@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useProject, ProjectProvider } from '@/lib/project-context';
 import Sidebar from '@/components/layout/Sidebar';
 import ChatPanel from '@/components/panels/ChatPanel';
@@ -9,12 +9,65 @@ import ValidationView from '@/components/views/ValidationView';
 import OutputView from '@/components/views/OutputView';
 import { ViewMode } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
-import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers } from 'lucide-react';
+import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
+
+function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
+  const isDragging = useRef(false);
+  const lastX = useRef(0);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+    lastX.current = e.clientX;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging.current) return;
+      const delta = e.clientX - lastX.current;
+      lastX.current = e.clientX;
+      onResize(side === 'left' ? delta : -delta);
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [onResize, side]);
+
+  return (
+    <div
+      data-testid={`resize-handle-${side}`}
+      className="hidden md:flex w-1 cursor-col-resize items-center justify-center group hover:bg-primary/20 active:bg-primary/30 transition-colors relative z-30 shrink-0"
+      onMouseDown={handleMouseDown}
+    >
+      <div className="w-px h-8 bg-border group-hover:bg-primary group-active:bg-primary transition-colors" />
+    </div>
+  );
+}
 
 function WorkspaceContent() {
   const { activeView, setActiveView } = useProject();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [chatCollapsed, setChatCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(256);
+  const [chatWidth, setChatWidth] = useState(350);
+
+  const handleSidebarResize = useCallback((delta: number) => {
+    setSidebarWidth(w => Math.max(180, Math.min(480, w + delta)));
+  }, []);
+
+  const handleChatResize = useCallback((delta: number) => {
+    setChatWidth(w => Math.max(280, Math.min(600, w + delta)));
+  }, []);
 
   const tabs: { id: ViewMode; label: string; icon: any }[] = [
     { id: 'project_explorer', label: 'Project Explorer', icon: null },
@@ -51,10 +104,26 @@ function WorkspaceContent() {
       </div>
 
       <div className="flex flex-1 min-h-0">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          collapsed={sidebarCollapsed}
+          width={sidebarWidth}
+        />
+
+        {!sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
         
         <main className="flex-1 flex flex-col min-w-0 relative bg-[#090a0d]">
-          <header className="h-10 border-b border-border bg-background hidden md:flex items-center px-2 gap-1 z-10">
+          <header className="h-10 border-b border-border bg-background hidden md:flex items-center px-1 gap-0 z-10">
+            <button
+              data-testid="toggle-sidebar"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors mr-1"
+              title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+            </button>
+            <div className="w-px h-5 bg-border mr-1" />
             {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -72,6 +141,15 @@ function WorkspaceContent() {
               </button>
             ))}
             <div className="flex-1 border-b border-border h-full"></div>
+            <div className="w-px h-5 bg-border ml-1" />
+            <button
+              data-testid="toggle-chat"
+              onClick={() => setChatCollapsed(!chatCollapsed)}
+              className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
+              title={chatCollapsed ? "Show chat" : "Hide chat"}
+            >
+              {chatCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
+            </button>
           </header>
 
           <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
@@ -83,7 +161,14 @@ function WorkspaceContent() {
           </div>
         </main>
 
-        <ChatPanel isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+        {!chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}
+
+        <ChatPanel
+          isOpen={chatOpen}
+          onClose={() => setChatOpen(false)}
+          collapsed={chatCollapsed}
+          width={chatWidth}
+        />
       </div>
 
       <div data-testid="mobile-bottom-nav" className="h-14 border-t border-border bg-card flex items-center justify-around md:hidden">
