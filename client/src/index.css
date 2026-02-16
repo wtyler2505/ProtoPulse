@@ -129,6 +129,11 @@
     background: hsl(0 85% 55%);
     box-shadow: 0 0 6px hsl(0 85% 55% / 0.6);
   }
+  .glass-panel {
+    background: rgba(15, 15, 20, 0.7);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }

@@ -102,6 +102,12 @@ interface ProjectState {
 
   outputLog: string[];
   addOutputLog: (log: string) => void;
+  clearOutputLog: () => void;
+
+  projectName: string;
+  setProjectName: (name: string) => void;
+  projectDescription: string;
+  setProjectDescription: (desc: string) => void;
 
   isLoading: boolean;
 }
@@ -159,6 +165,9 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     manufacturingDate: new Date(),
   });
 
+  const [projectName, setProjectName] = useState('Smart_Agro_Node_v1');
+  const [projectDescription, setProjectDescription] = useState('IoT Agriculture Sensor Node');
+
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [outputLog, setOutputLog] = useState<string[]>([
@@ -169,6 +178,10 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const addOutputLog = (log: string) => {
     setOutputLog(prev => [...prev, log]);
+  };
+
+  const clearOutputLog = () => {
+    setOutputLog([]);
   };
 
   const nodesQuery = useQuery({
@@ -387,7 +400,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       addMessage, isGenerating, setIsGenerating,
       history: historyQuery.data ?? [],
       addToHistory,
-      outputLog, addOutputLog,
+      outputLog, addOutputLog, clearOutputLog,
+      projectName, setProjectName, projectDescription, setProjectDescription,
       isLoading,
     }}>
       {children}

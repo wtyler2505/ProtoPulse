@@ -5,16 +5,38 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 interface ChatPanelProps {
   isOpen: boolean;
   onClose: () => void;
   collapsed?: boolean;
   width?: number;
+  onToggleCollapse?: () => void;
 }
 
-export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 350 }: ChatPanelProps) {
-  const { messages, addMessage, isGenerating, setIsGenerating, runValidation, setNodes, setEdges } = useProject();
+const quickActionDescriptions: Record<string, string> = {
+  'Generate Architecture': 'Generate a default system architecture',
+  'Optimize BOM': 'Optimize bill of materials cost',
+  'Run Validation': 'Run design rule checks',
+  'Add MCU Node': 'Add an MCU component to the design',
+  'Switch to Schematic': 'Open the schematic editor',
+  'Project Summary': 'Show current project info',
+  'Show Help': 'List all available commands',
+  'Export BOM CSV': 'Export BOM as CSV file',
+};
+
+export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 350, onToggleCollapse }: ChatPanelProps) {
+  const { 
+    messages, addMessage, isGenerating, setIsGenerating, 
+    runValidation, deleteValidationIssue, issues,
+    setNodes, setEdges, nodes, edges,
+    bom, addBomItem, deleteBomItem, 
+    activeView, setActiveView,
+    activeSheetId, setActiveSheetId, schematicSheets,
+    projectName, setProjectName, projectDescription, setProjectDescription,
+    addToHistory, addOutputLog
+  } = useProject();
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<'chat' | 'image' | 'video'>('chat');
   const [showQuickActions, setShowQuickActions] = useState(true);
@@ -25,6 +47,273 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isGenerating]);
+
+  const processAICommand = (msgText: string): string => {
+    const lower = msgText.toLowerCase().trim();
+
+    const viewMap: Record<string, string> = {
+      'architecture': 'architecture',
+      'schematic': 'schematic',
+      'procurement': 'procurement',
+      'validation': 'validation',
+      'output': 'output',
+    };
+    for (const [key, view] of Object.entries(viewMap)) {
+      if ((lower.includes('switch to') || lower.includes('go to') || lower.includes('show') || lower.includes('open')) && lower.includes(key)) {
+        if (key === 'schematic') {
+          const sheetMatch = lower.match(/sheet\s+(.+)/);
+          if (sheetMatch) {
+            const sheetName = sheetMatch[1].trim();
+            const sheet = schematicSheets.find((s: any) => s.name.toLowerCase().includes(sheetName) || s.id.toLowerCase() === sheetName);
+            if (sheet) {
+              setActiveSheetId(sheet.id);
+              setActiveView('schematic' as any);
+              addToHistory(`Opened schematic sheet: ${sheet.name}`, 'AI');
+              addOutputLog(`[AI] Opened schematic sheet: ${sheet.name}`);
+              return `[ACTION] Opened schematic sheet '${sheet.name}'.\n\nYou can now view and edit this sheet in the schematic editor.`;
+            }
+          }
+        }
+        setActiveView(view as any);
+        const viewLabel = key.charAt(0).toUpperCase() + key.slice(1);
+        addToHistory(`Switched to ${viewLabel} view`, 'AI');
+        addOutputLog(`[AI] Switched to ${viewLabel} view`);
+        return `[ACTION] Switched to ${viewLabel} view.\n\nYou can manage your ${key} here.`;
+      }
+    }
+
+    if (lower.includes('generate architecture') || lower.includes('generate schematic') || (lower.includes('generate') && (lower.includes('arch') || lower.includes('design')))) {
+      const defaultNodes = [
+        { id: Date.now().toString(), type: 'custom' as const, position: { x: 300, y: 100 }, data: { label: 'ESP32-S3', type: 'mcu', description: 'Main MCU' } },
+        { id: (Date.now() + 1).toString(), type: 'custom' as const, position: { x: 100, y: 250 }, data: { label: 'TP4056', type: 'power', description: 'Power Management' } },
+        { id: (Date.now() + 2).toString(), type: 'custom' as const, position: { x: 500, y: 250 }, data: { label: 'SX1262', type: 'comm', description: 'LoRa Communication' } },
+        { id: (Date.now() + 3).toString(), type: 'custom' as const, position: { x: 300, y: 400 }, data: { label: 'SHT40', type: 'sensor', description: 'Temp/Humidity Sensor' } },
+      ];
+      const defaultEdges = [
+        { id: `e-${Date.now()}`, source: defaultNodes[0].id, target: defaultNodes[1].id, label: 'Power', animated: true },
+        { id: `e-${Date.now() + 1}`, source: defaultNodes[0].id, target: defaultNodes[2].id, label: 'SPI', animated: true },
+        { id: `e-${Date.now() + 2}`, source: defaultNodes[0].id, target: defaultNodes[3].id, label: 'I2C', animated: true },
+      ];
+      setNodes(defaultNodes);
+      setEdges(defaultEdges);
+      setActiveView('architecture' as any);
+      addToHistory('Generated default architecture', 'AI');
+      addOutputLog('[AI] Generated default architecture with 4 components');
+      return `[ACTION] Generated default architecture with 4 components.\n\nCreated: ESP32-S3 (MCU), TP4056 (Power), SX1262 (Communication), SHT40 (Sensor). All components are connected with data buses.`;
+    }
+
+    if (lower.includes('clear all') && (lower.includes('node') || lower.includes('component'))) {
+      setNodes([]);
+      setEdges([]);
+      addToHistory('Cleared all architecture nodes', 'AI');
+      addOutputLog('[AI] Cleared all nodes and edges');
+      return `[ACTION] Cleared all nodes and edges from the architecture.\n\nThe canvas is now empty. You can add new components or generate a fresh architecture.`;
+    }
+
+    const addNodeMatch = lower.match(/add\s+(mcu|sensor|power|comm|connector)?\s*(?:component|node|block)?\s*(?:called|named)?\s*(.+)/i);
+    if (addNodeMatch || (lower.includes('add') && (lower.includes('mcu') || lower.includes('sensor') || lower.includes('power') || lower.includes('comm') || lower.includes('connector') || lower.includes('node') || lower.includes('component')))) {
+      let nodeType = 'mcu';
+      let nodeName = 'New Component';
+
+      if (addNodeMatch) {
+        nodeType = addNodeMatch[1] || 'mcu';
+        nodeName = addNodeMatch[2]?.trim() || 'New Component';
+      } else {
+        if (lower.includes('mcu')) { nodeType = 'mcu'; nodeName = 'MCU Node'; }
+        else if (lower.includes('sensor')) { nodeType = 'sensor'; nodeName = 'Sensor Node'; }
+        else if (lower.includes('power')) { nodeType = 'power'; nodeName = 'Power Node'; }
+        else if (lower.includes('comm')) { nodeType = 'comm'; nodeName = 'Comm Node'; }
+        else if (lower.includes('connector')) { nodeType = 'connector'; nodeName = 'Connector Node'; }
+        else { nodeName = 'New Component'; }
+      }
+
+      if (nodeName.toLowerCase() === 'mcu node' && lower.includes('add mcu node')) {
+        nodeName = 'ESP32-S3';
+        nodeType = 'mcu';
+      }
+
+      const newNode = {
+        id: Date.now().toString(),
+        type: 'custom' as const,
+        position: { x: 200 + Math.random() * 400, y: 100 + Math.random() * 300 },
+        data: { label: nodeName, type: nodeType, description: `${nodeType.toUpperCase()} component` },
+      };
+      setNodes([...nodes, newNode]);
+      setActiveView('architecture' as any);
+      addToHistory(`Added ${nodeType} node: ${nodeName}`, 'AI');
+      addOutputLog(`[AI] Added ${nodeType} node: ${nodeName}`);
+      return `[ACTION] Added new ${nodeType.toUpperCase()} node '${nodeName}' to the architecture.\n\nI've placed it on the canvas. You can drag it to reposition, then connect it to other components.`;
+    }
+
+    if ((lower.includes('remove') || lower.includes('delete')) && (lower.includes('node') || lower.includes('component'))) {
+      const nameMatch = lower.match(/(?:remove|delete)\s+(?:node|component)\s+(.+)/);
+      if (nameMatch) {
+        const targetName = nameMatch[1].trim();
+        const nodeToRemove = nodes.find((n: any) => n.data.label.toLowerCase().includes(targetName));
+        if (nodeToRemove) {
+          const filteredNodes = nodes.filter((n: any) => n.id !== nodeToRemove.id);
+          const filteredEdges = edges.filter((e: any) => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id);
+          setNodes(filteredNodes);
+          setEdges(filteredEdges);
+          addToHistory(`Removed node: ${nodeToRemove.data.label}`, 'AI');
+          addOutputLog(`[AI] Removed node: ${nodeToRemove.data.label}`);
+          return `[ACTION] Removed node '${nodeToRemove.data.label}' and its connections from the architecture.`;
+        }
+        return `Could not find a node matching '${targetName}'. Available nodes: ${nodes.map((n: any) => n.data.label).join(', ') || 'none'}.`;
+      }
+    }
+
+    if (lower.includes('connect') && lower.includes(' to ')) {
+      const connectMatch = lower.match(/connect\s+(.+?)\s+to\s+(.+)/);
+      if (connectMatch) {
+        const sourceName = connectMatch[1].trim();
+        const targetName = connectMatch[2].trim();
+        const sourceNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(sourceName));
+        const targetNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(targetName));
+        if (sourceNode && targetNode) {
+          const newEdge = {
+            id: `e-${Date.now()}`,
+            source: sourceNode.id,
+            target: targetNode.id,
+            label: 'Data',
+            animated: true,
+          };
+          setEdges([...edges, newEdge]);
+          addToHistory(`Connected ${sourceNode.data.label} to ${targetNode.data.label}`, 'AI');
+          addOutputLog(`[AI] Connected ${sourceNode.data.label} → ${targetNode.data.label}`);
+          return `[ACTION] Connected '${sourceNode.data.label}' to '${targetNode.data.label}'.\n\nA data bus has been created between the two components.`;
+        }
+        return `Could not find one or both nodes. Available nodes: ${nodes.map((n: any) => n.data.label).join(', ') || 'none'}.`;
+      }
+    }
+
+    if (lower.includes('add to bom') || lower.includes('add bom')) {
+      const partMatch = lower.match(/(?:add to bom|add bom)\s+(.+)/);
+      const partName = partMatch ? partMatch[1].trim() : 'Unknown Part';
+      addBomItem({
+        partNumber: partName.toUpperCase().replace(/\s+/g, '-'),
+        manufacturer: 'TBD',
+        description: partName,
+        quantity: 1,
+        unitPrice: 0,
+        totalPrice: 0,
+        supplier: 'Digi-Key',
+        stock: 0,
+        status: 'In Stock',
+      });
+      addToHistory(`Added BOM item: ${partName}`, 'AI');
+      addOutputLog(`[AI] Added BOM item: ${partName}`);
+      return `[ACTION] Added '${partName}' to the Bill of Materials.\n\nYou can update pricing and sourcing details in the Procurement view.`;
+    }
+
+    if (lower.includes('remove from bom') || lower.includes('delete from bom')) {
+      const partMatch = lower.match(/(?:remove|delete) from bom\s+(.+)/);
+      if (partMatch) {
+        const partName = partMatch[1].trim().toLowerCase();
+        const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(partName) || b.description.toLowerCase().includes(partName));
+        if (bomItem) {
+          deleteBomItem(Number(bomItem.id));
+          addToHistory(`Removed BOM item: ${bomItem.partNumber}`, 'AI');
+          addOutputLog(`[AI] Removed BOM item: ${bomItem.partNumber}`);
+          return `[ACTION] Removed '${bomItem.partNumber}' from the Bill of Materials.`;
+        }
+        return `Could not find BOM item matching '${partMatch[1]}'. Check the Procurement view for current items.`;
+      }
+    }
+
+    if (lower.includes('export bom') || lower.includes('export csv')) {
+      if (bom.length === 0) {
+        return `No BOM items to export. Add components to the BOM first.`;
+      }
+      const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
+      const rows = bom.map((item: any) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status].join(','));
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projectName}_BOM.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      addToHistory('Exported BOM as CSV', 'AI');
+      addOutputLog('[AI] Exported BOM as CSV file');
+      return `[ACTION] Exported BOM as CSV file (${bom.length} items).\n\nThe file '${projectName}_BOM.csv' has been downloaded.`;
+    }
+
+    if (lower.includes('optimize bom') || lower.includes('optimize cost')) {
+      addToHistory('BOM optimization analysis', 'AI');
+      addOutputLog('[AI] Ran BOM optimization analysis');
+      return `[ACTION] BOM optimization analysis complete.\n\nSuggestions:\n• Consider alternative sourcing from LCSC for passive components (20-40% savings)\n• Consolidate resistor values to reduce unique part count\n• Check for volume pricing breaks at 1k+ quantities\n• Replace through-hole components with SMD equivalents where possible\n\nCurrent BOM has ${bom.length} items. Switch to Procurement view for details.`;
+    }
+
+    if (lower.includes('validate') || lower.includes('check design') || lower.includes('run drc') || lower.includes('check errors') || lower.includes('run validation')) {
+      runValidation();
+      addToHistory('Ran design validation', 'AI');
+      addOutputLog('[AI] Ran design rule check');
+      return `[ACTION] Design rule check complete.\n\nI've added a validation finding. Switch to the Validation view to review all ${issues.length + 1} issues and apply suggested fixes.`;
+    }
+
+    if (lower.includes('fix all issues') || lower.includes('fix all') || lower.includes('clear issues')) {
+      if (issues.length === 0) {
+        return `No validation issues to fix. The design is currently clean.`;
+      }
+      const count = issues.length;
+      issues.forEach((issue: any) => deleteValidationIssue(Number(issue.id)));
+      addToHistory(`Fixed ${count} validation issues`, 'AI');
+      addOutputLog(`[AI] Cleared ${count} validation issues`);
+      return `[ACTION] Removed ${count} validation issues.\n\nAll issues have been resolved. Run validation again to check for new findings.`;
+    }
+
+    if (lower.includes('rename project to') || lower.includes('rename project')) {
+      const nameMatch = lower.match(/rename project (?:to\s+)?(.+)/);
+      if (nameMatch) {
+        const newName = nameMatch[1].trim();
+        setProjectName(newName);
+        addToHistory(`Renamed project to: ${newName}`, 'AI');
+        addOutputLog(`[AI] Renamed project to: ${newName}`);
+        return `[ACTION] Renamed project to '${newName}'.\n\nThe sidebar and project settings have been updated.`;
+      }
+    }
+
+    if (lower.includes('set description to') || lower.includes('update description')) {
+      const descMatch = lower.match(/(?:set|update) description (?:to\s+)?(.+)/);
+      if (descMatch) {
+        const newDesc = descMatch[1].trim();
+        setProjectDescription(newDesc);
+        addToHistory(`Updated project description`, 'AI');
+        addOutputLog(`[AI] Updated project description: ${newDesc}`);
+        return `[ACTION] Updated project description to '${newDesc}'.`;
+      }
+    }
+
+    if (lower.includes('project info') || lower.includes('project summary') || lower.includes('show project') || lower.includes('project status')) {
+      return `**Project Summary**\n\n• **Name:** ${projectName}\n• **Description:** ${projectDescription}\n• **Architecture Nodes:** ${nodes.length}\n• **Connections:** ${edges.length}\n• **BOM Items:** ${bom.length}\n• **Validation Issues:** ${issues.length}\n• **Active View:** ${activeView}\n• **Schematic Sheets:** ${schematicSheets.length}`;
+    }
+
+    if (lower === 'help' || lower.includes('what can you do') || lower.includes('show help') || lower.includes('commands')) {
+      return `Here's what I can do:\n\n**Navigation:** Switch between views (architecture, schematic, procurement, validation, output)\n\n**Design:** Add/remove nodes, connect components, generate architectures, clear all nodes\n\n**BOM:** Add/remove parts, export CSV, optimize costs\n\n**Validation:** Run DRC checks, fix all issues\n\n**Project:** Rename project, update description, view summary\n\n**Examples:**\n• "add mcu called ATSAMD21"\n• "connect ESP32 to SHT40"\n• "switch to procurement"\n• "generate architecture"\n• "export bom csv"\n• "rename project to MyProject"`;
+    }
+
+    if (lower.includes('clear chat')) {
+      return `Chat history is persistent and synced with the project. You can scroll up to review previous conversations.`;
+    }
+
+    if (lower.includes('schematic') || lower.includes('generate')) {
+      return "I've analyzed the design for schematic generation. The architecture includes the ESP32-S3, LoRa transceiver, and power management units. All connections follow standard bus protocols. Try 'generate architecture' to create a default layout.";
+    } else if (lower.includes('bom') || lower.includes('cost')) {
+      return "BOM optimization tips:\n• TP4056 → MCP73831 (saves $0.08/unit, same footprint)\n• USB connector → alternate GCT part (saves $0.12/unit)\nTotal potential savings: $0.20/unit at 1k qty.\n\nTry 'optimize bom' for a full analysis or 'export bom csv' to download.";
+    } else if (lower.includes('memory') || lower.includes('ram') || lower.includes('storage')) {
+      return "For the ESP32-S3, I recommend adding external PSRAM (ESP-PSRAM64H, 8MB). Connect via the dedicated SPI interface on GPIO 33-37. Try 'add sensor called PSRAM64H' to add it to your design.";
+    } else if (lower.includes('power') || lower.includes('battery')) {
+      return "Power analysis summary:\n• Active mode: ~180mA (Wi-Fi TX)\n• Deep sleep: ~10µA\n• Battery life (2000mAh): ~45 days at 1 reading/hour\nRecommendation: Add a solar cell (5V/500mA) with MPPT for indefinite operation.";
+    } else if (lower.includes('antenna') || lower.includes('rf')) {
+      return "RF design recommendations:\n• LoRa antenna: Use a spring-type 868/915MHz antenna with SMA connector\n• Match impedance to 50Ω using Pi-network (L=3.3nH, C1=1.5pF, C2=1.8pF)\n• Keep RF trace width at 0.7mm for FR4 substrate (εr=4.6)";
+    } else if (lower.includes('sensor') || lower.includes('temperature')) {
+      return "Sensor configuration optimized:\n• SHT40: Set to high-precision mode (±0.2°C accuracy)\n• I2C address: 0x44, pull-ups: 4.7kΩ to 3.3V\n• Sample rate: 1Hz recommended for thermal stability\n• Consider adding SHT40-BD1B for extended range (-40°C to +125°C).";
+    }
+
+    return "I've analyzed your request. I can help with navigation, design, BOM management, validation, and project settings. Type 'help' to see all available commands.";
+  };
 
   const handleSend = async (messageOverride?: string) => {
     const msgText = messageOverride || input;
@@ -42,27 +331,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     setIsGenerating(true);
 
     setTimeout(() => {
-      let response = "I've analyzed your design and everything looks good. Let me know if you'd like me to review specific subsystems.";
-      const lowerMsg = msgText.toLowerCase();
-
-      if (lowerMsg.includes('schematic') || lowerMsg.includes('generate')) {
-        response = "I've generated a preliminary block diagram for the agriculture sensor node. It includes the ESP32-S3, LoRa transceiver, and power management units. All connections follow standard bus protocols.";
-      } else if (lowerMsg.includes('bom') || lowerMsg.includes('cost') || lowerMsg.includes('optimize')) {
-        response = "BOM optimization complete. I found alternative sourcing for 2 components:\n• TP4056 → MCP73831 (saves $0.08/unit, same footprint)\n• USB connector → alternate GCT part (saves $0.12/unit)\nTotal savings: $0.20/unit at 1k qty.";
-      } else if (lowerMsg.includes('validate') || lowerMsg.includes('check') || lowerMsg.includes('error')) {
-        runValidation();
-        response = "Design rule check complete. I've identified potential issues in your design. Switch to the Validation tab to review findings and apply suggested fixes.";
-      } else if (lowerMsg.includes('memory') || lowerMsg.includes('ram') || lowerMsg.includes('storage')) {
-        response = "For the ESP32-S3, I recommend adding external PSRAM (ESP-PSRAM64H, 8MB). Connect via the dedicated SPI interface on GPIO 33-37. This gives you enough buffer for sensor data logging and OTA update staging.";
-      } else if (lowerMsg.includes('power') || lowerMsg.includes('battery')) {
-        response = "Power analysis summary:\n• Active mode: ~180mA (Wi-Fi TX)\n• Deep sleep: ~10µA\n• Battery life (2000mAh): ~45 days at 1 reading/hour\nRecommendation: Add a solar cell (5V/500mA) with MPPT for indefinite operation.";
-      } else if (lowerMsg.includes('antenna') || lowerMsg.includes('rf')) {
-        response = "RF design recommendations:\n• LoRa antenna: Use a spring-type 868/915MHz antenna with SMA connector\n• Match impedance to 50Ω using Pi-network (L=3.3nH, C1=1.5pF, C2=1.8pF)\n• Keep RF trace width at 0.7mm for FR4 substrate (εr=4.6)";
-      } else if (lowerMsg.includes('sensor') || lowerMsg.includes('temperature')) {
-        response = "Sensor configuration optimized:\n• SHT40: Set to high-precision mode (±0.2°C accuracy)\n• I2C address: 0x44, pull-ups: 4.7kΩ to 3.3V\n• Sample rate: 1Hz recommended for thermal stability\n• Consider adding SHT40-BD1B for extended range (-40°C to +125°C).";
-      } else if (lowerMsg.includes('add') || lowerMsg.includes('component')) {
-        response = "I can help you add a component. Drag one from the Asset Library on the left, or tell me what type of component you need (MCU, sensor, power, communication, or connector) and I'll suggest specific parts.";
-      }
+      let response = processAICommand(msgText);
 
       if (mode === 'image') {
         response = "📐 [Schematic visualization mode] " + response;
@@ -77,11 +346,29 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         timestamp: Date.now()
       });
       setIsGenerating(false);
-    }, 2000);
+    }, 1500);
   };
 
   if (collapsed) {
-    return null;
+    return (
+      <div
+        data-testid="chat-collapsed"
+        className="hidden md:flex flex-col items-center w-10 h-full bg-card/80 backdrop-blur-xl border-l border-border shrink-0 cursor-pointer transition-all duration-300"
+        onClick={onToggleCollapse}
+      >
+        <div className="h-14 flex items-center justify-center border-b border-border w-full">
+          <Sparkles className="w-4 h-4 text-primary" />
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <span
+            className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground"
+            style={{ writingMode: 'vertical-rl' }}
+          >
+            AI Assistant
+          </span>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -95,7 +382,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       )}
       <div
         className={cn(
-          "flex flex-col h-full bg-card border-l border-border shadow-2xl relative shrink-0 overflow-hidden",
+          "flex flex-col h-full bg-card/80 backdrop-blur-xl border-l border-border shadow-2xl relative shrink-0 overflow-hidden",
           "fixed inset-y-0 right-0 z-50 w-full max-w-[350px] transform transition-transform md:relative md:w-auto md:max-w-none md:translate-x-0",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
@@ -132,22 +419,50 @@ function ChatContent({
           <h3 className="font-display font-bold tracking-wider text-sm">ProtoPulse AI</h3>
         </div>
         <div className="flex gap-1 items-center">
-          <button onClick={() => setMode('chat')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'chat' && "text-primary bg-primary/10")}>
-            <Bot className="w-4 h-4" />
-          </button>
-          <button onClick={() => setMode('image')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'image' && "text-primary bg-primary/10")}>
-            <ImageIcon className="w-4 h-4" />
-          </button>
-          <button onClick={() => setMode('video')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'video' && "text-primary bg-primary/10")}>
-            <Video className="w-4 h-4" />
-          </button>
-          <button
-            data-testid="chat-close"
-            className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1 md:hidden"
-            onClick={onClose}
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={() => setMode('chat')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'chat' && "text-primary bg-primary/10")}>
+                <Bot className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+              <p>Chat mode</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={() => setMode('image')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'image' && "text-primary bg-primary/10")}>
+                <ImageIcon className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+              <p>Schematic visualization</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button onClick={() => setMode('video')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'video' && "text-primary bg-primary/10")}>
+                <Video className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+              <p>Simulation mode</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                data-testid="chat-close"
+                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1 md:hidden"
+                onClick={onClose}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+              <p>Close chat</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -173,10 +488,10 @@ function ChatContent({
             
             <div className="flex flex-col gap-1 max-w-[85%]">
               <div className={cn(
-                "p-3 leading-relaxed shadow-sm",
+                "p-3 leading-relaxed shadow-sm whitespace-pre-wrap",
                 msg.role === 'user' 
                   ? "bg-primary text-primary-foreground" 
-                  : "bg-muted/50 border border-border text-foreground"
+                  : "bg-muted/30 backdrop-blur border border-border text-foreground"
               )}>
                 {msg.content}
               </div>
@@ -202,20 +517,26 @@ function ChatContent({
 
       {showQuickActions && !isGenerating && messages.length > 0 && (
         <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
-          {['Generate Schematic', 'Optimize BOM', 'Check Errors', 'Add Memory'].map((action) => (
-            <button 
-              key={action}
-              onClick={() => handleSend(action)}
-              className="whitespace-nowrap px-3 py-1.5 bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
-            >
-              <Zap className="w-3 h-3" />
-              {action}
-            </button>
+          {['Generate Architecture', 'Optimize BOM', 'Run Validation', 'Add MCU Node', 'Switch to Schematic', 'Project Summary', 'Show Help', 'Export BOM CSV'].map((action) => (
+            <Tooltip key={action}>
+              <TooltipTrigger asChild>
+                <button 
+                  onClick={() => handleSend(action)}
+                  className="whitespace-nowrap px-3 py-1.5 bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
+                >
+                  <Zap className="w-3 h-3" />
+                  {action}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top">
+                <p>{quickActionDescriptions[action]}</p>
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
       )}
 
-      <div className="p-4 border-t border-border bg-card">
+      <div className="p-4 border-t border-border bg-card/60 backdrop-blur">
         <div className="relative">
           <Input 
             value={input}
@@ -225,15 +546,31 @@ function ChatContent({
             className="bg-muted/30 border-border focus:border-primary pr-10 pl-10 py-5 shadow-inner"
           />
           <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => setShowQuickActions(!showQuickActions)} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button type="button" className="flex items-center justify-center" onClick={() => setShowQuickActions(!showQuickActions)}>
+                  <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-pointer" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top">
+                <p>Quick actions</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
-          <Button 
-            size="icon" 
-            onClick={() => handleSend()} 
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            <Send className="w-4 h-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                size="icon" 
+                onClick={() => handleSend()} 
+                className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top">
+              <p>Send message</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         <div className="text-[10px] text-center text-muted-foreground/40 mt-2 font-mono">
           ProtoPulse AI v2.4 (Model: CircuitGPT-4o)

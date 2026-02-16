@@ -6,6 +6,8 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 
 const supplierUrls: Record<string, string> = {
   'Mouser': 'https://www.mouser.com/Search/Refine?Keyword=',
@@ -13,11 +15,24 @@ const supplierUrls: Record<string, string> = {
   'LCSC': 'https://www.lcsc.com/search?q=',
 };
 
+const goalDescriptions: Record<string, string> = {
+  'Cost': 'Minimize total cost',
+  'Power': 'Minimize power consumption',
+  'Size': 'Minimize board footprint',
+  'Avail': 'Maximize component availability',
+};
+
 export default function ProcurementView() {
   const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem } = useProject();
   const [showSettings, setShowSettings] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [optimizationGoal, setOptimizationGoal] = useState('Cost');
+  const [showSupplierEdit, setShowSupplierEdit] = useState(false);
+  const [preferredSuppliers, setPreferredSuppliers] = useState<Record<string, boolean>>({
+    'Mouser': true,
+    'Digi-Key': true,
+    'LCSC': false,
+  });
 
   const filteredBom = bom.filter(item => {
     if (!searchTerm) return true;
@@ -78,25 +93,39 @@ export default function ProcurementView() {
               className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus:outline-none focus:border-primary w-full sm:w-64 transition-all"
             />
           </div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className={showSettings ? "bg-primary/10 border-primary text-primary" : ""}
-            onClick={() => setShowSettings(!showSettings)}
-            data-testid="button-toggle-settings"
-          >
-            <SlidersHorizontal className="w-4 h-4 mr-2" />
-            Cost Optimisation
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAddItem}
-            data-testid="button-add-bom-item"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Item
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={showSettings ? "bg-primary/10 border-primary text-primary" : ""}
+                onClick={() => setShowSettings(!showSettings)}
+                data-testid="button-toggle-settings"
+              >
+                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                Cost Optimisation
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+              <p>Configure BOM optimization settings</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddItem}
+                data-testid="button-add-bom-item"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Item
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+              <p>Add new BOM component</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
         
         <div className="flex items-center gap-4 md:gap-6">
@@ -107,14 +136,21 @@ export default function ProcurementView() {
               <span className="text-xs text-muted-foreground font-sans font-normal">/ unit @ 1k qty</span>
             </div>
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleExportCSV} data-testid="button-export-csv">
-            <Download className="w-4 h-4 mr-2" /> Export CSV
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleExportCSV} data-testid="button-export-csv">
+                <Download className="w-4 h-4 mr-2" /> Export CSV
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+              <p>Download BOM as CSV file</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
       {showSettings && (
-        <div className="bg-muted/20 border-b border-border p-6 grid grid-cols-1 md:grid-cols-4 gap-8 animate-in slide-in-from-top-2" data-testid="panel-settings">
+        <div className="bg-muted/10 backdrop-blur-lg border-b border-border p-6 grid grid-cols-1 md:grid-cols-4 gap-8 animate-in slide-in-from-top-2" data-testid="panel-settings">
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Production Batch Size</h4>
             <div className="flex items-center gap-4">
@@ -153,25 +189,58 @@ export default function ProcurementView() {
              </div>
              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Preferred Suppliers</span>
-                <span className="text-xs text-primary cursor-pointer hover:underline" data-testid="link-edit-suppliers">Edit List</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      className="text-xs text-primary cursor-pointer hover:underline"
+                      data-testid="link-edit-suppliers"
+                      onClick={() => setShowSupplierEdit(!showSupplierEdit)}
+                    >Edit List</span>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top">
+                    <p>Edit preferred supplier list</p>
+                  </TooltipContent>
+                </Tooltip>
              </div>
+             {showSupplierEdit && (
+               <div className="mt-2 space-y-1.5 pl-1 animate-in slide-in-from-top-1" data-testid="panel-supplier-edit">
+                 {Object.entries(preferredSuppliers).map(([supplier, checked]) => (
+                   <label key={supplier} className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
+                     <input
+                       type="checkbox"
+                       checked={checked}
+                       onChange={(e) => setPreferredSuppliers(prev => ({ ...prev, [supplier]: e.target.checked }))}
+                       className="accent-primary w-3.5 h-3.5"
+                       data-testid={`checkbox-supplier-${supplier.toLowerCase().replace(/[^a-z]/g, '-')}`}
+                     />
+                     {supplier}
+                   </label>
+                 ))}
+               </div>
+             )}
           </div>
 
            <div className="space-y-4">
              <h4 className="text-sm font-medium text-foreground">Optimization Goal</h4>
              <div className="flex gap-2">
                 {['Cost', 'Power', 'Size', 'Avail'].map(goal => (
-                  <button
-                    key={goal}
-                    onClick={() => setOptimizationGoal(goal)}
-                    data-testid={`button-goal-${goal.toLowerCase()}`}
-                    className={cn(
-                      "px-3 py-1 border border-border text-xs hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors",
-                      optimizationGoal === goal && "bg-primary/10 border-primary text-primary"
-                    )}
-                  >
-                    {goal}
-                  </button>
+                  <Tooltip key={goal}>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setOptimizationGoal(goal)}
+                        data-testid={`button-goal-${goal.toLowerCase()}`}
+                        className={cn(
+                          "px-3 py-1 border border-border text-xs hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors",
+                          optimizationGoal === goal && "bg-primary/10 border-primary text-primary"
+                        )}
+                      >
+                        {goal}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+                      <p>{goalDescriptions[goal]}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 ))}
              </div>
           </div>
@@ -179,7 +248,7 @@ export default function ProcurementView() {
       )}
 
       <div className="flex-1 overflow-auto p-3 md:p-6">
-        <div className="border border-border overflow-hidden bg-card shadow-sm overflow-x-auto">
+        <div className="border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
             <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
               <tr>
@@ -197,43 +266,71 @@ export default function ProcurementView() {
             </thead>
             <tbody className="divide-y divide-border">
               {filteredBom.map((item) => (
-                <tr key={item.id} className="hover:bg-muted/30 transition-colors group" data-testid={`row-bom-${item.id}`}>
-                  <td className="px-4 py-3">
-                    <span className={cn("inline-flex items-center px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
-                      item.status === 'In Stock' 
-                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
-                        : item.status === 'Low Stock'
-                        ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                        : 'bg-destructive/10 text-destructive border-destructive/20'
-                    )} data-testid={`status-bom-${item.id}`}>
-                      {item.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>{item.partNumber}</td>
-                  <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
-                  <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
-                  <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${item.unitPrice.toFixed(4)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${item.totalPrice.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right flex gap-1">
-                    <button
-                      className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => window.open((supplierUrls[item.supplier] || '') + item.partNumber, '_blank')}
-                      data-testid={`button-cart-${item.id}`}
-                    >
-                      <ShoppingCart className="w-4 h-4" />
-                    </button>
-                    <button
-                      className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => deleteBomItem(Number(item.id))}
-                      data-testid={`button-delete-${item.id}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
+                <ContextMenu key={item.id}>
+                  <ContextMenuTrigger asChild>
+                    <tr className="hover:bg-muted/30 transition-colors group" data-testid={`row-bom-${item.id}`}>
+                      <td className="px-4 py-3">
+                        <span className={cn("inline-flex items-center px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
+                          item.status === 'In Stock' 
+                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                            : item.status === 'Low Stock'
+                            ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                            : 'bg-destructive/10 text-destructive border-destructive/20'
+                        )} data-testid={`status-bom-${item.id}`}>
+                          {item.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>{item.partNumber}</td>
+                      <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
+                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
+                      <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
+                      <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
+                      <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${item.unitPrice.toFixed(4)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${item.totalPrice.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right flex gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => window.open((supplierUrls[item.supplier] || '') + item.partNumber, '_blank')}
+                              data-testid={`button-cart-${item.id}`}
+                            >
+                              <ShoppingCart className="w-4 h-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
+                            <p>Buy from supplier</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => deleteBomItem(Number(item.id))}
+                              data-testid={`button-delete-${item.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
+                            <p>Remove from BOM</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </td>
+                    </tr>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
+                    <ContextMenuItem onSelect={() => console.log('Edit component', item.partNumber)}>Edit Component</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => console.log('View datasheet', item.partNumber)}>View Datasheet</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => console.log('Find alternatives', item.partNumber)}>Find Alternatives</ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onSelect={() => window.open((supplierUrls[item.supplier] || '') + item.partNumber, '_blank')}>Buy from {item.supplier}</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => navigator.clipboard.writeText(item.partNumber)}>Copy Part Number</ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem className="text-destructive" onSelect={() => deleteBomItem(Number(item.id))}>Remove from BOM</ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
               ))}
             </tbody>
           </table>
