@@ -1,7 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { Node, Edge } from '@xyflow/react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
-// --- Types ---
+const PROJECT_ID = 1;
 
 export interface Position {
   x: number;
@@ -49,7 +51,7 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   attachments?: any[];
-  mode?: 'chat' | 'image' | 'video'; // For multi-modal stubs
+  mode?: 'chat' | 'image' | 'video';
 }
 
 export interface ProjectHistoryItem {
@@ -61,25 +63,19 @@ export interface ProjectHistoryItem {
 
 export type ViewMode = 'project_explorer' | 'output' | 'architecture' | 'schematic' | 'procurement' | 'validation';
 
-// --- State Interface ---
-
 interface ProjectState {
-  // Navigation
   activeView: ViewMode;
   setActiveView: (view: ViewMode) => void;
 
-  // Architecture (Block Diagram)
   nodes: Node[];
   edges: Edge[];
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
 
-  // Schematic (Simplified)
   schematicSheets: { id: string; name: string; content: any }[];
   activeSheetId: string;
   setActiveSheetId: (id: string) => void;
 
-  // Procurement
   bom: BomItem[];
   bomSettings: {
     maxCost: number;
@@ -89,67 +85,59 @@ interface ProjectState {
   };
   setBomSettings: (settings: any) => void;
 
-  // Validation
   issues: ValidationIssue[];
   runValidation: () => void;
 
-  // Chat / AI
   messages: ChatMessage[];
   addMessage: (msg: ChatMessage) => void;
   isGenerating: boolean;
   setIsGenerating: (bg: boolean) => void;
 
-  // History
   history: ProjectHistoryItem[];
   addToHistory: (action: string, user: 'User' | 'AI') => void;
 
-  // Output
   outputLog: string[];
   addOutputLog: (log: string) => void;
-}
 
-// --- Context ---
+  isLoading: boolean;
+}
 
 const ProjectContext = createContext<ProjectState | undefined>(undefined);
 
-// --- Provider ---
+function formatTimeAgo(timestamp: string): string {
+  const now = new Date();
+  const then = new Date(timestamp);
+  const diffMs = now.getTime() - then.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'Just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffH = Math.floor(diffMin / 60);
+  if (diffH < 24) return `${diffH}h ago`;
+  return `${Math.floor(diffH / 24)}d ago`;
+}
 
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
-  // Navigation
+  const queryClient = useQueryClient();
+
+  const [seeded, setSeeded] = useState(false);
+
+  useEffect(() => {
+    apiRequest('POST', '/api/seed').then(() => {
+      setSeeded(true);
+    }).catch(() => {
+      setSeeded(true);
+    });
+  }, []);
+
   const [activeView, setActiveView] = useState<ViewMode>('architecture');
 
-  // Architecture Data (Mocked Initial State)
-  const [nodes, setNodes] = useState<Node[]>([
-    { id: '1', type: 'custom', position: { x: 400, y: 100 }, data: { label: 'ESP32-S3-WROOM-1', type: 'mcu', description: 'Dual-core MCU, Wi-Fi/BLE' } },
-    { id: '2', type: 'custom', position: { x: 150, y: 250 }, data: { label: 'TP4056 PMU', type: 'power', description: 'Li-Ion Battery Charger' } },
-    { id: '3', type: 'custom', position: { x: 650, y: 250 }, data: { label: 'SX1262 LoRa', type: 'comm', description: 'Long Range Transceiver' } },
-    { id: '4', type: 'custom', position: { x: 400, y: 400 }, data: { label: 'SHT40', type: 'sensor', description: 'Temp/Humidity Sensor' } },
-    { id: '5', type: 'custom', position: { x: 150, y: 100 }, data: { label: 'USB-C Connector', type: 'connector', description: 'Power/Data Input' } },
-  ]);
-  
-  const [edges, setEdges] = useState<Edge[]>([
-    { id: 'e5-2', source: '5', target: '2', animated: true, label: '5V VBUS', style: { stroke: '#ef4444' } },
-    { id: 'e2-1', source: '2', target: '1', animated: true, label: '3.3V', style: { stroke: '#ef4444' } },
-    { id: 'e1-3', source: '1', target: '3', animated: true, label: 'SPI', style: { stroke: '#06b6d4' } },
-    { id: 'e1-4', source: '1', target: '4', animated: true, label: 'I2C', style: { stroke: '#06b6d4' } },
-  ]);
-
-  // Schematic Data
-  const [schematicSheets, setSchematicSheets] = useState([
+  const [schematicSheets] = useState([
     { id: 'top', name: 'Top Level.sch', content: {} },
     { id: 'power', name: 'Power.sch', content: {} },
     { id: 'mcu', name: 'MCU_Core.sch', content: {} },
   ]);
   const [activeSheetId, setActiveSheetId] = useState('top');
 
-  // Procurement Data
-  const [bom, setBom] = useState<BomItem[]>([
-    { id: '1', partNumber: 'ESP32-S3-WROOM-1', manufacturer: 'Espressif', description: 'Wi-Fi/BLE MCU Module', quantity: 1, unitPrice: 3.50, totalPrice: 3.50, supplier: 'Mouser', stock: 1240, status: 'In Stock' },
-    { id: '2', partNumber: 'TP4056', manufacturer: 'Top Power', description: 'Li-Ion Charger IC', quantity: 1, unitPrice: 0.15, totalPrice: 0.15, supplier: 'LCSC', stock: 50000, status: 'In Stock' },
-    { id: '3', partNumber: 'SX1262IMLTRT', manufacturer: 'Semtech', description: 'LoRa Transceiver', quantity: 1, unitPrice: 4.20, totalPrice: 4.20, supplier: 'Digi-Key', stock: 85, status: 'Low Stock' },
-    { id: '4', partNumber: 'SHT40-AD1B-R2', manufacturer: 'Sensirion', description: 'Sensor Humidity/Temp', quantity: 1, unitPrice: 1.85, totalPrice: 1.85, supplier: 'Mouser', stock: 5000, status: 'In Stock' },
-    { id: '5', partNumber: 'USB4105-GF-A', manufacturer: 'GCT', description: 'USB Type-C Receptacle', quantity: 1, unitPrice: 0.65, totalPrice: 0.65, supplier: 'Digi-Key', stock: 12000, status: 'In Stock' },
-  ]);
   const [bomSettings, setBomSettings] = useState({
     maxCost: 50,
     batchSize: 1000,
@@ -157,56 +145,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     manufacturingDate: new Date(),
   });
 
-  // Validation Data
-  const [issues, setIssues] = useState<ValidationIssue[]>([
-    { id: '1', severity: 'warning', message: 'Missing decoupling capacitor on ESP32 VDD', componentId: '1', suggestion: 'Add 10uF + 0.1uF ceramic capacitors close to pins.' },
-    { id: '2', severity: 'error', message: 'LoRa antenna path impedance mismatch likely', componentId: '3', suggestion: 'Check RF trace width and add Pi-matching network.' },
-  ]);
-
-  const runValidation = () => {
-    // Mock validation logic
-    const newIssues: ValidationIssue[] = [...issues];
-    // Randomly add an issue if list is short
-    if (newIssues.length < 3) {
-      newIssues.push({
-         id: Date.now().toString(),
-         severity: 'info',
-         message: 'Check I2C pull-up resistor values for SHT40',
-         componentId: '4',
-         suggestion: 'Recommended 4.7kΩ for 100kHz standard mode.'
-      });
-    }
-    setIssues(newIssues);
-  };
-
-  // Chat Data
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { id: '1', role: 'system', content: 'Welcome to ProtoPulse AI. I can help you generate architectures, create schematics, and optimize your BOM.', timestamp: Date.now(), mode: 'chat' }
-  ]);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const addMessage = (msg: ChatMessage) => {
-    setMessages(prev => [...prev, msg]);
-  };
-
-  // History Data
-  const [history, setHistory] = useState<ProjectHistoryItem[]>([
-    { id: '1', action: 'Project Created', timestamp: '1h ago', user: 'User' },
-    { id: '2', action: 'Added ESP32-S3', timestamp: '45m ago', user: 'User' },
-    { id: '3', action: 'Auto-connected Power Rails', timestamp: '10m ago', user: 'AI' },
-  ]);
-
-  const addToHistory = (action: string, user: 'User' | 'AI') => {
-    const newItem: ProjectHistoryItem = {
-      id: Date.now().toString(),
-      action,
-      timestamp: 'Just now',
-      user
-    };
-    setHistory(prev => [newItem, ...prev]);
-  };
-
-  // Output Logs
   const [outputLog, setOutputLog] = useState<string[]>([
     "[SYSTEM] Initializing ProtoPulse Core...",
     "[PROJECT] Smart_Agro_Node_v1 loaded.",
@@ -217,16 +157,180 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setOutputLog(prev => [...prev, log]);
   };
 
+  const nodesQuery = useQuery({
+    queryKey: [`/api/projects/${PROJECT_ID}/nodes`],
+    enabled: seeded,
+    select: (data: any[]) => data.map((n: any): Node => ({
+      id: n.nodeId,
+      type: 'custom',
+      position: { x: n.positionX, y: n.positionY },
+      data: { label: n.label, type: n.nodeType, description: (n.data as any)?.description },
+    })),
+  });
+
+  const edgesQuery = useQuery({
+    queryKey: [`/api/projects/${PROJECT_ID}/edges`],
+    enabled: seeded,
+    select: (data: any[]) => data.map((e: any): Edge => ({
+      id: e.edgeId,
+      source: e.source,
+      target: e.target,
+      label: e.label,
+      animated: e.animated,
+      style: e.style as any,
+    })),
+  });
+
+  const bomQuery = useQuery({
+    queryKey: [`/api/projects/${PROJECT_ID}/bom`],
+    enabled: seeded,
+    select: (data: any[]) => data.map((item: any): BomItem => ({
+      ...item,
+      id: String(item.id),
+    })),
+  });
+
+  const validationQuery = useQuery({
+    queryKey: [`/api/projects/${PROJECT_ID}/validation`],
+    enabled: seeded,
+    select: (data: any[]) => data.map((issue: any): ValidationIssue => ({
+      ...issue,
+      id: String(issue.id),
+    })),
+  });
+
+  const chatQuery = useQuery({
+    queryKey: [`/api/projects/${PROJECT_ID}/chat`],
+    enabled: seeded,
+    select: (data: any[]) => data.map((msg: any): ChatMessage => ({
+      id: String(msg.id),
+      role: msg.role,
+      content: msg.content,
+      timestamp: new Date(msg.timestamp).getTime(),
+      mode: msg.mode,
+    })),
+  });
+
+  const historyQuery = useQuery({
+    queryKey: [`/api/projects/${PROJECT_ID}/history`],
+    enabled: seeded,
+    select: (data: any[]) => data.map((item: any): ProjectHistoryItem => ({
+      id: String(item.id),
+      action: item.action,
+      user: item.user,
+      timestamp: formatTimeAgo(item.timestamp),
+    })),
+  });
+
+  const saveNodesMutation = useMutation({
+    mutationFn: async (nodes: Node[]) => {
+      const body = nodes.map(node => ({
+        nodeId: node.id,
+        nodeType: node.data.type,
+        label: node.data.label,
+        positionX: node.position.x,
+        positionY: node.position.y,
+        data: { description: node.data.description },
+      }));
+      await apiRequest('PUT', `/api/projects/${PROJECT_ID}/nodes`, body);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/nodes`] });
+    },
+  });
+
+  const saveEdgesMutation = useMutation({
+    mutationFn: async (edges: Edge[]) => {
+      const body = edges.map(edge => ({
+        edgeId: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        animated: edge.animated ?? false,
+        style: edge.style,
+      }));
+      await apiRequest('PUT', `/api/projects/${PROJECT_ID}/edges`, body);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/edges`] });
+    },
+  });
+
+  const addChatMutation = useMutation({
+    mutationFn: async (msg: { role: string; content: string; mode?: string }) => {
+      await apiRequest('POST', `/api/projects/${PROJECT_ID}/chat`, msg);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/chat`] });
+    },
+  });
+
+  const addHistoryMutation = useMutation({
+    mutationFn: async (data: { action: string; user: string }) => {
+      await apiRequest('POST', `/api/projects/${PROJECT_ID}/history`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/history`] });
+    },
+  });
+
+  const addValidationIssueMutation = useMutation({
+    mutationFn: async (issue: { severity: string; message: string; componentId?: string; suggestion?: string }) => {
+      await apiRequest('POST', `/api/projects/${PROJECT_ID}/validation`, issue);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/validation`] });
+    },
+  });
+
+  const setNodes = (nodes: Node[]) => {
+    saveNodesMutation.mutate(nodes);
+  };
+
+  const setEdges = (edges: Edge[]) => {
+    saveEdgesMutation.mutate(edges);
+  };
+
+  const addMessage = (msg: ChatMessage) => {
+    addChatMutation.mutate({ role: msg.role, content: msg.content, mode: msg.mode });
+  };
+
+  const addToHistory = (action: string, user: 'User' | 'AI') => {
+    addHistoryMutation.mutate({ action, user });
+  };
+
+  const runValidation = () => {
+    addValidationIssueMutation.mutate({
+      severity: 'info',
+      message: 'Check I2C pull-up resistor values for SHT40',
+      componentId: '4',
+      suggestion: 'Recommended 4.7kΩ for 100kHz standard mode.',
+    });
+  };
+
+  const isLoading = !seeded || nodesQuery.isLoading || edgesQuery.isLoading || bomQuery.isLoading || validationQuery.isLoading || chatQuery.isLoading || historyQuery.isLoading;
+
+  if (isLoading) {
+    return null;
+  }
+
   return (
     <ProjectContext.Provider value={{
       activeView, setActiveView,
-      nodes, edges, setNodes, setEdges,
+      nodes: nodesQuery.data ?? [],
+      edges: edgesQuery.data ?? [],
+      setNodes, setEdges,
       schematicSheets, activeSheetId, setActiveSheetId,
-      bom, bomSettings, setBomSettings,
-      issues, runValidation,
-      messages, addMessage, isGenerating, setIsGenerating,
-      history, addToHistory,
-      outputLog, addOutputLog
+      bom: bomQuery.data ?? [],
+      bomSettings, setBomSettings,
+      issues: validationQuery.data ?? [],
+      runValidation,
+      messages: chatQuery.data ?? [],
+      addMessage, isGenerating, setIsGenerating,
+      history: historyQuery.data ?? [],
+      addToHistory,
+      outputLog, addOutputLog,
+      isLoading,
     }}>
       {children}
     </ProjectContext.Provider>

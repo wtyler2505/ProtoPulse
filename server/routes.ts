@@ -118,6 +118,14 @@ export async function registerRoutes(
     res.json(issues);
   });
 
+  app.post("/api/projects/:id/validation", async (req, res) => {
+    const projectId = Number(req.params.id);
+    const parsed = insertValidationIssueSchema.omit({ projectId: true }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    const issue = await storage.createValidationIssue({ ...parsed.data, projectId });
+    res.status(201).json(issue);
+  });
+
   app.put("/api/projects/:id/validation", async (req, res) => {
     const projectId = Number(req.params.id);
     const issuesArray = z.array(insertValidationIssueSchema.omit({ projectId: true })).safeParse(req.body);
