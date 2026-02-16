@@ -70,7 +70,7 @@ Request validation uses Zod schemas generated from Drizzle table definitions via
 
 1. **Shared Schema**: The `shared/` directory contains the database schema that's imported by both client and server, ensuring type safety across the full stack.
 2. **Single Project Focus**: The current UI defaults to `PROJECT_ID = 1`, suggesting a single-project-at-a-time workflow (though the API supports multiple projects).
-3. **Simulated AI**: The chat panel currently uses simulated/mock AI responses rather than a real AI integration. The build script includes `@google/generative-ai` and `openai` in the bundle allowlist, indicating planned AI integration.
+3. **AI Command System**: The chat panel uses a `processAICommand()` function that detects user intent via keyword matching and executes actions across the entire app (view switching, node/edge CRUD, BOM management, validation, project renaming, CSV export, etc.). Responses are prefixed with `[ACTION]` when an action is performed. The build script includes `@google/generative-ai` and `openai` in the bundle allowlist for future real AI integration.
 4. **Component Library**: Heavy use of shadcn/ui components provides a consistent, accessible UI foundation without external component library lock-in.
 
 ## External Dependencies
