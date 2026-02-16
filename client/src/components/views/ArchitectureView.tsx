@@ -22,47 +22,80 @@ function ArchitectureFlow() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useReactFlow();
 
-  const isInitialMount = useRef(true);
-  const saveTimer = useRef<NodeJS.Timeout>();
+  const nodesMountSkip = useRef(true);
+  const edgesMountSkip = useRef(true);
+  const nodeSaveTimer = useRef<NodeJS.Timeout>();
+  const edgeSaveTimer = useRef<NodeJS.Timeout>();
+  const userInteracted = useRef(false);
+  const prevContextNodes = useRef(nodes);
+  const prevContextEdges = useRef(edges);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    if (prevContextNodes.current !== nodes && !userInteracted.current) {
+      setLocalNodes(nodes);
+    }
+    prevContextNodes.current = nodes;
+  }, [nodes, setLocalNodes]);
+
+  useEffect(() => {
+    if (prevContextEdges.current !== edges && !userInteracted.current) {
+      setLocalEdges(edges);
+    }
+    prevContextEdges.current = edges;
+  }, [edges, setLocalEdges]);
+
+  useEffect(() => {
+    if (nodesMountSkip.current) {
+      nodesMountSkip.current = false;
       return;
     }
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
+    if (!userInteracted.current) return;
+    clearTimeout(nodeSaveTimer.current);
+    nodeSaveTimer.current = setTimeout(() => {
       setNodes(localNodes);
-    }, 1000);
-    return () => clearTimeout(saveTimer.current);
+      userInteracted.current = false;
+    }, 1500);
+    return () => clearTimeout(nodeSaveTimer.current);
   }, [localNodes]);
 
   useEffect(() => {
-    if (isInitialMount.current) return;
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
+    if (edgesMountSkip.current) {
+      edgesMountSkip.current = false;
+      return;
+    }
+    if (!userInteracted.current) return;
+    clearTimeout(edgeSaveTimer.current);
+    edgeSaveTimer.current = setTimeout(() => {
       setEdges(localEdges);
-    }, 1000);
-    return () => clearTimeout(saveTimer.current);
+      userInteracted.current = false;
+    }, 1500);
+    return () => clearTimeout(edgeSaveTimer.current);
   }, [localEdges]);
+
+  const markInteracted = useCallback(() => { userInteracted.current = true; }, []);
 
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
+      markInteracted();
       setLocalNodes((nds) => nds.filter((n) => !deleted.find((d) => d.id === n.id)));
     },
-    [setLocalNodes],
+    [setLocalNodes, markInteracted],
   );
 
   const onEdgesDelete = useCallback(
     (deleted: Edge[]) => {
+      markInteracted();
       setLocalEdges((eds) => eds.filter((e) => !deleted.find((d) => d.id === e.id)));
     },
-    [setLocalEdges],
+    [setLocalEdges, markInteracted],
   );
 
   const onConnect = useCallback(
-    (params: Connection) => setLocalEdges((eds) => addEdge(params, eds)),
-    [setLocalEdges],
+    (params: Connection) => {
+      markInteracted();
+      setLocalEdges((eds) => addEdge(params, eds));
+    },
+    [setLocalEdges, markInteracted],
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -88,9 +121,10 @@ function ArchitectureFlow() {
         data: { label, type },
       };
 
+      markInteracted();
       setLocalNodes((nds) => nds.concat(newNode));
     },
-    [setLocalNodes],
+    [setLocalNodes, markInteracted],
   );
 
   const onDragStart = (event: React.DragEvent, nodeType: string, label: string) => {
@@ -149,6 +183,7 @@ function ArchitectureFlow() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onNodeDragStop={() => markInteracted()}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onNodesDelete={onNodesDelete}
