@@ -28,6 +28,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
   const { activeView, setActiveView, schematicSheets, activeSheetId, setActiveSheetId, history } = useProject();
   const [blocksExpanded, setBlocksExpanded] = useState(true);
   const [schematicsExpanded, setSchematicsExpanded] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
 
   if (collapsed) {
     return null;
@@ -78,6 +79,8 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
             setBlocksExpanded={setBlocksExpanded}
             schematicsExpanded={schematicsExpanded}
             setSchematicsExpanded={setSchematicsExpanded}
+            showSettings={showSettings}
+            setShowSettings={setShowSettings}
           />
         </div>
       </div>
@@ -87,7 +90,8 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
 
 function SidebarContent({
   activeView, setActiveView, schematicSheets, activeSheetId, setActiveSheetId, history,
-  blocksExpanded, setBlocksExpanded, schematicsExpanded, setSchematicsExpanded
+  blocksExpanded, setBlocksExpanded, schematicsExpanded, setSchematicsExpanded,
+  showSettings, setShowSettings
 }: any) {
   return (
     <>
@@ -118,7 +122,10 @@ function SidebarContent({
               {blocksExpanded && (
                 <div className="pl-8 pr-2 py-1 space-y-1">
                   {['MCU (ESP32)', 'Power (PMU)', 'Comms (LoRa)', 'Sensors'].map((block) => (
-                    <div key={block} className="text-xs text-muted-foreground hover:text-primary cursor-pointer py-0.5 flex items-center gap-2">
+                    <div key={block} 
+                      className="text-xs text-muted-foreground hover:text-primary cursor-pointer py-0.5 flex items-center gap-2"
+                      onClick={() => setActiveView('architecture')}
+                    >
                       <div className="w-1 h-1 bg-muted-foreground/50"></div>
                       {block}
                     </div>
@@ -189,10 +196,24 @@ function SidebarContent({
       </div>
 
       <div className="p-3 border-t border-sidebar-border bg-sidebar/50">
-        <button className="w-full flex items-center gap-2 p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
+        <button 
+          data-testid="button-project-settings"
+          className="w-full flex items-center gap-2 p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
+          onClick={() => setShowSettings(!showSettings)}
+        >
           <Settings className="w-4 h-4" />
           <span className="text-xs font-medium">Project Settings</span>
         </button>
+        {showSettings && (
+          <div className="px-3 pb-3 space-y-2 border-t border-border pt-2 mt-1">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Project Name</div>
+            <div className="text-xs font-medium text-foreground">Smart_Agro_Node_v1</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Description</div>
+            <div className="text-xs text-muted-foreground">IoT Agriculture Sensor Node</div>
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Version</div>
+            <div className="text-xs font-mono text-primary">v1.0.0-alpha</div>
+          </div>
+        )}
       </div>
     </>
   );
