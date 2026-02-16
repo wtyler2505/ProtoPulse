@@ -32,6 +32,7 @@ export interface IStorage {
 
   getValidationIssues(projectId: number): Promise<ValidationIssue[]>;
   createValidationIssue(issue: InsertValidationIssue): Promise<ValidationIssue>;
+  deleteValidationIssue(id: number): Promise<void>;
   deleteValidationIssuesByProject(projectId: number): Promise<void>;
   bulkCreateValidationIssues(issues: InsertValidationIssue[]): Promise<ValidationIssue[]>;
 
@@ -118,6 +119,10 @@ export class DatabaseStorage implements IStorage {
   async createValidationIssue(issue: InsertValidationIssue): Promise<ValidationIssue> {
     const [created] = await db.insert(validationIssues).values(issue).returning();
     return created;
+  }
+
+  async deleteValidationIssue(id: number): Promise<void> {
+    await db.delete(validationIssues).where(eq(validationIssues.id, id));
   }
 
   async deleteValidationIssuesByProject(projectId: number): Promise<void> {

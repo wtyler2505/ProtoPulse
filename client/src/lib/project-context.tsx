@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -84,12 +84,16 @@ interface ProjectState {
     manufacturingDate: Date;
   };
   setBomSettings: (settings: any) => void;
+  addBomItem: (item: Omit<BomItem, 'id'>) => void;
+  deleteBomItem: (id: number) => void;
+  updateBomItem: (id: number, data: Partial<BomItem>) => void;
 
   issues: ValidationIssue[];
   runValidation: () => void;
+  deleteValidationIssue: (id: number) => void;
 
   messages: ChatMessage[];
-  addMessage: (msg: ChatMessage) => void;
+  addMessage: (msg: ChatMessage | string) => void;
   isGenerating: boolean;
   setIsGenerating: (bg: boolean) => void;
 
@@ -116,8 +120,18 @@ function formatTimeAgo(timestamp: string): string {
   return `${Math.floor(diffH / 24)}d ago`;
 }
 
+const validationChecks = [
+  { severity: 'info', message: 'Check I2C pull-up resistor values for SHT40', componentId: '4', suggestion: 'Recommended 4.7kΩ for 100kHz standard mode.' },
+  { severity: 'warning', message: 'No ESD protection on USB-C data lines', componentId: '5', suggestion: 'Add TVS diode array (e.g., USBLC6-2SC6) for ESD protection.' },
+  { severity: 'info', message: 'Consider adding watchdog timer configuration', componentId: '1', suggestion: 'Enable ESP32 hardware WDT with 5s timeout for field reliability.' },
+  { severity: 'warning', message: 'Battery reverse polarity protection missing', componentId: '2', suggestion: 'Add P-channel MOSFET or Schottky diode for reverse polarity protection.' },
+  { severity: 'error', message: 'SPI bus contention possible without proper CS management', componentId: '3', suggestion: 'Ensure CS lines have pull-up resistors and are properly sequenced.' },
+  { severity: 'info', message: 'Power sequencing not defined for multi-rail design', componentId: '2', suggestion: 'Define power-up sequence: 3.3V → 1.8V → I/O to prevent latch-up.' },
+];
+
 export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const validationCheckIndex = useRef(0);
 
   const [seeded, setSeeded] = useState(false);
 
@@ -283,6 +297,42 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
+  const addBomItemMutation = useMutation({
+    mutationFn: async (item: Omit<BomItem, 'id'>) => {
+      await apiRequest('POST', `/api/projects/${PROJECT_ID}/bom`, item);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
+    },
+  });
+
+  const deleteBomItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest('DELETE', `/api/bom/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
+    },
+  });
+
+  const updateBomItemMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<BomItem> }) => {
+      await apiRequest('PATCH', `/api/bom/${id}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
+    },
+  });
+
+  const deleteValidationIssueMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest('DELETE', `/api/validation/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/validation`] });
+    },
+  });
+
   const setNodes = (nodes: Node[]) => {
     saveNodesMutation.mutate(nodes);
   };
@@ -291,8 +341,12 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     saveEdgesMutation.mutate(edges);
   };
 
-  const addMessage = (msg: ChatMessage) => {
-    addChatMutation.mutate({ role: msg.role, content: msg.content, mode: msg.mode });
+  const addMessage = (msg: ChatMessage | string) => {
+    if (typeof msg === 'string') {
+      addChatMutation.mutate({ role: 'user', content: msg });
+    } else {
+      addChatMutation.mutate({ role: msg.role, content: msg.content, mode: msg.mode });
+    }
   };
 
   const addToHistory = (action: string, user: 'User' | 'AI') => {
@@ -300,13 +354,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   };
 
   const runValidation = () => {
-    addValidationIssueMutation.mutate({
-      severity: 'info',
-      message: 'Check I2C pull-up resistor values for SHT40',
-      componentId: '4',
-      suggestion: 'Recommended 4.7kΩ for 100kHz standard mode.',
-    });
+    const check = validationChecks[validationCheckIndex.current % validationChecks.length];
+    validationCheckIndex.current += 1;
+    addValidationIssueMutation.mutate(check);
   };
+
+  const addBomItem = (item: Omit<BomItem, 'id'>) => addBomItemMutation.mutate(item);
+  const deleteBomItemFn = (id: number) => deleteBomItemMutation.mutate(id);
+  const updateBomItemFn = (id: number, data: Partial<BomItem>) => updateBomItemMutation.mutate({ id, data });
+  const deleteValidationIssue = (id: number) => deleteValidationIssueMutation.mutate(id);
 
   const isLoading = !seeded || nodesQuery.isLoading || edgesQuery.isLoading || bomQuery.isLoading || validationQuery.isLoading || chatQuery.isLoading || historyQuery.isLoading;
 
@@ -323,8 +379,10 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       schematicSheets, activeSheetId, setActiveSheetId,
       bom: bomQuery.data ?? [],
       bomSettings, setBomSettings,
+      addBomItem, deleteBomItem: deleteBomItemFn, updateBomItem: updateBomItemFn,
       issues: validationQuery.data ?? [],
       runValidation,
+      deleteValidationIssue,
       messages: chatQuery.data ?? [],
       addMessage, isGenerating, setIsGenerating,
       history: historyQuery.data ?? [],

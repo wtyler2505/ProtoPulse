@@ -126,6 +126,11 @@ export async function registerRoutes(
     res.status(201).json(issue);
   });
 
+  app.delete("/api/validation/:id", async (req, res) => {
+    await storage.deleteValidationIssue(Number(req.params.id));
+    res.status(204).end();
+  });
+
   app.put("/api/projects/:id/validation", async (req, res) => {
     const projectId = Number(req.params.id);
     const issuesArray = z.array(insertValidationIssueSchema.omit({ projectId: true })).safeParse(req.body);
