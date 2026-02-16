@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProject } from '@/lib/project-context';
-import { Search, Plus, Cpu, Battery, Radio, Activity, Zap, Component } from 'lucide-react';
+import { Search, Plus, Cpu, Battery, Radio, Activity, Zap, Component, X } from 'lucide-react';
 
 const categories = [
   { id: 'all', label: 'All', icon: Component },
@@ -22,7 +22,12 @@ const assets = [
   { id: '8', type: 'sensor', name: 'L86 GNSS', desc: 'GPS/GLONASS patch antenna module' },
 ];
 
-export default function AssetManager({ onDragStart }: { onDragStart: (event: React.DragEvent, nodeType: string, label: string) => void }) {
+interface AssetManagerProps {
+  onDragStart: (event: React.DragEvent, nodeType: string, label: string) => void;
+  onClose?: () => void;
+}
+
+export default function AssetManager({ onDragStart, onClose }: AssetManagerProps) {
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
 
@@ -32,12 +37,23 @@ export default function AssetManager({ onDragStart }: { onDragStart: (event: Rea
   );
 
   return (
-    <div className="absolute top-4 left-4 z-20 w-64 bg-card/90 backdrop-blur border border-border shadow-xl flex flex-col max-h-[calc(100%-2rem)] animate-in fade-in slide-in-from-left-2 duration-300">
+    <div className="fixed inset-x-0 top-0 bottom-0 z-30 md:absolute md:top-4 md:left-4 md:bottom-auto md:right-auto md:inset-x-auto md:w-64 bg-card/90 backdrop-blur border border-border shadow-xl flex flex-col max-h-full md:max-h-[calc(100%-2rem)] animate-in fade-in slide-in-from-left-2 duration-300">
       <div className="p-3 border-b border-border">
-        <h3 className="font-display font-bold text-sm mb-2 flex items-center gap-2">
-          <Component className="w-4 h-4 text-primary" />
-          Asset Library
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-display font-bold text-sm flex items-center gap-2">
+            <Component className="w-4 h-4 text-primary" />
+            Asset Library
+          </h3>
+          {onClose && (
+            <button
+              data-testid="asset-manager-close"
+              className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors md:hidden"
+              onClick={onClose}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input 

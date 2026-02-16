@@ -15,15 +15,14 @@ export default function ProcurementView() {
 
   return (
     <div className="h-full flex flex-col bg-background/50">
-      {/* Toolbar */}
-      <div className="p-4 border-b border-border flex items-center justify-between bg-card/30 backdrop-blur">
-        <div className="flex items-center gap-4">
+      <div className="p-4 border-b border-border flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-card/30 backdrop-blur">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <input 
               type="text" 
               placeholder="Search components..." 
-              className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus:outline-none focus:border-primary w-64 transition-all"
+              className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus:outline-none focus:border-primary w-full sm:w-64 transition-all"
             />
           </div>
           <Button 
@@ -37,8 +36,8 @@ export default function ProcurementView() {
           </Button>
         </div>
         
-        <div className="flex items-center gap-6">
-          <div className="text-right">
+        <div className="flex items-center gap-4 md:gap-6">
+          <div className="text-right flex-1 md:flex-none">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Estimated BOM Cost</div>
             <div className="text-xl font-mono font-bold text-primary flex items-baseline justify-end gap-1">
               ${totalCost.toFixed(2)}
@@ -51,7 +50,6 @@ export default function ProcurementView() {
         </div>
       </div>
 
-      {/* Advanced Settings Panel */}
       {showSettings && (
         <div className="bg-muted/20 border-b border-border p-6 grid grid-cols-1 md:grid-cols-4 gap-8 animate-in slide-in-from-top-2">
           <div className="space-y-4">
@@ -107,10 +105,9 @@ export default function ProcurementView() {
         </div>
       )}
 
-      {/* Main Table */}
-      <div className="flex-1 overflow-auto p-6">
-        <div className="border border-border overflow-hidden bg-card shadow-sm">
-          <table className="w-full text-sm text-left">
+      <div className="flex-1 overflow-auto p-3 md:p-6">
+        <div className="border border-border overflow-hidden bg-card shadow-sm overflow-x-auto">
+          <table className="w-full text-sm text-left min-w-[800px]">
             <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-4 py-3">Status</th>
