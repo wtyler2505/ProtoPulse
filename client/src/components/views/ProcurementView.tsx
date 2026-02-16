@@ -1,20 +1,70 @@
 import { useState } from 'react';
 import { useProject } from '@/lib/project-context';
-import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-export default function ProcurementView() {
-  const { bom, bomSettings, setBomSettings } = useProject();
-  const [showSettings, setShowSettings] = useState(false);
+const supplierUrls: Record<string, string> = {
+  'Mouser': 'https://www.mouser.com/Search/Refine?Keyword=',
+  'Digi-Key': 'https://www.digikey.com/en/products/result?keywords=',
+  'LCSC': 'https://www.lcsc.com/search?q=',
+};
 
-  const totalCost = bom.reduce((acc, item) => acc + item.totalPrice, 0);
+export default function ProcurementView() {
+  const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem } = useProject();
+  const [showSettings, setShowSettings] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [optimizationGoal, setOptimizationGoal] = useState('Cost');
+
+  const filteredBom = bom.filter(item => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      item.partNumber.toLowerCase().includes(term) ||
+      item.manufacturer.toLowerCase().includes(term) ||
+      item.description.toLowerCase().includes(term) ||
+      item.supplier.toLowerCase().includes(term)
+    );
+  });
+
+  const totalCost = filteredBom.reduce((acc, item) => acc + item.totalPrice, 0);
+
+  const handleExportCSV = () => {
+    const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Stock', 'Status'];
+    const rows = filteredBom.map(item => [
+      item.partNumber, item.manufacturer, item.description, item.quantity,
+      item.unitPrice.toFixed(4), item.totalPrice.toFixed(2), item.supplier,
+      item.stock, item.status
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bom_export.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleAddItem = () => {
+    addBomItem({
+      partNumber: 'NEW-PART',
+      manufacturer: 'Unknown',
+      description: 'New component',
+      quantity: 1,
+      unitPrice: 0,
+      totalPrice: 0,
+      supplier: 'Digi-Key',
+      stock: 0,
+      status: 'Out of Stock',
+    });
+  };
 
   return (
-    <div className="h-full flex flex-col bg-background/50">
+    <div className="h-full flex flex-col bg-background/50" data-testid="procurement-view">
       <div className="p-4 border-b border-border flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-card/30 backdrop-blur">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <div className="relative group">
@@ -22,6 +72,9 @@ export default function ProcurementView() {
             <input 
               type="text" 
               placeholder="Search components..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              data-testid="input-search-bom"
               className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus:outline-none focus:border-primary w-full sm:w-64 transition-all"
             />
           </div>
@@ -30,28 +83,38 @@ export default function ProcurementView() {
             size="sm" 
             className={showSettings ? "bg-primary/10 border-primary text-primary" : ""}
             onClick={() => setShowSettings(!showSettings)}
+            data-testid="button-toggle-settings"
           >
             <SlidersHorizontal className="w-4 h-4 mr-2" />
             Cost Optimisation
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleAddItem}
+            data-testid="button-add-bom-item"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Item
           </Button>
         </div>
         
         <div className="flex items-center gap-4 md:gap-6">
           <div className="text-right flex-1 md:flex-none">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Estimated BOM Cost</div>
-            <div className="text-xl font-mono font-bold text-primary flex items-baseline justify-end gap-1">
+            <div className="text-xl font-mono font-bold text-primary flex items-baseline justify-end gap-1" data-testid="text-total-cost">
               ${totalCost.toFixed(2)}
               <span className="text-xs text-muted-foreground font-sans font-normal">/ unit @ 1k qty</span>
             </div>
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleExportCSV} data-testid="button-export-csv">
             <Download className="w-4 h-4 mr-2" /> Export CSV
           </Button>
         </div>
       </div>
 
       {showSettings && (
-        <div className="bg-muted/20 border-b border-border p-6 grid grid-cols-1 md:grid-cols-4 gap-8 animate-in slide-in-from-top-2">
+        <div className="bg-muted/20 border-b border-border p-6 grid grid-cols-1 md:grid-cols-4 gap-8 animate-in slide-in-from-top-2" data-testid="panel-settings">
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Production Batch Size</h4>
             <div className="flex items-center gap-4">
@@ -61,8 +124,9 @@ export default function ProcurementView() {
                 step={100} 
                 className="flex-1"
                 onValueChange={([v]) => setBomSettings({...bomSettings, batchSize: v})}
+                data-testid="slider-batch-size"
               />
-              <span className="font-mono text-sm w-16 text-right">{bomSettings.batchSize}</span>
+              <span className="font-mono text-sm w-16 text-right" data-testid="text-batch-size">{bomSettings.batchSize}</span>
             </div>
           </div>
           
@@ -75,8 +139,9 @@ export default function ProcurementView() {
                 step={1} 
                 className="flex-1"
                  onValueChange={([v]) => setBomSettings({...bomSettings, maxCost: v})}
+                data-testid="slider-max-cost"
               />
-              <span className="font-mono text-sm w-16 text-right">${bomSettings.maxCost}</span>
+              <span className="font-mono text-sm w-16 text-right" data-testid="text-max-cost">${bomSettings.maxCost}</span>
             </div>
           </div>
 
@@ -84,11 +149,11 @@ export default function ProcurementView() {
              <h4 className="text-sm font-medium text-foreground">Sourcing Constraints</h4>
              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">In Stock Only</span>
-                <Switch checked={bomSettings.inStockOnly} onCheckedChange={(v) => setBomSettings({...bomSettings, inStockOnly: v})} />
+                <Switch checked={bomSettings.inStockOnly} onCheckedChange={(v) => setBomSettings({...bomSettings, inStockOnly: v})} data-testid="switch-in-stock-only" />
              </div>
              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Preferred Suppliers</span>
-                <span className="text-xs text-primary cursor-pointer hover:underline">Edit List</span>
+                <span className="text-xs text-primary cursor-pointer hover:underline" data-testid="link-edit-suppliers">Edit List</span>
              </div>
           </div>
 
@@ -96,7 +161,15 @@ export default function ProcurementView() {
              <h4 className="text-sm font-medium text-foreground">Optimization Goal</h4>
              <div className="flex gap-2">
                 {['Cost', 'Power', 'Size', 'Avail'].map(goal => (
-                  <button key={goal} className="px-3 py-1 border border-border text-xs hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors first:bg-primary/10 first:border-primary first:text-primary">
+                  <button
+                    key={goal}
+                    onClick={() => setOptimizationGoal(goal)}
+                    data-testid={`button-goal-${goal.toLowerCase()}`}
+                    className={cn(
+                      "px-3 py-1 border border-border text-xs hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors",
+                      optimizationGoal === goal && "bg-primary/10 border-primary text-primary"
+                    )}
+                  >
                     {goal}
                   </button>
                 ))}
@@ -107,7 +180,7 @@ export default function ProcurementView() {
 
       <div className="flex-1 overflow-auto p-3 md:p-6">
         <div className="border border-border overflow-hidden bg-card shadow-sm overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[800px]">
+          <table className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
             <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-4 py-3">Status</th>
@@ -123,8 +196,8 @@ export default function ProcurementView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {bom.map((item) => (
-                <tr key={item.id} className="hover:bg-muted/30 transition-colors group">
+              {filteredBom.map((item) => (
+                <tr key={item.id} className="hover:bg-muted/30 transition-colors group" data-testid={`row-bom-${item.id}`}>
                   <td className="px-4 py-3">
                     <span className={cn("inline-flex items-center px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
                       item.status === 'In Stock' 
@@ -132,21 +205,32 @@ export default function ProcurementView() {
                         : item.status === 'Low Stock'
                         ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                         : 'bg-destructive/10 text-destructive border-destructive/20'
-                    )}>
+                    )} data-testid={`status-bom-${item.id}`}>
                       {item.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 font-mono font-medium text-foreground text-xs">{item.partNumber}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{item.manufacturer}</td>
-                  <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{item.description}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{item.supplier}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">{item.stock.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs">{item.quantity}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground">${item.unitPrice.toFixed(4)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${item.totalPrice.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>{item.partNumber}</td>
+                  <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
+                  <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
+                  <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
+                  <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
+                  <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${item.unitPrice.toFixed(4)}</td>
+                  <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${item.totalPrice.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right flex gap-1">
+                    <button
+                      className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => window.open((supplierUrls[item.supplier] || '') + item.partNumber, '_blank')}
+                      data-testid={`button-cart-${item.id}`}
+                    >
                       <ShoppingCart className="w-4 h-4" />
+                    </button>
+                    <button
+                      className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => deleteBomItem(Number(item.id))}
+                      data-testid={`button-delete-${item.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </td>
                 </tr>

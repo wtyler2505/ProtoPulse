@@ -3,7 +3,7 @@ import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle } from 
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function ValidationView() {
-  const { issues, runValidation } = useProject();
+  const { issues, runValidation, deleteValidationIssue, addOutputLog, setActiveView } = useProject();
 
   const getIcon = (severity: string) => {
     switch (severity) {
@@ -43,7 +43,7 @@ export default function ValidationView() {
         
         <ScrollArea className="flex-1">
           {issues.map((issue) => (
-            <div key={issue.id} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
+            <div key={issue.id} data-testid={`row-issue-${issue.id}`} onClick={() => { if (issue.componentId) { setActiveView('architecture'); } }} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
               <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
                 {getIcon(issue.severity)}
                 <span className="text-xs font-medium uppercase md:hidden">{issue.severity}</span>
@@ -61,7 +61,7 @@ export default function ValidationView() {
                 {issue.componentId || 'GLOBAL'}
               </div>
               <div className="md:w-32">
-                 <button className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
+                 <button data-testid={`button-autofix-${issue.id}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(Number(issue.id)); addOutputLog(`[AUTO-FIX] Resolved: ${issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
                    Auto-Fix
                  </button>
               </div>
