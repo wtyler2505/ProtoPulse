@@ -17,6 +17,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const { messages, addMessage, isGenerating, setIsGenerating, runValidation, setNodes, setEdges } = useProject();
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<'chat' | 'image' | 'video'>('chat');
+  const [showQuickActions, setShowQuickActions] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -25,15 +26,15 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     }
   }, [messages, isGenerating]);
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (messageOverride?: string) => {
+    const msgText = messageOverride || input;
+    if (!msgText.trim()) return;
     
-    const userMsg = input;
     setInput('');
     addMessage({
       id: Date.now().toString(),
       role: 'user',
-      content: userMsg,
+      content: msgText,
       timestamp: Date.now(),
       mode: mode
     });
@@ -41,16 +42,32 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     setIsGenerating(true);
 
     setTimeout(() => {
-      let response = "I've processed your request.";
-      const lowerMsg = userMsg.toLowerCase();
+      let response = "I've analyzed your design and everything looks good. Let me know if you'd like me to review specific subsystems.";
+      const lowerMsg = msgText.toLowerCase();
 
       if (lowerMsg.includes('schematic') || lowerMsg.includes('generate')) {
-        response = "I've generated a preliminary block diagram for the agriculture sensor node. It includes the ESP32-S3, LoRa transceiver, and power management units.";
-      } else if (lowerMsg.includes('bom') || lowerMsg.includes('cost')) {
-        response = "I've optimized the BOM. Switched the LDO to a lower-cost alternative from Texas Instruments. Total estimated savings: $0.45 per unit.";
-      } else if (lowerMsg.includes('validate') || lowerMsg.includes('check')) {
+        response = "I've generated a preliminary block diagram for the agriculture sensor node. It includes the ESP32-S3, LoRa transceiver, and power management units. All connections follow standard bus protocols.";
+      } else if (lowerMsg.includes('bom') || lowerMsg.includes('cost') || lowerMsg.includes('optimize')) {
+        response = "BOM optimization complete. I found alternative sourcing for 2 components:\n• TP4056 → MCP73831 (saves $0.08/unit, same footprint)\n• USB connector → alternate GCT part (saves $0.12/unit)\nTotal savings: $0.20/unit at 1k qty.";
+      } else if (lowerMsg.includes('validate') || lowerMsg.includes('check') || lowerMsg.includes('error')) {
         runValidation();
-        response = "Validation complete. I found a potential issue with the RF impedance matching on the LoRa module path.";
+        response = "Design rule check complete. I've identified potential issues in your design. Switch to the Validation tab to review findings and apply suggested fixes.";
+      } else if (lowerMsg.includes('memory') || lowerMsg.includes('ram') || lowerMsg.includes('storage')) {
+        response = "For the ESP32-S3, I recommend adding external PSRAM (ESP-PSRAM64H, 8MB). Connect via the dedicated SPI interface on GPIO 33-37. This gives you enough buffer for sensor data logging and OTA update staging.";
+      } else if (lowerMsg.includes('power') || lowerMsg.includes('battery')) {
+        response = "Power analysis summary:\n• Active mode: ~180mA (Wi-Fi TX)\n• Deep sleep: ~10µA\n• Battery life (2000mAh): ~45 days at 1 reading/hour\nRecommendation: Add a solar cell (5V/500mA) with MPPT for indefinite operation.";
+      } else if (lowerMsg.includes('antenna') || lowerMsg.includes('rf')) {
+        response = "RF design recommendations:\n• LoRa antenna: Use a spring-type 868/915MHz antenna with SMA connector\n• Match impedance to 50Ω using Pi-network (L=3.3nH, C1=1.5pF, C2=1.8pF)\n• Keep RF trace width at 0.7mm for FR4 substrate (εr=4.6)";
+      } else if (lowerMsg.includes('sensor') || lowerMsg.includes('temperature')) {
+        response = "Sensor configuration optimized:\n• SHT40: Set to high-precision mode (±0.2°C accuracy)\n• I2C address: 0x44, pull-ups: 4.7kΩ to 3.3V\n• Sample rate: 1Hz recommended for thermal stability\n• Consider adding SHT40-BD1B for extended range (-40°C to +125°C).";
+      } else if (lowerMsg.includes('add') || lowerMsg.includes('component')) {
+        response = "I can help you add a component. Drag one from the Asset Library on the left, or tell me what type of component you need (MCU, sensor, power, communication, or connector) and I'll suggest specific parts.";
+      }
+
+      if (mode === 'image') {
+        response = "📐 [Schematic visualization mode] " + response;
+      } else if (mode === 'video') {
+        response = "🎬 [Simulation mode] " + response;
       }
 
       addMessage({
@@ -95,6 +112,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             handleSend={handleSend}
             scrollRef={scrollRef}
             onClose={onClose}
+            showQuickActions={showQuickActions}
+            setShowQuickActions={setShowQuickActions}
           />
         </div>
       </div>
@@ -103,7 +122,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 }
 
 function ChatContent({
-  messages, input, setInput, mode, setMode, isGenerating, handleSend, scrollRef, onClose
+  messages, input, setInput, mode, setMode, isGenerating, handleSend, scrollRef, onClose, showQuickActions, setShowQuickActions
 }: any) {
   return (
     <>
@@ -181,12 +200,12 @@ function ChatContent({
         )}
       </div>
 
-      {!isGenerating && messages.length > 0 && (
+      {showQuickActions && !isGenerating && messages.length > 0 && (
         <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
           {['Generate Schematic', 'Optimize BOM', 'Check Errors', 'Add Memory'].map((action) => (
             <button 
               key={action}
-              onClick={() => { setInput(action); handleSend(); }}
+              onClick={() => handleSend(action)}
               className="whitespace-nowrap px-3 py-1.5 bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
             >
               <Zap className="w-3 h-3" />
@@ -206,11 +225,11 @@ function ChatContent({
             className="bg-muted/30 border-border focus:border-primary pr-10 pl-10 py-5 shadow-inner"
           />
           <div className="absolute left-3 top-1/2 -translate-y-1/2">
-            <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-pointer" />
+            <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-pointer" onClick={() => setShowQuickActions(!showQuickActions)} />
           </div>
           <Button 
             size="icon" 
-            onClick={handleSend} 
+            onClick={() => handleSend()} 
             className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Send className="w-4 h-4" />

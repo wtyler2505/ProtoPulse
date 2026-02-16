@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from 'react';
-import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Connection, Edge, ReactFlowProvider } from '@xyflow/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Connection, Edge, Node, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useProject } from '@/lib/project-context';
 import CustomNode from './CustomNode';
@@ -12,12 +12,53 @@ const nodeTypes = {
 };
 
 function ArchitectureFlow() {
-  const { nodes, edges, setNodes, setEdges, isGenerating } = useProject();
+  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating } = useProject();
   const [showAssetManager, setShowAssetManager] = useState(false);
+  const [activeTool, setActiveTool] = useState<'select' | 'pan'>('select');
+  const [snapEnabled, setSnapEnabled] = useState(true);
   
   const [localNodes, setLocalNodes, onNodesChange] = useNodesState(nodes);
   const [localEdges, setLocalEdges, onEdgesChange] = useEdgesState(edges);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const reactFlowInstance = useReactFlow();
+
+  const isInitialMount = useRef(true);
+  const saveTimer = useRef<NodeJS.Timeout>();
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      setNodes(localNodes);
+    }, 1000);
+    return () => clearTimeout(saveTimer.current);
+  }, [localNodes]);
+
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      setEdges(localEdges);
+    }, 1000);
+    return () => clearTimeout(saveTimer.current);
+  }, [localEdges]);
+
+  const onNodesDelete = useCallback(
+    (deleted: Node[]) => {
+      setLocalNodes((nds) => nds.filter((n) => !deleted.find((d) => d.id === n.id)));
+    },
+    [setLocalNodes],
+  );
+
+  const onEdgesDelete = useCallback(
+    (deleted: Edge[]) => {
+      setLocalEdges((eds) => eds.filter((e) => !deleted.find((d) => d.id === e.id)));
+    },
+    [setLocalEdges],
+  );
 
   const onConnect = useCallback(
     (params: Connection) => setLocalEdges((eds) => addEdge(params, eds)),
@@ -57,6 +98,13 @@ function ArchitectureFlow() {
     event.dataTransfer.setData('application/reactflow/label', label);
     event.dataTransfer.effectAllowed = 'move';
   };
+
+  const tools = [
+    { icon: MousePointer2, id: 'select' as const, action: () => setActiveTool('select') },
+    { icon: Move, id: 'pan' as const, action: () => setActiveTool('pan') },
+    { icon: Grid, id: 'grid' as const, action: () => setSnapEnabled(!snapEnabled) },
+    { icon: Maximize, id: 'fit' as const, action: () => reactFlowInstance.fitView({ padding: 0.2 }) },
+  ];
   
   return (
     <div className="w-full h-full relative group bg-background" ref={reactFlowWrapper}>
@@ -78,9 +126,19 @@ function ArchitectureFlow() {
         >
           <Component className="w-4 h-4" />
         </button>
-        {[MousePointer2, Move, Grid, Maximize].map((Icon, i) => (
-          <button key={i} className={cn("p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors", i === 0 && "bg-primary/20 text-primary")}>
-            <Icon className="w-4 h-4" />
+        {tools.map((tool) => (
+          <button
+            key={tool.id}
+            data-testid={`tool-${tool.id}`}
+            className={cn(
+              "p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors",
+              tool.id === 'select' && activeTool === 'select' && "bg-primary/20 text-primary",
+              tool.id === 'pan' && activeTool === 'pan' && "bg-primary/20 text-primary",
+              tool.id === 'grid' && snapEnabled && "bg-primary/20 text-primary",
+            )}
+            onClick={tool.action}
+          >
+            <tool.icon className="w-4 h-4" />
           </button>
         ))}
       </div>
@@ -93,12 +151,16 @@ function ArchitectureFlow() {
         onConnect={onConnect}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        deleteKeyCode={['Backspace', 'Delete']}
         nodeTypes={nodeTypes}
         fitView
         className="bg-transparent"
         colorMode="dark"
-        snapToGrid={true}
+        snapToGrid={snapEnabled}
         snapGrid={[20, 20]}
+        panOnDrag={activeTool === 'pan'}
       >
         <Background color="#333" gap={20} size={1} />
         <Controls className="!bg-card !border-border !fill-foreground" />
@@ -129,7 +191,18 @@ function ArchitectureFlow() {
             </div>
             <h3 className="text-xl font-display font-bold text-foreground">No diagram yet</h3>
             <p className="text-muted-foreground">Ask Chat to generate a system architecture or drag components from the Asset Library.</p>
-            <button className="pointer-events-auto px-6 py-2 bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/20 hover:scale-105 transition-all">
+            <button
+              data-testid="button-generate-schematic"
+              className="pointer-events-auto px-6 py-2 bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/20 hover:scale-105 transition-all"
+              onClick={() => {
+                addMessage({ id: Date.now().toString(), role: 'user', content: 'Generate Schematic', timestamp: Date.now(), mode: 'chat' });
+                setIsGenerating(true);
+                setTimeout(() => {
+                  addMessage({ id: (Date.now()+1).toString(), role: 'assistant', content: "I've generated a preliminary block diagram. The architecture includes an MCU core, power management, communication module, and sensor subsystem.", timestamp: Date.now() });
+                  setIsGenerating(false);
+                }, 2000);
+              }}
+            >
               Generate Schematic
             </button>
           </div>
