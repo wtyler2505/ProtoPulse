@@ -12,7 +12,7 @@ export default function OutputView() {
       </div>
       <ScrollArea className="flex-1">
         {outputLog.map((log, i) => (
-          <div key={i} className="mb-1 break-all hover:bg-white/5 px-1 rounded cursor-text">
+          <div key={i} className="mb-1 break-all hover:bg-white/5 px-1 cursor-text">
             <span className="text-gray-500 mr-2">{new Date().toLocaleTimeString()}</span>
             {log}
           </div>

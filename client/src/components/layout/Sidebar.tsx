@@ -25,7 +25,7 @@ export default function Sidebar() {
     <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col h-full text-sm select-none">
       {/* Brand Header - Minimal and Clean */}
       <div className="h-14 border-b border-sidebar-border flex items-center px-4 gap-3 bg-sidebar/50">
-        <div className="w-8 h-8 bg-primary/10 rounded-md flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
+        <div className="w-8 h-8 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
           <Layers className="w-5 h-5 text-primary" />
         </div>
         <div className="flex flex-col justify-center">
@@ -48,7 +48,7 @@ export default function Sidebar() {
           <div className="mt-2 space-y-0.5">
             {/* Project Name */}
             <div className="px-4 py-1.5 flex items-center gap-2 text-foreground font-medium">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_5px_var(--color-primary)]"></div>
+              <div className="w-1.5 h-1.5 bg-primary shadow-[0_0_5px_var(--color-primary)]"></div>
               Smart_Agro_Node_v1
             </div>
 
@@ -66,7 +66,7 @@ export default function Sidebar() {
                 <div className="pl-8 pr-2 py-1 space-y-1">
                   {['MCU (ESP32)', 'Power (PMU)', 'Comms (LoRa)', 'Sensors'].map((block) => (
                     <div key={block} className="text-xs text-muted-foreground hover:text-primary cursor-pointer py-0.5 flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-muted-foreground/50"></div>
+                      <div className="w-1 h-1 bg-muted-foreground/50"></div>
                       {block}
                     </div>
                   ))}
@@ -90,7 +90,7 @@ export default function Sidebar() {
                     <div 
                       key={sheet.id} 
                       className={cn(
-                        "text-xs cursor-pointer py-1 px-2 rounded flex items-center gap-2 transition-colors",
+                        "text-xs cursor-pointer py-1 px-2 flex items-center gap-2 transition-colors",
                         activeSheetId === sheet.id && activeView === 'schematic'
                           ? "bg-primary/10 text-primary" 
                           : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -123,7 +123,7 @@ export default function Sidebar() {
             {history.map((item, idx) => (
               <div key={item.id} className="relative pl-6 group cursor-pointer">
                 <div className={cn(
-                  "absolute left-[5px] top-1.5 w-2 h-2 rounded-full border-2 border-background z-10",
+                  "absolute left-[5px] top-1.5 w-2 h-2 border-2 border-background z-10",
                   item.user === 'AI' ? "bg-primary" : "bg-muted-foreground"
                 )}></div>
                 <div className="text-xs font-medium text-foreground group-hover:text-primary transition-colors">{item.action}</div>
@@ -140,7 +140,7 @@ export default function Sidebar() {
 
       {/* Settings Footer */}
       <div className="p-3 border-t border-sidebar-border bg-sidebar/50">
-        <button className="w-full flex items-center gap-2 p-2 rounded hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
+        <button className="w-full flex items-center gap-2 p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors">
           <Settings className="w-4 h-4" />
           <span className="text-xs font-medium">Project Settings</span>
         </button>

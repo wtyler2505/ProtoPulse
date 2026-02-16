@@ -64,7 +64,7 @@ export default function SchematicView() {
 
       </svg>
 
-      <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-card/80 backdrop-blur border border-border rounded text-xs text-muted-foreground font-mono">
+      <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-card/80 backdrop-blur border border-border text-xs text-muted-foreground font-mono">
         MODE: SCHEMATIC // READ-ONLY
       </div>
     </div>

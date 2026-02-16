@@ -23,7 +23,7 @@ export default function ProcurementView() {
             <input 
               type="text" 
               placeholder="Search components..." 
-              className="pl-9 pr-4 py-2 bg-muted/30 border border-border rounded text-sm focus:outline-none focus:border-primary w-64 transition-all"
+              className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus:outline-none focus:border-primary w-64 transition-all"
             />
           </div>
           <Button 
@@ -98,7 +98,7 @@ export default function ProcurementView() {
              <h4 className="text-sm font-medium text-foreground">Optimization Goal</h4>
              <div className="flex gap-2">
                 {['Cost', 'Power', 'Size', 'Avail'].map(goal => (
-                  <button key={goal} className="px-3 py-1 rounded border border-border text-xs hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors first:bg-primary/10 first:border-primary first:text-primary">
+                  <button key={goal} className="px-3 py-1 border border-border text-xs hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors first:bg-primary/10 first:border-primary first:text-primary">
                     {goal}
                   </button>
                 ))}
@@ -109,7 +109,7 @@ export default function ProcurementView() {
 
       {/* Main Table */}
       <div className="flex-1 overflow-auto p-6">
-        <div className="rounded-lg border border-border overflow-hidden bg-card shadow-sm">
+        <div className="border border-border overflow-hidden bg-card shadow-sm">
           <table className="w-full text-sm text-left">
             <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
               <tr>
@@ -129,7 +129,7 @@ export default function ProcurementView() {
               {bom.map((item) => (
                 <tr key={item.id} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-4 py-3">
-                    <span className={cn("inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border uppercase tracking-wide",
+                    <span className={cn("inline-flex items-center px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
                       item.status === 'In Stock' 
                         ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                         : item.status === 'Low Stock'
@@ -148,7 +148,7 @@ export default function ProcurementView() {
                   <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground">${item.unitPrice.toFixed(4)}</td>
                   <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${item.totalPrice.toFixed(2)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button className="p-1.5 text-primary hover:bg-primary/10 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity">
                       <ShoppingCart className="w-4 h-4" />
                     </button>
                   </td>

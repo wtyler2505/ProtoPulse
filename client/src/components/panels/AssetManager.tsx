@@ -32,7 +32,7 @@ export default function AssetManager({ onDragStart }: { onDragStart: (event: Rea
   );
 
   return (
-    <div className="absolute top-4 left-4 z-20 w-64 bg-card/90 backdrop-blur border border-border rounded-lg shadow-xl flex flex-col max-h-[calc(100%-2rem)] animate-in fade-in slide-in-from-left-2 duration-300">
+    <div className="absolute top-4 left-4 z-20 w-64 bg-card/90 backdrop-blur border border-border shadow-xl flex flex-col max-h-[calc(100%-2rem)] animate-in fade-in slide-in-from-left-2 duration-300">
       <div className="p-3 border-b border-border">
         <h3 className="font-display font-bold text-sm mb-2 flex items-center gap-2">
           <Component className="w-4 h-4 text-primary" />
@@ -41,7 +41,7 @@ export default function AssetManager({ onDragStart }: { onDragStart: (event: Rea
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <input 
-            className="w-full pl-8 pr-2 py-1.5 bg-muted/50 border border-border rounded text-xs focus:outline-none focus:border-primary transition-colors"
+            className="w-full pl-8 pr-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors"
             placeholder="Search parts..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -54,7 +54,7 @@ export default function AssetManager({ onDragStart }: { onDragStart: (event: Rea
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            className={`p-1.5 rounded-md transition-colors ${activeCategory === cat.id ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-muted'}`}
+            className={`p-1.5 transition-colors ${activeCategory === cat.id ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-muted'}`}
             title={cat.label}
           >
             <cat.icon className="w-4 h-4" />
@@ -68,7 +68,7 @@ export default function AssetManager({ onDragStart }: { onDragStart: (event: Rea
             key={asset.id}
             draggable
             onDragStart={(event) => onDragStart(event, asset.type, asset.name)}
-            className="p-2 rounded bg-muted/20 border border-transparent hover:border-primary/50 hover:bg-muted/40 cursor-grab active:cursor-grabbing group transition-all"
+            className="p-2 bg-muted/20 border border-transparent hover:border-primary/50 hover:bg-muted/40 cursor-grab active:cursor-grabbing group transition-all"
           >
             <div className="flex items-center justify-between mb-1">
               <span className="font-medium text-xs text-foreground group-hover:text-primary transition-colors">{asset.name}</span>

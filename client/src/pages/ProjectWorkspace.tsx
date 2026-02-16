@@ -34,7 +34,7 @@ function WorkspaceContent() {
               key={tab.id}
               onClick={() => setActiveView(tab.id)}
               className={cn(
-                "h-8 px-4 flex items-center gap-2 text-xs font-medium rounded-t-sm transition-all relative top-[1px]",
+                "h-8 px-4 flex items-center gap-2 text-xs font-medium transition-all relative top-[1px]",
                 activeView === tab.id
                   ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[2px] before:bg-primary"
                   : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"

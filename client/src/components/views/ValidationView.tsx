@@ -26,13 +26,13 @@ export default function ValidationView() {
         </div>
         <button 
           onClick={runValidation}
-          className="px-6 py-2 bg-primary text-primary-foreground font-medium rounded hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
+          className="px-6 py-2 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
         >
           Run DRC Checks
         </button>
       </div>
 
-      <div className="w-full max-w-5xl flex-1 overflow-hidden bg-card/50 border border-border rounded-xl backdrop-blur-sm shadow-xl flex flex-col">
+      <div className="w-full max-w-5xl flex-1 overflow-hidden bg-card/50 border border-border backdrop-blur-sm shadow-xl flex flex-col">
         <div className="flex items-center gap-6 p-4 border-b border-border bg-muted/20 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
            <div className="w-8 text-center">Sev</div>
            <div className="flex-1">Description</div>
@@ -53,11 +53,11 @@ export default function ValidationView() {
                   </div>
                 )}
               </div>
-              <div className="w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 rounded self-start text-center">
+              <div className="w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 self-start text-center">
                 {issue.componentId || 'GLOBAL'}
               </div>
               <div className="w-32">
-                 <button className="opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 rounded w-full">
+                 <button className="opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
                    Auto-Fix
                  </button>
               </div>

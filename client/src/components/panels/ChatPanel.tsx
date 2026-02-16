@@ -70,13 +70,13 @@ export default function ChatPanel() {
         </div>
         <div className="flex gap-1">
            {/* Mode Toggles */}
-           <button onClick={() => setMode('chat')} className={cn("p-1.5 rounded hover:bg-muted transition-colors", mode === 'chat' && "text-primary bg-primary/10")}>
+           <button onClick={() => setMode('chat')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'chat' && "text-primary bg-primary/10")}>
              <Bot className="w-4 h-4" />
            </button>
-           <button onClick={() => setMode('image')} className={cn("p-1.5 rounded hover:bg-muted transition-colors", mode === 'image' && "text-primary bg-primary/10")}>
+           <button onClick={() => setMode('image')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'image' && "text-primary bg-primary/10")}>
              <ImageIcon className="w-4 h-4" />
            </button>
-           <button onClick={() => setMode('video')} className={cn("p-1.5 rounded hover:bg-muted transition-colors", mode === 'video' && "text-primary bg-primary/10")}>
+           <button onClick={() => setMode('video')} className={cn("p-1.5 hover:bg-muted transition-colors", mode === 'video' && "text-primary bg-primary/10")}>
              <Video className="w-4 h-4" />
            </button>
         </div>
@@ -97,7 +97,7 @@ export default function ChatPanel() {
             msg.role === 'user' ? "flex-row-reverse" : "flex-row"
           )}>
             <div className={cn(
-              "w-8 h-8 rounded-full flex items-center justify-center shrink-0 border shadow-sm",
+              "w-8 h-8 flex items-center justify-center shrink-0 border shadow-sm",
               msg.role === 'user' ? "bg-muted text-foreground border-border" : "bg-primary/10 text-primary border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
             )}>
               {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
@@ -105,7 +105,7 @@ export default function ChatPanel() {
             
             <div className="flex flex-col gap-1 max-w-[85%]">
               <div className={cn(
-                "p-3 rounded-lg leading-relaxed shadow-sm",
+                "p-3 leading-relaxed shadow-sm",
                 msg.role === 'user' 
                   ? "bg-primary text-primary-foreground" 
                   : "bg-muted/50 border border-border text-foreground"
@@ -121,10 +121,10 @@ export default function ChatPanel() {
 
         {isGenerating && (
           <div className="flex gap-3 text-sm">
-             <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border bg-primary/10 text-primary border-primary/20">
+             <div className="w-8 h-8 flex items-center justify-center shrink-0 border bg-primary/10 text-primary border-primary/20">
               <Bot className="w-4 h-4" />
             </div>
-            <div className="bg-muted/50 border border-border text-foreground p-3 rounded-lg flex items-center gap-2">
+            <div className="bg-muted/50 border border-border text-foreground p-3 flex items-center gap-2">
               <Loader2 className="w-3 h-3 animate-spin text-primary" />
               <span className="text-xs text-muted-foreground animate-pulse">Analyzing system requirements...</span>
             </div>
@@ -139,7 +139,7 @@ export default function ChatPanel() {
             <button 
               key={action}
               onClick={() => { setInput(action); handleSend(); }}
-              className="whitespace-nowrap px-3 py-1.5 rounded-full bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
+              className="whitespace-nowrap px-3 py-1.5 bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
             >
               <Zap className="w-3 h-3" />
               {action}
@@ -164,7 +164,7 @@ export default function ChatPanel() {
           <Button 
             size="icon" 
             onClick={handleSend} 
-            className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90 rounded-sm"
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             <Send className="w-4 h-4" />
           </Button>
