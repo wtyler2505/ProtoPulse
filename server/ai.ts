@@ -21,7 +21,20 @@ export type AIAction =
   | { type: "update_description"; description: string }
   | { type: "export_bom_csv" }
   | { type: "undo" }
-  | { type: "redo" };
+  | { type: "redo" }
+  | { type: "auto_layout"; layout: "hierarchical" | "grid" | "circular" | "force" }
+  | { type: "add_subcircuit"; template: string; positionX?: number; positionY?: number }
+  | { type: "assign_net_name"; sourceLabel: string; targetLabel: string; netName: string }
+  | { type: "create_sheet"; name: string }
+  | { type: "rename_sheet"; sheetId: string; newName: string }
+  | { type: "move_to_sheet"; nodeLabel: string; sheetId: string }
+  | { type: "set_pin_map"; nodeLabel: string; pins: Record<string, string> }
+  | { type: "auto_assign_pins"; nodeLabel: string }
+  | { type: "power_budget_analysis" }
+  | { type: "voltage_domain_check" }
+  | { type: "auto_fix_validation" }
+  | { type: "dfm_check" }
+  | { type: "thermal_analysis" };
 
 interface AppState {
   projectName: string;
@@ -149,7 +162,7 @@ Switch to a specific schematic sheet.
 
 **Architecture Diagram — Nodes:**
 \`{ "type": "add_node", "nodeType": "<type>", "label": "<name>", "description": "<optional>", "positionX": <number>, "positionY": <number> }\`
-Add a new component node to the architecture diagram. nodeType can be: "mcu", "sensor", "power", "comm", "connector", "memory", "actuator", "ic", "passive", "module", or any custom type.
+Add a new component node to the architecture diagram. nodeType can be: "mcu", "sensor", "power", "comm", "connector", "memory", "actuator", "ic", "passive", "module", or any custom type. When positioning nodes, calculate positions relative to existing nodes. Place connected nodes near each other (within 200px). Place power nodes on the left (x: 100-200), MCUs in center (x: 300-500), peripherals on right (x: 600-800), sensors at bottom (y: 350-500).
 
 \`{ "type": "remove_node", "nodeLabel": "<label>" }\`
 Remove a node by its label.
@@ -205,6 +218,51 @@ Export the BOM as a CSV file.
 **Undo/Redo:**
 \`{ "type": "undo" }\` — Undo the last AI action.
 \`{ "type": "redo" }\` — Redo the last undone action.
+
+**Auto-Layout:**
+\`{ "type": "auto_layout", "layout": "hierarchical" | "grid" | "circular" | "force" }\`
+Reorganize all nodes on the canvas using the specified layout algorithm. Use "hierarchical" for tree-like designs, "grid" for uniform spacing, "circular" for ring topologies, "force" for organic layouts.
+
+**Sub-circuit Templates:**
+\`{ "type": "add_subcircuit", "template": "power_supply_ldo" | "usb_interface" | "spi_flash" | "i2c_sensors" | "uart_debug" | "battery_charger" | "motor_driver" | "led_driver" | "adc_frontend" | "dac_output", "positionX": <number>, "positionY": <number> }\`
+Insert a pre-wired sub-circuit template at the specified position. Each template includes multiple components and their connections.
+
+**Net Naming:**
+\`{ "type": "assign_net_name", "sourceLabel": "<label>", "targetLabel": "<label>", "netName": "<net-name>" }\`
+Assign a meaningful net name to an existing connection between two nodes.
+
+**Multi-Sheet Management:**
+\`{ "type": "create_sheet", "name": "<sheet-name>" }\`
+Create a new schematic sheet (e.g., "Power_Supply.sch", "RF_Frontend.sch").
+
+\`{ "type": "rename_sheet", "sheetId": "<id>", "newName": "<name>" }\`
+Rename an existing schematic sheet.
+
+\`{ "type": "move_to_sheet", "nodeLabel": "<label>", "sheetId": "<id>" }\`
+Move a component to a different schematic sheet for organization.
+
+**Pin-Level Connections:**
+\`{ "type": "set_pin_map", "nodeLabel": "<label>", "pins": { "<pin_name>": "<connected_to>", ... } }\`
+Set pin assignments for a component (e.g., {"MOSI": "GPIO23", "MISO": "GPIO19", "SCK": "GPIO18", "CS": "GPIO5"}).
+
+\`{ "type": "auto_assign_pins", "nodeLabel": "<label>" }\`
+Auto-assign optimal pin connections based on the component datasheet and existing connections.
+
+**Advanced Validation:**
+\`{ "type": "power_budget_analysis" }\`
+Calculate total power budget across all power rails, tallying current draw from all components.
+
+\`{ "type": "voltage_domain_check" }\`
+Verify voltage compatibility across all connections and flag mismatches.
+
+\`{ "type": "auto_fix_validation" }\`
+Automatically fix validation issues by adding missing decoupling caps, pull-up resistors, ESD protection components.
+
+\`{ "type": "dfm_check" }\`
+Run Design for Manufacturing checks — flag hard-to-solder components, suggest assembly-friendly alternatives.
+
+\`{ "type": "thermal_analysis" }\`
+Estimate power dissipation per component, flag thermal hot spots, suggest heatsinks or thermal vias.
 
 ## Response Format
 

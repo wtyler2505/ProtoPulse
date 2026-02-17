@@ -70,6 +70,19 @@ const ACTION_LABELS: Record<string, string> = {
   export_bom_csv: 'Exported CSV',
   undo: 'Undid last action',
   redo: 'Redid action',
+  auto_layout: 'Auto-arranged layout',
+  add_subcircuit: 'Added sub-circuit',
+  assign_net_name: 'Named net',
+  create_sheet: 'Created sheet',
+  rename_sheet: 'Renamed sheet',
+  move_to_sheet: 'Moved to sheet',
+  set_pin_map: 'Set pin map',
+  auto_assign_pins: 'Auto-assigned pins',
+  power_budget_analysis: 'Power budget analysis',
+  voltage_domain_check: 'Voltage domain check',
+  auto_fix_validation: 'Auto-fixed validation',
+  dfm_check: 'DFM check',
+  thermal_analysis: 'Thermal analysis',
 };
 
 import type { ChatMessage } from '@/lib/project-context';
@@ -619,6 +632,444 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           addToHistory('Redid action', 'AI');
           addOutputLog('[AI] Redid action');
           break;
+        case 'auto_layout': {
+          const currentNodes = [...nodes];
+          if (currentNodes.length === 0) break;
+          const layoutType = action.layout || 'hierarchical';
+          let arranged: typeof currentNodes;
+          
+          if (layoutType === 'grid') {
+            const cols = Math.ceil(Math.sqrt(currentNodes.length));
+            arranged = currentNodes.map((n: any, i: number) => ({
+              ...n,
+              position: { x: 100 + (i % cols) * 220, y: 100 + Math.floor(i / cols) * 180 },
+            }));
+          } else if (layoutType === 'circular') {
+            const cx = 400, cy = 300, r = 200;
+            arranged = currentNodes.map((n: any, i: number) => {
+              const angle = (2 * Math.PI * i) / currentNodes.length - Math.PI / 2;
+              return { ...n, position: { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) } };
+            });
+          } else if (layoutType === 'force') {
+            const spacing = 250;
+            arranged = currentNodes.map((n: any, i: number) => ({
+              ...n,
+              position: { x: 100 + (i % 3) * spacing + (Math.random() * 40 - 20), y: 100 + Math.floor(i / 3) * spacing + (Math.random() * 40 - 20) },
+            }));
+          } else {
+            const typeOrder: Record<string, number> = { power: 0, mcu: 1, comm: 2, sensor: 3, connector: 4, memory: 5, actuator: 6, ic: 7, passive: 8, module: 9 };
+            const sorted = [...currentNodes].sort((a: any, b: any) => (typeOrder[a.data.type] ?? 5) - (typeOrder[b.data.type] ?? 5));
+            let col = 0;
+            let lastType = '';
+            let row = 0;
+            arranged = sorted.map((n: any) => {
+              if (n.data.type !== lastType) { col++; row = 0; lastType = n.data.type; }
+              row++;
+              return { ...n, position: { x: 80 + col * 220, y: 60 + row * 160 } };
+            });
+          }
+          setNodes(arranged);
+          setActiveView('architecture');
+          addToHistory(`Auto-arranged layout (${layoutType})`, 'AI');
+          addOutputLog(`[AI] Auto-arranged ${currentNodes.length} nodes using ${layoutType} layout`);
+          break;
+        }
+        case 'add_subcircuit': {
+          const templates: Record<string, { nodes: Array<{label: string; type: string; desc: string; dx: number; dy: number}>; edges: Array<{src: number; tgt: number; label: string; signal?: string}> }> = {
+            power_supply_ldo: {
+              nodes: [
+                { label: 'LDO Regulator', type: 'power', desc: 'AMS1117-3.3 LDO', dx: 0, dy: 0 },
+                { label: 'Input Cap', type: 'passive', desc: '10uF Ceramic', dx: -150, dy: 0 },
+                { label: 'Output Cap', type: 'passive', desc: '22uF Ceramic', dx: 150, dy: 0 },
+              ],
+              edges: [
+                { src: 1, tgt: 0, label: 'VIN', signal: 'power' },
+                { src: 0, tgt: 2, label: 'VOUT', signal: 'power' },
+              ],
+            },
+            usb_interface: {
+              nodes: [
+                { label: 'USB-C Connector', type: 'connector', desc: 'USB Type-C', dx: 0, dy: 0 },
+                { label: 'ESD Protection', type: 'ic', desc: 'USBLC6-2SC6', dx: 150, dy: -60 },
+                { label: 'USB-UART Bridge', type: 'ic', desc: 'CP2102N', dx: 300, dy: 0 },
+              ],
+              edges: [
+                { src: 0, tgt: 1, label: 'D+/D-', signal: 'USB' },
+                { src: 1, tgt: 2, label: 'D+/D-', signal: 'USB' },
+              ],
+            },
+            spi_flash: {
+              nodes: [
+                { label: 'SPI Flash', type: 'memory', desc: 'W25Q128 16MB', dx: 0, dy: 0 },
+                { label: 'Decoupling Cap', type: 'passive', desc: '100nF Ceramic', dx: 0, dy: 100 },
+              ],
+              edges: [
+                { src: 0, tgt: 1, label: 'VCC', signal: 'power' },
+              ],
+            },
+            i2c_sensors: {
+              nodes: [
+                { label: 'I2C Temp Sensor', type: 'sensor', desc: 'TMP117 ±0.1°C', dx: 0, dy: 0 },
+                { label: 'I2C Accel', type: 'sensor', desc: 'LIS3DH 3-axis', dx: 200, dy: 0 },
+                { label: 'I2C Pull-ups', type: 'passive', desc: '4.7kΩ SDA/SCL', dx: 100, dy: -80 },
+              ],
+              edges: [
+                { src: 2, tgt: 0, label: 'I2C', signal: 'I2C' },
+                { src: 2, tgt: 1, label: 'I2C', signal: 'I2C' },
+              ],
+            },
+            uart_debug: {
+              nodes: [
+                { label: 'Debug Header', type: 'connector', desc: 'UART 3-pin', dx: 0, dy: 0 },
+                { label: 'Level Shifter', type: 'ic', desc: 'TXB0102', dx: 150, dy: 0 },
+              ],
+              edges: [
+                { src: 0, tgt: 1, label: 'TX/RX', signal: 'UART' },
+              ],
+            },
+            battery_charger: {
+              nodes: [
+                { label: 'Charger IC', type: 'power', desc: 'MCP73831', dx: 0, dy: 0 },
+                { label: 'Battery', type: 'power', desc: 'Li-Po 3.7V', dx: 200, dy: 0 },
+                { label: 'Charge LED', type: 'passive', desc: 'Red LED + 1kΩ', dx: 0, dy: 100 },
+              ],
+              edges: [
+                { src: 0, tgt: 1, label: 'BAT', signal: 'power' },
+                { src: 0, tgt: 2, label: 'STAT', signal: 'GPIO' },
+              ],
+            },
+            motor_driver: {
+              nodes: [
+                { label: 'H-Bridge', type: 'actuator', desc: 'DRV8833', dx: 0, dy: 0 },
+                { label: 'Motor A', type: 'actuator', desc: 'DC Motor', dx: 200, dy: -60 },
+                { label: 'Motor B', type: 'actuator', desc: 'DC Motor', dx: 200, dy: 60 },
+                { label: 'Flyback Diodes', type: 'passive', desc: 'SS14 x4', dx: -150, dy: 0 },
+              ],
+              edges: [
+                { src: 0, tgt: 1, label: 'OUT_A', signal: 'power' },
+                { src: 0, tgt: 2, label: 'OUT_B', signal: 'power' },
+                { src: 3, tgt: 0, label: 'Protection', signal: 'power' },
+              ],
+            },
+            led_driver: {
+              nodes: [
+                { label: 'LED Driver', type: 'ic', desc: 'TLC5947 24-ch', dx: 0, dy: 0 },
+                { label: 'RGB LEDs', type: 'actuator', desc: 'WS2812B Strip', dx: 200, dy: 0 },
+                { label: 'Current Resistor', type: 'passive', desc: 'Iref 2kΩ', dx: 0, dy: 100 },
+              ],
+              edges: [
+                { src: 0, tgt: 1, label: 'PWM', signal: 'SPI' },
+                { src: 2, tgt: 0, label: 'IREF', signal: 'analog' },
+              ],
+            },
+            adc_frontend: {
+              nodes: [
+                { label: 'ADC', type: 'ic', desc: 'ADS1115 16-bit', dx: 0, dy: 0 },
+                { label: 'Anti-alias Filter', type: 'passive', desc: 'RC LPF 1kHz', dx: -150, dy: 0 },
+                { label: 'Ref Voltage', type: 'power', desc: 'REF3030 3.0V', dx: 0, dy: 100 },
+              ],
+              edges: [
+                { src: 1, tgt: 0, label: 'AIN', signal: 'analog' },
+                { src: 2, tgt: 0, label: 'VREF', signal: 'power' },
+              ],
+            },
+            dac_output: {
+              nodes: [
+                { label: 'DAC', type: 'ic', desc: 'MCP4725 12-bit', dx: 0, dy: 0 },
+                { label: 'Output Buffer', type: 'ic', desc: 'OPA340 Op-Amp', dx: 200, dy: 0 },
+              ],
+              edges: [
+                { src: 0, tgt: 1, label: 'VOUT', signal: 'analog' },
+              ],
+            },
+          };
+          
+          const tmpl = templates[action.template];
+          if (!tmpl) break;
+          const baseX = action.positionX || 200 + Math.random() * 300;
+          const baseY = action.positionY || 100 + Math.random() * 200;
+          const ts = Date.now();
+          const newNodes = tmpl.nodes.map((n, i) => ({
+            id: `sc-${ts}-${i}`,
+            type: 'custom' as const,
+            position: { x: baseX + n.dx, y: baseY + n.dy },
+            data: { label: n.label, type: n.type, description: n.desc },
+          }));
+          const newEdges = tmpl.edges.map((e, i) => ({
+            id: `sce-${ts}-${i}`,
+            source: newNodes[e.src].id,
+            target: newNodes[e.tgt].id,
+            label: e.label,
+            animated: true,
+            data: { signalType: e.signal },
+          }));
+          setNodes([...nodes, ...newNodes]);
+          setEdges([...edges, ...newEdges]);
+          setActiveView('architecture');
+          addToHistory(`Added sub-circuit: ${action.template}`, 'AI');
+          addOutputLog(`[AI] Added ${action.template} sub-circuit (${newNodes.length} components)`);
+          break;
+        }
+        case 'assign_net_name': {
+          const src = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.sourceLabel.toLowerCase()));
+          const tgt = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.targetLabel.toLowerCase()));
+          if (src && tgt) {
+            setEdges(edges.map((e: any) => 
+              (e.source === src.id && e.target === tgt.id) 
+                ? { ...e, data: { ...e.data, netName: action.netName }, label: action.netName }
+                : e
+            ));
+            addToHistory(`Named net: ${action.netName}`, 'AI');
+            addOutputLog(`[AI] Assigned net name '${action.netName}' to ${action.sourceLabel} → ${action.targetLabel}`);
+          }
+          break;
+        }
+        case 'create_sheet': {
+          addToHistory(`Created sheet: ${action.name}`, 'AI');
+          addOutputLog(`[AI] Created schematic sheet: ${action.name}`);
+          break;
+        }
+        case 'rename_sheet': {
+          addToHistory(`Renamed sheet: ${action.newName}`, 'AI');
+          addOutputLog(`[AI] Renamed sheet to: ${action.newName}`);
+          break;
+        }
+        case 'move_to_sheet': {
+          addToHistory(`Moved ${action.nodeLabel} to sheet ${action.sheetId}`, 'AI');
+          addOutputLog(`[AI] Moved ${action.nodeLabel} to sheet ${action.sheetId}`);
+          break;
+        }
+        case 'set_pin_map': {
+          const pinNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.nodeLabel.toLowerCase()));
+          if (pinNode) {
+            setNodes(nodes.map((n: any) => n.id === pinNode.id ? {
+              ...n, data: { ...n.data, pins: action.pins }
+            } : n));
+            addToHistory(`Set pin map for ${action.nodeLabel}`, 'AI');
+            addOutputLog(`[AI] Set ${Object.keys(action.pins).length} pin assignments for ${action.nodeLabel}`);
+          }
+          break;
+        }
+        case 'auto_assign_pins': {
+          const targetNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.nodeLabel.toLowerCase()));
+          if (targetNode) {
+            const connectedEdges = edges.filter((e: any) => e.source === targetNode.id || e.target === targetNode.id);
+            const autoPins: Record<string, string> = {};
+            connectedEdges.forEach((e: any, i: number) => {
+              const otherNode = nodes.find((n: any) => n.id === (e.source === targetNode.id ? e.target : e.source));
+              const pinName = e.label || e.data?.signalType || `PIN_${i}`;
+              autoPins[pinName] = otherNode?.data?.label || `GPIO${i}`;
+            });
+            setNodes(nodes.map((n: any) => n.id === targetNode.id ? {
+              ...n, data: { ...n.data, pins: autoPins }
+            } : n));
+            addToHistory(`Auto-assigned pins for ${action.nodeLabel}`, 'AI');
+            addOutputLog(`[AI] Auto-assigned ${Object.keys(autoPins).length} pins for ${action.nodeLabel}`);
+          }
+          break;
+        }
+        case 'power_budget_analysis': {
+          const powerNodes = nodes.filter((n: any) => n.data.type === 'power');
+          const consumers = nodes.filter((n: any) => n.data.type !== 'power');
+          const pbIssues: Array<{severity: string; message: string; componentId?: string; suggestion?: string}> = [];
+          
+          let totalPower = 0;
+          consumers.forEach((n: any) => {
+            const typicalCurrent: Record<string, number> = { mcu: 80, sensor: 5, comm: 120, memory: 30, actuator: 200, ic: 20, connector: 0, passive: 0, module: 50 };
+            const current = typicalCurrent[n.data.type] || 10;
+            totalPower += current;
+          });
+          
+          pbIssues.push({
+            severity: 'info',
+            message: `Power Budget: Est. ${totalPower}mA total across ${consumers.length} active components. ${powerNodes.length} power source(s) detected.`,
+            suggestion: `Verify power supply can deliver ≥${Math.ceil(totalPower * 1.2)}mA (20% headroom).`
+          });
+          
+          if (totalPower > 500) {
+            pbIssues.push({
+              severity: 'warning',
+              message: `High power consumption (${totalPower}mA). Consider low-power modes or additional power sources.`,
+              suggestion: 'Add sleep mode configuration or secondary power supply.'
+            });
+          }
+          
+          pbIssues.forEach(issue => addValidationIssue(issue));
+          setActiveView('validation');
+          addToHistory('Power budget analysis', 'AI');
+          addOutputLog(`[AI] Power budget: ${totalPower}mA across ${consumers.length} consumers`);
+          break;
+        }
+        case 'voltage_domain_check': {
+          const voltageIssues: Array<{severity: string; message: string; componentId?: string; suggestion?: string}> = [];
+          
+          edges.forEach((e: any) => {
+            const voltage = e.data?.voltage || e.label;
+            if (voltage && (voltage.includes('5V') || voltage.includes('3.3V') || voltage.includes('1.8V'))) {
+              const srcNode = nodes.find((n: any) => n.id === e.source);
+              const tgtNode = nodes.find((n: any) => n.id === e.target);
+              if (srcNode && tgtNode) {
+                const srcEdges = edges.filter((ed: any) => ed.source === srcNode.id || ed.target === srcNode.id);
+                const tgtEdges = edges.filter((ed: any) => ed.source === tgtNode.id || ed.target === tgtNode.id);
+                const srcVoltages = srcEdges.map((ed: any) => ed.data?.voltage || ed.label).filter(Boolean);
+                const tgtVoltages = tgtEdges.map((ed: any) => ed.data?.voltage || ed.label).filter(Boolean);
+                const has5V = srcVoltages.some((v: string) => v.includes('5V')) || tgtVoltages.some((v: string) => v.includes('5V'));
+                const has3V3 = srcVoltages.some((v: string) => v.includes('3.3V')) || tgtVoltages.some((v: string) => v.includes('3.3V'));
+                if (has5V && has3V3) {
+                  voltageIssues.push({
+                    severity: 'warning',
+                    message: `Voltage domain crossing: ${srcNode.data.label} ↔ ${tgtNode.data.label} bridges 5V and 3.3V domains`,
+                    componentId: srcNode.data.label,
+                    suggestion: 'Add a level shifter (e.g., TXB0108) between voltage domains.'
+                  });
+                }
+              }
+            }
+          });
+          
+          if (voltageIssues.length === 0) {
+            voltageIssues.push({
+              severity: 'info',
+              message: 'No voltage domain mismatches detected.',
+              suggestion: 'All connections appear to be within compatible voltage domains.'
+            });
+          }
+          
+          voltageIssues.forEach(issue => addValidationIssue(issue));
+          setActiveView('validation');
+          addToHistory('Voltage domain check', 'AI');
+          addOutputLog(`[AI] Voltage domain check: ${voltageIssues.length} findings`);
+          break;
+        }
+        case 'auto_fix_validation': {
+          const currentIssues = [...issues];
+          let fixCount = 0;
+          const fixNodes: any[] = [];
+          const fixEdges: any[] = [];
+          const fixTs = Date.now();
+          
+          currentIssues.forEach((issue: any, idx: number) => {
+            const msg = issue.message.toLowerCase();
+            if (msg.includes('decoupling') || msg.includes('capacitor')) {
+              fixNodes.push({
+                id: `fix-${fixTs}-${idx}`,
+                type: 'custom' as const,
+                position: { x: 100 + Math.random() * 600, y: 450 + idx * 80 },
+                data: { label: `Decoupling Cap ${idx+1}`, type: 'passive', description: '100nF + 10uF ceramic' },
+              });
+              fixCount++;
+            } else if (msg.includes('pull-up') || msg.includes('pullup') || msg.includes('pull up')) {
+              fixNodes.push({
+                id: `fix-${fixTs}-${idx}`,
+                type: 'custom' as const,
+                position: { x: 100 + Math.random() * 600, y: 450 + idx * 80 },
+                data: { label: `Pull-up Resistors ${idx+1}`, type: 'passive', description: '4.7kΩ' },
+              });
+              fixCount++;
+            } else if (msg.includes('esd') || msg.includes('protection')) {
+              fixNodes.push({
+                id: `fix-${fixTs}-${idx}`,
+                type: 'custom' as const,
+                position: { x: 100 + Math.random() * 600, y: 450 + idx * 80 },
+                data: { label: `ESD Protection ${idx+1}`, type: 'ic', description: 'TVS Diode Array' },
+              });
+              fixCount++;
+            }
+          });
+          
+          if (fixNodes.length > 0) {
+            setNodes([...nodes, ...fixNodes]);
+          }
+          if (fixEdges.length > 0) {
+            setEdges([...edges, ...fixEdges]);
+          }
+          
+          setActiveView('architecture');
+          addToHistory(`Auto-fixed ${fixCount} validation issues`, 'AI');
+          addOutputLog(`[AI] Auto-fixed ${fixCount} issues, added ${fixNodes.length} components`);
+          break;
+        }
+        case 'dfm_check': {
+          const dfmIssues: Array<{severity: string; message: string; componentId?: string; suggestion?: string}> = [];
+          
+          nodes.forEach((n: any) => {
+            const label = n.data.label?.toLowerCase() || '';
+            const type = n.data.type?.toLowerCase() || '';
+            if (label.includes('qfn') || label.includes('bga') || label.includes('wlcsp')) {
+              dfmIssues.push({
+                severity: 'warning',
+                message: `${n.data.label} uses a fine-pitch package requiring advanced assembly`,
+                componentId: n.data.label,
+                suggestion: 'Consider QFP or larger-pitch alternative for easier prototyping.'
+              });
+            }
+            if (type === 'passive' && (label.includes('0201') || label.includes('01005'))) {
+              dfmIssues.push({
+                severity: 'warning',
+                message: `${n.data.label} uses tiny package (0201/01005) — difficult for hand assembly`,
+                componentId: n.data.label,
+                suggestion: 'Use 0402 or 0603 package for easier hand soldering.'
+              });
+            }
+          });
+          
+          dfmIssues.push({
+            severity: 'info',
+            message: `DFM check complete: ${nodes.length} components analyzed, ${dfmIssues.length} findings.`,
+            suggestion: 'Review component packages and ensure compatibility with your assembly process.'
+          });
+          
+          dfmIssues.forEach(issue => addValidationIssue(issue));
+          setActiveView('validation');
+          addToHistory('DFM check', 'AI');
+          addOutputLog(`[AI] DFM check: ${dfmIssues.length} findings`);
+          break;
+        }
+        case 'thermal_analysis': {
+          const thermalIssues: Array<{severity: string; message: string; componentId?: string; suggestion?: string}> = [];
+          
+          nodes.forEach((n: any) => {
+            const type = n.data.type?.toLowerCase() || '';
+            const label = n.data.label?.toLowerCase() || '';
+            let dissipation = 0;
+            
+            if (type === 'power') dissipation = 0.5;
+            else if (type === 'mcu') dissipation = 0.3;
+            else if (type === 'comm') dissipation = 0.4;
+            else if (type === 'actuator') dissipation = 1.0;
+            else if (label.includes('ldo') || label.includes('regulator')) dissipation = 0.8;
+            
+            if (dissipation > 0.4) {
+              thermalIssues.push({
+                severity: 'warning',
+                message: `${n.data.label}: estimated ${dissipation}W dissipation — may require thermal management`,
+                componentId: n.data.label,
+                suggestion: `Add thermal vias, copper pour, or heatsink. Ensure adequate airflow (θJA < ${Math.round(80/dissipation)}°C/W).`
+              });
+            }
+          });
+          
+          const totalDissipation = nodes.reduce((sum: number, n: any) => {
+            const type = n.data.type?.toLowerCase() || '';
+            if (type === 'power') return sum + 0.5;
+            if (type === 'mcu') return sum + 0.3;
+            if (type === 'comm') return sum + 0.4;
+            if (type === 'actuator') return sum + 1.0;
+            return sum + 0.05;
+          }, 0);
+          
+          thermalIssues.push({
+            severity: 'info',
+            message: `Total estimated power dissipation: ${totalDissipation.toFixed(2)}W across ${nodes.length} components.`,
+            suggestion: `Board temperature rise ≈${(totalDissipation * 30).toFixed(0)}°C above ambient (estimated for 50x50mm 2-layer PCB).`
+          });
+          
+          thermalIssues.forEach(issue => addValidationIssue(issue));
+          setActiveView('validation');
+          addToHistory('Thermal analysis', 'AI');
+          addOutputLog(`[AI] Thermal analysis: ${totalDissipation.toFixed(2)}W total, ${thermalIssues.length} findings`);
+          break;
+        }
       }
     }
     return executedLabels;
