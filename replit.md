@@ -1,125 +1,224 @@
-# ProtoPulse
+# ProtoPulse — replit.md (Agent Instructions v3)
 
-## Overview
+## 0) Prime directive (non-negotiable)
+- Maintain a working app at all times. Prefer small, safe, incremental changes.
+- Do not “rewrite the stack” or swap major libraries unless explicitly requested.
+- Do not delete or rename routes/endpoints/tables used by the UI without updating all callers.
+- Do not edit this `replit.md` unless the user explicitly asks you to.
+- Always protect user trust: explain changes, avoid surprise behavior shifts.
 
-ProtoPulse is an AI-assisted electronics and system design platform. It provides a workspace for designing hardware architectures with features including block diagram editing (using a node/edge graph), bill of materials (BOM) management, design validation, schematic viewing, and an AI chat assistant. The application is built as a full-stack TypeScript project with a React frontend and Express backend, backed by PostgreSQL.
+## 1) What this project is
+ProtoPulse is an AI-assisted electronics + system design platform:
+- Architecture block diagram editor (node/edge graph)
+- BOM management
+- Design validation results
+- Schematic viewing (present/planned)
+- AI chat assistant that can perform in-app actions
 
-## User Preferences
+## 2) Communication preferences
+- Use simple, everyday language.
+- Before implementing: give a brief plan (what + where in code).
+- If requirements are unclear or risky (data loss / breaking changes), pause and ask.
+- When you change behavior, list the affected files and why.
+- Prefer clarity over verbosity: short plan, then execution, then summary.
 
-Preferred communication style: Simple, everyday language.
+## 2.1 Proactive mode (be curious + helpful by default)
+You are expected to be proactive and explorative. That means:
+- While doing any task, watch for:
+  - bugs, edge cases, and brittle logic
+  - missing validation, inconsistent types, unsafe assumptions
+  - performance bottlenecks (re-renders, large payloads, chat streaming issues)
+  - UX friction (unclear affordances, missing confirmations, confusing flows)
+  - missing tests/scripts/guardrails that would prevent future breakage
+- After each meaningful change (or when asked to “review”), provide an **Improvements Radar**:
+  - 3–7 ideas, each labeled:
+    - **Quick Win** (low effort, low risk)
+    - **Medium** (some refactor or UI work)
+    - **Big Swing** (innovative / structural / experimental)
+  - For each idea include: *why it matters* + *where in code* + *risk level*.
+- Be creative and innovative, but **never ship Big Swing changes silently**.
 
-## System Architecture
+## 2.2 Exploration budget (innovate without breaking stuff)
+- You may perform “research spikes” and “codebase reconnaissance” as part of work:
+  - quick scans: routes, schema, key components, action system, query keys
+  - identify “hot paths” and weak spots
+- Keep exploration time bounded and useful:
+  - Prefer small discoveries that immediately improve design quality.
+- If you find something critical (security, data loss risk), surface it immediately.
 
-### Frontend
+## 2.3 Approval gates (how to be bold safely)
+- You can implement **Quick Wins** immediately if they are clearly safe and scoped.
+- For **Medium** changes: propose + wait for explicit user go-ahead unless user asked for “go all in”.
+- For **Big Swing** changes:
+  - propose as an option
+  - outline plan + rollback
+  - do not implement without explicit approval
 
-- **Framework**: React 18 with TypeScript, bundled by Vite
-- **Routing**: Wouter (lightweight client-side router) — single main route (`/`) renders the `ProjectWorkspace`
-- **State Management**: React Context (`ProjectProvider` in `client/src/lib/project-context.tsx`) combined with TanStack React Query for server state
-- **UI Components**: shadcn/ui (new-york style) built on Radix UI primitives with Tailwind CSS v4
-- **Graph/Diagram Editor**: `@xyflow/react` (React Flow) for the architecture block diagram with draggable nodes and edges
-- **Styling**: Tailwind CSS with a custom dark theme (neon cyan/purple color scheme), custom fonts (Rajdhani, JetBrains Mono, Inter)
-- **Path Aliases**: `@/` maps to `client/src/`, `@shared/` maps to `shared/`
+## 3) Tech stack (stable baseline — avoid stack churn)
+- Keep the current stack unless there’s a clear benefit.
+- Allowed: normal dependency updates, small helper libraries, and refactors that preserve behavior.
+- Not allowed without explicit approval: replacing core frameworks/libraries (router, ORM, UI system, diagram engine).
+- If you spot a better approach, propose it under “Big Swing” ideas; don’t implement without approval.
 
-### Backend
+Frontend:
+- React 18 + TypeScript + Vite
+- Routing: Wouter (single main route `/` -> ProjectWorkspace)
+- State: React Context (ProjectProvider) + TanStack React Query (server state)
+- UI: shadcn/ui (new-york) + Radix primitives + Tailwind CSS v4
+- Diagram editor: @xyflow/react (React Flow)
+- Styling: dark theme, neon cyan/purple; fonts: Rajdhani, JetBrains Mono, Inter
+- Path aliases: `@/` -> `client/src/`, `@shared/` -> `shared/`
 
-- **Runtime**: Node.js with Express, written in TypeScript (executed via `tsx` in development)
-- **API Pattern**: RESTful JSON API under `/api/` prefix
-- **Key Resources**: Projects, Architecture Nodes, Architecture Edges, BOM Items, Validation Issues, Chat Messages, History Items
-- **Development Server**: Vite dev server middleware is integrated into Express for HMR during development
-- **Production Build**: Vite builds the client to `dist/public`; esbuild bundles the server to `dist/index.cjs`
-- **Static Serving**: In production, Express serves the built client files and falls back to `index.html` for SPA routing
+Backend:
+- Node.js + Express + TypeScript (dev via tsx)
+- REST JSON API under `/api/`
+- Vite dev middleware integrated into Express for HMR
+- Prod: Vite builds client to `dist/public`; esbuild bundles server to `dist/index.cjs`
+- Prod static serving: Express serves built client, falls back to `index.html` for SPA routing
 
-### Data Storage
+Data:
+- PostgreSQL via `pg`
+- Drizzle ORM + drizzle-zod
+- Schema: `shared/schema.ts` shared by client and server
+- Dev schema sync: `drizzle-kit push` (no migration files required for dev)
 
-- **Database**: PostgreSQL via `node-postgres` (`pg` package)
-- **ORM**: Drizzle ORM with `drizzle-zod` for schema-to-validation integration
-- **Schema Location**: `shared/schema.ts` — shared between frontend and backend
-- **Schema Push**: `drizzle-kit push` (no migration files needed for development)
-- **Tables**:
-  - `projects` — top-level project entity (name, description)
-  - `architecture_nodes` — graph nodes with position, type, label, and JSON data
-  - `architecture_edges` — graph edges with source/target, label, animation, and style
-  - `bom_items` — bill of materials entries (part number, manufacturer, quantity, pricing, stock status)
-  - `validation_issues` — design validation results (severity, message, suggestions)
-  - `chat_messages` — AI chat history per project
-  - `history_items` — project activity/change history
-- **Foreign Keys**: All child tables reference `projects.id` with `onDelete: cascade`
-- **Storage Layer**: `server/storage.ts` implements `IStorage` interface using `DatabaseStorage` class with Drizzle queries
+External AI (server-side):
+- Anthropic via `@anthropic-ai/sdk`
+- Google Gemini via `@google/generative-ai`
+- Streaming endpoint: `POST /api/chat/ai/stream` using SSE
 
-### API Structure
+## 4) Repo map (where to look first)
+- Client app entry + UI: `client/src/`
+- Project context provider: `client/src/lib/project-context.tsx`
+- Shared DB/types: `shared/schema.ts`
+- Server routes: `server/` (Express + `/api`)
+- Storage implementation: `server/storage.ts` (IStorage + DatabaseStorage using Drizzle)
 
-All endpoints are prefixed with `/api/`:
+## 5) Agent work protocol (how to implement changes)
+For any feature/bugfix:
+1) Locate the current behavior in code first (search + read before writing).
+2) Identify the single source of truth (schema, shared types, storage, API route, client query).
+3) Implement the smallest safe change that preserves compatibility.
+4) Update both sides (server + client) if types or API responses change.
+5) Verify:
+   - TypeScript compiles (no type regressions)
+   - UI still loads and core flows still function
+   - API endpoints return valid JSON and proper status codes
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/api/projects` | List all projects |
-| GET | `/api/projects/:id` | Get single project |
-| POST | `/api/projects` | Create project |
-| GET | `/api/projects/:id/nodes` | Get architecture nodes |
-| POST | `/api/projects/:id/nodes` | Create architecture node |
-| GET | `/api/projects/:id/edges` | Get architecture edges |
-| POST | `/api/projects/:id/edges` | Create architecture edge |
-| GET/POST/PUT/DELETE | `/api/projects/:id/bom` | BOM item CRUD |
-| GET/POST | `/api/projects/:id/validation` | Validation issues |
-| GET/POST | `/api/projects/:id/chat` | Chat messages |
-| GET/POST | `/api/projects/:id/history` | History items |
+If uncertain about commands/scripts, inspect `package.json` and use existing scripts.
 
-Request validation uses Zod schemas generated from Drizzle table definitions via `drizzle-zod`.
+## 6) API conventions (keep consistent)
+- All endpoints use `/api/...`
+- Prefer RESTful patterns, predictable resources
+- Validate inputs with Zod (via drizzle-zod schemas where applicable)
+- Return semantic HTTP status codes
+- Error responses must be consistent:
+  - Do not leak secrets/keys in errors
+  - Include enough context for debugging (message + safe details)
 
-### Key Design Decisions
+Key resources:
+- Projects
+- Architecture Nodes / Edges
+- BOM Items
+- Validation Issues
+- Chat Messages
+- History Items
 
-1. **Shared Schema**: The `shared/` directory contains the database schema that's imported by both client and server, ensuring type safety across the full stack.
-2. **Single Project Focus**: The current UI defaults to `PROJECT_ID = 1`, suggesting a single-project-at-a-time workflow (though the API supports multiple projects).
-3. **AI Command System**: The chat panel uses a `processAICommand()` function that detects user intent via keyword matching and executes actions across the entire app (view switching, node/edge CRUD, BOM management, validation, project renaming, CSV export, etc.). Responses are prefixed with `[ACTION]` when an action is performed. The build script includes `@google/generative-ai` and `openai` in the bundle allowlist for future real AI integration.
-4. **Component Library**: Heavy use of shadcn/ui components provides a consistent, accessible UI foundation without external component library lock-in.
+## 7) Database conventions (Drizzle + Postgres)
+Tables:
+- `projects`
+- `architecture_nodes`
+- `architecture_edges`
+- `bom_items`
+- `validation_issues`
+- `chat_messages`
+- `history_items`
 
-## External Dependencies
+Rules:
+- Child tables reference `projects.id` with `onDelete: cascade`
+- Schema changes happen in `shared/schema.ts`
+- When adding/changing tables:
+  - update schema
+  - update Zod validation
+  - update storage layer queries (`server/storage.ts`)
+  - update API handlers
+  - update client queries + cache invalidation
 
-### Required Services
-- **PostgreSQL**: Primary database, connection via `DATABASE_URL` environment variable (required)
+## 8) Frontend conventions (React + Query + shadcn)
+- Prefer functional components + hooks
+- Avoid introducing new state management libraries
+- Use React Query for server state; invalidate queries after mutations
+- Keep UI consistent with the existing dark neon theme
+- Avoid inline styles; use Tailwind + existing component patterns
+- Proactively reduce re-render churn around the graph editor and chat panel.
 
-### AI Integration (Active)
-- **Anthropic Claude**: Server-side integration via `@anthropic-ai/sdk` — models: Claude Sonnet 4.5, Claude 4.6 Sonnet, Claude Sonnet 4, Claude Opus 4, Claude 4.6 Opus, Claude Haiku 4.5
-- **Google Gemini**: Server-side integration via `@google/generative-ai` — models: Gemini 2.5 Flash, 2.5 Pro, Gemini 2.0 Flash
-- **AI Endpoint**: `POST /api/chat/ai/stream` receives user message + full app state context, streams response via SSE, returns structured response with action commands
-- **Action System**: AI can control all app features via 36+ action types across 7 categories:
-  - **Phase 1 — Context Awareness**: Node selection tracking, edge signal metadata, undo/redo integration, change diff tracking
-  - **Phase 2 — Canvas Intelligence**: Smart placement guidance, auto-layout (hierarchical/grid/circular/force), 10 subcircuit templates, net naming, multi-sheet management, pin-level connections
-  - **Phase 3 — Design Validation**: Power budget calculator, voltage domain checking, auto-fix validation, DFM checks, thermal analysis
-  - **Phase 4 — BOM Intelligence**: Pricing lookup, alternative part suggestions, BOM optimization, lead time warnings, parametric search
-  - **Phase 5 — Chat/UX**: Image upload/analysis, voice input (Web Speech API), design decisions, annotations, tutorials
-  - **Phase 6 — Export**: KiCad export, SPICE netlist, Gerber preview, datasheet links, design report
-  - **Phase 7 — AI Models**: Project type configuration, token usage display
-- **API Keys**: User-provided via ChatPanel settings UI, stored in localStorage (client-side), sent per-request to server
-- **Custom System Prompt**: User can provide custom instructions appended to the AI system prompt
-- **Streaming**: Server-side SSE streaming with client-side incremental rendering and cancel support (AbortController)
-- **Fallback**: When no API key is configured, local keyword-matching command system is used
+## 9) Diagram editor conventions (@xyflow/react)
+- Nodes/edges are persisted in DB tables and must remain in sync with UI state
+- Any new node/edge fields must be:
+  - stored in DB (if persistent)
+  - represented in shared types
+  - handled in create/update flows
 
-### AI Chat Features
-- **Markdown rendering**: react-markdown + remark-gfm for rich AI response formatting
-- **Auto-expanding textarea**: Shift+Enter for newlines, Enter to send
-- **Message actions**: Copy to clipboard, regenerate last response, retry on error
-- **Action status chips**: Inline badges showing executed actions in message bubbles
-- **Destructive action confirmation**: Accept/reject UI for dangerous operations (clear canvas, remove nodes)
-- **Follow-up suggestions**: Context-aware suggestion chips after AI responses
-- **Chat search & export**: Search through chat history, export as text file
-- **Temperature slider**: 0-2 range (precise to creative), stored in localStorage
-- **API key validation**: Format checks for Anthropic (sk-ant-*) and Gemini (20+ chars)
-- **Keyboard shortcuts**: Escape to close chat panel
+## 10) AI action system (critical rules)
+- The AI endpoint streams SSE and may return structured “action commands”.
+- Actions must be:
+  - explicit, typed, and validated
+  - idempotent when possible (safe replays)
+  - guarded for destructive operations (require confirmation UI)
+- Never perform destructive actions automatically (clear canvas, bulk delete, etc.)
 
-### Error Handling
-- **ResizeObserver suppression**: Global error handlers suppress harmless ResizeObserver loop errors during panel resize
-- **React ErrorBoundary**: Wraps main content area and ChatPanel to prevent full-page crashes, with "Try Again" recovery UI
+API keys:
+- User-provided via ChatPanel settings
+- Stored client-side (localStorage) and sent per request
+- Do NOT log keys
+- Do NOT store keys server-side unless explicitly requested + implemented securely
 
-### Planned/Partially Integrated
-- **Stripe**: Listed in build allowlist, suggesting planned payment integration
+Fallback behavior:
+- If no API key: use local keyword-matching command system (do not break this path)
 
-### Key NPM Packages
-- **@xyflow/react**: Interactive node-based diagram editor
-- **drizzle-orm** + **drizzle-kit**: Database ORM and migration tooling
-- **@tanstack/react-query**: Server state management and caching
-- **express** + **express-session**: HTTP server and session management
-- **connect-pg-simple**: PostgreSQL-backed session store
-- **zod** + **drizzle-zod**: Runtime validation
-- **wouter**: Lightweight client-side routing
-- **recharts**: Charting library (available via shadcn chart component)
+## 10.1 Innovation lane (creative features, safely)
+You should actively suggest and design innovative features such as:
+- smarter canvas behaviors (auto-layout presets, alignment helpers, smart placement)
+- template subcircuits (power, MCU + sensors, motor driver blocks)
+- validation upgrades (power domain checks, voltage compatibility warnings)
+- BOM intelligence (alt parts, param search, lead-time warnings)
+- export improvements (CSV polish, report generation, KiCad/SPICE prep paths)
+But do not implement “innovation lane” items without the approval gates in §2.3.
+
+## 11) Research rules (web search)
+- Use web search for:
+  - current best practices (security, performance)
+  - library compatibility issues
+  - API/SDK changes
+  - data model patterns for graph editors / BOM tools / SSE streaming
+- When suggesting a new library:
+  - confirm it fits the stack
+  - prefer minimal dependencies
+  - don’t introduce a framework shift
+
+## 12) Quality + reliability expectations
+- Keep ResizeObserver loop error suppression (intentional)
+- Preserve ErrorBoundary behavior and recovery UI
+- Keep chat UX features intact (copy/regenerate/retry, action chips, cancel streaming)
+- Proactively improve:
+  - input validation coverage
+  - consistent error shapes
+  - query invalidation correctness
+  - safe defaults (no silent destructive actions)
+
+## 13) “Do NOT do this” list
+- Don’t replace Wouter with React Router.
+- Don’t replace Drizzle with Prisma (or anything else).
+- Don’t replace shadcn/ui with another component library.
+- Don’t add a second global state library (Redux/Zustand/etc.) unless asked.
+- Don’t silently change response shapes for existing endpoints.
+- Don’t auto-edit this `replit.md` unless asked.
+
+## 14) Standard response format (be more communicative)
+When you finish a task or propose next steps, format your response like:
+- ✅ What changed (1–5 bullets)
+- 📁 Files touched (short list)
+- 🧪 How it was verified (what you ran/checked)
+- 🔭 Improvements Radar (3–7 suggestions; Quick Win / Medium / Big Swing; with risk + where)
+- ⚠️ Any risks or follow-ups (only if real)
+
