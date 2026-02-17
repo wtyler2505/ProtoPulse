@@ -494,7 +494,6 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
           </Tooltip>
         </div>
       </div>
-
       <div className="flex gap-1 p-2 overflow-x-auto no-scrollbar border-b border-border bg-muted/10">
         {categories.map(cat => {
           const counts = getCategoryCount(cat.id);
@@ -513,7 +512,7 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
                 >
                   <cat.icon className="w-4 h-4" />
                   {showLabels && <span className="text-[8px] mt-0.5">{cat.label.length > 8 ? cat.label.slice(0, 7) + '…' : cat.label}</span>}
-                  <span className="text-[8px] absolute -top-1 -right-1 bg-primary/60 text-primary-foreground w-3.5 h-3.5 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 flex items-center justify-center text-[9px] bg-[#21212199] text-[#dbdbdb]">
                     {search ? counts.filtered : counts.total}
                   </span>
                 </button>
@@ -525,7 +524,6 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
           );
         })}
       </div>
-
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         {favoriteAssets.length > 0 && (
           <div data-testid="asset-favorites-section" className="mb-2">
@@ -648,7 +646,6 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
           </button>
         )}
       </div>
-
       {selectedAssets.size > 1 && (
         <div
           className="p-2 border-t border-border bg-primary/10 flex items-center justify-between"
@@ -668,7 +665,6 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
           </button>
         </div>
       )}
-
       <div
         data-testid="asset-resize-handle"
         className="hidden md:block absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-primary/30 transition-colors group"
