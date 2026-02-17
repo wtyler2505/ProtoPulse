@@ -93,7 +93,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     return (localStorage.getItem('protopulse_ai_provider') as any) || 'anthropic';
   });
   const [aiModel, setAiModel] = useState(() => {
-    return localStorage.getItem('protopulse_ai_model') || 'claude-4-6-sonnet-20260101';
+    const stored = localStorage.getItem('protopulse_ai_model');
+    const provider = (localStorage.getItem('protopulse_ai_provider') as 'anthropic' | 'gemini') || 'anthropic';
+    const models = AI_MODELS[provider];
+    if (stored && models.some(m => m.id === stored)) return stored;
+    return models[0].id;
   });
   const [aiApiKey, setAiApiKey] = useState(() => {
     return localStorage.getItem('protopulse_ai_apikey') || '';
