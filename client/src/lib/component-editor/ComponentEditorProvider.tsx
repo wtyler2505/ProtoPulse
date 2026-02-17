@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react';
-import type { PartState } from '@shared/component-types';
+import type { PartState, Shape, Connector, CircleShape } from '@shared/component-types';
 import { createDefaultPartState } from '@shared/component-types';
 import type { EditorState, EditorAction, HistoryEntry } from './types';
 
@@ -15,6 +15,7 @@ function createInitialState(): EditorState {
       selectedShapeIds: [],
       selectedConnectorId: null,
       isDirty: false,
+      activeTool: 'select',
     },
   };
 }
@@ -76,7 +77,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     }
 
     case 'SET_EDITOR_VIEW':
-      return { ...state, ui: { ...state.ui, activeEditorView: action.payload } };
+      return { ...state, ui: { ...state.ui, activeEditorView: action.payload, activeTool: 'select' } };
 
     case 'SET_SELECTION':
       return { ...state, ui: { ...state.ui, selectedShapeIds: action.payload } };
@@ -86,6 +87,144 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case 'MARK_CLEAN':
       return { ...state, ui: { ...state.ui, isDirty: false } };
+
+    case 'ADD_SHAPE': {
+      const { view, shape } = action.payload;
+      const entry: HistoryEntry = { label: `Add ${shape.type}`, state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          views: {
+            ...state.present.views,
+            [view]: {
+              ...state.present.views[view],
+              shapes: [...state.present.views[view].shapes, shape],
+            },
+          },
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'UPDATE_SHAPE': {
+      const { view, shapeId, updates } = action.payload;
+      const entry: HistoryEntry = { label: 'Update shape', state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          views: {
+            ...state.present.views,
+            [view]: {
+              ...state.present.views[view],
+              shapes: state.present.views[view].shapes.map((s) =>
+                s.id === shapeId ? { ...s, ...updates } as Shape : s
+              ),
+            },
+          },
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'DELETE_SHAPES': {
+      const { view, shapeIds } = action.payload;
+      const count = shapeIds.length;
+      const entry: HistoryEntry = { label: `Delete ${count} shape(s)`, state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          views: {
+            ...state.present.views,
+            [view]: {
+              ...state.present.views[view],
+              shapes: state.present.views[view].shapes.filter((s) => !shapeIds.includes(s.id)),
+            },
+          },
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'MOVE_SHAPES': {
+      const { view, moves } = action.payload;
+      const moveMap = new Map(moves.map((m) => [m.id, m]));
+      return {
+        ...state,
+        present: {
+          ...state.present,
+          views: {
+            ...state.present.views,
+            [view]: {
+              ...state.present.views[view],
+              shapes: state.present.views[view].shapes.map((s) => {
+                const move = moveMap.get(s.id);
+                if (!move) return s;
+                const dx = move.x - s.x;
+                const dy = move.y - s.y;
+                if (s.type === 'circle') {
+                  const cs = s as CircleShape;
+                  return { ...cs, x: move.x, y: move.y, cx: cs.cx + dx, cy: cs.cy + dy } as Shape;
+                }
+                return { ...s, x: move.x, y: move.y } as Shape;
+              }),
+            },
+          },
+        },
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'ADD_CONNECTOR': {
+      const connector = action.payload;
+      const entry: HistoryEntry = { label: `Add connector ${connector.name}`, state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          connectors: [...state.present.connectors, connector],
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'UPDATE_CONNECTOR': {
+      const { connectorId, updates } = action.payload;
+      const entry: HistoryEntry = { label: 'Update connector', state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          connectors: state.present.connectors.map((c) =>
+            c.id === connectorId ? { ...c, ...updates } : c
+          ),
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'DELETE_CONNECTOR': {
+      const entry: HistoryEntry = { label: 'Delete connector', state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          connectors: state.present.connectors.filter((c) => c.id !== action.payload),
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'SET_TOOL':
+      return { ...state, ui: { ...state.ui, activeTool: action.payload } };
 
     default:
       return state;

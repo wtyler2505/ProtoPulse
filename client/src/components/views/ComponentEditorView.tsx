@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ComponentEditorProvider, useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import { useComponentParts, useCreateComponentPart, useUpdateComponentPart } from '@/lib/component-editor/hooks';
 import { useProject, PROJECT_ID } from '@/lib/project-context';
@@ -7,7 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2 } from 'lucide-react';
+import { Undo2, Redo2, Save } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
+import PinTable from '@/components/views/component-editor/PinTable';
 
 const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'breadboard', label: 'Breadboard' },
@@ -156,10 +160,86 @@ function ComponentEditorContent() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useComponentEditor();
   const { selectedNodeId } = useProject();
   const activeView = state.ui.activeEditorView;
+  const { toast } = useToast();
 
-  useComponentParts(PROJECT_ID);
-  useCreateComponentPart();
-  useUpdateComponentPart();
+  const [partId, setPartId] = useState<number | null>(null);
+  const loadedRef = useRef(false);
+
+  const { data: parts } = useComponentParts(PROJECT_ID);
+  const createMutation = useCreateComponentPart();
+  const updateMutation = useUpdateComponentPart();
+
+  useEffect(() => {
+    if (loadedRef.current || !parts) return;
+    if (parts.length > 0) {
+      const part = parts[0];
+      setPartId(part.id);
+      dispatch({
+        type: 'LOAD_PART',
+        payload: {
+          meta: part.meta as any,
+          connectors: part.connectors as any ?? [],
+          buses: part.buses as any ?? [],
+          views: part.views as any,
+          constraints: part.constraints as any ?? [],
+        },
+      });
+    }
+    loadedRef.current = true;
+  }, [parts, dispatch]);
+
+  const handleSave = useCallback(async () => {
+    const payload = {
+      meta: state.present.meta,
+      connectors: state.present.connectors,
+      buses: state.present.buses,
+      views: state.present.views,
+      constraints: state.present.constraints || [],
+    };
+
+    try {
+      if (partId) {
+        await updateMutation.mutateAsync({
+          id: partId,
+          projectId: PROJECT_ID,
+          data: payload,
+        });
+      } else {
+        const created = await createMutation.mutateAsync({
+          projectId: PROJECT_ID,
+          ...payload,
+        });
+        setPartId(created.id);
+      }
+      dispatch({ type: 'MARK_CLEAN' });
+      toast({ title: 'Saved', description: 'Component part saved successfully.' });
+    } catch {
+      toast({ title: 'Save failed', description: 'Could not save component part.', variant: 'destructive' });
+    }
+  }, [state.present, partId, updateMutation, createMutation, dispatch, toast]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      } else if (mod && e.shiftKey && e.key === 'z') {
+        e.preventDefault();
+        redo();
+      } else if (mod && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      } else if (mod && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleSave, undo, redo]);
+
+  const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="w-full h-full flex flex-col bg-background" data-testid="component-editor">
@@ -182,6 +262,26 @@ function ComponentEditorContent() {
         </div>
 
         <div className="flex items-center gap-1">
+          {state.ui.isDirty && (
+            <span
+              data-testid="indicator-dirty"
+              className="w-2 h-2 rounded-full bg-primary animate-pulse"
+            />
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            data-testid="button-save"
+            disabled={!state.ui.isDirty || isSaving}
+            onClick={handleSave}
+            className={`h-8 w-8 ${
+              state.ui.isDirty
+                ? 'text-primary hover:text-primary hover:bg-primary/20'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Save className="w-4 h-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -208,6 +308,10 @@ function ComponentEditorContent() {
       <div className="flex-1 overflow-auto">
         {activeView === 'metadata' ? (
           <MetadataForm />
+        ) : activeView === 'pin-table' ? (
+          <PinTable />
+        ) : activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb' ? (
+          <ShapeCanvas view={activeView} />
         ) : (
           <CanvasPlaceholder view={activeView} />
         )}

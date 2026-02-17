@@ -1,4 +1,4 @@
-import type { PartState, EditorViewType } from '@shared/component-types';
+import type { PartState, EditorViewType, Shape, Connector } from '@shared/component-types';
 
 export interface HistoryEntry {
   label: string;
@@ -11,6 +11,7 @@ export interface EditorUIState {
   selectedShapeIds: string[];
   selectedConnectorId: string | null;
   isDirty: boolean;
+  activeTool: 'select' | 'rect' | 'circle' | 'text' | 'connector';
 }
 
 export type EditorAction =
@@ -22,7 +23,15 @@ export type EditorAction =
   | { type: 'SET_CONNECTOR_SELECTION'; payload: string | null }
   | { type: 'MARK_CLEAN' }
   | { type: 'UNDO' }
-  | { type: 'REDO' };
+  | { type: 'REDO' }
+  | { type: 'ADD_SHAPE'; payload: { view: 'breadboard' | 'schematic' | 'pcb'; shape: Shape } }
+  | { type: 'UPDATE_SHAPE'; payload: { view: 'breadboard' | 'schematic' | 'pcb'; shapeId: string; updates: Partial<Shape> } }
+  | { type: 'DELETE_SHAPES'; payload: { view: 'breadboard' | 'schematic' | 'pcb'; shapeIds: string[] } }
+  | { type: 'MOVE_SHAPES'; payload: { view: 'breadboard' | 'schematic' | 'pcb'; moves: Array<{ id: string; x: number; y: number }> } }
+  | { type: 'ADD_CONNECTOR'; payload: Connector }
+  | { type: 'UPDATE_CONNECTOR'; payload: { connectorId: string; updates: Partial<Connector> } }
+  | { type: 'DELETE_CONNECTOR'; payload: string }
+  | { type: 'SET_TOOL'; payload: 'select' | 'rect' | 'circle' | 'text' | 'connector' };
 
 export interface EditorState {
   past: HistoryEntry[];
