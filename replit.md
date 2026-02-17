@@ -80,7 +80,7 @@ Request validation uses Zod schemas generated from Drizzle table definitions via
 
 ### AI Integration (Active)
 - **Anthropic Claude**: Server-side integration via `@anthropic-ai/sdk` — models: Claude Sonnet 4.5, Claude 4.6 Sonnet, Claude Sonnet 4, Claude Opus 4, Claude 4.6 Opus, Claude Haiku 4.5
-- **Google Gemini**: Server-side integration via `@google/generative-ai` — models: Gemini 2.5 Flash, 2.5 Pro, 3.0 Flash, 3.0 Pro
+- **Google Gemini**: Server-side integration via `@google/generative-ai` — models: Gemini 2.5 Flash, 2.5 Pro, Gemini 3 Flash, Gemini 3 Pro
 - **AI Endpoint**: `POST /api/chat/ai/stream` receives user message + full app state context, streams response via SSE, returns structured response with action commands
 - **Action System**: AI can control all app features via 18 action types (node/edge CRUD, BOM management, validation, view switching, project settings, exports)
 - **API Keys**: User-provided via ChatPanel settings UI, stored in localStorage (client-side), sent per-request to server
