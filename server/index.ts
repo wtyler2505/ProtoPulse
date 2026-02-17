@@ -6,10 +6,16 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
+app.set("trust proxy", 1);
 
-// Apply security-related middlewares early
-// Helmet sets various HTTP headers to help protect the app【697222849486831†L63-L75】.
-app.use(helmet());
+if (process.env.NODE_ENV === "production") {
+  app.use(helmet());
+} else {
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  }));
+}
 
 // Rate limit API requests to prevent brute-force attacks and abuse【697222849486831†L78-L93】.
 const apiLimiter = rateLimit({
