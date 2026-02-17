@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useProject } from '@/lib/project-context';
 import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -5,9 +6,22 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
 
 export default function ValidationView() {
   const { issues, runValidation, deleteValidationIssue, addOutputLog, setActiveView } = useProject();
+  const [pendingDismissId, setPendingDismissId] = useState<number | string | null>(null);
 
   const getIcon = (severity: string) => {
     switch (severity) {
@@ -92,7 +106,7 @@ export default function ValidationView() {
                 <ContextMenuItem onSelect={() => setActiveView('architecture')}>View in Architecture</ContextMenuItem>
                 <ContextMenuItem onSelect={() => copyToClipboard(issue.message)}>Copy Issue Details</ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem className="text-destructive" onSelect={() => deleteValidationIssue(issue.id)}>Dismiss Issue</ContextMenuItem>
+                <ContextMenuItem className="text-destructive" onSelect={() => setPendingDismissId(issue.id)}>Dismiss Issue</ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
           ))}
@@ -106,6 +120,26 @@ export default function ValidationView() {
           )}
         </ScrollArea>
       </div>
+
+      <AlertDialog open={pendingDismissId !== null} onOpenChange={(open) => { if (!open) setPendingDismissId(null); }}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Dismiss Validation Issue</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this validation issue without resolving the underlying problem. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (pendingDismissId !== null) { deleteValidationIssue(pendingDismissId); setPendingDismissId(null); } }}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Dismiss
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

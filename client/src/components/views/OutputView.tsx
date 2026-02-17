@@ -5,6 +5,7 @@ import { Search, Trash2, Copy, ClipboardCheck } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { copyToClipboard } from '@/lib/clipboard';
 import { COPY_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export default function OutputView() {
   const { outputLog, clearOutputLog } = useProject();
@@ -55,20 +56,28 @@ export default function OutputView() {
                 <p>{copiedAll ? 'Copied!' : 'Copy all logs'}</p>
               </TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  data-testid="button-clear-logs"
-                  className="p-1 hover:bg-white/10 text-muted-foreground hover:text-red-400 transition-colors"
-                  onClick={() => { if (window.confirm('Clear all output logs? This cannot be undone.')) { clearOutputLog(); } }}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                <p>Clear output</p>
-              </TooltipContent>
-            </Tooltip>
+            <ConfirmDialog
+              trigger={
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      data-testid="button-clear-logs"
+                      className="p-1 hover:bg-white/10 text-muted-foreground hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+                    <p>Clear output</p>
+                  </TooltipContent>
+                </Tooltip>
+              }
+              title="Clear Output Logs"
+              description="Clear all output logs? This cannot be undone."
+              confirmLabel="Clear"
+              onConfirm={clearOutputLog}
+              variant="destructive"
+            />
             <span className="text-[10px]">{outputLog.length} entries</span>
             <span>BASH / LINUX</span>
           </div>
