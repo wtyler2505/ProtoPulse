@@ -1,226 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useProject } from '@/lib/project-context';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
-
-interface SchematicPin {
-  name: string;
-  x: number;
-  y: number;
-  side: 'left' | 'right' | 'top' | 'bottom';
-  net?: string;
-}
-
-interface SchematicComponent {
-  id: string;
-  name: string;
-  type: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  pins: SchematicPin[];
-  partNumber?: string;
-  package?: string;
-  specs?: Record<string, string>;
-}
-
-interface SchematicNet {
-  id: string;
-  name: string;
-  points: { x: number; y: number }[];
-  color?: string;
-}
-
-interface SheetData {
-  components: SchematicComponent[];
-  nets: SchematicNet[];
-}
-
-const topSheetData: SheetData = {
-  components: [
-    {
-      id: 'esp32-top', name: 'ESP32-S3', type: 'MCU',
-      x: 300, y: 200, width: 200, height: 150,
-      pins: [
-        { name: '3V3', x: -20, y: 30, side: 'left', net: 'VCC_3V3' },
-        { name: 'GND', x: -20, y: 60, side: 'left', net: 'GND' },
-        { name: 'MOSI', x: 220, y: 30, side: 'right', net: 'SPI_MOSI' },
-        { name: 'MISO', x: 220, y: 50, side: 'right', net: 'SPI_MISO' },
-        { name: 'SCK', x: 220, y: 70, side: 'right', net: 'SPI_SCK' },
-        { name: 'CS', x: 220, y: 90, side: 'right', net: 'SPI_CS' },
-      ],
-      partNumber: 'ESP32-S3-WROOM-1', package: 'Module',
-      specs: { 'CPU': 'Dual-core Xtensa LX7 @ 240MHz', 'Flash': '8MB', 'RAM': '512KB SRAM', 'WiFi': '802.11 b/g/n', 'BLE': '5.0', 'GPIO': '45 pins' },
-    },
-    {
-      id: 'tp4056-top', name: 'TP4056', type: 'Charger IC',
-      x: 50, y: 200, width: 100, height: 80,
-      pins: [
-        { name: 'OUT', x: 120, y: 30, side: 'right', net: 'VBAT' },
-      ],
-      partNumber: 'TP4056', package: 'SOP-8',
-      specs: { 'Input': '4.5V-5.5V', 'Charge Current': '1A max', 'Charge Voltage': '4.2V' },
-    },
-    {
-      id: 'sx1262-top', name: 'SX1262', type: 'LoRa Transceiver',
-      x: 600, y: 200, width: 120, height: 100,
-      pins: [
-        { name: 'MOSI', x: -20, y: 30, side: 'left', net: 'SPI_MOSI' },
-        { name: 'MISO', x: -20, y: 50, side: 'left', net: 'SPI_MISO' },
-        { name: 'SCK', x: -20, y: 70, side: 'left', net: 'SPI_SCK' },
-        { name: 'NSS', x: -20, y: 90, side: 'left', net: 'SPI_CS' },
-      ],
-      partNumber: 'SX1262IMLTRT', package: 'QFN-24',
-      specs: { 'Frequency': '150MHz - 960MHz', 'Sensitivity': '-148 dBm', 'TX Power': '+22 dBm', 'Modulation': 'LoRa / FSK' },
-    },
-    {
-      id: 'sht40-top', name: 'SHT40', type: 'Temp/Humidity Sensor',
-      x: 300, y: 430, width: 120, height: 70,
-      pins: [
-        { name: 'SDA', x: -20, y: 25, side: 'left', net: 'I2C_SDA' },
-        { name: 'SCL', x: -20, y: 50, side: 'left', net: 'I2C_SCL' },
-        { name: 'VDD', x: 140, y: 25, side: 'right', net: 'VCC_3V3' },
-        { name: 'GND', x: 140, y: 50, side: 'right', net: 'GND' },
-      ],
-      partNumber: 'SHT40-AD1B-R2', package: 'DFN-4',
-      specs: { 'Temp Range': '-40°C to 125°C', 'Temp Accuracy': '±0.2°C', 'Humidity Range': '0-100% RH', 'Interface': 'I2C' },
-    },
-    {
-      id: 'antenna-top', name: 'Antenna', type: 'LoRa Antenna',
-      x: 650, y: 80, width: 80, height: 60,
-      pins: [
-        { name: 'RF', x: -20, y: 30, side: 'left', net: 'RF_OUT' },
-      ],
-      partNumber: 'ANT-868-USP410', package: 'SMA',
-      specs: { 'Frequency': '868/915 MHz', 'Gain': '2 dBi', 'VSWR': '<2.0' },
-    },
-  ],
-  nets: [
-    { id: 'net-vbat-top', name: 'VBAT', points: [{ x: 170, y: 230 }, { x: 280, y: 230 }] },
-    { id: 'net-spi-mosi', name: 'SPI_MOSI', points: [{ x: 520, y: 230 }, { x: 580, y: 230 }] },
-    { id: 'net-spi-miso', name: 'SPI_MISO', points: [{ x: 520, y: 250 }, { x: 580, y: 250 }] },
-    { id: 'net-spi-sck', name: 'SPI_SCK', points: [{ x: 520, y: 270 }, { x: 580, y: 270 }] },
-    { id: 'net-spi-cs', name: 'SPI_CS', points: [{ x: 520, y: 290 }, { x: 580, y: 290 }] },
-    { id: 'net-i2c-sda', name: 'I2C_SDA', points: [{ x: 280, y: 455 }, { x: 250, y: 455 }, { x: 250, y: 360 }, { x: 280, y: 360 }] },
-    { id: 'net-i2c-scl', name: 'I2C_SCL', points: [{ x: 280, y: 480 }, { x: 230, y: 480 }, { x: 230, y: 380 }, { x: 280, y: 380 }] },
-    { id: 'net-rf', name: 'RF_OUT', points: [{ x: 660, y: 300 }, { x: 660, y: 140 }, { x: 630, y: 110 }] },
-  ],
-};
-
-const powerSheetData: SheetData = {
-  components: [
-    {
-      id: 'usbc-pwr', name: 'USB-C', type: 'Connector',
-      x: 80, y: 230, width: 100, height: 60,
-      pins: [
-        { name: 'VBUS', x: 120, y: 20, side: 'right', net: 'VBUS_5V' },
-        { name: 'GND', x: 120, y: 40, side: 'right', net: 'GND' },
-      ],
-      partNumber: 'USB4110-GF-A', package: 'SMD',
-      specs: { 'Voltage': '5V', 'Current': '3A max', 'Standard': 'USB 2.0' },
-    },
-    {
-      id: 'tp4056-pwr', name: 'TP4056', type: 'Charger IC',
-      x: 300, y: 210, width: 140, height: 100,
-      pins: [
-        { name: 'IN', x: -20, y: 20, side: 'left', net: 'VBUS_5V' },
-        { name: 'GND', x: -20, y: 50, side: 'left', net: 'GND' },
-        { name: 'BAT+', x: 160, y: 20, side: 'right', net: 'VBAT' },
-        { name: 'OUT', x: 160, y: 50, side: 'right', net: 'VBAT' },
-      ],
-      partNumber: 'TP4056', package: 'SOP-8',
-      specs: { 'Input': '4.5V-5.5V', 'Charge Current': '1A max', 'Charge Voltage': '4.2V', 'Standby Current': '<2µA' },
-    },
-    {
-      id: 'lipo-pwr', name: 'Li-Po Battery', type: 'Battery',
-      x: 560, y: 220, width: 120, height: 80,
-      pins: [
-        { name: 'BAT+', x: -20, y: 20, side: 'left', net: 'VBAT' },
-        { name: 'BAT-', x: -20, y: 60, side: 'left', net: 'GND' },
-      ],
-      partNumber: 'LP-503759', package: '50x37x5.9mm',
-      specs: { 'Voltage': '3.7V nominal', 'Capacity': '2000mAh', 'Max Discharge': '2C', 'Weight': '38g' },
-    },
-    {
-      id: 'ldo-pwr', name: 'LDO 3.3V', type: 'Voltage Regulator',
-      x: 360, y: 400, width: 120, height: 70,
-      pins: [
-        { name: 'VIN', x: -20, y: 25, side: 'left', net: 'VBAT' },
-        { name: 'GND', x: 60, y: 90, side: 'bottom', net: 'GND' },
-        { name: 'VOUT', x: 140, y: 25, side: 'right', net: 'VCC_3V3' },
-      ],
-      partNumber: 'AP2112K-3.3', package: 'SOT-23-5',
-      specs: { 'Input': '2.5V-6V', 'Output': '3.3V', 'Max Current': '600mA', 'Dropout': '250mV @ 600mA', 'Quiescent': '55µA' },
-    },
-  ],
-  nets: [
-    { id: 'net-vbus', name: 'VBUS_5V', points: [{ x: 200, y: 250 }, { x: 280, y: 230 }], color: '#ef4444' },
-    { id: 'net-gnd-pwr1', name: 'GND', points: [{ x: 200, y: 270 }, { x: 280, y: 260 }], color: '#3b82f6' },
-    { id: 'net-vbat-pwr', name: 'VBAT', points: [{ x: 460, y: 230 }, { x: 540, y: 240 }] },
-    { id: 'net-vbat-pwr2', name: 'VBAT', points: [{ x: 460, y: 260 }, { x: 480, y: 260 }, { x: 480, y: 425 }, { x: 340, y: 425 }] },
-    { id: 'net-3v3-out', name: 'VCC_3V3', points: [{ x: 500, y: 425 }, { x: 560, y: 425 }, { x: 560, y: 370 }], color: '#22c55e' },
-  ],
-};
-
-const mcuSheetData: SheetData = {
-  components: [
-    {
-      id: 'esp32-mcu', name: 'ESP32-S3', type: 'MCU',
-      x: 250, y: 130, width: 300, height: 300,
-      pins: [
-        { name: '3V3', x: -30, y: 40, side: 'left', net: 'VCC_3V3' },
-        { name: 'GND', x: -30, y: 70, side: 'left', net: 'GND' },
-        { name: 'EN', x: -30, y: 100, side: 'left', net: 'EN' },
-        { name: 'IO0', x: -30, y: 130, side: 'left', net: 'BOOT' },
-        { name: 'SDA', x: -30, y: 160, side: 'left', net: 'I2C_SDA' },
-        { name: 'SCL', x: -30, y: 190, side: 'left', net: 'I2C_SCL' },
-        { name: 'TX', x: -30, y: 220, side: 'left', net: 'UART_TX' },
-        { name: 'RX', x: -30, y: 250, side: 'left', net: 'UART_RX' },
-        { name: 'MOSI', x: 330, y: 40, side: 'right', net: 'SPI_MOSI' },
-        { name: 'MISO', x: 330, y: 70, side: 'right', net: 'SPI_MISO' },
-        { name: 'SCK', x: 330, y: 100, side: 'right', net: 'SPI_SCK' },
-        { name: 'CS', x: 330, y: 130, side: 'right', net: 'SPI_CS' },
-        { name: 'ADC1', x: 330, y: 160, side: 'right', net: 'ADC_CH1' },
-        { name: 'ADC2', x: 330, y: 190, side: 'right', net: 'ADC_CH2' },
-        { name: 'GPIO18', x: 330, y: 220, side: 'right', net: 'LED_STATUS' },
-        { name: 'GPIO19', x: 330, y: 250, side: 'right', net: 'BUZZER' },
-      ],
-      partNumber: 'ESP32-S3-WROOM-1', package: 'Module (18x25.5mm)',
-      specs: { 'CPU': 'Dual-core Xtensa LX7 @ 240MHz', 'Flash': '8MB', 'PSRAM': '2MB', 'RAM': '512KB SRAM', 'WiFi': '802.11 b/g/n', 'BLE': '5.0', 'USB': 'OTG', 'ADC': '2x 12-bit SAR' },
-    },
-    {
-      id: 'decoupling-mcu', name: 'C1 100nF', type: 'Capacitor',
-      x: 120, y: 140, width: 60, height: 40,
-      pins: [
-        { name: '+', x: 80, y: 15, side: 'right', net: 'VCC_3V3' },
-        { name: '-', x: 80, y: 30, side: 'right', net: 'GND' },
-      ],
-      partNumber: 'CL05B104KO5NNNC', package: '0402',
-      specs: { 'Capacitance': '100nF', 'Voltage': '16V', 'Dielectric': 'X5R' },
-    },
-    {
-      id: 'pullup-en', name: 'R1 10K', type: 'Resistor',
-      x: 130, y: 220, width: 60, height: 30,
-      pins: [
-        { name: '1', x: 80, y: 15, side: 'right', net: 'EN' },
-        { name: '2', x: -20, y: 15, side: 'left', net: 'VCC_3V3' },
-      ],
-      partNumber: 'RC0402FR-0710KL', package: '0402',
-      specs: { 'Resistance': '10KΩ', 'Tolerance': '1%', 'Power': '1/16W' },
-    },
-  ],
-  nets: [
-    { id: 'net-3v3-mcu', name: 'VCC_3V3', points: [{ x: 200, y: 155 }, { x: 220, y: 170 }], color: '#22c55e' },
-    { id: 'net-gnd-mcu', name: 'GND', points: [{ x: 200, y: 170 }, { x: 220, y: 200 }], color: '#3b82f6' },
-    { id: 'net-en', name: 'EN', points: [{ x: 210, y: 235 }, { x: 220, y: 230 }] },
-  ],
-};
-
-const sheetDataMap: Record<string, SheetData> = {
-  top: topSheetData,
-  power: powerSheetData,
-  mcu: mcuSheetData,
-};
+import { topSheetData, sheetDataMap } from './schematic/data';
+import type { SheetData, SchematicNet } from './schematic/data';
 
 export default function SchematicView() {
   const { activeSheetId, schematicSheets, setActiveView, setActiveSheetId, addBomItem, addOutputLog } = useProject();
@@ -241,6 +23,9 @@ export default function SchematicView() {
   const [showPinLabels, setShowPinLabels] = useState(true);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const translateXRef = useRef(translateX);
+  const translateYRef = useRef(translateY);
 
   const sheetData = sheetDataMap[activeSheetId] || topSheetData;
   const components = sheetData.components;
@@ -270,6 +55,8 @@ export default function SchematicView() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' && !e.repeat) {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
         e.preventDefault();
         setSpaceDown(true);
       }
@@ -307,20 +94,50 @@ export default function SchematicView() {
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isPanning) {
-      setTranslateX(e.clientX - panStart.x);
-      setTranslateY(e.clientY - panStart.y);
+      const newX = e.clientX - panStart.x;
+      const newY = e.clientY - panStart.y;
+      translateXRef.current = newX;
+      translateYRef.current = newY;
+      if (svgRef.current) {
+        svgRef.current.style.transform = `translate(${newX}px, ${newY}px) scale(${scale})`;
+      }
     }
-  }, [isPanning, panStart]);
+  }, [isPanning, panStart, scale]);
 
   const handleMouseUp = useCallback(() => {
+    if (isPanning) {
+      setTranslateX(translateXRef.current);
+      setTranslateY(translateYRef.current);
+    }
     setIsPanning(false);
-  }, []);
+  }, [isPanning]);
 
   const fitToView = useCallback(() => {
-    setScale(1);
-    setTranslateX(0);
-    setTranslateY(0);
-  }, []);
+    if (components.length === 0) {
+      setScale(1);
+      setTranslateX(0);
+      setTranslateY(0);
+      return;
+    }
+    const containerEl = containerRef.current;
+    if (!containerEl) return;
+    const { width: containerW, height: containerH } = containerEl.getBoundingClientRect();
+    const minX = Math.min(...components.map(c => c.x));
+    const minY = Math.min(...components.map(c => c.y));
+    const maxX = Math.max(...components.map(c => c.x + c.width));
+    const maxY = Math.max(...components.map(c => c.y + c.height));
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    const padding = 60;
+    const scaleX = (containerW - padding * 2) / contentW;
+    const scaleY = (containerH - padding * 2) / contentH;
+    const newScale = Math.min(scaleX, scaleY, 2);
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    setScale(newScale);
+    setTranslateX(containerW / 2 - centerX * newScale);
+    setTranslateY(containerH / 2 - centerY * newScale);
+  }, [components]);
 
   const zoomIn = useCallback(() => setScale(prev => Math.min(prev * 1.25, 5)), []);
   const zoomOut = useCallback(() => setScale(prev => Math.max(prev * 0.8, 0.2)), []);
@@ -373,6 +190,11 @@ export default function SchematicView() {
     return false;
   }, [hoveredNetId, highlightedNetName]);
 
+  useEffect(() => {
+    translateXRef.current = translateX;
+    translateYRef.current = translateY;
+  }, [translateX, translateY]);
+
   const activeSheet = schematicSheets.find(s => s.id === activeSheetId);
 
   return (
@@ -380,6 +202,9 @@ export default function SchematicView() {
       <div
         ref={containerRef}
         className="flex-1 relative overflow-hidden"
+        role="application"
+        aria-label="Schematic editor"
+        tabIndex={0}
         style={{ cursor: isPanning ? 'grabbing' : spaceDown ? 'grab' : 'default' }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -395,7 +220,10 @@ export default function SchematicView() {
         />
 
         <svg
+          ref={svgRef}
           className="absolute inset-0 w-full h-full"
+          role="img"
+          aria-label="Circuit schematic diagram"
           style={{
             transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
             transformOrigin: 'center center',
@@ -448,8 +276,17 @@ export default function SchematicView() {
             return (
               <g
                 key={comp.id}
+                tabIndex={0}
+                role="button"
+                aria-label={`${comp.name} - ${comp.type}`}
                 transform={`translate(${comp.x}, ${comp.y})`}
                 onClick={() => handleComponentClick(comp.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleComponentClick(comp.id);
+                  }
+                }}
                 onMouseEnter={() => setHoveredComponentId(comp.id)}
                 onMouseLeave={() => setHoveredComponentId(null)}
                 style={{ cursor: 'pointer', opacity: dimmed ? 0.25 : 1 }}
@@ -529,6 +366,8 @@ export default function SchematicView() {
 
         {netTooltip && (
           <div
+            role="tooltip"
+            aria-live="polite"
             className="fixed z-50 px-2 py-1 bg-card/90 backdrop-blur border border-cyan-500/50 text-cyan-400 font-mono text-xs pointer-events-none"
             style={{ left: netTooltip.x + 12, top: netTooltip.y - 24 }}
           >
@@ -685,7 +524,7 @@ export default function SchematicView() {
               className="text-xs font-mono text-cyan-400 hover:underline"
               data-testid="link-datasheet"
             >
-              View Datasheet →
+              Search Datasheet →
             </a>
           </div>
 

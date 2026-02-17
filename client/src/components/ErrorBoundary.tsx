@@ -17,14 +17,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    if (error.message?.includes('ResizeObserver')) {
+    if (error.message?.match(/ResizeObserver loop (limit exceeded|completed with undelivered notifications)/)) {
       return { hasError: false, error: null };
     }
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    if (error.message?.includes('ResizeObserver')) return;
+    if (error.message?.match(/ResizeObserver loop (limit exceeded|completed with undelivered notifications)/)) return;
     console.warn('ErrorBoundary caught:', error.message, info.componentStack);
   }
 

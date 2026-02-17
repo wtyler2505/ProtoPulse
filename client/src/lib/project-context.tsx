@@ -3,7 +3,12 @@ import { Node, Edge } from '@xyflow/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 
-const PROJECT_ID = 1;
+/**
+ * Default project ID. Currently hardcoded to 1 because the backend seeds a
+ * single project. Replace with a value derived from route params (e.g.
+ * `useParams`) when multi-project support is implemented.
+ */
+export const PROJECT_ID = 1;
 
 export interface Position {
   x: number;
@@ -45,14 +50,26 @@ export interface ValidationIssue {
   suggestion?: string;
 }
 
+export interface ChatAttachment {
+  type: 'image' | 'file';
+  name: string;
+  url?: string;
+  data?: string;
+}
+
+export interface ChatAction {
+  type: string;
+  [key: string]: unknown;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
-  attachments?: any[];
+  attachments?: ChatAttachment[];
   mode?: 'chat' | 'image' | 'video';
-  actions?: any[];
+  actions?: ChatAction[];
   isError?: boolean;
   isStreaming?: boolean;
 }
@@ -75,7 +92,7 @@ interface ProjectState {
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
 
-  schematicSheets: { id: string; name: string; content: any }[];
+  schematicSheets: { id: string; name: string; content: Record<string, unknown> }[];
   activeSheetId: string;
   setActiveSheetId: (id: string) => void;
 
@@ -86,15 +103,15 @@ interface ProjectState {
     inStockOnly: boolean;
     manufacturingDate: Date;
   };
-  setBomSettings: (settings: any) => void;
+  setBomSettings: (settings: Partial<{ maxCost: number; batchSize: number; inStockOnly: boolean; manufacturingDate: Date }>) => void;
   addBomItem: (item: Omit<BomItem, 'id'>) => void;
-  deleteBomItem: (id: number) => void;
-  updateBomItem: (id: number, data: Partial<BomItem>) => void;
+  deleteBomItem: (id: number | string) => void;
+  updateBomItem: (id: number | string, data: Partial<BomItem>) => void;
 
   issues: ValidationIssue[];
   runValidation: () => void;
-  addValidationIssue: (issue: { severity: string; message: string; componentId?: string; suggestion?: string }) => void;
-  deleteValidationIssue: (id: number) => void;
+  addValidationIssue: (issue: { severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string }) => void;
+  deleteValidationIssue: (id: number | string) => void;
 
   messages: ChatMessage[];
   addMessage: (msg: ChatMessage | string) => void;
@@ -147,7 +164,7 @@ function formatTimeAgo(timestamp: string): string {
   return `${Math.floor(diffH / 24)}d ago`;
 }
 
-const validationChecks = [
+const validationChecks: Array<{ severity: 'error' | 'warning' | 'info'; message: string; componentId: string; suggestion: string }> = [
   { severity: 'info', message: 'Check I2C pull-up resistor values for SHT40', componentId: '4', suggestion: 'Recommended 4.7kΩ for 100kHz standard mode.' },
   { severity: 'warning', message: 'No ESD protection on USB-C data lines', componentId: '5', suggestion: 'Add TVS diode array (e.g., USBLC6-2SC6) for ESD protection.' },
   { severity: 'info', message: 'Consider adding watchdog timer configuration', componentId: '1', suggestion: 'Enable ESP32 hardware WDT with 5s timeout for field reliability.' },
@@ -457,7 +474,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   });
 
   const addValidationIssueMutation = useMutation({
-    mutationFn: async (issue: { severity: string; message: string; componentId?: string; suggestion?: string }) => {
+    mutationFn: async (issue: { severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string }) => {
       await apiRequest('POST', `/api/projects/${PROJECT_ID}/validation`, issue);
     },
     onSuccess: () => {
@@ -475,8 +492,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   });
 
   const deleteBomItemMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/bom/${id}?projectId=${PROJECT_ID}`);
+    mutationFn: async (id: number | string) => {
+      await apiRequest('DELETE', `/api/bom/${Number(id)}?projectId=${PROJECT_ID}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
@@ -484,8 +501,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   });
 
   const updateBomItemMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<BomItem> }) => {
-      await apiRequest('PATCH', `/api/bom/${id}?projectId=${PROJECT_ID}`, data);
+    mutationFn: async ({ id, data }: { id: number | string; data: Partial<BomItem> }) => {
+      await apiRequest('PATCH', `/api/bom/${Number(id)}?projectId=${PROJECT_ID}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
@@ -493,8 +510,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   });
 
   const deleteValidationIssueMutation = useMutation({
-    mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/validation/${id}?projectId=${PROJECT_ID}`);
+    mutationFn: async (id: number | string) => {
+      await apiRequest('DELETE', `/api/validation/${Number(id)}?projectId=${PROJECT_ID}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/validation`] });
@@ -542,14 +559,14 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     addValidationIssueMutation.mutate(check);
   };
 
-  const addValidationIssue = (issue: { severity: string; message: string; componentId?: string; suggestion?: string }) => {
+  const addValidationIssue = (issue: { severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string }) => {
     addValidationIssueMutation.mutate(issue);
   };
 
   const addBomItem = (item: Omit<BomItem, 'id'>) => addBomItemMutation.mutate(item);
-  const deleteBomItemFn = (id: number) => deleteBomItemMutation.mutate(id);
-  const updateBomItemFn = (id: number, data: Partial<BomItem>) => updateBomItemMutation.mutate({ id, data });
-  const deleteValidationIssue = (id: number) => deleteValidationIssueMutation.mutate(id);
+  const deleteBomItemFn = (id: number | string) => deleteBomItemMutation.mutate(id);
+  const updateBomItemFn = (id: number | string, data: Partial<BomItem>) => updateBomItemMutation.mutate({ id, data });
+  const deleteValidationIssue = (id: number | string) => deleteValidationIssueMutation.mutate(id);
 
   useEffect(() => {
     if (projectQuery.data) {

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { MousePointer2, Grid, Move, Maximize, Cpu, Component } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from '@/components/ui/context-menu';
+import { copyToClipboard } from '@/lib/clipboard';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -21,7 +22,7 @@ const toolLabels: Record<string, string> = {
 };
 
 function ArchitectureFlow() {
-  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog, focusNodeId, selectedNodeId, setSelectedNodeId } = useProject();
+  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog, focusNodeId, selectedNodeId, setSelectedNodeId, pushUndoState, undo, redo } = useProject();
   // Show the asset manager by default on desktop. This state now controls
   // visibility across both desktop and mobile, enabling a collapsible
   // asset library on larger screens.
@@ -33,6 +34,7 @@ function ArchitectureFlow() {
   const [localEdges, setLocalEdges, onEdgesChange] = useEdgesState(edges);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useReactFlow();
+  const genTimeoutRef = useRef<NodeJS.Timeout>(undefined);
 
   const nodesMountSkip = useRef(true);
   const edgesMountSkip = useRef(true);
@@ -43,15 +45,21 @@ function ArchitectureFlow() {
   const prevContextEdges = useRef(edges);
 
   useEffect(() => {
-    if (prevContextNodes.current !== nodes && !userInteracted.current) {
-      setLocalNodes(nodes);
+    if (prevContextNodes.current !== nodes) {
+      if (!userInteracted.current) {
+        setLocalNodes(nodes);
+      }
+      userInteracted.current = false;
     }
     prevContextNodes.current = nodes;
   }, [nodes, setLocalNodes]);
 
   useEffect(() => {
-    if (prevContextEdges.current !== edges && !userInteracted.current) {
-      setLocalEdges(edges);
+    if (prevContextEdges.current !== edges) {
+      if (!userInteracted.current) {
+        setLocalEdges(edges);
+      }
+      userInteracted.current = false;
     }
     prevContextEdges.current = edges;
   }, [edges, setLocalEdges]);
@@ -65,7 +73,6 @@ function ArchitectureFlow() {
     clearTimeout(nodeSaveTimer.current);
     nodeSaveTimer.current = setTimeout(() => {
       setNodes(localNodes);
-      userInteracted.current = false;
     }, 1500);
     return () => clearTimeout(nodeSaveTimer.current);
   }, [localNodes]);
@@ -79,7 +86,6 @@ function ArchitectureFlow() {
     clearTimeout(edgeSaveTimer.current);
     edgeSaveTimer.current = setTimeout(() => {
       setEdges(localEdges);
-      userInteracted.current = false;
     }, 1500);
     return () => clearTimeout(edgeSaveTimer.current);
   }, [localEdges]);
@@ -101,30 +107,69 @@ function ArchitectureFlow() {
     }
   }, [focusNodeId]);
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (nodeSaveTimer.current) {
+        clearTimeout(nodeSaveTimer.current);
+        setNodes(localNodes);
+      }
+      if (edgeSaveTimer.current) {
+        clearTimeout(edgeSaveTimer.current);
+        setEdges(localEdges);
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [localNodes, localEdges, setNodes, setEdges]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]);
+
+  useEffect(() => {
+    return () => {
+      if (genTimeoutRef.current) clearTimeout(genTimeoutRef.current);
+    };
+  }, []);
+
   const markInteracted = useCallback(() => { userInteracted.current = true; }, []);
 
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
+      pushUndoState();
       markInteracted();
       setLocalNodes((nds) => nds.filter((n) => !deleted.find((d) => d.id === n.id)));
     },
-    [setLocalNodes, markInteracted],
+    [setLocalNodes, markInteracted, pushUndoState],
   );
 
   const onEdgesDelete = useCallback(
     (deleted: Edge[]) => {
+      pushUndoState();
       markInteracted();
       setLocalEdges((eds) => eds.filter((e) => !deleted.find((d) => d.id === e.id)));
     },
-    [setLocalEdges, markInteracted],
+    [setLocalEdges, markInteracted, pushUndoState],
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
+      pushUndoState();
       markInteracted();
       setLocalEdges((eds) => addEdge(params, eds));
     },
-    [setLocalEdges, markInteracted],
+    [setLocalEdges, markInteracted, pushUndoState],
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -141,19 +186,20 @@ function ArchitectureFlow() {
       const type = event.dataTransfer.getData('application/reactflow/type');
       const label = event.dataTransfer.getData('application/reactflow/label');
 
-      const position = { x: event.clientX - 300, y: event.clientY - 100 };
+      const position = reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
       
       const newNode = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         type: 'custom',
         position,
         data: { label, type },
       };
 
+      pushUndoState();
       markInteracted();
       setLocalNodes((nds) => nds.concat(newNode));
     },
-    [setLocalNodes, markInteracted],
+    [setLocalNodes, markInteracted, pushUndoState, reactFlowInstance],
   );
 
   const onDragStart = (event: React.DragEvent, nodeType: string, label: string) => {
@@ -171,22 +217,24 @@ function ArchitectureFlow() {
 
   const handleAddNodeFromAsset = useCallback((type: string, label: string) => {
     const newNode = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       type: 'custom',
       position: { x: 200 + Math.random() * 400, y: 100 + Math.random() * 300 },
       data: { label, type },
     };
+    pushUndoState();
     markInteracted();
     setLocalNodes((nds) => nds.concat(newNode));
-  }, [setLocalNodes, markInteracted]);
+  }, [setLocalNodes, markInteracted, pushUndoState]);
 
   const handleAddComponent = (type: string) => {
     const newNode = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       type: 'custom',
       position: { x: Math.random() * 400 + 100, y: Math.random() * 400 + 100 },
       data: { label: type, type: type.toLowerCase() },
     };
+    pushUndoState();
     markInteracted();
     setLocalNodes((nds) => nds.concat(newNode));
   };
@@ -303,19 +351,19 @@ function ArchitectureFlow() {
                       data-testid="button-generate-schematic"
                       className="pointer-events-auto px-6 py-2 bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/20 hover:scale-105 transition-all"
                       onClick={() => {
-                        addMessage({ id: Date.now().toString(), role: 'user', content: 'Generate Schematic', timestamp: Date.now(), mode: 'chat' });
+                        addMessage({ id: crypto.randomUUID(), role: 'user', content: 'Generate Architecture', timestamp: Date.now(), mode: 'chat' });
                         setIsGenerating(true);
-                        setTimeout(() => {
-                          addMessage({ id: (Date.now()+1).toString(), role: 'assistant', content: "I've generated a preliminary block diagram. The architecture includes an MCU core, power management, communication module, and sensor subsystem.", timestamp: Date.now() });
+                        genTimeoutRef.current = setTimeout(() => {
+                          addMessage({ id: crypto.randomUUID(), role: 'assistant', content: "I've generated a sample block diagram to get you started. You can customize it by adding, removing, or connecting components using the asset library or chat commands.", timestamp: Date.now() });
                           setIsGenerating(false);
                         }, 2000);
                       }}
                     >
-                      Generate Schematic
+                      Generate Architecture
                     </button>
                   </TooltipTrigger>
                   <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                    <p>Generate initial architecture</p>
+                    <p>Ask AI to suggest a system architecture</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -332,13 +380,13 @@ function ArchitectureFlow() {
             ))}
           </ContextMenuSubContent>
         </ContextMenuSub>
-        <ContextMenuItem onSelect={() => { setNodes([...nodes, { id: Date.now().toString(), type: 'custom', position: { x: 300, y: 300 }, data: { label: 'New Component', type: 'mcu' } }]); addOutputLog('[ARCH] Added component from paste'); }}>Paste</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { pushUndoState(); const center = reactFlowInstance.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); markInteracted(); setLocalNodes((nds) => [...nds, { id: crypto.randomUUID(), type: 'custom', position: center, data: { label: 'New Component', type: 'mcu' } }]); addOutputLog('[ARCH] Added component from paste'); }}>Paste</ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => reactFlowInstance.fitView({ padding: 0.2 })}>Fit View</ContextMenuItem>
-        <ContextMenuItem onSelect={() => setSnapEnabled(!snapEnabled)}>Toggle Grid</ContextMenuItem>
-        <ContextMenuItem onSelect={() => { setNodes(nodes.map((n: any) => ({ ...n, selected: true }))); addOutputLog('[ARCH] Selected all ' + nodes.length + ' nodes'); }}>Select All</ContextMenuItem>
+        <ContextMenuItem onSelect={() => reactFlowInstance.fitView({ padding: 0.2 })}>Fit View <span className="ml-auto text-muted-foreground text-[10px]">F</span></ContextMenuItem>
+        <ContextMenuItem onSelect={() => setSnapEnabled(!snapEnabled)}>Toggle Grid <span className="ml-auto text-muted-foreground text-[10px]">G</span></ContextMenuItem>
+        <ContextMenuItem onSelect={() => { setLocalNodes(localNodes.map((n) => ({ ...n, selected: true }))); addOutputLog('[ARCH] Selected all ' + localNodes.length + ' nodes'); }}>Select All <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span></ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(JSON.stringify({ nodes, edges }, null, 2)); addOutputLog('[ARCH] Exported architecture to clipboard'); }}>Export to Clipboard</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { copyToClipboard(JSON.stringify({ nodes, edges }, null, 2)); addOutputLog('[ARCH] Exported architecture to clipboard'); }}>Export to Clipboard</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

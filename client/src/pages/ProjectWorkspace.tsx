@@ -1,13 +1,14 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
 import { useProject, ProjectProvider } from '@/lib/project-context';
 import Sidebar from '@/components/layout/Sidebar';
 import ChatPanel from '@/components/panels/ChatPanel';
-import ArchitectureView from '@/components/views/ArchitectureView';
-import SchematicView from '@/components/views/SchematicView';
-import ProcurementView from '@/components/views/ProcurementView';
-import ValidationView from '@/components/views/ValidationView';
-import OutputView from '@/components/views/OutputView';
 import { ViewMode } from '@/lib/project-context';
+
+const ArchitectureView = lazy(() => import('@/components/views/ArchitectureView'));
+const SchematicView = lazy(() => import('@/components/views/SchematicView'));
+const ProcurementView = lazy(() => import('@/components/views/ProcurementView'));
+const ValidationView = lazy(() => import('@/components/views/ValidationView'));
+const OutputView = lazy(() => import('@/components/views/OutputView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
@@ -63,8 +64,24 @@ function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (d
   );
 }
 
+function ViewLoadingFallback() {
+  return (
+    <div className="flex items-center justify-center h-full w-full">
+      <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+    </div>
+  );
+}
+
 function WorkspaceContent() {
   const { activeView, setActiveView } = useProject();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (mainRef.current) {
+      mainRef.current.focus({ preventScroll: true });
+    }
+  }, [activeView]);
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -93,6 +110,9 @@ function WorkspaceContent() {
 
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden font-sans text-foreground">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:text-sm">
+        Skip to main content
+      </a>
       <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 md:hidden">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -139,7 +159,7 @@ function WorkspaceContent() {
 
         {!sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
         
-        <main className="flex-1 flex flex-col min-w-0 relative bg-[#090a0d]">
+        <main id="main-content" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-[#090a0d]">
           <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden md:flex items-center px-1 gap-0 z-10">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -203,15 +223,43 @@ function WorkspaceContent() {
             </div>
           </header>
 
-          <ErrorBoundary>
-            <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
-              {activeView === 'output' && <OutputView />}
-              {activeView === 'architecture' && <ArchitectureView />}
-              {activeView === 'schematic' && <SchematicView />}
-              {activeView === 'procurement' && <ProcurementView />}
-              {activeView === 'validation' && <ValidationView />}
-            </div>
-          </ErrorBoundary>
+          <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
+              {activeView === 'output' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <OutputView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'architecture' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <ArchitectureView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'schematic' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <SchematicView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'procurement' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <ProcurementView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'validation' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <ValidationView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+          </div>
         </main>
 
         {!chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}

@@ -29,7 +29,9 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey.join("/") as string, {
+    // queryKey is always a single-element array like ['/api/projects/1/nodes']
+    const url = queryKey[0] as string;
+    const res = await fetch(url, {
       credentials: "include",
     });
 
@@ -38,7 +40,11 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    return await res.json();
+    const data = await res.json();
+    if (data === undefined) {
+      throw new Error('API returned undefined response');
+    }
+    return data;
   };
 
 export const queryClient = new QueryClient({
@@ -47,11 +53,14 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 5 * 60 * 1000,
+      retry: 2,
     },
     mutations: {
       retry: false,
+      onError: (error: Error) => {
+        console.error('[API Mutation Error]', error.message);
+      },
     },
   },
 });

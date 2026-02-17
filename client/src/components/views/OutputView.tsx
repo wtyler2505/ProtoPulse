@@ -3,6 +3,8 @@ import { useProject } from '@/lib/project-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Trash2, Copy, ClipboardCheck } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { copyToClipboard } from '@/lib/clipboard';
+import { COPY_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
 
 export default function OutputView() {
   const { outputLog, clearOutputLog } = useProject();
@@ -10,20 +12,25 @@ export default function OutputView() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
 
-  const filteredLog = outputLog.filter(log =>
-    !searchTerm || log.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const indexedFilteredLog = outputLog
+    .map((log, index) => ({ log, index }))
+    .filter(({ log }) =>
+      !searchTerm || log.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+  const displayLog = indexedFilteredLog.slice(-500);
+  const truncatedCount = indexedFilteredLog.length - displayLog.length;
 
   const handleCopyEntry = (log: string, index: number) => {
-    navigator.clipboard.writeText(log);
+    copyToClipboard(log);
     setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 1500);
+    setTimeout(() => setCopiedIndex(null), COPY_FEEDBACK_DURATION);
   };
 
   const handleCopyAll = () => {
-    navigator.clipboard.writeText(outputLog.join('\n'));
+    copyToClipboard(outputLog.join('\n'));
     setCopiedAll(true);
-    setTimeout(() => setCopiedAll(false), 1500);
+    setTimeout(() => setCopiedAll(false), COPY_FEEDBACK_DURATION);
   };
 
   return (
@@ -51,7 +58,7 @@ export default function OutputView() {
                 <button
                   data-testid="button-clear-logs"
                   className="p-1 hover:bg-white/10 text-muted-foreground hover:text-red-400 transition-colors"
-                  onClick={clearOutputLog}
+                  onClick={() => { if (window.confirm('Clear all output logs? This cannot be undone.')) { clearOutputLog(); } }}
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -77,29 +84,31 @@ export default function OutputView() {
         </div>
       </div>
       <ScrollArea className="flex-1">
-        {filteredLog.map((log, i) => {
-          const originalIndex = outputLog.indexOf(log);
-          return (
-            <Tooltip key={i}>
-              <TooltipTrigger asChild>
-                <div
-                  data-testid={`log-entry-${originalIndex}`}
-                  className="mb-1 break-all hover:bg-white/10 px-1 cursor-pointer transition-colors group"
-                  onClick={() => handleCopyEntry(log, originalIndex)}
-                >
-                  <span className="text-gray-500 mr-2">[{String(originalIndex).padStart(3, '0')}]</span>
-                  {log}
-                  {copiedIndex === originalIndex && (
-                    <span className="ml-2 text-green-400 text-[10px]">copied!</span>
-                  )}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="right">
-                <p>Click to copy</p>
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+        {truncatedCount > 0 && (
+          <div className="mb-2 px-1 text-yellow-500/80 text-[10px]">
+            [{truncatedCount} older entries hidden — showing last 500]
+          </div>
+        )}
+        {displayLog.map(({ log, index: originalIndex }) => (
+          <Tooltip key={originalIndex}>
+            <TooltipTrigger asChild>
+              <div
+                data-testid={`log-entry-${originalIndex}`}
+                className="mb-1 break-all hover:bg-white/10 px-1 cursor-pointer transition-colors group"
+                onClick={() => handleCopyEntry(log, originalIndex)}
+              >
+                <span className="text-gray-500 mr-2">[{String(originalIndex).padStart(3, '0')}]</span>
+                {log}
+                {copiedIndex === originalIndex && (
+                  <span className="ml-2 text-green-400 text-[10px]">copied!</span>
+                )}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="right">
+              <p>Click to copy</p>
+            </TooltipContent>
+          </Tooltip>
+        ))}
         <div className="animate-pulse">_</div>
       </ScrollArea>
     </div>

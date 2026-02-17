@@ -3,6 +3,7 @@ import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle } from 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
+import { copyToClipboard } from '@/lib/clipboard';
 
 export default function ValidationView() {
   const { issues, runValidation, deleteValidationIssue, addOutputLog, setActiveView } = useProject();
@@ -74,8 +75,8 @@ export default function ValidationView() {
                   <div className="md:w-32">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button data-testid={`button-autofix-${issue.id}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(Number(issue.id)); addOutputLog(`[AUTO-FIX] Resolved: ${issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
-                            Auto-Fix
+                        <button data-testid={`button-autofix-${issue.id}`} aria-label={`Auto-fix: ${issue.message}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(issue.id); addOutputLog(`[AUTO-FIX] Resolved: ${issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
+                            Mark Resolved
                         </button>
                       </TooltipTrigger>
                       <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
@@ -86,11 +87,11 @@ export default function ValidationView() {
                 </div>
               </ContextMenuTrigger>
               <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-                <ContextMenuItem onSelect={() => { deleteValidationIssue(Number(issue.id)); addOutputLog(`[AUTO-FIX] Resolved: ${issue.message}`); }}>Auto-Fix Issue</ContextMenuItem>
+                <ContextMenuItem onSelect={() => { deleteValidationIssue(issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${issue.message}`); }}>Mark Resolved</ContextMenuItem>
                 <ContextMenuItem onSelect={() => setActiveView('architecture')}>View in Architecture</ContextMenuItem>
-                <ContextMenuItem onSelect={() => navigator.clipboard.writeText(issue.message)}>Copy Issue Details</ContextMenuItem>
+                <ContextMenuItem onSelect={() => copyToClipboard(issue.message)}>Copy Issue Details</ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem className="text-destructive" onSelect={() => deleteValidationIssue(Number(issue.id))}>Dismiss Issue</ContextMenuItem>
+                <ContextMenuItem className="text-destructive" onSelect={() => { if (window.confirm('Dismiss this issue? This cannot be undone.')) { deleteValidationIssue(issue.id); } }}>Dismiss Issue</ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
           ))}

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProject } from '@/lib/project-context';
 import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
+import { copyToClipboard } from '@/lib/clipboard';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -34,41 +35,54 @@ export default function ProcurementView() {
     'LCSC': false,
   });
 
-  const filteredBom = bom.filter(item => {
-    if (!searchTerm) return true;
+  const filteredBom = useMemo(() => {
+    if (!searchTerm) return bom;
     const term = searchTerm.toLowerCase();
-    return (
+    return bom.filter(item =>
       item.partNumber.toLowerCase().includes(term) ||
       item.manufacturer.toLowerCase().includes(term) ||
       item.description.toLowerCase().includes(term) ||
       item.supplier.toLowerCase().includes(term)
     );
-  });
+  }, [bom, searchTerm]);
 
-  const totalCost = filteredBom.reduce((acc, item) => acc + item.totalPrice, 0);
+  const totalCost = filteredBom.reduce((acc, item) => acc + Number(item.totalPrice), 0);
 
   const handleExportCSV = () => {
-    const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Stock', 'Status'];
-    const rows = filteredBom.map(item => [
-      item.partNumber, item.manufacturer, item.description, item.quantity,
-      item.unitPrice.toFixed(4), item.totalPrice.toFixed(2), item.supplier,
-      item.stock, item.status
-    ]);
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'bom_export.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const escapeCSV = (val: string | number) => {
+        const s = String(val);
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      };
+      const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Stock', 'Status'];
+      const rows = filteredBom.map(item => [
+        escapeCSV(item.partNumber), escapeCSV(item.manufacturer), escapeCSV(item.description), escapeCSV(item.quantity),
+        escapeCSV(Number(item.unitPrice).toFixed(4)), escapeCSV(Number(item.totalPrice).toFixed(2)), escapeCSV(item.supplier),
+        escapeCSV(item.stock), escapeCSV(item.status)
+      ]);
+      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'bom_export.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('Export failed:', err);
+      alert('Failed to export CSV. Please try again.');
+    }
   };
 
+  // TODO: Open an inline edit row instead of inserting a placeholder entry
   const handleAddItem = () => {
     addBomItem({
       partNumber: 'NEW-PART',
       manufacturer: 'Unknown',
-      description: 'New component',
+      description: 'New component — edit to customize',
       quantity: 1,
       unitPrice: 0,
       totalPrice: 0,
@@ -250,7 +264,7 @@ export default function ProcurementView() {
 
       <div className="flex-1 overflow-auto p-3 md:p-6">
         <div className="border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm overflow-x-auto">
-          <table className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
+          <table aria-label="Bill of Materials" className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
             <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-4 py-3">Status</th>
@@ -287,8 +301,8 @@ export default function ProcurementView() {
                       <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
                       <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
                       <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${item.unitPrice.toFixed(4)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${item.totalPrice.toFixed(2)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${Number(item.unitPrice).toFixed(4)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${Number(item.totalPrice).toFixed(2)}</td>
                       <td className="px-4 py-3 text-right flex gap-1">
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -312,7 +326,7 @@ export default function ProcurementView() {
                           <TooltipTrigger asChild>
                             <button
                               className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => deleteBomItem(Number(item.id))}
+                              onClick={() => { if (window.confirm('Delete this item? This cannot be undone.')) { deleteBomItem(item.id); } }}
                               data-testid={`button-delete-${item.id}`}
                             >
                               <Trash2 className="w-4 h-4" />
@@ -326,9 +340,9 @@ export default function ProcurementView() {
                     </tr>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-                    <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(JSON.stringify(item, null, 2)); addOutputLog('[BOM] Copied details: ' + item.partNumber); }}>Copy Details</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' ' + item.manufacturer + ' datasheet'), '_blank')}>View Datasheet</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' alternative equivalent'), '_blank')}>Find Alternatives</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => { copyToClipboard(JSON.stringify(item, null, 2)); addOutputLog('[BOM] Copied details: ' + item.partNumber); }}>Copy Details</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' ' + item.manufacturer + ' datasheet'), '_blank', 'noopener,noreferrer')}>Search Datasheet</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' alternative equivalent'), '_blank', 'noopener,noreferrer')}>Find Alternatives</ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem
                       onSelect={() => {
@@ -338,15 +352,22 @@ export default function ProcurementView() {
                     >
                       Buy from {item.supplier}
                     </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => navigator.clipboard.writeText(item.partNumber)}>Copy Part Number</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => copyToClipboard(item.partNumber)}>Copy Part Number</ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem className="text-destructive" onSelect={() => deleteBomItem(Number(item.id))}>Remove from BOM</ContextMenuItem>
+                    <ContextMenuItem className="text-destructive" onSelect={() => { if (window.confirm('Remove this item from BOM? This cannot be undone.')) { deleteBomItem(item.id); } }}>Remove from BOM</ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
               ))}
             </tbody>
           </table>
         </div>
+        {filteredBom.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <Package className="w-12 h-12 mb-4 opacity-30" />
+            <p className="text-sm font-medium">No BOM items yet</p>
+            <p className="text-xs mt-1">Add components from the architecture view or click "Add Item"</p>
+          </div>
+        )}
       </div>
     </div>
   );

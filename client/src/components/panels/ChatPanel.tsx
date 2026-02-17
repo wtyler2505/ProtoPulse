@@ -1,15 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Send, Bot, User, Sparkles, Loader2, Plus, Zap, X, Settings2, Eye, EyeOff,
-  ChevronDown, Copy, Check, RefreshCw, ArrowDown, Search, Download, Trash2,
-  StopCircle, AlertTriangle, CheckCircle2, ArrowRight, SlidersHorizontal, Mic, ImagePlus
+  Send, Bot, Sparkles, Loader2, Plus, Zap, X, Settings2,
+  ChevronDown, ArrowDown, Search, Download, Trash2,
+  StopCircle, AlertTriangle, ArrowRight, SlidersHorizontal, Mic, ImagePlus
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { useProject } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { copyToClipboard } from '@/lib/clipboard';
+import { quickActionDescriptions, AI_MODELS, DESTRUCTIVE_ACTIONS, COPY_FEEDBACK_DURATION, LOCAL_COMMAND_DELAY } from './chat/constants';
+import MessageBubble from './chat/MessageBubble';
+import SettingsPanel from './chat/SettingsPanel';
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -18,88 +20,6 @@ interface ChatPanelProps {
   width?: number;
   onToggleCollapse?: () => void;
 }
-
-const quickActionDescriptions: Record<string, string> = {
-  'Generate Architecture': 'Generate a default system architecture',
-  'Optimize BOM': 'Optimize bill of materials cost',
-  'Run Validation': 'Run design rule checks',
-  'Add MCU Node': 'Add an MCU component to the design',
-  'Switch to Schematic': 'Open the schematic editor',
-  'Project Summary': 'Show current project info',
-  'Show Help': 'List all available commands',
-  'Export BOM CSV': 'Export BOM as CSV file',
-};
-
-const AI_MODELS = {
-  anthropic: [
-    { id: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5' },
-    { id: 'claude-4-6-sonnet-20260101', label: 'Claude 4.6 Sonnet' },
-    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
-    { id: 'claude-4-6-opus-20260101', label: 'Claude 4.6 Opus' },
-    { id: 'claude-haiku-4-5-20250514', label: 'Claude Haiku 4.5' },
-  ],
-  gemini: [
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-  ],
-};
-
-const DESTRUCTIVE_ACTIONS = ['clear_canvas', 'remove_node', 'remove_edge', 'clear_validation', 'remove_bom_item'];
-
-const ACTION_LABELS: Record<string, string> = {
-  switch_view: 'Switched view',
-  switch_schematic_sheet: 'Switched sheet',
-  add_node: 'Added component',
-  remove_node: 'Removed component',
-  update_node: 'Updated component',
-  connect_nodes: 'Connected nodes',
-  remove_edge: 'Removed connection',
-  clear_canvas: 'Cleared canvas',
-  generate_architecture: 'Generated architecture',
-  add_bom_item: 'Added to BOM',
-  remove_bom_item: 'Removed from BOM',
-  update_bom_item: 'Updated BOM item',
-  run_validation: 'Ran validation',
-  clear_validation: 'Cleared issues',
-  add_validation_issue: 'Added issue',
-  rename_project: 'Renamed project',
-  update_description: 'Updated description',
-  export_bom_csv: 'Exported CSV',
-  undo: 'Undid last action',
-  redo: 'Redid action',
-  auto_layout: 'Auto-arranged layout',
-  add_subcircuit: 'Added sub-circuit',
-  assign_net_name: 'Named net',
-  create_sheet: 'Created sheet',
-  rename_sheet: 'Renamed sheet',
-  move_to_sheet: 'Moved to sheet',
-  set_pin_map: 'Set pin map',
-  auto_assign_pins: 'Auto-assigned pins',
-  power_budget_analysis: 'Power budget analysis',
-  voltage_domain_check: 'Voltage domain check',
-  auto_fix_validation: 'Auto-fixed validation',
-  dfm_check: 'DFM check',
-  thermal_analysis: 'Thermal analysis',
-  pricing_lookup: 'Checked pricing',
-  suggest_alternatives: 'Suggested alternatives',
-  optimize_bom: 'Optimized BOM',
-  check_lead_times: 'Checked lead times',
-  parametric_search: 'Parametric search',
-  analyze_image: 'Analyzed image',
-  save_design_decision: 'Saved decision',
-  add_annotation: 'Added annotation',
-  start_tutorial: 'Started tutorial',
-  export_kicad: 'Exported KiCad',
-  export_spice: 'Exported SPICE',
-  preview_gerber: 'Gerber preview',
-  add_datasheet_link: 'Added datasheet',
-  export_design_report: 'Generated report',
-  set_project_type: 'Set project type',
-};
-
-import type { ChatMessage } from '@/lib/project-context';
 
 export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 350, onToggleCollapse }: ChatPanelProps) {
   const {
@@ -123,23 +43,25 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [aiProvider, setAiProvider] = useState<'anthropic' | 'gemini'>(() => {
-    return (localStorage.getItem('protopulse_ai_provider') as any) || 'anthropic';
+    try { return (localStorage.getItem('protopulse_ai_provider') as 'anthropic' | 'gemini') || 'anthropic'; } catch { return 'anthropic'; }
   });
   const [aiModel, setAiModel] = useState(() => {
-    const stored = localStorage.getItem('protopulse_ai_model');
-    const provider = (localStorage.getItem('protopulse_ai_provider') as 'anthropic' | 'gemini') || 'anthropic';
-    const models = AI_MODELS[provider];
-    if (stored && models.some(m => m.id === stored)) return stored;
-    return models[0].id;
+    try {
+      const stored = localStorage.getItem('protopulse_ai_model');
+      const provider = (localStorage.getItem('protopulse_ai_provider') as 'anthropic' | 'gemini') || 'anthropic';
+      const models = AI_MODELS[provider];
+      if (stored && models.some(m => m.id === stored)) return stored;
+      return models[0].id;
+    } catch { return AI_MODELS.anthropic[0].id; }
   });
   const [aiApiKey, setAiApiKey] = useState(() => {
-    return localStorage.getItem('protopulse_ai_apikey') || '';
+    return '';
   });
   const [aiTemperature, setAiTemperature] = useState(() => {
-    return parseFloat(localStorage.getItem('protopulse_ai_temp') || '0.7');
+    try { return parseFloat(localStorage.getItem('protopulse_ai_temp') || '0.7'); } catch { return 0.7; }
   });
   const [customSystemPrompt, setCustomSystemPrompt] = useState(() => {
-    return localStorage.getItem('protopulse_ai_sysprompt') || '';
+    try { return localStorage.getItem('protopulse_ai_sysprompt') || ''; } catch { return ''; }
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -153,11 +75,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const [isListening, setIsListening] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<{input: number; output: number; cost: number} | null>(null);
 
-  useEffect(() => { localStorage.setItem('protopulse_ai_provider', aiProvider); }, [aiProvider]);
-  useEffect(() => { localStorage.setItem('protopulse_ai_model', aiModel); }, [aiModel]);
-  useEffect(() => { localStorage.setItem('protopulse_ai_apikey', aiApiKey); }, [aiApiKey]);
-  useEffect(() => { localStorage.setItem('protopulse_ai_temp', String(aiTemperature)); }, [aiTemperature]);
-  useEffect(() => { localStorage.setItem('protopulse_ai_sysprompt', customSystemPrompt); }, [customSystemPrompt]);
+  useEffect(() => { try { localStorage.setItem('protopulse_ai_provider', aiProvider); } catch {} }, [aiProvider]);
+  useEffect(() => { try { localStorage.setItem('protopulse_ai_model', aiModel); } catch {} }, [aiModel]);
+  useEffect(() => { try { localStorage.setItem('protopulse_ai_temp', String(aiTemperature)); } catch {} }, [aiTemperature]);
+  useEffect(() => { try { localStorage.setItem('protopulse_ai_sysprompt', customSystemPrompt); } catch {} }, [customSystemPrompt]);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -198,9 +119,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   useEffect(() => { resizeTextarea(); }, [input, resizeTextarea]);
 
   const copyMessage = useCallback((id: string, content: string) => {
-    navigator.clipboard.writeText(content);
+    copyToClipboard(content);
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    setTimeout(() => setCopiedId(null), COPY_FEEDBACK_DURATION);
   }, []);
 
   const processLocalCommand = (msgText: string): string => {
@@ -362,7 +283,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         const partName = partMatch[1].trim().toLowerCase();
         const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(partName) || b.description.toLowerCase().includes(partName));
         if (bomItem) {
-          deleteBomItem(Number(bomItem.id));
+          deleteBomItem(bomItem.id);
           addToHistory(`Removed BOM item: ${bomItem.partNumber}`, 'AI');
           addOutputLog(`[AI] Removed BOM item: ${bomItem.partNumber}`);
           return `[ACTION] Removed '${bomItem.partNumber}' from the Bill of Materials.`;
@@ -376,13 +297,18 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
       const rows = bom.map((item: any) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status].join(','));
       const csv = [headers.join(','), ...rows].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${projectName}_BOM.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      try {
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${projectName}_BOM.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.warn('Export failed:', err);
+        return `Export failed. Please try again.`;
+      }
       addToHistory('Exported BOM as CSV', 'AI');
       addOutputLog('[AI] Exported BOM as CSV file');
       return `[ACTION] Exported BOM as CSV file (${bom.length} items).\n\nThe file '${projectName}_BOM.csv' has been downloaded.`;
@@ -404,7 +330,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     if (lower.includes('fix all issues') || lower.includes('fix all') || lower.includes('clear issues')) {
       if (issues.length === 0) return `No validation issues to fix. The design is currently clean.`;
       const count = issues.length;
-      issues.forEach((issue: any) => deleteValidationIssue(Number(issue.id)));
+      issues.forEach((issue: any) => deleteValidationIssue(issue.id));
       addToHistory(`Fixed ${count} validation issues`, 'AI');
       addOutputLog(`[AI] Cleared ${count} validation issues`);
       return `[ACTION] Removed ${count} validation issues.\n\nAll issues have been resolved. Run validation again to check for new findings.`;
@@ -582,7 +508,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'remove_bom_item': {
           const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
           if (bomItem) {
-            deleteBomItem(Number(bomItem.id));
+            deleteBomItem(bomItem.id);
             addToHistory(`Removed BOM item: ${action.partNumber}`, 'AI');
             addOutputLog(`[AI] Removed BOM item: ${action.partNumber}`);
           }
@@ -591,7 +517,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'update_bom_item': {
           const bomToUpdate = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
           if (bomToUpdate && updateBomItem) {
-            updateBomItem(Number(bomToUpdate.id), action.updates);
+            updateBomItem(bomToUpdate.id, action.updates);
             addToHistory(`Updated BOM item: ${action.partNumber}`, 'AI');
             addOutputLog(`[AI] Updated BOM: ${action.partNumber}`);
           }
@@ -603,7 +529,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           addOutputLog('[AI] Ran design validation');
           break;
         case 'clear_validation':
-          issues.forEach((issue: any) => deleteValidationIssue(Number(issue.id)));
+          issues.forEach((issue: any) => deleteValidationIssue(issue.id));
           addToHistory('Cleared validation issues', 'AI');
           addOutputLog('[AI] Cleared all validation issues');
           break;
@@ -624,18 +550,22 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         case 'export_bom_csv': {
           if (bom.length > 0) {
-            const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
-            const rows = bom.map((item: any) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status].join(','));
-            const csv = [headers.join(','), ...rows].join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${projectName}_BOM.csv`;
-            a.click();
-            URL.revokeObjectURL(url);
-            addToHistory('Exported BOM as CSV', 'AI');
-            addOutputLog('[AI] Exported BOM as CSV');
+            try {
+              const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
+              const rows = bom.map((item: any) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status].join(','));
+              const csv = [headers.join(','), ...rows].join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `${projectName}_BOM.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+              addToHistory('Exported BOM as CSV', 'AI');
+              addOutputLog('[AI] Exported BOM as CSV');
+            } catch (err) {
+              console.warn('Export failed:', err);
+            }
           }
           break;
         }
@@ -874,8 +804,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             const autoPins: Record<string, string> = {};
             connectedEdges.forEach((e: any, i: number) => {
               const otherNode = nodes.find((n: any) => n.id === (e.source === targetNode.id ? e.target : e.source));
-              const pinName = e.label || e.data?.signalType || `PIN_${i}`;
-              autoPins[pinName] = otherNode?.data?.label || `GPIO${i}`;
+              const pinName = String(e.label || '') || e.data?.signalType || `PIN_${i}`;
+              autoPins[pinName] = String(otherNode?.data?.label || '') || `GPIO${i}`;
             });
             setNodes(nodes.map((n: any) => n.id === targetNode.id ? {
               ...n, data: { ...n.data, pins: autoPins }
@@ -888,7 +818,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'power_budget_analysis': {
           const powerNodes = nodes.filter((n: any) => n.data.type === 'power');
           const consumers = nodes.filter((n: any) => n.data.type !== 'power');
-          const pbIssues: Array<{severity: string; message: string; componentId?: string; suggestion?: string}> = [];
+          const pbIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
           
           let totalPower = 0;
           consumers.forEach((n: any) => {
@@ -918,7 +848,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'voltage_domain_check': {
-          const voltageIssues: Array<{severity: string; message: string; componentId?: string; suggestion?: string}> = [];
+          const voltageIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
           
           edges.forEach((e: any) => {
             const voltage = e.data?.voltage || e.label;
@@ -936,7 +866,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   voltageIssues.push({
                     severity: 'warning',
                     message: `Voltage domain crossing: ${srcNode.data.label} ↔ ${tgtNode.data.label} bridges 5V and 3.3V domains`,
-                    componentId: srcNode.data.label,
+                    componentId: String(srcNode.data.label ?? ''),
                     suggestion: 'Add a level shifter (e.g., TXB0108) between voltage domains.'
                   });
                 }
@@ -1007,7 +937,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'dfm_check': {
-          const dfmIssues: Array<{severity: string; message: string; componentId?: string; suggestion?: string}> = [];
+          const dfmIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
           
           nodes.forEach((n: any) => {
             const label = n.data.label?.toLowerCase() || '';
@@ -1043,7 +973,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'thermal_analysis': {
-          const thermalIssues: Array<{severity: string; message: string; componentId?: string; suggestion?: string}> = [];
+          const thermalIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
           
           nodes.forEach((n: any) => {
             const type = n.data.type?.toLowerCase() || '';
@@ -1285,13 +1215,17 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           });
           kicadContent.push(')');
           
-          const blob = new Blob([kicadContent.join('\n')], { type: 'text/plain' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${projectName || 'design'}.kicad_sch`;
-          a.click();
-          URL.revokeObjectURL(url);
+          try {
+            const blob = new Blob([kicadContent.join('\n')], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projectName || 'design'}.kicad_sch`;
+            a.click();
+            URL.revokeObjectURL(url);
+          } catch (err) {
+            console.warn('KiCad export failed:', err);
+          }
           
           addToHistory('Exported KiCad schematic', 'AI');
           addOutputLog(`[AI] Exported KiCad schematic with ${nodes.length} components`);
@@ -1318,13 +1252,17 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           
           spiceLines.push('', '.end');
           
-          const blob2 = new Blob([spiceLines.join('\n')], { type: 'text/plain' });
-          const url2 = URL.createObjectURL(blob2);
-          const a2 = document.createElement('a');
-          a2.href = url2;
-          a2.download = `${projectName || 'design'}.cir`;
-          a2.click();
-          URL.revokeObjectURL(url2);
+          try {
+            const blob2 = new Blob([spiceLines.join('\n')], { type: 'text/plain' });
+            const url2 = URL.createObjectURL(blob2);
+            const a2 = document.createElement('a');
+            a2.href = url2;
+            a2.download = `${projectName || 'design'}.cir`;
+            a2.click();
+            URL.revokeObjectURL(url2);
+          } catch (err) {
+            console.warn('SPICE export failed:', err);
+          }
           
           addToHistory('Exported SPICE netlist', 'AI');
           addOutputLog(`[AI] Generated SPICE netlist with ${nodes.length} components`);
@@ -1344,7 +1282,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'add_datasheet_link': {
           const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
           if (bomItem) {
-            updateBomItem(Number(bomItem.id), { leadTime: action.url });
+            updateBomItem(bomItem.id, { leadTime: action.url });
             addToHistory(`Added datasheet for ${action.partNumber}`, 'AI');
             addOutputLog(`[AI] Linked datasheet for ${action.partNumber}: ${action.url}`);
           }
@@ -1362,12 +1300,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             '## Architecture Overview',
             `- Components: ${nodes.length}`,
             `- Connections: ${edges.length}`,
-            `- Component Types: ${[...new Set(nodes.map((n: any) => n.data.type))].join(', ')}`,
+            `- Component Types: ${Array.from(new Set(nodes.map((n: any) => n.data.type))).join(', ')}`,
             '',
             '## Bill of Materials',
             `- Total Items: ${bom.length}`,
             `- Estimated Cost: $${totalCost.toFixed(2)}`,
-            `- Suppliers: ${[...new Set(bom.map((b: any) => b.supplier))].join(', ')}`,
+            `- Suppliers: ${Array.from(new Set(bom.map((b: any) => b.supplier))).join(', ')}`,
             '',
             '## Validation Status',
             `- Errors: ${errorCount}`,
@@ -1383,13 +1321,17 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             nodes.length < 3 ? '- 📐 Consider adding more components for a complete design' : '- ✓ Design complexity looks reasonable',
           ].join('\n');
           
-          const blob3 = new Blob([report], { type: 'text/markdown' });
-          const url3 = URL.createObjectURL(blob3);
-          const a3 = document.createElement('a');
-          a3.href = url3;
-          a3.download = `${projectName || 'design'}_report.md`;
-          a3.click();
-          URL.revokeObjectURL(url3);
+          try {
+            const blob3 = new Blob([report], { type: 'text/markdown' });
+            const url3 = URL.createObjectURL(blob3);
+            const a3 = document.createElement('a');
+            a3.href = url3;
+            a3.download = `${projectName || 'design'}_report.md`;
+            a3.click();
+            URL.revokeObjectURL(url3);
+          } catch (err) {
+            console.warn('Report export failed:', err);
+          }
           
           setActiveView('output');
           addToHistory('Generated design report', 'AI');
@@ -1519,7 +1461,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             timestamp: Date.now()
           });
           setIsGenerating(false);
-        }, 500);
+        }, LOCAL_COMMAND_DELAY);
         return;
       }
 
@@ -1645,16 +1587,22 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   }, [lastUserMessage, isGenerating, handleSend]);
 
   const exportChat = useCallback(() => {
-    const text = messages.map((m: any) =>
-      `[${new Date(m.timestamp).toLocaleString()}] ${m.role === 'user' ? 'You' : 'AI'}: ${m.content}`
-    ).join('\n\n');
-    const blob = new Blob([text], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${projectName}_chat.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      const text = messages.map((m: any) =>
+        `[${new Date(m.timestamp).toLocaleString()}] ${m.role === 'user' ? 'You' : 'AI'}: ${m.content}`
+      ).join('\n\n');
+      const blob = new Blob([text], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = projectName.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50);
+      a.download = `${safeName}_chat.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.warn('Chat export failed:', err);
+      alert('Failed to export chat. Please try again.');
+    }
   }, [messages, projectName]);
 
   const filteredMessages = chatSearch
@@ -1977,7 +1925,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
               <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
                   className="hidden"
                   ref={fileInputRef}
                   onChange={(e) => {
@@ -1999,6 +1947,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                 >
                   <ImagePlus className="h-4 w-4" />
                 </Button>
+                {('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) && (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -2009,6 +1958,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                 >
                   <Mic className="h-4 w-4" />
                 </Button>
+                )}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
@@ -2057,306 +2007,3 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   );
 }
 
-function MarkdownContent({ content }: { content: string }) {
-  return (
-    <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
-      components={{
-        p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
-        strong: ({ children }) => <strong className="font-bold text-primary/90">{children}</strong>,
-        em: ({ children }) => <em className="italic text-muted-foreground">{children}</em>,
-        h1: ({ children }) => <h1 className="text-base font-bold text-foreground mb-2 mt-3 first:mt-0">{children}</h1>,
-        h2: ({ children }) => <h2 className="text-sm font-bold text-foreground mb-1.5 mt-2 first:mt-0">{children}</h2>,
-        h3: ({ children }) => <h3 className="text-sm font-semibold text-foreground mb-1 mt-2 first:mt-0">{children}</h3>,
-        code: ({ children, className }) => {
-          const isBlock = className?.includes('language-');
-          if (isBlock) {
-            return (
-              <pre className="bg-background/60 border border-border p-2 my-2 overflow-x-auto text-[11px] font-mono">
-                <code>{children}</code>
-              </pre>
-            );
-          }
-          return <code className="bg-primary/10 text-primary px-1 py-0.5 text-[11px] font-mono">{children}</code>;
-        },
-        pre: ({ children }) => <>{children}</>,
-        ul: ({ children }) => <ul className="list-disc list-inside space-y-0.5 mb-2">{children}</ul>,
-        ol: ({ children }) => <ol className="list-decimal list-inside space-y-0.5 mb-2">{children}</ol>,
-        li: ({ children }) => <li className="text-sm">{children}</li>,
-        a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">{children}</a>,
-        table: ({ children }) => <div className="overflow-x-auto my-2"><table className="w-full text-xs border border-border">{children}</table></div>,
-        thead: ({ children }) => <thead className="bg-muted/30">{children}</thead>,
-        th: ({ children }) => <th className="border border-border px-2 py-1 text-left font-bold">{children}</th>,
-        td: ({ children }) => <td className="border border-border px-2 py-1">{children}</td>,
-      }}
-    >
-      {content}
-    </ReactMarkdown>
-  );
-}
-
-function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, isLast, pendingActions, onAcceptActions, onRejectActions, tokenInfo }: {
-  msg: ChatMessage;
-  copiedId: string | null;
-  onCopy: (id: string, content: string) => void;
-  onRegenerate?: () => void;
-  onRetry?: () => void;
-  isLast: boolean;
-  pendingActions: { actions: any[]; messageId: string } | null;
-  onAcceptActions: () => void;
-  onRejectActions: () => void;
-  tokenInfo?: {input: number; output: number; cost: number} | null;
-}) {
-  return (
-    <div className={cn(
-      "flex gap-3 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg",
-      msg.role === 'user' ? "flex-row-reverse" : "flex-row"
-    )}>
-      <div className={cn(
-        "w-8 h-8 flex items-center justify-center shrink-0 border shadow-sm",
-        msg.role === 'user' ? "bg-muted text-foreground border-border" : "bg-primary/10 text-primary border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
-      )}>
-        {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-      </div>
-
-      <div className="flex flex-col gap-1 max-w-[85%]">
-        <div className={cn(
-          "p-3 leading-relaxed shadow-sm relative",
-          msg.role === 'user'
-            ? "bg-primary text-primary-foreground"
-            : msg.isError
-              ? "bg-destructive/10 border border-destructive/30 text-foreground"
-              : "bg-muted/30 backdrop-blur border border-border text-foreground"
-        )}>
-          {msg.role === 'assistant' ? (
-            <MarkdownContent content={msg.content} />
-          ) : (
-            <span className="whitespace-pre-wrap">{msg.content}</span>
-          )}
-          {tokenInfo && msg.role === 'assistant' && (
-            <div className="text-[10px] text-muted-foreground/50 mt-1" data-testid="text-token-info">
-              {tokenInfo.input + tokenInfo.output} tokens · ~${tokenInfo.cost.toFixed(4)}
-            </div>
-          )}
-        </div>
-
-        {/* Action chips */}
-        {msg.actions && msg.actions.length > 0 && !pendingActions && (
-          <div className="flex flex-wrap gap-1 px-1">
-            {msg.actions.map((action: any, idx: number) => (
-              <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 border border-primary/20 text-[10px] text-primary">
-                <CheckCircle2 className="w-2.5 h-2.5" />
-                {ACTION_LABELS[action.type] || action.type}
-              </span>
-            ))}
-          </div>
-        )}
-
-        {/* Destructive action confirmation */}
-        {pendingActions && (
-          <div className="border border-amber-500/30 bg-amber-500/5 p-2.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-[11px] text-amber-400 font-bold">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              Confirm destructive actions
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {pendingActions.actions.map((action: any, idx: number) => (
-                <span key={idx} className={cn(
-                  "inline-flex items-center gap-1 px-2 py-0.5 text-[10px] border",
-                  DESTRUCTIVE_ACTIONS.includes(action.type) ? "border-amber-500/30 bg-amber-500/10 text-amber-400" : "border-primary/20 bg-primary/10 text-primary"
-                )}>
-                  {ACTION_LABELS[action.type] || action.type}
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button onClick={onAcceptActions} data-testid="accept-actions" className="flex-1 py-1.5 bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors">
-                Apply Changes
-              </button>
-              <button onClick={onRejectActions} data-testid="reject-actions" className="flex-1 py-1.5 bg-muted border border-border text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Message footer */}
-        <div className="flex items-center gap-2 px-1">
-          <span className="text-[10px] text-muted-foreground opacity-50">
-            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </span>
-          <div className="flex gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => onCopy(msg.id, msg.content)}
-                  data-testid={`copy-msg-${msg.id}`}
-                  className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {copiedId === msg.id ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Copy</p></TooltipContent>
-            </Tooltip>
-            {onRegenerate && isLast && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button onClick={onRegenerate} data-testid="regenerate-msg" className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
-                    <RefreshCw className="w-3 h-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Regenerate</p></TooltipContent>
-              </Tooltip>
-            )}
-            {onRetry && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button onClick={onRetry} data-testid="retry-msg" className="p-1 hover:bg-muted text-destructive/70 hover:text-destructive transition-colors">
-                    <RefreshCw className="w-3 h-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Retry</p></TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SettingsPanel({
-  aiProvider, setAiProvider, aiModel, setAiModel, aiApiKey, setAiApiKey,
-  showApiKey, setShowApiKey, aiTemperature, setAiTemperature,
-  customSystemPrompt, setCustomSystemPrompt, apiKeyValid, onClose,
-}: any) {
-  return (
-    <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
-      <div className="flex items-center gap-2 mb-2">
-        <Settings2 className="w-4 h-4 text-primary" />
-        <h4 className="font-display font-bold tracking-wider text-sm">AI Settings</h4>
-      </div>
-
-      <div>
-        <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Provider</label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            data-testid="provider-anthropic"
-            onClick={() => { setAiProvider('anthropic'); setAiModel(AI_MODELS.anthropic[0].id); }}
-            className={cn(
-              "p-3 border text-center text-sm font-bold transition-all",
-              aiProvider === 'anthropic' ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]" : "border-border bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
-            )}
-          >
-            Anthropic
-          </button>
-          <button
-            data-testid="provider-gemini"
-            onClick={() => { setAiProvider('gemini'); setAiModel(AI_MODELS.gemini[0].id); }}
-            className={cn(
-              "p-3 border text-center text-sm font-bold transition-all",
-              aiProvider === 'gemini' ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]" : "border-border bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
-            )}
-          >
-            Gemini
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Model</label>
-        <div className="relative">
-          <select
-            data-testid="model-select"
-            value={aiModel}
-            onChange={(e) => setAiModel(e.target.value)}
-            className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus:outline-none focus:border-primary"
-          >
-            {AI_MODELS[aiProvider as keyof typeof AI_MODELS].map((m: any) => (
-              <option key={m.id} value={m.id} className="bg-background text-foreground">{m.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-        </div>
-      </div>
-
-      <div>
-        <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">API Key</label>
-        <div className="relative">
-          <input
-            data-testid="api-key-input"
-            type={showApiKey ? 'text' : 'password'}
-            value={aiApiKey}
-            onChange={(e) => setAiApiKey(e.target.value)}
-            placeholder={aiProvider === 'anthropic' ? "sk-ant-..." : "Enter your API key..."}
-            className={cn(
-              "w-full bg-muted/30 border text-foreground text-sm p-2.5 pr-10 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40",
-              aiApiKey && !apiKeyValid() ? "border-amber-500/50" : "border-border"
-            )}
-          />
-          <button
-            data-testid="toggle-api-key-visibility"
-            type="button"
-            onClick={() => setShowApiKey(!showApiKey)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-          </button>
-        </div>
-        {aiApiKey && !apiKeyValid() && (
-          <p className="text-[10px] text-amber-400/80 mt-1">
-            {aiProvider === 'anthropic' ? "Anthropic keys start with 'sk-ant-'" : "Key appears too short"}
-          </p>
-        )}
-        <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-          Get your key at{' '}
-          <span className="text-primary/70">console.anthropic.com</span> or{' '}
-          <span className="text-primary/70">aistudio.google.dev</span>
-        </p>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold">Temperature</label>
-          <span className="text-xs text-primary font-mono">{aiTemperature.toFixed(1)}</span>
-        </div>
-        <input
-          data-testid="temperature-slider"
-          type="range"
-          min="0"
-          max="2"
-          step="0.1"
-          value={aiTemperature}
-          onChange={(e) => setAiTemperature(parseFloat(e.target.value))}
-          className="w-full h-1.5 bg-muted/50 appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border-0"
-        />
-        <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-1">
-          <span>Precise</span>
-          <span>Balanced</span>
-          <span>Creative</span>
-        </div>
-      </div>
-
-      <div>
-        <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Custom Instructions (optional)</label>
-        <textarea
-          data-testid="custom-system-prompt"
-          value={customSystemPrompt}
-          onChange={(e) => setCustomSystemPrompt(e.target.value)}
-          placeholder="Add custom instructions for the AI..."
-          rows={3}
-          className="w-full bg-muted/30 border border-border text-foreground text-xs p-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40 resize-none"
-        />
-        <p className="text-[10px] text-muted-foreground/60 mt-1">These instructions are appended to the AI's system prompt.</p>
-      </div>
-
-      <button
-        data-testid="save-settings"
-        onClick={onClose}
-        className="w-full py-2.5 bg-primary text-primary-foreground font-bold text-sm tracking-wider hover:bg-primary/90 transition-colors"
-      >
-        Save & Close
-      </button>
-    </div>
-  );
-}
