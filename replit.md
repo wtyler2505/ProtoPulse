@@ -80,9 +80,16 @@ Request validation uses Zod schemas generated from Drizzle table definitions via
 
 ### AI Integration (Active)
 - **Anthropic Claude**: Server-side integration via `@anthropic-ai/sdk` — models: Claude Sonnet 4.5, Claude 4.6 Sonnet, Claude Sonnet 4, Claude Opus 4, Claude 4.6 Opus, Claude Haiku 4.5
-- **Google Gemini**: Server-side integration via `@google/generative-ai` — models: Gemini 2.5 Flash, 2.5 Pro, Gemini 3 Flash, Gemini 3 Pro
+- **Google Gemini**: Server-side integration via `@google/generative-ai` — models: Gemini 2.5 Flash, 2.5 Pro, Gemini 2.0 Flash
 - **AI Endpoint**: `POST /api/chat/ai/stream` receives user message + full app state context, streams response via SSE, returns structured response with action commands
-- **Action System**: AI can control all app features via 18 action types (node/edge CRUD, BOM management, validation, view switching, project settings, exports)
+- **Action System**: AI can control all app features via 36+ action types across 7 categories:
+  - **Phase 1 — Context Awareness**: Node selection tracking, edge signal metadata, undo/redo integration, change diff tracking
+  - **Phase 2 — Canvas Intelligence**: Smart placement guidance, auto-layout (hierarchical/grid/circular/force), 10 subcircuit templates, net naming, multi-sheet management, pin-level connections
+  - **Phase 3 — Design Validation**: Power budget calculator, voltage domain checking, auto-fix validation, DFM checks, thermal analysis
+  - **Phase 4 — BOM Intelligence**: Pricing lookup, alternative part suggestions, BOM optimization, lead time warnings, parametric search
+  - **Phase 5 — Chat/UX**: Image upload/analysis, voice input (Web Speech API), design decisions, annotations, tutorials
+  - **Phase 6 — Export**: KiCad export, SPICE netlist, Gerber preview, datasheet links, design report
+  - **Phase 7 — AI Models**: Project type configuration, token usage display
 - **API Keys**: User-provided via ChatPanel settings UI, stored in localStorage (client-side), sent per-request to server
 - **Custom System Prompt**: User can provide custom instructions appended to the AI system prompt
 - **Streaming**: Server-side SSE streaming with client-side incremental rendering and cancel support (AbortController)

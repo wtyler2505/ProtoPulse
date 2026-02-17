@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Bot, User, Sparkles, Loader2, Plus, Zap, X, Settings2, Eye, EyeOff,
   ChevronDown, Copy, Check, RefreshCw, ArrowDown, Search, Download, Trash2,
-  StopCircle, AlertTriangle, CheckCircle2, ArrowRight, SlidersHorizontal, Mic
+  StopCircle, AlertTriangle, CheckCircle2, ArrowRight, SlidersHorizontal, Mic, ImagePlus
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -42,8 +42,7 @@ const AI_MODELS = {
   gemini: [
     { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-    { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
-    { id: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
   ],
 };
 
@@ -121,6 +120,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [aiProvider, setAiProvider] = useState<'anthropic' | 'gemini'>(() => {
     return (localStorage.getItem('protopulse_ai_provider') as any) || 'anthropic';
@@ -1975,6 +1975,30 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                 </Tooltip>
               </div>
               <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      addOutputLog(`[SYSTEM] Image attached: ${file.name}`);
+                      addToHistory(`Uploaded image: ${file.name}`, 'User');
+                    }
+                  }}
+                  data-testid="input-image-upload"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                  onClick={() => fileInputRef.current?.click()}
+                  data-testid="button-image-upload"
+                  title="Upload image"
+                >
+                  <ImagePlus className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
