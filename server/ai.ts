@@ -32,6 +32,7 @@ interface AppState {
   schematicSheets: Array<{ id: string; name: string }>;
   activeSheetId: string;
   chatHistory: Array<{ role: string; content: string }>;
+  customSystemPrompt?: string;
 }
 
 function buildSystemPrompt(appState: AppState): string {
@@ -196,7 +197,7 @@ First explain what you will do in plain text, then include the actions at the ve
 ]
 \`\`\`
 
-Always provide expert-level, detailed electronics advice. When suggesting components, include real part numbers, manufacturers, and typical specifications. When discussing design choices, explain trade-offs and best practices.`;
+Always provide expert-level, detailed electronics advice. When suggesting components, include real part numbers, manufacturers, and typical specifications. When discussing design choices, explain trade-offs and best practices.${appState.customSystemPrompt ? `\n\n## Custom User Instructions\n\n${appState.customSystemPrompt}` : ''}`;
 }
 
 function parseActionsFromResponse(text: string): { message: string; actions: AIAction[] } {

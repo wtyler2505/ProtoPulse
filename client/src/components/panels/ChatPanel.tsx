@@ -33,13 +33,17 @@ const quickActionDescriptions: Record<string, string> = {
 const AI_MODELS = {
   anthropic: [
     { id: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5' },
+    { id: 'claude-4-6-sonnet-20260101', label: 'Claude 4.6 Sonnet' },
     { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-    { id: 'claude-haiku-4-5-20250514', label: 'Claude Haiku 4.5' },
     { id: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
+    { id: 'claude-4-6-opus-20260101', label: 'Claude 4.6 Opus' },
+    { id: 'claude-haiku-4-5-20250514', label: 'Claude Haiku 4.5' },
   ],
   gemini: [
     { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { id: 'gemini-3.0-flash', label: 'Gemini 3.0 Flash' },
+    { id: 'gemini-3.0-pro', label: 'Gemini 3.0 Pro' },
   ],
 };
 
@@ -89,7 +93,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     return (localStorage.getItem('protopulse_ai_provider') as any) || 'anthropic';
   });
   const [aiModel, setAiModel] = useState(() => {
-    return localStorage.getItem('protopulse_ai_model') || 'claude-sonnet-4-5-20250514';
+    return localStorage.getItem('protopulse_ai_model') || 'claude-4-6-sonnet-20260101';
   });
   const [aiApiKey, setAiApiKey] = useState(() => {
     return localStorage.getItem('protopulse_ai_apikey') || '';
@@ -648,6 +652,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           model: aiModel,
           apiKey: aiApiKey,
           temperature: aiTemperature,
+          customSystemPrompt,
           activeView,
           schematicSheets: schematicSheets.map((s: any) => ({ id: s.id, name: s.name })),
           activeSheetId,

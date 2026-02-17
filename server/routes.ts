@@ -337,6 +337,7 @@ export async function registerRoutes(
       schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
       activeSheetId: z.string().optional(),
       temperature: z.number().min(0).max(2).optional(),
+      customSystemPrompt: z.string().optional(),
     });
 
     const parsed = aiRequestSchema.safeParse(req.body);
@@ -397,6 +398,7 @@ export async function registerRoutes(
         role: m.role,
         content: m.content,
       })),
+      customSystemPrompt: parsed.data.customSystemPrompt || "",
     };
 
     res.setHeader('Content-Type', 'text/event-stream');

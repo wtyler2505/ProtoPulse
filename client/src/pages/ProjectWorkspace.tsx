@@ -8,6 +8,7 @@ import ProcurementView from '@/components/views/ProcurementView';
 import ValidationView from '@/components/views/ValidationView';
 import OutputView from '@/components/views/OutputView';
 import { ViewMode } from '@/lib/project-context';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
@@ -202,24 +203,28 @@ function WorkspaceContent() {
             </div>
           </header>
 
-          <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
-            {activeView === 'output' && <OutputView />}
-            {activeView === 'architecture' && <ArchitectureView />}
-            {activeView === 'schematic' && <SchematicView />}
-            {activeView === 'procurement' && <ProcurementView />}
-            {activeView === 'validation' && <ValidationView />}
-          </div>
+          <ErrorBoundary>
+            <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
+              {activeView === 'output' && <OutputView />}
+              {activeView === 'architecture' && <ArchitectureView />}
+              {activeView === 'schematic' && <SchematicView />}
+              {activeView === 'procurement' && <ProcurementView />}
+              {activeView === 'validation' && <ValidationView />}
+            </div>
+          </ErrorBoundary>
         </main>
 
         {!chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}
 
-        <ChatPanel
-          isOpen={chatOpen}
-          onClose={() => setChatOpen(false)}
-          collapsed={chatCollapsed}
-          width={chatWidth}
-          onToggleCollapse={() => setChatCollapsed(false)}
-        />
+        <ErrorBoundary>
+          <ChatPanel
+            isOpen={chatOpen}
+            onClose={() => setChatOpen(false)}
+            collapsed={chatCollapsed}
+            width={chatWidth}
+            onToggleCollapse={() => setChatCollapsed(false)}
+          />
+        </ErrorBoundary>
       </div>
 
       <div data-testid="mobile-bottom-nav" className="h-14 border-t border-border bg-card/60 backdrop-blur-xl flex items-center justify-around md:hidden">
