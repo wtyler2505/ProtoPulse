@@ -1,4 +1,4 @@
-# VOID (ProtoPulse)
+# ProtoPulse
 
 Browser-based AI-assisted EDA platform. Architecture block diagrams, BOM management, design validation, AI chat with 53 in-app action types (add nodes, generate architectures, manage BOM, run DRC, export). Built for electronics engineers.
 
