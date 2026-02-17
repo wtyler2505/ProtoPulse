@@ -23,7 +23,7 @@ const goalDescriptions: Record<string, string> = {
 };
 
 export default function ProcurementView() {
-  const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem } = useProject();
+  const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, addOutputLog } = useProject();
   const [showSettings, setShowSettings] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [optimizationGoal, setOptimizationGoal] = useState('Cost');
@@ -321,9 +321,9 @@ export default function ProcurementView() {
                     </tr>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-                    <ContextMenuItem onSelect={() => console.log('Edit component', item.partNumber)}>Edit Component</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => console.log('View datasheet', item.partNumber)}>View Datasheet</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => console.log('Find alternatives', item.partNumber)}>Find Alternatives</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(JSON.stringify(item, null, 2)); addOutputLog(`[BOM] Copied ${item.partNumber} details to clipboard`); }}>Copy Details</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(item.partNumber + ' ' + item.manufacturer + ' datasheet')}`, '_blank')}>View Datasheet</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(item.description + ' alternative equivalent')}`, '_blank')}>Find Alternatives</ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onSelect={() => window.open((supplierUrls[item.supplier] || '') + item.partNumber, '_blank')}>Buy from {item.supplier}</ContextMenuItem>
                     <ContextMenuItem onSelect={() => navigator.clipboard.writeText(item.partNumber)}>Copy Part Number</ContextMenuItem>

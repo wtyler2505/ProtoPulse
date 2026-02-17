@@ -21,7 +21,7 @@ const toolLabels: Record<string, string> = {
 };
 
 function ArchitectureFlow() {
-  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating } = useProject();
+  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog } = useProject();
   const [showAssetManager, setShowAssetManager] = useState(false);
   const [activeTool, setActiveTool] = useState<'select' | 'pan'>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -307,13 +307,13 @@ function ArchitectureFlow() {
             ))}
           </ContextMenuSubContent>
         </ContextMenuSub>
-        <ContextMenuItem onSelect={() => console.log('Paste')}>Paste</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { handleAddComponent('MCU'); addOutputLog('[ARCH] Pasted new component'); }}>Paste Component</ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => reactFlowInstance.fitView({ padding: 0.2 })}>Fit View</ContextMenuItem>
         <ContextMenuItem onSelect={() => setSnapEnabled(!snapEnabled)}>Toggle Grid</ContextMenuItem>
-        <ContextMenuItem onSelect={() => console.log('Select all')}>Select All</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { const allNodes = localNodes.map(n => ({ ...n, selected: true })); setLocalNodes(allNodes); addOutputLog(`[ARCH] Selected all ${allNodes.length} nodes`); }}>Select All</ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => console.log('Export as PNG')}>Export as PNG</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { const data = JSON.stringify(reactFlowInstance.toObject(), null, 2); navigator.clipboard.writeText(data); addOutputLog('[ARCH] Architecture JSON copied to clipboard'); }}>Export to Clipboard</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

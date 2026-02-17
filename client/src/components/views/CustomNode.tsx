@@ -2,6 +2,7 @@ import { Handle, Position, NodeProps } from '@xyflow/react';
 import { CircuitBoard, Cpu, Radio, Battery, Zap, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from '@/components/ui/context-menu';
+import { useProject } from '@/lib/project-context';
 
 const iconMap: Record<string, any> = {
   mcu: Cpu,
@@ -12,8 +13,18 @@ const iconMap: Record<string, any> = {
   generic: CircuitBoard
 };
 
-export default function CustomNode({ data, selected }: NodeProps) {
+const typeMap: Record<string, string> = {
+  'MCU': 'mcu',
+  'Sensor': 'sensor',
+  'Power': 'power',
+  'Communication': 'comm',
+  'Connector': 'connector',
+  'Generic': 'generic',
+};
+
+export default function CustomNode({ id, data, selected }: NodeProps) {
   const Icon = iconMap[data.type as string] || CircuitBoard;
+  const { nodes, edges, setNodes, setEdges, addOutputLog } = useProject();
   
   return (
     <ContextMenu>
@@ -38,20 +49,35 @@ export default function CustomNode({ data, selected }: NodeProps) {
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-        <ContextMenuItem onSelect={() => console.log('Edit label', data.label)}>Edit Label</ContextMenuItem>
-        <ContextMenuItem onSelect={() => console.log('Duplicate node', data.label)}>Duplicate Node</ContextMenuItem>
-        <ContextMenuItem onSelect={() => console.log('View datasheet', data.label)}>View Datasheet</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(data.label as string); addOutputLog(`[NODE] Copied label: ${data.label}`); }}>Copy Label</ContextMenuItem>
+        <ContextMenuItem onSelect={() => {
+          const thisNode = nodes.find((n: any) => n.id === id);
+          if (thisNode) {
+            const dup = { ...thisNode, id: Date.now().toString(), position: { x: (thisNode.position?.x || 0) + 50, y: (thisNode.position?.y || 0) + 50 } };
+            setNodes([...nodes, dup]);
+            addOutputLog(`[NODE] Duplicated: ${data.label}`);
+          }
+        }}>Duplicate Node</ContextMenuItem>
+        <ContextMenuItem onSelect={() => window.open(`https://www.google.com/search?q=${encodeURIComponent((data.label as string) + ' datasheet')}`, '_blank')}>View Datasheet</ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
           <ContextMenuSubTrigger>Change Type</ContextMenuSubTrigger>
           <ContextMenuSubContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
             {['MCU', 'Sensor', 'Power', 'Communication', 'Connector', 'Generic'].map((t) => (
-              <ContextMenuItem key={t} onSelect={() => console.log('Change type to', t, data.label)}>{t}</ContextMenuItem>
+              <ContextMenuItem key={t} onSelect={() => {
+                const newType = typeMap[t] || 'generic';
+                setNodes(nodes.map((n: any) => n.id === id ? { ...n, data: { ...n.data, type: newType } } : n));
+                addOutputLog(`[NODE] Changed ${data.label} type to ${t}`);
+              }}>{t}</ContextMenuItem>
             ))}
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSeparator />
-        <ContextMenuItem className="text-destructive" onSelect={() => console.log('Delete node', data.label)}>Delete Node</ContextMenuItem>
+        <ContextMenuItem className="text-destructive" onSelect={() => {
+          setNodes(nodes.filter((n: any) => n.id !== id));
+          setEdges(edges.filter((e: any) => e.source !== id && e.target !== id));
+          addOutputLog(`[NODE] Deleted: ${data.label}`);
+        }}>Delete Node</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

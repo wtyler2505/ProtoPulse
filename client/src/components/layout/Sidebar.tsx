@@ -212,8 +212,8 @@ function SidebarContent({
                       </ContextMenuTrigger>
                       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
                         <ContextMenuItem onSelect={() => setActiveView('architecture')}>View in Architecture</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => console.log('View datasheet', block)}>View Datasheet</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => console.log('Edit properties', block)}>Edit Properties</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(block + ' datasheet')}`, '_blank')}>View Datasheet</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(block); addOutputLog(`[SIDEBAR] Copied block name: ${block}`); }}>Copy Name</ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
                   ))}
@@ -253,8 +253,8 @@ function SidebarContent({
                       </ContextMenuTrigger>
                       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
                         <ContextMenuItem onSelect={() => { setActiveView('schematic'); setActiveSheetId(sheet.id); }}>Open Sheet</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => console.log('Rename sheet', sheet.name)}>Rename Sheet</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => console.log('Duplicate sheet', sheet.name)}>Duplicate Sheet</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(sheet.name); addOutputLog(`[SIDEBAR] Copied sheet name: ${sheet.name}`); }}>Copy Sheet Name</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => { addOutputLog(`[SIDEBAR] Sheet info: ${sheet.name} (${sheet.id})`); }}>Sheet Info</ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
                   ))}
