@@ -44,9 +44,9 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
 
   if (collapsed) {
     return (
-      <div
+    <div
         data-testid="sidebar-collapsed"
-        className="hidden md:flex flex-col items-center w-10 h-full bg-sidebar/80 backdrop-blur-xl border-r border-sidebar-border shrink-0 cursor-pointer transition-all duration-300"
+        className="hidden md:flex flex-col items-center w-10 h-full bg-sidebar/60 backdrop-blur-xl border-r border-sidebar-border shrink-0 cursor-pointer transition-all duration-300"
         onClick={onToggleCollapse}
       >
         <div className="h-14 flex items-center justify-center border-b border-sidebar-border w-full">
@@ -113,14 +113,14 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
       )}
       <div
         className={cn(
-          "bg-sidebar/80 backdrop-blur-xl border-r border-sidebar-border flex flex-col h-full text-sm select-none shrink-0 overflow-hidden",
+          "bg-sidebar/60 backdrop-blur-xl border-r border-sidebar-border flex flex-col h-full text-sm select-none shrink-0 overflow-hidden",
           "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform md:relative md:w-auto md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         style={{ '--sidebar-w': `${width}px` } as React.CSSProperties}
       >
         <div className="flex flex-col h-full w-64 md:w-[var(--sidebar-w)]">
-          <div className="h-14 border-b border-sidebar-border flex items-center px-4 gap-3 bg-sidebar/30">
+          <div className="h-14 border-b border-sidebar-border flex items-center px-4 gap-3 bg-sidebar/20">
             <div className="w-8 h-8 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)] shrink-0">
               <Layers className="w-5 h-5 text-primary" />
             </div>
@@ -212,8 +212,8 @@ function SidebarContent({
                       </ContextMenuTrigger>
                       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
                         <ContextMenuItem onSelect={() => setActiveView('architecture')}>View in Architecture</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(block + ' datasheet')}`, '_blank')}>View Datasheet</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(block); addOutputLog(`[SIDEBAR] Copied block name: ${block}`); }}>Copy Name</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(block + ' datasheet'), '_blank')}>View Datasheet</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(block); addOutputLog('[SIDEBAR] Copied: ' + block); }}>Copy Name</ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
                   ))}
@@ -253,8 +253,8 @@ function SidebarContent({
                       </ContextMenuTrigger>
                       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
                         <ContextMenuItem onSelect={() => { setActiveView('schematic'); setActiveSheetId(sheet.id); }}>Open Sheet</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(sheet.name); addOutputLog(`[SIDEBAR] Copied sheet name: ${sheet.name}`); }}>Copy Sheet Name</ContextMenuItem>
-                        <ContextMenuItem onSelect={() => { addOutputLog(`[SIDEBAR] Sheet info: ${sheet.name} (${sheet.id})`); }}>Sheet Info</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(sheet.name); addOutputLog('[SIDEBAR] Copied sheet: ' + sheet.name); }}>Copy Sheet Name</ContextMenuItem>
+                        <ContextMenuItem onSelect={() => { addOutputLog('[SIDEBAR] Sheet: ' + sheet.name + ' (' + sheet.components + ' components)'); }}>Sheet Info</ContextMenuItem>
                       </ContextMenuContent>
                     </ContextMenu>
                   ))}
@@ -304,7 +304,7 @@ function SidebarContent({
         </div>
       </div>
 
-      <div className="p-3 border-t border-sidebar-border bg-sidebar/30">
+      <div className="p-3 border-t border-sidebar-border bg-sidebar/20">
         <Tooltip>
           <TooltipTrigger asChild>
             <button 

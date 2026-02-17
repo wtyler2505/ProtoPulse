@@ -12,6 +12,17 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+// Helper to safely parse numeric IDs from route parameters. Throws a 400 error on invalid input.
+function parseIdParam(param: any): number {
+  const id = Number(param);
+  if (!Number.isFinite(id)) {
+    const err: any = new Error("Invalid id");
+    err.status = 400;
+    throw err;
+  }
+  return id;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -25,7 +36,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/projects/:id", async (req, res) => {
-    const project = await storage.getProject(Number(req.params.id));
+    const project = await storage.getProject(parseIdParam(req.params.id));
     if (!project) return res.status(404).json({ message: "Project not found" });
     res.json(project);
   });
@@ -40,12 +51,12 @@ export async function registerRoutes(
   // --- Architecture Nodes ---
 
   app.get("/api/projects/:id/nodes", async (req, res) => {
-    const nodes = await storage.getNodes(Number(req.params.id));
+    const nodes = await storage.getNodes(parseIdParam(req.params.id));
     res.json(nodes);
   });
 
   app.post("/api/projects/:id/nodes", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const parsed = insertArchitectureNodeSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const node = await storage.createNode({ ...parsed.data, projectId });
@@ -53,7 +64,7 @@ export async function registerRoutes(
   });
 
   app.put("/api/projects/:id/nodes", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const nodesArray = z.array(insertArchitectureNodeSchema.omit({ projectId: true })).safeParse(req.body);
     if (!nodesArray.success) return res.status(400).json({ message: nodesArray.error.message });
     await storage.deleteNodesByProject(projectId);
@@ -64,12 +75,12 @@ export async function registerRoutes(
   // --- Architecture Edges ---
 
   app.get("/api/projects/:id/edges", async (req, res) => {
-    const edges = await storage.getEdges(Number(req.params.id));
+    const edges = await storage.getEdges(parseIdParam(req.params.id));
     res.json(edges);
   });
 
   app.post("/api/projects/:id/edges", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const parsed = insertArchitectureEdgeSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const edge = await storage.createEdge({ ...parsed.data, projectId });
@@ -77,7 +88,7 @@ export async function registerRoutes(
   });
 
   app.put("/api/projects/:id/edges", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const edgesArray = z.array(insertArchitectureEdgeSchema.omit({ projectId: true })).safeParse(req.body);
     if (!edgesArray.success) return res.status(400).json({ message: edgesArray.error.message });
     await storage.deleteEdgesByProject(projectId);
@@ -88,12 +99,12 @@ export async function registerRoutes(
   // --- BOM Items ---
 
   app.get("/api/projects/:id/bom", async (req, res) => {
-    const items = await storage.getBomItems(Number(req.params.id));
+    const items = await storage.getBomItems(parseIdParam(req.params.id));
     res.json(items);
   });
 
   app.post("/api/projects/:id/bom", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const parsed = insertBomItemSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const item = await storage.createBomItem({ ...parsed.data, projectId });
@@ -101,25 +112,25 @@ export async function registerRoutes(
   });
 
   app.patch("/api/bom/:id", async (req, res) => {
-    const updated = await storage.updateBomItem(Number(req.params.id), req.body);
+    const updated = await storage.updateBomItem(parseIdParam(req.params.id), req.body);
     if (!updated) return res.status(404).json({ message: "BOM item not found" });
     res.json(updated);
   });
 
   app.delete("/api/bom/:id", async (req, res) => {
-    await storage.deleteBomItem(Number(req.params.id));
+    await storage.deleteBomItem(parseIdParam(req.params.id));
     res.status(204).end();
   });
 
   // --- Validation Issues ---
 
   app.get("/api/projects/:id/validation", async (req, res) => {
-    const issues = await storage.getValidationIssues(Number(req.params.id));
+    const issues = await storage.getValidationIssues(parseIdParam(req.params.id));
     res.json(issues);
   });
 
   app.post("/api/projects/:id/validation", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const parsed = insertValidationIssueSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const issue = await storage.createValidationIssue({ ...parsed.data, projectId });
@@ -127,12 +138,12 @@ export async function registerRoutes(
   });
 
   app.delete("/api/validation/:id", async (req, res) => {
-    await storage.deleteValidationIssue(Number(req.params.id));
+    await storage.deleteValidationIssue(parseIdParam(req.params.id));
     res.status(204).end();
   });
 
   app.put("/api/projects/:id/validation", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const issuesArray = z.array(insertValidationIssueSchema.omit({ projectId: true })).safeParse(req.body);
     if (!issuesArray.success) return res.status(400).json({ message: issuesArray.error.message });
     await storage.deleteValidationIssuesByProject(projectId);
@@ -143,12 +154,12 @@ export async function registerRoutes(
   // --- Chat Messages ---
 
   app.get("/api/projects/:id/chat", async (req, res) => {
-    const messages = await storage.getChatMessages(Number(req.params.id));
+    const messages = await storage.getChatMessages(parseIdParam(req.params.id));
     res.json(messages);
   });
 
   app.post("/api/projects/:id/chat", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const parsed = insertChatMessageSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const msg = await storage.createChatMessage({ ...parsed.data, projectId });
@@ -158,12 +169,12 @@ export async function registerRoutes(
   // --- History ---
 
   app.get("/api/projects/:id/history", async (req, res) => {
-    const items = await storage.getHistoryItems(Number(req.params.id));
+    const items = await storage.getHistoryItems(parseIdParam(req.params.id));
     res.json(items);
   });
 
   app.post("/api/projects/:id/history", async (req, res) => {
-    const projectId = Number(req.params.id);
+    const projectId = parseIdParam(req.params.id);
     const parsed = insertHistoryItemSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const item = await storage.createHistoryItem({ ...parsed.data, projectId });

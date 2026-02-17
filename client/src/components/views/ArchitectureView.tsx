@@ -22,7 +22,10 @@ const toolLabels: Record<string, string> = {
 
 function ArchitectureFlow() {
   const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog } = useProject();
-  const [showAssetManager, setShowAssetManager] = useState(false);
+  // Show the asset manager by default on desktop. This state now controls
+  // visibility across both desktop and mobile, enabling a collapsible
+  // asset library on larger screens.
+  const [showAssetManager, setShowAssetManager] = useState(true);
   const [activeTool, setActiveTool] = useState<'select' | 'pan'>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
   
@@ -175,29 +178,30 @@ function ArchitectureFlow() {
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <div className="w-full h-full relative group bg-background" ref={reactFlowWrapper}>
-          <div className="hidden md:block">
-            <AssetManager onDragStart={onDragStart} onAddNode={handleAddNodeFromAsset} />
-          </div>
-
+          {/* Asset manager is now controlled via showAssetManager state on both
+             mobile and desktop. When collapsed, it won't render. */}
           {showAssetManager && (
-            <div className="md:hidden">
-              <AssetManager onDragStart={onDragStart} onAddNode={handleAddNodeFromAsset} onClose={() => setShowAssetManager(false)} />
-            </div>
+            <AssetManager
+              onDragStart={onDragStart}
+              onAddNode={handleAddNodeFromAsset}
+              onClose={() => setShowAssetManager(false)}
+            />
           )}
 
-          <div className="absolute top-4 right-4 md:right-auto md:left-[300px] z-10 flex items-center gap-1 bg-card/70 backdrop-blur-xl border border-border p-1 shadow-lg">
+          <div className="absolute top-4 right-4 md:right-auto md:left-[300px] z-10 flex items-center gap-1 bg-card/50 backdrop-blur-xl border border-border p-1 shadow-lg">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   data-testid="toggle-asset-manager"
-                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors md:hidden"
+                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowAssetManager(!showAssetManager)}
+                  title={showAssetManager ? 'Hide asset library' : 'Show asset library'}
                 >
                   <Component className="w-4 h-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                <p>Open asset library</p>
+                <p>{showAssetManager ? 'Hide asset library' : 'Show asset library'}</p>
               </TooltipContent>
             </Tooltip>
             {tools.map((tool) => (
@@ -307,13 +311,13 @@ function ArchitectureFlow() {
             ))}
           </ContextMenuSubContent>
         </ContextMenuSub>
-        <ContextMenuItem onSelect={() => { handleAddComponent('MCU'); addOutputLog('[ARCH] Pasted new component'); }}>Paste Component</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { setNodes([...nodes, { id: Date.now().toString(), type: 'custom', position: { x: 300, y: 300 }, data: { label: 'New Component', type: 'mcu' } }]); addOutputLog('[ARCH] Added component from paste'); }}>Paste</ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => reactFlowInstance.fitView({ padding: 0.2 })}>Fit View</ContextMenuItem>
         <ContextMenuItem onSelect={() => setSnapEnabled(!snapEnabled)}>Toggle Grid</ContextMenuItem>
-        <ContextMenuItem onSelect={() => { const allNodes = localNodes.map(n => ({ ...n, selected: true })); setLocalNodes(allNodes); addOutputLog(`[ARCH] Selected all ${allNodes.length} nodes`); }}>Select All</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { setNodes(nodes.map((n: any) => ({ ...n, selected: true }))); addOutputLog('[ARCH] Selected all ' + nodes.length + ' nodes'); }}>Select All</ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => { const data = JSON.stringify(reactFlowInstance.toObject(), null, 2); navigator.clipboard.writeText(data); addOutputLog('[ARCH] Architecture JSON copied to clipboard'); }}>Export to Clipboard</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(JSON.stringify({ nodes, edges }, null, 2)); addOutputLog('[ARCH] Exported architecture to clipboard'); }}>Export to Clipboard</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

@@ -346,12 +346,27 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     },
   });
 
+  // Track whether nodes/edges have been modified after hydration so we don't trigger an unnecessary
+  // initial save. The first call to setNodes or setEdges simply marks the data as dirty; subsequent
+  // calls will persist the changes to the server. This helps avoid a save on initial hydration
+  // without introducing debouncing complexity.
+  const nodesDirtyRef = useRef(false);
+  const edgesDirtyRef = useRef(false);
+
   const setNodes = (nodes: Node[]) => {
-    saveNodesMutation.mutate(nodes);
+    if (nodesDirtyRef.current) {
+      saveNodesMutation.mutate(nodes);
+    } else {
+      nodesDirtyRef.current = true;
+    }
   };
 
   const setEdges = (edges: Edge[]) => {
-    saveEdgesMutation.mutate(edges);
+    if (edgesDirtyRef.current) {
+      saveEdgesMutation.mutate(edges);
+    } else {
+      edgesDirtyRef.current = true;
+    }
   };
 
   const addMessage = (msg: ChatMessage | string) => {
@@ -378,9 +393,19 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const deleteValidationIssue = (id: number) => deleteValidationIssueMutation.mutate(id);
 
   const isLoading = !seeded || nodesQuery.isLoading || edgesQuery.isLoading || bomQuery.isLoading || validationQuery.isLoading || chatQuery.isLoading || historyQuery.isLoading;
+  const hasError = nodesQuery.isError || edgesQuery.isError || bomQuery.isError || validationQuery.isError || chatQuery.isError || historyQuery.isError;
 
   if (isLoading) {
+    // Show a simple loader; in a real app we might show a spinner. This avoids rendering empty UI while data loads.
     return null;
+  }
+
+  if (hasError) {
+    return (
+      <div className="h-full flex items-center justify-center text-destructive">
+        <p>Failed to load project data. Please check your connection and try again.</p>
+      </div>
+    );
   }
 
   return (

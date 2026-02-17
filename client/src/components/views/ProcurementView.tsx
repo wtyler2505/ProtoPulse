@@ -87,6 +87,7 @@ export default function ProcurementView() {
             <input 
               type="text" 
               placeholder="Search components..." 
+              aria-label="Search components"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               data-testid="input-search-bom"
@@ -293,7 +294,11 @@ export default function ProcurementView() {
                           <TooltipTrigger asChild>
                             <button
                               className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => window.open((supplierUrls[item.supplier] || '') + item.partNumber, '_blank')}
+                              onClick={() => {
+                                // Encode part number to avoid malformed URLs and open in a safe context【697222849486831†L63-L75】.
+                                const url = (supplierUrls[item.supplier] || '') + encodeURIComponent(item.partNumber);
+                                window.open(url, '_blank', 'noopener,noreferrer');
+                              }}
                               data-testid={`button-cart-${item.id}`}
                             >
                               <ShoppingCart className="w-4 h-4" />
@@ -321,11 +326,18 @@ export default function ProcurementView() {
                     </tr>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-                    <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(JSON.stringify(item, null, 2)); addOutputLog(`[BOM] Copied ${item.partNumber} details to clipboard`); }}>Copy Details</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(item.partNumber + ' ' + item.manufacturer + ' datasheet')}`, '_blank')}>View Datasheet</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(item.description + ' alternative equivalent')}`, '_blank')}>Find Alternatives</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => { navigator.clipboard.writeText(JSON.stringify(item, null, 2)); addOutputLog('[BOM] Copied details: ' + item.partNumber); }}>Copy Details</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' ' + item.manufacturer + ' datasheet'), '_blank')}>View Datasheet</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' alternative equivalent'), '_blank')}>Find Alternatives</ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem onSelect={() => window.open((supplierUrls[item.supplier] || '') + item.partNumber, '_blank')}>Buy from {item.supplier}</ContextMenuItem>
+                    <ContextMenuItem
+                      onSelect={() => {
+                        const url = (supplierUrls[item.supplier] || '') + encodeURIComponent(item.partNumber);
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                      }}
+                    >
+                      Buy from {item.supplier}
+                    </ContextMenuItem>
                     <ContextMenuItem onSelect={() => navigator.clipboard.writeText(item.partNumber)}>Copy Part Number</ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem className="text-destructive" onSelect={() => deleteBomItem(Number(item.id))}>Remove from BOM</ContextMenuItem>

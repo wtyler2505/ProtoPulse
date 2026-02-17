@@ -353,7 +353,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     return (
       <div
         data-testid="chat-collapsed"
-        className="hidden md:flex flex-col items-center w-10 h-full bg-card/80 backdrop-blur-xl border-l border-border shrink-0 cursor-pointer transition-all duration-300"
+        className="hidden md:flex flex-col items-center w-10 h-full bg-card/60 backdrop-blur-xl border-l border-border shrink-0 cursor-pointer transition-all duration-300"
         onClick={onToggleCollapse}
       >
         <div className="h-14 flex items-center justify-center border-b border-border w-full">
@@ -382,7 +382,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       )}
       <div
         className={cn(
-          "flex flex-col h-full bg-card/80 backdrop-blur-xl border-l border-border shadow-2xl relative shrink-0 overflow-hidden",
+          "flex flex-col h-full bg-card/60 backdrop-blur-xl border-l border-border shadow-2xl relative shrink-0 overflow-hidden",
           "fixed inset-y-0 right-0 z-50 w-full max-w-[350px] transform transition-transform md:relative md:w-auto md:max-w-none md:translate-x-0",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
@@ -413,7 +413,7 @@ function ChatContent({
 }: any) {
   return (
     <>
-      <div className="h-14 border-b border-border bg-card/50 backdrop-blur flex items-center justify-between px-4">
+      <div className="h-14 border-b border-border bg-card/30 backdrop-blur flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
           <h3 className="font-display font-bold tracking-wider text-sm">ProtoPulse AI</h3>
@@ -536,7 +536,7 @@ function ChatContent({
         </div>
       )}
 
-      <div className="p-4 border-t border-border bg-card/60 backdrop-blur">
+      <div className="p-4 border-t border-border bg-card/40 backdrop-blur">
         <div className="relative">
           <Input 
             value={input}

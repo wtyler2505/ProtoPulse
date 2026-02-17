@@ -10,6 +10,7 @@ import OutputView from '@/components/views/OutputView';
 import { ViewMode } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
 import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import ThemeToggle from '@/components/ui/theme-toggle';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 const tabDescriptions: Record<string, string> = {
@@ -91,7 +92,7 @@ function WorkspaceContent() {
 
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden font-sans text-foreground">
-      <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/70 backdrop-blur-xl flex items-center justify-between px-4 md:hidden">
+      <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 md:hidden">
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -138,7 +139,7 @@ function WorkspaceContent() {
         {!sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
         
         <main className="flex-1 flex flex-col min-w-0 relative bg-[#090a0d]">
-          <header className="h-10 border-b border-border bg-background/80 backdrop-blur-xl hidden md:flex items-center px-1 gap-0 z-10">
+          <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden md:flex items-center px-1 gap-0 z-10">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -194,6 +195,11 @@ function WorkspaceContent() {
                 <p>Toggle AI assistant</p>
               </TooltipContent>
             </Tooltip>
+
+            {/* Theme toggle button to switch between light and dark modes */}
+            <div className="ml-2 flex items-center">
+              <ThemeToggle />
+            </div>
           </header>
 
           <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
@@ -216,7 +222,7 @@ function WorkspaceContent() {
         />
       </div>
 
-      <div data-testid="mobile-bottom-nav" className="h-14 border-t border-border bg-card/70 backdrop-blur-xl flex items-center justify-around md:hidden">
+      <div data-testid="mobile-bottom-nav" className="h-14 border-t border-border bg-card/60 backdrop-blur-xl flex items-center justify-around md:hidden">
         {visibleTabs.map((tab) => (
           <Tooltip key={tab.id}>
             <TooltipTrigger asChild>
@@ -246,10 +252,8 @@ function WorkspaceContent() {
 
 export default function ProjectWorkspace() {
   return (
-    <div className="dark">
-      <ProjectProvider>
-        <WorkspaceContent />
-      </ProjectProvider>
-    </div>
+    <ProjectProvider>
+      <WorkspaceContent />
+    </ProjectProvider>
   );
 }
