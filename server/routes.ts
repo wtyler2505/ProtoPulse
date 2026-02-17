@@ -52,6 +52,16 @@ function parseIdParam(param: any): number {
   return id;
 }
 
+function payloadLimit(maxBytes: number) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const contentLength = parseInt(req.headers['content-length'] || '0', 10);
+    if (contentLength > maxBytes) {
+      return res.status(413).json({ message: `Payload too large. Maximum size is ${Math.round(maxBytes / 1024)}KB` });
+    }
+    next();
+  };
+}
+
 const aiRequestSchema = z.object({
   message: z.string().min(1).max(32000),
   provider: z.enum(["anthropic", "gemini"]),
@@ -62,6 +72,7 @@ const aiRequestSchema = z.object({
   schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
   activeSheetId: z.string().optional(),
   temperature: z.number().min(0).max(2).optional(),
+  maxTokens: z.number().int().min(256).max(16384).optional(),
   customSystemPrompt: z.string().max(10000).optional(),
   selectedNodeId: z.string().nullable().optional(),
   changeDiff: z.string().max(50000).optional(),
@@ -158,14 +169,14 @@ export async function registerRoutes(
     res.json(project);
   }));
 
-  app.post("/api/projects", asyncHandler(async (req, res) => {
+  app.post("/api/projects", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const parsed = insertProjectSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const project = await storage.createProject(parsed.data);
     res.status(201).json(project);
   }));
 
-  app.patch("/api/projects/:id", asyncHandler(async (req, res) => {
+  app.patch("/api/projects/:id", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const parsed = insertProjectSchema.partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
@@ -193,7 +204,7 @@ export async function registerRoutes(
     res.json(nodes);
   }));
 
-  app.post("/api/projects/:id/nodes", asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/nodes", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertArchitectureNodeSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
@@ -201,7 +212,7 @@ export async function registerRoutes(
     res.status(201).json(node);
   }));
 
-  app.patch("/api/projects/:id/nodes/:nodeId", asyncHandler(async (req, res) => {
+  app.patch("/api/projects/:id/nodes/:nodeId", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const nodeId = parseIdParam(req.params.nodeId);
     const parsed = insertArchitectureNodeSchema.partial().omit({ projectId: true }).safeParse(req.body);
@@ -211,7 +222,7 @@ export async function registerRoutes(
     res.json(updated);
   }));
 
-  app.put("/api/projects/:id/nodes", asyncHandler(async (req, res) => {
+  app.put("/api/projects/:id/nodes", payloadLimit(512 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const nodesArray = z.array(insertArchitectureNodeSchema.omit({ projectId: true })).safeParse(req.body);
     if (!nodesArray.success) return res.status(400).json({ message: nodesArray.error.message });
@@ -228,7 +239,7 @@ export async function registerRoutes(
     res.json(edges);
   }));
 
-  app.post("/api/projects/:id/edges", asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/edges", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertArchitectureEdgeSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
@@ -236,7 +247,7 @@ export async function registerRoutes(
     res.status(201).json(edge);
   }));
 
-  app.patch("/api/projects/:id/edges/:edgeId", asyncHandler(async (req, res) => {
+  app.patch("/api/projects/:id/edges/:edgeId", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const edgeId = parseIdParam(req.params.edgeId);
     const parsed = insertArchitectureEdgeSchema.partial().omit({ projectId: true }).safeParse(req.body);
@@ -246,7 +257,7 @@ export async function registerRoutes(
     res.json(updated);
   }));
 
-  app.put("/api/projects/:id/edges", asyncHandler(async (req, res) => {
+  app.put("/api/projects/:id/edges", payloadLimit(512 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const edgesArray = z.array(insertArchitectureEdgeSchema.omit({ projectId: true })).safeParse(req.body);
     if (!edgesArray.success) return res.status(400).json({ message: edgesArray.error.message });
@@ -271,7 +282,7 @@ export async function registerRoutes(
     res.json(item);
   }));
 
-  app.post("/api/projects/:id/bom", asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/bom", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertBomItemSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
@@ -279,7 +290,26 @@ export async function registerRoutes(
     res.status(201).json(item);
   }));
 
-  app.patch("/api/bom/:id", asyncHandler(async (req, res) => {
+  app.patch("/api/projects/:id/bom/:bomId", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const bomId = parseIdParam(req.params.bomId);
+    const parsed = insertBomItemSchema.partial().omit({ projectId: true }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    const updated = await storage.updateBomItem(bomId, projectId, parsed.data);
+    if (!updated) return res.status(404).json({ message: "BOM item not found" });
+    res.json(updated);
+  }));
+
+  app.delete("/api/projects/:id/bom/:bomId", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const bomId = parseIdParam(req.params.bomId);
+    const deleted = await storage.deleteBomItem(bomId, projectId);
+    if (!deleted) return res.status(404).json({ message: "BOM item not found" });
+    res.status(204).end();
+  }));
+
+  // Deprecated: use /api/projects/:id/bom/:bomId instead
+  app.patch("/api/bom/:id", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const projectId = parseIdParam(req.query.projectId);
     const parsed = insertBomItemSchema.partial().omit({ projectId: true }).safeParse(req.body);
@@ -289,6 +319,7 @@ export async function registerRoutes(
     res.json(updated);
   }));
 
+  // Deprecated: use /api/projects/:id/bom/:bomId instead
   app.delete("/api/bom/:id", asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const projectId = parseIdParam(req.query.projectId);
@@ -306,7 +337,7 @@ export async function registerRoutes(
     res.json(issues);
   }));
 
-  app.post("/api/projects/:id/validation", asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/validation", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertValidationIssueSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
@@ -314,6 +345,15 @@ export async function registerRoutes(
     res.status(201).json(issue);
   }));
 
+  app.delete("/api/projects/:id/validation/:issueId", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const issueId = parseIdParam(req.params.issueId);
+    const deleted = await storage.deleteValidationIssue(issueId, projectId);
+    if (!deleted) return res.status(404).json({ message: "Validation issue not found" });
+    res.status(204).end();
+  }));
+
+  // Deprecated: use /api/projects/:id/validation/:issueId instead
   app.delete("/api/validation/:id", asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const projectId = parseIdParam(req.query.projectId);
@@ -322,7 +362,7 @@ export async function registerRoutes(
     res.status(204).end();
   }));
 
-  app.put("/api/projects/:id/validation", asyncHandler(async (req, res) => {
+  app.put("/api/projects/:id/validation", payloadLimit(512 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const issuesArray = z.array(insertValidationIssueSchema.omit({ projectId: true })).safeParse(req.body);
     if (!issuesArray.success) return res.status(400).json({ message: issuesArray.error.message });
@@ -339,7 +379,7 @@ export async function registerRoutes(
     res.json(messages);
   }));
 
-  app.post("/api/projects/:id/chat", asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/chat", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertChatMessageSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
@@ -370,7 +410,7 @@ export async function registerRoutes(
     res.json(items);
   }));
 
-  app.post("/api/projects/:id/history", asyncHandler(async (req, res) => {
+  app.post("/api/projects/:id/history", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertHistoryItemSchema.omit({ projectId: true }).safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
@@ -394,7 +434,7 @@ export async function registerRoutes(
 
   // --- Seed / Init default project ---
 
-  app.post("/api/seed", asyncHandler(async (_req, res) => {
+  app.post("/api/seed", payloadLimit(16 * 1024), asyncHandler(async (_req, res) => {
     if (process.env.NODE_ENV === "production") {
       return res.status(404).json({ message: "Not found" });
     }
@@ -451,13 +491,13 @@ export async function registerRoutes(
 
   // --- AI Chat Endpoint ---
 
-  app.post("/api/chat/ai", asyncHandler(async (req, res) => {
+  app.post("/api/chat/ai", payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
     const parsed = aiRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
     }
 
-    const { message, provider, model, apiKey, temperature } = parsed.data;
+    const { message, provider, model, apiKey, temperature, maxTokens } = parsed.data;
     const pid = parsed.data.projectId;
 
     const appState = await buildAppStateFromProject(pid, {
@@ -476,18 +516,19 @@ export async function registerRoutes(
       apiKey,
       appState,
       temperature: temperature ?? 0.7,
+      maxTokens,
     });
 
     res.json(result);
   }));
 
-  app.post("/api/chat/ai/stream", asyncHandler(async (req, res) => {
+  app.post("/api/chat/ai/stream", payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
     const parsed = aiRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
     }
 
-    const { message, provider, model, apiKey, temperature } = parsed.data;
+    const { message, provider, model, apiKey, temperature, maxTokens } = parsed.data;
     const pid = parsed.data.projectId;
 
     const appState = await buildAppStateFromProject(pid, {
@@ -531,7 +572,7 @@ export async function registerRoutes(
 
     try {
       await streamAIMessage(
-        { message, provider, model, apiKey, appState, temperature: temperature ?? 0.7 },
+        { message, provider, model, apiKey, appState, temperature: temperature ?? 0.7, maxTokens },
         async (chunk) => {
           if (!closed) {
             await writeWithBackpressure(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);

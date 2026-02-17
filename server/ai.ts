@@ -100,6 +100,56 @@ class LRUClientCache<T> {
 const anthropicClients = new LRUClientCache<Anthropic>(MAX_CLIENT_CACHE);
 const geminiClients = new LRUClientCache<GoogleGenerativeAI>(MAX_CLIENT_CACHE);
 
+let cachedPromptHash = '';
+let cachedPrompt = '';
+
+function hashAppState(appState: AppState): string {
+  return JSON.stringify({
+    name: appState.projectName,
+    desc: appState.projectDescription,
+    nodes: appState.nodes.length,
+    edges: appState.edges.length,
+    bom: appState.bom.length,
+    validation: appState.validationIssues.length,
+    sheets: appState.schematicSheets.length,
+    view: appState.activeView,
+    selected: appState.selectedNodeId,
+    custom: appState.customSystemPrompt || '',
+  });
+}
+
+type AIErrorCode = 'AUTH_FAILED' | 'RATE_LIMITED' | 'TIMEOUT' | 'MODEL_ERROR' | 'PROVIDER_ERROR' | 'UNKNOWN';
+
+function categorizeError(error: any): { code: AIErrorCode; userMessage: string } {
+  const msg = error?.message || String(error);
+  const status = error?.status || error?.statusCode;
+
+  if (status === 401 || msg.includes('authentication') || msg.includes('API key') || msg.includes('invalid_api_key')) {
+    return { code: 'AUTH_FAILED', userMessage: `Authentication failed. Please check your API key in settings.` };
+  }
+  if (status === 429 || msg.includes('rate limit') || msg.includes('quota')) {
+    return { code: 'RATE_LIMITED', userMessage: 'Rate limit exceeded. Please wait a moment and try again.' };
+  }
+  if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNABORTED')) {
+    return { code: 'TIMEOUT', userMessage: 'Request timed out. Try again with a shorter message.' };
+  }
+  if (status === 400 || msg.includes('invalid_request') || msg.includes('model not found')) {
+    return { code: 'MODEL_ERROR', userMessage: `Invalid request. The model "${msg}" may not be available.` };
+  }
+  if (status >= 500) {
+    return { code: 'PROVIDER_ERROR', userMessage: 'The AI provider is experiencing issues. Try again shortly.' };
+  }
+
+  const safe = msg.replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]').replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
+  return { code: 'UNKNOWN', userMessage: `AI error: ${safe}` };
+}
+
+const activeRequests = new Map<string, Promise<{ message: string; actions: AIAction[] }>>();
+
+function requestKey(message: string, provider: string, projectId: string): string {
+  return `${provider}:${projectId}:${message.slice(0, 100)}`;
+}
+
 function getAnthropicClient(apiKey: string): Anthropic {
   let client = anthropicClients.get(apiKey);
   if (!client) {
@@ -398,20 +448,35 @@ Always provide expert-level, detailed electronics advice. When suggesting compon
 }
 
 function parseActionsFromResponse(text: string): { message: string; actions: AIAction[] } {
-  const jsonBlockRegex = /```json\s*\n([\s\S]*?)\n```\s*$/;
-  const match = text.match(jsonBlockRegex);
+  const jsonBlockRegex = /```json\s*\n?([\s\S]*?)\n?\s*```/g;
+  let lastMatch: RegExpExecArray | null = null;
+  let match: RegExpExecArray | null;
+  while ((match = jsonBlockRegex.exec(text)) !== null) {
+    lastMatch = match;
+  }
 
-  if (!match) {
+  if (!lastMatch) {
+    const bareJsonRegex = /\[\s*\{[\s\S]*\}\s*\]\s*$/;
+    const bareMatch = text.match(bareJsonRegex);
+    if (bareMatch) {
+      try {
+        const parsed = JSON.parse(bareMatch[0]);
+        const actions = Array.isArray(parsed) ? parsed.filter(a => a && typeof a === 'object' && typeof a.type === 'string') : [];
+        if (actions.length > 0) {
+          const message = text.slice(0, bareMatch.index).trim();
+          return { message, actions };
+        }
+      } catch {}
+    }
     return { message: text.trim(), actions: [] };
   }
 
-  const message = text.slice(0, match.index).trim();
+  const message = text.slice(0, lastMatch.index).trim();
   try {
-    const parsed = JSON.parse(match[1]);
-    const actions: AIAction[] = Array.isArray(parsed) ? parsed : [];
+    const parsed = JSON.parse(lastMatch[1]);
+    const actions: AIAction[] = Array.isArray(parsed) ? parsed : [parsed];
     const validActions = actions.filter((action): action is AIAction => {
-      if (!action || typeof action !== 'object' || typeof action.type !== 'string') return false;
-      return true;
+      return action && typeof action === 'object' && typeof action.type === 'string';
     });
     return { message, actions: validActions };
   } catch {
@@ -425,7 +490,8 @@ async function callAnthropic(
   systemPrompt: string,
   chatHistory: Array<{ role: string; content: string }>,
   userMessage: string,
-  temperature: number = 0.7
+  temperature: number = 0.7,
+  maxTokens?: number
 ): Promise<{ message: string; actions: AIAction[] }> {
   const client = getAnthropicClient(apiKey);
 
@@ -439,7 +505,7 @@ async function callAnthropic(
 
   const response = await client.messages.create({
     model,
-    max_tokens: 4096,
+    max_tokens: maxTokens || 4096,
     system: systemPrompt,
     messages,
     temperature,
@@ -459,13 +525,14 @@ async function callGemini(
   systemPrompt: string,
   chatHistory: Array<{ role: string; content: string }>,
   userMessage: string,
-  temperature: number = 0.7
+  temperature: number = 0.7,
+  maxTokens?: number
 ): Promise<{ message: string; actions: AIAction[] }> {
   const genAI = getGeminiClient(apiKey);
   const geminiModel = genAI.getGenerativeModel({
     model,
     systemInstruction: systemPrompt,
-    generationConfig: { temperature },
+    generationConfig: { temperature, maxOutputTokens: maxTokens || 4096 },
   });
 
   const history = chatHistory.map((msg) => ({
@@ -487,9 +554,10 @@ export async function processAIMessage(params: {
   apiKey: string;
   appState: AppState;
   temperature?: number;
+  maxTokens?: number;
 }): Promise<{ message: string; actions: AIAction[] }> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7 } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       return {
@@ -505,43 +573,38 @@ export async function processAIMessage(params: {
       };
     }
 
-    const systemPrompt = buildSystemPrompt(appState);
+    const stateHash = hashAppState(appState);
+    let systemPrompt: string;
+    if (stateHash === cachedPromptHash) {
+      systemPrompt = cachedPrompt;
+    } else {
+      systemPrompt = buildSystemPrompt(appState);
+      cachedPromptHash = stateHash;
+      cachedPrompt = systemPrompt;
+    }
     const recentHistory = appState.chatHistory.slice(-10);
 
-    if (provider === "anthropic") {
-      return await callAnthropic(apiKey, model, systemPrompt, recentHistory, message, temperature);
-    } else {
-      return await callGemini(apiKey, model, systemPrompt, recentHistory, message, temperature);
+    const dedupeKey = requestKey(message, provider, String(appState.projectName));
+    const existing = activeRequests.get(dedupeKey);
+    if (existing) return existing;
+
+    const promise = (async () => {
+      if (provider === "anthropic") {
+        return await callAnthropic(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens);
+      } else {
+        return await callGemini(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens);
+      }
+    })();
+    activeRequests.set(dedupeKey, promise);
+    try {
+      return await promise;
+    } finally {
+      activeRequests.delete(dedupeKey);
     }
   } catch (error: any) {
-    const errorMessage = error?.message || String(error);
-
-    if (errorMessage.includes("401") || errorMessage.includes("invalid") || errorMessage.includes("authentication") || errorMessage.includes("API key")) {
-      return {
-        message: `Authentication failed — your ${params.provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key appears to be invalid. Please check your API key in settings and try again.`,
-        actions: [],
-      };
-    }
-
-    if (errorMessage.includes("429") || errorMessage.includes("rate limit")) {
-      return {
-        message: "Rate limit exceeded. Please wait a moment and try again.",
-        actions: [],
-      };
-    }
-
-    if (errorMessage.includes("timeout") || errorMessage.includes("ETIMEDOUT") || errorMessage.includes("ECONNABORTED")) {
-      return {
-        message: "The request timed out. Please try again with a shorter message or simpler request.",
-        actions: [],
-      };
-    }
-
-    const safeMessage = errorMessage
-      .replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]')
-      .replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
+    const { userMessage } = categorizeError(error);
     return {
-      message: `An error occurred while communicating with the AI provider: ${safeMessage}`,
+      message: userMessage,
       actions: [],
     };
   }
@@ -555,13 +618,14 @@ export async function streamAIMessage(
     apiKey: string;
     appState: AppState;
     temperature?: number;
+    maxTokens?: number;
   },
   write: (chunk: string) => void | Promise<void>,
   onComplete: (result: { message: string; actions: AIAction[] }) => void | Promise<void>,
   signal?: AbortSignal
 ): Promise<void> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7 } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       write(`No API key provided for ${provider}. Please add your ${provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key in the settings panel to enable AI features.`);
@@ -575,7 +639,15 @@ export async function streamAIMessage(
       return;
     }
 
-    const systemPrompt = buildSystemPrompt(appState);
+    const stateHash = hashAppState(appState);
+    let systemPrompt: string;
+    if (stateHash === cachedPromptHash) {
+      systemPrompt = cachedPrompt;
+    } else {
+      systemPrompt = buildSystemPrompt(appState);
+      cachedPromptHash = stateHash;
+      cachedPrompt = systemPrompt;
+    }
     const recentHistory = appState.chatHistory.slice(-10);
 
     if (provider === "anthropic") {
@@ -591,7 +663,7 @@ export async function streamAIMessage(
 
       const stream = client.messages.stream({
         model,
-        max_tokens: 4096,
+        max_tokens: maxTokens || 4096,
         system: systemPrompt,
         messages,
         temperature,
@@ -622,7 +694,7 @@ export async function streamAIMessage(
       const geminiModel = genAI.getGenerativeModel({
         model,
         systemInstruction: systemPrompt,
-        generationConfig: { temperature },
+        generationConfig: { temperature, maxOutputTokens: maxTokens || 4096 },
       });
 
       const history = recentHistory.map((msg) => ({
@@ -634,13 +706,20 @@ export async function streamAIMessage(
       const result = await chat.sendMessageStream(message);
 
       let fullText = "";
-      for await (const chunk of result.stream) {
-        if (signal?.aborted) break;
-        const text = chunk.text();
-        if (text) {
-          await write(text);
-          fullText += text;
+      try {
+        for await (const chunk of result.stream) {
+          if (signal?.aborted) break;
+          const text = chunk.text();
+          if (text) {
+            await write(text);
+            fullText += text;
+          }
         }
+      } catch (streamError: any) {
+        if (signal?.aborted) return;
+        const safe = (streamError?.message || 'Stream interrupted')
+          .replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
+        await write(`\n\n[Stream interrupted: ${safe}]`);
       }
 
       if (signal?.aborted) return;
@@ -650,11 +729,8 @@ export async function streamAIMessage(
     }
   } catch (error: any) {
     if (signal?.aborted) return;
-    const rawMessage = error?.message || String(error);
-    const safeMessage = rawMessage
-      .replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]')
-      .replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
-    write(`\n\nError: ${safeMessage}`);
-    onComplete({ message: `An error occurred while communicating with the AI provider: ${safeMessage}`, actions: [] });
+    const { userMessage } = categorizeError(error);
+    write(`\n\nError: ${userMessage}`);
+    onComplete({ message: userMessage, actions: [] });
   }
 }
