@@ -1,6 +1,7 @@
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "@shared/schema";
+import { logger } from "./logger";
 
 if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL must be set. Did you forget to provision a database?");
@@ -15,7 +16,7 @@ export const pool = new pg.Pool({
 });
 
 pool.on("error", (err) => {
-  console.error("Unexpected database pool error:", err.message);
+  logger.error("Unexpected database pool error", { error: err.message });
 });
 
 export const db = drizzle(pool, { schema });
@@ -25,10 +26,10 @@ export async function checkConnection(maxRetries = 5): Promise<void> {
     try {
       const client = await pool.connect();
       client.release();
-      console.log("Database connection verified.");
+      logger.info("Database connection verified");
       return;
     } catch (err: any) {
-      console.error(`Database connection attempt ${attempt}/${maxRetries} failed: ${err.message}`);
+      logger.error("Database connection attempt failed", { attempt, maxRetries, error: err.message });
       if (attempt === maxRetries) {
         throw new Error(`Could not connect to database after ${maxRetries} attempts.`);
       }

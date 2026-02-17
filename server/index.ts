@@ -7,6 +7,9 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { validateEnv } from "./env";
 import crypto from "crypto";
+import { logger } from "./logger";
+import { recordRequest, getMetrics } from "./metrics";
+import { apiDocs } from "./api-docs";
 
 declare global {
   namespace Express {
@@ -129,14 +132,7 @@ app.use((req, res, next) => {
 });
 
 export function log(message: string, source = "express") {
-  const formattedTime = new Date().toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-
-  console.log(`${formattedTime} [${source}] ${message}`);
+  logger.info(message, { source });
 }
 
 app.use((req, res, next) => {
@@ -164,6 +160,7 @@ app.use((req, res, next) => {
       }
 
       log(logLine);
+      recordRequest(req.method, path, res.statusCode, duration);
     }
   });
 
@@ -187,13 +184,21 @@ app.use((req, res, next) => {
     }
   });
 
+  app.get("/api/metrics", (_req, res) => {
+    res.json(getMetrics());
+  });
+
+  app.get("/api/docs", (_req, res) => {
+    res.json({ version: 1, routes: apiDocs });
+  });
+
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
       return next(err);
     }
 
     const status = err.status || err.statusCode || 500;
-    console.error("Server error:", err.stack || err);
+    logger.error("Server error", { stack: err.stack, status });
 
     let clientMessage: string;
     if (status < 500) {
@@ -232,19 +237,19 @@ app.use((req, res, next) => {
   );
 
   function gracefulShutdown(signal: string) {
-    console.log(`\n${signal} received. Shutting down gracefully...`);
+    logger.info("Shutting down...", { signal });
     httpServer.close(async () => {
       try {
         const { pool } = await import("./db");
         await pool.end();
-        console.log("Database pool closed.");
+        logger.info("Database pool closed");
       } catch (err) {
-        console.error("Error closing database pool:", err);
+        logger.error("Error closing database pool", { error: err instanceof Error ? err.message : String(err) });
       }
       process.exit(0);
     });
     setTimeout(() => {
-      console.error("Forced shutdown after timeout.");
+      logger.error("Forced shutdown after timeout");
       process.exit(1);
     }, 10000);
   }
