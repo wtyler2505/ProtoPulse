@@ -2,7 +2,7 @@
 
 **Scope:** `server/` (all files) + `shared/schema.ts`
 **Total findings:** 116
-**Last updated:** 2026-02-17
+**Last updated:** 2026-02-17 (Session 2: 14 additional fixes)
 
 ---
 
@@ -30,10 +30,10 @@
 | Priority | Total | Fixed | Open | Partial |
 |----------|-------|-------|------|---------|
 | P0 | 10 | 9 | 1 | 0 |
-| P1 | 33 | 29 | 4 | 0 |
-| P2 | 60 | 5 | 53 | 2 |
-| P3 | 13 | 4 | 9 | 0 |
-| **Total** | **116** | **47** | **67** | **2** |
+| P1 | 33 | 31 | 2 | 0 |
+| P2 | 60 | 13 | 45 | 2 |
+| P3 | 13 | 8 | 5 | 0 |
+| **Total** | **116** | **61** | **53** | **2** |
 
 ---
 
@@ -56,7 +56,8 @@
   > Fixed: Increased to 300 requests / 15 min.
 - [x] ✅ **#6** P1 Reliability — Rate limit applies to SSE AI stream (/api/chat/ai/stream) even though it's long-lived.
   > Fixed: SSE endpoint exempted via skip function.
-- [ ] ⬜ **#7** P2 Security/DX — trust proxy set to 1 without comment. Fine for Replit; risky if deployed elsewhere.
+- [x] ✅ **#7** P2 Security/DX — trust proxy set to 1 without comment. Fine for Replit; risky if deployed elsewhere.
+  > Fixed: Added explanatory comment noting Replit's single reverse proxy and guidance for other deployments.
 - [x] ✅ **#8** P1 Security — Helmet CSP disabled in dev (contentSecurityPolicy: false): zero XSS protection during dev.
   > Fixed: Unified CSP config for dev and prod with proper directives (self, unsafe-inline for styles, Google Fonts, data/blob for images, WebSocket in dev only).
 - [x] ✅ **#9** P1 Reliability — Helmet CSP likely too strict in production (default CSP may block inline styles, external fonts, SSE), risking prod breakage.
@@ -67,7 +68,8 @@
   > Fixed: Response body logging truncated to 500 chars.
 - [x] ✅ **#12** P2 Observability — No log truncation; huge payloads will explode logs.
   > Fixed: Truncated to 500 chars with [truncated] suffix.
-- [ ] ⬜ **#13** P2 Observability — No request ID / correlation ID.
+- [x] ✅ **#13** P2 Observability — No request ID / correlation ID.
+  > Fixed: Added middleware generating crypto.randomUUID() per request, sets X-Request-Id header, included in all API log lines.
 - [x] ✅ **#14** P1 Reliability — No graceful shutdown (no SIGTERM/SIGINT handlers to drain server + close DB pool).
   > Fixed: Added gracefulShutdown function with SIGTERM/SIGINT handlers.
 - [ ] ⬜ **#15** P3 DX/Tech Debt — createServer import/usage inconsistent (imported but server created inline; also appears unused elsewhere).
@@ -89,7 +91,8 @@
 
 - [x] ✅ **#21** P1 Reliability — No try/catch in any route handler. Failures become generic 500s.
   > Fixed: All 25 route handlers wrapped with asyncHandler() that catches and forwards errors.
-- [ ] ⬜ **#22** P2 Reliability — parseIdParam throws unhandled; relies on global error handler via nonstandard status property.
+- [x] ✅ **#22** P2 Reliability — parseIdParam throws unhandled; relies on global error handler via nonstandard status property.
+  > Fixed: Created HttpError class extending Error with proper status property. parseIdParam now throws HttpError(400).
 
 ### Data integrity risks (transactions)
 
@@ -128,13 +131,16 @@
 
 ### AI endpoints duplication + SSE concerns
 
-- [ ] ⬜ **#37** P3 DX/Tech Debt — aiRequestSchema duplicated between /api/chat/ai and /api/chat/ai/stream.
-- [ ] ⬜ **#38** P3 DX/Tech Debt — appState construction duplicated (~50 lines repeated).
+- [x] ✅ **#37** P3 DX/Tech Debt — aiRequestSchema duplicated between /api/chat/ai and /api/chat/ai/stream.
+  > Fixed: Extracted single shared aiRequestSchema constant at file top with all fields (extras optional).
+- [x] ✅ **#38** P3 DX/Tech Debt — appState construction duplicated (~50 lines repeated).
+  > Fixed: Extracted buildAppStateFromProject() helper function used by both AI endpoints.
 - [x] ✅ **#39** P1 Correctness — projectId defaults to 1 silently if missing; may send wrong project state to AI.
   > Fixed: Made projectId required in both AI chat endpoint Zod schemas. Removed fallback to 1.
 - [x] ✅ **#40** P1 Reliability — SSE headers missing X-Accel-Buffering: no (reverse proxies may buffer).
   > Fixed: Added X-Accel-Buffering: no header.
-- [ ] ⬜ **#41** P1 Reliability — SSE doesn't handle backpressure; res.write() can buffer indefinitely.
+- [x] ✅ **#41** P1 Reliability — SSE doesn't handle backpressure; res.write() can buffer indefinitely.
+  > Fixed: Added writeWithBackpressure() that checks res.write() return value and waits for 'drain' event when buffer is full.
 - [x] ✅ **#42** P1 Reliability — No timeout on AI stream; hangs forever if provider stalls.
   > Fixed: Added 120-second stream timeout.
 
@@ -196,16 +202,20 @@
 
 ### Performance + cost
 
-- [ ] ⬜ **#64** P2 Performance — Anthropic client instantiated on every request; prevents reuse.
-- [ ] ⬜ **#65** P2 Performance — Gemini client instantiated on every request; same issue.
+- [x] ✅ **#64** P2 Performance — Anthropic client instantiated on every request; prevents reuse.
+  > Fixed: Added LRUClientCache (max 10 entries) with getAnthropicClient() that caches and reuses instances per API key.
+- [x] ✅ **#65** P2 Performance — Gemini client instantiated on every request; same issue.
+  > Fixed: Added getGeminiClient() with same LRU cache pattern.
 - [ ] ⬜ **#66** P2 Cost/Performance — System prompt is enormous (~5000+ tokens) each request → higher cost.
 - [ ] ⬜ **#67** P2 Performance — System prompt rebuilt every request (no caching when state unchanged).
 - [ ] ⬜ **#68** P2 Product — max_tokens: 4096 hardcoded; no user configurability.
 
 ### History/context handling (duplication)
 
-- [ ] ⬜ **#69** P3 Tech Debt — Chat history sliced to last 10 messages in multiple places; should be centralized + configurable.
-- [ ] ⬜ **#70** P3 Tech Debt — Duplicate system message filtering across processAIMessage, streamAIMessage, and routes.
+- [x] ✅ **#69** P3 Tech Debt — Chat history sliced to last 10 messages in multiple places; should be centralized + configurable.
+  > Fixed: Centralized in buildAppStateFromProject() with MAX_CHAT_HISTORY constant. Both endpoints use the shared helper.
+- [x] ✅ **#70** P3 Tech Debt — Duplicate system message filtering across processAIMessage, streamAIMessage, and routes.
+  > Fixed: History slicing now happens once in buildAppStateFromProject(); AI functions use what they receive.
 
 ### Types + validation
 
@@ -215,10 +225,12 @@
 - [x] ✅ **#73** P1 Safety — AI actions not validated: JSON parsed but not checked against AIAction shape.
   > Fixed: parseActionsFromResponse now validates each action is a non-null object with string type property.
 - [ ] ⬜ **#74** P2 Reliability — Error categorization via string matching (includes("401")) is fragile; should use structured error codes.
-- [ ] ⬜ **#75** P2 UX/Reliability — No abort/cancel mechanism for AI streams; provider continues generating after client disconnect.
+- [x] ✅ **#75** P2 UX/Reliability — No abort/cancel mechanism for AI streams; provider continues generating after client disconnect.
+  > Fixed: AbortController created per SSE request, abort() called on req.close. Signal passed to streamAIMessage and forwarded to Anthropic/Gemini APIs.
 - [ ] ⬜ **#76** P2 Reliability — No request deduplication; double-send triggers duplicate AI calls.
 - [ ] ⬜ **#77** P2 Correctness — parseActionsFromResponse only matches JSON at end of response; can miss actions if formatting varies.
-- [ ] ⬜ **#78** P2 Consistency — Temperature not consistently validated/forwarded across endpoints (range checks should be unified).
+- [x] ✅ **#78** P2 Consistency — Temperature not consistently validated/forwarded across endpoints (range checks should be unified).
+  > Fixed: Single shared aiRequestSchema validates temperature (0-2 range). Both endpoints use `temperature ?? 0.7` consistently.
 - [ ] ⬜ **#79** P2 Reliability — Gemini mid-stream errors less graceful than Anthropic's handling.
 
 ---
@@ -280,7 +292,8 @@
 
 - [x] ✅ **#99** P2 Performance — No caching headers on static assets (Cache-Control, ETag, Last-Modified tuning).
   > Fixed: Added maxAge, etag, lastModified, and immutable cache for hashed assets.
-- [ ] ⬜ **#100** P2 Performance — No compression middleware (gzip/brotli). JS/CSS served uncompressed.
+- [x] ✅ **#100** P2 Performance — No compression middleware (gzip/brotli). JS/CSS served uncompressed.
+  > Fixed: Added compression middleware (gzip/deflate) in server/index.ts after helmet, before body parsing.
 - [x] ✅ **#101** P2 Performance — SPA catch-all (index.html) sends no cache directives.
   > Fixed: Added Cache-Control: no-cache on SPA fallback.
 
@@ -303,13 +316,15 @@
 - [ ] ⬜ **#107** P0 Security — No authentication/authorization: any client can read/write any project's data.
 - [x] ✅ **#108** P1 Security — No input length limits on text fields (names, descriptions, labels, chat messages) → storage abuse risk.
   > Fixed: Added .max() constraints to AI chat Zod schemas (message: 32k, model: 200, apiKey: 500, customSystemPrompt: 10k, changeDiff: 50k).
-- [ ] ⬜ **#109** P1 Security — No CSRF protection for mutation endpoints.
+- [x] ✅ **#109** P1 Security — No CSRF protection for mutation endpoints.
+  > Fixed: Added same-origin check middleware. Verifies Origin/Referer against Host for POST/PUT/PATCH/DELETE. Lenient in dev, strict in prod. Skips SSE endpoint.
 - [ ] ⬜ **#110** P2 Reliability — No per-endpoint payload size validation (only global 1MB cap).
 - [ ] ⬜ **#111** P2 Observability — No structured logging (console logs only). Hard to aggregate/analyze in prod.
 - [ ] ⬜ **#112** P2 Ops — No metrics/monitoring (latency, error rates, DB query timing).
 - [ ] ⬜ **#113** P2 DX — No API documentation (OpenAPI/Swagger) to define request/response contracts.
 - [ ] ⬜ **#114** P1 Reliability — No backend tests (unit tests for storage, integration tests for routes, tests for AI parsing).
-- [ ] ⬜ **#115** P2 Reliability — No environment variable validation beyond DATABASE_URL (missing validation for PORT, NODE_ENV, etc.).
+- [x] ✅ **#115** P2 Reliability — No environment variable validation beyond DATABASE_URL (missing validation for PORT, NODE_ENV, etc.).
+  > Fixed: Added server/env.ts with validateEnv() called on startup. Validates DATABASE_URL (required), PORT (valid number 0-65535), NODE_ENV (development/production/test).
 - [x] ✅ **#116** P1 Reliability — Request timeout: SSE now has 120s timeout, but non-SSE routes still have no request timeout.
   > Fixed: 30s request timeout middleware added for non-SSE routes. SSE keeps 120s timeout.
 
@@ -322,24 +337,22 @@
 |---|---------|------|--------|
 | 107 | No authentication/authorization | Cross-cutting | ⬜ Open |
 
-### P1 — High (4 remaining)
+### P1 — High (2 remaining)
 | # | Finding | File | Status |
 |---|---------|------|--------|
-| 41 | SSE doesn't handle backpressure | server/routes.ts | ⬜ |
 | 61 | API key sent in request body every time | server/ai.ts | ⬜ |
-| 109 | No CSRF protection | Cross-cutting | ⬜ |
 | 114 | No backend tests | Cross-cutting | ⬜ |
 
-### P2 — Medium (55 remaining: 53 open + 2 partial)
+### P2 — Medium (47 remaining: 45 open + 2 partial)
 See items marked ⬜ or 🔶 above with P2 tag. Key areas:
-- **Performance:** Pagination (#28), sorting (#29), caching (#52), compression (#100)
+- **Performance:** Pagination (#28), sorting (#29), caching (#52)
 - **API gaps:** Missing DELETE endpoints (#30-33, #57, #60), individual node/edge updates (#58)
-- **AI improvements:** Client reuse (#64-65), prompt optimization (#66-67), action parsing (#77)
+- **AI improvements:** Prompt optimization (#66-67), action parsing (#77), dedup (#76)
 - **Schema:** Enum constraints (#84-87), composite indexes (#89), timestamps (#90-92), jsonb typing (#93-94)
-- **Observability:** Request IDs (#13), structured logging (#111), metrics (#112)
+- **Observability:** Structured logging (#111), metrics (#112)
 
-### P3 — Low (9 remaining)
-See items marked ⬜ above with P3 tag. Mostly DX/cleanup items.
+### P3 — Low (5 remaining)
+See items marked ⬜ above with P3 tag. Mostly DX/cleanup items (#15, #43, #95, #98, #105).
 
 ---
 
@@ -351,14 +364,19 @@ See items marked ⬜ above with P3 tag. Mostly DX/cleanup items.
 - ✅ Add /api/health
 - ⬜ Add pagination + sorting on list endpoints
 - ✅ Add Zod validation to PATCH /api/bom/:id
-- ⬜ Add request IDs / correlation IDs
+- ✅ Add request IDs / correlation IDs
+- ✅ Add compression middleware
+- ✅ Add env variable validation
 
-### Medium Efforts (stability + scale) — partially done
+### Medium Efforts (stability + scale) — mostly done
 - ✅ Add DB transactions for bulk replace operations
-- ⬜ Centralize duplicated AI endpoint logic (shared schema + appState builder + history slicing)
+- ✅ Centralize duplicated AI endpoint logic (shared schema + appState builder + history slicing)
 - ✅ Add indexes on FK columns
 - ✅ Add composite unique constraints (nodeId, edgeId per project)
-- ✅ Add request timeout + SSE anti-buffer headers (SSE: 120s, non-SSE: 30s) — backpressure still open
+- ✅ Add request timeout + SSE anti-buffer headers + backpressure handling
+- ✅ Add CSRF same-origin protection
+- ✅ Cache AI client instances (LRU per API key)
+- ✅ Add AI stream abort on client disconnect
 
 ### Big Swings (structural) — not started
 - ⬜ Add auth + project-level authorization

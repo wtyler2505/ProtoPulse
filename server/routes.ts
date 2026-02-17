@@ -13,21 +13,115 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+const MAX_CHAT_HISTORY = 10;
+
+class HttpError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+    this.name = "HttpError";
+  }
+}
+
 function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
 
-// Helper to safely parse numeric IDs from route parameters. Throws a 400 error on invalid input.
 function parseIdParam(param: any): number {
   const id = Number(param);
   if (!Number.isFinite(id)) {
-    const err: any = new Error("Invalid id");
-    err.status = 400;
-    throw err;
+    throw new HttpError("Invalid id", 400);
   }
   return id;
+}
+
+const aiRequestSchema = z.object({
+  message: z.string().min(1).max(32000),
+  provider: z.enum(["anthropic", "gemini"]),
+  model: z.string().min(1).max(200),
+  apiKey: z.string().min(1).max(500),
+  projectId: z.number(),
+  activeView: z.string().optional(),
+  schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+  activeSheetId: z.string().optional(),
+  temperature: z.number().min(0).max(2).optional(),
+  customSystemPrompt: z.string().max(10000).optional(),
+  selectedNodeId: z.string().nullable().optional(),
+  changeDiff: z.string().max(50000).optional(),
+});
+
+async function buildAppStateFromProject(
+  projectId: number,
+  options: {
+    activeView?: string;
+    schematicSheets?: Array<{ id: string; name: string }>;
+    activeSheetId?: string;
+    selectedNodeId?: string | null;
+    customSystemPrompt?: string;
+    changeDiff?: string;
+  }
+) {
+  const [nodes, edges, bomData, validation, chatHistory, project] = await Promise.all([
+    storage.getNodes(projectId),
+    storage.getEdges(projectId),
+    storage.getBomItems(projectId),
+    storage.getValidationIssues(projectId),
+    storage.getChatMessages(projectId),
+    storage.getProject(projectId),
+  ]);
+
+  return {
+    projectName: project?.name || "Untitled",
+    projectDescription: project?.description || "",
+    activeView: options.activeView || "architecture",
+    selectedNodeId: options.selectedNodeId || null,
+    nodes: nodes.map(n => ({
+      id: n.nodeId,
+      label: n.label,
+      type: n.nodeType,
+      description: (n.data as any)?.description,
+      positionX: n.positionX,
+      positionY: n.positionY,
+    })),
+    edges: edges.map(e => ({
+      id: e.edgeId,
+      source: e.source,
+      target: e.target,
+      label: e.label || undefined,
+      signalType: e.signalType || undefined,
+      voltage: e.voltage || undefined,
+      busWidth: e.busWidth || undefined,
+      netName: e.netName || undefined,
+    })),
+    bom: bomData.map(b => ({
+      id: String(b.id),
+      partNumber: b.partNumber,
+      manufacturer: b.manufacturer,
+      description: b.description,
+      quantity: b.quantity,
+      unitPrice: Number(b.unitPrice),
+      supplier: b.supplier,
+      status: b.status,
+    })),
+    validationIssues: validation.map(v => ({
+      id: String(v.id),
+      severity: v.severity,
+      message: v.message,
+      componentId: v.componentId || undefined,
+      suggestion: v.suggestion || undefined,
+    })),
+    schematicSheets: options.schematicSheets || [],
+    activeSheetId: options.activeSheetId || "top",
+    chatHistory: chatHistory.slice(-MAX_CHAT_HISTORY).map(m => ({
+      role: m.role,
+      content: m.content,
+    })),
+    customSystemPrompt: options.customSystemPrompt || "",
+    changeDiff: options.changeDiff || "",
+  };
 }
 
 export async function registerRoutes(
@@ -261,108 +355,6 @@ export async function registerRoutes(
   // --- AI Chat Endpoint ---
 
   app.post("/api/chat/ai", asyncHandler(async (req, res) => {
-    const aiRequestSchema = z.object({
-      message: z.string().min(1).max(32000),
-      provider: z.enum(["anthropic", "gemini"]),
-      model: z.string().min(1).max(200),
-      apiKey: z.string().min(1).max(500),
-      projectId: z.number(),
-      activeView: z.string().optional(),
-      schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
-      activeSheetId: z.string().optional(),
-    });
-
-    const parsed = aiRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
-    }
-
-    const { message, provider, model, apiKey } = parsed.data;
-    const pid = parsed.data.projectId;
-
-    const [nodes, edges, bomData, validation, chatHistory, project] = await Promise.all([
-      storage.getNodes(pid),
-      storage.getEdges(pid),
-      storage.getBomItems(pid),
-      storage.getValidationIssues(pid),
-      storage.getChatMessages(pid),
-      storage.getProject(pid),
-    ]);
-
-    const appState = {
-      projectName: project?.name || "Untitled",
-      projectDescription: project?.description || "",
-      activeView: parsed.data.activeView || "architecture",
-      nodes: nodes.map(n => ({
-        id: n.nodeId,
-        label: n.label,
-        type: n.nodeType,
-        description: (n.data as any)?.description,
-        positionX: n.positionX,
-        positionY: n.positionY,
-      })),
-      edges: edges.map(e => ({
-        id: e.edgeId,
-        source: e.source,
-        target: e.target,
-        label: e.label || undefined,
-        signalType: e.signalType || undefined,
-        voltage: e.voltage || undefined,
-        busWidth: e.busWidth || undefined,
-        netName: e.netName || undefined,
-      })),
-      bom: bomData.map(b => ({
-        id: String(b.id),
-        partNumber: b.partNumber,
-        manufacturer: b.manufacturer,
-        description: b.description,
-        quantity: b.quantity,
-        unitPrice: Number(b.unitPrice),
-        supplier: b.supplier,
-        status: b.status,
-      })),
-      validationIssues: validation.map(v => ({
-        id: String(v.id),
-        severity: v.severity,
-        message: v.message,
-        componentId: v.componentId || undefined,
-        suggestion: v.suggestion || undefined,
-      })),
-      schematicSheets: parsed.data.schematicSheets || [],
-      activeSheetId: parsed.data.activeSheetId || "top",
-      chatHistory: chatHistory.slice(-10).map(m => ({
-        role: m.role,
-        content: m.content,
-      })),
-    };
-
-    const result = await processAIMessage({
-      message,
-      provider,
-      model,
-      apiKey,
-      appState,
-    });
-
-    res.json(result);
-  }));
-
-  app.post("/api/chat/ai/stream", asyncHandler(async (req, res) => {
-    const aiRequestSchema = z.object({
-      message: z.string().min(1).max(32000),
-      provider: z.enum(["anthropic", "gemini"]),
-      model: z.string().min(1).max(200),
-      apiKey: z.string().min(1).max(500),
-      projectId: z.number(),
-      activeView: z.string().optional(),
-      schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
-      activeSheetId: z.string().optional(),
-      temperature: z.number().min(0).max(2).optional(),
-      customSystemPrompt: z.string().max(10000).optional(),
-      selectedNodeId: z.string().nullable().optional(),
-      changeDiff: z.string().max(50000).optional(),
-    });
-
     const parsed = aiRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
@@ -371,64 +363,44 @@ export async function registerRoutes(
     const { message, provider, model, apiKey, temperature } = parsed.data;
     const pid = parsed.data.projectId;
 
-    const [nodes, edges, bomData, validation, chatHistory, project] = await Promise.all([
-      storage.getNodes(pid),
-      storage.getEdges(pid),
-      storage.getBomItems(pid),
-      storage.getValidationIssues(pid),
-      storage.getChatMessages(pid),
-      storage.getProject(pid),
-    ]);
+    const appState = await buildAppStateFromProject(pid, {
+      activeView: parsed.data.activeView,
+      schematicSheets: parsed.data.schematicSheets,
+      activeSheetId: parsed.data.activeSheetId,
+      selectedNodeId: parsed.data.selectedNodeId,
+      customSystemPrompt: parsed.data.customSystemPrompt,
+      changeDiff: parsed.data.changeDiff,
+    });
 
-    const appState = {
-      projectName: project?.name || "Untitled",
-      projectDescription: project?.description || "",
-      activeView: parsed.data.activeView || "architecture",
-      selectedNodeId: parsed.data.selectedNodeId || null,
-      nodes: nodes.map(n => ({
-        id: n.nodeId,
-        label: n.label,
-        type: n.nodeType,
-        description: (n.data as any)?.description,
-        positionX: n.positionX,
-        positionY: n.positionY,
-      })),
-      edges: edges.map(e => ({
-        id: e.edgeId,
-        source: e.source,
-        target: e.target,
-        label: e.label || undefined,
-        signalType: e.signalType || undefined,
-        voltage: e.voltage || undefined,
-        busWidth: e.busWidth || undefined,
-        netName: e.netName || undefined,
-      })),
-      bom: bomData.map(b => ({
-        id: String(b.id),
-        partNumber: b.partNumber,
-        manufacturer: b.manufacturer,
-        description: b.description,
-        quantity: b.quantity,
-        unitPrice: Number(b.unitPrice),
-        supplier: b.supplier,
-        status: b.status,
-      })),
-      validationIssues: validation.map(v => ({
-        id: String(v.id),
-        severity: v.severity,
-        message: v.message,
-        componentId: v.componentId || undefined,
-        suggestion: v.suggestion || undefined,
-      })),
-      schematicSheets: parsed.data.schematicSheets || [],
-      activeSheetId: parsed.data.activeSheetId || "top",
-      chatHistory: chatHistory.slice(-10).map(m => ({
-        role: m.role,
-        content: m.content,
-      })),
-      customSystemPrompt: parsed.data.customSystemPrompt || "",
-      changeDiff: parsed.data.changeDiff || "",
-    };
+    const result = await processAIMessage({
+      message,
+      provider,
+      model,
+      apiKey,
+      appState,
+      temperature: temperature ?? 0.7,
+    });
+
+    res.json(result);
+  }));
+
+  app.post("/api/chat/ai/stream", asyncHandler(async (req, res) => {
+    const parsed = aiRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
+    }
+
+    const { message, provider, model, apiKey, temperature } = parsed.data;
+    const pid = parsed.data.projectId;
+
+    const appState = await buildAppStateFromProject(pid, {
+      activeView: parsed.data.activeView,
+      schematicSheets: parsed.data.schematicSheets,
+      activeSheetId: parsed.data.activeSheetId,
+      selectedNodeId: parsed.data.selectedNodeId,
+      customSystemPrompt: parsed.data.customSystemPrompt,
+      changeDiff: parsed.data.changeDiff,
+    });
 
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -436,6 +408,7 @@ export async function registerRoutes(
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
+    const abortController = new AbortController();
     let closed = false;
     const streamTimeout = setTimeout(() => {
       if (!closed) {
@@ -444,23 +417,37 @@ export async function registerRoutes(
         res.end();
       }
     }, 120000);
-    req.on('close', () => { closed = true; clearTimeout(streamTimeout); });
+    req.on('close', () => {
+      closed = true;
+      abortController.abort();
+      clearTimeout(streamTimeout);
+    });
+
+    const writeWithBackpressure = (data: string): Promise<void> => {
+      return new Promise((resolve) => {
+        if (closed) { resolve(); return; }
+        const ok = res.write(data);
+        if (ok) { resolve(); return; }
+        res.once('drain', resolve);
+      });
+    };
 
     try {
       await streamAIMessage(
-        { message, provider, model, apiKey, appState, temperature },
-        (chunk) => {
+        { message, provider, model, apiKey, appState, temperature: temperature ?? 0.7 },
+        async (chunk) => {
           if (!closed) {
-            res.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
+            await writeWithBackpressure(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
           }
         },
-        (result) => {
+        async (result) => {
           clearTimeout(streamTimeout);
           if (!closed) {
-            res.write(`data: ${JSON.stringify({ type: 'done', message: result.message, actions: result.actions })}\n\n`);
+            await writeWithBackpressure(`data: ${JSON.stringify({ type: 'done', message: result.message, actions: result.actions })}\n\n`);
             res.end();
           }
-        }
+        },
+        abortController.signal
       );
     } catch (error: any) {
       clearTimeout(streamTimeout);

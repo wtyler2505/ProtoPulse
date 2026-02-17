@@ -1,23 +1,39 @@
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
+import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { validateEnv } from "./env";
+import crypto from "crypto";
+
+declare global {
+  namespace Express {
+    interface Request {
+      id: string;
+    }
+  }
+}
+
+validateEnv();
 
 const app = express();
+
+// Replit runs behind one reverse proxy, so trust exactly 1 hop.
+// Adjust this value if deploying behind additional proxies (e.g., Cloudflare + load balancer = 2).
 app.set("trust proxy", 1);
 
 const isDev = process.env.NODE_ENV !== "production";
 app.use(helmet({
-  contentSecurityPolicy: isDev ? false : {
+  contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'"],
+      connectSrc: isDev ? ["'self'", "ws:", "wss:"] : ["'self'"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -25,6 +41,21 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false,
 }));
+
+app.use(compression());
+
+app.use((req, _res, next) => {
+  req.id = crypto.randomUUID();
+  next();
+});
+
+app.use((_req, res, next) => {
+  const reqId = (_req as Request).id;
+  if (reqId) {
+    res.setHeader("X-Request-Id", reqId);
+  }
+  next();
+});
 
 // Rate limit API requests to prevent brute-force attacks and abuse【697222849486831†L78-L93】.
 const apiLimiter = rateLimit({
@@ -40,6 +71,34 @@ const httpServer = createServer(app);
 app.use(express.json({ limit: "1mb" }));
 
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.path === '/api/chat/ai/stream') return next();
+
+  const method = req.method.toUpperCase();
+  if (method === "GET" || method === "HEAD" || method === "OPTIONS") return next();
+
+  const host = req.get("x-forwarded-host") || req.get("host");
+  const origin = req.get("origin");
+  const referer = req.get("referer");
+
+  const originHost = origin
+    ? (() => { try { return new URL(origin).host; } catch { return null; } })()
+    : referer
+      ? (() => { try { return new URL(referer).host; } catch { return null; } })()
+      : null;
+
+  if (!originHost) {
+    if (isDev) return next();
+    return res.status(403).json({ message: "Forbidden: missing Origin header" });
+  }
+
+  if (originHost !== host) {
+    return res.status(403).json({ message: "Forbidden: origin mismatch" });
+  }
+
+  next();
+});
 
 app.use((req, res, next) => {
   if (req.path === '/api/chat/ai/stream') return next();
@@ -65,6 +124,7 @@ export function log(message: string, source = "express") {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
+  const requestId = req.id;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
@@ -77,6 +137,9 @@ app.use((req, res, next) => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (requestId) {
+        logLine += ` [${requestId}]`;
+      }
       if (capturedJsonResponse) {
         const body = JSON.stringify(capturedJsonResponse);
         logLine += ` :: ${body.length > 500 ? body.slice(0, 500) + '...[truncated]' : body}`;

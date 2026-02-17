@@ -67,6 +67,57 @@ interface AppState {
   changeDiff?: string;
 }
 
+const MAX_CLIENT_CACHE = 10;
+
+class LRUClientCache<T> {
+  private cache = new Map<string, T>();
+  private maxSize: number;
+
+  constructor(maxSize: number) {
+    this.maxSize = maxSize;
+  }
+
+  get(key: string): T | undefined {
+    const value = this.cache.get(key);
+    if (value !== undefined) {
+      this.cache.delete(key);
+      this.cache.set(key, value);
+    }
+    return value;
+  }
+
+  set(key: string, value: T): void {
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    } else if (this.cache.size >= this.maxSize) {
+      const oldest = this.cache.keys().next().value;
+      if (oldest !== undefined) this.cache.delete(oldest);
+    }
+    this.cache.set(key, value);
+  }
+}
+
+const anthropicClients = new LRUClientCache<Anthropic>(MAX_CLIENT_CACHE);
+const geminiClients = new LRUClientCache<GoogleGenerativeAI>(MAX_CLIENT_CACHE);
+
+function getAnthropicClient(apiKey: string): Anthropic {
+  let client = anthropicClients.get(apiKey);
+  if (!client) {
+    client = new Anthropic({ apiKey });
+    anthropicClients.set(apiKey, client);
+  }
+  return client;
+}
+
+function getGeminiClient(apiKey: string): GoogleGenerativeAI {
+  let client = geminiClients.get(apiKey);
+  if (!client) {
+    client = new GoogleGenerativeAI(apiKey);
+    geminiClients.set(apiKey, client);
+  }
+  return client;
+}
+
 function buildSystemPrompt(appState: AppState): string {
   const nodesDescription = appState.nodes.length > 0
     ? appState.nodes.map(n => `  - "${n.label}" (type: ${n.type}, id: ${n.id}, pos: ${n.positionX},${n.positionY}${n.description ? `, desc: ${n.description}` : ""})`).join("\n")
@@ -376,7 +427,7 @@ async function callAnthropic(
   userMessage: string,
   temperature: number = 0.7
 ): Promise<{ message: string; actions: AIAction[] }> {
-  const client = new Anthropic({ apiKey });
+  const client = getAnthropicClient(apiKey);
 
   const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
   for (const msg of chatHistory) {
@@ -410,7 +461,7 @@ async function callGemini(
   userMessage: string,
   temperature: number = 0.7
 ): Promise<{ message: string; actions: AIAction[] }> {
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const genAI = getGeminiClient(apiKey);
   const geminiModel = genAI.getGenerativeModel({
     model,
     systemInstruction: systemPrompt,
@@ -505,8 +556,9 @@ export async function streamAIMessage(
     appState: AppState;
     temperature?: number;
   },
-  write: (chunk: string) => void,
-  onComplete: (result: { message: string; actions: AIAction[] }) => void
+  write: (chunk: string) => void | Promise<void>,
+  onComplete: (result: { message: string; actions: AIAction[] }) => void | Promise<void>,
+  signal?: AbortSignal
 ): Promise<void> {
   try {
     const { message, provider, model, apiKey, appState, temperature = 0.7 } = params;
@@ -527,7 +579,7 @@ export async function streamAIMessage(
     const recentHistory = appState.chatHistory.slice(-10);
 
     if (provider === "anthropic") {
-      const client = new Anthropic({ apiKey });
+      const client = getAnthropicClient(apiKey);
 
       const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
       for (const msg of recentHistory) {
@@ -543,12 +595,18 @@ export async function streamAIMessage(
         system: systemPrompt,
         messages,
         temperature,
-      });
+      }, signal ? { signal } : undefined);
 
       for await (const event of stream) {
+        if (signal?.aborted) break;
         if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          write(event.delta.text);
+          await write(event.delta.text);
         }
+      }
+
+      if (signal?.aborted) {
+        stream.abort();
+        return;
       }
 
       const finalMessage = await stream.finalMessage();
@@ -558,9 +616,9 @@ export async function streamAIMessage(
         .join("");
 
       const parsed = parseActionsFromResponse(fullText);
-      onComplete(parsed);
+      await onComplete(parsed);
     } else {
-      const genAI = new GoogleGenerativeAI(apiKey);
+      const genAI = getGeminiClient(apiKey);
       const geminiModel = genAI.getGenerativeModel({
         model,
         systemInstruction: systemPrompt,
@@ -577,17 +635,21 @@ export async function streamAIMessage(
 
       let fullText = "";
       for await (const chunk of result.stream) {
+        if (signal?.aborted) break;
         const text = chunk.text();
         if (text) {
-          write(text);
+          await write(text);
           fullText += text;
         }
       }
 
+      if (signal?.aborted) return;
+
       const parsed = parseActionsFromResponse(fullText);
-      onComplete(parsed);
+      await onComplete(parsed);
     }
   } catch (error: any) {
+    if (signal?.aborted) return;
     const rawMessage = error?.message || String(error);
     const safeMessage = rawMessage
       .replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]')
