@@ -1,9 +1,28 @@
+import { useState } from 'react';
 import { Handle, Position, NodeProps, Node, Edge } from '@xyflow/react';
 import { CircuitBoard, Cpu, Radio, Battery, Zap, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useProject } from '@/lib/project-context';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { buttonVariants } from '@/components/ui/button';
+
+interface CustomNodeData {
+  type: string;
+  label: string;
+  description?: string;
+  [key: string]: unknown;
+}
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   mcu: Cpu,
@@ -19,9 +38,10 @@ const typeMap: Record<string, string> = {
   'Communication': 'comm', 'Connector': 'connector', 'Generic': 'generic',
 };
 
-export default function CustomNode({ id, data, selected }: NodeProps) {
+export default function CustomNode({ id, data, selected }: NodeProps<Node<CustomNodeData>>) {
   const { nodes, edges, setNodes, setEdges, addOutputLog } = useProject();
-  const Icon = iconMap[data.type as string] || CircuitBoard;
+  const [pendingDelete, setPendingDelete] = useState(false);
+  const Icon = iconMap[data.type] || CircuitBoard;
   
   return (
     <ContextMenu>
@@ -47,8 +67,8 @@ export default function CustomNode({ id, data, selected }: NodeProps) {
               <Icon className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">{data.type as string}</div>
-              <div className="font-display font-medium text-sm text-foreground">{data.label as string}</div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">{data.type}</div>
+              <div className="font-display font-medium text-sm text-foreground">{data.label}</div>
             </div>
           </div>
 
@@ -56,9 +76,9 @@ export default function CustomNode({ id, data, selected }: NodeProps) {
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-        <ContextMenuItem onSelect={() => { copyToClipboard(data.label as string); addOutputLog('[NODE] Copied label: ' + data.label); }}>Copy Label</ContextMenuItem>
+        <ContextMenuItem onSelect={() => { copyToClipboard(data.label); addOutputLog('[NODE] Copied label: ' + data.label); }}>Copy Label</ContextMenuItem>
         <ContextMenuItem onSelect={() => { const orig = nodes.find((n: Node) => n.id === id); if (orig) { setNodes([...nodes, { ...orig, id: Date.now().toString(), position: { x: orig.position.x + 50, y: orig.position.y + 50 } }]); } }}>Duplicate Node</ContextMenuItem>
-        <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent((data.label as string) + ' datasheet'), '_blank', 'noopener,noreferrer')}>Search Datasheet</ContextMenuItem>
+        <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(data.label + ' datasheet'), '_blank', 'noopener,noreferrer')}>Search Datasheet</ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuSub>
           <ContextMenuSubTrigger>Change Type</ContextMenuSubTrigger>
@@ -69,8 +89,28 @@ export default function CustomNode({ id, data, selected }: NodeProps) {
           </ContextMenuSubContent>
         </ContextMenuSub>
         <ContextMenuSeparator />
-        <ContextMenuItem className="text-destructive" onSelect={() => { if (window.confirm('Delete this node? This cannot be undone.')) { setNodes(nodes.filter((n: Node) => n.id !== id)); setEdges(edges.filter((e: Edge) => e.source !== id && e.target !== id)); addOutputLog('[NODE] Deleted: ' + data.label); } }}>Delete Node</ContextMenuItem>
+        <ContextMenuItem className="text-destructive" onSelect={() => setPendingDelete(true)}>Delete Node</ContextMenuItem>
       </ContextMenuContent>
+
+      <AlertDialog open={pendingDelete} onOpenChange={(open) => { if (!open) setPendingDelete(false); }}>
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Node</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete this node? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { setNodes(nodes.filter((n: Node) => n.id !== id)); setEdges(edges.filter((e: Edge) => e.source !== id && e.target !== id)); addOutputLog('[NODE] Deleted: ' + data.label); setPendingDelete(false); }}
+              className={cn(buttonVariants({ variant: 'destructive' }))}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </ContextMenu>
   );
 }

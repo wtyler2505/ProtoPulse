@@ -4,11 +4,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Trash2, Copy, ClipboardCheck } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { copyToClipboard } from '@/lib/clipboard';
+import { useToast } from '@/hooks/use-toast';
 import { COPY_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export default function OutputView() {
   const { outputLog, clearOutputLog } = useProject();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
@@ -34,6 +36,7 @@ export default function OutputView() {
     copyToClipboard(outputLog.join('\n'));
     setCopiedAll(true);
     setTimeout(() => setCopiedAll(false), COPY_FEEDBACK_DURATION);
+    toast({ title: 'Copied', description: 'All log entries copied to clipboard.' });
   };
 
   return (
@@ -101,7 +104,7 @@ export default function OutputView() {
           </div>
         )}
         {displayLog.map(({ log, index: originalIndex }) => (
-          <Tooltip key={originalIndex}>
+          <Tooltip key={`log-${originalIndex}`}>
             <TooltipTrigger asChild>
               <div
                 data-testid={`log-entry-${originalIndex}`}

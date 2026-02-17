@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useProject } from '@/lib/project-context';
-import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package } from 'lucide-react';
+import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -26,6 +27,7 @@ const goalDescriptions: Record<string, string> = {
 
 export default function ProcurementView() {
   const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, addOutputLog } = useProject();
+  const { toast } = useToast();
   const [showSettings, setShowSettings] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [optimizationGoal, setOptimizationGoal] = useState('Cost');
@@ -72,9 +74,10 @@ export default function ProcurementView() {
       a.download = 'bom_export.csv';
       a.click();
       URL.revokeObjectURL(url);
+      toast({ title: 'Export Complete', description: 'BOM exported as CSV file.' });
     } catch (err) {
       console.warn('Export failed:', err);
-      alert('Failed to export CSV. Please try again.');
+      toast({ title: 'Export Failed', description: 'Could not export CSV. Please try again.', variant: 'destructive' });
     }
   };
 
@@ -91,6 +94,7 @@ export default function ProcurementView() {
       stock: 0,
       status: 'Out of Stock',
     });
+    toast({ title: 'Item Added', description: 'New BOM component added. Edit details to customize.' });
   };
 
   return (
@@ -286,13 +290,16 @@ export default function ProcurementView() {
                   <ContextMenuTrigger asChild>
                     <tr className="hover:bg-muted/30 transition-colors group" data-testid={`row-bom-${item.id}`}>
                       <td className="px-4 py-3">
-                        <span className={cn("inline-flex items-center px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
+                        <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
                           item.status === 'In Stock' 
                             ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
                             : item.status === 'Low Stock'
                             ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                             : 'bg-destructive/10 text-destructive border-destructive/20'
                         )} data-testid={`status-bom-${item.id}`}>
+                          {item.status === 'In Stock' && <CheckCircle2 className="w-3 h-3" />}
+                          {item.status === 'Low Stock' && <AlertCircle className="w-3 h-3" />}
+                          {item.status === 'Out of Stock' && <XCircle className="w-3 h-3" />}
                           {item.status}
                         </span>
                       </td>

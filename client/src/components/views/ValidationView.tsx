@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useProject } from '@/lib/project-context';
+import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -21,6 +22,7 @@ import { buttonVariants } from '@/components/ui/button';
 
 export default function ValidationView() {
   const { issues, runValidation, deleteValidationIssue, addOutputLog, setActiveView } = useProject();
+  const { toast } = useToast();
   const [pendingDismissId, setPendingDismissId] = useState<number | string | null>(null);
 
   const getIcon = (severity: string) => {
@@ -46,7 +48,7 @@ export default function ValidationView() {
           <TooltipTrigger asChild>
             <button 
               data-testid="run-drc-checks"
-              onClick={runValidation}
+              onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
               className="px-6 py-2 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
             >
               Run DRC Checks
@@ -90,12 +92,12 @@ export default function ValidationView() {
                   <div className="md:w-32">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <button data-testid={`button-autofix-${issue.id}`} aria-label={`Auto-fix: ${issue.message}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(issue.id); addOutputLog(`[AUTO-FIX] Resolved: ${issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
+                        <button data-testid={`button-resolve-${issue.id}`} aria-label={`Mark resolved: ${issue.message}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
                             Mark Resolved
                         </button>
                       </TooltipTrigger>
                       <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
-                        <p>Automatically resolve this issue</p>
+                        <p>Mark this issue as resolved</p>
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -132,7 +134,7 @@ export default function ValidationView() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { if (pendingDismissId !== null) { deleteValidationIssue(pendingDismissId); setPendingDismissId(null); } }}
+              onClick={() => { if (pendingDismissId !== null) { deleteValidationIssue(pendingDismissId); setPendingDismissId(null); toast({ title: 'Issue Dismissed', description: 'Validation issue has been dismissed.' }); } }}
               className={cn(buttonVariants({ variant: 'destructive' }))}
             >
               Dismiss
