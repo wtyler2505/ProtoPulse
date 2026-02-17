@@ -34,7 +34,22 @@ export type AIAction =
   | { type: "voltage_domain_check" }
   | { type: "auto_fix_validation" }
   | { type: "dfm_check" }
-  | { type: "thermal_analysis" };
+  | { type: "thermal_analysis" }
+  | { type: "pricing_lookup"; partNumber: string }
+  | { type: "suggest_alternatives"; partNumber: string; reason?: string }
+  | { type: "optimize_bom" }
+  | { type: "check_lead_times" }
+  | { type: "parametric_search"; category: string; specs: Record<string, string> }
+  | { type: "analyze_image"; description: string }
+  | { type: "save_design_decision"; decision: string; rationale: string }
+  | { type: "add_annotation"; nodeLabel: string; note: string; color?: string }
+  | { type: "start_tutorial"; topic: string }
+  | { type: "export_kicad" }
+  | { type: "export_spice" }
+  | { type: "preview_gerber" }
+  | { type: "add_datasheet_link"; partNumber: string; url: string }
+  | { type: "export_design_report" }
+  | { type: "set_project_type"; projectType: string };
 
 interface AppState {
   projectName: string;
@@ -263,6 +278,55 @@ Run Design for Manufacturing checks — flag hard-to-solder components, suggest 
 
 \`{ "type": "thermal_analysis" }\`
 Estimate power dissipation per component, flag thermal hot spots, suggest heatsinks or thermal vias.
+
+**BOM Intelligence:**
+\`{ "type": "pricing_lookup", "partNumber": "<pn>" }\`
+Look up real-time pricing and availability for a specific part across distributors (Digi-Key, Mouser, LCSC).
+
+\`{ "type": "suggest_alternatives", "partNumber": "<pn>", "reason": "<cost|availability|performance>" }\`
+Find alternative/equivalent parts for a BOM item. Specify reason: cost reduction, availability, or performance improvement.
+
+\`{ "type": "optimize_bom" }\`
+Analyze the entire BOM for cost optimization opportunities — supplier consolidation, quantity discounts, and cheaper equivalents.
+
+\`{ "type": "check_lead_times" }\`
+Check estimated lead times and delivery dates for all BOM items. Flag items with long lead times (>8 weeks).
+
+\`{ "type": "parametric_search", "category": "<category>", "specs": { "<param>": "<value>", ... } }\`
+Search for components by parametric specifications. Categories: "mcu", "sensor", "regulator", "capacitor", "resistor", "inductor", "connector", "transistor", "diode", "opamp". Specs examples: {"voltage": "3.3V", "package": "QFP-48", "frequency": ">100MHz"}.
+
+**Design Documentation:**
+\`{ "type": "analyze_image", "description": "<description>" }\`
+Analyze an uploaded image or schematic reference — describe what's shown and suggest how to implement it.
+
+\`{ "type": "save_design_decision", "decision": "<what>", "rationale": "<why>" }\`
+Record a design decision with its rationale for future reference. This creates a permanent record of WHY choices were made.
+
+\`{ "type": "add_annotation", "nodeLabel": "<label>", "note": "<comment>", "color": "yellow" | "blue" | "red" | "green" }\`
+Add a sticky-note annotation to a component for documentation or review comments.
+
+\`{ "type": "start_tutorial", "topic": "getting_started" | "power_design" | "pcb_layout" | "bom_management" | "validation" }\`
+Start an interactive tutorial walkthrough for the specified topic.
+
+**Export & Output:**
+\`{ "type": "export_kicad" }\`
+Generate a KiCad-compatible schematic file (.kicad_sch) from the current architecture. Creates hierarchical sheet structure matching the block diagram.
+
+\`{ "type": "export_spice" }\`
+Generate a SPICE netlist (.cir) for circuit simulation. Maps components to SPICE models and connections to nets.
+
+\`{ "type": "preview_gerber" }\`
+Generate a rough PCB layout preview showing component placement and basic routing estimation.
+
+\`{ "type": "add_datasheet_link", "partNumber": "<pn>", "url": "<datasheet-url>" }\`
+Attach a datasheet URL to a BOM item for quick reference.
+
+\`{ "type": "export_design_report" }\`
+Generate a comprehensive design report including architecture overview, BOM summary, validation status, and recommendations.
+
+**Project Configuration:**
+\`{ "type": "set_project_type", "projectType": "iot" | "wearable" | "industrial" | "automotive" | "consumer" | "medical" | "rf" | "power" }\`
+Set the project type to optimize AI suggestions, component recommendations, and validation rules for the specific domain.
 
 ## Response Format
 

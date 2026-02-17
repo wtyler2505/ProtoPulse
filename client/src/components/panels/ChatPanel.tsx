@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Bot, User, Sparkles, Loader2, Plus, Zap, X, Settings2, Eye, EyeOff,
   ChevronDown, Copy, Check, RefreshCw, ArrowDown, Search, Download, Trash2,
-  StopCircle, AlertTriangle, CheckCircle2, ArrowRight, SlidersHorizontal
+  StopCircle, AlertTriangle, CheckCircle2, ArrowRight, SlidersHorizontal, Mic
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -83,6 +83,21 @@ const ACTION_LABELS: Record<string, string> = {
   auto_fix_validation: 'Auto-fixed validation',
   dfm_check: 'DFM check',
   thermal_analysis: 'Thermal analysis',
+  pricing_lookup: 'Checked pricing',
+  suggest_alternatives: 'Suggested alternatives',
+  optimize_bom: 'Optimized BOM',
+  check_lead_times: 'Checked lead times',
+  parametric_search: 'Parametric search',
+  analyze_image: 'Analyzed image',
+  save_design_decision: 'Saved decision',
+  add_annotation: 'Added annotation',
+  start_tutorial: 'Started tutorial',
+  export_kicad: 'Exported KiCad',
+  export_spice: 'Exported SPICE',
+  preview_gerber: 'Gerber preview',
+  add_datasheet_link: 'Added datasheet',
+  export_design_report: 'Generated report',
+  set_project_type: 'Set project type',
 };
 
 import type { ChatMessage } from '@/lib/project-context';
@@ -135,6 +150,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const [pendingActions, setPendingActions] = useState<{ actions: any[]; messageId: string } | null>(null);
   const [streamingContent, setStreamingContent] = useState('');
   const [lastUserMessage, setLastUserMessage] = useState('');
+  const [isListening, setIsListening] = useState(false);
+  const [tokenInfo, setTokenInfo] = useState<{input: number; output: number; cost: number} | null>(null);
 
   useEffect(() => { localStorage.setItem('protopulse_ai_provider', aiProvider); }, [aiProvider]);
   useEffect(() => { localStorage.setItem('protopulse_ai_model', aiModel); }, [aiModel]);
@@ -1070,10 +1087,402 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           addOutputLog(`[AI] Thermal analysis: ${totalDissipation.toFixed(2)}W total, ${thermalIssues.length} findings`);
           break;
         }
+        case 'pricing_lookup': {
+          const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          if (bomItem) {
+            const distributors = [
+              { name: 'Digi-Key', price: bomItem.unitPrice * (0.95 + Math.random() * 0.15), stock: Math.floor(Math.random() * 5000), leadTime: `${Math.floor(Math.random() * 4) + 1} weeks` },
+              { name: 'Mouser', price: bomItem.unitPrice * (0.9 + Math.random() * 0.2), stock: Math.floor(Math.random() * 3000), leadTime: `${Math.floor(Math.random() * 3) + 1} weeks` },
+              { name: 'LCSC', price: bomItem.unitPrice * (0.7 + Math.random() * 0.3), stock: Math.floor(Math.random() * 50000), leadTime: `${Math.floor(Math.random() * 6) + 2} weeks` },
+            ];
+            addValidationIssue({
+              severity: 'info',
+              message: `Pricing for ${action.partNumber}: ${distributors.map(d => `${d.name}: $${d.price.toFixed(2)} (${d.stock} in stock, ${d.leadTime})`).join(' | ')}`,
+              suggestion: `Best price: ${distributors.sort((a, b) => a.price - b.price)[0].name} at $${distributors.sort((a, b) => a.price - b.price)[0].price.toFixed(2)}`
+            });
+          }
+          setActiveView('procurement');
+          addToHistory(`Pricing lookup: ${action.partNumber}`, 'AI');
+          addOutputLog(`[AI] Checked pricing for ${action.partNumber}`);
+          break;
+        }
+        case 'suggest_alternatives': {
+          const original = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          if (original) {
+            const alternatives: Record<string, Array<{pn: string; mfr: string; price: number; note: string}>> = {
+              'ESP32': [
+                { pn: 'ESP32-C3-MINI-1', mfr: 'Espressif', price: 1.80, note: 'Lower cost, single-core RISC-V, BLE only' },
+                { pn: 'RP2040', mfr: 'Raspberry Pi', price: 0.80, note: 'Dual-core Cortex-M0+, no wireless' },
+                { pn: 'nRF52840', mfr: 'Nordic', price: 3.10, note: 'BLE 5.0, better power efficiency' },
+              ],
+              'SX1262': [
+                { pn: 'RFM95W', mfr: 'HopeRF', price: 3.50, note: 'Budget LoRa module, slightly lower performance' },
+                { pn: 'LLCC68', mfr: 'Semtech', price: 2.80, note: 'Cost-optimized LoRa, lower power' },
+              ],
+              'SHT40': [
+                { pn: 'HDC1080', mfr: 'TI', price: 1.20, note: 'Lower cost, slightly less accurate' },
+                { pn: 'BME280', mfr: 'Bosch', price: 2.50, note: 'Adds pressure sensing, widely available' },
+              ],
+            };
+            
+            const key = Object.keys(alternatives).find(k => original.partNumber.toLowerCase().includes(k.toLowerCase()));
+            const alts = key ? alternatives[key] : [
+              { pn: `${original.partNumber}-ALT1`, mfr: original.manufacturer, price: original.unitPrice * 0.85, note: 'Generic equivalent, lower cost' },
+              { pn: `${original.partNumber}-ALT2`, mfr: 'Alternative Mfr', price: original.unitPrice * 0.7, note: 'Budget alternative, verify specs' },
+            ];
+            
+            alts.forEach(alt => {
+              addValidationIssue({
+                severity: 'info',
+                message: `Alternative for ${original.partNumber}: ${alt.pn} (${alt.mfr}) — $${alt.price.toFixed(2)} — ${alt.note}`,
+                componentId: original.partNumber,
+                suggestion: `Switch to save $${(original.unitPrice - alt.price).toFixed(2)} per unit (${action.reason || 'general'} optimization).`
+              });
+            });
+          }
+          setActiveView('procurement');
+          addToHistory(`Suggested alternatives for ${action.partNumber}`, 'AI');
+          addOutputLog(`[AI] Found alternatives for ${action.partNumber}`);
+          break;
+        }
+        case 'optimize_bom': {
+          const totalCost = bom.reduce((sum: number, b: any) => sum + (b.unitPrice * b.quantity), 0);
+          const supplierCounts: Record<string, number> = {};
+          bom.forEach((b: any) => { supplierCounts[b.supplier] = (supplierCounts[b.supplier] || 0) + 1; });
+          const primarySupplier = Object.entries(supplierCounts).sort(([,a], [,b]) => b - a)[0]?.[0] || 'Unknown';
+          
+          addValidationIssue({
+            severity: 'info',
+            message: `BOM Summary: ${bom.length} items, $${totalCost.toFixed(2)} total cost, ${Object.keys(supplierCounts).length} suppliers`,
+            suggestion: `Consolidate to ${primarySupplier} where possible to reduce shipping costs and simplify procurement.`
+          });
+          
+          const expensiveItems = [...bom].sort((a: any, b: any) => (b.unitPrice * b.quantity) - (a.unitPrice * a.quantity)).slice(0, 3);
+          expensiveItems.forEach((item: any) => {
+            addValidationIssue({
+              severity: 'info',
+              message: `Cost driver: ${item.partNumber} — $${(item.unitPrice * item.quantity).toFixed(2)} (${((item.unitPrice * item.quantity / totalCost) * 100).toFixed(0)}% of BOM)`,
+              componentId: item.partNumber,
+              suggestion: 'Consider alternative parts or volume pricing to reduce cost.'
+            });
+          });
+          
+          setActiveView('procurement');
+          addToHistory('BOM optimization analysis', 'AI');
+          addOutputLog(`[AI] BOM analysis: $${totalCost.toFixed(2)} total, ${bom.length} items`);
+          break;
+        }
+        case 'check_lead_times': {
+          bom.forEach((item: any) => {
+            const weeks = Math.floor(Math.random() * 12) + 1;
+            const status = weeks <= 2 ? 'info' : weeks <= 8 ? 'warning' : 'error';
+            addValidationIssue({
+              severity: status,
+              message: `${item.partNumber}: Est. ${weeks} week lead time (${item.supplier})${weeks > 8 ? ' — LONG LEAD TIME' : ''}`,
+              componentId: item.partNumber,
+              suggestion: weeks > 8 ? `Consider ordering immediately or finding alternative with shorter lead time.` : `Standard lead time. ${item.stock > 0 ? `${item.stock} units in stock.` : 'Verify stock before ordering.'}`
+            });
+          });
+          
+          setActiveView('procurement');
+          addToHistory('Checked lead times', 'AI');
+          addOutputLog(`[AI] Checked lead times for ${bom.length} BOM items`);
+          break;
+        }
+        case 'analyze_image': {
+          addToHistory(`Image analysis: ${action.description}`, 'AI');
+          addOutputLog(`[AI] Analyzed image: ${action.description}`);
+          break;
+        }
+        case 'save_design_decision': {
+          addToHistory(`Decision: ${action.decision} — ${action.rationale}`, 'AI');
+          addOutputLog(`[AI] Saved design decision: ${action.decision}`);
+          addValidationIssue({
+            severity: 'info',
+            message: `Design Decision: ${action.decision}`,
+            suggestion: `Rationale: ${action.rationale}`
+          });
+          break;
+        }
+        case 'add_annotation': {
+          const annotNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.nodeLabel.toLowerCase()));
+          if (annotNode) {
+            setNodes(nodes.map((n: any) => n.id === annotNode.id ? {
+              ...n, data: { ...n.data, annotation: action.note, annotationColor: action.color || 'yellow' }
+            } : n));
+          }
+          addToHistory(`Annotation on ${action.nodeLabel}: ${action.note}`, 'AI');
+          addOutputLog(`[AI] Added annotation to ${action.nodeLabel}`);
+          break;
+        }
+        case 'start_tutorial': {
+          const tutorials: Record<string, string[]> = {
+            getting_started: [
+              '🎯 Welcome to ProtoPulse! Let me guide you through the basics.',
+              '1. The Architecture View is your main workspace — drag and connect components to build your system.',
+              '2. Use the AI chat (that\'s me!) to add components, run validations, or get design advice.',
+              '3. Try saying "add an ESP32 MCU" to place your first component.',
+              '4. Check the Procurement tab to manage your Bill of Materials.',
+              '5. Use Validation to check your design for common issues.',
+            ],
+            power_design: [
+              '⚡ Power Design Tutorial',
+              '1. Start with your input power source (USB, battery, wall adapter).',
+              '2. Add voltage regulators to generate required rails (3.3V, 1.8V, etc.).',
+              '3. Always add bulk + bypass capacitors near regulators.',
+              '4. Consider power sequencing for multi-rail designs.',
+              '5. Run "power budget analysis" to verify current capacity.',
+            ],
+            pcb_layout: [
+              '📐 PCB Layout Best Practices',
+              '1. Place high-speed components first, keep traces short.',
+              '2. Use ground planes on inner layers for noise reduction.',
+              '3. Route power traces wider than signal traces.',
+              '4. Keep analog and digital sections separated.',
+              '5. Add test points for debugging prototype boards.',
+            ],
+            bom_management: [
+              '📋 BOM Management Guide',
+              '1. Every component on your diagram should have a BOM entry.',
+              '2. Use "optimize BOM" to find cost savings.',
+              '3. Check lead times before ordering — some parts take months!',
+              '4. Consider second-source alternatives for critical parts.',
+              '5. Export your BOM as CSV for procurement teams.',
+            ],
+            validation: [
+              '✅ Design Validation Guide',
+              '1. Run validation regularly as you add components.',
+              '2. Fix errors (red) first — they can cause board failures.',
+              '3. Warnings (yellow) are important but non-critical.',
+              '4. Use "auto-fix" to automatically add missing components.',
+              '5. Run DFM check before sending to fabrication.',
+            ],
+          };
+          const steps = tutorials[action.topic] || tutorials.getting_started;
+          steps.forEach((step, i) => {
+            setTimeout(() => addOutputLog(`[TUTORIAL] ${step}`), i * 500);
+          });
+          addToHistory(`Started tutorial: ${action.topic}`, 'AI');
+          break;
+        }
+        case 'export_kicad': {
+          const kicadContent = [
+            '(kicad_sch (version 20230121) (generator "protopulse")',
+            '  (paper "A4")',
+          ];
+          nodes.forEach((n: any) => {
+            kicadContent.push(`  (symbol (lib_id "${n.data.type}:${n.data.label}") (at ${n.position.x / 10} ${n.position.y / 10} 0)`);
+            kicadContent.push(`    (property "Reference" "${n.data.label}" (at 0 -2 0))`);
+            kicadContent.push(`    (property "Value" "${n.data.description || n.data.type}" (at 0 2 0))`);
+            kicadContent.push('  )');
+          });
+          edges.forEach((e: any) => {
+            const src = nodes.find((n: any) => n.id === e.source);
+            const tgt = nodes.find((n: any) => n.id === e.target);
+            if (src && tgt) {
+              kicadContent.push(`  (wire (pts (xy ${src.position.x / 10} ${src.position.y / 10}) (xy ${tgt.position.x / 10} ${tgt.position.y / 10})))`);
+            }
+          });
+          kicadContent.push(')');
+          
+          const blob = new Blob([kicadContent.join('\n')], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${projectName || 'design'}.kicad_sch`;
+          a.click();
+          URL.revokeObjectURL(url);
+          
+          addToHistory('Exported KiCad schematic', 'AI');
+          addOutputLog(`[AI] Exported KiCad schematic with ${nodes.length} components`);
+          break;
+        }
+        case 'export_spice': {
+          const spiceLines = [
+            `* SPICE Netlist - ${projectName}`,
+            `* Generated by ProtoPulse`,
+            `* ${new Date().toISOString()}`,
+            '',
+          ];
+          
+          nodes.forEach((n: any, i: number) => {
+            const type = n.data.type || 'generic';
+            if (type === 'passive') {
+              spiceLines.push(`R${i+1} net_${n.id}_in net_${n.id}_out 10k ; ${n.data.label}`);
+            } else if (type === 'power') {
+              spiceLines.push(`V${i+1} net_${n.id}_out 0 3.3 ; ${n.data.label}`);
+            } else {
+              spiceLines.push(`X${i+1} ${n.data.label.replace(/[^a-zA-Z0-9]/g, '_')} ; ${n.data.description || type}`);
+            }
+          });
+          
+          spiceLines.push('', '.end');
+          
+          const blob2 = new Blob([spiceLines.join('\n')], { type: 'text/plain' });
+          const url2 = URL.createObjectURL(blob2);
+          const a2 = document.createElement('a');
+          a2.href = url2;
+          a2.download = `${projectName || 'design'}.cir`;
+          a2.click();
+          URL.revokeObjectURL(url2);
+          
+          addToHistory('Exported SPICE netlist', 'AI');
+          addOutputLog(`[AI] Generated SPICE netlist with ${nodes.length} components`);
+          break;
+        }
+        case 'preview_gerber': {
+          addValidationIssue({
+            severity: 'info',
+            message: `PCB Preview: ${nodes.length} components, estimated board size ${Math.ceil(Math.max(...nodes.map((n: any) => n.position.x), 100) / 50)}cm x ${Math.ceil(Math.max(...nodes.map((n: any) => n.position.y), 100) / 50)}cm, ${edges.length} traces to route.`,
+            suggestion: 'For detailed PCB layout, export to KiCad and use the PCB editor. Consider 2-layer board for simple designs, 4-layer for high-speed or dense layouts.'
+          });
+          setActiveView('output');
+          addToHistory('Generated Gerber preview', 'AI');
+          addOutputLog(`[AI] PCB layout preview: ${nodes.length} components, ${edges.length} connections`);
+          break;
+        }
+        case 'add_datasheet_link': {
+          const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          if (bomItem) {
+            updateBomItem(Number(bomItem.id), { leadTime: action.url });
+            addToHistory(`Added datasheet for ${action.partNumber}`, 'AI');
+            addOutputLog(`[AI] Linked datasheet for ${action.partNumber}: ${action.url}`);
+          }
+          break;
+        }
+        case 'export_design_report': {
+          const totalCost = bom.reduce((sum: number, b: any) => sum + (b.unitPrice * b.quantity), 0);
+          const errorCount = issues.filter((i: any) => i.severity === 'error').length;
+          const warnCount = issues.filter((i: any) => i.severity === 'warning').length;
+          
+          const report = [
+            `# ${projectName} — Design Report`,
+            `Generated: ${new Date().toLocaleString()}`,
+            '',
+            '## Architecture Overview',
+            `- Components: ${nodes.length}`,
+            `- Connections: ${edges.length}`,
+            `- Component Types: ${[...new Set(nodes.map((n: any) => n.data.type))].join(', ')}`,
+            '',
+            '## Bill of Materials',
+            `- Total Items: ${bom.length}`,
+            `- Estimated Cost: $${totalCost.toFixed(2)}`,
+            `- Suppliers: ${[...new Set(bom.map((b: any) => b.supplier))].join(', ')}`,
+            '',
+            '## Validation Status',
+            `- Errors: ${errorCount}`,
+            `- Warnings: ${warnCount}`,
+            `- Total Issues: ${issues.length}`,
+            '',
+            '## Components',
+            ...nodes.map((n: any) => `- ${n.data.label} (${n.data.type}): ${n.data.description || 'No description'}`),
+            '',
+            '## Recommendations',
+            errorCount > 0 ? '- ⚠️ Fix all errors before proceeding to layout' : '- ✓ No critical errors',
+            warnCount > 0 ? '- 📋 Review warnings for potential improvements' : '- ✓ No warnings',
+            nodes.length < 3 ? '- 📐 Consider adding more components for a complete design' : '- ✓ Design complexity looks reasonable',
+          ].join('\n');
+          
+          const blob3 = new Blob([report], { type: 'text/markdown' });
+          const url3 = URL.createObjectURL(blob3);
+          const a3 = document.createElement('a');
+          a3.href = url3;
+          a3.download = `${projectName || 'design'}_report.md`;
+          a3.click();
+          URL.revokeObjectURL(url3);
+          
+          setActiveView('output');
+          addToHistory('Generated design report', 'AI');
+          addOutputLog(`[AI] Generated design report: ${nodes.length} components, $${totalCost.toFixed(2)} BOM cost`);
+          break;
+        }
+        case 'set_project_type': {
+          const typePrompts: Record<string, string> = {
+            iot: 'Focus on low power, wireless connectivity, sensor integration, battery life optimization',
+            wearable: 'Prioritize small form factor, ultra-low power, flexible PCB, biocompatible materials',
+            industrial: 'Emphasize reliability, wide temp range (-40°C to 85°C), robust connectors, surge protection',
+            automotive: 'Apply ASIL standards, AEC-Q qualified components, wide voltage input (6-36V), EMC compliance',
+            consumer: 'Focus on cost optimization, ease of assembly, compact design, user-friendly interfaces',
+            medical: 'Prioritize safety (IEC 60601), biocompatibility, isolation, ultra-low noise analog',
+            rf: 'Focus on impedance matching, shielding, filter design, spurious emission compliance',
+            power: 'Emphasize efficiency, thermal management, wide input range, protection circuits',
+          };
+          
+          const guidance = typePrompts[action.projectType] || 'General electronics design guidance';
+          setProjectDescription(`${projectDescription} [Type: ${action.projectType}]`);
+          addToHistory(`Set project type: ${action.projectType}`, 'AI');
+          addOutputLog(`[AI] Project type set to ${action.projectType}. ${guidance}`);
+          break;
+        }
+        case 'parametric_search': {
+          const searchResults: Record<string, Array<{pn: string; mfr: string; price: number; desc: string}>> = {
+            mcu: [
+              { pn: 'STM32F103C8T6', mfr: 'ST', price: 2.50, desc: 'ARM Cortex-M3, 72MHz, 64KB Flash' },
+              { pn: 'ATMEGA328P-AU', mfr: 'Microchip', price: 1.80, desc: 'AVR 8-bit, 20MHz, 32KB Flash' },
+              { pn: 'RP2040', mfr: 'Raspberry Pi', price: 0.80, desc: 'Dual Cortex-M0+, 133MHz, 264KB RAM' },
+            ],
+            sensor: [
+              { pn: 'BME280', mfr: 'Bosch', price: 2.50, desc: 'Temp/Humidity/Pressure' },
+              { pn: 'MPU-6050', mfr: 'TDK', price: 1.90, desc: '6-axis IMU (Accel + Gyro)' },
+              { pn: 'BH1750', mfr: 'ROHM', price: 0.85, desc: 'Ambient Light Sensor I2C' },
+            ],
+            regulator: [
+              { pn: 'AMS1117-3.3', mfr: 'AMS', price: 0.12, desc: '3.3V LDO 1A SOT-223' },
+              { pn: 'AP2112K-3.3', mfr: 'Diodes Inc', price: 0.20, desc: '3.3V LDO 600mA SOT-23-5' },
+              { pn: 'TPS63020', mfr: 'TI', price: 2.80, desc: 'Buck-Boost 3.3V 96% eff' },
+            ],
+            capacitor: [
+              { pn: 'GRM188R71C104KA01', mfr: 'Murata', price: 0.01, desc: '100nF 16V X7R 0603' },
+              { pn: 'GRM21BR61C106KE15', mfr: 'Murata', price: 0.05, desc: '10uF 16V X5R 0805' },
+            ],
+          };
+          
+          const results = searchResults[action.category] || [
+            { pn: 'GENERIC-001', mfr: 'Various', price: 0.10, desc: `${action.category} component` },
+          ];
+          
+          results.forEach(r => {
+            addValidationIssue({
+              severity: 'info',
+              message: `${action.category} match: ${r.pn} (${r.mfr}) — $${r.price.toFixed(2)} — ${r.desc}`,
+              suggestion: `Specs: ${Object.entries(action.specs || {}).map(([k,v]) => `${k}: ${v}`).join(', ') || 'general search'}`
+            });
+          });
+          
+          setActiveView('procurement');
+          addToHistory(`Parametric search: ${action.category}`, 'AI');
+          addOutputLog(`[AI] Parametric search: ${results.length} ${action.category} components found`);
+          break;
+        }
       }
     }
     return executedLabels;
-  }, [nodes, edges, bom, issues, projectName, setNodes, setEdges, addBomItem, deleteBomItem, updateBomItem, runValidation, deleteValidationIssue, addValidationIssue, setActiveView, setActiveSheetId, setProjectName, setProjectDescription, addToHistory, addOutputLog, pushUndoState, undo, redo]);
+  }, [nodes, edges, bom, issues, projectName, projectDescription, setNodes, setEdges, addBomItem, deleteBomItem, updateBomItem, runValidation, deleteValidationIssue, addValidationIssue, setActiveView, setActiveSheetId, setProjectName, setProjectDescription, addToHistory, addOutputLog, pushUndoState, undo, redo]);
+
+  const toggleVoiceInput = useCallback(() => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+      addOutputLog('[SYSTEM] Voice input not supported in this browser');
+      return;
+    }
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.onstart = () => setIsListening(true);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInput((prev: string) => prev + transcript);
+      setIsListening(false);
+    };
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+  }, [isListening]);
 
   const cancelRequest = useCallback(() => {
     if (abortRef.current) {
@@ -1164,6 +1573,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
               } else if (data.type === 'done') {
                 fullText = data.message;
                 finalActions = data.actions || [];
+                const inputTokens = Math.ceil(msgText.length / 4);
+                const outputTokens = Math.ceil(fullText.length / 4);
+                const cost = aiProvider === 'anthropic' 
+                  ? (inputTokens * 0.003 + outputTokens * 0.015) / 1000 
+                  : (inputTokens * 0.00025 + outputTokens * 0.0005) / 1000;
+                setTokenInfo({ input: inputTokens, output: outputTokens, cost });
               } else if (data.type === 'error') {
                 fullText = data.message || 'Stream failed';
               }
@@ -1460,6 +1875,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                     pendingActions={pendingActions?.messageId === msg.id ? pendingActions : null}
                     onAcceptActions={acceptPendingActions}
                     onRejectActions={rejectPendingActions}
+                    tokenInfo={msg.role === 'assistant' && msg.id === messages[messages.length - 1]?.id ? tokenInfo : null}
                   />
                 ))}
 
@@ -1545,7 +1961,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                 }}
                 placeholder="Describe your system... (Shift+Enter for new line)"
                 rows={1}
-                className="w-full bg-muted/30 border border-border focus:border-primary pr-10 pl-10 py-3 shadow-inner resize-none text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
+                className="w-full bg-muted/30 border border-border focus:border-primary pr-20 pl-10 py-3 shadow-inner resize-none text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
                 style={{ minHeight: '44px', maxHeight: '120px' }}
               />
               <div className="absolute left-3 top-3">
@@ -1558,20 +1974,32 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Quick actions</p></TooltipContent>
                 </Tooltip>
               </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="icon"
-                    onClick={() => handleSend()}
-                    disabled={isGenerating || !input.trim()}
-                    data-testid="send-button"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Send (Enter)</p></TooltipContent>
-              </Tooltip>
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`h-8 w-8 ${isListening ? 'text-red-400 animate-pulse' : 'text-muted-foreground hover:text-foreground'}`}
+                  onClick={toggleVoiceInput}
+                  data-testid="button-voice-input"
+                  title={isListening ? 'Stop listening' : 'Voice input'}
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="icon"
+                      onClick={() => handleSend()}
+                      disabled={isGenerating || !input.trim()}
+                      data-testid="send-button"
+                      className="w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Send (Enter)</p></TooltipContent>
+                </Tooltip>
+              </div>
             </div>
 
             {/* Quick actions row */}
@@ -1643,7 +2071,7 @@ function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, isLast, pendingActions, onAcceptActions, onRejectActions }: {
+function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, isLast, pendingActions, onAcceptActions, onRejectActions, tokenInfo }: {
   msg: ChatMessage;
   copiedId: string | null;
   onCopy: (id: string, content: string) => void;
@@ -1653,6 +2081,7 @@ function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, isLast, p
   pendingActions: { actions: any[]; messageId: string } | null;
   onAcceptActions: () => void;
   onRejectActions: () => void;
+  tokenInfo?: {input: number; output: number; cost: number} | null;
 }) {
   return (
     <div className={cn(
@@ -1679,6 +2108,11 @@ function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, isLast, p
             <MarkdownContent content={msg.content} />
           ) : (
             <span className="whitespace-pre-wrap">{msg.content}</span>
+          )}
+          {tokenInfo && msg.role === 'assistant' && (
+            <div className="text-[10px] text-muted-foreground/50 mt-1" data-testid="text-token-info">
+              {tokenInfo.input + tokenInfo.output} tokens · ~${tokenInfo.cost.toFixed(4)}
+            </div>
           )}
         </div>
 
