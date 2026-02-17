@@ -44,6 +44,19 @@ app.use(helmet({
 
 app.use(compression());
 
+if (isDev) {
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+    next();
+  });
+}
+
 app.use((req, _res, next) => {
   req.id = crypto.randomUUID();
   next();
@@ -66,6 +79,11 @@ const apiLimiter = rateLimit({
   skip: (req) => req.path === '/api/chat/ai/stream',
 });
 app.use("/api", apiLimiter);
+
+app.use('/api', (req, res, next) => {
+  res.setHeader('X-API-Version', '1');
+  next();
+});
 const httpServer = createServer(app);
 
 app.use(express.json({ limit: "1mb" }));
@@ -156,7 +174,7 @@ app.use((req, res, next) => {
   const { checkConnection } = await import("./db");
   await checkConnection();
 
-  await registerRoutes(httpServer, app);
+  await registerRoutes(app);
 
   app.get("/api/health", async (_req, res) => {
     try {

@@ -1,8 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
-import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { db } from "./db";
 import { processAIMessage, streamAIMessage } from "./ai";
+import { fromZodError } from "zod-validation-error";
 import {
   insertProjectSchema,
   insertArchitectureNodeSchema,
@@ -149,10 +149,7 @@ async function buildAppStateFromProject(
   };
 }
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export async function registerRoutes(app: Express): Promise<void> {
 
   // --- Projects ---
 
@@ -171,7 +168,7 @@ export async function registerRoutes(
 
   app.post("/api/projects", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const parsed = insertProjectSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const project = await storage.createProject(parsed.data);
     res.status(201).json(project);
   }));
@@ -179,7 +176,7 @@ export async function registerRoutes(
   app.patch("/api/projects/:id", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const parsed = insertProjectSchema.partial().safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     if (parsed.data.name !== undefined && parsed.data.name.trim().length === 0) {
       return res.status(400).json({ message: "Project name cannot be empty" });
     }
@@ -207,7 +204,7 @@ export async function registerRoutes(
   app.post("/api/projects/:id/nodes", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertArchitectureNodeSchema.omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const node = await storage.createNode({ ...parsed.data, projectId });
     res.status(201).json(node);
   }));
@@ -216,7 +213,7 @@ export async function registerRoutes(
     const projectId = parseIdParam(req.params.id);
     const nodeId = parseIdParam(req.params.nodeId);
     const parsed = insertArchitectureNodeSchema.partial().omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const updated = await storage.updateNode(nodeId, projectId, parsed.data);
     if (!updated) return res.status(404).json({ message: "Node not found" });
     res.json(updated);
@@ -225,7 +222,7 @@ export async function registerRoutes(
   app.put("/api/projects/:id/nodes", payloadLimit(512 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const nodesArray = z.array(insertArchitectureNodeSchema.omit({ projectId: true })).safeParse(req.body);
-    if (!nodesArray.success) return res.status(400).json({ message: nodesArray.error.message });
+    if (!nodesArray.success) return res.status(400).json({ message: fromZodError(nodesArray.error).toString() });
     const nodes = await storage.replaceNodes(projectId, nodesArray.data.map(n => ({ ...n, projectId })));
     res.json(nodes);
   }));
@@ -242,7 +239,7 @@ export async function registerRoutes(
   app.post("/api/projects/:id/edges", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertArchitectureEdgeSchema.omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const edge = await storage.createEdge({ ...parsed.data, projectId });
     res.status(201).json(edge);
   }));
@@ -251,7 +248,7 @@ export async function registerRoutes(
     const projectId = parseIdParam(req.params.id);
     const edgeId = parseIdParam(req.params.edgeId);
     const parsed = insertArchitectureEdgeSchema.partial().omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const updated = await storage.updateEdge(edgeId, projectId, parsed.data);
     if (!updated) return res.status(404).json({ message: "Edge not found" });
     res.json(updated);
@@ -260,7 +257,7 @@ export async function registerRoutes(
   app.put("/api/projects/:id/edges", payloadLimit(512 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const edgesArray = z.array(insertArchitectureEdgeSchema.omit({ projectId: true })).safeParse(req.body);
-    if (!edgesArray.success) return res.status(400).json({ message: edgesArray.error.message });
+    if (!edgesArray.success) return res.status(400).json({ message: fromZodError(edgesArray.error).toString() });
     const edges = await storage.replaceEdges(projectId, edgesArray.data.map(e => ({ ...e, projectId })));
     res.json(edges);
   }));
@@ -285,7 +282,7 @@ export async function registerRoutes(
   app.post("/api/projects/:id/bom", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertBomItemSchema.omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const item = await storage.createBomItem({ ...parsed.data, projectId });
     res.status(201).json(item);
   }));
@@ -294,7 +291,7 @@ export async function registerRoutes(
     const projectId = parseIdParam(req.params.id);
     const bomId = parseIdParam(req.params.bomId);
     const parsed = insertBomItemSchema.partial().omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const updated = await storage.updateBomItem(bomId, projectId, parsed.data);
     if (!updated) return res.status(404).json({ message: "BOM item not found" });
     res.json(updated);
@@ -313,7 +310,7 @@ export async function registerRoutes(
     const id = parseIdParam(req.params.id);
     const projectId = parseIdParam(req.query.projectId);
     const parsed = insertBomItemSchema.partial().omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const updated = await storage.updateBomItem(id, projectId, parsed.data);
     if (!updated) return res.status(404).json({ message: "BOM item not found" });
     res.json(updated);
@@ -340,7 +337,7 @@ export async function registerRoutes(
   app.post("/api/projects/:id/validation", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertValidationIssueSchema.omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const issue = await storage.createValidationIssue({ ...parsed.data, projectId });
     res.status(201).json(issue);
   }));
@@ -365,7 +362,7 @@ export async function registerRoutes(
   app.put("/api/projects/:id/validation", payloadLimit(512 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const issuesArray = z.array(insertValidationIssueSchema.omit({ projectId: true })).safeParse(req.body);
-    if (!issuesArray.success) return res.status(400).json({ message: issuesArray.error.message });
+    if (!issuesArray.success) return res.status(400).json({ message: fromZodError(issuesArray.error).toString() });
     const issues = await storage.replaceValidationIssues(projectId, issuesArray.data.map(i => ({ ...i, projectId })));
     res.json(issues);
   }));
@@ -382,7 +379,7 @@ export async function registerRoutes(
   app.post("/api/projects/:id/chat", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertChatMessageSchema.omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const msg = await storage.createChatMessage({ ...parsed.data, projectId });
     res.status(201).json(msg);
   }));
@@ -413,7 +410,7 @@ export async function registerRoutes(
   app.post("/api/projects/:id/history", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = insertHistoryItemSchema.omit({ projectId: true }).safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
     const item = await storage.createHistoryItem({ ...parsed.data, projectId });
     res.status(201).json(item);
   }));
@@ -494,7 +491,7 @@ export async function registerRoutes(
   app.post("/api/chat/ai", payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
     const parsed = aiRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
+      return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
     }
 
     const { message, provider, model, apiKey, temperature, maxTokens } = parsed.data;
@@ -525,7 +522,7 @@ export async function registerRoutes(
   app.post("/api/chat/ai/stream", payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
     const parsed = aiRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
+      return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
     }
 
     const { message, provider, model, apiKey, temperature, maxTokens } = parsed.data;
@@ -597,5 +594,4 @@ export async function registerRoutes(
     }
   }));
 
-  return httpServer;
 }
