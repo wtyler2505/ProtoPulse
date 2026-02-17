@@ -23,16 +23,8 @@
   <body>
     <div id="root"></div>
     <script>
-      // Suppress ResizeObserver and non-Error-object errors globally
-      // These are harmless browser errors during rapid panel resizing
       window.addEventListener('error', function(e) {
-        if (e && e.message && /ResizeObserver/.test(e.message)) {
-          e.stopImmediatePropagation();
-          e.preventDefault();
-          return false;
-        }
-        // Suppress non-Error-object exceptions (ResizeObserver in some browsers)
-        if (e && !e.error && e.message === 'Script error.') {
+        if (e && e.message && /ResizeObserver loop/.test(e.message)) {
           e.stopImmediatePropagation();
           e.preventDefault();
           return false;

@@ -79,12 +79,30 @@ Request validation uses Zod schemas generated from Drizzle table definitions via
 - **PostgreSQL**: Primary database, connection via `DATABASE_URL` environment variable (required)
 
 ### AI Integration (Active)
-- **Anthropic Claude**: Server-side integration via `@anthropic-ai/sdk` — models: Claude Sonnet 4.5, Haiku 4.5, Opus 4.1
-- **Google Gemini**: Server-side integration via `@google/generative-ai` — models: Gemini 2.5 Flash, 2.5 Pro
-- **AI Endpoint**: `POST /api/chat/ai` receives user message + full app state context, calls selected provider, returns structured response with action commands
+- **Anthropic Claude**: Server-side integration via `@anthropic-ai/sdk` — models: Claude Sonnet 4.5, Claude 4.6 Sonnet, Claude Sonnet 4, Claude Opus 4, Claude 4.6 Opus, Claude Haiku 4.5
+- **Google Gemini**: Server-side integration via `@google/generative-ai` — models: Gemini 2.5 Flash, 2.5 Pro, 3.0 Flash, 3.0 Pro
+- **AI Endpoint**: `POST /api/chat/ai/stream` receives user message + full app state context, streams response via SSE, returns structured response with action commands
 - **Action System**: AI can control all app features via 18 action types (node/edge CRUD, BOM management, validation, view switching, project settings, exports)
 - **API Keys**: User-provided via ChatPanel settings UI, stored in localStorage (client-side), sent per-request to server
+- **Custom System Prompt**: User can provide custom instructions appended to the AI system prompt
+- **Streaming**: Server-side SSE streaming with client-side incremental rendering and cancel support (AbortController)
 - **Fallback**: When no API key is configured, local keyword-matching command system is used
+
+### AI Chat Features
+- **Markdown rendering**: react-markdown + remark-gfm for rich AI response formatting
+- **Auto-expanding textarea**: Shift+Enter for newlines, Enter to send
+- **Message actions**: Copy to clipboard, regenerate last response, retry on error
+- **Action status chips**: Inline badges showing executed actions in message bubbles
+- **Destructive action confirmation**: Accept/reject UI for dangerous operations (clear canvas, remove nodes)
+- **Follow-up suggestions**: Context-aware suggestion chips after AI responses
+- **Chat search & export**: Search through chat history, export as text file
+- **Temperature slider**: 0-2 range (precise to creative), stored in localStorage
+- **API key validation**: Format checks for Anthropic (sk-ant-*) and Gemini (20+ chars)
+- **Keyboard shortcuts**: Escape to close chat panel
+
+### Error Handling
+- **ResizeObserver suppression**: Global error handlers suppress harmless ResizeObserver loop errors during panel resize
+- **React ErrorBoundary**: Wraps main content area and ChatPanel to prevent full-page crashes, with "Try Again" recovery UI
 
 ### Planned/Partially Integrated
 - **Stripe**: Listed in build allowlist, suggesting planned payment integration

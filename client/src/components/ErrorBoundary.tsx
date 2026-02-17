@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from 'react';
+import { Component, type ReactNode, type ErrorInfo } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -7,21 +7,25 @@ interface Props {
 
 interface State {
   hasError: boolean;
+  error: Error | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(): State {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): State {
+    if (error.message?.includes('ResizeObserver')) {
+      return { hasError: false, error: null };
+    }
+    return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error) {
+  componentDidCatch(error: Error, info: ErrorInfo) {
     if (error.message?.includes('ResizeObserver')) return;
-    console.warn('ErrorBoundary caught:', error.message);
+    console.warn('ErrorBoundary caught:', error.message, info.componentStack);
   }
 
   render() {
@@ -31,7 +35,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="text-center space-y-3">
             <p className="text-sm font-medium">Something went wrong rendering this section.</p>
             <button
-              onClick={() => this.setState({ hasError: false })}
+              onClick={() => this.setState({ hasError: false, error: null })}
               className="px-4 py-2 bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors"
             >
               Try Again
