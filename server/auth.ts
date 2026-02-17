@@ -2,9 +2,22 @@ import crypto from "crypto";
 import { db } from "./db";
 import { users, sessions, apiKeys } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { logger } from "./logger";
 
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
-const ENCRYPTION_KEY = process.env.API_KEY_ENCRYPTION_KEY || crypto.randomBytes(32).toString('hex');
+
+const ENCRYPTION_KEY = (() => {
+  const key = process.env.API_KEY_ENCRYPTION_KEY;
+  if (!key) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('API_KEY_ENCRYPTION_KEY environment variable is required in production');
+    }
+    const fallback = crypto.randomBytes(32).toString('hex');
+    logger.warn('API_KEY_ENCRYPTION_KEY not set — using random key (stored API keys will not survive restart)', { env: process.env.NODE_ENV });
+    return fallback;
+  }
+  return key;
+})();
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.randomBytes(16).toString('hex');

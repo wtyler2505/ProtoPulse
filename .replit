@@ -43,3 +43,8 @@ waitForPort = 5000
 [agent]
 stack = "MOCKUP_JS"
 mockupState = "FULLSTACK"
+
+[userenv]
+
+[userenv.shared]
+API_KEY_ENCRYPTION_KEY = "44358a6a17abd19e235e237a9a7bfd4cf48bddbd5f6bc3aa760f74f4acc3afb6"
