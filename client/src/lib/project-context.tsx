@@ -52,6 +52,9 @@ export interface ChatMessage {
   timestamp: number;
   attachments?: any[];
   mode?: 'chat' | 'image' | 'video';
+  actions?: any[];
+  isError?: boolean;
+  isStreaming?: boolean;
 }
 
 export interface ProjectHistoryItem {

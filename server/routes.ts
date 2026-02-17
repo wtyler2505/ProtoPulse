@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { processAIMessage } from "./ai";
+import { processAIMessage, streamAIMessage } from "./ai";
 import {
   insertProjectSchema,
   insertArchitectureNodeSchema,
@@ -324,6 +324,110 @@ export async function registerRoutes(
     });
 
     res.json(result);
+  });
+
+  app.post("/api/chat/ai/stream", async (req, res) => {
+    const aiRequestSchema = z.object({
+      message: z.string().min(1),
+      provider: z.enum(["anthropic", "gemini"]),
+      model: z.string().min(1),
+      apiKey: z.string().min(1),
+      projectId: z.number().optional(),
+      activeView: z.string().optional(),
+      schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+      activeSheetId: z.string().optional(),
+      temperature: z.number().min(0).max(2).optional(),
+    });
+
+    const parsed = aiRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
+    }
+
+    const { message, provider, model, apiKey, projectId: reqProjectId, temperature } = parsed.data;
+    const pid = reqProjectId || 1;
+
+    const [nodes, edges, bomData, validation, chatHistory, project] = await Promise.all([
+      storage.getNodes(pid),
+      storage.getEdges(pid),
+      storage.getBomItems(pid),
+      storage.getValidationIssues(pid),
+      storage.getChatMessages(pid),
+      storage.getProject(pid),
+    ]);
+
+    const appState = {
+      projectName: project?.name || "Untitled",
+      projectDescription: project?.description || "",
+      activeView: parsed.data.activeView || "architecture",
+      nodes: nodes.map(n => ({
+        id: n.nodeId,
+        label: n.label,
+        type: n.nodeType,
+        description: (n.data as any)?.description,
+        positionX: n.positionX,
+        positionY: n.positionY,
+      })),
+      edges: edges.map(e => ({
+        id: e.edgeId,
+        source: e.source,
+        target: e.target,
+        label: e.label || undefined,
+      })),
+      bom: bomData.map(b => ({
+        id: String(b.id),
+        partNumber: b.partNumber,
+        manufacturer: b.manufacturer,
+        description: b.description,
+        quantity: b.quantity,
+        unitPrice: b.unitPrice,
+        supplier: b.supplier,
+        status: b.status,
+      })),
+      validationIssues: validation.map(v => ({
+        id: String(v.id),
+        severity: v.severity,
+        message: v.message,
+        componentId: v.componentId || undefined,
+        suggestion: v.suggestion || undefined,
+      })),
+      schematicSheets: parsed.data.schematicSheets || [],
+      activeSheetId: parsed.data.activeSheetId || "top",
+      chatHistory: chatHistory.slice(-10).map(m => ({
+        role: m.role,
+        content: m.content,
+      })),
+    };
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    let closed = false;
+    req.on('close', () => { closed = true; });
+
+    try {
+      await streamAIMessage(
+        { message, provider, model, apiKey, appState, temperature },
+        (chunk) => {
+          if (!closed) {
+            res.write(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
+          }
+        },
+        (result) => {
+          if (!closed) {
+            res.write(`data: ${JSON.stringify({ type: 'done', message: result.message, actions: result.actions })}\n\n`);
+            res.end();
+          }
+        }
+      );
+    } catch (error: any) {
+      if (!closed) {
+        res.write(`data: ${JSON.stringify({ type: 'error', message: error.message || 'Stream failed' })}\n\n`);
+        res.end();
+      }
+    }
   });
 
   return httpServer;

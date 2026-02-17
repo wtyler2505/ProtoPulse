@@ -222,7 +222,8 @@ async function callAnthropic(
   model: string,
   systemPrompt: string,
   chatHistory: Array<{ role: string; content: string }>,
-  userMessage: string
+  userMessage: string,
+  temperature: number = 0.7
 ): Promise<{ message: string; actions: AIAction[] }> {
   const client = new Anthropic({ apiKey });
 
@@ -239,6 +240,7 @@ async function callAnthropic(
     max_tokens: 4096,
     system: systemPrompt,
     messages,
+    temperature,
   });
 
   const responseText = response.content
@@ -254,12 +256,14 @@ async function callGemini(
   model: string,
   systemPrompt: string,
   chatHistory: Array<{ role: string; content: string }>,
-  userMessage: string
+  userMessage: string,
+  temperature: number = 0.7
 ): Promise<{ message: string; actions: AIAction[] }> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const geminiModel = genAI.getGenerativeModel({
     model,
     systemInstruction: systemPrompt,
+    generationConfig: { temperature },
   });
 
   const history = chatHistory.map((msg) => ({
@@ -280,9 +284,10 @@ export async function processAIMessage(params: {
   model: string;
   apiKey: string;
   appState: AppState;
+  temperature?: number;
 }): Promise<{ message: string; actions: AIAction[] }> {
   try {
-    const { message, provider, model, apiKey, appState } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7 } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       return {
@@ -295,9 +300,9 @@ export async function processAIMessage(params: {
     const recentHistory = appState.chatHistory.slice(-10);
 
     if (provider === "anthropic") {
-      return await callAnthropic(apiKey, model, systemPrompt, recentHistory, message);
+      return await callAnthropic(apiKey, model, systemPrompt, recentHistory, message, temperature);
     } else {
-      return await callGemini(apiKey, model, systemPrompt, recentHistory, message);
+      return await callGemini(apiKey, model, systemPrompt, recentHistory, message, temperature);
     }
   } catch (error: any) {
     const errorMessage = error?.message || String(error);
@@ -327,5 +332,97 @@ export async function processAIMessage(params: {
       message: `An error occurred while communicating with the AI provider: ${errorMessage}`,
       actions: [],
     };
+  }
+}
+
+export async function streamAIMessage(
+  params: {
+    message: string;
+    provider: "anthropic" | "gemini";
+    model: string;
+    apiKey: string;
+    appState: AppState;
+    temperature?: number;
+  },
+  write: (chunk: string) => void,
+  onComplete: (result: { message: string; actions: AIAction[] }) => void
+): Promise<void> {
+  try {
+    const { message, provider, model, apiKey, appState, temperature = 0.7 } = params;
+
+    if (!apiKey || apiKey.trim().length === 0) {
+      write(`No API key provided for ${provider}. Please add your ${provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key in the settings panel to enable AI features.`);
+      onComplete({ message: `No API key provided for ${provider}.`, actions: [] });
+      return;
+    }
+
+    const systemPrompt = buildSystemPrompt(appState);
+    const recentHistory = appState.chatHistory.slice(-10);
+
+    if (provider === "anthropic") {
+      const client = new Anthropic({ apiKey });
+
+      const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+      for (const msg of recentHistory) {
+        if (msg.role === "user" || msg.role === "assistant") {
+          messages.push({ role: msg.role as "user" | "assistant", content: msg.content });
+        }
+      }
+      messages.push({ role: "user", content: message });
+
+      const stream = client.messages.stream({
+        model,
+        max_tokens: 4096,
+        system: systemPrompt,
+        messages,
+        temperature,
+      });
+
+      for await (const event of stream) {
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          write(event.delta.text);
+        }
+      }
+
+      const finalMessage = await stream.finalMessage();
+      const fullText = finalMessage.content
+        .filter((block): block is Anthropic.TextBlock => block.type === "text")
+        .map((block) => block.text)
+        .join("");
+
+      const parsed = parseActionsFromResponse(fullText);
+      onComplete(parsed);
+    } else {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const geminiModel = genAI.getGenerativeModel({
+        model,
+        systemInstruction: systemPrompt,
+        generationConfig: { temperature },
+      });
+
+      const history = recentHistory.map((msg) => ({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }],
+      }));
+
+      const chat = geminiModel.startChat({ history });
+      const result = await chat.sendMessageStream(message);
+
+      let fullText = "";
+      for await (const chunk of result.stream) {
+        const text = chunk.text();
+        if (text) {
+          write(text);
+          fullText += text;
+        }
+      }
+
+      const parsed = parseActionsFromResponse(fullText);
+      onComplete(parsed);
+    }
+  } catch (error: any) {
+    const errorMessage = error?.message || String(error);
+    write(`\n\nError: ${errorMessage}`);
+    onComplete({ message: `An error occurred while communicating with the AI provider: ${errorMessage}`, actions: [] });
   }
 }
