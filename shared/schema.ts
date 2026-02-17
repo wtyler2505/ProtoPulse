@@ -37,6 +37,10 @@ export const architectureEdges = pgTable("architecture_edges", {
   label: text("label"),
   animated: boolean("animated").default(false),
   style: jsonb("style"),
+  signalType: text("signal_type"),
+  voltage: text("voltage"),
+  busWidth: text("bus_width"),
+  netName: text("net_name"),
 });
 
 export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true });

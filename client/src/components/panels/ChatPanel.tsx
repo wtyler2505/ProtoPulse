@@ -68,6 +68,8 @@ const ACTION_LABELS: Record<string, string> = {
   rename_project: 'Renamed project',
   update_description: 'Updated description',
   export_bom_csv: 'Exported CSV',
+  undo: 'Undid last action',
+  redo: 'Redid action',
 };
 
 import type { ChatMessage } from '@/lib/project-context';
@@ -81,7 +83,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     activeView, setActiveView,
     activeSheetId, setActiveSheetId, schematicSheets,
     projectName, setProjectName, projectDescription, setProjectDescription,
-    addToHistory, addOutputLog
+    addToHistory, addOutputLog,
+    selectedNodeId,
+    pushUndoState, undo, redo, canUndo, canRedo,
+    captureSnapshot, getChangeDiff,
   } = useProject();
   const [input, setInput] = useState('');
   const [showQuickActions, setShowQuickActions] = useState(true);
@@ -427,6 +432,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   };
 
   const executeAIActions = useCallback((actions: any[]) => {
+    pushUndoState();
     const executedLabels: string[] = [];
     for (const action of actions) {
       const label = ACTION_LABELS[action.type] || action.type;
@@ -481,10 +487,16 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           const sourceNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.sourceLabel.toLowerCase()));
           const targetNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.targetLabel.toLowerCase()));
           if (sourceNode && targetNode) {
-            const newEdge = {
+            const newEdge: any = {
               id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
               source: sourceNode.id, target: targetNode.id,
               label: action.edgeLabel || action.busType || 'Data', animated: true,
+              data: {
+                signalType: action.signalType || undefined,
+                voltage: action.voltage || undefined,
+                busWidth: action.busWidth || undefined,
+                netName: action.netName || undefined,
+              },
             };
             setEdges([...edges, newEdge]);
             addToHistory(`Connected ${sourceNode.data.label} → ${targetNode.data.label}`, 'AI');
@@ -597,10 +609,20 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           }
           break;
         }
+        case 'undo':
+          undo();
+          addToHistory('Undid last action', 'AI');
+          addOutputLog('[AI] Undid last action');
+          break;
+        case 'redo':
+          redo();
+          addToHistory('Redid action', 'AI');
+          addOutputLog('[AI] Redid action');
+          break;
       }
     }
     return executedLabels;
-  }, [nodes, edges, bom, issues, projectName, setNodes, setEdges, addBomItem, deleteBomItem, updateBomItem, runValidation, deleteValidationIssue, addValidationIssue, setActiveView, setActiveSheetId, setProjectName, setProjectDescription, addToHistory, addOutputLog]);
+  }, [nodes, edges, bom, issues, projectName, setNodes, setEdges, addBomItem, deleteBomItem, updateBomItem, runValidation, deleteValidationIssue, addValidationIssue, setActiveView, setActiveSheetId, setProjectName, setProjectDescription, addToHistory, addOutputLog, pushUndoState, undo, redo]);
 
   const cancelRequest = useCallback(() => {
     if (abortRef.current) {
@@ -646,6 +668,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
       setStreamingContent('');
 
+      const changeDiff = getChangeDiff();
+
       const response = await fetch('/api/chat/ai/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -660,6 +684,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           activeView,
           schematicSheets: schematicSheets.map((s: any) => ({ id: s.id, name: s.name })),
           activeSheetId,
+          selectedNodeId,
+          changeDiff,
         }),
       });
 
@@ -742,8 +768,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       setIsGenerating(false);
       setStreamingContent('');
       abortRef.current = null;
+      captureSnapshot();
     }
-  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, activeView, schematicSheets, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand]);
+  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, activeView, schematicSheets, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand, selectedNodeId, getChangeDiff, captureSnapshot]);
 
   const handleRegenerate = useCallback(() => {
     if (lastUserMessage && !isGenerating) {

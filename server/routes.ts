@@ -289,6 +289,10 @@ export async function registerRoutes(
         source: e.source,
         target: e.target,
         label: e.label || undefined,
+        signalType: e.signalType || undefined,
+        voltage: e.voltage || undefined,
+        busWidth: e.busWidth || undefined,
+        netName: e.netName || undefined,
       })),
       bom: bomData.map(b => ({
         id: String(b.id),
@@ -338,6 +342,8 @@ export async function registerRoutes(
       activeSheetId: z.string().optional(),
       temperature: z.number().min(0).max(2).optional(),
       customSystemPrompt: z.string().optional(),
+      selectedNodeId: z.string().nullable().optional(),
+      changeDiff: z.string().optional(),
     });
 
     const parsed = aiRequestSchema.safeParse(req.body);
@@ -361,6 +367,7 @@ export async function registerRoutes(
       projectName: project?.name || "Untitled",
       projectDescription: project?.description || "",
       activeView: parsed.data.activeView || "architecture",
+      selectedNodeId: parsed.data.selectedNodeId || null,
       nodes: nodes.map(n => ({
         id: n.nodeId,
         label: n.label,
@@ -374,6 +381,10 @@ export async function registerRoutes(
         source: e.source,
         target: e.target,
         label: e.label || undefined,
+        signalType: e.signalType || undefined,
+        voltage: e.voltage || undefined,
+        busWidth: e.busWidth || undefined,
+        netName: e.netName || undefined,
       })),
       bom: bomData.map(b => ({
         id: String(b.id),
@@ -399,6 +410,7 @@ export async function registerRoutes(
         content: m.content,
       })),
       customSystemPrompt: parsed.data.customSystemPrompt || "",
+      changeDiff: parsed.data.changeDiff || "",
     };
 
     res.setHeader('Content-Type', 'text/event-stream');

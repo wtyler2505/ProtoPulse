@@ -7,7 +7,7 @@ export type AIAction =
   | { type: "add_node"; nodeType: string; label: string; description?: string; positionX?: number; positionY?: number }
   | { type: "remove_node"; nodeLabel: string }
   | { type: "update_node"; nodeLabel: string; newLabel?: string; newType?: string; newDescription?: string }
-  | { type: "connect_nodes"; sourceLabel: string; targetLabel: string; edgeLabel?: string; busType?: string }
+  | { type: "connect_nodes"; sourceLabel: string; targetLabel: string; edgeLabel?: string; busType?: string; signalType?: string; voltage?: string; busWidth?: string; netName?: string }
   | { type: "remove_edge"; sourceLabel: string; targetLabel: string }
   | { type: "clear_canvas" }
   | { type: "generate_architecture"; components: Array<{ label: string; nodeType: string; description: string; positionX: number; positionY: number }>; connections: Array<{ sourceLabel: string; targetLabel: string; label: string; busType?: string }> }
@@ -19,20 +19,24 @@ export type AIAction =
   | { type: "add_validation_issue"; severity: string; message: string; componentId?: string; suggestion?: string }
   | { type: "rename_project"; name: string }
   | { type: "update_description"; description: string }
-  | { type: "export_bom_csv" };
+  | { type: "export_bom_csv" }
+  | { type: "undo" }
+  | { type: "redo" };
 
 interface AppState {
   projectName: string;
   projectDescription: string;
   activeView: string;
+  selectedNodeId?: string | null;
   nodes: Array<{ id: string; label: string; type: string; description?: string; positionX: number; positionY: number }>;
-  edges: Array<{ id: string; source: string; target: string; label?: string }>;
+  edges: Array<{ id: string; source: string; target: string; label?: string; signalType?: string; voltage?: string; busWidth?: string; netName?: string }>;
   bom: Array<{ id: string; partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string; status: string }>;
   validationIssues: Array<{ id: string; severity: string; message: string; componentId?: string; suggestion?: string }>;
   schematicSheets: Array<{ id: string; name: string }>;
   activeSheetId: string;
   chatHistory: Array<{ role: string; content: string }>;
   customSystemPrompt?: string;
+  changeDiff?: string;
 }
 
 function buildSystemPrompt(appState: AppState): string {
@@ -44,7 +48,13 @@ function buildSystemPrompt(appState: AppState): string {
     ? appState.edges.map(e => {
         const srcNode = appState.nodes.find(n => n.id === e.source);
         const tgtNode = appState.nodes.find(n => n.id === e.target);
-        return `  - "${srcNode?.label || e.source}" → "${tgtNode?.label || e.target}"${e.label ? ` [${e.label}]` : ""} (id: ${e.id})`;
+        const meta = [
+          e.signalType ? `signal: ${e.signalType}` : "",
+          e.voltage ? `voltage: ${e.voltage}` : "",
+          e.busWidth ? `bus: ${e.busWidth}` : "",
+          e.netName ? `net: ${e.netName}` : "",
+        ].filter(Boolean).join(", ");
+        return `  - "${srcNode?.label || e.source}" → "${tgtNode?.label || e.target}"${e.label ? ` [${e.label}]` : ""} (id: ${e.id}${meta ? `, ${meta}` : ""})`;
       }).join("\n")
     : "  (none)";
 
@@ -91,6 +101,16 @@ ProtoPulse has these main views:
 **Project:** ${appState.projectName}
 **Description:** ${appState.projectDescription || "(none)"}
 **Active View:** ${appState.activeView}
+**Selected Component:** ${(() => {
+    if (appState.selectedNodeId) {
+      const sel = appState.nodes.find(n => n.id === appState.selectedNodeId);
+      if (sel) return `"${sel.label}" (type: ${sel.type}, pos: ${sel.positionX},${sel.positionY}${sel.description ? `, desc: ${sel.description}` : ""})`;
+    }
+    return "(none)";
+  })()}
+
+### Recent Changes (since last AI turn):
+${appState.changeDiff || "(no changes)"}
 
 ### Architecture Nodes:
 ${nodesDescription}
@@ -141,8 +161,8 @@ Update properties of an existing node.
 Remove all nodes and edges from the architecture diagram.
 
 **Architecture Diagram — Connections:**
-\`{ "type": "connect_nodes", "sourceLabel": "<label>", "targetLabel": "<label>", "edgeLabel": "<optional>", "busType": "<optional>" }\`
-Create a connection between two nodes. busType examples: "SPI", "I2C", "UART", "USB", "Power", "GPIO", "CAN", "Ethernet".
+\`{ "type": "connect_nodes", "sourceLabel": "<label>", "targetLabel": "<label>", "edgeLabel": "<optional>", "busType": "<optional>", "signalType": "<optional>", "voltage": "<optional>", "busWidth": "<optional>", "netName": "<optional>" }\`
+Create a connection between two nodes. busType examples: "SPI", "I2C", "UART", "USB", "Power", "GPIO", "CAN", "Ethernet". Optional signal metadata: signalType (e.g. "SPI", "analog"), voltage (e.g. "3.3V"), busWidth (e.g. "4-bit"), netName (e.g. "MOSI").
 
 \`{ "type": "remove_edge", "sourceLabel": "<label>", "targetLabel": "<label>" }\`
 Remove a connection between two nodes.
@@ -181,6 +201,10 @@ Update the project description.
 **Export:**
 \`{ "type": "export_bom_csv" }\`
 Export the BOM as a CSV file.
+
+**Undo/Redo:**
+\`{ "type": "undo" }\` — Undo the last AI action.
+\`{ "type": "redo" }\` — Redo the last undone action.
 
 ## Response Format
 
