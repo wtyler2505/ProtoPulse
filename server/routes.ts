@@ -2,6 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { db } from "./db";
 import { processAIMessage, streamAIMessage } from "./ai";
+import { createUser, getUserByUsername, verifyPassword, createSession, deleteSession, getUserById, validateSession, storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from "./auth";
 import { fromZodError } from "zod-validation-error";
 import {
   insertProjectSchema,
@@ -66,7 +67,7 @@ const aiRequestSchema = z.object({
   message: z.string().min(1).max(32000),
   provider: z.enum(["anthropic", "gemini"]),
   model: z.string().min(1).max(200),
-  apiKey: z.string().min(1).max(500),
+  apiKey: z.string().max(500).optional().default(''),
   projectId: z.number(),
   activeView: z.string().optional(),
   schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
@@ -150,6 +151,93 @@ async function buildAppStateFromProject(
 }
 
 export async function registerRoutes(app: Express): Promise<void> {
+
+  // --- Auth ---
+
+  app.post("/api/auth/register", payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+    const schema = z.object({
+      username: z.string().min(3).max(50).regex(/^[a-zA-Z0-9_-]+$/),
+      password: z.string().min(6).max(128),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
+
+    const existing = await getUserByUsername(parsed.data.username);
+    if (existing) return res.status(409).json({ message: "Username already taken" });
+
+    const user = await createUser(parsed.data.username, parsed.data.password);
+    const sessionId = await createSession(user.id);
+    res.status(201).json({ sessionId, user: { id: user.id, username: user.username } });
+  }));
+
+  app.post("/api/auth/login", payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+    const schema = z.object({
+      username: z.string().min(1),
+      password: z.string().min(1),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
+
+    const user = await getUserByUsername(parsed.data.username);
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
+
+    const valid = await verifyPassword(parsed.data.password, user.passwordHash);
+    if (!valid) return res.status(401).json({ message: "Invalid credentials" });
+
+    const sessionId = await createSession(user.id);
+    res.json({ sessionId, user: { id: user.id, username: user.username } });
+  }));
+
+  app.post("/api/auth/logout", asyncHandler(async (req, res) => {
+    const sessionId = req.headers['x-session-id'] as string;
+    if (sessionId) await deleteSession(sessionId);
+    res.status(204).end();
+  }));
+
+  app.get("/api/auth/me", asyncHandler(async (req, res) => {
+    const sessionId = req.headers['x-session-id'] as string;
+    if (!sessionId) return res.status(401).json({ message: "Not authenticated" });
+
+    const session = await validateSession(sessionId);
+    if (!session) return res.status(401).json({ message: "Invalid session" });
+
+    const user = await getUserById(session.userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    res.json({ id: user.id, username: user.username });
+  }));
+
+  // --- API Key Management ---
+
+  app.get("/api/settings/api-keys", asyncHandler(async (req, res) => {
+    if (!req.userId) return res.status(401).json({ message: "Authentication required" });
+    const providers = await listApiKeyProviders(req.userId);
+    res.json({ providers });
+  }));
+
+  app.post("/api/settings/api-keys", payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+    if (!req.userId) return res.status(401).json({ message: "Authentication required" });
+    const schema = z.object({
+      provider: z.enum(["anthropic", "gemini"]),
+      apiKey: z.string().min(1).max(500),
+    });
+    const parsed = schema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
+
+    await storeApiKey(req.userId, parsed.data.provider, parsed.data.apiKey);
+    res.json({ message: "API key stored" });
+  }));
+
+  app.delete("/api/settings/api-keys/:provider", asyncHandler(async (req, res) => {
+    if (!req.userId) return res.status(401).json({ message: "Authentication required" });
+    const provider = req.params.provider;
+    if (provider !== "anthropic" && provider !== "gemini") {
+      return res.status(400).json({ message: "Invalid provider" });
+    }
+    const deleted = await deleteApiKey(req.userId, provider);
+    if (!deleted) return res.status(404).json({ message: "No API key found for this provider" });
+    res.status(204).end();
+  }));
 
   // --- Projects ---
 
@@ -494,8 +582,16 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
     }
 
-    const { message, provider, model, apiKey, temperature, maxTokens } = parsed.data;
+    const { message, provider, model, apiKey: clientApiKey, temperature, maxTokens } = parsed.data;
     const pid = parsed.data.projectId;
+
+    let apiKeyToUse = clientApiKey || '';
+    if (req.userId) {
+      const storedKey = await getApiKey(req.userId, provider);
+      if (storedKey) {
+        apiKeyToUse = storedKey;
+      }
+    }
 
     const appState = await buildAppStateFromProject(pid, {
       activeView: parsed.data.activeView,
@@ -510,7 +606,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       message,
       provider,
       model,
-      apiKey,
+      apiKey: apiKeyToUse,
       appState,
       temperature: temperature ?? 0.7,
       maxTokens,
@@ -525,8 +621,16 @@ export async function registerRoutes(app: Express): Promise<void> {
       return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
     }
 
-    const { message, provider, model, apiKey, temperature, maxTokens } = parsed.data;
+    const { message, provider, model, apiKey: clientApiKey, temperature, maxTokens } = parsed.data;
     const pid = parsed.data.projectId;
+
+    let apiKeyToUse = clientApiKey || '';
+    if (req.userId) {
+      const storedKey = await getApiKey(req.userId, provider);
+      if (storedKey) {
+        apiKeyToUse = storedKey;
+      }
+    }
 
     const appState = await buildAppStateFromProject(pid, {
       activeView: parsed.data.activeView,
@@ -569,7 +673,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
     try {
       await streamAIMessage(
-        { message, provider, model, apiKey, appState, temperature: temperature ?? 0.7, maxTokens },
+        { message, provider, model, apiKey: apiKeyToUse, appState, temperature: temperature ?? 0.7, maxTokens },
         async (chunk) => {
           if (!closed) {
             await writeWithBackpressure(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);

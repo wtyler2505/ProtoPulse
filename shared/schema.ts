@@ -142,3 +142,33 @@ export const historyItems = pgTable("history_items", {
 export const insertHistoryItemSchema = createInsertSchema(historyItems).omit({ id: true, timestamp: true });
 export type InsertHistoryItem = z.infer<typeof insertHistoryItemSchema>;
 export type HistoryItem = typeof historyItems.$inferSelect;
+
+export const users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const sessions = pgTable("sessions", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const apiKeys = pgTable("api_keys", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  encryptedKey: text("encrypted_key").notNull(),
+  iv: text("iv").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+
+export type Session = typeof sessions.$inferSelect;
+export type ApiKeyRecord = typeof apiKeys.$inferSelect;

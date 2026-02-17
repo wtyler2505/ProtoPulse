@@ -10,11 +10,13 @@ import crypto from "crypto";
 import { logger } from "./logger";
 import { recordRequest, getMetrics } from "./metrics";
 import { apiDocs } from "./api-docs";
+import { validateSession } from "./auth";
 
 declare global {
   namespace Express {
     interface Request {
       id: string;
+      userId?: number;
     }
   }
 }
@@ -51,7 +53,7 @@ if (isDev) {
   app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Session-Id');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     if (req.method === 'OPTIONS') {
       return res.status(204).end();
@@ -129,6 +131,27 @@ app.use((req, res, next) => {
     }
   });
   next();
+});
+
+const PUBLIC_PATHS = ['/api/auth/', '/api/health', '/api/docs', '/api/metrics'];
+
+app.use('/api', (req, res, next) => {
+  if (PUBLIC_PATHS.some(p => req.path.startsWith(p.replace('/api', ''))) || req.path === '/api/seed') {
+    return next();
+  }
+
+  const sessionId = req.headers['x-session-id'] as string;
+  if (!sessionId) {
+    return res.status(401).json({ message: 'Authentication required' });
+  }
+
+  validateSession(sessionId).then(session => {
+    if (!session) {
+      return res.status(401).json({ message: 'Invalid or expired session' });
+    }
+    req.userId = session.userId;
+    next();
+  }).catch(next);
 });
 
 export function log(message: string, source = "express") {

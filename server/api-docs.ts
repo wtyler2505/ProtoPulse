@@ -9,6 +9,13 @@ interface RouteDoc {
 }
 
 export const apiDocs: RouteDoc[] = [
+  { method: "POST", path: "/api/auth/register", description: "Register a new user", body: "{ username: string (3-50 chars, alphanumeric/_/-), password: string (6-128 chars) }", response: "{ sessionId, user: { id, username } }" },
+  { method: "POST", path: "/api/auth/login", description: "Log in with credentials", body: "{ username: string, password: string }", response: "{ sessionId, user: { id, username } }" },
+  { method: "POST", path: "/api/auth/logout", description: "Log out (invalidate session)", response: "204 No Content" },
+  { method: "GET", path: "/api/auth/me", description: "Get current authenticated user", response: "{ id, username }" },
+  { method: "GET", path: "/api/settings/api-keys", description: "List stored API key providers for current user", response: "{ providers: string[] }" },
+  { method: "POST", path: "/api/settings/api-keys", description: "Store an API key for a provider", body: "{ provider: 'anthropic'|'gemini', apiKey: string }", response: "{ message: string }" },
+  { method: "DELETE", path: "/api/settings/api-keys/:provider", description: "Delete a stored API key", params: { provider: "anthropic|gemini" }, response: "204 No Content" },
   { method: "GET", path: "/api/projects", description: "List all projects", query: { limit: "number (1-100, default 50)", offset: "number (default 0)", sort: "asc|desc (default desc)" } },
   { method: "GET", path: "/api/projects/:id", description: "Get a project by ID", params: { id: "Project ID" } },
   { method: "POST", path: "/api/projects", description: "Create a new project", body: "{ name: string, description?: string }" },
