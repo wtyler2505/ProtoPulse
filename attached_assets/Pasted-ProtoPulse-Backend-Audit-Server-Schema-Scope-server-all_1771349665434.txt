@@ -1,0 +1,246 @@
+ProtoPulse — Backend Audit (Server + Schema)
+Scope: server/ (all files) + shared/schema.ts
+Result: 116 findings total, ranging from quick wins → structural upgrades.
+
+
+Legend
+Tag
+Meaning
+Examples
+P0
+🔥 Critical (security/data-loss)
+auth gaps, destructive writes w/o transactions, key leakage
+P1
+⚠️ High (reliability/production breakage)
+pool exhaustion, CSP breaking prod, no shutdown
+P2
+🧠 Medium (performance/scale)
+unbounded queries, log bloat, SSE buffering
+P3
+🧹 Low (cleanup/DX)
+unused deps, dead code, missing docs/comments
+
+
+Categories: Security • Data Integrity • Reliability • Performance • Observability • API Design • DX/Tech Debt
+
+
+Executive Summary (what’s actually scary)
+P0 / P1 themes
+Data loss risk: bulk “delete then recreate” operations with no transactions (nodes/edges/validation).
+Security gaps: no auth/authorization, error messages leak internals, seed endpoint exposed in prod, key handling risks.
+Production breakage likely: Helmet CSP configuration (too strict in prod / off in dev), rate limiting impacts core flows + SSE.
+P2 / P3 themes
+Scale pain: unbounded list endpoints (chat/BOM/history), no pagination/sorting, possible PG parameter limits on bulk inserts.
+Observability weak: noisy logs (full response bodies), no request IDs, no health endpoint, no metrics.
+Tech debt: unused dependencies, duplicated AI endpoint logic, redundant history slicing, dead code (rawBody).
+
+
+Contents
+server/db.ts
+server/index.ts
+server/routes.ts
+server/storage.ts
+server/ai.ts
+shared/schema.ts
+server/vite.ts
+server/static.ts
+package.json
+Cross-cutting concerns
+Backlog framing
+
+
+server/db.ts — Database Connection
+P1 Reliability — No connection pool limits configured (pg.Pool only uses connectionString; missing max, min, idleTimeoutMillis, connectionTimeoutMillis). Under load: potential exhaustion/leaks.
+P1 Reliability — No pool error handling (pool.on("error", ...) missing). Unexpected disconnects may crash or fail silently.
+P1 Reliability — No connection health check / retry. Startup hard-crashes if DB is temporarily unavailable.
+P0 Security — No SSL configuration (ssl not set). Remote Postgres could run unencrypted in production.
+
+
+server/index.ts — Server Bootstrap
+P1 Reliability — Rate limit is overly aggressive: 100 requests / 15 min across all /api routes. Normal editing flows may hit it fast.
+P1 Reliability — Rate limit applies to SSE AI stream (/api/chat/ai/stream) even though it’s long-lived.
+P2 Security/DX — trust proxy set to 1 without comment. Fine for Replit; risky if deployed elsewhere.
+P1 Security — Helmet CSP disabled in dev (contentSecurityPolicy: false): zero XSS protection during dev.
+P1 Reliability — Helmet CSP likely too strict in production (default CSP may block inline styles, external fonts, SSE), risking prod breakage.
+P3 DX/Tech Debt — rawBody is stored via express.json(verify) but never used (dead code).
+P1 Observability/Security — Request logging captures full JSON response bodies (noise + potential sensitive leakage).
+P2 Observability — No log truncation; huge payloads will explode logs.
+P2 Observability — No request ID / correlation ID.
+P1 Reliability — No graceful shutdown (no SIGTERM/SIGINT handlers to drain server + close DB pool).
+P3 DX/Tech Debt — createServer import/usage inconsistent (imported but server created inline; also appears unused elsewhere).
+P1 API/DX — Global error handler doesn’t differentiate error types (validation vs DB vs unexpected).
+P1 Security — Error handler leaks raw err.message to client (SQL/file paths/internal details).
+P2 API Design — No CORS configuration (fine for same-origin now; breaks external clients later).
+P1 Reliability — No request timeout (slow requests/SSE could hang indefinitely).
+P3 Tech Debt — Unused deps installed: passport, passport-local, express-session, connect-pg-simple, memorystore, ws.
+
+
+server/routes.ts — API Routes
+Error handling + correctness
+P1 Reliability — No try/catch in any route handler. Failures become generic 500s.
+P2 Reliability — parseIdParam throws unhandled; relies on global error handler via nonstandard status property.
+Data integrity risks (transactions)
+P0 Data Loss — PUT /api/projects/:id/nodes deletes ALL nodes then recreates. If create fails → permanent loss. Needs DB transaction.
+P0 Data Loss — PUT /api/projects/:id/edges same delete/recreate risk.
+P0 Data Loss — PUT /api/projects/:id/validation same delete/recreate risk.
+Validation + REST consistency
+P1 Security/API — PATCH /api/bom/:id has no input validation; passes req.body directly to storage.
+P2 API Design — Inconsistent URL patterns:
+BOM list/create: /api/projects/:id/bom
+BOM update/delete: /api/bom/:id
+Validation similarly inconsistent (/api/validation/:id vs /api/projects/:id/validation)
+Scaling limitations
+P2 Performance — No pagination on list endpoints (projects, nodes, bom, chat, history) → unbounded payloads.
+P2 UX/API — No sorting guarantees; returns arbitrary DB order.
+Missing endpoints / capability gaps
+P2 API Design — Missing DELETE for projects.
+P2 API Design — Missing DELETE for chat messages (no per-message delete or clear chat).
+P2 API Design — Missing DELETE for history items (no clear history).
+P2 API Design — Missing individual node/edge update endpoints. Only bulk replace via PUT (no PATCH single node/edge).
+Seeding issues
+P2 Reliability — Seed endpoint not idempotent; returns first project if exists but doesn’t verify/update seed data.
+P0 Security — Seed endpoint accessible in production (no env guard).
+P2 Performance — BOM seeding inserts one-by-one, not bulk; slower and not atomic.
+AI endpoints duplication + SSE concerns
+P3 DX/Tech Debt — aiRequestSchema duplicated between /api/chat/ai and /api/chat/ai/stream.
+P3 DX/Tech Debt — appState construction duplicated (~50 lines repeated).
+P1 Correctness — projectId defaults to 1 silently if missing; may send wrong project state to AI.
+P1 Reliability — SSE headers missing X-Accel-Buffering: no (reverse proxies may buffer).
+P1 Reliability — SSE doesn’t handle backpressure; res.write() can buffer indefinitely.
+P1 Reliability — No timeout on AI stream; hangs forever if provider stalls.
+Structural/API hygiene
+P3 Tech Debt — registerRoutes receives httpServer but doesn’t use it (unnecessary coupling).
+P1 Ops/Observability — No /api/health or /api/status endpoint.
+P2 API Design — No API versioning (/api/v1/...), making future breaking changes painful.
+
+
+server/storage.ts — Data Access Layer
+Atomicity + correctness
+P0 Data Loss — No transactions anywhere (bulk delete/recreate not atomic). Root cause of data-loss risk.
+P1 Security/Data Integrity — updateBomItem accepts Partial<InsertBomItem> with no validation; allows changing dangerous fields (e.g., projectId).
+P1 Security/Data Integrity — updateProject accepts Partial<InsertProject>; no guard against nulling fields unexpectedly.
+P0 Security — deleteBomItem doesn’t verify ownership (delete by ID regardless of project).
+P0 Security — deleteValidationIssue same cross-project deletion risk.
+Data lifecycle + recoverability
+P2 Reliability — No soft deletes (no audit trail / recovery).
+Performance + scaling
+P2 Performance — No caching layer; every request hits DB (nodes/edges/project info are frequent reads).
+P2 Performance — Chat messages: no limit/pagination (returns ALL rows).
+P2 Performance — History items: no limit/pagination.
+P2 Reliability — Bulk create methods may hit PG parameter limits (65535). Needs batching/chunking.
+Error quality + interface gaps
+P2 Observability — No error wrapping/context; raw DB errors bubble up.
+P2 API Design — No deleteProject method (CRUD missing D for projects).
+P2 API Design — No update method for individual nodes/edges (missing updateNode(id) / updateEdge(id)).
+P2 API Design — No getBomItem(id) (only by project).
+P2 API Design — No methods to delete chat messages/history items (create-only).
+
+
+server/ai.ts — AI Integration
+Key handling + safety
+P1 Security — API key sent in request body every time (higher exposure surface). Prefer server-side storage.
+P0 Security — No API key sanitization in error messages; provider errors could echo secrets.
+P1 Security — Streaming error handler writes raw error to SSE stream (potentially exposes internals).
+Performance + cost
+P2 Performance — Anthropic client instantiated on every request; prevents reuse.
+P2 Performance — Gemini client instantiated on every request; same issue.
+P2 Cost/Performance — System prompt is enormous (~5000+ tokens) each request → higher cost.
+P2 Performance — System prompt rebuilt every request (no caching when state unchanged).
+P2 Product — max_tokens: 4096 hardcoded; no user configurability.
+History/context handling (duplication)
+P3 Tech Debt — Chat history sliced to last 10 messages in multiple places; should be centralized + configurable.
+P3 Tech Debt — Duplicate system message filtering across processAIMessage, streamAIMessage, and routes.
+Types + validation
+P2 Type Safety — (n.data as any)?.description bypasses TS; jsonb shape should be typed.
+P1 Reliability/Safety — No input sanitization/limits on user messages (length/content).
+P1 Safety — AI actions not validated: JSON parsed but not checked against AIAction shape.
+P2 Reliability — Error categorization via string matching (includes("401")) is fragile; should use structured error codes.
+P2 UX/Reliability — No abort/cancel mechanism for AI streams; provider continues generating after client disconnect.
+P2 Reliability — No request deduplication; double-send triggers duplicate AI calls.
+P2 Correctness — parseActionsFromResponse only matches JSON at end of response; can miss actions if formatting varies.
+P2 Consistency — Temperature not consistently validated/forwarded across endpoints (range checks should be unified).
+P2 Reliability — Gemini mid-stream errors less graceful than Anthropic’s handling.
+
+
+shared/schema.ts — Database Schema
+Constraints + integrity
+P1 Data Integrity — No unique constraint on nodeId within a project → duplicates possible. Needs composite unique (projectId, nodeId).
+P1 Data Integrity — No unique constraint on edgeId within a project → duplicates possible.
+Money correctness
+P1 Data Integrity — unitPrice and totalPrice are real (float) → rounding errors for money. Use numeric/decimal or integer cents.
+P2 Data Integrity — totalPrice stored but should be computed (quantity * unitPrice) to avoid denormalization drift.
+Enum constraints
+P2 Data Integrity — validationIssues.severity is text; should be enum (error|warning|info).
+P2 Data Integrity — bomItems.status is text; should be constrained to known statuses.
+P2 Data Integrity — chatMessages.role is text; should be enum (user|assistant|system).
+P2 Data Integrity — nodeType is free text (no constraint).
+Indexing + performance
+P1 Performance — No indexes on foreign keys (projectId not indexed by default in Postgres). Project-filtered queries may full-scan.
+P2 Performance — No composite indexes for common queries (e.g., (projectId, timestamp) for ordered chat).
+Auditing + change tracking
+P2 Product/Observability — projects has no createdAt/updatedAt.
+P2 Product — architectureNodes has no updatedAt.
+P2 Product — bomItems has no updatedAt.
+JSON shape safety
+P2 Data Integrity — architectureNodes.data is untyped jsonb (no schema validation).
+P2 Data Integrity — architectureEdges.style is untyped jsonb.
+Minor defaults
+P3 DX — projects.description nullable (fine), but no default empty string (optional taste issue).
+
+
+server/vite.ts — Dev Server
+P2 Performance — nanoid() appended to main.tsx on every load (?v=) disables browser caching unnecessarily (Vite/HMR already handles this).
+P2 DX — process.exit(1) on Vite logger error is extremely aggressive for development.
+P3 DX — import.meta.dirname usage can be surprising; document why/where it’s required.
+
+
+server/static.ts — Production Static Serving
+P2 Performance — No caching headers on static assets (Cache-Control, ETag, Last-Modified tuning).
+P2 Performance — No compression middleware (gzip/brotli). JS/CSS served uncompressed.
+P2 Performance — SPA catch-all (index.html) sends no cache directives.
+
+
+package.json — Dependencies
+P3 Security/Tech Debt — Installed but unused: passport, passport-local, express-session, connect-pg-simple, memorystore (bigger attack surface, slower installs).
+P3 Tech Debt — ws installed but unused.
+P2 Reliability — nanoid used in vite.ts but not explicitly listed (may be transitive; should be explicit).
+P3 DX — zod-validation-error installed but unused (could format Zod errors nicely).
+P2 DX — TypeScript pinned to 5.6.3 (not latest; consider bumping for fixes/features).
+
+
+Cross-cutting concerns
+P0 Security — No authentication/authorization: any client can read/write any project’s data.
+P1 Security — No input length limits on text fields (names, descriptions, labels, chat messages) → storage abuse risk.
+P1 Security — No CSRF protection for mutation endpoints.
+P2 Reliability — No per-endpoint payload size validation (only global 1MB cap).
+P2 Observability — No structured logging (console logs only). Hard to aggregate/analyze in prod.
+P2 Ops — No metrics/monitoring (latency, error rates, DB query timing).
+P2 DX — No API documentation (OpenAPI/Swagger) to define request/response contracts.
+P1 Reliability — No backend tests (unit tests for storage, integration tests for routes, tests for AI parsing).
+P2 Reliability — No environment variable validation beyond DATABASE_URL (missing validation for PORT, NODE_ENV, etc.).
+
+
+Backlog framing (how to attack this)
+Quick wins (high ROI, low risk)
+Remove unused dependencies
+Stop logging full response bodies + add truncation
+Add /api/health
+Add pagination + sorting on list endpoints
+Add Zod validation to missing routes (e.g., PATCH /api/bom/:id)
+Add request IDs / correlation IDs
+Medium efforts (stability + scale)
+Add DB transactions for bulk replace operations
+Centralize duplicated AI endpoint logic (shared schema + appState builder + history slicing)
+Add indexes + composite unique constraints
+Add request timeout + SSE anti-buffer headers + basic backpressure handling
+Big swings (structural)
+Add auth + project-level authorization
+Add structured logging (pino) + metrics
+Add API versioning
+Add tests (storage + routes + AI action validation)
+
+
+Final note
+That’s 116 findings across backend + schema.
+They span cleanup → correctness → security & architecture.
+If you want, this can be turned into a tracked remediation checklist with owners, effort estimates, and a “P0-first” rollout plan—but the audit above is the full raw gold.
