@@ -1,0 +1,491 @@
+ProtoPulse — Frontend Audit (React + UI/State/API)
+Scope: All React components, state management, API integration, UI/UX patterns
+Files audited: 14 primary frontend files (~6,500+ LOC)
+Stack: React 18 • TypeScript • Vite • TanStack Query • shadcn/ui • Tailwind v4 • @xyflow/react
+
+
+Legend
+Tag
+Meaning
+Examples
+P0
+🔥 Critical (breaks app / security / data loss)
+TS errors, key exposure, missing boundaries
+P1
+⚠️ High (major UX/reliability/perf risk)
+monolithic context, localStorage fragility
+P2
+🧠 Medium (scale + quality debt)
+memoization gaps, pagination gaps, styling drift
+P3
+🧹 Low (cleanup/DX polish)
+naming consistency, central constants, tooling
+
+
+Categories: Compile/Types • Architecture • State • Performance • Accessibility • UX • Security • API Integration • Error Handling • React Patterns • Styling/Responsive • Missing Features • Code Quality
+
+
+Executive Summary (what matters most)
+🔥 P0 — Fix immediately
+4 active TypeScript/LSP errors in ChatPanel.tsx (compile/IDE-blockers)
+ChatPanel is 2,363 lines (maintenance + bug magnet; blocks iteration speed)
+Monolithic project-context.tsx triggers cascade re-renders across the app
+localStorage as primary persistence (5MB limit + silent failure + crash risk on corrupted JSON)
+ID type mismatches (string IDs cast to number for deletes)
+API keys in localStorage (XSS / extension exposure)
+Missing error boundaries around views + ReactFlow (single crash takes down whole workspace)
+⚠️ P1 — High leverage improvements
+Component decomposition across Sidebar/AssetManager/ChatPanel
+Debounced save strategy risks losing edits on tab close
+Virtualization for large lists (chat, BOM, logs, validations)
+Accessibility: keyboard traps, SVG semantics, focus management, color-only indicators
+
+
+Contents
+Active TypeScript/LSP Errors
+Architecture & Structure
+State Management
+Type Safety
+Performance
+Accessibility
+UI/UX
+Security
+API Integration
+Error Handling
+React Patterns
+Styling & Responsive
+Missing Features
+Code Quality & Maintenance
+Summary Table
+Priority Backlog
+
+
+SECTION 1 — ACTIVE TypeScript / LSP ERRORS
+File: ChatPanel.tsx (4 errors)
+P0 Compile/Types — Line 878: Type '{}' is not assignable to type 'string'
+Object is being passed where a string is expected (likely message content or ID).
+
+P0 Compile/Types — Line 939: Type 'unknown' is not assignable to type 'string | undefined'
+Untyped value from parsing/catch used without narrowing.
+
+P0 Compile/Types — Line 1365: Set iteration without downlevelIteration
+Set<any> iterated via for...of/spread but TS target doesn’t support it. Use Array.from(set).
+
+P0 Compile/Types — Line 1370: Same Set iteration issue nearby.
+
+
+SECTION 2 — ARCHITECTURE & STRUCTURAL ISSUES
+P1 Architecture — ChatPanel.tsx is 2,363 lines
+Needs decomposition into ~6–8 components (e.g., MessageList, MessageInput, SettingsPanel, ModelSelector, AttachmentHandler, ImageGenPanel).
+
+P1 Architecture/Perf — project-context.tsx is 614 lines with 40+ state values
+Monolithic context triggers global re-renders; split into domain contexts (Chat/Diagram/BOM/Validation/etc.).
+
+P1 Architecture — Sidebar.tsx is 832 lines
+Should be section-driven subcomponents (navigation, tree, history, settings).
+
+P1 Architecture — AssetManager.tsx is 678 lines
+Mixing browsing/search/drag-drop/custom asset creation/shortcuts; split into dedicated modules.
+
+P2 Performance — No code splitting / lazy loading
+Heavy views (ReactFlow especially) are eagerly loaded; use React.lazy().
+
+P1 Reliability — No tests anywhere
+Zero unit/integration/e2e coverage for a state-heavy app.
+
+
+SECTION 3 — STATE MANAGEMENT ISSUES
+P0 Performance — Monolithic provider causes cascade re-renders
+useProject() consumers rerender on any state change.
+
+P2 Type Safety — setBomSettings accepts any (project-context line ~89)
+Should be BomSettings or Partial<BomSettings>.
+
+P1 Type Safety — ChatMessage.attachments?: any[] and actions?: any[]
+Bypasses TS entirely; define interfaces.
+
+P2 Type Safety — schematicSheets[].content: any
+Define a schema/type for sheet content.
+
+P0 Reliability — localStorage used as primary persistence for project state
+~5MB limit, silent failure, not durable, no user feedback when exceeding.
+
+P0 Reliability — No localStorage error handling
+JSON.parse(localStorage.getItem(...)) with no try/catch; corrupted storage can brick app on load.
+
+P1 Data Loss — Debounced saves can lose edits (ArchitectureView 1500ms debounce)
+Closing tab within debounce window loses changes.
+
+P1 Reliability — userInteracted ref flag is fragile
+A shared boolean gate can be reset by unrelated updates; saves may skip incorrectly.
+
+P0 Product — PROJECT_ID = 1 hardcoded
+Blocks multi-project support and causes wrong-project assumptions.
+
+
+SECTION 4 — TYPE SAFETY ISSUES
+P2 Types — Widespread as any in CustomNode.tsx
+nodes.find/map/filter((n: any) => ...) bypasses React Flow typing.
+
+P2 Types — data.type as string, data.label as string assertions
+Will explode silently if data shape changes.
+
+P2 Types — ArchitectureView context menu uses any casts
+Should use proper Node types.
+
+P2 Types — iconMap typed as Record<string, any>
+Should be Record<string, React.ComponentType<LucideProps>> (or similar).
+
+P1 Correctness — Node IDs created via Date.now().toString()
+Not guaranteed unique under fast creation; use crypto.randomUUID().
+
+P0 Correctness — BOM deletion casts string ID to number
+deleteBomItem(Number(item.id)) while interface defines id: string. Mismatch.
+
+P0 Correctness — Validation deletion casts string ID to number
+Same mismatch for validation issues.
+
+P1 Correctness — addValidationIssue accepts loose severity: string
+Should be 'error' | 'warning' | 'info'.
+
+
+SECTION 5 — PERFORMANCE ISSUES
+P2 Performance — SchematicView has massive hardcoded data objects (~220 LOC)
+Extract to data files or fetch from backend.
+
+P1 Performance — SchematicView re-renders entire SVG on panning
+Mouse move triggers state updates → full SVG repaint; use ref + CSS transforms or canvas.
+
+P2 Performance — No memoization on filtered BOM list
+filteredBom recalculated each render; use useMemo.
+
+P2 Performance — No memoization on filtered output log
+filteredLog recalculated each render; use useMemo.
+
+P1 Performance/Correctness — OutputView uses indexOf() per item
+O(n²) and wrong index when duplicates exist.
+
+P1 Performance — No virtualization for long lists
+Output log, BOM, chat, validation render everything. Use react-window or @tanstack/react-virtual.
+
+P2 Styling Fragility — ReactFlow controls styled with !important overrides
+Fragile and likely to break on library updates.
+
+P2 React — Multiple useCallback hooks with empty/incorrect deps
+Risks stale closures or unnecessary rerenders.
+
+P2 Perf/Tree Depth — Tooltip wrapping nearly every interactive element
+Adds heavy component depth; consider fewer tooltips or a lighter pattern.
+
+
+SECTION 6 — ACCESSIBILITY ISSUES
+P1 A11y — Schematic SVG has no roles/ARIA labels
+Screen readers get nothing meaningful.
+
+P1 A11y — SVG components clickable only; not keyboard accessible
+Missing tabIndex, role="button", key handlers.
+
+P0 A11y/UX — Space bar hijacked globally in SchematicView
+preventDefault() breaks scrolling and keyboard activation globally.
+
+P1 A11y — No focus management when switching views
+Screen reader users lose position/context.
+
+P1 A11y — Color-only status indicators in ProcurementView
+Needs icon/text/ARIA to support color-blind users.
+
+P2 A11y — No skip navigation links
+Sidebar + main + chat needs skip controls.
+
+P2 A11y — Context menus lack keyboard shortcut indicators
+Users can’t discover controls.
+
+P2 A11y — Net tooltip is raw div; no ARIA linkage to trigger
+Not announced; not navigable.
+
+P2 A11y — BOM table lacks caption / accessible name
+Needs <caption> or aria-label.
+
+P2 A11y — “Auto-Fix” buttons lack row context
+Screen readers hear repeated “Auto-Fix” with no association.
+
+
+SECTION 7 — UI/UX ISSUES
+P1 UX Integrity — “Generate Schematic” is a fake stub
+Adds canned response via timeout; presented as functionality.
+
+P1 UX — Drop position uses magic numbers
+Should use reactFlowInstance.screenToFlowPosition().
+
+P0 UX/Data Safety — No undo/redo anywhere
+Destructive edits cannot be reversed.
+
+P0 UX/Data Safety — No confirmation dialogs for destructive actions
+Deleting nodes/BOM, clearing logs happen instantly.
+
+P1 UX Integrity — “Paste” context menu doesn’t paste
+Creates hardcoded node at (300,300) regardless of clipboard.
+
+P2 UX — Export to clipboard copies raw JSON
+Not user-friendly; needs format options.
+
+P1 Correctness — “Select All” uses context nodes not local nodes
+Recently added nodes not yet synced won’t be selected.
+
+P2 UX — BOM “Add Item” creates useless default entry
+No edit-in-place flow to make it real.
+
+P1 Data Integrity — CSV export doesn’t escape commas
+Descriptions with commas corrupt file.
+
+P2 UX Integrity — “View Datasheet” opens Google search
+Label implies a real datasheet link.
+
+P1 UX Integrity — Validation “Auto-Fix” just deletes the issue
+Doesn’t fix design; creates false confidence.
+
+P2 UX — Schematic “fit to view” just resets origin
+Doesn’t compute bounds or fit.
+
+P2 UX — No loading states for view transitions
+Abrupt switching, no skeleton/indicator.
+
+P2 UX — Empty states minimal/missing (Procurement especially)
+Guidance absent when lists are empty.
+
+
+SECTION 8 — SECURITY CONCERNS
+P0 Security — API keys stored in localStorage
+XSS/extensions can extract; should move to server-side storage or safer vault model.
+
+P1 Security — window.open missing noopener,noreferrer consistently
+Some calls secure, some not.
+
+P2 Security — User-controlled data inserted into URLs (pattern risk)
+encodeURIComponent helps, but future extensions could go wrong.
+
+P1 Security — No CSP headers configured (frontend perspective)
+Increased injection risk.
+
+P2 Reliability — Global suppression of ResizeObserver errors
+Could mask real errors if message matches pattern.
+
+
+SECTION 9 — API INTEGRATION ISSUES
+P1 Data Freshness — staleTime: Infinity
+Data never refetches unless manually invalidated (multi-tab/multi-user issues).
+
+P2 Reliability — retry: false everywhere
+Transient network failures leave UI broken until manual retry.
+
+P2 Reliability — No global error handler for API failures
+Failures can be silent unless every view handles them.
+
+P2 Correctness — getQueryFn joins queryKey with /
+Can produce malformed URLs if segments contain slashes/special chars.
+
+P1 Reliability — API responses not validated
+.json() consumed without schema validation; runtime mismatches become crashes.
+
+P2 Architecture — TanStack Query is underutilized
+Heavy manual state/localStorage patterns coexist; uneven data flow strategy.
+
+
+SECTION 10 — ERROR HANDLING ISSUES
+P0 Reliability — ErrorBoundary only wraps top level
+View-level failures take down entire app.
+
+P1 Reliability — ErrorBoundary ignores ResizeObserver errors too broadly
+Could mask co-occurring real errors.
+
+P1 Reliability — No ErrorBoundary around ReactFlow
+Invalid node/edge data can crash the whole workspace.
+
+P1 UX — Clipboard writes have no error handling
+Permissions/non-HTTPS failures leave users with no feedback.
+
+P2 Reliability — Blob URL creation for CSV export lacks try/catch
+Could fail silently.
+
+P2 Reliability — Schematic key listeners risk duplication under rapid remounts
+Cleanup exists, but fast remount behavior can still bite.
+
+
+SECTION 11 — REACT PATTERNS & BEST PRACTICES
+P2 React — Missing dependencies in useEffect hooks
+setNodes/setEdges missing from dep arrays; hooks linting would flag.
+
+P2 React — Multiple useEffect blocks for related syncing logic
+Consider custom hook (e.g., useSyncedFlowState).
+
+P2 Perf — Inline JSX handlers create new functions every render
+May cause ReactFlow resubscriptions.
+
+P2 Correctness — Potential key issues in dynamic lists
+OutputView uses array index as key; unstable with filtering.
+
+P3 Consistency — useCallback used inconsistently
+Similar handlers treated differently across files.
+
+P3 DX — Direct DOM manipulation for CSV export
+Should be a shared util or lib.
+
+P2 Reliability — Generate Schematic timeout not cleaned up
+Can set state on unmounted component.
+
+P2 React Smell — “mount skip refs” pattern used
+Indicates effect logic should be restructured.
+
+
+SECTION 12 — STYLING & RESPONSIVE DESIGN
+P2 Styling — Hardcoded colors mixed with theme tokens
+Breaks theme switching; should use Tailwind variables/CSS vars.
+
+P2 Styling — SchematicView background hardcoded dark
+bg-[#1e1e1e] won’t adapt to light mode.
+
+P2 Styling — OutputView hardcodes terminal aesthetic
+Not theme-aware (bg-black/80, text-green-500/80).
+
+P3 Design System — Inconsistent backdrop-blur usage
+Needs a consistent design token strategy.
+
+P2 Responsive — BOM table min-width forces horizontal scroll on mobile
+Consider card layout or responsive table.
+
+P1 Responsive — No mobile controls for SchematicView
+No touch pan/pinch zoom support.
+
+P2 Responsive — AssetManager overlay crowds small screens
+Needs responsive placement/drawer behavior.
+
+P2 UX — Validation row click behavior inconsistent
+Clickability varies with no visual indication.
+
+
+SECTION 13 — MISSING FEATURES / INCOMPLETE IMPLEMENTATIONS
+P2 UX — No shortcuts help modal/documentation
+Users can’t discover Space+drag/Escape etc.
+
+P2 UX — No theme toggle UI
+ThemeProvider exists but no visible control.
+
+P2 UX — Toast system mounted but unused
+<Toaster /> present; no toast() usage.
+
+P2 Product — Schematic sheets hardcoded, not editable
+No create/rename/delete; static data only.
+
+P2 Product — No collaboration or presence
+No multi-user awareness (if that’s a goal).
+
+P2 Product — No import flow for schematics/netlists/EDA files
+No file upload pipeline.
+
+P1 UX — BOM items not editable in-place
+Add/delete only; no editing quantities/prices/suppliers.
+
+P2 Product — No print stylesheet / export-to-PDF
+Expected for hardware design tooling.
+
+P2 UX — Schematic search doesn’t scroll/center to matches
+Only dims non-matches.
+
+P2 UX — No DnD reorder for BOM
+No sorting/reordering options.
+
+P2 State — Preferred suppliers local-only in ProcurementView
+Lost on unmount.
+
+P2 State — Optimization goal local-only
+Resets when switching views.
+
+
+SECTION 14 — CODE QUALITY & MAINTENANCE
+P1 DX — LLM-style reference annotations left in JSX
+E.g., and should be removed.
+
+P3 Consistency — Inconsistent event handler naming conventions
+Mixed handleX vs onX patterns within same files.
+
+P3 Tech Debt — Dead imports likely in huge icon lists
+Needs pass to confirm usage.
+
+P1 DX — No ESLint/Prettier configuration visible
+No enforced hooks rules, formatting, or quality gates.
+
+P2 DX — Magic numbers across SchematicView
+Dimensions/zoom constants should be named.
+
+P2 DX — Duplicate icon maps across multiple files
+Centralize icon/category mapping.
+
+P2 DX — No centralized constants file
+Supplier URLs, defaults, component types scattered across components.
+
+P2 DX — Tooltip styling copy-pasted 30+ times
+Extract shared component or utility class.
+
+
+SUMMARY — Counts & Priorities
+Category
+Count
+Active TypeScript/LSP Errors
+4
+Architecture & Structure
+6
+State Management
+9
+Type Safety
+8
+Performance
+9
+Accessibility
+10
+UI/UX
+14
+Security
+5
+API Integration
+6
+Error Handling
+6
+React Patterns
+8
+Styling & Responsive
+8
+Missing Features
+12
+Code Quality
+8
+TOTAL
+113
+
+
+
+Priority Backlog — What to fix first
+🔥 Critical Priority (fix immediately)
+(1–4) TypeScript/LSP errors in ChatPanel.tsx
+(5) ChatPanel.tsx size/decomposition (unblocks everything else)
+(11) Context re-render cascade (split context / selectors)
+(15–16) localStorage limits + parse crash handling
+(25–26) ID type mismatch (string ↔ number)
+(61) API keys stored in localStorage
+(72–74) Missing error boundaries (views + ReactFlow)
+⚠️ High Priority
+Oversized components: Sidebar/AssetManager (decompose)
+Data-loss risks: debounced saving + fragile interaction flag
+Performance: virtualization for long lists + schematic panning optimization
+Accessibility: Spacebar hijack, keyboard access for schematic, focus management
+UX integrity: remove/label fake features (Generate Schematic, Auto-Fix behavior)
+CSV correctness: quote/escape fields properly
+🧠 Medium Priority
+Memoization, callback deps, hook cleanup
+Improve TanStack Query usage (freshness/retry/global error handling)
+Theme token consistency + responsive improvements
+Persist procurement preferences + optimization goal
+Better empty states + transitions
+🧹 Low Priority
+Styling cleanup + design system consistency
+Missing “nice-to-haves” (shortcuts modal, theme toggle UI)
+Codebase hygiene: remove LLM annotations, add ESLint/Prettier, centralize constants
