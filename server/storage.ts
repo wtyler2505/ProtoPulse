@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc, asc } from "drizzle-orm";
 import { db } from "./db";
 import {
   projects, type Project, type InsertProject,
@@ -10,6 +10,12 @@ import {
   historyItems, type HistoryItem, type InsertHistoryItem,
 } from "@shared/schema";
 
+export interface PaginationOptions {
+  limit: number;
+  offset: number;
+  sort: 'asc' | 'desc';
+}
+
 export class StorageError extends Error {
   constructor(operation: string, entity: string, cause?: unknown) {
     const causeMsg = cause instanceof Error ? cause.message : String(cause);
@@ -20,19 +26,19 @@ export class StorageError extends Error {
 }
 
 export interface IStorage {
-  getProjects(): Promise<Project[]>;
+  getProjects(opts?: PaginationOptions): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, data: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
 
-  getNodes(projectId: number): Promise<ArchitectureNode[]>;
+  getNodes(projectId: number, opts?: PaginationOptions): Promise<ArchitectureNode[]>;
   createNode(node: InsertArchitectureNode): Promise<ArchitectureNode>;
   updateNode(id: number, projectId: number, data: Partial<InsertArchitectureNode>): Promise<ArchitectureNode | undefined>;
   deleteNodesByProject(projectId: number): Promise<void>;
   bulkCreateNodes(nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]>;
 
-  getEdges(projectId: number): Promise<ArchitectureEdge[]>;
+  getEdges(projectId: number, opts?: PaginationOptions): Promise<ArchitectureEdge[]>;
   createEdge(edge: InsertArchitectureEdge): Promise<ArchitectureEdge>;
   updateEdge(id: number, projectId: number, data: Partial<InsertArchitectureEdge>): Promise<ArchitectureEdge | undefined>;
   deleteEdgesByProject(projectId: number): Promise<void>;
@@ -42,24 +48,24 @@ export interface IStorage {
   replaceEdges(projectId: number, edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]>;
   replaceValidationIssues(projectId: number, issues: InsertValidationIssue[]): Promise<ValidationIssue[]>;
 
-  getBomItems(projectId: number): Promise<BomItem[]>;
+  getBomItems(projectId: number, opts?: PaginationOptions): Promise<BomItem[]>;
   getBomItem(id: number, projectId: number): Promise<BomItem | undefined>;
   createBomItem(item: InsertBomItem): Promise<BomItem>;
   updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined>;
   deleteBomItem(id: number, projectId: number): Promise<boolean>;
 
-  getValidationIssues(projectId: number): Promise<ValidationIssue[]>;
+  getValidationIssues(projectId: number, opts?: PaginationOptions): Promise<ValidationIssue[]>;
   createValidationIssue(issue: InsertValidationIssue): Promise<ValidationIssue>;
   deleteValidationIssue(id: number, projectId: number): Promise<boolean>;
   deleteValidationIssuesByProject(projectId: number): Promise<void>;
   bulkCreateValidationIssues(issues: InsertValidationIssue[]): Promise<ValidationIssue[]>;
 
-  getChatMessages(projectId: number): Promise<ChatMessage[]>;
+  getChatMessages(projectId: number, opts?: PaginationOptions): Promise<ChatMessage[]>;
   createChatMessage(msg: InsertChatMessage): Promise<ChatMessage>;
   deleteChatMessages(projectId: number): Promise<void>;
   deleteChatMessage(id: number, projectId: number): Promise<boolean>;
 
-  getHistoryItems(projectId: number): Promise<HistoryItem[]>;
+  getHistoryItems(projectId: number, opts?: PaginationOptions): Promise<HistoryItem[]>;
   createHistoryItem(item: InsertHistoryItem): Promise<HistoryItem>;
   deleteHistoryItems(projectId: number): Promise<void>;
   deleteHistoryItem(id: number, projectId: number): Promise<boolean>;
@@ -87,9 +93,13 @@ export class DatabaseStorage implements IStorage {
     return results;
   }
 
-  async getProjects(): Promise<Project[]> {
+  async getProjects(opts?: PaginationOptions): Promise<Project[]> {
     try {
-      return await db.select().from(projects);
+      const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
+      return await db.select().from(projects)
+        .orderBy(sort === 'desc' ? desc(projects.id) : asc(projects.id))
+        .limit(limit)
+        .offset(offset);
     } catch (e) {
       throw new StorageError('getProjects', 'projects', e);
     }
@@ -131,9 +141,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getNodes(projectId: number): Promise<ArchitectureNode[]> {
+  async getNodes(projectId: number, opts?: PaginationOptions): Promise<ArchitectureNode[]> {
     try {
-      return await db.select().from(architectureNodes).where(eq(architectureNodes.projectId, projectId));
+      const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
+      return await db.select().from(architectureNodes)
+        .where(eq(architectureNodes.projectId, projectId))
+        .orderBy(sort === 'desc' ? desc(architectureNodes.id) : asc(architectureNodes.id))
+        .limit(limit)
+        .offset(offset);
     } catch (e) {
       throw new StorageError('getNodes', `projects/${projectId}/nodes`, e);
     }
@@ -174,9 +189,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getEdges(projectId: number): Promise<ArchitectureEdge[]> {
+  async getEdges(projectId: number, opts?: PaginationOptions): Promise<ArchitectureEdge[]> {
     try {
-      return await db.select().from(architectureEdges).where(eq(architectureEdges.projectId, projectId));
+      const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
+      return await db.select().from(architectureEdges)
+        .where(eq(architectureEdges.projectId, projectId))
+        .orderBy(sort === 'desc' ? desc(architectureEdges.id) : asc(architectureEdges.id))
+        .limit(limit)
+        .offset(offset);
     } catch (e) {
       throw new StorageError('getEdges', `projects/${projectId}/edges`, e);
     }
@@ -217,9 +237,14 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getBomItems(projectId: number): Promise<BomItem[]> {
+  async getBomItems(projectId: number, opts?: PaginationOptions): Promise<BomItem[]> {
     try {
-      return await db.select().from(bomItems).where(eq(bomItems.projectId, projectId));
+      const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
+      return await db.select().from(bomItems)
+        .where(eq(bomItems.projectId, projectId))
+        .orderBy(sort === 'desc' ? desc(bomItems.id) : asc(bomItems.id))
+        .limit(limit)
+        .offset(offset);
     } catch (e) {
       throw new StorageError('getBomItems', `projects/${projectId}/bom`, e);
     }
@@ -278,8 +303,13 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getValidationIssues(projectId: number): Promise<ValidationIssue[]> {
-    return db.select().from(validationIssues).where(eq(validationIssues.projectId, projectId));
+  async getValidationIssues(projectId: number, opts?: PaginationOptions): Promise<ValidationIssue[]> {
+    const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
+    return db.select().from(validationIssues)
+      .where(eq(validationIssues.projectId, projectId))
+      .orderBy(sort === 'desc' ? desc(validationIssues.id) : asc(validationIssues.id))
+      .limit(limit)
+      .offset(offset);
   }
 
   async createValidationIssue(issue: InsertValidationIssue): Promise<ValidationIssue> {
@@ -343,8 +373,13 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getChatMessages(projectId: number): Promise<ChatMessage[]> {
-    return db.select().from(chatMessages).where(eq(chatMessages.projectId, projectId));
+  async getChatMessages(projectId: number, opts?: PaginationOptions): Promise<ChatMessage[]> {
+    const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
+    return db.select().from(chatMessages)
+      .where(eq(chatMessages.projectId, projectId))
+      .orderBy(sort === 'desc' ? desc(chatMessages.timestamp) : asc(chatMessages.timestamp))
+      .limit(limit)
+      .offset(offset);
   }
 
   async createChatMessage(msg: InsertChatMessage): Promise<ChatMessage> {
@@ -363,8 +398,13 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
-  async getHistoryItems(projectId: number): Promise<HistoryItem[]> {
-    return db.select().from(historyItems).where(eq(historyItems.projectId, projectId));
+  async getHistoryItems(projectId: number, opts?: PaginationOptions): Promise<HistoryItem[]> {
+    const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
+    return db.select().from(historyItems)
+      .where(eq(historyItems.projectId, projectId))
+      .orderBy(sort === 'desc' ? desc(historyItems.timestamp) : asc(historyItems.timestamp))
+      .limit(limit)
+      .offset(offset);
   }
 
   async createHistoryItem(item: InsertHistoryItem): Promise<HistoryItem> {

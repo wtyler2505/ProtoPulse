@@ -21,6 +21,12 @@ import {
 } from "@shared/schema";
 import { z } from "zod";
 
+const paginationSchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+  sort: z.enum(["asc", "desc"]).default("desc"),
+});
+
 const MAX_CHAT_HISTORY = 10;
 
 class HttpError extends Error {
@@ -123,7 +129,7 @@ async function buildAppStateFromProject(
     })),
     schematicSheets: options.schematicSheets || [],
     activeSheetId: options.activeSheetId || "top",
-    chatHistory: chatHistory.slice(-MAX_CHAT_HISTORY).map(m => ({
+    chatHistory: chatHistory.slice(0, MAX_CHAT_HISTORY).reverse().map(m => ({
       role: m.role,
       content: m.content,
     })),
@@ -139,9 +145,11 @@ export async function registerRoutes(
 
   // --- Projects ---
 
-  app.get("/api/projects", asyncHandler(async (_req, res) => {
-    const projects = await storage.getProjects();
-    res.json(projects);
+  app.get("/api/projects", asyncHandler(async (req, res) => {
+    const opts = paginationSchema.safeParse(req.query);
+    const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
+    const result = await storage.getProjects(pagination);
+    res.json(result);
   }));
 
   app.get("/api/projects/:id", asyncHandler(async (req, res) => {
@@ -179,7 +187,9 @@ export async function registerRoutes(
   // --- Architecture Nodes ---
 
   app.get("/api/projects/:id/nodes", asyncHandler(async (req, res) => {
-    const nodes = await storage.getNodes(parseIdParam(req.params.id));
+    const opts = paginationSchema.safeParse(req.query);
+    const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
+    const nodes = await storage.getNodes(parseIdParam(req.params.id), pagination);
     res.json(nodes);
   }));
 
@@ -212,7 +222,9 @@ export async function registerRoutes(
   // --- Architecture Edges ---
 
   app.get("/api/projects/:id/edges", asyncHandler(async (req, res) => {
-    const edges = await storage.getEdges(parseIdParam(req.params.id));
+    const opts = paginationSchema.safeParse(req.query);
+    const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
+    const edges = await storage.getEdges(parseIdParam(req.params.id), pagination);
     res.json(edges);
   }));
 
@@ -245,7 +257,9 @@ export async function registerRoutes(
   // --- BOM Items ---
 
   app.get("/api/projects/:id/bom", asyncHandler(async (req, res) => {
-    const items = await storage.getBomItems(parseIdParam(req.params.id));
+    const opts = paginationSchema.safeParse(req.query);
+    const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
+    const items = await storage.getBomItems(parseIdParam(req.params.id), pagination);
     res.json(items);
   }));
 
@@ -286,7 +300,9 @@ export async function registerRoutes(
   // --- Validation Issues ---
 
   app.get("/api/projects/:id/validation", asyncHandler(async (req, res) => {
-    const issues = await storage.getValidationIssues(parseIdParam(req.params.id));
+    const opts = paginationSchema.safeParse(req.query);
+    const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
+    const issues = await storage.getValidationIssues(parseIdParam(req.params.id), pagination);
     res.json(issues);
   }));
 
@@ -317,7 +333,9 @@ export async function registerRoutes(
   // --- Chat Messages ---
 
   app.get("/api/projects/:id/chat", asyncHandler(async (req, res) => {
-    const messages = await storage.getChatMessages(parseIdParam(req.params.id));
+    const opts = paginationSchema.safeParse(req.query);
+    const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
+    const messages = await storage.getChatMessages(parseIdParam(req.params.id), pagination);
     res.json(messages);
   }));
 
@@ -346,7 +364,9 @@ export async function registerRoutes(
   // --- History ---
 
   app.get("/api/projects/:id/history", asyncHandler(async (req, res) => {
-    const items = await storage.getHistoryItems(parseIdParam(req.params.id));
+    const opts = paginationSchema.safeParse(req.query);
+    const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
+    const items = await storage.getHistoryItems(parseIdParam(req.params.id), pagination);
     res.json(items);
   }));
 
