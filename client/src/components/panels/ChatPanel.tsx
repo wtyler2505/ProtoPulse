@@ -841,12 +841,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       <div
         className={cn(
           "flex flex-col h-full bg-card/60 backdrop-blur-xl border-l border-border shadow-2xl relative shrink-0 overflow-hidden",
-          "fixed inset-y-0 right-0 z-50 w-full max-w-[350px] transform transition-transform md:relative md:w-auto md:max-w-none md:translate-x-0",
+          "fixed inset-y-0 right-0 z-50 w-full max-w-[350px] transform transition-transform md:relative md:translate-x-0 md:max-w-none",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
-        style={{ '--chat-w': `${width}px` } as React.CSSProperties}
+        style={{ width: width }}
       >
-        <div className="flex flex-col h-full w-full max-w-[350px] md:max-w-none md:w-[var(--chat-w)]">
+        <div className="flex flex-col h-full w-full">
           {/* Header */}
           <div className="h-14 border-b border-border bg-card/30 backdrop-blur flex items-center justify-between px-4 shrink-0">
             <div className="flex items-center gap-2">
