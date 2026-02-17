@@ -138,6 +138,28 @@
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 }
 
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(190 100% 43% / 0.25) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: hsl(190 100% 43% / 0.25);
+  border: none;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: hsl(190 100% 43% / 0.45);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 .react-flow__node {
   @apply font-display text-sm;
   border-radius: 0 !important;
