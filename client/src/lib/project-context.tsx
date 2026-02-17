@@ -199,96 +199,6 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => setFocusNodeId(null), 500);
   };
 
-  const [undoStack, setUndoStack] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
-  const [redoStack, setRedoStack] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
-
-  const pushUndoState = useCallback(() => {
-    const currentNodes = nodesQuery.data ?? [];
-    const currentEdges = edgesQuery.data ?? [];
-    setUndoStack(prev => [...prev.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
-    setRedoStack([]);
-  }, [nodesQuery.data, edgesQuery.data]);
-
-  const undo = useCallback(() => {
-    if (undoStack.length === 0) return;
-    const currentNodes = nodesQuery.data ?? [];
-    const currentEdges = edgesQuery.data ?? [];
-    const prev = undoStack[undoStack.length - 1];
-    setUndoStack(s => s.slice(0, -1));
-    setRedoStack(s => [...s.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
-    saveNodesMutation.mutate(prev.nodes);
-    saveEdgesMutation.mutate(prev.edges);
-  }, [undoStack, nodesQuery.data, edgesQuery.data]);
-
-  const redo = useCallback(() => {
-    if (redoStack.length === 0) return;
-    const currentNodes = nodesQuery.data ?? [];
-    const currentEdges = edgesQuery.data ?? [];
-    const next = redoStack[redoStack.length - 1];
-    setRedoStack(s => s.slice(0, -1));
-    setUndoStack(s => [...s.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
-    saveNodesMutation.mutate(next.nodes);
-    saveEdgesMutation.mutate(next.edges);
-  }, [redoStack, nodesQuery.data, edgesQuery.data]);
-
-  const snapshotRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
-
-  const captureSnapshot = useCallback(() => {
-    snapshotRef.current = { nodes: nodesQuery.data ?? [], edges: edgesQuery.data ?? [] };
-  }, [nodesQuery.data, edgesQuery.data]);
-
-  const getChangeDiff = useCallback((): string => {
-    const snap = snapshotRef.current;
-    if (!snap) return "";
-    const currentNodes = nodesQuery.data ?? [];
-    const currentEdges = edgesQuery.data ?? [];
-    const diffs: string[] = [];
-
-    const snapNodeIds = new Set(snap.nodes.map(n => n.id));
-    const curNodeIds = new Set(currentNodes.map(n => n.id));
-    for (const n of currentNodes) {
-      if (!snapNodeIds.has(n.id)) {
-        diffs.push(`Added node '${n.data?.label || n.id}'`);
-      }
-    }
-    for (const n of snap.nodes) {
-      if (!curNodeIds.has(n.id)) {
-        diffs.push(`Removed node '${n.data?.label || n.id}'`);
-      }
-    }
-    for (const n of currentNodes) {
-      const old = snap.nodes.find(s => s.id === n.id);
-      if (old) {
-        if (old.position.x !== n.position.x || old.position.y !== n.position.y) {
-          diffs.push(`Moved '${n.data?.label || n.id}' from (${Math.round(old.position.x)},${Math.round(old.position.y)}) to (${Math.round(n.position.x)},${Math.round(n.position.y)})`);
-        }
-        if (old.data?.label !== n.data?.label) {
-          diffs.push(`Renamed '${old.data?.label}' to '${n.data?.label}'`);
-        }
-      }
-    }
-
-    const snapEdgeIds = new Set(snap.edges.map(e => e.id));
-    const curEdgeIds = new Set(currentEdges.map(e => e.id));
-    for (const e of currentEdges) {
-      if (!snapEdgeIds.has(e.id)) {
-        const src = currentNodes.find(n => n.id === e.source);
-        const tgt = currentNodes.find(n => n.id === e.target);
-        diffs.push(`Added edge '${e.label || 'connection'}' between ${src?.data?.label || e.source} and ${tgt?.data?.label || e.target}`);
-      }
-    }
-    for (const e of snap.edges) {
-      if (!curEdgeIds.has(e.id)) {
-        const src = snap.nodes.find(n => n.id === e.source);
-        const tgt = snap.nodes.find(n => n.id === e.target);
-        diffs.push(`Removed edge '${e.label || 'connection'}' between ${src?.data?.label || e.source} and ${tgt?.data?.label || e.target}`);
-      }
-    }
-
-    if (diffs.length === 0) return "";
-    return "Since your last message: " + diffs.join(", ");
-  }, [nodesQuery.data, edgesQuery.data]);
-
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [outputLog, setOutputLog] = useState<string[]>([
@@ -437,6 +347,96 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/edges`] });
     },
   });
+
+  const [undoStack, setUndoStack] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+  const [redoStack, setRedoStack] = useState<Array<{ nodes: Node[]; edges: Edge[] }>>([]);
+
+  const pushUndoState = useCallback(() => {
+    const currentNodes = nodesQuery.data ?? [];
+    const currentEdges = edgesQuery.data ?? [];
+    setUndoStack(prev => [...prev.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
+    setRedoStack([]);
+  }, [nodesQuery.data, edgesQuery.data]);
+
+  const undo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const currentNodes = nodesQuery.data ?? [];
+    const currentEdges = edgesQuery.data ?? [];
+    const prev = undoStack[undoStack.length - 1];
+    setUndoStack(s => s.slice(0, -1));
+    setRedoStack(s => [...s.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
+    saveNodesMutation.mutate(prev.nodes);
+    saveEdgesMutation.mutate(prev.edges);
+  }, [undoStack, nodesQuery.data, edgesQuery.data, saveNodesMutation, saveEdgesMutation]);
+
+  const redo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    const currentNodes = nodesQuery.data ?? [];
+    const currentEdges = edgesQuery.data ?? [];
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack(s => s.slice(0, -1));
+    setUndoStack(s => [...s.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
+    saveNodesMutation.mutate(next.nodes);
+    saveEdgesMutation.mutate(next.edges);
+  }, [redoStack, nodesQuery.data, edgesQuery.data, saveNodesMutation, saveEdgesMutation]);
+
+  const snapshotRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
+
+  const captureSnapshot = useCallback(() => {
+    snapshotRef.current = { nodes: nodesQuery.data ?? [], edges: edgesQuery.data ?? [] };
+  }, [nodesQuery.data, edgesQuery.data]);
+
+  const getChangeDiff = useCallback((): string => {
+    const snap = snapshotRef.current;
+    if (!snap) return "";
+    const currentNodes = nodesQuery.data ?? [];
+    const currentEdges = edgesQuery.data ?? [];
+    const diffs: string[] = [];
+
+    const snapNodeIds = new Set(snap.nodes.map(n => n.id));
+    const curNodeIds = new Set(currentNodes.map(n => n.id));
+    for (const n of currentNodes) {
+      if (!snapNodeIds.has(n.id)) {
+        diffs.push(`Added node '${n.data?.label || n.id}'`);
+      }
+    }
+    for (const n of snap.nodes) {
+      if (!curNodeIds.has(n.id)) {
+        diffs.push(`Removed node '${n.data?.label || n.id}'`);
+      }
+    }
+    for (const n of currentNodes) {
+      const old = snap.nodes.find(s => s.id === n.id);
+      if (old) {
+        if (old.position.x !== n.position.x || old.position.y !== n.position.y) {
+          diffs.push(`Moved '${n.data?.label || n.id}' from (${Math.round(old.position.x)},${Math.round(old.position.y)}) to (${Math.round(n.position.x)},${Math.round(n.position.y)})`);
+        }
+        if (old.data?.label !== n.data?.label) {
+          diffs.push(`Renamed '${old.data?.label}' to '${n.data?.label}'`);
+        }
+      }
+    }
+
+    const snapEdgeIds = new Set(snap.edges.map(e => e.id));
+    const curEdgeIds = new Set(currentEdges.map(e => e.id));
+    for (const e of currentEdges) {
+      if (!snapEdgeIds.has(e.id)) {
+        const src = currentNodes.find(n => n.id === e.source);
+        const tgt = currentNodes.find(n => n.id === e.target);
+        diffs.push(`Added edge '${e.label || 'connection'}' between ${src?.data?.label || e.source} and ${tgt?.data?.label || e.target}`);
+      }
+    }
+    for (const e of snap.edges) {
+      if (!curEdgeIds.has(e.id)) {
+        const src = snap.nodes.find(n => n.id === e.source);
+        const tgt = snap.nodes.find(n => n.id === e.target);
+        diffs.push(`Removed edge '${e.label || 'connection'}' between ${src?.data?.label || e.source} and ${tgt?.data?.label || e.target}`);
+      }
+    }
+
+    if (diffs.length === 0) return "";
+    return "Since your last message: " + diffs.join(", ");
+  }, [nodesQuery.data, edgesQuery.data]);
 
   const addChatMutation = useMutation({
     mutationFn: async (msg: { role: string; content: string; mode?: string }) => {
