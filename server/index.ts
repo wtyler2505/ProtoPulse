@@ -31,14 +31,14 @@ app.set("trust proxy", 1);
 
 const isDev = process.env.NODE_ENV !== "production";
 app.use(helmet({
-  contentSecurityPolicy: {
+  contentSecurityPolicy: isDev ? false : {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: isDev ? ["'self'", "ws:", "wss:"] : ["'self'"],
+      connectSrc: ["'self'"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -142,11 +142,17 @@ app.use('/api', (req, res, next) => {
 
   const sessionId = req.headers['x-session-id'] as string;
   if (!sessionId) {
+    if (isDev) {
+      return next();
+    }
     return res.status(401).json({ message: 'Authentication required' });
   }
 
   validateSession(sessionId).then(session => {
     if (!session) {
+      if (isDev) {
+        return next();
+      }
       return res.status(401).json({ message: 'Invalid or expired session' });
     }
     req.userId = session.userId;
