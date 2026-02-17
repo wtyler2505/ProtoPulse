@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { processAIMessage, streamAIMessage } from "./ai";
 import {
   insertProjectSchema,
@@ -10,6 +11,13 @@ import {
   insertValidationIssueSchema,
   insertChatMessageSchema,
   insertHistoryItemSchema,
+  projects,
+  architectureNodes,
+  architectureEdges,
+  bomItems,
+  validationIssues,
+  chatMessages,
+  historyItems,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -161,6 +169,13 @@ export async function registerRoutes(
     res.json(updated);
   }));
 
+  app.delete("/api/projects/:id", asyncHandler(async (req, res) => {
+    const id = parseIdParam(req.params.id);
+    const deleted = await storage.deleteProject(id);
+    if (!deleted) return res.status(404).json({ message: "Project not found" });
+    res.status(204).end();
+  }));
+
   // --- Architecture Nodes ---
 
   app.get("/api/projects/:id/nodes", asyncHandler(async (req, res) => {
@@ -174,6 +189,16 @@ export async function registerRoutes(
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
     const node = await storage.createNode({ ...parsed.data, projectId });
     res.status(201).json(node);
+  }));
+
+  app.patch("/api/projects/:id/nodes/:nodeId", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const nodeId = parseIdParam(req.params.nodeId);
+    const parsed = insertArchitectureNodeSchema.partial().omit({ projectId: true }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    const updated = await storage.updateNode(nodeId, projectId, parsed.data);
+    if (!updated) return res.status(404).json({ message: "Node not found" });
+    res.json(updated);
   }));
 
   app.put("/api/projects/:id/nodes", asyncHandler(async (req, res) => {
@@ -199,6 +224,16 @@ export async function registerRoutes(
     res.status(201).json(edge);
   }));
 
+  app.patch("/api/projects/:id/edges/:edgeId", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const edgeId = parseIdParam(req.params.edgeId);
+    const parsed = insertArchitectureEdgeSchema.partial().omit({ projectId: true }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    const updated = await storage.updateEdge(edgeId, projectId, parsed.data);
+    if (!updated) return res.status(404).json({ message: "Edge not found" });
+    res.json(updated);
+  }));
+
   app.put("/api/projects/:id/edges", asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const edgesArray = z.array(insertArchitectureEdgeSchema.omit({ projectId: true })).safeParse(req.body);
@@ -212,6 +247,14 @@ export async function registerRoutes(
   app.get("/api/projects/:id/bom", asyncHandler(async (req, res) => {
     const items = await storage.getBomItems(parseIdParam(req.params.id));
     res.json(items);
+  }));
+
+  app.get("/api/projects/:id/bom/:bomId", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const bomId = parseIdParam(req.params.bomId);
+    const item = await storage.getBomItem(bomId, projectId);
+    if (!item) return res.status(404).json({ message: "BOM item not found" });
+    res.json(item);
   }));
 
   app.post("/api/projects/:id/bom", asyncHandler(async (req, res) => {
@@ -286,6 +329,20 @@ export async function registerRoutes(
     res.status(201).json(msg);
   }));
 
+  app.delete("/api/projects/:id/chat", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    await storage.deleteChatMessages(projectId);
+    res.status(204).end();
+  }));
+
+  app.delete("/api/projects/:id/chat/:msgId", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const msgId = parseIdParam(req.params.msgId);
+    const deleted = await storage.deleteChatMessage(msgId, projectId);
+    if (!deleted) return res.status(404).json({ message: "Chat message not found" });
+    res.status(204).end();
+  }));
+
   // --- History ---
 
   app.get("/api/projects/:id/history", asyncHandler(async (req, res) => {
@@ -301,6 +358,20 @@ export async function registerRoutes(
     res.status(201).json(item);
   }));
 
+  app.delete("/api/projects/:id/history", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    await storage.deleteHistoryItems(projectId);
+    res.status(204).end();
+  }));
+
+  app.delete("/api/projects/:id/history/:itemId", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const itemId = parseIdParam(req.params.itemId);
+    const deleted = await storage.deleteHistoryItem(itemId, projectId);
+    if (!deleted) return res.status(404).json({ message: "History item not found" });
+    res.status(204).end();
+  }));
+
   // --- Seed / Init default project ---
 
   app.post("/api/seed", asyncHandler(async (_req, res) => {
@@ -312,44 +383,50 @@ export async function registerRoutes(
       return res.json({ message: "Already seeded", project: existingProjects[0] });
     }
 
-    const project = await storage.createProject({ name: "Smart_Agro_Node_v1", description: "IoT Agriculture Sensor Node" });
+    const result = await db.transaction(async (tx) => {
+      const [project] = await tx.insert(projects).values({ name: "Smart_Agro_Node_v1", description: "IoT Agriculture Sensor Node" }).returning();
 
-    await storage.bulkCreateNodes([
-      { projectId: project.id, nodeId: "1", nodeType: "mcu", label: "ESP32-S3-WROOM-1", positionX: 400, positionY: 100, data: { description: "Dual-core MCU, Wi-Fi/BLE" } },
-      { projectId: project.id, nodeId: "2", nodeType: "power", label: "TP4056 PMU", positionX: 150, positionY: 250, data: { description: "Li-Ion Battery Charger" } },
-      { projectId: project.id, nodeId: "3", nodeType: "comm", label: "SX1262 LoRa", positionX: 650, positionY: 250, data: { description: "Long Range Transceiver" } },
-      { projectId: project.id, nodeId: "4", nodeType: "sensor", label: "SHT40", positionX: 400, positionY: 400, data: { description: "Temp/Humidity Sensor" } },
-      { projectId: project.id, nodeId: "5", nodeType: "connector", label: "USB-C Connector", positionX: 150, positionY: 100, data: { description: "Power/Data Input" } },
-    ]);
+      await tx.insert(architectureNodes).values([
+        { projectId: project.id, nodeId: "1", nodeType: "mcu", label: "ESP32-S3-WROOM-1", positionX: 400, positionY: 100, data: { description: "Dual-core MCU, Wi-Fi/BLE" } },
+        { projectId: project.id, nodeId: "2", nodeType: "power", label: "TP4056 PMU", positionX: 150, positionY: 250, data: { description: "Li-Ion Battery Charger" } },
+        { projectId: project.id, nodeId: "3", nodeType: "comm", label: "SX1262 LoRa", positionX: 650, positionY: 250, data: { description: "Long Range Transceiver" } },
+        { projectId: project.id, nodeId: "4", nodeType: "sensor", label: "SHT40", positionX: 400, positionY: 400, data: { description: "Temp/Humidity Sensor" } },
+        { projectId: project.id, nodeId: "5", nodeType: "connector", label: "USB-C Connector", positionX: 150, positionY: 100, data: { description: "Power/Data Input" } },
+      ]);
 
-    await storage.bulkCreateEdges([
-      { projectId: project.id, edgeId: "e5-2", source: "5", target: "2", animated: true, label: "5V VBUS", style: { stroke: "#ef4444" } },
-      { projectId: project.id, edgeId: "e2-1", source: "2", target: "1", animated: true, label: "3.3V", style: { stroke: "#ef4444" } },
-      { projectId: project.id, edgeId: "e1-3", source: "1", target: "3", animated: true, label: "SPI", style: { stroke: "#06b6d4" } },
-      { projectId: project.id, edgeId: "e1-4", source: "1", target: "4", animated: true, label: "I2C", style: { stroke: "#06b6d4" } },
-    ]);
+      await tx.insert(architectureEdges).values([
+        { projectId: project.id, edgeId: "e5-2", source: "5", target: "2", animated: true, label: "5V VBUS", style: { stroke: "#ef4444" } },
+        { projectId: project.id, edgeId: "e2-1", source: "2", target: "1", animated: true, label: "3.3V", style: { stroke: "#ef4444" } },
+        { projectId: project.id, edgeId: "e1-3", source: "1", target: "3", animated: true, label: "SPI", style: { stroke: "#06b6d4" } },
+        { projectId: project.id, edgeId: "e1-4", source: "1", target: "4", animated: true, label: "I2C", style: { stroke: "#06b6d4" } },
+      ]);
 
-    const bomData = [
-      { projectId: project.id, partNumber: "ESP32-S3-WROOM-1", manufacturer: "Espressif", description: "Wi-Fi/BLE MCU Module", quantity: 1, unitPrice: "3.5000", supplier: "Mouser", stock: 1240, status: "In Stock" as const },
-      { projectId: project.id, partNumber: "TP4056", manufacturer: "Top Power", description: "Li-Ion Charger IC", quantity: 1, unitPrice: "0.1500", supplier: "LCSC", stock: 50000, status: "In Stock" as const },
-      { projectId: project.id, partNumber: "SX1262IMLTRT", manufacturer: "Semtech", description: "LoRa Transceiver", quantity: 1, unitPrice: "4.2000", supplier: "Digi-Key", stock: 85, status: "Low Stock" as const },
-      { projectId: project.id, partNumber: "SHT40-AD1B-R2", manufacturer: "Sensirion", description: "Sensor Humidity/Temp", quantity: 1, unitPrice: "1.8500", supplier: "Mouser", stock: 5000, status: "In Stock" as const },
-      { projectId: project.id, partNumber: "USB4105-GF-A", manufacturer: "GCT", description: "USB Type-C Receptacle", quantity: 1, unitPrice: "0.6500", supplier: "Digi-Key", stock: 12000, status: "In Stock" as const },
-    ];
-    await Promise.all(bomData.map(item => storage.createBomItem(item)));
+      const bomData = [
+        { projectId: project.id, partNumber: "ESP32-S3-WROOM-1", manufacturer: "Espressif", description: "Wi-Fi/BLE MCU Module", quantity: 1, unitPrice: "3.5000", totalPrice: "3.5000", supplier: "Mouser", stock: 1240, status: "In Stock" as const },
+        { projectId: project.id, partNumber: "TP4056", manufacturer: "Top Power", description: "Li-Ion Charger IC", quantity: 1, unitPrice: "0.1500", totalPrice: "0.1500", supplier: "LCSC", stock: 50000, status: "In Stock" as const },
+        { projectId: project.id, partNumber: "SX1262IMLTRT", manufacturer: "Semtech", description: "LoRa Transceiver", quantity: 1, unitPrice: "4.2000", totalPrice: "4.2000", supplier: "Digi-Key", stock: 85, status: "Low Stock" as const },
+        { projectId: project.id, partNumber: "SHT40-AD1B-R2", manufacturer: "Sensirion", description: "Sensor Humidity/Temp", quantity: 1, unitPrice: "1.8500", totalPrice: "1.8500", supplier: "Mouser", stock: 5000, status: "In Stock" as const },
+        { projectId: project.id, partNumber: "USB4105-GF-A", manufacturer: "GCT", description: "USB Type-C Receptacle", quantity: 1, unitPrice: "0.6500", totalPrice: "0.6500", supplier: "Digi-Key", stock: 12000, status: "In Stock" as const },
+      ];
+      await tx.insert(bomItems).values(bomData);
 
-    await storage.bulkCreateValidationIssues([
-      { projectId: project.id, severity: "warning", message: "Missing decoupling capacitor on ESP32 VDD", componentId: "1", suggestion: "Add 10uF + 0.1uF ceramic capacitors close to pins." },
-      { projectId: project.id, severity: "error", message: "LoRa antenna path impedance mismatch likely", componentId: "3", suggestion: "Check RF trace width and add Pi-matching network." },
-    ]);
+      await tx.insert(validationIssues).values([
+        { projectId: project.id, severity: "warning", message: "Missing decoupling capacitor on ESP32 VDD", componentId: "1", suggestion: "Add 10uF + 0.1uF ceramic capacitors close to pins." },
+        { projectId: project.id, severity: "error", message: "LoRa antenna path impedance mismatch likely", componentId: "3", suggestion: "Check RF trace width and add Pi-matching network." },
+      ]);
 
-    await storage.createChatMessage({ projectId: project.id, role: "system", content: "Welcome to ProtoPulse AI. I can help you generate architectures, create schematics, and optimize your BOM.", mode: "chat" });
+      await tx.insert(chatMessages).values({ projectId: project.id, role: "system", content: "Welcome to ProtoPulse AI. I can help you generate architectures, create schematics, and optimize your BOM.", mode: "chat" });
 
-    await storage.createHistoryItem({ projectId: project.id, action: "Project Created", user: "User" });
-    await storage.createHistoryItem({ projectId: project.id, action: "Added ESP32-S3", user: "User" });
-    await storage.createHistoryItem({ projectId: project.id, action: "Auto-connected Power Rails", user: "AI" });
+      await tx.insert(historyItems).values([
+        { projectId: project.id, action: "Project Created", user: "User" },
+        { projectId: project.id, action: "Added ESP32-S3", user: "User" },
+        { projectId: project.id, action: "Auto-connected Power Rails", user: "AI" },
+      ]);
 
-    res.status(201).json({ message: "Seeded successfully", project });
+      return project;
+    });
+
+    res.status(201).json({ message: "Seeded successfully", project: result });
   }));
 
   // --- AI Chat Endpoint ---

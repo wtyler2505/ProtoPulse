@@ -10,19 +10,31 @@ import {
   historyItems, type HistoryItem, type InsertHistoryItem,
 } from "@shared/schema";
 
+export class StorageError extends Error {
+  constructor(operation: string, entity: string, cause?: unknown) {
+    const causeMsg = cause instanceof Error ? cause.message : String(cause);
+    super(`Storage.${operation}(${entity}) failed: ${causeMsg}`);
+    this.name = 'StorageError';
+    if (cause instanceof Error) this.stack = cause.stack;
+  }
+}
+
 export interface IStorage {
   getProjects(): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(id: number, data: Partial<InsertProject>): Promise<Project | undefined>;
+  deleteProject(id: number): Promise<boolean>;
 
   getNodes(projectId: number): Promise<ArchitectureNode[]>;
   createNode(node: InsertArchitectureNode): Promise<ArchitectureNode>;
+  updateNode(id: number, projectId: number, data: Partial<InsertArchitectureNode>): Promise<ArchitectureNode | undefined>;
   deleteNodesByProject(projectId: number): Promise<void>;
   bulkCreateNodes(nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]>;
 
   getEdges(projectId: number): Promise<ArchitectureEdge[]>;
   createEdge(edge: InsertArchitectureEdge): Promise<ArchitectureEdge>;
+  updateEdge(id: number, projectId: number, data: Partial<InsertArchitectureEdge>): Promise<ArchitectureEdge | undefined>;
   deleteEdgesByProject(projectId: number): Promise<void>;
   bulkCreateEdges(edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]>;
 
@@ -31,6 +43,7 @@ export interface IStorage {
   replaceValidationIssues(projectId: number, issues: InsertValidationIssue[]): Promise<ValidationIssue[]>;
 
   getBomItems(projectId: number): Promise<BomItem[]>;
+  getBomItem(id: number, projectId: number): Promise<BomItem | undefined>;
   createBomItem(item: InsertBomItem): Promise<BomItem>;
   updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined>;
   deleteBomItem(id: number, projectId: number): Promise<boolean>;
@@ -43,9 +56,13 @@ export interface IStorage {
 
   getChatMessages(projectId: number): Promise<ChatMessage[]>;
   createChatMessage(msg: InsertChatMessage): Promise<ChatMessage>;
+  deleteChatMessages(projectId: number): Promise<void>;
+  deleteChatMessage(id: number, projectId: number): Promise<boolean>;
 
   getHistoryItems(projectId: number): Promise<HistoryItem[]>;
   createHistoryItem(item: InsertHistoryItem): Promise<HistoryItem>;
+  deleteHistoryItems(projectId: number): Promise<void>;
+  deleteHistoryItem(id: number, projectId: number): Promise<boolean>;
 }
 
 function computeTotalPrice(quantity: number, unitPrice: string | number): string {
@@ -53,32 +70,95 @@ function computeTotalPrice(quantity: number, unitPrice: string | number): string
 }
 
 export class DatabaseStorage implements IStorage {
+  private async chunkedInsert<T extends Record<string, unknown>, R>(
+    table: any,
+    items: T[],
+    chunkSize = 100
+  ): Promise<R[]> {
+    if (items.length <= chunkSize) {
+      return db.insert(table).values(items).returning() as Promise<R[]>;
+    }
+    const results: R[] = [];
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const chunk = items.slice(i, i + chunkSize);
+      const inserted = await db.insert(table).values(chunk).returning();
+      results.push(...(inserted as R[]));
+    }
+    return results;
+  }
+
   async getProjects(): Promise<Project[]> {
-    return db.select().from(projects);
+    try {
+      return await db.select().from(projects);
+    } catch (e) {
+      throw new StorageError('getProjects', 'projects', e);
+    }
   }
 
   async getProject(id: number): Promise<Project | undefined> {
-    const [project] = await db.select().from(projects).where(eq(projects.id, id));
-    return project;
+    try {
+      const [project] = await db.select().from(projects).where(eq(projects.id, id));
+      return project;
+    } catch (e) {
+      throw new StorageError('getProject', `projects/${id}`, e);
+    }
   }
 
   async createProject(project: InsertProject): Promise<Project> {
-    const [created] = await db.insert(projects).values(project).returning();
-    return created;
+    try {
+      const [created] = await db.insert(projects).values(project).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createProject', 'projects', e);
+    }
   }
 
   async updateProject(id: number, data: Partial<InsertProject>): Promise<Project | undefined> {
-    const [updated] = await db.update(projects).set({ ...data, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
-    return updated;
+    try {
+      const [updated] = await db.update(projects).set({ ...data, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateProject', `projects/${id}`, e);
+    }
+  }
+
+  async deleteProject(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(projects).where(eq(projects.id, id)).returning();
+      return result.length > 0;
+    } catch (e) {
+      throw new StorageError('deleteProject', `projects/${id}`, e);
+    }
   }
 
   async getNodes(projectId: number): Promise<ArchitectureNode[]> {
-    return db.select().from(architectureNodes).where(eq(architectureNodes.projectId, projectId));
+    try {
+      return await db.select().from(architectureNodes).where(eq(architectureNodes.projectId, projectId));
+    } catch (e) {
+      throw new StorageError('getNodes', `projects/${projectId}/nodes`, e);
+    }
   }
 
   async createNode(node: InsertArchitectureNode): Promise<ArchitectureNode> {
-    const [created] = await db.insert(architectureNodes).values(node).returning();
-    return created;
+    try {
+      const [created] = await db.insert(architectureNodes).values(node).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createNode', 'nodes', e);
+    }
+  }
+
+  async updateNode(id: number, projectId: number, data: Partial<InsertArchitectureNode>): Promise<ArchitectureNode | undefined> {
+    try {
+      const { projectId: _ignoreProjectId, ...safeData } = data as any;
+      const [updated] = await db.update(architectureNodes)
+        .set({ ...safeData, updatedAt: new Date() })
+        .where(and(eq(architectureNodes.id, id), eq(architectureNodes.projectId, projectId)))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateNode', `nodes/${id}`, e);
+    }
   }
 
   async deleteNodesByProject(projectId: number): Promise<void> {
@@ -87,16 +167,41 @@ export class DatabaseStorage implements IStorage {
 
   async bulkCreateNodes(nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]> {
     if (nodes.length === 0) return [];
-    return db.insert(architectureNodes).values(nodes).returning();
+    try {
+      return await this.chunkedInsert<any, ArchitectureNode>(architectureNodes, nodes);
+    } catch (e) {
+      throw new StorageError('bulkCreateNodes', 'nodes', e);
+    }
   }
 
   async getEdges(projectId: number): Promise<ArchitectureEdge[]> {
-    return db.select().from(architectureEdges).where(eq(architectureEdges.projectId, projectId));
+    try {
+      return await db.select().from(architectureEdges).where(eq(architectureEdges.projectId, projectId));
+    } catch (e) {
+      throw new StorageError('getEdges', `projects/${projectId}/edges`, e);
+    }
   }
 
   async createEdge(edge: InsertArchitectureEdge): Promise<ArchitectureEdge> {
-    const [created] = await db.insert(architectureEdges).values(edge).returning();
-    return created;
+    try {
+      const [created] = await db.insert(architectureEdges).values(edge).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createEdge', 'edges', e);
+    }
+  }
+
+  async updateEdge(id: number, projectId: number, data: Partial<InsertArchitectureEdge>): Promise<ArchitectureEdge | undefined> {
+    try {
+      const { projectId: _ignoreProjectId, ...safeData } = data as any;
+      const [updated] = await db.update(architectureEdges)
+        .set(safeData)
+        .where(and(eq(architectureEdges.id, id), eq(architectureEdges.projectId, projectId)))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateEdge', `edges/${id}`, e);
+    }
   }
 
   async deleteEdgesByProject(projectId: number): Promise<void> {
@@ -105,40 +210,65 @@ export class DatabaseStorage implements IStorage {
 
   async bulkCreateEdges(edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]> {
     if (edges.length === 0) return [];
-    return db.insert(architectureEdges).values(edges).returning();
+    try {
+      return await this.chunkedInsert<any, ArchitectureEdge>(architectureEdges, edges);
+    } catch (e) {
+      throw new StorageError('bulkCreateEdges', 'edges', e);
+    }
   }
 
   async getBomItems(projectId: number): Promise<BomItem[]> {
-    return db.select().from(bomItems).where(eq(bomItems.projectId, projectId));
+    try {
+      return await db.select().from(bomItems).where(eq(bomItems.projectId, projectId));
+    } catch (e) {
+      throw new StorageError('getBomItems', `projects/${projectId}/bom`, e);
+    }
+  }
+
+  async getBomItem(id: number, projectId: number): Promise<BomItem | undefined> {
+    try {
+      const [item] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)));
+      return item;
+    } catch (e) {
+      throw new StorageError('getBomItem', `bom/${id}`, e);
+    }
   }
 
   async createBomItem(item: InsertBomItem): Promise<BomItem> {
-    const totalPrice = computeTotalPrice(item.quantity, item.unitPrice);
-    const [created] = await db.insert(bomItems).values({ ...item, totalPrice }).returning();
-    return created;
+    try {
+      const totalPrice = computeTotalPrice(item.quantity, item.unitPrice);
+      const [created] = await db.insert(bomItems).values({ ...item, totalPrice }).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createBomItem', 'bom', e);
+    }
   }
 
   async updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined> {
-    const { projectId: _ignoreProjectId, ...safeData } = item as any;
+    try {
+      const { projectId: _ignoreProjectId, ...safeData } = item as any;
 
-    if (safeData.quantity !== undefined || safeData.unitPrice !== undefined) {
-      const [existing] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)));
-      if (!existing) return undefined;
-      const quantity = safeData.quantity ?? existing.quantity;
-      const unitPrice = safeData.unitPrice ?? existing.unitPrice;
-      const totalPrice = computeTotalPrice(quantity, unitPrice);
+      if (safeData.quantity !== undefined || safeData.unitPrice !== undefined) {
+        const [existing] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)));
+        if (!existing) return undefined;
+        const quantity = safeData.quantity ?? existing.quantity;
+        const unitPrice = safeData.unitPrice ?? existing.unitPrice;
+        const totalPrice = computeTotalPrice(quantity, unitPrice);
+        const [updated] = await db.update(bomItems)
+          .set({ ...safeData, totalPrice, updatedAt: new Date() })
+          .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
+          .returning();
+        return updated;
+      }
+
       const [updated] = await db.update(bomItems)
-        .set({ ...safeData, totalPrice, updatedAt: new Date() })
+        .set({ ...safeData, updatedAt: new Date() })
         .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
         .returning();
       return updated;
+    } catch (e) {
+      throw new StorageError('updateBomItem', `bom/${id}`, e);
     }
-
-    const [updated] = await db.update(bomItems)
-      .set({ ...safeData, updatedAt: new Date() })
-      .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
-      .returning();
-    return updated;
   }
 
   async deleteBomItem(id: number, projectId: number): Promise<boolean> {
@@ -170,31 +300,47 @@ export class DatabaseStorage implements IStorage {
 
   async bulkCreateValidationIssues(issues: InsertValidationIssue[]): Promise<ValidationIssue[]> {
     if (issues.length === 0) return [];
-    return db.insert(validationIssues).values(issues).returning();
+    try {
+      return await this.chunkedInsert<any, ValidationIssue>(validationIssues, issues);
+    } catch (e) {
+      throw new StorageError('bulkCreateValidationIssues', 'validationIssues', e);
+    }
   }
 
   async replaceNodes(projectId: number, nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]> {
-    return db.transaction(async (tx) => {
-      await tx.delete(architectureNodes).where(eq(architectureNodes.projectId, projectId));
-      if (nodes.length === 0) return [];
-      return tx.insert(architectureNodes).values(nodes).returning();
-    });
+    try {
+      return await db.transaction(async (tx) => {
+        await tx.delete(architectureNodes).where(eq(architectureNodes.projectId, projectId));
+        if (nodes.length === 0) return [];
+        return tx.insert(architectureNodes).values(nodes).returning();
+      });
+    } catch (e) {
+      throw new StorageError('replaceNodes', `projects/${projectId}/nodes`, e);
+    }
   }
 
   async replaceEdges(projectId: number, edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]> {
-    return db.transaction(async (tx) => {
-      await tx.delete(architectureEdges).where(eq(architectureEdges.projectId, projectId));
-      if (edges.length === 0) return [];
-      return tx.insert(architectureEdges).values(edges).returning();
-    });
+    try {
+      return await db.transaction(async (tx) => {
+        await tx.delete(architectureEdges).where(eq(architectureEdges.projectId, projectId));
+        if (edges.length === 0) return [];
+        return tx.insert(architectureEdges).values(edges).returning();
+      });
+    } catch (e) {
+      throw new StorageError('replaceEdges', `projects/${projectId}/edges`, e);
+    }
   }
 
   async replaceValidationIssues(projectId: number, issues: InsertValidationIssue[]): Promise<ValidationIssue[]> {
-    return db.transaction(async (tx) => {
-      await tx.delete(validationIssues).where(eq(validationIssues.projectId, projectId));
-      if (issues.length === 0) return [];
-      return tx.insert(validationIssues).values(issues).returning();
-    });
+    try {
+      return await db.transaction(async (tx) => {
+        await tx.delete(validationIssues).where(eq(validationIssues.projectId, projectId));
+        if (issues.length === 0) return [];
+        return tx.insert(validationIssues).values(issues).returning();
+      });
+    } catch (e) {
+      throw new StorageError('replaceValidationIssues', `projects/${projectId}/validation`, e);
+    }
   }
 
   async getChatMessages(projectId: number): Promise<ChatMessage[]> {
@@ -206,6 +352,17 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async deleteChatMessages(projectId: number): Promise<void> {
+    await db.delete(chatMessages).where(eq(chatMessages.projectId, projectId));
+  }
+
+  async deleteChatMessage(id: number, projectId: number): Promise<boolean> {
+    const result = await db.delete(chatMessages)
+      .where(and(eq(chatMessages.id, id), eq(chatMessages.projectId, projectId)))
+      .returning();
+    return result.length > 0;
+  }
+
   async getHistoryItems(projectId: number): Promise<HistoryItem[]> {
     return db.select().from(historyItems).where(eq(historyItems.projectId, projectId));
   }
@@ -213,6 +370,17 @@ export class DatabaseStorage implements IStorage {
   async createHistoryItem(item: InsertHistoryItem): Promise<HistoryItem> {
     const [created] = await db.insert(historyItems).values(item).returning();
     return created;
+  }
+
+  async deleteHistoryItems(projectId: number): Promise<void> {
+    await db.delete(historyItems).where(eq(historyItems.projectId, projectId));
+  }
+
+  async deleteHistoryItem(id: number, projectId: number): Promise<boolean> {
+    const result = await db.delete(historyItems)
+      .where(and(eq(historyItems.id, id), eq(historyItems.projectId, projectId)))
+      .returning();
+    return result.length > 0;
   }
 }
 
