@@ -19,3 +19,21 @@ pool.on("error", (err) => {
 });
 
 export const db = drizzle(pool, { schema });
+
+export async function checkConnection(maxRetries = 5): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const client = await pool.connect();
+      client.release();
+      console.log("Database connection verified.");
+      return;
+    } catch (err: any) {
+      console.error(`Database connection attempt ${attempt}/${maxRetries} failed: ${err.message}`);
+      if (attempt === maxRetries) {
+        throw new Error(`Could not connect to database after ${maxRetries} attempts.`);
+      }
+      const delay = Math.pow(2, attempt - 1) * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}

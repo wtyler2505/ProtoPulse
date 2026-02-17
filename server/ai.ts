@@ -358,7 +358,11 @@ function parseActionsFromResponse(text: string): { message: string; actions: AIA
   try {
     const parsed = JSON.parse(match[1]);
     const actions: AIAction[] = Array.isArray(parsed) ? parsed : [];
-    return { message, actions };
+    const validActions = actions.filter((action): action is AIAction => {
+      if (!action || typeof action !== 'object' || typeof action.type !== 'string') return false;
+      return true;
+    });
+    return { message, actions: validActions };
   } catch {
     return { message: text.trim(), actions: [] };
   }
@@ -443,6 +447,13 @@ export async function processAIMessage(params: {
       };
     }
 
+    if (message.length > 32000) {
+      return {
+        message: "Your message is too long. Please keep messages under 32,000 characters.",
+        actions: [],
+      };
+    }
+
     const systemPrompt = buildSystemPrompt(appState);
     const recentHistory = appState.chatHistory.slice(-10);
 
@@ -475,8 +486,11 @@ export async function processAIMessage(params: {
       };
     }
 
+    const safeMessage = errorMessage
+      .replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]')
+      .replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
     return {
-      message: `An error occurred while communicating with the AI provider: ${errorMessage}`,
+      message: `An error occurred while communicating with the AI provider: ${safeMessage}`,
       actions: [],
     };
   }
@@ -500,6 +514,12 @@ export async function streamAIMessage(
     if (!apiKey || apiKey.trim().length === 0) {
       write(`No API key provided for ${provider}. Please add your ${provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key in the settings panel to enable AI features.`);
       onComplete({ message: `No API key provided for ${provider}.`, actions: [] });
+      return;
+    }
+
+    if (message.length > 32000) {
+      write("Your message is too long. Please keep messages under 32,000 characters.");
+      onComplete({ message: "Message too long.", actions: [] });
       return;
     }
 
@@ -568,8 +588,11 @@ export async function streamAIMessage(
       onComplete(parsed);
     }
   } catch (error: any) {
-    const errorMessage = error?.message || String(error);
-    write(`\n\nError: ${errorMessage}`);
-    onComplete({ message: `An error occurred while communicating with the AI provider: ${errorMessage}`, actions: [] });
+    const rawMessage = error?.message || String(error);
+    const safeMessage = rawMessage
+      .replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]')
+      .replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
+    write(`\n\nError: ${safeMessage}`);
+    onComplete({ message: `An error occurred while communicating with the AI provider: ${safeMessage}`, actions: [] });
   }
 }

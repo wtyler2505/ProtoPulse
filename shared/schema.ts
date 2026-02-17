@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp, serial, numeric, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp, serial, numeric, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -24,6 +24,7 @@ export const architectureNodes = pgTable("architecture_nodes", {
   data: jsonb("data"),
 }, (table) => [
   index("idx_arch_nodes_project").on(table.projectId),
+  uniqueIndex("uq_arch_nodes_project_node").on(table.projectId, table.nodeId),
 ]);
 
 export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true });
@@ -45,6 +46,7 @@ export const architectureEdges = pgTable("architecture_edges", {
   netName: text("net_name"),
 }, (table) => [
   index("idx_arch_edges_project").on(table.projectId),
+  uniqueIndex("uq_arch_edges_project_edge").on(table.projectId, table.edgeId),
 ]);
 
 export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true });

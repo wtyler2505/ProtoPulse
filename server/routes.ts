@@ -59,6 +59,9 @@ export async function registerRoutes(
     const id = parseIdParam(req.params.id);
     const parsed = insertProjectSchema.partial().safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    if (parsed.data.name !== undefined && parsed.data.name.trim().length === 0) {
+      return res.status(400).json({ message: "Project name cannot be empty" });
+    }
     const updated = await storage.updateProject(id, parsed.data);
     if (!updated) return res.status(404).json({ message: "Project not found" });
     res.json(updated);
@@ -259,11 +262,11 @@ export async function registerRoutes(
 
   app.post("/api/chat/ai", asyncHandler(async (req, res) => {
     const aiRequestSchema = z.object({
-      message: z.string().min(1),
+      message: z.string().min(1).max(32000),
       provider: z.enum(["anthropic", "gemini"]),
-      model: z.string().min(1),
-      apiKey: z.string().min(1),
-      projectId: z.number().optional(),
+      model: z.string().min(1).max(200),
+      apiKey: z.string().min(1).max(500),
+      projectId: z.number(),
       activeView: z.string().optional(),
       schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
       activeSheetId: z.string().optional(),
@@ -274,8 +277,8 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
     }
 
-    const { message, provider, model, apiKey, projectId: reqProjectId } = parsed.data;
-    const pid = reqProjectId || 1;
+    const { message, provider, model, apiKey } = parsed.data;
+    const pid = parsed.data.projectId;
 
     const [nodes, edges, bomData, validation, chatHistory, project] = await Promise.all([
       storage.getNodes(pid),
@@ -346,18 +349,18 @@ export async function registerRoutes(
 
   app.post("/api/chat/ai/stream", asyncHandler(async (req, res) => {
     const aiRequestSchema = z.object({
-      message: z.string().min(1),
+      message: z.string().min(1).max(32000),
       provider: z.enum(["anthropic", "gemini"]),
-      model: z.string().min(1),
-      apiKey: z.string().min(1),
-      projectId: z.number().optional(),
+      model: z.string().min(1).max(200),
+      apiKey: z.string().min(1).max(500),
+      projectId: z.number(),
       activeView: z.string().optional(),
       schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
       activeSheetId: z.string().optional(),
       temperature: z.number().min(0).max(2).optional(),
-      customSystemPrompt: z.string().optional(),
+      customSystemPrompt: z.string().max(10000).optional(),
       selectedNodeId: z.string().nullable().optional(),
-      changeDiff: z.string().optional(),
+      changeDiff: z.string().max(50000).optional(),
     });
 
     const parsed = aiRequestSchema.safeParse(req.body);
@@ -365,8 +368,8 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
     }
 
-    const { message, provider, model, apiKey, projectId: reqProjectId, temperature } = parsed.data;
-    const pid = reqProjectId || 1;
+    const { message, provider, model, apiKey, temperature } = parsed.data;
+    const pid = parsed.data.projectId;
 
     const [nodes, edges, bomData, validation, chatHistory, project] = await Promise.all([
       storage.getNodes(pid),

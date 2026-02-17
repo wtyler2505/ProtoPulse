@@ -8,14 +8,25 @@ import { createServer } from "http";
 const app = express();
 app.set("trust proxy", 1);
 
-if (process.env.NODE_ENV === "production") {
-  app.use(helmet());
-} else {
-  app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-  }));
-}
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: [
+        "'self'",
+        ...(process.env.NODE_ENV !== "production" ? ["ws://localhost:*", "ws://0.0.0.0:*"] : []),
+      ],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+}));
 
 // Rate limit API requests to prevent brute-force attacks and abuse【697222849486831†L78-L93】.
 const apiLimiter = rateLimit({
@@ -31,6 +42,16 @@ const httpServer = createServer(app);
 app.use(express.json({ limit: "1mb" }));
 
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+
+app.use((req, res, next) => {
+  if (req.path === '/api/chat/ai/stream') return next();
+  req.setTimeout(30000, () => {
+    if (!res.headersSent) {
+      res.status(408).json({ message: "Request timeout" });
+    }
+  });
+  next();
+});
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -71,6 +92,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const { checkConnection } = await import("./db");
+  await checkConnection();
+
   await registerRoutes(httpServer, app);
 
   app.get("/api/health", async (_req, res) => {
