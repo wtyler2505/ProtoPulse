@@ -6,12 +6,18 @@ import { z } from "zod";
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  description: text("description"),
+  description: text("description").default(""),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertProjectSchema = createInsertSchema(projects).omit({ id: true });
+export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
+
+const nodeDataSchema = z.object({
+  description: z.string().optional(),
+}).passthrough().nullable().optional();
 
 export const architectureNodes = pgTable("architecture_nodes", {
   id: serial("id").primaryKey(),
@@ -22,14 +28,22 @@ export const architectureNodes = pgTable("architecture_nodes", {
   positionX: real("position_x").notNull(),
   positionY: real("position_y").notNull(),
   data: jsonb("data"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_arch_nodes_project").on(table.projectId),
   uniqueIndex("uq_arch_nodes_project_node").on(table.projectId, table.nodeId),
 ]);
 
-export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true });
+export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true, updatedAt: true }).extend({
+  nodeType: z.string().min(1).max(100),
+  data: nodeDataSchema,
+});
 export type InsertArchitectureNode = z.infer<typeof insertArchitectureNodeSchema>;
 export type ArchitectureNode = typeof architectureNodes.$inferSelect;
+
+const edgeStyleSchema = z.object({
+  stroke: z.string().optional(),
+}).passthrough().nullable().optional();
 
 export const architectureEdges = pgTable("architecture_edges", {
   id: serial("id").primaryKey(),
@@ -49,7 +63,9 @@ export const architectureEdges = pgTable("architecture_edges", {
   uniqueIndex("uq_arch_edges_project_edge").on(table.projectId, table.edgeId),
 ]);
 
-export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true });
+export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true }).extend({
+  style: edgeStyleSchema,
+});
 export type InsertArchitectureEdge = z.infer<typeof insertArchitectureEdgeSchema>;
 export type ArchitectureEdge = typeof architectureEdges.$inferSelect;
 
@@ -66,11 +82,14 @@ export const bomItems = pgTable("bom_items", {
   stock: integer("stock").notNull().default(0),
   status: text("status").notNull().default("In Stock"),
   leadTime: text("lead_time"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_bom_items_project").on(table.projectId),
 ]);
 
-export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true });
+export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true, totalPrice: true, updatedAt: true }).extend({
+  status: z.enum(["In Stock", "Low Stock", "Out of Stock", "On Order"]).default("In Stock"),
+});
 export type InsertBomItem = z.infer<typeof insertBomItemSchema>;
 export type BomItem = typeof bomItems.$inferSelect;
 
@@ -85,7 +104,9 @@ export const validationIssues = pgTable("validation_issues", {
   index("idx_validation_issues_project").on(table.projectId),
 ]);
 
-export const insertValidationIssueSchema = createInsertSchema(validationIssues).omit({ id: true });
+export const insertValidationIssueSchema = createInsertSchema(validationIssues).omit({ id: true }).extend({
+  severity: z.enum(["error", "warning", "info"]),
+});
 export type InsertValidationIssue = z.infer<typeof insertValidationIssueSchema>;
 export type ValidationIssue = typeof validationIssues.$inferSelect;
 
@@ -98,9 +119,12 @@ export const chatMessages = pgTable("chat_messages", {
   mode: text("mode").default("chat"),
 }, (table) => [
   index("idx_chat_messages_project").on(table.projectId),
+  index("idx_chat_messages_project_ts").on(table.projectId, table.timestamp),
 ]);
 
-export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, timestamp: true });
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, timestamp: true }).extend({
+  role: z.enum(["user", "assistant", "system"]),
+});
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 
@@ -112,6 +136,7 @@ export const historyItems = pgTable("history_items", {
   timestamp: timestamp("timestamp").defaultNow().notNull(),
 }, (table) => [
   index("idx_history_items_project").on(table.projectId),
+  index("idx_history_items_project_ts").on(table.projectId, table.timestamp),
 ]);
 
 export const insertHistoryItemSchema = createInsertSchema(historyItems).omit({ id: true, timestamp: true });

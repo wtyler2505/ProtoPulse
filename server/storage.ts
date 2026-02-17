@@ -48,6 +48,10 @@ export interface IStorage {
   createHistoryItem(item: InsertHistoryItem): Promise<HistoryItem>;
 }
 
+function computeTotalPrice(quantity: number, unitPrice: string | number): string {
+  return String((quantity * parseFloat(String(unitPrice))).toFixed(4));
+}
+
 export class DatabaseStorage implements IStorage {
   async getProjects(): Promise<Project[]> {
     return db.select().from(projects);
@@ -64,7 +68,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateProject(id: number, data: Partial<InsertProject>): Promise<Project | undefined> {
-    const [updated] = await db.update(projects).set(data).where(eq(projects.id, id)).returning();
+    const [updated] = await db.update(projects).set({ ...data, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
     return updated;
   }
 
@@ -109,14 +113,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBomItem(item: InsertBomItem): Promise<BomItem> {
-    const [created] = await db.insert(bomItems).values(item).returning();
+    const totalPrice = computeTotalPrice(item.quantity, item.unitPrice);
+    const [created] = await db.insert(bomItems).values({ ...item, totalPrice }).returning();
     return created;
   }
 
   async updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined> {
     const { projectId: _ignoreProjectId, ...safeData } = item as any;
+
+    if (safeData.quantity !== undefined || safeData.unitPrice !== undefined) {
+      const [existing] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)));
+      if (!existing) return undefined;
+      const quantity = safeData.quantity ?? existing.quantity;
+      const unitPrice = safeData.unitPrice ?? existing.unitPrice;
+      const totalPrice = computeTotalPrice(quantity, unitPrice);
+      const [updated] = await db.update(bomItems)
+        .set({ ...safeData, totalPrice, updatedAt: new Date() })
+        .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
+        .returning();
+      return updated;
+    }
+
     const [updated] = await db.update(bomItems)
-      .set(safeData)
+      .set({ ...safeData, updatedAt: new Date() })
       .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
       .returning();
     return updated;

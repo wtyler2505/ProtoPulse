@@ -82,7 +82,7 @@ async function buildAppStateFromProject(
       id: n.nodeId,
       label: n.label,
       type: n.nodeType,
-      description: (n.data as any)?.description,
+      description: (n.data as Record<string, unknown> | null)?.description as string | undefined,
       positionX: n.positionX,
       positionY: n.positionY,
     })),
@@ -330,11 +330,11 @@ export async function registerRoutes(
     ]);
 
     const bomData = [
-      { projectId: project.id, partNumber: "ESP32-S3-WROOM-1", manufacturer: "Espressif", description: "Wi-Fi/BLE MCU Module", quantity: 1, unitPrice: "3.5000", totalPrice: "3.5000", supplier: "Mouser", stock: 1240, status: "In Stock" },
-      { projectId: project.id, partNumber: "TP4056", manufacturer: "Top Power", description: "Li-Ion Charger IC", quantity: 1, unitPrice: "0.1500", totalPrice: "0.1500", supplier: "LCSC", stock: 50000, status: "In Stock" },
-      { projectId: project.id, partNumber: "SX1262IMLTRT", manufacturer: "Semtech", description: "LoRa Transceiver", quantity: 1, unitPrice: "4.2000", totalPrice: "4.2000", supplier: "Digi-Key", stock: 85, status: "Low Stock" },
-      { projectId: project.id, partNumber: "SHT40-AD1B-R2", manufacturer: "Sensirion", description: "Sensor Humidity/Temp", quantity: 1, unitPrice: "1.8500", totalPrice: "1.8500", supplier: "Mouser", stock: 5000, status: "In Stock" },
-      { projectId: project.id, partNumber: "USB4105-GF-A", manufacturer: "GCT", description: "USB Type-C Receptacle", quantity: 1, unitPrice: "0.6500", totalPrice: "0.6500", supplier: "Digi-Key", stock: 12000, status: "In Stock" },
+      { projectId: project.id, partNumber: "ESP32-S3-WROOM-1", manufacturer: "Espressif", description: "Wi-Fi/BLE MCU Module", quantity: 1, unitPrice: "3.5000", supplier: "Mouser", stock: 1240, status: "In Stock" as const },
+      { projectId: project.id, partNumber: "TP4056", manufacturer: "Top Power", description: "Li-Ion Charger IC", quantity: 1, unitPrice: "0.1500", supplier: "LCSC", stock: 50000, status: "In Stock" as const },
+      { projectId: project.id, partNumber: "SX1262IMLTRT", manufacturer: "Semtech", description: "LoRa Transceiver", quantity: 1, unitPrice: "4.2000", supplier: "Digi-Key", stock: 85, status: "Low Stock" as const },
+      { projectId: project.id, partNumber: "SHT40-AD1B-R2", manufacturer: "Sensirion", description: "Sensor Humidity/Temp", quantity: 1, unitPrice: "1.8500", supplier: "Mouser", stock: 5000, status: "In Stock" as const },
+      { projectId: project.id, partNumber: "USB4105-GF-A", manufacturer: "GCT", description: "USB Type-C Receptacle", quantity: 1, unitPrice: "0.6500", supplier: "Digi-Key", stock: 12000, status: "In Stock" as const },
     ];
     await Promise.all(bomData.map(item => storage.createBomItem(item)));
 
