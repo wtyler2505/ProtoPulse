@@ -81,7 +81,7 @@ export interface ProjectHistoryItem {
   user: 'User' | 'AI';
 }
 
-export type ViewMode = 'project_explorer' | 'output' | 'architecture' | 'schematic' | 'procurement' | 'validation';
+export type ViewMode = 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'procurement' | 'validation';
 
 interface ProjectState {
   activeView: ViewMode;

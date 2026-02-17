@@ -59,7 +59,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
 
   const navItems: { icon: typeof LayoutGrid; view: string; label: string }[] = [
     { icon: LayoutGrid, view: 'architecture', label: 'Architecture' },
-    { icon: Cpu, view: 'schematic', label: 'Schematic' },
+    { icon: Cpu, view: 'component_editor', label: 'Component Editor' },
     { icon: Package, view: 'procurement', label: 'Procurement' },
     { icon: Activity, view: 'validation', label: 'Validation' },
     { icon: TerminalSquare, view: 'output', label: 'Output' },

@@ -5,7 +5,7 @@ import ChatPanel from '@/components/panels/ChatPanel';
 import { ViewMode } from '@/lib/project-context';
 
 const ArchitectureView = lazy(() => import('@/components/views/ArchitectureView'));
-const SchematicView = lazy(() => import('@/components/views/SchematicView'));
+const ComponentEditorView = lazy(() => import('@/components/views/ComponentEditorView'));
 const ProcurementView = lazy(() => import('@/components/views/ProcurementView'));
 const ValidationView = lazy(() => import('@/components/views/ValidationView'));
 const OutputView = lazy(() => import('@/components/views/OutputView'));
@@ -18,7 +18,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 const tabDescriptions: Record<string, string> = {
   output: 'View build output and system logs',
   architecture: 'Design system block diagram',
-  schematic: 'View detailed circuit schematics',
+  component_editor: 'Design individual electronic components',
   procurement: 'Manage bill of materials and sourcing',
   validation: 'Run design rule checks',
 };
@@ -101,7 +101,7 @@ function WorkspaceContent() {
     { id: 'project_explorer', label: 'Project Explorer', icon: null },
     { id: 'output', label: 'Output', icon: TerminalSquare },
     { id: 'architecture', label: 'Architecture', icon: LayoutGrid },
-    { id: 'schematic', label: 'Schematic', icon: Cpu },
+    { id: 'component_editor', label: 'Component Editor', icon: Cpu },
     { id: 'procurement', label: 'Procurement', icon: Package },
     { id: 'validation', label: 'Validation', icon: Activity },
   ];
@@ -238,10 +238,10 @@ function WorkspaceContent() {
                   </Suspense>
                 </ErrorBoundary>
               )}
-              {activeView === 'schematic' && (
+              {activeView === 'component_editor' && (
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
-                    <SchematicView />
+                    <ComponentEditorView />
                   </Suspense>
                 </ErrorBoundary>
               )}

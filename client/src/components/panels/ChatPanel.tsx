@@ -129,24 +129,24 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
     const viewMap: Record<string, string> = {
       'architecture': 'architecture',
-      'schematic': 'schematic',
+      'component editor': 'component_editor',
       'procurement': 'procurement',
       'validation': 'validation',
       'output': 'output',
     };
     for (const [key, view] of Object.entries(viewMap)) {
       if ((lower.includes('switch to') || lower.includes('go to') || lower.includes('show') || lower.includes('open')) && lower.includes(key)) {
-        if (key === 'schematic') {
+        if (key === 'component editor') {
           const sheetMatch = lower.match(/sheet\s+(.+)/);
           if (sheetMatch) {
             const sheetName = sheetMatch[1].trim();
             const sheet = schematicSheets.find((s: any) => s.name.toLowerCase().includes(sheetName) || s.id.toLowerCase() === sheetName);
             if (sheet) {
               setActiveSheetId(sheet.id);
-              setActiveView('schematic' as any);
+              setActiveView('component_editor' as any);
               addToHistory(`Opened schematic sheet: ${sheet.name}`, 'AI');
               addOutputLog(`[AI] Opened schematic sheet: ${sheet.name}`);
-              return `[ACTION] Opened schematic sheet '${sheet.name}'.\n\nYou can now view and edit this sheet in the schematic editor.`;
+              return `[ACTION] Opened schematic sheet '${sheet.name}'.\n\nYou can now view and edit this sheet in the component editor.`;
             }
           }
         }
@@ -363,15 +363,15 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     }
 
     if (lower === 'help' || lower.includes('what can you do') || lower.includes('show help') || lower.includes('commands')) {
-      return `Here's what I can do:\n\n**Navigation:** Switch between views (architecture, schematic, procurement, validation, output)\n\n**Design:** Add/remove nodes, connect components, generate architectures, clear all nodes\n\n**BOM:** Add/remove parts, export CSV, optimize costs\n\n**Validation:** Run DRC checks, fix all issues\n\n**Project:** Rename project, update description, view summary\n\n**Examples:**\n• "add mcu called ATSAMD21"\n• "connect ESP32 to SHT40"\n• "switch to procurement"\n• "generate architecture"\n• "export bom csv"\n• "rename project to MyProject"`;
+      return `Here's what I can do:\n\n**Navigation:** Switch between views (architecture, component editor, procurement, validation, output)\n\n**Design:** Add/remove nodes, connect components, generate architectures, clear all nodes\n\n**BOM:** Add/remove parts, export CSV, optimize costs\n\n**Validation:** Run DRC checks, fix all issues\n\n**Project:** Rename project, update description, view summary\n\n**Examples:**\n• "add mcu called ATSAMD21"\n• "connect ESP32 to SHT40"\n• "switch to procurement"\n• "generate architecture"\n• "export bom csv"\n• "rename project to MyProject"`;
     }
 
     if (lower.includes('clear chat')) {
       return `Chat history is persistent and synced with the project. You can scroll up to review previous conversations.`;
     }
 
-    if (lower.includes('schematic') || lower.includes('generate')) {
-      return "I've analyzed the design for schematic generation. The architecture includes the ESP32-S3, LoRa transceiver, and power management units. All connections follow standard bus protocols. Try 'generate architecture' to create a default layout.";
+    if (lower.includes('component') || lower.includes('generate')) {
+      return "I've analyzed the design for component generation. The architecture includes the ESP32-S3, LoRa transceiver, and power management units. All connections follow standard bus protocols. Try 'generate architecture' to create a default layout or open the Component Editor to design individual parts.";
     } else if (lower.includes('bom') || lower.includes('cost')) {
       return "BOM optimization tips:\n• TP4056 → MCP73831 (saves $0.08/unit, same footprint)\n• USB connector → alternate GCT part (saves $0.12/unit)\nTotal potential savings: $0.20/unit at 1k qty.\n\nTry 'optimize bom' for a full analysis or 'export bom csv' to download.";
     } else if (lower.includes('memory') || lower.includes('ram') || lower.includes('storage')) {
@@ -401,7 +401,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         case 'switch_schematic_sheet':
           setActiveSheetId(action.sheetId);
-          setActiveView('schematic');
+          setActiveView('component_editor');
           addToHistory(`Opened schematic sheet: ${action.sheetId}`, 'AI');
           addOutputLog(`[AI] Opened schematic sheet: ${action.sheetId}`);
           break;

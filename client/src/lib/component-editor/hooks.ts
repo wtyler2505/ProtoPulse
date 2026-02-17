@@ -1,0 +1,74 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import type { ComponentPart } from '@shared/schema';
+
+export function useComponentParts(projectId: number) {
+  return useQuery<ComponentPart[]>({
+    queryKey: ['component-parts', projectId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/projects/${projectId}/component-parts`);
+      return res.json();
+    },
+  });
+}
+
+export function useComponentPart(id: number, projectId: number) {
+  return useQuery<ComponentPart>({
+    queryKey: ['component-part', projectId, id],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/projects/${projectId}/component-parts/${id}`);
+      return res.json();
+    },
+    enabled: id > 0,
+  });
+}
+
+export function useComponentPartByNodeId(projectId: number, nodeId: string | null) {
+  return useQuery<ComponentPart>({
+    queryKey: ['component-part-node', projectId, nodeId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/projects/${projectId}/component-parts/by-node/${nodeId}`);
+      return res.json();
+    },
+    enabled: !!nodeId,
+  });
+}
+
+export function useCreateComponentPart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: number; nodeId?: string; meta?: unknown; connectors?: unknown; buses?: unknown; views?: unknown; constraints?: unknown }) => {
+      const res = await apiRequest('POST', `/api/projects/${data.projectId}/component-parts`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['component-parts'] });
+    },
+  });
+}
+
+export function useUpdateComponentPart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, projectId, data }: { id: number; projectId: number; data: { meta?: unknown; connectors?: unknown; buses?: unknown; views?: unknown; constraints?: unknown; nodeId?: string | null } }) => {
+      const res = await apiRequest('PATCH', `/api/projects/${projectId}/component-parts/${id}`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['component-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['component-part'] });
+    },
+  });
+}
+
+export function useDeleteComponentPart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, projectId }: { id: number; projectId: number }) => {
+      await apiRequest('DELETE', `/api/projects/${projectId}/component-parts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['component-parts'] });
+    },
+  });
+}

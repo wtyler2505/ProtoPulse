@@ -13,6 +13,8 @@ import {
   insertValidationIssueSchema,
   insertChatMessageSchema,
   insertHistoryItemSchema,
+  insertComponentPartSchema,
+  componentParts,
   projects,
   architectureNodes,
   architectureEdges,
@@ -515,6 +517,56 @@ export async function registerRoutes(app: Express): Promise<void> {
     const itemId = parseIdParam(req.params.itemId);
     const deleted = await storage.deleteHistoryItem(itemId, projectId);
     if (!deleted) return res.status(404).json({ message: "History item not found" });
+    res.status(204).end();
+  }));
+
+  // --- Component Parts ---
+
+  app.get("/api/projects/:projectId/component-parts", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const parts = await storage.getComponentParts(projectId);
+    res.json(parts);
+  }));
+
+  app.get("/api/projects/:projectId/component-parts/by-node/:nodeId", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const nodeId = req.params.nodeId;
+    const part = await storage.getComponentPartByNodeId(projectId, nodeId);
+    if (!part) return res.status(404).json({ message: "Component part not found" });
+    res.json(part);
+  }));
+
+  app.get("/api/projects/:projectId/component-parts/:id", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const part = await storage.getComponentPart(id, projectId);
+    if (!part) return res.status(404).json({ message: "Component part not found" });
+    res.json(part);
+  }));
+
+  app.post("/api/projects/:projectId/component-parts", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const parsed = insertComponentPartSchema.omit({ projectId: true }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
+    const part = await storage.createComponentPart({ ...parsed.data, projectId });
+    res.status(201).json(part);
+  }));
+
+  app.patch("/api/projects/:projectId/component-parts/:id", payloadLimit(32 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const parsed = insertComponentPartSchema.partial().omit({ projectId: true }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
+    const updated = await storage.updateComponentPart(id, projectId, parsed.data);
+    if (!updated) return res.status(404).json({ message: "Component part not found" });
+    res.json(updated);
+  }));
+
+  app.delete("/api/projects/:projectId/component-parts/:id", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const deleted = await storage.deleteComponentPart(id, projectId);
+    if (!deleted) return res.status(404).json({ message: "Component part not found" });
     res.status(204).end();
   }));
 

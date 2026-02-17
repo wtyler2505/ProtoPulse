@@ -176,3 +176,24 @@ export type User = typeof users.$inferSelect;
 
 export type Session = typeof sessions.$inferSelect;
 export type ApiKeyRecord = typeof apiKeys.$inferSelect;
+
+export const componentParts = pgTable("component_parts", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  nodeId: text("node_id"),
+  meta: jsonb("meta").notNull().default({}),
+  connectors: jsonb("connectors").notNull().default([]),
+  buses: jsonb("buses").notNull().default([]),
+  views: jsonb("views").notNull().default({}),
+  constraints: jsonb("constraints").notNull().default([]),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_component_parts_project").on(table.projectId),
+  index("idx_component_parts_node").on(table.nodeId),
+]);
+
+export const insertComponentPartSchema = createInsertSchema(componentParts).omit({ id: true, version: true, createdAt: true, updatedAt: true });
+export type InsertComponentPart = z.infer<typeof insertComponentPartSchema>;
+export type ComponentPart = typeof componentParts.$inferSelect;

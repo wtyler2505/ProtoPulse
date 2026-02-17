@@ -9,6 +9,7 @@ import {
   validationIssues, type ValidationIssue, type InsertValidationIssue,
   chatMessages, type ChatMessage, type InsertChatMessage,
   historyItems, type HistoryItem, type InsertHistoryItem,
+  componentParts, type ComponentPart, type InsertComponentPart,
 } from "@shared/schema";
 
 export interface PaginationOptions {
@@ -70,6 +71,13 @@ export interface IStorage {
   createHistoryItem(item: InsertHistoryItem): Promise<HistoryItem>;
   deleteHistoryItems(projectId: number): Promise<void>;
   deleteHistoryItem(id: number, projectId: number): Promise<boolean>;
+
+  getComponentParts(projectId: number): Promise<ComponentPart[]>;
+  getComponentPart(id: number, projectId: number): Promise<ComponentPart | undefined>;
+  getComponentPartByNodeId(projectId: number, nodeId: string): Promise<ComponentPart | undefined>;
+  createComponentPart(part: InsertComponentPart): Promise<ComponentPart>;
+  updateComponentPart(id: number, projectId: number, data: Partial<InsertComponentPart>): Promise<ComponentPart | undefined>;
+  deleteComponentPart(id: number, projectId: number): Promise<boolean>;
 }
 
 function computeTotalPrice(quantity: number, unitPrice: string | number): string {
@@ -471,6 +479,80 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(historyItems.id, id), eq(historyItems.projectId, projectId)))
       .returning();
     return result.length > 0;
+  }
+
+  async getComponentParts(projectId: number): Promise<ComponentPart[]> {
+    try {
+      const cacheKey = `parts:${projectId}`;
+      const cached = cache.get<ComponentPart[]>(cacheKey);
+      if (cached) return cached;
+      const result = await db.select().from(componentParts)
+        .where(eq(componentParts.projectId, projectId))
+        .orderBy(asc(componentParts.id));
+      cache.set(cacheKey, result);
+      return result;
+    } catch (e) {
+      throw new StorageError('getComponentParts', `projects/${projectId}/component-parts`, e);
+    }
+  }
+
+  async getComponentPart(id: number, projectId: number): Promise<ComponentPart | undefined> {
+    try {
+      const [part] = await db.select().from(componentParts)
+        .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)));
+      return part;
+    } catch (e) {
+      throw new StorageError('getComponentPart', `component-parts/${id}`, e);
+    }
+  }
+
+  async getComponentPartByNodeId(projectId: number, nodeId: string): Promise<ComponentPart | undefined> {
+    try {
+      const [part] = await db.select().from(componentParts)
+        .where(and(eq(componentParts.projectId, projectId), eq(componentParts.nodeId, nodeId)));
+      return part;
+    } catch (e) {
+      throw new StorageError('getComponentPartByNodeId', `component-parts/node/${nodeId}`, e);
+    }
+  }
+
+  async createComponentPart(part: InsertComponentPart): Promise<ComponentPart> {
+    try {
+      const [created] = await db.insert(componentParts).values(part).returning();
+      cache.invalidate(`parts:${part.projectId}`);
+      return created;
+    } catch (e) {
+      throw new StorageError('createComponentPart', 'component-parts', e);
+    }
+  }
+
+  async updateComponentPart(id: number, projectId: number, data: Partial<InsertComponentPart>): Promise<ComponentPart | undefined> {
+    try {
+      const { projectId: _ignoreProjectId, ...safeData } = data as any;
+      const [existing] = await db.select().from(componentParts)
+        .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)));
+      if (!existing) return undefined;
+      const [updated] = await db.update(componentParts)
+        .set({ ...safeData, version: existing.version + 1, updatedAt: new Date() })
+        .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)))
+        .returning();
+      if (updated) cache.invalidate(`parts:${projectId}`);
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateComponentPart', `component-parts/${id}`, e);
+    }
+  }
+
+  async deleteComponentPart(id: number, projectId: number): Promise<boolean> {
+    try {
+      const result = await db.delete(componentParts)
+        .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)))
+        .returning();
+      if (result.length > 0) cache.invalidate(`parts:${projectId}`);
+      return result.length > 0;
+    } catch (e) {
+      throw new StorageError('deleteComponentPart', `component-parts/${id}`, e);
+    }
   }
 }
 

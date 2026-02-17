@@ -38,12 +38,12 @@ export default function SheetList({
             <div
               className={cn(
                 "text-xs cursor-pointer py-1 px-2 flex items-center gap-2 transition-colors",
-                activeSheetId === sheet.id && activeView === 'schematic'
+                activeSheetId === sheet.id && activeView === 'component_editor'
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
               )}
               onClick={() => {
-                setActiveView('schematic');
+                setActiveView('component_editor');
                 setActiveSheetId(sheet.id);
               }}
             >
@@ -52,7 +52,7 @@ export default function SheetList({
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-            <ContextMenuItem onSelect={() => { setActiveView('schematic'); setActiveSheetId(sheet.id); }}>Open Sheet</ContextMenuItem>
+            <ContextMenuItem onSelect={() => { setActiveView('component_editor'); setActiveSheetId(sheet.id); }}>Open Sheet</ContextMenuItem>
             <ContextMenuItem onSelect={() => { copyToClipboard(sheet.name); addOutputLog('[SIDEBAR] Copied sheet: ' + sheet.name); }}>Copy Sheet Name</ContextMenuItem>
             <ContextMenuItem onSelect={() => { addOutputLog('[SIDEBAR] Sheet: ' + sheet.name + ' (' + sheet.components + ' components)'); }}>Sheet Info</ContextMenuItem>
           </ContextMenuContent>
