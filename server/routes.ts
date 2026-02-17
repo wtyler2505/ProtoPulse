@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { processAIMessage } from "./ai";
 import {
   insertProjectSchema,
   insertArchitectureNodeSchema,
@@ -229,6 +230,91 @@ export async function registerRoutes(
     await storage.createHistoryItem({ projectId: project.id, action: "Auto-connected Power Rails", user: "AI" });
 
     res.status(201).json({ message: "Seeded successfully", project });
+  });
+
+  // --- AI Chat Endpoint ---
+
+  app.post("/api/chat/ai", async (req, res) => {
+    const aiRequestSchema = z.object({
+      message: z.string().min(1),
+      provider: z.enum(["anthropic", "gemini"]),
+      model: z.string().min(1),
+      apiKey: z.string().min(1),
+      projectId: z.number().optional(),
+      activeView: z.string().optional(),
+      schematicSheets: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+      activeSheetId: z.string().optional(),
+    });
+
+    const parsed = aiRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request: " + parsed.error.message });
+    }
+
+    const { message, provider, model, apiKey, projectId: reqProjectId } = parsed.data;
+    const pid = reqProjectId || 1;
+
+    const [nodes, edges, bomData, validation, chatHistory, project] = await Promise.all([
+      storage.getNodes(pid),
+      storage.getEdges(pid),
+      storage.getBomItems(pid),
+      storage.getValidationIssues(pid),
+      storage.getChatMessages(pid),
+      storage.getProject(pid),
+    ]);
+
+    const appState = {
+      projectName: project?.name || "Untitled",
+      projectDescription: project?.description || "",
+      activeView: parsed.data.activeView || "architecture",
+      nodes: nodes.map(n => ({
+        id: n.nodeId,
+        label: n.label,
+        type: n.nodeType,
+        description: (n.data as any)?.description,
+        positionX: n.positionX,
+        positionY: n.positionY,
+      })),
+      edges: edges.map(e => ({
+        id: e.edgeId,
+        source: e.source,
+        target: e.target,
+        label: e.label || undefined,
+      })),
+      bom: bomData.map(b => ({
+        id: String(b.id),
+        partNumber: b.partNumber,
+        manufacturer: b.manufacturer,
+        description: b.description,
+        quantity: b.quantity,
+        unitPrice: b.unitPrice,
+        supplier: b.supplier,
+        status: b.status,
+      })),
+      validationIssues: validation.map(v => ({
+        id: String(v.id),
+        severity: v.severity,
+        message: v.message,
+        componentId: v.componentId || undefined,
+        suggestion: v.suggestion || undefined,
+      })),
+      schematicSheets: parsed.data.schematicSheets || [],
+      activeSheetId: parsed.data.activeSheetId || "top",
+      chatHistory: chatHistory.slice(-10).map(m => ({
+        role: m.role,
+        content: m.content,
+      })),
+    };
+
+    const result = await processAIMessage({
+      message,
+      provider,
+      model,
+      apiKey,
+      appState,
+    });
+
+    res.json(result);
   });
 
   return httpServer;

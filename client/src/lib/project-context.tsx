@@ -90,6 +90,7 @@ interface ProjectState {
 
   issues: ValidationIssue[];
   runValidation: () => void;
+  addValidationIssue: (issue: { severity: string; message: string; componentId?: string; suggestion?: string }) => void;
   deleteValidationIssue: (id: number) => void;
 
   messages: ChatMessage[];
@@ -387,6 +388,10 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     addValidationIssueMutation.mutate(check);
   };
 
+  const addValidationIssue = (issue: { severity: string; message: string; componentId?: string; suggestion?: string }) => {
+    addValidationIssueMutation.mutate(issue);
+  };
+
   const addBomItem = (item: Omit<BomItem, 'id'>) => addBomItemMutation.mutate(item);
   const deleteBomItemFn = (id: number) => deleteBomItemMutation.mutate(id);
   const updateBomItemFn = (id: number, data: Partial<BomItem>) => updateBomItemMutation.mutate({ id, data });
@@ -420,6 +425,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       addBomItem, deleteBomItem: deleteBomItemFn, updateBomItem: updateBomItemFn,
       issues: validationQuery.data ?? [],
       runValidation,
+      addValidationIssue,
       deleteValidationIssue,
       messages: chatQuery.data ?? [],
       addMessage, isGenerating, setIsGenerating,

@@ -78,9 +78,15 @@ Request validation uses Zod schemas generated from Drizzle table definitions via
 ### Required Services
 - **PostgreSQL**: Primary database, connection via `DATABASE_URL` environment variable (required)
 
+### AI Integration (Active)
+- **Anthropic Claude**: Server-side integration via `@anthropic-ai/sdk` — models: Claude Sonnet 4.5, Haiku 4.5, Opus 4.1
+- **Google Gemini**: Server-side integration via `@google/generative-ai` — models: Gemini 2.5 Flash, 2.5 Pro
+- **AI Endpoint**: `POST /api/chat/ai` receives user message + full app state context, calls selected provider, returns structured response with action commands
+- **Action System**: AI can control all app features via 18 action types (node/edge CRUD, BOM management, validation, view switching, project settings, exports)
+- **API Keys**: User-provided via ChatPanel settings UI, stored in localStorage (client-side), sent per-request to server
+- **Fallback**: When no API key is configured, local keyword-matching command system is used
+
 ### Planned/Partially Integrated
-- **OpenAI API**: Listed in build dependencies but chat is currently mocked
-- **Google Generative AI**: Listed in build dependencies but not yet active
 - **Stripe**: Listed in build allowlist, suggesting planned payment integration
 
 ### Key NPM Packages

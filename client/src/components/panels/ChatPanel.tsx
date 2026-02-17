@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles, Loader2, Image as ImageIcon, Video, Mic, Plus, Zap, X } from 'lucide-react';
+import { Send, Bot, User, Sparkles, Loader2, Image as ImageIcon, Video, Mic, Plus, Zap, X, Settings2, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { useProject } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,12 +26,24 @@ const quickActionDescriptions: Record<string, string> = {
   'Export BOM CSV': 'Export BOM as CSV file',
 };
 
+const AI_MODELS = {
+  anthropic: [
+    { id: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
+    { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
+    { id: 'claude-opus-4-1', label: 'Claude Opus 4.1' },
+  ],
+  gemini: [
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+  ],
+};
+
 export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 350, onToggleCollapse }: ChatPanelProps) {
   const { 
     messages, addMessage, isGenerating, setIsGenerating, 
-    runValidation, deleteValidationIssue, issues,
+    runValidation, addValidationIssue, deleteValidationIssue, issues,
     setNodes, setEdges, nodes, edges,
-    bom, addBomItem, deleteBomItem, 
+    bom, addBomItem, deleteBomItem, updateBomItem,
     activeView, setActiveView,
     activeSheetId, setActiveSheetId, schematicSheets,
     projectName, setProjectName, projectDescription, setProjectDescription,
@@ -42,13 +54,36 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const [showQuickActions, setShowQuickActions] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const [aiProvider, setAiProvider] = useState<'anthropic' | 'gemini'>(() => {
+    return (localStorage.getItem('protopulse_ai_provider') as any) || 'anthropic';
+  });
+  const [aiModel, setAiModel] = useState(() => {
+    return localStorage.getItem('protopulse_ai_model') || 'claude-sonnet-4-5';
+  });
+  const [aiApiKey, setAiApiKey] = useState(() => {
+    return localStorage.getItem('protopulse_ai_apikey') || '';
+  });
+  const [showSettings, setShowSettings] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('protopulse_ai_provider', aiProvider);
+  }, [aiProvider]);
+
+  useEffect(() => {
+    localStorage.setItem('protopulse_ai_model', aiModel);
+  }, [aiModel]);
+
+  useEffect(() => {
+    localStorage.setItem('protopulse_ai_apikey', aiApiKey);
+  }, [aiApiKey]);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages, isGenerating]);
 
-  const processAICommand = (msgText: string): string => {
+  const processLocalCommand = (msgText: string): string => {
     const lower = msgText.toLowerCase().trim();
 
     const viewMap: Record<string, string> = {
@@ -315,10 +350,230 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     return "I've analyzed your request. I can help with navigation, design, BOM management, validation, and project settings. Type 'help' to see all available commands.";
   };
 
+  const executeAIActions = (actions: any[]) => {
+    for (const action of actions) {
+      switch (action.type) {
+        case 'switch_view':
+          setActiveView(action.view);
+          addToHistory(`Switched to ${action.view} view`, 'AI');
+          addOutputLog(`[AI] Switched to ${action.view} view`);
+          break;
+
+        case 'switch_schematic_sheet':
+          setActiveSheetId(action.sheetId);
+          setActiveView('schematic');
+          addToHistory(`Opened schematic sheet: ${action.sheetId}`, 'AI');
+          addOutputLog(`[AI] Opened schematic sheet: ${action.sheetId}`);
+          break;
+
+        case 'add_node': {
+          const newNode = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            type: 'custom' as const,
+            position: { x: action.positionX || 200 + Math.random() * 400, y: action.positionY || 100 + Math.random() * 300 },
+            data: { label: action.label, type: action.nodeType || 'generic', description: action.description || '' },
+          };
+          setNodes([...nodes, newNode]);
+          setActiveView('architecture');
+          addToHistory(`Added ${action.nodeType || 'component'}: ${action.label}`, 'AI');
+          addOutputLog(`[AI] Added node: ${action.label}`);
+          break;
+        }
+
+        case 'remove_node': {
+          const nodeToRemove = nodes.find((n: any) => n.data.label.toLowerCase() === action.nodeLabel.toLowerCase());
+          if (nodeToRemove) {
+            setNodes(nodes.filter((n: any) => n.id !== nodeToRemove.id));
+            setEdges(edges.filter((e: any) => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id));
+            addToHistory(`Removed node: ${action.nodeLabel}`, 'AI');
+            addOutputLog(`[AI] Removed node: ${action.nodeLabel}`);
+          }
+          break;
+        }
+
+        case 'update_node': {
+          const nodeToUpdate = nodes.find((n: any) => n.data.label.toLowerCase() === action.nodeLabel.toLowerCase());
+          if (nodeToUpdate) {
+            const updatedNodes = nodes.map((n: any) => {
+              if (n.id === nodeToUpdate.id) {
+                return {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    label: action.newLabel || n.data.label,
+                    type: action.newType || n.data.type,
+                    description: action.newDescription || n.data.description,
+                  },
+                };
+              }
+              return n;
+            });
+            setNodes(updatedNodes);
+            addToHistory(`Updated node: ${action.nodeLabel}`, 'AI');
+            addOutputLog(`[AI] Updated node: ${action.nodeLabel}`);
+          }
+          break;
+        }
+
+        case 'connect_nodes': {
+          const sourceNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.sourceLabel.toLowerCase()));
+          const targetNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.targetLabel.toLowerCase()));
+          if (sourceNode && targetNode) {
+            const newEdge = {
+              id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+              source: sourceNode.id,
+              target: targetNode.id,
+              label: action.edgeLabel || action.busType || 'Data',
+              animated: true,
+            };
+            setEdges([...edges, newEdge]);
+            addToHistory(`Connected ${sourceNode.data.label} → ${targetNode.data.label}`, 'AI');
+            addOutputLog(`[AI] Connected ${sourceNode.data.label} → ${targetNode.data.label}`);
+          }
+          break;
+        }
+
+        case 'remove_edge': {
+          const srcNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.sourceLabel.toLowerCase()));
+          const tgtNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.targetLabel.toLowerCase()));
+          if (srcNode && tgtNode) {
+            setEdges(edges.filter((e: any) => !(e.source === srcNode.id && e.target === tgtNode.id)));
+            addToHistory(`Removed edge: ${action.sourceLabel} → ${action.targetLabel}`, 'AI');
+            addOutputLog(`[AI] Removed edge: ${action.sourceLabel} → ${action.targetLabel}`);
+          }
+          break;
+        }
+
+        case 'clear_canvas':
+          setNodes([]);
+          setEdges([]);
+          addToHistory('Cleared all architecture nodes', 'AI');
+          addOutputLog('[AI] Cleared all nodes and edges');
+          break;
+
+        case 'generate_architecture': {
+          const genNodes = action.components.map((comp: any, idx: number) => ({
+            id: `gen-${Date.now()}-${idx}`,
+            type: 'custom' as const,
+            position: { x: comp.positionX, y: comp.positionY },
+            data: { label: comp.label, type: comp.nodeType, description: comp.description },
+          }));
+          setNodes(genNodes);
+
+          const genEdges = action.connections.map((conn: any, idx: number) => {
+            const src = genNodes.find((n: any) => n.data.label === conn.sourceLabel);
+            const tgt = genNodes.find((n: any) => n.data.label === conn.targetLabel);
+            return {
+              id: `gen-e-${Date.now()}-${idx}`,
+              source: src?.id || '',
+              target: tgt?.id || '',
+              label: conn.label,
+              animated: true,
+            };
+          }).filter((e: any) => e.source && e.target);
+          setEdges(genEdges);
+          setActiveView('architecture');
+          addToHistory(`Generated architecture with ${genNodes.length} components`, 'AI');
+          addOutputLog(`[AI] Generated architecture: ${genNodes.length} components, ${genEdges.length} connections`);
+          break;
+        }
+
+        case 'add_bom_item':
+          addBomItem({
+            partNumber: action.partNumber,
+            manufacturer: action.manufacturer,
+            description: action.description,
+            quantity: action.quantity || 1,
+            unitPrice: action.unitPrice || 0,
+            totalPrice: (action.quantity || 1) * (action.unitPrice || 0),
+            supplier: action.supplier || 'TBD',
+            stock: 0,
+            status: action.status || 'In Stock',
+          });
+          addToHistory(`Added BOM item: ${action.partNumber}`, 'AI');
+          addOutputLog(`[AI] Added BOM item: ${action.partNumber}`);
+          break;
+
+        case 'remove_bom_item': {
+          const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          if (bomItem) {
+            deleteBomItem(Number(bomItem.id));
+            addToHistory(`Removed BOM item: ${action.partNumber}`, 'AI');
+            addOutputLog(`[AI] Removed BOM item: ${action.partNumber}`);
+          }
+          break;
+        }
+
+        case 'update_bom_item': {
+          const bomToUpdate = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          if (bomToUpdate && updateBomItem) {
+            updateBomItem(Number(bomToUpdate.id), action.updates);
+            addToHistory(`Updated BOM item: ${action.partNumber}`, 'AI');
+            addOutputLog(`[AI] Updated BOM: ${action.partNumber}`);
+          }
+          break;
+        }
+
+        case 'run_validation':
+          runValidation();
+          addToHistory('Ran design validation', 'AI');
+          addOutputLog('[AI] Ran design validation');
+          break;
+
+        case 'clear_validation':
+          issues.forEach((issue: any) => deleteValidationIssue(Number(issue.id)));
+          addToHistory('Cleared validation issues', 'AI');
+          addOutputLog('[AI] Cleared all validation issues');
+          break;
+
+        case 'add_validation_issue':
+          addValidationIssue({
+            severity: action.severity,
+            message: action.message,
+            componentId: action.componentId,
+            suggestion: action.suggestion,
+          });
+          addToHistory(`Added validation: ${action.message}`, 'AI');
+          addOutputLog(`[AI] Added validation issue: ${action.message}`);
+          break;
+
+        case 'rename_project':
+          setProjectName(action.name);
+          addToHistory(`Renamed project to: ${action.name}`, 'AI');
+          addOutputLog(`[AI] Renamed project to: ${action.name}`);
+          break;
+
+        case 'update_description':
+          setProjectDescription(action.description);
+          addToHistory(`Updated project description`, 'AI');
+          addOutputLog(`[AI] Updated description: ${action.description}`);
+          break;
+
+        case 'export_bom_csv': {
+          if (bom.length > 0) {
+            const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
+            const rows = bom.map((item: any) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status].join(','));
+            const csv = [headers.join(','), ...rows].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projectName}_BOM.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            addToHistory('Exported BOM as CSV', 'AI');
+            addOutputLog('[AI] Exported BOM as CSV');
+          }
+          break;
+        }
+      }
+    }
+  };
+
   const handleSend = async (messageOverride?: string) => {
     const msgText = messageOverride || input;
     if (!msgText.trim()) return;
-    
+
     setInput('');
     addMessage({
       id: Date.now().toString(),
@@ -330,23 +585,57 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
     setIsGenerating(true);
 
-    setTimeout(() => {
-      let response = processAICommand(msgText);
+    try {
+      if (!aiApiKey) {
+        setTimeout(() => {
+          const response = processLocalCommand(msgText);
+          addMessage({
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: response,
+            timestamp: Date.now()
+          });
+          setIsGenerating(false);
+        }, 500);
+        return;
+      }
 
-      if (mode === 'image') {
-        response = "📐 [Schematic visualization mode] " + response;
-      } else if (mode === 'video') {
-        response = "🎬 [Simulation mode] " + response;
+      const response = await fetch('/api/chat/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: msgText,
+          provider: aiProvider,
+          model: aiModel,
+          apiKey: aiApiKey,
+          activeView,
+          schematicSheets: schematicSheets.map(s => ({ id: s.id, name: s.name })),
+          activeSheetId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.actions && data.actions.length > 0) {
+        executeAIActions(data.actions);
       }
 
       addMessage({
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response,
+        content: data.message,
         timestamp: Date.now()
       });
+    } catch (error: any) {
+      addMessage({
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Error: ${error.message || 'Failed to communicate with AI. Check your settings.'}`,
+        timestamp: Date.now()
+      });
+    } finally {
       setIsGenerating(false);
-    }, 1500);
+    }
   };
 
   if (collapsed) {
@@ -401,6 +690,14 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             onClose={onClose}
             showQuickActions={showQuickActions}
             setShowQuickActions={setShowQuickActions}
+            showSettings={showSettings}
+            setShowSettings={setShowSettings}
+            aiProvider={aiProvider}
+            setAiProvider={setAiProvider}
+            aiModel={aiModel}
+            setAiModel={setAiModel}
+            aiApiKey={aiApiKey}
+            setAiApiKey={setAiApiKey}
           />
         </div>
       </div>
@@ -409,8 +706,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 }
 
 function ChatContent({
-  messages, input, setInput, mode, setMode, isGenerating, handleSend, scrollRef, onClose, showQuickActions, setShowQuickActions
+  messages, input, setInput, mode, setMode, isGenerating, handleSend, scrollRef, onClose, showQuickActions, setShowQuickActions,
+  showSettings, setShowSettings, aiProvider, setAiProvider, aiModel, setAiModel, aiApiKey, setAiApiKey
 }: any) {
+  const [showApiKey, setShowApiKey] = useState(false);
+
   return (
     <>
       <div className="h-14 border-b border-border bg-card/30 backdrop-blur flex items-center justify-between px-4">
@@ -452,6 +752,20 @@ function ChatContent({
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                data-testid="settings-button"
+                className={cn("p-1.5 hover:bg-muted transition-colors", showSettings && "text-primary bg-primary/10")}
+                onClick={() => setShowSettings(!showSettings)}
+              >
+                <Settings2 className="w-4 h-4" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
+              <p>AI Settings</p>
+            </TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
                 data-testid="chat-close"
                 className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1 md:hidden"
                 onClick={onClose}
@@ -466,79 +780,178 @@ function ChatContent({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6" ref={scrollRef}>
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-50">
-            <Bot className="w-12 h-12 mb-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">Ask ProtoPulse AI to generate a schematic, optimize costs, or validate your design.</p>
+      {showSettings ? (
+        <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Settings2 className="w-4 h-4 text-primary" />
+            <h4 className="font-display font-bold tracking-wider text-sm">AI Settings</h4>
           </div>
-        )}
 
-        {messages.map((msg: any) => (
-          <div key={msg.id} className={cn(
-            "flex gap-3 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300",
-            msg.role === 'user' ? "flex-row-reverse" : "flex-row"
-          )}>
-            <div className={cn(
-              "w-8 h-8 flex items-center justify-center shrink-0 border shadow-sm",
-              msg.role === 'user' ? "bg-muted text-foreground border-border" : "bg-primary/10 text-primary border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
-            )}>
-              {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-            </div>
-            
-            <div className="flex flex-col gap-1 max-w-[85%]">
-              <div className={cn(
-                "p-3 leading-relaxed shadow-sm whitespace-pre-wrap",
-                msg.role === 'user' 
-                  ? "bg-primary text-primary-foreground" 
-                  : "bg-muted/30 backdrop-blur border border-border text-foreground"
-              )}>
-                {msg.content}
-              </div>
-              <span className="text-[10px] text-muted-foreground opacity-50 px-1">
-                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            </div>
-          </div>
-        ))}
-
-        {isGenerating && (
-          <div className="flex gap-3 text-sm">
-            <div className="w-8 h-8 flex items-center justify-center shrink-0 border bg-primary/10 text-primary border-primary/20">
-              <Bot className="w-4 h-4" />
-            </div>
-            <div className="bg-muted/50 border border-border text-foreground p-3 flex items-center gap-2">
-              <Loader2 className="w-3 h-3 animate-spin text-primary" />
-              <span className="text-xs text-muted-foreground animate-pulse">Analyzing system requirements...</span>
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Provider</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                data-testid="provider-anthropic"
+                onClick={() => {
+                  setAiProvider('anthropic');
+                  setAiModel(AI_MODELS.anthropic[0].id);
+                }}
+                className={cn(
+                  "p-3 border text-center text-sm font-bold transition-all",
+                  aiProvider === 'anthropic'
+                    ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
+                    : "border-border bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
+                )}
+              >
+                Anthropic
+              </button>
+              <button
+                data-testid="provider-gemini"
+                onClick={() => {
+                  setAiProvider('gemini');
+                  setAiModel(AI_MODELS.gemini[0].id);
+                }}
+                className={cn(
+                  "p-3 border text-center text-sm font-bold transition-all",
+                  aiProvider === 'gemini'
+                    ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]"
+                    : "border-border bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
+                )}
+              >
+                Gemini
+              </button>
             </div>
           </div>
-        )}
-      </div>
 
-      {showQuickActions && !isGenerating && messages.length > 0 && (
-        <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
-          {['Generate Architecture', 'Optimize BOM', 'Run Validation', 'Add MCU Node', 'Switch to Schematic', 'Project Summary', 'Show Help', 'Export BOM CSV'].map((action) => (
-            <Tooltip key={action}>
-              <TooltipTrigger asChild>
-                <button 
-                  onClick={() => handleSend(action)}
-                  className="whitespace-nowrap px-3 py-1.5 bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
-                >
-                  <Zap className="w-3 h-3" />
-                  {action}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top">
-                <p>{quickActionDescriptions[action]}</p>
-              </TooltipContent>
-            </Tooltip>
-          ))}
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Model</label>
+            <div className="relative">
+              <select
+                data-testid="model-select"
+                value={aiModel}
+                onChange={(e) => setAiModel(e.target.value)}
+                className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus:outline-none focus:border-primary"
+              >
+                {AI_MODELS[aiProvider as keyof typeof AI_MODELS].map((m: any) => (
+                  <option key={m.id} value={m.id} className="bg-background text-foreground">{m.label}</option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">API Key</label>
+            <div className="relative">
+              <input
+                data-testid="api-key-input"
+                type={showApiKey ? 'text' : 'password'}
+                value={aiApiKey}
+                onChange={(e) => setAiApiKey(e.target.value)}
+                placeholder="Enter your API key..."
+                className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-10 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40"
+              />
+              <button
+                data-testid="toggle-api-key-visibility"
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+              Get your key at{' '}
+              <span className="text-primary/70">console.anthropic.com</span> or{' '}
+              <span className="text-primary/70">aistudio.google.dev</span>
+            </p>
+          </div>
+
+          <button
+            data-testid="save-settings"
+            onClick={() => setShowSettings(false)}
+            className="w-full py-2.5 bg-primary text-primary-foreground font-bold text-sm tracking-wider hover:bg-primary/90 transition-colors"
+          >
+            Save & Close
+          </button>
         </div>
+      ) : (
+        <>
+          <div className="flex-1 overflow-y-auto p-4 space-y-6" ref={scrollRef}>
+            {messages.length === 0 && (
+              <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-50">
+                <Bot className="w-12 h-12 mb-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">Ask ProtoPulse AI to generate a schematic, optimize costs, or validate your design.</p>
+              </div>
+            )}
+
+            {messages.map((msg: any) => (
+              <div key={msg.id} className={cn(
+                "flex gap-3 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300",
+                msg.role === 'user' ? "flex-row-reverse" : "flex-row"
+              )}>
+                <div className={cn(
+                  "w-8 h-8 flex items-center justify-center shrink-0 border shadow-sm",
+                  msg.role === 'user' ? "bg-muted text-foreground border-border" : "bg-primary/10 text-primary border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]"
+                )}>
+                  {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                </div>
+
+                <div className="flex flex-col gap-1 max-w-[85%]">
+                  <div className={cn(
+                    "p-3 leading-relaxed shadow-sm whitespace-pre-wrap",
+                    msg.role === 'user'
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted/30 backdrop-blur border border-border text-foreground"
+                  )}>
+                    {msg.content}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground opacity-50 px-1">
+                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {isGenerating && (
+              <div className="flex gap-3 text-sm">
+                <div className="w-8 h-8 flex items-center justify-center shrink-0 border bg-primary/10 text-primary border-primary/20">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div className="bg-muted/50 border border-border text-foreground p-3 flex items-center gap-2">
+                  <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                  <span className="text-xs text-muted-foreground animate-pulse">Analyzing system requirements...</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {showQuickActions && !isGenerating && messages.length > 0 && (
+            <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
+              {['Generate Architecture', 'Optimize BOM', 'Run Validation', 'Add MCU Node', 'Switch to Schematic', 'Project Summary', 'Show Help', 'Export BOM CSV'].map((action) => (
+                <Tooltip key={action}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => handleSend(action)}
+                      className="whitespace-nowrap px-3 py-1.5 bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5"
+                    >
+                      <Zap className="w-3 h-3" />
+                      {action}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top">
+                    <p>{quickActionDescriptions[action]}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <div className="p-4 border-t border-border bg-card/40 backdrop-blur">
         <div className="relative">
-          <Input 
+          <Input
             value={input}
             onChange={(e: any) => setInput(e.target.value)}
             onKeyDown={(e: any) => e.key === 'Enter' && handleSend()}
@@ -559,9 +972,9 @@ function ChatContent({
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button 
-                size="icon" 
-                onClick={() => handleSend()} 
+              <Button
+                size="icon"
+                onClick={() => handleSend()}
                 className="absolute right-1 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90"
               >
                 <Send className="w-4 h-4" />
@@ -573,7 +986,7 @@ function ChatContent({
           </Tooltip>
         </div>
         <div className="text-[10px] text-center text-muted-foreground/40 mt-2 font-mono">
-          ProtoPulse AI v2.4 (Model: CircuitGPT-4o)
+          {aiApiKey ? `${aiProvider === 'anthropic' ? 'Anthropic' : 'Gemini'} — ${aiModel}` : 'Local Mode (No API Key)'}
         </div>
       </div>
     </>
