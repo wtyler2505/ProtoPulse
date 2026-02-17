@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp, serial, numeric, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -22,7 +22,9 @@ export const architectureNodes = pgTable("architecture_nodes", {
   positionX: real("position_x").notNull(),
   positionY: real("position_y").notNull(),
   data: jsonb("data"),
-});
+}, (table) => [
+  index("idx_arch_nodes_project").on(table.projectId),
+]);
 
 export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true });
 export type InsertArchitectureNode = z.infer<typeof insertArchitectureNodeSchema>;
@@ -41,7 +43,9 @@ export const architectureEdges = pgTable("architecture_edges", {
   voltage: text("voltage"),
   busWidth: text("bus_width"),
   netName: text("net_name"),
-});
+}, (table) => [
+  index("idx_arch_edges_project").on(table.projectId),
+]);
 
 export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true });
 export type InsertArchitectureEdge = z.infer<typeof insertArchitectureEdgeSchema>;
@@ -54,13 +58,15 @@ export const bomItems = pgTable("bom_items", {
   manufacturer: text("manufacturer").notNull(),
   description: text("description").notNull(),
   quantity: integer("quantity").notNull().default(1),
-  unitPrice: real("unit_price").notNull(),
-  totalPrice: real("total_price").notNull(),
+  unitPrice: numeric("unit_price", { precision: 10, scale: 4 }).notNull(),
+  totalPrice: numeric("total_price", { precision: 10, scale: 4 }).notNull(),
   supplier: text("supplier").notNull(),
   stock: integer("stock").notNull().default(0),
   status: text("status").notNull().default("In Stock"),
   leadTime: text("lead_time"),
-});
+}, (table) => [
+  index("idx_bom_items_project").on(table.projectId),
+]);
 
 export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true });
 export type InsertBomItem = z.infer<typeof insertBomItemSchema>;
@@ -73,7 +79,9 @@ export const validationIssues = pgTable("validation_issues", {
   message: text("message").notNull(),
   componentId: text("component_id"),
   suggestion: text("suggestion"),
-});
+}, (table) => [
+  index("idx_validation_issues_project").on(table.projectId),
+]);
 
 export const insertValidationIssueSchema = createInsertSchema(validationIssues).omit({ id: true });
 export type InsertValidationIssue = z.infer<typeof insertValidationIssueSchema>;
@@ -86,7 +94,9 @@ export const chatMessages = pgTable("chat_messages", {
   content: text("content").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   mode: text("mode").default("chat"),
-});
+}, (table) => [
+  index("idx_chat_messages_project").on(table.projectId),
+]);
 
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, timestamp: true });
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
@@ -98,7 +108,9 @@ export const historyItems = pgTable("history_items", {
   action: text("action").notNull(),
   user: text("user").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_history_items_project").on(table.projectId),
+]);
 
 export const insertHistoryItemSchema = createInsertSchema(historyItems).omit({ id: true, timestamp: true });
 export type InsertHistoryItem = z.infer<typeof insertHistoryItemSchema>;

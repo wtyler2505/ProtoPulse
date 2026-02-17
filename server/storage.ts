@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "./db";
 import {
   projects, type Project, type InsertProject,
@@ -26,14 +26,18 @@ export interface IStorage {
   deleteEdgesByProject(projectId: number): Promise<void>;
   bulkCreateEdges(edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]>;
 
+  replaceNodes(projectId: number, nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]>;
+  replaceEdges(projectId: number, edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]>;
+  replaceValidationIssues(projectId: number, issues: InsertValidationIssue[]): Promise<ValidationIssue[]>;
+
   getBomItems(projectId: number): Promise<BomItem[]>;
   createBomItem(item: InsertBomItem): Promise<BomItem>;
-  updateBomItem(id: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined>;
-  deleteBomItem(id: number): Promise<void>;
+  updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined>;
+  deleteBomItem(id: number, projectId: number): Promise<boolean>;
 
   getValidationIssues(projectId: number): Promise<ValidationIssue[]>;
   createValidationIssue(issue: InsertValidationIssue): Promise<ValidationIssue>;
-  deleteValidationIssue(id: number): Promise<void>;
+  deleteValidationIssue(id: number, projectId: number): Promise<boolean>;
   deleteValidationIssuesByProject(projectId: number): Promise<void>;
   bulkCreateValidationIssues(issues: InsertValidationIssue[]): Promise<ValidationIssue[]>;
 
@@ -109,13 +113,20 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async updateBomItem(id: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined> {
-    const [updated] = await db.update(bomItems).set(item).where(eq(bomItems.id, id)).returning();
+  async updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined> {
+    const { projectId: _ignoreProjectId, ...safeData } = item as any;
+    const [updated] = await db.update(bomItems)
+      .set(safeData)
+      .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
+      .returning();
     return updated;
   }
 
-  async deleteBomItem(id: number): Promise<void> {
-    await db.delete(bomItems).where(eq(bomItems.id, id));
+  async deleteBomItem(id: number, projectId: number): Promise<boolean> {
+    const result = await db.delete(bomItems)
+      .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
+      .returning();
+    return result.length > 0;
   }
 
   async getValidationIssues(projectId: number): Promise<ValidationIssue[]> {
@@ -127,8 +138,11 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async deleteValidationIssue(id: number): Promise<void> {
-    await db.delete(validationIssues).where(eq(validationIssues.id, id));
+  async deleteValidationIssue(id: number, projectId: number): Promise<boolean> {
+    const result = await db.delete(validationIssues)
+      .where(and(eq(validationIssues.id, id), eq(validationIssues.projectId, projectId)))
+      .returning();
+    return result.length > 0;
   }
 
   async deleteValidationIssuesByProject(projectId: number): Promise<void> {
@@ -138,6 +152,30 @@ export class DatabaseStorage implements IStorage {
   async bulkCreateValidationIssues(issues: InsertValidationIssue[]): Promise<ValidationIssue[]> {
     if (issues.length === 0) return [];
     return db.insert(validationIssues).values(issues).returning();
+  }
+
+  async replaceNodes(projectId: number, nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]> {
+    return db.transaction(async (tx) => {
+      await tx.delete(architectureNodes).where(eq(architectureNodes.projectId, projectId));
+      if (nodes.length === 0) return [];
+      return tx.insert(architectureNodes).values(nodes).returning();
+    });
+  }
+
+  async replaceEdges(projectId: number, edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]> {
+    return db.transaction(async (tx) => {
+      await tx.delete(architectureEdges).where(eq(architectureEdges.projectId, projectId));
+      if (edges.length === 0) return [];
+      return tx.insert(architectureEdges).values(edges).returning();
+    });
+  }
+
+  async replaceValidationIssues(projectId: number, issues: InsertValidationIssue[]): Promise<ValidationIssue[]> {
+    return db.transaction(async (tx) => {
+      await tx.delete(validationIssues).where(eq(validationIssues.projectId, projectId));
+      if (issues.length === 0) return [];
+      return tx.insert(validationIssues).values(issues).returning();
+    });
   }
 
   async getChatMessages(projectId: number): Promise<ChatMessage[]> {

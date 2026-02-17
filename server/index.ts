@@ -19,28 +19,16 @@ if (process.env.NODE_ENV === "production") {
 
 // Rate limit API requests to prevent brute-force attacks and abuse【697222849486831†L78-L93】.
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  limit: 100,
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.path === '/api/chat/ai/stream',
 });
 app.use("/api", apiLimiter);
 const httpServer = createServer(app);
 
-declare module "http" {
-  interface IncomingMessage {
-    rawBody: unknown;
-  }
-}
-
-app.use(
-  express.json({
-    limit: "1mb",
-    verify: (req, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
+app.use(express.json({ limit: "1mb" }));
 
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 
@@ -71,7 +59,8 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const body = JSON.stringify(capturedJsonResponse);
+        logLine += ` :: ${body.length > 500 ? body.slice(0, 500) + '...[truncated]' : body}`;
       }
 
       log(logLine);
@@ -84,17 +73,33 @@ app.use((req, res, next) => {
 (async () => {
   await registerRoutes(httpServer, app);
 
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const { pool } = await import("./db");
+      const client = await pool.connect();
+      client.release();
+      res.json({ status: "ok", timestamp: new Date().toISOString() });
+    } catch (err) {
+      res.status(503).json({ status: "unhealthy", timestamp: new Date().toISOString() });
+    }
+  });
+
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    console.error("Internal Server Error:", err);
-
     if (res.headersSent) {
       return next(err);
     }
 
-    return res.status(status).json({ message });
+    const status = err.status || err.statusCode || 500;
+    console.error("Server error:", err.stack || err);
+
+    let clientMessage: string;
+    if (status < 500) {
+      clientMessage = err.message || "Bad request";
+    } else {
+      clientMessage = "Internal server error";
+    }
+
+    return res.status(status).json({ message: clientMessage });
   });
 
   // importantly only setup vite in development and after
@@ -122,4 +127,25 @@ app.use((req, res, next) => {
       log(`serving on port ${port}`);
     },
   );
+
+  function gracefulShutdown(signal: string) {
+    console.log(`\n${signal} received. Shutting down gracefully...`);
+    httpServer.close(async () => {
+      try {
+        const { pool } = await import("./db");
+        await pool.end();
+        console.log("Database pool closed.");
+      } catch (err) {
+        console.error("Error closing database pool:", err);
+      }
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.error("Forced shutdown after timeout.");
+      process.exit(1);
+    }, 10000);
+  }
+
+  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 })();

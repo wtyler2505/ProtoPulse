@@ -476,7 +476,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const deleteBomItemMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/bom/${id}`);
+      await apiRequest('DELETE', `/api/bom/${id}?projectId=${PROJECT_ID}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
@@ -485,7 +485,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const updateBomItemMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<BomItem> }) => {
-      await apiRequest('PATCH', `/api/bom/${id}`, data);
+      await apiRequest('PATCH', `/api/bom/${id}?projectId=${PROJECT_ID}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
@@ -494,7 +494,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const deleteValidationIssueMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest('DELETE', `/api/validation/${id}`);
+      await apiRequest('DELETE', `/api/validation/${id}?projectId=${PROJECT_ID}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/validation`] });
