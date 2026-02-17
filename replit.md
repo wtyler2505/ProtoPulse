@@ -104,11 +104,14 @@ GET/POST         /api/projects/:id/history
 POST             /api/seed
 POST             /api/chat/ai
 POST             /api/chat/ai/stream
+DELETE           /api/admin/purge
 ```
 
 ### Database tables (shared/schema.ts)
 `projects`, `architecture_nodes`, `architecture_edges`, `bom_items`, `validation_issues`, `chat_messages`, `history_items`
 All child tables cascade on `projects.id`. Architecture edges already have `signalType`, `voltage`, `busWidth`, `netName` — these bridge to circuit-level features later.
+Soft deletes: `projects`, `architecture_nodes`, `architecture_edges`, `bom_items` have a `deleted_at` column. Queries filter with `isNull(deletedAt)`. Deletes set `deletedAt` instead of removing rows. `DELETE /api/admin/purge` hard-deletes soft-deleted records older than 30 days.
+In-memory cache: `server/cache.ts` — SimpleCache with 200-entry max, 60s TTL. Caches `getProject`, `getNodes`, `getEdges`, `getBomItems`. Invalidated on writes.
 
 ### NPM scripts
 ```

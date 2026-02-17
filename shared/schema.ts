@@ -9,9 +9,10 @@ export const projects = pgTable("projects", {
   description: text("description").default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
-export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true, deletedAt: true });
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 
@@ -29,12 +30,13 @@ export const architectureNodes = pgTable("architecture_nodes", {
   positionY: real("position_y").notNull(),
   data: jsonb("data"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_arch_nodes_project").on(table.projectId),
   uniqueIndex("uq_arch_nodes_project_node").on(table.projectId, table.nodeId),
 ]);
 
-export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true, updatedAt: true }).extend({
+export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true, updatedAt: true, deletedAt: true }).extend({
   nodeType: z.string().min(1).max(100),
   data: nodeDataSchema,
 });
@@ -58,12 +60,13 @@ export const architectureEdges = pgTable("architecture_edges", {
   voltage: text("voltage"),
   busWidth: text("bus_width"),
   netName: text("net_name"),
+  deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_arch_edges_project").on(table.projectId),
   uniqueIndex("uq_arch_edges_project_edge").on(table.projectId, table.edgeId),
 ]);
 
-export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true }).extend({
+export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true, deletedAt: true }).extend({
   style: edgeStyleSchema,
 });
 export type InsertArchitectureEdge = z.infer<typeof insertArchitectureEdgeSchema>;
@@ -83,11 +86,12 @@ export const bomItems = pgTable("bom_items", {
   status: text("status").notNull().default("In Stock"),
   leadTime: text("lead_time"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_bom_items_project").on(table.projectId),
 ]);
 
-export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true, totalPrice: true, updatedAt: true }).extend({
+export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true, totalPrice: true, updatedAt: true, deletedAt: true }).extend({
   status: z.enum(["In Stock", "Low Stock", "Out of Stock", "On Order"]).default("In Stock"),
 });
 export type InsertBomItem = z.infer<typeof insertBomItemSchema>;

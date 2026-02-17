@@ -1,5 +1,6 @@
-import { eq, and, desc, asc } from "drizzle-orm";
+import { eq, and, desc, asc, isNull } from "drizzle-orm";
 import { db } from "./db";
+import { cache } from "./cache";
 import {
   projects, type Project, type InsertProject,
   architectureNodes, type ArchitectureNode, type InsertArchitectureNode,
@@ -97,6 +98,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
       return await db.select().from(projects)
+        .where(isNull(projects.deletedAt))
         .orderBy(sort === 'desc' ? desc(projects.id) : asc(projects.id))
         .limit(limit)
         .offset(offset);
@@ -107,7 +109,11 @@ export class DatabaseStorage implements IStorage {
 
   async getProject(id: number): Promise<Project | undefined> {
     try {
-      const [project] = await db.select().from(projects).where(eq(projects.id, id));
+      const cacheKey = `project:${id}`;
+      const cached = cache.get<Project>(cacheKey);
+      if (cached) return cached;
+      const [project] = await db.select().from(projects).where(and(eq(projects.id, id), isNull(projects.deletedAt)));
+      if (project) cache.set(cacheKey, project);
       return project;
     } catch (e) {
       throw new StorageError('getProject', `projects/${id}`, e);
@@ -125,7 +131,8 @@ export class DatabaseStorage implements IStorage {
 
   async updateProject(id: number, data: Partial<InsertProject>): Promise<Project | undefined> {
     try {
-      const [updated] = await db.update(projects).set({ ...data, updatedAt: new Date() }).where(eq(projects.id, id)).returning();
+      const [updated] = await db.update(projects).set({ ...data, updatedAt: new Date() }).where(and(eq(projects.id, id), isNull(projects.deletedAt))).returning();
+      if (updated) cache.invalidate(`project:${id}`);
       return updated;
     } catch (e) {
       throw new StorageError('updateProject', `projects/${id}`, e);
@@ -134,8 +141,17 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProject(id: number): Promise<boolean> {
     try {
-      const result = await db.delete(projects).where(eq(projects.id, id)).returning();
-      return result.length > 0;
+      const now = new Date();
+      const [project] = await db.update(projects).set({ deletedAt: now }).where(and(eq(projects.id, id), isNull(projects.deletedAt))).returning();
+      if (!project) return false;
+      await db.update(architectureNodes).set({ deletedAt: now }).where(eq(architectureNodes.projectId, id));
+      await db.update(architectureEdges).set({ deletedAt: now }).where(eq(architectureEdges.projectId, id));
+      await db.update(bomItems).set({ deletedAt: now }).where(eq(bomItems.projectId, id));
+      cache.invalidate(`project:${id}`);
+      cache.invalidate(`nodes:${id}`);
+      cache.invalidate(`edges:${id}`);
+      cache.invalidate(`bom:${id}`);
+      return true;
     } catch (e) {
       throw new StorageError('deleteProject', `projects/${id}`, e);
     }
@@ -144,11 +160,16 @@ export class DatabaseStorage implements IStorage {
   async getNodes(projectId: number, opts?: PaginationOptions): Promise<ArchitectureNode[]> {
     try {
       const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
-      return await db.select().from(architectureNodes)
-        .where(eq(architectureNodes.projectId, projectId))
+      const cacheKey = `nodes:${projectId}:${limit}:${offset}:${sort}`;
+      const cached = cache.get<ArchitectureNode[]>(cacheKey);
+      if (cached) return cached;
+      const result = await db.select().from(architectureNodes)
+        .where(and(eq(architectureNodes.projectId, projectId), isNull(architectureNodes.deletedAt)))
         .orderBy(sort === 'desc' ? desc(architectureNodes.id) : asc(architectureNodes.id))
         .limit(limit)
         .offset(offset);
+      cache.set(cacheKey, result);
+      return result;
     } catch (e) {
       throw new StorageError('getNodes', `projects/${projectId}/nodes`, e);
     }
@@ -157,6 +178,7 @@ export class DatabaseStorage implements IStorage {
   async createNode(node: InsertArchitectureNode): Promise<ArchitectureNode> {
     try {
       const [created] = await db.insert(architectureNodes).values(node).returning();
+      cache.invalidate(`nodes:${node.projectId}`);
       return created;
     } catch (e) {
       throw new StorageError('createNode', 'nodes', e);
@@ -168,8 +190,9 @@ export class DatabaseStorage implements IStorage {
       const { projectId: _ignoreProjectId, ...safeData } = data as any;
       const [updated] = await db.update(architectureNodes)
         .set({ ...safeData, updatedAt: new Date() })
-        .where(and(eq(architectureNodes.id, id), eq(architectureNodes.projectId, projectId)))
+        .where(and(eq(architectureNodes.id, id), eq(architectureNodes.projectId, projectId), isNull(architectureNodes.deletedAt)))
         .returning();
+      if (updated) cache.invalidate(`nodes:${projectId}`);
       return updated;
     } catch (e) {
       throw new StorageError('updateNode', `nodes/${id}`, e);
@@ -177,13 +200,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteNodesByProject(projectId: number): Promise<void> {
-    await db.delete(architectureNodes).where(eq(architectureNodes.projectId, projectId));
+    await db.update(architectureNodes).set({ deletedAt: new Date() }).where(and(eq(architectureNodes.projectId, projectId), isNull(architectureNodes.deletedAt)));
+    cache.invalidate(`nodes:${projectId}`);
   }
 
   async bulkCreateNodes(nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]> {
     if (nodes.length === 0) return [];
     try {
-      return await this.chunkedInsert<any, ArchitectureNode>(architectureNodes, nodes);
+      const result = await this.chunkedInsert<any, ArchitectureNode>(architectureNodes, nodes);
+      if (nodes.length > 0) cache.invalidate(`nodes:${nodes[0].projectId}`);
+      return result;
     } catch (e) {
       throw new StorageError('bulkCreateNodes', 'nodes', e);
     }
@@ -192,11 +218,16 @@ export class DatabaseStorage implements IStorage {
   async getEdges(projectId: number, opts?: PaginationOptions): Promise<ArchitectureEdge[]> {
     try {
       const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
-      return await db.select().from(architectureEdges)
-        .where(eq(architectureEdges.projectId, projectId))
+      const cacheKey = `edges:${projectId}:${limit}:${offset}:${sort}`;
+      const cached = cache.get<ArchitectureEdge[]>(cacheKey);
+      if (cached) return cached;
+      const result = await db.select().from(architectureEdges)
+        .where(and(eq(architectureEdges.projectId, projectId), isNull(architectureEdges.deletedAt)))
         .orderBy(sort === 'desc' ? desc(architectureEdges.id) : asc(architectureEdges.id))
         .limit(limit)
         .offset(offset);
+      cache.set(cacheKey, result);
+      return result;
     } catch (e) {
       throw new StorageError('getEdges', `projects/${projectId}/edges`, e);
     }
@@ -205,6 +236,7 @@ export class DatabaseStorage implements IStorage {
   async createEdge(edge: InsertArchitectureEdge): Promise<ArchitectureEdge> {
     try {
       const [created] = await db.insert(architectureEdges).values(edge).returning();
+      cache.invalidate(`edges:${edge.projectId}`);
       return created;
     } catch (e) {
       throw new StorageError('createEdge', 'edges', e);
@@ -216,8 +248,9 @@ export class DatabaseStorage implements IStorage {
       const { projectId: _ignoreProjectId, ...safeData } = data as any;
       const [updated] = await db.update(architectureEdges)
         .set(safeData)
-        .where(and(eq(architectureEdges.id, id), eq(architectureEdges.projectId, projectId)))
+        .where(and(eq(architectureEdges.id, id), eq(architectureEdges.projectId, projectId), isNull(architectureEdges.deletedAt)))
         .returning();
+      if (updated) cache.invalidate(`edges:${projectId}`);
       return updated;
     } catch (e) {
       throw new StorageError('updateEdge', `edges/${id}`, e);
@@ -225,13 +258,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEdgesByProject(projectId: number): Promise<void> {
-    await db.delete(architectureEdges).where(eq(architectureEdges.projectId, projectId));
+    await db.update(architectureEdges).set({ deletedAt: new Date() }).where(and(eq(architectureEdges.projectId, projectId), isNull(architectureEdges.deletedAt)));
+    cache.invalidate(`edges:${projectId}`);
   }
 
   async bulkCreateEdges(edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]> {
     if (edges.length === 0) return [];
     try {
-      return await this.chunkedInsert<any, ArchitectureEdge>(architectureEdges, edges);
+      const result = await this.chunkedInsert<any, ArchitectureEdge>(architectureEdges, edges);
+      if (edges.length > 0) cache.invalidate(`edges:${edges[0].projectId}`);
+      return result;
     } catch (e) {
       throw new StorageError('bulkCreateEdges', 'edges', e);
     }
@@ -240,11 +276,16 @@ export class DatabaseStorage implements IStorage {
   async getBomItems(projectId: number, opts?: PaginationOptions): Promise<BomItem[]> {
     try {
       const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
-      return await db.select().from(bomItems)
-        .where(eq(bomItems.projectId, projectId))
+      const cacheKey = `bom:${projectId}:${limit}:${offset}:${sort}`;
+      const cached = cache.get<BomItem[]>(cacheKey);
+      if (cached) return cached;
+      const result = await db.select().from(bomItems)
+        .where(and(eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
         .orderBy(sort === 'desc' ? desc(bomItems.id) : asc(bomItems.id))
         .limit(limit)
         .offset(offset);
+      cache.set(cacheKey, result);
+      return result;
     } catch (e) {
       throw new StorageError('getBomItems', `projects/${projectId}/bom`, e);
     }
@@ -252,7 +293,7 @@ export class DatabaseStorage implements IStorage {
 
   async getBomItem(id: number, projectId: number): Promise<BomItem | undefined> {
     try {
-      const [item] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)));
+      const [item] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)));
       return item;
     } catch (e) {
       throw new StorageError('getBomItem', `bom/${id}`, e);
@@ -263,6 +304,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const totalPrice = computeTotalPrice(item.quantity, item.unitPrice);
       const [created] = await db.insert(bomItems).values({ ...item, totalPrice }).returning();
+      cache.invalidate(`bom:${item.projectId}`);
       return created;
     } catch (e) {
       throw new StorageError('createBomItem', 'bom', e);
@@ -274,22 +316,24 @@ export class DatabaseStorage implements IStorage {
       const { projectId: _ignoreProjectId, ...safeData } = item as any;
 
       if (safeData.quantity !== undefined || safeData.unitPrice !== undefined) {
-        const [existing] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)));
+        const [existing] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)));
         if (!existing) return undefined;
         const quantity = safeData.quantity ?? existing.quantity;
         const unitPrice = safeData.unitPrice ?? existing.unitPrice;
         const totalPrice = computeTotalPrice(quantity, unitPrice);
         const [updated] = await db.update(bomItems)
           .set({ ...safeData, totalPrice, updatedAt: new Date() })
-          .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
+          .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
           .returning();
+        if (updated) cache.invalidate(`bom:${projectId}`);
         return updated;
       }
 
       const [updated] = await db.update(bomItems)
         .set({ ...safeData, updatedAt: new Date() })
-        .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
+        .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
         .returning();
+      if (updated) cache.invalidate(`bom:${projectId}`);
       return updated;
     } catch (e) {
       throw new StorageError('updateBomItem', `bom/${id}`, e);
@@ -297,10 +341,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteBomItem(id: number, projectId: number): Promise<boolean> {
-    const result = await db.delete(bomItems)
-      .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId)))
+    const [result] = await db.update(bomItems)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
       .returning();
-    return result.length > 0;
+    if (result) cache.invalidate(`bom:${projectId}`);
+    return !!result;
   }
 
   async getValidationIssues(projectId: number, opts?: PaginationOptions): Promise<ValidationIssue[]> {
@@ -339,11 +385,13 @@ export class DatabaseStorage implements IStorage {
 
   async replaceNodes(projectId: number, nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]> {
     try {
-      return await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         await tx.delete(architectureNodes).where(eq(architectureNodes.projectId, projectId));
         if (nodes.length === 0) return [];
         return tx.insert(architectureNodes).values(nodes).returning();
       });
+      cache.invalidate(`nodes:${projectId}`);
+      return result;
     } catch (e) {
       throw new StorageError('replaceNodes', `projects/${projectId}/nodes`, e);
     }
@@ -351,11 +399,13 @@ export class DatabaseStorage implements IStorage {
 
   async replaceEdges(projectId: number, edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]> {
     try {
-      return await db.transaction(async (tx) => {
+      const result = await db.transaction(async (tx) => {
         await tx.delete(architectureEdges).where(eq(architectureEdges.projectId, projectId));
         if (edges.length === 0) return [];
         return tx.insert(architectureEdges).values(edges).returning();
       });
+      cache.invalidate(`edges:${projectId}`);
+      return result;
     } catch (e) {
       throw new StorageError('replaceEdges', `projects/${projectId}/edges`, e);
     }

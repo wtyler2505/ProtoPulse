@@ -4,6 +4,7 @@ import { db } from "./db";
 import { processAIMessage, streamAIMessage } from "./ai";
 import { createUser, getUserByUsername, verifyPassword, createSession, deleteSession, getUserById, validateSession, storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from "./auth";
 import { fromZodError } from "zod-validation-error";
+import { isNotNull, lte, and, isNull } from "drizzle-orm";
 import {
   insertProjectSchema,
   insertArchitectureNodeSchema,
@@ -696,6 +697,17 @@ export async function registerRoutes(app: Express): Promise<void> {
         res.end();
       }
     }
+  }));
+
+  // --- Admin: Purge soft-deleted records ---
+
+  app.delete("/api/admin/purge", asyncHandler(async (req, res) => {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await db.delete(architectureNodes).where(and(isNotNull(architectureNodes.deletedAt), lte(architectureNodes.deletedAt, cutoff)));
+    await db.delete(architectureEdges).where(and(isNotNull(architectureEdges.deletedAt), lte(architectureEdges.deletedAt, cutoff)));
+    await db.delete(bomItems).where(and(isNotNull(bomItems.deletedAt), lte(bomItems.deletedAt, cutoff)));
+    await db.delete(projects).where(and(isNotNull(projects.deletedAt), lte(projects.deletedAt, cutoff)));
+    res.json({ message: "Purge complete" });
   }));
 
 }
