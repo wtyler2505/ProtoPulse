@@ -49,6 +49,15 @@ export async function registerRoutes(
     res.status(201).json(project);
   });
 
+  app.patch("/api/projects/:id", async (req, res) => {
+    const id = parseIdParam(req.params.id);
+    const parsed = insertProjectSchema.partial().safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: parsed.error.message });
+    const updated = await storage.updateProject(id, parsed.data);
+    if (!updated) return res.status(404).json({ message: "Project not found" });
+    res.json(updated);
+  });
+
   // --- Architecture Nodes ---
 
   app.get("/api/projects/:id/nodes", async (req, res) => {

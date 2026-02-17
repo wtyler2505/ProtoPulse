@@ -21,7 +21,7 @@ const toolLabels: Record<string, string> = {
 };
 
 function ArchitectureFlow() {
-  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog } = useProject();
+  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog, focusNodeId, selectedNodeId, setSelectedNodeId } = useProject();
   // Show the asset manager by default on desktop. This state now controls
   // visibility across both desktop and mobile, enabling a collapsible
   // asset library on larger screens.
@@ -83,6 +83,23 @@ function ArchitectureFlow() {
     }, 1500);
     return () => clearTimeout(edgeSaveTimer.current);
   }, [localEdges]);
+
+  useEffect(() => {
+    if (focusNodeId) {
+      const targetNode = localNodes.find(n => n.id === focusNodeId);
+      if (targetNode) {
+        reactFlowInstance.setCenter(
+          targetNode.position.x + 75,
+          targetNode.position.y + 40,
+          { zoom: 1.5, duration: 600 }
+        );
+        setLocalNodes(nds => nds.map(n => ({
+          ...n,
+          selected: n.id === focusNodeId,
+        })));
+      }
+    }
+  }, [focusNodeId]);
 
   const markInteracted = useCallback(() => { userInteracted.current = true; }, []);
 
@@ -234,6 +251,10 @@ function ArchitectureFlow() {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeDragStop={() => markInteracted()}
+            onSelectionChange={({ nodes: selectedNodes }) => {
+              const firstSelected = selectedNodes.length > 0 ? selectedNodes[0].id : null;
+              setSelectedNodeId(firstSelected);
+            }}
             onDragOver={onDragOver}
             onDrop={onDrop}
             onNodesDelete={onNodesDelete}

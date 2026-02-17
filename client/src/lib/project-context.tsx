@@ -110,6 +110,11 @@ interface ProjectState {
   projectDescription: string;
   setProjectDescription: (desc: string) => void;
 
+  selectedNodeId: string | null;
+  setSelectedNodeId: (id: string | null) => void;
+  focusNodeId: string | null;
+  focusNode: (nodeId: string) => void;
+
   isLoading: boolean;
 }
 
@@ -168,6 +173,16 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const [projectName, setProjectName] = useState('Smart_Agro_Node_v1');
   const [projectDescription, setProjectDescription] = useState('IoT Agriculture Sensor Node');
+
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
+
+  const focusNode = (nodeId: string) => {
+    setFocusNodeId(nodeId);
+    setSelectedNodeId(nodeId);
+    setActiveView('architecture');
+    setTimeout(() => setFocusNodeId(null), 500);
+  };
 
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -249,6 +264,30 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       timestamp: formatTimeAgo(item.timestamp),
     })),
   });
+
+  const projectQuery = useQuery({
+    queryKey: [`/api/projects/${PROJECT_ID}`],
+    enabled: seeded,
+  });
+
+  const updateProjectMutation = useMutation({
+    mutationFn: async (data: { name?: string; description?: string }) => {
+      await apiRequest('PATCH', `/api/projects/${PROJECT_ID}`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}`] });
+    },
+  });
+
+  const handleSetProjectName = (name: string) => {
+    setProjectName(name);
+    updateProjectMutation.mutate({ name });
+  };
+
+  const handleSetProjectDescription = (desc: string) => {
+    setProjectDescription(desc);
+    updateProjectMutation.mutate({ description: desc });
+  };
 
   const saveNodesMutation = useMutation({
     mutationFn: async (nodes: Node[]) => {
@@ -397,7 +436,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const updateBomItemFn = (id: number, data: Partial<BomItem>) => updateBomItemMutation.mutate({ id, data });
   const deleteValidationIssue = (id: number) => deleteValidationIssueMutation.mutate(id);
 
-  const isLoading = !seeded || nodesQuery.isLoading || edgesQuery.isLoading || bomQuery.isLoading || validationQuery.isLoading || chatQuery.isLoading || historyQuery.isLoading;
+  useEffect(() => {
+    if (projectQuery.data) {
+      const p = projectQuery.data as any;
+      if (p.name && p.name !== projectName) setProjectName(p.name);
+      if (p.description !== undefined && p.description !== projectDescription) setProjectDescription(p.description ?? '');
+    }
+  }, [projectQuery.data]);
+
+  const isLoading = !seeded || nodesQuery.isLoading || edgesQuery.isLoading || bomQuery.isLoading || validationQuery.isLoading || chatQuery.isLoading || historyQuery.isLoading || projectQuery.isLoading;
   const hasError = nodesQuery.isError || edgesQuery.isError || bomQuery.isError || validationQuery.isError || chatQuery.isError || historyQuery.isError;
 
   if (isLoading) {
@@ -432,7 +479,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       history: historyQuery.data ?? [],
       addToHistory,
       outputLog, addOutputLog, clearOutputLog,
-      projectName, setProjectName, projectDescription, setProjectDescription,
+      projectName, setProjectName: handleSetProjectName, projectDescription, setProjectDescription: handleSetProjectDescription,
+      selectedNodeId, setSelectedNodeId, focusNodeId, focusNode,
       isLoading,
     }}>
       {children}
