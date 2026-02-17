@@ -4,6 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export default function ValidationView() {
   const { issues, runValidation, deleteValidationIssue, addOutputLog, setActiveView } = useProject();
@@ -91,7 +92,7 @@ export default function ValidationView() {
                 <ContextMenuItem onSelect={() => setActiveView('architecture')}>View in Architecture</ContextMenuItem>
                 <ContextMenuItem onSelect={() => copyToClipboard(issue.message)}>Copy Issue Details</ContextMenuItem>
                 <ContextMenuSeparator />
-                <ContextMenuItem className="text-destructive" onSelect={() => { if (window.confirm('Dismiss this issue? This cannot be undone.')) { deleteValidationIssue(issue.id); } }}>Dismiss Issue</ContextMenuItem>
+                <ContextMenuItem className="text-destructive" onSelect={() => deleteValidationIssue(issue.id)}>Dismiss Issue</ContextMenuItem>
               </ContextMenuContent>
             </ContextMenu>
           ))}

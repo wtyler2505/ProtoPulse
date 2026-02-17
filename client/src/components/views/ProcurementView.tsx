@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useProject } from '@/lib/project-context';
-import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2 } from 'lucide-react';
+import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const supplierUrls: Record<string, string> = {
   'Mouser': 'https://www.mouser.com/Search/Refine?Keyword=',
@@ -322,20 +323,28 @@ export default function ProcurementView() {
                             <p>Buy from supplier</p>
                           </TooltipContent>
                         </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => { if (window.confirm('Delete this item? This cannot be undone.')) { deleteBomItem(item.id); } }}
-                              data-testid={`button-delete-${item.id}`}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
-                            <p>Remove from BOM</p>
-                          </TooltipContent>
-                        </Tooltip>
+                        <ConfirmDialog
+                          trigger={
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  data-testid={`button-delete-${item.id}`}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
+                                <p>Remove from BOM</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          }
+                          title="Remove BOM Item"
+                          description={`Are you sure you want to remove "${item.partNumber}" from the Bill of Materials? This action cannot be undone.`}
+                          confirmLabel="Remove"
+                          variant="destructive"
+                          onConfirm={() => deleteBomItem(item.id)}
+                        />
                       </td>
                     </tr>
                   </ContextMenuTrigger>
@@ -354,7 +363,7 @@ export default function ProcurementView() {
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => copyToClipboard(item.partNumber)}>Copy Part Number</ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem className="text-destructive" onSelect={() => { if (window.confirm('Remove this item from BOM? This cannot be undone.')) { deleteBomItem(item.id); } }}>Remove from BOM</ContextMenuItem>
+                    <ContextMenuItem className="text-destructive" onSelect={() => deleteBomItem(item.id)}>Remove from BOM</ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
               ))}

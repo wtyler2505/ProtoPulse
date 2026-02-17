@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
-const resizeObserverErr = /ResizeObserver loop/;
+const resizeObserverErr = /ResizeObserver loop (limit exceeded|completed with undelivered notifications)/;
 window.addEventListener('error', (e) => {
   if (e.message && resizeObserverErr.test(e.message)) {
     e.stopImmediatePropagation();

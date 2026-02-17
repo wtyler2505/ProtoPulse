@@ -54,9 +54,12 @@ export default function SchematicView() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.tagName === 'BUTTON' || target.isContentEditable) {
+        return;
+      }
       if (e.code === 'Space' && !e.repeat) {
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+        if (!containerRef.current?.contains(target)) return;
         e.preventDefault();
         setSpaceDown(true);
       }

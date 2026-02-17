@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useProject } from '@/lib/project-context';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Trash2, Copy, ClipboardCheck } from 'lucide-react';
@@ -12,11 +12,13 @@ export default function OutputView() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
 
-  const indexedFilteredLog = outputLog
-    .map((log, index) => ({ log, index }))
-    .filter(({ log }) =>
-      !searchTerm || log.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+  const indexedFilteredLog = useMemo(() => {
+    return outputLog
+      .map((log, index) => ({ log, index }))
+      .filter(({ log }) =>
+        !searchTerm || log.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+  }, [outputLog, searchTerm]);
 
   const displayLog = indexedFilteredLog.slice(-500);
   const truncatedCount = indexedFilteredLog.length - displayLog.length;

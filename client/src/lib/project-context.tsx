@@ -203,6 +203,10 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     manufacturingDate: new Date(),
   });
 
+  const handleSetBomSettings = (settings: Partial<typeof bomSettings>) => {
+    setBomSettings(prev => ({ ...prev, ...settings }));
+  };
+
   const [projectName, setProjectName] = useState('Smart_Agro_Node_v1');
   const [projectDescription, setProjectDescription] = useState('IoT Agriculture Sensor Node');
 
@@ -600,7 +604,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       setNodes, setEdges,
       schematicSheets, activeSheetId, setActiveSheetId,
       bom: bomQuery.data ?? [],
-      bomSettings, setBomSettings,
+      bomSettings, setBomSettings: handleSetBomSettings,
       addBomItem, deleteBomItem: deleteBomItemFn, updateBomItem: updateBomItemFn,
       issues: validationQuery.data ?? [],
       runValidation,

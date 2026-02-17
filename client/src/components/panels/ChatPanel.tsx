@@ -4,13 +4,13 @@ import {
   ChevronDown, ArrowDown, Search, Download, Trash2,
   StopCircle, AlertTriangle, ArrowRight, SlidersHorizontal, Mic, ImagePlus
 } from 'lucide-react';
-import { useProject } from '@/lib/project-context';
+import { useProject, type ChatMessage } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { copyToClipboard } from '@/lib/clipboard';
-import { quickActionDescriptions, AI_MODELS, DESTRUCTIVE_ACTIONS, COPY_FEEDBACK_DURATION, LOCAL_COMMAND_DELAY } from './chat/constants';
-import MessageBubble from './chat/MessageBubble';
+import { quickActionDescriptions, AI_MODELS, DESTRUCTIVE_ACTIONS, COPY_FEEDBACK_DURATION, LOCAL_COMMAND_DELAY, ACTION_LABELS } from './chat/constants';
+import MessageBubble, { MarkdownContent } from './chat/MessageBubble';
 import SettingsPanel from './chat/SettingsPanel';
 
 interface ChatPanelProps {
@@ -54,6 +54,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       return models[0].id;
     } catch { return AI_MODELS.anthropic[0].id; }
   });
+  // TODO: Migrate API key storage to server-side via GET/POST /api/settings/api-keys
+  // The backend supports encrypted key storage per provider. Once auth is wired up,
+  // fetch stored keys on mount and save via POST instead of keeping in-memory only.
   const [aiApiKey, setAiApiKey] = useState(() => {
     return '';
   });

@@ -310,7 +310,7 @@ export class DatabaseStorage implements IStorage {
 
   async createBomItem(item: InsertBomItem): Promise<BomItem> {
     try {
-      const totalPrice = computeTotalPrice(item.quantity, item.unitPrice);
+      const totalPrice = computeTotalPrice(item.quantity ?? 1, item.unitPrice ?? '0');
       const [created] = await db.insert(bomItems).values({ ...item, totalPrice }).returning();
       cache.invalidate(`bom:${item.projectId}`);
       return created;

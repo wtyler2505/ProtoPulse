@@ -530,7 +530,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.get("/api/projects/:projectId/component-parts/by-node/:nodeId", asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
-    const nodeId = req.params.nodeId;
+    const nodeId = Array.isArray(req.params.nodeId) ? req.params.nodeId[0] : req.params.nodeId;
     const part = await storage.getComponentPartByNodeId(projectId, nodeId);
     if (!part) return res.status(404).json({ message: "Component part not found" });
     res.json(part);
