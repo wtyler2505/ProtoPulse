@@ -205,7 +205,7 @@ function ArchitectureFlow() {
             />
           )}
 
-          <div className="absolute top-4 right-4 md:right-auto md:left-[300px] z-10 flex items-center gap-1 bg-card/50 backdrop-blur-xl border border-border p-1 shadow-lg">
+          <div className={cn("absolute top-4 right-4 md:right-auto z-10 flex items-center gap-1 bg-card/50 backdrop-blur-xl border border-border p-1 shadow-lg", showAssetManager ? "md:left-[300px]" : "md:left-4")}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
