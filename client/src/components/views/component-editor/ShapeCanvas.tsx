@@ -116,6 +116,54 @@ function nodesToPathD(nodes: PathNode[]): string {
   }).join(' ');
 }
 
+function simplifyPath(nodes: PathNode[], tolerance: number): PathNode[] {
+  if (nodes.length <= 2) return [...nodes];
+  function perpendicularDistance(pt: { x: number; y: number }, lineStart: { x: number; y: number }, lineEnd: { x: number; y: number }): number {
+    const dx = lineEnd.x - lineStart.x;
+    const dy = lineEnd.y - lineStart.y;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.sqrt((pt.x - lineStart.x) ** 2 + (pt.y - lineStart.y) ** 2);
+    const t = Math.max(0, Math.min(1, ((pt.x - lineStart.x) * dx + (pt.y - lineStart.y) * dy) / lenSq));
+    const projX = lineStart.x + t * dx;
+    const projY = lineStart.y + t * dy;
+    return Math.sqrt((pt.x - projX) ** 2 + (pt.y - projY) ** 2);
+  }
+  function rdp(pts: PathNode[], startIdx: number, endIdx: number, keep: boolean[]): void {
+    if (endIdx - startIdx <= 1) return;
+    let maxDist = 0;
+    let maxIdx = startIdx;
+    for (let i = startIdx + 1; i < endIdx; i++) {
+      const d = perpendicularDistance(pts[i], pts[startIdx], pts[endIdx]);
+      if (d > maxDist) { maxDist = d; maxIdx = i; }
+    }
+    if (maxDist > tolerance) {
+      keep[maxIdx] = true;
+      rdp(pts, startIdx, maxIdx, keep);
+      rdp(pts, maxIdx, endIdx, keep);
+    }
+  }
+  const keep = new Array(nodes.length).fill(false);
+  keep[0] = true;
+  keep[nodes.length - 1] = true;
+  rdp(nodes, 0, nodes.length - 1, keep);
+  const result: PathNode[] = [];
+  for (let i = 0; i < nodes.length; i++) {
+    if (keep[i]) {
+      const node = { ...nodes[i] };
+      if (node.cp1) node.cp1 = { ...node.cp1 };
+      if (node.cp2) node.cp2 = { ...node.cp2 };
+      result.push(node);
+    }
+  }
+  if (result.length > 0) result[0] = { ...result[0], type: 'M' };
+  for (let i = 1; i < result.length; i++) {
+    if (!result[i].cp1 && !result[i].cp2 && result[i].type === 'C') {
+      result[i] = { ...result[i], type: 'L' };
+    }
+  }
+  return result;
+}
+
 interface PathPoint {
   x: number;
   y: number;
@@ -952,6 +1000,53 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
     return <g data-testid="path-preview">{elements}</g>;
   }, [pathPoints, pathCursorPos, isDrawingPath, pathClickStart, pathDraggingHandle]);
 
+  const handleToggleNodeType = useCallback((i: number) => {
+    if (!editingPathNodes || !selectedPathShape) return;
+    const newNodes = editingPathNodes.map(n => {
+      const copy = { ...n };
+      if (copy.cp1) copy.cp1 = { ...copy.cp1 };
+      if (copy.cp2) copy.cp2 = { ...copy.cp2 };
+      return copy;
+    });
+    const node = newNodes[i];
+    if (node.cp1 || node.cp2) {
+      delete node.cp1;
+      delete node.cp2;
+      if (node.type !== 'M') node.type = 'L';
+    } else if (node.type === 'L') {
+      const prev = newNodes[i - 1] || node;
+      const next = newNodes[i + 1] || node;
+      node.cp1 = { x: prev.x + (node.x - prev.x) / 3, y: prev.y + (node.y - prev.y) / 3 };
+      node.cp2 = { x: node.x + (next.x - node.x) / 3, y: node.y + (next.y - node.y) / 3 };
+      node.type = 'C';
+    }
+    setEditingPathNodes(newNodes);
+    const d = nodesToPathD(newNodes);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    newNodes.forEach((n) => {
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x); maxY = Math.max(maxY, n.y);
+      if (n.cp1) { minX = Math.min(minX, n.cp1.x); minY = Math.min(minY, n.cp1.y); maxX = Math.max(maxX, n.cp1.x); maxY = Math.max(maxY, n.cp1.y); }
+      if (n.cp2) { minX = Math.min(minX, n.cp2.x); minY = Math.min(minY, n.cp2.y); maxX = Math.max(maxX, n.cp2.x); maxY = Math.max(maxY, n.cp2.y); }
+    });
+    dispatch({ type: 'UPDATE_SHAPE', payload: { view, shapeId: selectedPathShape.id, updates: { d, x: minX, y: minY, width: maxX - minX, height: maxY - minY } } });
+  }, [editingPathNodes, selectedPathShape, dispatch, view]);
+
+  const handleSimplifyPath = useCallback(() => {
+    if (!editingPathNodes || !selectedPathShape || editingPathNodes.length < 4) return;
+    const simplified = simplifyPath(editingPathNodes, 2);
+    setEditingPathNodes(simplified);
+    const d = nodesToPathD(simplified);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    simplified.forEach((n) => {
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+      maxX = Math.max(maxX, n.x); maxY = Math.max(maxY, n.y);
+      if (n.cp1) { minX = Math.min(minX, n.cp1.x); minY = Math.min(minY, n.cp1.y); maxX = Math.max(maxX, n.cp1.x); maxY = Math.max(maxY, n.cp1.y); }
+      if (n.cp2) { minX = Math.min(minX, n.cp2.x); minY = Math.min(minY, n.cp2.y); maxX = Math.max(maxX, n.cp2.x); maxY = Math.max(maxY, n.cp2.y); }
+    });
+    dispatch({ type: 'UPDATE_SHAPE', payload: { view, shapeId: selectedPathShape.id, updates: { d, x: minX, y: minY, width: maxX - minX, height: maxY - minY } } });
+  }, [editingPathNodes, selectedPathShape, dispatch, view]);
+
   const pathEditOverlay = useMemo(() => {
     if (!editingPathNodes || !selectedPathShape) return null;
     const elements: React.ReactNode[] = [];
@@ -970,12 +1065,26 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
           fill="#FFD700" stroke="none" style={{ cursor: 'pointer' }}
           onMouseDown={(e) => { e.stopPropagation(); setEditingNodeDrag({ nodeIndex: i, handle: 'cp2' }); }} />);
       }
-      elements.push(<rect key={`edit-pt-${i}`} x={node.x - 3} y={node.y - 3} width={6} height={6}
-        fill={SEL} stroke="none" style={{ cursor: 'move' }}
-        onMouseDown={(e) => { e.stopPropagation(); setEditingNodeDrag({ nodeIndex: i, handle: 'point' }); }} />);
+      const isSmooth = node.type === 'C' || node.type === 'Q';
+      const titleText = isSmooth ? 'Smooth node (double-click to make corner)' : 'Corner node (double-click to make smooth)';
+      if (isSmooth) {
+        elements.push(<circle key={`edit-pt-${i}`} data-testid={`path-node-${i}`} cx={node.x} cy={node.y} r={3}
+          fill={SEL} stroke="none" style={{ cursor: 'move' }}
+          onMouseDown={(e) => { e.stopPropagation(); setEditingNodeDrag({ nodeIndex: i, handle: 'point' }); }}
+          onDoubleClick={(e) => { e.stopPropagation(); handleToggleNodeType(i); }}>
+          <title>{titleText}</title>
+        </circle>);
+      } else {
+        elements.push(<rect key={`edit-pt-${i}`} data-testid={`path-node-${i}`} x={node.x - 3} y={node.y - 3} width={6} height={6}
+          fill={SEL} stroke="none" style={{ cursor: 'move' }}
+          onMouseDown={(e) => { e.stopPropagation(); setEditingNodeDrag({ nodeIndex: i, handle: 'point' }); }}
+          onDoubleClick={(e) => { e.stopPropagation(); handleToggleNodeType(i); }}>
+          <title>{titleText}</title>
+        </rect>);
+      }
     });
     return <g data-testid="path-edit-overlay">{elements}</g>;
-  }, [editingPathNodes, selectedPathShape]);
+  }, [editingPathNodes, selectedPathShape, handleToggleNodeType]);
 
   const toolbar = useMemo(() => (
     <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card" data-testid="canvas-toolbar" role="toolbar" aria-label="Drawing tools">
@@ -1078,7 +1187,7 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
   ), [activeTool, dispatch, zoomToFit, zoom, refImage, isCalibrating, calibrationPoints, handleRefImageUpload, showLayerPanel, view, isDrawingPath, cancelPath]);
 
   return (
-    <div className="flex flex-col flex-1 h-full" data-testid="shape-canvas-container">
+    <div className="flex flex-col flex-1 h-full relative" data-testid="shape-canvas-container">
       {toolbar}
       <svg ref={svgRef} data-testid="shape-canvas-svg" className="flex-1 w-full"
         role="application" aria-label={`Component editor canvas - ${view} view`} aria-roledescription="drawing canvas" tabIndex={0}
@@ -1126,6 +1235,27 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
           {pathEditOverlay}
         </g>
       </svg>
+      {editingPathNodes && editingPathNodes.length >= 4 && (
+        <button
+          data-testid="path-simplify-btn"
+          onClick={handleSimplifyPath}
+          style={{
+            position: 'absolute',
+            top: 48,
+            right: 12,
+            zIndex: 20,
+            padding: '4px 10px',
+            fontSize: 12,
+            background: '#1a1a2e',
+            color: '#00F0FF',
+            border: '1px solid #00F0FF',
+            borderRadius: 4,
+            cursor: 'pointer',
+          }}
+        >
+          Simplify Path
+        </button>
+      )}
     </div>
   );
 }

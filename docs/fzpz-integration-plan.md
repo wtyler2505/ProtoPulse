@@ -1,8 +1,8 @@
 # FZPZ Studio → ProtoPulse Integration Plan
 
 **Created:** 2026-02-17
-**Status:** In Progress — Phases 1-3, 6-8 complete, Phase 5 partial (4/10), Phases 4/9+ not started
-**Last updated:** 2026-02-18 (v5 — Phase 7+8 complete, checklist updates)
+**Status:** In Progress — Phases 1-3, 5-8 complete, Phase 4 not started (needs API keys), Phases 9+ not started
+**Last updated:** 2026-02-18 (v6 — Phase 5 fully verified complete, Phase 7+8 complete)
 
 ---
 
@@ -1344,14 +1344,14 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 5: Import/Export + Architecture Integration + Verification Overlay
 **Goal:** FZPZ/SVG import/export works, components link to architecture nodes and feed BOM, footprint verification overlay.
-**Status: PARTIAL — Items 5.7-5.10 complete (integration features), 5.1-5.6 pending (import/export)**
+**Status: COMPLETE** (2026-02-18)
 
-- [ ] **5.1** Move FZPZ export logic to `server/component-export.ts` (needs jszip)
-- [ ] **5.2** Add import endpoint: upload .fzpz → parse → create component_part
-- [ ] **5.3** Add export endpoint: component_part → generate .fzpz → download
-- [ ] **5.4** [ME-4] Create `svg-parser.ts` — parse external SVG file into internal Shape[] model; handle `<rect>`, `<circle>`, `<path>`, `<text>`, `<g>` (groups)
-- [ ] **5.5** [ME-4] Add SVG import endpoint + UI: upload SVG → server parses → returns shapes → merge into current view
-- [ ] **5.6** [ME-5/BS-7] Enhance reference image system with calibrated overlay — `CalibratedReferenceImage` with scale/offset/lock; ruler-based calibration UI ("click two points, enter real distance")
+- [x] **5.1** Move FZPZ export logic to `server/component-export.ts` (needs jszip)
+- [x] **5.2** Add import endpoint: upload .fzpz → parse → create component_part
+- [x] **5.3** Add export endpoint: component_part → generate .fzpz → download
+- [x] **5.4** [ME-4] Create `svg-parser.ts` — parse external SVG file into internal Shape[] model; handle `<rect>`, `<circle>`, `<path>`, `<text>`, `<g>` (groups)
+- [x] **5.5** [ME-4] Add SVG import endpoint + UI: upload SVG → server parses → returns shapes → merge into current view
+- [x] **5.6** [ME-5/BS-7] Enhance reference image system with calibrated overlay — `CalibratedReferenceImage` with scale/offset/lock; ruler-based calibration UI ("click two points, enter real distance")
 - [x] **5.7** [QW-5] Add click-to-highlight for validation issues — clicking issue switches view, pans to element, highlights with pulsing outline, selects element
 - [x] **5.8** Wire architecture node → component part linking (click node → open Component Editor for that part)
 - [x] **5.9** Add BOM enrichment: component metadata → BOM item auto-fill suggestions
@@ -2072,7 +2072,7 @@ This is the master checklist. Update status as work progresses.
 | Phase 2: Canvas + Drawing | Complete | 14/14 items |
 | Phase 3: Metadata + Generator + Pin Table | Complete | 6/6 items |
 | Phase 4: AI Generation | Not started | 0/10 items |
-| Phase 5: Import/Export | Partial | 4/10 items |
+| Phase 5: Import/Export | Complete | 10/10 items |
 | Phase 6: Polish | Complete | 9/9 items |
 | Phase 7: Advanced Canvas | Complete | 3/3 items |
 | Phase 8: Intelligence & Automation | Complete | 6/6 items |

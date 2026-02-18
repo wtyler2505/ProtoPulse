@@ -406,8 +406,9 @@ export async function importFromFzpz(buffer: Buffer): Promise<PartState> {
 
   let totalUncompressed = 0;
   for (const [, file] of fileEntries) {
-    if (file._data && typeof (file._data as any).uncompressedSize === 'number') {
-      totalUncompressed += (file._data as any).uncompressedSize;
+    const fileAny = file as any;
+    if (fileAny._data && typeof fileAny._data.uncompressedSize === 'number') {
+      totalUncompressed += fileAny._data.uncompressedSize;
     } else {
       totalUncompressed += 500 * 1024;
     }
