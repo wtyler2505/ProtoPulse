@@ -26,6 +26,27 @@ Currently, the platform offers an architecture block diagram editor, Bill of Mat
 - Do NOT implement a later phase without dependencies complete
 - Do NOT auto-edit this file
 
+## Documentation Maintenance (CRITICAL)
+
+**All documentation must be kept accurate and up-to-date as work progresses. This is a non-negotiable requirement.**
+
+After any meaningful code change, review and update the following files if affected:
+- `replit.md` — Project architecture, preferences, system overview (update when explicitly asked OR when architecture changes)
+- `CLAUDE.md` — Key files, gotchas, guardrails (update when architecture, key files, or conventions change)
+- `README.md` — Features, tech stack, roadmap (update when user-facing features or roadmap status change)
+- `docs/DEVELOPER.md` — API reference, schema, AI system, security (update when endpoints, tables, auth, or AI actions change)
+- `docs/USER_GUIDE.md` — Feature walkthroughs, shortcuts, UI behavior (update when UI features or user-facing behavior change)
+- `docs/AI_AGENT_GUIDE.md` — Conventions, audit status, phase roadmap, checklists (update when conventions, audit items, or phase status change)
+- `docs/frontend-audit-checklist.md` — Audit item status (update when fixing audit items)
+
+**Rules:**
+- Never document features that don't exist yet as if they're available
+- Never leave stale information after refactors
+- When fixing audit items, mark them in the checklist
+- When adding/removing API endpoints, update DEVELOPER.md
+- When changing UI behavior, update USER_GUIDE.md
+- When changing conventions or guardrails, update AI_AGENT_GUIDE.md and CLAUDE.md
+
 ## System Architecture
 
 The application is structured into a frontend, backend, and shared components.
