@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import type { ComponentPart } from '@shared/schema';
+import type { ComponentPart, ComponentLibraryEntry } from '@shared/schema';
 
 export function useComponentParts(projectId: number) {
   return useQuery<ComponentPart[]>({
@@ -66,6 +66,46 @@ export function useDeleteComponentPart() {
   return useMutation({
     mutationFn: async ({ id, projectId }: { id: number; projectId: number }) => {
       await apiRequest('DELETE', `/api/projects/${projectId}/component-parts/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['component-parts'] });
+    },
+  });
+}
+
+export function useLibraryEntries(opts?: { search?: string; category?: string; page?: number }) {
+  return useQuery<{ entries: ComponentLibraryEntry[]; total: number }>({
+    queryKey: ['component-library', opts?.search, opts?.category, opts?.page],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (opts?.search) params.set('search', opts.search);
+      if (opts?.category) params.set('category', opts.category);
+      if (opts?.page) params.set('page', String(opts.page));
+      const res = await apiRequest('GET', `/api/component-library?${params.toString()}`);
+      return res.json();
+    },
+  });
+}
+
+export function usePublishToLibrary() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { title: string; description?: string; meta: unknown; connectors: unknown; buses: unknown; views: unknown; constraints: unknown; tags: string[]; category?: string; isPublic: boolean }) => {
+      const res = await apiRequest('POST', '/api/component-library', data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['component-library'] });
+    },
+  });
+}
+
+export function useForkLibraryEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ libraryId, projectId }: { libraryId: number; projectId: number }) => {
+      const res = await apiRequest('POST', `/api/component-library/${libraryId}/fork`, { projectId });
+      return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['component-parts'] });

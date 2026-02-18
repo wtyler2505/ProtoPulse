@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ComponentEditorProvider, useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
-import { useComponentParts, useCreateComponentPart, useUpdateComponentPart } from '@/lib/component-editor/hooks';
+import { useComponentParts, useCreateComponentPart, useUpdateComponentPart, useDeleteComponentPart, usePublishToLibrary } from '@/lib/component-editor/hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProject, PROJECT_ID } from '@/lib/project-context';
 import type { EditorViewType, PartMeta } from '@shared/component-types';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield } from 'lucide-react';
+import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield, Share2, Library, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
 import PinTable from '@/components/views/component-editor/PinTable';
@@ -22,6 +22,11 @@ import type { GeneratorResult } from '@/lib/component-editor/generators';
 import { validatePart } from '@/lib/component-editor/validation';
 import { runDRC, getDefaultDRCRules } from '@/lib/component-editor/drc';
 import type { ComponentValidationIssue, DRCViolation, DRCRule } from '@shared/component-types';
+import { createDefaultPartState } from '@shared/component-types';
+import ComponentLibraryBrowser from '@/components/views/component-editor/ComponentLibraryBrowser';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import type { ComponentPart } from '@shared/schema';
 
 const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'breadboard', label: 'Breadboard' },
@@ -207,11 +212,16 @@ function ComponentEditorContent() {
   const [drcOpen, setDrcOpen] = useState(false);
   const [showDrcOverlays, setShowDrcOverlays] = useState(true);
   const [drcRules, setDrcRules] = useState(() => getDefaultDRCRules());
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [publishTags, setPublishTags] = useState('');
+  const [publishIsPublic, setPublishIsPublic] = useState(true);
   const queryClient = useQueryClient();
 
   const { data: parts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
   const createMutation = useCreateComponentPart();
   const updateMutation = useUpdateComponentPart();
+  const publishMutation = usePublishToLibrary();
 
   useEffect(() => {
     if (loadedRef.current || !parts) return;
@@ -468,6 +478,75 @@ function ComponentEditorContent() {
     }
   }, [partId, activeView, dispatch, toast]);
 
+  const handlePublish = useCallback(() => {
+    const issues = validatePart(state.present);
+    if (issues.some(i => i.severity === 'error')) {
+      toast({ title: 'Validation failed', description: 'Fix validation errors before publishing.', variant: 'destructive' });
+      return;
+    }
+    setPublishTags(state.present.meta.tags?.join(', ') || '');
+    setPublishIsPublic(true);
+    setPublishOpen(true);
+  }, [state.present, toast]);
+
+  const handleConfirmPublish = useCallback(async () => {
+    try {
+      await publishMutation.mutateAsync({
+        title: state.present.meta.title || 'Untitled',
+        description: state.present.meta.description || undefined,
+        meta: state.present.meta,
+        connectors: state.present.connectors,
+        buses: state.present.buses,
+        views: state.present.views,
+        constraints: state.present.constraints || [],
+        tags: publishTags.split(',').map(t => t.trim()).filter(Boolean),
+        category: state.present.meta.family || undefined,
+        isPublic: publishIsPublic,
+      });
+      setPublishOpen(false);
+      toast({ title: 'Published', description: 'Component published to library.' });
+    } catch {
+      toast({ title: 'Publish failed', description: 'Could not publish component.', variant: 'destructive' });
+    }
+  }, [state.present, publishTags, publishIsPublic, publishMutation, toast]);
+
+  const handleCreateNewPart = useCallback(async () => {
+    if (state.ui.isDirty && partId) {
+      await handleSave();
+    }
+    try {
+      const created = await createMutation.mutateAsync({ projectId: PROJECT_ID });
+      setPartId(created.id);
+      dispatch({ type: 'LOAD_PART', payload: createDefaultPartState() });
+      loadedRef.current = true;
+    } catch {
+      toast({ title: 'Error', description: 'Could not create new part.', variant: 'destructive' });
+    }
+  }, [state.ui.isDirty, partId, handleSave, createMutation, dispatch, toast]);
+
+  const handleSwitchPart = useCallback(async (part: ComponentPart) => {
+    if (state.ui.isDirty && partId) {
+      await handleSave();
+    }
+    setPartId(part.id);
+    dispatch({
+      type: 'LOAD_PART',
+      payload: {
+        meta: part.meta as any,
+        connectors: part.connectors as any ?? [],
+        buses: part.buses as any ?? [],
+        views: part.views as any,
+        constraints: part.constraints as any ?? [],
+      },
+    });
+  }, [state.ui.isDirty, partId, handleSave, dispatch]);
+
+  const handleLibraryForked = useCallback((forkedPartId: number) => {
+    queryClient.invalidateQueries({ queryKey: ['component-parts'] });
+    setPartId(forkedPartId);
+    loadedRef.current = false;
+  }, [queryClient]);
+
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
@@ -521,6 +600,27 @@ function ComponentEditorContent() {
           >
             <Download className="w-4 h-4" />
             <span className="text-xs">Export</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-publish"
+            onClick={handlePublish}
+            disabled={!partId}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Share2 className="w-4 h-4" />
+            <span className="text-xs">Publish</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-library"
+            onClick={() => setLibraryOpen(true)}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Library className="w-4 h-4" />
+            <span className="text-xs">Library</span>
           </Button>
           <Button
             variant="ghost"
@@ -645,6 +745,31 @@ function ComponentEditorContent() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
+        <div className="w-48 border-r border-border flex flex-col bg-card/50">
+          <div className="p-2 flex items-center justify-between border-b border-border">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Parts</span>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreateNewPart} data-testid="button-new-part">
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {parts?.map(part => (
+              <button
+                key={part.id}
+                data-testid={`part-item-${part.id}`}
+                className={`w-full text-left px-3 py-2 text-sm border-b border-border/50 transition-colors ${
+                  partId === part.id
+                    ? 'bg-[#00F0FF]/10 text-[#00F0FF] border-l-2 border-l-[#00F0FF]'
+                    : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                }`}
+                onClick={() => handleSwitchPart(part)}
+              >
+                <div className="font-medium truncate">{(part.meta as any)?.title || `Part #${part.id}`}</div>
+                <div className="text-xs opacity-60 truncate">{(part.meta as any)?.family || 'No family'}</div>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex-1 overflow-auto">
           {partsLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 h-full" data-testid="loading-editor">
@@ -692,6 +817,65 @@ function ComponentEditorContent() {
         onClose={() => setValidationOpen(false)}
         issues={validationIssues}
         onNavigate={handleNavigateToIssue}
+      />
+      <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
+        <DialogContent className="max-w-md bg-background border-border" data-testid="dialog-publish">
+          <DialogHeader>
+            <DialogTitle>Publish to Library</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="publish-tags" className="text-muted-foreground text-sm">Tags (comma-separated)</Label>
+              <Input
+                id="publish-tags"
+                data-testid="input-publish-tags"
+                value={publishTags}
+                onChange={(e) => setPublishTags(e.target.value)}
+                placeholder="mcu, sensor, ic"
+                className="bg-card border-border"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-sm">Category</Label>
+              <Input
+                data-testid="input-publish-category"
+                value={state.present.meta.family || ''}
+                disabled
+                className="bg-card border-border opacity-60"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="publish-public"
+                data-testid="checkbox-publish-public"
+                checked={publishIsPublic}
+                onCheckedChange={(checked) => setPublishIsPublic(checked === true)}
+              />
+              <Label htmlFor="publish-public" className="text-sm text-muted-foreground cursor-pointer">Make public</Label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" size="sm" data-testid="button-cancel-publish" onClick={() => setPublishOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              data-testid="button-confirm-publish"
+              onClick={handleConfirmPublish}
+              disabled={publishMutation.isPending}
+              className="bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80"
+            >
+              {publishMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Publish
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <ComponentLibraryBrowser
+        open={libraryOpen}
+        onClose={() => setLibraryOpen(false)}
+        projectId={PROJECT_ID}
+        onForked={handleLibraryForked}
       />
     </div>
   );

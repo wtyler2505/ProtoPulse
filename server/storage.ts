@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, isNull } from "drizzle-orm";
+import { eq, and, desc, asc, isNull, ilike, sql, count, or } from "drizzle-orm";
 import { db } from "./db";
 import { cache } from "./cache";
 import {
@@ -10,6 +10,7 @@ import {
   chatMessages, type ChatMessage, type InsertChatMessage,
   historyItems, type HistoryItem, type InsertHistoryItem,
   componentParts, type ComponentPart, type InsertComponentPart,
+  componentLibrary, type ComponentLibraryEntry, type InsertComponentLibrary,
 } from "@shared/schema";
 
 export interface PaginationOptions {
@@ -78,6 +79,13 @@ export interface IStorage {
   createComponentPart(part: InsertComponentPart): Promise<ComponentPart>;
   updateComponentPart(id: number, projectId: number, data: Partial<InsertComponentPart>): Promise<ComponentPart | undefined>;
   deleteComponentPart(id: number, projectId: number): Promise<boolean>;
+
+  getLibraryEntries(opts?: { search?: string; category?: string; page?: number; limit?: number }): Promise<{ entries: ComponentLibraryEntry[]; total: number }>;
+  getLibraryEntry(id: number): Promise<ComponentLibraryEntry | undefined>;
+  createLibraryEntry(entry: InsertComponentLibrary): Promise<ComponentLibraryEntry>;
+  updateLibraryEntry(id: number, data: Partial<InsertComponentLibrary>): Promise<ComponentLibraryEntry | undefined>;
+  deleteLibraryEntry(id: number): Promise<boolean>;
+  incrementLibraryDownloads(id: number): Promise<void>;
 }
 
 function computeTotalPrice(quantity: number, unitPrice: string | number): string {
@@ -552,6 +560,92 @@ export class DatabaseStorage implements IStorage {
       return result.length > 0;
     } catch (e) {
       throw new StorageError('deleteComponentPart', `component-parts/${id}`, e);
+    }
+  }
+  async getLibraryEntries(opts?: { search?: string; category?: string; page?: number; limit?: number }): Promise<{ entries: ComponentLibraryEntry[]; total: number }> {
+    try {
+      const { search, category, page = 1, limit = 20 } = opts || {};
+      const offset = (page - 1) * limit;
+
+      const conditions = [eq(componentLibrary.isPublic, true)];
+      if (category) {
+        conditions.push(eq(componentLibrary.category, category));
+      }
+      if (search) {
+        conditions.push(
+          or(
+            ilike(componentLibrary.title, `%${search}%`),
+            sql`EXISTS (SELECT 1 FROM unnest(${componentLibrary.tags}) AS t WHERE t ILIKE ${'%' + search + '%'})`
+          )!
+        );
+      }
+
+      const whereClause = and(...conditions);
+
+      const [entries, [{ total }]] = await Promise.all([
+        db.select().from(componentLibrary)
+          .where(whereClause)
+          .orderBy(desc(componentLibrary.downloadCount), desc(componentLibrary.createdAt))
+          .limit(limit)
+          .offset(offset),
+        db.select({ total: count() }).from(componentLibrary)
+          .where(whereClause),
+      ]);
+
+      return { entries, total };
+    } catch (e) {
+      throw new StorageError('getLibraryEntries', 'componentLibrary', e);
+    }
+  }
+
+  async getLibraryEntry(id: number): Promise<ComponentLibraryEntry | undefined> {
+    try {
+      const [entry] = await db.select().from(componentLibrary).where(eq(componentLibrary.id, id));
+      return entry;
+    } catch (e) {
+      throw new StorageError('getLibraryEntry', `componentLibrary/${id}`, e);
+    }
+  }
+
+  async createLibraryEntry(entry: InsertComponentLibrary): Promise<ComponentLibraryEntry> {
+    try {
+      const [created] = await db.insert(componentLibrary).values(entry).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createLibraryEntry', 'componentLibrary', e);
+    }
+  }
+
+  async updateLibraryEntry(id: number, data: Partial<InsertComponentLibrary>): Promise<ComponentLibraryEntry | undefined> {
+    try {
+      const [updated] = await db.update(componentLibrary)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(componentLibrary.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateLibraryEntry', `componentLibrary/${id}`, e);
+    }
+  }
+
+  async deleteLibraryEntry(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(componentLibrary)
+        .where(eq(componentLibrary.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (e) {
+      throw new StorageError('deleteLibraryEntry', `componentLibrary/${id}`, e);
+    }
+  }
+
+  async incrementLibraryDownloads(id: number): Promise<void> {
+    try {
+      await db.update(componentLibrary)
+        .set({ downloadCount: sql`${componentLibrary.downloadCount} + 1` })
+        .where(eq(componentLibrary.id, id));
+    } catch (e) {
+      throw new StorageError('incrementLibraryDownloads', `componentLibrary/${id}`, e);
     }
   }
 }

@@ -18,6 +18,7 @@ import {
   insertChatMessageSchema,
   insertHistoryItemSchema,
   insertComponentPartSchema,
+  insertComponentLibrarySchema,
   componentParts,
   projects,
   architectureNodes,
@@ -749,6 +750,62 @@ export async function registerRoutes(app: Express): Promise<void> {
     } catch (err: any) {
       res.status(400).json({ message: err.message || "Invalid SVG content" });
     }
+  }));
+
+  // --- Component Library ---
+
+  app.get("/api/component-library", asyncHandler(async (req, res) => {
+    const search = typeof req.query.search === 'string' ? req.query.search : undefined;
+    const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
+    const result = await storage.getLibraryEntries({ search, category, page, limit });
+    res.json(result);
+  }));
+
+  app.get("/api/component-library/:id", asyncHandler(async (req, res) => {
+    const id = parseIdParam(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+    const entry = await storage.getLibraryEntry(id);
+    if (!entry) return res.status(404).json({ message: "Library entry not found" });
+    res.json(entry);
+  }));
+
+  app.post("/api/component-library", asyncHandler(async (req, res) => {
+    const parsed = insertComponentLibrarySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: fromZodError(parsed.error).message });
+    }
+    const entry = await storage.createLibraryEntry(parsed.data);
+    res.status(201).json(entry);
+  }));
+
+  app.delete("/api/component-library/:id", asyncHandler(async (req, res) => {
+    const id = parseIdParam(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+    const deleted = await storage.deleteLibraryEntry(id);
+    if (!deleted) return res.status(404).json({ message: "Library entry not found" });
+    res.json({ success: true });
+  }));
+
+  app.post("/api/component-library/:id/fork", asyncHandler(async (req, res) => {
+    const id = parseIdParam(req.params.id);
+    const forkSchema = z.object({ projectId: z.number().int().positive() });
+    const parsed = forkSchema.safeParse(req.body);
+    if (isNaN(id) || !parsed.success) return res.status(400).json({ message: "Invalid id or projectId" });
+    const projectId = parsed.data.projectId;
+    const entry = await storage.getLibraryEntry(id);
+    if (!entry) return res.status(404).json({ message: "Library entry not found" });
+    const part = await storage.createComponentPart({
+      projectId,
+      meta: entry.meta as any,
+      connectors: entry.connectors as any,
+      buses: entry.buses as any,
+      views: entry.views as any,
+      constraints: entry.constraints as any,
+    });
+    await storage.incrementLibraryDownloads(id);
+    res.status(201).json(part);
   }));
 
   // --- DRC Check ---

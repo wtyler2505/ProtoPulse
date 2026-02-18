@@ -198,3 +198,29 @@ export const componentParts = pgTable("component_parts", {
 export const insertComponentPartSchema = createInsertSchema(componentParts).omit({ id: true, version: true, createdAt: true, updatedAt: true });
 export type InsertComponentPart = z.infer<typeof insertComponentPartSchema>;
 export type ComponentPart = typeof componentParts.$inferSelect;
+
+export const componentLibrary = pgTable("component_library", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  meta: jsonb("meta").notNull().default({}),
+  connectors: jsonb("connectors").notNull().default([]),
+  buses: jsonb("buses").notNull().default([]),
+  views: jsonb("views").notNull().default({}),
+  constraints: jsonb("constraints").notNull().default([]),
+  tags: text("tags").array().notNull().default([]),
+  category: text("category"),
+  isPublic: boolean("is_public").notNull().default(false),
+  authorId: text("author_id"),
+  forkedFromId: integer("forked_from_id"),
+  downloadCount: integer("download_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_component_library_category").on(table.category),
+  index("idx_component_library_public").on(table.isPublic),
+]);
+
+export const insertComponentLibrarySchema = createInsertSchema(componentLibrary).omit({ id: true, downloadCount: true, createdAt: true, updatedAt: true });
+export type InsertComponentLibrary = z.infer<typeof insertComponentLibrarySchema>;
+export type ComponentLibraryEntry = typeof componentLibrary.$inferSelect;
