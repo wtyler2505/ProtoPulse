@@ -7,7 +7,6 @@ export const quickActionDescriptions: Record<string, string> = {
   'Optimize BOM': 'Optimize bill of materials cost',
   'Run Validation': 'Run design rule checks',
   'Add MCU Node': 'Add an MCU component to the design',
-  'Switch to Schematic': 'Open the schematic editor',
   'Project Summary': 'Show current project info',
   'Show Help': 'List all available commands',
   'Export BOM CSV': 'Export BOM as CSV file',
@@ -33,7 +32,6 @@ export const DESTRUCTIVE_ACTIONS = ['clear_canvas', 'remove_node', 'remove_edge'
 
 export const ACTION_LABELS: Record<string, string> = {
   switch_view: 'Switched view',
-  switch_schematic_sheet: 'Switched sheet',
   add_node: 'Added component',
   remove_node: 'Removed component',
   update_node: 'Updated component',

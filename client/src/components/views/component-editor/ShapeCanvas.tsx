@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import type { Shape, RectShape, CircleShape, PathShape, TextShape, GroupShape, Connector } from '@shared/component-types';
 import { nanoid } from 'nanoid';
@@ -16,8 +16,18 @@ function renderShape(shape: Shape, selectedIds: string[], onMD?: (e: React.Mouse
   const sel = selectedIds.includes(shape.id);
   const st = shape.style || {};
   const cmn = { opacity: st.opacity ?? 1, cursor: 'pointer' as const };
+  const shapeLabel = (() => {
+    switch (shape.type) {
+      case 'rect': return `Rectangle at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
+      case 'circle': return `Circle at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
+      case 'path': return `Path at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
+      case 'text': return `Text "${(shape as TextShape).text}" at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
+      case 'group': return `Group at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
+      default: return `Shape at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
+    }
+  })();
   const wrap = (id: string, children: React.ReactNode) => (
-    <g key={id} data-testid={`shape-${id}`} onMouseDown={(e) => onMD?.(e, id)}>{children}</g>
+    <g key={id} data-testid={`shape-${id}`} role="img" aria-label={shapeLabel} onMouseDown={(e) => onMD?.(e, id)}>{children}</g>
   );
   const selBox = sel ? (
     <rect x={shape.x - 2} y={shape.y - 2} width={shape.width + 4} height={shape.height + 4}
@@ -72,14 +82,17 @@ function renderShape(shape: Shape, selectedIds: string[], onMD?: (e: React.Mouse
 }
 
 const TOOLS = [
-  { id: 'select' as const, icon: MousePointer2, label: 'Select' },
-  { id: 'rect' as const, icon: Square, label: 'Rectangle' },
-  { id: 'circle' as const, icon: CircleIcon, label: 'Circle' },
-  { id: 'text' as const, icon: Type, label: 'Text' },
-  { id: 'line' as const, icon: Minus, label: 'Line' },
-  { id: 'connector' as const, icon: MapPin, label: 'Pin' },
-  { id: 'measure' as const, icon: Ruler, label: 'Measure' },
+  { id: 'select' as const, icon: MousePointer2, label: 'Select', shortcut: 'S' },
+  { id: 'rect' as const, icon: Square, label: 'Rectangle', shortcut: 'R' },
+  { id: 'circle' as const, icon: CircleIcon, label: 'Circle', shortcut: 'C' },
+  { id: 'text' as const, icon: Type, label: 'Text', shortcut: 'T' },
+  { id: 'line' as const, icon: Minus, label: 'Line', shortcut: 'L' },
+  { id: 'connector' as const, icon: MapPin, label: 'Pin', shortcut: 'P' },
+  { id: 'measure' as const, icon: Ruler, label: 'Measure', shortcut: 'M' },
 ];
+
+const SHORTCUT_MAP: Record<string, typeof TOOLS[number]['id']> = {};
+TOOLS.forEach((t) => { SHORTCUT_MAP[t.shortcut.toLowerCase()] = t.id; });
 
 export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic' | 'pcb' }) {
   const { state, dispatch } = useComponentEditor();
@@ -358,12 +371,17 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
   }, [isPanning, isDragging, drawStart, drawCurrent, activeTool, dispatch, view, marqueeStart, marqueeCurrent, shapes]);
 
   useEffect(() => {
+    const isInputFocused = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable;
+    };
     const down = (e: KeyboardEvent) => {
       if (e.code === 'Space') { e.preventDefault(); setSpaceHeld(true); }
       if (e.key === 'Escape') {
         setPendingMeasureStart(null);
+        dispatch({ type: 'SET_SELECTION', payload: [] });
       }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0) {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0 && !isInputFocused(e)) {
         dispatch({ type: 'DELETE_SHAPES', payload: { view, shapeIds: selectedIds } });
         dispatch({ type: 'SET_SELECTION', payload: [] });
       }
@@ -379,16 +397,32 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
         e.preventDefault();
         zoomToFit();
       }
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && !isInputFocused(e)) {
+        const toolId = SHORTCUT_MAP[e.key.toLowerCase()];
+        if (toolId) {
+          if (activeTool === 'measure' && toolId !== 'measure') {
+            setMeasurements([]);
+            setPendingMeasureStart(null);
+          }
+          dispatch({ type: 'SET_TOOL', payload: toolId });
+        }
+      }
     };
     const up = (e: KeyboardEvent) => { if (e.code === 'Space') setSpaceHeld(false); };
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, [selectedIds, dispatch, view, zoomToFit]);
+  }, [selectedIds, dispatch, view, zoomToFit, activeTool]);
 
   const gps = GRID_SIZE * zoom;
 
-  const preview = drawStart && drawCurrent ? (() => {
+  const renderedShapes = useMemo(
+    () => shapes.map((s) => renderShape(s, selectedIds, handleShapeMouseDown)),
+    [shapes, selectedIds, handleShapeMouseDown]
+  );
+
+  const preview = useMemo(() => {
+    if (!drawStart || !drawCurrent) return null;
     const x = Math.min(drawStart.x, drawCurrent.x), y = Math.min(drawStart.y, drawCurrent.y);
     const w = Math.abs(drawCurrent.x - drawStart.x), h = Math.abs(drawCurrent.y - drawStart.y);
     if (activeTool === 'circle') {
@@ -402,50 +436,58 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
     }
     return <rect x={x} y={y} width={w} height={h}
       fill="rgba(0,240,255,0.1)" stroke={SEL} strokeWidth={1} strokeDasharray="4 2" />;
-  })() : null;
+  }, [drawStart, drawCurrent, activeTool]);
 
-  const marqueeRect = marqueeStart && marqueeCurrent ? (() => {
+  const marqueeRect = useMemo(() => {
+    if (!marqueeStart || !marqueeCurrent) return null;
     const x = Math.min(marqueeStart.x, marqueeCurrent.x);
     const y = Math.min(marqueeStart.y, marqueeCurrent.y);
     const w = Math.abs(marqueeCurrent.x - marqueeStart.x);
     const h = Math.abs(marqueeCurrent.y - marqueeStart.y);
     return <rect x={x} y={y} width={w} height={h}
       fill="rgba(0,240,255,0.1)" stroke="#00F0FF" strokeWidth={1} strokeDasharray="4 2" />;
-  })() : null;
+  }, [marqueeStart, marqueeCurrent]);
 
-  const connectorGhost = activeTool === 'connector' && cursorPos ? (
-    <circle cx={cursorPos.x} cy={cursorPos.y} r={3}
-      fill="none" stroke={SEL} strokeWidth={1} strokeDasharray="4 2" pointerEvents="none" />
-  ) : null;
+  const connectorGhost = useMemo(() => {
+    if (activeTool !== 'connector' || !cursorPos) return null;
+    return <circle cx={cursorPos.x} cy={cursorPos.y} r={3}
+      fill="none" stroke={SEL} strokeWidth={1} strokeDasharray="4 2" pointerEvents="none" />;
+  }, [activeTool, cursorPos]);
+
+  const toolbar = useMemo(() => (
+    <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card" data-testid="canvas-toolbar" role="toolbar" aria-label="Drawing tools">
+      {TOOLS.map((t) => (
+        <button key={t.id} data-testid={`tool-${t.id}`} title={`${t.label} (${t.shortcut})`}
+          aria-label={`${t.label} (${t.shortcut})`} aria-pressed={activeTool === t.id}
+          className={`p-1.5 rounded transition-colors ${activeTool === t.id
+            ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+          onClick={() => {
+            if (activeTool === 'measure' && t.id !== 'measure') {
+              setMeasurements([]);
+              setPendingMeasureStart(null);
+            }
+            dispatch({ type: 'SET_TOOL', payload: t.id });
+          }}>
+          <t.icon className="w-4 h-4" />
+        </button>
+      ))}
+      <div className="w-px h-4 bg-border mx-1" />
+      <button data-testid="button-zoom-fit" title="Zoom to fit (Ctrl+0)"
+        className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+        onClick={zoomToFit}>
+        <Maximize2 className="w-4 h-4" />
+      </button>
+      <span className="ml-auto text-xs text-muted-foreground" data-testid="zoom-indicator" aria-live="polite">
+        {Math.round(zoom * 100)}%
+      </span>
+    </div>
+  ), [activeTool, dispatch, zoomToFit, zoom]);
 
   return (
     <div className="flex flex-col flex-1 h-full" data-testid="shape-canvas-container">
-      <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card" data-testid="canvas-toolbar">
-        {TOOLS.map((t) => (
-          <button key={t.id} data-testid={`tool-${t.id}`} title={t.label}
-            className={`p-1.5 rounded transition-colors ${activeTool === t.id
-              ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-            onClick={() => {
-              if (activeTool === 'measure' && t.id !== 'measure') {
-                setMeasurements([]);
-                setPendingMeasureStart(null);
-              }
-              dispatch({ type: 'SET_TOOL', payload: t.id });
-            }}>
-            <t.icon className="w-4 h-4" />
-          </button>
-        ))}
-        <div className="w-px h-4 bg-border mx-1" />
-        <button data-testid="button-zoom-fit" title="Zoom to fit (Ctrl+0)"
-          className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
-          onClick={zoomToFit}>
-          <Maximize2 className="w-4 h-4" />
-        </button>
-        <span className="ml-auto text-xs text-muted-foreground" data-testid="zoom-indicator">
-          {Math.round(zoom * 100)}%
-        </span>
-      </div>
+      {toolbar}
       <svg ref={svgRef} data-testid="shape-canvas-svg" className="flex-1 w-full"
+        role="application" aria-label={`Component editor canvas - ${view} view`} aria-roledescription="drawing canvas" tabIndex={0}
         style={{ background: '#0a0a0a', cursor: isPanning || spaceHeld ? 'grabbing' : activeTool === 'select' ? 'default' : 'crosshair' }}
         onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp} onContextMenu={(e) => e.preventDefault()}>
@@ -459,7 +501,7 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
         <g transform={`translate(${panX}, ${panY}) scale(${zoom})`}>
           <line x1="-10000" y1="0" x2="10000" y2="0" stroke="#333" strokeWidth={0.5 / zoom} />
           <line x1="0" y1="-10000" x2="0" y2="10000" stroke="#333" strokeWidth={0.5 / zoom} />
-          {shapes.map((s) => renderShape(s, selectedIds, handleShapeMouseDown))}
+          {renderedShapes}
           <SnapGuides guides={activeGuides} />
           <RulerOverlay measurements={measurements} pendingStart={pendingMeasureStart}
             cursorPos={measureCursorPos} zoom={zoom} />

@@ -35,6 +35,7 @@ function ColorInput({
       <Input
         data-testid={testId}
         value={value}
+        aria-label={label}
         onChange={(e) => onChange(e.target.value)}
         className="h-7 bg-card border-border text-sm flex-1"
       />
@@ -68,6 +69,7 @@ function NumberField({
         data-testid={testId}
         type="number"
         value={value}
+        aria-label={label}
         onChange={(e) => onChange?.(parseFloat(e.target.value) || 0)}
         step={step}
         min={min}
@@ -158,6 +160,7 @@ function SingleShapeInspector({ shape, view }: { shape: Shape; view: CanvasView 
               <Input
                 data-testid="input-shape-text"
                 value={(shape as TextShape).text}
+                aria-label="Content"
                 onChange={(e) => updateShape({ text: e.target.value } as Partial<Shape>)}
                 className="h-7 bg-card border-border text-sm flex-1"
               />
@@ -174,6 +177,7 @@ function SingleShapeInspector({ shape, view }: { shape: Shape; view: CanvasView 
               <Input
                 data-testid="input-shape-fontFamily"
                 value={style.fontFamily ?? 'sans-serif'}
+                aria-label="Font"
                 onChange={(e) => updateStyle({ fontFamily: e.target.value })}
                 className="h-7 bg-card border-border text-sm flex-1"
               />
@@ -268,6 +272,8 @@ export default function ComponentInspector() {
   return (
     <div
       data-testid="inspector-panel"
+      role="complementary"
+      aria-label="Shape properties inspector"
       className="w-64 flex-shrink-0 border-l border-border bg-card overflow-y-auto"
     >
       {selectedShapes.length === 0 && (

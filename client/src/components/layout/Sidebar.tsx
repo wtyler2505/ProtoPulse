@@ -21,7 +21,6 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { copyToClipboard } from '@/lib/clipboard';
 import { SETTINGS_SAVE_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
 import ComponentTree from './sidebar/ComponentTree';
-import SheetList from './sidebar/SheetList';
 import HistoryList from './sidebar/HistoryList';
 
 interface SidebarProps {
@@ -34,7 +33,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose, collapsed = false, width = 256, onToggleCollapse }: SidebarProps) {
   const {
-    activeView, setActiveView, schematicSheets, activeSheetId, setActiveSheetId,
+    activeView, setActiveView,
     history, projectName, projectDescription, addOutputLog,
     nodes, edges, bom, issues, setNodes,
     selectedNodeId, focusNode,
@@ -42,7 +41,6 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
   } = useProject();
 
   const [blocksExpanded, setBlocksExpanded] = useState(true);
-  const [schematicsExpanded, setSchematicsExpanded] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingName, setEditingName] = useState(false);
@@ -169,14 +167,9 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
           <SidebarContent
             activeView={activeView}
             setActiveView={setActiveView}
-            schematicSheets={schematicSheets}
-            activeSheetId={activeSheetId}
-            setActiveSheetId={setActiveSheetId}
             history={history}
             blocksExpanded={blocksExpanded}
             setBlocksExpanded={setBlocksExpanded}
-            schematicsExpanded={schematicsExpanded}
-            setSchematicsExpanded={setSchematicsExpanded}
             showSettings={showSettings}
             setShowSettings={setShowSettings}
             projectName={projectName}
@@ -215,8 +208,8 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
 }
 
 function SidebarContent({
-  activeView, setActiveView, schematicSheets, activeSheetId, setActiveSheetId, history,
-  blocksExpanded, setBlocksExpanded, schematicsExpanded, setSchematicsExpanded,
+  activeView, setActiveView, history,
+  blocksExpanded, setBlocksExpanded,
   showSettings, setShowSettings, projectName, projectDescription, addOutputLog,
   nodes, edges, bom, issues, setNodes,
   selectedNodeId, focusNode,
@@ -285,7 +278,7 @@ function SidebarContent({
               <input
                 data-testid="sidebar-search"
                 type="text"
-                placeholder="Search blocks & sheets..."
+                placeholder="Search blocks..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/30 border border-border/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:bg-muted/50 transition-colors"
@@ -346,28 +339,6 @@ function SidebarContent({
               )}
             </div>
 
-            <div>
-              <div
-                className="px-4 py-1.5 flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-muted/50"
-                onClick={() => setSchematicsExpanded(!schematicsExpanded)}
-              >
-                {schematicsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                <span className="text-xs">Schematics</span>
-                <span className="text-[10px] bg-muted/50 px-1.5 py-0.5 ml-auto">{schematicSheets.length}</span>
-              </div>
-
-              {schematicsExpanded && (
-                <SheetList
-                  schematicSheets={schematicSheets}
-                  activeSheetId={activeSheetId}
-                  activeView={activeView}
-                  searchQuery={searchQuery}
-                  setActiveView={setActiveView}
-                  setActiveSheetId={setActiveSheetId}
-                  addOutputLog={addOutputLog}
-                />
-              )}
-            </div>
           </div>
         </div>
 

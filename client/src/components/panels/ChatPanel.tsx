@@ -28,7 +28,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     setNodes, setEdges, nodes, edges,
     bom, addBomItem, deleteBomItem, updateBomItem,
     activeView, setActiveView,
-    activeSheetId, setActiveSheetId, schematicSheets,
+    activeSheetId, setActiveSheetId,
     projectName, setProjectName, projectDescription, setProjectDescription,
     addToHistory, addOutputLog,
     selectedNodeId,
@@ -139,20 +139,6 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     };
     for (const [key, view] of Object.entries(viewMap)) {
       if ((lower.includes('switch to') || lower.includes('go to') || lower.includes('show') || lower.includes('open')) && lower.includes(key)) {
-        if (key === 'component editor') {
-          const sheetMatch = lower.match(/sheet\s+(.+)/);
-          if (sheetMatch) {
-            const sheetName = sheetMatch[1].trim();
-            const sheet = schematicSheets.find((s: any) => s.name.toLowerCase().includes(sheetName) || s.id.toLowerCase() === sheetName);
-            if (sheet) {
-              setActiveSheetId(sheet.id);
-              setActiveView('component_editor' as any);
-              addToHistory(`Opened schematic sheet: ${sheet.name}`, 'AI');
-              addOutputLog(`[AI] Opened schematic sheet: ${sheet.name}`);
-              return `[ACTION] Opened schematic sheet '${sheet.name}'.\n\nYou can now view and edit this sheet in the component editor.`;
-            }
-          }
-        }
         setActiveView(view as any);
         const viewLabel = key.charAt(0).toUpperCase() + key.slice(1);
         addToHistory(`Switched to ${viewLabel} view`, 'AI');
@@ -362,7 +348,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     }
 
     if (lower.includes('project info') || lower.includes('project summary') || lower.includes('show project') || lower.includes('project status')) {
-      return `**Project Summary**\n\n• **Name:** ${projectName}\n• **Description:** ${projectDescription}\n• **Architecture Nodes:** ${nodes.length}\n• **Connections:** ${edges.length}\n• **BOM Items:** ${bom.length}\n• **Validation Issues:** ${issues.length}\n• **Active View:** ${activeView}\n• **Schematic Sheets:** ${schematicSheets.length}`;
+      return `**Project Summary**\n\n• **Name:** ${projectName}\n• **Description:** ${projectDescription}\n• **Architecture Nodes:** ${nodes.length}\n• **Connections:** ${edges.length}\n• **BOM Items:** ${bom.length}\n• **Validation Issues:** ${issues.length}\n• **Active View:** ${activeView}`;
     }
 
     if (lower === 'help' || lower.includes('what can you do') || lower.includes('show help') || lower.includes('commands')) {
@@ -401,12 +387,6 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           setActiveView(action.view);
           addToHistory(`Switched to ${action.view} view`, 'AI');
           addOutputLog(`[AI] Switched to ${action.view} view`);
-          break;
-        case 'switch_schematic_sheet':
-          setActiveSheetId(action.sheetId);
-          setActiveView('component_editor');
-          addToHistory(`Opened schematic sheet: ${action.sheetId}`, 'AI');
-          addOutputLog(`[AI] Opened schematic sheet: ${action.sheetId}`);
           break;
         case 'add_node': {
           const newNode = {
@@ -1487,7 +1467,6 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           temperature: aiTemperature,
           customSystemPrompt,
           activeView,
-          schematicSheets: schematicSheets.map((s: any) => ({ id: s.id, name: s.name })),
           activeSheetId,
           selectedNodeId,
           changeDiff,
@@ -1581,7 +1560,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       abortRef.current = null;
       captureSnapshot();
     }
-  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, activeView, schematicSheets, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand, selectedNodeId, getChangeDiff, captureSnapshot]);
+  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, activeView, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand, selectedNodeId, getChangeDiff, captureSnapshot]);
 
   const handleRegenerate = useCallback(() => {
     if (lastUserMessage && !isGenerating) {

@@ -78,10 +78,9 @@ export function useOutput() {
 export function useSchematic() {
   const ctx = useProject();
   return useMemo(() => ({
-    schematicSheets: ctx.schematicSheets,
     activeSheetId: ctx.activeSheetId,
     setActiveSheetId: ctx.setActiveSheetId,
-  }), [ctx.schematicSheets, ctx.activeSheetId, ctx.setActiveSheetId]);
+  }), [ctx.activeSheetId, ctx.setActiveSheetId]);
 }
 
 export function useHistory() {

@@ -348,7 +348,7 @@ function ArchitectureFlow() {
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
-                      data-testid="button-generate-schematic"
+                      data-testid="button-generate-architecture"
                       className="pointer-events-auto px-6 py-2 bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/20 hover:scale-105 transition-all"
                       onClick={() => {
                         addMessage({ id: crypto.randomUUID(), role: 'user', content: 'Generate Architecture', timestamp: Date.now(), mode: 'chat' });

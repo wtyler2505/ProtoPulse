@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2, Save, Cpu, ShieldCheck } from 'lucide-react';
+import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
 import PinTable from '@/components/views/component-editor/PinTable';
@@ -155,9 +155,30 @@ function MetadataForm() {
 }
 
 function CanvasPlaceholder({ view }: { view: string }) {
+  const viewConfig: Record<string, { icon: React.ReactNode; message: string }> = {
+    breadboard: {
+      icon: <Box className="w-10 h-10 text-muted-foreground/50" />,
+      message: 'No shapes yet. Use the toolbar to draw, or click Generate to create a component package.',
+    },
+    schematic: {
+      icon: <GitBranch className="w-10 h-10 text-muted-foreground/50" />,
+      message: 'Design the schematic symbol for your component.',
+    },
+    pcb: {
+      icon: <CircuitBoard className="w-10 h-10 text-muted-foreground/50" />,
+      message: 'Design the PCB footprint for your component.',
+    },
+  };
+
+  const config = viewConfig[view] ?? {
+    icon: <FileText className="w-10 h-10 text-muted-foreground/50" />,
+    message: `${view.charAt(0).toUpperCase() + view.slice(1)} view`,
+  };
+
   return (
-    <div className="flex-1 flex items-center justify-center" data-testid={`placeholder-${view}`}>
-      <p className="text-muted-foreground text-lg">{view.charAt(0).toUpperCase() + view.slice(1)} canvas coming in Phase 2</p>
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 p-8" data-testid={`placeholder-${view}`}>
+      {config.icon}
+      <p className="text-muted-foreground text-sm text-center max-w-md">{config.message}</p>
     </div>
   );
 }
@@ -174,7 +195,7 @@ function ComponentEditorContent() {
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationIssues, setValidationIssues] = useState<ComponentValidationIssue[]>([]);
 
-  const { data: parts } = useComponentParts(PROJECT_ID);
+  const { data: parts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
   const createMutation = useCreateComponentPart();
   const updateMutation = useUpdateComponentPart();
 
@@ -359,8 +380,20 @@ function ComponentEditorContent() {
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 overflow-auto">
-          {activeView === 'metadata' ? (
-            <MetadataForm />
+          {partsLoading ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 h-full" data-testid="loading-editor">
+              <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+              <p className="text-muted-foreground text-sm">Loading component data…</p>
+            </div>
+          ) : activeView === 'metadata' ? (
+            !partId ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3 h-full p-8" data-testid="empty-metadata">
+                <FileText className="w-10 h-10 text-muted-foreground/50" />
+                <p className="text-muted-foreground text-sm text-center max-w-md">Create or select a component part to edit its metadata.</p>
+              </div>
+            ) : (
+              <MetadataForm />
+            )
           ) : activeView === 'pin-table' ? (
             <PinTable />
           ) : activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb' ? (

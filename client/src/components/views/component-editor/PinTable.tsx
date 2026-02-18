@@ -2,7 +2,7 @@ import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvid
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Pin } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import type { Connector } from '@shared/component-types';
 
@@ -125,8 +125,9 @@ export default function PinTable() {
   if (connectors.length === 0) {
     return (
       <div data-testid="empty-pin-table" className="flex-1 flex flex-col items-center justify-center gap-4 p-8">
-        <p className="text-muted-foreground text-center">
-          No pins defined. Add pins to define the component's electrical connections.
+        <Pin className="w-10 h-10 text-muted-foreground/50" />
+        <p className="text-muted-foreground text-sm text-center max-w-md">
+          No pins defined yet. Add pins to define the component's electrical connections.
         </p>
         <Button data-testid="button-add-pin" onClick={addPin} className="gap-2">
           <Plus className="w-4 h-4" />

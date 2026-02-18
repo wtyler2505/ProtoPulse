@@ -153,6 +153,110 @@ async function buildAppStateFromProject(
   };
 }
 
+function buildSeedComponentPart(projectId: number) {
+  const pinNames = ["VCC", "PB0", "PB1", "PB2", "PB3", "PB4", "GND", "PB5"];
+  const pinTypes: Array<"power" | "io"> = ["power", "io", "io", "io", "io", "io", "power", "io"];
+
+  const connectors = pinNames.map((name, i) => {
+    const pinNum = i + 1;
+    const isLeft = pinNum <= 4;
+    const row = isLeft ? i : 7 - i;
+    const x = isLeft ? 20 : 180;
+    const y = 35 + row * 70;
+    return {
+      id: `pin${pinNum}`,
+      name,
+      description: `Pin ${pinNum} - ${name} (${pinTypes[i]})`,
+      connectorType: "pad" as const,
+      shapeIds: {
+        breadboard: [`pin${pinNum}-bb`],
+        schematic: [`pin${pinNum}-sch`],
+        pcb: [`pin${pinNum}-pcb`],
+      },
+      terminalPositions: {
+        breadboard: { x, y },
+        schematic: { x, y },
+        pcb: { x, y },
+      },
+      padSpec: {
+        type: "tht" as const,
+        shape: "circle" as const,
+        diameter: 1.6,
+        drill: 0.8,
+      },
+    };
+  });
+
+  const leftPinsBB = Array.from({ length: 4 }, (_, i) => ({
+    id: `pin${i + 1}-bb`, type: "rect" as const, x: 20, y: 30 + i * 70, width: 20, height: 10, rotation: 0,
+    style: { fill: "#C0C0C0", stroke: "#999999", strokeWidth: 1 },
+  }));
+  const rightPinsBB = Array.from({ length: 4 }, (_, i) => ({
+    id: `pin${i + 5}-bb`, type: "rect" as const, x: 160, y: 240 - i * 70, width: 20, height: 10, rotation: 0,
+    style: { fill: "#C0C0C0", stroke: "#999999", strokeWidth: 1 },
+  }));
+  const leftPinsSch = Array.from({ length: 4 }, (_, i) => ({
+    id: `pin${i + 1}-sch`, type: "rect" as const, x: 0, y: 30 + i * 70, width: 20, height: 10, rotation: 0,
+    style: { fill: "#C0C0C0", stroke: "#000000", strokeWidth: 1 },
+  }));
+  const rightPinsSch = Array.from({ length: 4 }, (_, i) => ({
+    id: `pin${i + 5}-sch`, type: "rect" as const, x: 180, y: 240 - i * 70, width: 20, height: 10, rotation: 0,
+    style: { fill: "#C0C0C0", stroke: "#000000", strokeWidth: 1 },
+  }));
+  const leftPinsPcb = Array.from({ length: 4 }, (_, i) => ({
+    id: `pin${i + 1}-pcb`, type: "circle" as const, x: 20, y: 30 + i * 70, width: 16, height: 16,
+    cx: 28, cy: 35 + i * 70, rotation: 0, style: { fill: "#C0C0C0", stroke: "#999999", strokeWidth: 1 },
+  }));
+  const rightPinsPcb = Array.from({ length: 4 }, (_, i) => ({
+    id: `pin${i + 5}-pcb`, type: "circle" as const, x: 164, y: 240 - i * 70, width: 16, height: 16,
+    cx: 172, cy: 245 - i * 70, rotation: 0, style: { fill: "#C0C0C0", stroke: "#999999", strokeWidth: 1 },
+  }));
+
+  return {
+    projectId,
+    meta: {
+      title: "ATtiny85",
+      family: "Microcontroller",
+      description: "8-bit AVR Microcontroller, 8-pin DIP",
+      manufacturer: "Microchip",
+      mpn: "ATTINY85-20PU",
+      mountingType: "tht",
+      packageType: "DIP",
+      tags: ["microcontroller", "AVR", "8-bit", "DIP-8"],
+      properties: [],
+    },
+    connectors,
+    buses: [],
+    views: {
+      breadboard: {
+        shapes: [
+          { id: "body-bb", type: "rect" as const, x: 40, y: 0, width: 120, height: 280, rotation: 0, style: { fill: "#333333", stroke: "#000000", strokeWidth: 2 } },
+          { id: "notch-bb", type: "circle" as const, x: 90, y: 5, width: 20, height: 20, cx: 100, cy: 15, rotation: 0, style: { fill: "#555555", stroke: "#444444", strokeWidth: 1 } },
+          { id: "label-bb", type: "text" as const, x: 55, y: 140, width: 90, height: 20, rotation: 0, text: "ATtiny85", style: { fill: "#FFFFFF", fontSize: 11, fontFamily: "monospace", textAnchor: "middle" } },
+          ...leftPinsBB,
+          ...rightPinsBB,
+        ],
+      },
+      schematic: {
+        shapes: [
+          { id: "body-sch", type: "rect" as const, x: 20, y: 0, width: 160, height: 280, rotation: 0, style: { fill: "#FFFFFF", stroke: "#000000", strokeWidth: 2 } },
+          { id: "label-sch", type: "text" as const, x: 60, y: 140, width: 80, height: 20, rotation: 0, text: "ATtiny85", style: { fontSize: 12, fontFamily: "monospace", textAnchor: "middle" } },
+          ...leftPinsSch,
+          ...rightPinsSch,
+        ],
+      },
+      pcb: {
+        shapes: [
+          { id: "body-pcb", type: "rect" as const, x: 40, y: 0, width: 120, height: 280, rotation: 0, style: { fill: "#1a1a1a", stroke: "#333333", strokeWidth: 1 } },
+          ...leftPinsPcb,
+          ...rightPinsPcb,
+        ],
+      },
+    },
+    constraints: [],
+  };
+}
+
 export async function registerRoutes(app: Express): Promise<void> {
 
   // --- Auth ---
@@ -578,6 +682,10 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
     const existingProjects = await storage.getProjects();
     if (existingProjects.length > 0) {
+      const existingParts = await storage.getComponentParts(existingProjects[0].id);
+      if (existingParts.length === 0) {
+        await storage.createComponentPart(buildSeedComponentPart(existingProjects[0].id));
+      }
       return res.json({ message: "Already seeded", project: existingProjects[0] });
     }
 
@@ -620,6 +728,8 @@ export async function registerRoutes(app: Express): Promise<void> {
         { projectId: project.id, action: "Added ESP32-S3", user: "User" },
         { projectId: project.id, action: "Auto-connected Power Rails", user: "AI" },
       ]);
+
+      await tx.insert(componentParts).values(buildSeedComponentPart(project.id));
 
       return project;
     });
