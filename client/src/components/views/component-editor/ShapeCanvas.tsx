@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import type { Shape, RectShape, CircleShape, PathShape, TextShape, GroupShape, Connector, DRCViolation, Constraint } from '@shared/component-types';
-import { getShapeCenter } from '@/lib/component-editor/constraint-solver';
+import { getShapeCenter, detectConflicts } from '@/lib/component-editor/constraint-solver';
 import { nanoid } from 'nanoid';
 import { MousePointer2, Square, Circle as CircleIcon, Type, MapPin, Minus, Maximize2, Ruler, ImageIcon, Lock, Unlock, X, Layers, Spline } from 'lucide-react';
 import { computeSnap, getShapeBounds, type SnapTarget } from '@/lib/component-editor/snap-engine';
@@ -789,6 +789,8 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
     if (constraints.length === 0) return null;
     const shapes = state.present.views[view].shapes;
     const shapeMap = new Map(shapes.map(s => [s.id, s]));
+    const conflictIds = new Set(detectConflicts(constraints.filter(c => c.enabled), shapes));
+
     return (
       <g data-testid="constraint-overlays" pointerEvents="none">
         {constraints.filter(c => c.enabled).map(c => {
@@ -796,25 +798,58 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
             const s = shapeMap.get(id);
             return s ? getShapeCenter(s) : null;
           }).filter(Boolean) as { x: number; y: number }[];
+
+          const isSatisfied = !conflictIds.has(c.id);
+          const lineColor = isSatisfied ? '#22c55e' : '#ef4444';
+          const labelColor = isSatisfied ? '#22c55e' : '#ef4444';
+
           if (centers.length < 2) {
             if (c.type === 'fixed' && centers.length === 1) {
+              const fixedX = Number(c.params.x) || 0;
+              const fixedY = Number(c.params.y) || 0;
+              const dx = centers[0].x - fixedX;
+              const dy = centers[0].y - fixedY;
+              const isFixed = Math.abs(dx) < 1 && Math.abs(dy) < 1;
+              const fixColor = isFixed ? '#22c55e' : '#ef4444';
               return (
                 <g key={c.id}>
-                  <circle cx={centers[0].x} cy={centers[0].y} r={4 / zoom} fill="none" stroke="#a855f7" strokeWidth={1.5 / zoom} />
-                  <line x1={centers[0].x - 4 / zoom} y1={centers[0].y} x2={centers[0].x + 4 / zoom} y2={centers[0].y} stroke="#a855f7" strokeWidth={1 / zoom} />
-                  <line x1={centers[0].x} y1={centers[0].y - 4 / zoom} x2={centers[0].x} y2={centers[0].y + 4 / zoom} stroke="#a855f7" strokeWidth={1 / zoom} />
+                  <circle cx={centers[0].x} cy={centers[0].y} r={4 / zoom} fill="none" stroke={fixColor} strokeWidth={1.5 / zoom} />
+                  <line x1={centers[0].x - 4 / zoom} y1={centers[0].y} x2={centers[0].x + 4 / zoom} y2={centers[0].y} stroke={fixColor} strokeWidth={1 / zoom} />
+                  <line x1={centers[0].x} y1={centers[0].y - 4 / zoom} x2={centers[0].x} y2={centers[0].y + 4 / zoom} stroke={fixColor} strokeWidth={1 / zoom} />
                 </g>
               );
             }
             return null;
           }
+
+          const dx = centers[1].x - centers[0].x;
+          const dy = centers[1].y - centers[0].y;
+          const currentDist = Math.sqrt(dx * dx + dy * dy);
+
+          let label = c.type;
+          if (c.type === 'distance' && c.params.distance !== undefined) {
+            label = `${currentDist.toFixed(0)}/${c.params.distance}`;
+          } else if (c.type === 'pitch' && c.params.pitch !== undefined) {
+            label = `pitch ${c.params.pitch}`;
+          } else if (c.type === 'alignment') {
+            const axis = (c.params.axis as string) || 'x';
+            const diff = axis === 'x' ? Math.abs(centers[0].x - centers[1].x) : Math.abs(centers[0].y - centers[1].y);
+            label = `align-${axis} \u0394${diff.toFixed(0)}`;
+          }
+
           return (
             <g key={c.id}>
               <line x1={centers[0].x} y1={centers[0].y} x2={centers[1].x} y2={centers[1].y}
-                stroke="#a855f7" strokeWidth={1 / zoom} strokeDasharray={`${4 / zoom} ${3 / zoom}`} opacity={0.7} />
+                stroke={lineColor} strokeWidth={1.2 / zoom} strokeDasharray={isSatisfied ? 'none' : `${4 / zoom} ${3 / zoom}`} opacity={0.8} />
+              {isSatisfied && (
+                <>
+                  <circle cx={(centers[0].x + centers[1].x) / 2} cy={(centers[0].y + centers[1].y) / 2} r={4 / zoom} fill="#22c55e" opacity={0.3} />
+                  <circle cx={(centers[0].x + centers[1].x) / 2} cy={(centers[0].y + centers[1].y) / 2} r={2 / zoom} fill="#22c55e" opacity={0.6} />
+                </>
+              )}
               <text x={(centers[0].x + centers[1].x) / 2} y={(centers[0].y + centers[1].y) / 2 - 6 / zoom}
-                fill="#a855f7" fontSize={9 / zoom} textAnchor="middle" fontFamily="JetBrains Mono, monospace">
-                {c.type}{c.params.distance !== undefined ? ` ${c.params.distance}` : ''}{c.params.pitch !== undefined ? ` ${c.params.pitch}` : ''}
+                fill={labelColor} fontSize={9 / zoom} textAnchor="middle" fontFamily="JetBrains Mono, monospace" fontWeight={isSatisfied ? 'normal' : 'bold'}>
+                {label}
               </text>
             </g>
           );

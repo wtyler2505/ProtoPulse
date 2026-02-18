@@ -21,7 +21,7 @@ import DRCPanel from '@/components/views/component-editor/DRCPanel';
 import type { GeneratorResult } from '@/lib/component-editor/generators';
 import { validatePart } from '@/lib/component-editor/validation';
 import { runDRC, getDefaultDRCRules } from '@/lib/component-editor/drc';
-import type { ComponentValidationIssue, DRCViolation } from '@shared/component-types';
+import type { ComponentValidationIssue, DRCViolation, DRCRule } from '@shared/component-types';
 
 const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'breadboard', label: 'Breadboard' },
@@ -206,7 +206,7 @@ function ComponentEditorContent() {
   const [drcViolations, setDrcViolations] = useState<DRCViolation[]>([]);
   const [drcOpen, setDrcOpen] = useState(false);
   const [showDrcOverlays, setShowDrcOverlays] = useState(true);
-  const [drcRules] = useState(() => getDefaultDRCRules());
+  const [drcRules, setDrcRules] = useState(() => getDefaultDRCRules());
   const queryClient = useQueryClient();
 
   const { data: parts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
@@ -328,6 +328,10 @@ function ComponentEditorContent() {
     }
     setValidationOpen(true);
   }, [state.present, activeView, drcRules]);
+
+  const handleUpdateDrcRule = useCallback((index: number, updates: Partial<DRCRule>) => {
+    setDrcRules(prev => prev.map((rule, i) => i === index ? { ...rule, ...updates } : rule));
+  }, []);
 
   const handleDrcHighlight = useCallback((shapeIds: string[]) => {
     dispatch({ type: 'SET_SELECTION', payload: shapeIds });
@@ -672,6 +676,8 @@ function ComponentEditorContent() {
             showOverlays={showDrcOverlays}
             onToggleOverlays={() => setShowDrcOverlays(v => !v)}
             onHighlight={handleDrcHighlight}
+            rules={drcRules}
+            onUpdateRule={handleUpdateDrcRule}
           />
         )}
         {historyOpen && <HistoryPanel />}
