@@ -1,8 +1,8 @@
 # FZPZ Studio → ProtoPulse Integration Plan
 
 **Created:** 2026-02-17
-**Status:** In Progress — Phases 1-3 complete, Phase 5 partial (4/10), Phase 6 complete, Phases 4/7+ not started
-**Last updated:** 2026-02-18 (v4 — implementation progress tracking, actual file locations, checklist updates)
+**Status:** In Progress — Phases 1-3, 6-8 complete, Phase 5 partial (4/10), Phases 4/9+ not started
+**Last updated:** 2026-02-18 (v5 — Phase 7+8 complete, checklist updates)
 
 ---
 
@@ -1377,21 +1377,21 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 7: Advanced Canvas Features (Medium enhancements)
 **Goal:** Layer system, enhanced path drawing, and named undo history make the editor feel professional.
-**Status: NOT STARTED**
+**Status: COMPLETE** (2026-02-18)
 
 **Dependency note:** Phases 2-6 assume a flat shape list with no layer filtering. When the layer system is added here, all shapes from earlier phases default to the primary layer for their view. Rendering code from Phase 2 must treat `shape.layer === undefined` as "belongs to default layer." DRC overlays referenced in Phase 2's canvas are **not** DRC — they are snap/ruler overlays only. Actual DRC overlays are gated until Phase 8.
 
-- [ ] **7.1** [ME-6] Implement layer system:
+- [x] **7.1** [ME-6] Implement layer system:
   - Add `LayerPanel.tsx` — per-view layer visibility/lock toggles
   - Update shape rendering to filter by visible layers
   - Update shape creation to assign to active layer
   - Default layer configs per view type (PCB: copper-front/back, silkscreen, courtyard, fab; breadboard: body, pins, labels; schematic: symbols, pins, labels)
-- [ ] **7.2** [ME-7] Upgrade path drawing tool:
+- [x] **7.2** [ME-7] Upgrade path drawing tool:
   - Add Bezier curve editing with control handle dragging
   - Support smooth/corner node types
   - Allow editing existing path nodes (click path → show nodes → drag to reshape)
   - Add path simplification (reduce node count while preserving shape)
-- [ ] **7.3** [ME-8] Create `HistoryPanel.tsx`:
+- [x] **7.3** [ME-8] Create `HistoryPanel.tsx`:
   - List of named history entries with timestamps
   - Click any entry to jump to that state (replaces current undo/redo stepping)
   - Visual indicator of current position in history
@@ -1401,7 +1401,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 8: Intelligence & Automation (Big Swing innovations)
 **Goal:** Real-time DRC and parametric constraints turn the editor from a drawing tool into an engineering tool.
-**Status: NOT STARTED**
+**Status: COMPLETE** (2026-02-18)
 
 **Dependency note:** DRC accuracy improves with the layer system (Phase 7) since clearance checks should only apply within the same copper layer. If Phase 8 is started before Phase 7, DRC treats all shapes as on the same layer (conservative — more violations, never missed violations). Phase 8 constraint solver works on shape positions regardless of layers, so no hard dependency. DRC runs **client-side** for real-time feedback (debounced). The server `POST /api/components/:id/drc` endpoint is for heavy full-project validation only (e.g., before export or publish) — it uses the same `drc.ts` engine bundled for server via shared code.
 
@@ -1968,17 +1968,17 @@ This is the master checklist. Update status as work progresses.
 - [x] 6.9 Seed data with sample component
 
 ### Phase 7: Advanced Canvas Features
-- [ ] 7.1 Layer system (LayerPanel + rendering filter + default configs)
-- [ ] 7.2 Path drawing tool upgrade (Bezier curves + control handles + node editing)
-- [ ] 7.3 HistoryPanel.tsx (named history with jump-to)
+- [x] 7.1 Layer system (LayerPanel + rendering filter + default configs)
+- [x] 7.2 Path drawing tool upgrade (Bezier curves + control handles + node editing)
+- [x] 7.3 HistoryPanel.tsx (named history with jump-to)
 
 ### Phase 8: Intelligence & Automation
-- [ ] 8.1 drc.ts engine (6 rule types + spatial indexing + debounced execution)
-- [ ] 8.2 DRCPanel.tsx (violations list + click-to-highlight)
-- [ ] 8.3 DRC canvas overlays (red/amber violation indicators)
-- [ ] 8.4 constraint-solver.ts (6 constraint types + iterative propagation + conflict detection)
-- [ ] 8.5 Constraint editor UI in inspector
-- [ ] 8.6 DRC in main Validation view
+- [x] 8.1 drc.ts engine (6 rule types + spatial indexing + debounced execution)
+- [x] 8.2 DRCPanel.tsx (violations list + click-to-highlight + rule customization + JSON/CSV export)
+- [x] 8.3 DRC canvas overlays (red/amber violation indicators)
+- [x] 8.4 constraint-solver.ts (6 constraint types + iterative propagation + conflict detection + auto-inference)
+- [x] 8.5 Constraint editor UI in inspector (with satisfaction indicators)
+- [x] 8.6 DRC in main Validation view
 
 ### Phase 9: Component Library & Ecosystem
 - [ ] 9.1 component_library table + migration
@@ -2071,10 +2071,12 @@ This is the master checklist. Update status as work progresses.
 | Phase 1: Foundation | Complete | 11/11 items |
 | Phase 2: Canvas + Drawing | Complete | 14/14 items |
 | Phase 3: Metadata + Generator + Pin Table | Complete | 6/6 items |
-| Phase 4: AI Generation | Not started | 0/8 items |
+| Phase 4: AI Generation | Not started | 0/10 items |
 | Phase 5: Import/Export | Partial | 4/10 items |
 | Phase 6: Polish | Complete | 9/9 items |
-| Phases 7-13 | Not started | 0/x items |
+| Phase 7: Advanced Canvas | Complete | 3/3 items |
+| Phase 8: Intelligence & Automation | Complete | 6/6 items |
+| Phases 9-13 | Not started | 0/x items |
 
 ### Actual File Locations vs Plan
 
