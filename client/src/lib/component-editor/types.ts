@@ -11,8 +11,9 @@ export interface EditorUIState {
   selectedShapeIds: string[];
   selectedConnectorId: string | null;
   isDirty: boolean;
-  activeTool: 'select' | 'rect' | 'circle' | 'text' | 'connector' | 'line' | 'measure';
+  activeTool: 'select' | 'rect' | 'circle' | 'text' | 'connector' | 'line' | 'measure' | 'path';
   clipboard: Shape[];
+  activeLayer: string;
 }
 
 export type EditorAction =
@@ -32,9 +33,12 @@ export type EditorAction =
   | { type: 'ADD_CONNECTOR'; payload: Connector }
   | { type: 'UPDATE_CONNECTOR'; payload: { connectorId: string; updates: Partial<Connector> } }
   | { type: 'DELETE_CONNECTOR'; payload: string }
-  | { type: 'SET_TOOL'; payload: 'select' | 'rect' | 'circle' | 'text' | 'connector' | 'line' | 'measure' }
+  | { type: 'SET_TOOL'; payload: 'select' | 'rect' | 'circle' | 'text' | 'connector' | 'line' | 'measure' | 'path' }
   | { type: 'COPY_SHAPES'; payload: { view: 'breadboard' | 'schematic' | 'pcb' } }
-  | { type: 'PASTE_SHAPES'; payload: { view: 'breadboard' | 'schematic' | 'pcb' } };
+  | { type: 'PASTE_SHAPES'; payload: { view: 'breadboard' | 'schematic' | 'pcb' } }
+  | { type: 'SET_LAYER_CONFIG'; payload: { view: 'breadboard' | 'schematic' | 'pcb'; layerConfig: Record<string, { visible: boolean; locked: boolean; color?: string }> } }
+  | { type: 'SET_ACTIVE_LAYER'; payload: string }
+  | { type: 'JUMP_TO_HISTORY'; payload: { index: number } };
 
 export interface EditorState {
   past: HistoryEntry[];

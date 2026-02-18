@@ -95,6 +95,9 @@ app.use(express.json({ limit: "1mb" }));
 
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 
+app.use(express.raw({ limit: "5mb", type: ['application/octet-stream', 'application/zip', 'application/x-zip-compressed'] }));
+app.use(express.text({ limit: "2mb", type: ['text/xml', 'application/xml', 'image/svg+xml', 'text/plain'] }));
+
 app.use((req: Request, res: Response, next: NextFunction) => {
   if (req.path === '/api/chat/ai/stream') return next();
 

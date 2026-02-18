@@ -1,5 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
+import { exportToFzpz, importFromFzpz } from "./component-export";
+import { parseSvgToShapes } from "./svg-parser";
+import type { PartMeta, Connector, PartViews, Bus } from "@shared/component-types";
 import { db } from "./db";
 import { processAIMessage, streamAIMessage } from "./ai";
 import { createUser, getUserByUsername, verifyPassword, createSession, deleteSession, getUserById, validateSession, storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from "./auth";
@@ -672,6 +675,79 @@ export async function registerRoutes(app: Express): Promise<void> {
     const deleted = await storage.deleteComponentPart(id, projectId);
     if (!deleted) return res.status(404).json({ message: "Component part not found" });
     res.status(204).end();
+  }));
+
+  // --- FZPZ Export ---
+  app.get("/api/projects/:projectId/component-parts/:id/export/fzpz", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const part = await storage.getComponentPart(id, projectId);
+    if (!part) return res.status(404).json({ message: "Component part not found" });
+
+    const partState = {
+      meta: part.meta as PartMeta,
+      connectors: part.connectors as Connector[],
+      buses: part.buses as Bus[],
+      views: part.views as PartViews,
+    };
+
+    const zipBuffer = await exportToFzpz(partState);
+    const filename = (partState.meta.title || 'component').replace(/[^a-zA-Z0-9_-]/g, '_');
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${filename}.fzpz"`,
+    });
+    res.send(zipBuffer);
+  }));
+
+  // --- FZPZ Import ---
+  app.post("/api/projects/:projectId/component-parts/import/fzpz", payloadLimit(5 * 1024 * 1024), asyncHandler(async (req, res) => {
+    let buffer: Buffer;
+    if (Buffer.isBuffer(req.body)) {
+      buffer = req.body;
+    } else if (typeof req.body === 'string') {
+      buffer = Buffer.from(req.body, 'binary');
+    } else {
+      const chunks: Buffer[] = [];
+      let totalSize = 0;
+      for await (const chunk of req) {
+        totalSize += chunk.length;
+        if (totalSize > 5 * 1024 * 1024) return res.status(400).json({ message: "File too large (max 5MB)" });
+        chunks.push(Buffer.from(chunk));
+      }
+      buffer = Buffer.concat(chunks);
+    }
+
+    if (buffer.length === 0) return res.status(400).json({ message: "No file data provided" });
+
+    const projectId = parseIdParam(req.params.projectId);
+    const partState = await importFromFzpz(buffer);
+
+    const part = await storage.createComponentPart({
+      projectId,
+      meta: partState.meta,
+      connectors: partState.connectors,
+      buses: partState.buses,
+      views: partState.views,
+      constraints: [],
+    });
+    res.status(201).json(part);
+  }));
+
+  // --- SVG Import ---
+  app.post("/api/projects/:projectId/component-parts/:id/import/svg", payloadLimit(2 * 1024 * 1024), asyncHandler(async (req, res) => {
+    const svgContent = typeof req.body === 'string' ? req.body : '';
+
+    if (!svgContent || svgContent.trim().length === 0) {
+      return res.status(400).json({ message: "No SVG content provided. Send raw SVG with Content-Type: text/xml" });
+    }
+
+    try {
+      const shapes = parseSvgToShapes(svgContent);
+      res.json({ shapes });
+    } catch (err: any) {
+      res.status(400).json({ message: err.message || "Invalid SVG content" });
+    }
   }));
 
   // --- Seed / Init default project ---

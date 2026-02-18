@@ -99,7 +99,7 @@ export interface PartMeta {
 
 export interface ViewData {
   shapes: Shape[];
-  layerConfig?: Record<string, { visible: boolean; locked: boolean }>;
+  layerConfig?: Record<string, { visible: boolean; locked: boolean; color?: string }>;
 }
 
 export interface PartViews {

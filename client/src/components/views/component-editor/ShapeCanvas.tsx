@@ -2,15 +2,125 @@ import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import type { Shape, RectShape, CircleShape, PathShape, TextShape, GroupShape, Connector } from '@shared/component-types';
 import { nanoid } from 'nanoid';
-import { MousePointer2, Square, Circle as CircleIcon, Type, MapPin, Minus, Maximize2, Ruler } from 'lucide-react';
+import { MousePointer2, Square, Circle as CircleIcon, Type, MapPin, Minus, Maximize2, Ruler, ImageIcon, Lock, Unlock, X, Layers, Spline } from 'lucide-react';
 import { computeSnap, getShapeBounds, type SnapTarget } from '@/lib/component-editor/snap-engine';
 import SnapGuides from './SnapGuides';
 import RulerOverlay, { type Measurement } from './RulerOverlay';
+import LayerPanel, { getDefaultLayerConfig } from './LayerPanel';
 
 const MIN_ZOOM = 0.1;
 const MAX_ZOOM = 10;
 const GRID_SIZE = 10;
 const SEL = '#00F0FF';
+
+interface PathNode {
+  x: number;
+  y: number;
+  type: 'M' | 'L' | 'C' | 'Q';
+  cp1?: { x: number; y: number };
+  cp2?: { x: number; y: number };
+}
+
+function pathDToNodes(d: string): PathNode[] {
+  const nodes: PathNode[] = [];
+  const tokens = d.match(/[MLCQSTZmlcqstz]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/g);
+  if (!tokens) return nodes;
+  let i = 0;
+  let cx = 0, cy = 0;
+  while (i < tokens.length) {
+    const cmd = tokens[i];
+    if (cmd === 'M' || cmd === 'm') {
+      i++;
+      const x = parseFloat(tokens[i++]);
+      const y = parseFloat(tokens[i++]);
+      const absX = cmd === 'm' ? cx + x : x;
+      const absY = cmd === 'm' ? cy + y : y;
+      nodes.push({ x: absX, y: absY, type: 'M' });
+      cx = absX; cy = absY;
+    } else if (cmd === 'L' || cmd === 'l') {
+      i++;
+      const x = parseFloat(tokens[i++]);
+      const y = parseFloat(tokens[i++]);
+      const absX = cmd === 'l' ? cx + x : x;
+      const absY = cmd === 'l' ? cy + y : y;
+      nodes.push({ x: absX, y: absY, type: 'L' });
+      cx = absX; cy = absY;
+    } else if (cmd === 'C' || cmd === 'c') {
+      i++;
+      const cp1x = parseFloat(tokens[i++]);
+      const cp1y = parseFloat(tokens[i++]);
+      const cp2x = parseFloat(tokens[i++]);
+      const cp2y = parseFloat(tokens[i++]);
+      const x = parseFloat(tokens[i++]);
+      const y = parseFloat(tokens[i++]);
+      if (cmd === 'c') {
+        nodes.push({ x: cx + x, y: cy + y, type: 'C', cp1: { x: cx + cp1x, y: cy + cp1y }, cp2: { x: cx + cp2x, y: cy + cp2y } });
+        cx += x; cy += y;
+      } else {
+        nodes.push({ x, y, type: 'C', cp1: { x: cp1x, y: cp1y }, cp2: { x: cp2x, y: cp2y } });
+        cx = x; cy = y;
+      }
+    } else if (cmd === 'Q' || cmd === 'q') {
+      i++;
+      const cp1x = parseFloat(tokens[i++]);
+      const cp1y = parseFloat(tokens[i++]);
+      const x = parseFloat(tokens[i++]);
+      const y = parseFloat(tokens[i++]);
+      if (cmd === 'q') {
+        nodes.push({ x: cx + x, y: cy + y, type: 'Q', cp1: { x: cx + cp1x, y: cy + cp1y } });
+        cx += x; cy += y;
+      } else {
+        nodes.push({ x, y, type: 'Q', cp1: { x: cp1x, y: cp1y } });
+        cx = x; cy = y;
+      }
+    } else if (cmd === 'S' || cmd === 's') {
+      i++;
+      const cp2x = parseFloat(tokens[i++]);
+      const cp2y = parseFloat(tokens[i++]);
+      const x = parseFloat(tokens[i++]);
+      const y = parseFloat(tokens[i++]);
+      if (cmd === 's') {
+        nodes.push({ x: cx + x, y: cy + y, type: 'C', cp2: { x: cx + cp2x, y: cy + cp2y } });
+        cx += x; cy += y;
+      } else {
+        nodes.push({ x, y, type: 'C', cp2: { x: cp2x, y: cp2y } });
+        cx = x; cy = y;
+      }
+    } else if (cmd === 'T' || cmd === 't') {
+      i++;
+      const x = parseFloat(tokens[i++]);
+      const y = parseFloat(tokens[i++]);
+      const absX = cmd === 't' ? cx + x : x;
+      const absY = cmd === 't' ? cy + y : y;
+      nodes.push({ x: absX, y: absY, type: 'Q' });
+      cx = absX; cy = absY;
+    } else if (cmd === 'Z' || cmd === 'z') {
+      i++;
+    } else {
+      i++;
+    }
+  }
+  return nodes;
+}
+
+function nodesToPathD(nodes: PathNode[]): string {
+  return nodes.map((n) => {
+    switch (n.type) {
+      case 'M': return `M ${n.x} ${n.y}`;
+      case 'L': return `L ${n.x} ${n.y}`;
+      case 'C': return `C ${n.cp1?.x ?? n.x} ${n.cp1?.y ?? n.y} ${n.cp2?.x ?? n.x} ${n.cp2?.y ?? n.y} ${n.x} ${n.y}`;
+      case 'Q': return `Q ${n.cp1?.x ?? n.x} ${n.cp1?.y ?? n.y} ${n.x} ${n.y}`;
+      default: return '';
+    }
+  }).join(' ');
+}
+
+interface PathPoint {
+  x: number;
+  y: number;
+  cp1?: { x: number; y: number };
+  cp2?: { x: number; y: number };
+}
 
 function renderShape(shape: Shape, selectedIds: string[], onMD?: (e: React.MouseEvent, id: string) => void): React.ReactNode {
   const sel = selectedIds.includes(shape.id);
@@ -89,6 +199,7 @@ const TOOLS = [
   { id: 'line' as const, icon: Minus, label: 'Line', shortcut: 'L' },
   { id: 'connector' as const, icon: MapPin, label: 'Pin', shortcut: 'P' },
   { id: 'measure' as const, icon: Ruler, label: 'Measure', shortcut: 'M' },
+  { id: 'path' as const, icon: Spline, label: 'Path', shortcut: 'B' },
 ];
 
 const SHORTCUT_MAP: Record<string, typeof TOOLS[number]['id']> = {};
@@ -115,11 +226,48 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [pendingMeasureStart, setPendingMeasureStart] = useState<{ x: number; y: number } | null>(null);
   const [measureCursorPos, setMeasureCursorPos] = useState<{ x: number; y: number } | null>(null);
+  const [refImage, setRefImage] = useState<{
+    url: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    opacity: number;
+    locked: boolean;
+    scale: number;
+  } | null>(null);
+  const [isCalibrating, setIsCalibrating] = useState(false);
+  const [calibrationPoints, setCalibrationPoints] = useState<Array<{x: number; y: number}>>([]);
+  const refImageInputRef = useRef<HTMLInputElement>(null);
+  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  const [pathPoints, setPathPoints] = useState<PathPoint[]>([]);
+  const [isDrawingPath, setIsDrawingPath] = useState(false);
+  const [pathDragIndex, setPathDragIndex] = useState<number | null>(null);
+  const [pathCursorPos, setPathCursorPos] = useState<{ x: number; y: number } | null>(null);
+  const [pathClickStart, setPathClickStart] = useState<{ x: number; y: number } | null>(null);
+  const [pathDraggingHandle, setPathDraggingHandle] = useState(false);
+  const [editingPathNodes, setEditingPathNodes] = useState<PathNode[] | null>(null);
+  const [editingNodeDrag, setEditingNodeDrag] = useState<{ nodeIndex: number; handle: 'point' | 'cp1' | 'cp2' } | null>(null);
 
   const activeTool = state.ui.activeTool;
   const selectedIds = state.ui.selectedShapeIds;
-  const shapes = state.present.views[view].shapes;
+  const allShapes = state.present.views[view].shapes;
   const connectors = state.present.connectors;
+  const layerConfig = state.present.views[view].layerConfig || getDefaultLayerConfig(view);
+
+  const shapes = useMemo(() => {
+    return allShapes.filter((s) => {
+      const layer = s.layer || 'default';
+      const cfg = layerConfig[layer];
+      return !cfg || cfg.visible;
+    });
+  }, [allShapes, layerConfig]);
+
+  const isLayerLocked = useCallback((shapeLayer?: string) => {
+    const layer = shapeLayer || 'default';
+    const cfg = layerConfig[layer];
+    return cfg?.locked ?? false;
+  }, [layerConfig]);
 
   const toPartSpace = useCallback((sx: number, sy: number) => {
     const svg = svgRef.current;
@@ -159,6 +307,106 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
     setZoom(newZoom);
   }, [shapes]);
 
+  const handleRefImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      setRefImage({
+        url,
+        x: 0,
+        y: 0,
+        width: img.naturalWidth,
+        height: img.naturalHeight,
+        opacity: 0.5,
+        locked: false,
+        scale: 1,
+      });
+    };
+    img.src = url;
+    e.target.value = '';
+  }, []);
+
+  const handleCalibrationClick = useCallback((pos: { x: number; y: number }) => {
+    const newPoints = [...calibrationPoints, pos];
+    setCalibrationPoints(newPoints);
+    if (newPoints.length >= 2) {
+      const dx = newPoints[1].x - newPoints[0].x;
+      const dy = newPoints[1].y - newPoints[0].y;
+      const pixelDistance = Math.sqrt(dx * dx + dy * dy);
+      if (pixelDistance > 0) {
+        const input = window.prompt('Enter the real distance between the two points in mils (thousandths of inch):');
+        if (input) {
+          const realDistance = parseFloat(input);
+          if (!isNaN(realDistance) && realDistance > 0 && refImage) {
+            const newScale = refImage.scale * (realDistance / pixelDistance);
+            setRefImage({ ...refImage, scale: newScale });
+          }
+        }
+      }
+      setCalibrationPoints([]);
+      setIsCalibrating(false);
+    }
+  }, [calibrationPoints, refImage]);
+
+  const finishPath = useCallback(() => {
+    if (pathPoints.length < 2) {
+      setPathPoints([]);
+      setIsDrawingPath(false);
+      setPathCursorPos(null);
+      return;
+    }
+    const nodes: PathNode[] = pathPoints.map((pt, i) => {
+      if (i === 0) return { x: pt.x, y: pt.y, type: 'M' as const };
+      if (pt.cp1 || pt.cp2) {
+        const prev = pathPoints[i - 1];
+        const cp1 = pt.cp1 || { x: prev.x, y: prev.y };
+        const cp2 = pt.cp2 || { x: pt.x, y: pt.y };
+        return { x: pt.x, y: pt.y, type: 'C' as const, cp1, cp2 };
+      }
+      return { x: pt.x, y: pt.y, type: 'L' as const };
+    });
+    const d = nodesToPathD(nodes);
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    pathPoints.forEach((pt) => {
+      minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+      maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+      if (pt.cp1) { minX = Math.min(minX, pt.cp1.x); minY = Math.min(minY, pt.cp1.y); maxX = Math.max(maxX, pt.cp1.x); maxY = Math.max(maxY, pt.cp1.y); }
+      if (pt.cp2) { minX = Math.min(minX, pt.cp2.x); minY = Math.min(minY, pt.cp2.y); maxX = Math.max(maxX, pt.cp2.x); maxY = Math.max(maxY, pt.cp2.y); }
+    });
+    dispatch({ type: 'ADD_SHAPE', payload: { view, shape: {
+      id: nanoid(), type: 'path', x: minX, y: minY,
+      width: maxX - minX, height: maxY - minY, rotation: 0, d,
+      style: { stroke: '#888', strokeWidth: 2, fill: 'none' },
+    } as PathShape }});
+    setPathPoints([]);
+    setIsDrawingPath(false);
+    setPathCursorPos(null);
+  }, [pathPoints, dispatch, view]);
+
+  const cancelPath = useCallback(() => {
+    setPathPoints([]);
+    setIsDrawingPath(false);
+    setPathCursorPos(null);
+    setPathClickStart(null);
+    setPathDraggingHandle(false);
+  }, []);
+
+  const selectedPathShape = useMemo(() => {
+    if (activeTool !== 'select' || selectedIds.length !== 1) return null;
+    const s = shapes.find((sh) => sh.id === selectedIds[0]);
+    return s && s.type === 'path' ? s as PathShape : null;
+  }, [activeTool, selectedIds, shapes]);
+
+  useEffect(() => {
+    if (selectedPathShape && !editingNodeDrag) {
+      setEditingPathNodes(pathDToNodes(selectedPathShape.d));
+    } else if (!selectedPathShape) {
+      setEditingPathNodes(null);
+    }
+  }, [selectedPathShape?.id, selectedPathShape?.d]);
+
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
     const svg = svgRef.current;
@@ -180,6 +428,11 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
       return;
     }
     if (e.button !== 0) return;
+    if (isCalibrating) {
+      const pos = toPartSpace(e.clientX, e.clientY);
+      handleCalibrationClick(pos);
+      return;
+    }
     const shapeEl = (e.target as SVGElement).closest('[data-testid^="shape-"]');
     if (activeTool === 'select') {
       if (!shapeEl) {
@@ -234,16 +487,28 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
       }
       return;
     }
+    if (activeTool === 'path') {
+      if (e.detail === 2) {
+        finishPath();
+        return;
+      }
+      const pos = toPartSpace(e.clientX, e.clientY);
+      setPathClickStart(pos);
+      setPathDraggingHandle(false);
+      return;
+    }
     if (activeTool === 'rect' || activeTool === 'circle' || activeTool === 'line') {
       const pos = toPartSpace(e.clientX, e.clientY);
       setDrawStart(pos);
       setDrawCurrent(pos);
     }
-  }, [spaceHeld, panX, panY, activeTool, dispatch, toPartSpace, view, connectors.length, pendingMeasureStart]);
+  }, [spaceHeld, panX, panY, activeTool, dispatch, toPartSpace, view, connectors.length, pendingMeasureStart, isCalibrating, handleCalibrationClick, finishPath]);
 
   const handleShapeMouseDown = useCallback((e: React.MouseEvent, shapeId: string) => {
     if (activeTool !== 'select') return;
     e.stopPropagation();
+    const targetShape = shapes.find((s) => s.id === shapeId);
+    if (targetShape && isLayerLocked(targetShape.layer)) return;
     if (e.shiftKey) {
       const newSelection = selectedIds.includes(shapeId)
         ? selectedIds.filter((id) => id !== shapeId)
@@ -265,14 +530,45 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
       if (shape) origins.set(shapeId, { x: shape.x, y: shape.y });
     }
     setDragOrigins(origins);
-  }, [activeTool, dispatch, toPartSpace, selectedIds, shapes]);
+  }, [activeTool, dispatch, toPartSpace, selectedIds, shapes, isLayerLocked]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (activeTool === 'path' || isDrawingPath) {
+      const pos = toPartSpace(e.clientX, e.clientY);
+      setPathCursorPos(pos);
+      if (pathClickStart) {
+        const dx = pos.x - pathClickStart.x;
+        const dy = pos.y - pathClickStart.y;
+        if (dx * dx + dy * dy > 9) {
+          setPathDraggingHandle(true);
+        }
+      }
+    }
     if (activeTool === 'connector') {
       setCursorPos(toPartSpace(e.clientX, e.clientY));
     }
     if (activeTool === 'measure') {
       setMeasureCursorPos(toPartSpace(e.clientX, e.clientY));
+    }
+    if (editingNodeDrag && selectedPathShape && editingPathNodes) {
+      const pos = toPartSpace(e.clientX, e.clientY);
+      const updatedNodes = [...editingPathNodes];
+      const node = { ...updatedNodes[editingNodeDrag.nodeIndex] };
+      if (editingNodeDrag.handle === 'point') {
+        const dx = pos.x - node.x;
+        const dy = pos.y - node.y;
+        node.x = pos.x;
+        node.y = pos.y;
+        if (node.cp1) node.cp1 = { x: node.cp1.x + dx, y: node.cp1.y + dy };
+        if (node.cp2) node.cp2 = { x: node.cp2.x + dx, y: node.cp2.y + dy };
+      } else if (editingNodeDrag.handle === 'cp1' && node.cp1) {
+        node.cp1 = { x: pos.x, y: pos.y };
+      } else if (editingNodeDrag.handle === 'cp2' && node.cp2) {
+        node.cp2 = { x: pos.x, y: pos.y };
+      }
+      updatedNodes[editingNodeDrag.nodeIndex] = node;
+      setEditingPathNodes(updatedNodes);
+      return;
     }
     if (isPanning) {
       setPanX(e.clientX - panStart.x);
@@ -319,9 +615,37 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
       dispatch({ type: 'MOVE_SHAPES', payload: { view, moves } });
       setActiveGuides(snapResult.guides);
     }
-  }, [isPanning, panStart, drawStart, toPartSpace, isDragging, dragStart, dragOrigins, dispatch, view, marqueeStart, activeTool, shapes]);
+  }, [isPanning, panStart, drawStart, toPartSpace, isDragging, dragStart, dragOrigins, dispatch, view, marqueeStart, activeTool, shapes, isDrawingPath, pathClickStart, editingNodeDrag, selectedPathShape, editingPathNodes]);
 
   const handleMouseUp = useCallback(() => {
+    if (editingNodeDrag && selectedPathShape && editingPathNodes) {
+      const d = nodesToPathD(editingPathNodes);
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      editingPathNodes.forEach((n) => {
+        minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+        maxX = Math.max(maxX, n.x); maxY = Math.max(maxY, n.y);
+        if (n.cp1) { minX = Math.min(minX, n.cp1.x); minY = Math.min(minY, n.cp1.y); maxX = Math.max(maxX, n.cp1.x); maxY = Math.max(maxY, n.cp1.y); }
+        if (n.cp2) { minX = Math.min(minX, n.cp2.x); minY = Math.min(minY, n.cp2.y); maxX = Math.max(maxX, n.cp2.x); maxY = Math.max(maxY, n.cp2.y); }
+      });
+      dispatch({ type: 'UPDATE_SHAPE', payload: { view, shapeId: selectedPathShape.id, updates: { d, x: minX, y: minY, width: maxX - minX, height: maxY - minY } } });
+      setEditingNodeDrag(null);
+      return;
+    }
+    if (pathClickStart && activeTool === 'path') {
+      const pos = pathDraggingHandle && pathCursorPos ? pathCursorPos : pathClickStart;
+      const newPoint: PathPoint = { x: pathClickStart.x, y: pathClickStart.y };
+      if (pathDraggingHandle && pathCursorPos) {
+        const dx = pathCursorPos.x - pathClickStart.x;
+        const dy = pathCursorPos.y - pathClickStart.y;
+        newPoint.cp1 = { x: pathClickStart.x - dx, y: pathClickStart.y - dy };
+        newPoint.cp2 = { x: pathCursorPos.x, y: pathCursorPos.y };
+      }
+      setPathPoints((prev) => [...prev, newPoint]);
+      setIsDrawingPath(true);
+      setPathClickStart(null);
+      setPathDraggingHandle(false);
+      return;
+    }
     if (isPanning) { setIsPanning(false); return; }
     if (isDragging) { setIsDragging(false); setDragStart(null); setDragOrigins(new Map()); setActiveGuides([]); return; }
     if (marqueeStart && marqueeCurrent) {
@@ -368,7 +692,7 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
       setDrawStart(null);
       setDrawCurrent(null);
     }
-  }, [isPanning, isDragging, drawStart, drawCurrent, activeTool, dispatch, view, marqueeStart, marqueeCurrent, shapes]);
+  }, [isPanning, isDragging, drawStart, drawCurrent, activeTool, dispatch, view, marqueeStart, marqueeCurrent, shapes, editingNodeDrag, selectedPathShape, editingPathNodes, pathClickStart, pathDraggingHandle, pathCursorPos]);
 
   useEffect(() => {
     const isInputFocused = (e: KeyboardEvent) => {
@@ -377,8 +701,19 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
     };
     const down = (e: KeyboardEvent) => {
       if (e.code === 'Space') { e.preventDefault(); setSpaceHeld(true); }
+      if (e.key === 'Enter' && isDrawingPath) {
+        e.preventDefault();
+        finishPath();
+        return;
+      }
+      if (e.key === 'Escape' && isDrawingPath) {
+        cancelPath();
+        return;
+      }
       if (e.key === 'Escape') {
         setPendingMeasureStart(null);
+        setIsCalibrating(false);
+        setCalibrationPoints([]);
         dispatch({ type: 'SET_SELECTION', payload: [] });
       }
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0 && !isInputFocused(e)) {
@@ -412,7 +747,7 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
     window.addEventListener('keydown', down);
     window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, [selectedIds, dispatch, view, zoomToFit, activeTool]);
+  }, [selectedIds, dispatch, view, zoomToFit, activeTool, isDrawingPath, finishPath, cancelPath]);
 
   const gps = GRID_SIZE * zoom;
 
@@ -454,6 +789,88 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
       fill="none" stroke={SEL} strokeWidth={1} strokeDasharray="4 2" pointerEvents="none" />;
   }, [activeTool, cursorPos]);
 
+  const pathPreview = useMemo(() => {
+    if (!isDrawingPath && pathPoints.length === 0 && !pathClickStart) return null;
+    const allPts = [...pathPoints];
+    const elements: React.ReactNode[] = [];
+    if (allPts.length > 0) {
+      let dStr = `M ${allPts[0].x} ${allPts[0].y}`;
+      for (let i = 1; i < allPts.length; i++) {
+        const pt = allPts[i];
+        if (pt.cp1 || pt.cp2) {
+          const prev = allPts[i - 1];
+          const cp1 = pt.cp1 || { x: prev.x, y: prev.y };
+          const cp2 = pt.cp2 || { x: pt.x, y: pt.y };
+          dStr += ` C ${cp1.x} ${cp1.y} ${cp2.x} ${cp2.y} ${pt.x} ${pt.y}`;
+        } else {
+          dStr += ` L ${pt.x} ${pt.y}`;
+        }
+      }
+      elements.push(<path key="path-preview-solid" d={dStr} fill="none" stroke={SEL} strokeWidth={2} pointerEvents="none" />);
+    }
+    if (pathCursorPos && allPts.length > 0) {
+      const last = allPts[allPts.length - 1];
+      elements.push(<line key="path-preview-dashed" x1={last.x} y1={last.y} x2={pathCursorPos.x} y2={pathCursorPos.y}
+        stroke={SEL} strokeWidth={1} strokeDasharray="4 2" pointerEvents="none" />);
+    }
+    allPts.forEach((pt, i) => {
+      elements.push(<rect key={`path-pt-${i}`} x={pt.x - 2} y={pt.y - 2} width={4} height={4}
+        fill={SEL} stroke="none" pointerEvents="none" />);
+      if (pt.cp1) {
+        elements.push(<line key={`path-cp1-line-${i}`} x1={pt.x} y1={pt.y} x2={pt.cp1.x} y2={pt.cp1.y}
+          stroke={SEL} strokeWidth={0.5} strokeDasharray="2 2" pointerEvents="none" />);
+        elements.push(<circle key={`path-cp1-${i}`} cx={pt.cp1.x} cy={pt.cp1.y} r={2.5}
+          fill={SEL} stroke="none" pointerEvents="none" />);
+      }
+      if (pt.cp2) {
+        elements.push(<line key={`path-cp2-line-${i}`} x1={pt.x} y1={pt.y} x2={pt.cp2.x} y2={pt.cp2.y}
+          stroke={SEL} strokeWidth={0.5} strokeDasharray="2 2" pointerEvents="none" />);
+        elements.push(<circle key={`path-cp2-${i}`} cx={pt.cp2.x} cy={pt.cp2.y} r={2.5}
+          fill={SEL} stroke="none" pointerEvents="none" />);
+      }
+    });
+    if (pathClickStart && pathDraggingHandle && pathCursorPos) {
+      const dx = pathCursorPos.x - pathClickStart.x;
+      const dy = pathCursorPos.y - pathClickStart.y;
+      const mirrorX = pathClickStart.x - dx;
+      const mirrorY = pathClickStart.y - dy;
+      elements.push(<rect key="path-drag-pt" x={pathClickStart.x - 2} y={pathClickStart.y - 2} width={4} height={4}
+        fill={SEL} stroke="none" pointerEvents="none" />);
+      elements.push(<line key="path-drag-handle-line" x1={mirrorX} y1={mirrorY} x2={pathCursorPos.x} y2={pathCursorPos.y}
+        stroke={SEL} strokeWidth={0.5} strokeDasharray="2 2" pointerEvents="none" />);
+      elements.push(<circle key="path-drag-cp1" cx={mirrorX} cy={mirrorY} r={2.5}
+        fill={SEL} stroke="none" pointerEvents="none" />);
+      elements.push(<circle key="path-drag-cp2" cx={pathCursorPos.x} cy={pathCursorPos.y} r={2.5}
+        fill={SEL} stroke="none" pointerEvents="none" />);
+    }
+    return <g data-testid="path-preview">{elements}</g>;
+  }, [pathPoints, pathCursorPos, isDrawingPath, pathClickStart, pathDraggingHandle]);
+
+  const pathEditOverlay = useMemo(() => {
+    if (!editingPathNodes || !selectedPathShape) return null;
+    const elements: React.ReactNode[] = [];
+    editingPathNodes.forEach((node, i) => {
+      if (node.cp1) {
+        elements.push(<line key={`edit-cp1-line-${i}`} x1={node.x} y1={node.y} x2={node.cp1.x} y2={node.cp1.y}
+          stroke="#FFD700" strokeWidth={0.5} strokeDasharray="2 2" pointerEvents="none" />);
+        elements.push(<circle key={`edit-cp1-${i}`} cx={node.cp1.x} cy={node.cp1.y} r={3}
+          fill="#FFD700" stroke="none" style={{ cursor: 'pointer' }}
+          onMouseDown={(e) => { e.stopPropagation(); setEditingNodeDrag({ nodeIndex: i, handle: 'cp1' }); }} />);
+      }
+      if (node.cp2) {
+        elements.push(<line key={`edit-cp2-line-${i}`} x1={node.x} y1={node.y} x2={node.cp2.x} y2={node.cp2.y}
+          stroke="#FFD700" strokeWidth={0.5} strokeDasharray="2 2" pointerEvents="none" />);
+        elements.push(<circle key={`edit-cp2-${i}`} cx={node.cp2.x} cy={node.cp2.y} r={3}
+          fill="#FFD700" stroke="none" style={{ cursor: 'pointer' }}
+          onMouseDown={(e) => { e.stopPropagation(); setEditingNodeDrag({ nodeIndex: i, handle: 'cp2' }); }} />);
+      }
+      elements.push(<rect key={`edit-pt-${i}`} x={node.x - 3} y={node.y - 3} width={6} height={6}
+        fill={SEL} stroke="none" style={{ cursor: 'move' }}
+        onMouseDown={(e) => { e.stopPropagation(); setEditingNodeDrag({ nodeIndex: i, handle: 'point' }); }} />);
+    });
+    return <g data-testid="path-edit-overlay">{elements}</g>;
+  }, [editingPathNodes, selectedPathShape]);
+
   const toolbar = useMemo(() => (
     <div className="flex items-center gap-1 px-2 py-1 border-b border-border bg-card" data-testid="canvas-toolbar" role="toolbar" aria-label="Drawing tools">
       {TOOLS.map((t) => (
@@ -466,29 +883,100 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
               setMeasurements([]);
               setPendingMeasureStart(null);
             }
+            if (isDrawingPath && t.id !== 'path') {
+              cancelPath();
+            }
             dispatch({ type: 'SET_TOOL', payload: t.id });
           }}>
           <t.icon className="w-4 h-4" />
         </button>
       ))}
       <div className="w-px h-4 bg-border mx-1" />
+      <div className="relative">
+        <button data-testid="button-layers" title="Toggle layers panel"
+          aria-pressed={showLayerPanel}
+          className={`p-1.5 rounded transition-colors ${showLayerPanel
+            ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+          onClick={() => setShowLayerPanel(!showLayerPanel)}>
+          <Layers className="w-4 h-4" />
+        </button>
+        {showLayerPanel && (
+          <div className="absolute top-full left-0 mt-1 z-50">
+            <LayerPanel view={view} />
+          </div>
+        )}
+      </div>
+      <div className="w-px h-4 bg-border mx-1" />
       <button data-testid="button-zoom-fit" title="Zoom to fit (Ctrl+0)"
         className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
         onClick={zoomToFit}>
         <Maximize2 className="w-4 h-4" />
       </button>
+      <div className="w-px h-4 bg-border mx-1" />
+      <input ref={refImageInputRef} type="file" accept=".png,.jpg,.jpeg,.gif,.bmp,.webp"
+        className="hidden" data-testid="ref-image-input" onChange={handleRefImageUpload} />
+      <button data-testid="button-ref-image" title="Upload reference image"
+        className="p-1.5 rounded transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
+        onClick={() => refImageInputRef.current?.click()}>
+        <ImageIcon className="w-4 h-4" />
+      </button>
+      {refImage && (
+        <>
+          <label className="flex items-center gap-1 text-xs text-muted-foreground ml-1" title="Reference image opacity">
+            <span>Op</span>
+            <input data-testid="ref-image-opacity" type="range" min="0" max="100"
+              value={Math.round(refImage.opacity * 100)}
+              className="w-14 h-3 accent-primary"
+              onChange={(e) => setRefImage({ ...refImage, opacity: parseInt(e.target.value) / 100 })} />
+          </label>
+          <label className="flex items-center gap-1 text-xs text-muted-foreground ml-1" title="Reference image X offset">
+            <span>X</span>
+            <input data-testid="ref-image-x" type="number" value={Math.round(refImage.x)}
+              className="w-14 h-5 text-xs bg-background border border-border rounded px-1"
+              onChange={(e) => setRefImage({ ...refImage, x: parseFloat(e.target.value) || 0 })} />
+          </label>
+          <label className="flex items-center gap-1 text-xs text-muted-foreground" title="Reference image Y offset">
+            <span>Y</span>
+            <input data-testid="ref-image-y" type="number" value={Math.round(refImage.y)}
+              className="w-14 h-5 text-xs bg-background border border-border rounded px-1"
+              onChange={(e) => setRefImage({ ...refImage, y: parseFloat(e.target.value) || 0 })} />
+          </label>
+          <button data-testid="button-ref-lock" title={refImage.locked ? 'Unlock reference image' : 'Lock reference image'}
+            className={`p-1.5 rounded transition-colors ${refImage.locked
+              ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+            onClick={() => setRefImage({ ...refImage, locked: !refImage.locked })}>
+            {refImage.locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+          </button>
+          <button data-testid="button-ref-calibrate" title={isCalibrating ? 'Calibrating... click 2 points' : 'Calibrate reference image'}
+            className={`p-1.5 rounded transition-colors ${isCalibrating
+              ? 'bg-yellow-500/20 text-yellow-400' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+            onClick={() => { setIsCalibrating(!isCalibrating); setCalibrationPoints([]); }}>
+            <Ruler className="w-4 h-4" />
+          </button>
+          <button data-testid="button-ref-remove" title="Remove reference image"
+            className="p-1.5 rounded transition-colors text-muted-foreground hover:text-destructive hover:bg-muted"
+            onClick={() => { URL.revokeObjectURL(refImage.url); setRefImage(null); setIsCalibrating(false); setCalibrationPoints([]); }}>
+            <X className="w-4 h-4" />
+          </button>
+        </>
+      )}
+      {isCalibrating && (
+        <span className="text-xs text-yellow-400 ml-1">
+          {calibrationPoints.length === 0 ? 'Click first point' : 'Click second point'}
+        </span>
+      )}
       <span className="ml-auto text-xs text-muted-foreground" data-testid="zoom-indicator" aria-live="polite">
         {Math.round(zoom * 100)}%
       </span>
     </div>
-  ), [activeTool, dispatch, zoomToFit, zoom]);
+  ), [activeTool, dispatch, zoomToFit, zoom, refImage, isCalibrating, calibrationPoints, handleRefImageUpload, showLayerPanel, view, isDrawingPath, cancelPath]);
 
   return (
     <div className="flex flex-col flex-1 h-full" data-testid="shape-canvas-container">
       {toolbar}
       <svg ref={svgRef} data-testid="shape-canvas-svg" className="flex-1 w-full"
         role="application" aria-label={`Component editor canvas - ${view} view`} aria-roledescription="drawing canvas" tabIndex={0}
-        style={{ background: '#0a0a0a', cursor: isPanning || spaceHeld ? 'grabbing' : activeTool === 'select' ? 'default' : 'crosshair' }}
+        style={{ background: '#0a0a0a', cursor: isPanning || spaceHeld ? 'grabbing' : isCalibrating ? 'crosshair' : activeTool === 'select' ? 'default' : 'crosshair' }}
         onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp} onContextMenu={(e) => e.preventDefault()}>
         <defs>
@@ -501,6 +989,24 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
         <g transform={`translate(${panX}, ${panY}) scale(${zoom})`}>
           <line x1="-10000" y1="0" x2="10000" y2="0" stroke="#333" strokeWidth={0.5 / zoom} />
           <line x1="0" y1="-10000" x2="0" y2="10000" stroke="#333" strokeWidth={0.5 / zoom} />
+          {refImage && (
+            <image
+              href={refImage.url}
+              x={refImage.x}
+              y={refImage.y}
+              width={refImage.width * refImage.scale}
+              height={refImage.height * refImage.scale}
+              opacity={refImage.opacity}
+              style={{ pointerEvents: refImage.locked ? 'none' : 'auto' }}
+              data-testid="ref-image-overlay"
+            />
+          )}
+          {isCalibrating && calibrationPoints.map((pt, i) => (
+            <g key={`cal-${i}`}>
+              <circle cx={pt.x} cy={pt.y} r={4 / zoom} fill="none" stroke="#f59e0b" strokeWidth={2 / zoom} />
+              <circle cx={pt.x} cy={pt.y} r={1 / zoom} fill="#f59e0b" />
+            </g>
+          ))}
           {renderedShapes}
           <SnapGuides guides={activeGuides} />
           <RulerOverlay measurements={measurements} pendingStart={pendingMeasureStart}
@@ -508,6 +1014,8 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
           {preview}
           {marqueeRect}
           {connectorGhost}
+          {pathPreview}
+          {pathEditOverlay}
         </g>
       </svg>
     </div>

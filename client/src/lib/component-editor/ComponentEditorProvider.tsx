@@ -18,6 +18,7 @@ function createInitialState(): EditorState {
       isDirty: false,
       activeTool: 'select',
       clipboard: [],
+      activeLayer: 'default',
     },
   };
 }
@@ -92,6 +93,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case 'ADD_SHAPE': {
       const { view, shape } = action.payload;
+      const shapeWithLayer = shape.layer ? shape : { ...shape, layer: state.ui.activeLayer } as Shape;
       const entry: HistoryEntry = { label: `Add ${shape.type}`, state: state.present, timestamp: Date.now() };
       return {
         past: [...state.past, entry].slice(-MAX_HISTORY),
@@ -101,7 +103,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
             ...state.present.views,
             [view]: {
               ...state.present.views[view],
-              shapes: [...state.present.views[view].shapes, shape],
+              shapes: [...state.present.views[view].shapes, shapeWithLayer],
             },
           },
         },
@@ -261,6 +263,69 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         future: [],
         ui: { ...state.ui, isDirty: true, selectedShapeIds: newIds },
       };
+    }
+
+    case 'SET_LAYER_CONFIG': {
+      const newPresent = { ...state.present };
+      newPresent.views = { ...newPresent.views };
+      newPresent.views[action.payload.view] = {
+        ...newPresent.views[action.payload.view],
+        layerConfig: action.payload.layerConfig,
+      };
+      return { ...state, present: newPresent, ui: { ...state.ui, isDirty: true } };
+    }
+
+    case 'SET_ACTIVE_LAYER':
+      return { ...state, ui: { ...state.ui, activeLayer: action.payload } };
+
+    case 'JUMP_TO_HISTORY': {
+      const targetIndex = action.payload.index;
+      const currentIndex = state.past.length;
+      if (targetIndex === currentIndex) return state;
+
+      if (targetIndex < currentIndex) {
+        const keepPast = state.past.slice(0, targetIndex);
+        const movedPast = state.past.slice(targetIndex);
+        const newPresent = movedPast[0].state;
+        const newFutureFromPast = movedPast.slice(1).map(entry => ({
+          label: entry.label,
+          state: entry.state,
+          timestamp: entry.timestamp,
+        }));
+        const currentEntry: HistoryEntry = {
+          label: 'Jump back',
+          state: state.present,
+          timestamp: Date.now(),
+        };
+        return {
+          past: keepPast,
+          present: newPresent,
+          future: [...newFutureFromPast, currentEntry, ...state.future],
+          ui: { ...state.ui, isDirty: keepPast.length > 0 },
+        };
+      } else {
+        const futureIndex = targetIndex - currentIndex - 1;
+        if (futureIndex < 0 || futureIndex >= state.future.length) return state;
+        const movedFuture = state.future.slice(0, futureIndex + 1);
+        const keepFuture = state.future.slice(futureIndex + 1);
+        const currentEntry: HistoryEntry = {
+          label: 'Jump forward',
+          state: state.present,
+          timestamp: Date.now(),
+        };
+        const newPastEntries = movedFuture.slice(0, -1).map(entry => ({
+          label: entry.label,
+          state: entry.state,
+          timestamp: entry.timestamp,
+        }));
+        const newPresent = movedFuture[movedFuture.length - 1].state;
+        return {
+          past: [...state.past, currentEntry, ...newPastEntries].slice(-MAX_HISTORY),
+          present: newPresent,
+          future: keepFuture,
+          ui: { ...state.ui, isDirty: true },
+        };
+      }
     }
 
     default:

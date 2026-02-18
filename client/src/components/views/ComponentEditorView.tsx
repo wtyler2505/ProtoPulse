@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ComponentEditorProvider, useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import { useComponentParts, useCreateComponentPart, useUpdateComponentPart } from '@/lib/component-editor/hooks';
+import { useQueryClient } from '@tanstack/react-query';
 import { useProject, PROJECT_ID } from '@/lib/project-context';
 import type { EditorViewType, PartMeta } from '@shared/component-types';
 import { Input } from '@/components/ui/input';
@@ -8,13 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText } from 'lucide-react';
+import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
 import PinTable from '@/components/views/component-editor/PinTable';
 import ComponentInspector from '@/components/views/component-editor/ComponentInspector';
 import GeneratorModal from '@/components/views/component-editor/GeneratorModal';
 import ValidationModal from '@/components/views/component-editor/ValidationModal';
+import HistoryPanel from '@/components/views/component-editor/HistoryPanel';
 import type { GeneratorResult } from '@/lib/component-editor/generators';
 import { validatePart } from '@/lib/component-editor/validation';
 import type { ComponentValidationIssue } from '@shared/component-types';
@@ -194,6 +196,12 @@ function ComponentEditorContent() {
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationIssues, setValidationIssues] = useState<ComponentValidationIssue[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const svgFileInputRef = useRef<HTMLInputElement>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isImportingSvg, setIsImportingSvg] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: parts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
   const createMutation = useCreateComponentPart();
@@ -326,6 +334,87 @@ function ComponentEditorContent() {
     setValidationOpen(false);
   }, [state.present, dispatch]);
 
+  const handleExportFzpz = useCallback(() => {
+    if (!partId) {
+      toast({ title: 'No component', description: 'Save a component first before exporting.', variant: 'destructive' });
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = `/api/projects/${PROJECT_ID}/component-parts/${partId}/export/fzpz`;
+    link.download = `${(state.present.meta.title || 'component').replace(/[^a-zA-Z0-9_-]/g, '_')}.fzpz`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [partId, state.present.meta.title, toast]);
+
+  const handleImportFzpz = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const res = await fetch(`/api/projects/${PROJECT_ID}/component-parts/import/fzpz`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Import failed' }));
+        throw new Error(err.message || 'Import failed');
+      }
+      const created = await res.json();
+      queryClient.invalidateQueries({ queryKey: ['component-parts'] });
+      setPartId(created.id);
+      dispatch({
+        type: 'LOAD_PART',
+        payload: {
+          meta: created.meta,
+          connectors: created.connectors ?? [],
+          buses: created.buses ?? [],
+          views: created.views,
+          constraints: created.constraints ?? [],
+        },
+      });
+      toast({ title: 'Imported', description: `Component "${created.meta?.title || 'Untitled'}" imported successfully.` });
+    } catch (err: any) {
+      toast({ title: 'Import failed', description: err.message || 'Could not import FZPZ file.', variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [queryClient, dispatch, toast]);
+
+  const handleImportSvg = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImportingSvg(true);
+    try {
+      const svgText = await file.text();
+      const res = await fetch(`/api/projects/${PROJECT_ID}/component-parts/${partId || 0}/import/svg`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/xml' },
+        body: svgText,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'SVG import failed' }));
+        throw new Error(err.message || 'SVG import failed');
+      }
+      const { shapes } = await res.json();
+      const view = (activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb') ? activeView : 'breadboard';
+      for (const shape of shapes) {
+        dispatch({ type: 'ADD_SHAPE', payload: { view, shape } });
+      }
+      if (activeView !== view) {
+        dispatch({ type: 'SET_EDITOR_VIEW', payload: view });
+      }
+      toast({ title: 'SVG Imported', description: `Imported ${shapes.length} shape(s) into ${view} view.` });
+    } catch (err: any) {
+      toast({ title: 'SVG Import failed', description: err.message || 'Could not import SVG file.', variant: 'destructive' });
+    } finally {
+      setIsImportingSvg(false);
+      if (svgFileInputRef.current) svgFileInputRef.current.value = '';
+    }
+  }, [partId, activeView, dispatch, toast]);
+
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
@@ -368,6 +457,73 @@ function ComponentEditorContent() {
           >
             <ShieldCheck className="w-4 h-4" />
             <span className="text-xs">Validate</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-export-fzpz"
+            onClick={handleExportFzpz}
+            disabled={!partId}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Download className="w-4 h-4" />
+            <span className="text-xs">Export</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-import-fzpz"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            {isImporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            <span className="text-xs">Import</span>
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".fzpz"
+            className="hidden"
+            onChange={handleImportFzpz}
+            data-testid="input-import-fzpz"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-import-svg"
+            onClick={() => svgFileInputRef.current?.click()}
+            disabled={isImportingSvg}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            {isImportingSvg ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileImage className="w-4 h-4" />}
+            <span className="text-xs">Import SVG</span>
+          </Button>
+          <input
+            ref={svgFileInputRef}
+            type="file"
+            accept=".svg"
+            className="hidden"
+            onChange={handleImportSvg}
+            data-testid="input-import-svg"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-history"
+            onClick={() => setHistoryOpen((v) => !v)}
+            className={`h-8 gap-1 relative ${historyOpen ? 'text-[#00F0FF] bg-[#00F0FF]/10' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <History className="w-4 h-4" />
+            <span className="text-xs">History</span>
+            {(state.past.length + state.future.length) > 0 && (
+              <span
+                className="absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 flex items-center justify-center rounded-full bg-[#00F0FF]/20 text-[#00F0FF] font-medium"
+                data-testid="badge-history-count"
+              >
+                {state.past.length + state.future.length}
+              </span>
+            )}
           </Button>
           <div className="w-px h-5 bg-border mx-1" />
           {state.ui.isDirty && (
@@ -438,6 +594,7 @@ function ComponentEditorContent() {
           )}
         </div>
         <ComponentInspector />
+        {historyOpen && <HistoryPanel />}
       </div>
       <GeneratorModal
         open={generatorOpen}
