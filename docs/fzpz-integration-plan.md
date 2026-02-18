@@ -878,6 +878,8 @@ client/src/components/component-editor/
 └── shared-components.tsx          — PanelHeader, InputGroup, DebouncedInput, etc. (~80 lines)
 ```
 
+> **Implementation Note (2026-02-18):** The actual implementation simplified this decomposition. See [Section 15](#15-implementation-progress--notes) for actual file locations. Key changes: ShapeCanvas.tsx replaces ComponentCanvas.tsx + ComponentToolbar.tsx; MetadataForm is inline in ComponentEditorView.tsx; PinTable.tsx replaces PinTableEditor.tsx. ComponentEditorProvider.tsx moved to `client/src/lib/component-editor/` (not `components/`).
+
 ### New utility modules for enhancements:
 
 ```
@@ -1870,26 +1872,26 @@ This is the master checklist. Update status as work progresses.
 - [ ] Frontend audit #72 (ErrorBoundary) resolved
 
 ### Phase 1: Foundation
-- [ ] 1.1 shared/component-types.ts (with forward-compatible fields)
-- [ ] 1.2 client/src/lib/component-editor/types.ts (UI-only types)
-- [ ] 1.3 component_parts table in schema.ts (with constraints + version)
-- [ ] 1.4 drizzle-kit push
-- [ ] 1.5 Storage CRUD methods
-- [ ] 1.6 API routes
-- [ ] 1.7 ComponentEditorProvider.tsx (named history from day one)
-- [ ] 1.8 ComponentEditorView.tsx skeleton (5 internal tabs)
-- [ ] 1.9 Sidebar tab replacement
-- [ ] 1.10 ProjectWorkspace routing
-- [ ] 1.11 TanStack Query hooks
+- [x] 1.1 shared/component-types.ts (with forward-compatible fields)
+- [x] 1.2 client/src/lib/component-editor/types.ts (UI-only types)
+- [x] 1.3 component_parts table in schema.ts (with constraints + version)
+- [x] 1.4 drizzle-kit push
+- [x] 1.5 Storage CRUD methods
+- [x] 1.6 API routes
+- [x] 1.7 ComponentEditorProvider.tsx (named history from day one)
+- [x] 1.8 ComponentEditorView.tsx skeleton (5 internal tabs)
+- [x] 1.9 Sidebar tab replacement
+- [x] 1.10 ProjectWorkspace routing
+- [x] 1.11 TanStack Query hooks
 
 ### Phase 2: Canvas + Drawing + Quick Wins
-- [ ] 2.1 ComponentCanvas.tsx
-- [ ] 2.2 ComponentToolbar.tsx (with zoom-to-fit button)
+- [x] 2.1 ComponentCanvas.tsx
+- [ ] 2.2 ComponentToolbar.tsx (with zoom-to-fit button) — partial: inline toolbar in ShapeCanvas, missing zoom-to-fit
 - [ ] 2.3 ComponentInspector.tsx
-- [ ] 2.4 Shape rendering
-- [ ] 2.5 Selection logic
+- [x] 2.4 Shape rendering
+- [ ] 2.5 Selection logic — partial: single-select + drag works, multi-select not yet implemented
 - [ ] 2.6 Copy/paste
-- [ ] 2.7 Theme alignment
+- [x] 2.7 Theme alignment
 - [ ] 2.8 Auto-save to backend
 - [ ] 2.9 snap-engine.ts
 - [ ] 2.10 SnapGuides.tsx
@@ -1899,12 +1901,12 @@ This is the master checklist. Update status as work progresses.
 - [ ] 2.14 RulerOverlay.tsx
 
 ### Phase 3: Metadata + Generator + Pin Table
-- [ ] 3.1 ComponentMetadataPanel.tsx
+- [x] 3.1 ComponentMetadataPanel.tsx
 - [ ] 3.2 GeneratorModal.tsx
 - [ ] 3.3 generators.ts (parametric)
 - [ ] 3.4 Validation engine + modal
 - [ ] 3.5 Shape templates/presets
-- [ ] 3.6 PinTableEditor.tsx
+- [x] 3.6 PinTableEditor.tsx
 
 ### Phase 4: AI Features + Diff/Merge + Photo Extraction
 - [ ] 4.1 server/component-ai.ts
@@ -2031,3 +2033,60 @@ This is the master checklist. Update status as work progresses.
 - [ ] 13.11 "Simulation" sidebar tab
 - [ ] 13.12 Basic signal integrity warnings
 - [ ] 13.13 Simulation result size management (compressed JSONB, auto-cleanup, size UI)
+
+---
+
+## 15. Implementation Progress & Notes
+
+**Last verified:** 2026-02-18
+
+### Status Summary
+
+| Phase | Status | Completion |
+|-------|--------|------------|
+| Phase 1: Foundation | Complete | 11/11 items |
+| Phase 2: Canvas + Drawing | Partial | 3/14 items (2 more partial) |
+| Phase 3: Metadata + Generator + Pin Table | Partial | 2/6 items |
+| Phase 4: AI Generation | Not started | 0/8 items |
+| Phase 5: Import/Export | Not started | 0/10 items |
+| Phase 6: Polish | Not started | 0/9 items |
+| Phases 7-13 | Not started | 0/x items |
+
+### Actual File Locations vs Plan
+
+The implementation deviated from the planned file naming in a few places for simplicity:
+
+| Planned File | Actual Implementation | Notes |
+|-------------|----------------------|-------|
+| `ComponentCanvas.tsx` | `client/src/components/views/component-editor/ShapeCanvas.tsx` | Renamed for clarity — renders Shape objects on SVG canvas |
+| `ComponentToolbar.tsx` (separate file) | Inline toolbar in `ShapeCanvas.tsx` | Embedded toolbar with tool buttons + zoom indicator for simplicity |
+| `ComponentMetadataPanel.tsx` (separate file) | `MetadataForm` function in `ComponentEditorView.tsx` | Inline component within the main view file |
+| `PinTableEditor.tsx` | `client/src/components/views/component-editor/PinTable.tsx` | Simplified name |
+| `ComponentEditorProvider.tsx` planned in `components/component-editor/` | `client/src/lib/component-editor/ComponentEditorProvider.tsx` | Located in lib/ since it provides context, not UI |
+| `ComponentEditorView.tsx` planned in `components/component-editor/` | `client/src/components/views/ComponentEditorView.tsx` | Located in views/ to match ProtoPulse's existing view pattern |
+
+### Key Implementation Decisions
+
+1. **JSONB storage with version field**: Component part data uses PostgreSQL JSONB columns (views, metadata, connectors, constraints) with an integer `version` column for optimistic concurrency.
+2. **nanoid for shape/connector IDs**: All client-generated IDs use `nanoid()` for uniqueness.
+3. **ProtoPulse neon theme**: Selection color uses `#00F0FF` (ProtoPulse's cyan accent) instead of standard blue.
+4. **Manual save via Ctrl+S**: Auto-save not yet implemented; save is manual via toolbar button or keyboard shortcut.
+5. **14 action types in reducer**: The ComponentEditorProvider reducer handles: SET_STATE, SET_METADATA, ADD_SHAPE, UPDATE_SHAPE, DELETE_SHAPES, MOVE_SHAPES, ADD_CONNECTOR, UPDATE_CONNECTOR, DELETE_CONNECTOR, SET_ACTIVE_VIEW, SET_TOOL, SET_SELECTION, UNDO, REDO.
+6. **5-tab internal layout**: ComponentEditorView uses Breadboard/Schematic/PCB/Metadata/Connectors tabs (Tabs component from shadcn/ui).
+7. **Sidebar integration**: Component Editor appears as a Cpu icon tab in the existing sidebar, routing to `component_editor` view in ProjectWorkspace.
+
+### Remaining Phase 2 Work
+- ComponentInspector.tsx (shape properties panel for selected shapes)
+- Copy/paste logic
+- Auto-save with debouncing
+- Snap guides and alignment engine
+- Connector numbering preview on canvas
+- Zoom-to-fit action
+- Multi-select property editing
+- Ruler overlay
+
+### Remaining Phase 3 Work
+- GeneratorModal.tsx for parametric package generation (DIP, SOIC, QFP, etc.)
+- generators.ts with pure parametric generation functions
+- Validation engine
+- Shape templates/presets
