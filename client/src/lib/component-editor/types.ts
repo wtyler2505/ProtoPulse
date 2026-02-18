@@ -11,7 +11,8 @@ export interface EditorUIState {
   selectedShapeIds: string[];
   selectedConnectorId: string | null;
   isDirty: boolean;
-  activeTool: 'select' | 'rect' | 'circle' | 'text' | 'connector';
+  activeTool: 'select' | 'rect' | 'circle' | 'text' | 'connector' | 'line' | 'measure';
+  clipboard: Shape[];
 }
 
 export type EditorAction =
@@ -31,7 +32,9 @@ export type EditorAction =
   | { type: 'ADD_CONNECTOR'; payload: Connector }
   | { type: 'UPDATE_CONNECTOR'; payload: { connectorId: string; updates: Partial<Connector> } }
   | { type: 'DELETE_CONNECTOR'; payload: string }
-  | { type: 'SET_TOOL'; payload: 'select' | 'rect' | 'circle' | 'text' | 'connector' };
+  | { type: 'SET_TOOL'; payload: 'select' | 'rect' | 'circle' | 'text' | 'connector' | 'line' | 'measure' }
+  | { type: 'COPY_SHAPES'; payload: { view: 'breadboard' | 'schematic' | 'pcb' } }
+  | { type: 'PASTE_SHAPES'; payload: { view: 'breadboard' | 'schematic' | 'pcb' } };
 
 export interface EditorState {
   past: HistoryEntry[];

@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useCallback, type ReactNode } fr
 import type { PartState, Shape, Connector, CircleShape } from '@shared/component-types';
 import { createDefaultPartState } from '@shared/component-types';
 import type { EditorState, EditorAction, HistoryEntry } from './types';
+import { nanoid } from 'nanoid';
 
 const MAX_HISTORY = 50;
 
@@ -16,6 +17,7 @@ function createInitialState(): EditorState {
       selectedConnectorId: null,
       isDirty: false,
       activeTool: 'select',
+      clipboard: [],
     },
   };
 }
@@ -225,6 +227,41 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
 
     case 'SET_TOOL':
       return { ...state, ui: { ...state.ui, activeTool: action.payload } };
+
+    case 'COPY_SHAPES': {
+      const { view } = action.payload;
+      const selected = state.ui.selectedShapeIds;
+      const copied = state.present.views[view].shapes.filter((s) => selected.includes(s.id));
+      return { ...state, ui: { ...state.ui, clipboard: copied } };
+    }
+
+    case 'PASTE_SHAPES': {
+      const { view } = action.payload;
+      const clipboard = state.ui.clipboard;
+      if (clipboard.length === 0) return state;
+      const entry: HistoryEntry = { label: `Paste ${clipboard.length} shape(s)`, state: state.present, timestamp: Date.now() };
+      const newIds: string[] = [];
+      const newShapes = clipboard.map((s) => {
+        const newId = nanoid();
+        newIds.push(newId);
+        return { ...s, id: newId, x: s.x + 20, y: s.y + 20 } as Shape;
+      });
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          views: {
+            ...state.present.views,
+            [view]: {
+              ...state.present.views[view],
+              shapes: [...state.present.views[view].shapes, ...newShapes],
+            },
+          },
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true, selectedShapeIds: newIds },
+      };
+    }
 
     default:
       return state;

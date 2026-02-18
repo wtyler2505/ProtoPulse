@@ -8,10 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2, Save } from 'lucide-react';
+import { Undo2, Redo2, Save, Cpu, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
 import PinTable from '@/components/views/component-editor/PinTable';
+import ComponentInspector from '@/components/views/component-editor/ComponentInspector';
+import GeneratorModal from '@/components/views/component-editor/GeneratorModal';
+import ValidationModal from '@/components/views/component-editor/ValidationModal';
+import type { GeneratorResult } from '@/lib/component-editor/generators';
+import { validatePart } from '@/lib/component-editor/validation';
+import type { ComponentValidationIssue } from '@shared/component-types';
 
 const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'breadboard', label: 'Breadboard' },
@@ -164,6 +170,9 @@ function ComponentEditorContent() {
 
   const [partId, setPartId] = useState<number | null>(null);
   const loadedRef = useRef(false);
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationIssues, setValidationIssues] = useState<ComponentValidationIssue[]>([]);
 
   const { data: parts } = useComponentParts(PROJECT_ID);
   const createMutation = useCreateComponentPart();
@@ -239,6 +248,28 @@ function ComponentEditorContent() {
     return () => window.removeEventListener('keydown', handler);
   }, [handleSave, undo, redo]);
 
+  useEffect(() => {
+    if (!state.ui.isDirty || !partId) return;
+    const timer = setTimeout(() => {
+      handleSave();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [state.ui.isDirty, state.present, partId, handleSave]);
+
+  const handleGenerate = useCallback((result: GeneratorResult) => {
+    const view = (activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb') ? activeView : 'breadboard';
+    for (const shape of result.shapes) {
+      dispatch({ type: 'ADD_SHAPE', payload: { view, shape } });
+    }
+    for (const connector of result.connectors) {
+      dispatch({ type: 'ADD_CONNECTOR', payload: connector });
+    }
+    if (activeView !== view) {
+      dispatch({ type: 'SET_EDITOR_VIEW', payload: view });
+    }
+    toast({ title: 'Generated', description: `Created ${result.shapes.length} shapes and ${result.connectors.length} pins.` });
+  }, [activeView, dispatch, toast]);
+
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
   return (
@@ -262,6 +293,27 @@ function ComponentEditorContent() {
         </div>
 
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-generate"
+            onClick={() => setGeneratorOpen(true)}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Cpu className="w-4 h-4" />
+            <span className="text-xs">Generate</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-validate"
+            onClick={() => { setValidationIssues(validatePart(state.present)); setValidationOpen(true); }}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span className="text-xs">Validate</span>
+          </Button>
+          <div className="w-px h-5 bg-border mx-1" />
           {state.ui.isDirty && (
             <span
               data-testid="indicator-dirty"
@@ -305,17 +357,30 @@ function ComponentEditorContent() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto">
-        {activeView === 'metadata' ? (
-          <MetadataForm />
-        ) : activeView === 'pin-table' ? (
-          <PinTable />
-        ) : activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb' ? (
-          <ShapeCanvas view={activeView} />
-        ) : (
-          <CanvasPlaceholder view={activeView} />
-        )}
+      <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 overflow-auto">
+          {activeView === 'metadata' ? (
+            <MetadataForm />
+          ) : activeView === 'pin-table' ? (
+            <PinTable />
+          ) : activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb' ? (
+            <ShapeCanvas view={activeView} />
+          ) : (
+            <CanvasPlaceholder view={activeView} />
+          )}
+        </div>
+        <ComponentInspector />
       </div>
+      <GeneratorModal
+        open={generatorOpen}
+        onClose={() => setGeneratorOpen(false)}
+        onGenerate={handleGenerate}
+      />
+      <ValidationModal
+        open={validationOpen}
+        onClose={() => setValidationOpen(false)}
+        issues={validationIssues}
+      />
     </div>
   );
 }
