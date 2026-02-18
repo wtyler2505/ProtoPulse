@@ -1,0 +1,157 @@
+This is the master checklist. Update status as work progresses.
+
+Phase 0: Prerequisites
+ Backend audit P0/P1 items resolved
+ Frontend audit #11 (context splitting) resolved
+ Frontend audit #19 (PROJECT_ID hardcoding) resolved
+ Frontend audit #72 (ErrorBoundary) resolved
+Phase 1: Foundation
+ 1.1 shared/component-types.ts (with forward-compatible fields)
+ 1.2 client/src/lib/component-editor/types.ts (UI-only types)
+ 1.3 component_parts table in schema.ts (with constraints + version)
+ 1.4 drizzle-kit push
+ 1.5 Storage CRUD methods
+ 1.6 API routes
+ 1.7 ComponentEditorProvider.tsx (named history from day one)
+ 1.8 ComponentEditorView.tsx skeleton (5 internal tabs)
+ 1.9 Sidebar tab replacement
+ 1.10 ProjectWorkspace routing
+ 1.11 TanStack Query hooks
+Phase 2: Canvas + Drawing + Quick Wins
+ 2.1 ComponentCanvas.tsx
+ 2.2 ComponentToolbar.tsx (with zoom-to-fit button) — partial: inline toolbar in ShapeCanvas, missing zoom-to-fit
+ 2.3 ComponentInspector.tsx
+ 2.4 Shape rendering
+ 2.5 Selection logic — partial: single-select + drag works, multi-select not yet implemented
+ 2.6 Copy/paste
+ 2.7 Theme alignment
+ 2.8 Auto-save to backend
+ 2.9 snap-engine.ts
+ 2.10 SnapGuides.tsx
+ 2.11 Connector numbering preview
+ 2.12 Zoom-to-fit implementation
+ 2.13 Multi-select property editing
+ 2.14 RulerOverlay.tsx
+Phase 3: Metadata + Generator + Pin Table
+ 3.1 ComponentMetadataPanel.tsx
+ 3.2 GeneratorModal.tsx
+ 3.3 generators.ts (parametric)
+ 3.4 Validation engine + modal
+ 3.5 Shape templates/presets
+ 3.6 PinTableEditor.tsx
+Phase 4: AI Features + Diff/Merge + Photo Extraction
+ 4.1 server/component-ai.ts
+ 4.2 Gemini SDK migration
+ 4.3 AI API endpoints
+ 4.4 ModifyModal.tsx
+ 4.5 Datasheet upload + extraction
+ 4.6 ChatPanel AI action integration
+ 4.7 diff-engine.ts
+ 4.8 DiffPreview.tsx
+ 4.9 Diff/merge in ModifyModal
+ 4.10 AI pin extraction from photos
+Phase 5: Import/Export + Integration + Verification
+ 5.1 FZPZ export (server-side)
+ 5.2 FZPZ import endpoint
+ 5.3 FZPZ export endpoint
+ 5.4 svg-parser.ts
+ 5.5 SVG import endpoint + UI
+ 5.6 Calibrated reference image overlay
+ 5.7 Validation click-to-highlight
+ 5.8 Architecture node → component linking
+ 5.9 BOM enrichment
+ 5.10 Validation view integration
+Phase 6: Polish
+ 6.1 Remove old SchematicView.tsx
+ 6.2 Update sidebar icons/labels
+ 6.3 Keyboard shortcuts
+ 6.4 Loading + empty states
+ 6.5 ErrorBoundary
+ 6.6 Performance pass
+ 6.7 Accessibility pass
+ 6.8 Update replit.md
+ 6.9 Seed data with sample component
+Phase 7: Advanced Canvas Features
+ 7.1 Layer system (LayerPanel + rendering filter + default configs)
+ 7.2 Path drawing tool upgrade (Bezier curves + control handles + node editing)
+ 7.3 HistoryPanel.tsx (named history with jump-to)
+Phase 8: Intelligence & Automation
+ 8.1 drc.ts engine (6 rule types + spatial indexing + debounced execution)
+ 8.2 DRCPanel.tsx (violations list + click-to-highlight)
+ 8.3 DRC canvas overlays (red/amber violation indicators)
+ 8.4 constraint-solver.ts (6 constraint types + iterative propagation + conflict detection)
+ 8.5 Constraint editor UI in inspector
+ 8.6 DRC in main Validation view
+Phase 9: Component Library & Ecosystem
+ 9.1 component_library table + migration
+ 9.2 server/component-library.ts (CRUD + search)
+ 9.3 Library API routes
+ 9.4 ComponentLibraryBrowser.tsx (search + browse + fork)
+ 9.5 Publish-to-library action
+ 9.6 Multi-part project support (sidebar list + switching)
+Phase 10: Circuit Schematic Capture
+ 10.1 shared/circuit-types.ts (all circuit-level type definitions)
+ 10.2 circuit_designs, circuit_instances, circuit_nets tables in schema.ts
+ 10.3 drizzle-kit push for circuit tables
+ 10.4 Storage CRUD methods for circuit_designs, circuit_instances, circuit_nets
+ 10.5 server/circuit-routes.ts (circuit CRUD API routes)
+ 10.6 SchematicView.tsx (main schematic editor view)
+ 10.7 SchematicCanvas.tsx (schematic rendering engine — React Flow or SVG)
+ 10.8 ComponentPlacer.tsx (drag-drop component instances)
+ 10.9 NetDrawingTool.tsx (net drawing interaction)
+ 10.10 PowerSymbolPalette.tsx (VCC/GND symbol picker)
+ 10.11 Net labels, bus connections, no-connect markers
+ 10.12 erc-engine.ts (Electrical Rule Check — 7 rule types)
+ 10.13 ERCPanel.tsx (violations list)
+ 10.14 ERCOverlay.tsx (violation markers on canvas)
+ 10.15 Architecture → Schematic expansion (edge bridging)
+ 10.16 HierarchicalSheetPanel.tsx (sub-sheet navigation)
+ 10.17 server/circuit-ai.ts (AI schematic generation + review)
+ 10.18 ERC results in main Validation view
+ 10.19 Netlist generation endpoint
+ 10.20 "Circuit Schematic" sidebar tab
+ 10.21 TanStack Query hooks for circuit CRUD
+Phase 11: Breadboard & Physical Layout
+ 11.1 circuit_wires table in schema.ts + drizzle-kit push
+ 11.2 Storage CRUD methods for circuit_wires
+ 11.3 Wire API routes in circuit-routes.ts
+ 11.4 breadboard-model.ts (grid coordinate system, tie-point connectivity)
+ 11.5 BreadboardGrid.tsx (830-point grid SVG rendering)
+ 11.6 BreadboardView.tsx (component placement + wire drawing)
+ 11.7 WireRouter.ts (A* auto-routing for breadboard wires)
+ 11.8 view-sync.ts (schematic ↔ breadboard synchronization)
+ 11.9 PCBLayoutView.tsx (basic PCB component placement + trace routing)
+ 11.10 RatsnestOverlay.tsx (unrouted net visualization)
+ 11.11 Auto-route endpoint
+ 11.12 AI breadboard layout suggestion
+ 11.13 "Breadboard / PCB" sidebar tab
+Phase 12: Manufacturing Output & Interoperability
+ 12.1 server/export/ directory structure
+ 12.2 netlist-generator.ts (SPICE, KiCad, generic formats)
+ 12.3 bom-exporter.ts (JLCPCB, Mouser, Digi-Key, generic CSV)
+ 12.4 gerber-generator.ts (RS-274X output + unit tests with reference Gerbers)
+ 12.5 drill-generator.ts (Excellon drill file)
+ 12.6 pick-place-generator.ts (pick-and-place CSV)
+ 12.7 kicad-exporter.ts (.kicad_sch + .kicad_pcb + .kicad_pro)
+ 12.8 eagle-exporter.ts (Eagle XML .sch + .brd)
+ 12.9 pdf-generator.ts (PDF view export with title blocks)
+ 12.10 fzz-handler.ts (Fritzing full project .fzz import/export)
+ 12.10a DRC safety gate before manufacturing exports
+ 12.11 ExportPanel.tsx (unified export UI)
+ 12.12 Export API routes
+ 12.13 Import endpoints (.fzz, .kicad)
+ 12.14 SVG/PNG export of any view
+Phase 13: Simulation & Advanced Analysis
+ 13.1 spice-generator.ts (generate SPICE netlist from circuit data)
+ 13.2 spice-exporter.ts (SPICE netlist file export endpoint)
+ 13.3 circuit-solver.ts (JS MNA solver for basic circuits)
+ 13.4 server/simulation.ts (server-side simulation execution)
+ 13.5 SimulationPanel.tsx (simulation setup + run UI)
+ 13.6 WaveformViewer.tsx (plot/graph viewer with cursors)
+ 13.7 ProbeOverlay.tsx (voltage/current probes on schematic)
+ 13.8 Simulation API routes (simulate, list, export SPICE)
+ 13.9 AI circuit analysis (server/circuit-ai.ts extension)
+ 13.10 Power consumption estimation
+ 13.11 "Simulation" sidebar tab
+ 13.12 Basic signal integrity warnings
+ 13.13 Simulation result size management (compressed JSONB, auto-cleanup, size UI)

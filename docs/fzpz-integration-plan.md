@@ -1275,31 +1275,33 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 1: Foundation (data model + skeleton)
 **Goal:** Component Editor view exists, can be navigated to, shows empty state, backend stores parts.
+**Status: COMPLETE** (2026-02-18) — All 11 items implemented. See [Section 15](#15-implementation-progress--notes) for actual file locations vs plan.
 
-- [ ] **1.1** Add `shared/component-types.ts` with all shared types — include forward-compatible fields: `layer` on Shape, `constraints` on PartState, `layerConfig` on ViewData, `DRCRule`, `DRCViolation`, `ComponentValidationIssue`, `Constraint`
-- [ ] **1.2** Add `client/src/lib/component-editor/types.ts` with UI-only types — include `HistoryEntry`, `CalibratedReferenceImage`, `PartDiff`, `ShapeDiff`, `ConnectorDiff`
-- [ ] **1.3** Add `component_parts` table to `shared/schema.ts` with Drizzle definition (including `constraints` JSONB and `version` integer)
-- [ ] **1.4** Run `drizzle-kit push` to create the table
-- [ ] **1.5** Add CRUD methods to `server/storage.ts` for component_parts (create, get, getByProject, update, delete)
-- [ ] **1.6** Add API routes in `server/routes.ts` for component parts (full CRUD)
-- [ ] **1.7** Create `client/src/components/component-editor/ComponentEditorProvider.tsx` — reducer + named history context (adapted from FZPZ App.tsx reducer; use `HistoryEntry` with labels from the start)
-- [ ] **1.8** Create `client/src/components/component-editor/ComponentEditorView.tsx` — skeleton layout with internal tabs (breadboard/schematic/pcb/metadata/pin-table)
-- [ ] **1.9** Replace "Schematic" sidebar tab with "Component Editor" tab in Sidebar.tsx
-- [ ] **1.10** Replace SchematicView rendering in ProjectWorkspace.tsx with ComponentEditorView
-- [ ] **1.11** Wire up TanStack Query hooks in `client/src/lib/component-editor/hooks.ts` to load/save component parts from backend
+- [x] **1.1** Add `shared/component-types.ts` with all shared types — include forward-compatible fields: `layer` on Shape, `constraints` on PartState, `layerConfig` on ViewData, `DRCRule`, `DRCViolation`, `ComponentValidationIssue`, `Constraint`
+- [x] **1.2** Add `client/src/lib/component-editor/types.ts` with UI-only types — include `HistoryEntry`, `CalibratedReferenceImage`, `PartDiff`, `ShapeDiff`, `ConnectorDiff`
+- [x] **1.3** Add `component_parts` table to `shared/schema.ts` with Drizzle definition (including `constraints` JSONB and `version` integer)
+- [x] **1.4** Run `drizzle-kit push` to create the table
+- [x] **1.5** Add CRUD methods to `server/storage.ts` for component_parts (create, get, getByProject, update, delete)
+- [x] **1.6** Add API routes in `server/routes.ts` for component parts (full CRUD)
+- [x] **1.7** Create `client/src/components/component-editor/ComponentEditorProvider.tsx` — reducer + named history context (adapted from FZPZ App.tsx reducer; use `HistoryEntry` with labels from the start)
+- [x] **1.8** Create `client/src/components/component-editor/ComponentEditorView.tsx` — skeleton layout with internal tabs (breadboard/schematic/pcb/metadata/pin-table)
+- [x] **1.9** Replace "Schematic" sidebar tab with "Component Editor" tab in Sidebar.tsx
+- [x] **1.10** Replace SchematicView rendering in ProjectWorkspace.tsx with ComponentEditorView
+- [x] **1.11** Wire up TanStack Query hooks in `client/src/lib/component-editor/hooks.ts` to load/save component parts from backend
 
 ---
 
 ### Phase 2: Canvas + Drawing + Quick Wins (the core editor)
 **Goal:** User can draw shapes, place pins, edit properties on the SVG canvas — with smart snap guides, zoom-to-fit, multi-select editing, and ruler tool.
+**Status: IN PROGRESS** — 3/14 items complete, 2 partial. Canvas with basic drawing tools works. Missing: inspector, copy/paste, auto-save, snap guides, zoom-to-fit, multi-select, ruler.
 
-- [ ] **2.1** Port `ComponentCanvas.tsx` — SVG canvas with pan/zoom, grid, shape rendering, selection, drag
+- [x] **2.1** Port `ComponentCanvas.tsx` — SVG canvas with pan/zoom, grid, shape rendering, selection, drag
 - [ ] **2.2** Port `ComponentToolbar.tsx` — drawing tools (select, rect, circle, text, pin, measure), alignment buttons, undo/redo, zoom-to-fit button
 - [ ] **2.3** Port `ComponentInspector.tsx` — shape properties panel, connector properties, pad specs
-- [ ] **2.4** Port shape rendering logic (rect, circle, path, text, group SVG rendering)
+- [x] **2.4** Port shape rendering logic (rect, circle, path, text, group SVG rendering)
 - [ ] **2.5** Port selection/multi-select/group/ungroup logic
 - [ ] **2.6** Port copy/paste logic
-- [ ] **2.7** Adapt styling to match ProtoPulse theme (shadcn/ui components, design tokens)
+- [x] **2.7** Adapt styling to match ProtoPulse theme (shadcn/ui components, design tokens)
 - [ ] **2.8** Add auto-save: debounced PATCH to backend on state changes
 - [ ] **2.9** [QW-1] Create `snap-engine.ts` — compute snap targets from all shapes/connectors in the current view
 - [ ] **2.10** [QW-1] Create `SnapGuides.tsx` — render dynamic alignment guide lines as SVG overlay (edge, center, spacing)
@@ -1312,18 +1314,20 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 3: Metadata + Package Generator + Pin Table
 **Goal:** User can edit part metadata, generate standard packages, use shape templates, and manage pins in a spreadsheet view.
+**Status: IN PROGRESS** — 2/6 items complete. Metadata form and pin table work. Missing: package generator, validation engine, shape templates.
 
-- [ ] **3.1** Port `ComponentMetadataPanel.tsx` — metadata form with all fields
+- [x] **3.1** Port `ComponentMetadataPanel.tsx` — metadata form with all fields
 - [ ] **3.2** Port `GeneratorModal.tsx` — parametric package generator (DIP, SOIC, QFP, QFN, Header, R, C)
 - [ ] **3.3** Port `generators.ts` (client-side parametric generation — pure functions)
 - [ ] **3.4** Port validation engine (`validatePart()`) and `ValidationModal.tsx`
 - [ ] **3.5** [QW-4] Add shape templates/presets to GeneratorModal — quick-add IC body, header, passive body, mounting hole, test point
-- [ ] **3.6** [ME-3] Create `PinTableEditor.tsx` — spreadsheet-style connector editing with sortable columns, inline edit, bulk operations, CSV import
+- [x] **3.6** [ME-3] Create `PinTableEditor.tsx` — spreadsheet-style connector editing with sortable columns, inline edit, bulk operations, CSV import
 
 ---
 
 ### Phase 4: AI Features + Diff/Merge + Photo Extraction (server-side)
 **Goal:** AI can generate, modify, and extract component data — all through the server — with visual diff/merge for modifications and photo-based pin extraction.
+**Status: NOT STARTED**
 
 - [ ] **4.1** Create `server/component-ai.ts` — server-side AI functions for component operations
 - [ ] **4.2** Migrate Gemini SDK: replace `@google/generative-ai` with `@google/genai` across the project
@@ -1340,6 +1344,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 5: Import/Export + Architecture Integration + Verification Overlay
 **Goal:** FZPZ/SVG import/export works, components link to architecture nodes and feed BOM, footprint verification overlay.
+**Status: NOT STARTED**
 
 - [ ] **5.1** Move FZPZ export logic to `server/component-export.ts` (needs jszip)
 - [ ] **5.2** Add import endpoint: upload .fzpz → parse → create component_part
@@ -1356,6 +1361,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 6: Polish + Cleanup
 **Goal:** Everything is polished, themed, and the old SchematicView code is fully removed.
+**Status: NOT STARTED**
 
 - [ ] **6.1** Remove old `SchematicView.tsx` file and all references
 - [ ] **6.2** Update sidebar icons and labels
@@ -1371,6 +1377,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 7: Advanced Canvas Features (Medium enhancements)
 **Goal:** Layer system, enhanced path drawing, and named undo history make the editor feel professional.
+**Status: NOT STARTED**
 
 **Dependency note:** Phases 2-6 assume a flat shape list with no layer filtering. When the layer system is added here, all shapes from earlier phases default to the primary layer for their view. Rendering code from Phase 2 must treat `shape.layer === undefined` as "belongs to default layer." DRC overlays referenced in Phase 2's canvas are **not** DRC — they are snap/ruler overlays only. Actual DRC overlays are gated until Phase 8.
 
@@ -1394,6 +1401,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 8: Intelligence & Automation (Big Swing innovations)
 **Goal:** Real-time DRC and parametric constraints turn the editor from a drawing tool into an engineering tool.
+**Status: NOT STARTED**
 
 **Dependency note:** DRC accuracy improves with the layer system (Phase 7) since clearance checks should only apply within the same copper layer. If Phase 8 is started before Phase 7, DRC treats all shapes as on the same layer (conservative — more violations, never missed violations). Phase 8 constraint solver works on shape positions regardless of layers, so no hard dependency. DRC runs **client-side** for real-time feedback (debounced). The server `POST /api/components/:id/drc` endpoint is for heavy full-project validation only (e.g., before export or publish) — it uses the same `drc.ts` engine bundled for server via shared code.
 
@@ -1438,6 +1446,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 9: Component Library & Ecosystem (Big Swing innovation)
 **Goal:** Searchable component library enables reuse, community sharing, and accelerated part creation.
+**Status: NOT STARTED**
 
 - [ ] **9.1** [BS-3] Create `component_library` table (see section 4.2) and run migration
 - [ ] **9.2** [BS-3] Create `server/component-library.ts` — CRUD + search API:
@@ -1465,6 +1474,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 10: Circuit Schematic Capture
 **Goal:** Multi-component schematic editor where users place component symbols and draw electrical nets between pins, with ERC validation and AI-assisted design.
+**Status: NOT STARTED**
 
 **Dependency note:** Phase 10 depends on Phases 1-9 being complete — component_parts must exist as the "stamps" that get placed on the schematic. The schematic canvas can reuse React Flow (already used by ArchitectureView) since schematics are fundamentally node+edge graphs. The existing architecture edges' `signalType`, `voltage`, `busWidth`, and `netName` fields bridge into circuit_nets when expanding architecture blocks into schematic components.
 
@@ -1499,6 +1509,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 11: Breadboard & Physical Layout
 **Goal:** Virtual breadboard view where users place component breadboard graphics and wire them together, plus basic PCB component placement with ratsnest display.
+**Status: NOT STARTED**
 
 **Dependency note:** Phase 11 depends on Phase 10 for circuit_nets (breadboard wiring is driven by schematic nets). Component breadboard views come from component_parts (Phases 1-9). The breadboard grid model is independent and can be developed in parallel with schematic capture, but wiring synchronization requires Phase 10's net model.
 
@@ -1542,6 +1553,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 12: Manufacturing Output & Interoperability
 **Goal:** Export designs to industry-standard manufacturing formats and enable round-tripping with other EDA tools.
+**Status: NOT STARTED**
 
 **Dependency note:** Phase 12 depends on Phase 10 (schematic netlist) and Phase 11 (PCB layout with traces). Some exports (schematic PDF, BOM, netlist) can work with Phase 10 alone. Gerber and pick-and-place exports require Phase 11's PCB layout. KiCad/Eagle export requires both schematic and layout data.
 
@@ -1603,6 +1615,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 13: Simulation & Advanced Analysis
 **Goal:** Basic circuit simulation and analysis capabilities — from embedded solver for simple circuits to SPICE export for complex designs, with interactive waveform visualization and AI-assisted analysis.
+**Status: NOT STARTED**
 
 **Dependency note:** Phase 13 depends on Phase 10 (circuit netlist is the input to simulation). The simulation engine choice (JS solver vs. WASM ngspice vs. server-side ngspice) is a key architectural decision — see Open Questions. A simplified JS solver can handle resistive networks and basic RC/RL circuits; SPICE-level simulation requires ngspice or similar.
 
@@ -1718,8 +1731,13 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ### Manual smoke tests after each phase:
 
 **Phase 1:** Navigate to Component Editor tab → see empty state → create part via API → see it loaded
+> **Phase 1 smoke test status (2026-02-18):** PASS — Component Editor tab navigable via sidebar, empty state renders, backend CRUD operational via API routes, TanStack Query hooks load/save parts.
+
 **Phase 2:** Draw shapes → select → move → verify snap guides appear during alignment → multi-select and bulk-edit properties → use ruler tool to measure distance → zoom-to-fit → undo/redo → switch views → verify persistence
+> **Phase 2 smoke test status (2026-02-18):** PARTIAL — Drawing shapes (rect, circle, text) works, selection and drag works, pan/zoom works, grid overlay works. Not yet tested: snap guides, zoom-to-fit, multi-select, ruler, auto-save.
+
 **Phase 3:** Open generator → select DIP-8 → generate → see shapes on canvas. Open shape templates → add standard body. Edit metadata → save → reload → verify. Open pin table → sort by name → inline edit → verify canvas updates.
+> **Phase 3 smoke test status (2026-02-18):** PARTIAL — Metadata form saves fields, pin table add/edit/delete works. Not yet tested: generator modal, shape templates, validation engine.
 **Phase 4:** Enter part description → AI generates → shapes appear. Upload datasheet → metadata extracted. Ask AI to "move pin 1 to the left" → see diff preview → accept some changes, reject others → verify final state. Upload chip photo → pins auto-detected.
 **Phase 5:** Export .fzpz → import it into Fritzing (external). Import .fzpz → see part. Import SVG → shapes appear. Upload reference photo → calibrate overlay → toggle lock. Link to architecture node → BOM updates. Click validation issue → auto-navigate to element.
 **Phase 6:** Verify all keyboard shortcuts. Test error recovery. Check loading states. Verify performance with complex part (100+ shapes).
@@ -1790,8 +1808,12 @@ These should be resolved before each relevant phase starts:
 1. **Should the Component Editor support editing multiple parts simultaneously?**
    Current plan: one part at a time, selected from a sidebar list. Multi-part support deferred to Phase 9.
 
+> **RESOLVED (2026-02-18):** Implemented as planned — one part at a time. Component Editor loads a single part via `useComponentPartByNodeId` hook. Multi-part sidebar list deferred to Phase 9.
+
 2. **Should parts be shareable across projects?**
    Current plan: parts belong to a project. Cross-project sharing via the component library (Phase 9).
+
+> **RESOLVED (2026-02-18):** Implemented as planned — `component_parts` table has `projectId` foreign key. Parts are project-scoped. Library sharing deferred to Phase 9.
 
 ### Before Phase 4:
 3. **Should the AI chat in ProtoPulse be able to invoke component editor actions?**
@@ -1806,6 +1828,8 @@ These should be resolved before each relevant phase starts:
 ### Before Phase 7:
 6. **Should we keep the breadboard/schematic/pcb sub-views or simplify?**
    Current plan: Keep all three — they're the core value of FZPZ Studio and essential for Fritzing compatibility.
+
+> **RESOLVED (2026-02-18):** Implemented as planned — ComponentEditorView has breadboard/schematic/pcb tabs, each rendering a ShapeCanvas with the corresponding view's shapes.
 
 7. **How many layers per view is reasonable?**
    Proposal: PCB gets 8 layers (copper front/back, silk front/back, courtyard, fab, paste front/back). Breadboard gets 4 (body, pins, labels, artwork). Schematic gets 3 (symbols, pins, labels). Users can't add custom layers (keeps it simple).
