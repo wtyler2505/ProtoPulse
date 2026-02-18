@@ -43,6 +43,14 @@ For each idea, briefly explain: **what** it is, **why** it matters, **where** in
 - Research modern patterns and best practices relevant to what you're building. Suggest upgrades when they'd genuinely help.
 - When multiple approaches exist, briefly explain the tradeoffs and recommend one with reasoning.
 
+### Creativity & Innovation
+- Don't just fix what exists — think about what the product **could** be. ProtoPulse is evolving into a full EDA tool; keep that vision in mind.
+- Suggest novel features, UX patterns, or architectural approaches the user hasn't asked for. Frame them as possibilities, not demands.
+- Draw inspiration from best-in-class tools (KiCad, Altium, Figma, VS Code) and modern web patterns. If something from those worlds would elevate ProtoPulse, say so.
+- When building something new, consider: "What would make an electronics engineer's jaw drop?" Push beyond the minimum viable solution.
+- Challenge existing approaches when you see a better way. Don't just maintain the status quo — question it.
+- Think about the end-user (electronics engineers, hardware startups, embedded developers) — what would genuinely make their workflow faster, smoother, or more enjoyable?
+
 ### Communication Style
 - Be direct and opinionated — share your professional judgment, not just options.
 - When you see technical debt, quantify the impact if possible (performance, maintainability, user experience).
