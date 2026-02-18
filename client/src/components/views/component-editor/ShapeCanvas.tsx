@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
-import type { Shape, RectShape, CircleShape, PathShape, TextShape, GroupShape, Connector } from '@shared/component-types';
+import type { Shape, RectShape, CircleShape, PathShape, TextShape, GroupShape, Connector, DRCViolation, Constraint } from '@shared/component-types';
+import { getShapeCenter } from '@/lib/component-editor/constraint-solver';
 import { nanoid } from 'nanoid';
 import { MousePointer2, Square, Circle as CircleIcon, Type, MapPin, Minus, Maximize2, Ruler, ImageIcon, Lock, Unlock, X, Layers, Spline } from 'lucide-react';
 import { computeSnap, getShapeBounds, type SnapTarget } from '@/lib/component-editor/snap-engine';
@@ -205,7 +206,12 @@ const TOOLS = [
 const SHORTCUT_MAP: Record<string, typeof TOOLS[number]['id']> = {};
 TOOLS.forEach((t) => { SHORTCUT_MAP[t.shortcut.toLowerCase()] = t.id; });
 
-export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic' | 'pcb' }) {
+interface ShapeCanvasProps {
+  view: 'breadboard' | 'schematic' | 'pcb';
+  drcViolations?: DRCViolation[];
+}
+
+export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasProps) {
   const { state, dispatch } = useComponentEditor();
   const svgRef = useRef<SVGSVGElement>(null);
   const [zoom, setZoom] = useState(1);
@@ -756,6 +762,67 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
     [shapes, selectedIds, handleShapeMouseDown]
   );
 
+  const drcOverlayElements = useMemo(() => {
+    if (drcViolations.length === 0) return null;
+    return (
+      <g data-testid="drc-overlays" className="drc-overlays" pointerEvents="none">
+        {drcViolations.map(v => {
+          const color = v.severity === 'error' ? '#ef4444' : '#f59e0b';
+          const size = 20;
+          return (
+            <g key={v.id} data-testid={`drc-overlay-${v.id}`}>
+              <circle cx={v.location.x} cy={v.location.y} r={size} fill={color} fillOpacity={0.15} stroke={color} strokeWidth={2 / zoom} strokeDasharray={`${4 / zoom} ${2 / zoom}`} />
+              {v.actual !== undefined && v.required !== undefined && (
+                <text x={v.location.x} y={v.location.y - size - 4 / zoom} textAnchor="middle" fill={color} fontSize={10 / zoom} fontFamily="JetBrains Mono, monospace">
+                  {v.actual.toFixed(1)} / {v.required}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </g>
+    );
+  }, [drcViolations, zoom]);
+
+  const constraintLines = useMemo(() => {
+    const constraints = state.present.constraints || [];
+    if (constraints.length === 0) return null;
+    const shapes = state.present.views[view].shapes;
+    const shapeMap = new Map(shapes.map(s => [s.id, s]));
+    return (
+      <g data-testid="constraint-overlays" pointerEvents="none">
+        {constraints.filter(c => c.enabled).map(c => {
+          const centers = c.shapeIds.map(id => {
+            const s = shapeMap.get(id);
+            return s ? getShapeCenter(s) : null;
+          }).filter(Boolean) as { x: number; y: number }[];
+          if (centers.length < 2) {
+            if (c.type === 'fixed' && centers.length === 1) {
+              return (
+                <g key={c.id}>
+                  <circle cx={centers[0].x} cy={centers[0].y} r={4 / zoom} fill="none" stroke="#a855f7" strokeWidth={1.5 / zoom} />
+                  <line x1={centers[0].x - 4 / zoom} y1={centers[0].y} x2={centers[0].x + 4 / zoom} y2={centers[0].y} stroke="#a855f7" strokeWidth={1 / zoom} />
+                  <line x1={centers[0].x} y1={centers[0].y - 4 / zoom} x2={centers[0].x} y2={centers[0].y + 4 / zoom} stroke="#a855f7" strokeWidth={1 / zoom} />
+                </g>
+              );
+            }
+            return null;
+          }
+          return (
+            <g key={c.id}>
+              <line x1={centers[0].x} y1={centers[0].y} x2={centers[1].x} y2={centers[1].y}
+                stroke="#a855f7" strokeWidth={1 / zoom} strokeDasharray={`${4 / zoom} ${3 / zoom}`} opacity={0.7} />
+              <text x={(centers[0].x + centers[1].x) / 2} y={(centers[0].y + centers[1].y) / 2 - 6 / zoom}
+                fill="#a855f7" fontSize={9 / zoom} textAnchor="middle" fontFamily="JetBrains Mono, monospace">
+                {c.type}{c.params.distance !== undefined ? ` ${c.params.distance}` : ''}{c.params.pitch !== undefined ? ` ${c.params.pitch}` : ''}
+              </text>
+            </g>
+          );
+        })}
+      </g>
+    );
+  }, [state.present.constraints, state.present.views, view, zoom]);
+
   const preview = useMemo(() => {
     if (!drawStart || !drawCurrent) return null;
     const x = Math.min(drawStart.x, drawCurrent.x), y = Math.min(drawStart.y, drawCurrent.y);
@@ -1008,6 +1075,8 @@ export default function ShapeCanvas({ view }: { view: 'breadboard' | 'schematic'
             </g>
           ))}
           {renderedShapes}
+          {drcOverlayElements}
+          {constraintLines}
           <SnapGuides guides={activeGuides} />
           <RulerOverlay measurements={measurements} pendingStart={pendingMeasureStart}
             cursorPos={measureCursorPos} zoom={zoom} />

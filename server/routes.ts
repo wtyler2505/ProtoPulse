@@ -750,6 +750,73 @@ export async function registerRoutes(app: Express): Promise<void> {
     }
   }));
 
+  // --- DRC Check (basic server-side subset — full DRC runs client-side) ---
+  app.post("/api/projects/:projectId/component-parts/:id/drc", asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const part = await storage.getComponentPart(id, projectId);
+    if (!part) return res.status(404).json({ message: "Component part not found" });
+
+    const view = (req.body?.view || 'pcb') as 'breadboard' | 'schematic' | 'pcb';
+    const partState = {
+      meta: part.meta as any,
+      connectors: part.connectors as any[],
+      buses: part.buses as any[],
+      views: part.views as any,
+      constraints: part.constraints as any[],
+    };
+
+    const viewData = partState.views?.[view];
+    if (!viewData) return res.json({ violations: [] });
+
+    const shapes = viewData.shapes || [];
+    const violations: any[] = [];
+
+    for (let i = 0; i < shapes.length; i++) {
+      for (let j = i + 1; j < shapes.length; j++) {
+        const a = shapes[i];
+        const b = shapes[j];
+        const dx = Math.max(0, Math.max(a.x - (b.x + b.width), b.x - (a.x + a.width)));
+        const dy = Math.max(0, Math.max(a.y - (b.y + b.height), b.y - (a.y + a.height)));
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 8 && dist >= 0) {
+          violations.push({
+            id: `drc-${i}-${j}`,
+            ruleType: 'min-clearance',
+            severity: 'error',
+            message: `Clearance ${dist.toFixed(1)}px between shapes is below minimum 8px`,
+            shapeIds: [a.id, b.id],
+            view,
+            location: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+            actual: Math.round(dist * 10) / 10,
+            required: 8,
+          });
+        }
+      }
+    }
+
+    for (const shape of shapes) {
+      if (shape.type === 'path') {
+        const sw = shape.style?.strokeWidth ?? 1;
+        if (sw < 6) {
+          violations.push({
+            id: `drc-trace-${shape.id}`,
+            ruleType: 'min-trace-width',
+            severity: 'error',
+            message: `Trace width ${sw}px is below minimum 6px`,
+            shapeIds: [shape.id],
+            view,
+            location: { x: shape.x, y: shape.y },
+            actual: sw,
+            required: 6,
+          });
+        }
+      }
+    }
+
+    res.json({ violations, checkedAt: new Date().toISOString() });
+  }));
+
   // --- Seed / Init default project ---
 
   app.post("/api/seed", payloadLimit(16 * 1024), asyncHandler(async (_req, res) => {

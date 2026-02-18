@@ -1,8 +1,9 @@
 import { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react';
-import type { PartState, Shape, Connector, CircleShape } from '@shared/component-types';
+import type { PartState, Shape, Connector, CircleShape, Constraint } from '@shared/component-types';
 import { createDefaultPartState } from '@shared/component-types';
 import type { EditorState, EditorAction, HistoryEntry } from './types';
 import { nanoid } from 'nanoid';
+import { applyConstraints } from './constraint-solver';
 
 const MAX_HISTORY = 50;
 
@@ -158,6 +159,25 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     case 'MOVE_SHAPES': {
       const { view, moves } = action.payload;
       const moveMap = new Map(moves.map((m) => [m.id, m]));
+      const movedShapes = state.present.views[view].shapes.map((s) => {
+        const move = moveMap.get(s.id);
+        if (!move) return s;
+        const dx = move.x - s.x;
+        const dy = move.y - s.y;
+        if (s.type === 'circle') {
+          const cs = s as CircleShape;
+          return { ...cs, x: move.x, y: move.y, cx: cs.cx + dx, cy: cs.cy + dy } as Shape;
+        }
+        return { ...s, x: move.x, y: move.y } as Shape;
+      });
+      const constraints = state.present.constraints || [];
+      const enabledConstraints = constraints.filter(c => c.enabled);
+      let finalShapes = movedShapes;
+      if (enabledConstraints.length > 0) {
+        for (const move of moves) {
+          finalShapes = applyConstraints(finalShapes, enabledConstraints, move.id);
+        }
+      }
       return {
         ...state,
         present: {
@@ -166,17 +186,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
             ...state.present.views,
             [view]: {
               ...state.present.views[view],
-              shapes: state.present.views[view].shapes.map((s) => {
-                const move = moveMap.get(s.id);
-                if (!move) return s;
-                const dx = move.x - s.x;
-                const dy = move.y - s.y;
-                if (s.type === 'circle') {
-                  const cs = s as CircleShape;
-                  return { ...cs, x: move.x, y: move.y, cx: cs.cx + dx, cy: cs.cy + dy } as Shape;
-                }
-                return { ...s, x: move.x, y: move.y } as Shape;
-              }),
+              shapes: finalShapes,
             },
           },
         },
@@ -326,6 +336,48 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           ui: { ...state.ui, isDirty: true },
         };
       }
+    }
+
+    case 'ADD_CONSTRAINT': {
+      const entry: HistoryEntry = { label: `Add ${action.payload.type} constraint`, state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          constraints: [...(state.present.constraints || []), action.payload],
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'UPDATE_CONSTRAINT': {
+      const { constraintId, updates } = action.payload;
+      const entry: HistoryEntry = { label: 'Update constraint', state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          constraints: (state.present.constraints || []).map(c =>
+            c.id === constraintId ? { ...c, ...updates } : c
+          ),
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
+    }
+
+    case 'DELETE_CONSTRAINT': {
+      const entry: HistoryEntry = { label: 'Delete constraint', state: state.present, timestamp: Date.now() };
+      return {
+        past: [...state.past, entry].slice(-MAX_HISTORY),
+        present: {
+          ...state.present,
+          constraints: (state.present.constraints || []).filter(c => c.id !== action.payload),
+        },
+        future: [],
+        ui: { ...state.ui, isDirty: true },
+      };
     }
 
     default:

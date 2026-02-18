@@ -1,4 +1,4 @@
-import type { PartState, EditorViewType, Shape, Connector } from '@shared/component-types';
+import type { PartState, EditorViewType, Shape, Connector, Constraint } from '@shared/component-types';
 
 export interface HistoryEntry {
   label: string;
@@ -38,6 +38,9 @@ export type EditorAction =
   | { type: 'PASTE_SHAPES'; payload: { view: 'breadboard' | 'schematic' | 'pcb' } }
   | { type: 'SET_LAYER_CONFIG'; payload: { view: 'breadboard' | 'schematic' | 'pcb'; layerConfig: Record<string, { visible: boolean; locked: boolean; color?: string }> } }
   | { type: 'SET_ACTIVE_LAYER'; payload: string }
+  | { type: 'ADD_CONSTRAINT'; payload: Constraint }
+  | { type: 'UPDATE_CONSTRAINT'; payload: { constraintId: string; updates: Partial<Constraint> } }
+  | { type: 'DELETE_CONSTRAINT'; payload: string }
   | { type: 'JUMP_TO_HISTORY'; payload: { index: number } };
 
 export interface EditorState {

@@ -108,10 +108,14 @@ export interface PartViews {
   pcb: ViewData;
 }
 
+export type ConstraintType = 'distance' | 'alignment' | 'pitch' | 'symmetric' | 'equal' | 'fixed';
+
 export interface Constraint {
   id: string;
-  type: string;
-  params: Record<string, unknown>;
+  type: ConstraintType;
+  shapeIds: string[];
+  params: Record<string, number | string>;
+  enabled: boolean;
 }
 
 export interface PartState {
@@ -122,19 +126,25 @@ export interface PartState {
   constraints?: Constraint[];
 }
 
+export type DRCRuleType = 'min-clearance' | 'min-trace-width' | 'courtyard-overlap' | 'pin-spacing' | 'pad-size' | 'silk-overlap';
+
 export interface DRCRule {
-  id: string;
-  name: string;
-  severity: 'error' | 'warning' | 'info';
-  check: string;
+  type: DRCRuleType;
+  params: Record<string, number>;
+  severity: 'error' | 'warning';
+  enabled: boolean;
 }
 
 export interface DRCViolation {
-  ruleId: string;
+  id: string;
+  ruleType: DRCRuleType;
+  severity: 'error' | 'warning';
   message: string;
-  shapeIds?: string[];
-  connectorIds?: string[];
-  view?: string;
+  shapeIds: string[];
+  view: 'breadboard' | 'schematic' | 'pcb';
+  location: { x: number; y: number };
+  actual?: number;
+  required?: number;
 }
 
 export interface ComponentValidationIssue {

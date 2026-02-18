@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History } from 'lucide-react';
+import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
 import PinTable from '@/components/views/component-editor/PinTable';
@@ -17,9 +17,11 @@ import ComponentInspector from '@/components/views/component-editor/ComponentIns
 import GeneratorModal from '@/components/views/component-editor/GeneratorModal';
 import ValidationModal from '@/components/views/component-editor/ValidationModal';
 import HistoryPanel from '@/components/views/component-editor/HistoryPanel';
+import DRCPanel from '@/components/views/component-editor/DRCPanel';
 import type { GeneratorResult } from '@/lib/component-editor/generators';
 import { validatePart } from '@/lib/component-editor/validation';
-import type { ComponentValidationIssue } from '@shared/component-types';
+import { runDRC, getDefaultDRCRules } from '@/lib/component-editor/drc';
+import type { ComponentValidationIssue, DRCViolation } from '@shared/component-types';
 
 const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'breadboard', label: 'Breadboard' },
@@ -201,6 +203,10 @@ function ComponentEditorContent() {
   const [isImporting, setIsImporting] = useState(false);
   const [isImportingSvg, setIsImportingSvg] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [drcViolations, setDrcViolations] = useState<DRCViolation[]>([]);
+  const [drcOpen, setDrcOpen] = useState(false);
+  const [showDrcOverlays, setShowDrcOverlays] = useState(true);
+  const [drcRules] = useState(() => getDefaultDRCRules());
   const queryClient = useQueryClient();
 
   const { data: parts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
@@ -290,6 +296,49 @@ function ComponentEditorContent() {
     }, 2000);
     return () => clearTimeout(timer);
   }, [state.ui.isDirty, state.present, partId, handleSave]);
+
+  useEffect(() => {
+    const view = activeView;
+    if (view !== 'breadboard' && view !== 'schematic' && view !== 'pcb') return;
+    const timer = setTimeout(() => {
+      const violations = runDRC(state.present, drcRules, view);
+      setDrcViolations(violations);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [state.present, activeView, drcRules]);
+
+  const handleValidateAll = useCallback(() => {
+    const partIssues = validatePart(state.present);
+    const view = activeView;
+    if (view === 'breadboard' || view === 'schematic' || view === 'pcb') {
+      const drcResults = runDRC(state.present, drcRules, view);
+      const drcAsIssues: ComponentValidationIssue[] = drcResults.map(v => ({
+        id: v.id,
+        severity: v.severity,
+        message: `[DRC] ${v.message}`,
+        view: v.view,
+        elementId: v.shapeIds[0],
+        suggestion: v.actual !== undefined && v.required !== undefined
+          ? `Actual: ${v.actual}, Required: ${v.required}`
+          : undefined,
+      }));
+      setValidationIssues([...partIssues, ...drcAsIssues]);
+    } else {
+      setValidationIssues(partIssues);
+    }
+    setValidationOpen(true);
+  }, [state.present, activeView, drcRules]);
+
+  const handleDrcHighlight = useCallback((shapeIds: string[]) => {
+    dispatch({ type: 'SET_SELECTION', payload: shapeIds });
+  }, [dispatch]);
+
+  const handleRunDrc = useCallback(() => {
+    const view = activeView;
+    if (view !== 'breadboard' && view !== 'schematic' && view !== 'pcb') return;
+    const violations = runDRC(state.present, drcRules, view);
+    setDrcViolations(violations);
+  }, [state.present, activeView, drcRules]);
 
   const handleGenerate = useCallback((result: GeneratorResult) => {
     const view = (activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb') ? activeView : 'breadboard';
@@ -452,7 +501,7 @@ function ComponentEditorContent() {
             variant="ghost"
             size="sm"
             data-testid="button-validate"
-            onClick={() => { setValidationIssues(validatePart(state.present)); setValidationOpen(true); }}
+            onClick={handleValidateAll}
             className="h-8 gap-1 text-muted-foreground hover:text-foreground"
           >
             <ShieldCheck className="w-4 h-4" />
@@ -507,6 +556,28 @@ function ComponentEditorContent() {
             onChange={handleImportSvg}
             data-testid="input-import-svg"
           />
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-drc"
+            onClick={() => setDrcOpen((v) => !v)}
+            className={`h-8 gap-1 relative ${drcOpen ? 'text-[#00F0FF] bg-[#00F0FF]/10' : 'text-muted-foreground hover:text-foreground'}`}
+          >
+            <Shield className="w-4 h-4" />
+            <span className="text-xs">DRC</span>
+            {drcViolations.length > 0 && (
+              <span
+                className={`absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 flex items-center justify-center rounded-full font-medium ${
+                  drcViolations.some(v => v.severity === 'error')
+                    ? 'bg-red-500/20 text-red-400'
+                    : 'bg-amber-500/20 text-amber-400'
+                }`}
+                data-testid="badge-drc-count"
+              >
+                {drcViolations.length}
+              </span>
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="sm"
@@ -588,12 +659,21 @@ function ComponentEditorContent() {
           ) : activeView === 'pin-table' ? (
             <PinTable />
           ) : activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb' ? (
-            <ShapeCanvas view={activeView} />
+            <ShapeCanvas view={activeView} drcViolations={showDrcOverlays ? drcViolations : []} />
           ) : (
             <CanvasPlaceholder view={activeView} />
           )}
         </div>
         <ComponentInspector />
+        {drcOpen && (
+          <DRCPanel
+            violations={drcViolations}
+            onRunDRC={handleRunDrc}
+            showOverlays={showDrcOverlays}
+            onToggleOverlays={() => setShowDrcOverlays(v => !v)}
+            onHighlight={handleDrcHighlight}
+          />
+        )}
         {historyOpen && <HistoryPanel />}
       </div>
       <GeneratorModal
