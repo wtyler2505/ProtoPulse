@@ -185,7 +185,7 @@ function CanvasPlaceholder({ view }: { view: string }) {
 
 function ComponentEditorContent() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useComponentEditor();
-  const { selectedNodeId } = useProject();
+  const { selectedNodeId, pendingComponentPartId, setPendingComponentPartId } = useProject();
   const activeView = state.ui.activeEditorView;
   const { toast } = useToast();
 
@@ -202,7 +202,10 @@ function ComponentEditorContent() {
   useEffect(() => {
     if (loadedRef.current || !parts) return;
     if (parts.length > 0) {
-      const part = parts[0];
+      const targetId = pendingComponentPartId;
+      const part = targetId
+        ? parts.find(p => p.id === targetId) ?? parts[0]
+        : parts[0];
       setPartId(part.id);
       dispatch({
         type: 'LOAD_PART',
@@ -214,9 +217,12 @@ function ComponentEditorContent() {
           constraints: part.constraints as any ?? [],
         },
       });
+      if (targetId) {
+        setPendingComponentPartId(null);
+      }
     }
     loadedRef.current = true;
-  }, [parts, dispatch]);
+  }, [parts, dispatch, pendingComponentPartId, setPendingComponentPartId]);
 
   const handleSave = useCallback(async () => {
     const payload = {
@@ -290,6 +296,35 @@ function ComponentEditorContent() {
     }
     toast({ title: 'Generated', description: `Created ${result.shapes.length} shapes and ${result.connectors.length} pins.` });
   }, [activeView, dispatch, toast]);
+
+  const handleNavigateToIssue = useCallback((issue: ComponentValidationIssue) => {
+    const isCanvasView = (v: string): v is 'breadboard' | 'schematic' | 'pcb' => ['breadboard', 'schematic', 'pcb'].includes(v);
+
+    if (issue.elementId) {
+      const allShapeIds = new Set<string>();
+      for (const viewKey of ['breadboard', 'schematic', 'pcb'] as const) {
+        for (const shape of state.present.views[viewKey].shapes) {
+          allShapeIds.add(shape.id);
+        }
+      }
+
+      if (allShapeIds.has(issue.elementId)) {
+        if (issue.view && isCanvasView(issue.view)) {
+          dispatch({ type: 'SET_EDITOR_VIEW', payload: issue.view });
+        }
+        dispatch({ type: 'SET_SELECTION', payload: [issue.elementId] });
+      } else if (state.present.connectors.some(c => c.id === issue.elementId)) {
+        dispatch({ type: 'SET_CONNECTOR_SELECTION', payload: issue.elementId });
+        dispatch({ type: 'SET_EDITOR_VIEW', payload: 'pin-table' });
+      }
+    } else if (issue.view && isCanvasView(issue.view)) {
+      dispatch({ type: 'SET_EDITOR_VIEW', payload: issue.view });
+    } else if (!issue.view && !issue.elementId && /title|description/i.test(issue.message)) {
+      dispatch({ type: 'SET_EDITOR_VIEW', payload: 'metadata' });
+    }
+
+    setValidationOpen(false);
+  }, [state.present, dispatch]);
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
@@ -413,6 +448,7 @@ function ComponentEditorContent() {
         open={validationOpen}
         onClose={() => setValidationOpen(false)}
         issues={validationIssues}
+        onNavigate={handleNavigateToIssue}
       />
     </div>
   );

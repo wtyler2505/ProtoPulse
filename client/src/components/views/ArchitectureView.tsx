@@ -5,7 +5,7 @@ import { useProject } from '@/lib/project-context';
 import CustomNode from './CustomNode';
 import AssetManager from '@/components/panels/AssetManager';
 import { cn } from '@/lib/utils';
-import { MousePointer2, Grid, Move, Maximize, Cpu, Component } from 'lucide-react';
+import { MousePointer2, Grid, Move, Maximize, Cpu, Component, Pencil } from 'lucide-react';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -22,7 +22,7 @@ const toolLabels: Record<string, string> = {
 };
 
 function ArchitectureFlow() {
-  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog, focusNodeId, selectedNodeId, setSelectedNodeId, pushUndoState, undo, redo } = useProject();
+  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog, focusNodeId, selectedNodeId, setSelectedNodeId, pushUndoState, undo, redo, setActiveView, setPendingComponentPartId } = useProject();
   // Show the asset manager by default on desktop. This state now controls
   // visibility across both desktop and mobile, enabling a collapsible
   // asset library on larger screens.
@@ -387,6 +387,24 @@ function ArchitectureFlow() {
         <ContextMenuItem onSelect={() => { setLocalNodes(localNodes.map((n) => ({ ...n, selected: true }))); addOutputLog('[ARCH] Selected all ' + localNodes.length + ' nodes'); }}>Select All <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span></ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => { copyToClipboard(JSON.stringify({ nodes, edges }, null, 2)); addOutputLog('[ARCH] Exported architecture to clipboard'); }}>Export to Clipboard</ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          data-testid="context-edit-component"
+          disabled={!selectedNodeId}
+          onSelect={() => {
+            if (selectedNodeId) {
+              const node = localNodes.find(n => n.id === selectedNodeId);
+              if (node?.data?.componentPartId) {
+                setPendingComponentPartId(node.data.componentPartId as number);
+              }
+              addOutputLog(`[ARCH] Opening Component Editor for node ${selectedNodeId}`);
+              setActiveView('component_editor');
+            }
+          }}
+        >
+          <Pencil className="w-3.5 h-3.5 mr-2" />
+          Edit Component
+        </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

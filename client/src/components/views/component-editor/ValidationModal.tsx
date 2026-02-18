@@ -1,12 +1,13 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { ComponentValidationIssue } from '@shared/component-types';
-import { AlertCircle, AlertTriangle, Info, CheckCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, CheckCircle, ArrowRight } from 'lucide-react';
 
 interface ValidationModalProps {
   open: boolean;
   onClose: () => void;
   issues: ComponentValidationIssue[];
+  onNavigate?: (issue: ComponentValidationIssue) => void;
 }
 
 const severityOrder: Record<string, number> = { error: 0, warning: 1, info: 2 };
@@ -17,7 +18,7 @@ const severityConfig = {
   info: { icon: Info, color: 'text-blue-400', bg: 'bg-blue-400/10', label: 'info' },
 } as const;
 
-export default function ValidationModal({ open, onClose, issues }: ValidationModalProps) {
+export default function ValidationModal({ open, onClose, issues, onNavigate }: ValidationModalProps) {
   const sorted = [...issues].sort((a, b) => (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3));
   const errorCount = issues.filter(i => i.severity === 'error').length;
   const warningCount = issues.filter(i => i.severity === 'warning').length;
@@ -52,19 +53,26 @@ export default function ValidationModal({ open, onClose, issues }: ValidationMod
             {sorted.map((issue) => {
               const config = severityConfig[issue.severity];
               const Icon = config.icon;
+              const isClickable = !!(onNavigate && (issue.view || issue.elementId || /title|description/i.test(issue.message)));
               return (
                 <div
                   key={issue.id}
                   data-testid={`validation-issue-${issue.id}`}
-                  className={`flex items-start gap-3 p-3 rounded-md ${config.bg}`}
+                  className={`flex items-start gap-3 p-3 rounded-md ${config.bg} ${isClickable ? 'cursor-pointer hover:ring-1 hover:ring-foreground/20 transition-shadow' : ''}`}
+                  onClick={isClickable ? () => onNavigate!(issue) : undefined}
+                  role={isClickable ? 'button' : undefined}
+                  tabIndex={isClickable ? 0 : undefined}
                 >
                   <Icon className={`w-5 h-5 mt-0.5 shrink-0 ${config.color}`} />
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm text-foreground">{issue.message}</p>
                     {issue.suggestion && (
                       <p className="text-xs text-muted-foreground mt-1">{issue.suggestion}</p>
                     )}
                   </div>
+                  {isClickable && (
+                    <ArrowRight className="w-4 h-4 mt-0.5 shrink-0 text-muted-foreground" />
+                  )}
                 </div>
               );
             })}

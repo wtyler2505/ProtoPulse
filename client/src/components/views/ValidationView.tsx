@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useProject } from '@/lib/project-context';
+import { useState, useMemo } from 'react';
+import { useProject, PROJECT_ID } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,11 +19,36 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
+import { useComponentParts } from '@/lib/component-editor/hooks';
+import { validatePart } from '@/lib/component-editor/validation';
+import type { PartState } from '@shared/component-types';
 
 export default function ValidationView() {
   const { issues, runValidation, deleteValidationIssue, addOutputLog, setActiveView } = useProject();
   const { toast } = useToast();
   const [pendingDismissId, setPendingDismissId] = useState<number | string | null>(null);
+  const { data: componentParts } = useComponentParts(PROJECT_ID);
+
+  const componentIssues = useMemo(() => {
+    if (!componentParts || componentParts.length === 0) return [];
+    return componentParts.flatMap((part) => {
+      const partState: PartState = {
+        meta: part.meta as PartState['meta'],
+        connectors: part.connectors as PartState['connectors'],
+        buses: part.buses as PartState['buses'],
+        views: part.views as PartState['views'],
+        constraints: part.constraints as PartState['constraints'],
+      };
+      const partName = partState.meta?.title || `Part #${part.id}`;
+      return validatePart(partState).map((issue) => ({
+        id: issue.id,
+        severity: issue.severity,
+        message: issue.message,
+        suggestion: issue.suggestion,
+        componentId: partName,
+      }));
+    });
+  }, [componentParts]);
 
   const getIcon = (severity: string) => {
     switch (severity) {
@@ -42,7 +67,7 @@ export default function ValidationView() {
              <ActivityIcon /> 
              System Validation
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">Found {issues.length} potential issues in your design.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Found {issues.length + componentIssues.length} potential issues in your design.</p>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -113,7 +138,45 @@ export default function ValidationView() {
             </ContextMenu>
           ))}
 
-          {issues.length === 0 && (
+          {componentParts && componentParts.length > 0 && (
+            <>
+              <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/20 backdrop-blur">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Component Part Issues</h3>
+                <span className="text-xs text-muted-foreground">({componentIssues.length})</span>
+              </div>
+              {componentIssues.map((issue) => (
+                <div key={issue.id} data-testid={`row-component-issue-${issue.id}`} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group">
+                  <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
+                    {getIcon(issue.severity)}
+                    <span className="text-xs font-medium uppercase md:hidden">{issue.severity}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground text-sm">{issue.message}</h3>
+                    {issue.suggestion && (
+                      <div className="mt-1.5 text-xs text-muted-foreground flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />
+                        <span className="text-emerald-500/80">Suggestion: {issue.suggestion}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="md:w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 self-start text-center">
+                    {issue.componentId}
+                  </div>
+                  <div className="md:w-32">
+                    <button
+                      data-testid={`button-view-component-${issue.id}`}
+                      onClick={() => setActiveView('component_editor')}
+                      className="text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full transition-opacity"
+                    >
+                      View
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {issues.length === 0 && componentIssues.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
               <CheckCircle2 className="w-16 h-16 mb-4 text-emerald-500/20" />
               <p className="text-lg font-medium text-foreground">All Systems Nominal</p>

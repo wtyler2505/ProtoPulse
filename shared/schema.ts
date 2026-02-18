@@ -18,6 +18,7 @@ export type Project = typeof projects.$inferSelect;
 
 const nodeDataSchema = z.object({
   description: z.string().optional(),
+  componentPartId: z.number().optional(),
 }).passthrough().nullable().optional();
 
 export const architectureNodes = pgTable("architecture_nodes", {

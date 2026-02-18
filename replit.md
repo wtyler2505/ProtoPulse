@@ -4,7 +4,7 @@
 
 ProtoPulse is an AI-assisted electronics design platform, aiming to evolve into a full Electronic Design Automation (EDA) tool. It combines features similar to Fritzing and KiCad within a browser-based environment, enhanced with AI capabilities.
 
-Currently, the platform offers an architecture block diagram editor, Bill of Materials (BOM) generation, design validation, and an AI chat interface with in-app actions. Future phases include a component/part editor, circuit schematic capture, breadboard/PCB layout, manufacturing output (Gerber, KiCad), and circuit simulation. The project's vision is to streamline the electronics design workflow from concept to manufacturing.
+Currently, the platform offers an architecture block diagram editor, a component part editor (multi-view: breadboard/schematic/PCB with SVG canvas, parametric generators, validation), Bill of Materials (BOM) generation, design validation, and an AI chat interface with in-app actions. Future phases include AI-powered component generation, import/export (FZPZ/SVG), circuit schematic capture, breadboard/PCB layout, manufacturing output (Gerber, KiCad), and circuit simulation. The project's vision is to streamline the electronics design workflow from concept to manufacturing.
 
 ## User Preferences
 
@@ -93,11 +93,19 @@ The application is structured into a frontend, backend, and shared components.
 - Built with React 19, TypeScript, and Vite.
 - Uses Wouter for routing, TanStack React Query for server state management, and shadcn/ui (New York theme) with Radix and Tailwind v4 for UI components.
 - The `ArchitectureView.tsx` uses `@xyflow/react` for the interactive canvas, a technology planned for reuse in schematic capture.
-- `ProjectWorkspace.tsx` manages view switching based on `ViewMode` states ('project_explorer', 'output', 'architecture', 'schematic', 'procurement', 'validation').
+- `ProjectWorkspace.tsx` manages view switching based on `ViewMode` states ('project_explorer', 'output', 'architecture', 'component_editor', 'procurement', 'validation'). Each view is wrapped in `ErrorBoundary` and `Suspense`.
 - The main layout is designed with a dark theme, using neon cyan (#00F0FF) and purple accents. Fonts are Rajdhani, JetBrains Mono, and Inter.
-- Key components include `ChatPanel.tsx` (AI chat, settings, streaming), `Sidebar.tsx` (navigation), `AssetManager.tsx` (component library), and `ProcurementView.tsx` (BOM table).
+- Key components include `ChatPanel.tsx` (AI chat, settings, streaming), `Sidebar.tsx` (navigation), `AssetManager.tsx` (component library), `ProcurementView.tsx` (BOM table), and `ComponentEditorView.tsx` (component part editor).
+- **Component Editor** (`ComponentEditorView.tsx`) is a multi-view component design workspace with 5 tabs: Breadboard, Schematic, PCB (SVG canvas views), Metadata, and Pin Table. Key sub-components:
+  - `ShapeCanvas.tsx` — SVG drawing canvas with select/rect/circle/text/line/pin/measure tools, snap guides, ruler overlay, zoom/pan, keyboard shortcuts (S/R/C/T/L/P/M hotkeys, Delete, Escape, Ctrl+0 zoom-to-fit). Performance-optimized with `useMemo` for shape rendering, toolbar, and preview elements.
+  - `ComponentInspector.tsx` — property inspector for selected shapes (color, position, size, style)
+  - `PinTable.tsx` — tabular pin/connector editor with add/delete/reorder
+  - `ComponentEditorProvider.tsx` — React context provider with `useReducer` for undo/redo state management, manages `PartState` (meta, connectors, views)
+  - `generators.ts` — parametric package generators (DIP, SOIC, QFP, Header, Resistor, Capacitor)
+  - `validation.ts` — component-level validation engine (checks metadata, pins, shapes, overlaps)
+  - `snap-engine.ts` — alignment snap guides for drawing precision
+- Accessibility: SVG canvas has `role="application"`, toolbar has `role="toolbar"` with `aria-pressed` states, shape elements have `role="img"` with descriptive labels, zoom indicator has `aria-live="polite"`.
 - There is a known "God context" (`project-context.tsx`) that causes re-renders for all consumers on any state change, and a hardcoded `PROJECT_ID = 1` blocking multi-project functionality, both identified for refactoring.
-- The `SchematicView.tsx` is currently a hardcoded stub and will be replaced by the Component Editor in future phases.
 
 **Backend:**
 - Implemented with Node.js and Express 5, using TypeScript (via `tsx` for development).
@@ -111,7 +119,7 @@ The application is structured into a frontend, backend, and shared components.
 
 **Data:**
 - PostgreSQL is used as the database, accessed via `pg` and Drizzle ORM.
-- `shared/schema.ts` defines the Drizzle schema, including tables for `projects`, `architecture_nodes`, `architecture_edges`, `bom_items`, `validation_issues`, `chat_messages`, `history_items`, `users`, `sessions`, and `api_keys`.
+- `shared/schema.ts` defines the Drizzle schema, including tables for `projects`, `architecture_nodes`, `architecture_edges`, `bom_items`, `validation_issues`, `chat_messages`, `history_items`, `users`, `sessions`, `api_keys`, and `component_parts`.
 - `drizzle-kit push` is used for schema synchronization in development; no versioned migrations are currently in place.
 - An in-memory cache (`server/cache.ts`) is used for frequently accessed project data, invalidated on writes.
 

@@ -147,6 +147,9 @@ interface ProjectState {
   captureSnapshot: () => void;
   getChangeDiff: () => string;
 
+  pendingComponentPartId: number | null;
+  setPendingComponentPartId: (id: number | null) => void;
+
   isLoading: boolean;
 }
 
@@ -221,6 +224,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   };
 
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pendingComponentPartId, setPendingComponentPartId] = useState<number | null>(null);
 
   const [outputLog, setOutputLog] = useState<string[]>([
     "[SYSTEM] Initializing ProtoPulse Core...",
@@ -620,6 +624,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       undoStack, redoStack, pushUndoState, undo, redo,
       canUndo: undoStack.length > 0, canRedo: redoStack.length > 0,
       lastAITurnSnapshot: snapshotRef.current, captureSnapshot, getChangeDiff,
+      pendingComponentPartId, setPendingComponentPartId,
       isLoading,
     }}>
       {children}
