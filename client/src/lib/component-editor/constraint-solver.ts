@@ -155,6 +155,76 @@ function solvePitch(shapes: Shape[], constraint: Constraint, anchorId: string): 
   return adjusted;
 }
 
+function solveSymmetric(shapes: Shape[], constraint: Constraint, anchorId: string): string[] {
+  const adjusted: string[] = [];
+  const axis = (constraint.params.axis as string) || 'x';
+
+  const anchor = findShape(shapes, anchorId);
+  if (!anchor) return adjusted;
+  const anchorCenter = getShapeCenter(anchor);
+
+  for (const sid of constraint.shapeIds) {
+    if (sid === anchorId) continue;
+    const target = findShape(shapes, sid);
+    if (!target) continue;
+
+    const targetCenter = getShapeCenter(target);
+
+    if (axis === 'x') {
+      const newX = 2 * anchorCenter.x - targetCenter.x;
+      if (Math.abs(targetCenter.x - newX) > CONVERGENCE_THRESHOLD) {
+        setShapeCenter(target, newX, targetCenter.y);
+        adjusted.push(sid);
+      }
+    } else {
+      const newY = 2 * anchorCenter.y - targetCenter.y;
+      if (Math.abs(targetCenter.y - newY) > CONVERGENCE_THRESHOLD) {
+        setShapeCenter(target, targetCenter.x, newY);
+        adjusted.push(sid);
+      }
+    }
+  }
+
+  return adjusted;
+}
+
+function solveEqual(shapes: Shape[], constraint: Constraint, anchorId: string): string[] {
+  const adjusted: string[] = [];
+  const property = (constraint.params.property as string) || 'width';
+
+  const anchor = findShape(shapes, anchorId);
+  if (!anchor) return adjusted;
+
+  for (const sid of constraint.shapeIds) {
+    if (sid === anchorId) continue;
+    const target = findShape(shapes, sid);
+    if (!target) continue;
+
+    let changed = false;
+    const center = getShapeCenter(target);
+
+    if (property === 'width' || property === 'both') {
+      if (Math.abs(target.width - anchor.width) > CONVERGENCE_THRESHOLD) {
+        target.width = anchor.width;
+        changed = true;
+      }
+    }
+    if (property === 'height' || property === 'both') {
+      if (Math.abs(target.height - anchor.height) > CONVERGENCE_THRESHOLD) {
+        target.height = anchor.height;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      setShapeCenter(target, center.x, center.y);
+      adjusted.push(sid);
+    }
+  }
+
+  return adjusted;
+}
+
 function solveFixed(shapes: Shape[], constraint: Constraint): string[] {
   const adjusted: string[] = [];
   const fixedX = Number(constraint.params.x) || 0;
@@ -185,8 +255,9 @@ function solveConstraint(shapes: Shape[], constraint: Constraint, anchorId: stri
     case 'fixed':
       return solveFixed(shapes, constraint);
     case 'symmetric':
+      return solveSymmetric(shapes, constraint, anchorId);
     case 'equal':
-      return [];
+      return solveEqual(shapes, constraint, anchorId);
     default:
       return [];
   }

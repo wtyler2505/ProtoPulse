@@ -826,7 +826,7 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
           const dy = centers[1].y - centers[0].y;
           const currentDist = Math.sqrt(dx * dx + dy * dy);
 
-          let label = c.type;
+          let label: string = c.type;
           if (c.type === 'distance' && c.params.distance !== undefined) {
             label = `${currentDist.toFixed(0)}/${c.params.distance}`;
           } else if (c.type === 'pitch' && c.params.pitch !== undefined) {
@@ -835,6 +835,10 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
             const axis = (c.params.axis as string) || 'x';
             const diff = axis === 'x' ? Math.abs(centers[0].x - centers[1].x) : Math.abs(centers[0].y - centers[1].y);
             label = `align-${axis} \u0394${diff.toFixed(0)}`;
+          } else if (c.type === 'symmetric') {
+            label = `sym-${c.params.axis || 'x'}`;
+          } else if (c.type === 'equal') {
+            label = `eq-${c.params.property || 'width'}`;
           }
 
           return (

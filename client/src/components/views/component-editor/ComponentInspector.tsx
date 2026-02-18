@@ -1,11 +1,12 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Shape, ShapeStyle, RectShape, CircleShape, TextShape, PathShape } from '@shared/component-types';
 import type { Constraint, ConstraintType } from '@shared/component-types';
 import { createConstraint } from '@/lib/component-editor/constraint-solver';
-import { Link2, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Link2, Trash2, ToggleLeft, ToggleRight, Sparkles, Check, X } from 'lucide-react';
+import { inferConstraints, type InferredConstraint } from '@/lib/component-editor/constraint-inference';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
@@ -277,6 +278,28 @@ function ConstraintSection({ view }: { view: CanvasView }) {
     dispatch({ type: 'ADD_CONSTRAINT', payload: constraint });
   };
 
+  const [suggestions, setSuggestions] = useState<InferredConstraint[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const handleInfer = () => {
+    const shapes = state.present.views[view].shapes;
+    const connectors = state.present.connectors;
+    const canvasView = view as 'breadboard' | 'schematic' | 'pcb';
+    const results = inferConstraints(shapes, connectors, canvasView, constraints);
+    setSuggestions(results);
+    setShowSuggestions(true);
+  };
+
+  const handleAcceptSuggestion = (s: InferredConstraint) => {
+    const constraint = createConstraint(s.type, s.shapeIds, s.params);
+    dispatch({ type: 'ADD_CONSTRAINT', payload: constraint });
+    setSuggestions(prev => prev.filter(p => p !== s));
+  };
+
+  const handleDismissSuggestion = (s: InferredConstraint) => {
+    setSuggestions(prev => prev.filter(p => p !== s));
+  };
+
   const handleDelete = (id: string) => {
     dispatch({ type: 'DELETE_CONSTRAINT', payload: id });
   };
@@ -291,7 +314,7 @@ function ConstraintSection({ view }: { view: CanvasView }) {
       <div className="px-3 flex flex-col gap-2">
         {selectedIds.length >= 2 && (
           <div className="flex flex-wrap gap-1">
-            {(['distance', 'alignment', 'pitch'] as ConstraintType[]).map(type => (
+            {(['distance', 'alignment', 'pitch', 'symmetric', 'equal'] as ConstraintType[]).map(type => (
               <Button key={type} variant="outline" size="sm" className="h-6 text-[10px] px-2"
                 data-testid={`button-add-constraint-${type}`}
                 onClick={() => handleAdd(type)}>
@@ -306,6 +329,40 @@ function ConstraintSection({ view }: { view: CanvasView }) {
             onClick={() => handleAdd('fixed')}>
             <Link2 className="w-3 h-3 mr-1" />fixed
           </Button>
+        )}
+        <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 w-fit"
+          data-testid="button-infer-constraints"
+          onClick={handleInfer}>
+          <Sparkles className="w-3 h-3 mr-1" />auto-detect
+        </Button>
+        {showSuggestions && suggestions.length > 0 && (
+          <div className="flex flex-col gap-1.5 mt-1">
+            <span className="text-[10px] text-muted-foreground font-medium">Suggestions ({suggestions.length})</span>
+            {suggestions.map((s, idx) => (
+              <div key={idx} data-testid={`suggestion-${idx}`}
+                className="flex items-start gap-1 p-1.5 rounded bg-purple-500/5 border border-purple-500/20 text-[10px]">
+                <div className="flex-1 min-w-0">
+                  <span className="font-medium text-purple-400">{s.type}</span>
+                  <span className="text-muted-foreground ml-1">({Math.round(s.confidence * 100)}%)</span>
+                  <p className="text-muted-foreground leading-tight mt-0.5">{s.reason}</p>
+                </div>
+                <button
+                  data-testid={`button-accept-suggestion-${idx}`}
+                  className="p-0.5 hover:text-green-400 text-muted-foreground shrink-0"
+                  onClick={() => handleAcceptSuggestion(s)}
+                  title="Accept">
+                  <Check className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  data-testid={`button-dismiss-suggestion-${idx}`}
+                  className="p-0.5 hover:text-red-400 text-muted-foreground shrink-0"
+                  onClick={() => handleDismissSuggestion(s)}
+                  title="Dismiss">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
         )}
         {relevantConstraints.length === 0 && (
           <p className="text-xs text-muted-foreground" data-testid="constraints-empty">
@@ -341,6 +398,33 @@ function ConstraintSection({ view }: { view: CanvasView }) {
                 className="h-5 w-14 text-[10px] bg-card border-border px-1"
                 data-testid={`input-constraint-pitch-${c.id}`}
               />
+            )}
+            {c.type === 'symmetric' && (
+              <select
+                value={String(c.params.axis || 'x')}
+                onChange={(e) => {
+                  dispatch({ type: 'UPDATE_CONSTRAINT', payload: { constraintId: c.id, updates: { params: { ...c.params, axis: e.target.value } } } });
+                }}
+                className="h-5 text-[10px] bg-card border border-border rounded px-1 text-foreground"
+                data-testid={`select-constraint-axis-${c.id}`}
+              >
+                <option value="x">X axis</option>
+                <option value="y">Y axis</option>
+              </select>
+            )}
+            {c.type === 'equal' && (
+              <select
+                value={String(c.params.property || 'width')}
+                onChange={(e) => {
+                  dispatch({ type: 'UPDATE_CONSTRAINT', payload: { constraintId: c.id, updates: { params: { ...c.params, property: e.target.value } } } });
+                }}
+                className="h-5 text-[10px] bg-card border border-border rounded px-1 text-foreground"
+                data-testid={`select-constraint-property-${c.id}`}
+              >
+                <option value="width">Width</option>
+                <option value="height">Height</option>
+                <option value="both">Both</option>
+              </select>
             )}
             <button
               data-testid={`button-toggle-constraint-${c.id}`}
@@ -398,9 +482,7 @@ export default function ComponentInspector() {
         <MultiShapeInspector shapes={selectedShapes} view={view} />
       )}
 
-      {selectedShapes.length >= 1 && (
-        <ConstraintSection view={view} />
-      )}
+      <ConstraintSection view={view} />
     </div>
   );
 }
