@@ -1,7 +1,7 @@
 # FZPZ Studio → ProtoPulse Integration Plan
 
 **Created:** 2026-02-17
-**Status:** In Progress — Phases 1-3 complete, Phases 4+ not started
+**Status:** In Progress — Phases 1-3 complete, Phase 5 partial (4/10), Phase 6 complete, Phases 4/7+ not started
 **Last updated:** 2026-02-18 (v4 — implementation progress tracking, actual file locations, checklist updates)
 
 ---
@@ -1344,7 +1344,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ### Phase 5: Import/Export + Architecture Integration + Verification Overlay
 **Goal:** FZPZ/SVG import/export works, components link to architecture nodes and feed BOM, footprint verification overlay.
-**Status: NOT STARTED**
+**Status: PARTIAL — Items 5.7-5.10 complete (integration features), 5.1-5.6 pending (import/export)**
 
 - [ ] **5.1** Move FZPZ export logic to `server/component-export.ts` (needs jszip)
 - [ ] **5.2** Add import endpoint: upload .fzpz → parse → create component_part
@@ -1352,26 +1352,26 @@ All enhancements, organized by effort level and mapped to their execution phase.
 - [ ] **5.4** [ME-4] Create `svg-parser.ts` — parse external SVG file into internal Shape[] model; handle `<rect>`, `<circle>`, `<path>`, `<text>`, `<g>` (groups)
 - [ ] **5.5** [ME-4] Add SVG import endpoint + UI: upload SVG → server parses → returns shapes → merge into current view
 - [ ] **5.6** [ME-5/BS-7] Enhance reference image system with calibrated overlay — `CalibratedReferenceImage` with scale/offset/lock; ruler-based calibration UI ("click two points, enter real distance")
-- [ ] **5.7** [QW-5] Add click-to-highlight for validation issues — clicking issue switches view, pans to element, highlights with pulsing outline, selects element
-- [ ] **5.8** Wire architecture node → component part linking (click node → open Component Editor for that part)
-- [ ] **5.9** Add BOM enrichment: component metadata → BOM item auto-fill suggestions
-- [ ] **5.10** Add component validation issues to the main Validation view
+- [x] **5.7** [QW-5] Add click-to-highlight for validation issues — clicking issue switches view, pans to element, highlights with pulsing outline, selects element
+- [x] **5.8** Wire architecture node → component part linking (click node → open Component Editor for that part)
+- [x] **5.9** Add BOM enrichment: component metadata → BOM item auto-fill suggestions
+- [x] **5.10** Add component validation issues to the main Validation view
 
 ---
 
 ### Phase 6: Polish + Cleanup
 **Goal:** Everything is polished, themed, and the old SchematicView code is fully removed.
-**Status: NOT STARTED**
+**Status: COMPLETE (2026-02-18)**
 
-- [ ] **6.1** Remove old `SchematicView.tsx` file and all references
-- [ ] **6.2** Update sidebar icons and labels
-- [ ] **6.3** Add keyboard shortcuts (Ctrl+Z/Y, Ctrl+K command palette, Delete, tool hotkeys R/C/T/P/M/S, Ctrl+0 zoom-to-fit)
-- [ ] **6.4** Add loading states and empty states for all Component Editor sub-views
-- [ ] **6.5** Add ErrorBoundary around Component Editor
-- [ ] **6.6** Performance pass: memoize canvas rendering, virtualize connector lists and pin table if needed
-- [ ] **6.7** Accessibility pass: ARIA labels on SVG elements, keyboard navigation for tools
-- [ ] **6.8** Update replit.md with new architecture documentation
-- [ ] **6.9** Update seed data to include a sample component part
+- [x] **6.1** Remove old `SchematicView.tsx` file and all references
+- [x] **6.2** Update sidebar icons and labels
+- [x] **6.3** Add keyboard shortcuts (Ctrl+Z/Y, Ctrl+K command palette, Delete, tool hotkeys R/C/T/P/M/S, Ctrl+0 zoom-to-fit)
+- [x] **6.4** Add loading states and empty states for all Component Editor sub-views
+- [x] **6.5** Add ErrorBoundary around Component Editor
+- [x] **6.6** Performance pass: memoize canvas rendering, virtualize connector lists and pin table if needed
+- [x] **6.7** Accessibility pass: ARIA labels on SVG elements, keyboard navigation for tools
+- [x] **6.8** Update replit.md with new architecture documentation
+- [x] **6.9** Update seed data to include a sample component part
 
 ---
 
@@ -1951,21 +1951,21 @@ This is the master checklist. Update status as work progresses.
 - [ ] 5.4 svg-parser.ts
 - [ ] 5.5 SVG import endpoint + UI
 - [ ] 5.6 Calibrated reference image overlay
-- [ ] 5.7 Validation click-to-highlight
-- [ ] 5.8 Architecture node → component linking
-- [ ] 5.9 BOM enrichment
-- [ ] 5.10 Validation view integration
+- [x] 5.7 Validation click-to-highlight
+- [x] 5.8 Architecture node → component linking
+- [x] 5.9 BOM enrichment
+- [x] 5.10 Validation view integration
 
 ### Phase 6: Polish
-- [ ] 6.1 Remove old SchematicView.tsx
-- [ ] 6.2 Update sidebar icons/labels
-- [ ] 6.3 Keyboard shortcuts
-- [ ] 6.4 Loading + empty states
-- [ ] 6.5 ErrorBoundary
-- [ ] 6.6 Performance pass
-- [ ] 6.7 Accessibility pass
-- [ ] 6.8 Update replit.md
-- [ ] 6.9 Seed data with sample component
+- [x] 6.1 Remove old SchematicView.tsx
+- [x] 6.2 Update sidebar icons/labels
+- [x] 6.3 Keyboard shortcuts
+- [x] 6.4 Loading + empty states
+- [x] 6.5 ErrorBoundary
+- [x] 6.6 Performance pass
+- [x] 6.7 Accessibility pass
+- [x] 6.8 Update replit.md
+- [x] 6.9 Seed data with sample component
 
 ### Phase 7: Advanced Canvas Features
 - [ ] 7.1 Layer system (LayerPanel + rendering filter + default configs)
@@ -2072,8 +2072,8 @@ This is the master checklist. Update status as work progresses.
 | Phase 2: Canvas + Drawing | Complete | 14/14 items |
 | Phase 3: Metadata + Generator + Pin Table | Complete | 6/6 items |
 | Phase 4: AI Generation | Not started | 0/8 items |
-| Phase 5: Import/Export | Not started | 0/10 items |
-| Phase 6: Polish | Not started | 0/9 items |
+| Phase 5: Import/Export | Partial | 4/10 items |
+| Phase 6: Polish | Complete | 9/9 items |
 | Phases 7-13 | Not started | 0/x items |
 
 ### Actual File Locations vs Plan
