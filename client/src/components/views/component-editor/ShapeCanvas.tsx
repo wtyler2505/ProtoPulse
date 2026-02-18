@@ -117,7 +117,8 @@ function nodesToPathD(nodes: PathNode[]): string {
 }
 
 function simplifyPath(nodes: PathNode[], tolerance: number): PathNode[] {
-  if (nodes.length <= 2) return [...nodes];
+  if (nodes.length <= 2) return nodes.map(n => ({ ...n }));
+
   function perpendicularDistance(pt: { x: number; y: number }, lineStart: { x: number; y: number }, lineEnd: { x: number; y: number }): number {
     const dx = lineEnd.x - lineStart.x;
     const dy = lineEnd.y - lineStart.y;
@@ -128,6 +129,7 @@ function simplifyPath(nodes: PathNode[], tolerance: number): PathNode[] {
     const projY = lineStart.y + t * dy;
     return Math.sqrt((pt.x - projX) ** 2 + (pt.y - projY) ** 2);
   }
+
   function rdp(pts: PathNode[], startIdx: number, endIdx: number, keep: boolean[]): void {
     if (endIdx - startIdx <= 1) return;
     let maxDist = 0;
@@ -142,23 +144,35 @@ function simplifyPath(nodes: PathNode[], tolerance: number): PathNode[] {
       rdp(pts, maxIdx, endIdx, keep);
     }
   }
-  const keep = new Array(nodes.length).fill(false);
-  keep[0] = true;
-  keep[nodes.length - 1] = true;
-  rdp(nodes, 0, nodes.length - 1, keep);
-  const result: PathNode[] = [];
-  for (let i = 0; i < nodes.length; i++) {
-    if (keep[i]) {
-      const node = { ...nodes[i] };
-      if (node.cp1) node.cp1 = { ...node.cp1 };
-      if (node.cp2) node.cp2 = { ...node.cp2 };
-      result.push(node);
+
+  const segments: PathNode[][] = [];
+  let currentSeg: PathNode[] = [];
+  for (const node of nodes) {
+    if (node.type === 'M' && currentSeg.length > 0) {
+      segments.push(currentSeg);
+      currentSeg = [];
     }
+    currentSeg.push(node);
   }
-  if (result.length > 0) result[0] = { ...result[0], type: 'M' };
-  for (let i = 1; i < result.length; i++) {
-    if (!result[i].cp1 && !result[i].cp2 && result[i].type === 'C') {
-      result[i] = { ...result[i], type: 'L' };
+  if (currentSeg.length > 0) segments.push(currentSeg);
+
+  const result: PathNode[] = [];
+  for (const seg of segments) {
+    if (seg.length <= 2) {
+      result.push(...seg.map(n => ({ ...n })));
+      continue;
+    }
+    const keep = new Array(seg.length).fill(false);
+    keep[0] = true;
+    keep[seg.length - 1] = true;
+    rdp(seg, 0, seg.length - 1, keep);
+    for (let i = 0; i < seg.length; i++) {
+      if (keep[i]) {
+        const node: PathNode = { x: seg[i].x, y: seg[i].y, type: seg[i].type };
+        if (i === 0) node.type = 'M';
+        else node.type = 'L';
+        result.push(node);
+      }
     }
   }
   return result;
@@ -1016,8 +1030,8 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
     } else if (node.type === 'L') {
       const prev = newNodes[i - 1] || node;
       const next = newNodes[i + 1] || node;
-      node.cp1 = { x: prev.x + (node.x - prev.x) / 3, y: prev.y + (node.y - prev.y) / 3 };
-      node.cp2 = { x: node.x + (next.x - node.x) / 3, y: node.y + (next.y - node.y) / 3 };
+      node.cp1 = { x: node.x - (next.x - prev.x) / 6, y: node.y - (next.y - prev.y) / 6 };
+      node.cp2 = { x: node.x + (next.x - prev.x) / 6, y: node.y + (next.y - prev.y) / 6 };
       node.type = 'C';
     }
     setEditingPathNodes(newNodes);
