@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useProject, PROJECT_ID } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
@@ -97,7 +97,7 @@ export default function ValidationView() {
           {issues.map((issue) => (
             <ContextMenu key={issue.id}>
               <ContextMenuTrigger asChild>
-                <div data-testid={`row-issue-${issue.id}`} onClick={() => { if (issue.componentId) { setActiveView('architecture'); } }} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
+                <div data-testid={`row-issue-${issue.id}`} onClick={() => { if (issue.componentId) { setActiveView('architecture'); } }} className={cn("flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group", issue.componentId ? "cursor-pointer" : "cursor-default")} role={issue.componentId ? "button" : undefined} tabIndex={issue.componentId ? 0 : undefined} onKeyDown={issue.componentId ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('architecture'); } } : undefined}>
                   <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
                     {getIcon(issue.severity)}
                     <span className="text-xs font-medium uppercase md:hidden">{issue.severity}</span>
@@ -145,7 +145,7 @@ export default function ValidationView() {
                 <span className="text-xs text-muted-foreground">({componentIssues.length})</span>
               </div>
               {componentIssues.map((issue) => (
-                <div key={issue.id} data-testid={`row-component-issue-${issue.id}`} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group">
+                <div key={issue.id} data-testid={`row-component-issue-${issue.id}`} role="button" tabIndex={0} onClick={() => setActiveView('component_editor')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('component_editor'); } }} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
                   <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
                     {getIcon(issue.severity)}
                     <span className="text-xs font-medium uppercase md:hidden">{issue.severity}</span>
@@ -165,8 +165,9 @@ export default function ValidationView() {
                   <div className="md:w-32">
                     <button
                       data-testid={`button-view-component-${issue.id}`}
-                      onClick={() => setActiveView('component_editor')}
-                      className="text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full transition-opacity"
+                      aria-label={`View in editor: ${issue.message}`}
+                      onClick={(e) => { e.stopPropagation(); setActiveView('component_editor'); }}
+                      className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
                     >
                       View
                     </button>
@@ -177,10 +178,20 @@ export default function ValidationView() {
           )}
 
           {issues.length === 0 && componentIssues.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
-              <CheckCircle2 className="w-16 h-16 mb-4 text-emerald-500/20" />
+            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground" data-testid="empty-state-validation">
+              <ShieldCheck className="w-16 h-16 mb-4 text-emerald-500/20" />
               <p className="text-lg font-medium text-foreground">All Systems Nominal</p>
-              <p className="text-sm">No design rule violations detected.</p>
+              <p className="text-sm mt-1">No design rule violations detected.</p>
+              <p className="text-xs mt-3 max-w-sm text-center">
+                Run DRC checks to validate your architecture against design rules, or use AI chat to analyze your design for potential issues.
+              </p>
+              <button
+                onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
+                className="mt-4 px-4 py-2 text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                data-testid="button-run-drc-empty"
+              >
+                Run DRC Checks
+              </button>
             </div>
           )}
         </ScrollArea>

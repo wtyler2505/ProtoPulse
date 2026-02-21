@@ -1,13 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useProject, PROJECT_ID } from '@/lib/project-context';
-import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, MessageSquarePlus } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { PartMeta } from '@shared/component-types';
+import type { BomItem } from '@shared/schema';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
@@ -36,11 +41,24 @@ export default function ProcurementView() {
   const [searchTerm, setSearchTerm] = useState('');
   const [optimizationGoal, setOptimizationGoal] = useState('Cost');
   const [showSupplierEdit, setShowSupplierEdit] = useState(false);
-  const [preferredSuppliers, setPreferredSuppliers] = useState<Record<string, boolean>>({
-    'Mouser': true,
-    'Digi-Key': true,
-    'LCSC': false,
+  const [showAddItemDialog, setShowAddItemDialog] = useState(false);
+  const [preferredSuppliers, setPreferredSuppliers] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem('protopulse_preferred_suppliers');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (typeof parsed === 'object' && parsed !== null) return parsed;
+      }
+    } catch { /* fall through to default */ }
+    return { 'Mouser': true, 'Digi-Key': true, 'LCSC': false };
   });
+  const updatePreferredSuppliers = useCallback((updater: (prev: Record<string, boolean>) => Record<string, boolean>) => {
+    setPreferredSuppliers(prev => {
+      const next = updater(prev);
+      try { localStorage.setItem('protopulse_preferred_suppliers', JSON.stringify(next)); } catch { /* quota exceeded, silently fail */ }
+      return next;
+    });
+  }, []);
 
   const filteredBom = useMemo(() => {
     if (!searchTerm) return bom;
@@ -85,20 +103,30 @@ export default function ProcurementView() {
     }
   };
 
-  // TODO: Open an inline edit row instead of inserting a placeholder entry
+  const defaultNewItem: { partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string } = { partNumber: '', manufacturer: '', description: '', quantity: 1, unitPrice: 0, supplier: 'Digi-Key' };
+  const [newItem, setNewItem] = useState(defaultNewItem);
+
+  const resetNewItem = () => setNewItem({ ...defaultNewItem });
+
   const handleAddItem = () => {
+    if (!newItem.partNumber.trim()) {
+      toast({ title: 'Missing Part Number', description: 'Please enter a part number.', variant: 'destructive' });
+      return;
+    }
     addBomItem({
-      partNumber: 'NEW-PART',
-      manufacturer: 'Unknown',
-      description: 'New component — edit to customize',
-      quantity: 1,
-      unitPrice: 0,
+      partNumber: newItem.partNumber.trim(),
+      manufacturer: newItem.manufacturer.trim() || 'Unknown',
+      description: newItem.description.trim() || '',
+      quantity: Math.max(1, newItem.quantity),
+      unitPrice: Math.max(0, newItem.unitPrice),
       totalPrice: 0,
-      supplier: 'Digi-Key',
+      supplier: newItem.supplier as 'Digi-Key' | 'Mouser' | 'LCSC' | 'Unknown',
       stock: 0,
       status: 'Out of Stock',
     });
-    toast({ title: 'Item Added', description: 'New BOM component added. Edit details to customize.' });
+    toast({ title: 'Item Added', description: `Added "${newItem.partNumber.trim()}" to the BOM.` });
+    resetNewItem();
+    setShowAddItemDialog(false);
   };
 
   return (
@@ -139,7 +167,7 @@ export default function ProcurementView() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleAddItem}
+                onClick={() => { resetNewItem(); setShowAddItemDialog(true); }}
                 data-testid="button-add-bom-item"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -233,7 +261,7 @@ export default function ProcurementView() {
                      <input
                        type="checkbox"
                        checked={checked}
-                       onChange={(e) => setPreferredSuppliers(prev => ({ ...prev, [supplier]: e.target.checked }))}
+                       onChange={(e) => updatePreferredSuppliers(prev => ({ ...prev, [supplier]: e.target.checked }))}
                        className="accent-primary w-3.5 h-3.5"
                        data-testid={`checkbox-supplier-${supplier.toLowerCase().replace(/[^a-z]/g, '-')}`}
                      />
@@ -382,10 +410,38 @@ export default function ProcurementView() {
           </table>
         </div>
         {filteredBom.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground" data-testid="empty-state-bom">
             <Package className="w-12 h-12 mb-4 opacity-30" />
-            <p className="text-sm font-medium">No BOM items yet</p>
-            <p className="text-xs mt-1">Add components from the architecture view or click "Add Item"</p>
+            {searchTerm ? (
+              <>
+                <p className="text-sm font-medium text-foreground">No matching components</p>
+                <p className="text-xs mt-1">No BOM items match "{searchTerm}". Try a different search term.</p>
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="mt-3 px-4 py-1.5 text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+                  data-testid="button-clear-search"
+                >
+                  Clear Search
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-foreground">No items in your Bill of Materials</p>
+                <p className="text-xs mt-1 max-w-sm text-center">
+                  Add your first component manually, or use AI chat to populate the BOM from your architecture.
+                </p>
+                <div className="flex items-center gap-2 mt-4">
+                  <button
+                    onClick={() => { resetNewItem(); setShowAddItemDialog(true); }}
+                    className="px-4 py-1.5 text-xs border border-primary bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                    data-testid="button-add-first-item"
+                  >
+                    <Plus className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
+                    Add First Item
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -464,6 +520,95 @@ export default function ProcurementView() {
           )}
         </div>
       </div>
+
+      <Dialog open={showAddItemDialog} onOpenChange={setShowAddItemDialog}>
+        <DialogContent className="bg-card border-border sm:max-w-md" data-testid="dialog-add-bom-item">
+          <DialogHeader>
+            <DialogTitle>Add BOM Item</DialogTitle>
+            <DialogDescription>Enter the component details to add to your Bill of Materials.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="add-part-number">Part Number <span className="text-destructive">*</span></Label>
+              <Input
+                id="add-part-number"
+                placeholder="e.g. STM32F407VGT6"
+                value={newItem.partNumber}
+                onChange={(e) => setNewItem(prev => ({ ...prev, partNumber: e.target.value }))}
+                data-testid="input-add-part-number"
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="add-manufacturer">Manufacturer</Label>
+                <Input
+                  id="add-manufacturer"
+                  placeholder="e.g. STMicroelectronics"
+                  value={newItem.manufacturer}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, manufacturer: e.target.value }))}
+                  data-testid="input-add-manufacturer"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-supplier">Supplier</Label>
+                <Select value={newItem.supplier} onValueChange={(v) => setNewItem(prev => ({ ...prev, supplier: v }))}>
+                  <SelectTrigger id="add-supplier" data-testid="select-add-supplier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Digi-Key">Digi-Key</SelectItem>
+                    <SelectItem value="Mouser">Mouser</SelectItem>
+                    <SelectItem value="LCSC">LCSC</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="add-description">Description</Label>
+              <Input
+                id="add-description"
+                placeholder="e.g. ARM Cortex-M4 MCU, 1MB Flash, 168MHz"
+                value={newItem.description}
+                onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                data-testid="input-add-description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="add-quantity">Quantity</Label>
+                <Input
+                  id="add-quantity"
+                  type="number"
+                  min={1}
+                  value={newItem.quantity}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                  data-testid="input-add-quantity"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="add-unit-price">Unit Price ($)</Label>
+                <Input
+                  id="add-unit-price"
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={newItem.unitPrice}
+                  onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                  data-testid="input-add-unit-price"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddItemDialog(false)} data-testid="button-cancel-add-item">Cancel</Button>
+            <Button onClick={handleAddItem} data-testid="button-confirm-add-item">
+              <Plus className="w-4 h-4 mr-2" />
+              Add to BOM
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

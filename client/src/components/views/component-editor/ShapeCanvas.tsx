@@ -189,14 +189,14 @@ function renderShape(shape: Shape, selectedIds: string[], onMD?: (e: React.Mouse
   const sel = selectedIds.includes(shape.id);
   const st = shape.style || {};
   const cmn = { opacity: st.opacity ?? 1, cursor: 'pointer' as const };
+  const posLabel = `${Math.round(shape.x)}, ${Math.round(shape.y)}`;
   const shapeLabel = (() => {
     switch (shape.type) {
-      case 'rect': return `Rectangle at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
-      case 'circle': return `Circle at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
-      case 'path': return `Path at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
-      case 'text': return `Text "${(shape as TextShape).text}" at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
-      case 'group': return `Group at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
-      default: return `Shape at position ${Math.round(shape.x)}, ${Math.round(shape.y)}`;
+      case 'rect': return `Rectangle at position ${posLabel}`;
+      case 'circle': return `Circle at position ${posLabel}`;
+      case 'path': return `Path at position ${posLabel}`;
+      case 'text': return `Text "${shape.text}" at position ${posLabel}`;
+      case 'group': return `Group at position ${posLabel}`;
     }
   })();
   const wrap = (id: string, children: React.ReactNode) => (

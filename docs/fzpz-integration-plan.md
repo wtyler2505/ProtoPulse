@@ -30,7 +30,8 @@
 
 FZPZ Studio is a standalone Fritzing part editor (~2,450 lines across 4 main files):
 
-### Core capabilities:
+### Core capabilities
+
 - **Multi-view SVG canvas** — breadboard, schematic, and PCB views of a single electronic component
 - **Shape drawing tools** — rect, circle, text, path, groups with selection, alignment, copy/paste
 - **Connector/pin management** — pin placement, pad specs (THT/SMD), terminal positions per view
@@ -46,7 +47,8 @@ FZPZ Studio is a standalone Fritzing part editor (~2,450 lines across 4 main fil
 - **Undo/redo** — full history via useReducer with past/present/future stacks
 - **Auto-save** — debounced localStorage persistence
 
-### File inventory:
+### File inventory
+
 | File | Lines | Purpose |
 |------|-------|---------|
 | `types.ts` | 165 | All TypeScript interfaces (Shape, Connector, PartMeta, UIState, AppState, etc.) |
@@ -55,7 +57,8 @@ FZPZ Studio is a standalone Fritzing part editor (~2,450 lines across 4 main fil
 | `App.tsx` | 1,103 | Entire UI: reducer, toolbar, canvas, inspector, metadata editor, modals |
 | `index.tsx` | 55 | Entry point / React mount |
 
-### Key data structures:
+### Key data structures
+
 - `PartState` — the core part model: meta + connectors[] + buses[] + views (breadboard/schematic/pcb, each with shapes[])
 - `Shape` — discriminated union: rect | circle | path | text | group, each with position, style, optional rotation
 - `Connector` — pin with shapeIds per view, terminal positions per view, padSpec for PCB
@@ -66,10 +69,12 @@ FZPZ Studio is a standalone Fritzing part editor (~2,450 lines across 4 main fil
 
 ## 2. Integration Vision
 
-### The big picture:
+### The big picture
+
 FZPZ Studio becomes ProtoPulse's **Component Editor** — a dedicated workspace where users design individual electronic components at the part level, complementing ProtoPulse's system-level architecture editor. Beyond porting the existing tool, we'll enhance it into a **best-in-class component design environment** with smart alignment, real-time design rule checking, parametric constraints, and a searchable component library. Then, Phases 10-13 extend ProtoPulse into a **full circuit design platform** — schematic capture, breadboard/PCB layout, manufacturing output, and simulation — delivering the complete Fritzing feature set and beyond.
 
-### The top-down design flow (key differentiator):
+### The top-down design flow (key differentiator)
+
 ProtoPulse's architecture is uniquely positioned for a **top-down design workflow** that no other open-source EDA tool offers:
 
 ```
@@ -86,7 +91,8 @@ Simulation & Analysis (DC/AC/transient, SPICE export)
 
 Each level feeds the next: architecture blocks map to schematic components, schematic nets drive breadboard wiring and PCB traces, and the complete design exports to industry-standard manufacturing formats. The existing architecture edges already carry `signalType`, `voltage`, `busWidth`, and `netName` fields — these bridge directly into schematic-level net data.
 
-### User journey after integration (full flow):
+### User journey after integration (full flow)
+
 1. User designs system architecture in the existing block diagram editor (React Flow)
 2. User clicks on a component node (e.g., "ESP32 Module") → opens Component Editor
 3. In the Component Editor (Phases 1-9), they can:
@@ -124,7 +130,8 @@ Each level feeds the next: architecture blocks map to schematic components, sche
 8. Part data feeds back into BOM (metadata, MPN, manufacturer) and validation (part completeness + DRC + ERC)
 9. Parametric constraints keep footprints dimensionally accurate as users make changes
 
-### What this replaces:
+### What this replaces
+
 The current `SchematicView.tsx` (711 lines) is a **hardcoded stub** with fake components and no real editing. It will be replaced by the FZPZ Studio's multi-view component editor, which is a real, functional tool. The full circuit design platform (Phases 10-13) then builds on this foundation to deliver capabilities comparable to Fritzing, KiCad, and Eagle — all within the browser.
 
 ---
@@ -134,12 +141,14 @@ The current `SchematicView.tsx` (711 lines) is a **hardcoded stub** with fake co
 ### Option chosen: **New view ("Component Editor") + replace SchematicView**
 
 **Why:**
+
 - FZPZ Studio's multi-view canvas (breadboard/schematic/PCB) is a superset of the current SchematicView stub
 - It naturally maps to a new sidebar tab in the existing view-switching system
 - The component editor operates at a different conceptual level (individual part) vs. architecture view (system level), so it should be its own view
 - The current SchematicView has no real functionality (it's hardcoded data) — replacing it loses nothing
 
 **Integration model:**
+
 ```
 ProtoPulse workspace views:
   ├── Architecture (existing — system block diagram via React Flow)
@@ -157,7 +166,8 @@ ProtoPulse workspace views:
   └── Output Log (existing)
 ```
 
-### State management approach:
+### State management approach
+
 - FZPZ Studio uses `useReducer` with an undo/redo history wrapper — this is self-contained and well-architected
 - Keep this pattern intact within the Component Editor view; **do NOT merge it into the monolithic ProjectProvider**
 - The Component Editor gets its own context provider (`ComponentEditorProvider`) that wraps just the editor view
@@ -191,6 +201,7 @@ CREATE INDEX idx_component_parts_node ON component_parts(node_id);
 ```
 
 **Why JSONB for shapes/connectors instead of normalized tables:**
+
 - Shape data is deeply nested (groups contain children, paths have complex `d` strings)
 - Connector data has per-view terminal positions and pad specs
 - The data is always loaded/saved as a unit (no individual shape queries needed)
@@ -855,7 +866,7 @@ POST   /api/projects/:id/ai/analyze          — AI circuit analysis
 | `generators.ts` (642 lines) | `client/src/lib/component-editor/generators.ts` (parametric generators — pure functions, no AI) + `server/component-ai.ts` (AI generation — server-side) | Parametric generation (DIP/SOIC/etc.) is pure math, stays client-side. AI generation moves server-side. |
 | `App.tsx` (1,103 lines) | Decomposed into ~12 files under `client/src/components/component-editor/`: | **Critical: Do NOT create another 1,100-line monolith** |
 
-### App.tsx decomposition target (updated with enhancements):
+### App.tsx decomposition target (updated with enhancements)
 
 ```
 client/src/components/component-editor/
@@ -880,7 +891,7 @@ client/src/components/component-editor/
 
 > **Implementation Note (2026-02-18):** The actual implementation simplified this decomposition. See [Section 15](#15-implementation-progress--notes) for actual file locations. Key changes: ShapeCanvas.tsx replaces ComponentCanvas.tsx + ComponentToolbar.tsx; MetadataForm is inline in ComponentEditorView.tsx; PinTable.tsx replaces PinTableEditor.tsx. ComponentEditorProvider.tsx moved to `client/src/lib/component-editor/` (not `components/`).
 
-### New utility modules for enhancements:
+### New utility modules for enhancements
 
 ```
 client/src/lib/component-editor/
@@ -914,7 +925,7 @@ server/
     └── spice-exporter.ts          — SPICE netlist file export (~150 lines)
 ```
 
-### New circuit editor components (Phases 10-11):
+### New circuit editor components (Phases 10-11)
 
 ```
 client/src/components/circuit-editor/
@@ -934,7 +945,7 @@ client/src/components/circuit-editor/
 └── ExportPanel.tsx                — UI for all export options (Phase 12 ~200 lines)
 ```
 
-### New circuit editor utilities (Phases 10-11):
+### New circuit editor utilities (Phases 10-11)
 
 ```
 client/src/lib/circuit-editor/
@@ -945,7 +956,7 @@ client/src/lib/circuit-editor/
 └── view-sync.ts                   — schematic ↔ breadboard ↔ PCB view synchronization (Phase 11 ~200 lines)
 ```
 
-### New simulation components (Phase 13):
+### New simulation components (Phase 13)
 
 ```
 client/src/components/simulation/
@@ -962,7 +973,8 @@ client/src/lib/simulation/
 
 ## 6. AI Consolidation Plan
 
-### Current state:
+### Current state
+
 - **ProtoPulse** has AI chat via Anthropic + Gemini (`server/ai.ts`), streaming SSE
 - **FZPZ Studio** uses Gemini only (`@google/genai` client-side) for:
   - Part generation from description/image
@@ -970,10 +982,11 @@ client/src/lib/simulation/
   - Datasheet metadata extraction
   - Description auto-suggestion
 
-### Target state:
+### Target state
+
 All AI calls go through the server. No client-side API key usage. Enhanced with diff/merge and photo pin extraction.
 
-### Migration plan:
+### Migration plan
 
 1. **Move FZPZ AI functions to server:**
    - `generatePartWithAI()` → `POST /api/components/:id/ai/generate`
@@ -1057,6 +1070,7 @@ ProjectWorkspace
 ### 7.3 Smart snap alignment guides (Quick Win)
 
 When dragging shapes or connectors, the canvas renders dynamic alignment guide lines:
+
 - **Edge alignment:** dashed cyan lines appear when a shape edge aligns with another shape's edge
 - **Center alignment:** dashed lines appear when centers align horizontally or vertically
 - **Spacing guides:** when three+ shapes are involved, show equal-spacing indicators
@@ -1066,6 +1080,7 @@ When dragging shapes or connectors, the canvas renders dynamic alignment guide l
 ### 7.4 Connector numbering preview (Quick Win)
 
 When the pin tool is active:
+
 - A ghost connector with its auto-generated name appears at the cursor position
 - The ghost snaps to grid and shows the pin number that will be assigned
 - If near an existing shape edge, highlight the edge to suggest terminal placement
@@ -1102,6 +1117,7 @@ When the pin tool is active:
 ### 7.8 Multi-select property editing (Medium)
 
 When multiple shapes are selected in the inspector:
+
 - Show a unified property panel with fields that are common to all selected shapes
 - Fields with mixed values show a "mixed" placeholder
 - Changing a field applies to all selected shapes at once
@@ -1130,6 +1146,7 @@ When multiple shapes are selected in the inspector:
 ### 7.11 Connecting architecture nodes to component parts
 
 When a user has an architecture node selected (e.g., "ESP32-S3 Module") and switches to the Component Editor tab:
+
 - If a `component_part` exists for that node (linked by `nodeId`) → load it
 - If no part exists → show a "Create Component Part" prompt with options:
   - Start from scratch (blank canvas)
@@ -1141,6 +1158,7 @@ When a user has an architecture node selected (e.g., "ESP32-S3 Module") and swit
 ### 7.12 BOM enrichment
 
 When a component part has metadata (manufacturer, MPN, datasheet URL), this data can auto-populate BOM entries:
+
 - On save, if the part's `nodeId` matches a BOM item's source node, offer to update BOM fields
 - Fields that can flow: manufacturer, part number, description, package type, mounting type
 - This is a **one-way suggestion** — user confirms before BOM is updated
@@ -1148,6 +1166,7 @@ When a component part has metadata (manufacturer, MPN, datasheet URL), this data
 ### 7.13 Validation integration
 
 The Component Editor has its own validation engine (`validatePart()` in utils.ts). This should feed into ProtoPulse's existing validation view:
+
 - Component-level validation issues get a new category in the validation list
 - DRC violations (Phase 8) also appear as a category
 - Clicking a component validation issue navigates to the Component Editor with the relevant view/element highlighted
@@ -1156,6 +1175,7 @@ The Component Editor has its own validation engine (`validatePart()` in utils.ts
 ### 7.14 Styling alignment
 
 FZPZ Studio uses a dark zinc/indigo theme — close but not identical to ProtoPulse's dark neon cyan/purple theme.
+
 - Replace FZPZ's inline Tailwind classes with ProtoPulse's design tokens
 - Use shadcn/ui components where possible (Button, Input, Select, Dialog, Tabs, Tooltip)
 - Canvas styling stays custom (SVG doesn't use shadcn)
@@ -1165,12 +1185,14 @@ FZPZ Studio uses a dark zinc/indigo theme — close but not identical to ProtoPu
 
 ## 8. Dependency Reconciliation
 
-### React version conflict:
+### React version conflict
+
 - ProtoPulse: React 18
 - FZPZ Studio: React 19
 - **Decision: Stay on React 18** (ProtoPulse's version). FZPZ Studio code is compatible — it doesn't use React 19-specific APIs.
 
-### New dependencies needed:
+### New dependencies needed
+
 | Package | Purpose | Size | Already in ProtoPulse? |
 |---------|---------|------|----------------------|
 | `@google/genai` | Gemini AI SDK (newer version) | ~50KB | No — has `@google/generative-ai` (older). Migrate. |
@@ -1178,12 +1200,14 @@ FZPZ Studio uses a dark zinc/indigo theme — close but not identical to ProtoPu
 | `lucide-react` | Icons | — | Yes, already installed. |
 | `svg-parser` | SVG import: parse SVG XML into shape model | ~15KB | No. Needed for SVG import. Consider `@xmldom/xmldom` for server-side. |
 
-### Dependencies to remove after migration:
+### Dependencies to remove after migration
+
 | Package | Reason |
 |---------|--------|
 | `@google/generative-ai` | Replaced by `@google/genai` |
 
-### New dependencies for Phases 10-13:
+### New dependencies for Phases 10-13
+
 | Package | Purpose | Size | Phase | Notes |
 |---------|---------|------|-------|-------|
 | `pdfkit` | PDF generation for view export | ~500KB | 12 | Server-side only. Generates PDFs with proper scaling and title blocks. |
@@ -1193,7 +1217,8 @@ FZPZ Studio uses a dark zinc/indigo theme — close but not identical to ProtoPu
 | `ngspice-wasm` (hypothetical) | Embedded SPICE simulation engine compiled to WASM | ~2-5MB | 13 | Heavy dependency. Alternative: build a simplified JS nodal analysis solver for basic circuits. See Open Questions. |
 | `mathjs` | Matrix operations for nodal analysis circuit solver | ~150KB | 13 | Needed if building a custom JS-based circuit solver instead of WASM ngspice. Provides sparse matrix support. |
 
-### Dependencies NOT needed (FZPZ Studio used them but ProtoPulse doesn't need):
+### Dependencies NOT needed (FZPZ Studio used them but ProtoPulse doesn't need)
+
 - None — FZPZ Studio is remarkably lean (only react, react-dom, lucide-react, @google/genai)
 
 ---
@@ -1265,6 +1290,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ## 10. Phased Execution Plan
 
 ### Phase 0: Prerequisites (do before integration)
+
 - [ ] Complete backend audit checklist to a stable state (at least all P0/P1 items)
 - [ ] Complete frontend audit items that affect integration points:
   - #11 (monolithic context — so Component Editor doesn't inherit the re-render problem)
@@ -1274,6 +1300,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 1: Foundation (data model + skeleton)
+
 **Goal:** Component Editor view exists, can be navigated to, shows empty state, backend stores parts.
 **Status: COMPLETE** (2026-02-18) — All 11 items implemented. See [Section 15](#15-implementation-progress--notes) for actual file locations vs plan.
 
@@ -1292,6 +1319,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 2: Canvas + Drawing + Quick Wins (the core editor)
+
 **Goal:** User can draw shapes, place pins, edit properties on the SVG canvas — with smart snap guides, zoom-to-fit, multi-select editing, and ruler tool.
 **Status: COMPLETE** (2026-02-18) — All 14 items implemented. Full drawing toolkit with inspector, multi-select, copy/paste, snap guides, zoom-to-fit, ruler, connector/line tools.
 
@@ -1313,6 +1341,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 3: Metadata + Package Generator + Pin Table
+
 **Goal:** User can edit part metadata, generate standard packages, use shape templates, and manage pins in a spreadsheet view.
 **Status: COMPLETE** (2026-02-18) — All 6 items implemented. Metadata form, pin table, parametric generators (DIP/SOIC/QFP/Header/R/C), validation engine, and shape templates.
 
@@ -1326,6 +1355,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 4: AI Features + Diff/Merge + Photo Extraction (server-side)
+
 **Goal:** AI can generate, modify, and extract component data — all through the server — with visual diff/merge for modifications and photo-based pin extraction.
 **Status: NOT STARTED**
 
@@ -1343,6 +1373,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 5: Import/Export + Architecture Integration + Verification Overlay
+
 **Goal:** FZPZ/SVG import/export works, components link to architecture nodes and feed BOM, footprint verification overlay.
 **Status: COMPLETE** (2026-02-18)
 
@@ -1360,6 +1391,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 6: Polish + Cleanup
+
 **Goal:** Everything is polished, themed, and the old SchematicView code is fully removed.
 **Status: COMPLETE (2026-02-18)**
 
@@ -1376,6 +1408,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 7: Advanced Canvas Features (Medium enhancements)
+
 **Goal:** Layer system, enhanced path drawing, and named undo history make the editor feel professional.
 **Status: COMPLETE** (2026-02-18)
 
@@ -1400,6 +1433,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 8: Intelligence & Automation (Big Swing innovations)
+
 **Goal:** Real-time DRC and parametric constraints turn the editor from a drawing tool into an engineering tool.
 **Status: COMPLETE** (2026-02-18)
 
@@ -1445,6 +1479,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 9: Component Library & Ecosystem (Big Swing innovation)
+
 **Goal:** Searchable component library enables reuse, community sharing, and accelerated part creation.
 **Status: NOT STARTED**
 
@@ -1473,6 +1508,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 10: Circuit Schematic Capture
+
 **Goal:** Multi-component schematic editor where users place component symbols and draw electrical nets between pins, with ERC validation and AI-assisted design.
 **Status: NOT STARTED**
 
@@ -1508,6 +1544,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 11: Breadboard & Physical Layout
+
 **Goal:** Virtual breadboard view where users place component breadboard graphics and wire them together, plus basic PCB component placement with ratsnest display.
 **Status: NOT STARTED**
 
@@ -1552,6 +1589,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 12: Manufacturing Output & Interoperability
+
 **Goal:** Export designs to industry-standard manufacturing formats and enable round-tripping with other EDA tools.
 **Status: NOT STARTED**
 
@@ -1614,6 +1652,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 ---
 
 ### Phase 13: Simulation & Advanced Analysis
+
 **Goal:** Basic circuit simulation and analysis capabilities — from embedded solver for simple circuits to SPICE export for complex designs, with interactive waveform visualization and AI-assisted analysis.
 **Status: NOT STARTED**
 
@@ -1677,7 +1716,8 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ## 11. Risk Assessment & Mitigations
 
-### High risk:
+### High risk
+
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | App.tsx (1,103 lines) is a monolith — decomposition could introduce bugs | Broken editor | Decompose incrementally: get reducer working first, then add UI components one by one. Test after each component. |
@@ -1686,7 +1726,8 @@ All enhancements, organized by effort level and mapped to their execution phase.
 | Constraint solver (Phase 8) could be algorithmically complex and have performance issues | Laggy editor when constraints are active | Use iterative propagation (not a full geometric solver). Limit constraint graph depth. Allow disabling constraints. Profile early. |
 | DRC engine (Phase 8) O(n²) clearance checks could be slow on complex parts | Editor stutters during drawing | Use spatial indexing (grid-based or R-tree). Debounce DRC runs (500ms after last change). Allow manual-only DRC mode. |
 
-### Medium risk:
+### Medium risk
+
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | FZPZ auto-save uses localStorage; migration to server-save could cause data loss during transition | User loses work | Implement server-save first, keep localStorage as fallback/cache. Clear localStorage data once server persistence is confirmed. |
@@ -1697,7 +1738,8 @@ All enhancements, organized by effort level and mapped to their execution phase.
 | SVG import security (Phase 5) — malformed/malicious SVG or huge payloads | Resource exhaustion, XSS via embedded scripts | Server-side parsing only (never `innerHTML`). Sanitize: strip `<script>`, `<foreignObject>`, event handlers. Max file size limit (2MB). Max shape count limit (5,000). Reject SVGs with external references (`<use xlink:href>`). |
 | Component library moderation (Phase 9) — spam, low-quality parts, inappropriate content | Library quality degrades | Start with "publish" requiring validation pass. Add report/flag mechanism. Curate initial seed library manually. |
 
-### High risk (Phases 10-13):
+### High risk (Phases 10-13)
+
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Gerber generation correctness — incorrect Gerber output could result in manufacturing defects on real PCBs | **Physical manufacturing errors, wasted money, safety hazard** | Build custom Gerber generator with exhaustive unit tests against known-good reference files. Include visual diff testing (render Gerber → compare to expected image). Add prominent "BETA — verify in dedicated Gerber viewer before manufacturing" warning. Never auto-submit to fab house. |
@@ -1705,7 +1747,8 @@ All enhancements, organized by effort level and mapped to their execution phase.
 | WASM ngspice bundle size — ngspice compiled to WASM is 2-5MB | Slow initial load, poor mobile experience | Lazy-load simulation WASM only when user opens Simulation tab. Show download progress. Consider server-side ngspice execution as alternative (avoids client bundle). For MVP, use JS solver + SPICE export and defer WASM to later. |
 | Schematic complexity at scale — 100+ component schematics could overwhelm React Flow or custom SVG rendering | Laggy schematic editor on large designs | Use virtualization (only render visible components). Hierarchical sheets break large designs into manageable sub-sheets. Canvas-level optimizations: culling off-screen elements, level-of-detail rendering (simplify symbols at low zoom). Profile early with synthetic large schematics. |
 
-### Medium risk (Phases 10-13):
+### Medium risk (Phases 10-13)
+
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | KiCad format compatibility — KiCad's S-expression format evolves across versions (KiCad 7 vs 8) | Exported files fail to open in KiCad | Target KiCad 7+ format (most widely used). Test exports against multiple KiCad versions. Monitor KiCad format changelog. Include format version in exported files. |
@@ -1714,7 +1757,8 @@ All enhancements, organized by effort level and mapped to their execution phase.
 | Eagle export format stability — Autodesk has been deprioritizing Eagle; format may not be maintained | Wasted development effort | Prioritize KiCad export (open-source, actively maintained, growing market share). Eagle export is lower priority and can be deferred if resources are tight. |
 | Fritzing .fzz format complexity — full Fritzing project format includes views, metadata, undo history, and custom XML schema | Import/export bugs, data loss | Focus on core data (parts, connections, positions). Ignore Fritzing undo history and view-specific decorations. Test with a corpus of real .fzz files from the Fritzing community. |
 
-### Low risk:
+### Low risk
+
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | jszip dependency adds bundle size | ~100KB gzipped | Only used for export; can be dynamically imported. |
@@ -1728,7 +1772,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 ## 12. Testing Strategy
 
-### Manual smoke tests after each phase:
+### Manual smoke tests after each phase
 
 **Phase 1:** Navigate to Component Editor tab → see empty state → create part via API → see it loaded
 > **Phase 1 smoke test status (2026-02-18):** PASS — Component Editor tab navigable via sidebar, empty state renders, backend CRUD operational via API routes, TanStack Query hooks load/save parts.
@@ -1750,9 +1794,10 @@ All enhancements, organized by effort level and mapped to their execution phase.
 **Phase 12:** Export Gerber files → open in a Gerber viewer (KiCad GerbView or online viewer) → verify copper/silk/mask layers are correct. Export KiCad project → open in KiCad → verify schematic and PCB load without errors. Export BOM in JLCPCB format → verify CSV has correct columns. Export schematic as PDF → verify scaling and title block. Import a Fritzing .fzz project → verify components and connections load. Export netlist in SPICE format → verify it's valid syntax.
 **Phase 13:** Create a simple voltage divider (2 resistors + voltage source) → run DC operating point → verify output voltage is correct (V * R2 / (R1 + R2)). Add voltage probes → verify probe values display on schematic. Run transient analysis on an RC circuit → verify waveform shows correct time constant. Export SPICE netlist → import into ngspice → verify simulation runs and results match. Ask AI "what is the output voltage?" → verify AI gives correct answer.
 
-### Automated tests (post-integration):
+### Automated tests (post-integration)
 
 **Phases 1-9:**
+
 - Unit tests for parametric generators (pure functions, easy to test)
 - Unit tests for validation engine
 - Unit tests for DRC engine (clearance calculations, spatial indexing)
@@ -1765,6 +1810,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 - Integration tests for component library API
 
 **Phase 10:**
+
 - Unit tests for ERC engine (all 7 rule types with known-violation test cases)
 - Unit tests for netlist generation (known circuit → expected netlist output)
 - Unit tests for architecture → schematic expansion (edge bridging: signalType/voltage/busWidth/netName mapping)
@@ -1772,6 +1818,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 - Integration tests for circuit AI endpoints (mock Gemini responses)
 
 **Phase 11:**
+
 - Unit tests for breadboard grid model (coordinate ↔ pixel mapping, tie-point connectivity)
 - Unit tests for wire auto-router (known layouts → expected paths, obstacle avoidance)
 - Unit tests for view synchronization (schematic change → expected breadboard update)
@@ -1779,6 +1826,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 - Visual regression tests for breadboard rendering (SVG snapshot comparison)
 
 **Phase 12:**
+
 - **Critical: Gerber output tests** — known PCB layout → generate Gerber → compare against reference Gerber files byte-by-byte. Use a Gerber rendering library to visually diff output.
 - Unit tests for Excellon drill file generation (known holes → expected drill file)
 - Unit tests for KiCad S-expression output (known schematic → valid .kicad_sch)
@@ -1789,6 +1837,7 @@ All enhancements, organized by effort level and mapped to their execution phase.
 - Round-trip tests for KiCad (export → import in KiCad → re-export → compare)
 
 **Phase 13:**
+
 - Unit tests for MNA circuit solver (known circuits with analytical solutions):
   - Simple resistive divider: V_out = V_in × R2/(R1+R2)
   - RC time constant: V(t) = V_0 × (1 - e^(-t/RC))
@@ -1804,7 +1853,8 @@ All enhancements, organized by effort level and mapped to their execution phase.
 
 These should be resolved before each relevant phase starts:
 
-### Before Phase 1:
+### Before Phase 1
+
 1. **Should the Component Editor support editing multiple parts simultaneously?**
    Current plan: one part at a time, selected from a sidebar list. Multi-part support deferred to Phase 9.
 
@@ -1815,7 +1865,8 @@ These should be resolved before each relevant phase starts:
 
 > **RESOLVED (2026-02-18):** Implemented as planned — `component_parts` table has `projectId` foreign key. Parts are project-scoped. Library sharing deferred to Phase 9.
 
-### Before Phase 4:
+### Before Phase 4
+
 3. **Should the AI chat in ProtoPulse be able to invoke component editor actions?**
    Current plan: Yes (Phase 4.6). The existing AI action system can be extended with component-specific actions like "create part", "add pin", "generate DIP-8".
 
@@ -1825,7 +1876,8 @@ These should be resolved before each relevant phase starts:
 5. **Should AI diff/merge be opt-in or always shown?**
    Proposal: always show diff for AI modifications (builds trust). Direct modifications (manual drawing) apply immediately.
 
-### Before Phase 7:
+### Before Phase 7
+
 6. **Should we keep the breadboard/schematic/pcb sub-views or simplify?**
    Current plan: Keep all three — they're the core value of FZPZ Studio and essential for Fritzing compatibility.
 
@@ -1834,21 +1886,24 @@ These should be resolved before each relevant phase starts:
 7. **How many layers per view is reasonable?**
    Proposal: PCB gets 8 layers (copper front/back, silk front/back, courtyard, fab, paste front/back). Breadboard gets 4 (body, pins, labels, artwork). Schematic gets 3 (symbols, pins, labels). Users can't add custom layers (keeps it simple).
 
-### Before Phase 8:
+### Before Phase 8
+
 8. **Should DRC run automatically or only on demand?**
    Proposal: Both. Auto-DRC runs debounced (500ms) for basic rules (clearance, overlap). Full DRC (all rules) runs on-demand via button.
 
 9. **How sophisticated should the constraint solver be?**
    Proposal: Iterative propagation only (not a full geometric constraint solver). If a constraint can't be satisfied, highlight it as conflicting and let the user fix it manually. Don't try to auto-resolve.
 
-### Before Phase 9:
+### Before Phase 9
+
 10. **Who can publish to the component library?**
     Proposal: Any user with a validated part. No approval workflow initially. Add report/flag for quality issues.
 
 11. **Should the library support versioning?**
     Proposal: Not initially. "Fork" creates a copy; the original is immutable once published. Versioning can be added later.
 
-### Before Phase 10:
+### Before Phase 10
+
 12. **What is the relationship between the Architecture view and the Circuit Schematic view?**
     The architecture view is a high-level system block diagram (MCU, Power Supply, Sensor). The schematic view is the detailed circuit-level design where those blocks are expanded into individual components with electrical connections. Proposal: architecture blocks map to schematic hierarchical sheets. An "Expand to Schematic" action on an architecture node creates component instances and seeds nets from architecture edges. The two views are linked but independently editable — schematic can diverge from architecture as the design evolves.
 
@@ -1858,11 +1913,13 @@ These should be resolved before each relevant phase starts:
 14. **How should component instances reference component_parts?**
     Each circuit_instance references a component_part by `partId`. The component_part defines the symbol, footprint, and pinout. The instance defines position, rotation, and property overrides (e.g., specific resistance value). If a component_part is modified after instances are placed, instances should update to reflect the new symbol/pinout. Question: should modification be automatic or require user confirmation?
 
-### Before Phase 11:
+### Before Phase 11
+
 15. **How should schematic ↔ breadboard synchronization work?**
     Proposal: schematic is the source of truth. When a net is added/modified in the schematic, the breadboard view shows the new connection as an unrouted ratsnest line. The user (or auto-router) then draws the physical wire. Breadboard-first workflows are also supported — drawing a wire on the breadboard creates the corresponding net in the schematic. Conflicts (e.g., wire exists on breadboard but net was deleted from schematic) show a warning dialog.
 
-### Before Phase 12:
+### Before Phase 12
+
 16. **What KiCad format version should we target?**
     KiCad 7+ uses S-expression format (.kicad_sch, .kicad_pcb). KiCad 8 is the latest (as of 2026). Proposal: target KiCad 7 S-expression format — it's the most widely used and has the best documentation. KiCad 8 is backward-compatible with KiCad 7 files. Don't target the older KiCad 5 legacy format.
 
@@ -1872,7 +1929,8 @@ These should be resolved before each relevant phase starts:
 18. **Should Eagle export be prioritized or deferred?**
     Eagle is being deprecated by Autodesk in favor of Fusion 360 Electronics. Proposal: defer Eagle export to a later phase or make it community-contributed. KiCad export is more valuable and should be the priority interop format.
 
-### Before Phase 13:
+### Before Phase 13
+
 19. **Which simulation engine should we use?**
     Three options:
     - **Option A: JavaScript MNA solver (recommended for MVP):** Custom Modified Nodal Analysis solver for basic circuits (resistive networks, RC/RL). ~400 lines of code, no external dependencies beyond mathjs for matrix operations. Limitations: no semiconductor models, no convergence for nonlinear circuits. Good enough for educational use and simple designs.
@@ -1890,12 +1948,14 @@ These should be resolved before each relevant phase starts:
 This is the master checklist. Update status as work progresses.
 
 ### Phase 0: Prerequisites
+
 - [ ] Backend audit P0/P1 items resolved
 - [ ] Frontend audit #11 (context splitting) resolved
 - [ ] Frontend audit #19 (PROJECT_ID hardcoding) resolved
 - [ ] Frontend audit #72 (ErrorBoundary) resolved
 
 ### Phase 1: Foundation
+
 - [x] 1.1 shared/component-types.ts (with forward-compatible fields)
 - [x] 1.2 client/src/lib/component-editor/types.ts (UI-only types)
 - [x] 1.3 component_parts table in schema.ts (with constraints + version)
@@ -1909,6 +1969,7 @@ This is the master checklist. Update status as work progresses.
 - [x] 1.11 TanStack Query hooks
 
 ### Phase 2: Canvas + Drawing + Quick Wins
+
 - [x] 2.1 ComponentCanvas.tsx
 - [x] 2.2 ComponentToolbar.tsx (with zoom-to-fit button)
 - [x] 2.3 ComponentInspector.tsx
@@ -1925,6 +1986,7 @@ This is the master checklist. Update status as work progresses.
 - [x] 2.14 RulerOverlay.tsx
 
 ### Phase 3: Metadata + Generator + Pin Table
+
 - [x] 3.1 ComponentMetadataPanel.tsx
 - [x] 3.2 GeneratorModal.tsx
 - [x] 3.3 generators.ts (parametric)
@@ -1933,6 +1995,7 @@ This is the master checklist. Update status as work progresses.
 - [x] 3.6 PinTableEditor.tsx
 
 ### Phase 4: AI Features + Diff/Merge + Photo Extraction
+
 - [ ] 4.1 server/component-ai.ts
 - [ ] 4.2 Gemini SDK migration
 - [ ] 4.3 AI API endpoints
@@ -1945,6 +2008,7 @@ This is the master checklist. Update status as work progresses.
 - [ ] 4.10 AI pin extraction from photos
 
 ### Phase 5: Import/Export + Integration + Verification
+
 - [ ] 5.1 FZPZ export (server-side)
 - [ ] 5.2 FZPZ import endpoint
 - [ ] 5.3 FZPZ export endpoint
@@ -1957,6 +2021,7 @@ This is the master checklist. Update status as work progresses.
 - [x] 5.10 Validation view integration
 
 ### Phase 6: Polish
+
 - [x] 6.1 Remove old SchematicView.tsx
 - [x] 6.2 Update sidebar icons/labels
 - [x] 6.3 Keyboard shortcuts
@@ -1968,11 +2033,13 @@ This is the master checklist. Update status as work progresses.
 - [x] 6.9 Seed data with sample component
 
 ### Phase 7: Advanced Canvas Features
+
 - [x] 7.1 Layer system (LayerPanel + rendering filter + default configs)
 - [x] 7.2 Path drawing tool upgrade (Bezier curves + control handles + node editing)
 - [x] 7.3 HistoryPanel.tsx (named history with jump-to)
 
 ### Phase 8: Intelligence & Automation
+
 - [x] 8.1 drc.ts engine (6 rule types + spatial indexing + debounced execution)
 - [x] 8.2 DRCPanel.tsx (violations list + click-to-highlight + rule customization + JSON/CSV export)
 - [x] 8.3 DRC canvas overlays (red/amber violation indicators)
@@ -1981,6 +2048,7 @@ This is the master checklist. Update status as work progresses.
 - [x] 8.6 DRC in main Validation view
 
 ### Phase 9: Component Library & Ecosystem
+
 - [ ] 9.1 component_library table + migration
 - [ ] 9.2 server/component-library.ts (CRUD + search)
 - [ ] 9.3 Library API routes
@@ -1989,6 +2057,7 @@ This is the master checklist. Update status as work progresses.
 - [ ] 9.6 Multi-part project support (sidebar list + switching)
 
 ### Phase 10: Circuit Schematic Capture
+
 - [ ] 10.1 shared/circuit-types.ts (all circuit-level type definitions)
 - [ ] 10.2 circuit_designs, circuit_instances, circuit_nets tables in schema.ts
 - [ ] 10.3 drizzle-kit push for circuit tables
@@ -2012,6 +2081,7 @@ This is the master checklist. Update status as work progresses.
 - [ ] 10.21 TanStack Query hooks for circuit CRUD
 
 ### Phase 11: Breadboard & Physical Layout
+
 - [ ] 11.1 circuit_wires table in schema.ts + drizzle-kit push
 - [ ] 11.2 Storage CRUD methods for circuit_wires
 - [ ] 11.3 Wire API routes in circuit-routes.ts
@@ -2027,6 +2097,7 @@ This is the master checklist. Update status as work progresses.
 - [ ] 11.13 "Breadboard / PCB" sidebar tab
 
 ### Phase 12: Manufacturing Output & Interoperability
+
 - [ ] 12.1 server/export/ directory structure
 - [ ] 12.2 netlist-generator.ts (SPICE, KiCad, generic formats)
 - [ ] 12.3 bom-exporter.ts (JLCPCB, Mouser, Digi-Key, generic CSV)
@@ -2044,6 +2115,7 @@ This is the master checklist. Update status as work progresses.
 - [ ] 12.14 SVG/PNG export of any view
 
 ### Phase 13: Simulation & Advanced Analysis
+
 - [ ] 13.1 spice-generator.ts (generate SPICE netlist from circuit data)
 - [ ] 13.2 spice-exporter.ts (SPICE netlist file export endpoint)
 - [ ] 13.3 circuit-solver.ts (JS MNA solver for basic circuits)
@@ -2102,20 +2174,25 @@ The implementation deviated from the planned file naming in a few places for sim
 7. **Sidebar integration**: Component Editor appears as a Cpu icon tab in the existing sidebar, routing to `component_editor` view in ProjectWorkspace.
 
 ### Phase 2 Completion Notes (2026-02-18)
+
 All 14 items implemented. New files created:
+
 - `client/src/components/views/component-editor/ComponentInspector.tsx` — Shape properties panel (position, size, style, multi-select batch editing)
 - `client/src/components/views/component-editor/SnapGuides.tsx` — SVG snap alignment overlay (edge, center, spacing guides)
 - `client/src/components/views/component-editor/RulerOverlay.tsx` — Measurement tool overlay (click-two-points distance display, pin pitch labels)
 - `client/src/lib/component-editor/snap-engine.ts` — Snap alignment computation engine
 
 Modified files:
+
 - `ShapeCanvas.tsx` — Now has multi-select, copy/paste, zoom-to-fit, connector/line/measure tools, snap guides, ruler
 - `types.ts` — Added clipboard, line/measure tools, copy/paste actions
 - `ComponentEditorProvider.tsx` — Added COPY_SHAPES/PASTE_SHAPES reducer actions
 - `ComponentEditorView.tsx` — Integrated inspector, auto-save with debouncing
 
 ### Phase 3 Completion Notes (2026-02-18)
+
 All 6 items implemented. New files created:
+
 - `client/src/components/views/component-editor/GeneratorModal.tsx` — Parametric generator dialog (DIP/SOIC/QFP/Header/R/C) with quick shape templates
 - `client/src/components/views/component-editor/ValidationModal.tsx` — Validation results dialog
 - `client/src/lib/component-editor/generators.ts` — Parametric package generators (pure functions)
@@ -2123,4 +2200,5 @@ All 6 items implemented. New files created:
 - `client/src/lib/component-editor/shape-templates.ts` — Shape template presets (IC body, header, passive body, mounting hole, test point)
 
 Modified files:
+
 - `ComponentEditorView.tsx` — Integrated GeneratorModal, ValidationModal, generate/validate toolbar buttons

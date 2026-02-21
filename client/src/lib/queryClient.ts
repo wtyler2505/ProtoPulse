@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -24,13 +25,26 @@ export async function apiRequest(
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
+
+/**
+ * Sanitize a URL string: collapse consecutive slashes in the path portion
+ * (after the protocol) and strip a trailing slash.
+ */
+function sanitizeUrl(raw: string): string {
+  // Collapse double+ slashes in the path (preserve protocol "//")
+  const cleaned = raw.replace(/([^:]\/)\/+/g, "$1");
+  // Strip trailing slash (unless the URL is just "/")
+  return cleaned.length > 1 ? cleaned.replace(/\/+$/, "") : cleaned;
+}
+
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // queryKey is always a single-element array like ['/api/projects/1/nodes']
-    const url = queryKey[0] as string;
+    const rawUrl = queryKey[0] as string;
+    const url = sanitizeUrl(rawUrl);
+
     const res = await fetch(url, {
       credentials: "include",
     });
@@ -40,12 +54,36 @@ export const getQueryFn: <T>(options: {
     }
 
     await throwIfResNotOk(res);
-    const data = await res.json();
-    if (data === undefined) {
-      throw new Error('API returned undefined response');
+
+    const text = await res.text();
+    if (!text) {
+      throw new Error(`API returned empty response for ${url}`);
     }
+
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`API returned invalid JSON for ${url}`);
+    }
+
+    if (data === null || data === undefined) {
+      throw new Error(`API returned null/undefined for ${url}`);
+    }
+
     return data;
   };
+
+/**
+ * Extract a human-readable message from an API error.
+ * Strips the HTTP status prefix (e.g. "400: ") if present.
+ */
+function friendlyErrorMessage(error: Error): string {
+  const msg = error.message;
+  // Strip leading "NNN: " status prefix from throwIfResNotOk
+  const stripped = msg.replace(/^\d{3}:\s*/, "");
+  return stripped || "An unexpected error occurred";
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,7 +98,23 @@ export const queryClient = new QueryClient({
       retry: false,
       onError: (error: Error) => {
         console.error('[API Mutation Error]', error.message);
+        toast({
+          variant: "destructive",
+          title: "Action failed",
+          description: friendlyErrorMessage(error),
+        });
       },
     },
   },
 });
+
+// Global query error handler — catches unhandled query failures and shows a toast.
+// This runs in addition to any per-query onError callbacks.
+queryClient.getQueryCache().config.onError = (error: Error) => {
+  console.error('[API Query Error]', error.message);
+  toast({
+    variant: "destructive",
+    title: "Failed to load data",
+    description: friendlyErrorMessage(error),
+  });
+};

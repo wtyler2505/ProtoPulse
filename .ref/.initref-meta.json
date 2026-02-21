@@ -1,0 +1,11 @@
+{
+  "generated_at": "2026-02-19T04:42:21Z",
+  "git_sha": "966a9a383840867e8336fa7cdf90636ae4bfdc47",
+  "project_root": "/home/wtyler/Projects/ProtoPulse",
+  "files_analyzed": 128,
+  "flags_used": "",
+  "file_hashes": {
+    "project-dna.md": "379342417639dbe690bea7d35e713c34aa3153f2798b6b727a208ca5c9279fd6",
+    "project-map.md": "4d84bf73147db9699488f9b80a60be84ae8b7e1d6a2e195c89333681b27f3db2"
+  }
+}

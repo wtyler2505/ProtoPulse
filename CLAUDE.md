@@ -104,3 +104,6 @@ For deep dives, read these files (don't read upfront — only when relevant):
 - `docs/AI_AGENT_GUIDE.md` — All conventions, audit status (113 items), phase roadmap, complete action type list, checklists
 - `docs/USER_GUIDE.md` — End-user feature documentation, UI behavior, keyboard shortcuts
 - `docs/frontend-audit-checklist.md` — Open technical debt items with priorities
+
+## Project Reference
+@.ref/project-dna.md

@@ -110,8 +110,11 @@ function WorkspaceContent() {
 
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden font-sans text-foreground">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:text-sm">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-4 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:text-sm" data-testid="skip-to-main">
         Skip to main content
+      </a>
+      <a href="#chat-panel" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-20 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:text-sm" data-testid="skip-to-chat">
+        Skip to AI assistant
       </a>
       <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 md:hidden">
         <Tooltip>
@@ -265,13 +268,15 @@ function WorkspaceContent() {
         {!chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}
 
         <ErrorBoundary>
-          <ChatPanel
-            isOpen={chatOpen}
-            onClose={() => setChatOpen(false)}
-            collapsed={chatCollapsed}
-            width={chatWidth}
-            onToggleCollapse={() => setChatCollapsed(false)}
-          />
+          <div id="chat-panel">
+            <ChatPanel
+              isOpen={chatOpen}
+              onClose={() => setChatOpen(false)}
+              collapsed={chatCollapsed}
+              width={chatWidth}
+              onToggleCollapse={() => setChatCollapsed(false)}
+            />
+          </div>
         </ErrorBoundary>
       </div>
 

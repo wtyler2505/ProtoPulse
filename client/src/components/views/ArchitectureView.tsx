@@ -40,26 +40,27 @@ function ArchitectureFlow() {
   const edgesMountSkip = useRef(true);
   const nodeSaveTimer = useRef<NodeJS.Timeout>(undefined);
   const edgeSaveTimer = useRef<NodeJS.Timeout>(undefined);
-  const userInteracted = useRef(false);
+  const nodeInteracted = useRef(false);
+  const edgeInteracted = useRef(false);
   const prevContextNodes = useRef(nodes);
   const prevContextEdges = useRef(edges);
 
   useEffect(() => {
     if (prevContextNodes.current !== nodes) {
-      if (!userInteracted.current) {
+      if (!nodeInteracted.current) {
         setLocalNodes(nodes);
       }
-      userInteracted.current = false;
+      nodeInteracted.current = false;
     }
     prevContextNodes.current = nodes;
   }, [nodes, setLocalNodes]);
 
   useEffect(() => {
     if (prevContextEdges.current !== edges) {
-      if (!userInteracted.current) {
+      if (!edgeInteracted.current) {
         setLocalEdges(edges);
       }
-      userInteracted.current = false;
+      edgeInteracted.current = false;
     }
     prevContextEdges.current = edges;
   }, [edges, setLocalEdges]);
@@ -69,7 +70,7 @@ function ArchitectureFlow() {
       nodesMountSkip.current = false;
       return;
     }
-    if (!userInteracted.current) return;
+    if (!nodeInteracted.current) return;
     clearTimeout(nodeSaveTimer.current);
     nodeSaveTimer.current = setTimeout(() => {
       setNodes(localNodes);
@@ -82,7 +83,7 @@ function ArchitectureFlow() {
       edgesMountSkip.current = false;
       return;
     }
-    if (!userInteracted.current) return;
+    if (!edgeInteracted.current) return;
     clearTimeout(edgeSaveTimer.current);
     edgeSaveTimer.current = setTimeout(() => {
       setEdges(localEdges);
@@ -143,33 +144,34 @@ function ArchitectureFlow() {
     };
   }, []);
 
-  const markInteracted = useCallback(() => { userInteracted.current = true; }, []);
+  const markNodeInteracted = useCallback(() => { nodeInteracted.current = true; }, []);
+  const markEdgeInteracted = useCallback(() => { edgeInteracted.current = true; }, []);
 
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
       pushUndoState();
-      markInteracted();
+      markNodeInteracted();
       setLocalNodes((nds) => nds.filter((n) => !deleted.find((d) => d.id === n.id)));
     },
-    [setLocalNodes, markInteracted, pushUndoState],
+    [setLocalNodes, markNodeInteracted, pushUndoState],
   );
 
   const onEdgesDelete = useCallback(
     (deleted: Edge[]) => {
       pushUndoState();
-      markInteracted();
+      markEdgeInteracted();
       setLocalEdges((eds) => eds.filter((e) => !deleted.find((d) => d.id === e.id)));
     },
-    [setLocalEdges, markInteracted, pushUndoState],
+    [setLocalEdges, markEdgeInteracted, pushUndoState],
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
       pushUndoState();
-      markInteracted();
+      markEdgeInteracted();
       setLocalEdges((eds) => addEdge(params, eds));
     },
-    [setLocalEdges, markInteracted, pushUndoState],
+    [setLocalEdges, markEdgeInteracted, pushUndoState],
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -196,10 +198,10 @@ function ArchitectureFlow() {
       };
 
       pushUndoState();
-      markInteracted();
+      markNodeInteracted();
       setLocalNodes((nds) => nds.concat(newNode));
     },
-    [setLocalNodes, markInteracted, pushUndoState, reactFlowInstance],
+    [setLocalNodes, markNodeInteracted, pushUndoState, reactFlowInstance],
   );
 
   const onDragStart = (event: React.DragEvent, nodeType: string, label: string) => {
@@ -223,9 +225,9 @@ function ArchitectureFlow() {
       data: { label, type },
     };
     pushUndoState();
-    markInteracted();
+    markNodeInteracted();
     setLocalNodes((nds) => nds.concat(newNode));
-  }, [setLocalNodes, markInteracted, pushUndoState]);
+  }, [setLocalNodes, markNodeInteracted, pushUndoState]);
 
   const handleAddComponent = (type: string) => {
     const newNode = {
@@ -235,7 +237,7 @@ function ArchitectureFlow() {
       data: { label: type, type: type.toLowerCase() },
     };
     pushUndoState();
-    markInteracted();
+    markNodeInteracted();
     setLocalNodes((nds) => nds.concat(newNode));
   };
   
@@ -298,7 +300,7 @@ function ArchitectureFlow() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
-            onNodeDragStop={() => markInteracted()}
+            onNodeDragStop={() => markNodeInteracted()}
             onSelectionChange={({ nodes: selectedNodes }) => {
               const firstSelected = selectedNodes.length > 0 ? selectedNodes[0].id : null;
               setSelectedNodeId(firstSelected);
@@ -380,11 +382,40 @@ function ArchitectureFlow() {
             ))}
           </ContextMenuSubContent>
         </ContextMenuSub>
-        <ContextMenuItem onSelect={() => { pushUndoState(); const center = reactFlowInstance.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 }); markInteracted(); setLocalNodes((nds) => [...nds, { id: crypto.randomUUID(), type: 'custom', position: center, data: { label: 'New Component', type: 'mcu' } }]); addOutputLog('[ARCH] Added component from paste'); }}>Paste</ContextMenuItem>
+        <ContextMenuItem data-testid="context-paste" onSelect={async () => {
+          const center = reactFlowInstance.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+          try {
+            const text = await navigator.clipboard.readText();
+            const parsed = JSON.parse(text);
+            if (parsed.nodes && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
+              pushUndoState();
+              markNodeInteracted();
+              const pastedNodes = parsed.nodes.map((n: Node, i: number) => ({
+                ...n,
+                id: crypto.randomUUID(),
+                position: { x: center.x + (i * 20), y: center.y + (i * 20) },
+              }));
+              setLocalNodes((nds) => [...nds, ...pastedNodes]);
+              if (parsed.edges && Array.isArray(parsed.edges)) {
+                markEdgeInteracted();
+                const pastedEdges = parsed.edges.map((e: Edge) => ({ ...e, id: crypto.randomUUID() }));
+                setLocalEdges((eds) => [...eds, ...pastedEdges]);
+              }
+              addOutputLog(`[ARCH] Pasted ${pastedNodes.length} node(s) from clipboard`);
+              return;
+            }
+          } catch {
+            // Clipboard empty, unreadable, or not valid architecture JSON — fall through to default
+          }
+          pushUndoState();
+          markNodeInteracted();
+          setLocalNodes((nds) => [...nds, { id: crypto.randomUUID(), type: 'custom' as const, position: center, data: { label: 'New Component', type: 'mcu' } }]);
+          addOutputLog('[ARCH] Added new component (no clipboard data)');
+        }}>Paste</ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => reactFlowInstance.fitView({ padding: 0.2 })}>Fit View <span className="ml-auto text-muted-foreground text-[10px]">F</span></ContextMenuItem>
         <ContextMenuItem onSelect={() => setSnapEnabled(!snapEnabled)}>Toggle Grid <span className="ml-auto text-muted-foreground text-[10px]">G</span></ContextMenuItem>
-        <ContextMenuItem onSelect={() => { setLocalNodes(localNodes.map((n) => ({ ...n, selected: true }))); addOutputLog('[ARCH] Selected all ' + localNodes.length + ' nodes'); }}>Select All <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span></ContextMenuItem>
+        <ContextMenuItem data-testid="context-select-all" onSelect={() => { setLocalNodes((nds) => { addOutputLog('[ARCH] Selected all ' + nds.length + ' nodes'); return nds.map((n) => ({ ...n, selected: true })); }); }}>Select All <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span></ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => { copyToClipboard(JSON.stringify({ nodes, edges }, null, 2)); addOutputLog('[ARCH] Exported architecture to clipboard'); }}>Export to Clipboard</ContextMenuItem>
         <ContextMenuSeparator />
@@ -394,8 +425,9 @@ function ArchitectureFlow() {
           onSelect={() => {
             if (selectedNodeId) {
               const node = localNodes.find(n => n.id === selectedNodeId);
-              if (node?.data?.componentPartId) {
-                setPendingComponentPartId(node.data.componentPartId as number);
+              const partId = node?.data?.componentPartId;
+              if (typeof partId === 'number') {
+                setPendingComponentPartId(partId);
               }
               addOutputLog(`[ARCH] Opening Component Editor for node ${selectedNodeId}`);
               setActiveView('component_editor');
