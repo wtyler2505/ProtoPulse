@@ -17,9 +17,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
+import type { ProjectHistoryItem } from '@/lib/project-context';
 
 interface HistoryListProps {
-  history: any[];
+  history: ProjectHistoryItem[];
   timelineExpanded: boolean;
   setTimelineExpanded: (v: boolean) => void;
   addOutputLog: (msg: string) => void;
@@ -32,7 +33,7 @@ export default function HistoryList({
   addOutputLog,
 }: HistoryListProps) {
   const [timelineFilter, setTimelineFilter] = useState<'all' | 'User' | 'AI'>('all');
-  const [expandedTimelineItem, setExpandedTimelineItem] = useState<number | null>(null);
+  const [expandedTimelineItem, setExpandedTimelineItem] = useState<string | null>(null);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -74,7 +75,7 @@ export default function HistoryList({
     return Clock;
   };
 
-  const getActionColor = (item: any): string => {
+  const getActionColor = (item: ProjectHistoryItem): string => {
     if (/Added|Created/i.test(item.action)) return '#22c55e';
     if (/Removed|Delete/i.test(item.action)) return '#ef4444';
     if (item.user === 'AI') return '#06b6d4';
@@ -97,19 +98,19 @@ export default function HistoryList({
   };
 
   const TIMELINE_LIMIT = 5;
-  const sortedHistory = [...history].sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-  const filteredHistory = timelineFilter === 'all' ? sortedHistory : sortedHistory.filter((h: any) => h.user === timelineFilter);
+  const sortedHistory = [...history].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  const filteredHistory = timelineFilter === 'all' ? sortedHistory : sortedHistory.filter((h) => h.user === timelineFilter);
   const visibleHistory = timelineExpanded ? filteredHistory : filteredHistory.slice(0, TIMELINE_LIMIT);
   const hiddenCount = Math.max(0, filteredHistory.length - TIMELINE_LIMIT);
 
-  const hasRecentActivity = history.some((h: any) => {
+  const hasRecentActivity = history.some((h) => {
     const diff = Date.now() - new Date(h.timestamp).getTime();
     return diff < 5 * 60 * 1000;
   });
 
-  const groupedVisibleHistory: { period: string; items: any[] }[] = [];
+  const groupedVisibleHistory: { period: string; items: ProjectHistoryItem[] }[] = [];
   let lastPeriod = '';
-  visibleHistory.forEach((item: any) => {
+  visibleHistory.forEach((item) => {
     const period = getTimePeriod(item.timestamp);
     if (period !== lastPeriod) {
       groupedVisibleHistory.push({ period, items: [item] });
@@ -168,7 +169,7 @@ export default function HistoryList({
               <div className="h-px flex-1 bg-border/50" />
             </div>
             <div className="relative space-y-0">
-              {group.items.map((item: any, itemIdx: number) => {
+              {group.items.map((item, itemIdx) => {
                 const IconComp = getActionIcon(item.action);
                 const color = getActionColor(item);
                 const isExpanded = expandedTimelineItem === item.id;

@@ -25,6 +25,7 @@
 
   --color-accent: hsl(190 100% 43%);
   --color-accent-foreground: hsl(225 20% 3%);
+  --color-editor-accent: #00F0FF;
 
   --color-destructive: hsl(0 85% 55%);
   --color-destructive-foreground: hsl(210 40% 98%);
@@ -46,7 +47,6 @@
 @layer base {
   * {
     @apply border-border;
-    border-radius: 0 !important;
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
@@ -128,11 +128,6 @@
   .led-error {
     background: hsl(0 85% 55%);
     box-shadow: 0 0 6px hsl(0 85% 55% / 0.6);
-  }
-  .glass-panel {
-    background: rgba(15, 15, 20, 0.7);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

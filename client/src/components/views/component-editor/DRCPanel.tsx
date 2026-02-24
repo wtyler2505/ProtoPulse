@@ -79,7 +79,7 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
 
   return (
     <div
-      className="w-60 border-l border-border bg-[#0a0a0a] flex flex-col"
+      className="w-60 border-l border-border bg-background flex flex-col"
       data-testid="drc-panel"
     >
       <div className="px-3 py-2 border-b border-border flex items-center justify-between">
@@ -93,7 +93,7 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
         <button
           data-testid="button-run-drc"
           onClick={onRunDRC}
-          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-[#00F0FF]/10 text-[#00F0FF] hover:bg-[#00F0FF]/20 transition-colors w-full justify-center"
+          className="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium bg-editor-accent/10 text-editor-accent hover:bg-editor-accent/20 transition-colors w-full justify-center"
         >
           <PlayCircle className="w-3.5 h-3.5" />
           Run DRC
@@ -146,7 +146,7 @@ export default function DRCPanel({ violations, onRunDRC, showOverlays, onToggleO
                     type="checkbox"
                     checked={rule.enabled}
                     onChange={(e) => onUpdateRule(idx, { enabled: e.target.checked })}
-                    className="w-3 h-3 accent-[#00F0FF]"
+                    className="w-3 h-3 accent-editor-accent"
                     data-testid={`checkbox-rule-${rule.type}`}
                   />
                   <span className={rule.enabled ? 'text-foreground' : 'text-muted-foreground line-through'}>

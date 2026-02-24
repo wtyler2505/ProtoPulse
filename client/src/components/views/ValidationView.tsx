@@ -3,7 +3,7 @@ import { useProject, PROJECT_ID } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -69,8 +69,7 @@ export default function ValidationView() {
           </h2>
           <p className="text-muted-foreground mt-1 text-sm">Found {issues.length + componentIssues.length} potential issues in your design.</p>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <StyledTooltip content="Run design rule validation checks" side="bottom">
             <button 
               data-testid="run-drc-checks"
               onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
@@ -78,14 +77,10 @@ export default function ValidationView() {
             >
               Run DRC Checks
             </button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-            <p>Run design rule validation checks</p>
-          </TooltipContent>
-        </Tooltip>
+        </StyledTooltip>
       </div>
 
-      <div className="w-full max-w-5xl flex-1 overflow-hidden bg-card/40 border border-border backdrop-blur-lg shadow-xl flex flex-col">
+      <div className="w-full max-w-5xl flex-1 overflow-hidden bg-card/40 border border-border backdrop-blur-xl shadow-xl flex flex-col">
         <div className="hidden md:flex items-center gap-6 p-4 border-b border-border bg-muted/10 backdrop-blur text-xs font-semibold text-muted-foreground uppercase tracking-wider">
            <div className="w-8 text-center">Sev</div>
            <div className="flex-1">Description</div>
@@ -115,16 +110,11 @@ export default function ValidationView() {
                     {issue.componentId || 'GLOBAL'}
                   </div>
                   <div className="md:w-32">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
+                    <StyledTooltip content="Mark this issue as resolved" side="left">
                         <button data-testid={`button-resolve-${issue.id}`} aria-label={`Mark resolved: ${issue.message}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
                             Mark Resolved
                         </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
-                        <p>Mark this issue as resolved</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    </StyledTooltip>
                   </div>
                 </div>
               </ContextMenuTrigger>

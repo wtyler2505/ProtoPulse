@@ -56,7 +56,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<Node<Custom
           tabIndex={0}
           aria-label={`Node ${data.label ?? data.type}`}
           className={cn(
-            "px-4 py-3 shadow-lg bg-card/80 backdrop-blur-lg border min-w-[150px] transition-all duration-200",
+            "px-4 py-3 shadow-lg bg-card/80 backdrop-blur-xl border min-w-[150px] transition-all duration-200",
             selected ? "border-primary shadow-[0_0_20px_rgba(6,182,212,0.4)] ring-1 ring-primary" : "border-border hover:border-primary/50"
           )}
         >

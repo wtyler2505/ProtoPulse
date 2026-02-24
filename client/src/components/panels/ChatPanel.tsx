@@ -4,14 +4,123 @@ import {
   ChevronDown, ArrowDown, Search, Download, Trash2,
   StopCircle, AlertTriangle, ArrowRight, SlidersHorizontal, Mic, ImagePlus
 } from 'lucide-react';
-import { useProject, type ChatMessage } from '@/lib/project-context';
+import { useProject, type ChatMessage, type ViewMode, type BomItem, type ValidationIssue } from '@/lib/project-context';
+import type { Node, Edge } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { copyToClipboard } from '@/lib/clipboard';
 import { quickActionDescriptions, AI_MODELS, DESTRUCTIVE_ACTIONS, COPY_FEEDBACK_DURATION, LOCAL_COMMAND_DELAY, ACTION_LABELS } from './chat/constants';
 import MessageBubble, { MarkdownContent } from './chat/MessageBubble';
 import SettingsPanel from './chat/SettingsPanel';
+import { STORAGE_KEYS } from '@/lib/constants';
+import { buildCSV, downloadBlob } from '@/lib/csv';
+
+/** Data shape stored on architecture nodes in ProtoPulse. */
+interface CustomNodeData {
+  label: string;
+  type: string;
+  description?: string;
+  pins?: Record<string, string>;
+  annotation?: string;
+  annotationColor?: string;
+  [key: string]: unknown;
+}
+
+/** Helper to read typed node data from a generic @xyflow/react Node. */
+function nodeData(n: Node): CustomNodeData {
+  return n.data as CustomNodeData;
+}
+
+/** Edge metadata stored in edge.data for electrical signal info. */
+interface CustomEdgeData {
+  signalType?: string;
+  voltage?: string;
+  busWidth?: number;
+  netName?: string;
+  [key: string]: unknown;
+}
+
+/** Helper to read typed edge data from a generic @xyflow/react Edge. */
+function edgeData(e: Edge): CustomEdgeData | undefined {
+  return e.data as CustomEdgeData | undefined;
+}
+
+/** Represents a single AI-generated action returned from the streaming API. */
+interface AIAction {
+  type: string;
+  nodeLabel?: string;
+  sourceLabel?: string;
+  targetLabel?: string;
+  edgeLabel?: string;
+  signalType?: string;
+  nodeType?: string;
+  description?: string;
+  label?: string;
+  partNumber?: string;
+  manufacturer?: string;
+  supplier?: string;
+  quantity?: number;
+  unitPrice?: number;
+  severity?: 'error' | 'warning' | 'info';
+  message?: string;
+  componentId?: string;
+  suggestion?: string;
+  annotation?: string;
+  position?: { x: number; y: number };
+  positionX?: number;
+  positionY?: number;
+  components?: GenComponent[];
+  connections?: GenConnection[];
+  layout?: string;
+  field?: string;
+  value?: string | number;
+  voltage?: string;
+  busWidth?: number;
+  netName?: string;
+  busType?: string;
+  animated?: boolean;
+  style?: Record<string, string | number>;
+  view?: ViewMode;
+  name?: string;
+  newLabel?: string;
+  newType?: string;
+  newDescription?: string;
+  template?: string;
+  pins?: Record<string, string>;
+  note?: string;
+  color?: string;
+  topic?: string;
+  url?: string;
+  decision?: string;
+  rationale?: string;
+  projectType?: string;
+  category?: string;
+  specs?: Record<string, string>;
+  reason?: string;
+  sheetId?: string;
+  newName?: string;
+  updates?: Record<string, unknown>;
+  status?: string;
+  [key: string]: unknown;
+}
+
+/** Shape for a generated architecture component inside an AIAction. */
+interface GenComponent {
+  label: string;
+  nodeType: string;
+  description?: string;
+  positionX: number;
+  positionY: number;
+}
+
+/** Shape for a generated architecture connection inside an AIAction. */
+interface GenConnection {
+  sourceLabel: string;
+  targetLabel: string;
+  label?: string;
+  signalType?: string;
+}
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -43,12 +152,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [aiProvider, setAiProvider] = useState<'anthropic' | 'gemini'>(() => {
-    try { return (localStorage.getItem('protopulse_ai_provider') as 'anthropic' | 'gemini') || 'anthropic'; } catch { return 'anthropic'; }
+    try { return (localStorage.getItem(STORAGE_KEYS.AI_PROVIDER) as 'anthropic' | 'gemini') || 'anthropic'; } catch { return 'anthropic'; }
   });
   const [aiModel, setAiModel] = useState(() => {
     try {
-      const stored = localStorage.getItem('protopulse_ai_model');
-      const provider = (localStorage.getItem('protopulse_ai_provider') as 'anthropic' | 'gemini') || 'anthropic';
+      const stored = localStorage.getItem(STORAGE_KEYS.AI_MODEL);
+      const provider = (localStorage.getItem(STORAGE_KEYS.AI_PROVIDER) as 'anthropic' | 'gemini') || 'anthropic';
       const models = AI_MODELS[provider];
       if (stored && models.some(m => m.id === stored)) return stored;
       return models[0].id;
@@ -61,10 +170,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     return '';
   });
   const [aiTemperature, setAiTemperature] = useState(() => {
-    try { return parseFloat(localStorage.getItem('protopulse_ai_temp') || '0.7'); } catch { return 0.7; }
+    try { return parseFloat(localStorage.getItem(STORAGE_KEYS.AI_TEMPERATURE) || '0.7'); } catch { return 0.7; }
   });
   const [customSystemPrompt, setCustomSystemPrompt] = useState(() => {
-    try { return localStorage.getItem('protopulse_ai_sysprompt') || ''; } catch { return ''; }
+    try { return localStorage.getItem(STORAGE_KEYS.AI_SYSTEM_PROMPT) || ''; } catch { return ''; }
   });
   const [showSettings, setShowSettings] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -72,16 +181,16 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [chatSearch, setChatSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [pendingActions, setPendingActions] = useState<{ actions: any[]; messageId: string } | null>(null);
+  const [pendingActions, setPendingActions] = useState<{ actions: AIAction[]; messageId: string } | null>(null);
   const [streamingContent, setStreamingContent] = useState('');
   const [lastUserMessage, setLastUserMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<{input: number; output: number; cost: number} | null>(null);
 
-  useEffect(() => { try { localStorage.setItem('protopulse_ai_provider', aiProvider); } catch {} }, [aiProvider]);
-  useEffect(() => { try { localStorage.setItem('protopulse_ai_model', aiModel); } catch {} }, [aiModel]);
-  useEffect(() => { try { localStorage.setItem('protopulse_ai_temp', String(aiTemperature)); } catch {} }, [aiTemperature]);
-  useEffect(() => { try { localStorage.setItem('protopulse_ai_sysprompt', customSystemPrompt); } catch {} }, [customSystemPrompt]);
+  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_PROVIDER, aiProvider); } catch {} }, [aiProvider]);
+  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_MODEL, aiModel); } catch {} }, [aiModel]);
+  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_TEMPERATURE, String(aiTemperature)); } catch {} }, [aiTemperature]);
+  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_SYSTEM_PROMPT, customSystemPrompt); } catch {} }, [customSystemPrompt]);
 
   const scrollToBottom = useCallback(() => {
     if (scrollRef.current) {
@@ -94,21 +203,21 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const onScroll = () => {
+    const handleScroll = () => {
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
       setShowScrollBtn(!atBottom);
     };
-    el.addEventListener('scroll', onScroll);
-    return () => el.removeEventListener('scroll', onScroll);
+    el.addEventListener('scroll', handleScroll);
+    return () => el.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
     if (!isOpen) return;
-    const handler = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
   const resizeTextarea = useCallback(() => {
@@ -130,7 +239,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const processLocalCommand = (msgText: string): string => {
     const lower = msgText.toLowerCase().trim();
 
-    const viewMap: Record<string, string> = {
+    const viewMap: Record<string, ViewMode> = {
       'architecture': 'architecture',
       'component editor': 'component_editor',
       'procurement': 'procurement',
@@ -139,7 +248,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     };
     for (const [key, view] of Object.entries(viewMap)) {
       if ((lower.includes('switch to') || lower.includes('go to') || lower.includes('show') || lower.includes('open')) && lower.includes(key)) {
-        setActiveView(view as any);
+        setActiveView(view);
         const viewLabel = key.charAt(0).toUpperCase() + key.slice(1);
         addToHistory(`Switched to ${viewLabel} view`, 'AI');
         addOutputLog(`[AI] Switched to ${viewLabel} view`);
@@ -161,7 +270,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       ];
       setNodes(defaultNodes);
       setEdges(defaultEdges);
-      setActiveView('architecture' as any);
+      setActiveView('architecture');
       addToHistory('Generated default architecture', 'AI');
       addOutputLog('[AI] Generated default architecture with 4 components');
       return `[ACTION] Generated default architecture with 4 components.\n\nCreated: ESP32-S3 (MCU), TP4056 (Power), SX1262 (Communication), SHT40 (Sensor). All components are connected with data buses.`;
@@ -201,7 +310,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         data: { label: nodeName, type: nodeType, description: `${nodeType.toUpperCase()} component` },
       };
       setNodes([...nodes, newNode]);
-      setActiveView('architecture' as any);
+      setActiveView('architecture');
       addToHistory(`Added ${nodeType} node: ${nodeName}`, 'AI');
       addOutputLog(`[AI] Added ${nodeType} node: ${nodeName}`);
       return `[ACTION] Added new ${nodeType.toUpperCase()} node '${nodeName}' to the architecture.\n\nI've placed it on the canvas. You can drag it to reposition, then connect it to other components.`;
@@ -211,15 +320,15 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const nameMatch = lower.match(/(?:remove|delete)\s+(?:node|component)\s+(.+)/);
       if (nameMatch) {
         const targetName = nameMatch[1].trim();
-        const nodeToRemove = nodes.find((n: any) => n.data.label.toLowerCase().includes(targetName));
+        const nodeToRemove = nodes.find((n) => nodeData(n).label.toLowerCase().includes(targetName));
         if (nodeToRemove) {
-          setNodes(nodes.filter((n: any) => n.id !== nodeToRemove.id));
-          setEdges(edges.filter((e: any) => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id));
-          addToHistory(`Removed node: ${nodeToRemove.data.label}`, 'AI');
-          addOutputLog(`[AI] Removed node: ${nodeToRemove.data.label}`);
-          return `[ACTION] Removed node '${nodeToRemove.data.label}' and its connections from the architecture.`;
+          setNodes(nodes.filter((n) => n.id !== nodeToRemove.id));
+          setEdges(edges.filter((e) => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id));
+          addToHistory(`Removed node: ${nodeData(nodeToRemove).label}`, 'AI');
+          addOutputLog(`[AI] Removed node: ${nodeData(nodeToRemove).label}`);
+          return `[ACTION] Removed node '${nodeData(nodeToRemove).label}' and its connections from the architecture.`;
         }
-        return `Could not find a node matching '${targetName}'. Available nodes: ${nodes.map((n: any) => n.data.label).join(', ') || 'none'}.`;
+        return `Could not find a node matching '${targetName}'. Available nodes: ${nodes.map((n) => nodeData(n).label).join(', ') || 'none'}.`;
       }
     }
 
@@ -228,8 +337,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       if (connectMatch) {
         const sourceName = connectMatch[1].trim();
         const targetName = connectMatch[2].trim();
-        const sourceNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(sourceName));
-        const targetNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(targetName));
+        const sourceNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(sourceName));
+        const targetNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(targetName));
         if (sourceNode && targetNode) {
           const newEdge = {
             id: `e-${Date.now()}`,
@@ -239,11 +348,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             animated: true,
           };
           setEdges([...edges, newEdge]);
-          addToHistory(`Connected ${sourceNode.data.label} to ${targetNode.data.label}`, 'AI');
-          addOutputLog(`[AI] Connected ${sourceNode.data.label} → ${targetNode.data.label}`);
-          return `[ACTION] Connected '${sourceNode.data.label}' to '${targetNode.data.label}'.\n\nA data bus has been created between the two components.`;
+          addToHistory(`Connected ${nodeData(sourceNode).label} to ${nodeData(targetNode).label}`, 'AI');
+          addOutputLog(`[AI] Connected ${nodeData(sourceNode).label} → ${nodeData(targetNode).label}`);
+          return `[ACTION] Connected '${nodeData(sourceNode).label}' to '${nodeData(targetNode).label}'.\n\nA data bus has been created between the two components.`;
         }
-        return `Could not find one or both nodes. Available nodes: ${nodes.map((n: any) => n.data.label).join(', ') || 'none'}.`;
+        return `Could not find one or both nodes. Available nodes: ${nodes.map((n) => nodeData(n).label).join(', ') || 'none'}.`;
       }
     }
 
@@ -270,7 +379,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const partMatch = lower.match(/(?:remove|delete) from bom\s+(.+)/);
       if (partMatch) {
         const partName = partMatch[1].trim().toLowerCase();
-        const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(partName) || b.description.toLowerCase().includes(partName));
+        const bomItem = bom.find((b) => b.partNumber.toLowerCase().includes(partName) || b.description.toLowerCase().includes(partName));
         if (bomItem) {
           deleteBomItem(bomItem.id);
           addToHistory(`Removed BOM item: ${bomItem.partNumber}`, 'AI');
@@ -284,16 +393,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     if (lower.includes('export bom') || lower.includes('export csv')) {
       if (bom.length === 0) return `No BOM items to export. Add components to the BOM first.`;
       const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
-      const rows = bom.map((item: any) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status].join(','));
-      const csv = [headers.join(','), ...rows].join('\n');
+      const rows = bom.map((item) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status]);
       try {
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${projectName}_BOM.csv`;
-        a.click();
-        URL.revokeObjectURL(url);
+        const csv = buildCSV(headers, rows);
+        downloadBlob(new Blob([csv], { type: 'text/csv' }), `${projectName}_BOM.csv`);
       } catch (err) {
         console.warn('Export failed:', err);
         return `Export failed. Please try again.`;
@@ -319,7 +422,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     if (lower.includes('fix all issues') || lower.includes('fix all') || lower.includes('clear issues')) {
       if (issues.length === 0) return `No validation issues to fix. The design is currently clean.`;
       const count = issues.length;
-      issues.forEach((issue: any) => deleteValidationIssue(issue.id));
+      issues.forEach((issue) => deleteValidationIssue(issue.id));
       addToHistory(`Fixed ${count} validation issues`, 'AI');
       addOutputLog(`[AI] Cleared ${count} validation issues`);
       return `[ACTION] Removed ${count} validation issues.\n\nAll issues have been resolved. Run validation again to check for new findings.`;
@@ -376,7 +479,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     return "I've analyzed your request. I can help with navigation, design, BOM management, validation, and project settings. Type 'help' to see all available commands.";
   };
 
-  const executeAIActions = useCallback((actions: any[]) => {
+  const executeAIActions = useCallback((actions: AIAction[]) => {
     pushUndoState();
     const executedLabels: string[] = [];
     for (const action of actions) {
@@ -384,7 +487,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       executedLabels.push(label);
       switch (action.type) {
         case 'switch_view':
-          setActiveView(action.view);
+          setActiveView(action.view!);
           addToHistory(`Switched to ${action.view} view`, 'AI');
           addOutputLog(`[AI] Switched to ${action.view} view`);
           break;
@@ -402,20 +505,21 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'remove_node': {
-          const nodeToRemove = nodes.find((n: any) => n.data.label.toLowerCase() === action.nodeLabel.toLowerCase());
+          const nodeToRemove = nodes.find((n) => nodeData(n).label.toLowerCase() === action.nodeLabel!.toLowerCase());
           if (nodeToRemove) {
-            setNodes(nodes.filter((n: any) => n.id !== nodeToRemove.id));
-            setEdges(edges.filter((e: any) => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id));
+            setNodes(nodes.filter((n) => n.id !== nodeToRemove.id));
+            setEdges(edges.filter((e) => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id));
             addToHistory(`Removed node: ${action.nodeLabel}`, 'AI');
             addOutputLog(`[AI] Removed node: ${action.nodeLabel}`);
           }
           break;
         }
         case 'update_node': {
-          const nodeToUpdate = nodes.find((n: any) => n.data.label.toLowerCase() === action.nodeLabel.toLowerCase());
+          const nodeToUpdate = nodes.find((n) => nodeData(n).label.toLowerCase() === action.nodeLabel!.toLowerCase());
           if (nodeToUpdate) {
-            setNodes(nodes.map((n: any) => n.id === nodeToUpdate.id ? {
-              ...n, data: { ...n.data, label: action.newLabel || n.data.label, type: action.newType || n.data.type, description: action.newDescription || n.data.description }
+            const nd = nodeData(nodeToUpdate);
+            setNodes(nodes.map((n) => n.id === nodeToUpdate.id ? {
+              ...n, data: { ...n.data, label: action.newLabel || nd.label, type: action.newType || nd.type, description: action.newDescription || nd.description }
             } : n));
             addToHistory(`Updated node: ${action.nodeLabel}`, 'AI');
             addOutputLog(`[AI] Updated node: ${action.nodeLabel}`);
@@ -423,10 +527,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'connect_nodes': {
-          const sourceNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.sourceLabel.toLowerCase()));
-          const targetNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.targetLabel.toLowerCase()));
+          const sourceNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.sourceLabel!.toLowerCase()));
+          const targetNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.targetLabel!.toLowerCase()));
           if (sourceNode && targetNode) {
-            const newEdge: any = {
+            const newEdge: Edge = {
               id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
               source: sourceNode.id, target: targetNode.id,
               label: action.edgeLabel || action.busType || 'Data', animated: true,
@@ -438,16 +542,16 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
               },
             };
             setEdges([...edges, newEdge]);
-            addToHistory(`Connected ${sourceNode.data.label} → ${targetNode.data.label}`, 'AI');
-            addOutputLog(`[AI] Connected ${sourceNode.data.label} → ${targetNode.data.label}`);
+            addToHistory(`Connected ${nodeData(sourceNode).label} → ${nodeData(targetNode).label}`, 'AI');
+            addOutputLog(`[AI] Connected ${nodeData(sourceNode).label} → ${nodeData(targetNode).label}`);
           }
           break;
         }
         case 'remove_edge': {
-          const srcNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.sourceLabel.toLowerCase()));
-          const tgtNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.targetLabel.toLowerCase()));
+          const srcNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.sourceLabel!.toLowerCase()));
+          const tgtNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.targetLabel!.toLowerCase()));
           if (srcNode && tgtNode) {
-            setEdges(edges.filter((e: any) => !(e.source === srcNode.id && e.target === tgtNode.id)));
+            setEdges(edges.filter((e) => !(e.source === srcNode.id && e.target === tgtNode.id)));
             addToHistory(`Removed edge: ${action.sourceLabel} → ${action.targetLabel}`, 'AI');
             addOutputLog(`[AI] Removed edge: ${action.sourceLabel} → ${action.targetLabel}`);
           }
@@ -460,18 +564,18 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           addOutputLog('[AI] Cleared all nodes and edges');
           break;
         case 'generate_architecture': {
-          const genNodes = action.components.map((comp: any, idx: number) => ({
+          const genNodes = (action.components || []).map((comp: GenComponent, idx: number) => ({
             id: `gen-${Date.now()}-${idx}`,
             type: 'custom' as const,
             position: { x: comp.positionX, y: comp.positionY },
             data: { label: comp.label, type: comp.nodeType, description: comp.description },
           }));
           setNodes(genNodes);
-          const genEdges = action.connections.map((conn: any, idx: number) => {
-            const src = genNodes.find((n: any) => n.data.label === conn.sourceLabel);
-            const tgt = genNodes.find((n: any) => n.data.label === conn.targetLabel);
+          const genEdges = (action.connections || []).map((conn: GenConnection, idx: number) => {
+            const src = genNodes.find((n) => n.data.label === conn.sourceLabel);
+            const tgt = genNodes.find((n) => n.data.label === conn.targetLabel);
             return { id: `gen-e-${Date.now()}-${idx}`, source: src?.id || '', target: tgt?.id || '', label: conn.label, animated: true };
-          }).filter((e: any) => e.source && e.target);
+          }).filter((e) => e.source && e.target);
           setEdges(genEdges);
           setActiveView('architecture');
           addToHistory(`Generated architecture with ${genNodes.length} components`, 'AI');
@@ -480,16 +584,16 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         }
         case 'add_bom_item':
           addBomItem({
-            partNumber: action.partNumber, manufacturer: action.manufacturer, description: action.description,
+            partNumber: action.partNumber!, manufacturer: action.manufacturer!, description: action.description!,
             quantity: action.quantity || 1, unitPrice: action.unitPrice || 0,
             totalPrice: (action.quantity || 1) * (action.unitPrice || 0),
-            supplier: action.supplier || 'TBD', stock: 0, status: action.status || 'In Stock',
+            supplier: (action.supplier || 'TBD') as BomItem['supplier'], stock: 0, status: (action.status || 'In Stock') as BomItem['status'],
           });
           addToHistory(`Added BOM item: ${action.partNumber}`, 'AI');
           addOutputLog(`[AI] Added BOM item: ${action.partNumber}`);
           break;
         case 'remove_bom_item': {
-          const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          const bomItem = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
           if (bomItem) {
             deleteBomItem(bomItem.id);
             addToHistory(`Removed BOM item: ${action.partNumber}`, 'AI');
@@ -498,9 +602,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'update_bom_item': {
-          const bomToUpdate = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          const bomToUpdate = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
           if (bomToUpdate && updateBomItem) {
-            updateBomItem(bomToUpdate.id, action.updates);
+            updateBomItem(bomToUpdate.id, action.updates!);
             addToHistory(`Updated BOM item: ${action.partNumber}`, 'AI');
             addOutputLog(`[AI] Updated BOM: ${action.partNumber}`);
           }
@@ -512,22 +616,22 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           addOutputLog('[AI] Ran design validation');
           break;
         case 'clear_validation':
-          issues.forEach((issue: any) => deleteValidationIssue(issue.id));
+          issues.forEach((issue) => deleteValidationIssue(issue.id));
           addToHistory('Cleared validation issues', 'AI');
           addOutputLog('[AI] Cleared all validation issues');
           break;
         case 'add_validation_issue':
-          addValidationIssue({ severity: action.severity, message: action.message, componentId: action.componentId, suggestion: action.suggestion });
+          addValidationIssue({ severity: action.severity!, message: action.message!, componentId: action.componentId, suggestion: action.suggestion });
           addToHistory(`Added validation: ${action.message}`, 'AI');
           addOutputLog(`[AI] Added validation issue: ${action.message}`);
           break;
         case 'rename_project':
-          setProjectName(action.name);
+          setProjectName(action.name!);
           addToHistory(`Renamed project to: ${action.name}`, 'AI');
           addOutputLog(`[AI] Renamed project to: ${action.name}`);
           break;
         case 'update_description':
-          setProjectDescription(action.description);
+          setProjectDescription(action.description!);
           addToHistory(`Updated project description`, 'AI');
           addOutputLog(`[AI] Updated description: ${action.description}`);
           break;
@@ -535,15 +639,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           if (bom.length > 0) {
             try {
               const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
-              const rows = bom.map((item: any) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status].join(','));
-              const csv = [headers.join(','), ...rows].join('\n');
-              const blob = new Blob([csv], { type: 'text/csv' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `${projectName}_BOM.csv`;
-              a.click();
-              URL.revokeObjectURL(url);
+              const rows = bom.map((item) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status]);
+              const csv = buildCSV(headers, rows);
+              downloadBlob(new Blob([csv], { type: 'text/csv' }), `${projectName}_BOM.csv`);
               addToHistory('Exported BOM as CSV', 'AI');
               addOutputLog('[AI] Exported BOM as CSV');
             } catch (err) {
@@ -570,30 +668,31 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           
           if (layoutType === 'grid') {
             const cols = Math.ceil(Math.sqrt(currentNodes.length));
-            arranged = currentNodes.map((n: any, i: number) => ({
+            arranged = currentNodes.map((n, i) => ({
               ...n,
               position: { x: 100 + (i % cols) * 220, y: 100 + Math.floor(i / cols) * 180 },
             }));
           } else if (layoutType === 'circular') {
             const cx = 400, cy = 300, r = 200;
-            arranged = currentNodes.map((n: any, i: number) => {
+            arranged = currentNodes.map((n, i) => {
               const angle = (2 * Math.PI * i) / currentNodes.length - Math.PI / 2;
               return { ...n, position: { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) } };
             });
           } else if (layoutType === 'force') {
             const spacing = 250;
-            arranged = currentNodes.map((n: any, i: number) => ({
+            arranged = currentNodes.map((n, i) => ({
               ...n,
               position: { x: 100 + (i % 3) * spacing + (Math.random() * 40 - 20), y: 100 + Math.floor(i / 3) * spacing + (Math.random() * 40 - 20) },
             }));
           } else {
             const typeOrder: Record<string, number> = { power: 0, mcu: 1, comm: 2, sensor: 3, connector: 4, memory: 5, actuator: 6, ic: 7, passive: 8, module: 9 };
-            const sorted = [...currentNodes].sort((a: any, b: any) => (typeOrder[a.data.type] ?? 5) - (typeOrder[b.data.type] ?? 5));
+            const sorted = [...currentNodes].sort((a, b) => (typeOrder[nodeData(a).type] ?? 5) - (typeOrder[nodeData(b).type] ?? 5));
             let col = 0;
             let lastType = '';
             let row = 0;
-            arranged = sorted.map((n: any) => {
-              if (n.data.type !== lastType) { col++; row = 0; lastType = n.data.type; }
+            arranged = sorted.map((n) => {
+              const nd = nodeData(n);
+              if (nd.type !== lastType) { col++; row = 0; lastType = nd.type; }
               row++;
               return { ...n, position: { x: 80 + col * 220, y: 60 + row * 160 } };
             });
@@ -714,7 +813,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             },
           };
           
-          const tmpl = templates[action.template];
+          const tmpl = templates[action.template!];
           if (!tmpl) break;
           const baseX = action.positionX || 200 + Math.random() * 300;
           const baseY = action.positionY || 100 + Math.random() * 200;
@@ -741,10 +840,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'assign_net_name': {
-          const src = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.sourceLabel.toLowerCase()));
-          const tgt = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.targetLabel.toLowerCase()));
+          const src = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.sourceLabel!.toLowerCase()));
+          const tgt = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.targetLabel!.toLowerCase()));
           if (src && tgt) {
-            setEdges(edges.map((e: any) => 
+            setEdges(edges.map((e) => 
               (e.source === src.id && e.target === tgt.id) 
                 ? { ...e, data: { ...e.data, netName: action.netName }, label: action.netName }
                 : e
@@ -770,27 +869,27 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'set_pin_map': {
-          const pinNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.nodeLabel.toLowerCase()));
+          const pinNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.nodeLabel!.toLowerCase()));
           if (pinNode) {
-            setNodes(nodes.map((n: any) => n.id === pinNode.id ? {
+            setNodes(nodes.map((n) => n.id === pinNode.id ? {
               ...n, data: { ...n.data, pins: action.pins }
             } : n));
             addToHistory(`Set pin map for ${action.nodeLabel}`, 'AI');
-            addOutputLog(`[AI] Set ${Object.keys(action.pins).length} pin assignments for ${action.nodeLabel}`);
+            addOutputLog(`[AI] Set ${Object.keys(action.pins!).length} pin assignments for ${action.nodeLabel}`);
           }
           break;
         }
         case 'auto_assign_pins': {
-          const targetNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.nodeLabel.toLowerCase()));
+          const targetNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.nodeLabel!.toLowerCase()));
           if (targetNode) {
-            const connectedEdges = edges.filter((e: any) => e.source === targetNode.id || e.target === targetNode.id);
+            const connectedEdges = edges.filter((e) => e.source === targetNode.id || e.target === targetNode.id);
             const autoPins: Record<string, string> = {};
-            connectedEdges.forEach((e: any, i: number) => {
-              const otherNode = nodes.find((n: any) => n.id === (e.source === targetNode.id ? e.target : e.source));
-              const pinName = String(e.label || '') || e.data?.signalType || `PIN_${i}`;
-              autoPins[pinName] = String(otherNode?.data?.label || '') || `GPIO${i}`;
+            connectedEdges.forEach((e, i) => {
+              const otherNode = nodes.find((n) => n.id === (e.source === targetNode.id ? e.target : e.source));
+              const pinName = String(e.label || '') || edgeData(e)?.signalType || `PIN_${i}`;
+              autoPins[pinName] = String(otherNode ? nodeData(otherNode).label : '') || `GPIO${i}`;
             });
-            setNodes(nodes.map((n: any) => n.id === targetNode.id ? {
+            setNodes(nodes.map((n) => n.id === targetNode.id ? {
               ...n, data: { ...n.data, pins: autoPins }
             } : n));
             addToHistory(`Auto-assigned pins for ${action.nodeLabel}`, 'AI');
@@ -799,14 +898,14 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'power_budget_analysis': {
-          const powerNodes = nodes.filter((n: any) => n.data.type === 'power');
-          const consumers = nodes.filter((n: any) => n.data.type !== 'power');
+          const powerNodes = nodes.filter((n) => nodeData(n).type === 'power');
+          const consumers = nodes.filter((n) => nodeData(n).type !== 'power');
           const pbIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
           
           let totalPower = 0;
-          consumers.forEach((n: any) => {
+          consumers.forEach((n) => {
             const typicalCurrent: Record<string, number> = { mcu: 80, sensor: 5, comm: 120, memory: 30, actuator: 200, ic: 20, connector: 0, passive: 0, module: 50 };
-            const current = typicalCurrent[n.data.type] || 10;
+            const current = typicalCurrent[nodeData(n).type] || 10;
             totalPower += current;
           });
           
@@ -833,23 +932,23 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'voltage_domain_check': {
           const voltageIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
           
-          edges.forEach((e: any) => {
-            const voltage = e.data?.voltage || e.label;
-            if (voltage && (voltage.includes('5V') || voltage.includes('3.3V') || voltage.includes('1.8V'))) {
-              const srcNode = nodes.find((n: any) => n.id === e.source);
-              const tgtNode = nodes.find((n: any) => n.id === e.target);
+          edges.forEach((e) => {
+            const voltage = edgeData(e)?.voltage || e.label;
+            if (voltage && (String(voltage).includes('5V') || String(voltage).includes('3.3V') || String(voltage).includes('1.8V'))) {
+              const srcNode = nodes.find((n) => n.id === e.source);
+              const tgtNode = nodes.find((n) => n.id === e.target);
               if (srcNode && tgtNode) {
-                const srcEdges = edges.filter((ed: any) => ed.source === srcNode.id || ed.target === srcNode.id);
-                const tgtEdges = edges.filter((ed: any) => ed.source === tgtNode.id || ed.target === tgtNode.id);
-                const srcVoltages = srcEdges.map((ed: any) => ed.data?.voltage || ed.label).filter(Boolean);
-                const tgtVoltages = tgtEdges.map((ed: any) => ed.data?.voltage || ed.label).filter(Boolean);
-                const has5V = srcVoltages.some((v: string) => v.includes('5V')) || tgtVoltages.some((v: string) => v.includes('5V'));
-                const has3V3 = srcVoltages.some((v: string) => v.includes('3.3V')) || tgtVoltages.some((v: string) => v.includes('3.3V'));
+                const srcEdges = edges.filter((ed) => ed.source === srcNode.id || ed.target === srcNode.id);
+                const tgtEdges = edges.filter((ed) => ed.source === tgtNode.id || ed.target === tgtNode.id);
+                const srcVoltages = srcEdges.map((ed) => edgeData(ed)?.voltage || ed.label).filter(Boolean);
+                const tgtVoltages = tgtEdges.map((ed) => edgeData(ed)?.voltage || ed.label).filter(Boolean);
+                const has5V = srcVoltages.some((v) => String(v).includes('5V')) || tgtVoltages.some((v) => String(v).includes('5V'));
+                const has3V3 = srcVoltages.some((v) => String(v).includes('3.3V')) || tgtVoltages.some((v) => String(v).includes('3.3V'));
                 if (has5V && has3V3) {
                   voltageIssues.push({
                     severity: 'warning',
-                    message: `Voltage domain crossing: ${srcNode.data.label} ↔ ${tgtNode.data.label} bridges 5V and 3.3V domains`,
-                    componentId: String(srcNode.data.label ?? ''),
+                    message: `Voltage domain crossing: ${nodeData(srcNode).label} ↔ ${nodeData(tgtNode).label} bridges 5V and 3.3V domains`,
+                    componentId: String(nodeData(srcNode).label ?? ''),
                     suggestion: 'Add a level shifter (e.g., TXB0108) between voltage domains.'
                   });
                 }
@@ -874,11 +973,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'auto_fix_validation': {
           const currentIssues = [...issues];
           let fixCount = 0;
-          const fixNodes: any[] = [];
-          const fixEdges: any[] = [];
+          const fixNodes: Node[] = [];
+          const fixEdges: Edge[] = [];
           const fixTs = Date.now();
           
-          currentIssues.forEach((issue: any, idx: number) => {
+          currentIssues.forEach((issue, idx) => {
             const msg = issue.message.toLowerCase();
             if (msg.includes('decoupling') || msg.includes('capacitor')) {
               fixNodes.push({
@@ -922,22 +1021,23 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'dfm_check': {
           const dfmIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
           
-          nodes.forEach((n: any) => {
-            const label = n.data.label?.toLowerCase() || '';
-            const type = n.data.type?.toLowerCase() || '';
+          nodes.forEach((n) => {
+            const nd = nodeData(n);
+            const label = nd.label?.toLowerCase() || '';
+            const type = nd.type?.toLowerCase() || '';
             if (label.includes('qfn') || label.includes('bga') || label.includes('wlcsp')) {
               dfmIssues.push({
                 severity: 'warning',
-                message: `${n.data.label} uses a fine-pitch package requiring advanced assembly`,
-                componentId: n.data.label,
+                message: `${nd.label} uses a fine-pitch package requiring advanced assembly`,
+                componentId: nd.label,
                 suggestion: 'Consider QFP or larger-pitch alternative for easier prototyping.'
               });
             }
             if (type === 'passive' && (label.includes('0201') || label.includes('01005'))) {
               dfmIssues.push({
                 severity: 'warning',
-                message: `${n.data.label} uses tiny package (0201/01005) — difficult for hand assembly`,
-                componentId: n.data.label,
+                message: `${nd.label} uses tiny package (0201/01005) — difficult for hand assembly`,
+                componentId: nd.label,
                 suggestion: 'Use 0402 or 0603 package for easier hand soldering.'
               });
             }
@@ -958,9 +1058,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'thermal_analysis': {
           const thermalIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
           
-          nodes.forEach((n: any) => {
-            const type = n.data.type?.toLowerCase() || '';
-            const label = n.data.label?.toLowerCase() || '';
+          nodes.forEach((n) => {
+            const nd = nodeData(n);
+            const type = nd.type?.toLowerCase() || '';
+            const label = nd.label?.toLowerCase() || '';
             let dissipation = 0;
             
             if (type === 'power') dissipation = 0.5;
@@ -972,15 +1073,15 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             if (dissipation > 0.4) {
               thermalIssues.push({
                 severity: 'warning',
-                message: `${n.data.label}: estimated ${dissipation}W dissipation — may require thermal management`,
-                componentId: n.data.label,
+                message: `${nd.label}: estimated ${dissipation}W dissipation — may require thermal management`,
+                componentId: nd.label,
                 suggestion: `Add thermal vias, copper pour, or heatsink. Ensure adequate airflow (θJA < ${Math.round(80/dissipation)}°C/W).`
               });
             }
           });
           
-          const totalDissipation = nodes.reduce((sum: number, n: any) => {
-            const type = n.data.type?.toLowerCase() || '';
+          const totalDissipation = nodes.reduce((sum: number, n) => {
+            const type = nodeData(n).type?.toLowerCase() || '';
             if (type === 'power') return sum + 0.5;
             if (type === 'mcu') return sum + 0.3;
             if (type === 'comm') return sum + 0.4;
@@ -1001,7 +1102,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'pricing_lookup': {
-          const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          const bomItem = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
           if (bomItem) {
             const distributors = [
               { name: 'Digi-Key', price: bomItem.unitPrice * (0.95 + Math.random() * 0.15), stock: Math.floor(Math.random() * 5000), leadTime: `${Math.floor(Math.random() * 4) + 1} weeks` },
@@ -1020,7 +1121,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'suggest_alternatives': {
-          const original = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          const original = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
           if (original) {
             const alternatives: Record<string, Array<{pn: string; mfr: string; price: number; note: string}>> = {
               'ESP32': [
@@ -1059,9 +1160,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'optimize_bom': {
-          const totalCost = bom.reduce((sum: number, b: any) => sum + (b.unitPrice * b.quantity), 0);
+          const totalCost = bom.reduce((sum: number, b) => sum + (b.unitPrice * b.quantity), 0);
           const supplierCounts: Record<string, number> = {};
-          bom.forEach((b: any) => { supplierCounts[b.supplier] = (supplierCounts[b.supplier] || 0) + 1; });
+          bom.forEach((b) => { supplierCounts[b.supplier] = (supplierCounts[b.supplier] || 0) + 1; });
           const primarySupplier = Object.entries(supplierCounts).sort(([,a], [,b]) => b - a)[0]?.[0] || 'Unknown';
           
           addValidationIssue({
@@ -1070,8 +1171,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             suggestion: `Consolidate to ${primarySupplier} where possible to reduce shipping costs and simplify procurement.`
           });
           
-          const expensiveItems = [...bom].sort((a: any, b: any) => (b.unitPrice * b.quantity) - (a.unitPrice * a.quantity)).slice(0, 3);
-          expensiveItems.forEach((item: any) => {
+          const expensiveItems = [...bom].sort((a, b) => (b.unitPrice * b.quantity) - (a.unitPrice * a.quantity)).slice(0, 3);
+          expensiveItems.forEach((item) => {
             addValidationIssue({
               severity: 'info',
               message: `Cost driver: ${item.partNumber} — $${(item.unitPrice * item.quantity).toFixed(2)} (${((item.unitPrice * item.quantity / totalCost) * 100).toFixed(0)}% of BOM)`,
@@ -1086,9 +1187,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'check_lead_times': {
-          bom.forEach((item: any) => {
+          bom.forEach((item) => {
             const weeks = Math.floor(Math.random() * 12) + 1;
-            const status = weeks <= 2 ? 'info' : weeks <= 8 ? 'warning' : 'error';
+            const status: 'error' | 'warning' | 'info' = weeks <= 2 ? 'info' : weeks <= 8 ? 'warning' : 'error';
             addValidationIssue({
               severity: status,
               message: `${item.partNumber}: Est. ${weeks} week lead time (${item.supplier})${weeks > 8 ? ' — LONG LEAD TIME' : ''}`,
@@ -1118,9 +1219,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'add_annotation': {
-          const annotNode = nodes.find((n: any) => n.data.label.toLowerCase().includes(action.nodeLabel.toLowerCase()));
+          const annotNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.nodeLabel!.toLowerCase()));
           if (annotNode) {
-            setNodes(nodes.map((n: any) => n.id === annotNode.id ? {
+            setNodes(nodes.map((n) => n.id === annotNode.id ? {
               ...n, data: { ...n.data, annotation: action.note, annotationColor: action.color || 'yellow' }
             } : n));
           }
@@ -1171,7 +1272,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
               '5. Run DFM check before sending to fabrication.',
             ],
           };
-          const steps = tutorials[action.topic] || tutorials.getting_started;
+          const steps = tutorials[action.topic!] || tutorials.getting_started;
           steps.forEach((step, i) => {
             setTimeout(() => addOutputLog(`[TUTORIAL] ${step}`), i * 500);
           });
@@ -1183,15 +1284,16 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             '(kicad_sch (version 20230121) (generator "protopulse")',
             '  (paper "A4")',
           ];
-          nodes.forEach((n: any) => {
-            kicadContent.push(`  (symbol (lib_id "${n.data.type}:${n.data.label}") (at ${n.position.x / 10} ${n.position.y / 10} 0)`);
-            kicadContent.push(`    (property "Reference" "${n.data.label}" (at 0 -2 0))`);
-            kicadContent.push(`    (property "Value" "${n.data.description || n.data.type}" (at 0 2 0))`);
+          nodes.forEach((n) => {
+            const nd = nodeData(n);
+            kicadContent.push(`  (symbol (lib_id "${nd.type}:${nd.label}") (at ${n.position.x / 10} ${n.position.y / 10} 0)`);
+            kicadContent.push(`    (property "Reference" "${nd.label}" (at 0 -2 0))`);
+            kicadContent.push(`    (property "Value" "${nd.description || nd.type}" (at 0 2 0))`);
             kicadContent.push('  )');
           });
-          edges.forEach((e: any) => {
-            const src = nodes.find((n: any) => n.id === e.source);
-            const tgt = nodes.find((n: any) => n.id === e.target);
+          edges.forEach((e) => {
+            const src = nodes.find((n) => n.id === e.source);
+            const tgt = nodes.find((n) => n.id === e.target);
             if (src && tgt) {
               kicadContent.push(`  (wire (pts (xy ${src.position.x / 10} ${src.position.y / 10}) (xy ${tgt.position.x / 10} ${tgt.position.y / 10})))`);
             }
@@ -1222,14 +1324,15 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             '',
           ];
           
-          nodes.forEach((n: any, i: number) => {
-            const type = n.data.type || 'generic';
+          nodes.forEach((n, i) => {
+            const nd = nodeData(n);
+            const type = nd.type || 'generic';
             if (type === 'passive') {
-              spiceLines.push(`R${i+1} net_${n.id}_in net_${n.id}_out 10k ; ${n.data.label}`);
+              spiceLines.push(`R${i+1} net_${n.id}_in net_${n.id}_out 10k ; ${nd.label}`);
             } else if (type === 'power') {
-              spiceLines.push(`V${i+1} net_${n.id}_out 0 3.3 ; ${n.data.label}`);
+              spiceLines.push(`V${i+1} net_${n.id}_out 0 3.3 ; ${nd.label}`);
             } else {
-              spiceLines.push(`X${i+1} ${n.data.label.replace(/[^a-zA-Z0-9]/g, '_')} ; ${n.data.description || type}`);
+              spiceLines.push(`X${i+1} ${String(nd.label).replace(/[^a-zA-Z0-9]/g, '_')} ; ${nd.description || type}`);
             }
           });
           
@@ -1254,7 +1357,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         case 'preview_gerber': {
           addValidationIssue({
             severity: 'info',
-            message: `PCB Preview: ${nodes.length} components, estimated board size ${Math.ceil(Math.max(...nodes.map((n: any) => n.position.x), 100) / 50)}cm x ${Math.ceil(Math.max(...nodes.map((n: any) => n.position.y), 100) / 50)}cm, ${edges.length} traces to route.`,
+            message: `PCB Preview: ${nodes.length} components, estimated board size ${Math.ceil(Math.max(...nodes.map((n) => n.position.x), 100) / 50)}cm x ${Math.ceil(Math.max(...nodes.map((n) => n.position.y), 100) / 50)}cm, ${edges.length} traces to route.`,
             suggestion: 'For detailed PCB layout, export to KiCad and use the PCB editor. Consider 2-layer board for simple designs, 4-layer for high-speed or dense layouts.'
           });
           setActiveView('output');
@@ -1263,7 +1366,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'add_datasheet_link': {
-          const bomItem = bom.find((b: any) => b.partNumber.toLowerCase().includes(action.partNumber.toLowerCase()));
+          const bomItem = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
           if (bomItem) {
             updateBomItem(bomItem.id, { leadTime: action.url });
             addToHistory(`Added datasheet for ${action.partNumber}`, 'AI');
@@ -1272,9 +1375,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           break;
         }
         case 'export_design_report': {
-          const totalCost = bom.reduce((sum: number, b: any) => sum + (b.unitPrice * b.quantity), 0);
-          const errorCount = issues.filter((i: any) => i.severity === 'error').length;
-          const warnCount = issues.filter((i: any) => i.severity === 'warning').length;
+          const totalCost = bom.reduce((sum: number, b) => sum + (b.unitPrice * b.quantity), 0);
+          const errorCount = issues.filter((i) => i.severity === 'error').length;
+          const warnCount = issues.filter((i) => i.severity === 'warning').length;
           
           const report = [
             `# ${projectName} — Design Report`,
@@ -1283,12 +1386,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             '## Architecture Overview',
             `- Components: ${nodes.length}`,
             `- Connections: ${edges.length}`,
-            `- Component Types: ${Array.from(new Set(nodes.map((n: any) => n.data.type))).join(', ')}`,
+            `- Component Types: ${Array.from(new Set(nodes.map((n) => nodeData(n).type))).join(', ')}`,
             '',
             '## Bill of Materials',
             `- Total Items: ${bom.length}`,
             `- Estimated Cost: $${totalCost.toFixed(2)}`,
-            `- Suppliers: ${Array.from(new Set(bom.map((b: any) => b.supplier))).join(', ')}`,
+            `- Suppliers: ${Array.from(new Set(bom.map((b) => b.supplier))).join(', ')}`,
             '',
             '## Validation Status',
             `- Errors: ${errorCount}`,
@@ -1296,7 +1399,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             `- Total Issues: ${issues.length}`,
             '',
             '## Components',
-            ...nodes.map((n: any) => `- ${n.data.label} (${n.data.type}): ${n.data.description || 'No description'}`),
+            ...nodes.map((n) => { const nd = nodeData(n); return `- ${nd.label} (${nd.type}): ${nd.description || 'No description'}`; }),
             '',
             '## Recommendations',
             errorCount > 0 ? '- ⚠️ Fix all errors before proceeding to layout' : '- ✓ No critical errors',
@@ -1333,7 +1436,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             power: 'Emphasize efficiency, thermal management, wide input range, protection circuits',
           };
           
-          const guidance = typePrompts[action.projectType] || 'General electronics design guidance';
+          const guidance = typePrompts[action.projectType!] || 'General electronics design guidance';
           setProjectDescription(`${projectDescription} [Type: ${action.projectType}]`);
           addToHistory(`Set project type: ${action.projectType}`, 'AI');
           addOutputLog(`[AI] Project type set to ${action.projectType}. ${guidance}`);
@@ -1362,7 +1465,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             ],
           };
           
-          const results = searchResults[action.category] || [
+          const results = searchResults[action.category!] || [
             { pn: 'GENERIC-001', mfr: 'Various', price: 0.10, desc: `${action.category} component` },
           ];
           
@@ -1393,13 +1496,25 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       setIsListening(false);
       return;
     }
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    const recognition = new SpeechRecognition();
+    /* eslint-disable @typescript-eslint/no-explicit-any -- Web Speech API types unavailable in all TS envs */
+    const win = window as Record<string, unknown>;
+    const SpeechRecognitionCtor = (win.webkitSpeechRecognition || win.SpeechRecognition) as (new () => {
+      continuous: boolean;
+      interimResults: boolean;
+      lang: string;
+      onstart: (() => void) | null;
+      onresult: ((event: { results: { [index: number]: { [index: number]: { transcript: string } } } }) => void) | null;
+      onerror: (() => void) | null;
+      onend: (() => void) | null;
+      start: () => void;
+    }) | undefined;
+    if (!SpeechRecognitionCtor) return;
+    const recognition = new SpeechRecognitionCtor();
     recognition.continuous = false;
     recognition.interimResults = false;
     recognition.lang = 'en-US';
     recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInput((prev: string) => prev + transcript);
       setIsListening(false);
@@ -1476,7 +1591,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
-      let finalActions: any[] = [];
+      let finalActions: AIAction[] = [];
 
       if (reader) {
         let buffer = '';
@@ -1513,7 +1628,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
       setStreamingContent('');
 
-      const hasDestructive = finalActions.some((a: any) => DESTRUCTIVE_ACTIONS.includes(a.type));
+      const hasDestructive = finalActions.some((a) => DESTRUCTIVE_ACTIONS.includes(a.type));
       const msgId = (Date.now() + 1).toString();
 
       if (hasDestructive && finalActions.length > 0) {
@@ -1537,8 +1652,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           actions: finalActions,
         });
       }
-    } catch (error: any) {
-      if (error.name === 'AbortError') {
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      if (err.name === 'AbortError') {
         addMessage({
           id: (Date.now() + 1).toString(),
           role: 'assistant',
@@ -1549,7 +1665,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         addMessage({
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: `Error: ${error.message || 'Failed to communicate with AI. Check your settings.'}`,
+          content: `Error: ${err.message || 'Failed to communicate with AI. Check your settings.'}`,
           timestamp: Date.now(),
           isError: true,
         });
@@ -1570,7 +1686,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
   const exportChat = useCallback(() => {
     try {
-      const text = messages.map((m: any) =>
+      const text = messages.map((m) =>
         `[${new Date(m.timestamp).toLocaleString()}] ${m.role === 'user' ? 'You' : 'AI'}: ${m.content}`
       ).join('\n\n');
       const blob = new Blob([text], { type: 'text/plain' });
@@ -1588,7 +1704,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   }, [messages, projectName]);
 
   const filteredMessages = chatSearch
-    ? messages.filter((m: any) => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
+    ? messages.filter((m) => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
     : messages;
 
   const generateFollowUps = useCallback((): string[] => {
@@ -1686,24 +1802,17 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
               <h3 className="font-display font-bold tracking-wider text-sm">ProtoPulse AI</h3>
             </div>
             <div className="flex gap-1 items-center">
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <StyledTooltip content="Search chat" side="bottom">
                   <button data-testid="chat-search-toggle" onClick={() => setShowSearch(!showSearch)} className={cn("p-1.5 hover:bg-muted transition-colors", showSearch && "text-primary bg-primary/10")}>
                     <Search className="w-4 h-4" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom"><p>Search chat</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
+              </StyledTooltip>
+              <StyledTooltip content="Export chat" side="bottom">
                   <button data-testid="chat-export" onClick={exportChat} className="p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                     <Download className="w-4 h-4" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom"><p>Export chat</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
+              </StyledTooltip>
+              <StyledTooltip content="AI Settings" side="bottom">
                   <button
                     data-testid="settings-button"
                     className={cn("p-1.5 hover:bg-muted transition-colors", showSettings && "text-primary bg-primary/10")}
@@ -1711,17 +1820,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   >
                     <Settings2 className="w-4 h-4" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom"><p>AI Settings</p></TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
+              </StyledTooltip>
+              <StyledTooltip content="Close (Esc)" side="bottom">
                   <button data-testid="chat-close" className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1 md:hidden" onClick={onClose}>
                     <X className="w-4 h-4" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom"><p>Close (Esc)</p></TooltipContent>
-              </Tooltip>
+              </StyledTooltip>
             </div>
           </div>
 
@@ -1793,7 +1897,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   </div>
                 )}
 
-                {filteredMessages.map((msg: any) => (
+                {filteredMessages.map((msg) => (
                   <MessageBubble
                     key={msg.id}
                     msg={msg}
@@ -1895,14 +1999,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                 style={{ minHeight: '44px', maxHeight: '120px' }}
               />
               <div className="absolute left-3 top-3">
-                <Tooltip>
-                  <TooltipTrigger asChild>
+                <StyledTooltip content="Quick actions" side="top">
                     <button type="button" className="flex items-center justify-center" onClick={() => setShowQuickActions(!showQuickActions)}>
                       <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-pointer" />
                     </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Quick actions</p></TooltipContent>
-                </Tooltip>
+                </StyledTooltip>
               </div>
               <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
                 <input
@@ -1941,8 +2042,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   <Mic className="h-4 w-4" />
                 </Button>
                 )}
-                <Tooltip>
-                  <TooltipTrigger asChild>
+                <StyledTooltip content="Send (Enter)" side="top">
                     <Button
                       size="icon"
                       onClick={() => handleSend()}
@@ -1952,9 +2052,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                     >
                       <Send className="w-4 h-4" />
                     </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Send (Enter)</p></TooltipContent>
-                </Tooltip>
+                </StyledTooltip>
               </div>
             </div>
 
@@ -1962,8 +2060,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             {showQuickActions && !isGenerating && (
               <div className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar">
                 {Object.entries(quickActionDescriptions).map(([action, desc]) => (
-                  <Tooltip key={action}>
-                    <TooltipTrigger asChild>
+                  <StyledTooltip key={action} content={desc} side="top">
                       <button
                         onClick={() => handleSend(action)}
                         data-testid={`quick-action-${action.toLowerCase().replace(/\s+/g, '-')}`}
@@ -1972,9 +2069,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                         <Zap className="w-2.5 h-2.5" />
                         {action}
                       </button>
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>{desc}</p></TooltipContent>
-                  </Tooltip>
+                  </StyledTooltip>
                 ))}
               </div>
             )}
@@ -1988,4 +2083,3 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     </>
   );
 }
-

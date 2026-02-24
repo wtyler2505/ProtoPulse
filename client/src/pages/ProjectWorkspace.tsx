@@ -13,7 +13,8 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import { KeyboardShortcutsModal } from '@/components/ui/keyboard-shortcuts-modal';
 
 const tabDescriptions: Record<string, string> = {
   output: 'View build output and system logs',
@@ -88,6 +89,20 @@ function WorkspaceContent() {
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [chatWidth, setChatWidth] = useState(350);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (e.key === '?') {
+        e.preventDefault();
+        setShortcutsOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
 
   const handleSidebarResize = useCallback((delta: number) => {
     setSidebarWidth(w => Math.max(180, Math.min(480, w + delta)));
@@ -97,7 +112,7 @@ function WorkspaceContent() {
     setChatWidth(w => Math.max(280, Math.min(600, w + delta)));
   }, []);
 
-  const tabs: { id: ViewMode; label: string; icon: any }[] = [
+  const tabs: { id: ViewMode; label: string; icon: React.ComponentType<{ className?: string }> | null }[] = [
     { id: 'project_explorer', label: 'Project Explorer', icon: null },
     { id: 'output', label: 'Output', icon: TerminalSquare },
     { id: 'architecture', label: 'Architecture', icon: LayoutGrid },
@@ -117,38 +132,28 @@ function WorkspaceContent() {
         Skip to AI assistant
       </a>
       <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 md:hidden">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              data-testid="mobile-menu-toggle"
-              className="p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-            <p>Open menu</p>
-          </TooltipContent>
-        </Tooltip>
+        <StyledTooltip content="Open menu" side="bottom">
+          <button
+            data-testid="mobile-menu-toggle"
+            className="p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </StyledTooltip>
         <div className="flex items-center gap-2">
           <Layers className="w-4 h-4 text-primary" />
           <span className="font-display font-bold text-sm tracking-tight">ProtoPulse</span>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              data-testid="mobile-chat-toggle"
-              className="p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setChatOpen(true)}
-            >
-              <MessageCircle className="w-5 h-5" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-            <p>Open AI assistant</p>
-          </TooltipContent>
-        </Tooltip>
+        <StyledTooltip content="Open AI assistant" side="bottom">
+          <button
+            data-testid="mobile-chat-toggle"
+            className="p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setChatOpen(true)}
+          >
+            <MessageCircle className="w-5 h-5" />
+          </button>
+        </StyledTooltip>
       </div>
 
       <div className="flex flex-1 min-h-0">
@@ -162,65 +167,49 @@ function WorkspaceContent() {
 
         {!sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
         
-        <main id="main-content" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-[#090a0d]">
+        <main id="main-content" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-background">
           <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden md:flex items-center px-1 gap-0 z-10">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  data-testid="toggle-sidebar"
-                  onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors mr-1"
-                  title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
-                >
-                  {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                <p>Toggle sidebar</p>
-              </TooltipContent>
-            </Tooltip>
+            <StyledTooltip content="Toggle sidebar" side="bottom">
+              <button
+                data-testid="toggle-sidebar"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors mr-1"
+                title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+              >
+                {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+              </button>
+            </StyledTooltip>
             <div className="w-px h-5 bg-border mr-1" />
             {visibleTabs.map((tab) => (
-              <Tooltip key={tab.id}>
-                <TooltipTrigger asChild>
-                  <button
-                    data-testid={`tab-${tab.id}`}
-                    onClick={() => setActiveView(tab.id)}
-                    className={cn(
-                      "h-8 px-4 flex items-center gap-2 text-xs font-medium transition-all relative top-[1px]",
-                      activeView === tab.id
-                        ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[2px] before:bg-primary"
-                        : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"
-                    )}
-                  >
-                    <tab.icon className="w-3.5 h-3.5" />
-                    {tab.label}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                  <p>{tabDescriptions[tab.id] || tab.label}</p>
-                </TooltipContent>
-              </Tooltip>
+              <StyledTooltip key={tab.id} content={tabDescriptions[tab.id] || tab.label} side="bottom">
+                <button
+                  data-testid={`tab-${tab.id}`}
+                  onClick={() => setActiveView(tab.id)}
+                  className={cn(
+                    "h-8 px-4 flex items-center gap-2 text-xs font-medium transition-all relative top-[1px]",
+                    activeView === tab.id
+                      ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[2px] before:bg-primary"
+                      : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"
+                  )}
+                >
+                  {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
+                  {tab.label}
+                </button>
+              </StyledTooltip>
             ))}
             <div className="flex-1 border-b border-border h-full"></div>
             <div className="w-px h-5 bg-border ml-1" />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  data-testid="toggle-chat"
-                  onClick={() => setChatCollapsed(!chatCollapsed)}
-                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
-                  title={chatCollapsed ? "Show chat" : "Hide chat"}
-                >
-                  {chatCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
-                </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                <p>Toggle AI assistant</p>
-              </TooltipContent>
-            </Tooltip>
+            <StyledTooltip content="Toggle AI assistant" side="bottom">
+              <button
+                data-testid="toggle-chat"
+                onClick={() => setChatCollapsed(!chatCollapsed)}
+                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
+                title={chatCollapsed ? "Show chat" : "Hide chat"}
+              >
+                {chatCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
+              </button>
+            </StyledTooltip>
 
-            {/* Theme toggle button to switch between light and dark modes */}
             <div className="ml-2 flex items-center">
               <ThemeToggle />
             </div>
@@ -280,28 +269,25 @@ function WorkspaceContent() {
         </ErrorBoundary>
       </div>
 
+      <KeyboardShortcutsModal open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+
       <div data-testid="mobile-bottom-nav" className="h-14 border-t border-border bg-card/60 backdrop-blur-xl flex items-center justify-around md:hidden">
         {visibleTabs.map((tab) => (
-          <Tooltip key={tab.id}>
-            <TooltipTrigger asChild>
-              <button
-                data-testid={`bottom-nav-${tab.id}`}
-                onClick={() => setActiveView(tab.id)}
-                className={cn(
-                  "flex flex-col items-center gap-1 px-3 py-1.5 transition-colors",
-                  activeView === tab.id
-                    ? "text-primary"
-                    : "text-muted-foreground"
-                )}
-              >
-                <tab.icon className="w-5 h-5" />
-                <span className="hidden sm:block text-[10px] font-medium">{tab.label}</span>
-              </button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top">
-              <p>{tab.label}</p>
-            </TooltipContent>
-          </Tooltip>
+          <StyledTooltip key={tab.id} content={tab.label} side="top">
+            <button
+              data-testid={`bottom-nav-${tab.id}`}
+              onClick={() => setActiveView(tab.id)}
+              className={cn(
+                "flex flex-col items-center gap-1 px-3 py-1.5 transition-colors",
+                activeView === tab.id
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              )}
+            >
+              {tab.icon && <tab.icon className="w-5 h-5" />}
+              <span className="hidden sm:block text-[10px] font-medium">{tab.label}</span>
+            </button>
+          </StyledTooltip>
         ))}
       </div>
     </div>

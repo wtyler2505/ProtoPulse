@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import {
   Search, X, ArrowUpDown, Component,
 } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { cn } from '@/lib/utils';
 
 interface Category {
@@ -48,8 +48,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
           </h3>
           <div className="flex items-center gap-1">
             {onClose && (
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <StyledTooltip content="Close asset library" side="bottom">
                   <button
                     data-testid="asset-manager-close"
                     className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -57,11 +56,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
                   >
                     <X className="w-4 h-4" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                  <p>Close asset library</p>
-                </TooltipContent>
-              </Tooltip>
+              </StyledTooltip>
             )}
           </div>
         </div>
@@ -77,8 +72,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
               data-testid="asset-search"
             />
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
+          <StyledTooltip content={`Sort: ${sortBy === 'name' ? 'Alphabetical' : sortBy === 'category' ? 'By Category' : 'Recently Used'}`} side="bottom">
               <button
                 onClick={cycleSortBy}
                 className="p-1.5 bg-muted/50 border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors flex items-center gap-1"
@@ -87,19 +81,14 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
                 <ArrowUpDown className="w-3.5 h-3.5" />
                 <span className="text-[8px]">{sortLabel}</span>
               </button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-              <p>Sort: {sortBy === 'name' ? 'Alphabetical' : sortBy === 'category' ? 'By Category' : 'Recently Used'}</p>
-            </TooltipContent>
-          </Tooltip>
+          </StyledTooltip>
         </div>
       </div>
       <div className="flex gap-1 p-2 overflow-x-auto no-scrollbar border-b border-border bg-muted/10">
         {categories.map(cat => {
           const counts = getCategoryCount(cat.id);
           return (
-            <Tooltip key={cat.id}>
-              <TooltipTrigger asChild>
+            <StyledTooltip key={cat.id} content={`${cat.label} (${search ? `${counts.filtered}/${counts.total}` : counts.total})`} side="bottom">
                 <button
                   onClick={() => setActiveCategory(cat.id)}
                   className={cn(
@@ -116,11 +105,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
                     {search ? counts.filtered : counts.total}
                   </span>
                 </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                <p>{cat.label} ({search ? `${counts.filtered}/${counts.total}` : counts.total})</p>
-              </TooltipContent>
-            </Tooltip>
+            </StyledTooltip>
           );
         })}
       </div>

@@ -49,7 +49,7 @@ interface AssetGridProps {
   customDesc: string;
   setCustomDesc: (v: string) => void;
   handleCustomSubmit: () => void;
-  categories: { id: string; label: string; icon: any }[];
+  categories: { id: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
   favoritesOpen: boolean;
   setFavoritesOpen: (v: boolean) => void;
   recentOpen: boolean;

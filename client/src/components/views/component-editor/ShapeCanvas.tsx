@@ -894,7 +894,7 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
           } else if (c.type === 'pitch' && c.params.pitch !== undefined) {
             label = `pitch ${c.params.pitch}`;
           } else if (c.type === 'alignment') {
-            const axis = (c.params.axis as string) || 'x';
+            const axis = String(c.params.axis ?? '') || 'x';
             const diff = axis === 'x' ? Math.abs(centers[0].x - centers[1].x) : Math.abs(centers[0].y - centers[1].y);
             label = `align-${axis} \u0394${diff.toFixed(0)}`;
           } else if (c.type === 'symmetric') {

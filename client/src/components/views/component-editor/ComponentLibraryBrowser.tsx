@@ -68,7 +68,7 @@ export default function ComponentLibraryBrowser({ open, onClose, projectId, onFo
       <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col bg-background border-border" data-testid="dialog-library-browser">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-[#00F0FF]" />
+            <Package className="w-5 h-5 text-editor-accent" />
             Component Library
           </DialogTitle>
         </DialogHeader>
@@ -100,7 +100,7 @@ export default function ComponentLibraryBrowser({ open, onClose, projectId, onFo
               data-testid={`filter-category-${cat.toLowerCase()}`}
               className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
                 category === cat
-                  ? 'bg-[#00F0FF]/20 text-[#00F0FF] border border-[#00F0FF]/50'
+                  ? 'bg-editor-accent/20 text-editor-accent border border-editor-accent/50'
                   : 'bg-muted text-muted-foreground hover:text-foreground border border-transparent'
               }`}
               onClick={() => { setCategory(cat); setPage(1); }}
@@ -128,7 +128,7 @@ export default function ComponentLibraryBrowser({ open, onClose, projectId, onFo
                   <div
                     key={entry.id}
                     data-testid={`card-library-${entry.id}`}
-                    className="bg-card border border-border hover:border-[#00F0FF]/50 transition rounded-lg p-3 flex flex-col gap-2"
+                    className="bg-card border border-border hover:border-editor-accent/50 transition rounded-lg p-3 flex flex-col gap-2"
                   >
                     <div className="flex items-start justify-between gap-1">
                       <h4 className="text-sm font-medium truncate flex-1" data-testid={`text-title-${entry.id}`}>{entry.title}</h4>
@@ -167,7 +167,7 @@ export default function ComponentLibraryBrowser({ open, onClose, projectId, onFo
                       variant="ghost"
                       size="sm"
                       data-testid={`button-fork-${entry.id}`}
-                      className="h-7 text-xs mt-auto text-[#00F0FF] hover:bg-[#00F0FF]/10"
+                      className="h-7 text-xs mt-auto text-editor-accent hover:bg-editor-accent/10"
                       disabled={forkMutation.isPending}
                       onClick={() => handleFork(entry.id)}
                     >

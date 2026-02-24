@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "typecheck-changed": {
+      "timeout": 120000
+    },
+    "typecheck-project": {
+      "timeout": 120000
+    }
+  }
+}

@@ -2,11 +2,33 @@ import { Settings2, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AI_MODELS } from './constants';
 
+interface AIModel {
+  id: string;
+  label: string;
+}
+
+interface SettingsPanelProps {
+  aiProvider: 'anthropic' | 'gemini';
+  setAiProvider: (provider: 'anthropic' | 'gemini') => void;
+  aiModel: string;
+  setAiModel: (model: string) => void;
+  aiApiKey: string;
+  setAiApiKey: (key: string) => void;
+  showApiKey: boolean;
+  setShowApiKey: (show: boolean) => void;
+  aiTemperature: number;
+  setAiTemperature: (temp: number) => void;
+  customSystemPrompt: string;
+  setCustomSystemPrompt: (prompt: string) => void;
+  apiKeyValid: () => boolean;
+  onClose: () => void;
+}
+
 export default function SettingsPanel({
   aiProvider, setAiProvider, aiModel, setAiModel, aiApiKey, setAiApiKey,
   showApiKey, setShowApiKey, aiTemperature, setAiTemperature,
   customSystemPrompt, setCustomSystemPrompt, apiKeyValid, onClose,
-}: any) {
+}: SettingsPanelProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
       <div className="flex items-center gap-2 mb-2">
@@ -49,7 +71,7 @@ export default function SettingsPanel({
             onChange={(e) => setAiModel(e.target.value)}
             className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus:outline-none focus:border-primary"
           >
-            {AI_MODELS[aiProvider as keyof typeof AI_MODELS].map((m: any) => (
+            {AI_MODELS[aiProvider as keyof typeof AI_MODELS].map((m: AIModel) => (
               <option key={m.id} value={m.id} className="bg-background text-foreground">{m.label}</option>
             ))}
           </select>

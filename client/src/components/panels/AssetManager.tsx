@@ -7,6 +7,7 @@ import {
 import { cn } from '@/lib/utils';
 import AssetSearch from './asset-manager/AssetSearch';
 import AssetGrid from './asset-manager/AssetGrid';
+import { STORAGE_KEYS } from '@/lib/constants';
 
 interface Asset {
   id: string;
@@ -63,13 +64,13 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
   const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
 
   const [favorites, setFavorites] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('asset-favorites') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSET_FAVORITES) || '[]'); } catch { return []; }
   });
   const [recentlyUsed, setRecentlyUsed] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('asset-recent') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSET_RECENT) || '[]'); } catch { return []; }
   });
   const [customAssets, setCustomAssets] = useState<Asset[]>(() => {
-    try { return JSON.parse(localStorage.getItem('asset-custom') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.ASSET_CUSTOM) || '[]'); } catch { return []; }
   });
 
   const [favoritesOpen, setFavoritesOpen] = useState(true);
@@ -85,9 +86,9 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
 
   const allAssets: Asset[] = [...builtInAssets, ...customAssets];
 
-  useEffect(() => { try { localStorage.setItem('asset-favorites', JSON.stringify(favorites)); } catch {} }, [favorites]);
-  useEffect(() => { try { localStorage.setItem('asset-recent', JSON.stringify(recentlyUsed)); } catch {} }, [recentlyUsed]);
-  useEffect(() => { try { localStorage.setItem('asset-custom', JSON.stringify(customAssets)); } catch {} }, [customAssets]);
+  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.ASSET_FAVORITES, JSON.stringify(favorites)); } catch {} }, [favorites]);
+  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.ASSET_RECENT, JSON.stringify(recentlyUsed)); } catch {} }, [recentlyUsed]);
+  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.ASSET_CUSTOM, JSON.stringify(customAssets)); } catch {} }, [customAssets]);
 
   const addToRecent = useCallback((assetId: string) => {
     setRecentlyUsed(prev => {
@@ -222,7 +223,7 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
   }, [cleanupDragGhost, handleResize, stopResize]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       const isInput = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 
@@ -249,15 +250,15 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
         handleAddNode(asset.type, asset.name, asset.id);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [search, showCustomForm, expandedAsset, filteredAssets, focusedIndex, handleAddNode]);
 
   useEffect(() => { setFocusedIndex(-1); }, [search, activeCategory]);
 
-  const cycleSortBy = () => {
+  const cycleSortBy = useCallback(() => {
     setSortBy(prev => prev === 'name' ? 'category' : prev === 'category' ? 'recent' : 'name');
-  };
+  }, []);
 
   const sortLabel = sortBy === 'name' ? 'A-Z' : sortBy === 'category' ? 'Cat' : 'Recent';
 

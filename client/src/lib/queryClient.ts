@@ -50,7 +50,7 @@ export const getQueryFn: <T>(options: {
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      return null as never;
     }
 
     await throwIfResNotOk(res);
@@ -60,7 +60,7 @@ export const getQueryFn: <T>(options: {
       throw new Error(`API returned empty response for ${url}`);
     }
 
-    let data: any;
+    let data: unknown;
     try {
       data = JSON.parse(text);
     } catch {
@@ -71,7 +71,7 @@ export const getQueryFn: <T>(options: {
       throw new Error(`API returned null/undefined for ${url}`);
     }
 
-    return data;
+    return data as never;
   };
 
 /**

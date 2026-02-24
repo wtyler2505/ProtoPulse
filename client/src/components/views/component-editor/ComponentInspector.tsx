@@ -372,7 +372,7 @@ function ConstraintSection({ view }: { view: CanvasView }) {
         {relevantConstraints.map(c => (
           <div key={c.id} data-testid={`constraint-${c.id}`}
             className="flex items-center gap-1 p-1.5 rounded bg-muted/30 border border-border text-xs">
-            <span className={`font-medium ${c.enabled ? 'text-[#00F0FF]' : 'text-muted-foreground line-through'}`}>
+            <span className={`font-medium ${c.enabled ? 'text-editor-accent' : 'text-muted-foreground line-through'}`}>
               {c.type}
             </span>
             {c.params.distance !== undefined && (
@@ -431,7 +431,7 @@ function ConstraintSection({ view }: { view: CanvasView }) {
               className="ml-auto p-0.5 hover:text-foreground text-muted-foreground"
               onClick={() => handleToggle(c.id, !c.enabled)}
               title={c.enabled ? 'Disable constraint' : 'Enable constraint'}>
-              {c.enabled ? <ToggleRight className="w-3.5 h-3.5 text-[#00F0FF]" /> : <ToggleLeft className="w-3.5 h-3.5" />}
+              {c.enabled ? <ToggleRight className="w-3.5 h-3.5 text-editor-accent" /> : <ToggleLeft className="w-3.5 h-3.5" />}
             </button>
             <button
               data-testid={`button-delete-constraint-${c.id}`}

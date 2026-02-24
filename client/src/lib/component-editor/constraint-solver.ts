@@ -32,7 +32,7 @@ function findShape(shapes: Shape[], id: string): Shape | undefined {
 function solveDistance(shapes: Shape[], constraint: Constraint, anchorId: string): string[] {
   const adjusted: string[] = [];
   const distance = Number(constraint.params.distance) || 0;
-  const axis = (constraint.params.axis as string) || 'any';
+  const axis = String(constraint.params.axis ?? '') || 'any';
 
   const anchor = findShape(shapes, anchorId);
   if (!anchor) return adjusted;
@@ -87,7 +87,7 @@ function solveDistance(shapes: Shape[], constraint: Constraint, anchorId: string
 
 function solveAlignment(shapes: Shape[], constraint: Constraint, anchorId: string): string[] {
   const adjusted: string[] = [];
-  const axis = (constraint.params.axis as string) || 'x';
+  const axis = String(constraint.params.axis ?? '') || 'x';
 
   const anchor = findShape(shapes, anchorId);
   if (!anchor) return adjusted;
@@ -119,7 +119,7 @@ function solveAlignment(shapes: Shape[], constraint: Constraint, anchorId: strin
 function solvePitch(shapes: Shape[], constraint: Constraint, anchorId: string): string[] {
   const adjusted: string[] = [];
   const pitch = Number(constraint.params.pitch) || 0;
-  const axis = (constraint.params.axis as string) || 'x';
+  const axis = String(constraint.params.axis ?? '') || 'x';
 
   const anchor = findShape(shapes, anchorId);
   if (!anchor) return adjusted;
@@ -157,7 +157,7 @@ function solvePitch(shapes: Shape[], constraint: Constraint, anchorId: string): 
 
 function solveSymmetric(shapes: Shape[], constraint: Constraint, anchorId: string): string[] {
   const adjusted: string[] = [];
-  const axis = (constraint.params.axis as string) || 'x';
+  const axis = String(constraint.params.axis ?? '') || 'x';
 
   const anchor = findShape(shapes, anchorId);
   if (!anchor) return adjusted;
@@ -190,7 +190,7 @@ function solveSymmetric(shapes: Shape[], constraint: Constraint, anchorId: strin
 
 function solveEqual(shapes: Shape[], constraint: Constraint, anchorId: string): string[] {
   const adjusted: string[] = [];
-  const property = (constraint.params.property as string) || 'width';
+  const property = String(constraint.params.property ?? '') || 'width';
 
   const anchor = findShape(shapes, anchorId);
   if (!anchor) return adjusted;

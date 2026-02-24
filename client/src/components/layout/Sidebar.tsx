@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { useProject } from '@/lib/project-context';
+import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react';
+import { useProject, ViewMode, BomItem, ValidationIssue, ProjectHistoryItem } from '@/lib/project-context';
+import type { Node, Edge } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import {
   LayoutGrid,
@@ -17,7 +18,7 @@ import {
   Pencil,
   Check,
 } from 'lucide-react';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { copyToClipboard } from '@/lib/clipboard';
 import { SETTINGS_SAVE_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
 import ComponentTree from './sidebar/ComponentTree';
@@ -55,7 +56,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
   useEffect(() => { setSettingsName(projectName); }, [projectName]);
   useEffect(() => { setSettingsDesc(projectDescription); }, [projectDescription]);
 
-  const navItems: { icon: typeof LayoutGrid; view: string; label: string }[] = [
+  const navItems: { icon: typeof LayoutGrid; view: ViewMode; label: string }[] = [
     { icon: LayoutGrid, view: 'architecture', label: 'Architecture' },
     { icon: Cpu, view: 'component_editor', label: 'Component Editor' },
     { icon: Package, view: 'procurement', label: 'Procurement' },
@@ -77,8 +78,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
         </div>
         <div className="flex-1 flex flex-col items-center py-3 gap-1">
           {navItems.map((item) => (
-            <Tooltip key={item.view}>
-              <TooltipTrigger asChild>
+            <StyledTooltip key={item.view} content={item.label} side="right">
                 <button
                   data-testid={`sidebar-icon-${item.view}`}
                   title={item.label}
@@ -90,21 +90,16 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
                   )}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setActiveView(item.view as any);
+                    setActiveView(item.view);
                   }}
                 >
                   <item.icon className="w-4 h-4" />
                 </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="right">
-                <p>{item.label}</p>
-              </TooltipContent>
-            </Tooltip>
+            </StyledTooltip>
           ))}
         </div>
         <div className="pb-3">
-          <Tooltip>
-            <TooltipTrigger asChild>
+          <StyledTooltip content="Open project settings" side="right">
               <button
                 data-testid="sidebar-icon-settings"
                 title="Settings"
@@ -113,11 +108,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
               >
                 <Settings className="w-4 h-4" />
               </button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="right">
-              <p>Open project settings</p>
-            </TooltipContent>
-          </Tooltip>
+          </StyledTooltip>
         </div>
       </div>
     );
@@ -149,8 +140,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
               <span className="font-display font-bold text-lg leading-none tracking-tight truncate">ProtoPulse</span>
               <span className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mt-1">System Architect</span>
             </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <StyledTooltip content="Close sidebar" side="bottom">
                 <button
                   data-testid="sidebar-close"
                   className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors md:hidden"
@@ -158,11 +148,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
                 >
                   <X className="w-4 h-4" />
                 </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                <p>Close sidebar</p>
-              </TooltipContent>
-            </Tooltip>
+            </StyledTooltip>
           </div>
           <SidebarContent
             activeView={activeView}
@@ -207,6 +193,44 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
   );
 }
 
+interface SidebarContentProps {
+  activeView: ViewMode;
+  setActiveView: (view: ViewMode) => void;
+  history: ProjectHistoryItem[];
+  blocksExpanded: boolean;
+  setBlocksExpanded: (v: boolean) => void;
+  showSettings: boolean;
+  setShowSettings: (v: boolean) => void;
+  projectName: string;
+  projectDescription: string;
+  addOutputLog: (log: string) => void;
+  nodes: Node[];
+  edges: Edge[];
+  bom: BomItem[];
+  issues: ValidationIssue[];
+  setNodes: (nodes: Node[]) => void;
+  selectedNodeId: string | null;
+  focusNode: (nodeId: string) => void;
+  setProjectName: (name: string) => void;
+  setProjectDescription: (desc: string) => void;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  editingName: boolean;
+  setEditingName: (v: boolean) => void;
+  editNameValue: string;
+  setEditNameValue: (v: string) => void;
+  timelineExpanded: boolean;
+  setTimelineExpanded: (v: boolean) => void;
+  expandedCategories: Record<string, boolean>;
+  setExpandedCategories: Dispatch<SetStateAction<Record<string, boolean>>>;
+  settingsName: string;
+  setSettingsName: (v: string) => void;
+  settingsDesc: string;
+  setSettingsDesc: (v: string) => void;
+  settingsSaved: boolean;
+  setSettingsSaved: (v: boolean) => void;
+}
+
 function SidebarContent({
   activeView, setActiveView, history,
   blocksExpanded, setBlocksExpanded,
@@ -221,7 +245,7 @@ function SidebarContent({
   settingsName, setSettingsName,
   settingsDesc, setSettingsDesc,
   settingsSaved, setSettingsSaved,
-}: any) {
+}: SidebarContentProps) {
   const editNameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -351,8 +375,7 @@ function SidebarContent({
       </div>
 
       <div className="p-3 border-t border-sidebar-border bg-sidebar/20">
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <StyledTooltip content="Open project settings" side="right">
             <button
               data-testid="button-project-settings"
               className="w-full flex items-center gap-2 p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
@@ -361,11 +384,7 @@ function SidebarContent({
               <Settings className="w-4 h-4" />
               <span className="text-xs font-medium">Project Settings</span>
             </button>
-          </TooltipTrigger>
-          <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="right">
-            <p>Open project settings</p>
-          </TooltipContent>
-        </Tooltip>
+        </StyledTooltip>
         {showSettings && (
           <div className="px-3 pb-3 space-y-2 border-t border-border pt-2 mt-1 bg-muted/10 backdrop-blur">
             <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Project Name</div>

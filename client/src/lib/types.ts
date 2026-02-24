@@ -48,5 +48,5 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
-  attachments?: any[];
+  attachments?: Array<{ type: string; url?: string; name?: string; data?: unknown }>;
 }

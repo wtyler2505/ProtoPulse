@@ -3,7 +3,7 @@ import { ComponentEditorProvider, useComponentEditor } from '@/lib/component-edi
 import { useComponentParts, useCreateComponentPart, useUpdateComponentPart, useDeleteComponentPart, usePublishToLibrary } from '@/lib/component-editor/hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProject, PROJECT_ID } from '@/lib/project-context';
-import type { EditorViewType, PartMeta } from '@shared/component-types';
+import type { EditorViewType, PartMeta, Connector, Bus, PartViews, Constraint } from '@shared/component-types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -234,11 +234,11 @@ function ComponentEditorContent() {
       dispatch({
         type: 'LOAD_PART',
         payload: {
-          meta: part.meta as any,
-          connectors: part.connectors as any ?? [],
-          buses: part.buses as any ?? [],
-          views: part.views as any,
-          constraints: part.constraints as any ?? [],
+          meta: part.meta as PartMeta,
+          connectors: part.connectors as Connector[] ?? [],
+          buses: part.buses as Bus[] ?? [],
+          views: part.views as PartViews,
+          constraints: part.constraints as Constraint[] ?? [],
         },
       });
       if (targetId) {
@@ -279,7 +279,7 @@ function ComponentEditorContent() {
   }, [state.present, partId, updateMutation, createMutation, dispatch, toast]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && e.key === 's') {
         e.preventDefault();
@@ -295,8 +295,8 @@ function ComponentEditorContent() {
         redo();
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleSave, undo, redo]);
 
   useEffect(() => {
@@ -438,8 +438,9 @@ function ComponentEditorContent() {
         },
       });
       toast({ title: 'Imported', description: `Component "${created.meta?.title || 'Untitled'}" imported successfully.` });
-    } catch (err: any) {
-      toast({ title: 'Import failed', description: err.message || 'Could not import FZPZ file.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not import FZPZ file.';
+      toast({ title: 'Import failed', description: message, variant: 'destructive' });
     } finally {
       setIsImporting(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -470,8 +471,9 @@ function ComponentEditorContent() {
         dispatch({ type: 'SET_EDITOR_VIEW', payload: view });
       }
       toast({ title: 'SVG Imported', description: `Imported ${shapes.length} shape(s) into ${view} view.` });
-    } catch (err: any) {
-      toast({ title: 'SVG Import failed', description: err.message || 'Could not import SVG file.', variant: 'destructive' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Could not import SVG file.';
+      toast({ title: 'SVG Import failed', description: message, variant: 'destructive' });
     } finally {
       setIsImportingSvg(false);
       if (svgFileInputRef.current) svgFileInputRef.current.value = '';
@@ -532,11 +534,11 @@ function ComponentEditorContent() {
     dispatch({
       type: 'LOAD_PART',
       payload: {
-        meta: part.meta as any,
-        connectors: part.connectors as any ?? [],
-        buses: part.buses as any ?? [],
-        views: part.views as any,
-        constraints: part.constraints as any ?? [],
+        meta: part.meta as PartMeta,
+        connectors: part.connectors as Connector[] ?? [],
+        buses: part.buses as Bus[] ?? [],
+        views: part.views as PartViews,
+        constraints: part.constraints as Constraint[] ?? [],
       },
     });
   }, [state.ui.isDirty, partId, handleSave, dispatch]);
@@ -665,7 +667,7 @@ function ComponentEditorContent() {
             size="sm"
             data-testid="button-drc"
             onClick={() => setDrcOpen((v) => !v)}
-            className={`h-8 gap-1 relative ${drcOpen ? 'text-[#00F0FF] bg-[#00F0FF]/10' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`h-8 gap-1 relative ${drcOpen ? 'text-editor-accent bg-editor-accent/10' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <Shield className="w-4 h-4" />
             <span className="text-xs">DRC</span>
@@ -687,13 +689,13 @@ function ComponentEditorContent() {
             size="sm"
             data-testid="button-history"
             onClick={() => setHistoryOpen((v) => !v)}
-            className={`h-8 gap-1 relative ${historyOpen ? 'text-[#00F0FF] bg-[#00F0FF]/10' : 'text-muted-foreground hover:text-foreground'}`}
+            className={`h-8 gap-1 relative ${historyOpen ? 'text-editor-accent bg-editor-accent/10' : 'text-muted-foreground hover:text-foreground'}`}
           >
             <History className="w-4 h-4" />
             <span className="text-xs">History</span>
             {(state.past.length + state.future.length) > 0 && (
               <span
-                className="absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 flex items-center justify-center rounded-full bg-[#00F0FF]/20 text-[#00F0FF] font-medium"
+                className="absolute -top-1 -right-1 text-[9px] min-w-[16px] h-4 flex items-center justify-center rounded-full bg-editor-accent/20 text-editor-accent font-medium"
                 data-testid="badge-history-count"
               >
                 {state.past.length + state.future.length}
@@ -759,13 +761,13 @@ function ComponentEditorContent() {
                 data-testid={`part-item-${part.id}`}
                 className={`w-full text-left px-3 py-2 text-sm border-b border-border/50 transition-colors ${
                   partId === part.id
-                    ? 'bg-[#00F0FF]/10 text-[#00F0FF] border-l-2 border-l-[#00F0FF]'
+                    ? 'bg-editor-accent/10 text-editor-accent border-l-2 border-l-editor-accent'
                     : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                 }`}
                 onClick={() => handleSwitchPart(part)}
               >
-                <div className="font-medium truncate">{(part.meta as any)?.title || `Part #${part.id}`}</div>
-                <div className="text-xs opacity-60 truncate">{(part.meta as any)?.family || 'No family'}</div>
+                <div className="font-medium truncate">{(part.meta as PartMeta)?.title || `Part #${part.id}`}</div>
+                <div className="text-xs opacity-60 truncate">{(part.meta as PartMeta)?.family || 'No family'}</div>
               </button>
             ))}
           </div>
@@ -863,7 +865,7 @@ function ComponentEditorContent() {
               data-testid="button-confirm-publish"
               onClick={handleConfirmPublish}
               disabled={publishMutation.isPending}
-              className="bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80"
+              className="bg-editor-accent text-black hover:bg-editor-accent/80"
             >
               {publishMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
               Publish

@@ -1,3 +1,4 @@
+import type { Node } from '@xyflow/react';
 import {
   ChevronRight,
   ChevronDown,
@@ -23,13 +24,13 @@ const TYPE_CONFIG: Record<string, { label: string; icon: typeof Cpu }> = {
 };
 
 interface ComponentTreeProps {
-  nodes: any[];
+  nodes: Node[];
   searchQuery: string;
   selectedNodeId: string | null;
   expandedCategories: Record<string, boolean>;
   setExpandedCategories: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   focusNode: (id: string) => void;
-  setNodes: (nodes: any[]) => void;
+  setNodes: (nodes: Node[]) => void;
   addOutputLog: (msg: string) => void;
 }
 
@@ -49,9 +50,9 @@ export default function ComponentTree({
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const groupedNodes: Record<string, any[]> = {};
-  (nodes || []).forEach((node: any) => {
-    const type = node.data?.type || 'generic';
+  const groupedNodes: Record<string, Node[]> = {};
+  (nodes || []).forEach((node) => {
+    const type = String(node.data?.type || 'generic');
     const key = TYPE_CONFIG[type] ? type : 'generic';
     if (!groupedNodes[key]) groupedNodes[key] = [];
     groupedNodes[key].push(node);
@@ -62,8 +63,8 @@ export default function ComponentTree({
 
   const query = searchQuery.toLowerCase().trim();
   const filteredCategories = activeCategories.map(cat => {
-    const filtered = groupedNodes[cat].filter((n: any) =>
-      !query || (n.data?.label || '').toLowerCase().includes(query)
+    const filtered = groupedNodes[cat].filter((n) =>
+      !query || String(n.data?.label || '').toLowerCase().includes(query)
     );
     return { cat, nodes: filtered };
   }).filter(c => c.nodes.length > 0);
@@ -100,7 +101,7 @@ export default function ComponentTree({
             </div>
             {expanded && (
               <div className="pl-6 space-y-0.5">
-                {catNodes.map((node: any) => (
+                {catNodes.map((node) => (
                   <ContextMenu key={node.id}>
                     <ContextMenuTrigger asChild>
                       <div
@@ -112,20 +113,20 @@ export default function ComponentTree({
                             : "text-muted-foreground hover:text-primary hover:bg-muted/50"
                         )}
                         draggable
-                        onDragStart={(e) => onDragStart(e, node.data?.type || cat, node.data?.label || node.id)}
+                        onDragStart={(e) => onDragStart(e, String(node.data?.type || cat), String(node.data?.label || node.id))}
                         onClick={() => focusNode(node.id)}
                         style={{ cursor: 'grab' }}
                       >
                         <GripVertical className="w-3 h-3 opacity-0 group-hover/node:opacity-50 shrink-0" />
                         <div className="w-1 h-1 bg-muted-foreground/50 shrink-0"></div>
-                        <span className="truncate">{node.data?.label || node.id}</span>
+                        <span className="truncate">{String(node.data?.label || node.id)}</span>
                       </div>
                     </ContextMenuTrigger>
                     <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
                       <ContextMenuItem onSelect={() => focusNode(node.id)}>Focus in Architecture</ContextMenuItem>
-                      <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent((node.data?.label || node.id) + ' datasheet'), '_blank', 'noopener,noreferrer')}>Search Datasheet</ContextMenuItem>
-                      <ContextMenuItem onSelect={() => { copyToClipboard(node.data?.label || node.id); addOutputLog('[SIDEBAR] Copied: ' + (node.data?.label || node.id)); }}>Copy Name</ContextMenuItem>
-                      <ContextMenuItem onSelect={() => { if (window.confirm('Remove this node from the design? This cannot be undone.')) { setNodes(nodes.filter((n: any) => n.id !== node.id)); addOutputLog('[SIDEBAR] Removed from design: ' + (node.data?.label || node.id)); } }}>Remove from design</ContextMenuItem>
+                      <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(String(node.data?.label || node.id) + ' datasheet'), '_blank', 'noopener,noreferrer')}>Search Datasheet</ContextMenuItem>
+                      <ContextMenuItem onSelect={() => { copyToClipboard(String(node.data?.label || node.id)); addOutputLog('[SIDEBAR] Copied: ' + String(node.data?.label || node.id)); }}>Copy Name</ContextMenuItem>
+                      <ContextMenuItem onSelect={() => { if (window.confirm('Remove this node from the design? This cannot be undone.')) { setNodes(nodes.filter((n) => n.id !== node.id)); addOutputLog('[SIDEBAR] Removed from design: ' + String(node.data?.label || node.id)); } }}>Remove from design</ContextMenuItem>
                     </ContextMenuContent>
                   </ContextMenu>
                 ))}

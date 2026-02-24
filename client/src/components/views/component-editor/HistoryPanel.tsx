@@ -81,7 +81,7 @@ export default function HistoryPanel() {
                 onClick={() => handleClick(entry.index)}
                 className={`w-full text-left px-3 flex items-center gap-2 transition-colors ${
                   entry.type === 'current'
-                    ? 'bg-[#00F0FF]/10 border-l-2 border-[#00F0FF]'
+                    ? 'bg-editor-accent/10 border-l-2 border-editor-accent'
                     : entry.type === 'future'
                       ? 'opacity-40 border-l-2 border-dotted border-muted-foreground/30 hover:opacity-60 cursor-pointer'
                       : 'opacity-60 hover:opacity-90 hover:bg-muted/50 cursor-pointer'
@@ -92,14 +92,14 @@ export default function HistoryPanel() {
                 <div className="flex-1 min-w-0 flex items-center gap-1.5">
                   <span
                     className={`text-[11px] truncate ${
-                      entry.type === 'current' ? 'text-[#00F0FF] font-medium' : 'text-foreground/80'
+                      entry.type === 'current' ? 'text-editor-accent font-medium' : 'text-foreground/80'
                     }`}
                   >
                     {entry.label}
                   </span>
                   {entry.type === 'current' && (
                     <span
-                      className="text-[9px] px-1 py-px rounded bg-[#00F0FF]/20 text-[#00F0FF] font-medium shrink-0"
+                      className="text-[9px] px-1 py-px rounded bg-editor-accent/20 text-editor-accent font-medium shrink-0"
                       data-testid="badge-current"
                     >
                       Current

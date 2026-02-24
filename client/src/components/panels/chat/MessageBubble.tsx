@@ -2,9 +2,14 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ACTION_LABELS, DESTRUCTIVE_ACTIONS } from './constants';
 import type { ChatMessage } from '@/lib/project-context';
+
+interface AIAction {
+  type: string;
+  [key: string]: unknown;
+}
 
 export function MarkdownContent({ content }: { content: string }) {
   return (
@@ -51,7 +56,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
   onRegenerate?: () => void;
   onRetry?: () => void;
   isLast: boolean;
-  pendingActions: { actions: any[]; messageId: string } | null;
+  pendingActions: { actions: AIAction[]; messageId: string } | null;
   onAcceptActions: () => void;
   onRejectActions: () => void;
   tokenInfo?: {input: number; output: number; cost: number} | null;
@@ -91,7 +96,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
 
         {msg.actions && msg.actions.length > 0 && !pendingActions && (
           <div className="flex flex-wrap gap-1 px-1">
-            {msg.actions.map((action: any, idx: number) => (
+            {msg.actions.map((action, idx) => (
               <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 border border-primary/20 text-[10px] text-primary">
                 <CheckCircle2 className="w-2.5 h-2.5" />
                 {ACTION_LABELS[action.type] || action.type}
@@ -107,7 +112,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
               Confirm destructive actions
             </div>
             <div className="flex flex-wrap gap-1">
-              {pendingActions.actions.map((action: any, idx: number) => (
+              {pendingActions.actions.map((action, idx) => (
                 <span key={idx} className={cn(
                   "inline-flex items-center gap-1 px-2 py-0.5 text-[10px] border",
                   DESTRUCTIVE_ACTIONS.includes(action.type) ? "border-amber-500/30 bg-amber-500/10 text-amber-400" : "border-primary/20 bg-primary/10 text-primary"
@@ -132,8 +137,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           <div className="flex gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <StyledTooltip content="Copy" side="top">
                 <button
                   onClick={() => onCopy(msg.id, msg.content)}
                   data-testid={`copy-msg-${msg.id}`}
@@ -141,28 +145,20 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
                 >
                   {copiedId === msg.id ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                 </button>
-              </TooltipTrigger>
-              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Copy</p></TooltipContent>
-            </Tooltip>
+            </StyledTooltip>
             {onRegenerate && isLast && (
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <StyledTooltip content="Regenerate" side="top">
                   <button onClick={onRegenerate} data-testid="regenerate-msg" className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
                     <RefreshCw className="w-3 h-3" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Regenerate</p></TooltipContent>
-              </Tooltip>
+              </StyledTooltip>
             )}
             {onRetry && (
-              <Tooltip>
-                <TooltipTrigger asChild>
+              <StyledTooltip content="Retry" side="top">
                   <button onClick={onRetry} data-testid="retry-msg" className="p-1 hover:bg-muted text-destructive/70 hover:text-destructive transition-colors">
                     <RefreshCw className="w-3 h-3" />
                   </button>
-                </TooltipTrigger>
-                <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top"><p>Retry</p></TooltipContent>
-              </Tooltip>
+              </StyledTooltip>
             )}
           </div>
         </div>

@@ -1,11 +1,11 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useProject, PROJECT_ID } from '@/lib/project-context';
-import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, MessageSquarePlus } from 'lucide-react';
+import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, MessageSquarePlus, Copy, Pencil, Check, X } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { PartMeta } from '@shared/component-types';
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@/lib/project-context';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -15,47 +15,46 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-
-const supplierUrls: Record<string, string> = {
-  'Mouser': 'https://www.mouser.com/Search/Refine?Keyword=',
-  'Digi-Key': 'https://www.digikey.com/en/products/result?keywords=',
-  'LCSC': 'https://www.lcsc.com/search?q=',
-};
-
-const goalDescriptions: Record<string, string> = {
-  'Cost': 'Minimize total cost',
-  'Power': 'Minimize power consumption',
-  'Size': 'Minimize board footprint',
-  'Avail': 'Maximize component availability',
-};
+import { STORAGE_KEYS, DEFAULT_PREFERRED_SUPPLIERS, OPTIMIZATION_GOALS, getSupplierSearchUrl, type SupplierName } from '@/lib/constants';
+import { buildCSV, downloadBlob } from '@/lib/csv';
 
 export default function ProcurementView() {
-  const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, addOutputLog } = useProject();
+  const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem, addOutputLog } = useProject();
   const { toast } = useToast();
   const { data: componentParts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
   const [showSettings, setShowSettings] = useState(false);
   const [showComponentRef, setShowComponentRef] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [optimizationGoal, setOptimizationGoal] = useState('Cost');
+  const [optimizationGoal, setOptimizationGoal] = useState<string>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.OPTIMIZATION_GOAL);
+      if (stored && Object.hasOwn(OPTIMIZATION_GOALS, stored)) return stored;
+    } catch { /* fall through to default */ }
+    return 'Cost';
+  });
   const [showSupplierEdit, setShowSupplierEdit] = useState(false);
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
   const [preferredSuppliers, setPreferredSuppliers] = useState<Record<string, boolean>>(() => {
     try {
-      const stored = localStorage.getItem('protopulse_preferred_suppliers');
+      const stored = localStorage.getItem(STORAGE_KEYS.PREFERRED_SUPPLIERS);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (typeof parsed === 'object' && parsed !== null) return parsed;
       }
     } catch { /* fall through to default */ }
-    return { 'Mouser': true, 'Digi-Key': true, 'LCSC': false };
+    return { ...DEFAULT_PREFERRED_SUPPLIERS };
   });
+  const updateOptimizationGoal = useCallback((goal: string) => {
+    setOptimizationGoal(goal);
+    try { localStorage.setItem(STORAGE_KEYS.OPTIMIZATION_GOAL, goal); } catch { /* quota exceeded, silently fail */ }
+  }, []);
   const updatePreferredSuppliers = useCallback((updater: (prev: Record<string, boolean>) => Record<string, boolean>) => {
     setPreferredSuppliers(prev => {
       const next = updater(prev);
-      try { localStorage.setItem('protopulse_preferred_suppliers', JSON.stringify(next)); } catch { /* quota exceeded, silently fail */ }
+      try { localStorage.setItem(STORAGE_KEYS.PREFERRED_SUPPLIERS, JSON.stringify(next)); } catch { /* quota exceeded, silently fail */ }
       return next;
     });
   }, []);
@@ -73,35 +72,59 @@ export default function ProcurementView() {
 
   const totalCost = filteredBom.reduce((acc, item) => acc + Number(item.totalPrice), 0);
 
-  const handleExportCSV = () => {
+  const handleExportCSV = useCallback(() => {
     try {
-      const escapeCSV = (val: string | number) => {
-        const s = String(val);
-        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
-          return '"' + s.replace(/"/g, '""') + '"';
-        }
-        return s;
-      };
       const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Stock', 'Status'];
       const rows = filteredBom.map(item => [
-        escapeCSV(item.partNumber), escapeCSV(item.manufacturer), escapeCSV(item.description), escapeCSV(item.quantity),
-        escapeCSV(Number(item.unitPrice).toFixed(4)), escapeCSV(Number(item.totalPrice).toFixed(2)), escapeCSV(item.supplier),
-        escapeCSV(item.stock), escapeCSV(item.status)
+        item.partNumber, item.manufacturer, item.description, item.quantity,
+        Number(item.unitPrice).toFixed(4), Number(item.totalPrice).toFixed(2), item.supplier,
+        item.stock, item.status,
       ]);
-      const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'bom_export.csv';
-      a.click();
-      URL.revokeObjectURL(url);
+      const csv = buildCSV(headers, rows);
+      downloadBlob(new Blob([csv], { type: 'text/csv' }), 'bom_export.csv');
       toast({ title: 'Export Complete', description: 'BOM exported as CSV file.' });
     } catch (err) {
       console.warn('Export failed:', err);
       toast({ title: 'Export Failed', description: 'Could not export CSV. Please try again.', variant: 'destructive' });
     }
-  };
+  }, [filteredBom, toast]);
+
+  // ── Inline editing state ──
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValues, setEditValues] = useState({ partNumber: '', manufacturer: '', description: '', quantity: 1, unitPrice: 0, supplier: 'Digi-Key' });
+
+  const startEdit = useCallback((item: BomItem) => {
+    setEditingId(Number(item.id));
+    setEditValues({
+      partNumber: item.partNumber,
+      manufacturer: item.manufacturer,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: Number(item.unitPrice),
+      supplier: item.supplier,
+    });
+  }, []);
+
+  const saveEdit = useCallback(() => {
+    if (editingId === null) return;
+    updateBomItem(editingId, {
+      partNumber: editValues.partNumber.trim(),
+      manufacturer: editValues.manufacturer.trim() || 'Unknown',
+      description: editValues.description.trim(),
+      quantity: Math.max(1, editValues.quantity),
+      unitPrice: Math.max(0, editValues.unitPrice),
+      supplier: editValues.supplier as 'Digi-Key' | 'Mouser' | 'LCSC' | 'Unknown',
+    });
+    toast({ title: 'Item Updated', description: `Updated "${editValues.partNumber.trim()}"` });
+    setEditingId(null);
+  }, [editingId, editValues, updateBomItem, toast]);
+
+  const cancelEdit = useCallback(() => { setEditingId(null); }, []);
+
+  const handleEditKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); saveEdit(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+  }, [saveEdit, cancelEdit]);
 
   const defaultNewItem: { partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string } = { partNumber: '', manufacturer: '', description: '', quantity: 1, unitPrice: 0, supplier: 'Digi-Key' };
   const [newItem, setNewItem] = useState(defaultNewItem);
@@ -145,39 +168,29 @@ export default function ProcurementView() {
               className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus:outline-none focus:border-primary w-full sm:w-64 transition-all"
             />
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className={showSettings ? "bg-primary/10 border-primary text-primary" : ""}
-                onClick={() => setShowSettings(!showSettings)}
-                data-testid="button-toggle-settings"
-              >
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
-                Cost Optimisation
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-              <p>Configure BOM optimization settings</p>
-            </TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => { resetNewItem(); setShowAddItemDialog(true); }}
-                data-testid="button-add-bom-item"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Item
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-              <p>Add new BOM component</p>
-            </TooltipContent>
-          </Tooltip>
+          <StyledTooltip content="Configure BOM optimization settings" side="bottom">
+            <Button
+              variant="outline"
+              size="sm"
+              className={showSettings ? "bg-primary/10 border-primary text-primary" : ""}
+              onClick={() => setShowSettings(!showSettings)}
+              data-testid="button-toggle-settings"
+            >
+              <SlidersHorizontal className="w-4 h-4 mr-2" />
+              Cost Optimisation
+            </Button>
+          </StyledTooltip>
+          <StyledTooltip content="Add new BOM component" side="bottom">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { resetNewItem(); setShowAddItemDialog(true); }}
+              data-testid="button-add-bom-item"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Item
+            </Button>
+          </StyledTooltip>
         </div>
         
         <div className="flex items-center gap-4 md:gap-6">
@@ -188,21 +201,16 @@ export default function ProcurementView() {
               <span className="text-xs text-muted-foreground font-sans font-normal">/ unit @ 1k qty</span>
             </div>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleExportCSV} data-testid="button-export-csv">
-                <Download className="w-4 h-4 mr-2" /> Export CSV
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-              <p>Download BOM as CSV file</p>
-            </TooltipContent>
-          </Tooltip>
+          <StyledTooltip content="Download BOM as CSV file" side="bottom">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={handleExportCSV} data-testid="button-export-csv">
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+          </StyledTooltip>
         </div>
       </div>
 
       {showSettings && (
-        <div className="bg-muted/10 backdrop-blur-lg border-b border-border p-6 grid grid-cols-1 md:grid-cols-4 gap-8 animate-in slide-in-from-top-2" data-testid="panel-settings">
+        <div className="bg-muted/10 backdrop-blur-xl border-b border-border p-6 grid grid-cols-1 md:grid-cols-4 gap-8 animate-in slide-in-from-top-2" data-testid="panel-settings">
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Production Batch Size</h4>
             <div className="flex items-center gap-4">
@@ -241,18 +249,13 @@ export default function ProcurementView() {
              </div>
              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Preferred Suppliers</span>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span
-                      className="text-xs text-primary cursor-pointer hover:underline"
-                      data-testid="link-edit-suppliers"
-                      onClick={() => setShowSupplierEdit(!showSupplierEdit)}
-                    >Edit List</span>
-                  </TooltipTrigger>
-                  <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="top">
-                    <p>Edit preferred supplier list</p>
-                  </TooltipContent>
-                </Tooltip>
+                <StyledTooltip content="Edit preferred supplier list" side="top">
+                  <span
+                    className="text-xs text-primary cursor-pointer hover:underline"
+                    data-testid="link-edit-suppliers"
+                    onClick={() => setShowSupplierEdit(!showSupplierEdit)}
+                  >Edit List</span>
+                </StyledTooltip>
              </div>
              {showSupplierEdit && (
                <div className="mt-2 space-y-1.5 pl-1 animate-in slide-in-from-top-1" data-testid="panel-supplier-edit">
@@ -276,23 +279,18 @@ export default function ProcurementView() {
              <h4 className="text-sm font-medium text-foreground">Optimization Goal</h4>
              <div className="flex gap-2">
                 {['Cost', 'Power', 'Size', 'Avail'].map(goal => (
-                  <Tooltip key={goal}>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setOptimizationGoal(goal)}
-                        data-testid={`button-goal-${goal.toLowerCase()}`}
-                        className={cn(
-                          "px-3 py-1 border border-border text-xs hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors",
-                          optimizationGoal === goal && "bg-primary/10 border-primary text-primary"
-                        )}
-                      >
-                        {goal}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="bottom">
-                      <p>{goalDescriptions[goal]}</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <StyledTooltip key={goal} content={OPTIMIZATION_GOALS[goal]} side="bottom">
+                    <button
+                      onClick={() => updateOptimizationGoal(goal)}
+                      data-testid={`button-goal-${goal.toLowerCase()}`}
+                      className={cn(
+                        "px-3 py-1 border border-border text-xs hover:bg-primary/10 hover:border-primary hover:text-primary transition-colors",
+                        optimizationGoal === goal && "bg-primary/10 border-primary text-primary"
+                      )}
+                    >
+                      {goal}
+                    </button>
+                  </StyledTooltip>
                 ))}
              </div>
           </div>
@@ -300,7 +298,76 @@ export default function ProcurementView() {
       )}
 
       <div className="flex-1 overflow-auto p-3 md:p-6">
-        <div className="border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm overflow-x-auto">
+        {/* Mobile card layout */}
+        <div className="md:hidden space-y-2" data-testid="bom-cards">
+          {filteredBom.map((item) => (
+            <div key={item.id} className="border border-border bg-card/80 backdrop-blur p-3 space-y-2" data-testid={`card-bom-${item.id}`}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-mono font-medium text-foreground text-xs truncate">{item.partNumber}</div>
+                  <div className="text-muted-foreground text-xs truncate">{item.manufacturer}</div>
+                </div>
+                <span className={cn("shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
+                  item.status === 'In Stock'
+                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                    : item.status === 'Low Stock'
+                    ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                    : 'bg-destructive/10 text-destructive border-destructive/20'
+                )}>
+                  {item.status === 'In Stock' && <CheckCircle2 className="w-3 h-3" />}
+                  {item.status === 'Low Stock' && <AlertCircle className="w-3 h-3" />}
+                  {item.status === 'Out of Stock' && <XCircle className="w-3 h-3" />}
+                  {item.status}
+                </span>
+              </div>
+              {item.description && <div className="text-muted-foreground text-xs truncate">{item.description}</div>}
+              <div className="flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3 text-muted-foreground">
+                  <span>Qty: <span className="font-mono text-foreground">{item.quantity}</span></span>
+                  <span>@ <span className="font-mono text-foreground">${Number(item.unitPrice).toFixed(4)}</span></span>
+                  <span>{item.supplier}</span>
+                </div>
+                <span className="font-mono font-bold text-foreground">${Number(item.totalPrice).toFixed(2)}</span>
+              </div>
+              <div className="flex items-center gap-1 pt-1 border-t border-border">
+                <button
+                  className="p-1.5 text-primary hover:bg-primary/10 transition-colors"
+                  onClick={() => {
+                    const baseUrl = getSupplierSearchUrl(item.supplier);
+                    if (!baseUrl) return;
+                    window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer');
+                  }}
+                  data-testid={`card-button-cart-${item.id}`}
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors"
+                  onClick={() => { copyToClipboard(item.partNumber); toast({ title: 'Copied', description: 'Part number copied.' }); }}
+                  data-testid={`card-button-copy-${item.id}`}
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <div className="flex-1" />
+                <ConfirmDialog
+                  trigger={
+                    <button className="p-1.5 text-destructive hover:bg-destructive/10 transition-colors" data-testid={`card-button-delete-${item.id}`}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  }
+                  title="Remove BOM Item"
+                  description={`Remove "${item.partNumber}" from the Bill of Materials?`}
+                  confirmLabel="Remove"
+                  variant="destructive"
+                  onConfirm={() => deleteBomItem(item.id)}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop table layout */}
+        <div className="hidden md:block border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm overflow-x-auto">
           <table aria-label="Bill of Materials" className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
             <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
               <tr>
@@ -320,11 +387,11 @@ export default function ProcurementView() {
               {filteredBom.map((item) => (
                 <ContextMenu key={item.id}>
                   <ContextMenuTrigger asChild>
-                    <tr className="hover:bg-muted/30 transition-colors group" data-testid={`row-bom-${item.id}`}>
+                    <tr className={cn("hover:bg-muted/30 transition-colors group", editingId === Number(item.id) && "bg-primary/5")} data-testid={`row-bom-${item.id}`}>
                       <td className="px-4 py-3">
                         <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
-                          item.status === 'In Stock' 
-                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' 
+                          item.status === 'In Stock'
+                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                             : item.status === 'Low Stock'
                             ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
                             : 'bg-destructive/10 text-destructive border-destructive/20'
@@ -335,56 +402,78 @@ export default function ProcurementView() {
                           {item.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>{item.partNumber}</td>
-                      <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
-                      <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
-                      <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${Number(item.unitPrice).toFixed(4)}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${Number(item.totalPrice).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-right flex gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => {
-                                // Encode part number to avoid malformed URLs and open in a safe context【697222849486831†L63-L75】.
-                                const url = (supplierUrls[item.supplier] || '') + encodeURIComponent(item.partNumber);
-                                window.open(url, '_blank', 'noopener,noreferrer');
-                              }}
-                              data-testid={`button-cart-${item.id}`}
-                            >
-                              <ShoppingCart className="w-4 h-4" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
-                            <p>Buy from supplier</p>
-                          </TooltipContent>
-                        </Tooltip>
-                        <ConfirmDialog
-                          trigger={
-                            <Tooltip>
-                              <TooltipTrigger asChild>
+                      {editingId === Number(item.id) ? (
+                        <>
+                          <td className="px-4 py-1"><input data-testid={`edit-part-number-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" value={editValues.partNumber} onChange={e => setEditValues(v => ({ ...v, partNumber: e.target.value }))} onKeyDown={handleEditKeyDown} autoFocus /></td>
+                          <td className="px-4 py-1"><input data-testid={`edit-manufacturer-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.manufacturer} onChange={e => setEditValues(v => ({ ...v, manufacturer: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
+                          <td className="px-4 py-1"><input data-testid={`edit-description-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.description} onChange={e => setEditValues(v => ({ ...v, description: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
+                          <td className="px-4 py-1">
+                            <select data-testid={`edit-supplier-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.supplier} onChange={e => setEditValues(v => ({ ...v, supplier: e.target.value }))} onKeyDown={handleEditKeyDown}>
+                              <option value="Digi-Key">Digi-Key</option>
+                              <option value="Mouser">Mouser</option>
+                              <option value="LCSC">LCSC</option>
+                            </select>
+                          </td>
+                          <td className="px-4 py-3 text-right font-mono text-xs">{item.stock.toLocaleString()}</td>
+                          <td className="px-4 py-1"><input data-testid={`edit-quantity-${item.id}`} type="number" min={1} className="w-16 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
+                          <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} step={0.01} className="w-24 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
+                          <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${(editValues.quantity * editValues.unitPrice).toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right flex gap-1">
+                            <StyledTooltip content="Save changes" side="left">
+                              <button className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button>
+                            </StyledTooltip>
+                            <StyledTooltip content="Cancel editing" side="left">
+                              <button className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors" onClick={cancelEdit} data-testid={`button-cancel-edit-${item.id}`}><X className="w-4 h-4" /></button>
+                            </StyledTooltip>
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>{item.partNumber}</td>
+                          <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
+                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
+                          <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
+                          <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
+                          <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
+                          <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${Number(item.unitPrice).toFixed(4)}</td>
+                          <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${Number(item.totalPrice).toFixed(2)}</td>
+                          <td className="px-4 py-3 text-right flex gap-1">
+                            <StyledTooltip content="Edit item" side="left">
+                              <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button>
+                            </StyledTooltip>
+                            <StyledTooltip content="Buy from supplier" side="left">
                                 <button
-                                  className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  data-testid={`button-delete-${item.id}`}
+                                  className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => {
+                                    const baseUrl = getSupplierSearchUrl(item.supplier);
+                                    if (!baseUrl) return;
+                                    window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer');
+                                  }}
+                                  data-testid={`button-cart-${item.id}`}
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <ShoppingCart className="w-4 h-4" />
                                 </button>
-                              </TooltipTrigger>
-                              <TooltipContent className="bg-card/90 backdrop-blur border-border text-xs" side="left">
-                                <p>Remove from BOM</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          }
-                          title="Remove BOM Item"
-                          description={`Are you sure you want to remove "${item.partNumber}" from the Bill of Materials? This action cannot be undone.`}
-                          confirmLabel="Remove"
-                          variant="destructive"
-                          onConfirm={() => deleteBomItem(item.id)}
-                        />
-                      </td>
+                            </StyledTooltip>
+                            <ConfirmDialog
+                              trigger={
+                                <StyledTooltip content="Remove from BOM" side="left">
+                                    <button
+                                      className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      data-testid={`button-delete-${item.id}`}
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </StyledTooltip>
+                              }
+                              title="Remove BOM Item"
+                              description={`Are you sure you want to remove "${item.partNumber}" from the Bill of Materials? This action cannot be undone.`}
+                              confirmLabel="Remove"
+                              variant="destructive"
+                              onConfirm={() => deleteBomItem(item.id)}
+                            />
+                          </td>
+                        </>
+                      )}
                     </tr>
                   </ContextMenuTrigger>
                   <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
@@ -394,8 +483,9 @@ export default function ProcurementView() {
                     <ContextMenuSeparator />
                     <ContextMenuItem
                       onSelect={() => {
-                        const url = (supplierUrls[item.supplier] || '') + encodeURIComponent(item.partNumber);
-                        window.open(url, '_blank', 'noopener,noreferrer');
+                        const baseUrl = getSupplierSearchUrl(item.supplier);
+                        if (!baseUrl) return;
+                        window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer');
                       }}
                     >
                       Buy from {item.supplier}

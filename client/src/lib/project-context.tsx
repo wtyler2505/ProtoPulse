@@ -83,6 +83,44 @@ export interface ProjectHistoryItem {
 
 export type ViewMode = 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'procurement' | 'validation';
 
+/** API response shape for architecture nodes from the server. */
+interface NodeApiResponse {
+  nodeId: string;
+  positionX: number;
+  positionY: number;
+  label: string;
+  nodeType: string;
+  data?: { description?: string } | null;
+}
+
+/** API response shape for architecture edges from the server. */
+interface EdgeApiResponse {
+  edgeId: string;
+  source: string;
+  target: string;
+  label?: string;
+  animated?: boolean;
+  style?: Record<string, string | number>;
+  signalType?: string;
+  voltage?: string;
+  busWidth?: number;
+  netName?: string;
+}
+
+/** Custom data stored on edges for electrical signal metadata. */
+interface EdgeData {
+  signalType?: string;
+  voltage?: string;
+  busWidth?: number;
+  netName?: string;
+}
+
+/** API response shape for project metadata. */
+interface ProjectApiResponse {
+  name?: string;
+  description?: string;
+}
+
 interface ProjectState {
   activeView: ViewMode;
   setActiveView: (view: ViewMode) => void;
@@ -243,24 +281,24 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const nodesQuery = useQuery({
     queryKey: [`/api/projects/${PROJECT_ID}/nodes`],
     enabled: seeded,
-    select: (data: any[]) => data.map((n: any): Node => ({
+    select: (data: NodeApiResponse[]) => data.map((n): Node => ({
       id: n.nodeId,
       type: 'custom',
       position: { x: n.positionX, y: n.positionY },
-      data: { label: n.label, type: n.nodeType, description: (n.data as any)?.description },
+      data: { label: n.label, type: n.nodeType, description: n.data?.description },
     })),
   });
 
   const edgesQuery = useQuery({
     queryKey: [`/api/projects/${PROJECT_ID}/edges`],
     enabled: seeded,
-    select: (data: any[]) => data.map((e: any): Edge => ({
+    select: (data: EdgeApiResponse[]) => data.map((e): Edge => ({
       id: e.edgeId,
       source: e.source,
       target: e.target,
       label: e.label,
       animated: e.animated,
-      style: e.style as any,
+      style: e.style,
       data: {
         signalType: e.signalType || undefined,
         voltage: e.voltage || undefined,
@@ -273,7 +311,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const bomQuery = useQuery({
     queryKey: [`/api/projects/${PROJECT_ID}/bom`],
     enabled: seeded,
-    select: (data: any[]) => data.map((item: any): BomItem => ({
+    select: (data: Array<Omit<BomItem, 'id'> & { id: number | string }>) => data.map((item): BomItem => ({
       ...item,
       id: String(item.id),
     })),
@@ -282,7 +320,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const validationQuery = useQuery({
     queryKey: [`/api/projects/${PROJECT_ID}/validation`],
     enabled: seeded,
-    select: (data: any[]) => data.map((issue: any): ValidationIssue => ({
+    select: (data: Array<Omit<ValidationIssue, 'id'> & { id: number | string }>) => data.map((issue): ValidationIssue => ({
       ...issue,
       id: String(issue.id),
     })),
@@ -291,9 +329,9 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const chatQuery = useQuery({
     queryKey: [`/api/projects/${PROJECT_ID}/chat`],
     enabled: seeded,
-    select: (data: any[]) => data.map((msg: any): ChatMessage => ({
+    select: (data: Array<{ id: number | string; role: string; content: string; timestamp: string; mode?: ChatMessage['mode'] }>) => data.map((msg): ChatMessage => ({
       id: String(msg.id),
-      role: msg.role,
+      role: msg.role as ChatMessage['role'],
       content: msg.content,
       timestamp: new Date(msg.timestamp).getTime(),
       mode: msg.mode,
@@ -303,7 +341,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
   const historyQuery = useQuery({
     queryKey: [`/api/projects/${PROJECT_ID}/history`],
     enabled: seeded,
-    select: (data: any[]) => data.map((item: any): ProjectHistoryItem => ({
+    select: (data: Array<{ id: number | string; action: string; user: 'User' | 'AI'; timestamp: string }>) => data.map((item): ProjectHistoryItem => ({
       id: String(item.id),
       action: item.action,
       user: item.user,
@@ -354,18 +392,21 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   const saveEdgesMutation = useMutation({
     mutationFn: async (edges: Edge[]) => {
-      const body = edges.map(edge => ({
-        edgeId: edge.id,
-        source: edge.source,
-        target: edge.target,
-        label: edge.label,
-        animated: edge.animated ?? false,
-        style: edge.style,
-        signalType: (edge as any).data?.signalType || undefined,
-        voltage: (edge as any).data?.voltage || undefined,
-        busWidth: (edge as any).data?.busWidth || undefined,
-        netName: (edge as any).data?.netName || undefined,
-      }));
+      const body = edges.map(edge => {
+        const edgeData = edge.data as EdgeData | undefined;
+        return {
+          edgeId: edge.id,
+          source: edge.source,
+          target: edge.target,
+          label: edge.label,
+          animated: edge.animated ?? false,
+          style: edge.style,
+          signalType: edgeData?.signalType || undefined,
+          voltage: edgeData?.voltage || undefined,
+          busWidth: edgeData?.busWidth || undefined,
+          netName: edgeData?.netName || undefined,
+        };
+      });
       await apiRequest('PUT', `/api/projects/${PROJECT_ID}/edges`, body);
     },
     onSuccess: () => {
@@ -578,7 +619,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (projectQuery.data) {
-      const p = projectQuery.data as any;
+      const p = projectQuery.data as ProjectApiResponse;
       if (p.name && p.name !== projectName) setProjectName(p.name);
       if (p.description !== undefined && p.description !== projectDescription) setProjectDescription(p.description ?? '');
     }
