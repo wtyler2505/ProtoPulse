@@ -2,8 +2,7 @@ import { createContext, useContext, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ValidationIssue } from '@/lib/project-context';
-
-const PROJECT_ID = 1;
+import { useProjectId } from '@/lib/contexts/project-id-context';
 
 const validationChecks: Array<{ severity: 'error' | 'warning' | 'info'; message: string; componentId: string; suggestion: string }> = [
   { severity: 'info', message: 'Check I2C pull-up resistor values for SHT40', componentId: '4', suggestion: 'Recommended 4.7kΩ for 100kHz standard mode.' },
@@ -25,10 +24,11 @@ const ValidationContext = createContext<ValidationState | undefined>(undefined);
 
 export function ValidationProvider({ seeded, children }: { seeded: boolean; children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const projectId = useProjectId();
   const validationCheckIndex = useRef(0);
 
   const validationQuery = useQuery({
-    queryKey: [`/api/projects/${PROJECT_ID}/validation`],
+    queryKey: [`/api/projects/${projectId}/validation`],
     enabled: seeded,
     select: (data: Array<Omit<ValidationIssue, 'id'> & { id: number | string }>) => data.map((issue): ValidationIssue => ({
       ...issue,
@@ -38,19 +38,19 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
 
   const addValidationIssueMutation = useMutation({
     mutationFn: async (issue: { severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string }) => {
-      await apiRequest('POST', `/api/projects/${PROJECT_ID}/validation`, issue);
+      await apiRequest('POST', `/api/projects/${projectId}/validation`, issue);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/validation`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/validation`] });
     },
   });
 
   const deleteValidationIssueMutation = useMutation({
     mutationFn: async (id: number | string) => {
-      await apiRequest('DELETE', `/api/validation/${Number(id)}?projectId=${PROJECT_ID}`);
+      await apiRequest('DELETE', `/api/validation/${Number(id)}?projectId=${projectId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/validation`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/validation`] });
     },
   });
 

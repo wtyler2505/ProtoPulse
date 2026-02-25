@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
+import { useParams, Redirect } from 'wouter';
 import { ProjectProvider } from '@/lib/project-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import Sidebar from '@/components/layout/Sidebar';
@@ -296,8 +297,15 @@ function WorkspaceContent() {
 }
 
 export default function ProjectWorkspace() {
+  const params = useParams<{ projectId: string }>();
+  const rawId = Number(params.projectId);
+
+  if (!Number.isInteger(rawId) || rawId <= 0) {
+    return <Redirect to="/projects/1" />;
+  }
+
   return (
-    <ProjectProvider>
+    <ProjectProvider projectId={rawId}>
       <WorkspaceContent />
     </ProjectProvider>
   );

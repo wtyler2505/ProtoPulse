@@ -1,4 +1,5 @@
 import { eq, and, desc, asc, isNull, ilike, sql, count, or } from "drizzle-orm";
+import type { PgTable } from "drizzle-orm/pg-core";
 import { db } from "./db";
 import { cache } from "./cache";
 import {
@@ -11,6 +12,7 @@ import {
   historyItems, type HistoryItem, type InsertHistoryItem,
   componentParts, type ComponentPart, type InsertComponentPart,
   componentLibrary, type ComponentLibraryEntry, type InsertComponentLibrary,
+  userChatSettings, type UserChatSettings, type InsertUserChatSettings,
 } from "@shared/schema";
 
 export interface PaginationOptions {
@@ -86,6 +88,9 @@ export interface IStorage {
   updateLibraryEntry(id: number, data: Partial<InsertComponentLibrary>): Promise<ComponentLibraryEntry | undefined>;
   deleteLibraryEntry(id: number): Promise<boolean>;
   incrementLibraryDownloads(id: number): Promise<void>;
+
+  getChatSettings(userId: number): Promise<UserChatSettings | undefined>;
+  upsertChatSettings(userId: number, settings: Partial<InsertUserChatSettings>): Promise<UserChatSettings>;
 }
 
 function computeTotalPrice(quantity: number, unitPrice: string | number): string {
@@ -94,18 +99,18 @@ function computeTotalPrice(quantity: number, unitPrice: string | number): string
 
 export class DatabaseStorage implements IStorage {
   private async chunkedInsert<T extends Record<string, unknown>, R>(
-    table: any,
+    table: PgTable,
     items: T[],
     chunkSize = 100
   ): Promise<R[]> {
     if (items.length <= chunkSize) {
-      return db.insert(table).values(items).returning() as Promise<R[]>;
+      return db.insert(table).values(items).returning() as unknown as Promise<R[]>;
     }
     const results: R[] = [];
     for (let i = 0; i < items.length; i += chunkSize) {
       const chunk = items.slice(i, i + chunkSize);
       const inserted = await db.insert(table).values(chunk).returning();
-      results.push(...(inserted as R[]));
+      results.push(...(inserted as unknown as R[]));
     }
     return results;
   }
@@ -203,7 +208,8 @@ export class DatabaseStorage implements IStorage {
 
   async updateNode(id: number, projectId: number, data: Partial<InsertArchitectureNode>): Promise<ArchitectureNode | undefined> {
     try {
-      const { projectId: _ignoreProjectId, ...safeData } = data as any;
+      const safeData = { ...data };
+      delete safeData.projectId;
       const [updated] = await db.update(architectureNodes)
         .set({ ...safeData, updatedAt: new Date() })
         .where(and(eq(architectureNodes.id, id), eq(architectureNodes.projectId, projectId), isNull(architectureNodes.deletedAt)))
@@ -261,7 +267,8 @@ export class DatabaseStorage implements IStorage {
 
   async updateEdge(id: number, projectId: number, data: Partial<InsertArchitectureEdge>): Promise<ArchitectureEdge | undefined> {
     try {
-      const { projectId: _ignoreProjectId, ...safeData } = data as any;
+      const safeData = { ...data };
+      delete safeData.projectId;
       const [updated] = await db.update(architectureEdges)
         .set(safeData)
         .where(and(eq(architectureEdges.id, id), eq(architectureEdges.projectId, projectId), isNull(architectureEdges.deletedAt)))
@@ -329,7 +336,8 @@ export class DatabaseStorage implements IStorage {
 
   async updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined> {
     try {
-      const { projectId: _ignoreProjectId, ...safeData } = item as any;
+      const safeData = { ...item };
+      delete safeData.projectId;
 
       if (safeData.quantity !== undefined || safeData.unitPrice !== undefined) {
         const [existing] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)));
@@ -536,7 +544,8 @@ export class DatabaseStorage implements IStorage {
 
   async updateComponentPart(id: number, projectId: number, data: Partial<InsertComponentPart>): Promise<ComponentPart | undefined> {
     try {
-      const { projectId: _ignoreProjectId, ...safeData } = data as any;
+      const safeData = { ...data };
+      delete safeData.projectId;
       const [existing] = await db.select().from(componentParts)
         .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)));
       if (!existing) return undefined;
@@ -646,6 +655,38 @@ export class DatabaseStorage implements IStorage {
         .where(eq(componentLibrary.id, id));
     } catch (e) {
       throw new StorageError('incrementLibraryDownloads', `componentLibrary/${id}`, e);
+    }
+  }
+
+  async getChatSettings(userId: number): Promise<UserChatSettings | undefined> {
+    try {
+      const [settings] = await db.select().from(userChatSettings)
+        .where(eq(userChatSettings.userId, userId));
+      return settings;
+    } catch (e) {
+      throw new StorageError('getChatSettings', `user/${userId}/chat-settings`, e);
+    }
+  }
+
+  async upsertChatSettings(userId: number, settings: Partial<InsertUserChatSettings>): Promise<UserChatSettings> {
+    try {
+      const [existing] = await db.select().from(userChatSettings)
+        .where(eq(userChatSettings.userId, userId));
+
+      if (existing) {
+        const [updated] = await db.update(userChatSettings)
+          .set({ ...settings, updatedAt: new Date() })
+          .where(eq(userChatSettings.userId, userId))
+          .returning();
+        return updated;
+      }
+
+      const [created] = await db.insert(userChatSettings)
+        .values({ userId, ...settings })
+        .returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('upsertChatSettings', `user/${userId}/chat-settings`, e);
     }
   }
 }

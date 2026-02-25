@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ComponentEditorProvider, useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import { useComponentParts, useCreateComponentPart, useUpdateComponentPart, useDeleteComponentPart, usePublishToLibrary } from '@/lib/component-editor/hooks';
 import { useQueryClient } from '@tanstack/react-query';
-import { PROJECT_ID } from '@/lib/project-context';
+import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import type { EditorViewType, PartMeta, Connector, Bus, PartViews, Constraint } from '@shared/component-types';
 import { Input } from '@/components/ui/input';
@@ -196,6 +196,7 @@ function CanvasPlaceholder({ view }: { view: string }) {
 function ComponentEditorContent() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useComponentEditor();
   const { selectedNodeId, pendingComponentPartId, setPendingComponentPartId } = useArchitecture();
+  const projectId = useProjectId();
   const activeView = state.ui.activeEditorView;
   const { toast } = useToast();
 
@@ -219,7 +220,7 @@ function ComponentEditorContent() {
   const [publishIsPublic, setPublishIsPublic] = useState(true);
   const queryClient = useQueryClient();
 
-  const { data: parts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
+  const { data: parts, isLoading: partsLoading } = useComponentParts(projectId);
   const createMutation = useCreateComponentPart();
   const updateMutation = useUpdateComponentPart();
   const publishMutation = usePublishToLibrary();
@@ -262,12 +263,12 @@ function ComponentEditorContent() {
       if (partId) {
         await updateMutation.mutateAsync({
           id: partId,
-          projectId: PROJECT_ID,
+          projectId: projectId,
           data: payload,
         });
       } else {
         const created = await createMutation.mutateAsync({
-          projectId: PROJECT_ID,
+          projectId: projectId,
           ...payload,
         });
         setPartId(created.id);
@@ -404,7 +405,7 @@ function ComponentEditorContent() {
       return;
     }
     const link = document.createElement('a');
-    link.href = `/api/projects/${PROJECT_ID}/component-parts/${partId}/export/fzpz`;
+    link.href = `/api/projects/${projectId}/component-parts/${partId}/export/fzpz`;
     link.download = `${(state.present.meta.title || 'component').replace(/[^a-zA-Z0-9_-]/g, '_')}.fzpz`;
     document.body.appendChild(link);
     link.click();
@@ -416,7 +417,7 @@ function ComponentEditorContent() {
     if (!file) return;
     setIsImporting(true);
     try {
-      const res = await fetch(`/api/projects/${PROJECT_ID}/component-parts/import/fzpz`, {
+      const res = await fetch(`/api/projects/${projectId}/component-parts/import/fzpz`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/octet-stream' },
         body: file,
@@ -454,7 +455,7 @@ function ComponentEditorContent() {
     setIsImportingSvg(true);
     try {
       const svgText = await file.text();
-      const res = await fetch(`/api/projects/${PROJECT_ID}/component-parts/${partId || 0}/import/svg`, {
+      const res = await fetch(`/api/projects/${projectId}/component-parts/${partId || 0}/import/svg`, {
         method: 'POST',
         headers: { 'Content-Type': 'text/xml' },
         body: svgText,
@@ -518,7 +519,7 @@ function ComponentEditorContent() {
       await handleSave();
     }
     try {
-      const created = await createMutation.mutateAsync({ projectId: PROJECT_ID });
+      const created = await createMutation.mutateAsync({ projectId: projectId });
       setPartId(created.id);
       dispatch({ type: 'LOAD_PART', payload: createDefaultPartState() });
       loadedRef.current = true;
@@ -877,7 +878,7 @@ function ComponentEditorContent() {
       <ComponentLibraryBrowser
         open={libraryOpen}
         onClose={() => setLibraryOpen(false)}
-        projectId={PROJECT_ID}
+        projectId={projectId}
         onForked={handleLibraryForked}
       />
     </div>

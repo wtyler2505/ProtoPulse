@@ -8,6 +8,7 @@ import { useBom } from '@/lib/contexts/bom-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useHistory } from '@/lib/contexts/history-context';
 import { useOutput } from '@/lib/contexts/output-context';
+import { useProjectId } from '@/lib/contexts/project-id-context';
 import { type ChatMessage, type ViewMode } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
 
@@ -20,8 +21,8 @@ import ChatSearchBar from './chat/ChatSearchBar';
 import StreamingIndicator from './chat/StreamingIndicator';
 import FollowUpSuggestions from './chat/FollowUpSuggestions';
 import MessageInput from './chat/MessageInput';
-import { STORAGE_KEYS } from '@/lib/constants';
 import { buildCSV, downloadBlob } from '@/lib/csv';
+import { useChatSettings } from '@/hooks/useChatSettings';
 import type { AIAction } from './chat/chat-types';
 import { nodeData } from './chat/chat-types';
 import { useActionExecutor } from './chat/hooks/useActionExecutor';
@@ -49,30 +50,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const abortRef = useRef<AbortController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [aiProvider, setAiProvider] = useState<'anthropic' | 'gemini'>(() => {
-    try { return (localStorage.getItem(STORAGE_KEYS.AI_PROVIDER) as 'anthropic' | 'gemini') || 'anthropic'; } catch { return 'anthropic'; }
-  });
-  const [aiModel, setAiModel] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.AI_MODEL);
-      const provider = (localStorage.getItem(STORAGE_KEYS.AI_PROVIDER) as 'anthropic' | 'gemini') || 'anthropic';
-      const models = AI_MODELS[provider];
-      if (stored && models.some(m => m.id === stored)) return stored;
-      return models[0].id;
-    } catch { return AI_MODELS.anthropic[0].id; }
-  });
-  // TODO: Migrate API key storage to server-side via GET/POST /api/settings/api-keys
-  // The backend supports encrypted key storage per provider. Once auth is wired up,
-  // fetch stored keys on mount and save via POST instead of keeping in-memory only.
-  const [aiApiKey, setAiApiKey] = useState(() => {
-    return '';
-  });
-  const [aiTemperature, setAiTemperature] = useState(() => {
-    try { return parseFloat(localStorage.getItem(STORAGE_KEYS.AI_TEMPERATURE) || '0.7'); } catch { return 0.7; }
-  });
-  const [customSystemPrompt, setCustomSystemPrompt] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEYS.AI_SYSTEM_PROMPT) || ''; } catch { return ''; }
-  });
+  const projectId = useProjectId();
+  const { aiProvider, setAiProvider, aiModel, setAiModel, aiTemperature, setAiTemperature, customSystemPrompt, setCustomSystemPrompt } = useChatSettings();
+  const [aiApiKey, setAiApiKey] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -84,11 +64,6 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const [lastUserMessage, setLastUserMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<{input: number; output: number; cost: number} | null>(null);
-
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_PROVIDER, aiProvider); } catch {} }, [aiProvider]);
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_MODEL, aiModel); } catch {} }, [aiModel]);
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_TEMPERATURE, String(aiTemperature)); } catch {} }, [aiTemperature]);
-  useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_SYSTEM_PROMPT, customSystemPrompt); } catch {} }, [customSystemPrompt]);
 
   const filteredMessages = useMemo(() =>
     chatSearch
@@ -487,6 +462,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           provider: aiProvider,
           model: aiModel,
           apiKey: aiApiKey,
+          projectId,
           temperature: aiTemperature,
           customSystemPrompt,
           activeView,
@@ -584,7 +560,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       abortRef.current = null;
       captureSnapshot();
     }
-  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, customSystemPrompt, activeView, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand, selectedNodeId, getChangeDiff, captureSnapshot]);
+  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, customSystemPrompt, activeView, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand, selectedNodeId, getChangeDiff, captureSnapshot, projectId]);
 
   const handleRegenerate = useCallback(() => {
     if (lastUserMessage && !isGenerating) {

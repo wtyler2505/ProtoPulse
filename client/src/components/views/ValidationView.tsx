@@ -3,7 +3,8 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useValidation } from '@/lib/contexts/validation-context';
 import { useOutput } from '@/lib/contexts/output-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
-import { PROJECT_ID, type ViewMode } from '@/lib/project-context';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+import type { ViewMode } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
@@ -32,7 +33,8 @@ export default function ValidationView() {
   const { setActiveView } = useProjectMeta();
   const { toast } = useToast();
   const [pendingDismissId, setPendingDismissId] = useState<number | string | null>(null);
-  const { data: componentParts } = useComponentParts(PROJECT_ID);
+  const projectId = useProjectId();
+  const { data: componentParts } = useComponentParts(projectId);
 
   const componentIssues = useMemo(() => {
     if (!componentParts || componentParts.length === 0) return [];

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
 
 // Domain context providers
+import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
 import { OutputProvider, useOutput } from '@/lib/contexts/output-context';
 import { ChatProvider, useChat } from '@/lib/contexts/chat-context';
 import { HistoryProvider, useHistory } from '@/lib/contexts/history-context';
@@ -11,6 +12,7 @@ import { ProjectMetaProvider, useProjectMeta } from '@/lib/contexts/project-meta
 import { ArchitectureProvider, useArchitecture } from '@/lib/contexts/architecture-context';
 
 // Re-export domain hooks for direct use by consumers
+export { useProjectId } from '@/lib/contexts/project-id-context';
 export { useOutput } from '@/lib/contexts/output-context';
 export { useChat } from '@/lib/contexts/chat-context';
 export { useHistory } from '@/lib/contexts/history-context';
@@ -18,13 +20,6 @@ export { useBom } from '@/lib/contexts/bom-context';
 export { useValidation } from '@/lib/contexts/validation-context';
 export { useProjectMeta } from '@/lib/contexts/project-meta-context';
 export { useArchitecture } from '@/lib/contexts/architecture-context';
-
-/**
- * Default project ID. Currently hardcoded to 1 because the backend seeds a
- * single project. Replace with a value derived from route params (e.g.
- * `useParams`) when multi-project support is implemented.
- */
-export const PROJECT_ID = 1;
 
 export interface Position {
   x: number;
@@ -141,7 +136,7 @@ function ArchitectureBridge({ children }: { children: React.ReactNode }) {
  * Root provider that handles seeding, loading, and error states, then nests
  * all domain providers. Drop-in replacement for the old monolithic provider.
  */
-export function ProjectProvider({ children }: { children: React.ReactNode }) {
+export function ProjectProvider({ projectId, children }: { projectId: number; children: React.ReactNode }) {
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
@@ -156,7 +151,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
-  return <SeededProviders>{children}</SeededProviders>;
+  return (
+    <ProjectIdProvider projectId={projectId}>
+      <SeededProviders>{children}</SeededProviders>
+    </ProjectIdProvider>
+  );
 }
 
 /**

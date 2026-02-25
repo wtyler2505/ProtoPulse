@@ -3,8 +3,7 @@ import { Node, Edge } from '@xyflow/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ViewMode } from '@/lib/project-context';
-
-const PROJECT_ID = 1;
+import { useProjectId } from '@/lib/contexts/project-id-context';
 
 /** API response shape for architecture nodes from the server. */
 interface NodeApiResponse {
@@ -77,10 +76,11 @@ export function ArchitectureProvider({
   children: React.ReactNode;
 }) {
   const queryClient = useQueryClient();
+  const projectId = useProjectId();
 
   // --- Queries ---
   const nodesQuery = useQuery({
-    queryKey: [`/api/projects/${PROJECT_ID}/nodes`],
+    queryKey: [`/api/projects/${projectId}/nodes`],
     enabled: seeded,
     select: (data: NodeApiResponse[]) => data.map((n): Node => ({
       id: n.nodeId,
@@ -91,7 +91,7 @@ export function ArchitectureProvider({
   });
 
   const edgesQuery = useQuery({
-    queryKey: [`/api/projects/${PROJECT_ID}/edges`],
+    queryKey: [`/api/projects/${projectId}/edges`],
     enabled: seeded,
     select: (data: EdgeApiResponse[]) => data.map((e): Edge => ({
       id: e.edgeId,
@@ -120,13 +120,13 @@ export function ArchitectureProvider({
         positionY: node.position.y,
         data: { description: node.data.description },
       }));
-      await apiRequest('PUT', `/api/projects/${PROJECT_ID}/nodes`, body);
+      await apiRequest('PUT', `/api/projects/${projectId}/nodes`, body);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/nodes`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/nodes`] });
     },
     onError: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/nodes`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/nodes`] });
     },
   });
 
@@ -147,13 +147,13 @@ export function ArchitectureProvider({
           netName: edgeData?.netName || undefined,
         };
       });
-      await apiRequest('PUT', `/api/projects/${PROJECT_ID}/edges`, body);
+      await apiRequest('PUT', `/api/projects/${projectId}/edges`, body);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/edges`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/edges`] });
     },
     onError: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/edges`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/edges`] });
     },
   });
 
@@ -162,7 +162,7 @@ export function ArchitectureProvider({
     // then persist to server.  On success the invalidation refetches
     // the authoritative data; on error the query reverts.
     queryClient.setQueryData(
-      [`/api/projects/${PROJECT_ID}/nodes`],
+      [`/api/projects/${projectId}/nodes`],
       newNodes.map(node => ({
         nodeId: node.id,
         nodeType: node.data.type,
@@ -177,7 +177,7 @@ export function ArchitectureProvider({
 
   const setEdges = useCallback((newEdges: Edge[]) => {
     queryClient.setQueryData(
-      [`/api/projects/${PROJECT_ID}/edges`],
+      [`/api/projects/${projectId}/edges`],
       newEdges.map(edge => {
         const ed = edge.data as EdgeData | undefined;
         return {

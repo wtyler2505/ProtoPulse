@@ -171,6 +171,22 @@ export const apiKeys = pgTable("api_keys", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const userChatSettings = pgTable("user_chat_settings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  aiProvider: text("ai_provider").notNull().default("anthropic"),
+  aiModel: text("ai_model").notNull().default("claude-sonnet-4-5-20250514"),
+  aiTemperature: real("ai_temperature").notNull().default(0.7),
+  customSystemPrompt: text("custom_system_prompt").default(""),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_user_chat_settings_user").on(table.userId),
+]);
+
+export const insertUserChatSettingsSchema = createInsertSchema(userChatSettings).omit({ id: true, updatedAt: true });
+export type InsertUserChatSettings = z.infer<typeof insertUserChatSettingsSchema>;
+export type UserChatSettings = typeof userChatSettings.$inferSelect;
+
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;

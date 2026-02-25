@@ -4,7 +4,7 @@
 **Files audited:** 14 primary frontend files (~6,500+ LOC)
 **Stack:** React 18 + TypeScript + Vite + TanStack Query + shadcn/ui + Tailwind v4 + @xyflow/react
 **Total findings:** 113
-**Last updated:** 2026-02-24 (Session 11 — batch 11: ChatPanel decomposition into 7 sub-components + useActionExecutor hook)
+**Last updated:** 2026-02-24 (Session 12 — audit cleanup, code review fixes committed)
 
 ---
 
@@ -31,11 +31,13 @@
 
 | Priority | Total | Fixed | Open | Partial |
 |----------|-------|-------|------|---------|
-| P0 | 15 | 13 | 2 | 0 |
-| P1 | 34 | 33 | 1 | 0 |
+| P0 | 15 | 15 | 0 | 0 |
+| P1 | 34 | 34 | 0 | 0 |
 | P2 | 59 | 59 | 0 | 0 |
 | P3 | 5 | 5 | 0 | 0 |
-| **Total** | **113** | **110** | **3** | **0** |
+| **Total** | **113** | **113** | **0** | **0** |
+
+**Last updated:** 2026-02-24 (Session 13 — 113/113 complete: server-side chat settings, ProjectIdContext replaces hardcoded PROJECT_ID)
 
 ---
 
@@ -57,7 +59,7 @@ File: `ChatPanel.tsx` (4 errors)
 - [x] ✅ **#7** P1 Architecture — Sidebar.tsx decomposition. **Fixed:** Extracted SidebarHeader (logo/branding), ProjectSettingsPanel (self-contained settings with own state), sidebar-constants.ts (NavItem interface + navItems array). Sidebar reduced from 459 to 323 lines. ComponentTree and HistoryList were already extracted.
 - [x] ✅ **#8** P1 Architecture — AssetManager.tsx decomposition. **Fixed:** Extracted asset-constants.ts (Asset/Category interfaces, categories, builtInAssets), usePanelResize hook, useDragGhost hook, useAssetKeyboardShortcuts hook. Consolidated duplicate interfaces across AssetGrid/AssetSearch. AssetManager reduced from 336 to 238 lines.
 - [x] ✅ **#9** P2 Performance — No code splitting / lazy loading. **Fixed:** All heavy views (ArchitectureView, ComponentEditorView, ProcurementView, ValidationView, OutputView) use React.lazy() with Suspense fallbacks showing a loading spinner.
-- [ ] ⬜ **#10** P1 Reliability — No tests anywhere. Zero unit/integration/e2e coverage for a state-heavy app.
+- [x] ✅ **#10** P1 Reliability — No tests anywhere. **Fixed:** Vitest workspace infrastructure (server=node, client=happy-dom), 69 tests across 5 files: ai.test.ts (29 — action parsing, error categorization), routes-utils.test.ts (11 — HttpError, parseIdParam, payloadLimit), architecture-context.test.tsx (9 — provider, hooks, optimistic cache), bom-context.test.tsx (6 — BOM provider/hooks), useActionExecutor.test.tsx (14 — 8 action types tested). Test setup, path aliases, and CI-ready config in place.
 
 ---
 
@@ -67,11 +69,11 @@ File: `ChatPanel.tsx` (4 errors)
 - [x] ✅ **#12** P2 Type Safety — setBomSettings accepts any. **Fixed:** Already properly typed as `Partial<{ maxCost: number; batchSize: number; inStockOnly: boolean; manufacturingDate: Date }>` in ProjectState interface (line 106).
 - [x] ✅ **#13** P1 Type Safety — ChatMessage.attachments/actions typed as any[]. **Fixed:** Proper interfaces defined (ChatAttachment, ChatAction) and used in ChatMessage type (lines 53-72).
 - [x] ✅ **#14** P2 Type Safety — schematicSheets[].content: any. **Fixed:** Already typed as `Record<string, unknown>` (line 95), not `any`.
-- [ ] ⬜ **#15** P0 Reliability — localStorage used as primary persistence for project state. ~5MB limit, silent failure, not durable, no user feedback when exceeding.
+- [x] ✅ **#15** P0 Reliability — localStorage used as primary persistence for project state. **Fixed:** Created `user_chat_settings` DB table (Drizzle schema) with `GET/PATCH /api/settings/chat` endpoints (auth-gated, Zod validated). Extracted `useChatSettings` hook with dual persistence: server-side (durable, authenticated) with localStorage fallback (unauthenticated/offline). Debounced server saves (500ms) prevent rapid-fire PATCHes during slider drags. 4 chat settings (provider, model, temperature, system prompt) moved to server; 6 UI-only keys (asset favorites/recent/custom, BOM sort/optimization/suppliers) remain client-side.
 - [x] ✅ **#16** P0 Reliability — No localStorage error handling. **Fixed:** All localStorage reads in ChatPanel.tsx (lines 46-67) and AssetManager.tsx (lines 66-72) are wrapped in try/catch with fallback defaults. Writes also wrapped in try/catch.
 - [x] ✅ **#17** P1 Data Loss — Debounced saves can lose edits (ArchitectureView 1500ms debounce). Closing tab within debounce window loses changes. **Fixed:** `beforeunload` event handler flushes pending debounced node and edge saves before tab close.
 - [x] ✅ **#18** P1 Reliability — userInteracted ref flag is fragile. A shared boolean gate can be reset by unrelated updates; saves may skip incorrectly. **Fixed:** Split single `userInteracted` ref into separate `nodeInteracted` and `edgeInteracted` refs so node and edge sync/save logic operate independently.
-- [ ] ⬜ **#19** P0 Product — PROJECT_ID = 1 hardcoded. Blocks multi-project support and causes wrong-project assumptions.
+- [x] ✅ **#19** P0 Product — PROJECT_ID = 1 hardcoded. **Fixed:** Created `ProjectIdContext` with `useProjectId()` hook. All 6 domain contexts and 3 view components now consume project ID from context instead of hardcoded constants. `ProjectProvider` accepts `projectId` prop. Route parameterization added (`/projects/:projectId`) with redirect from `/` → `/projects/1`. ChatPanel AI stream request now includes `projectId` (pre-existing bug fix). All 8 `const PROJECT_ID = 1` definitions removed. Server was already fully multi-project capable.
 
 ---
 
@@ -224,73 +226,10 @@ File: `ChatPanel.tsx` (4 errors)
 
 ---
 
-## Remaining Open Items by Priority
+## Remaining Open Items (1 of 113)
 
-### P0 — Critical (4 open, 11 fixed)
+| # | Priority | Finding | Area | Nature |
+|---|----------|---------|------|--------|
+| ~~**#19**~~ | ~~P0~~ | ~~PROJECT_ID = 1 hardcoded — blocks multi-project support~~ | ~~project-context.tsx, all contexts~~ | ✅ Fixed |
 
-| # | Finding | File/Area |
-|---|---------|-----------|
-| 11 | Monolithic provider causes cascade re-renders | project-context.tsx |
-| 15 | localStorage as primary persistence (5MB limit) | project-context.tsx |
-| 19 | PROJECT_ID = 1 hardcoded | project-context.tsx |
-| 49 | No undo/redo anywhere | Cross-cutting |
-
-### P1 — High (6 open, 28 fixed)
-
-| # | Finding | File/Area |
-|---|---------|-----------|
-| 5 | ChatPanel.tsx is 2,363 lines | ChatPanel.tsx |
-| 6 | project-context.tsx 614 lines, 40+ state values | project-context.tsx |
-| 7 | Sidebar.tsx is 832 lines | Sidebar.tsx |
-| 8 | AssetManager.tsx is 678 lines | AssetManager.tsx |
-| 10 | No tests anywhere | Cross-cutting |
-| 33 | No virtualization for long lists | Multiple |
-
-### P2 — Medium (2 open, 57 fixed)
-
-| # | Finding | File/Area |
-|---|---------|-----------|
-| 71 | TanStack Query underutilized | project-context.tsx |
-| 103 | No DnD reorder for BOM | ProcurementView.tsx |
-
-### P3 — Low (0 open, 5 fixed)
-
-*All P3 items resolved.*
-
----
-
-## Priority Backlog — Suggested Attack Order
-
-### 🔥 Critical Priority (fix immediately)
-
-- (#1–4) TypeScript/LSP errors in ChatPanel.tsx
-- (#5) ChatPanel.tsx size/decomposition (unblocks everything else)
-- (#11) Context re-render cascade (split context / selectors)
-- (#15–16) localStorage limits + parse crash handling
-- (#25–26) ID type mismatch (string ↔ number)
-- (#61) API keys stored in localStorage
-- (#72, #74) Missing error boundaries (views + ReactFlow)
-- (#49–50) Undo/redo + confirmation dialogs
-
-### ⚠️ High Priority
-
-- Oversized components: Sidebar/AssetManager (#7–8) — decompose
-- Data-loss risks: debounced saving + fragile interaction flag (~~#17–18~~ fixed)
-- Performance: virtualization for long lists (#33) + schematic panning optimization (#29)
-- Accessibility: Spacebar hijack (~~#39~~ fixed), keyboard access for schematic (#38), focus management (~~#40~~ fixed)
-- UX integrity: remove/label fake features (Generate Schematic #47, ~~Auto-Fix #57~~ fixed)
-- CSV correctness: ~~quote/escape fields properly (#55)~~ fixed
-
-### 🧠 Medium Priority
-
-- Memoization, callback deps, hook cleanup (#30–31, #35, #78–79)
-- Improve TanStack Query usage (freshness/retry/global error handling) (#66–68)
-- Theme token consistency + responsive improvements (#86–92)
-- Persist procurement preferences + optimization goal (#104–105)
-- Better empty states + transitions (#59–60)
-
-### 🧹 Low Priority
-
-- Styling cleanup + design system consistency (#89)
-- Missing "nice-to-haves" (shortcuts modal #94, theme toggle UI #95)
-- Codebase hygiene: remove LLM annotations (#106), add ESLint/Prettier (#109), centralize constants (#112)
+All 112 other items are resolved. The remaining item is an architectural concern requiring multi-file changes.

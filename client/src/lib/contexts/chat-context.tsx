@@ -2,8 +2,7 @@ import { createContext, useContext, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ChatMessage } from '@/lib/project-context';
-
-const PROJECT_ID = 1;
+import { useProjectId } from '@/lib/contexts/project-id-context';
 
 interface ChatState {
   messages: ChatMessage[];
@@ -16,10 +15,11 @@ const ChatContext = createContext<ChatState | undefined>(undefined);
 
 export function ChatProvider({ seeded, children }: { seeded: boolean; children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const projectId = useProjectId();
   const [isGenerating, setIsGenerating] = useState(false);
 
   const chatQuery = useQuery({
-    queryKey: [`/api/projects/${PROJECT_ID}/chat`],
+    queryKey: [`/api/projects/${projectId}/chat`],
     enabled: seeded,
     select: (data: Array<{ id: number | string; role: string; content: string; timestamp: string; mode?: ChatMessage['mode'] }>) => data.map((msg): ChatMessage => ({
       id: String(msg.id),
@@ -32,10 +32,10 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
 
   const addChatMutation = useMutation({
     mutationFn: async (msg: { role: string; content: string; mode?: string }) => {
-      await apiRequest('POST', `/api/projects/${PROJECT_ID}/chat`, msg);
+      await apiRequest('POST', `/api/projects/${projectId}/chat`, msg);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/chat`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/chat`] });
     },
   });
 

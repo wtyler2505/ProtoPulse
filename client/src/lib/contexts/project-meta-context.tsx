@@ -2,8 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ViewMode } from '@/lib/project-context';
-
-const PROJECT_ID = 1;
+import { useProjectId } from '@/lib/contexts/project-id-context';
 
 /** API response shape for project metadata. */
 interface ProjectApiResponse {
@@ -28,6 +27,7 @@ const ProjectMetaContext = createContext<ProjectMetaState | undefined>(undefined
 
 export function ProjectMetaProvider({ seeded, children }: { seeded: boolean; children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const projectId = useProjectId();
 
   const [activeView, setActiveView] = useState<ViewMode>('architecture');
   const [projectName, setProjectNameState] = useState('Smart_Agro_Node_v1');
@@ -41,16 +41,16 @@ export function ProjectMetaProvider({ seeded, children }: { seeded: boolean; chi
   const [activeSheetId, setActiveSheetId] = useState('top');
 
   const projectQuery = useQuery({
-    queryKey: [`/api/projects/${PROJECT_ID}`],
+    queryKey: [`/api/projects/${projectId}`],
     enabled: seeded,
   });
 
   const updateProjectMutation = useMutation({
     mutationFn: async (data: { name?: string; description?: string }) => {
-      await apiRequest('PATCH', `/api/projects/${PROJECT_ID}`, data);
+      await apiRequest('PATCH', `/api/projects/${projectId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
     },
   });
 

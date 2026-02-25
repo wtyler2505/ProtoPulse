@@ -351,6 +351,47 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.status(204).end();
   }));
 
+  // --- Chat Settings ---
+
+  app.get("/api/settings/chat", asyncHandler(async (req, res) => {
+    if (!req.userId) return res.status(401).json({ message: "Authentication required" });
+    const settings = await storage.getChatSettings(req.userId);
+    if (!settings) {
+      return res.json({
+        aiProvider: 'anthropic',
+        aiModel: 'claude-sonnet-4-5-20250514',
+        aiTemperature: 0.7,
+        customSystemPrompt: '',
+      });
+    }
+    res.json({
+      aiProvider: settings.aiProvider,
+      aiModel: settings.aiModel,
+      aiTemperature: settings.aiTemperature,
+      customSystemPrompt: settings.customSystemPrompt,
+    });
+  }));
+
+  app.patch("/api/settings/chat", payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    if (!req.userId) return res.status(401).json({ message: "Authentication required" });
+    const chatSettingsSchema = z.object({
+      aiProvider: z.enum(["anthropic", "gemini"]).optional(),
+      aiModel: z.string().min(1).max(200).optional(),
+      aiTemperature: z.number().min(0).max(2).optional(),
+      customSystemPrompt: z.string().max(10000).optional(),
+    });
+    const parsed = chatSettingsSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
+
+    const updated = await storage.upsertChatSettings(req.userId, parsed.data);
+    res.json({
+      aiProvider: updated.aiProvider,
+      aiModel: updated.aiModel,
+      aiTemperature: updated.aiTemperature,
+      customSystemPrompt: updated.customSystemPrompt,
+    });
+  }));
+
   // --- Projects ---
 
   app.get("/api/projects", asyncHandler(async (req, res) => {

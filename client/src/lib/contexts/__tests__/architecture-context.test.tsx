@@ -22,6 +22,7 @@ vi.mock('@/lib/queryClient', async () => {
 
 // Import AFTER mocks are wired
 import { apiRequest } from '@/lib/queryClient';
+import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
 import { ArchitectureProvider, useArchitecture } from '@/lib/contexts/architecture-context';
 
 const mockedApiRequest = vi.mocked(apiRequest);
@@ -51,9 +52,11 @@ function createWrapper(seeded = true) {
   const Wrapper = function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <ArchitectureProvider seeded={seeded} setActiveView={setActiveView}>
-          {children}
-        </ArchitectureProvider>
+        <ProjectIdProvider projectId={1}>
+          <ArchitectureProvider seeded={seeded} setActiveView={setActiveView}>
+            {children}
+          </ArchitectureProvider>
+        </ProjectIdProvider>
       </QueryClientProvider>
     );
   };
@@ -215,7 +218,33 @@ describe('ArchitectureContext', () => {
     expect(mockedApiRequest).not.toHaveBeenCalled();
   });
 
-  // 9. setNodes updates the query cache optimistically (before mutation resolves)
+  // 9. Non-default projectId flows through to API calls
+  it('uses projectId from context for API calls (non-default project)', async () => {
+    const queryClient = createTestQueryClient();
+    const setActiveView = vi.fn();
+    const Wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <ProjectIdProvider projectId={42}>
+          <ArchitectureProvider seeded setActiveView={setActiveView}>
+            {children}
+          </ArchitectureProvider>
+        </ProjectIdProvider>
+      </QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useArchitecture(), { wrapper: Wrapper });
+    act(() => { result.current.setNodes([makeNode('n1', 'MCU')]); });
+
+    await waitFor(() => {
+      expect(mockedApiRequest).toHaveBeenCalledWith(
+        'PUT',
+        '/api/projects/42/nodes',
+        expect.any(Array),
+      );
+    });
+  });
+
+  // 10. setNodes updates the query cache optimistically (before mutation resolves)
   it('setNodes updates query cache before mutation completes', () => {
     const { Wrapper, queryClient } = createWrapper();
     const { result } = renderHook(() => useArchitecture(), { wrapper: Wrapper });

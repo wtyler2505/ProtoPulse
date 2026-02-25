@@ -2,8 +2,7 @@ import { createContext, useContext, useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { BomItem } from '@/lib/project-context';
-
-const PROJECT_ID = 1;
+import { useProjectId } from '@/lib/contexts/project-id-context';
 
 interface BomState {
   bom: BomItem[];
@@ -23,6 +22,7 @@ const BomContext = createContext<BomState | undefined>(undefined);
 
 export function BomProvider({ seeded, children }: { seeded: boolean; children: React.ReactNode }) {
   const queryClient = useQueryClient();
+  const projectId = useProjectId();
 
   const [bomSettings, setBomSettingsState] = useState({
     maxCost: 50,
@@ -36,7 +36,7 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
   }, []);
 
   const bomQuery = useQuery({
-    queryKey: [`/api/projects/${PROJECT_ID}/bom`],
+    queryKey: [`/api/projects/${projectId}/bom`],
     enabled: seeded,
     select: (data: Array<Omit<BomItem, 'id'> & { id: number | string }>) => data.map((item): BomItem => ({
       ...item,
@@ -46,28 +46,28 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
 
   const addBomItemMutation = useMutation({
     mutationFn: async (item: Omit<BomItem, 'id'>) => {
-      await apiRequest('POST', `/api/projects/${PROJECT_ID}/bom`, item);
+      await apiRequest('POST', `/api/projects/${projectId}/bom`, item);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bom`] });
     },
   });
 
   const deleteBomItemMutation = useMutation({
     mutationFn: async (id: number | string) => {
-      await apiRequest('DELETE', `/api/bom/${Number(id)}?projectId=${PROJECT_ID}`);
+      await apiRequest('DELETE', `/api/bom/${Number(id)}?projectId=${projectId}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bom`] });
     },
   });
 
   const updateBomItemMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number | string; data: Partial<BomItem> }) => {
-      await apiRequest('PATCH', `/api/bom/${Number(id)}?projectId=${PROJECT_ID}`, data);
+      await apiRequest('PATCH', `/api/bom/${Number(id)}?projectId=${projectId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/bom`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bom`] });
     },
   });
 

@@ -21,6 +21,7 @@ vi.mock('@/lib/queryClient', async () => {
 
 // Import AFTER mocks are wired
 import { apiRequest } from '@/lib/queryClient';
+import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
 import { BomProvider, useBom } from '@/lib/contexts/bom-context';
 
 const mockedApiRequest = vi.mocked(apiRequest);
@@ -49,7 +50,9 @@ function createWrapper(seeded = true) {
   return function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <BomProvider seeded={seeded}>{children}</BomProvider>
+        <ProjectIdProvider projectId={1}>
+          <BomProvider seeded={seeded}>{children}</BomProvider>
+        </ProjectIdProvider>
       </QueryClientProvider>
     );
   };
@@ -145,7 +148,43 @@ describe('BomContext', () => {
     });
   });
 
-  // 6. updateBomItem calls apiRequest with correct PATCH url and body
+  // 6. Non-default projectId flows through to API calls
+  it('uses projectId from context for API calls (non-default project)', async () => {
+    const queryClient = createTestQueryClient();
+    const Wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        <ProjectIdProvider projectId={42}>
+          <BomProvider seeded>{children}</BomProvider>
+        </ProjectIdProvider>
+      </QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useBom(), { wrapper: Wrapper });
+
+    act(() => {
+      result.current.addBomItem({
+        partNumber: 'TEST',
+        manufacturer: 'Test',
+        description: 'Test',
+        quantity: 1,
+        unitPrice: 1,
+        totalPrice: 1,
+        supplier: 'Digi-Key',
+        stock: 10,
+        status: 'In Stock',
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockedApiRequest).toHaveBeenCalledWith(
+        'POST',
+        '/api/projects/42/bom',
+        expect.any(Object),
+      );
+    });
+  });
+
+  // 7. updateBomItem calls apiRequest with correct PATCH url and body
   it('updateBomItem calls apiRequest with PATCH and the correct URL/body', async () => {
     const { result } = renderHook(() => useBom(), { wrapper: createWrapper() });
 

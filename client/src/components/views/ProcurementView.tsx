@@ -3,7 +3,7 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { PROJECT_ID } from '@/lib/project-context';
+import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
 import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, MessageSquarePlus, Copy, Pencil, Check, X, GripVertical, ArrowUpDown } from 'lucide-react';
@@ -31,7 +31,8 @@ export default function ProcurementView() {
   const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem } = useBom();
   const { addOutputLog } = useOutput();
   const { toast } = useToast();
-  const { data: componentParts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
+  const projectId = useProjectId();
+  const { data: componentParts, isLoading: partsLoading } = useComponentParts(projectId);
   const [showSettings, setShowSettings] = useState(false);
   const [showComponentRef, setShowComponentRef] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
