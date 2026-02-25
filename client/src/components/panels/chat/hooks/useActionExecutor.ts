@@ -642,8 +642,8 @@ export function useActionExecutor(): (actions: AIAction[]) => string[] {
         // ---------------------------------------------------------------
         // BOM
         // ---------------------------------------------------------------
-        case 'add_bom_item':
-          addBomItem({
+        case 'add_bom_item': {
+          const newBomItem = {
             partNumber: action.partNumber!,
             manufacturer: action.manufacturer!,
             description: action.description!,
@@ -653,10 +653,15 @@ export function useActionExecutor(): (actions: AIAction[]) => string[] {
             supplier: (action.supplier || 'TBD') as BomItem['supplier'],
             stock: 0,
             status: (action.status || 'In Stock') as BomItem['status'],
-          });
+          };
+          addBomItem(newBomItem);
+          // Update accumulator so subsequent actions in the same batch see this item.
+          // Use a placeholder id — the server assigns the real one on persist.
+          currentBom = [...currentBom, { id: crypto.randomUUID(), projectId: 1, ...newBomItem } as BomItem];
           addToHistory(`Added BOM item: ${action.partNumber}`, 'AI');
           addOutputLog(`[AI] Added BOM item: ${action.partNumber}`);
           break;
+        }
 
         case 'remove_bom_item': {
           const bomItem = currentBom.find(

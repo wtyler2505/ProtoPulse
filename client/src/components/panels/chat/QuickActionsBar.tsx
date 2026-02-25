@@ -12,7 +12,7 @@ export default function QuickActionsBar({ onAction, isVisible, isGenerating }: Q
   if (!isVisible || isGenerating) return null;
 
   return (
-    <div className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar">
+    <div data-testid="quick-actions-bar" className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar">
       {Object.entries(quickActionDescriptions).map(([action, desc]) => (
         <StyledTooltip key={action} content={desc} side="top">
             <button

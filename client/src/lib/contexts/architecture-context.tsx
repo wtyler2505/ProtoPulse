@@ -151,25 +151,45 @@ export function ArchitectureProvider({
     },
   });
 
-  // --- Dirty-flag pattern to avoid save on hydration ---
-  const nodesDirtyRef = useRef(false);
-  const edgesDirtyRef = useRef(false);
+  const setNodes = useCallback((newNodes: Node[]) => {
+    // Optimistic cache update so consumers see new data immediately,
+    // then persist to server.  On success the invalidation refetches
+    // the authoritative data; on error the query reverts.
+    queryClient.setQueryData(
+      [`/api/projects/${PROJECT_ID}/nodes`],
+      newNodes.map(node => ({
+        nodeId: node.id,
+        nodeType: node.data.type,
+        label: node.data.label,
+        positionX: node.position.x,
+        positionY: node.position.y,
+        data: { description: node.data.description },
+      })),
+    );
+    saveNodesMutation.mutate(newNodes);
+  }, [queryClient, saveNodesMutation]);
 
-  const setNodes = useCallback((nodes: Node[]) => {
-    if (nodesDirtyRef.current) {
-      saveNodesMutation.mutate(nodes);
-    } else {
-      nodesDirtyRef.current = true;
-    }
-  }, [saveNodesMutation]);
-
-  const setEdges = useCallback((edges: Edge[]) => {
-    if (edgesDirtyRef.current) {
-      saveEdgesMutation.mutate(edges);
-    } else {
-      edgesDirtyRef.current = true;
-    }
-  }, [saveEdgesMutation]);
+  const setEdges = useCallback((newEdges: Edge[]) => {
+    queryClient.setQueryData(
+      [`/api/projects/${PROJECT_ID}/edges`],
+      newEdges.map(edge => {
+        const ed = edge.data as EdgeData | undefined;
+        return {
+          edgeId: edge.id,
+          source: edge.source,
+          target: edge.target,
+          label: edge.label,
+          animated: edge.animated ?? false,
+          style: edge.style,
+          signalType: ed?.signalType || undefined,
+          voltage: ed?.voltage || undefined,
+          busWidth: ed?.busWidth || undefined,
+          netName: ed?.netName || undefined,
+        };
+      }),
+    );
+    saveEdgesMutation.mutate(newEdges);
+  }, [queryClient, saveEdgesMutation]);
 
   // --- Selection & focus ---
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

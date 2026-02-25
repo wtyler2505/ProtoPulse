@@ -390,7 +390,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     }
 
     return "I've analyzed your request. I can help with navigation, design, BOM management, validation, and project settings. Type 'help' to see all available commands.";
-  }, [nodes, edges, bom, issues, projectName, projectDescription, setNodes, setEdges, setActiveView, addToHistory, addOutputLog]);
+  }, [nodes, edges, bom, issues, projectName, projectDescription, setNodes, setEdges, setActiveView, addToHistory, addOutputLog, addBomItem, deleteBomItem, runValidation, deleteValidationIssue, setProjectName, setProjectDescription]);
 
   const executeAIActions = useActionExecutor();
 
@@ -584,7 +584,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       abortRef.current = null;
       captureSnapshot();
     }
-  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, activeView, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand, selectedNodeId, getChangeDiff, captureSnapshot]);
+  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, customSystemPrompt, activeView, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand, selectedNodeId, getChangeDiff, captureSnapshot]);
 
   const handleRegenerate = useCallback(() => {
     if (lastUserMessage && !isGenerating) {
