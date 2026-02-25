@@ -4,12 +4,7 @@ import {
 } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { cn } from '@/lib/utils';
-
-interface Category {
-  id: string;
-  label: string;
-  icon: typeof Component;
-}
+import type { Category } from './asset-constants';
 
 interface AssetSearchProps {
   search: string;

@@ -1,26 +1,26 @@
 import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react';
-import { useProject, ViewMode, BomItem, ValidationIssue, ProjectHistoryItem } from '@/lib/project-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useBom } from '@/lib/contexts/bom-context';
+import { useValidation } from '@/lib/contexts/validation-context';
+import { useHistory } from '@/lib/contexts/history-context';
+import { useOutput } from '@/lib/contexts/output-context';
+import { BomItem, ValidationIssue, ProjectHistoryItem } from '@/lib/project-context';
 import type { Node, Edge } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import {
-  LayoutGrid,
-  Cpu,
-  Activity,
   Layers,
-  Package,
   Settings,
   ChevronRight,
   ChevronDown,
   FolderOpen,
-  X,
-  TerminalSquare,
   Search,
   Pencil,
-  Check,
 } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
-import { copyToClipboard } from '@/lib/clipboard';
-import { SETTINGS_SAVE_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
+import { navItems } from '@/components/layout/sidebar/sidebar-constants';
+import SidebarHeader from '@/components/layout/sidebar/SidebarHeader';
+import ProjectSettingsPanel from '@/components/layout/sidebar/ProjectSettingsPanel';
 import ComponentTree from './sidebar/ComponentTree';
 import HistoryList from './sidebar/HistoryList';
 
@@ -33,36 +33,21 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ isOpen, onClose, collapsed = false, width = 256, onToggleCollapse }: SidebarProps) {
-  const {
-    activeView, setActiveView,
-    history, projectName, projectDescription, addOutputLog,
-    nodes, edges, bom, issues, setNodes,
-    selectedNodeId, focusNode,
-    setProjectName, setProjectDescription,
-  } = useProject();
+  const { activeView, setActiveView, projectName, projectDescription, setProjectName, setProjectDescription } = useProjectMeta();
+  const { nodes, edges, setNodes, selectedNodeId, focusNode } = useArchitecture();
+  const { bom } = useBom();
+  const { issues } = useValidation();
+  const { history } = useHistory();
+  const { addOutputLog } = useOutput();
 
   const [blocksExpanded, setBlocksExpanded] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState(projectName);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
-  const [settingsName, setSettingsName] = useState(projectName);
-  const [settingsDesc, setSettingsDesc] = useState(projectDescription);
-  const [settingsSaved, setSettingsSaved] = useState(false);
 
   useEffect(() => { setEditNameValue(projectName); }, [projectName]);
-  useEffect(() => { setSettingsName(projectName); }, [projectName]);
-  useEffect(() => { setSettingsDesc(projectDescription); }, [projectDescription]);
-
-  const navItems: { icon: typeof LayoutGrid; view: ViewMode; label: string }[] = [
-    { icon: LayoutGrid, view: 'architecture', label: 'Architecture' },
-    { icon: Cpu, view: 'component_editor', label: 'Component Editor' },
-    { icon: Package, view: 'procurement', label: 'Procurement' },
-    { icon: Activity, view: 'validation', label: 'Validation' },
-    { icon: TerminalSquare, view: 'output', label: 'Output' },
-  ];
 
   if (collapsed) {
     return (
@@ -132,32 +117,11 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
         style={{ '--sidebar-w': `${width}px` } as React.CSSProperties}
       >
         <div className="flex flex-col h-full w-64 md:w-[var(--sidebar-w)]">
-          <div className="h-14 border-b border-sidebar-border flex items-center px-4 gap-3 bg-sidebar/20">
-            <div className="w-8 h-8 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)] shrink-0">
-              <Layers className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex flex-col justify-center flex-1 min-w-0">
-              <span className="font-display font-bold text-lg leading-none tracking-tight truncate">ProtoPulse</span>
-              <span className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] mt-1">System Architect</span>
-            </div>
-            <StyledTooltip content="Close sidebar" side="bottom">
-                <button
-                  data-testid="sidebar-close"
-                  className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors md:hidden"
-                  onClick={onClose}
-                >
-                  <X className="w-4 h-4" />
-                </button>
-            </StyledTooltip>
-          </div>
+          <SidebarHeader onClose={onClose} />
           <SidebarContent
-            activeView={activeView}
-            setActiveView={setActiveView}
             history={history}
             blocksExpanded={blocksExpanded}
             setBlocksExpanded={setBlocksExpanded}
-            showSettings={showSettings}
-            setShowSettings={setShowSettings}
             projectName={projectName}
             projectDescription={projectDescription}
             addOutputLog={addOutputLog}
@@ -179,12 +143,6 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
             setTimelineExpanded={setTimelineExpanded}
             expandedCategories={expandedCategories}
             setExpandedCategories={setExpandedCategories}
-            settingsName={settingsName}
-            setSettingsName={setSettingsName}
-            settingsDesc={settingsDesc}
-            setSettingsDesc={setSettingsDesc}
-            settingsSaved={settingsSaved}
-            setSettingsSaved={setSettingsSaved}
             setNodes={setNodes}
           />
         </div>
@@ -194,13 +152,9 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
 }
 
 interface SidebarContentProps {
-  activeView: ViewMode;
-  setActiveView: (view: ViewMode) => void;
   history: ProjectHistoryItem[];
   blocksExpanded: boolean;
   setBlocksExpanded: (v: boolean) => void;
-  showSettings: boolean;
-  setShowSettings: (v: boolean) => void;
   projectName: string;
   projectDescription: string;
   addOutputLog: (log: string) => void;
@@ -223,18 +177,12 @@ interface SidebarContentProps {
   setTimelineExpanded: (v: boolean) => void;
   expandedCategories: Record<string, boolean>;
   setExpandedCategories: Dispatch<SetStateAction<Record<string, boolean>>>;
-  settingsName: string;
-  setSettingsName: (v: string) => void;
-  settingsDesc: string;
-  setSettingsDesc: (v: string) => void;
-  settingsSaved: boolean;
-  setSettingsSaved: (v: boolean) => void;
 }
 
 function SidebarContent({
-  activeView, setActiveView, history,
+  history,
   blocksExpanded, setBlocksExpanded,
-  showSettings, setShowSettings, projectName, projectDescription, addOutputLog,
+  projectName, projectDescription, addOutputLog,
   nodes, edges, bom, issues, setNodes,
   selectedNodeId, focusNode,
   setProjectName, setProjectDescription,
@@ -242,9 +190,6 @@ function SidebarContent({
   editingName, setEditingName, editNameValue, setEditNameValue,
   timelineExpanded, setTimelineExpanded,
   expandedCategories, setExpandedCategories,
-  settingsName, setSettingsName,
-  settingsDesc, setSettingsDesc,
-  settingsSaved, setSettingsSaved,
 }: SidebarContentProps) {
   const editNameRef = useRef<HTMLInputElement>(null);
 
@@ -270,19 +215,6 @@ function SidebarContent({
   const cancelInlineName = () => {
     setEditNameValue(projectName);
     setEditingName(false);
-  };
-
-  const settingsDirty = settingsName !== projectName || settingsDesc !== projectDescription;
-
-  const saveSettings = () => {
-    if (settingsName.trim() && settingsName !== projectName) {
-      setProjectName(settingsName.trim());
-    }
-    if (settingsDesc !== projectDescription) {
-      setProjectDescription(settingsDesc);
-    }
-    setSettingsSaved(true);
-    setTimeout(() => setSettingsSaved(false), SETTINGS_SAVE_FEEDBACK_DURATION);
   };
 
   return (
@@ -374,80 +306,17 @@ function SidebarContent({
         />
       </div>
 
-      <div className="p-3 border-t border-sidebar-border bg-sidebar/20">
-        <StyledTooltip content="Open project settings" side="right">
-            <button
-              data-testid="button-project-settings"
-              className="w-full flex items-center gap-2 p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setShowSettings(!showSettings)}
-            >
-              <Settings className="w-4 h-4" />
-              <span className="text-xs font-medium">Project Settings</span>
-            </button>
-        </StyledTooltip>
-        {showSettings && (
-          <div className="px-3 pb-3 space-y-2 border-t border-border pt-2 mt-1 bg-muted/10 backdrop-blur">
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Project Name</div>
-            <input
-              data-testid="settings-name-input"
-              type="text"
-              value={settingsName}
-              onChange={(e) => setSettingsName(e.target.value)}
-              onBlur={saveSettings}
-              onKeyDown={(e) => { if (e.key === 'Enter') saveSettings(); }}
-              className="w-full text-xs bg-muted/30 border border-border/50 px-2 py-1.5 text-foreground focus:outline-none focus:border-primary/50 transition-colors"
-            />
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Description</div>
-            <textarea
-              data-testid="settings-desc-input"
-              value={settingsDesc}
-              onChange={(e) => setSettingsDesc(e.target.value)}
-              onBlur={saveSettings}
-              rows={2}
-              className="w-full text-xs bg-muted/30 border border-border/50 px-2 py-1.5 text-foreground focus:outline-none focus:border-primary/50 transition-colors resize-none"
-            />
-            {settingsDirty && (
-              <button
-                className="w-full text-xs bg-primary text-primary-foreground py-1.5 px-3 hover:bg-primary/90 transition-colors flex items-center justify-center gap-1.5"
-                onClick={saveSettings}
-              >
-                <Check className="w-3 h-3" />
-                Save Changes
-              </button>
-            )}
-            {settingsSaved && (
-              <div className="text-xs text-green-400 flex items-center gap-1">
-                <Check className="w-3 h-3" />
-                Saved successfully
-              </div>
-            )}
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-3">Stats</div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="text-xs text-muted-foreground">
-                <span className="text-foreground font-medium">{(nodes || []).length}</span> nodes
-              </div>
-              <div className="text-xs text-muted-foreground">
-                <span className="text-foreground font-medium">{(edges || []).length}</span> edges
-              </div>
-              <div className="text-xs text-muted-foreground">
-                <span className="text-foreground font-medium">{(bom || []).length}</span> BOM items
-              </div>
-              <div className="text-xs text-muted-foreground">
-                <span className="text-foreground font-medium">{(issues || []).length}</span> issues
-              </div>
-            </div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2">Version</div>
-            <div
-              className="text-xs font-mono text-primary cursor-pointer hover:underline"
-              data-testid="text-version"
-              onClick={() => {
-                copyToClipboard('ProtoPulse v1.0.0-alpha');
-                addOutputLog('[SYSTEM] Version info copied: ProtoPulse v1.0.0-alpha');
-              }}
-            >v1.0.0-alpha</div>
-          </div>
-        )}
-      </div>
+      <ProjectSettingsPanel
+        projectName={projectName}
+        setProjectName={setProjectName}
+        projectDescription={projectDescription}
+        setProjectDescription={setProjectDescription}
+        nodes={nodes}
+        edges={edges}
+        bom={bom}
+        issues={issues}
+        addOutputLog={addOutputLog}
+      />
     </>
   );
 }

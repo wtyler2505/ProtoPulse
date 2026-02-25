@@ -1,8 +1,11 @@
-import { useState, useMemo } from 'react';
-import { useProject, PROJECT_ID } from '@/lib/project-context';
+import { useState, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useValidation } from '@/lib/contexts/validation-context';
+import { useOutput } from '@/lib/contexts/output-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { PROJECT_ID, type ViewMode } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -24,7 +27,9 @@ import { validatePart } from '@/lib/component-editor/validation';
 import type { PartState } from '@shared/component-types';
 
 export default function ValidationView() {
-  const { issues, runValidation, deleteValidationIssue, addOutputLog, setActiveView } = useProject();
+  const { issues, runValidation, deleteValidationIssue } = useValidation();
+  const { addOutputLog } = useOutput();
+  const { setActiveView } = useProjectMeta();
   const { toast } = useToast();
   const [pendingDismissId, setPendingDismissId] = useState<number | string | null>(null);
   const { data: componentParts } = useComponentParts(PROJECT_ID);
@@ -88,103 +93,18 @@ export default function ValidationView() {
            <div className="w-32">Action</div>
         </div>
         
-        <ScrollArea className="flex-1">
-          {issues.map((issue) => (
-            <ContextMenu key={issue.id}>
-              <ContextMenuTrigger asChild>
-                <div data-testid={`row-issue-${issue.id}`} onClick={() => { if (issue.componentId) { setActiveView('architecture'); } }} className={cn("flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group", issue.componentId ? "cursor-pointer" : "cursor-default")} role={issue.componentId ? "button" : undefined} tabIndex={issue.componentId ? 0 : undefined} onKeyDown={issue.componentId ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('architecture'); } } : undefined}>
-                  <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
-                    {getIcon(issue.severity)}
-                    <span className="text-xs font-medium uppercase md:hidden">{issue.severity}</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-foreground text-sm">{issue.message}</h3>
-                    {issue.suggestion && (
-                      <div className="mt-1.5 text-xs text-muted-foreground flex items-start gap-1.5">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />
-                        <span className="text-emerald-500/80">Suggestion: {issue.suggestion}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="md:w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 self-start text-center">
-                    {issue.componentId || 'GLOBAL'}
-                  </div>
-                  <div className="md:w-32">
-                    <StyledTooltip content="Mark this issue as resolved" side="left">
-                        <button data-testid={`button-resolve-${issue.id}`} aria-label={`Mark resolved: ${issue.message}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
-                            Mark Resolved
-                        </button>
-                    </StyledTooltip>
-                  </div>
-                </div>
-              </ContextMenuTrigger>
-              <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-                <ContextMenuItem onSelect={() => { deleteValidationIssue(issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${issue.message}`); }}>Mark Resolved</ContextMenuItem>
-                <ContextMenuItem onSelect={() => setActiveView('architecture')}>View in Architecture</ContextMenuItem>
-                <ContextMenuItem onSelect={() => copyToClipboard(issue.message)}>Copy Issue Details</ContextMenuItem>
-                <ContextMenuSeparator />
-                <ContextMenuItem className="text-destructive" onSelect={() => setPendingDismissId(issue.id)}>Dismiss Issue</ContextMenuItem>
-              </ContextMenuContent>
-            </ContextMenu>
-          ))}
-
-          {componentParts && componentParts.length > 0 && (
-            <>
-              <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/20 backdrop-blur">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Component Part Issues</h3>
-                <span className="text-xs text-muted-foreground">({componentIssues.length})</span>
-              </div>
-              {componentIssues.map((issue) => (
-                <div key={issue.id} data-testid={`row-component-issue-${issue.id}`} role="button" tabIndex={0} onClick={() => setActiveView('component_editor')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('component_editor'); } }} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
-                  <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
-                    {getIcon(issue.severity)}
-                    <span className="text-xs font-medium uppercase md:hidden">{issue.severity}</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-foreground text-sm">{issue.message}</h3>
-                    {issue.suggestion && (
-                      <div className="mt-1.5 text-xs text-muted-foreground flex items-start gap-1.5">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />
-                        <span className="text-emerald-500/80">Suggestion: {issue.suggestion}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="md:w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 self-start text-center">
-                    {issue.componentId}
-                  </div>
-                  <div className="md:w-32">
-                    <button
-                      data-testid={`button-view-component-${issue.id}`}
-                      aria-label={`View in editor: ${issue.message}`}
-                      onClick={(e) => { e.stopPropagation(); setActiveView('component_editor'); }}
-                      className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
-                    >
-                      View
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-
-          {issues.length === 0 && componentIssues.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-24 text-muted-foreground" data-testid="empty-state-validation">
-              <ShieldCheck className="w-16 h-16 mb-4 text-emerald-500/20" />
-              <p className="text-lg font-medium text-foreground">All Systems Nominal</p>
-              <p className="text-sm mt-1">No design rule violations detected.</p>
-              <p className="text-xs mt-3 max-w-sm text-center">
-                Run DRC checks to validate your architecture against design rules, or use AI chat to analyze your design for potential issues.
-              </p>
-              <button
-                onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
-                className="mt-4 px-4 py-2 text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
-                data-testid="button-run-drc-empty"
-              >
-                Run DRC Checks
-              </button>
-            </div>
-          )}
-        </ScrollArea>
+        <VirtualizedIssueList
+          issues={issues}
+          componentIssues={componentIssues}
+          hasComponentParts={!!componentParts && componentParts.length > 0}
+          getIcon={getIcon}
+          deleteValidationIssue={deleteValidationIssue}
+          addOutputLog={addOutputLog}
+          setActiveView={setActiveView}
+          setPendingDismissId={setPendingDismissId}
+          runValidation={runValidation}
+          toast={toast}
+        />
       </div>
 
       <AlertDialog open={pendingDismissId !== null} onOpenChange={(open) => { if (!open) setPendingDismissId(null); }}>
@@ -206,6 +126,166 @@ export default function ValidationView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+type ArchIssue = { id: number | string; severity: string; message: string; suggestion?: string; componentId?: string };
+type CompIssue = { id: string; severity: string; message: string; suggestion?: string; componentId: string };
+type VirtualRow =
+  | { type: 'arch'; issue: ArchIssue }
+  | { type: 'section_header'; count: number }
+  | { type: 'comp'; issue: CompIssue };
+
+function VirtualizedIssueList({
+  issues, componentIssues, hasComponentParts, getIcon,
+  deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
+}: {
+  issues: ArchIssue[];
+  componentIssues: CompIssue[];
+  hasComponentParts: boolean;
+  getIcon: (severity: string) => React.ReactNode;
+  deleteValidationIssue: (id: number | string) => void;
+  addOutputLog: (msg: string) => void;
+  setActiveView: (view: ViewMode) => void;
+  setPendingDismissId: (id: number | string | null) => void;
+  runValidation: () => void;
+  toast: ReturnType<typeof useToast>['toast'];
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rows = useMemo<VirtualRow[]>(() => {
+    const result: VirtualRow[] = issues.map((issue) => ({ type: 'arch' as const, issue }));
+    if (hasComponentParts && componentIssues.length > 0) {
+      result.push({ type: 'section_header' as const, count: componentIssues.length });
+      for (const issue of componentIssues) {
+        result.push({ type: 'comp' as const, issue });
+      }
+    }
+    return result;
+  }, [issues, componentIssues, hasComponentParts]);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) => rows[index].type === 'section_header' ? 48 : 72,
+    overscan: 10,
+  });
+
+  if (issues.length === 0 && componentIssues.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center py-24 text-muted-foreground" data-testid="empty-state-validation">
+        <ShieldCheck className="w-16 h-16 mb-4 text-emerald-500/20" />
+        <p className="text-lg font-medium text-foreground">All Systems Nominal</p>
+        <p className="text-sm mt-1">No design rule violations detected.</p>
+        <p className="text-xs mt-3 max-w-sm text-center">
+          Run DRC checks to validate your architecture against design rules, or use AI chat to analyze your design for potential issues.
+        </p>
+        <button
+          onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
+          className="mt-4 px-4 py-2 text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+          data-testid="button-run-drc-empty"
+        >
+          Run DRC Checks
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={parentRef} className="flex-1 overflow-auto">
+      <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const row = rows[virtualRow.index];
+          return (
+            <div
+              key={virtualRow.index}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+              }}
+            >
+              {row.type === 'section_header' && (
+                <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/20 backdrop-blur">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Component Part Issues</h3>
+                  <span className="text-xs text-muted-foreground">({row.count})</span>
+                </div>
+              )}
+              {row.type === 'arch' && (
+                <ContextMenu>
+                  <ContextMenuTrigger asChild>
+                    <div data-testid={`row-issue-${row.issue.id}`} onClick={() => { if (row.issue.componentId) { setActiveView('architecture'); } }} className={cn("flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group", row.issue.componentId ? "cursor-pointer" : "cursor-default")} role={row.issue.componentId ? "button" : undefined} tabIndex={row.issue.componentId ? 0 : undefined} onKeyDown={row.issue.componentId ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('architecture'); } } : undefined}>
+                      <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
+                        {getIcon(row.issue.severity)}
+                        <span className="text-xs font-medium uppercase md:hidden">{row.issue.severity}</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
+                        {row.issue.suggestion && (
+                          <div className="mt-1.5 text-xs text-muted-foreground flex items-start gap-1.5">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />
+                            <span className="text-emerald-500/80">Suggestion: {row.issue.suggestion}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="md:w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 self-start text-center">
+                        {row.issue.componentId || 'GLOBAL'}
+                      </div>
+                      <div className="md:w-32">
+                        <StyledTooltip content="Mark this issue as resolved" side="left">
+                          <button data-testid={`button-resolve-${row.issue.id}`} aria-label={`Mark resolved: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(row.issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${row.issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
+                            Mark Resolved
+                          </button>
+                        </StyledTooltip>
+                      </div>
+                    </div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
+                    <ContextMenuItem onSelect={() => { deleteValidationIssue(row.issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${row.issue.message}`); }}>Mark Resolved</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => setActiveView('architecture')}>View in Architecture</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => copyToClipboard(row.issue.message)}>Copy Issue Details</ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem className="text-destructive" onSelect={() => setPendingDismissId(row.issue.id)}>Dismiss Issue</ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              )}
+              {row.type === 'comp' && (
+                <div data-testid={`row-component-issue-${row.issue.id}`} role="button" tabIndex={0} onClick={() => setActiveView('component_editor')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('component_editor'); } }} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
+                  <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
+                    {getIcon(row.issue.severity)}
+                    <span className="text-xs font-medium uppercase md:hidden">{row.issue.severity}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
+                    {row.issue.suggestion && (
+                      <div className="mt-1.5 text-xs text-muted-foreground flex items-start gap-1.5">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-500 mt-0.5 shrink-0" />
+                        <span className="text-emerald-500/80">Suggestion: {row.issue.suggestion}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="md:w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 self-start text-center">
+                    {row.issue.componentId}
+                  </div>
+                  <div className="md:w-32">
+                    <button
+                      data-testid={`button-view-component-${row.issue.id}`}
+                      aria-label={`View in editor: ${row.issue.message}`}
+                      onClick={(e) => { e.stopPropagation(); setActiveView('component_editor'); }}
+                      className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
+                    >
+                      View
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

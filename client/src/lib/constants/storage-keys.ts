@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   // Procurement settings (ProcurementView)
   OPTIMIZATION_GOAL: 'protopulse_optimization_goal',
   PREFERRED_SUPPLIERS: 'protopulse_preferred_suppliers',
+  BOM_SORT_ORDER: 'protopulse_bom_sort_order',
 
   // Asset manager (AssetManager)
   // Keys intentionally unprefixed — pre-existing data in user browsers

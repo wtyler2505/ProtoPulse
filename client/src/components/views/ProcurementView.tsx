@@ -1,6 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useProject, PROJECT_ID } from '@/lib/project-context';
-import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, MessageSquarePlus, Copy, Pencil, Check, X } from 'lucide-react';
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { PROJECT_ID } from '@/lib/project-context';
+import { useBom } from '@/lib/contexts/bom-context';
+import { useOutput } from '@/lib/contexts/output-context';
+import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, MessageSquarePlus, Copy, Pencil, Check, X, GripVertical, ArrowUpDown } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
@@ -22,7 +28,8 @@ import { STORAGE_KEYS, DEFAULT_PREFERRED_SUPPLIERS, OPTIMIZATION_GOALS, getSuppl
 import { buildCSV, downloadBlob } from '@/lib/csv';
 
 export default function ProcurementView() {
-  const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem, addOutputLog } = useProject();
+  const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem } = useBom();
+  const { addOutputLog } = useOutput();
   const { toast } = useToast();
   const { data: componentParts, isLoading: partsLoading } = useComponentParts(PROJECT_ID);
   const [showSettings, setShowSettings] = useState(false);
@@ -59,16 +66,52 @@ export default function ProcurementView() {
     });
   }, []);
 
+  // ── Sort order state (persisted, enables DnD reorder) ──
+  const [sortOrder, setSortOrder] = useState<number[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.BOM_SORT_ORDER);
+      if (stored) { const parsed = JSON.parse(stored); if (Array.isArray(parsed)) return parsed; }
+    } catch { /* fall through */ }
+    return [];
+  });
+
+  const saveSortOrder = useCallback((order: number[]) => {
+    setSortOrder(order);
+    try { localStorage.setItem(STORAGE_KEYS.BOM_SORT_ORDER, JSON.stringify(order)); } catch { /* quota */ }
+  }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
   const filteredBom = useMemo(() => {
-    if (!searchTerm) return bom;
-    const term = searchTerm.toLowerCase();
-    return bom.filter(item =>
-      item.partNumber.toLowerCase().includes(term) ||
-      item.manufacturer.toLowerCase().includes(term) ||
-      item.description.toLowerCase().includes(term) ||
-      item.supplier.toLowerCase().includes(term)
-    );
-  }, [bom, searchTerm]);
+    const filtered = !searchTerm ? bom : bom.filter(item => {
+      const term = searchTerm.toLowerCase();
+      return item.partNumber.toLowerCase().includes(term) ||
+        item.manufacturer.toLowerCase().includes(term) ||
+        item.description.toLowerCase().includes(term) ||
+        item.supplier.toLowerCase().includes(term);
+    });
+    if (sortOrder.length === 0) return filtered;
+    const orderMap = new Map(sortOrder.map((id, idx) => [id, idx]));
+    return [...filtered].sort((a, b) => {
+      const aIdx = orderMap.get(Number(a.id)) ?? Number.MAX_SAFE_INTEGER;
+      const bIdx = orderMap.get(Number(b.id)) ?? Number.MAX_SAFE_INTEGER;
+      return aIdx - bIdx;
+    });
+  }, [bom, searchTerm, sortOrder]);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = filteredBom.findIndex(item => Number(item.id) === active.id);
+    const newIndex = filteredBom.findIndex(item => Number(item.id) === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = arrayMove(filteredBom, oldIndex, newIndex);
+    saveSortOrder(reordered.map(item => Number(item.id)));
+    toast({ title: 'Reordered', description: 'BOM item order updated.' });
+  }, [filteredBom, saveSortOrder, toast]);
 
   const totalCost = filteredBom.reduce((acc, item) => acc + Number(item.totalPrice), 0);
 
@@ -367,138 +410,34 @@ export default function ProcurementView() {
         </div>
 
         {/* Desktop table layout */}
-        <div className="hidden md:block border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm overflow-x-auto">
-          <table aria-label="Bill of Materials" className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
-            <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Part Number</th>
-                <th className="px-4 py-3">Manufacturer</th>
-                <th className="px-4 py-3 w-64">Description</th>
-                <th className="px-4 py-3">Supplier</th>
-                <th className="px-4 py-3 text-right">Stock</th>
-                <th className="px-4 py-3 text-right">Qty</th>
-                <th className="px-4 py-3 text-right">Unit Price</th>
-                <th className="px-4 py-3 text-right">Total</th>
-                <th className="px-4 py-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filteredBom.map((item) => (
-                <ContextMenu key={item.id}>
-                  <ContextMenuTrigger asChild>
-                    <tr className={cn("hover:bg-muted/30 transition-colors group", editingId === Number(item.id) && "bg-primary/5")} data-testid={`row-bom-${item.id}`}>
-                      <td className="px-4 py-3">
-                        <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
-                          item.status === 'In Stock'
-                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                            : item.status === 'Low Stock'
-                            ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                            : 'bg-destructive/10 text-destructive border-destructive/20'
-                        )} data-testid={`status-bom-${item.id}`}>
-                          {item.status === 'In Stock' && <CheckCircle2 className="w-3 h-3" />}
-                          {item.status === 'Low Stock' && <AlertCircle className="w-3 h-3" />}
-                          {item.status === 'Out of Stock' && <XCircle className="w-3 h-3" />}
-                          {item.status}
-                        </span>
-                      </td>
-                      {editingId === Number(item.id) ? (
-                        <>
-                          <td className="px-4 py-1"><input data-testid={`edit-part-number-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" value={editValues.partNumber} onChange={e => setEditValues(v => ({ ...v, partNumber: e.target.value }))} onKeyDown={handleEditKeyDown} autoFocus /></td>
-                          <td className="px-4 py-1"><input data-testid={`edit-manufacturer-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.manufacturer} onChange={e => setEditValues(v => ({ ...v, manufacturer: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
-                          <td className="px-4 py-1"><input data-testid={`edit-description-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.description} onChange={e => setEditValues(v => ({ ...v, description: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
-                          <td className="px-4 py-1">
-                            <select data-testid={`edit-supplier-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.supplier} onChange={e => setEditValues(v => ({ ...v, supplier: e.target.value }))} onKeyDown={handleEditKeyDown}>
-                              <option value="Digi-Key">Digi-Key</option>
-                              <option value="Mouser">Mouser</option>
-                              <option value="LCSC">LCSC</option>
-                            </select>
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono text-xs">{item.stock.toLocaleString()}</td>
-                          <td className="px-4 py-1"><input data-testid={`edit-quantity-${item.id}`} type="number" min={1} className="w-16 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
-                          <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} step={0.01} className="w-24 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
-                          <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${(editValues.quantity * editValues.unitPrice).toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right flex gap-1">
-                            <StyledTooltip content="Save changes" side="left">
-                              <button className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button>
-                            </StyledTooltip>
-                            <StyledTooltip content="Cancel editing" side="left">
-                              <button className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors" onClick={cancelEdit} data-testid={`button-cancel-edit-${item.id}`}><X className="w-4 h-4" /></button>
-                            </StyledTooltip>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>{item.partNumber}</td>
-                          <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
-                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
-                          <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
-                          <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
-                          <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
-                          <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${Number(item.unitPrice).toFixed(4)}</td>
-                          <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${Number(item.totalPrice).toFixed(2)}</td>
-                          <td className="px-4 py-3 text-right flex gap-1">
-                            <StyledTooltip content="Edit item" side="left">
-                              <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button>
-                            </StyledTooltip>
-                            <StyledTooltip content="Buy from supplier" side="left">
-                                <button
-                                  className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={() => {
-                                    const baseUrl = getSupplierSearchUrl(item.supplier);
-                                    if (!baseUrl) return;
-                                    window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer');
-                                  }}
-                                  data-testid={`button-cart-${item.id}`}
-                                >
-                                  <ShoppingCart className="w-4 h-4" />
-                                </button>
-                            </StyledTooltip>
-                            <ConfirmDialog
-                              trigger={
-                                <StyledTooltip content="Remove from BOM" side="left">
-                                    <button
-                                      className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      data-testid={`button-delete-${item.id}`}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </StyledTooltip>
-                              }
-                              title="Remove BOM Item"
-                              description={`Are you sure you want to remove "${item.partNumber}" from the Bill of Materials? This action cannot be undone.`}
-                              confirmLabel="Remove"
-                              variant="destructive"
-                              onConfirm={() => deleteBomItem(item.id)}
-                            />
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
-                    <ContextMenuItem onSelect={() => { copyToClipboard(JSON.stringify(item, null, 2)); addOutputLog('[BOM] Copied details: ' + item.partNumber); }}>Copy Details</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' ' + item.manufacturer + ' datasheet'), '_blank', 'noopener,noreferrer')}>Search Datasheet</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' alternative equivalent'), '_blank', 'noopener,noreferrer')}>Find Alternatives</ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem
-                      onSelect={() => {
-                        const baseUrl = getSupplierSearchUrl(item.supplier);
-                        if (!baseUrl) return;
-                        window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer');
-                      }}
-                    >
-                      Buy from {item.supplier}
-                    </ContextMenuItem>
-                    <ContextMenuItem onSelect={() => copyToClipboard(item.partNumber)}>Copy Part Number</ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem className="text-destructive" onSelect={() => deleteBomItem(item.id)}>Remove from BOM</ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
+          <div className="hidden md:block border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm overflow-x-auto">
+            <table aria-label="Bill of Materials" className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
+              <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="w-8 px-1 py-3"><StyledTooltip content="Drag to reorder" side="right"><ArrowUpDown className="w-3 h-3 mx-auto" /></StyledTooltip></th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Part Number</th>
+                  <th className="px-4 py-3">Manufacturer</th>
+                  <th className="px-4 py-3 w-64">Description</th>
+                  <th className="px-4 py-3">Supplier</th>
+                  <th className="px-4 py-3 text-right">Stock</th>
+                  <th className="px-4 py-3 text-right">Qty</th>
+                  <th className="px-4 py-3 text-right">Unit Price</th>
+                  <th className="px-4 py-3 text-right">Total</th>
+                  <th className="px-4 py-3">Actions</th>
+                </tr>
+              </thead>
+              <SortableContext items={filteredBom.map(item => Number(item.id))} strategy={verticalListSortingStrategy}>
+                <tbody className="divide-y divide-border">
+                  {filteredBom.map((item) => (
+                    <SortableBomRow key={item.id} item={item} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} getSupplierSearchUrl={getSupplierSearchUrl} copyToClipboard={copyToClipboard} toast={toast} />
+                  ))}
+                </tbody>
+              </SortableContext>
+            </table>
+          </div>
+        </DndContext>
         {filteredBom.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground" data-testid="empty-state-bom">
             <Package className="w-12 h-12 mb-4 opacity-30" />
@@ -700,5 +639,106 @@ export default function ProcurementView() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, getSupplierSearchUrl: getUrl, copyToClipboard: copy, toast: t }: {
+  item: BomItem;
+  editingId: number | null;
+  editValues: { partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string };
+  setEditValues: React.Dispatch<React.SetStateAction<typeof editValues>>;
+  handleEditKeyDown: (e: React.KeyboardEvent) => void;
+  saveEdit: () => void;
+  cancelEdit: () => void;
+  startEdit: (item: BomItem) => void;
+  deleteBomItem: (id: number | string) => void;
+  addOutputLog: (msg: string) => void;
+  getSupplierSearchUrl: (supplier: string) => string | null;
+  copyToClipboard: (text: string) => Promise<boolean>;
+  toast: ReturnType<typeof import('@/hooks/use-toast').useToast>['toast'];
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: Number(item.id) });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const isEditing = editingId === Number(item.id);
+
+  return (
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <tr ref={setNodeRef} style={style} className={cn("hover:bg-muted/30 transition-colors group", isEditing && "bg-primary/5")} data-testid={`row-bom-${item.id}`}>
+          <td className="w-8 px-1 py-3 text-center">
+            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`drag-handle-${item.id}`} aria-label="Drag to reorder">
+              <GripVertical className="w-3.5 h-3.5" />
+            </button>
+          </td>
+          <td className="px-4 py-3">
+            <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
+              item.status === 'In Stock' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                : item.status === 'Low Stock' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                : 'bg-destructive/10 text-destructive border-destructive/20'
+            )} data-testid={`status-bom-${item.id}`}>
+              {item.status === 'In Stock' && <CheckCircle2 className="w-3 h-3" />}
+              {item.status === 'Low Stock' && <AlertCircle className="w-3 h-3" />}
+              {item.status === 'Out of Stock' && <XCircle className="w-3 h-3" />}
+              {item.status}
+            </span>
+          </td>
+          {isEditing ? (
+            <>
+              <td className="px-4 py-1"><input data-testid={`edit-part-number-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" value={editValues.partNumber} onChange={e => setEditValues(v => ({ ...v, partNumber: e.target.value }))} onKeyDown={handleEditKeyDown} autoFocus /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-manufacturer-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.manufacturer} onChange={e => setEditValues(v => ({ ...v, manufacturer: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-description-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.description} onChange={e => setEditValues(v => ({ ...v, description: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1">
+                <select data-testid={`edit-supplier-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.supplier} onChange={e => setEditValues(v => ({ ...v, supplier: e.target.value }))} onKeyDown={handleEditKeyDown}>
+                  <option value="Digi-Key">Digi-Key</option><option value="Mouser">Mouser</option><option value="LCSC">LCSC</option>
+                </select>
+              </td>
+              <td className="px-4 py-3 text-right font-mono text-xs">{item.stock.toLocaleString()}</td>
+              <td className="px-4 py-1"><input data-testid={`edit-quantity-${item.id}`} type="number" min={1} className="w-16 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} step={0.01} className="w-24 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${(editValues.quantity * editValues.unitPrice).toFixed(2)}</td>
+              <td className="px-4 py-3 text-right flex gap-1">
+                <StyledTooltip content="Save changes" side="left"><button className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Cancel editing" side="left"><button className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors" onClick={cancelEdit} data-testid={`button-cancel-edit-${item.id}`}><X className="w-4 h-4" /></button></StyledTooltip>
+              </td>
+            </>
+          ) : (
+            <>
+              <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>{item.partNumber}</td>
+              <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
+              <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
+              <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${Number(item.unitPrice).toFixed(4)}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${Number(item.totalPrice).toFixed(2)}</td>
+              <td className="px-4 py-3 text-right flex gap-1">
+                <StyledTooltip content="Edit item" side="left"><button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Buy from supplier" side="left">
+                  <button className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { const baseUrl = getUrl(item.supplier); if (!baseUrl) return; window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer'); }} data-testid={`button-cart-${item.id}`}><ShoppingCart className="w-4 h-4" /></button>
+                </StyledTooltip>
+                <ConfirmDialog
+                  trigger={<StyledTooltip content="Remove from BOM" side="left"><button className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-delete-${item.id}`}><Trash2 className="w-4 h-4" /></button></StyledTooltip>}
+                  title="Remove BOM Item"
+                  description={`Are you sure you want to remove "${item.partNumber}" from the Bill of Materials? This action cannot be undone.`}
+                  confirmLabel="Remove"
+                  variant="destructive"
+                  onConfirm={() => deleteBomItem(item.id)}
+                />
+              </td>
+            </>
+          )}
+        </tr>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
+        <ContextMenuItem onSelect={() => { copy(JSON.stringify(item, null, 2)); addOutputLog('[BOM] Copied details: ' + item.partNumber); }}>Copy Details</ContextMenuItem>
+        <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' ' + item.manufacturer + ' datasheet'), '_blank', 'noopener,noreferrer')}>Search Datasheet</ContextMenuItem>
+        <ContextMenuItem onSelect={() => window.open('https://www.google.com/search?q=' + encodeURIComponent(item.partNumber + ' alternative equivalent'), '_blank', 'noopener,noreferrer')}>Find Alternatives</ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onSelect={() => { const baseUrl = getUrl(item.supplier); if (!baseUrl) return; window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer'); }}>Buy from {item.supplier}</ContextMenuItem>
+        <ContextMenuItem onSelect={() => copy(item.partNumber)}>Copy Part Number</ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem className="text-destructive" onSelect={() => deleteBomItem(item.id)}>Remove from BOM</ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

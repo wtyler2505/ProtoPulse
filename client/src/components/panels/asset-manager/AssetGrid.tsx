@@ -7,18 +7,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
-
-interface Asset {
-  id: string;
-  type: string;
-  name: string;
-  desc: string;
-  specs: { label: string; value: string }[];
-  package?: string;
-  voltage?: string;
-  datasheet?: string;
-  custom?: boolean;
-}
+import type { Asset } from './asset-constants';
 
 interface AssetGridProps {
   filteredAssets: Asset[];

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
-import { useProject, ProjectProvider } from '@/lib/project-context';
+import { ProjectProvider } from '@/lib/project-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import Sidebar from '@/components/layout/Sidebar';
 import ChatPanel from '@/components/panels/ChatPanel';
 import { ViewMode } from '@/lib/project-context';
@@ -74,7 +75,7 @@ function ViewLoadingFallback() {
 }
 
 function WorkspaceContent() {
-  const { activeView, setActiveView } = useProject();
+  const { activeView, setActiveView } = useProjectMeta();
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {

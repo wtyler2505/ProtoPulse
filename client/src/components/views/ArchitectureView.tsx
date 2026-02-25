@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Connection, Edge, Node, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { useProject } from '@/lib/project-context';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useChat } from '@/lib/contexts/chat-context';
+import { useOutput } from '@/lib/contexts/output-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import CustomNode from './CustomNode';
 import AssetManager from '@/components/panels/AssetManager';
 import { cn } from '@/lib/utils';
@@ -23,7 +26,10 @@ const toolLabels: Record<string, string> = {
 };
 
 function ArchitectureFlow() {
-  const { nodes, edges, setNodes, setEdges, isGenerating, addMessage, setIsGenerating, addOutputLog, focusNodeId, selectedNodeId, setSelectedNodeId, pushUndoState, undo, redo, setActiveView, setPendingComponentPartId } = useProject();
+  const { nodes, edges, setNodes, setEdges, focusNodeId, selectedNodeId, setSelectedNodeId, pushUndoState, undo, redo, setPendingComponentPartId } = useArchitecture();
+  const { isGenerating, addMessage, setIsGenerating } = useChat();
+  const { addOutputLog } = useOutput();
+  const { setActiveView } = useProjectMeta();
   // Show the asset manager by default on desktop. This state now controls
   // visibility across both desktop and mobile, enabling a collapsible
   // asset library on larger screens.

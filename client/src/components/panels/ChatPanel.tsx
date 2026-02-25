@@ -1,126 +1,30 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import {
-  Send, Bot, Sparkles, Loader2, Plus, Zap, X, Settings2,
-  ChevronDown, ArrowDown, Search, Download, Trash2,
-  StopCircle, AlertTriangle, ArrowRight, SlidersHorizontal, Mic, ImagePlus
-} from 'lucide-react';
-import { useProject, type ChatMessage, type ViewMode, type BomItem, type ValidationIssue } from '@/lib/project-context';
-import type { Node, Edge } from '@xyflow/react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { Bot, Sparkles, ArrowDown, Search } from 'lucide-react';
+import { useChat } from '@/lib/contexts/chat-context';
+import { useValidation } from '@/lib/contexts/validation-context';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useBom } from '@/lib/contexts/bom-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useHistory } from '@/lib/contexts/history-context';
+import { useOutput } from '@/lib/contexts/output-context';
+import { type ChatMessage, type ViewMode } from '@/lib/project-context';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { StyledTooltip } from '@/components/ui/styled-tooltip';
+
 import { copyToClipboard } from '@/lib/clipboard';
-import { quickActionDescriptions, AI_MODELS, DESTRUCTIVE_ACTIONS, COPY_FEEDBACK_DURATION, LOCAL_COMMAND_DELAY, ACTION_LABELS } from './chat/constants';
-import MessageBubble, { MarkdownContent } from './chat/MessageBubble';
+import { AI_MODELS, DESTRUCTIVE_ACTIONS, COPY_FEEDBACK_DURATION, LOCAL_COMMAND_DELAY } from './chat/constants';
+import MessageBubble from './chat/MessageBubble';
 import SettingsPanel from './chat/SettingsPanel';
+import ChatHeader from './chat/ChatHeader';
+import ChatSearchBar from './chat/ChatSearchBar';
+import StreamingIndicator from './chat/StreamingIndicator';
+import FollowUpSuggestions from './chat/FollowUpSuggestions';
+import MessageInput from './chat/MessageInput';
 import { STORAGE_KEYS } from '@/lib/constants';
 import { buildCSV, downloadBlob } from '@/lib/csv';
-
-/** Data shape stored on architecture nodes in ProtoPulse. */
-interface CustomNodeData {
-  label: string;
-  type: string;
-  description?: string;
-  pins?: Record<string, string>;
-  annotation?: string;
-  annotationColor?: string;
-  [key: string]: unknown;
-}
-
-/** Helper to read typed node data from a generic @xyflow/react Node. */
-function nodeData(n: Node): CustomNodeData {
-  return n.data as CustomNodeData;
-}
-
-/** Edge metadata stored in edge.data for electrical signal info. */
-interface CustomEdgeData {
-  signalType?: string;
-  voltage?: string;
-  busWidth?: number;
-  netName?: string;
-  [key: string]: unknown;
-}
-
-/** Helper to read typed edge data from a generic @xyflow/react Edge. */
-function edgeData(e: Edge): CustomEdgeData | undefined {
-  return e.data as CustomEdgeData | undefined;
-}
-
-/** Represents a single AI-generated action returned from the streaming API. */
-interface AIAction {
-  type: string;
-  nodeLabel?: string;
-  sourceLabel?: string;
-  targetLabel?: string;
-  edgeLabel?: string;
-  signalType?: string;
-  nodeType?: string;
-  description?: string;
-  label?: string;
-  partNumber?: string;
-  manufacturer?: string;
-  supplier?: string;
-  quantity?: number;
-  unitPrice?: number;
-  severity?: 'error' | 'warning' | 'info';
-  message?: string;
-  componentId?: string;
-  suggestion?: string;
-  annotation?: string;
-  position?: { x: number; y: number };
-  positionX?: number;
-  positionY?: number;
-  components?: GenComponent[];
-  connections?: GenConnection[];
-  layout?: string;
-  field?: string;
-  value?: string | number;
-  voltage?: string;
-  busWidth?: number;
-  netName?: string;
-  busType?: string;
-  animated?: boolean;
-  style?: Record<string, string | number>;
-  view?: ViewMode;
-  name?: string;
-  newLabel?: string;
-  newType?: string;
-  newDescription?: string;
-  template?: string;
-  pins?: Record<string, string>;
-  note?: string;
-  color?: string;
-  topic?: string;
-  url?: string;
-  decision?: string;
-  rationale?: string;
-  projectType?: string;
-  category?: string;
-  specs?: Record<string, string>;
-  reason?: string;
-  sheetId?: string;
-  newName?: string;
-  updates?: Record<string, unknown>;
-  status?: string;
-  [key: string]: unknown;
-}
-
-/** Shape for a generated architecture component inside an AIAction. */
-interface GenComponent {
-  label: string;
-  nodeType: string;
-  description?: string;
-  positionX: number;
-  positionY: number;
-}
-
-/** Shape for a generated architecture connection inside an AIAction. */
-interface GenConnection {
-  sourceLabel: string;
-  targetLabel: string;
-  label?: string;
-  signalType?: string;
-}
+import type { AIAction } from './chat/chat-types';
+import { nodeData } from './chat/chat-types';
+import { useActionExecutor } from './chat/hooks/useActionExecutor';
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -131,19 +35,13 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 350, onToggleCollapse }: ChatPanelProps) {
-  const {
-    messages, addMessage, isGenerating, setIsGenerating,
-    runValidation, addValidationIssue, deleteValidationIssue, issues,
-    setNodes, setEdges, nodes, edges,
-    bom, addBomItem, deleteBomItem, updateBomItem,
-    activeView, setActiveView,
-    activeSheetId, setActiveSheetId,
-    projectName, setProjectName, projectDescription, setProjectDescription,
-    addToHistory, addOutputLog,
-    selectedNodeId,
-    pushUndoState, undo, redo, canUndo, canRedo,
-    captureSnapshot, getChangeDiff,
-  } = useProject();
+  const { messages, addMessage, isGenerating, setIsGenerating } = useChat();
+  const { runValidation, addValidationIssue, deleteValidationIssue, issues } = useValidation();
+  const { setNodes, setEdges, nodes, edges, selectedNodeId, captureSnapshot, getChangeDiff } = useArchitecture();
+  const { bom, addBomItem, deleteBomItem, updateBomItem } = useBom();
+  const { activeView, setActiveView, activeSheetId, setActiveSheetId, projectName, setProjectName, projectDescription, setProjectDescription } = useProjectMeta();
+  const { addToHistory } = useHistory();
+  const { addOutputLog } = useOutput();
   const [input, setInput] = useState('');
   const [showQuickActions, setShowQuickActions] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -192,11 +90,26 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_TEMPERATURE, String(aiTemperature)); } catch {} }, [aiTemperature]);
   useEffect(() => { try { localStorage.setItem(STORAGE_KEYS.AI_SYSTEM_PROMPT, customSystemPrompt); } catch {} }, [customSystemPrompt]);
 
+  const filteredMessages = useMemo(() =>
+    chatSearch
+      ? messages.filter((m) => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
+      : messages,
+    [messages, chatSearch]
+  );
+
+  const messageVirtualizer = useVirtualizer({
+    count: filteredMessages.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 120,
+    overscan: 5,
+    measureElement: (el) => el.getBoundingClientRect().height + 16,
+  });
+
   const scrollToBottom = useCallback(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (filteredMessages.length > 0) {
+      messageVirtualizer.scrollToIndex(filteredMessages.length - 1, { align: 'end' });
     }
-  }, []);
+  }, [filteredMessages.length, messageVirtualizer]);
 
   useEffect(() => { scrollToBottom(); }, [messages, isGenerating, streamingContent, scrollToBottom]);
 
@@ -236,7 +149,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     setTimeout(() => setCopiedId(null), COPY_FEEDBACK_DURATION);
   }, []);
 
-  const processLocalCommand = (msgText: string): string => {
+  const processLocalCommand = useCallback((msgText: string): string => {
     const lower = msgText.toLowerCase().trim();
 
     const viewMap: Record<string, ViewMode> = {
@@ -258,15 +171,15 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
     if (lower.includes('generate architecture') || lower.includes('generate schematic') || (lower.includes('generate') && (lower.includes('arch') || lower.includes('design')))) {
       const defaultNodes = [
-        { id: Date.now().toString(), type: 'custom' as const, position: { x: 300, y: 100 }, data: { label: 'ESP32-S3', type: 'mcu', description: 'Main MCU' } },
-        { id: (Date.now() + 1).toString(), type: 'custom' as const, position: { x: 100, y: 250 }, data: { label: 'TP4056', type: 'power', description: 'Power Management' } },
-        { id: (Date.now() + 2).toString(), type: 'custom' as const, position: { x: 500, y: 250 }, data: { label: 'SX1262', type: 'comm', description: 'LoRa Communication' } },
-        { id: (Date.now() + 3).toString(), type: 'custom' as const, position: { x: 300, y: 400 }, data: { label: 'SHT40', type: 'sensor', description: 'Temp/Humidity Sensor' } },
+        { id: crypto.randomUUID(), type: 'custom' as const, position: { x: 300, y: 100 }, data: { label: 'ESP32-S3', type: 'mcu', description: 'Main MCU' } },
+        { id: crypto.randomUUID(), type: 'custom' as const, position: { x: 100, y: 250 }, data: { label: 'TP4056', type: 'power', description: 'Power Management' } },
+        { id: crypto.randomUUID(), type: 'custom' as const, position: { x: 500, y: 250 }, data: { label: 'SX1262', type: 'comm', description: 'LoRa Communication' } },
+        { id: crypto.randomUUID(), type: 'custom' as const, position: { x: 300, y: 400 }, data: { label: 'SHT40', type: 'sensor', description: 'Temp/Humidity Sensor' } },
       ];
       const defaultEdges = [
-        { id: `e-${Date.now()}`, source: defaultNodes[0].id, target: defaultNodes[1].id, label: 'Power', animated: true },
-        { id: `e-${Date.now() + 1}`, source: defaultNodes[0].id, target: defaultNodes[2].id, label: 'SPI', animated: true },
-        { id: `e-${Date.now() + 2}`, source: defaultNodes[0].id, target: defaultNodes[3].id, label: 'I2C', animated: true },
+        { id: crypto.randomUUID(), source: defaultNodes[0].id, target: defaultNodes[1].id, label: 'Power', animated: true },
+        { id: crypto.randomUUID(), source: defaultNodes[0].id, target: defaultNodes[2].id, label: 'SPI', animated: true },
+        { id: crypto.randomUUID(), source: defaultNodes[0].id, target: defaultNodes[3].id, label: 'I2C', animated: true },
       ];
       setNodes(defaultNodes);
       setEdges(defaultEdges);
@@ -304,7 +217,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         nodeType = 'mcu';
       }
       const newNode = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         type: 'custom' as const,
         position: { x: 200 + Math.random() * 400, y: 100 + Math.random() * 300 },
         data: { label: nodeName, type: nodeType, description: `${nodeType.toUpperCase()} component` },
@@ -341,7 +254,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         const targetNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(targetName));
         if (sourceNode && targetNode) {
           const newEdge = {
-            id: `e-${Date.now()}`,
+            id: crypto.randomUUID(),
             source: sourceNode.id,
             target: targetNode.id,
             label: 'Data',
@@ -477,1015 +390,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     }
 
     return "I've analyzed your request. I can help with navigation, design, BOM management, validation, and project settings. Type 'help' to see all available commands.";
-  };
+  }, [nodes, edges, bom, issues, projectName, projectDescription, setNodes, setEdges, setActiveView, addToHistory, addOutputLog]);
 
-  const executeAIActions = useCallback((actions: AIAction[]) => {
-    pushUndoState();
-    const executedLabels: string[] = [];
-    for (const action of actions) {
-      const label = ACTION_LABELS[action.type] || action.type;
-      executedLabels.push(label);
-      switch (action.type) {
-        case 'switch_view':
-          setActiveView(action.view!);
-          addToHistory(`Switched to ${action.view} view`, 'AI');
-          addOutputLog(`[AI] Switched to ${action.view} view`);
-          break;
-        case 'add_node': {
-          const newNode = {
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-            type: 'custom' as const,
-            position: { x: action.positionX || 200 + Math.random() * 400, y: action.positionY || 100 + Math.random() * 300 },
-            data: { label: action.label, type: action.nodeType || 'generic', description: action.description || '' },
-          };
-          setNodes([...nodes, newNode]);
-          setActiveView('architecture');
-          addToHistory(`Added ${action.nodeType || 'component'}: ${action.label}`, 'AI');
-          addOutputLog(`[AI] Added node: ${action.label}`);
-          break;
-        }
-        case 'remove_node': {
-          const nodeToRemove = nodes.find((n) => nodeData(n).label.toLowerCase() === action.nodeLabel!.toLowerCase());
-          if (nodeToRemove) {
-            setNodes(nodes.filter((n) => n.id !== nodeToRemove.id));
-            setEdges(edges.filter((e) => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id));
-            addToHistory(`Removed node: ${action.nodeLabel}`, 'AI');
-            addOutputLog(`[AI] Removed node: ${action.nodeLabel}`);
-          }
-          break;
-        }
-        case 'update_node': {
-          const nodeToUpdate = nodes.find((n) => nodeData(n).label.toLowerCase() === action.nodeLabel!.toLowerCase());
-          if (nodeToUpdate) {
-            const nd = nodeData(nodeToUpdate);
-            setNodes(nodes.map((n) => n.id === nodeToUpdate.id ? {
-              ...n, data: { ...n.data, label: action.newLabel || nd.label, type: action.newType || nd.type, description: action.newDescription || nd.description }
-            } : n));
-            addToHistory(`Updated node: ${action.nodeLabel}`, 'AI');
-            addOutputLog(`[AI] Updated node: ${action.nodeLabel}`);
-          }
-          break;
-        }
-        case 'connect_nodes': {
-          const sourceNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.sourceLabel!.toLowerCase()));
-          const targetNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.targetLabel!.toLowerCase()));
-          if (sourceNode && targetNode) {
-            const newEdge: Edge = {
-              id: `e-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-              source: sourceNode.id, target: targetNode.id,
-              label: action.edgeLabel || action.busType || 'Data', animated: true,
-              data: {
-                signalType: action.signalType || undefined,
-                voltage: action.voltage || undefined,
-                busWidth: action.busWidth || undefined,
-                netName: action.netName || undefined,
-              },
-            };
-            setEdges([...edges, newEdge]);
-            addToHistory(`Connected ${nodeData(sourceNode).label} → ${nodeData(targetNode).label}`, 'AI');
-            addOutputLog(`[AI] Connected ${nodeData(sourceNode).label} → ${nodeData(targetNode).label}`);
-          }
-          break;
-        }
-        case 'remove_edge': {
-          const srcNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.sourceLabel!.toLowerCase()));
-          const tgtNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.targetLabel!.toLowerCase()));
-          if (srcNode && tgtNode) {
-            setEdges(edges.filter((e) => !(e.source === srcNode.id && e.target === tgtNode.id)));
-            addToHistory(`Removed edge: ${action.sourceLabel} → ${action.targetLabel}`, 'AI');
-            addOutputLog(`[AI] Removed edge: ${action.sourceLabel} → ${action.targetLabel}`);
-          }
-          break;
-        }
-        case 'clear_canvas':
-          setNodes([]);
-          setEdges([]);
-          addToHistory('Cleared all architecture nodes', 'AI');
-          addOutputLog('[AI] Cleared all nodes and edges');
-          break;
-        case 'generate_architecture': {
-          const genNodes = (action.components || []).map((comp: GenComponent, idx: number) => ({
-            id: `gen-${Date.now()}-${idx}`,
-            type: 'custom' as const,
-            position: { x: comp.positionX, y: comp.positionY },
-            data: { label: comp.label, type: comp.nodeType, description: comp.description },
-          }));
-          setNodes(genNodes);
-          const genEdges = (action.connections || []).map((conn: GenConnection, idx: number) => {
-            const src = genNodes.find((n) => n.data.label === conn.sourceLabel);
-            const tgt = genNodes.find((n) => n.data.label === conn.targetLabel);
-            return { id: `gen-e-${Date.now()}-${idx}`, source: src?.id || '', target: tgt?.id || '', label: conn.label, animated: true };
-          }).filter((e) => e.source && e.target);
-          setEdges(genEdges);
-          setActiveView('architecture');
-          addToHistory(`Generated architecture with ${genNodes.length} components`, 'AI');
-          addOutputLog(`[AI] Generated architecture: ${genNodes.length} components, ${genEdges.length} connections`);
-          break;
-        }
-        case 'add_bom_item':
-          addBomItem({
-            partNumber: action.partNumber!, manufacturer: action.manufacturer!, description: action.description!,
-            quantity: action.quantity || 1, unitPrice: action.unitPrice || 0,
-            totalPrice: (action.quantity || 1) * (action.unitPrice || 0),
-            supplier: (action.supplier || 'TBD') as BomItem['supplier'], stock: 0, status: (action.status || 'In Stock') as BomItem['status'],
-          });
-          addToHistory(`Added BOM item: ${action.partNumber}`, 'AI');
-          addOutputLog(`[AI] Added BOM item: ${action.partNumber}`);
-          break;
-        case 'remove_bom_item': {
-          const bomItem = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
-          if (bomItem) {
-            deleteBomItem(bomItem.id);
-            addToHistory(`Removed BOM item: ${action.partNumber}`, 'AI');
-            addOutputLog(`[AI] Removed BOM item: ${action.partNumber}`);
-          }
-          break;
-        }
-        case 'update_bom_item': {
-          const bomToUpdate = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
-          if (bomToUpdate && updateBomItem) {
-            updateBomItem(bomToUpdate.id, action.updates!);
-            addToHistory(`Updated BOM item: ${action.partNumber}`, 'AI');
-            addOutputLog(`[AI] Updated BOM: ${action.partNumber}`);
-          }
-          break;
-        }
-        case 'run_validation':
-          runValidation();
-          addToHistory('Ran design validation', 'AI');
-          addOutputLog('[AI] Ran design validation');
-          break;
-        case 'clear_validation':
-          issues.forEach((issue) => deleteValidationIssue(issue.id));
-          addToHistory('Cleared validation issues', 'AI');
-          addOutputLog('[AI] Cleared all validation issues');
-          break;
-        case 'add_validation_issue':
-          addValidationIssue({ severity: action.severity!, message: action.message!, componentId: action.componentId, suggestion: action.suggestion });
-          addToHistory(`Added validation: ${action.message}`, 'AI');
-          addOutputLog(`[AI] Added validation issue: ${action.message}`);
-          break;
-        case 'rename_project':
-          setProjectName(action.name!);
-          addToHistory(`Renamed project to: ${action.name}`, 'AI');
-          addOutputLog(`[AI] Renamed project to: ${action.name}`);
-          break;
-        case 'update_description':
-          setProjectDescription(action.description!);
-          addToHistory(`Updated project description`, 'AI');
-          addOutputLog(`[AI] Updated description: ${action.description}`);
-          break;
-        case 'export_bom_csv': {
-          if (bom.length > 0) {
-            try {
-              const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
-              const rows = bom.map((item) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status]);
-              const csv = buildCSV(headers, rows);
-              downloadBlob(new Blob([csv], { type: 'text/csv' }), `${projectName}_BOM.csv`);
-              addToHistory('Exported BOM as CSV', 'AI');
-              addOutputLog('[AI] Exported BOM as CSV');
-            } catch (err) {
-              console.warn('Export failed:', err);
-            }
-          }
-          break;
-        }
-        case 'undo':
-          undo();
-          addToHistory('Undid last action', 'AI');
-          addOutputLog('[AI] Undid last action');
-          break;
-        case 'redo':
-          redo();
-          addToHistory('Redid action', 'AI');
-          addOutputLog('[AI] Redid action');
-          break;
-        case 'auto_layout': {
-          const currentNodes = [...nodes];
-          if (currentNodes.length === 0) break;
-          const layoutType = action.layout || 'hierarchical';
-          let arranged: typeof currentNodes;
-          
-          if (layoutType === 'grid') {
-            const cols = Math.ceil(Math.sqrt(currentNodes.length));
-            arranged = currentNodes.map((n, i) => ({
-              ...n,
-              position: { x: 100 + (i % cols) * 220, y: 100 + Math.floor(i / cols) * 180 },
-            }));
-          } else if (layoutType === 'circular') {
-            const cx = 400, cy = 300, r = 200;
-            arranged = currentNodes.map((n, i) => {
-              const angle = (2 * Math.PI * i) / currentNodes.length - Math.PI / 2;
-              return { ...n, position: { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) } };
-            });
-          } else if (layoutType === 'force') {
-            const spacing = 250;
-            arranged = currentNodes.map((n, i) => ({
-              ...n,
-              position: { x: 100 + (i % 3) * spacing + (Math.random() * 40 - 20), y: 100 + Math.floor(i / 3) * spacing + (Math.random() * 40 - 20) },
-            }));
-          } else {
-            const typeOrder: Record<string, number> = { power: 0, mcu: 1, comm: 2, sensor: 3, connector: 4, memory: 5, actuator: 6, ic: 7, passive: 8, module: 9 };
-            const sorted = [...currentNodes].sort((a, b) => (typeOrder[nodeData(a).type] ?? 5) - (typeOrder[nodeData(b).type] ?? 5));
-            let col = 0;
-            let lastType = '';
-            let row = 0;
-            arranged = sorted.map((n) => {
-              const nd = nodeData(n);
-              if (nd.type !== lastType) { col++; row = 0; lastType = nd.type; }
-              row++;
-              return { ...n, position: { x: 80 + col * 220, y: 60 + row * 160 } };
-            });
-          }
-          setNodes(arranged);
-          setActiveView('architecture');
-          addToHistory(`Auto-arranged layout (${layoutType})`, 'AI');
-          addOutputLog(`[AI] Auto-arranged ${currentNodes.length} nodes using ${layoutType} layout`);
-          break;
-        }
-        case 'add_subcircuit': {
-          const templates: Record<string, { nodes: Array<{label: string; type: string; desc: string; dx: number; dy: number}>; edges: Array<{src: number; tgt: number; label: string; signal?: string}> }> = {
-            power_supply_ldo: {
-              nodes: [
-                { label: 'LDO Regulator', type: 'power', desc: 'AMS1117-3.3 LDO', dx: 0, dy: 0 },
-                { label: 'Input Cap', type: 'passive', desc: '10uF Ceramic', dx: -150, dy: 0 },
-                { label: 'Output Cap', type: 'passive', desc: '22uF Ceramic', dx: 150, dy: 0 },
-              ],
-              edges: [
-                { src: 1, tgt: 0, label: 'VIN', signal: 'power' },
-                { src: 0, tgt: 2, label: 'VOUT', signal: 'power' },
-              ],
-            },
-            usb_interface: {
-              nodes: [
-                { label: 'USB-C Connector', type: 'connector', desc: 'USB Type-C', dx: 0, dy: 0 },
-                { label: 'ESD Protection', type: 'ic', desc: 'USBLC6-2SC6', dx: 150, dy: -60 },
-                { label: 'USB-UART Bridge', type: 'ic', desc: 'CP2102N', dx: 300, dy: 0 },
-              ],
-              edges: [
-                { src: 0, tgt: 1, label: 'D+/D-', signal: 'USB' },
-                { src: 1, tgt: 2, label: 'D+/D-', signal: 'USB' },
-              ],
-            },
-            spi_flash: {
-              nodes: [
-                { label: 'SPI Flash', type: 'memory', desc: 'W25Q128 16MB', dx: 0, dy: 0 },
-                { label: 'Decoupling Cap', type: 'passive', desc: '100nF Ceramic', dx: 0, dy: 100 },
-              ],
-              edges: [
-                { src: 0, tgt: 1, label: 'VCC', signal: 'power' },
-              ],
-            },
-            i2c_sensors: {
-              nodes: [
-                { label: 'I2C Temp Sensor', type: 'sensor', desc: 'TMP117 ±0.1°C', dx: 0, dy: 0 },
-                { label: 'I2C Accel', type: 'sensor', desc: 'LIS3DH 3-axis', dx: 200, dy: 0 },
-                { label: 'I2C Pull-ups', type: 'passive', desc: '4.7kΩ SDA/SCL', dx: 100, dy: -80 },
-              ],
-              edges: [
-                { src: 2, tgt: 0, label: 'I2C', signal: 'I2C' },
-                { src: 2, tgt: 1, label: 'I2C', signal: 'I2C' },
-              ],
-            },
-            uart_debug: {
-              nodes: [
-                { label: 'Debug Header', type: 'connector', desc: 'UART 3-pin', dx: 0, dy: 0 },
-                { label: 'Level Shifter', type: 'ic', desc: 'TXB0102', dx: 150, dy: 0 },
-              ],
-              edges: [
-                { src: 0, tgt: 1, label: 'TX/RX', signal: 'UART' },
-              ],
-            },
-            battery_charger: {
-              nodes: [
-                { label: 'Charger IC', type: 'power', desc: 'MCP73831', dx: 0, dy: 0 },
-                { label: 'Battery', type: 'power', desc: 'Li-Po 3.7V', dx: 200, dy: 0 },
-                { label: 'Charge LED', type: 'passive', desc: 'Red LED + 1kΩ', dx: 0, dy: 100 },
-              ],
-              edges: [
-                { src: 0, tgt: 1, label: 'BAT', signal: 'power' },
-                { src: 0, tgt: 2, label: 'STAT', signal: 'GPIO' },
-              ],
-            },
-            motor_driver: {
-              nodes: [
-                { label: 'H-Bridge', type: 'actuator', desc: 'DRV8833', dx: 0, dy: 0 },
-                { label: 'Motor A', type: 'actuator', desc: 'DC Motor', dx: 200, dy: -60 },
-                { label: 'Motor B', type: 'actuator', desc: 'DC Motor', dx: 200, dy: 60 },
-                { label: 'Flyback Diodes', type: 'passive', desc: 'SS14 x4', dx: -150, dy: 0 },
-              ],
-              edges: [
-                { src: 0, tgt: 1, label: 'OUT_A', signal: 'power' },
-                { src: 0, tgt: 2, label: 'OUT_B', signal: 'power' },
-                { src: 3, tgt: 0, label: 'Protection', signal: 'power' },
-              ],
-            },
-            led_driver: {
-              nodes: [
-                { label: 'LED Driver', type: 'ic', desc: 'TLC5947 24-ch', dx: 0, dy: 0 },
-                { label: 'RGB LEDs', type: 'actuator', desc: 'WS2812B Strip', dx: 200, dy: 0 },
-                { label: 'Current Resistor', type: 'passive', desc: 'Iref 2kΩ', dx: 0, dy: 100 },
-              ],
-              edges: [
-                { src: 0, tgt: 1, label: 'PWM', signal: 'SPI' },
-                { src: 2, tgt: 0, label: 'IREF', signal: 'analog' },
-              ],
-            },
-            adc_frontend: {
-              nodes: [
-                { label: 'ADC', type: 'ic', desc: 'ADS1115 16-bit', dx: 0, dy: 0 },
-                { label: 'Anti-alias Filter', type: 'passive', desc: 'RC LPF 1kHz', dx: -150, dy: 0 },
-                { label: 'Ref Voltage', type: 'power', desc: 'REF3030 3.0V', dx: 0, dy: 100 },
-              ],
-              edges: [
-                { src: 1, tgt: 0, label: 'AIN', signal: 'analog' },
-                { src: 2, tgt: 0, label: 'VREF', signal: 'power' },
-              ],
-            },
-            dac_output: {
-              nodes: [
-                { label: 'DAC', type: 'ic', desc: 'MCP4725 12-bit', dx: 0, dy: 0 },
-                { label: 'Output Buffer', type: 'ic', desc: 'OPA340 Op-Amp', dx: 200, dy: 0 },
-              ],
-              edges: [
-                { src: 0, tgt: 1, label: 'VOUT', signal: 'analog' },
-              ],
-            },
-          };
-          
-          const tmpl = templates[action.template!];
-          if (!tmpl) break;
-          const baseX = action.positionX || 200 + Math.random() * 300;
-          const baseY = action.positionY || 100 + Math.random() * 200;
-          const ts = Date.now();
-          const newNodes = tmpl.nodes.map((n, i) => ({
-            id: `sc-${ts}-${i}`,
-            type: 'custom' as const,
-            position: { x: baseX + n.dx, y: baseY + n.dy },
-            data: { label: n.label, type: n.type, description: n.desc },
-          }));
-          const newEdges = tmpl.edges.map((e, i) => ({
-            id: `sce-${ts}-${i}`,
-            source: newNodes[e.src].id,
-            target: newNodes[e.tgt].id,
-            label: e.label,
-            animated: true,
-            data: { signalType: e.signal },
-          }));
-          setNodes([...nodes, ...newNodes]);
-          setEdges([...edges, ...newEdges]);
-          setActiveView('architecture');
-          addToHistory(`Added sub-circuit: ${action.template}`, 'AI');
-          addOutputLog(`[AI] Added ${action.template} sub-circuit (${newNodes.length} components)`);
-          break;
-        }
-        case 'assign_net_name': {
-          const src = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.sourceLabel!.toLowerCase()));
-          const tgt = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.targetLabel!.toLowerCase()));
-          if (src && tgt) {
-            setEdges(edges.map((e) => 
-              (e.source === src.id && e.target === tgt.id) 
-                ? { ...e, data: { ...e.data, netName: action.netName }, label: action.netName }
-                : e
-            ));
-            addToHistory(`Named net: ${action.netName}`, 'AI');
-            addOutputLog(`[AI] Assigned net name '${action.netName}' to ${action.sourceLabel} → ${action.targetLabel}`);
-          }
-          break;
-        }
-        case 'create_sheet': {
-          addToHistory(`Created sheet: ${action.name}`, 'AI');
-          addOutputLog(`[AI] Created schematic sheet: ${action.name}`);
-          break;
-        }
-        case 'rename_sheet': {
-          addToHistory(`Renamed sheet: ${action.newName}`, 'AI');
-          addOutputLog(`[AI] Renamed sheet to: ${action.newName}`);
-          break;
-        }
-        case 'move_to_sheet': {
-          addToHistory(`Moved ${action.nodeLabel} to sheet ${action.sheetId}`, 'AI');
-          addOutputLog(`[AI] Moved ${action.nodeLabel} to sheet ${action.sheetId}`);
-          break;
-        }
-        case 'set_pin_map': {
-          const pinNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.nodeLabel!.toLowerCase()));
-          if (pinNode) {
-            setNodes(nodes.map((n) => n.id === pinNode.id ? {
-              ...n, data: { ...n.data, pins: action.pins }
-            } : n));
-            addToHistory(`Set pin map for ${action.nodeLabel}`, 'AI');
-            addOutputLog(`[AI] Set ${Object.keys(action.pins!).length} pin assignments for ${action.nodeLabel}`);
-          }
-          break;
-        }
-        case 'auto_assign_pins': {
-          const targetNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.nodeLabel!.toLowerCase()));
-          if (targetNode) {
-            const connectedEdges = edges.filter((e) => e.source === targetNode.id || e.target === targetNode.id);
-            const autoPins: Record<string, string> = {};
-            connectedEdges.forEach((e, i) => {
-              const otherNode = nodes.find((n) => n.id === (e.source === targetNode.id ? e.target : e.source));
-              const pinName = String(e.label || '') || edgeData(e)?.signalType || `PIN_${i}`;
-              autoPins[pinName] = String(otherNode ? nodeData(otherNode).label : '') || `GPIO${i}`;
-            });
-            setNodes(nodes.map((n) => n.id === targetNode.id ? {
-              ...n, data: { ...n.data, pins: autoPins }
-            } : n));
-            addToHistory(`Auto-assigned pins for ${action.nodeLabel}`, 'AI');
-            addOutputLog(`[AI] Auto-assigned ${Object.keys(autoPins).length} pins for ${action.nodeLabel}`);
-          }
-          break;
-        }
-        case 'power_budget_analysis': {
-          const powerNodes = nodes.filter((n) => nodeData(n).type === 'power');
-          const consumers = nodes.filter((n) => nodeData(n).type !== 'power');
-          const pbIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
-          
-          let totalPower = 0;
-          consumers.forEach((n) => {
-            const typicalCurrent: Record<string, number> = { mcu: 80, sensor: 5, comm: 120, memory: 30, actuator: 200, ic: 20, connector: 0, passive: 0, module: 50 };
-            const current = typicalCurrent[nodeData(n).type] || 10;
-            totalPower += current;
-          });
-          
-          pbIssues.push({
-            severity: 'info',
-            message: `Power Budget: Est. ${totalPower}mA total across ${consumers.length} active components. ${powerNodes.length} power source(s) detected.`,
-            suggestion: `Verify power supply can deliver ≥${Math.ceil(totalPower * 1.2)}mA (20% headroom).`
-          });
-          
-          if (totalPower > 500) {
-            pbIssues.push({
-              severity: 'warning',
-              message: `High power consumption (${totalPower}mA). Consider low-power modes or additional power sources.`,
-              suggestion: 'Add sleep mode configuration or secondary power supply.'
-            });
-          }
-          
-          pbIssues.forEach(issue => addValidationIssue(issue));
-          setActiveView('validation');
-          addToHistory('Power budget analysis', 'AI');
-          addOutputLog(`[AI] Power budget: ${totalPower}mA across ${consumers.length} consumers`);
-          break;
-        }
-        case 'voltage_domain_check': {
-          const voltageIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
-          
-          edges.forEach((e) => {
-            const voltage = edgeData(e)?.voltage || e.label;
-            if (voltage && (String(voltage).includes('5V') || String(voltage).includes('3.3V') || String(voltage).includes('1.8V'))) {
-              const srcNode = nodes.find((n) => n.id === e.source);
-              const tgtNode = nodes.find((n) => n.id === e.target);
-              if (srcNode && tgtNode) {
-                const srcEdges = edges.filter((ed) => ed.source === srcNode.id || ed.target === srcNode.id);
-                const tgtEdges = edges.filter((ed) => ed.source === tgtNode.id || ed.target === tgtNode.id);
-                const srcVoltages = srcEdges.map((ed) => edgeData(ed)?.voltage || ed.label).filter(Boolean);
-                const tgtVoltages = tgtEdges.map((ed) => edgeData(ed)?.voltage || ed.label).filter(Boolean);
-                const has5V = srcVoltages.some((v) => String(v).includes('5V')) || tgtVoltages.some((v) => String(v).includes('5V'));
-                const has3V3 = srcVoltages.some((v) => String(v).includes('3.3V')) || tgtVoltages.some((v) => String(v).includes('3.3V'));
-                if (has5V && has3V3) {
-                  voltageIssues.push({
-                    severity: 'warning',
-                    message: `Voltage domain crossing: ${nodeData(srcNode).label} ↔ ${nodeData(tgtNode).label} bridges 5V and 3.3V domains`,
-                    componentId: String(nodeData(srcNode).label ?? ''),
-                    suggestion: 'Add a level shifter (e.g., TXB0108) between voltage domains.'
-                  });
-                }
-              }
-            }
-          });
-          
-          if (voltageIssues.length === 0) {
-            voltageIssues.push({
-              severity: 'info',
-              message: 'No voltage domain mismatches detected.',
-              suggestion: 'All connections appear to be within compatible voltage domains.'
-            });
-          }
-          
-          voltageIssues.forEach(issue => addValidationIssue(issue));
-          setActiveView('validation');
-          addToHistory('Voltage domain check', 'AI');
-          addOutputLog(`[AI] Voltage domain check: ${voltageIssues.length} findings`);
-          break;
-        }
-        case 'auto_fix_validation': {
-          const currentIssues = [...issues];
-          let fixCount = 0;
-          const fixNodes: Node[] = [];
-          const fixEdges: Edge[] = [];
-          const fixTs = Date.now();
-          
-          currentIssues.forEach((issue, idx) => {
-            const msg = issue.message.toLowerCase();
-            if (msg.includes('decoupling') || msg.includes('capacitor')) {
-              fixNodes.push({
-                id: `fix-${fixTs}-${idx}`,
-                type: 'custom' as const,
-                position: { x: 100 + Math.random() * 600, y: 450 + idx * 80 },
-                data: { label: `Decoupling Cap ${idx+1}`, type: 'passive', description: '100nF + 10uF ceramic' },
-              });
-              fixCount++;
-            } else if (msg.includes('pull-up') || msg.includes('pullup') || msg.includes('pull up')) {
-              fixNodes.push({
-                id: `fix-${fixTs}-${idx}`,
-                type: 'custom' as const,
-                position: { x: 100 + Math.random() * 600, y: 450 + idx * 80 },
-                data: { label: `Pull-up Resistors ${idx+1}`, type: 'passive', description: '4.7kΩ' },
-              });
-              fixCount++;
-            } else if (msg.includes('esd') || msg.includes('protection')) {
-              fixNodes.push({
-                id: `fix-${fixTs}-${idx}`,
-                type: 'custom' as const,
-                position: { x: 100 + Math.random() * 600, y: 450 + idx * 80 },
-                data: { label: `ESD Protection ${idx+1}`, type: 'ic', description: 'TVS Diode Array' },
-              });
-              fixCount++;
-            }
-          });
-          
-          if (fixNodes.length > 0) {
-            setNodes([...nodes, ...fixNodes]);
-          }
-          if (fixEdges.length > 0) {
-            setEdges([...edges, ...fixEdges]);
-          }
-          
-          setActiveView('architecture');
-          addToHistory(`Auto-fixed ${fixCount} validation issues`, 'AI');
-          addOutputLog(`[AI] Auto-fixed ${fixCount} issues, added ${fixNodes.length} components`);
-          break;
-        }
-        case 'dfm_check': {
-          const dfmIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
-          
-          nodes.forEach((n) => {
-            const nd = nodeData(n);
-            const label = nd.label?.toLowerCase() || '';
-            const type = nd.type?.toLowerCase() || '';
-            if (label.includes('qfn') || label.includes('bga') || label.includes('wlcsp')) {
-              dfmIssues.push({
-                severity: 'warning',
-                message: `${nd.label} uses a fine-pitch package requiring advanced assembly`,
-                componentId: nd.label,
-                suggestion: 'Consider QFP or larger-pitch alternative for easier prototyping.'
-              });
-            }
-            if (type === 'passive' && (label.includes('0201') || label.includes('01005'))) {
-              dfmIssues.push({
-                severity: 'warning',
-                message: `${nd.label} uses tiny package (0201/01005) — difficult for hand assembly`,
-                componentId: nd.label,
-                suggestion: 'Use 0402 or 0603 package for easier hand soldering.'
-              });
-            }
-          });
-          
-          dfmIssues.push({
-            severity: 'info',
-            message: `DFM check complete: ${nodes.length} components analyzed, ${dfmIssues.length} findings.`,
-            suggestion: 'Review component packages and ensure compatibility with your assembly process.'
-          });
-          
-          dfmIssues.forEach(issue => addValidationIssue(issue));
-          setActiveView('validation');
-          addToHistory('DFM check', 'AI');
-          addOutputLog(`[AI] DFM check: ${dfmIssues.length} findings`);
-          break;
-        }
-        case 'thermal_analysis': {
-          const thermalIssues: Array<{severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string}> = [];
-          
-          nodes.forEach((n) => {
-            const nd = nodeData(n);
-            const type = nd.type?.toLowerCase() || '';
-            const label = nd.label?.toLowerCase() || '';
-            let dissipation = 0;
-            
-            if (type === 'power') dissipation = 0.5;
-            else if (type === 'mcu') dissipation = 0.3;
-            else if (type === 'comm') dissipation = 0.4;
-            else if (type === 'actuator') dissipation = 1.0;
-            else if (label.includes('ldo') || label.includes('regulator')) dissipation = 0.8;
-            
-            if (dissipation > 0.4) {
-              thermalIssues.push({
-                severity: 'warning',
-                message: `${nd.label}: estimated ${dissipation}W dissipation — may require thermal management`,
-                componentId: nd.label,
-                suggestion: `Add thermal vias, copper pour, or heatsink. Ensure adequate airflow (θJA < ${Math.round(80/dissipation)}°C/W).`
-              });
-            }
-          });
-          
-          const totalDissipation = nodes.reduce((sum: number, n) => {
-            const type = nodeData(n).type?.toLowerCase() || '';
-            if (type === 'power') return sum + 0.5;
-            if (type === 'mcu') return sum + 0.3;
-            if (type === 'comm') return sum + 0.4;
-            if (type === 'actuator') return sum + 1.0;
-            return sum + 0.05;
-          }, 0);
-          
-          thermalIssues.push({
-            severity: 'info',
-            message: `Total estimated power dissipation: ${totalDissipation.toFixed(2)}W across ${nodes.length} components.`,
-            suggestion: `Board temperature rise ≈${(totalDissipation * 30).toFixed(0)}°C above ambient (estimated for 50x50mm 2-layer PCB).`
-          });
-          
-          thermalIssues.forEach(issue => addValidationIssue(issue));
-          setActiveView('validation');
-          addToHistory('Thermal analysis', 'AI');
-          addOutputLog(`[AI] Thermal analysis: ${totalDissipation.toFixed(2)}W total, ${thermalIssues.length} findings`);
-          break;
-        }
-        case 'pricing_lookup': {
-          const bomItem = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
-          if (bomItem) {
-            const distributors = [
-              { name: 'Digi-Key', price: bomItem.unitPrice * (0.95 + Math.random() * 0.15), stock: Math.floor(Math.random() * 5000), leadTime: `${Math.floor(Math.random() * 4) + 1} weeks` },
-              { name: 'Mouser', price: bomItem.unitPrice * (0.9 + Math.random() * 0.2), stock: Math.floor(Math.random() * 3000), leadTime: `${Math.floor(Math.random() * 3) + 1} weeks` },
-              { name: 'LCSC', price: bomItem.unitPrice * (0.7 + Math.random() * 0.3), stock: Math.floor(Math.random() * 50000), leadTime: `${Math.floor(Math.random() * 6) + 2} weeks` },
-            ];
-            addValidationIssue({
-              severity: 'info',
-              message: `Pricing for ${action.partNumber}: ${distributors.map(d => `${d.name}: $${d.price.toFixed(2)} (${d.stock} in stock, ${d.leadTime})`).join(' | ')}`,
-              suggestion: `Best price: ${distributors.sort((a, b) => a.price - b.price)[0].name} at $${distributors.sort((a, b) => a.price - b.price)[0].price.toFixed(2)}`
-            });
-          }
-          setActiveView('procurement');
-          addToHistory(`Pricing lookup: ${action.partNumber}`, 'AI');
-          addOutputLog(`[AI] Checked pricing for ${action.partNumber}`);
-          break;
-        }
-        case 'suggest_alternatives': {
-          const original = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
-          if (original) {
-            const alternatives: Record<string, Array<{pn: string; mfr: string; price: number; note: string}>> = {
-              'ESP32': [
-                { pn: 'ESP32-C3-MINI-1', mfr: 'Espressif', price: 1.80, note: 'Lower cost, single-core RISC-V, BLE only' },
-                { pn: 'RP2040', mfr: 'Raspberry Pi', price: 0.80, note: 'Dual-core Cortex-M0+, no wireless' },
-                { pn: 'nRF52840', mfr: 'Nordic', price: 3.10, note: 'BLE 5.0, better power efficiency' },
-              ],
-              'SX1262': [
-                { pn: 'RFM95W', mfr: 'HopeRF', price: 3.50, note: 'Budget LoRa module, slightly lower performance' },
-                { pn: 'LLCC68', mfr: 'Semtech', price: 2.80, note: 'Cost-optimized LoRa, lower power' },
-              ],
-              'SHT40': [
-                { pn: 'HDC1080', mfr: 'TI', price: 1.20, note: 'Lower cost, slightly less accurate' },
-                { pn: 'BME280', mfr: 'Bosch', price: 2.50, note: 'Adds pressure sensing, widely available' },
-              ],
-            };
-            
-            const key = Object.keys(alternatives).find(k => original.partNumber.toLowerCase().includes(k.toLowerCase()));
-            const alts = key ? alternatives[key] : [
-              { pn: `${original.partNumber}-ALT1`, mfr: original.manufacturer, price: original.unitPrice * 0.85, note: 'Generic equivalent, lower cost' },
-              { pn: `${original.partNumber}-ALT2`, mfr: 'Alternative Mfr', price: original.unitPrice * 0.7, note: 'Budget alternative, verify specs' },
-            ];
-            
-            alts.forEach(alt => {
-              addValidationIssue({
-                severity: 'info',
-                message: `Alternative for ${original.partNumber}: ${alt.pn} (${alt.mfr}) — $${alt.price.toFixed(2)} — ${alt.note}`,
-                componentId: original.partNumber,
-                suggestion: `Switch to save $${(original.unitPrice - alt.price).toFixed(2)} per unit (${action.reason || 'general'} optimization).`
-              });
-            });
-          }
-          setActiveView('procurement');
-          addToHistory(`Suggested alternatives for ${action.partNumber}`, 'AI');
-          addOutputLog(`[AI] Found alternatives for ${action.partNumber}`);
-          break;
-        }
-        case 'optimize_bom': {
-          const totalCost = bom.reduce((sum: number, b) => sum + (b.unitPrice * b.quantity), 0);
-          const supplierCounts: Record<string, number> = {};
-          bom.forEach((b) => { supplierCounts[b.supplier] = (supplierCounts[b.supplier] || 0) + 1; });
-          const primarySupplier = Object.entries(supplierCounts).sort(([,a], [,b]) => b - a)[0]?.[0] || 'Unknown';
-          
-          addValidationIssue({
-            severity: 'info',
-            message: `BOM Summary: ${bom.length} items, $${totalCost.toFixed(2)} total cost, ${Object.keys(supplierCounts).length} suppliers`,
-            suggestion: `Consolidate to ${primarySupplier} where possible to reduce shipping costs and simplify procurement.`
-          });
-          
-          const expensiveItems = [...bom].sort((a, b) => (b.unitPrice * b.quantity) - (a.unitPrice * a.quantity)).slice(0, 3);
-          expensiveItems.forEach((item) => {
-            addValidationIssue({
-              severity: 'info',
-              message: `Cost driver: ${item.partNumber} — $${(item.unitPrice * item.quantity).toFixed(2)} (${((item.unitPrice * item.quantity / totalCost) * 100).toFixed(0)}% of BOM)`,
-              componentId: item.partNumber,
-              suggestion: 'Consider alternative parts or volume pricing to reduce cost.'
-            });
-          });
-          
-          setActiveView('procurement');
-          addToHistory('BOM optimization analysis', 'AI');
-          addOutputLog(`[AI] BOM analysis: $${totalCost.toFixed(2)} total, ${bom.length} items`);
-          break;
-        }
-        case 'check_lead_times': {
-          bom.forEach((item) => {
-            const weeks = Math.floor(Math.random() * 12) + 1;
-            const status: 'error' | 'warning' | 'info' = weeks <= 2 ? 'info' : weeks <= 8 ? 'warning' : 'error';
-            addValidationIssue({
-              severity: status,
-              message: `${item.partNumber}: Est. ${weeks} week lead time (${item.supplier})${weeks > 8 ? ' — LONG LEAD TIME' : ''}`,
-              componentId: item.partNumber,
-              suggestion: weeks > 8 ? `Consider ordering immediately or finding alternative with shorter lead time.` : `Standard lead time. ${item.stock > 0 ? `${item.stock} units in stock.` : 'Verify stock before ordering.'}`
-            });
-          });
-          
-          setActiveView('procurement');
-          addToHistory('Checked lead times', 'AI');
-          addOutputLog(`[AI] Checked lead times for ${bom.length} BOM items`);
-          break;
-        }
-        case 'analyze_image': {
-          addToHistory(`Image analysis: ${action.description}`, 'AI');
-          addOutputLog(`[AI] Analyzed image: ${action.description}`);
-          break;
-        }
-        case 'save_design_decision': {
-          addToHistory(`Decision: ${action.decision} — ${action.rationale}`, 'AI');
-          addOutputLog(`[AI] Saved design decision: ${action.decision}`);
-          addValidationIssue({
-            severity: 'info',
-            message: `Design Decision: ${action.decision}`,
-            suggestion: `Rationale: ${action.rationale}`
-          });
-          break;
-        }
-        case 'add_annotation': {
-          const annotNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(action.nodeLabel!.toLowerCase()));
-          if (annotNode) {
-            setNodes(nodes.map((n) => n.id === annotNode.id ? {
-              ...n, data: { ...n.data, annotation: action.note, annotationColor: action.color || 'yellow' }
-            } : n));
-          }
-          addToHistory(`Annotation on ${action.nodeLabel}: ${action.note}`, 'AI');
-          addOutputLog(`[AI] Added annotation to ${action.nodeLabel}`);
-          break;
-        }
-        case 'start_tutorial': {
-          const tutorials: Record<string, string[]> = {
-            getting_started: [
-              '🎯 Welcome to ProtoPulse! Let me guide you through the basics.',
-              '1. The Architecture View is your main workspace — drag and connect components to build your system.',
-              '2. Use the AI chat (that\'s me!) to add components, run validations, or get design advice.',
-              '3. Try saying "add an ESP32 MCU" to place your first component.',
-              '4. Check the Procurement tab to manage your Bill of Materials.',
-              '5. Use Validation to check your design for common issues.',
-            ],
-            power_design: [
-              '⚡ Power Design Tutorial',
-              '1. Start with your input power source (USB, battery, wall adapter).',
-              '2. Add voltage regulators to generate required rails (3.3V, 1.8V, etc.).',
-              '3. Always add bulk + bypass capacitors near regulators.',
-              '4. Consider power sequencing for multi-rail designs.',
-              '5. Run "power budget analysis" to verify current capacity.',
-            ],
-            pcb_layout: [
-              '📐 PCB Layout Best Practices',
-              '1. Place high-speed components first, keep traces short.',
-              '2. Use ground planes on inner layers for noise reduction.',
-              '3. Route power traces wider than signal traces.',
-              '4. Keep analog and digital sections separated.',
-              '5. Add test points for debugging prototype boards.',
-            ],
-            bom_management: [
-              '📋 BOM Management Guide',
-              '1. Every component on your diagram should have a BOM entry.',
-              '2. Use "optimize BOM" to find cost savings.',
-              '3. Check lead times before ordering — some parts take months!',
-              '4. Consider second-source alternatives for critical parts.',
-              '5. Export your BOM as CSV for procurement teams.',
-            ],
-            validation: [
-              '✅ Design Validation Guide',
-              '1. Run validation regularly as you add components.',
-              '2. Fix errors (red) first — they can cause board failures.',
-              '3. Warnings (yellow) are important but non-critical.',
-              '4. Use "auto-fix" to automatically add missing components.',
-              '5. Run DFM check before sending to fabrication.',
-            ],
-          };
-          const steps = tutorials[action.topic!] || tutorials.getting_started;
-          steps.forEach((step, i) => {
-            setTimeout(() => addOutputLog(`[TUTORIAL] ${step}`), i * 500);
-          });
-          addToHistory(`Started tutorial: ${action.topic}`, 'AI');
-          break;
-        }
-        case 'export_kicad': {
-          const kicadContent = [
-            '(kicad_sch (version 20230121) (generator "protopulse")',
-            '  (paper "A4")',
-          ];
-          nodes.forEach((n) => {
-            const nd = nodeData(n);
-            kicadContent.push(`  (symbol (lib_id "${nd.type}:${nd.label}") (at ${n.position.x / 10} ${n.position.y / 10} 0)`);
-            kicadContent.push(`    (property "Reference" "${nd.label}" (at 0 -2 0))`);
-            kicadContent.push(`    (property "Value" "${nd.description || nd.type}" (at 0 2 0))`);
-            kicadContent.push('  )');
-          });
-          edges.forEach((e) => {
-            const src = nodes.find((n) => n.id === e.source);
-            const tgt = nodes.find((n) => n.id === e.target);
-            if (src && tgt) {
-              kicadContent.push(`  (wire (pts (xy ${src.position.x / 10} ${src.position.y / 10}) (xy ${tgt.position.x / 10} ${tgt.position.y / 10})))`);
-            }
-          });
-          kicadContent.push(')');
-          
-          try {
-            const blob = new Blob([kicadContent.join('\n')], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${projectName || 'design'}.kicad_sch`;
-            a.click();
-            URL.revokeObjectURL(url);
-          } catch (err) {
-            console.warn('KiCad export failed:', err);
-          }
-          
-          addToHistory('Exported KiCad schematic', 'AI');
-          addOutputLog(`[AI] Exported KiCad schematic with ${nodes.length} components`);
-          break;
-        }
-        case 'export_spice': {
-          const spiceLines = [
-            `* SPICE Netlist - ${projectName}`,
-            `* Generated by ProtoPulse`,
-            `* ${new Date().toISOString()}`,
-            '',
-          ];
-          
-          nodes.forEach((n, i) => {
-            const nd = nodeData(n);
-            const type = nd.type || 'generic';
-            if (type === 'passive') {
-              spiceLines.push(`R${i+1} net_${n.id}_in net_${n.id}_out 10k ; ${nd.label}`);
-            } else if (type === 'power') {
-              spiceLines.push(`V${i+1} net_${n.id}_out 0 3.3 ; ${nd.label}`);
-            } else {
-              spiceLines.push(`X${i+1} ${String(nd.label).replace(/[^a-zA-Z0-9]/g, '_')} ; ${nd.description || type}`);
-            }
-          });
-          
-          spiceLines.push('', '.end');
-          
-          try {
-            const blob2 = new Blob([spiceLines.join('\n')], { type: 'text/plain' });
-            const url2 = URL.createObjectURL(blob2);
-            const a2 = document.createElement('a');
-            a2.href = url2;
-            a2.download = `${projectName || 'design'}.cir`;
-            a2.click();
-            URL.revokeObjectURL(url2);
-          } catch (err) {
-            console.warn('SPICE export failed:', err);
-          }
-          
-          addToHistory('Exported SPICE netlist', 'AI');
-          addOutputLog(`[AI] Generated SPICE netlist with ${nodes.length} components`);
-          break;
-        }
-        case 'preview_gerber': {
-          addValidationIssue({
-            severity: 'info',
-            message: `PCB Preview: ${nodes.length} components, estimated board size ${Math.ceil(Math.max(...nodes.map((n) => n.position.x), 100) / 50)}cm x ${Math.ceil(Math.max(...nodes.map((n) => n.position.y), 100) / 50)}cm, ${edges.length} traces to route.`,
-            suggestion: 'For detailed PCB layout, export to KiCad and use the PCB editor. Consider 2-layer board for simple designs, 4-layer for high-speed or dense layouts.'
-          });
-          setActiveView('output');
-          addToHistory('Generated Gerber preview', 'AI');
-          addOutputLog(`[AI] PCB layout preview: ${nodes.length} components, ${edges.length} connections`);
-          break;
-        }
-        case 'add_datasheet_link': {
-          const bomItem = bom.find((b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()));
-          if (bomItem) {
-            updateBomItem(bomItem.id, { leadTime: action.url });
-            addToHistory(`Added datasheet for ${action.partNumber}`, 'AI');
-            addOutputLog(`[AI] Linked datasheet for ${action.partNumber}: ${action.url}`);
-          }
-          break;
-        }
-        case 'export_design_report': {
-          const totalCost = bom.reduce((sum: number, b) => sum + (b.unitPrice * b.quantity), 0);
-          const errorCount = issues.filter((i) => i.severity === 'error').length;
-          const warnCount = issues.filter((i) => i.severity === 'warning').length;
-          
-          const report = [
-            `# ${projectName} — Design Report`,
-            `Generated: ${new Date().toLocaleString()}`,
-            '',
-            '## Architecture Overview',
-            `- Components: ${nodes.length}`,
-            `- Connections: ${edges.length}`,
-            `- Component Types: ${Array.from(new Set(nodes.map((n) => nodeData(n).type))).join(', ')}`,
-            '',
-            '## Bill of Materials',
-            `- Total Items: ${bom.length}`,
-            `- Estimated Cost: $${totalCost.toFixed(2)}`,
-            `- Suppliers: ${Array.from(new Set(bom.map((b) => b.supplier))).join(', ')}`,
-            '',
-            '## Validation Status',
-            `- Errors: ${errorCount}`,
-            `- Warnings: ${warnCount}`,
-            `- Total Issues: ${issues.length}`,
-            '',
-            '## Components',
-            ...nodes.map((n) => { const nd = nodeData(n); return `- ${nd.label} (${nd.type}): ${nd.description || 'No description'}`; }),
-            '',
-            '## Recommendations',
-            errorCount > 0 ? '- ⚠️ Fix all errors before proceeding to layout' : '- ✓ No critical errors',
-            warnCount > 0 ? '- 📋 Review warnings for potential improvements' : '- ✓ No warnings',
-            nodes.length < 3 ? '- 📐 Consider adding more components for a complete design' : '- ✓ Design complexity looks reasonable',
-          ].join('\n');
-          
-          try {
-            const blob3 = new Blob([report], { type: 'text/markdown' });
-            const url3 = URL.createObjectURL(blob3);
-            const a3 = document.createElement('a');
-            a3.href = url3;
-            a3.download = `${projectName || 'design'}_report.md`;
-            a3.click();
-            URL.revokeObjectURL(url3);
-          } catch (err) {
-            console.warn('Report export failed:', err);
-          }
-          
-          setActiveView('output');
-          addToHistory('Generated design report', 'AI');
-          addOutputLog(`[AI] Generated design report: ${nodes.length} components, $${totalCost.toFixed(2)} BOM cost`);
-          break;
-        }
-        case 'set_project_type': {
-          const typePrompts: Record<string, string> = {
-            iot: 'Focus on low power, wireless connectivity, sensor integration, battery life optimization',
-            wearable: 'Prioritize small form factor, ultra-low power, flexible PCB, biocompatible materials',
-            industrial: 'Emphasize reliability, wide temp range (-40°C to 85°C), robust connectors, surge protection',
-            automotive: 'Apply ASIL standards, AEC-Q qualified components, wide voltage input (6-36V), EMC compliance',
-            consumer: 'Focus on cost optimization, ease of assembly, compact design, user-friendly interfaces',
-            medical: 'Prioritize safety (IEC 60601), biocompatibility, isolation, ultra-low noise analog',
-            rf: 'Focus on impedance matching, shielding, filter design, spurious emission compliance',
-            power: 'Emphasize efficiency, thermal management, wide input range, protection circuits',
-          };
-          
-          const guidance = typePrompts[action.projectType!] || 'General electronics design guidance';
-          setProjectDescription(`${projectDescription} [Type: ${action.projectType}]`);
-          addToHistory(`Set project type: ${action.projectType}`, 'AI');
-          addOutputLog(`[AI] Project type set to ${action.projectType}. ${guidance}`);
-          break;
-        }
-        case 'parametric_search': {
-          const searchResults: Record<string, Array<{pn: string; mfr: string; price: number; desc: string}>> = {
-            mcu: [
-              { pn: 'STM32F103C8T6', mfr: 'ST', price: 2.50, desc: 'ARM Cortex-M3, 72MHz, 64KB Flash' },
-              { pn: 'ATMEGA328P-AU', mfr: 'Microchip', price: 1.80, desc: 'AVR 8-bit, 20MHz, 32KB Flash' },
-              { pn: 'RP2040', mfr: 'Raspberry Pi', price: 0.80, desc: 'Dual Cortex-M0+, 133MHz, 264KB RAM' },
-            ],
-            sensor: [
-              { pn: 'BME280', mfr: 'Bosch', price: 2.50, desc: 'Temp/Humidity/Pressure' },
-              { pn: 'MPU-6050', mfr: 'TDK', price: 1.90, desc: '6-axis IMU (Accel + Gyro)' },
-              { pn: 'BH1750', mfr: 'ROHM', price: 0.85, desc: 'Ambient Light Sensor I2C' },
-            ],
-            regulator: [
-              { pn: 'AMS1117-3.3', mfr: 'AMS', price: 0.12, desc: '3.3V LDO 1A SOT-223' },
-              { pn: 'AP2112K-3.3', mfr: 'Diodes Inc', price: 0.20, desc: '3.3V LDO 600mA SOT-23-5' },
-              { pn: 'TPS63020', mfr: 'TI', price: 2.80, desc: 'Buck-Boost 3.3V 96% eff' },
-            ],
-            capacitor: [
-              { pn: 'GRM188R71C104KA01', mfr: 'Murata', price: 0.01, desc: '100nF 16V X7R 0603' },
-              { pn: 'GRM21BR61C106KE15', mfr: 'Murata', price: 0.05, desc: '10uF 16V X5R 0805' },
-            ],
-          };
-          
-          const results = searchResults[action.category!] || [
-            { pn: 'GENERIC-001', mfr: 'Various', price: 0.10, desc: `${action.category} component` },
-          ];
-          
-          results.forEach(r => {
-            addValidationIssue({
-              severity: 'info',
-              message: `${action.category} match: ${r.pn} (${r.mfr}) — $${r.price.toFixed(2)} — ${r.desc}`,
-              suggestion: `Specs: ${Object.entries(action.specs || {}).map(([k,v]) => `${k}: ${v}`).join(', ') || 'general search'}`
-            });
-          });
-          
-          setActiveView('procurement');
-          addToHistory(`Parametric search: ${action.category}`, 'AI');
-          addOutputLog(`[AI] Parametric search: ${results.length} ${action.category} components found`);
-          break;
-        }
-      }
-    }
-    return executedLabels;
-  }, [nodes, edges, bom, issues, projectName, projectDescription, setNodes, setEdges, addBomItem, deleteBomItem, updateBomItem, runValidation, deleteValidationIssue, addValidationIssue, setActiveView, setActiveSheetId, setProjectName, setProjectDescription, addToHistory, addOutputLog, pushUndoState, undo, redo]);
+  const executeAIActions = useActionExecutor();
+
 
   const toggleVoiceInput = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -1522,7 +430,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognition.start();
-  }, [isListening]);
+  }, [isListening, addOutputLog]);
 
   const cancelRequest = useCallback(() => {
     if (abortRef.current) {
@@ -1540,7 +448,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     setInput('');
     setLastUserMessage(msgText);
     const userMsg: ChatMessage = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: 'user',
       content: msgText,
       timestamp: Date.now(),
@@ -1553,10 +461,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         setTimeout(() => {
           const response = processLocalCommand(msgText);
           addMessage({
-            id: (Date.now() + 1).toString(),
+            id: crypto.randomUUID(),
             role: 'assistant',
             content: response,
-            timestamp: Date.now()
+            timestamp: Date.now(),
           });
           setIsGenerating(false);
         }, LOCAL_COMMAND_DELAY);
@@ -1629,7 +537,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       setStreamingContent('');
 
       const hasDestructive = finalActions.some((a) => DESTRUCTIVE_ACTIONS.includes(a.type));
-      const msgId = (Date.now() + 1).toString();
+      const msgId = crypto.randomUUID();
 
       if (hasDestructive && finalActions.length > 0) {
         setPendingActions({ actions: finalActions, messageId: msgId });
@@ -1656,14 +564,14 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const err = error instanceof Error ? error : new Error(String(error));
       if (err.name === 'AbortError') {
         addMessage({
-          id: (Date.now() + 1).toString(),
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: 'Request was cancelled.',
           timestamp: Date.now(),
         });
       } else {
         addMessage({
-          id: (Date.now() + 1).toString(),
+          id: crypto.randomUUID(),
           role: 'assistant',
           content: `Error: ${err.message || 'Failed to communicate with AI. Check your settings.'}`,
           timestamp: Date.now(),
@@ -1703,11 +611,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     }
   }, [messages, projectName]);
 
-  const filteredMessages = chatSearch
-    ? messages.filter((m) => m.content.toLowerCase().includes(chatSearch.toLowerCase()))
-    : messages;
 
-  const generateFollowUps = useCallback((): string[] => {
+
+  const followUpSuggestions = useMemo((): string[] => {
     if (messages.length === 0) return [];
     const last = messages[messages.length - 1];
     if (!last || last.role !== 'assistant') return [];
@@ -1748,7 +654,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const rejectPendingActions = useCallback(() => {
     setPendingActions(null);
     addMessage({
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       role: 'assistant',
       content: 'Actions cancelled. No changes were made to your design.',
       timestamp: Date.now(),
@@ -1795,60 +701,20 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         style={{ width: width }}
       >
         <div className="flex flex-col h-full w-full">
-          {/* Header */}
-          <div className="h-14 border-b border-border bg-card/30 backdrop-blur flex items-center justify-between px-4 shrink-0">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <h3 className="font-display font-bold tracking-wider text-sm">ProtoPulse AI</h3>
-            </div>
-            <div className="flex gap-1 items-center">
-              <StyledTooltip content="Search chat" side="bottom">
-                  <button data-testid="chat-search-toggle" onClick={() => setShowSearch(!showSearch)} className={cn("p-1.5 hover:bg-muted transition-colors", showSearch && "text-primary bg-primary/10")}>
-                    <Search className="w-4 h-4" />
-                  </button>
-              </StyledTooltip>
-              <StyledTooltip content="Export chat" side="bottom">
-                  <button data-testid="chat-export" onClick={exportChat} className="p-1.5 hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
-                    <Download className="w-4 h-4" />
-                  </button>
-              </StyledTooltip>
-              <StyledTooltip content="AI Settings" side="bottom">
-                  <button
-                    data-testid="settings-button"
-                    className={cn("p-1.5 hover:bg-muted transition-colors", showSettings && "text-primary bg-primary/10")}
-                    onClick={() => setShowSettings(!showSettings)}
-                  >
-                    <Settings2 className="w-4 h-4" />
-                  </button>
-              </StyledTooltip>
-              <StyledTooltip content="Close (Esc)" side="bottom">
-                  <button data-testid="chat-close" className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1 md:hidden" onClick={onClose}>
-                    <X className="w-4 h-4" />
-                  </button>
-              </StyledTooltip>
-            </div>
-          </div>
+          <ChatHeader
+            onSearch={() => setShowSearch(!showSearch)}
+            onExport={exportChat}
+            onSettings={() => setShowSettings(!showSettings)}
+            onClose={onClose}
+            showSearch={showSearch}
+            showSettings={showSettings}
+          />
 
-          {/* Search bar */}
-          {showSearch && (
-            <div className="px-3 py-2 border-b border-border bg-card/20 flex items-center gap-2 shrink-0">
-              <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-              <input
-                data-testid="chat-search-input"
-                type="text"
-                value={chatSearch}
-                onChange={(e) => setChatSearch(e.target.value)}
-                placeholder="Search messages..."
-                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
-                autoFocus
-              />
-              {chatSearch && (
-                <button onClick={() => setChatSearch('')} className="text-muted-foreground hover:text-foreground">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-          )}
+          <ChatSearchBar
+            value={chatSearch}
+            onChange={setChatSearch}
+            visible={showSearch}
+          />
 
           {showSettings ? (
             <SettingsPanel
@@ -1870,7 +736,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           ) : (
             <>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 relative" ref={scrollRef}>
+              <div className="flex-1 overflow-y-auto p-4 relative" ref={scrollRef}>
                 {filteredMessages.length === 0 && !chatSearch && (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-50">
                     <Bot className="w-12 h-12 mb-4 text-muted-foreground" />
@@ -1897,49 +763,44 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   </div>
                 )}
 
-                {filteredMessages.map((msg) => (
-                  <MessageBubble
-                    key={msg.id}
-                    msg={msg}
-                    copiedId={copiedId}
-                    onCopy={copyMessage}
-                    onRegenerate={msg.role === 'assistant' && msg.id === messages[messages.length - 1]?.id ? handleRegenerate : undefined}
-                    onRetry={msg.isError ? () => handleSend(lastUserMessage) : undefined}
-                    isLast={msg.id === messages[messages.length - 1]?.id}
-                    pendingActions={pendingActions?.messageId === msg.id ? pendingActions : null}
-                    onAcceptActions={acceptPendingActions}
-                    onRejectActions={rejectPendingActions}
-                    tokenInfo={msg.role === 'assistant' && msg.id === messages[messages.length - 1]?.id ? tokenInfo : null}
-                  />
-                ))}
-
-                {/* Streaming indicator */}
-                {isGenerating && (
-                  <div className="flex gap-3 text-sm">
-                    <div className="w-8 h-8 flex items-center justify-center shrink-0 border bg-primary/10 text-primary border-primary/20">
-                      <Bot className="w-4 h-4" />
-                    </div>
-                    <div className="flex flex-col gap-1 max-w-[85%]">
-                      <div className="bg-muted/30 backdrop-blur border border-border text-foreground p-3">
-                        {streamingContent ? (
-                          <MarkdownContent content={streamingContent} />
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="w-3 h-3 animate-spin text-primary" />
-                            <span className="text-xs text-muted-foreground animate-pulse">Analyzing system requirements...</span>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={cancelRequest}
-                        data-testid="cancel-generation"
-                        className="flex items-center gap-1 text-[10px] text-destructive/70 hover:text-destructive px-1 w-fit transition-colors"
-                      >
-                        <StopCircle className="w-3 h-3" />
-                        Cancel
-                      </button>
-                    </div>
+                {filteredMessages.length > 0 && (
+                  <div style={{ height: `${messageVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                    {messageVirtualizer.getVirtualItems().map((virtualRow) => {
+                      const msg = filteredMessages[virtualRow.index];
+                      return (
+                        <div
+                          key={msg.id}
+                          ref={messageVirtualizer.measureElement}
+                          data-index={virtualRow.index}
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            transform: `translateY(${virtualRow.start}px)`,
+                            paddingBottom: '16px',
+                          }}
+                        >
+                          <MessageBubble
+                            msg={msg}
+                            copiedId={copiedId}
+                            onCopy={copyMessage}
+                            onRegenerate={msg.role === 'assistant' && msg.id === messages[messages.length - 1]?.id ? handleRegenerate : undefined}
+                            onRetry={msg.isError ? () => handleSend(lastUserMessage) : undefined}
+                            isLast={msg.id === messages[messages.length - 1]?.id}
+                            pendingActions={pendingActions?.messageId === msg.id ? pendingActions : null}
+                            onAcceptActions={acceptPendingActions}
+                            onRejectActions={rejectPendingActions}
+                            tokenInfo={msg.role === 'assistant' && msg.id === messages[messages.length - 1]?.id ? tokenInfo : null}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
+                )}
+
+                {isGenerating && (
+                  <StreamingIndicator content={streamingContent} onCancel={cancelRequest} />
                 )}
               </div>
 
@@ -1954,130 +815,36 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                 </button>
               )}
 
-              {/* Follow-up suggestions */}
-              {!isGenerating && messages.length > 0 && !pendingActions && (
-                <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar shrink-0">
-                  {generateFollowUps().map(suggestion => (
-                    <button
-                      key={suggestion}
-                      onClick={() => handleSend(suggestion)}
-                      data-testid={`followup-${suggestion.toLowerCase().replace(/\s+/g, '-')}`}
-                      className="whitespace-nowrap px-3 py-1.5 bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1.5 shrink-0"
-                    >
-                      <ArrowRight className="w-3 h-3" />
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              )}
+              <FollowUpSuggestions
+                suggestions={followUpSuggestions}
+                onSuggest={handleSend}
+                isGenerating={isGenerating}
+                hasPendingActions={!!pendingActions}
+              />
             </>
           )}
 
-          {/* Input area */}
-          <div className="p-4 border-t border-border bg-card/40 backdrop-blur shrink-0">
-            {!apiKeyValid() && aiApiKey && (
-              <div className="flex items-center gap-2 text-[10px] text-amber-400/80 mb-2 px-1">
-                <AlertTriangle className="w-3 h-3 shrink-0" />
-                <span>API key format looks incorrect for {aiProvider === 'anthropic' ? 'Anthropic' : 'Gemini'}</span>
-              </div>
-            )}
-            <div className="relative">
-              <textarea
-                ref={textareaRef}
-                data-testid="chat-input"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Describe your system... (Shift+Enter for new line)"
-                rows={1}
-                className="w-full bg-muted/30 border border-border focus:border-primary pr-20 pl-10 py-3 shadow-inner resize-none text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
-                style={{ minHeight: '44px', maxHeight: '120px' }}
-              />
-              <div className="absolute left-3 top-3">
-                <StyledTooltip content="Quick actions" side="top">
-                    <button type="button" className="flex items-center justify-center" onClick={() => setShowQuickActions(!showQuickActions)}>
-                      <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-pointer" />
-                    </button>
-                </StyledTooltip>
-              </div>
-              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      addOutputLog(`[SYSTEM] Image attached: ${file.name}`);
-                      addToHistory(`Uploaded image: ${file.name}`, 'User');
-                    }
-                  }}
-                  data-testid="input-image-upload"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                  onClick={() => fileInputRef.current?.click()}
-                  data-testid="button-image-upload"
-                  title="Upload image"
-                >
-                  <ImagePlus className="h-4 w-4" />
-                </Button>
-                {('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={`h-8 w-8 ${isListening ? 'text-red-400 animate-pulse' : 'text-muted-foreground hover:text-foreground'}`}
-                  onClick={toggleVoiceInput}
-                  data-testid="button-voice-input"
-                  title={isListening ? 'Stop listening' : 'Voice input'}
-                >
-                  <Mic className="h-4 w-4" />
-                </Button>
-                )}
-                <StyledTooltip content="Send (Enter)" side="top">
-                    <Button
-                      size="icon"
-                      onClick={() => handleSend()}
-                      disabled={isGenerating || !input.trim()}
-                      data-testid="send-button"
-                      className="w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      <Send className="w-4 h-4" />
-                    </Button>
-                </StyledTooltip>
-              </div>
-            </div>
-
-            {/* Quick actions row */}
-            {showQuickActions && !isGenerating && (
-              <div className="mt-2 flex gap-1.5 overflow-x-auto no-scrollbar">
-                {Object.entries(quickActionDescriptions).map(([action, desc]) => (
-                  <StyledTooltip key={action} content={desc} side="top">
-                      <button
-                        onClick={() => handleSend(action)}
-                        data-testid={`quick-action-${action.toLowerCase().replace(/\s+/g, '-')}`}
-                        className="whitespace-nowrap px-2.5 py-1 bg-muted/30 border border-border text-[11px] text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-1 shrink-0"
-                      >
-                        <Zap className="w-2.5 h-2.5" />
-                        {action}
-                      </button>
-                  </StyledTooltip>
-                ))}
-              </div>
-            )}
-
-            <div className="text-[10px] text-center text-muted-foreground/40 mt-2 font-mono">
-              {aiApiKey ? `${aiProvider === 'anthropic' ? 'Anthropic' : 'Gemini'} — ${AI_MODELS[aiProvider].find(m => m.id === aiModel)?.label || aiModel}` : 'Local Mode (No API Key)'}
-            </div>
-          </div>
+          <MessageInput
+            input={input}
+            onInputChange={setInput}
+            onSend={() => handleSend()}
+            onQuickAction={handleSend}
+            isGenerating={isGenerating}
+            onToggleQuickActions={() => setShowQuickActions(!showQuickActions)}
+            showQuickActions={showQuickActions}
+            onVoiceToggle={toggleVoiceInput}
+            isListening={isListening}
+            aiProvider={aiProvider}
+            aiModel={aiModel}
+            apiKeyValid={apiKeyValid()}
+            aiApiKey={aiApiKey}
+            onFileUpload={(file) => {
+              addOutputLog(`[SYSTEM] Image attached: ${file.name}`);
+              addToHistory(`Uploaded image: ${file.name}`, 'User');
+            }}
+            textareaRef={textareaRef}
+            fileInputRef={fileInputRef}
+          />
         </div>
       </div>
     </>

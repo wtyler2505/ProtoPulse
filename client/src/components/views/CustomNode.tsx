@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Handle, Position, NodeProps, Node, Edge } from '@xyflow/react';
 import { CircuitBoard, Cpu, Radio, Battery, Zap, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useProject } from '@/lib/project-context';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useOutput } from '@/lib/contexts/output-context';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
 import {
@@ -39,7 +40,8 @@ const typeMap: Record<string, string> = {
 };
 
 export default function CustomNode({ id, data, selected }: NodeProps<Node<CustomNodeData>>) {
-  const { nodes, edges, setNodes, setEdges, addOutputLog } = useProject();
+  const { nodes, edges, setNodes, setEdges } = useArchitecture();
+  const { addOutputLog } = useOutput();
   const [pendingDelete, setPendingDelete] = useState(false);
   const Icon = iconMap[data.type] || CircuitBoard;
   

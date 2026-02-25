@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ComponentEditorProvider, useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
 import { useComponentParts, useCreateComponentPart, useUpdateComponentPart, useDeleteComponentPart, usePublishToLibrary } from '@/lib/component-editor/hooks';
 import { useQueryClient } from '@tanstack/react-query';
-import { useProject, PROJECT_ID } from '@/lib/project-context';
+import { PROJECT_ID } from '@/lib/project-context';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
 import type { EditorViewType, PartMeta, Connector, Bus, PartViews, Constraint } from '@shared/component-types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -194,7 +195,7 @@ function CanvasPlaceholder({ view }: { view: string }) {
 
 function ComponentEditorContent() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useComponentEditor();
-  const { selectedNodeId, pendingComponentPartId, setPendingComponentPartId } = useProject();
+  const { selectedNodeId, pendingComponentPartId, setPendingComponentPartId } = useArchitecture();
   const activeView = state.ui.activeEditorView;
   const { toast } = useToast();
 

@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useProject } from '@/lib/project-context';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useOutput } from '@/lib/contexts/output-context';
 import { Search, Trash2, Copy, ClipboardCheck } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -9,11 +9,13 @@ import { COPY_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 export default function OutputView() {
-  const { outputLog, clearOutputLog } = useProject();
+  const { outputLog, clearOutputLog } = useOutput();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
+  const parentRef = useRef<HTMLDivElement>(null);
+  const prevLogLength = useRef(outputLog.length);
 
   const indexedFilteredLog = useMemo(() => {
     return outputLog
@@ -23,8 +25,20 @@ export default function OutputView() {
       );
   }, [outputLog, searchTerm]);
 
-  const displayLog = indexedFilteredLog.slice(-500);
-  const truncatedCount = indexedFilteredLog.length - displayLog.length;
+  const virtualizer = useVirtualizer({
+    count: indexedFilteredLog.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 24,
+    overscan: 20,
+  });
+
+  // Auto-scroll to bottom when new entries arrive
+  useEffect(() => {
+    if (outputLog.length > prevLogLength.current && indexedFilteredLog.length > 0) {
+      virtualizer.scrollToIndex(indexedFilteredLog.length - 1, { align: 'end' });
+    }
+    prevLogLength.current = outputLog.length;
+  }, [outputLog.length, indexedFilteredLog.length, virtualizer]);
 
   const handleCopyEntry = useCallback((log: string, index: number) => {
     copyToClipboard(log);
@@ -87,29 +101,39 @@ export default function OutputView() {
           />
         </div>
       </div>
-      <ScrollArea className="flex-1">
-        {truncatedCount > 0 && (
-          <div className="mb-2 px-1 text-yellow-500/80 text-[10px]">
-            [{truncatedCount} older entries hidden — showing last 500]
-          </div>
-        )}
-        {displayLog.map(({ log, index: originalIndex }) => (
-          <StyledTooltip key={`log-${originalIndex}`} content="Click to copy" side="right">
-            <div
-              data-testid={`log-entry-${originalIndex}`}
-              className="mb-1 break-all hover:bg-white/10 px-1 cursor-pointer transition-colors group"
-              onClick={() => handleCopyEntry(log, originalIndex)}
-            >
-              <span className="text-muted-foreground mr-2">[{String(originalIndex).padStart(3, '0')}]</span>
-              {log}
-              {copiedIndex === originalIndex && (
-                <span className="ml-2 text-primary text-[10px]">copied!</span>
-              )}
-            </div>
-          </StyledTooltip>
-        ))}
+
+      <div ref={parentRef} className="flex-1 overflow-auto">
+        <div
+          style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}
+        >
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const { log, index: originalIndex } = indexedFilteredLog[virtualRow.index];
+            return (
+              <div
+                key={`log-${originalIndex}`}
+                data-testid={`log-entry-${originalIndex}`}
+                className="break-all hover:bg-white/10 px-1 cursor-pointer transition-colors group"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+                onClick={() => handleCopyEntry(log, originalIndex)}
+              >
+                <span className="text-muted-foreground mr-2">[{String(originalIndex).padStart(3, '0')}]</span>
+                {log}
+                {copiedIndex === originalIndex && (
+                  <span className="ml-2 text-primary text-[10px]">copied!</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
         <div className="animate-pulse">_</div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

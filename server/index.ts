@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import helmet from "helmet";
 import compression from "compression";
@@ -224,12 +225,12 @@ app.use((req, res, next) => {
     res.json({ version: 1, routes: apiDocs });
   });
 
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+  app.use((err: Error & { status?: number; statusCode?: number }, _req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
       return next(err);
     }
 
-    const status = err.status || err.statusCode || 500;
+    const status = err.status ?? err.statusCode ?? 500;
     logger.error("Server error", { stack: err.stack, status });
 
     let clientMessage: string;
