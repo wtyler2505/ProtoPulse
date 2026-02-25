@@ -54,7 +54,7 @@ export interface BomItem {
   totalPrice: number;
   supplier: 'Digi-Key' | 'Mouser' | 'LCSC' | 'Unknown';
   stock: number;
-  status: 'In Stock' | 'Low Stock' | 'Out of Stock';
+  status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'On Order';
   leadTime?: string;
 }
 

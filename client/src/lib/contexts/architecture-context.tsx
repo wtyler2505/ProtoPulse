@@ -125,6 +125,9 @@ export function ArchitectureProvider({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/nodes`] });
     },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/nodes`] });
+    },
   });
 
   const saveEdgesMutation = useMutation({
@@ -147,6 +150,9 @@ export function ArchitectureProvider({
       await apiRequest('PUT', `/api/projects/${PROJECT_ID}/edges`, body);
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/edges`] });
+    },
+    onError: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${PROJECT_ID}/edges`] });
     },
   });
@@ -220,9 +226,9 @@ export function ArchitectureProvider({
     const prev = undoStack[undoStack.length - 1];
     setUndoStack(s => s.slice(0, -1));
     setRedoStack(s => [...s.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
-    saveNodesMutation.mutate(prev.nodes);
-    saveEdgesMutation.mutate(prev.edges);
-  }, [undoStack, nodesQuery.data, edgesQuery.data, saveNodesMutation, saveEdgesMutation]);
+    setNodes(prev.nodes);
+    setEdges(prev.edges);
+  }, [undoStack, nodesQuery.data, edgesQuery.data, setNodes, setEdges]);
 
   const redo = useCallback(() => {
     if (redoStack.length === 0) return;
@@ -231,9 +237,9 @@ export function ArchitectureProvider({
     const next = redoStack[redoStack.length - 1];
     setRedoStack(s => s.slice(0, -1));
     setUndoStack(s => [...s.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
-    saveNodesMutation.mutate(next.nodes);
-    saveEdgesMutation.mutate(next.edges);
-  }, [redoStack, nodesQuery.data, edgesQuery.data, saveNodesMutation, saveEdgesMutation]);
+    setNodes(next.nodes);
+    setEdges(next.edges);
+  }, [redoStack, nodesQuery.data, edgesQuery.data, setNodes, setEdges]);
 
   // --- Snapshot & diff ---
   const snapshotRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
