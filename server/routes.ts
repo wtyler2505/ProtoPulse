@@ -2,10 +2,10 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 import { exportToFzpz, importFromFzpz } from "./component-export";
 import { parseSvgToShapes } from "./svg-parser";
-import type { PartMeta, Connector, PartViews, Bus } from "@shared/component-types";
+import type { PartMeta, Connector, PartViews, Bus, Constraint, PartState } from "@shared/component-types";
 import { runDRC, getDefaultDRCRules } from "@shared/drc-engine";
 import { db } from "./db";
-import { processAIMessage, streamAIMessage } from "./ai";
+import { processAIMessage, streamAIMessage, categorizeError } from "./ai";
 import { createUser, getUserByUsername, verifyPassword, createSession, deleteSession, getUserById, validateSession, storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from "./auth";
 import { fromZodError } from "zod-validation-error";
 import { isNotNull, lte, and, isNull } from "drizzle-orm";
@@ -38,7 +38,7 @@ const paginationSchema = z.object({
 
 const MAX_CHAT_HISTORY = 10;
 
-class HttpError extends Error {
+export class HttpError extends Error {
   status: number;
   constructor(message: string, status: number) {
     super(message);
@@ -47,13 +47,13 @@ class HttpError extends Error {
   }
 }
 
-function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<any>) {
+function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<void | Response>) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
 }
 
-function parseIdParam(param: any): number {
+export function parseIdParam(param: unknown): number {
   const id = Number(param);
   if (!Number.isFinite(id)) {
     throw new HttpError("Invalid id", 400);
@@ -61,7 +61,7 @@ function parseIdParam(param: any): number {
   return id;
 }
 
-function payloadLimit(maxBytes: number) {
+export function payloadLimit(maxBytes: number) {
   return (req: Request, res: Response, next: NextFunction) => {
     const contentLength = parseInt(req.headers['content-length'] || '0', 10);
     if (contentLength > maxBytes) {
@@ -747,8 +747,9 @@ export async function registerRoutes(app: Express): Promise<void> {
     try {
       const shapes = parseSvgToShapes(svgContent);
       res.json({ shapes });
-    } catch (err: any) {
-      res.status(400).json({ message: err.message || "Invalid SVG content" });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Invalid SVG content";
+      res.status(400).json({ message });
     }
   }));
 
@@ -765,7 +766,6 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.get("/api/component-library/:id", asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
     const entry = await storage.getLibraryEntry(id);
     if (!entry) return res.status(404).json({ message: "Library entry not found" });
     res.json(entry);
@@ -782,7 +782,6 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   app.delete("/api/component-library/:id", asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
-    if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
     const deleted = await storage.deleteLibraryEntry(id);
     if (!deleted) return res.status(404).json({ message: "Library entry not found" });
     res.json({ success: true });
@@ -792,17 +791,17 @@ export async function registerRoutes(app: Express): Promise<void> {
     const id = parseIdParam(req.params.id);
     const forkSchema = z.object({ projectId: z.number().int().positive() });
     const parsed = forkSchema.safeParse(req.body);
-    if (isNaN(id) || !parsed.success) return res.status(400).json({ message: "Invalid id or projectId" });
+    if (!parsed.success) return res.status(400).json({ message: "Invalid projectId" });
     const projectId = parsed.data.projectId;
     const entry = await storage.getLibraryEntry(id);
     if (!entry) return res.status(404).json({ message: "Library entry not found" });
     const part = await storage.createComponentPart({
       projectId,
-      meta: entry.meta as any,
-      connectors: entry.connectors as any,
-      buses: entry.buses as any,
-      views: entry.views as any,
-      constraints: entry.constraints as any,
+      meta: entry.meta as PartMeta,
+      connectors: entry.connectors as Connector[],
+      buses: entry.buses as Bus[],
+      views: entry.views as PartViews,
+      constraints: entry.constraints as Constraint[],
     });
     await storage.incrementLibraryDownloads(id);
     res.status(201).json(part);
@@ -816,12 +815,12 @@ export async function registerRoutes(app: Express): Promise<void> {
     if (!part) return res.status(404).json({ message: "Component part not found" });
 
     const view = (req.body?.view || 'pcb') as 'breadboard' | 'schematic' | 'pcb';
-    const partState = {
-      meta: part.meta as any,
-      connectors: (part.connectors as any[]) || [],
-      buses: (part.buses as any[]) || [],
-      views: part.views as any,
-      constraints: (part.constraints as any[]) || [],
+    const partState: PartState = {
+      meta: part.meta as PartMeta,
+      connectors: (part.connectors as Connector[]) || [],
+      buses: (part.buses as Bus[]) || [],
+      views: part.views as PartViews,
+      constraints: (part.constraints as Constraint[]) || [],
     };
 
     const rules = req.body?.rules || getDefaultDRCRules();
@@ -1007,11 +1006,11 @@ export async function registerRoutes(app: Express): Promise<void> {
         },
         abortController.signal
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       clearTimeout(streamTimeout);
       if (!closed) {
-        const safeMessage = (error?.message || 'Stream failed').replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]').replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
-        res.write(`data: ${JSON.stringify({ type: 'error', message: safeMessage })}\n\n`);
+        const { userMessage } = categorizeError(error);
+        res.write(`data: ${JSON.stringify({ type: 'error', message: userMessage })}\n\n`);
         res.end();
       }
     }

@@ -120,9 +120,28 @@ function hashAppState(appState: AppState): string {
 
 type AIErrorCode = 'AUTH_FAILED' | 'RATE_LIMITED' | 'TIMEOUT' | 'MODEL_ERROR' | 'PROVIDER_ERROR' | 'UNKNOWN';
 
-function categorizeError(error: any): { code: AIErrorCode; userMessage: string } {
-  const msg = error?.message || String(error);
-  const status = error?.status || error?.statusCode;
+/** Safely extract message and HTTP status from unknown error shapes. */
+function extractErrorInfo(error: unknown): { message: string; status: number | undefined } {
+  if (error === null || typeof error !== 'object') {
+    return { message: String(error ?? ''), status: undefined };
+  }
+  const e = error as Record<string, unknown>;
+  return {
+    message: typeof e.message === 'string' ? e.message : String(error),
+    status:
+      typeof e.status === 'number' ? e.status :
+      typeof e.statusCode === 'number' ? e.statusCode :
+      undefined,
+  };
+}
+
+/** Strip API keys from error messages to prevent leaking secrets in responses. */
+export function redactSecrets(text: string): string {
+  return text.replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]').replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
+}
+
+export function categorizeError(error: unknown): { code: AIErrorCode; userMessage: string } {
+  const { message: msg, status } = extractErrorInfo(error);
 
   if (status === 401 || msg.includes('authentication') || msg.includes('API key') || msg.includes('invalid_api_key')) {
     return { code: 'AUTH_FAILED', userMessage: `Authentication failed. Please check your API key in settings.` };
@@ -136,12 +155,11 @@ function categorizeError(error: any): { code: AIErrorCode; userMessage: string }
   if (status === 400 || msg.includes('invalid_request') || msg.includes('model not found')) {
     return { code: 'MODEL_ERROR', userMessage: `Invalid request. The model "${msg}" may not be available.` };
   }
-  if (status >= 500) {
+  if (status !== undefined && status >= 500) {
     return { code: 'PROVIDER_ERROR', userMessage: 'The AI provider is experiencing issues. Try again shortly.' };
   }
 
-  const safe = msg.replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]').replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
-  return { code: 'UNKNOWN', userMessage: `AI error: ${safe}` };
+  return { code: 'UNKNOWN', userMessage: `AI error: ${redactSecrets(msg)}` };
 }
 
 const activeRequests = new Map<string, Promise<{ message: string; actions: AIAction[] }>>();
@@ -447,7 +465,7 @@ First explain what you will do in plain text, then include the actions at the ve
 Always provide expert-level, detailed electronics advice. When suggesting components, include real part numbers, manufacturers, and typical specifications. When discussing design choices, explain trade-offs and best practices.${appState.customSystemPrompt ? `\n\n## Custom User Instructions\n\n${appState.customSystemPrompt}` : ''}`;
 }
 
-function parseActionsFromResponse(text: string): { message: string; actions: AIAction[] } {
+export function parseActionsFromResponse(text: string): { message: string; actions: AIAction[] } {
   const jsonBlockRegex = /```json\s*\n?([\s\S]*?)\n?\s*```/g;
   let lastMatch: RegExpExecArray | null = null;
   let match: RegExpExecArray | null;
@@ -601,7 +619,7 @@ export async function processAIMessage(params: {
     } finally {
       activeRequests.delete(dedupeKey);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     const { userMessage } = categorizeError(error);
     return {
       message: userMessage,
@@ -715,11 +733,10 @@ export async function streamAIMessage(
             fullText += text;
           }
         }
-      } catch (streamError: any) {
+      } catch (streamError: unknown) {
         if (signal?.aborted) return;
-        const safe = (streamError?.message || 'Stream interrupted')
-          .replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
-        await write(`\n\n[Stream interrupted: ${safe}]`);
+        const { message: errMsg } = extractErrorInfo(streamError);
+        await write(`\n\n[Stream interrupted: ${redactSecrets(errMsg || 'Stream interrupted')}]`);
       }
 
       if (signal?.aborted) return;
@@ -727,7 +744,7 @@ export async function streamAIMessage(
       const parsed = parseActionsFromResponse(fullText);
       await onComplete(parsed);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (signal?.aborted) return;
     const { userMessage } = categorizeError(error);
     write(`\n\nError: ${userMessage}`);
