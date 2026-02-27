@@ -13,6 +13,11 @@ import {
   componentParts, type ComponentPart, type InsertComponentPart,
   componentLibrary, type ComponentLibraryEntry, type InsertComponentLibrary,
   userChatSettings, type UserChatSettings, type InsertUserChatSettings,
+  circuitDesigns, type CircuitDesignRow, type InsertCircuitDesign,
+  circuitInstances, type CircuitInstanceRow, type InsertCircuitInstance,
+  circuitNets, type CircuitNetRow, type InsertCircuitNet,
+  circuitWires, type CircuitWireRow, type InsertCircuitWire,
+  simulationResults, type SimulationResultRow, type InsertSimulationResult,
 } from "@shared/schema";
 
 export interface PaginationOptions {
@@ -91,6 +96,41 @@ export interface IStorage {
 
   getChatSettings(userId: number): Promise<UserChatSettings | undefined>;
   upsertChatSettings(userId: number, settings: Partial<InsertUserChatSettings>): Promise<UserChatSettings>;
+
+  // Circuit designs
+  getCircuitDesigns(projectId: number): Promise<CircuitDesignRow[]>;
+  getCircuitDesign(id: number): Promise<CircuitDesignRow | undefined>;
+  createCircuitDesign(data: InsertCircuitDesign): Promise<CircuitDesignRow>;
+  updateCircuitDesign(id: number, data: Partial<InsertCircuitDesign>): Promise<CircuitDesignRow | undefined>;
+  deleteCircuitDesign(id: number): Promise<CircuitDesignRow | undefined>;
+
+  // Circuit instances
+  getCircuitInstances(circuitId: number): Promise<CircuitInstanceRow[]>;
+  getCircuitInstance(id: number): Promise<CircuitInstanceRow | undefined>;
+  createCircuitInstance(data: InsertCircuitInstance): Promise<CircuitInstanceRow>;
+  updateCircuitInstance(id: number, data: Partial<InsertCircuitInstance>): Promise<CircuitInstanceRow | undefined>;
+  deleteCircuitInstance(id: number): Promise<CircuitInstanceRow | undefined>;
+
+  // Circuit nets
+  getCircuitNets(circuitId: number): Promise<CircuitNetRow[]>;
+  getCircuitNet(id: number): Promise<CircuitNetRow | undefined>;
+  createCircuitNet(data: InsertCircuitNet): Promise<CircuitNetRow>;
+  updateCircuitNet(id: number, data: Partial<InsertCircuitNet>): Promise<CircuitNetRow | undefined>;
+  deleteCircuitNet(id: number): Promise<CircuitNetRow | undefined>;
+
+  // Circuit wires
+  getCircuitWires(circuitId: number): Promise<CircuitWireRow[]>;
+  getCircuitWire(id: number): Promise<CircuitWireRow | undefined>;
+  createCircuitWire(data: InsertCircuitWire): Promise<CircuitWireRow>;
+  updateCircuitWire(id: number, data: Partial<InsertCircuitWire>): Promise<CircuitWireRow | undefined>;
+  deleteCircuitWire(id: number): Promise<CircuitWireRow | undefined>;
+
+  // Simulation results (Phase 13.13)
+  getSimulationResults(circuitId: number): Promise<SimulationResultRow[]>;
+  getSimulationResult(id: number): Promise<SimulationResultRow | undefined>;
+  createSimulationResult(data: InsertSimulationResult): Promise<SimulationResultRow>;
+  deleteSimulationResult(id: number): Promise<SimulationResultRow | undefined>;
+  cleanupSimulationResults(circuitId: number, maxResults: number): Promise<number>;
 }
 
 function computeTotalPrice(quantity: number, unitPrice: string | number): string {
@@ -687,6 +727,292 @@ export class DatabaseStorage implements IStorage {
       return created;
     } catch (e) {
       throw new StorageError('upsertChatSettings', `user/${userId}/chat-settings`, e);
+    }
+  }
+
+  // --- Circuit Designs ---
+
+  async getCircuitDesigns(projectId: number): Promise<CircuitDesignRow[]> {
+    try {
+      return await db.select().from(circuitDesigns)
+        .where(eq(circuitDesigns.projectId, projectId))
+        .orderBy(asc(circuitDesigns.id));
+    } catch (e) {
+      throw new StorageError('getCircuitDesigns', `projects/${projectId}/circuit-designs`, e);
+    }
+  }
+
+  async getCircuitDesign(id: number): Promise<CircuitDesignRow | undefined> {
+    try {
+      const [design] = await db.select().from(circuitDesigns)
+        .where(eq(circuitDesigns.id, id));
+      return design;
+    } catch (e) {
+      throw new StorageError('getCircuitDesign', `circuit-designs/${id}`, e);
+    }
+  }
+
+  async createCircuitDesign(data: InsertCircuitDesign): Promise<CircuitDesignRow> {
+    try {
+      const [created] = await db.insert(circuitDesigns).values(data).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createCircuitDesign', 'circuit-designs', e);
+    }
+  }
+
+  async updateCircuitDesign(id: number, data: Partial<InsertCircuitDesign>): Promise<CircuitDesignRow | undefined> {
+    try {
+      const [updated] = await db.update(circuitDesigns)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(circuitDesigns.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateCircuitDesign', `circuit-designs/${id}`, e);
+    }
+  }
+
+  async deleteCircuitDesign(id: number): Promise<CircuitDesignRow | undefined> {
+    try {
+      const [deleted] = await db.delete(circuitDesigns)
+        .where(eq(circuitDesigns.id, id))
+        .returning();
+      return deleted;
+    } catch (e) {
+      throw new StorageError('deleteCircuitDesign', `circuit-designs/${id}`, e);
+    }
+  }
+
+  // --- Circuit Instances ---
+
+  async getCircuitInstances(circuitId: number): Promise<CircuitInstanceRow[]> {
+    try {
+      return await db.select().from(circuitInstances)
+        .where(eq(circuitInstances.circuitId, circuitId))
+        .orderBy(asc(circuitInstances.id));
+    } catch (e) {
+      throw new StorageError('getCircuitInstances', `circuits/${circuitId}/instances`, e);
+    }
+  }
+
+  async getCircuitInstance(id: number): Promise<CircuitInstanceRow | undefined> {
+    try {
+      const [instance] = await db.select().from(circuitInstances)
+        .where(eq(circuitInstances.id, id));
+      return instance;
+    } catch (e) {
+      throw new StorageError('getCircuitInstance', `circuit-instances/${id}`, e);
+    }
+  }
+
+  async createCircuitInstance(data: InsertCircuitInstance): Promise<CircuitInstanceRow> {
+    try {
+      const [created] = await db.insert(circuitInstances).values(data).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createCircuitInstance', 'circuit-instances', e);
+    }
+  }
+
+  async updateCircuitInstance(id: number, data: Partial<InsertCircuitInstance>): Promise<CircuitInstanceRow | undefined> {
+    try {
+      const [updated] = await db.update(circuitInstances)
+        .set(data)
+        .where(eq(circuitInstances.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateCircuitInstance', `circuit-instances/${id}`, e);
+    }
+  }
+
+  async deleteCircuitInstance(id: number): Promise<CircuitInstanceRow | undefined> {
+    try {
+      const [deleted] = await db.delete(circuitInstances)
+        .where(eq(circuitInstances.id, id))
+        .returning();
+      return deleted;
+    } catch (e) {
+      throw new StorageError('deleteCircuitInstance', `circuit-instances/${id}`, e);
+    }
+  }
+
+  // --- Circuit Nets ---
+
+  async getCircuitNets(circuitId: number): Promise<CircuitNetRow[]> {
+    try {
+      return await db.select().from(circuitNets)
+        .where(eq(circuitNets.circuitId, circuitId))
+        .orderBy(asc(circuitNets.id));
+    } catch (e) {
+      throw new StorageError('getCircuitNets', `circuits/${circuitId}/nets`, e);
+    }
+  }
+
+  async getCircuitNet(id: number): Promise<CircuitNetRow | undefined> {
+    try {
+      const [net] = await db.select().from(circuitNets)
+        .where(eq(circuitNets.id, id));
+      return net;
+    } catch (e) {
+      throw new StorageError('getCircuitNet', `circuit-nets/${id}`, e);
+    }
+  }
+
+  async createCircuitNet(data: InsertCircuitNet): Promise<CircuitNetRow> {
+    try {
+      const [created] = await db.insert(circuitNets).values(data).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createCircuitNet', 'circuit-nets', e);
+    }
+  }
+
+  async updateCircuitNet(id: number, data: Partial<InsertCircuitNet>): Promise<CircuitNetRow | undefined> {
+    try {
+      const [updated] = await db.update(circuitNets)
+        .set(data)
+        .where(eq(circuitNets.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateCircuitNet', `circuit-nets/${id}`, e);
+    }
+  }
+
+  async deleteCircuitNet(id: number): Promise<CircuitNetRow | undefined> {
+    try {
+      const [deleted] = await db.delete(circuitNets)
+        .where(eq(circuitNets.id, id))
+        .returning();
+      return deleted;
+    } catch (e) {
+      throw new StorageError('deleteCircuitNet', `circuit-nets/${id}`, e);
+    }
+  }
+
+  // --- Circuit Wires ---
+
+  async getCircuitWires(circuitId: number): Promise<CircuitWireRow[]> {
+    try {
+      return await db.select().from(circuitWires)
+        .where(eq(circuitWires.circuitId, circuitId))
+        .orderBy(asc(circuitWires.id));
+    } catch (e) {
+      throw new StorageError('getCircuitWires', `circuits/${circuitId}/wires`, e);
+    }
+  }
+
+  async getCircuitWire(id: number): Promise<CircuitWireRow | undefined> {
+    try {
+      const [wire] = await db.select().from(circuitWires)
+        .where(eq(circuitWires.id, id));
+      return wire;
+    } catch (e) {
+      throw new StorageError('getCircuitWire', `circuit-wires/${id}`, e);
+    }
+  }
+
+  async createCircuitWire(data: InsertCircuitWire): Promise<CircuitWireRow> {
+    try {
+      const [created] = await db.insert(circuitWires).values(data).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createCircuitWire', 'circuit-wires', e);
+    }
+  }
+
+  async updateCircuitWire(id: number, data: Partial<InsertCircuitWire>): Promise<CircuitWireRow | undefined> {
+    try {
+      const [updated] = await db.update(circuitWires)
+        .set(data)
+        .where(eq(circuitWires.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateCircuitWire', `circuit-wires/${id}`, e);
+    }
+  }
+
+  async deleteCircuitWire(id: number): Promise<CircuitWireRow | undefined> {
+    try {
+      const [deleted] = await db.delete(circuitWires)
+        .where(eq(circuitWires.id, id))
+        .returning();
+      return deleted;
+    } catch (e) {
+      throw new StorageError('deleteCircuitWire', `circuit-wires/${id}`, e);
+    }
+  }
+
+  // =========================================================================
+  // Simulation Results (Phase 13.13)
+  // =========================================================================
+
+  async getSimulationResults(circuitId: number): Promise<SimulationResultRow[]> {
+    try {
+      return await db.select()
+        .from(simulationResults)
+        .where(eq(simulationResults.circuitId, circuitId))
+        .orderBy(desc(simulationResults.createdAt));
+    } catch (e) {
+      throw new StorageError('getSimulationResults', `circuits/${circuitId}/simulations`, e);
+    }
+  }
+
+  async getSimulationResult(id: number): Promise<SimulationResultRow | undefined> {
+    try {
+      const [result] = await db.select()
+        .from(simulationResults)
+        .where(eq(simulationResults.id, id));
+      return result;
+    } catch (e) {
+      throw new StorageError('getSimulationResult', `simulations/${id}`, e);
+    }
+  }
+
+  async createSimulationResult(data: InsertSimulationResult): Promise<SimulationResultRow> {
+    try {
+      const [result] = await db.insert(simulationResults)
+        .values(data)
+        .returning();
+      return result;
+    } catch (e) {
+      throw new StorageError('createSimulationResult', `circuits/${data.circuitId}/simulations`, e);
+    }
+  }
+
+  async deleteSimulationResult(id: number): Promise<SimulationResultRow | undefined> {
+    try {
+      const [deleted] = await db.delete(simulationResults)
+        .where(eq(simulationResults.id, id))
+        .returning();
+      return deleted;
+    } catch (e) {
+      throw new StorageError('deleteSimulationResult', `simulations/${id}`, e);
+    }
+  }
+
+  async cleanupSimulationResults(circuitId: number, maxResults: number): Promise<number> {
+    try {
+      const results = await db.select({ id: simulationResults.id })
+        .from(simulationResults)
+        .where(eq(simulationResults.circuitId, circuitId))
+        .orderBy(desc(simulationResults.createdAt));
+
+      if (results.length <= maxResults) return 0;
+
+      const idsToDelete = results.slice(maxResults).map(r => r.id);
+      let deleted = 0;
+      for (const id of idsToDelete) {
+        await db.delete(simulationResults)
+          .where(eq(simulationResults.id, id));
+        deleted++;
+      }
+      return deleted;
+    } catch (e) {
+      throw new StorageError('cleanupSimulationResults', `circuits/${circuitId}/simulations`, e);
     }
   }
 }

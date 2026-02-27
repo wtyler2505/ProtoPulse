@@ -92,7 +92,7 @@ export interface ProjectHistoryItem {
   user: 'User' | 'AI';
 }
 
-export type ViewMode = 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'procurement' | 'validation';
+export type ViewMode = 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'schematic' | 'breadboard' | 'pcb' | 'procurement' | 'validation' | 'simulation';
 
 /**
  * Inner provider that nests all domain providers once seeded state is ready.

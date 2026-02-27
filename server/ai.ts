@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
+import { LRUClientCache } from "./lib/lru-cache";
 
 export type AIAction =
   | { type: "switch_view"; view: "architecture" | "schematic" | "procurement" | "validation" | "output" | "project_explorer" }
@@ -69,36 +70,8 @@ interface AppState {
 
 const MAX_CLIENT_CACHE = 10;
 
-class LRUClientCache<T> {
-  private cache = new Map<string, T>();
-  private maxSize: number;
-
-  constructor(maxSize: number) {
-    this.maxSize = maxSize;
-  }
-
-  get(key: string): T | undefined {
-    const value = this.cache.get(key);
-    if (value !== undefined) {
-      this.cache.delete(key);
-      this.cache.set(key, value);
-    }
-    return value;
-  }
-
-  set(key: string, value: T): void {
-    if (this.cache.has(key)) {
-      this.cache.delete(key);
-    } else if (this.cache.size >= this.maxSize) {
-      const oldest = this.cache.keys().next().value;
-      if (oldest !== undefined) this.cache.delete(oldest);
-    }
-    this.cache.set(key, value);
-  }
-}
-
 const anthropicClients = new LRUClientCache<Anthropic>(MAX_CLIENT_CACHE);
-const geminiClients = new LRUClientCache<GoogleGenerativeAI>(MAX_CLIENT_CACHE);
+const geminiClients = new LRUClientCache<GoogleGenAI>(MAX_CLIENT_CACHE);
 
 let cachedPromptHash = '';
 let cachedPrompt = '';
@@ -168,7 +141,7 @@ function requestKey(message: string, provider: string, projectId: string): strin
   return `${provider}:${projectId}:${message.slice(0, 100)}`;
 }
 
-function getAnthropicClient(apiKey: string): Anthropic {
+export function getAnthropicClient(apiKey: string): Anthropic {
   let client = anthropicClients.get(apiKey);
   if (!client) {
     client = new Anthropic({ apiKey });
@@ -177,10 +150,10 @@ function getAnthropicClient(apiKey: string): Anthropic {
   return client;
 }
 
-function getGeminiClient(apiKey: string): GoogleGenerativeAI {
+function getGeminiClient(apiKey: string): GoogleGenAI {
   let client = geminiClients.get(apiKey);
   if (!client) {
-    client = new GoogleGenerativeAI(apiKey);
+    client = new GoogleGenAI({ apiKey });
     geminiClients.set(apiKey, client);
   }
   return client;
@@ -547,20 +520,24 @@ async function callGemini(
   maxTokens?: number
 ): Promise<{ message: string; actions: AIAction[] }> {
   const genAI = getGeminiClient(apiKey);
-  const geminiModel = genAI.getGenerativeModel({
-    model,
-    systemInstruction: systemPrompt,
-    generationConfig: { temperature, maxOutputTokens: maxTokens || 4096 },
-  });
 
   const history = chatHistory.map((msg) => ({
-    role: msg.role === "assistant" ? "model" : "user",
+    role: msg.role === "assistant" ? ("model" as const) : ("user" as const),
     parts: [{ text: msg.content }],
   }));
 
-  const chat = geminiModel.startChat({ history });
-  const result = await chat.sendMessage(userMessage);
-  const responseText = result.response.text();
+  const chat = genAI.chats.create({
+    model,
+    config: {
+      systemInstruction: systemPrompt,
+      temperature,
+      maxOutputTokens: maxTokens || 4096,
+    },
+    history,
+  });
+
+  const result = await chat.sendMessage({ message: userMessage });
+  const responseText = result.text ?? "";
 
   return parseActionsFromResponse(responseText);
 }
@@ -709,25 +686,29 @@ export async function streamAIMessage(
       await onComplete(parsed);
     } else {
       const genAI = getGeminiClient(apiKey);
-      const geminiModel = genAI.getGenerativeModel({
-        model,
-        systemInstruction: systemPrompt,
-        generationConfig: { temperature, maxOutputTokens: maxTokens || 4096 },
-      });
 
       const history = recentHistory.map((msg) => ({
-        role: msg.role === "assistant" ? "model" : "user",
+        role: msg.role === "assistant" ? ("model" as const) : ("user" as const),
         parts: [{ text: msg.content }],
       }));
 
-      const chat = geminiModel.startChat({ history });
-      const result = await chat.sendMessageStream(message);
+      const chat = genAI.chats.create({
+        model,
+        config: {
+          systemInstruction: systemPrompt,
+          temperature,
+          maxOutputTokens: maxTokens || 4096,
+        },
+        history,
+      });
+
+      const stream = await chat.sendMessageStream({ message });
 
       let fullText = "";
       try {
-        for await (const chunk of result.stream) {
+        for await (const chunk of stream) {
           if (signal?.aborted) break;
-          const text = chunk.text();
+          const text = chunk.text ?? "";
           if (text) {
             await write(text);
             fullText += text;

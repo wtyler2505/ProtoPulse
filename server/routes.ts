@@ -47,7 +47,7 @@ export class HttpError extends Error {
   }
 }
 
-function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<void | Response>) {
+export function asyncHandler(fn: (req: Request, res: Response, next: NextFunction) => Promise<void | Response>) {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
@@ -817,7 +817,10 @@ export async function registerRoutes(app: Express): Promise<void> {
     if (!parsed.success) {
       return res.status(400).json({ message: fromZodError(parsed.error).message });
     }
-    const entry = await storage.createLibraryEntry(parsed.data);
+    const entry = await storage.createLibraryEntry({
+      ...parsed.data,
+      authorId: req.userId != null ? String(req.userId) : (parsed.data.authorId ?? null),
+    });
     res.status(201).json(entry);
   }));
 
@@ -868,6 +871,145 @@ export async function registerRoutes(app: Express): Promise<void> {
     const violations = runDRC(partState, rules, view);
 
     res.json({ violations, checkedAt: new Date().toISOString() });
+  }));
+
+  // --- Component AI Operations ---
+
+  async function resolveGeminiApiKey(clientKey: string | undefined, userId: number | undefined): Promise<string> {
+    if (clientKey && clientKey.length > 0) return clientKey;
+    if (userId) {
+      const storedKey = await getApiKey(userId, 'gemini');
+      if (storedKey) return storedKey;
+    }
+    throw new HttpError('No Gemini API key available. Set one in Settings or provide it in the request.', 400);
+  }
+
+  const generateBodySchema = z.object({
+    description: z.string().min(1).max(10000),
+    apiKey: z.string().max(500).optional(),
+    imageBase64: z.string().optional(),
+    imageMimeType: z.string().optional(),
+  });
+
+  app.post("/api/projects/:projectId/component-parts/ai/generate", payloadLimit(5 * 1024 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const parsed = generateBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
+    }
+    const { description, apiKey: clientApiKey, imageBase64, imageMimeType } = parsed.data;
+    const apiKey = await resolveGeminiApiKey(clientApiKey, req.userId);
+
+    const { generatePartFromDescription } = await import("./component-ai");
+    const partState = await generatePartFromDescription(apiKey, description.trim(), imageBase64, imageMimeType);
+    const part = await storage.createComponentPart({
+      projectId,
+      meta: partState.meta,
+      connectors: partState.connectors,
+      buses: partState.buses,
+      views: partState.views,
+      constraints: partState.constraints || [],
+    });
+    res.status(201).json(part);
+  }));
+
+  const modifyBodySchema = z.object({
+    instruction: z.string().min(1).max(10000),
+    apiKey: z.string().max(500).optional(),
+    currentPart: z.any().optional(),
+  });
+
+  app.post("/api/projects/:projectId/component-parts/:id/ai/modify", payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const parsed = modifyBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
+    }
+    const { instruction, apiKey: clientApiKey, currentPart } = parsed.data;
+    const apiKey = await resolveGeminiApiKey(clientApiKey, req.userId);
+
+    let partState: PartState;
+    if (currentPart) {
+      partState = currentPart;
+    } else {
+      const part = await storage.getComponentPart(id, projectId);
+      if (!part) return res.status(404).json({ message: "Component part not found" });
+      partState = {
+        meta: part.meta as PartMeta,
+        connectors: (part.connectors as Connector[]) || [],
+        buses: (part.buses as Bus[]) || [],
+        views: part.views as PartViews,
+        constraints: (part.constraints as Constraint[]) || [],
+      };
+    }
+
+    const { modifyPartWithAI } = await import("./component-ai");
+    const modified = await modifyPartWithAI(apiKey, partState, instruction.trim());
+    res.json(modified);
+  }));
+
+  const extractBodySchema = z.object({
+    apiKey: z.string().max(500).optional(),
+    imageBase64: z.string().min(1),
+    mimeType: z.string().optional(),
+  });
+
+  app.post("/api/projects/:projectId/component-parts/:id/ai/extract", payloadLimit(10 * 1024 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const parsed = extractBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
+    }
+    const { apiKey: clientApiKey, imageBase64, mimeType } = parsed.data;
+    const apiKey = await resolveGeminiApiKey(clientApiKey, req.userId);
+
+    const { extractMetadataFromDatasheet } = await import("./component-ai");
+    const metadata = await extractMetadataFromDatasheet(apiKey, imageBase64, mimeType || 'image/png');
+    res.json(metadata);
+  }));
+
+  const suggestBodySchema = z.object({
+    apiKey: z.string().max(500).optional(),
+    meta: z.any(),
+  });
+
+  app.post("/api/projects/:projectId/component-parts/:id/ai/suggest", payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const parsed = suggestBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
+    }
+    const { apiKey: clientApiKey, meta } = parsed.data;
+    const apiKey = await resolveGeminiApiKey(clientApiKey, req.userId);
+
+    const { suggestDescription } = await import("./component-ai");
+    const description = await suggestDescription(apiKey, meta);
+    res.json({ description });
+  }));
+
+  const extractPinsBodySchema = z.object({
+    apiKey: z.string().max(500).optional(),
+    imageBase64: z.string().min(1),
+    mimeType: z.string().optional(),
+    existingMeta: z.any().optional(),
+  });
+
+  app.post("/api/projects/:projectId/component-parts/:id/ai/extract-pins", payloadLimit(10 * 1024 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const id = parseIdParam(req.params.id);
+    const parsed = extractPinsBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
+    }
+    const { apiKey: clientApiKey, imageBase64, mimeType, existingMeta } = parsed.data;
+    const apiKey = await resolveGeminiApiKey(clientApiKey, req.userId);
+
+    const { extractPinsFromPhoto } = await import("./component-ai");
+    const connectors = await extractPinsFromPhoto(apiKey, imageBase64, mimeType || 'image/png', existingMeta);
+    res.json({ connectors });
   }));
 
   // --- Seed / Init default project ---
@@ -1068,4 +1210,11 @@ export async function registerRoutes(app: Express): Promise<void> {
     res.json({ message: "Purge complete" });
   }));
 
+  // --- Circuit Schematic Routes ---
+  const { registerCircuitRoutes } = await import("./circuit-routes");
+  registerCircuitRoutes(app, storage);
+
+  // --- Circuit AI Routes ---
+  const { registerCircuitAIRoutes } = await import("./circuit-ai");
+  registerCircuitAIRoutes(app, storage);
 }

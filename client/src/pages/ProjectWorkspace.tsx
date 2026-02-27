@@ -11,9 +11,13 @@ const ComponentEditorView = lazy(() => import('@/components/views/ComponentEdito
 const ProcurementView = lazy(() => import('@/components/views/ProcurementView'));
 const ValidationView = lazy(() => import('@/components/views/ValidationView'));
 const OutputView = lazy(() => import('@/components/views/OutputView'));
+const SchematicView = lazy(() => import('@/components/views/SchematicView'));
+const BreadboardView = lazy(() => import('@/components/circuit-editor/BreadboardView'));
+const PCBLayoutView = lazy(() => import('@/components/circuit-editor/PCBLayoutView'));
+const SimulationView = lazy(() => import('@/components/simulation/SimulationPanel'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { KeyboardShortcutsModal } from '@/components/ui/keyboard-shortcuts-modal';
@@ -22,6 +26,9 @@ const tabDescriptions: Record<string, string> = {
   output: 'View build output and system logs',
   architecture: 'Design system block diagram',
   component_editor: 'Design individual electronic components',
+  schematic: 'Circuit schematic capture and net editing',
+  breadboard: 'Virtual breadboard wiring and component placement',
+  pcb: 'PCB footprint placement and trace routing',
   procurement: 'Manage bill of materials and sourcing',
   validation: 'Run design rule checks',
 };
@@ -119,6 +126,9 @@ function WorkspaceContent() {
     { id: 'output', label: 'Output', icon: TerminalSquare },
     { id: 'architecture', label: 'Architecture', icon: LayoutGrid },
     { id: 'component_editor', label: 'Component Editor', icon: Cpu },
+    { id: 'schematic', label: 'Schematic', icon: CircuitBoard },
+    { id: 'breadboard', label: 'Breadboard', icon: Grid3X3 },
+    { id: 'pcb', label: 'PCB', icon: Microchip },
     { id: 'procurement', label: 'Procurement', icon: Package },
     { id: 'validation', label: 'Validation', icon: Activity },
   ];
@@ -239,6 +249,27 @@ function WorkspaceContent() {
                   </Suspense>
                 </ErrorBoundary>
               )}
+              {activeView === 'schematic' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <SchematicView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'breadboard' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <BreadboardView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'pcb' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <PCBLayoutView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
               {activeView === 'procurement' && (
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
@@ -250,6 +281,13 @@ function WorkspaceContent() {
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
                     <ValidationView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'simulation' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <SimulationView />
                   </Suspense>
                 </ErrorBoundary>
               )}

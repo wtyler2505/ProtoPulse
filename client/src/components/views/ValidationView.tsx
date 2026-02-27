@@ -25,7 +25,13 @@ import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import { validatePart } from '@/lib/component-editor/validation';
+import { runDRC, getDefaultDRCRules } from '@/lib/component-editor/drc';
 import type { PartState } from '@shared/component-types';
+import { useCircuitDesigns, useCircuitInstances, useCircuitNets } from '@/lib/circuit-editor/hooks';
+import { runERC, type ERCInput } from '@/lib/circuit-editor/erc-engine';
+import { DEFAULT_ERC_RULES, DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
+import type { ERCViolation, CircuitSettings } from '@shared/circuit-types';
+import type { ComponentPart } from '@shared/schema';
 
 export default function ValidationView() {
   const { issues, runValidation, deleteValidationIssue } = useValidation();
@@ -57,6 +63,62 @@ export default function ValidationView() {
     });
   }, [componentParts]);
 
+  // DRC violations from component part geometry
+  const drcDefaultRules = useMemo(() => getDefaultDRCRules(), []);
+  const drcIssues = useMemo(() => {
+    if (!componentParts || componentParts.length === 0) return [];
+    const views = ['breadboard', 'schematic', 'pcb'] as const;
+    return componentParts.flatMap((part) => {
+      const partState: PartState = {
+        meta: part.meta as PartState['meta'],
+        connectors: part.connectors as PartState['connectors'],
+        buses: part.buses as PartState['buses'],
+        views: part.views as PartState['views'],
+        constraints: part.constraints as PartState['constraints'],
+      };
+      const partName = partState.meta?.title || `Part #${part.id}`;
+      return views.flatMap((view) => {
+        if (!partState.views[view]?.shapes?.length) return [];
+        return runDRC(partState, drcDefaultRules, view).map((v) => ({
+          id: v.id,
+          severity: v.severity,
+          message: v.message,
+          ruleType: v.ruleType,
+          view,
+          componentId: partName,
+        }));
+      });
+    });
+  }, [componentParts, drcDefaultRules]);
+
+  // ERC violations from circuit schematics
+  const { data: circuits } = useCircuitDesigns(projectId);
+  const firstCircuitId = circuits?.[0]?.id ?? 0;
+  const { data: circuitInstances } = useCircuitInstances(firstCircuitId);
+  const { data: circuitNets } = useCircuitNets(firstCircuitId);
+
+  const ercViolations = useMemo(() => {
+    if (!circuitInstances || circuitInstances.length === 0 || !componentParts) return [];
+
+    const partsMap = new Map<number, ComponentPart>();
+    componentParts.forEach((p: ComponentPart) => partsMap.set(p.id, p));
+
+    const circuitSettings: CircuitSettings = {
+      ...DEFAULT_CIRCUIT_SETTINGS,
+      ...(circuits?.[0]?.settings as Partial<CircuitSettings> | null),
+    };
+
+    const input: ERCInput = {
+      instances: circuitInstances,
+      nets: circuitNets ?? [],
+      partsMap,
+      settings: circuitSettings,
+      rules: DEFAULT_ERC_RULES,
+    };
+
+    return runERC(input);
+  }, [circuitInstances, circuitNets, componentParts, circuits]);
+
   const getIcon = (severity: string) => {
     switch (severity) {
       case 'error': return <XCircle className="w-5 h-5 text-destructive" />;
@@ -74,7 +136,7 @@ export default function ValidationView() {
              <ActivityIcon /> 
              System Validation
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">Found {issues.length + componentIssues.length} potential issues in your design.</p>
+          <p className="text-muted-foreground mt-1 text-sm">Found {issues.length + componentIssues.length + drcIssues.length + ercViolations.length} potential issues in your design.</p>
         </div>
         <StyledTooltip content="Run design rule validation checks" side="bottom">
             <button 
@@ -98,6 +160,8 @@ export default function ValidationView() {
         <VirtualizedIssueList
           issues={issues}
           componentIssues={componentIssues}
+          drcIssues={drcIssues}
+          ercIssues={ercViolations.map((v) => ({ id: v.id, severity: v.severity, message: v.message, ruleType: v.ruleType }))}
           hasComponentParts={!!componentParts && componentParts.length > 0}
           getIcon={getIcon}
           deleteValidationIssue={deleteValidationIssue}
@@ -134,17 +198,25 @@ export default function ValidationView() {
 
 type ArchIssue = { id: number | string; severity: string; message: string; suggestion?: string; componentId?: string };
 type CompIssue = { id: string; severity: string; message: string; suggestion?: string; componentId: string };
+type ERCIssue = { id: string; severity: string; message: string; ruleType: string };
+type DRCIssue = { id: string; severity: string; message: string; ruleType: string; view: string; componentId: string };
 type VirtualRow =
   | { type: 'arch'; issue: ArchIssue }
   | { type: 'section_header'; count: number }
-  | { type: 'comp'; issue: CompIssue };
+  | { type: 'drc_header'; count: number }
+  | { type: 'erc_header'; count: number }
+  | { type: 'comp'; issue: CompIssue }
+  | { type: 'drc'; issue: DRCIssue }
+  | { type: 'erc'; issue: ERCIssue };
 
 function VirtualizedIssueList({
-  issues, componentIssues, hasComponentParts, getIcon,
+  issues, componentIssues, drcIssues, ercIssues, hasComponentParts, getIcon,
   deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
 }: {
   issues: ArchIssue[];
   componentIssues: CompIssue[];
+  drcIssues: DRCIssue[];
+  ercIssues: ERCIssue[];
   hasComponentParts: boolean;
   getIcon: (severity: string) => React.ReactNode;
   deleteValidationIssue: (id: number | string) => void;
@@ -164,17 +236,32 @@ function VirtualizedIssueList({
         result.push({ type: 'comp' as const, issue });
       }
     }
+    if (drcIssues.length > 0) {
+      result.push({ type: 'drc_header' as const, count: drcIssues.length });
+      for (const issue of drcIssues) {
+        result.push({ type: 'drc' as const, issue });
+      }
+    }
+    if (ercIssues.length > 0) {
+      result.push({ type: 'erc_header' as const, count: ercIssues.length });
+      for (const issue of ercIssues) {
+        result.push({ type: 'erc' as const, issue });
+      }
+    }
     return result;
-  }, [issues, componentIssues, hasComponentParts]);
+  }, [issues, componentIssues, drcIssues, ercIssues, hasComponentParts]);
 
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: (index) => rows[index].type === 'section_header' ? 48 : 72,
+    estimateSize: (index) => {
+      const t = rows[index].type;
+      return (t === 'section_header' || t === 'erc_header' || t === 'drc_header') ? 48 : 72;
+    },
     overscan: 10,
   });
 
-  if (issues.length === 0 && componentIssues.length === 0) {
+  if (issues.length === 0 && componentIssues.length === 0 && drcIssues.length === 0 && ercIssues.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-24 text-muted-foreground" data-testid="empty-state-validation">
         <ShieldCheck className="w-16 h-16 mb-4 text-emerald-500/20" />
@@ -277,6 +364,68 @@ function VirtualizedIssueList({
                       data-testid={`button-view-component-${row.issue.id}`}
                       aria-label={`View in editor: ${row.issue.message}`}
                       onClick={(e) => { e.stopPropagation(); setActiveView('component_editor'); }}
+                      className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
+                    >
+                      View
+                    </button>
+                  </div>
+                </div>
+              )}
+              {row.type === 'drc_header' && (
+                <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/20 backdrop-blur">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Design Rule Check (DRC)</h3>
+                  <span className="text-xs text-muted-foreground">({row.count})</span>
+                </div>
+              )}
+              {row.type === 'drc' && (
+                <div data-testid={`row-drc-issue-${row.issue.id}`} role="button" tabIndex={0} onClick={() => setActiveView('component_editor')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('component_editor'); } }} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
+                  <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
+                    {getIcon(row.issue.severity)}
+                    <span className="text-xs font-medium uppercase md:hidden">{row.issue.severity}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
+                    <div className="mt-1 text-[10px] text-muted-foreground font-mono">{row.issue.ruleType} ({row.issue.view})</div>
+                  </div>
+                  <div className="md:w-32 text-xs font-mono text-rose-500 bg-rose-500/10 px-2 py-1 self-start text-center">
+                    {row.issue.componentId}
+                  </div>
+                  <div className="md:w-32">
+                    <button
+                      data-testid={`button-view-drc-${row.issue.id}`}
+                      aria-label={`View in editor: ${row.issue.message}`}
+                      onClick={(e) => { e.stopPropagation(); setActiveView('component_editor'); }}
+                      className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
+                    >
+                      View
+                    </button>
+                  </div>
+                </div>
+              )}
+              {row.type === 'erc_header' && (
+                <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/20 backdrop-blur">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Electrical Rule Check (ERC)</h3>
+                  <span className="text-xs text-muted-foreground">({row.count})</span>
+                </div>
+              )}
+              {row.type === 'erc' && (
+                <div data-testid={`row-erc-issue-${row.issue.id}`} role="button" tabIndex={0} onClick={() => setActiveView('schematic')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('schematic'); } }} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
+                  <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
+                    {getIcon(row.issue.severity)}
+                    <span className="text-xs font-medium uppercase md:hidden">{row.issue.severity}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
+                    <div className="mt-1 text-[10px] text-muted-foreground font-mono">{row.issue.ruleType}</div>
+                  </div>
+                  <div className="md:w-32 text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-1 self-start text-center">
+                    ERC
+                  </div>
+                  <div className="md:w-32">
+                    <button
+                      data-testid={`button-view-erc-${row.issue.id}`}
+                      aria-label={`View in schematic: ${row.issue.message}`}
+                      onClick={(e) => { e.stopPropagation(); setActiveView('schematic'); }}
                       className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
                     >
                       View

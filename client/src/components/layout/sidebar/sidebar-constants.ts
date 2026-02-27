@@ -5,6 +5,7 @@ import {
   Activity,
   Package,
   TerminalSquare,
+  Zap,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -19,5 +20,6 @@ export const navItems: NavItem[] = [
   { icon: Cpu, view: 'component_editor', label: 'Component Editor' },
   { icon: Package, view: 'procurement', label: 'Procurement' },
   { icon: Activity, view: 'validation', label: 'Validation' },
+  { icon: Zap, view: 'simulation', label: 'Simulation' },
   { icon: TerminalSquare, view: 'output', label: 'Output' },
 ];

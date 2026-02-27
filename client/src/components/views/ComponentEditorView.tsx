@@ -10,12 +10,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield, Share2, Library, Plus } from 'lucide-react';
+import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield, Share2, Library, Plus, Sparkles, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
 import PinTable from '@/components/views/component-editor/PinTable';
 import ComponentInspector from '@/components/views/component-editor/ComponentInspector';
 import GeneratorModal from '@/components/views/component-editor/GeneratorModal';
+import ModifyModal from '@/components/views/component-editor/ModifyModal';
+import DatasheetExtractModal from '@/components/views/component-editor/DatasheetExtractModal';
+import PinExtractModal from '@/components/views/component-editor/PinExtractModal';
+import type { PartState } from '@shared/component-types';
 import ValidationModal from '@/components/views/component-editor/ValidationModal';
 import HistoryPanel from '@/components/views/component-editor/HistoryPanel';
 import DRCPanel from '@/components/views/component-editor/DRCPanel';
@@ -203,6 +207,9 @@ function ComponentEditorContent() {
   const [partId, setPartId] = useState<number | null>(null);
   const loadedRef = useRef(false);
   const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [modifyOpen, setModifyOpen] = useState(false);
+  const [datasheetExtractOpen, setDatasheetExtractOpen] = useState(false);
+  const [pinExtractOpen, setPinExtractOpen] = useState(false);
   const [validationOpen, setValidationOpen] = useState(false);
   const [validationIssues, setValidationIssues] = useState<ComponentValidationIssue[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -369,6 +376,30 @@ function ComponentEditorContent() {
     }
     toast({ title: 'Generated', description: `Created ${result.shapes.length} shapes and ${result.connectors.length} pins.` });
   }, [activeView, dispatch, toast]);
+
+  const handleModifyApply = useCallback((newState: PartState) => {
+    dispatch({
+      type: 'SET_PART_STATE',
+      payload: {
+        label: 'AI Modify',
+        state: newState,
+      },
+    });
+    toast({ title: 'AI Changes Applied', description: 'Component has been modified.' });
+  }, [dispatch, toast]);
+
+  const handleDatasheetExtractApply = useCallback((updates: Partial<PartMeta>) => {
+    dispatch({ type: 'UPDATE_META', payload: updates });
+    const count = Object.keys(updates).length;
+    toast({ title: 'Metadata Extracted', description: `Applied ${count} field${count !== 1 ? 's' : ''} from datasheet.` });
+  }, [dispatch, toast]);
+
+  const handlePinExtractApply = useCallback((connectors: Connector[]) => {
+    for (const conn of connectors) {
+      dispatch({ type: 'ADD_CONNECTOR', payload: conn });
+    }
+    toast({ title: 'Pins Extracted', description: `Added ${connectors.length} pin${connectors.length !== 1 ? 's' : ''} from photo.` });
+  }, [dispatch, toast]);
 
   const handleNavigateToIssue = useCallback((issue: ComponentValidationIssue) => {
     const isCanvasView = (v: string): v is 'breadboard' | 'schematic' | 'pcb' => ['breadboard', 'schematic', 'pcb'].includes(v);
@@ -583,6 +614,39 @@ function ComponentEditorContent() {
           >
             <Cpu className="w-4 h-4" />
             <span className="text-xs">Generate</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-ai-modify"
+            onClick={() => setModifyOpen(true)}
+            disabled={!partId}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span className="text-xs">AI Modify</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-extract-datasheet"
+            onClick={() => setDatasheetExtractOpen(true)}
+            disabled={!partId}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <FileText className="w-4 h-4" />
+            <span className="text-xs">Datasheet</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-extract-pins"
+            onClick={() => setPinExtractOpen(true)}
+            disabled={!partId}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Camera className="w-4 h-4" />
+            <span className="text-xs">Pins</span>
           </Button>
           <Button
             variant="ghost"
@@ -816,6 +880,34 @@ function ComponentEditorContent() {
         onClose={() => setGeneratorOpen(false)}
         onGenerate={handleGenerate}
       />
+      {partId && (
+        <>
+          <ModifyModal
+            open={modifyOpen}
+            onOpenChange={setModifyOpen}
+            currentPart={state.present}
+            projectId={projectId}
+            partId={partId}
+            onApply={handleModifyApply}
+          />
+          <DatasheetExtractModal
+            open={datasheetExtractOpen}
+            onOpenChange={setDatasheetExtractOpen}
+            projectId={projectId}
+            partId={partId}
+            currentMeta={state.present.meta}
+            onApply={handleDatasheetExtractApply}
+          />
+          <PinExtractModal
+            open={pinExtractOpen}
+            onOpenChange={setPinExtractOpen}
+            projectId={projectId}
+            partId={partId}
+            currentMeta={state.present.meta}
+            onApply={handlePinExtractApply}
+          />
+        </>
+      )}
       <ValidationModal
         open={validationOpen}
         onClose={() => setValidationOpen(false)}

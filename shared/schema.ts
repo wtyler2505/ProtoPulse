@@ -240,3 +240,111 @@ export const componentLibrary = pgTable("component_library", {
 export const insertComponentLibrarySchema = createInsertSchema(componentLibrary).omit({ id: true, downloadCount: true, createdAt: true, updatedAt: true });
 export type InsertComponentLibrary = z.infer<typeof insertComponentLibrarySchema>;
 export type ComponentLibraryEntry = typeof componentLibrary.$inferSelect;
+
+// --- Circuit Design Tables (Phase 10) ---
+
+export const circuitDesigns = pgTable("circuit_designs", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  name: text("name").notNull().default("Main Circuit"),
+  description: text("description"),
+  settings: jsonb("settings").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_circuit_designs_project").on(table.projectId),
+]);
+
+export const insertCircuitDesignSchema = createInsertSchema(circuitDesigns).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCircuitDesign = z.infer<typeof insertCircuitDesignSchema>;
+export type CircuitDesignRow = typeof circuitDesigns.$inferSelect;
+
+export const circuitInstances = pgTable("circuit_instances", {
+  id: serial("id").primaryKey(),
+  circuitId: integer("circuit_id").notNull().references(() => circuitDesigns.id, { onDelete: "cascade" }),
+  partId: integer("part_id").notNull().references(() => componentParts.id),
+  referenceDesignator: text("reference_designator").notNull(),
+  schematicX: real("schematic_x").notNull().default(0),
+  schematicY: real("schematic_y").notNull().default(0),
+  schematicRotation: real("schematic_rotation").notNull().default(0),
+  breadboardX: real("breadboard_x"),
+  breadboardY: real("breadboard_y"),
+  breadboardRotation: real("breadboard_rotation").default(0),
+  pcbX: real("pcb_x"),
+  pcbY: real("pcb_y"),
+  pcbRotation: real("pcb_rotation").default(0),
+  pcbSide: text("pcb_side").default("front"),
+  properties: jsonb("properties").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_circuit_instances_circuit").on(table.circuitId),
+  index("idx_circuit_instances_part").on(table.partId),
+]);
+
+export const insertCircuitInstanceSchema = createInsertSchema(circuitInstances).omit({ id: true, createdAt: true });
+export type InsertCircuitInstance = z.infer<typeof insertCircuitInstanceSchema>;
+export type CircuitInstanceRow = typeof circuitInstances.$inferSelect;
+
+export const circuitNets = pgTable("circuit_nets", {
+  id: serial("id").primaryKey(),
+  circuitId: integer("circuit_id").notNull().references(() => circuitDesigns.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  netType: text("net_type").notNull().default("signal"),
+  voltage: text("voltage"),
+  busWidth: integer("bus_width"),
+  segments: jsonb("segments").notNull().default([]),
+  labels: jsonb("labels").notNull().default([]),
+  style: jsonb("style").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_circuit_nets_circuit").on(table.circuitId),
+  index("idx_circuit_nets_name").on(table.name),
+]);
+
+export const insertCircuitNetSchema = createInsertSchema(circuitNets).omit({ id: true, createdAt: true });
+export type InsertCircuitNet = z.infer<typeof insertCircuitNetSchema>;
+export type CircuitNetRow = typeof circuitNets.$inferSelect;
+
+export const circuitWires = pgTable("circuit_wires", {
+  id: serial("id").primaryKey(),
+  circuitId: integer("circuit_id").notNull().references(() => circuitDesigns.id, { onDelete: "cascade" }),
+  netId: integer("net_id").notNull().references(() => circuitNets.id, { onDelete: "cascade" }),
+  view: text("view").notNull(),
+  points: jsonb("points").notNull().default([]),
+  layer: text("layer").default("front"),
+  width: real("width").notNull().default(1.0),
+  color: text("color"),
+  wireType: text("wire_type").default("wire"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_circuit_wires_circuit").on(table.circuitId),
+  index("idx_circuit_wires_net").on(table.netId),
+]);
+
+export const insertCircuitWireSchema = createInsertSchema(circuitWires).omit({ id: true, createdAt: true });
+export type InsertCircuitWire = z.infer<typeof insertCircuitWireSchema>;
+export type CircuitWireRow = typeof circuitWires.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Simulation Results (Phase 13.13)
+// ---------------------------------------------------------------------------
+
+export const simulationResults = pgTable("simulation_results", {
+  id: serial("id").primaryKey(),
+  circuitId: integer("circuit_id").notNull().references(() => circuitDesigns.id, { onDelete: "cascade" }),
+  analysisType: text("analysis_type").notNull(),
+  config: jsonb("config").notNull().default({}),
+  results: jsonb("results").notNull().default({}),
+  status: text("status").notNull().default("completed"),
+  engineUsed: text("engine_used"),
+  elapsedMs: integer("elapsed_ms"),
+  sizeBytes: integer("size_bytes"),
+  error: text("error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_simulation_results_circuit").on(table.circuitId),
+]);
+
+export const insertSimulationResultSchema = createInsertSchema(simulationResults).omit({ id: true, createdAt: true });
+export type InsertSimulationResult = z.infer<typeof insertSimulationResultSchema>;
+export type SimulationResultRow = typeof simulationResults.$inferSelect;

@@ -49,3 +49,46 @@ export interface EditorState {
   future: HistoryEntry[];
   ui: EditorUIState;
 }
+
+/** Describes a single shape change between two PartState versions. */
+export interface ShapeDiff {
+  type: 'added' | 'removed' | 'modified';
+  shapeId: string;
+  view: 'breadboard' | 'schematic' | 'pcb';
+  before?: Shape;   // undefined for 'added'
+  after?: Shape;    // undefined for 'removed'
+}
+
+/** Describes a single connector change between two PartState versions. */
+export interface ConnectorDiff {
+  type: 'added' | 'removed' | 'modified';
+  connectorId: string;
+  before?: Connector;  // undefined for 'added'
+  after?: Connector;   // undefined for 'removed'
+}
+
+/** Describes metadata field changes between two PartState versions. */
+export interface MetaDiff {
+  field: keyof PartState['meta'];
+  before: unknown;
+  after: unknown;
+}
+
+/** Complete diff between two PartState versions. */
+export interface PartDiff {
+  shapes: ShapeDiff[];
+  connectors: ConnectorDiff[];
+  metaChanges: MetaDiff[];
+  /** True if there are any changes at all */
+  hasChanges: boolean;
+  /** Summary counts */
+  summary: {
+    shapesAdded: number;
+    shapesRemoved: number;
+    shapesModified: number;
+    connectorsAdded: number;
+    connectorsRemoved: number;
+    connectorsModified: number;
+    metaFieldsChanged: number;
+  };
+}
