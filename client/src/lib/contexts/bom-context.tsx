@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { BomItem } from '@/lib/project-context';
@@ -75,15 +75,26 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
   const deleteBomItem = useCallback((id: number | string) => deleteBomItemMutation.mutate(id), [deleteBomItemMutation]);
   const updateBomItem = useCallback((id: number | string, data: Partial<BomItem>) => updateBomItemMutation.mutate({ id, data }), [updateBomItemMutation]);
 
+  const bom = bomQuery.data ?? [];
+
+  const contextValue = useMemo<BomState>(() => ({
+    bom,
+    bomSettings,
+    setBomSettings,
+    addBomItem,
+    deleteBomItem,
+    updateBomItem,
+  }), [
+    bom,
+    bomSettings,
+    setBomSettings,
+    addBomItem,
+    deleteBomItem,
+    updateBomItem,
+  ]);
+
   return (
-    <BomContext.Provider value={{
-      bom: bomQuery.data ?? [],
-      bomSettings,
-      setBomSettings,
-      addBomItem,
-      deleteBomItem,
-      updateBomItem,
-    }}>
+    <BomContext.Provider value={contextValue}>
       {children}
     </BomContext.Provider>
   );

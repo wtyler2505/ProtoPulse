@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 
 interface OutputState {
   outputLog: string[];
@@ -23,8 +23,18 @@ export function OutputProvider({ children }: { children: React.ReactNode }) {
     setOutputLog([]);
   }, []);
 
+  const contextValue = useMemo<OutputState>(() => ({
+    outputLog,
+    addOutputLog,
+    clearOutputLog,
+  }), [
+    outputLog,
+    addOutputLog,
+    clearOutputLog,
+  ]);
+
   return (
-    <OutputContext.Provider value={{ outputLog, addOutputLog, clearOutputLog }}>
+    <OutputContext.Provider value={contextValue}>
       {children}
     </OutputContext.Provider>
   );

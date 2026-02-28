@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ViewMode } from '@/lib/project-context';
@@ -75,19 +75,32 @@ export function ProjectMetaProvider({ seeded, children }: { seeded: boolean; chi
 
   const isLoading = !seeded || projectQuery.isLoading;
 
+  const contextValue = useMemo<ProjectMetaState>(() => ({
+    activeView,
+    setActiveView,
+    projectName,
+    setProjectName,
+    projectDescription,
+    setProjectDescription,
+    schematicSheets,
+    activeSheetId,
+    setActiveSheetId,
+    isLoading,
+  }), [
+    activeView,
+    setActiveView,
+    projectName,
+    setProjectName,
+    projectDescription,
+    setProjectDescription,
+    schematicSheets,
+    activeSheetId,
+    setActiveSheetId,
+    isLoading,
+  ]);
+
   return (
-    <ProjectMetaContext.Provider value={{
-      activeView,
-      setActiveView,
-      projectName,
-      setProjectName,
-      projectDescription,
-      setProjectDescription,
-      schematicSheets,
-      activeSheetId,
-      setActiveSheetId,
-      isLoading,
-    }}>
+    <ProjectMetaContext.Provider value={contextValue}>
       {children}
     </ProjectMetaContext.Provider>
   );

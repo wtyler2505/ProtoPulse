@@ -118,6 +118,7 @@ export default function LayerPanel({ view }: { view: 'breadboard' | 'schematic' 
               }`}
               onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.name); }}
               title={layer.visible ? 'Hide layer' : 'Show layer'}
+              aria-label={`Toggle ${layer.name} visibility`}
             >
               {layer.visible ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
             </button>
@@ -128,6 +129,7 @@ export default function LayerPanel({ view }: { view: 'breadboard' | 'schematic' 
               }`}
               onClick={(e) => { e.stopPropagation(); toggleLock(layer.name); }}
               title={layer.locked ? 'Unlock layer' : 'Lock layer'}
+              aria-label={`Toggle ${layer.name} lock`}
             >
               {layer.locked ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
             </button>

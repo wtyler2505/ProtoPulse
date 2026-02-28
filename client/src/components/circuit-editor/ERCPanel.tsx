@@ -177,6 +177,7 @@ export default function ERCPanel({ circuitId, onHighlightViolation, onViolations
             showSettings && 'bg-accent text-accent-foreground',
           )}
           title="Rule settings"
+          aria-label="ERC settings"
         >
           <Settings2 className="w-3.5 h-3.5" />
         </button>
@@ -185,6 +186,7 @@ export default function ERCPanel({ circuitId, onHighlightViolation, onViolations
           onClick={handleRunERC}
           className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 hover:bg-primary/20 text-primary text-[10px] font-medium transition-colors"
           title="Run ERC"
+          aria-label="Run ERC"
         >
           <Play className="w-3 h-3" />
           Run
@@ -204,6 +206,7 @@ export default function ERCPanel({ circuitId, onHighlightViolation, onViolations
                 onClick={() => toggleRule(rule.type)}
                 className="p-0.5"
                 title={rule.enabled ? 'Disable rule' : 'Enable rule'}
+                aria-label={`Toggle ${RULE_LABELS[rule.type]}`}
               >
                 {rule.enabled ? (
                   <Eye className="w-3 h-3 text-foreground" />
@@ -216,6 +219,7 @@ export default function ERCPanel({ circuitId, onHighlightViolation, onViolations
                 onClick={() => cycleSeverity(rule.type)}
                 className="p-0.5"
                 title={`Severity: ${rule.severity} (click to toggle)`}
+                aria-label={`Toggle ${rule.severity === 'error' ? 'errors' : 'warnings'} for ${RULE_LABELS[rule.type]}`}
               >
                 {rule.severity === 'error' ? (
                   <XCircle className="w-3 h-3 text-destructive" />

@@ -781,6 +781,7 @@ function ComponentEditorContent() {
             data-testid="button-save"
             disabled={!state.ui.isDirty || isSaving}
             onClick={handleSave}
+            aria-label="Save"
             className={`h-8 w-8 ${
               state.ui.isDirty
                 ? 'text-primary hover:text-primary hover:bg-primary/20'
@@ -795,6 +796,7 @@ function ComponentEditorContent() {
             data-testid="button-undo"
             disabled={!canUndo}
             onClick={undo}
+            aria-label="Undo"
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
           >
             <Undo2 className="w-4 h-4" />
@@ -805,6 +807,7 @@ function ComponentEditorContent() {
             data-testid="button-redo"
             disabled={!canRedo}
             onClick={redo}
+            aria-label="Redo"
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
           >
             <Redo2 className="w-4 h-4" />
@@ -816,7 +819,7 @@ function ComponentEditorContent() {
         <div className="w-48 border-r border-border flex flex-col bg-card/50">
           <div className="p-2 flex items-center justify-between border-b border-border">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Parts</span>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreateNewPart} data-testid="button-new-part">
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCreateNewPart} data-testid="button-new-part" aria-label="Add new part">
               <Plus className="w-3.5 h-3.5" />
             </Button>
           </div>

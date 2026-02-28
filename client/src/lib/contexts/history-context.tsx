@@ -1,20 +1,9 @@
-import { createContext, useContext, useCallback } from 'react';
+import { createContext, useContext, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ProjectHistoryItem } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 
-function formatTimeAgo(timestamp: string): string {
-  const now = new Date();
-  const then = new Date(timestamp);
-  const diffMs = now.getTime() - then.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
-  if (diffMin < 1) return 'Just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffH = Math.floor(diffMin / 60);
-  if (diffH < 24) return `${diffH}h ago`;
-  return `${Math.floor(diffH / 24)}d ago`;
-}
 
 interface HistoryState {
   history: ProjectHistoryItem[];
@@ -34,7 +23,7 @@ export function HistoryProvider({ seeded, children }: { seeded: boolean; childre
       id: String(item.id),
       action: item.action,
       user: item.user,
-      timestamp: formatTimeAgo(item.timestamp),
+      timestamp: item.timestamp,
     })),
   });
 
@@ -51,11 +40,18 @@ export function HistoryProvider({ seeded, children }: { seeded: boolean; childre
     addHistoryMutation.mutate({ action, user });
   }, [addHistoryMutation]);
 
+  const history = historyQuery.data ?? [];
+
+  const contextValue = useMemo<HistoryState>(() => ({
+    history,
+    addToHistory,
+  }), [
+    history,
+    addToHistory,
+  ]);
+
   return (
-    <HistoryContext.Provider value={{
-      history: historyQuery.data ?? [],
-      addToHistory,
-    }}>
+    <HistoryContext.Provider value={contextValue}>
       {children}
     </HistoryContext.Provider>
   );

@@ -17,6 +17,7 @@ export default function ToolButton({ icon: Icon, label, active, onClick, testId 
       data-testid={testId}
       onClick={onClick}
       title={label}
+      aria-label={label}
       className={cn(
         'h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors',
         active && 'bg-primary/20 text-primary',

@@ -350,14 +350,16 @@ function ConstraintSection({ view }: { view: CanvasView }) {
                   data-testid={`button-accept-suggestion-${idx}`}
                   className="p-0.5 hover:text-green-400 text-muted-foreground shrink-0"
                   onClick={() => handleAcceptSuggestion(s)}
-                  title="Accept">
+                  title="Accept"
+                  aria-label="Accept suggestion">
                   <Check className="w-3.5 h-3.5" />
                 </button>
                 <button
                   data-testid={`button-dismiss-suggestion-${idx}`}
                   className="p-0.5 hover:text-red-400 text-muted-foreground shrink-0"
                   onClick={() => handleDismissSuggestion(s)}
-                  title="Dismiss">
+                  title="Dismiss"
+                  aria-label="Dismiss suggestion">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -430,14 +432,16 @@ function ConstraintSection({ view }: { view: CanvasView }) {
               data-testid={`button-toggle-constraint-${c.id}`}
               className="ml-auto p-0.5 hover:text-foreground text-muted-foreground"
               onClick={() => handleToggle(c.id, !c.enabled)}
-              title={c.enabled ? 'Disable constraint' : 'Enable constraint'}>
+              title={c.enabled ? 'Disable constraint' : 'Enable constraint'}
+              aria-label="Toggle constraint">
               {c.enabled ? <ToggleRight className="w-3.5 h-3.5 text-editor-accent" /> : <ToggleLeft className="w-3.5 h-3.5" />}
             </button>
             <button
               data-testid={`button-delete-constraint-${c.id}`}
               className="p-0.5 hover:text-destructive text-muted-foreground"
               onClick={() => handleDelete(c.id)}
-              title="Delete constraint">
+              title="Delete constraint"
+              aria-label="Delete constraint">
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           </div>

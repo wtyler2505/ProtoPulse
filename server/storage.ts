@@ -18,6 +18,7 @@ import {
   circuitNets, type CircuitNetRow, type InsertCircuitNet,
   circuitWires, type CircuitWireRow, type InsertCircuitWire,
   simulationResults, type SimulationResultRow, type InsertSimulationResult,
+  aiActions, type AiActionRow, type InsertAiAction,
 } from "@shared/schema";
 
 export interface PaginationOptions {
@@ -131,6 +132,11 @@ export interface IStorage {
   createSimulationResult(data: InsertSimulationResult): Promise<SimulationResultRow>;
   deleteSimulationResult(id: number): Promise<SimulationResultRow | undefined>;
   cleanupSimulationResults(circuitId: number, maxResults: number): Promise<number>;
+
+  // AI action log (Phase 5)
+  getAiActions(projectId: number): Promise<AiActionRow[]>;
+  getAiActionsByMessage(chatMessageId: string): Promise<AiActionRow[]>;
+  createAiAction(data: InsertAiAction): Promise<AiActionRow>;
 }
 
 function computeTotalPrice(quantity: number, unitPrice: string | number): string {
@@ -1013,6 +1019,42 @@ export class DatabaseStorage implements IStorage {
       return deleted;
     } catch (e) {
       throw new StorageError('cleanupSimulationResults', `circuits/${circuitId}/simulations`, e);
+    }
+  }
+  // =========================================================================
+  // AI Action Log (Phase 5)
+  // =========================================================================
+
+  async getAiActions(projectId: number): Promise<AiActionRow[]> {
+    try {
+      return await db.select()
+        .from(aiActions)
+        .where(eq(aiActions.projectId, projectId))
+        .orderBy(desc(aiActions.createdAt));
+    } catch (e) {
+      throw new StorageError('getAiActions', `projects/${projectId}/actions`, e);
+    }
+  }
+
+  async getAiActionsByMessage(chatMessageId: string): Promise<AiActionRow[]> {
+    try {
+      return await db.select()
+        .from(aiActions)
+        .where(eq(aiActions.chatMessageId, chatMessageId))
+        .orderBy(asc(aiActions.createdAt));
+    } catch (e) {
+      throw new StorageError('getAiActionsByMessage', `messages/${chatMessageId}/actions`, e);
+    }
+  }
+
+  async createAiAction(data: InsertAiAction): Promise<AiActionRow> {
+    try {
+      const [action] = await db.insert(aiActions)
+        .values(data)
+        .returning();
+      return action;
+    } catch (e) {
+      throw new StorageError('createAiAction', `projects/${data.projectId}/actions`, e);
     }
   }
 }

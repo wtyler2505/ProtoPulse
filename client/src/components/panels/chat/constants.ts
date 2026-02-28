@@ -14,12 +14,12 @@ export const quickActionDescriptions: Record<string, string> = {
 
 export const AI_MODELS = {
   anthropic: [
-    { id: 'claude-sonnet-4-5-20250514', label: 'Claude Sonnet 4.5' },
+    { id: 'claude-sonnet-4-5-20250514', label: 'Claude 4.5 Sonnet' },
     { id: 'claude-4-6-sonnet-20260101', label: 'Claude 4.6 Sonnet' },
-    { id: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-    { id: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
+    { id: 'claude-sonnet-4-20250514', label: 'Claude 4 Sonnet' },
+    { id: 'claude-opus-4-20250514', label: 'Claude 4 Opus' },
     { id: 'claude-4-6-opus-20260101', label: 'Claude 4.6 Opus' },
-    { id: 'claude-haiku-4-5-20250514', label: 'Claude Haiku 4.5' },
+    { id: 'claude-haiku-4-5-20250514', label: 'Claude 4.5 Haiku' },
   ],
   gemini: [
     { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
@@ -27,6 +27,16 @@ export const AI_MODELS = {
     { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
   ],
 };
+
+export type RoutingStrategy = 'user' | 'auto' | 'quality' | 'speed' | 'cost';
+
+export const ROUTING_STRATEGIES: Array<{ id: RoutingStrategy; label: string; description: string }> = [
+  { id: 'user', label: 'Manual', description: 'Use the model you select above' },
+  { id: 'auto', label: 'Auto', description: 'Picks model based on message complexity' },
+  { id: 'quality', label: 'Quality', description: 'Always uses the most capable model' },
+  { id: 'speed', label: 'Speed', description: 'Always uses the fastest model' },
+  { id: 'cost', label: 'Cost', description: 'Always uses the most affordable model' },
+];
 
 export const DESTRUCTIVE_ACTIONS = ['clear_canvas', 'remove_node', 'remove_edge', 'clear_validation', 'remove_bom_item'];
 
@@ -78,4 +88,12 @@ export const ACTION_LABELS: Record<string, string> = {
   add_datasheet_link: 'Added datasheet',
   export_design_report: 'Generated report',
   set_project_type: 'Set project type',
+  // Phase 6: New export tools
+  download_file: 'Downloaded file',
+  export_gerber: 'Exported Gerber',
+  export_kicad_netlist: 'Exported KiCad netlist',
+  export_csv_netlist: 'Exported CSV netlist',
+  export_pick_and_place: 'Exported pick & place',
+  export_eagle: 'Exported Eagle',
+  export_fritzing_project: 'Exported Fritzing',
 };

@@ -25,16 +25,21 @@ const PACKAGE_LABELS: Record<PackageType, string> = {
   capacitor: 'Capacitor',
 };
 
+/** Round a number to at most 2 decimal places, removing floating-point noise. */
+function round2(n: number): number {
+  return parseFloat(n.toFixed(2));
+}
+
 function getPreviewDescription(config: GeneratorConfig): string {
   switch (config.type) {
     case 'dip':
-      return `${config.pinCount ?? 8}-pin DIP package with ${(config.pinCount ?? 8) / 2} pins per side, ${config.pitch ?? 2.54}mm pin spacing, ${config.bodyWidth ?? 7.62}mm row spacing. THT through-hole pads.`;
+      return `${config.pinCount ?? 8}-pin DIP package with ${(config.pinCount ?? 8) / 2} pins per side, ${round2(config.pitch ?? 2.54)}mm pin spacing, ${round2(config.bodyWidth ?? 7.62)}mm row spacing. THT through-hole pads.`;
     case 'soic':
-      return `${config.pinCount ?? 8}-pin SOIC package with ${(config.pinCount ?? 8) / 2} pins per side, ${config.pitch ?? 1.27}mm pitch. SMD surface-mount pads.`;
+      return `${config.pinCount ?? 8}-pin SOIC package with ${(config.pinCount ?? 8) / 2} pins per side, ${round2(config.pitch ?? 1.27)}mm pitch. SMD surface-mount pads.`;
     case 'qfp':
-      return `${config.pinCount ?? 32}-pin QFP package with ${(config.pinCount ?? 32) / 4} pins per side, ${config.pitch ?? 0.5}mm pitch. SMD surface-mount pads.`;
+      return `${config.pinCount ?? 32}-pin QFP package with ${(config.pinCount ?? 32) / 4} pins per side, ${round2(config.pitch ?? 0.5)}mm pitch. SMD surface-mount pads.`;
     case 'header':
-      return `${config.cols ?? 4}×${config.rows ?? 1} pin header (${(config.cols ?? 4) * (config.rows ?? 1)} pins total), ${config.pitch ?? 2.54}mm pitch. THT through-hole pads.`;
+      return `${config.cols ?? 4}×${config.rows ?? 1} pin header (${(config.cols ?? 4) * (config.rows ?? 1)} pins total), ${round2(config.pitch ?? 2.54)}mm pitch. THT through-hole pads.`;
     case 'resistor':
       return `2-pin resistor, ${config.mountingType === 'smd' ? 'SMD (0603-style)' : 'THT axial'} package.`;
     case 'capacitor':
@@ -212,7 +217,7 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
                 type="number"
                 min={0.1}
                 step={0.01}
-                value={pitch}
+                value={round2(pitch)}
                 onChange={(e) => setPitch(Math.max(0.1, parseFloat(e.target.value) || 0.1))}
               />
             </div>
@@ -227,7 +232,7 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
                 type="number"
                 min={1}
                 step={0.01}
-                value={bodyWidth}
+                value={round2(bodyWidth)}
                 onChange={(e) => setBodyWidth(Math.max(1, parseFloat(e.target.value) || 1))}
               />
             </div>

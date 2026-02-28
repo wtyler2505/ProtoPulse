@@ -5,7 +5,7 @@ import { parseSvgToShapes } from "./svg-parser";
 import type { PartMeta, Connector, PartViews, Bus, Constraint, PartState } from "@shared/component-types";
 import { runDRC, getDefaultDRCRules } from "@shared/drc-engine";
 import { db } from "./db";
-import { processAIMessage, streamAIMessage, categorizeError } from "./ai";
+import { processAIMessage, streamAIMessage, categorizeError, routeToModel } from "./ai";
 import { createUser, getUserByUsername, verifyPassword, createSession, deleteSession, getUserById, validateSession, storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from "./auth";
 import { fromZodError } from "zod-validation-error";
 import { isNotNull, lte, and, isNull } from "drizzle-orm";
@@ -85,6 +85,10 @@ const aiRequestSchema = z.object({
   customSystemPrompt: z.string().max(10000).optional(),
   selectedNodeId: z.string().nullable().optional(),
   changeDiff: z.string().max(50000).optional(),
+  routingStrategy: z.enum(["user", "auto", "quality", "speed", "cost"]).optional(),
+  // Phase 4: Vision/multimodal — optional image attachment
+  imageBase64: z.string().max(10_000_000).optional(),
+  imageMimeType: z.enum(["image/jpeg", "image/png", "image/gif", "image/webp"]).optional(),
 });
 
 async function buildAppStateFromProject(
@@ -98,14 +102,39 @@ async function buildAppStateFromProject(
     changeDiff?: string;
   }
 ) {
-  const [nodes, edges, bomData, validation, chatHistory, project] = await Promise.all([
+  const [nodes, edges, bomData, validation, chatHistory, project, parts, circuits, history] = await Promise.all([
     storage.getNodes(projectId),
     storage.getEdges(projectId),
     storage.getBomItems(projectId),
     storage.getValidationIssues(projectId),
     storage.getChatMessages(projectId),
     storage.getProject(projectId),
+    storage.getComponentParts(projectId),
+    storage.getCircuitDesigns(projectId),
+    storage.getHistoryItems(projectId, { limit: 20, offset: 0, sort: 'desc' }),
   ]);
+
+  // Fetch instance/net counts for each circuit design
+  const circuitDesigns = await Promise.all(
+    circuits.map(async (c) => {
+      const [instances, nets] = await Promise.all([
+        storage.getCircuitInstances(c.id),
+        storage.getCircuitNets(c.id),
+      ]);
+      return {
+        id: c.id,
+        name: c.name,
+        description: c.description || undefined,
+        instanceCount: instances.length,
+        netCount: nets.length,
+      };
+    })
+  );
+
+  // BOM metadata aggregation
+  const totalCost = bomData.reduce((sum, b) => sum + b.quantity * Number(b.unitPrice), 0);
+  const outOfStockCount = bomData.filter(b => b.status === "Out of Stock").length;
+  const lowStockCount = bomData.filter(b => b.status === "Low Stock").length;
 
   return {
     projectName: project?.name || "Untitled",
@@ -155,6 +184,28 @@ async function buildAppStateFromProject(
     })),
     customSystemPrompt: options.customSystemPrompt || "",
     changeDiff: options.changeDiff || "",
+    // Phase 2: expanded context
+    componentParts: parts.map(p => {
+      const meta = (p.meta ?? {}) as Record<string, unknown>;
+      const connectors = (p.connectors ?? []) as unknown[];
+      return {
+        id: p.id,
+        nodeId: p.nodeId || undefined,
+        title: (meta.title as string) || undefined,
+        family: (meta.family as string) || undefined,
+        manufacturer: (meta.manufacturer as string) || undefined,
+        mpn: (meta.mpn as string) || undefined,
+        category: (meta.category as string) || undefined,
+        pinCount: connectors.length,
+      };
+    }),
+    circuitDesigns,
+    historyItems: history.map(h => ({
+      action: h.action,
+      user: h.user,
+      timestamp: h.timestamp.toISOString(),
+    })),
+    bomMetadata: { totalCost, itemCount: bomData.length, outOfStockCount, lowStockCount },
   };
 }
 
@@ -354,21 +405,25 @@ export async function registerRoutes(app: Express): Promise<void> {
   // --- Chat Settings ---
 
   app.get("/api/settings/chat", asyncHandler(async (req, res) => {
-    if (!req.userId) return res.status(401).json({ message: "Authentication required" });
+    const defaults = {
+      aiProvider: 'anthropic',
+      aiModel: 'claude-sonnet-4-5-20250514',
+      aiTemperature: 0.7,
+      customSystemPrompt: '',
+      routingStrategy: 'user',
+    };
+
+    if (!req.userId) return res.json(defaults);
+
     const settings = await storage.getChatSettings(req.userId);
-    if (!settings) {
-      return res.json({
-        aiProvider: 'anthropic',
-        aiModel: 'claude-sonnet-4-5-20250514',
-        aiTemperature: 0.7,
-        customSystemPrompt: '',
-      });
-    }
+    if (!settings) return res.json(defaults);
+
     res.json({
       aiProvider: settings.aiProvider,
       aiModel: settings.aiModel,
       aiTemperature: settings.aiTemperature,
       customSystemPrompt: settings.customSystemPrompt,
+      routingStrategy: settings.routingStrategy,
     });
   }));
 
@@ -379,6 +434,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       aiModel: z.string().min(1).max(200).optional(),
       aiTemperature: z.number().min(0).max(2).optional(),
       customSystemPrompt: z.string().max(10000).optional(),
+      routingStrategy: z.enum(["user", "auto", "quality", "speed", "cost"]).optional(),
     });
     const parsed = chatSettingsSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: fromZodError(parsed.error).toString() });
@@ -389,6 +445,7 @@ export async function registerRoutes(app: Express): Promise<void> {
       aiModel: updated.aiModel,
       aiTemperature: updated.aiTemperature,
       customSystemPrompt: updated.customSystemPrompt,
+      routingStrategy: updated.routingStrategy,
     });
   }));
 
@@ -1077,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<void> {
 
   // --- AI Chat Endpoint ---
 
-  app.post("/api/chat/ai", payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+  app.post("/api/chat/ai", payloadLimit(10 * 1024 * 1024), asyncHandler(async (req, res) => {
     const parsed = aiRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
@@ -1085,6 +1142,19 @@ export async function registerRoutes(app: Express): Promise<void> {
 
     const { message, provider, model, apiKey: clientApiKey, temperature, maxTokens } = parsed.data;
     const pid = parsed.data.projectId;
+
+    const routingStrategy = parsed.data.routingStrategy || 'user';
+    let resolvedModel = model;
+    if (routingStrategy !== 'user') {
+      const routed = routeToModel({
+        strategy: routingStrategy,
+        provider,
+        userModel: model,
+        messageLength: message.length,
+        hasImage: !!parsed.data.imageBase64,
+      });
+      resolvedModel = routed.model;
+    }
 
     let apiKeyToUse = clientApiKey || '';
     if (req.userId) {
@@ -1106,17 +1176,21 @@ export async function registerRoutes(app: Express): Promise<void> {
     const result = await processAIMessage({
       message,
       provider,
-      model,
+      model: resolvedModel,
       apiKey: apiKeyToUse,
       appState,
       temperature: temperature ?? 0.7,
       maxTokens,
+      imageContent: parsed.data.imageBase64 ? {
+        base64: parsed.data.imageBase64,
+        mediaType: parsed.data.imageMimeType || "image/png",
+      } : undefined,
     });
 
     res.json(result);
   }));
 
-  app.post("/api/chat/ai/stream", payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+  app.post("/api/chat/ai/stream", payloadLimit(10 * 1024 * 1024), asyncHandler(async (req, res) => {
     const parsed = aiRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: "Invalid request: " + fromZodError(parsed.error).toString() });
@@ -1124,6 +1198,19 @@ export async function registerRoutes(app: Express): Promise<void> {
 
     const { message, provider, model, apiKey: clientApiKey, temperature, maxTokens } = parsed.data;
     const pid = parsed.data.projectId;
+
+    const routingStrategy = parsed.data.routingStrategy || 'user';
+    let resolvedModel = model;
+    if (routingStrategy !== 'user') {
+      const routed = routeToModel({
+        strategy: routingStrategy,
+        provider,
+        userModel: model,
+        messageLength: message.length,
+        hasImage: !!parsed.data.imageBase64,
+      });
+      resolvedModel = routed.model;
+    }
 
     let apiKeyToUse = clientApiKey || '';
     if (req.userId) {
@@ -1174,21 +1261,26 @@ export async function registerRoutes(app: Express): Promise<void> {
 
     try {
       await streamAIMessage(
-        { message, provider, model, apiKey: apiKeyToUse, appState, temperature: temperature ?? 0.7, maxTokens },
-        async (chunk) => {
-          if (!closed) {
-            await writeWithBackpressure(`data: ${JSON.stringify({ type: 'chunk', text: chunk })}\n\n`);
-          }
+        {
+          message, provider, model: resolvedModel, apiKey: apiKeyToUse, appState,
+          temperature: temperature ?? 0.7, maxTokens,
+          toolContext: { projectId: pid, storage },
+          imageContent: parsed.data.imageBase64 ? {
+            base64: parsed.data.imageBase64,
+            mediaType: parsed.data.imageMimeType || "image/png",
+          } : undefined,
         },
-        async (result) => {
-          clearTimeout(streamTimeout);
+        async (event) => {
           if (!closed) {
-            await writeWithBackpressure(`data: ${JSON.stringify({ type: 'done', message: result.message, actions: result.actions })}\n\n`);
-            res.end();
+            await writeWithBackpressure(`data: ${JSON.stringify(event)}\n\n`);
           }
         },
         abortController.signal
       );
+      clearTimeout(streamTimeout);
+      if (!closed) {
+        res.end();
+      }
     } catch (error: unknown) {
       clearTimeout(streamTimeout);
       if (!closed) {
@@ -1197,6 +1289,23 @@ export async function registerRoutes(app: Express): Promise<void> {
         res.end();
       }
     }
+  }));
+
+  // --- AI Action History (Phase 5) ---
+
+  app.get("/api/projects/:id/ai-actions", asyncHandler(async (req, res) => {
+    const pid = parseIdParam(req.params.id);
+    const project = await storage.getProject(pid);
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    const actions = await storage.getAiActions(pid);
+    res.json(actions);
+  }));
+
+  app.get("/api/ai-actions/by-message/:messageId", asyncHandler(async (req, res) => {
+    const messageId = String(req.params.messageId ?? "");
+    if (!messageId) return res.status(400).json({ message: "messageId is required" });
+    const actions = await storage.getAiActionsByMessage(messageId);
+    res.json(actions);
   }));
 
   // --- Admin: Purge soft-deleted records ---

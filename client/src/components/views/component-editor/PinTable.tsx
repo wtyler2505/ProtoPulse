@@ -97,6 +97,7 @@ function PinRow({ connector, index }: { connector: Connector; index: number }) {
           data-testid={`button-delete-pin-${connector.id}`}
           onClick={() => dispatch({ type: 'DELETE_CONNECTOR', payload: connector.id })}
           className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          aria-label={`Delete pin ${connector.name}`}
         >
           <Trash2 className="w-3.5 h-3.5" />
         </Button>

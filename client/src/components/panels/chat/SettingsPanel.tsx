@@ -1,6 +1,6 @@
 import { Settings2, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { AI_MODELS } from './constants';
+import { AI_MODELS, type RoutingStrategy } from './constants';
 
 interface AIModel {
   id: string;
@@ -20,6 +20,8 @@ interface SettingsPanelProps {
   setAiTemperature: (temp: number) => void;
   customSystemPrompt: string;
   setCustomSystemPrompt: (prompt: string) => void;
+  routingStrategy: RoutingStrategy;
+  setRoutingStrategy: (strategy: RoutingStrategy) => void;
   apiKeyValid: () => boolean;
   onClose: () => void;
 }
@@ -27,7 +29,8 @@ interface SettingsPanelProps {
 export default function SettingsPanel({
   aiProvider, setAiProvider, aiModel, setAiModel, aiApiKey, setAiApiKey,
   showApiKey, setShowApiKey, aiTemperature, setAiTemperature,
-  customSystemPrompt, setCustomSystemPrompt, apiKeyValid, onClose,
+  customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy,
+  apiKeyValid, onClose,
 }: SettingsPanelProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
@@ -42,6 +45,7 @@ export default function SettingsPanel({
           <button
             data-testid="provider-anthropic"
             onClick={() => { setAiProvider('anthropic'); setAiModel(AI_MODELS.anthropic[0].id); }}
+            aria-pressed={aiProvider === 'anthropic'}
             className={cn(
               "p-3 border text-center text-sm font-bold transition-all",
               aiProvider === 'anthropic' ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]" : "border-border bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
@@ -52,6 +56,7 @@ export default function SettingsPanel({
           <button
             data-testid="provider-gemini"
             onClick={() => { setAiProvider('gemini'); setAiModel(AI_MODELS.gemini[0].id); }}
+            aria-pressed={aiProvider === 'gemini'}
             className={cn(
               "p-3 border text-center text-sm font-bold transition-all",
               aiProvider === 'gemini' ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]" : "border-border bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
@@ -77,6 +82,32 @@ export default function SettingsPanel({
           </select>
           <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
         </div>
+      </div>
+
+      <div>
+        <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Model Routing</label>
+        <div className="relative">
+          <select
+            data-testid="routing-strategy-select"
+            value={routingStrategy}
+            onChange={(e) => setRoutingStrategy(e.target.value as RoutingStrategy)}
+            className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus:outline-none focus:border-primary"
+          >
+            <option value="user" className="bg-background text-foreground">Manual</option>
+            <option value="auto" className="bg-background text-foreground">Auto</option>
+            <option value="quality" className="bg-background text-foreground">Quality</option>
+            <option value="speed" className="bg-background text-foreground">Speed</option>
+            <option value="cost" className="bg-background text-foreground">Cost</option>
+          </select>
+          <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+        </div>
+        <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+          {routingStrategy === 'user' && 'Uses the exact model selected above.'}
+          {routingStrategy === 'auto' && 'Picks fast/standard/premium based on message complexity.'}
+          {routingStrategy === 'quality' && 'Always routes to the most capable model.'}
+          {routingStrategy === 'speed' && 'Always routes to the fastest model.'}
+          {routingStrategy === 'cost' && 'Always routes to the most affordable model.'}
+        </p>
       </div>
 
       <div>
@@ -109,8 +140,8 @@ export default function SettingsPanel({
         )}
         <p className="text-[10px] text-muted-foreground/60 mt-1.5">
           Get your key at{' '}
-          <span className="text-primary/70">console.anthropic.com</span> or{' '}
-          <span className="text-primary/70">aistudio.google.dev</span>
+          <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">console.anthropic.com</a> or{' '}
+          <a href="https://aistudio.google.dev" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">aistudio.google.dev</a>
         </p>
       </div>
 
@@ -126,7 +157,8 @@ export default function SettingsPanel({
           max="2"
           step="0.1"
           value={aiTemperature}
-          onChange={(e) => setAiTemperature(parseFloat(e.target.value))}
+          onChange={(e) => setAiTemperature(Math.round(parseFloat(e.target.value) * 10) / 10)}
+          aria-valuetext={aiTemperature.toFixed(1)}
           className="w-full h-1.5 bg-muted/50 appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border-0"
         />
         <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-1">

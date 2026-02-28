@@ -2,13 +2,14 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { STORAGE_KEYS } from '@/lib/constants';
-import { AI_MODELS } from '@/components/panels/chat/constants';
+import { AI_MODELS, type RoutingStrategy } from '@/components/panels/chat/constants';
 
 interface ChatSettings {
   aiProvider: 'anthropic' | 'gemini';
   aiModel: string;
   aiTemperature: number;
   customSystemPrompt: string;
+  routingStrategy: RoutingStrategy;
 }
 
 const DEFAULTS: ChatSettings = {
@@ -16,6 +17,7 @@ const DEFAULTS: ChatSettings = {
   aiModel: AI_MODELS.anthropic[0].id,
   aiTemperature: 0.7,
   customSystemPrompt: '',
+  routingStrategy: 'user' as RoutingStrategy,
 };
 
 /** Read chat settings from localStorage with validation and fallback defaults. */
@@ -28,11 +30,13 @@ function readLocalStorage(): ChatSettings {
     const raw = localStorage.getItem(STORAGE_KEYS.AI_TEMPERATURE);
     const temperature = raw !== null ? parseFloat(raw) : DEFAULTS.aiTemperature;
     const customSystemPrompt = localStorage.getItem(STORAGE_KEYS.AI_SYSTEM_PROMPT) || '';
+    const routingStrategy = (localStorage.getItem(STORAGE_KEYS.ROUTING_STRATEGY) as RoutingStrategy) || DEFAULTS.routingStrategy;
     return {
       aiProvider: provider,
       aiModel: model,
       aiTemperature: Number.isFinite(temperature) ? temperature : DEFAULTS.aiTemperature,
       customSystemPrompt,
+      routingStrategy,
     };
   } catch {
     return DEFAULTS;
@@ -46,6 +50,7 @@ function writeLocalStorage(patch: Partial<ChatSettings>) {
     if (patch.aiModel !== undefined) localStorage.setItem(STORAGE_KEYS.AI_MODEL, patch.aiModel);
     if (patch.aiTemperature !== undefined) localStorage.setItem(STORAGE_KEYS.AI_TEMPERATURE, String(patch.aiTemperature));
     if (patch.customSystemPrompt !== undefined) localStorage.setItem(STORAGE_KEYS.AI_SYSTEM_PROMPT, patch.customSystemPrompt);
+    if (patch.routingStrategy !== undefined) localStorage.setItem(STORAGE_KEYS.ROUTING_STRATEGY, patch.routingStrategy);
   } catch {
     // Quota exceeded — silently ignore, server is the durable store
   }
@@ -163,6 +168,14 @@ export function useChatSettings() {
     });
   }, [scheduleSave]);
 
+  const setRoutingStrategy = useCallback((v: RoutingStrategy) => {
+    setSettings(prev => {
+      writeLocalStorage({ routingStrategy: v });
+      scheduleSave({ routingStrategy: v });
+      return { ...prev, routingStrategy: v };
+    });
+  }, [scheduleSave]);
+
   return {
     aiProvider: settings.aiProvider,
     setAiProvider,
@@ -172,6 +185,8 @@ export function useChatSettings() {
     setAiTemperature,
     customSystemPrompt: settings.customSystemPrompt,
     setCustomSystemPrompt,
+    routingStrategy: settings.routingStrategy,
+    setRoutingStrategy,
     isLoaded: settingsQuery.isFetched,
   };
 }

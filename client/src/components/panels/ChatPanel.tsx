@@ -21,11 +21,11 @@ import ChatSearchBar from './chat/ChatSearchBar';
 import StreamingIndicator from './chat/StreamingIndicator';
 import FollowUpSuggestions from './chat/FollowUpSuggestions';
 import MessageInput from './chat/MessageInput';
-import { buildCSV, downloadBlob } from '@/lib/csv';
 import { useChatSettings } from '@/hooks/useChatSettings';
+import { queryClient } from '@/lib/queryClient';
 import type { AIAction } from './chat/chat-types';
-import { nodeData } from './chat/chat-types';
 import { useActionExecutor } from './chat/hooks/useActionExecutor';
+import { parseLocalIntent } from './chat/parseLocalIntent';
 
 interface ChatPanelProps {
   isOpen: boolean;
@@ -51,7 +51,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const projectId = useProjectId();
-  const { aiProvider, setAiProvider, aiModel, setAiModel, aiTemperature, setAiTemperature, customSystemPrompt, setCustomSystemPrompt } = useChatSettings();
+  const { aiProvider, setAiProvider, aiModel, setAiModel, aiTemperature, setAiTemperature, customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy } = useChatSettings();
   const [aiApiKey, setAiApiKey] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -64,6 +64,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const [lastUserMessage, setLastUserMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<{input: number; output: number; cost: number} | null>(null);
+  const [attachedImage, setAttachedImage] = useState<{ base64: string; mimeType: string; name: string; previewUrl: string } | null>(null);
 
   const filteredMessages = useMemo(() =>
     chatSearch
@@ -124,251 +125,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     setTimeout(() => setCopiedId(null), COPY_FEEDBACK_DURATION);
   }, []);
 
-  const processLocalCommand = useCallback((msgText: string): string => {
-    const lower = msgText.toLowerCase().trim();
-
-    const viewMap: Record<string, ViewMode> = {
-      'architecture': 'architecture',
-      'component editor': 'component_editor',
-      'procurement': 'procurement',
-      'validation': 'validation',
-      'output': 'output',
-    };
-    for (const [key, view] of Object.entries(viewMap)) {
-      if ((lower.includes('switch to') || lower.includes('go to') || lower.includes('show') || lower.includes('open')) && lower.includes(key)) {
-        setActiveView(view);
-        const viewLabel = key.charAt(0).toUpperCase() + key.slice(1);
-        addToHistory(`Switched to ${viewLabel} view`, 'AI');
-        addOutputLog(`[AI] Switched to ${viewLabel} view`);
-        return `[ACTION] Switched to ${viewLabel} view.\n\nYou can manage your ${key} here.`;
-      }
-    }
-
-    if (lower.includes('generate architecture') || lower.includes('generate schematic') || (lower.includes('generate') && (lower.includes('arch') || lower.includes('design')))) {
-      const defaultNodes = [
-        { id: crypto.randomUUID(), type: 'custom' as const, position: { x: 300, y: 100 }, data: { label: 'ESP32-S3', type: 'mcu', description: 'Main MCU' } },
-        { id: crypto.randomUUID(), type: 'custom' as const, position: { x: 100, y: 250 }, data: { label: 'TP4056', type: 'power', description: 'Power Management' } },
-        { id: crypto.randomUUID(), type: 'custom' as const, position: { x: 500, y: 250 }, data: { label: 'SX1262', type: 'comm', description: 'LoRa Communication' } },
-        { id: crypto.randomUUID(), type: 'custom' as const, position: { x: 300, y: 400 }, data: { label: 'SHT40', type: 'sensor', description: 'Temp/Humidity Sensor' } },
-      ];
-      const defaultEdges = [
-        { id: crypto.randomUUID(), source: defaultNodes[0].id, target: defaultNodes[1].id, label: 'Power', animated: true },
-        { id: crypto.randomUUID(), source: defaultNodes[0].id, target: defaultNodes[2].id, label: 'SPI', animated: true },
-        { id: crypto.randomUUID(), source: defaultNodes[0].id, target: defaultNodes[3].id, label: 'I2C', animated: true },
-      ];
-      setNodes(defaultNodes);
-      setEdges(defaultEdges);
-      setActiveView('architecture');
-      addToHistory('Generated default architecture', 'AI');
-      addOutputLog('[AI] Generated default architecture with 4 components');
-      return `[ACTION] Generated default architecture with 4 components.\n\nCreated: ESP32-S3 (MCU), TP4056 (Power), SX1262 (Communication), SHT40 (Sensor). All components are connected with data buses.`;
-    }
-
-    if (lower.includes('clear all') && (lower.includes('node') || lower.includes('component'))) {
-      setNodes([]);
-      setEdges([]);
-      addToHistory('Cleared all architecture nodes', 'AI');
-      addOutputLog('[AI] Cleared all nodes and edges');
-      return `[ACTION] Cleared all nodes and edges from the architecture.\n\nThe canvas is now empty. You can add new components or generate a fresh architecture.`;
-    }
-
-    const addNodeMatch = lower.match(/add\s+(mcu|sensor|power|comm|connector)?\s*(?:component|node|block)?\s*(?:called|named)?\s*(.+)/i);
-    if (addNodeMatch || (lower.includes('add') && (lower.includes('mcu') || lower.includes('sensor') || lower.includes('power') || lower.includes('comm') || lower.includes('connector') || lower.includes('node') || lower.includes('component')))) {
-      let nodeType = 'mcu';
-      let nodeName = 'New Component';
-      if (addNodeMatch) {
-        nodeType = addNodeMatch[1] || 'mcu';
-        nodeName = addNodeMatch[2]?.trim() || 'New Component';
-      } else {
-        if (lower.includes('mcu')) { nodeType = 'mcu'; nodeName = 'MCU Node'; }
-        else if (lower.includes('sensor')) { nodeType = 'sensor'; nodeName = 'Sensor Node'; }
-        else if (lower.includes('power')) { nodeType = 'power'; nodeName = 'Power Node'; }
-        else if (lower.includes('comm')) { nodeType = 'comm'; nodeName = 'Comm Node'; }
-        else if (lower.includes('connector')) { nodeType = 'connector'; nodeName = 'Connector Node'; }
-        else { nodeName = 'New Component'; }
-      }
-      if (nodeName.toLowerCase() === 'mcu node' && lower.includes('add mcu node')) {
-        nodeName = 'ESP32-S3';
-        nodeType = 'mcu';
-      }
-      const newNode = {
-        id: crypto.randomUUID(),
-        type: 'custom' as const,
-        position: { x: 200 + Math.random() * 400, y: 100 + Math.random() * 300 },
-        data: { label: nodeName, type: nodeType, description: `${nodeType.toUpperCase()} component` },
-      };
-      setNodes([...nodes, newNode]);
-      setActiveView('architecture');
-      addToHistory(`Added ${nodeType} node: ${nodeName}`, 'AI');
-      addOutputLog(`[AI] Added ${nodeType} node: ${nodeName}`);
-      return `[ACTION] Added new ${nodeType.toUpperCase()} node '${nodeName}' to the architecture.\n\nI've placed it on the canvas. You can drag it to reposition, then connect it to other components.`;
-    }
-
-    if ((lower.includes('remove') || lower.includes('delete')) && (lower.includes('node') || lower.includes('component'))) {
-      const nameMatch = lower.match(/(?:remove|delete)\s+(?:node|component)\s+(.+)/);
-      if (nameMatch) {
-        const targetName = nameMatch[1].trim();
-        const nodeToRemove = nodes.find((n) => nodeData(n).label.toLowerCase().includes(targetName));
-        if (nodeToRemove) {
-          setNodes(nodes.filter((n) => n.id !== nodeToRemove.id));
-          setEdges(edges.filter((e) => e.source !== nodeToRemove.id && e.target !== nodeToRemove.id));
-          addToHistory(`Removed node: ${nodeData(nodeToRemove).label}`, 'AI');
-          addOutputLog(`[AI] Removed node: ${nodeData(nodeToRemove).label}`);
-          return `[ACTION] Removed node '${nodeData(nodeToRemove).label}' and its connections from the architecture.`;
-        }
-        return `Could not find a node matching '${targetName}'. Available nodes: ${nodes.map((n) => nodeData(n).label).join(', ') || 'none'}.`;
-      }
-    }
-
-    if (lower.includes('connect') && lower.includes(' to ')) {
-      const connectMatch = lower.match(/connect\s+(.+?)\s+to\s+(.+)/);
-      if (connectMatch) {
-        const sourceName = connectMatch[1].trim();
-        const targetName = connectMatch[2].trim();
-        const sourceNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(sourceName));
-        const targetNode = nodes.find((n) => nodeData(n).label.toLowerCase().includes(targetName));
-        if (sourceNode && targetNode) {
-          const newEdge = {
-            id: crypto.randomUUID(),
-            source: sourceNode.id,
-            target: targetNode.id,
-            label: 'Data',
-            animated: true,
-          };
-          setEdges([...edges, newEdge]);
-          addToHistory(`Connected ${nodeData(sourceNode).label} to ${nodeData(targetNode).label}`, 'AI');
-          addOutputLog(`[AI] Connected ${nodeData(sourceNode).label} → ${nodeData(targetNode).label}`);
-          return `[ACTION] Connected '${nodeData(sourceNode).label}' to '${nodeData(targetNode).label}'.\n\nA data bus has been created between the two components.`;
-        }
-        return `Could not find one or both nodes. Available nodes: ${nodes.map((n) => nodeData(n).label).join(', ') || 'none'}.`;
-      }
-    }
-
-    if (lower.includes('add to bom') || lower.includes('add bom')) {
-      const partMatch = lower.match(/(?:add to bom|add bom)\s+(.+)/);
-      const partName = partMatch ? partMatch[1].trim() : 'Unknown Part';
-      addBomItem({
-        partNumber: partName.toUpperCase().replace(/\s+/g, '-'),
-        manufacturer: 'TBD',
-        description: partName,
-        quantity: 1,
-        unitPrice: 0,
-        totalPrice: 0,
-        supplier: 'Digi-Key',
-        stock: 0,
-        status: 'In Stock',
-      });
-      addToHistory(`Added BOM item: ${partName}`, 'AI');
-      addOutputLog(`[AI] Added BOM item: ${partName}`);
-      return `[ACTION] Added '${partName}' to the Bill of Materials.\n\nYou can update pricing and sourcing details in the Procurement view.`;
-    }
-
-    if (lower.includes('remove from bom') || lower.includes('delete from bom')) {
-      const partMatch = lower.match(/(?:remove|delete) from bom\s+(.+)/);
-      if (partMatch) {
-        const partName = partMatch[1].trim().toLowerCase();
-        const bomItem = bom.find((b) => b.partNumber.toLowerCase().includes(partName) || b.description.toLowerCase().includes(partName));
-        if (bomItem) {
-          deleteBomItem(bomItem.id);
-          addToHistory(`Removed BOM item: ${bomItem.partNumber}`, 'AI');
-          addOutputLog(`[AI] Removed BOM item: ${bomItem.partNumber}`);
-          return `[ACTION] Removed '${bomItem.partNumber}' from the Bill of Materials.`;
-        }
-        return `Could not find BOM item matching '${partMatch[1]}'. Check the Procurement view for current items.`;
-      }
-    }
-
-    if (lower.includes('export bom') || lower.includes('export csv')) {
-      if (bom.length === 0) return `No BOM items to export. Add components to the BOM first.`;
-      const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Status'];
-      const rows = bom.map((item) => [item.partNumber, item.manufacturer, item.description, item.quantity, item.unitPrice, item.totalPrice, item.supplier, item.status]);
-      try {
-        const csv = buildCSV(headers, rows);
-        downloadBlob(new Blob([csv], { type: 'text/csv' }), `${projectName}_BOM.csv`);
-      } catch (err) {
-        console.warn('Export failed:', err);
-        return `Export failed. Please try again.`;
-      }
-      addToHistory('Exported BOM as CSV', 'AI');
-      addOutputLog('[AI] Exported BOM as CSV file');
-      return `[ACTION] Exported BOM as CSV file (${bom.length} items).\n\nThe file '${projectName}_BOM.csv' has been downloaded.`;
-    }
-
-    if (lower.includes('optimize bom') || lower.includes('optimize cost')) {
-      addToHistory('BOM optimization analysis', 'AI');
-      addOutputLog('[AI] Ran BOM optimization analysis');
-      return `[ACTION] BOM optimization analysis complete.\n\nSuggestions:\n• Consider alternative sourcing from LCSC for passive components (20-40% savings)\n• Consolidate resistor values to reduce unique part count\n• Check for volume pricing breaks at 1k+ quantities\n• Replace through-hole components with SMD equivalents where possible\n\nCurrent BOM has ${bom.length} items. Switch to Procurement view for details.`;
-    }
-
-    if (lower.includes('validate') || lower.includes('check design') || lower.includes('run drc') || lower.includes('check errors') || lower.includes('run validation')) {
-      runValidation();
-      addToHistory('Ran design validation', 'AI');
-      addOutputLog('[AI] Ran design rule check');
-      return `[ACTION] Design rule check complete.\n\nI've added a validation finding. Switch to the Validation view to review all ${issues.length + 1} issues and apply suggested fixes.`;
-    }
-
-    if (lower.includes('fix all issues') || lower.includes('fix all') || lower.includes('clear issues')) {
-      if (issues.length === 0) return `No validation issues to fix. The design is currently clean.`;
-      const count = issues.length;
-      issues.forEach((issue) => deleteValidationIssue(issue.id));
-      addToHistory(`Fixed ${count} validation issues`, 'AI');
-      addOutputLog(`[AI] Cleared ${count} validation issues`);
-      return `[ACTION] Removed ${count} validation issues.\n\nAll issues have been resolved. Run validation again to check for new findings.`;
-    }
-
-    if (lower.includes('rename project to') || lower.includes('rename project')) {
-      const nameMatch = lower.match(/rename project (?:to\s+)?(.+)/);
-      if (nameMatch) {
-        const newName = nameMatch[1].trim();
-        setProjectName(newName);
-        addToHistory(`Renamed project to: ${newName}`, 'AI');
-        addOutputLog(`[AI] Renamed project to: ${newName}`);
-        return `[ACTION] Renamed project to '${newName}'.\n\nThe sidebar and project settings have been updated.`;
-      }
-    }
-
-    if (lower.includes('set description to') || lower.includes('update description')) {
-      const descMatch = lower.match(/(?:set|update) description (?:to\s+)?(.+)/);
-      if (descMatch) {
-        const newDesc = descMatch[1].trim();
-        setProjectDescription(newDesc);
-        addToHistory(`Updated project description`, 'AI');
-        addOutputLog(`[AI] Updated project description: ${newDesc}`);
-        return `[ACTION] Updated project description to '${newDesc}'.`;
-      }
-    }
-
-    if (lower.includes('project info') || lower.includes('project summary') || lower.includes('show project') || lower.includes('project status')) {
-      return `**Project Summary**\n\n• **Name:** ${projectName}\n• **Description:** ${projectDescription}\n• **Architecture Nodes:** ${nodes.length}\n• **Connections:** ${edges.length}\n• **BOM Items:** ${bom.length}\n• **Validation Issues:** ${issues.length}\n• **Active View:** ${activeView}`;
-    }
-
-    if (lower === 'help' || lower.includes('what can you do') || lower.includes('show help') || lower.includes('commands')) {
-      return `Here's what I can do:\n\n**Navigation:** Switch between views (architecture, component editor, procurement, validation, output)\n\n**Design:** Add/remove nodes, connect components, generate architectures, clear all nodes\n\n**BOM:** Add/remove parts, export CSV, optimize costs\n\n**Validation:** Run DRC checks, fix all issues\n\n**Project:** Rename project, update description, view summary\n\n**Examples:**\n• "add mcu called ATSAMD21"\n• "connect ESP32 to SHT40"\n• "switch to procurement"\n• "generate architecture"\n• "export bom csv"\n• "rename project to MyProject"`;
-    }
-
-    if (lower.includes('clear chat')) {
-      return `Chat history is persistent and synced with the project. You can scroll up to review previous conversations.`;
-    }
-
-    if (lower.includes('component') || lower.includes('generate')) {
-      return "I've analyzed the design for component generation. The architecture includes the ESP32-S3, LoRa transceiver, and power management units. All connections follow standard bus protocols. Try 'generate architecture' to create a default layout or open the Component Editor to design individual parts.";
-    } else if (lower.includes('bom') || lower.includes('cost')) {
-      return "BOM optimization tips:\n• TP4056 → MCP73831 (saves $0.08/unit, same footprint)\n• USB connector → alternate GCT part (saves $0.12/unit)\nTotal potential savings: $0.20/unit at 1k qty.\n\nTry 'optimize bom' for a full analysis or 'export bom csv' to download.";
-    } else if (lower.includes('memory') || lower.includes('ram') || lower.includes('storage')) {
-      return "For the ESP32-S3, I recommend adding external PSRAM (ESP-PSRAM64H, 8MB). Connect via the dedicated SPI interface on GPIO 33-37. Try 'add sensor called PSRAM64H' to add it to your design.";
-    } else if (lower.includes('power') || lower.includes('battery')) {
-      return "Power analysis summary:\n• Active mode: ~180mA (Wi-Fi TX)\n• Deep sleep: ~10µA\n• Battery life (2000mAh): ~45 days at 1 reading/hour\nRecommendation: Add a solar cell (5V/500mA) with MPPT for indefinite operation.";
-    } else if (lower.includes('antenna') || lower.includes('rf')) {
-      return "RF design recommendations:\n• LoRa antenna: Use a spring-type 868/915MHz antenna with SMA connector\n• Match impedance to 50Ω using Pi-network (L=3.3nH, C1=1.5pF, C2=1.8pF)\n• Keep RF trace width at 0.7mm for FR4 substrate (εr=4.6)";
-    } else if (lower.includes('sensor') || lower.includes('temperature')) {
-      return "Sensor configuration optimized:\n• SHT40: Set to high-precision mode (±0.2°C accuracy)\n• I2C address: 0x44, pull-ups: 4.7kΩ to 3.3V\n• Sample rate: 1Hz recommended for thermal stability\n• Consider adding SHT40-BD1B for extended range (-40°C to +125°C).";
-    }
-
-    return "I've analyzed your request. I can help with navigation, design, BOM management, validation, and project settings. Type 'help' to see all available commands.";
-  }, [nodes, edges, bom, issues, projectName, projectDescription, setNodes, setEdges, setActiveView, addToHistory, addOutputLog, addBomItem, deleteBomItem, runValidation, deleteValidationIssue, setProjectName, setProjectDescription]);
-
+  // ---------------------------------------------------------------------------
+  // Unified local command handling — parseLocalIntent produces AIAction[] that
+  // route through the same executeAIActions path the AI tool system uses.
+  // ---------------------------------------------------------------------------
   const executeAIActions = useActionExecutor();
-
 
   const toggleVoiceInput = useCallback(() => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -422,11 +183,15 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
     setInput('');
     setLastUserMessage(msgText);
+    // Capture and clear attached image before async work
+    const currentImage = attachedImage;
+    setAttachedImage(null);
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       role: 'user',
       content: msgText,
       timestamp: Date.now(),
+      attachments: currentImage ? [{ type: 'image', name: currentImage.name, url: currentImage.previewUrl }] : undefined,
     };
     addMessage(userMsg);
     setIsGenerating(true);
@@ -434,11 +199,16 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     try {
       if (!aiApiKey) {
         setTimeout(() => {
-          const response = processLocalCommand(msgText);
+          const intent = parseLocalIntent(msgText, {
+            nodes, edges, bom, issues, projectName, projectDescription, activeView,
+          });
+          if (intent.actions.length > 0) {
+            executeAIActions(intent.actions);
+          }
           addMessage({
             id: crypto.randomUUID(),
             role: 'assistant',
-            content: response,
+            content: intent.response ?? "Command executed.",
             timestamp: Date.now(),
           });
           setIsGenerating(false);
@@ -469,6 +239,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           activeSheetId,
           selectedNodeId,
           changeDiff,
+          routingStrategy,
+          ...(currentImage ? {
+            imageBase64: currentImage.base64,
+            imageMimeType: currentImage.mimeType,
+          } : {}),
         }),
       });
 
@@ -476,6 +251,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const decoder = new TextDecoder();
       let fullText = '';
       let finalActions: AIAction[] = [];
+      let finalToolCalls: Array<{ id: string; name: string; input: Record<string, unknown>; result: { success: boolean; message: string; data?: unknown } }> = [];
+      let hasServerToolCalls = false;
 
       if (reader) {
         let buffer = '';
@@ -490,16 +267,33 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             if (!line.startsWith('data: ')) continue;
             try {
               const data = JSON.parse(line.slice(6));
-              if (data.type === 'chunk') {
+              if (data.type === 'text') {
+                // Native tool use: structured text event
                 fullText += data.text;
                 setStreamingContent(fullText);
+              } else if (data.type === 'chunk') {
+                // Legacy: raw text chunk (backward compat)
+                fullText += data.text;
+                setStreamingContent(fullText);
+              } else if (data.type === 'tool_call') {
+                // AI is calling a tool — show in streaming indicator
+                setStreamingContent(fullText + `\n\n_Using tool: ${data.name}..._`);
+              } else if (data.type === 'tool_result') {
+                // Tool finished — update indicator
+                const status = data.result?.success ? 'done' : 'failed';
+                setStreamingContent(fullText + `\n\n_Tool ${data.name}: ${status}_`);
+                hasServerToolCalls = true;
               } else if (data.type === 'done') {
                 fullText = data.message;
                 finalActions = data.actions || [];
+                finalToolCalls = data.toolCalls || [];
+                if (finalToolCalls.length > 0) {
+                  hasServerToolCalls = true;
+                }
                 const inputTokens = Math.ceil(msgText.length / 4);
                 const outputTokens = Math.ceil(fullText.length / 4);
-                const cost = aiProvider === 'anthropic' 
-                  ? (inputTokens * 0.003 + outputTokens * 0.015) / 1000 
+                const cost = aiProvider === 'anthropic'
+                  ? (inputTokens * 0.003 + outputTokens * 0.015) / 1000
                   : (inputTokens * 0.00025 + outputTokens * 0.0005) / 1000;
                 setTokenInfo({ input: inputTokens, output: outputTokens, cost });
               } else if (data.type === 'error') {
@@ -512,6 +306,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
       setStreamingContent('');
 
+      // Invalidate caches if server executed tools (data may have changed in DB)
+      if (hasServerToolCalls) {
+        queryClient.invalidateQueries();
+      }
+
       const hasDestructive = finalActions.some((a) => DESTRUCTIVE_ACTIONS.includes(a.type));
       const msgId = crypto.randomUUID();
 
@@ -523,6 +322,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           content: fullText,
           timestamp: Date.now(),
           actions: finalActions,
+          toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
         });
       } else {
         if (finalActions.length > 0) {
@@ -534,6 +334,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           content: fullText,
           timestamp: Date.now(),
           actions: finalActions,
+          toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
         });
       }
     } catch (error: unknown) {
@@ -560,7 +361,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       abortRef.current = null;
       captureSnapshot();
     }
-  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, customSystemPrompt, activeView, activeSheetId, addMessage, setIsGenerating, executeAIActions, processLocalCommand, selectedNodeId, getChangeDiff, captureSnapshot, projectId]);
+  }, [input, aiApiKey, aiProvider, aiModel, aiTemperature, customSystemPrompt, routingStrategy, activeView, activeSheetId, addMessage, setIsGenerating, executeAIActions, selectedNodeId, getChangeDiff, captureSnapshot, projectId, attachedImage, nodes, edges, bom, issues, projectName, projectDescription]);
 
   const handleRegenerate = useCallback(() => {
     if (lastUserMessage && !isGenerating) {
@@ -706,6 +507,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
               setAiTemperature={setAiTemperature}
               customSystemPrompt={customSystemPrompt}
               setCustomSystemPrompt={setCustomSystemPrompt}
+              routingStrategy={routingStrategy}
+              setRoutingStrategy={setRoutingStrategy}
               apiKeyValid={apiKeyValid}
               onClose={() => setShowSettings(false)}
             />
@@ -785,6 +588,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                 <button
                   onClick={scrollToBottom}
                   data-testid="scroll-to-bottom"
+                  aria-label="Scroll to bottom"
                   className="absolute bottom-32 right-6 w-8 h-8 bg-primary/20 border border-primary/40 text-primary flex items-center justify-center hover:bg-primary/30 transition-colors z-10 shadow-lg"
                 >
                   <ArrowDown className="w-4 h-4" />
@@ -814,7 +618,21 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             aiModel={aiModel}
             apiKeyValid={apiKeyValid()}
             aiApiKey={aiApiKey}
+            attachedImage={attachedImage}
+            onRemoveImage={() => setAttachedImage(null)}
             onFileUpload={(file) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const dataUrl = reader.result as string;
+                const base64 = dataUrl.split(',')[1];
+                setAttachedImage({
+                  base64,
+                  mimeType: file.type || 'image/png',
+                  name: file.name,
+                  previewUrl: dataUrl,
+                });
+              };
+              reader.readAsDataURL(file);
               addOutputLog(`[SYSTEM] Image attached: ${file.name}`);
               addToHistory(`Uploaded image: ${file.name}`, 'User');
             }}

@@ -1,10 +1,10 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ACTION_LABELS, DESTRUCTIVE_ACTIONS } from './constants';
-import type { ChatMessage } from '@/lib/project-context';
+import type { ChatMessage, ToolCallInfo } from '@/lib/project-context';
 
 interface AIAction {
   type: string;
@@ -82,6 +82,19 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
               ? "bg-destructive/10 border border-destructive/30 text-foreground"
               : "bg-muted/30 backdrop-blur border border-border text-foreground"
         )}>
+          {msg.attachments && msg.attachments.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {msg.attachments.filter(a => a.type === 'image' && a.url).map((att, idx) => (
+                <img
+                  key={idx}
+                  src={att.url}
+                  alt={att.name}
+                  className="max-w-[200px] max-h-[150px] object-contain border border-border/50"
+                  data-testid={`msg-image-${idx}`}
+                />
+              ))}
+            </div>
+          )}
           {msg.role === 'assistant' ? (
             <MarkdownContent content={msg.content} />
           ) : (
@@ -94,7 +107,26 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
           )}
         </div>
 
-        {msg.actions && msg.actions.length > 0 && !pendingActions && (
+        {msg.toolCalls && msg.toolCalls.length > 0 && (
+          <div className="flex flex-col gap-1 px-1">
+            {msg.toolCalls.map((tc) => (
+              <div key={tc.id} className={cn(
+                "flex items-center gap-1.5 px-2 py-1 text-[10px] border",
+                tc.result.success
+                  ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
+                  : "border-destructive/20 bg-destructive/5 text-destructive"
+              )}>
+                {tc.result.success
+                  ? <Wrench className="w-2.5 h-2.5 shrink-0" />
+                  : <XCircle className="w-2.5 h-2.5 shrink-0" />}
+                <span className="font-medium">{ACTION_LABELS[tc.name] || tc.name}</span>
+                <span className="text-muted-foreground truncate">— {tc.result.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {msg.actions && msg.actions.length > 0 && !pendingActions && !msg.toolCalls?.length && (
           <div className="flex flex-wrap gap-1 px-1">
             {msg.actions.map((action, idx) => (
               <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 border border-primary/20 text-[10px] text-primary">
@@ -122,10 +154,10 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
               ))}
             </div>
             <div className="flex gap-2">
-              <button onClick={onAcceptActions} data-testid="accept-actions" className="flex-1 py-1.5 bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors">
+              <button onClick={onAcceptActions} data-testid="accept-actions" aria-label="Accept" className="flex-1 py-1.5 bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors">
                 Apply Changes
               </button>
-              <button onClick={onRejectActions} data-testid="reject-actions" className="flex-1 py-1.5 bg-muted border border-border text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={onRejectActions} data-testid="reject-actions" aria-label="Reject" className="flex-1 py-1.5 bg-muted border border-border text-xs text-muted-foreground hover:text-foreground transition-colors">
                 Cancel
               </button>
             </div>
@@ -141,6 +173,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
                 <button
                   onClick={() => onCopy(msg.id, msg.content)}
                   data-testid={`copy-msg-${msg.id}`}
+                  aria-label="Copy message"
                   className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {copiedId === msg.id ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
@@ -148,14 +181,14 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
             </StyledTooltip>
             {onRegenerate && isLast && (
               <StyledTooltip content="Regenerate" side="top">
-                  <button onClick={onRegenerate} data-testid="regenerate-msg" className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                  <button onClick={onRegenerate} data-testid="regenerate-msg" aria-label="Regenerate response" className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
                     <RefreshCw className="w-3 h-3" />
                   </button>
               </StyledTooltip>
             )}
             {onRetry && (
               <StyledTooltip content="Retry" side="top">
-                  <button onClick={onRetry} data-testid="retry-msg" className="p-1 hover:bg-muted text-destructive/70 hover:text-destructive transition-colors">
+                  <button onClick={onRetry} data-testid="retry-msg" aria-label="Retry message" className="p-1 hover:bg-muted text-destructive/70 hover:text-destructive transition-colors">
                     <RefreshCw className="w-3 h-3" />
                   </button>
               </StyledTooltip>

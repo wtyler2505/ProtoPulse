@@ -72,6 +72,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
                 onClick={cycleSortBy}
                 className="p-1.5 bg-muted/50 border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors flex items-center gap-1"
                 data-testid="asset-sort"
+                aria-label="Sort assets"
               >
                 <ArrowUpDown className="w-3.5 h-3.5" />
                 <span className="text-[8px]">{sortLabel}</span>
@@ -93,6 +94,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
                   )}
                   data-testid={`asset-category-${cat.id}`}
                   title={cat.label}
+                  aria-label={cat.label}
                 >
                   <cat.icon className="w-4 h-4" />
                   {showLabels && <span className="text-[8px] mt-0.5">{cat.label.length > 8 ? cat.label.slice(0, 7) + '…' : cat.label}</span>}

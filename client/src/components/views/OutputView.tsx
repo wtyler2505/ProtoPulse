@@ -64,6 +64,7 @@ export default function OutputView() {
                 data-testid="button-copy-all-logs"
                 className="p-1 hover:bg-white/10 text-muted-foreground hover:text-primary transition-colors"
                 onClick={handleCopyAll}
+                aria-label="Copy all logs"
               >
                 {copiedAll ? <ClipboardCheck className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
@@ -74,6 +75,7 @@ export default function OutputView() {
                   <button
                     data-testid="button-clear-logs"
                     className="p-1 hover:bg-white/10 text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label="Clear logs"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>

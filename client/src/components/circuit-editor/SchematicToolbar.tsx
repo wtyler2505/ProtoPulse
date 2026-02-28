@@ -53,6 +53,7 @@ export default function SchematicToolbar({
           <button
             data-testid={`schematic-tool-${tool.id}`}
             disabled={!tool.enabled}
+            aria-label={tool.label}
             className={cn(
               'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
               activeTool === tool.id && tool.enabled && 'bg-primary/20 text-primary',
@@ -68,6 +69,7 @@ export default function SchematicToolbar({
       <StyledTooltip content="Toggle grid snap (G)" side="bottom">
         <button
           data-testid="schematic-tool-grid"
+          aria-label="Toggle grid snap"
           className={cn(
             'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
             snapEnabled && 'bg-primary/20 text-primary',
@@ -80,6 +82,7 @@ export default function SchematicToolbar({
       <StyledTooltip content="Fit view (F)" side="bottom">
         <button
           data-testid="schematic-tool-fit"
+          aria-label="Fit view"
           className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           onClick={onFitView}
         >

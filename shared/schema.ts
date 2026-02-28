@@ -178,6 +178,7 @@ export const userChatSettings = pgTable("user_chat_settings", {
   aiModel: text("ai_model").notNull().default("claude-sonnet-4-5-20250514"),
   aiTemperature: real("ai_temperature").notNull().default(0.7),
   customSystemPrompt: text("custom_system_prompt").default(""),
+  routingStrategy: text("routing_strategy").notNull().default("user"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("uq_user_chat_settings_user").on(table.userId),
@@ -348,3 +349,25 @@ export const simulationResults = pgTable("simulation_results", {
 export const insertSimulationResultSchema = createInsertSchema(simulationResults).omit({ id: true, createdAt: true });
 export type InsertSimulationResult = z.infer<typeof insertSimulationResultSchema>;
 export type SimulationResultRow = typeof simulationResults.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// AI Action Log (Phase 5) — persists tool executions for audit/replay
+// ---------------------------------------------------------------------------
+
+export const aiActions = pgTable("ai_actions", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  chatMessageId: text("chat_message_id"),
+  toolName: text("tool_name").notNull(),
+  parameters: jsonb("parameters").notNull().default({}),
+  result: jsonb("result").notNull().default({}),
+  status: text("status").notNull().default("completed"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_ai_actions_project").on(table.projectId),
+  index("idx_ai_actions_message").on(table.chatMessageId),
+]);
+
+export const insertAiActionSchema = createInsertSchema(aiActions).omit({ id: true, createdAt: true });
+export type InsertAiAction = z.infer<typeof insertAiActionSchema>;
+export type AiActionRow = typeof aiActions.$inferSelect;

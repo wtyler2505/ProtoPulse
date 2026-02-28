@@ -689,6 +689,28 @@ export function useActionExecutor(): (actions: AIAction[]) => string[] {
           break;
         }
 
+        // Phase 6: Generic server-generated file download handler
+        case 'download_file': {
+          const filename = action.filename as string | undefined;
+          const content = action.content as string | undefined;
+          const encoding = action.encoding as string | undefined;
+          const mimeType = action.mimeType as string | undefined;
+          if (!filename || !content) break;
+          let blob: Blob;
+          if (encoding === 'base64') {
+            const binary = atob(content);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            blob = new Blob([bytes], { type: mimeType || 'application/octet-stream' });
+          } else {
+            blob = new Blob([content], { type: mimeType || 'text/plain' });
+          }
+          downloadBlob(blob, filename);
+          addToHistory(`Exported: ${filename}`, 'AI');
+          addOutputLog(`[AI] Downloaded: ${filename}`);
+          break;
+        }
+
         case 'export_bom_csv': {
           if (currentBom.length > 0) {
             try {

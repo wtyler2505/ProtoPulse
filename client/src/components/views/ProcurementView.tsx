@@ -121,7 +121,7 @@ export default function ProcurementView() {
       const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Stock', 'Status'];
       const rows = filteredBom.map(item => [
         item.partNumber, item.manufacturer, item.description, item.quantity,
-        Number(item.unitPrice).toFixed(4), Number(item.totalPrice).toFixed(2), item.supplier,
+        Number(item.unitPrice).toFixed(2), Number(item.totalPrice).toFixed(2), item.supplier,
         item.stock, item.status,
       ]);
       const csv = buildCSV(headers, rows);
@@ -144,7 +144,7 @@ export default function ProcurementView() {
       manufacturer: item.manufacturer,
       description: item.description,
       quantity: item.quantity,
-      unitPrice: Number(item.unitPrice),
+      unitPrice: Math.round(Number(item.unitPrice) * 100) / 100,
       supplier: item.supplier,
     });
   }, []);
@@ -368,13 +368,14 @@ export default function ProcurementView() {
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-3 text-muted-foreground">
                   <span>Qty: <span className="font-mono text-foreground">{item.quantity}</span></span>
-                  <span>@ <span className="font-mono text-foreground">${Number(item.unitPrice).toFixed(4)}</span></span>
+                  <span>@ <span className="font-mono text-foreground">${Number(item.unitPrice).toFixed(2)}</span></span>
                   <span>{item.supplier}</span>
                 </div>
                 <span className="font-mono font-bold text-foreground">${Number(item.totalPrice).toFixed(2)}</span>
               </div>
               <div className="flex items-center gap-1 pt-1 border-t border-border">
                 <button
+                  aria-label="Add to cart"
                   className="p-1.5 text-primary hover:bg-primary/10 transition-colors"
                   onClick={() => {
                     const baseUrl = getSupplierSearchUrl(item.supplier);
@@ -386,6 +387,7 @@ export default function ProcurementView() {
                   <ShoppingCart className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  aria-label="Copy part number"
                   className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors"
                   onClick={() => { copyToClipboard(item.partNumber); toast({ title: 'Copied', description: 'Part number copied.' }); }}
                   data-testid={`card-button-copy-${item.id}`}
@@ -395,7 +397,7 @@ export default function ProcurementView() {
                 <div className="flex-1" />
                 <ConfirmDialog
                   trigger={
-                    <button className="p-1.5 text-destructive hover:bg-destructive/10 transition-colors" data-testid={`card-button-delete-${item.id}`}>
+                    <button aria-label="Delete item" className="p-1.5 text-destructive hover:bg-destructive/10 transition-colors" data-testid={`card-button-delete-${item.id}`}>
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   }
@@ -611,6 +613,7 @@ export default function ProcurementView() {
                   id="add-quantity"
                   type="number"
                   min={1}
+                  max={999999}
                   value={newItem.quantity}
                   onChange={(e) => setNewItem(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
                   data-testid="input-add-quantity"
@@ -622,6 +625,7 @@ export default function ProcurementView() {
                   id="add-unit-price"
                   type="number"
                   min={0}
+                  max={99999.99}
                   step={0.01}
                   value={newItem.unitPrice}
                   onChange={(e) => setNewItem(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
@@ -694,12 +698,12 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
                 </select>
               </td>
               <td className="px-4 py-3 text-right font-mono text-xs">{item.stock.toLocaleString()}</td>
-              <td className="px-4 py-1"><input data-testid={`edit-quantity-${item.id}`} type="number" min={1} className="w-16 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
-              <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} step={0.01} className="w-24 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-quantity-${item.id}`} type="number" min={1} max={999999} className="w-16 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} max={99999.99} step={0.01} className="w-24 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
               <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${(editValues.quantity * editValues.unitPrice).toFixed(2)}</td>
               <td className="px-4 py-3 text-right flex gap-1">
-                <StyledTooltip content="Save changes" side="left"><button className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button></StyledTooltip>
-                <StyledTooltip content="Cancel editing" side="left"><button className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors" onClick={cancelEdit} data-testid={`button-cancel-edit-${item.id}`}><X className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Save changes" side="left"><button aria-label="Save changes" className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Cancel editing" side="left"><button aria-label="Cancel editing" className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors" onClick={cancelEdit} data-testid={`button-cancel-edit-${item.id}`}><X className="w-4 h-4" /></button></StyledTooltip>
               </td>
             </>
           ) : (
@@ -710,15 +714,15 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
               <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
               <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
               <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
-              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${Number(item.unitPrice).toFixed(4)}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${Number(item.unitPrice).toFixed(2)}</td>
               <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${Number(item.totalPrice).toFixed(2)}</td>
               <td className="px-4 py-3 text-right flex gap-1">
-                <StyledTooltip content="Edit item" side="left"><button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Edit item" side="left"><button aria-label="Edit item" className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button></StyledTooltip>
                 <StyledTooltip content="Buy from supplier" side="left">
-                  <button className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { const baseUrl = getUrl(item.supplier); if (!baseUrl) return; window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer'); }} data-testid={`button-cart-${item.id}`}><ShoppingCart className="w-4 h-4" /></button>
+                  <button aria-label="Add to cart" className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { const baseUrl = getUrl(item.supplier); if (!baseUrl) return; window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer'); }} data-testid={`button-cart-${item.id}`}><ShoppingCart className="w-4 h-4" /></button>
                 </StyledTooltip>
                 <ConfirmDialog
-                  trigger={<StyledTooltip content="Remove from BOM" side="left"><button className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-delete-${item.id}`}><Trash2 className="w-4 h-4" /></button></StyledTooltip>}
+                  trigger={<StyledTooltip content="Remove from BOM" side="left"><button aria-label="Delete item" className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-delete-${item.id}`}><Trash2 className="w-4 h-4" /></button></StyledTooltip>}
                   title="Remove BOM Item"
                   description={`Are you sure you want to remove "${item.partNumber}" from the Bill of Materials? This action cannot be undone.`}
                   confirmLabel="Remove"

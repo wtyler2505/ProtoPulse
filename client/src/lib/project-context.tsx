@@ -73,6 +73,13 @@ export interface ChatAction {
   [key: string]: unknown;
 }
 
+export interface ToolCallInfo {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  result: { success: boolean; message: string; data?: unknown };
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -81,6 +88,7 @@ export interface ChatMessage {
   attachments?: ChatAttachment[];
   mode?: 'chat' | 'image' | 'video';
   actions?: ChatAction[];
+  toolCalls?: ToolCallInfo[];
   isError?: boolean;
   isStreaming?: boolean;
 }

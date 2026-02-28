@@ -183,6 +183,8 @@ export default function HistoryList({
                       />
                     )}
                     <div
+                      role="button"
+                      aria-label={`View details: ${item.action}`}
                       className="relative pl-6 py-1.5 group/item cursor-pointer"
                       onClick={() => setExpandedTimelineItem(isExpanded ? null : item.id)}
                       data-testid={`timeline-item-${item.id}`}
@@ -192,6 +194,7 @@ export default function HistoryList({
                       </div>
 
                       <button
+                        aria-label="Undo action"
                         data-testid={`timeline-undo-${item.id}`}
                         className="absolute right-0 top-1.5 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 hover:bg-muted/50"
                         onClick={(e) => {
@@ -216,6 +219,7 @@ export default function HistoryList({
                           </div>
                           <div className="flex items-center gap-1 mt-1.5">
                             <button
+                              aria-label="Copy details"
                               className="text-[10px] px-1.5 py-0.5 bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1"
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -227,6 +231,7 @@ export default function HistoryList({
                               Copy
                             </button>
                             <button
+                              aria-label="Close details"
                               className="text-[10px] px-1.5 py-0.5 bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1"
                               onClick={(e) => {
                                 e.stopPropagation();

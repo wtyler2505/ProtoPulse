@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, lazy, Suspense } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
 import { useParams, Redirect } from 'wouter';
 import { ProjectProvider } from '@/lib/project-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
@@ -121,7 +121,7 @@ function WorkspaceContent() {
     setChatWidth(w => Math.max(280, Math.min(600, w + delta)));
   }, []);
 
-  const tabs: { id: ViewMode; label: string; icon: React.ComponentType<{ className?: string }> | null }[] = [
+  const tabs = useMemo<{ id: ViewMode; label: string; icon: React.ComponentType<{ className?: string }> | null }[]>(() => [
     { id: 'project_explorer', label: 'Project Explorer', icon: null },
     { id: 'output', label: 'Output', icon: TerminalSquare },
     { id: 'architecture', label: 'Architecture', icon: LayoutGrid },
@@ -131,9 +131,10 @@ function WorkspaceContent() {
     { id: 'pcb', label: 'PCB', icon: Microchip },
     { id: 'procurement', label: 'Procurement', icon: Package },
     { id: 'validation', label: 'Validation', icon: Activity },
-  ];
+  ], []);
 
-  const visibleTabs = tabs.filter(t => t.id !== 'project_explorer');
+  const visibleTabs = useMemo(() => tabs.filter(t => t.id !== 'project_explorer'), [tabs]);
+  const activeTabId = `tab-${activeView}`;
 
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden font-sans text-foreground">
@@ -143,6 +144,7 @@ function WorkspaceContent() {
       <a href="#chat-panel" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:top-4 focus:left-20 focus:bg-primary focus:text-primary-foreground focus:px-4 focus:py-2 focus:text-sm" data-testid="skip-to-chat">
         Skip to AI assistant
       </a>
+      <h1 className="sr-only">ProtoPulse</h1>
       <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 md:hidden">
         <StyledTooltip content="Open menu" side="bottom">
           <button
@@ -180,6 +182,7 @@ function WorkspaceContent() {
         {!sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
         
         <main id="main-content" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-background">
+          <h2 className="sr-only">Design workspace</h2>
           <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden md:flex items-center px-1 gap-0 z-10">
             <StyledTooltip content="Toggle sidebar" side="bottom">
               <button
@@ -192,23 +195,29 @@ function WorkspaceContent() {
               </button>
             </StyledTooltip>
             <div className="w-px h-5 bg-border mr-1" />
-            {visibleTabs.map((tab) => (
-              <StyledTooltip key={tab.id} content={tabDescriptions[tab.id] || tab.label} side="bottom">
-                <button
-                  data-testid={`tab-${tab.id}`}
-                  onClick={() => setActiveView(tab.id)}
-                  className={cn(
-                    "h-8 px-4 flex items-center gap-2 text-xs font-medium transition-all relative top-[1px]",
-                    activeView === tab.id
-                      ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[2px] before:bg-primary"
-                      : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"
-                  )}
-                >
-                  {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
-                  {tab.label}
-                </button>
-              </StyledTooltip>
-            ))}
+            <div role="tablist" aria-label="Main views" className="flex items-center gap-0">
+              {visibleTabs.map((tab) => (
+                <StyledTooltip key={tab.id} content={tabDescriptions[tab.id] || tab.label} side="bottom">
+                  <button
+                    role="tab"
+                    id={`tab-${tab.id}`}
+                    aria-selected={activeView === tab.id}
+                    aria-controls="main-panel"
+                    data-testid={`tab-${tab.id}`}
+                    onClick={() => setActiveView(tab.id)}
+                    className={cn(
+                      "h-8 px-4 flex items-center gap-2 text-xs font-medium transition-all relative top-[1px]",
+                      activeView === tab.id
+                        ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[2px] before:bg-primary"
+                        : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"
+                    )}
+                  >
+                    {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
+                    {tab.label}
+                  </button>
+                </StyledTooltip>
+              ))}
+            </div>
             <div className="flex-1 border-b border-border h-full"></div>
             <div className="w-px h-5 bg-border ml-1" />
             <StyledTooltip content="Toggle AI assistant" side="bottom">
@@ -227,7 +236,7 @@ function WorkspaceContent() {
             </div>
           </header>
 
-          <div className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
+          <div role="tabpanel" id="main-panel" aria-labelledby={activeTabId} className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
               {activeView === 'output' && (
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
@@ -298,6 +307,7 @@ function WorkspaceContent() {
 
         <ErrorBoundary>
           <div id="chat-panel">
+            <h2 className="sr-only">AI Assistant</h2>
             <ChatPanel
               isOpen={chatOpen}
               onClose={() => setChatOpen(false)}

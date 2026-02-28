@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ChatMessage } from '@/lib/project-context';
@@ -47,13 +47,17 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
     }
   }, [addChatMutation]);
 
+  const messages = chatQuery.data ?? [];
+
+  const contextValue = useMemo(() => ({
+    messages,
+    addMessage,
+    isGenerating,
+    setIsGenerating,
+  }), [messages, addMessage, isGenerating, setIsGenerating]);
+
   return (
-    <ChatContext.Provider value={{
-      messages: chatQuery.data ?? [],
-      addMessage,
-      isGenerating,
-      setIsGenerating,
-    }}>
+    <ChatContext.Provider value={contextValue}>
       {children}
     </ChatContext.Provider>
   );

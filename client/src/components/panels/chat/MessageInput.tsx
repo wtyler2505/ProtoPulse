@@ -23,6 +23,8 @@ interface MessageInputProps {
   onFileUpload: (file: File) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   fileInputRef: RefObject<HTMLInputElement | null>;
+  attachedImage?: { base64: string; mimeType: string; name: string; previewUrl: string } | null;
+  onRemoveImage?: () => void;
 }
 
 export default function MessageInput({
@@ -42,6 +44,8 @@ export default function MessageInput({
   onFileUpload,
   textareaRef,
   fileInputRef,
+  attachedImage,
+  onRemoveImage,
 }: MessageInputProps) {
   return (
     <div className="p-4 border-t border-border bg-card/40 backdrop-blur shrink-0">
@@ -49,6 +53,29 @@ export default function MessageInput({
         <div className="flex items-center gap-2 text-[10px] text-amber-400/80 mb-2 px-1">
           <AlertTriangle className="w-3 h-3 shrink-0" />
           <span>API key format looks incorrect for {aiProvider === 'anthropic' ? 'Anthropic' : 'Gemini'}</span>
+        </div>
+      )}
+      {attachedImage && (
+        <div className="flex items-center gap-2 mb-2 px-1">
+          <div className="relative group/img">
+            <img
+              src={attachedImage.previewUrl}
+              alt={attachedImage.name}
+              className="w-16 h-16 object-cover border border-border"
+              data-testid="attached-image-preview"
+            />
+            {onRemoveImage && (
+              <button
+                onClick={onRemoveImage}
+                data-testid="remove-attached-image"
+                aria-label="Remove image"
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-destructive text-destructive-foreground flex items-center justify-center text-[10px] font-bold opacity-0 group-hover/img:opacity-100 transition-opacity"
+              >
+                &times;
+              </button>
+            )}
+          </div>
+          <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{attachedImage.name}</span>
         </div>
       )}
       <div className="relative">
@@ -70,7 +97,7 @@ export default function MessageInput({
         />
         <div className="absolute left-3 top-3">
           <StyledTooltip content="Quick actions" side="top">
-              <button type="button" data-testid="toggle-quick-actions" className="flex items-center justify-center" onClick={onToggleQuickActions}>
+              <button type="button" data-testid="toggle-quick-actions" aria-label="Toggle quick actions" className="flex items-center justify-center" onClick={onToggleQuickActions}>
                 <Plus className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-pointer" />
               </button>
           </StyledTooltip>
@@ -95,6 +122,7 @@ export default function MessageInput({
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={() => fileInputRef.current?.click()}
             data-testid="button-image-upload"
+            aria-label="Upload image"
             title="Upload image"
           >
             <ImagePlus className="h-4 w-4" />
@@ -106,6 +134,7 @@ export default function MessageInput({
             className={cn("h-8 w-8", isListening ? 'text-red-400 animate-pulse' : 'text-muted-foreground hover:text-foreground')}
             onClick={onVoiceToggle}
             data-testid="button-voice-input"
+            aria-label="Voice input"
             title={isListening ? 'Stop listening' : 'Voice input'}
           >
             <Mic className="h-4 w-4" />
@@ -117,6 +146,7 @@ export default function MessageInput({
                 onClick={onSend}
                 disabled={isGenerating || !input.trim()}
                 data-testid="send-button"
+                aria-label="Send message"
                 className="w-8 h-8 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 <Send className="w-4 h-4" />

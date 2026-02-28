@@ -301,6 +301,7 @@ function ArchitectureFlow() {
                 className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                 onClick={handleToggleAssetManager}
                 title={showAssetManager ? 'Hide asset library' : 'Show asset library'}
+                aria-label="Toggle asset manager"
               >
                 <Component className="w-4 h-4" />
               </button>
@@ -309,6 +310,7 @@ function ArchitectureFlow() {
               <StyledTooltip key={tool.id} content={toolLabels[tool.id]} side="bottom">
                 <button
                   data-testid={`tool-${tool.id}`}
+                  aria-label={toolLabels[tool.id]}
                   className={cn(
                     "p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors",
                     tool.id === 'select' && activeTool === 'select' && "bg-primary/20 text-primary",

@@ -94,6 +94,7 @@ function SchematicViewContent() {
           data-testid="button-toggle-parts-panel"
           onClick={() => setPartsPanel((v) => !v)}
           className="h-7 px-1.5 text-muted-foreground hover:text-foreground"
+          aria-label="Toggle parts panel"
         >
           {partsPanel ? (
             <PanelLeftClose className="w-4 h-4" />
@@ -143,6 +144,7 @@ function SchematicViewContent() {
             ercPanel && 'text-primary',
           )}
           title="Electrical Rule Check"
+          aria-label="Toggle ERC panel"
         >
           <ShieldCheck className="w-4 h-4" />
           {ercPanel ? (

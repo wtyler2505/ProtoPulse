@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useCallback } from 'react';
+import { createContext, useContext, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ValidationIssue } from '@/lib/project-context';
@@ -68,13 +68,22 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
     deleteValidationIssueMutation.mutate(id);
   }, [deleteValidationIssueMutation]);
 
+  const issues = validationQuery.data ?? [];
+
+  const contextValue = useMemo<ValidationState>(() => ({
+    issues,
+    runValidation,
+    addValidationIssue,
+    deleteValidationIssue,
+  }), [
+    issues,
+    runValidation,
+    addValidationIssue,
+    deleteValidationIssue,
+  ]);
+
   return (
-    <ValidationContext.Provider value={{
-      issues: validationQuery.data ?? [],
-      runValidation,
-      addValidationIssue,
-      deleteValidationIssue,
-    }}>
+    <ValidationContext.Provider value={contextValue}>
       {children}
     </ValidationContext.Provider>
   );

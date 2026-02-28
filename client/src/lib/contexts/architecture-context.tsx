@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useRef, useCallback } from 'react';
+import { createContext, useContext, useState, useRef, useCallback, useMemo } from 'react';
 import { Node, Edge } from '@xyflow/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
@@ -303,29 +303,56 @@ export function ArchitectureProvider({
   // --- Component part ID ---
   const [pendingComponentPartId, setPendingComponentPartId] = useState<number | null>(null);
 
+  const nodes = nodesQuery.data ?? [];
+  const edges = edgesQuery.data ?? [];
+  const canUndo = undoStack.length > 0;
+  const canRedo = redoStack.length > 0;
+
+  const contextValue = useMemo<ArchitectureState>(() => ({
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    selectedNodeId,
+    setSelectedNodeId,
+    focusNodeId,
+    focusNode,
+    undoStack,
+    redoStack,
+    pushUndoState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    lastAITurnSnapshot: snapshotRef.current,
+    captureSnapshot,
+    getChangeDiff,
+    pendingComponentPartId,
+    setPendingComponentPartId,
+  }), [
+    nodes,
+    edges,
+    setNodes,
+    setEdges,
+    selectedNodeId,
+    setSelectedNodeId,
+    focusNodeId,
+    focusNode,
+    undoStack,
+    redoStack,
+    pushUndoState,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    captureSnapshot,
+    getChangeDiff,
+    pendingComponentPartId,
+    setPendingComponentPartId,
+  ]);
+
   return (
-    <ArchitectureContext.Provider value={{
-      nodes: nodesQuery.data ?? [],
-      edges: edgesQuery.data ?? [],
-      setNodes,
-      setEdges,
-      selectedNodeId,
-      setSelectedNodeId,
-      focusNodeId,
-      focusNode,
-      undoStack,
-      redoStack,
-      pushUndoState,
-      undo,
-      redo,
-      canUndo: undoStack.length > 0,
-      canRedo: redoStack.length > 0,
-      lastAITurnSnapshot: snapshotRef.current,
-      captureSnapshot,
-      getChangeDiff,
-      pendingComponentPartId,
-      setPendingComponentPartId,
-    }}>
+    <ArchitectureContext.Provider value={contextValue}>
       {children}
     </ArchitectureContext.Provider>
   );

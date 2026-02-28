@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import { LRUClientCache } from "./lib/lru-cache";
+import { toolRegistry, DESTRUCTIVE_TOOLS, type ToolResult, type ToolContext } from "./ai-tools";
 
 export type AIAction =
   | { type: "switch_view"; view: "architecture" | "schematic" | "procurement" | "validation" | "output" | "project_explorer" }
@@ -50,7 +51,16 @@ export type AIAction =
   | { type: "preview_gerber" }
   | { type: "add_datasheet_link"; partNumber: string; url: string }
   | { type: "export_design_report" }
-  | { type: "set_project_type"; projectType: string };
+  | { type: "set_project_type"; projectType: string }
+  // Phase 6: Server-generated file downloads
+  | { type: "download_file"; filename: string; mimeType: string; content: string; encoding: "utf8" | "base64" }
+  // Phase 6: New export tool action types
+  | { type: "export_gerber"; circuitId?: number }
+  | { type: "export_kicad_netlist"; circuitId?: number }
+  | { type: "export_csv_netlist"; circuitId?: number }
+  | { type: "export_pick_and_place"; circuitId?: number }
+  | { type: "export_eagle" }
+  | { type: "export_fritzing_project"; circuitId?: number };
 
 interface AppState {
   projectName: string;
@@ -66,6 +76,99 @@ interface AppState {
   chatHistory: Array<{ role: string; content: string }>;
   customSystemPrompt?: string;
   changeDiff?: string;
+  // Phase 2: Expanded context
+  componentParts: Array<{ id: number; nodeId?: string; title?: string; family?: string; manufacturer?: string; mpn?: string; category?: string; pinCount: number }>;
+  circuitDesigns: Array<{ id: number; name: string; description?: string; instanceCount: number; netCount: number }>;
+  historyItems: Array<{ action: string; user: string; timestamp: string }>;
+  bomMetadata: { totalCost: number; itemCount: number; outOfStockCount: number; lowStockCount: number };
+}
+
+// ---------------------------------------------------------------------------
+// Stream event types for native tool use
+// ---------------------------------------------------------------------------
+
+export interface ToolCallRecord {
+  id: string;
+  name: string;
+  input: Record<string, unknown>;
+  result: ToolResult;
+}
+
+export type AIStreamEvent =
+  | { type: 'text'; text: string }
+  | { type: 'tool_call'; id: string; name: string; input: Record<string, unknown> }
+  | { type: 'tool_result'; id: string; name: string; result: ToolResult }
+  | { type: 'done'; message: string; actions: AIAction[]; toolCalls: ToolCallRecord[]; actionGroupId?: string }
+  | { type: 'error'; message: string };
+
+const MAX_TOOL_TURNS = 10;
+
+// ---------------------------------------------------------------------------
+// Phase 6: Multi-model routing
+// ---------------------------------------------------------------------------
+
+export type RoutingStrategy = 'user' | 'auto' | 'quality' | 'speed' | 'cost';
+
+type ModelTier = 'fast' | 'standard' | 'premium';
+
+const MODEL_TIERS: Record<string, { fast: string; standard: string; premium: string }> = {
+  anthropic: {
+    fast: 'claude-haiku-4-5-20250514',
+    standard: 'claude-sonnet-4-5-20250514',
+    premium: 'claude-4-6-opus-20260101',
+  },
+  gemini: {
+    fast: 'gemini-2.0-flash',
+    standard: 'gemini-2.5-flash',
+    premium: 'gemini-2.5-pro',
+  },
+};
+
+export function routeToModel(params: {
+  strategy: RoutingStrategy;
+  provider: 'anthropic' | 'gemini';
+  userModel: string;
+  messageLength: number;
+  hasImage: boolean;
+}): { model: string; reason: string } {
+  const { strategy, provider, userModel, messageLength, hasImage } = params;
+
+  if (strategy === 'user') {
+    return { model: userModel, reason: 'User-selected model' };
+  }
+
+  const tiers = MODEL_TIERS[provider];
+  if (!tiers) {
+    return { model: userModel, reason: 'Unknown provider, using user model' };
+  }
+
+  if (strategy === 'quality') {
+    return { model: tiers.premium, reason: 'Quality strategy: premium tier' };
+  }
+  if (strategy === 'speed') {
+    return { model: tiers.fast, reason: 'Speed strategy: fast tier' };
+  }
+  if (strategy === 'cost') {
+    return { model: tiers.fast, reason: 'Cost strategy: fast tier' };
+  }
+
+  // strategy === 'auto'
+  if (hasImage) {
+    return { model: tiers.standard, reason: 'Auto: image attached, using standard (vision-capable)' };
+  }
+  if (messageLength < 200) {
+    return { model: tiers.fast, reason: 'Auto: short message, using fast tier' };
+  }
+  if (messageLength > 2000) {
+    return { model: tiers.premium, reason: 'Auto: long/complex message, using premium tier' };
+  }
+  return { model: tiers.standard, reason: 'Auto: standard complexity' };
+}
+
+/** Image content for multimodal messages (Phase 4). */
+export interface ImageContent {
+  base64: string;
+  mediaType: string;
 }
 
 const MAX_CLIENT_CACHE = 10;
@@ -73,8 +176,12 @@ const MAX_CLIENT_CACHE = 10;
 const anthropicClients = new LRUClientCache<Anthropic>(MAX_CLIENT_CACHE);
 const geminiClients = new LRUClientCache<GoogleGenAI>(MAX_CLIENT_CACHE);
 
-let cachedPromptHash = '';
-let cachedPrompt = '';
+/**
+ * Per-session prompt cache. Keyed by a composite of projectId + state hash
+ * so different users/sessions don't share cached prompts (fixes the
+ * module-level singleton bug where all users shared one cached prompt).
+ */
+const promptCache = new LRUClientCache<string>(20);
 
 function hashAppState(appState: AppState): string {
   return JSON.stringify({
@@ -190,6 +297,49 @@ function buildSystemPrompt(appState: AppState): string {
     ? appState.schematicSheets.map(s => `  - "${s.name}" (id: ${s.id}${s.id === appState.activeSheetId ? ", ACTIVE" : ""})`).join("\n")
     : "  (none)";
 
+  // Phase 2: Component Library description (tiered)
+  let componentPartsDescription: string;
+  if (appState.componentParts.length === 0) {
+    componentPartsDescription = "  (none)";
+  } else if (appState.componentParts.length <= 20) {
+    componentPartsDescription = appState.componentParts.map(p =>
+      `  - ${p.title || "(untitled)"} | ${p.category || "generic"} | ${p.manufacturer || "?"} | MPN: ${p.mpn || "?"} | ${p.pinCount} pins${p.nodeId ? ` | linked to node ${p.nodeId}` : ""}`
+    ).join("\n");
+  } else if (appState.componentParts.length <= 100) {
+    const byCategory = new Map<string, number>();
+    for (const p of appState.componentParts) {
+      const cat = p.category || "uncategorized";
+      byCategory.set(cat, (byCategory.get(cat) || 0) + 1);
+    }
+    componentPartsDescription = `  ${appState.componentParts.length} parts total. By category:\n` +
+      Array.from(byCategory.entries()).map(([cat, count]) => `    - ${cat}: ${count}`).join("\n");
+  } else {
+    componentPartsDescription = `  ${appState.componentParts.length} parts in library (use tools to query specific parts)`;
+  }
+
+  // Phase 2: Circuit Designs description (tiered)
+  let circuitDesignsDescription: string;
+  if (appState.circuitDesigns.length === 0) {
+    circuitDesignsDescription = "  (none)";
+  } else if (appState.circuitDesigns.length <= 20) {
+    circuitDesignsDescription = appState.circuitDesigns.map(c =>
+      `  - "${c.name}" (id: ${c.id}) — ${c.instanceCount} instances, ${c.netCount} nets${c.description ? ` | ${c.description}` : ""}`
+    ).join("\n");
+  } else {
+    circuitDesignsDescription = `  ${appState.circuitDesigns.length} circuit designs (${appState.circuitDesigns.reduce((s, c) => s + c.instanceCount, 0)} total instances, ${appState.circuitDesigns.reduce((s, c) => s + c.netCount, 0)} total nets)`;
+  }
+
+  // Phase 2: Recent History description (last 20)
+  const recentHistory = appState.historyItems.slice(0, 20);
+  const historyDescription = recentHistory.length > 0
+    ? recentHistory.map(h => `  - [${h.user}] ${h.action} (${h.timestamp})`).join("\n")
+    : "  (none)";
+
+  // Phase 2: BOM Summary metadata
+  const bomSummaryDescription = appState.bomMetadata.itemCount > 0
+    ? `  Total items: ${appState.bomMetadata.itemCount} | Total cost: $${appState.bomMetadata.totalCost.toFixed(2)} | Out of stock: ${appState.bomMetadata.outOfStockCount} | Low stock: ${appState.bomMetadata.lowStockCount}`
+    : "  (no BOM items)";
+
   return `You are ProtoPulse AI, an expert electronics and system design assistant embedded in the ProtoPulse application — a comprehensive hardware prototyping platform for designing, validating, and managing electronic systems.
 
 You are a world-class expert in:
@@ -247,193 +397,30 @@ ${validationDescription}
 ### Schematic Sheets:
 ${sheetsDescription}
 
-## Available Actions
+### Component Library:
+${componentPartsDescription}
 
-When the user asks you to MAKE CHANGES to the design, you can execute actions by including a JSON code block at the END of your response. The JSON must be an array of action objects.
+### Circuit Designs:
+${circuitDesignsDescription}
 
-IMPORTANT RULES:
-- ONLY include actions when the user explicitly asks to make changes, add/remove components, modify the design, etc.
-- For informational questions, discussions, explanations, or advice — respond with text only, NO actions.
-- When you do include actions, explain what you're doing in your text response BEFORE the JSON block.
-- You can include multiple actions in a single response to perform complex operations atomically.
-- When referencing nodes in actions, use their LABEL (display name), not their internal ID.
+### Recent History:
+${historyDescription}
 
-### Action Schema Reference:
+### BOM Summary:
+${bomSummaryDescription}
 
-**View Navigation:**
-\`{ "type": "switch_view", "view": "architecture" | "schematic" | "procurement" | "validation" | "output" | "project_explorer" }\`
-Switch the active view in the application.
+## Tools
 
-\`{ "type": "switch_schematic_sheet", "sheetId": "<sheet-id>" }\`
-Switch to a specific schematic sheet.
+You have access to tools that let you directly modify the project. When the user asks you to make changes, use the provided tools. You can call multiple tools to perform complex operations.
 
-**Architecture Diagram — Nodes:**
-\`{ "type": "add_node", "nodeType": "<type>", "label": "<name>", "description": "<optional>", "positionX": <number>, "positionY": <number> }\`
-Add a new component node to the architecture diagram. nodeType can be: "mcu", "sensor", "power", "comm", "connector", "memory", "actuator", "ic", "passive", "module", or any custom type. When positioning nodes, calculate positions relative to existing nodes. Place connected nodes near each other (within 200px). Place power nodes on the left (x: 100-200), MCUs in center (x: 300-500), peripherals on right (x: 600-800), sensors at bottom (y: 350-500).
+For informational questions, discussions, explanations, or advice — respond with text only, do NOT call tools.
 
-\`{ "type": "remove_node", "nodeLabel": "<label>" }\`
-Remove a node by its label.
-
-\`{ "type": "update_node", "nodeLabel": "<label>", "newLabel": "<optional>", "newType": "<optional>", "newDescription": "<optional>" }\`
-Update properties of an existing node.
-
-\`{ "type": "clear_canvas" }\`
-Remove all nodes and edges from the architecture diagram.
-
-**Architecture Diagram — Connections:**
-\`{ "type": "connect_nodes", "sourceLabel": "<label>", "targetLabel": "<label>", "edgeLabel": "<optional>", "busType": "<optional>", "signalType": "<optional>", "voltage": "<optional>", "busWidth": "<optional>", "netName": "<optional>" }\`
-Create a connection between two nodes. busType examples: "SPI", "I2C", "UART", "USB", "Power", "GPIO", "CAN", "Ethernet". Optional signal metadata: signalType (e.g. "SPI", "analog"), voltage (e.g. "3.3V"), busWidth (e.g. "4-bit"), netName (e.g. "MOSI").
-
-\`{ "type": "remove_edge", "sourceLabel": "<label>", "targetLabel": "<label>" }\`
-Remove a connection between two nodes.
-
-**Generate Full Architecture:**
-\`{ "type": "generate_architecture", "components": [{ "label": "<name>", "nodeType": "<type>", "description": "<desc>", "positionX": <num>, "positionY": <num> }, ...], "connections": [{ "sourceLabel": "<label>", "targetLabel": "<label>", "label": "<bus/signal>", "busType": "<optional>" }, ...] }\`
-Generate a complete architecture diagram, replacing the current one. Use this for creating entire system designs from scratch. Lay out components logically: power on the left, MCU in center, peripherals around it. Use reasonable spacing (150-200px between components).
-
-**BOM Management:**
-\`{ "type": "add_bom_item", "partNumber": "<pn>", "manufacturer": "<mfr>", "description": "<desc>", "quantity": <num>, "unitPrice": <num>, "supplier": "<supplier>", "status": "<status>" }\`
-Add a component to the Bill of Materials. Status options: "In Stock", "Low Stock", "Out of Stock", "On Order".
-
-\`{ "type": "remove_bom_item", "partNumber": "<pn>" }\`
-Remove a BOM item by part number.
-
-\`{ "type": "update_bom_item", "partNumber": "<pn>", "updates": { "<field>": "<value>", ... } }\`
-Update fields of an existing BOM item. Fields: partNumber, manufacturer, description, quantity, unitPrice, supplier, status.
-
-**Design Validation:**
-\`{ "type": "run_validation" }\`
-Trigger a design validation check.
-
-\`{ "type": "clear_validation" }\`
-Clear all validation issues.
-
-\`{ "type": "add_validation_issue", "severity": "error" | "warning" | "info", "message": "<description>", "componentId": "<optional-node-label>", "suggestion": "<optional-fix>" }\`
-Add a validation issue/finding.
-
-**Project Settings:**
-\`{ "type": "rename_project", "name": "<new-name>" }\`
-Rename the project.
-
-\`{ "type": "update_description", "description": "<new-description>" }\`
-Update the project description.
-
-**Export:**
-\`{ "type": "export_bom_csv" }\`
-Export the BOM as a CSV file.
-
-**Undo/Redo:**
-\`{ "type": "undo" }\` — Undo the last AI action.
-\`{ "type": "redo" }\` — Redo the last undone action.
-
-**Auto-Layout:**
-\`{ "type": "auto_layout", "layout": "hierarchical" | "grid" | "circular" | "force" }\`
-Reorganize all nodes on the canvas using the specified layout algorithm. Use "hierarchical" for tree-like designs, "grid" for uniform spacing, "circular" for ring topologies, "force" for organic layouts.
-
-**Sub-circuit Templates:**
-\`{ "type": "add_subcircuit", "template": "power_supply_ldo" | "usb_interface" | "spi_flash" | "i2c_sensors" | "uart_debug" | "battery_charger" | "motor_driver" | "led_driver" | "adc_frontend" | "dac_output", "positionX": <number>, "positionY": <number> }\`
-Insert a pre-wired sub-circuit template at the specified position. Each template includes multiple components and their connections.
-
-**Net Naming:**
-\`{ "type": "assign_net_name", "sourceLabel": "<label>", "targetLabel": "<label>", "netName": "<net-name>" }\`
-Assign a meaningful net name to an existing connection between two nodes.
-
-**Multi-Sheet Management:**
-\`{ "type": "create_sheet", "name": "<sheet-name>" }\`
-Create a new schematic sheet (e.g., "Power_Supply.sch", "RF_Frontend.sch").
-
-\`{ "type": "rename_sheet", "sheetId": "<id>", "newName": "<name>" }\`
-Rename an existing schematic sheet.
-
-\`{ "type": "move_to_sheet", "nodeLabel": "<label>", "sheetId": "<id>" }\`
-Move a component to a different schematic sheet for organization.
-
-**Pin-Level Connections:**
-\`{ "type": "set_pin_map", "nodeLabel": "<label>", "pins": { "<pin_name>": "<connected_to>", ... } }\`
-Set pin assignments for a component (e.g., {"MOSI": "GPIO23", "MISO": "GPIO19", "SCK": "GPIO18", "CS": "GPIO5"}).
-
-\`{ "type": "auto_assign_pins", "nodeLabel": "<label>" }\`
-Auto-assign optimal pin connections based on the component datasheet and existing connections.
-
-**Advanced Validation:**
-\`{ "type": "power_budget_analysis" }\`
-Calculate total power budget across all power rails, tallying current draw from all components.
-
-\`{ "type": "voltage_domain_check" }\`
-Verify voltage compatibility across all connections and flag mismatches.
-
-\`{ "type": "auto_fix_validation" }\`
-Automatically fix validation issues by adding missing decoupling caps, pull-up resistors, ESD protection components.
-
-\`{ "type": "dfm_check" }\`
-Run Design for Manufacturing checks — flag hard-to-solder components, suggest assembly-friendly alternatives.
-
-\`{ "type": "thermal_analysis" }\`
-Estimate power dissipation per component, flag thermal hot spots, suggest heatsinks or thermal vias.
-
-**BOM Intelligence:**
-\`{ "type": "pricing_lookup", "partNumber": "<pn>" }\`
-Look up real-time pricing and availability for a specific part across distributors (Digi-Key, Mouser, LCSC).
-
-\`{ "type": "suggest_alternatives", "partNumber": "<pn>", "reason": "<cost|availability|performance>" }\`
-Find alternative/equivalent parts for a BOM item. Specify reason: cost reduction, availability, or performance improvement.
-
-\`{ "type": "optimize_bom" }\`
-Analyze the entire BOM for cost optimization opportunities — supplier consolidation, quantity discounts, and cheaper equivalents.
-
-\`{ "type": "check_lead_times" }\`
-Check estimated lead times and delivery dates for all BOM items. Flag items with long lead times (>8 weeks).
-
-\`{ "type": "parametric_search", "category": "<category>", "specs": { "<param>": "<value>", ... } }\`
-Search for components by parametric specifications. Categories: "mcu", "sensor", "regulator", "capacitor", "resistor", "inductor", "connector", "transistor", "diode", "opamp". Specs examples: {"voltage": "3.3V", "package": "QFP-48", "frequency": ">100MHz"}.
-
-**Design Documentation:**
-\`{ "type": "analyze_image", "description": "<description>" }\`
-Analyze an uploaded image or schematic reference — describe what's shown and suggest how to implement it.
-
-\`{ "type": "save_design_decision", "decision": "<what>", "rationale": "<why>" }\`
-Record a design decision with its rationale for future reference. This creates a permanent record of WHY choices were made.
-
-\`{ "type": "add_annotation", "nodeLabel": "<label>", "note": "<comment>", "color": "yellow" | "blue" | "red" | "green" }\`
-Add a sticky-note annotation to a component for documentation or review comments.
-
-\`{ "type": "start_tutorial", "topic": "getting_started" | "power_design" | "pcb_layout" | "bom_management" | "validation" }\`
-Start an interactive tutorial walkthrough for the specified topic.
-
-**Export & Output:**
-\`{ "type": "export_kicad" }\`
-Generate a KiCad-compatible schematic file (.kicad_sch) from the current architecture. Creates hierarchical sheet structure matching the block diagram.
-
-\`{ "type": "export_spice" }\`
-Generate a SPICE netlist (.cir) for circuit simulation. Maps components to SPICE models and connections to nets.
-
-\`{ "type": "preview_gerber" }\`
-Generate a rough PCB layout preview showing component placement and basic routing estimation.
-
-\`{ "type": "add_datasheet_link", "partNumber": "<pn>", "url": "<datasheet-url>" }\`
-Attach a datasheet URL to a BOM item for quick reference.
-
-\`{ "type": "export_design_report" }\`
-Generate a comprehensive design report including architecture overview, BOM summary, validation status, and recommendations.
-
-**Project Configuration:**
-\`{ "type": "set_project_type", "projectType": "iot" | "wearable" | "industrial" | "automotive" | "consumer" | "medical" | "rf" | "power" }\`
-Set the project type to optimize AI suggestions, component recommendations, and validation rules for the specific domain.
-
-## Response Format
-
-For informational responses (no changes needed):
-Just respond with helpful text. No JSON block needed.
-
-For action responses (user wants changes):
-First explain what you will do in plain text, then include the actions at the very end:
-
-\`\`\`json
-[
-  { "type": "action_type", ... },
-  { "type": "another_action", ... }
-]
-\`\`\`
+Guidelines when using tools:
+- When referencing architecture nodes, use their LABEL (display name), not internal IDs.
+- Position new components logically: power on left (x: 100-200), MCUs center (x: 300-500), peripherals right (x: 600-800), sensors at bottom (y: 350-500). Place connected components near each other (within 200px). Use reasonable spacing (150-200px between components).
+- Use real part numbers and manufacturers when adding BOM items.
+- Explain your reasoning in text alongside tool calls.
+- You can call multiple tools in sequence to perform complex operations atomically.
 
 Always provide expert-level, detailed electronics advice. When suggesting components, include real part numbers, manufacturers, and typical specifications. When discussing design choices, explain trade-offs and best practices.${appState.customSystemPrompt ? `\n\n## Custom User Instructions\n\n${appState.customSystemPrompt}` : ''}`;
 }
@@ -482,17 +469,38 @@ async function callAnthropic(
   chatHistory: Array<{ role: string; content: string }>,
   userMessage: string,
   temperature: number = 0.7,
-  maxTokens?: number
+  maxTokens?: number,
+  imageContent?: ImageContent,
 ): Promise<{ message: string; actions: AIAction[] }> {
   const client = getAnthropicClient(apiKey);
+  const anthropicTools = toolRegistry.toAnthropicTools();
 
-  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+  const messages: Anthropic.MessageParam[] = [];
   for (const msg of chatHistory) {
     if (msg.role === "user" || msg.role === "assistant") {
       messages.push({ role: msg.role as "user" | "assistant", content: msg.content });
     }
   }
-  messages.push({ role: "user", content: userMessage });
+
+  // Build user message — multimodal if image attached
+  if (imageContent) {
+    messages.push({
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: imageContent.mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: imageContent.base64,
+          },
+        },
+        { type: "text", text: userMessage },
+      ],
+    });
+  } else {
+    messages.push({ role: "user", content: userMessage });
+  }
 
   const response = await client.messages.create({
     model,
@@ -500,12 +508,27 @@ async function callAnthropic(
     system: systemPrompt,
     messages,
     temperature,
+    tools: anthropicTools as Anthropic.Messages.Tool[],
+    tool_choice: { type: "auto" },
   });
 
+  // Extract text content
   const responseText = response.content
     .filter((block): block is Anthropic.TextBlock => block.type === "text")
     .map((block) => block.text)
     .join("");
+
+  // Extract tool calls as actions (single turn — no server execution in non-streaming path)
+  const toolUseBlocks = response.content.filter(
+    (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
+  );
+  if (toolUseBlocks.length > 0) {
+    const actions = toolUseBlocks.map(b => ({
+      type: b.name,
+      ...(b.input as Record<string, unknown>),
+    })) as unknown as AIAction[];
+    return { message: responseText.trim(), actions };
+  }
 
   return parseActionsFromResponse(responseText);
 }
@@ -517,9 +540,11 @@ async function callGemini(
   chatHistory: Array<{ role: string; content: string }>,
   userMessage: string,
   temperature: number = 0.7,
-  maxTokens?: number
+  maxTokens?: number,
+  imageContent?: ImageContent,
 ): Promise<{ message: string; actions: AIAction[] }> {
   const genAI = getGeminiClient(apiKey);
+  const geminiFunctionDeclarations = toolRegistry.toGeminiFunctionDeclarations();
 
   const history = chatHistory.map((msg) => ({
     role: msg.role === "assistant" ? ("model" as const) : ("user" as const),
@@ -532,13 +557,32 @@ async function callGemini(
       systemInstruction: systemPrompt,
       temperature,
       maxOutputTokens: maxTokens || 4096,
+      tools: [{ functionDeclarations: geminiFunctionDeclarations }],
     },
     history,
   });
 
-  const result = await chat.sendMessage({ message: userMessage });
-  const responseText = result.text ?? "";
+  // Build message — multimodal if image attached
+  const messageParts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
+  if (imageContent) {
+    messageParts.push({ inlineData: { mimeType: imageContent.mediaType, data: imageContent.base64 } });
+  }
+  messageParts.push({ text: userMessage });
 
+  const result = await chat.sendMessage({ message: messageParts as Parameters<typeof chat.sendMessage>[0]["message"] });
+
+  // Extract function calls as actions (single turn — no server execution in non-streaming path)
+  const functionCalls = result.functionCalls;
+  if (functionCalls && functionCalls.length > 0) {
+    const actions = functionCalls.map(fc => ({
+      type: fc.name ?? '',
+      ...((fc.args ?? {}) as Record<string, unknown>),
+    })) as unknown as AIAction[];
+    const responseText = result.text ?? "";
+    return { message: responseText.trim(), actions };
+  }
+
+  const responseText = result.text ?? "";
   return parseActionsFromResponse(responseText);
 }
 
@@ -550,9 +594,10 @@ export async function processAIMessage(params: {
   appState: AppState;
   temperature?: number;
   maxTokens?: number;
+  imageContent?: ImageContent;
 }): Promise<{ message: string; actions: AIAction[] }> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, imageContent } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       return {
@@ -569,14 +614,12 @@ export async function processAIMessage(params: {
     }
 
     const stateHash = hashAppState(appState);
-    let systemPrompt: string;
-    if (stateHash === cachedPromptHash) {
-      systemPrompt = cachedPrompt;
-    } else {
-      systemPrompt = buildSystemPrompt(appState);
-      cachedPromptHash = stateHash;
-      cachedPrompt = systemPrompt;
-    }
+    const cachedPrompt = promptCache.get(stateHash);
+    const systemPrompt = cachedPrompt ?? (() => {
+      const built = buildSystemPrompt(appState);
+      promptCache.set(stateHash, built);
+      return built;
+    })();
     const recentHistory = appState.chatHistory.slice(-10);
 
     const dedupeKey = requestKey(message, provider, String(appState.projectName));
@@ -585,9 +628,9 @@ export async function processAIMessage(params: {
 
     const promise = (async () => {
       if (provider === "anthropic") {
-        return await callAnthropic(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens);
+        return await callAnthropic(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent);
       } else {
-        return await callGemini(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens);
+        return await callGemini(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent);
       }
     })();
     activeRequests.set(dedupeKey, promise);
@@ -614,121 +657,427 @@ export async function streamAIMessage(
     appState: AppState;
     temperature?: number;
     maxTokens?: number;
+    toolContext?: ToolContext;
+    imageContent?: ImageContent;
   },
-  write: (chunk: string) => void | Promise<void>,
-  onComplete: (result: { message: string; actions: AIAction[] }) => void | Promise<void>,
+  onEvent: (event: AIStreamEvent) => void | Promise<void>,
   signal?: AbortSignal
 ): Promise<void> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, toolContext, imageContent } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
-      write(`No API key provided for ${provider}. Please add your ${provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key in the settings panel to enable AI features.`);
-      onComplete({ message: `No API key provided for ${provider}.`, actions: [] });
+      const noKeyMsg = `No API key provided for ${provider}. Please add your ${provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key in the settings panel to enable AI features.`;
+      await onEvent({ type: 'text', text: noKeyMsg });
+      await onEvent({ type: 'done', message: noKeyMsg, actions: [], toolCalls: [] });
       return;
     }
 
     if (message.length > 32000) {
-      write("Your message is too long. Please keep messages under 32,000 characters.");
-      onComplete({ message: "Message too long.", actions: [] });
+      const longMsg = "Your message is too long. Please keep messages under 32,000 characters.";
+      await onEvent({ type: 'text', text: longMsg });
+      await onEvent({ type: 'done', message: longMsg, actions: [], toolCalls: [] });
       return;
     }
 
     const stateHash = hashAppState(appState);
-    let systemPrompt: string;
-    if (stateHash === cachedPromptHash) {
-      systemPrompt = cachedPrompt;
-    } else {
-      systemPrompt = buildSystemPrompt(appState);
-      cachedPromptHash = stateHash;
-      cachedPrompt = systemPrompt;
-    }
+    const cachedPrompt2 = promptCache.get(stateHash);
+    const systemPrompt = cachedPrompt2 ?? (() => {
+      const built = buildSystemPrompt(appState);
+      promptCache.set(stateHash, built);
+      return built;
+    })();
     const recentHistory = appState.chatHistory.slice(-10);
+    const actionGroupId = crypto.randomUUID();
 
     if (provider === "anthropic") {
-      const client = getAnthropicClient(apiKey);
+      const result = await streamAnthropicWithTools(
+        apiKey, model, systemPrompt, recentHistory, message,
+        temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent,
+      );
+      if (signal?.aborted) return;
 
-      const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
-      for (const msg of recentHistory) {
-        if (msg.role === "user" || msg.role === "assistant") {
-          messages.push({ role: msg.role as "user" | "assistant", content: msg.content });
-        }
-      }
-      messages.push({ role: "user", content: message });
+      persistToolCalls(result.toolCalls, toolContext, actionGroupId).catch(() => {});
 
-      const stream = client.messages.stream({
-        model,
-        max_tokens: maxTokens || 4096,
-        system: systemPrompt,
-        messages,
-        temperature,
-      }, signal ? { signal } : undefined);
+      // Extract client-executable actions from tool results
+      const clientActions = extractClientActions(result.toolCalls);
+      // Fallback: if no tool calls were made, parse actions from text
+      const fallbackParsed = result.toolCalls.length === 0
+        ? parseActionsFromResponse(result.fullText)
+        : { message: result.fullText, actions: [] as AIAction[] };
 
-      for await (const event of stream) {
-        if (signal?.aborted) break;
-        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-          await write(event.delta.text);
-        }
-      }
-
-      if (signal?.aborted) {
-        stream.abort();
-        return;
-      }
-
-      const finalMessage = await stream.finalMessage();
-      const fullText = finalMessage.content
-        .filter((block): block is Anthropic.TextBlock => block.type === "text")
-        .map((block) => block.text)
-        .join("");
-
-      const parsed = parseActionsFromResponse(fullText);
-      await onComplete(parsed);
-    } else {
-      const genAI = getGeminiClient(apiKey);
-
-      const history = recentHistory.map((msg) => ({
-        role: msg.role === "assistant" ? ("model" as const) : ("user" as const),
-        parts: [{ text: msg.content }],
-      }));
-
-      const chat = genAI.chats.create({
-        model,
-        config: {
-          systemInstruction: systemPrompt,
-          temperature,
-          maxOutputTokens: maxTokens || 4096,
-        },
-        history,
+      await onEvent({
+        type: 'done',
+        message: result.fullText.trim() || fallbackParsed.message,
+        actions: result.toolCalls.length > 0 ? clientActions : fallbackParsed.actions,
+        toolCalls: result.toolCalls,
+        actionGroupId: result.toolCalls.length > 0 ? actionGroupId : undefined,
       });
+    } else {
+      const result = await streamGeminiWithTools(
+        apiKey, model, systemPrompt, recentHistory, message,
+        temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent,
+      );
+      if (signal?.aborted) return;
 
-      const stream = await chat.sendMessageStream({ message });
+      persistToolCalls(result.toolCalls, toolContext, actionGroupId).catch(() => {});
 
-      let fullText = "";
+      const clientActions = extractClientActions(result.toolCalls);
+      const fallbackParsed = result.toolCalls.length === 0
+        ? parseActionsFromResponse(result.fullText)
+        : { message: result.fullText, actions: [] as AIAction[] };
+
+      await onEvent({
+        type: 'done',
+        message: result.fullText.trim() || fallbackParsed.message,
+        actions: result.toolCalls.length > 0 ? clientActions : fallbackParsed.actions,
+        toolCalls: result.toolCalls,
+        actionGroupId: result.toolCalls.length > 0 ? actionGroupId : undefined,
+      });
+    }
+  } catch (error: unknown) {
+    if (signal?.aborted) return;
+    const { userMessage } = categorizeError(error);
+    await onEvent({ type: 'text', text: `\n\nError: ${userMessage}` });
+    await onEvent({ type: 'done', message: userMessage, actions: [], toolCalls: [] });
+  }
+}
+
+/**
+ * Persist completed tool calls to the ai_actions table for audit/replay.
+ * Runs fire-and-forget — logging failures should never break the AI response.
+ */
+async function persistToolCalls(
+  toolCalls: ToolCallRecord[],
+  toolContext: ToolContext | undefined,
+  chatMessageId?: string,
+): Promise<void> {
+  if (!toolContext || toolCalls.length === 0) return;
+  const { projectId, storage } = toolContext;
+  for (const tc of toolCalls) {
+    try {
+      await storage.createAiAction({
+        projectId,
+        chatMessageId: chatMessageId ?? null,
+        toolName: tc.name,
+        parameters: tc.input,
+        result: tc.result as unknown as Record<string, unknown>,
+        status: tc.result.success ? "completed" : "failed",
+      });
+    } catch (err) {
+      console.error(`[ai:persist] action=${tc.name} project=${projectId} error=${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Native tool use — Anthropic streaming with multi-turn tool calling
+// ---------------------------------------------------------------------------
+
+async function streamAnthropicWithTools(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  chatHistory: Array<{ role: string; content: string }>,
+  userMessage: string,
+  temperature: number,
+  maxTokens: number,
+  toolContext: ToolContext | undefined,
+  onEvent: (event: AIStreamEvent) => void | Promise<void>,
+  signal?: AbortSignal,
+  imageContent?: ImageContent,
+): Promise<{ fullText: string; toolCalls: ToolCallRecord[] }> {
+  const client = getAnthropicClient(apiKey);
+  const anthropicTools = toolRegistry.toAnthropicTools();
+
+  // Build initial messages array — needs to support both string and block content for multi-turn
+  const messages: Anthropic.MessageParam[] = [];
+  for (const msg of chatHistory) {
+    if (msg.role === "user" || msg.role === "assistant") {
+      messages.push({ role: msg.role as "user" | "assistant", content: msg.content });
+    }
+  }
+
+  // Multimodal: if image attached, build content blocks
+  if (imageContent) {
+    messages.push({
+      role: "user",
+      content: [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: imageContent.mediaType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
+            data: imageContent.base64,
+          },
+        },
+        { type: "text", text: userMessage },
+      ],
+    });
+  } else {
+    messages.push({ role: "user", content: userMessage });
+  }
+
+  const allToolCalls: ToolCallRecord[] = [];
+  let fullText = '';
+
+  for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
+    if (signal?.aborted) break;
+
+    const stream = client.messages.stream({
+      model,
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages,
+      temperature,
+      tools: anthropicTools as Anthropic.Messages.Tool[],
+      tool_choice: { type: "auto" },
+    }, signal ? { signal } : undefined);
+
+    // Stream text chunks in real-time
+    for await (const event of stream) {
+      if (signal?.aborted) break;
+      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+        fullText += event.delta.text;
+        await onEvent({ type: 'text', text: event.delta.text });
+      }
+    }
+
+    if (signal?.aborted) {
+      stream.abort();
+      break;
+    }
+
+    const finalMessage = await stream.finalMessage();
+
+    // Check if model wants to call tools
+    const toolUseBlocks = finalMessage.content.filter(
+      (b): b is Anthropic.ToolUseBlock => b.type === 'tool_use'
+    );
+
+    if (toolUseBlocks.length === 0 || !toolContext) {
+      // No tool calls or no tool context — done
+      break;
+    }
+
+    // Execute each tool call
+    const toolResultBlocks: Anthropic.Messages.ToolResultBlockParam[] = [];
+    for (const block of toolUseBlocks) {
+      const input = (block.input ?? {}) as Record<string, unknown>;
+      await onEvent({ type: 'tool_call', id: block.id, name: block.name, input });
+
+      const result = await toolRegistry.execute(block.name, input, toolContext);
+      allToolCalls.push({ id: block.id, name: block.name, input, result });
+
+      await onEvent({ type: 'tool_result', id: block.id, name: block.name, result });
+
+      toolResultBlocks.push({
+        type: "tool_result",
+        tool_use_id: block.id,
+        content: JSON.stringify(result),
+        is_error: !result.success,
+      });
+    }
+
+    // Append assistant response + tool results for next turn
+    messages.push({ role: "assistant", content: finalMessage.content });
+    messages.push({ role: "user", content: toolResultBlocks });
+  }
+
+  return { fullText, toolCalls: allToolCalls };
+}
+
+// ---------------------------------------------------------------------------
+// Native tool use — Gemini streaming with multi-turn function calling
+// ---------------------------------------------------------------------------
+
+async function streamGeminiWithTools(
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  chatHistory: Array<{ role: string; content: string }>,
+  userMessage: string,
+  temperature: number,
+  maxTokens: number,
+  toolContext: ToolContext | undefined,
+  onEvent: (event: AIStreamEvent) => void | Promise<void>,
+  signal?: AbortSignal,
+  imageContent?: ImageContent,
+): Promise<{ fullText: string; toolCalls: ToolCallRecord[] }> {
+  const genAI = getGeminiClient(apiKey);
+  const geminiFunctionDeclarations = toolRegistry.toGeminiFunctionDeclarations();
+
+  const history = chatHistory.map((msg) => ({
+    role: msg.role === "assistant" ? ("model" as const) : ("user" as const),
+    parts: [{ text: msg.content }],
+  }));
+
+  const chat = genAI.chats.create({
+    model,
+    config: {
+      systemInstruction: systemPrompt,
+      temperature,
+      maxOutputTokens: maxTokens,
+      tools: [{ functionDeclarations: geminiFunctionDeclarations }],
+    },
+    history,
+  });
+
+  // Build first-turn message parts — multimodal if image attached
+  const firstTurnParts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [];
+  if (imageContent) {
+    firstTurnParts.push({ inlineData: { mimeType: imageContent.mediaType, data: imageContent.base64 } });
+  }
+  firstTurnParts.push({ text: userMessage });
+
+  const allToolCalls: ToolCallRecord[] = [];
+  let fullText = '';
+  let isFirstTurn = true;
+
+  for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
+    if (signal?.aborted) break;
+
+    let turnFunctionCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
+
+    if (isFirstTurn) {
+      // First turn: stream the user message (with optional image)
+      const stream = await chat.sendMessageStream({
+        message: firstTurnParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
+      });
       try {
         for await (const chunk of stream) {
           if (signal?.aborted) break;
           const text = chunk.text ?? "";
           if (text) {
-            await write(text);
             fullText += text;
+            await onEvent({ type: 'text', text });
+          }
+          // Collect function calls from chunks
+          const fcs = chunk.functionCalls;
+          if (fcs) {
+            for (const fc of fcs) {
+              turnFunctionCalls.push({ name: fc.name ?? '', args: (fc.args ?? {}) as Record<string, unknown> });
+            }
           }
         }
       } catch (streamError: unknown) {
-        if (signal?.aborted) return;
+        if (signal?.aborted) break;
         const { message: errMsg } = extractErrorInfo(streamError);
-        await write(`\n\n[Stream interrupted: ${redactSecrets(errMsg || 'Stream interrupted')}]`);
+        fullText += `\n\n[Stream interrupted: ${redactSecrets(errMsg || 'Stream interrupted')}]`;
+        await onEvent({ type: 'text', text: `\n\n[Stream interrupted: ${redactSecrets(errMsg || 'Stream interrupted')}]` });
       }
-
-      if (signal?.aborted) return;
-
-      const parsed = parseActionsFromResponse(fullText);
-      await onComplete(parsed);
+      isFirstTurn = false;
+    } else {
+      // Subsequent turns: we already sent function responses via sendMessage,
+      // now stream the model's next response
+      // (this path is reached after sending function responses below)
+      break; // Function responses are handled in the non-streaming sendMessage below
     }
-  } catch (error: unknown) {
-    if (signal?.aborted) return;
-    const { userMessage } = categorizeError(error);
-    write(`\n\nError: ${userMessage}`);
-    onComplete({ message: userMessage, actions: [] });
+
+    if (signal?.aborted || turnFunctionCalls.length === 0 || !toolContext) break;
+
+    // Execute function calls
+    const functionResponses: Array<{ name: string; response: unknown }> = [];
+    for (const fc of turnFunctionCalls) {
+      const toolId = crypto.randomUUID();
+      await onEvent({ type: 'tool_call', id: toolId, name: fc.name, input: fc.args });
+
+      const result = await toolRegistry.execute(fc.name, fc.args, toolContext);
+      allToolCalls.push({ id: toolId, name: fc.name, input: fc.args, result });
+
+      await onEvent({ type: 'tool_result', id: toolId, name: fc.name, result });
+
+      functionResponses.push({ name: fc.name, response: result });
+    }
+
+    // Send function responses back to Gemini and stream the next response
+    const frParts = functionResponses.map(fr => ({
+      functionResponse: { name: fr.name, response: fr.response },
+    }));
+    const nextStream = await chat.sendMessageStream({
+      message: frParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
+    });
+
+    turnFunctionCalls = [];
+    try {
+      for await (const chunk of nextStream) {
+        if (signal?.aborted) break;
+        const text = chunk.text ?? "";
+        if (text) {
+          fullText += text;
+          await onEvent({ type: 'text', text });
+        }
+        const fcs = chunk.functionCalls;
+        if (fcs) {
+          for (const fc of fcs) {
+            turnFunctionCalls.push({ name: fc.name ?? '', args: (fc.args ?? {}) as Record<string, unknown> });
+          }
+        }
+      }
+    } catch (streamError: unknown) {
+      if (signal?.aborted) break;
+      const { message: errMsg } = extractErrorInfo(streamError);
+      fullText += `\n\n[Stream interrupted: ${redactSecrets(errMsg || 'Stream interrupted')}]`;
+      await onEvent({ type: 'text', text: `\n\n[Stream interrupted: ${redactSecrets(errMsg || 'Stream interrupted')}]` });
+    }
+
+    // If this turn also had function calls, continue the loop
+    if (turnFunctionCalls.length === 0 || !toolContext) break;
+
+    // Execute the new function calls
+    const nextResponses: Array<{ name: string; response: unknown }> = [];
+    for (const fc of turnFunctionCalls) {
+      const toolId = crypto.randomUUID();
+      await onEvent({ type: 'tool_call', id: toolId, name: fc.name, input: fc.args });
+
+      const result = await toolRegistry.execute(fc.name, fc.args, toolContext);
+      allToolCalls.push({ id: toolId, name: fc.name, input: fc.args, result });
+
+      await onEvent({ type: 'tool_result', id: toolId, name: fc.name, result });
+
+      nextResponses.push({ name: fc.name, response: result });
+    }
+
+    // Continue multi-turn by sending these responses
+    const nextFrParts = nextResponses.map(fr => ({
+      functionResponse: { name: fr.name, response: fr.response },
+    }));
+    const followUpStream = await chat.sendMessageStream({
+      message: nextFrParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
+    });
+
+    try {
+      for await (const chunk of followUpStream) {
+        if (signal?.aborted) break;
+        const text = chunk.text ?? "";
+        if (text) {
+          fullText += text;
+          await onEvent({ type: 'text', text });
+        }
+      }
+    } catch (streamError: unknown) {
+      if (signal?.aborted) break;
+      const { message: errMsg } = extractErrorInfo(streamError);
+      fullText += `\n\n[Stream interrupted: ${redactSecrets(errMsg || 'Stream interrupted')}]`;
+      await onEvent({ type: 'text', text: `\n\n[Stream interrupted: ${redactSecrets(errMsg || 'Stream interrupted')}]` });
+    }
+
+    // After a follow-up response, break the outer loop (max 2 rounds of tool calling per turn)
+    break;
   }
+
+  return { fullText, toolCalls: allToolCalls };
+}
+
+// ---------------------------------------------------------------------------
+// Helpers for extracting client-executable actions from tool results
+// ---------------------------------------------------------------------------
+
+function extractClientActions(toolCalls: ToolCallRecord[]): AIAction[] {
+  return toolCalls
+    .map(tc => tc.result.data)
+    .filter((d): d is Record<string, unknown> =>
+      d != null && typeof d === 'object' && 'type' in (d as Record<string, unknown>)
+    )
+    .map(d => d as unknown as AIAction);
 }

@@ -155,6 +155,7 @@ export default function AssetGrid({
                 <button
                   onClick={(e) => { e.stopPropagation(); toggleFavorite(asset.id); }}
                   className={cn("p-0.5 transition-all", isFav ? "text-yellow-400" : "opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-yellow-400")}
+                  aria-label="Toggle favorite"
                 >
                   <Star className={cn("w-3 h-3", isFav && "fill-yellow-400")} />
                 </button>
@@ -162,6 +163,7 @@ export default function AssetGrid({
                   onClick={(e) => { e.stopPropagation(); handleAddNode(asset.type, asset.name, asset.id); }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"
                   data-testid={`button-add-asset-${asset.id}`}
+                  aria-label="Add to canvas"
                 >
                   <Plus className="w-3 h-3 text-muted-foreground hover:text-primary" />
                 </button>

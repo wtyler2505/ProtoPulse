@@ -18,6 +18,7 @@ export default function SidebarHeader({ onClose }: SidebarHeaderProps) {
       <StyledTooltip content="Close sidebar" side="bottom">
         <button
           data-testid="sidebar-close"
+          aria-label="Close sidebar"
           className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors md:hidden"
           onClick={onClose}
         >

@@ -290,6 +290,20 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
           {activeLayer === 'front' ? 'F.Cu' : 'B.Cu'}
         </button>
         <div className="w-px h-4 bg-border mx-1" />
+        <span className="text-[10px] text-muted-foreground">Trace:</span>
+        <input
+          type="range"
+          min={0.5}
+          max={8}
+          step={0.5}
+          value={traceWidth}
+          onChange={(e) => setTraceWidth(Number(e.target.value))}
+          className="w-20 h-1 accent-primary"
+          data-testid="pcb-trace-width"
+          aria-label="Trace width"
+        />
+        <span className="text-[10px] text-muted-foreground tabular-nums">{traceWidth.toFixed(1)}mm</span>
+        <div className="w-px h-4 bg-border mx-1" />
         <ToolButton icon={ZoomIn} label="Zoom in" onClick={() => setZoom(z => Math.min(6, z + 0.3))} testId="pcb-tool-zoom-in" />
         <ToolButton icon={ZoomOut} label="Zoom out" onClick={() => setZoom(z => Math.max(0.3, z - 0.3))} testId="pcb-tool-zoom-out" />
         <ToolButton icon={RotateCcw} label="Reset view" onClick={() => { setZoom(1.5); setPanOffset({ x: 40, y: 40 }); }} testId="pcb-tool-reset" />

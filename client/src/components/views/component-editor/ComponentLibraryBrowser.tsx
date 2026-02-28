@@ -87,6 +87,7 @@ export default function ComponentLibraryBrowser({ open, onClose, projectId, onFo
               data-testid="button-clear-search"
               onClick={() => setSearchInput('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              aria-label="Clear search"
             >
               <X className="w-4 h-4" />
             </button>
