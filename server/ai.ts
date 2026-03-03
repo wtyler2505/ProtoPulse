@@ -115,6 +115,12 @@ export type RoutingStrategy = 'user' | 'auto' | 'quality' | 'speed' | 'cost';
 
 type ModelTier = 'fast' | 'standard' | 'premium';
 
+/** Design phase derived from the user's active view in the workspace. */
+export type DesignPhase = 'architecture' | 'schematic' | 'pcb' | 'validation' | 'export' | 'exploration';
+
+/** Task complexity inferred from message content and project state. */
+export type TaskComplexity = 'simple' | 'moderate' | 'complex';
+
 const MODEL_TIERS: Record<string, { fast: string; standard: string; premium: string }> = {
   anthropic: {
     fast: 'claude-haiku-4-5-20250514',
@@ -128,14 +134,131 @@ const MODEL_TIERS: Record<string, { fast: string; standard: string; premium: str
   },
 };
 
+/**
+ * Phase-complexity routing matrix. Determines the model tier for a given
+ * combination of design phase and task complexity under the 'auto' strategy.
+ *
+ * Rationale:
+ * - Architecture/schematic: simple queries (navigation) stay fast; complex
+ *   generation (multi-block architectures, full schematics) needs premium.
+ * - PCB: even simple queries use standard because PCB layout context is dense.
+ * - Validation: mostly rule-based — standard is sufficient even for complex runs.
+ * - Export: lightweight generation; only complex multi-format exports need standard.
+ * - Exploration: general chat; escalates with complexity.
+ */
+const PHASE_COMPLEXITY_MATRIX: Record<DesignPhase, Record<TaskComplexity, ModelTier>> = {
+  architecture: { simple: 'fast', moderate: 'standard', complex: 'premium' },
+  schematic:    { simple: 'fast', moderate: 'standard', complex: 'premium' },
+  pcb:          { simple: 'standard', moderate: 'standard', complex: 'premium' },
+  validation:   { simple: 'fast', moderate: 'standard', complex: 'standard' },
+  export:       { simple: 'fast', moderate: 'fast', complex: 'standard' },
+  exploration:  { simple: 'fast', moderate: 'standard', complex: 'standard' },
+};
+
+/** Maps from the activeView string in AppState to a canonical design phase. */
+const VIEW_TO_PHASE: Record<string, DesignPhase> = {
+  architecture: 'architecture',
+  schematic: 'schematic',
+  breadboard: 'schematic',
+  pcb: 'pcb',
+  validation: 'validation',
+  output: 'export',
+  exports: 'export',
+};
+
+/**
+ * Detect the current design phase from the user's active workspace view.
+ * Falls back to 'exploration' for views without a specific phase mapping
+ * (dashboard, component_editor, procurement, simulation, lifecycle, etc.).
+ */
+export function detectDesignPhase(appState: Pick<AppState, 'activeView'>): DesignPhase {
+  return VIEW_TO_PHASE[appState.activeView] ?? 'exploration';
+}
+
+/** Patterns that indicate a simple, navigational query. */
+const SIMPLE_PATTERNS = /^(show\s+me|go\s+to|what\s+is|where\s+is|list|open|switch\s+to|navigate)\b/i;
+
+/** Patterns that indicate a complex, multi-step or generative request. */
+const COMPLEX_PATTERNS =
+  /\b(design\s+a|generate|create\s+a\s+full|analyze|review|architect|build\s+a|implement|compare\s+and|refactor|optimize\s+the)\b/i;
+
+/**
+ * Infer the complexity of a user's request from message content and project state.
+ *
+ * Heuristics:
+ * - **simple**: Short message (<100 chars) OR matches navigation-like patterns with
+ *   no multi-step indicators.
+ * - **complex**: Long message (>500 chars), matches generative/analytical patterns,
+ *   or references multiple component names found in the current BOM/node list.
+ * - **moderate**: Everything in between.
+ */
+export function detectTaskComplexity(message: string, appState: Pick<AppState, 'nodes' | 'bom'>): TaskComplexity {
+  const trimmed = message.trim();
+  const len = trimmed.length;
+
+  // Short navigational messages are simple
+  if (len < 100 && SIMPLE_PATTERNS.test(trimmed)) {
+    return 'simple';
+  }
+
+  // Long messages are at least moderate; check for complex indicators
+  if (len > 500) {
+    return COMPLEX_PATTERNS.test(trimmed) ? 'complex' : 'moderate';
+  }
+
+  // Check for complex patterns regardless of length
+  if (COMPLEX_PATTERNS.test(trimmed)) {
+    return 'complex';
+  }
+
+  // Check if the message references multiple existing components (cross-referencing
+  // indicates a more involved request that benefits from a stronger model)
+  const componentNames = [
+    ...appState.nodes.map((n) => n.label.toLowerCase()),
+    ...appState.bom.map((b) => b.partNumber.toLowerCase()),
+  ];
+  if (componentNames.length > 0) {
+    const lowerMessage = trimmed.toLowerCase();
+    const matchCount = componentNames.filter((name) => name.length > 2 && lowerMessage.includes(name)).length;
+    if (matchCount >= 3) {
+      return 'complex';
+    }
+    if (matchCount >= 2) {
+      return 'moderate';
+    }
+  }
+
+  // Short messages without strong signals are simple
+  if (len < 100) {
+    return 'simple';
+  }
+
+  return 'moderate';
+}
+
+/**
+ * Select an AI model based on routing strategy, provider capabilities, and
+ * optionally the user's design phase and task complexity.
+ *
+ * Strategies:
+ * - **user**: Always returns the user-selected model.
+ * - **quality**: Always selects the premium tier.
+ * - **speed**: Always selects the fast tier.
+ * - **cost**: Always selects the fast tier.
+ * - **auto**: Uses design-phase and task-complexity awareness when appState is
+ *   provided; falls back to message-length heuristics otherwise. Images always
+ *   route to standard+ tier for vision capability.
+ */
 export function routeToModel(params: {
   strategy: RoutingStrategy;
   provider: 'anthropic' | 'gemini';
   userModel: string;
   messageLength: number;
   hasImage: boolean;
+  appState?: Pick<AppState, 'activeView' | 'nodes' | 'bom'>;
+  message?: string;
 }): { model: string; reason: string } {
-  const { strategy, provider, userModel, messageLength, hasImage } = params;
+  const { strategy, provider, userModel, messageLength, hasImage, appState, message } = params;
 
   if (strategy === 'user') {
     return { model: userModel, reason: 'User-selected model' };
@@ -157,16 +280,72 @@ export function routeToModel(params: {
   }
 
   // strategy === 'auto'
+  // Images always require at least standard tier for vision capability
   if (hasImage) {
+    // If we have phase info, upgrade to premium for complex image analysis
+    if (appState && message) {
+      const phase = detectDesignPhase(appState);
+      const complexity = detectTaskComplexity(message, appState);
+      const matrixTier = PHASE_COMPLEXITY_MATRIX[phase][complexity];
+      const tier = matrixTier === 'fast' ? 'standard' : matrixTier;
+      const selectedModel = tiers[tier];
+      logger.info('AI model routing', {
+        phase,
+        complexity,
+        strategy,
+        selectedModel,
+        reason: `Auto (phase-aware): image + ${phase}/${complexity} → ${tier}`,
+      });
+      return { model: selectedModel, reason: `Auto (phase-aware): image + ${phase}/${complexity} → ${tier}` };
+    }
     return { model: tiers.standard, reason: 'Auto: image attached, using standard (vision-capable)' };
   }
+
+  // Phase-aware routing when appState is available
+  if (appState && message) {
+    const phase = detectDesignPhase(appState);
+    const complexity = detectTaskComplexity(message, appState);
+    const tier = PHASE_COMPLEXITY_MATRIX[phase][complexity];
+    const selectedModel = tiers[tier];
+    logger.info('AI model routing', {
+      phase,
+      complexity,
+      strategy,
+      selectedModel,
+      reason: `Auto (phase-aware): ${phase}/${complexity} → ${tier}`,
+    });
+    return { model: selectedModel, reason: `Auto (phase-aware): ${phase}/${complexity} → ${tier}` };
+  }
+
+  // Fallback: message-length heuristics when appState is not provided
   if (messageLength < 200) {
-    return { model: tiers.fast, reason: 'Auto: short message, using fast tier' };
+    logger.info('AI model routing', {
+      phase: 'unknown',
+      complexity: 'unknown',
+      strategy,
+      selectedModel: tiers.fast,
+      reason: 'Auto (fallback): short message, using fast tier',
+    });
+    return { model: tiers.fast, reason: 'Auto (fallback): short message, using fast tier' };
   }
   if (messageLength > 2000) {
-    return { model: tiers.premium, reason: 'Auto: long/complex message, using premium tier' };
+    logger.info('AI model routing', {
+      phase: 'unknown',
+      complexity: 'unknown',
+      strategy,
+      selectedModel: tiers.premium,
+      reason: 'Auto (fallback): long/complex message, using premium tier',
+    });
+    return { model: tiers.premium, reason: 'Auto (fallback): long/complex message, using premium tier' };
   }
-  return { model: tiers.standard, reason: 'Auto: standard complexity' };
+  logger.info('AI model routing', {
+    phase: 'unknown',
+    complexity: 'unknown',
+    strategy,
+    selectedModel: tiers.standard,
+    reason: 'Auto (fallback): standard complexity',
+  });
+  return { model: tiers.standard, reason: 'Auto (fallback): standard complexity' };
 }
 
 // ---------------------------------------------------------------------------

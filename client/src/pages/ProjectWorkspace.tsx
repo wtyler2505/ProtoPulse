@@ -16,12 +16,17 @@ const SchematicView = lazy(() => import('@/components/views/SchematicView'));
 const BreadboardView = lazy(() => import('@/components/circuit-editor/BreadboardView'));
 const PCBLayoutView = lazy(() => import('@/components/circuit-editor/PCBLayoutView'));
 const SimulationView = lazy(() => import('@/components/simulation/SimulationPanel'));
+const DesignHistoryView = lazy(() => import('@/components/views/DesignHistoryView'));
+const LifecycleDashboard = lazy(() => import('@/components/views/LifecycleDashboard'));
 const WorkflowBreadcrumb = lazy(() => import('@/components/layout/WorkflowBreadcrumb'));
 const KeyboardShortcutsModal = lazy(() => import('@/components/ui/keyboard-shortcuts-modal'));
 const CommandPalette = lazy(() => import('@/components/ui/command-palette'));
+const TutorialOverlay = lazy(() => import('@/components/ui/TutorialOverlay'));
+const TutorialMenu = lazy(() => import('@/components/ui/TutorialMenu'));
+const CommentsPanel = lazy(() => import('@/components/panels/CommentsPanel').then(m => ({ default: m.CommentsPanel })));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,6 +35,8 @@ import { useValidation } from '@/lib/contexts/validation-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { DndProvider } from '@/lib/dnd-context';
+import { TutorialProvider } from '@/lib/tutorial-context';
+import { useProjectId } from '@/lib/contexts/project-id-context';
 
 const tabDescriptions: Record<string, string> = {
   dashboard: 'Project overview and summary stats',
@@ -41,6 +48,9 @@ const tabDescriptions: Record<string, string> = {
   pcb: 'PCB footprint placement and trace routing',
   procurement: 'Manage bill of materials and sourcing',
   validation: 'Run design rule checks',
+  design_history: 'Architecture snapshot history and visual diff',
+  lifecycle: 'Component lifecycle tracking and supply chain risk',
+  comments: 'Design review comments and discussions',
 };
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
@@ -229,6 +239,7 @@ const initialWorkspaceState: WorkspaceState = {
 };
 
 function WorkspaceContent() {
+  const projectId = useProjectId();
   const { activeView, setActiveView, projectName } = useProjectMeta();
   const { runValidation, issues } = useValidation();
   const { nodes } = useArchitecture();
@@ -301,6 +312,9 @@ function WorkspaceContent() {
     { id: 'component_editor', label: 'Component Editor', icon: Cpu },
     { id: 'procurement', label: 'Procurement', icon: Package },
     { id: 'validation', label: 'Validation', icon: Activity },
+    { id: 'lifecycle', label: 'Lifecycle', icon: HeartPulse },
+    { id: 'design_history', label: 'History', icon: History },
+    { id: 'comments', label: 'Comments', icon: MessageSquare },
     { id: 'output', label: 'Exports', icon: TerminalSquare },
   ], []);
 
@@ -462,7 +476,24 @@ function WorkspaceContent() {
               </button>
             </StyledTooltip>
 
-            <div className="ml-2 flex items-center">
+            <div className="ml-2 flex items-center gap-1">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <StyledTooltip content="Tutorials" side="bottom">
+                    <button
+                      data-testid="tutorials-button"
+                      className="p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <GraduationCap className="w-4 h-4" />
+                    </button>
+                  </StyledTooltip>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <Suspense fallback={null}>
+                    <TutorialMenu />
+                  </Suspense>
+                </PopoverContent>
+              </Popover>
               <ThemeToggle />
             </div>
           </header>
@@ -539,6 +570,27 @@ function WorkspaceContent() {
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
                     <SimulationView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'lifecycle' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <LifecycleDashboard />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'design_history' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <DesignHistoryView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'comments' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <CommentsPanel projectId={projectId} />
                   </Suspense>
                 </ErrorBoundary>
               )}
@@ -655,7 +707,12 @@ export default function ProjectWorkspace() {
 
   return (
     <ProjectProvider projectId={rawId}>
-      <WorkspaceContent />
+      <TutorialProvider>
+        <WorkspaceContent />
+        <Suspense fallback={null}>
+          <TutorialOverlay />
+        </Suspense>
+      </TutorialProvider>
     </ProjectProvider>
   );
 }

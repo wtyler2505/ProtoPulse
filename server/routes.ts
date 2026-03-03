@@ -18,6 +18,9 @@ import { registerSpiceModelRoutes } from './routes/spice-models';
 import { registerBomSnapshotRoutes } from './routes/bom-snapshots';
 import { registerDesignPreferenceRoutes } from './routes/design-preferences';
 import { registerComponentLifecycleRoutes } from './routes/component-lifecycle';
+import { registerDesignHistoryRoutes } from './routes/design-history';
+import { registerCommentRoutes } from './routes/comments';
+import { registerBackupRoutes } from './routes/backup';
 
 // Re-export shared utilities for backward compatibility
 // (consumed by circuit-routes.ts, circuit-ai.ts, and tests)
@@ -46,6 +49,9 @@ export async function registerRoutes(app: Express): Promise<void> {
   registerBomSnapshotRoutes(app);
   registerDesignPreferenceRoutes(app);
   registerComponentLifecycleRoutes(app);
+  registerDesignHistoryRoutes(app);
+  registerCommentRoutes(app);
+  registerBackupRoutes(app);
 
   // --- Circuit Schematic Routes ---
   const { registerCircuitRoutes } = await import('./circuit-routes');

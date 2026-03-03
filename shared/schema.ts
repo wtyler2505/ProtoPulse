@@ -7,12 +7,15 @@ export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   description: text("description").default(""),
+  ownerId: integer("owner_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
-});
+}, (table) => [
+  index("idx_projects_owner").on(table.ownerId),
+]);
 
-export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, createdAt: true, updatedAt: true, deletedAt: true });
+export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true, deletedAt: true });
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 
@@ -502,3 +505,53 @@ export const componentLifecycle = pgTable('component_lifecycle', {
 export const insertComponentLifecycleSchema = createInsertSchema(componentLifecycle).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertComponentLifecycle = z.infer<typeof insertComponentLifecycleSchema>;
 export type ComponentLifecycle = typeof componentLifecycle.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Design Snapshots (IN-07) — point-in-time architecture captures for visual diff
+// ---------------------------------------------------------------------------
+
+export const designSnapshots = pgTable('design_snapshots', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  nodesJson: jsonb('nodes_json').notNull(),
+  edgesJson: jsonb('edges_json').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_design_snapshots_project').on(table.projectId),
+]);
+
+export const insertDesignSnapshotSchema = createInsertSchema(designSnapshots).omit({ id: true, createdAt: true });
+export type InsertDesignSnapshot = z.infer<typeof insertDesignSnapshotSchema>;
+export type DesignSnapshot = typeof designSnapshots.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Design Comments / Review (FG-12) — threaded comments on design elements
+// ---------------------------------------------------------------------------
+
+export const designComments = pgTable('design_comments', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').references(() => users.id),
+  parentId: integer('parent_id'),
+  targetType: text('target_type').notNull().default('general'),
+  targetId: text('target_id'),
+  content: text('content').notNull(),
+  resolved: boolean('resolved').notNull().default(false),
+  resolvedBy: integer('resolved_by').references(() => users.id),
+  resolvedAt: timestamp('resolved_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_design_comments_project').on(table.projectId),
+  index('idx_design_comments_project_target').on(table.projectId, table.targetType, table.targetId),
+  index('idx_design_comments_parent').on(table.parentId),
+]);
+
+export const insertDesignCommentSchema = createInsertSchema(designComments).omit({ id: true, resolved: true, resolvedBy: true, resolvedAt: true, createdAt: true, updatedAt: true }).extend({
+  targetType: z.enum(['node', 'edge', 'bom_item', 'general']).default('general'),
+  content: z.string().min(1).max(5000),
+});
+export type InsertDesignComment = z.infer<typeof insertDesignCommentSchema>;
+export type DesignComment = typeof designComments.$inferSelect;

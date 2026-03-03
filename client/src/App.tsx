@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ProtoPulseThemeProvider, THEME_PRESETS } from "@/lib/theme-context";
 import { Loader2 } from "lucide-react";
 import ProjectWorkspace from "@/pages/ProjectWorkspace";
 import AuthPage from "@/pages/AuthPage";
@@ -15,6 +16,23 @@ import NotFound from "@/pages/not-found";
 try {
   if (localStorage.getItem('protopulse-high-contrast') === 'true') {
     document.documentElement.classList.add('high-contrast');
+  }
+} catch {
+  // localStorage unavailable — skip
+}
+
+// Apply saved color theme eagerly to prevent flash of default colors.
+// The ProtoPulseThemeProvider keeps it in sync after React mounts.
+try {
+  const savedTheme = localStorage.getItem('protopulse-theme');
+  if (savedTheme && savedTheme !== 'neon-cyan') {
+    const preset = THEME_PRESETS.find((t) => t.id === savedTheme);
+    if (preset) {
+      const root = document.documentElement;
+      for (const [varName, value] of Object.entries(preset.colors)) {
+        root.style.setProperty(varName, value);
+      }
+    }
   }
 } catch {
   // localStorage unavailable — skip
@@ -51,16 +69,18 @@ function Router() {
 function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <AuthProvider>
-            <AuthGate>
-              <Router />
-            </AuthGate>
-          </AuthProvider>
-          <Toaster />
-        </TooltipProvider>
-      </QueryClientProvider>
+      <ProtoPulseThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <AuthProvider>
+              <AuthGate>
+                <Router />
+              </AuthGate>
+            </AuthProvider>
+            <Toaster />
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ProtoPulseThemeProvider>
     </ThemeProvider>
   );
 }

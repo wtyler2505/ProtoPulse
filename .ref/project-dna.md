@@ -21,15 +21,15 @@
 
 ## Architecture in 30 Seconds
 
-Browser-based EDA (Electronic Design Automation) tool for architecture block diagrams, circuit schematic editing, BOM management, design validation (DRC/ERC), and AI-assisted design. Monolithic Express server serves both the API and the Vite-built SPA. AI chat supports 79 AI tools that directly manipulate project state (add nodes, generate architectures, manage BOM, run DRC, circuit operations, exports). Multi-format export: KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF. All state flows through a single `ProjectProvider` React context backed by React Query mutations.
+Browser-based EDA (Electronic Design Automation) tool for architecture block diagrams, circuit schematic editing, BOM management, design validation (DRC/ERC), and AI-assisted design. Monolithic Express server serves both the API and the Vite-built SPA. AI chat supports 82 AI tools that directly manipulate project state (add nodes, generate architectures, manage BOM, run DRC, circuit operations, exports). Multi-format export: KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF. All state flows through a single `ProjectProvider` React context backed by React Query mutations.
 
 ## Entry Points
 
 | Concern | Start Here |
 | ------- | ---------- |
 | App bootstrap | `server/index.ts` → `client/src/main.tsx` |
-| Database schema | `shared/schema.ts` (24 tables) |
-| Main API routes | `server/routes.ts` (barrel → 18 domain routers in `server/routes/`) |
+| Database schema | `shared/schema.ts` (27 tables) |
+| Main API routes | `server/routes.ts` (barrel → 21 domain routers in `server/routes/`) |
 | Circuit API routes | `server/circuit-routes.ts` (barrel → 13 circuit routers in `server/circuit-routes/`) |
 | AI system (prompts, actions, streaming) | `server/ai.ts` |
 | Client state & mutations | `client/src/lib/project-context.tsx` |
@@ -42,17 +42,18 @@ Browser-based EDA (Electronic Design Automation) tool for architecture block dia
 | Generators | `server/export/` (Gerber, drill, pick-and-place, netlist generators) |
 | AI tools | `server/ai-tools.ts` (barrel → 11 tool modules in `server/ai-tools/`) |
 | BOM comparison | `shared/bom-diff.ts` |
+| Architecture diff | `shared/arch-diff.ts` |
 | Netlist comparison | `shared/netlist-diff.ts` |
 
 ## Onboarding Path (read in this order)
 
-1. `shared/schema.ts` — 24 Drizzle tables + Zod insert schemas; defines every data shape
+1. `shared/schema.ts` — 27 Drizzle tables + Zod insert schemas; defines every data shape
 2. `shared/component-types.ts` — component editor type system (shapes, connectors, DRC rules)
 3. `shared/drc-engine.ts` — design rule checking engine (shared between server + client)
 4. `server/storage.ts` — `IStorage` interface + `DatabaseStorage` with LRU cache
 5. `server/routes.ts` — main REST endpoints; maps URLs to storage + AI calls
 6. `server/circuit-routes.ts` — circuit schematic API endpoints
-7. `server/ai.ts` — AI prompt construction, 79 AI tools, streaming SSE responses, multi-model routing
+7. `server/ai.ts` — AI prompt construction, 82 AI tools, streaming SSE responses, multi-model routing
 8. `client/src/lib/project-context.tsx` — monolithic context with 40+ state values + mutations
 9. `client/src/pages/ProjectWorkspace.tsx` — 3-panel layout wiring everything together
 

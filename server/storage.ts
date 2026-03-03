@@ -24,6 +24,8 @@ import {
   designPreferences, type DesignPreference, type InsertDesignPreference,
   bomSnapshots, type BomSnapshot, type InsertBomSnapshot,
   componentLifecycle, type ComponentLifecycle, type InsertComponentLifecycle,
+  designSnapshots, type DesignSnapshot, type InsertDesignSnapshot,
+  designComments, type DesignComment, type InsertDesignComment,
 } from "@shared/schema";
 
 export interface PaginationOptions {
@@ -68,7 +70,9 @@ export class StorageError extends Error {
 export interface IStorage {
   getProjects(opts?: PaginationOptions): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
-  createProject(project: InsertProject): Promise<Project>;
+  getProjectsByOwner(userId: number): Promise<Project[]>;
+  isProjectOwner(projectId: number, userId: number): Promise<boolean>;
+  createProject(project: InsertProject, ownerId?: number): Promise<Project>;
   updateProject(id: number, data: Partial<InsertProject>): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
 
@@ -199,6 +203,21 @@ export interface IStorage {
   getComponentLifecycle(id: number): Promise<ComponentLifecycle | undefined>;
   upsertComponentLifecycle(data: InsertComponentLifecycle): Promise<ComponentLifecycle>;
   deleteComponentLifecycle(id: number): Promise<boolean>;
+
+  // Design snapshots / version history (IN-07)
+  getDesignSnapshots(projectId: number): Promise<DesignSnapshot[]>;
+  getDesignSnapshot(id: number): Promise<DesignSnapshot | undefined>;
+  createDesignSnapshot(data: InsertDesignSnapshot): Promise<DesignSnapshot>;
+  deleteDesignSnapshot(id: number): Promise<boolean>;
+
+  // Design comments / review (FG-12)
+  getComments(projectId: number, filters?: { targetType?: string; targetId?: string; resolved?: boolean }): Promise<DesignComment[]>;
+  getComment(id: number): Promise<DesignComment | undefined>;
+  createComment(data: InsertDesignComment): Promise<DesignComment>;
+  updateComment(id: number, data: { content?: string }): Promise<DesignComment | undefined>;
+  resolveComment(id: number, resolvedBy?: number): Promise<DesignComment | undefined>;
+  unresolveComment(id: number): Promise<DesignComment | undefined>;
+  deleteComment(id: number): Promise<boolean>;
 }
 
 function computeTotalPrice(quantity: number, unitPrice: string | number): string {
@@ -249,9 +268,33 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async createProject(project: InsertProject): Promise<Project> {
+  async getProjectsByOwner(userId: number): Promise<Project[]> {
     try {
-      const [created] = await db.insert(projects).values(project).returning();
+      return await db.select().from(projects)
+        .where(and(eq(projects.ownerId, userId), isNull(projects.deletedAt)))
+        .orderBy(desc(projects.id));
+    } catch (e) {
+      throw new StorageError('getProjectsByOwner', `users/${userId}/projects`, e);
+    }
+  }
+
+  async isProjectOwner(projectId: number, userId: number): Promise<boolean> {
+    try {
+      const [project] = await db.select({ ownerId: projects.ownerId })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)));
+      if (!project) { return false; }
+      // Projects with no owner are accessible to anyone (backward compat)
+      if (project.ownerId === null) { return true; }
+      return project.ownerId === userId;
+    } catch (e) {
+      throw new StorageError('isProjectOwner', `projects/${projectId}`, e);
+    }
+  }
+
+  async createProject(project: InsertProject, ownerId?: number): Promise<Project> {
+    try {
+      const [created] = await db.insert(projects).values({ ...project, ownerId: ownerId ?? null }).returning();
       return created;
     } catch (e) {
       throw new StorageError('createProject', 'projects', e);
@@ -453,16 +496,19 @@ export class DatabaseStorage implements IStorage {
       delete safeData.projectId;
 
       if (safeData.quantity !== undefined || safeData.unitPrice !== undefined) {
-        const [existing] = await db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)));
-        if (!existing) return undefined;
-        const quantity = safeData.quantity ?? existing.quantity;
-        const unitPrice = safeData.unitPrice ?? existing.unitPrice;
-        const totalPrice = computeTotalPrice(quantity, unitPrice);
-        const [updated] = await db.update(bomItems)
-          .set({ ...safeData, totalPrice, updatedAt: new Date() })
-          .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
-          .returning();
-        if (updated) cache.invalidate(`bom:${projectId}`);
+        const updated = await db.transaction(async (tx) => {
+          const [existing] = await tx.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)));
+          if (!existing) { return undefined; }
+          const quantity = safeData.quantity ?? existing.quantity;
+          const unitPrice = safeData.unitPrice ?? existing.unitPrice;
+          const totalPrice = computeTotalPrice(quantity, unitPrice);
+          const [result] = await tx.update(bomItems)
+            .set({ ...safeData, totalPrice, updatedAt: new Date() })
+            .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
+            .returning();
+          return result;
+        });
+        if (updated) { cache.invalidate(`bom:${projectId}`); }
         return updated;
       }
 
@@ -470,7 +516,7 @@ export class DatabaseStorage implements IStorage {
         .set({ ...safeData, updatedAt: new Date() })
         .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
         .returning();
-      if (updated) cache.invalidate(`bom:${projectId}`);
+      if (updated) { cache.invalidate(`bom:${projectId}`); }
       return updated;
     } catch (e) {
       throw new StorageError('updateBomItem', `bom/${id}`, e);
@@ -837,14 +883,17 @@ export class DatabaseStorage implements IStorage {
     try {
       const safeData = { ...data };
       delete safeData.projectId;
-      const [existing] = await db.select().from(componentParts)
-        .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)));
-      if (!existing) return undefined;
-      const [updated] = await db.update(componentParts)
-        .set({ ...safeData, version: existing.version + 1, updatedAt: new Date() })
-        .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)))
-        .returning();
-      if (updated) cache.invalidate(`parts:${projectId}`);
+      const updated = await db.transaction(async (tx) => {
+        const [existing] = await tx.select().from(componentParts)
+          .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)));
+        if (!existing) { return undefined; }
+        const [result] = await tx.update(componentParts)
+          .set({ ...safeData, version: existing.version + 1, updatedAt: new Date() })
+          .where(and(eq(componentParts.id, id), eq(componentParts.projectId, projectId)))
+          .returning();
+        return result;
+      });
+      if (updated) { cache.invalidate(`parts:${projectId}`); }
       return updated;
     } catch (e) {
       throw new StorageError('updateComponentPart', `component-parts/${id}`, e);
@@ -1591,6 +1640,158 @@ export class DatabaseStorage implements IStorage {
       return result.length > 0;
     } catch (e) {
       throw new StorageError('deleteComponentLifecycle', `component-lifecycle/${id}`, e);
+    }
+  }
+
+  // =========================================================================
+  // Design Snapshots / Version History (IN-07)
+  // =========================================================================
+
+  async getDesignSnapshots(projectId: number): Promise<DesignSnapshot[]> {
+    try {
+      return await db.select().from(designSnapshots)
+        .where(eq(designSnapshots.projectId, projectId))
+        .orderBy(desc(designSnapshots.createdAt));
+    } catch (e) {
+      throw new StorageError('getDesignSnapshots', `projects/${projectId}/snapshots`, e);
+    }
+  }
+
+  async getDesignSnapshot(id: number): Promise<DesignSnapshot | undefined> {
+    try {
+      const [snapshot] = await db.select().from(designSnapshots)
+        .where(eq(designSnapshots.id, id));
+      return snapshot;
+    } catch (e) {
+      throw new StorageError('getDesignSnapshot', `design-snapshots/${id}`, e);
+    }
+  }
+
+  async createDesignSnapshot(data: InsertDesignSnapshot): Promise<DesignSnapshot> {
+    try {
+      const [snapshot] = await db.insert(designSnapshots)
+        .values(data)
+        .returning();
+      return snapshot;
+    } catch (e) {
+      throw new StorageError('createDesignSnapshot', `projects/${data.projectId}/snapshots`, e);
+    }
+  }
+
+  async deleteDesignSnapshot(id: number): Promise<boolean> {
+    try {
+      const [deleted] = await db.delete(designSnapshots)
+        .where(eq(designSnapshots.id, id))
+        .returning();
+      return !!deleted;
+    } catch (e) {
+      throw new StorageError('deleteDesignSnapshot', `design-snapshots/${id}`, e);
+    }
+  }
+
+  // =========================================================================
+  // Design Comments / Review (FG-12)
+  // =========================================================================
+
+  async getComments(projectId: number, filters?: { targetType?: string; targetId?: string; resolved?: boolean }): Promise<DesignComment[]> {
+    try {
+      const conditions = [eq(designComments.projectId, projectId)];
+
+      if (filters?.targetType) {
+        conditions.push(eq(designComments.targetType, filters.targetType));
+      }
+      if (filters?.targetId) {
+        conditions.push(eq(designComments.targetId, filters.targetId));
+      }
+      if (filters?.resolved !== undefined) {
+        conditions.push(eq(designComments.resolved, filters.resolved));
+      }
+
+      return await db.select()
+        .from(designComments)
+        .where(and(...conditions))
+        .orderBy(asc(designComments.createdAt));
+    } catch (e) {
+      throw new StorageError('getComments', `projects/${projectId}/comments`, e);
+    }
+  }
+
+  async getComment(id: number): Promise<DesignComment | undefined> {
+    try {
+      const [comment] = await db.select()
+        .from(designComments)
+        .where(eq(designComments.id, id));
+      return comment;
+    } catch (e) {
+      throw new StorageError('getComment', `comments/${id}`, e);
+    }
+  }
+
+  async createComment(data: InsertDesignComment): Promise<DesignComment> {
+    try {
+      const [created] = await db.insert(designComments)
+        .values(data)
+        .returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createComment', `projects/${data.projectId}/comments`, e);
+    }
+  }
+
+  async updateComment(id: number, data: { content?: string }): Promise<DesignComment | undefined> {
+    try {
+      const [updated] = await db.update(designComments)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(designComments.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateComment', `comments/${id}`, e);
+    }
+  }
+
+  async resolveComment(id: number, resolvedBy?: number): Promise<DesignComment | undefined> {
+    try {
+      const [resolved] = await db.update(designComments)
+        .set({
+          resolved: true,
+          resolvedBy: resolvedBy ?? null,
+          resolvedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(designComments.id, id))
+        .returning();
+      return resolved;
+    } catch (e) {
+      throw new StorageError('resolveComment', `comments/${id}`, e);
+    }
+  }
+
+  async unresolveComment(id: number): Promise<DesignComment | undefined> {
+    try {
+      const [unresolved] = await db.update(designComments)
+        .set({
+          resolved: false,
+          resolvedBy: null,
+          resolvedAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(designComments.id, id))
+        .returning();
+      return unresolved;
+    } catch (e) {
+      throw new StorageError('unresolveComment', `comments/${id}`, e);
+    }
+  }
+
+  async deleteComment(id: number): Promise<boolean> {
+    try {
+      const [deleted] = await db.delete(designComments)
+        .where(eq(designComments.id, id))
+        .returning();
+      return !!deleted;
+    } catch (e) {
+      throw new StorageError('deleteComment', `comments/${id}`, e);
     }
   }
 }

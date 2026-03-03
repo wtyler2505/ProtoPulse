@@ -1,8 +1,10 @@
 import type { Express } from 'express';
 import { fromZodError } from 'zod-validation-error';
+import { validateSession } from '../auth';
 import { storage } from '../storage';
 import { insertProjectSchema } from '@shared/schema';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 export function registerProjectRoutes(app: Express): void {
   app.get(
@@ -34,13 +36,25 @@ export function registerProjectRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
-      const project = await storage.createProject(parsed.data);
+
+      // Assign ownership from session if authenticated
+      let ownerId: number | undefined;
+      const sessionId = req.headers['x-session-id'] as string | undefined;
+      if (sessionId) {
+        const session = await validateSession(sessionId);
+        if (session) {
+          ownerId = session.userId;
+        }
+      }
+
+      const project = await storage.createProject(parsed.data, ownerId);
       res.status(201).json(project);
     }),
   );
 
   app.patch(
     '/api/projects/:id',
+    requireProjectOwnership,
     payloadLimit(32 * 1024),
     asyncHandler(async (req, res) => {
       const id = parseIdParam(req.params.id);
@@ -61,6 +75,7 @@ export function registerProjectRoutes(app: Express): void {
 
   app.delete(
     '/api/projects/:id',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const id = parseIdParam(req.params.id);
       const deleted = await storage.deleteProject(id);

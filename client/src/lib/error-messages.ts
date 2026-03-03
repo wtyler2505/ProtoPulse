@@ -16,6 +16,14 @@ export interface UserFacingError {
   description: string;
   /** Whether the user can meaningfully retry the same action. */
   retryable: boolean;
+  /** Server-assigned request ID (from X-Request-Id header) for support/debugging. */
+  requestId?: string;
+}
+
+/** Options accepted by error mapping functions. */
+export interface ErrorMapOptions {
+  /** Server-assigned request ID (from X-Request-Id response header). */
+  requestId?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -172,6 +180,18 @@ const ABORT_ERROR: UserFacingError = {
 // ---------------------------------------------------------------------------
 
 /**
+ * Extract the X-Request-Id header from a fetch Response.
+ * Returns `undefined` when the header is absent or the response is unavailable.
+ */
+export function extractRequestId(response: Response | null | undefined): string | undefined {
+  if (!response) {
+    return undefined;
+  }
+  const id = response.headers.get('X-Request-Id');
+  return id ?? undefined;
+}
+
+/**
  * Extract an HTTP status code from an Error message produced by `throwIfResNotOk`
  * in queryClient.ts.  These messages follow the format "NNN: <body>".
  */
@@ -181,43 +201,73 @@ function extractStatusCode(message: string): number | null {
 }
 
 /**
+ * Append a request-ID reference line to a description string when a request ID
+ * is available. Enables users to quote the ID in support/bug reports.
+ */
+function appendRequestId(description: string, requestId: string | undefined): string {
+  if (!requestId) {
+    return description;
+  }
+  return `${description} (Request ID: ${requestId})`;
+}
+
+/**
  * Map an Error (from fetch, React Query, or SSE streaming) to a UserFacingError
  * with an actionable title + description.
+ *
+ * @param error - The caught error (usually an Error instance).
+ * @param options - Optional context such as a server-assigned request ID.
  */
-export function mapErrorToUserMessage(error: unknown): UserFacingError {
+export function mapErrorToUserMessage(error: unknown, options?: ErrorMapOptions): UserFacingError {
+  const requestId = options?.requestId;
+
   if (!(error instanceof Error)) {
     return {
       title: 'Unknown error',
-      description: String(error) || 'An unexpected error occurred.',
+      description: appendRequestId(String(error) || 'An unexpected error occurred.', requestId),
       retryable: true,
+      requestId,
     };
   }
 
-  // Abort / cancellation
+  // Abort / cancellation — no request ID (request never reached the server)
   if (error.name === 'AbortError') {
     return ABORT_ERROR;
   }
 
-  // Network failures (TypeError from fetch)
+  // Network failures (TypeError from fetch) — no request ID
   if (error instanceof TypeError && /fetch|network|failed to fetch|load/i.test(error.message)) {
     return NETWORK_ERROR;
   }
 
   // Timeout patterns
   if (/timed?\s*out|timeout/i.test(error.message)) {
-    return TIMEOUT_ERROR;
+    return {
+      ...TIMEOUT_ERROR,
+      description: appendRequestId(TIMEOUT_ERROR.description, requestId),
+      requestId,
+    };
   }
 
   // HTTP status from our queryClient error format "NNN: body"
   const status = extractStatusCode(error.message);
   if (status !== null && HTTP_STATUS_MAP[status]) {
-    return HTTP_STATUS_MAP[status];
+    const mapped = HTTP_STATUS_MAP[status];
+    return {
+      ...mapped,
+      description: appendRequestId(mapped.description, requestId),
+      requestId,
+    };
   }
 
   // AI-specific error patterns (check the full message)
   for (const pattern of AI_ERROR_PATTERNS) {
     if (pattern.test(error.message)) {
-      return pattern.error;
+      return {
+        ...pattern.error,
+        description: appendRequestId(pattern.error.description, requestId),
+        requestId,
+      };
     }
   }
 
@@ -229,8 +279,9 @@ export function mapErrorToUserMessage(error: unknown): UserFacingError {
   // Fallback: return the raw message wrapped in a generic shape
   return {
     title: 'Something went wrong',
-    description: error.message || 'An unexpected error occurred. Please try again.',
+    description: appendRequestId(error.message || 'An unexpected error occurred. Please try again.', requestId),
     retryable: true,
+    requestId,
   };
 }
 
@@ -238,8 +289,15 @@ export function mapErrorToUserMessage(error: unknown): UserFacingError {
  * Map an SSE streaming error event (the data payload from a `type: "error"` SSE
  * message) to a UserFacingError.  Streaming errors arrive as plain strings or
  * objects with a `message` field.
+ *
+ * @param errorData - The raw SSE error payload.
+ * @param options - Optional context such as a server-assigned request ID.
  */
-export function mapStreamErrorToUserMessage(errorData: string | { message?: string; code?: string }): UserFacingError {
+export function mapStreamErrorToUserMessage(
+  errorData: string | { message?: string; code?: string },
+  options?: ErrorMapOptions,
+): UserFacingError {
+  const requestId = options?.requestId;
   const message = typeof errorData === 'string'
     ? errorData
     : errorData.message ?? 'Stream failed';
@@ -251,9 +309,14 @@ export function mapStreamErrorToUserMessage(errorData: string | { message?: stri
   if (typeof errorData === 'object' && errorData.code) {
     const code = Number(errorData.code);
     if (!Number.isNaN(code) && HTTP_STATUS_MAP[code]) {
-      return HTTP_STATUS_MAP[code];
+      const mapped = HTTP_STATUS_MAP[code];
+      return {
+        ...mapped,
+        description: appendRequestId(mapped.description, requestId),
+        requestId,
+      };
     }
   }
 
-  return mapErrorToUserMessage(syntheticError);
+  return mapErrorToUserMessage(syntheticError, options);
 }

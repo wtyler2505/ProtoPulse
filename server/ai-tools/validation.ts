@@ -1,16 +1,18 @@
 /**
- * Validation tools — DRC, ERC, power budget, thermal analysis, test plan generation.
+ * Validation tools — DRC, ERC, power budget, thermal analysis, test plan generation, design review.
  *
  * Provides AI tools for design verification and validation: running full DRC,
  * clearing validation issues, adding specific findings, analyzing power budgets,
  * checking voltage domain compatibility, auto-fixing common issues, running DFM
- * checks, performing thermal analysis, and generating comprehensive test plans.
+ * checks, performing thermal analysis, generating comprehensive test plans, and
+ * conducting holistic design reviews across all project dimensions.
  *
  * Tools that mutate validation data server-side (e.g., `add_validation_issue`)
  * execute via `ctx.storage`. Tools that require client-side UI interaction
  * (e.g., `run_validation`, `power_budget_analysis`) are dispatched via
- * {@link clientAction}. The `generate_test_plan` tool gathers full project
- * state server-side and returns structured data for the AI to format.
+ * {@link clientAction}. The `generate_test_plan` and `design_review` tools
+ * gather full project state server-side and return structured data for the AI
+ * to format.
  *
  * @module ai-tools/validation
  */
@@ -23,7 +25,7 @@ import type { ToolResult } from './types';
 /**
  * Register all validation-category tools with the given registry.
  *
- * Tools registered (8 total):
+ * Tools registered (10 total):
  *
  * **Core validation:**
  * - `run_validation`        — Trigger a full DRC on the current project.
@@ -41,6 +43,9 @@ import type { ToolResult } from './types';
  *
  * **Test planning:**
  * - `generate_test_plan`    — Gather project state and return structured data for test plan generation.
+ *
+ * **Design review:**
+ * - `design_review`         — Gather ALL project data and return structured review across 7 categories.
  *
  * @param registry - The {@link ToolRegistry} instance to register tools into.
  */
@@ -286,6 +291,322 @@ export function registerValidationTools(registry: ToolRegistry): void {
             component: i.componentId,
           })),
           circuits: circuitSummaries,
+        },
+      };
+    },
+  });
+
+  /**
+   * design_review — Comprehensive AI-powered design review across all project dimensions.
+   *
+   * Executes server-side: fetches ALL project data in parallel (architecture nodes/edges,
+   * BOM items, component parts, validation issues, circuit designs with instances, nets,
+   * and wires) and returns a structured dataset organized for multi-category review.
+   *
+   * The AI model uses this data to produce findings across seven review categories:
+   *
+   * 1. **Architecture completeness** — Missing connections, isolated nodes, dangling edges.
+   * 2. **BOM quality** — Missing values, duplicate parts, cost optimization opportunities.
+   * 3. **Electrical safety** — Missing protection circuits, power filtering, thermal concerns.
+   * 4. **Signal integrity** — Unterminated traces, impedance mismatches, mixed voltage domains.
+   * 5. **Manufacturing readiness** — Missing reference designators, incomplete BOM fields.
+   * 6. **Best practices** — Naming conventions, organization, documentation gaps.
+   * 7. **Validation summary** — Current DRC/ERC status and open issue breakdown.
+   *
+   * @returns A {@link ToolResult} with `data` containing the full project state organized
+   *          by review category, plus pre-computed metrics (connectivity, BOM completeness,
+   *          voltage domains, signal types) to accelerate the AI's analysis.
+   *
+   * @side-effect Reads from multiple tables but does not write any data.
+   */
+  registry.register({
+    name: 'design_review',
+    description:
+      'Perform a comprehensive design review across all project dimensions. ' +
+      'Gathers ALL project data (architecture, BOM, components, circuits, validation issues) ' +
+      'and returns structured data organized for multi-category review. ' +
+      'Use this data to produce findings in these categories: ' +
+      '1) Architecture completeness — missing connections, isolated nodes, dangling edges ' +
+      '2) BOM quality — missing values (empty part numbers, zero quantities, missing suppliers), ' +
+      'duplicate parts, cost optimization opportunities ' +
+      '3) Electrical safety — missing protection (ESD, TVS, fuses), power filtering, thermal concerns ' +
+      '4) Signal integrity — unterminated high-speed traces, impedance mismatches, mixed voltage domains ' +
+      '5) Manufacturing readiness — missing reference designators, incomplete BOM fields, assembly notes ' +
+      '6) Best practices — naming conventions, node organization, documentation gaps ' +
+      '7) Validation summary — current DRC/ERC status, open issue breakdown by severity. ' +
+      'For each finding, provide: category, severity (critical/warning/info), description, and recommendation.',
+    category: 'validation',
+    parameters: z.object({
+      focus: z
+        .enum([
+          'all',
+          'architecture',
+          'bom',
+          'electrical',
+          'signal_integrity',
+          'manufacturing',
+          'best_practices',
+          'validation',
+        ])
+        .optional()
+        .default('all')
+        .describe('Focus area for the review (default: all categories)'),
+    }),
+    requiresConfirmation: false,
+    modelPreference: 'premium',
+    execute: async (_params, ctx): Promise<ToolResult> => {
+      // Fetch all project data in parallel
+      const [project, nodes, edges, bomItemsList, componentPartsList, issues, circuits] = await Promise.all([
+        ctx.storage.getProject(ctx.projectId),
+        ctx.storage.getNodes(ctx.projectId),
+        ctx.storage.getEdges(ctx.projectId),
+        ctx.storage.getBomItems(ctx.projectId),
+        ctx.storage.getComponentParts(ctx.projectId),
+        ctx.storage.getValidationIssues(ctx.projectId),
+        ctx.storage.getCircuitDesigns(ctx.projectId),
+      ]);
+
+      // Gather circuit-level detail: instances, nets, and wires per design
+      const circuitDetails = await Promise.all(
+        circuits.map(async (cd) => {
+          const [instances, nets, wires] = await Promise.all([
+            ctx.storage.getCircuitInstances(cd.id),
+            ctx.storage.getCircuitNets(cd.id),
+            ctx.storage.getCircuitWires(cd.id),
+          ]);
+          return {
+            designName: cd.name,
+            designId: cd.id,
+            parentDesignId: cd.parentDesignId,
+            instances: instances.map((inst) => ({
+              id: inst.id,
+              refDes: inst.referenceDesignator,
+              partId: inst.partId,
+            })),
+            nets: nets.map((net) => ({
+              id: net.id,
+              name: net.name,
+              type: net.netType,
+              voltage: net.voltage,
+            })),
+            wires: wires.map((w) => ({
+              id: w.id,
+              netId: w.netId,
+              view: w.view,
+              layer: w.layer,
+              wireType: w.wireType,
+            })),
+          };
+        }),
+      );
+
+      // --- Pre-computed metrics for architecture completeness ---
+
+      // Build adjacency data: which nodes have connections
+      const connectedNodeIds = new Set<string>();
+      for (const edge of edges) {
+        connectedNodeIds.add(edge.source);
+        connectedNodeIds.add(edge.target);
+      }
+      const isolatedNodes = nodes
+        .filter((n) => !connectedNodeIds.has(n.nodeId))
+        .map((n) => ({ nodeId: n.nodeId, label: n.label, nodeType: n.nodeType }));
+
+      // Detect dangling edges (edges referencing non-existent nodes)
+      const allNodeIds = new Set(nodes.map((n) => n.nodeId));
+      const danglingEdges = edges
+        .filter((e) => !allNodeIds.has(e.source) || !allNodeIds.has(e.target))
+        .map((e) => ({
+          edgeId: e.edgeId,
+          source: e.source,
+          target: e.target,
+          label: e.label,
+          missingSource: !allNodeIds.has(e.source),
+          missingTarget: !allNodeIds.has(e.target),
+        }));
+
+      // --- Pre-computed metrics for BOM quality ---
+
+      const bomWithIssues = bomItemsList.map((b) => {
+        const issues: string[] = [];
+        if (!b.partNumber || b.partNumber.trim() === '') {
+          issues.push('missing_part_number');
+        }
+        if (!b.manufacturer || b.manufacturer.trim() === '') {
+          issues.push('missing_manufacturer');
+        }
+        if (!b.supplier || b.supplier.trim() === '') {
+          issues.push('missing_supplier');
+        }
+        if (b.quantity <= 0) {
+          issues.push('zero_or_negative_quantity');
+        }
+        if (b.unitPrice === '0' || b.unitPrice === '0.0000') {
+          issues.push('zero_unit_price');
+        }
+        return {
+          id: b.id,
+          partNumber: b.partNumber,
+          manufacturer: b.manufacturer,
+          description: b.description,
+          quantity: b.quantity,
+          unitPrice: b.unitPrice,
+          totalPrice: b.totalPrice,
+          supplier: b.supplier,
+          stock: b.stock,
+          status: b.status,
+          leadTime: b.leadTime,
+          fieldIssues: issues,
+        };
+      });
+
+      // Detect potential duplicate BOM entries (same partNumber + manufacturer)
+      const bomDuplicateGroups: Record<string, number[]> = {};
+      for (const b of bomItemsList) {
+        if (b.partNumber && b.partNumber.trim() !== '') {
+          const key = `${b.partNumber.trim().toLowerCase()}|${(b.manufacturer || '').trim().toLowerCase()}`;
+          if (!bomDuplicateGroups[key]) {
+            bomDuplicateGroups[key] = [];
+          }
+          bomDuplicateGroups[key].push(b.id);
+        }
+      }
+      const duplicateBomEntries = Object.entries(bomDuplicateGroups)
+        .filter(([, ids]) => ids.length > 1)
+        .map(([key, ids]) => ({ key, bomItemIds: ids, count: ids.length }));
+
+      // --- Pre-computed metrics for electrical/signal analysis ---
+
+      const voltageDomains = new Set<string>();
+      const signalTypes = new Set<string>();
+      for (const edge of edges) {
+        if (edge.voltage) {
+          voltageDomains.add(edge.voltage);
+        }
+        if (edge.signalType) {
+          signalTypes.add(edge.signalType);
+        }
+      }
+      for (const cd of circuitDetails) {
+        for (const net of cd.nets) {
+          if (net.voltage) {
+            voltageDomains.add(net.voltage);
+          }
+        }
+      }
+
+      // --- Pre-computed metrics for manufacturing readiness ---
+
+      const instancesMissingRefDes = circuitDetails.flatMap((cd) =>
+        cd.instances
+          .filter((inst) => !inst.refDes || inst.refDes.trim() === '')
+          .map((inst) => ({ designName: cd.designName, instanceId: inst.id, partId: inst.partId })),
+      );
+
+      const instancesMissingPart = circuitDetails.flatMap((cd) =>
+        cd.instances
+          .filter((inst) => inst.partId === null)
+          .map((inst) => ({ designName: cd.designName, instanceId: inst.id, refDes: inst.refDes })),
+      );
+
+      // --- Pre-computed metrics for validation summary ---
+
+      const issueBySeverity: Record<string, number> = {};
+      for (const issue of issues) {
+        const sev = issue.severity || 'unknown';
+        issueBySeverity[sev] = (issueBySeverity[sev] || 0) + 1;
+      }
+
+      // Component parts summary
+      const partsSummary = componentPartsList.map((p) => {
+        const meta = p.meta && typeof p.meta === 'object' ? (p.meta as Record<string, unknown>) : {};
+        return {
+          id: p.id,
+          nodeId: p.nodeId,
+          title: (meta.title as string) || null,
+          family: (meta.family as string) || null,
+          category: (meta.category as string) || null,
+          manufacturer: (meta.manufacturer as string) || null,
+          mpn: (meta.mpn as string) || null,
+        };
+      });
+
+      // Nodes summary
+      const nodesSummary = nodes.map((n) => ({
+        nodeId: n.nodeId,
+        label: n.label,
+        nodeType: n.nodeType,
+      }));
+
+      // Edges summary
+      const edgesSummary = edges.map((e) => ({
+        edgeId: e.edgeId,
+        source: e.source,
+        target: e.target,
+        label: e.label,
+        signalType: e.signalType,
+        voltage: e.voltage,
+        busWidth: e.busWidth,
+        netName: e.netName,
+      }));
+
+      return {
+        success: true,
+        message:
+          `Gathered design review data for "${project?.name || 'Untitled'}" — ` +
+          `${nodes.length} nodes, ${edges.length} edges, ${bomItemsList.length} BOM items, ` +
+          `${componentPartsList.length} parts, ${circuits.length} circuits, ${issues.length} open issues`,
+        data: {
+          projectName: project?.name || 'Untitled',
+          projectDescription: project?.description || '',
+
+          // Raw project data for detailed analysis
+          architecture: {
+            nodes: nodesSummary,
+            edges: edgesSummary,
+            nodeCount: nodes.length,
+            edgeCount: edges.length,
+          },
+
+          bom: {
+            items: bomWithIssues,
+            itemCount: bomItemsList.length,
+            duplicateGroups: duplicateBomEntries,
+          },
+
+          componentParts: {
+            parts: partsSummary,
+            partCount: componentPartsList.length,
+          },
+
+          circuits: {
+            designs: circuitDetails,
+            designCount: circuits.length,
+          },
+
+          validation: {
+            issues: issues.map((i) => ({
+              id: i.id,
+              severity: i.severity,
+              message: i.message,
+              componentId: i.componentId,
+              suggestion: i.suggestion,
+            })),
+            issueCount: issues.length,
+            bySeverity: issueBySeverity,
+          },
+
+          // Pre-computed review metrics
+          metrics: {
+            isolatedNodes,
+            danglingEdges,
+            instancesMissingRefDes,
+            instancesMissingPart,
+            voltageDomains: Array.from(voltageDomains),
+            signalTypes: Array.from(signalTypes),
+            bomItemsWithFieldIssues: bomWithIssues.filter((b) => b.fieldIssues.length > 0).length,
+            duplicateBomGroupCount: duplicateBomEntries.length,
+          },
         },
       };
     },

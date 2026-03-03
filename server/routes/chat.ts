@@ -386,6 +386,8 @@ export function registerChatRoutes(app: Express): void {
           userModel: model,
           messageLength: message.length,
           hasImage: !!parsed.data.imageBase64,
+          appState: { activeView: parsed.data.activeView || 'dashboard', nodes: [], bom: [] },
+          message,
         });
         resolvedModel = routed.model;
       }
@@ -452,6 +454,8 @@ export function registerChatRoutes(app: Express): void {
           userModel: model,
           messageLength: message.length,
           hasImage: !!parsed.data.imageBase64,
+          appState: { activeView: parsed.data.activeView || 'dashboard', nodes: [], bom: [] },
+          message,
         });
         resolvedModel = routed.model;
       }

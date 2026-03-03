@@ -3,7 +3,7 @@
     "version": 1,
     "root": "/home/wtyler/Projects/ProtoPulse",
     "createdAt": "2026-03-02T08:19:48.175Z",
-    "updatedAt": "2026-03-03T05:44:18.093Z",
+    "updatedAt": "2026-03-03T11:35:40.293Z",
     "totalFiles": 261
   },
   "tree": {
@@ -1983,26 +1983,6 @@
       "to": "client/src/components/layout/sidebar/HistoryList.tsx"
     },
     {
-      "from": "server/routes.ts",
-      "to": "server/storage.ts"
-    },
-    {
-      "from": "server/__tests__/routes-utils.test.ts",
-      "to": "server/routes.ts"
-    },
-    {
-      "from": "server/circuit-ai.ts",
-      "to": "server/routes.ts"
-    },
-    {
-      "from": "server/circuit-routes.ts",
-      "to": "server/routes.ts"
-    },
-    {
-      "from": "server/index.ts",
-      "to": "server/routes.ts"
-    },
-    {
       "from": "client/src/components/panels/chat/MessageBubble.tsx",
       "to": "client/src/components/panels/chat/constants.ts"
     },
@@ -2087,6 +2067,78 @@
       "to": "server/ai.ts"
     },
     {
+      "from": "server/ai-tools/types.ts",
+      "to": "server/storage.ts"
+    },
+    {
+      "from": "server/circuit-routes/netlist.ts",
+      "to": "server/storage.ts"
+    },
+    {
+      "from": "server/ai-tools/export.ts",
+      "to": "server/export/bom-exporter.ts"
+    },
+    {
+      "from": "server/ai-tools/export.ts",
+      "to": "server/export/eagle-exporter.ts"
+    },
+    {
+      "from": "server/ai-tools/export.ts",
+      "to": "server/export/gerber-generator.ts"
+    },
+    {
+      "from": "server/ai-tools/export.ts",
+      "to": "server/export/kicad-exporter.ts"
+    },
+    {
+      "from": "server/ai-tools/export.ts",
+      "to": "server/export/netlist-generator.ts"
+    },
+    {
+      "from": "server/ai-tools/export.ts",
+      "to": "server/export/pick-place-generator.ts"
+    },
+    {
+      "from": "server/ai-tools/export.ts",
+      "to": "server/export/spice-exporter.ts"
+    },
+    {
+      "from": "server/ai-tools/export.ts",
+      "to": "server/storage.ts"
+    },
+    {
+      "from": "server/__tests__/ai-tools-validation.test.ts",
+      "to": "server/storage.ts"
+    },
+    {
+      "from": "server/routes/design-history.ts",
+      "to": "server/storage.ts"
+    },
+    {
+      "from": "server/routes/spice-models.ts",
+      "to": "server/storage.ts"
+    },
+    {
+      "from": "server/routes.ts",
+      "to": "server/storage.ts"
+    },
+    {
+      "from": "server/__tests__/routes-utils.test.ts",
+      "to": "server/routes.ts"
+    },
+    {
+      "from": "server/circuit-ai.ts",
+      "to": "server/routes.ts"
+    },
+    {
+      "from": "server/circuit-routes.ts",
+      "to": "server/routes.ts"
+    },
+    {
+      "from": "server/index.ts",
+      "to": "server/routes.ts"
+    },
+    {
       "from": "server/routes/chat.ts",
       "to": "server/ai.ts"
     },
@@ -2099,11 +2151,11 @@
       "to": "server/storage.ts"
     },
     {
-      "from": "server/ai-tools/types.ts",
-      "to": "server/storage.ts"
+      "from": "server/routes/auth-middleware.ts",
+      "to": "server/auth.ts"
     },
     {
-      "from": "server/circuit-routes/netlist.ts",
+      "from": "server/routes/auth-middleware.ts",
       "to": "server/storage.ts"
     }
   ],
@@ -20202,7 +20254,11 @@
             "Microchip",
             "MoreHorizontal",
             "ChevronLeft",
-            "ChevronRight"
+            "ChevronRight",
+            "History",
+            "HeartPulse",
+            "MessageSquare",
+            "GraduationCap"
           ]
         },
         {
@@ -20259,6 +20315,20 @@
           "kind": "import",
           "imported": [
             "DndProvider"
+          ]
+        },
+        {
+          "from": "@/lib/tutorial-context",
+          "kind": "import",
+          "imported": [
+            "TutorialProvider"
+          ]
+        },
+        {
+          "from": "@/lib/contexts/project-id-context",
+          "kind": "import",
+          "imported": [
+            "useProjectId"
           ]
         }
       ],
@@ -20384,6 +20454,16 @@
           "isExported": false
         },
         {
+          "name": "DesignHistoryView",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
+          "name": "LifecycleDashboard",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
           "name": "WorkflowBreadcrumb",
           "initKind": "unknown",
           "isExported": false
@@ -20395,6 +20475,21 @@
         },
         {
           "name": "CommandPalette",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
+          "name": "TutorialOverlay",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
+          "name": "TutorialMenu",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
+          "name": "CommentsPanel",
           "initKind": "unknown",
           "isExported": false
         },
@@ -28483,6 +28578,55 @@
           ]
         },
         {
+          "from": "./routes/spice-models",
+          "kind": "import",
+          "imported": [
+            "registerSpiceModelRoutes"
+          ]
+        },
+        {
+          "from": "./routes/bom-snapshots",
+          "kind": "import",
+          "imported": [
+            "registerBomSnapshotRoutes"
+          ]
+        },
+        {
+          "from": "./routes/design-preferences",
+          "kind": "import",
+          "imported": [
+            "registerDesignPreferenceRoutes"
+          ]
+        },
+        {
+          "from": "./routes/component-lifecycle",
+          "kind": "import",
+          "imported": [
+            "registerComponentLifecycleRoutes"
+          ]
+        },
+        {
+          "from": "./routes/design-history",
+          "kind": "import",
+          "imported": [
+            "registerDesignHistoryRoutes"
+          ]
+        },
+        {
+          "from": "./routes/comments",
+          "kind": "import",
+          "imported": [
+            "registerCommentRoutes"
+          ]
+        },
+        {
+          "from": "./routes/backup",
+          "kind": "import",
+          "imported": [
+            "registerBackupRoutes"
+          ]
+        },
+        {
           "from": "./routes/utils",
           "kind": "export",
           "imported": [
@@ -31378,6 +31522,13 @@
           "imported": [
             "clientAction"
           ]
+        },
+        {
+          "from": "./types",
+          "kind": "import",
+          "imported": [
+            "ToolResult"
+          ]
         }
       ],
       "dependencies": [],
@@ -32317,6 +32468,1042 @@
             {
               "name": "registry",
               "type": "ToolRegistry"
+            }
+          ],
+          "isAsync": false,
+          "isExported": true,
+          "returnType": "void"
+        }
+      ],
+      "classes": [],
+      "constants": []
+    },
+    "server/ai-tools/component.ts": {
+      "imports": [
+        {
+          "from": "zod",
+          "kind": "import",
+          "imported": [
+            "z"
+          ]
+        },
+        {
+          "from": "./registry",
+          "kind": "import",
+          "imported": [
+            "ToolRegistry"
+          ]
+        },
+        {
+          "from": "./registry",
+          "kind": "import",
+          "imported": [
+            "clientAction"
+          ]
+        }
+      ],
+      "dependencies": [],
+      "functions": [
+        {
+          "name": "registerComponentTools",
+          "params": [
+            {
+              "name": "registry",
+              "type": "ToolRegistry"
+            }
+          ],
+          "isAsync": false,
+          "isExported": true,
+          "returnType": "void"
+        }
+      ],
+      "classes": [],
+      "constants": []
+    },
+    "server/ai-tools/export.ts": {
+      "imports": [
+        {
+          "from": "zod",
+          "kind": "import",
+          "imported": [
+            "z"
+          ]
+        },
+        {
+          "from": "./registry",
+          "kind": "import",
+          "imported": [
+            "ToolRegistry"
+          ]
+        },
+        {
+          "from": "./registry",
+          "kind": "import",
+          "imported": [
+            "clientAction"
+          ]
+        },
+        {
+          "from": "./types",
+          "kind": "import",
+          "imported": [
+            "ToolResult"
+          ]
+        },
+        {
+          "from": "../storage",
+          "kind": "import",
+          "imported": [
+            "IStorage"
+          ]
+        },
+        {
+          "from": "../export/bom-exporter",
+          "kind": "import",
+          "imported": [
+            "generateGenericBomCsv",
+            "generateJlcpcbBom",
+            "generateMouserBom",
+            "generateDigikeyBom"
+          ]
+        },
+        {
+          "from": "../export/kicad-exporter",
+          "kind": "import",
+          "imported": [
+            "generateKicadSch",
+            "generateKicadNetlist"
+          ]
+        },
+        {
+          "from": "../export/spice-exporter",
+          "kind": "import",
+          "imported": [
+            "generateSpiceNetlist"
+          ]
+        },
+        {
+          "from": "../export/netlist-generator",
+          "kind": "import",
+          "imported": [
+            "generateCsvNetlist"
+          ]
+        },
+        {
+          "from": "../export/gerber-generator",
+          "kind": "import",
+          "imported": [
+            "generateGerber"
+          ]
+        },
+        {
+          "from": "../export/pick-place-generator",
+          "kind": "import",
+          "imported": [
+            "generatePickAndPlace"
+          ]
+        },
+        {
+          "from": "../export/eagle-exporter",
+          "kind": "import",
+          "imported": [
+            "generateEagleSch"
+          ]
+        },
+        {
+          "from": "../export/design-report",
+          "kind": "import",
+          "imported": [
+            "generateDesignReportMd"
+          ]
+        },
+        {
+          "from": "../export/types",
+          "kind": "import",
+          "imported": [
+            "BomItemData",
+            "ComponentPartData",
+            "ArchNodeData",
+            "ArchEdgeData",
+            "CircuitInstanceData",
+            "CircuitNetData",
+            "CircuitWireData",
+            "ValidationIssueData"
+          ]
+        }
+      ],
+      "dependencies": [
+        "server/export/bom-exporter.ts",
+        "server/export/eagle-exporter.ts",
+        "server/export/gerber-generator.ts",
+        "server/export/kicad-exporter.ts",
+        "server/export/netlist-generator.ts",
+        "server/export/pick-place-generator.ts",
+        "server/export/spice-exporter.ts",
+        "server/storage.ts"
+      ],
+      "functions": [
+        {
+          "name": "fileExportResult",
+          "params": [
+            {
+              "name": "result",
+              "type": "{\n  content: string;\n  encoding: 'utf8' | 'base64';\n  mimeType: string;\n  filename: string;\n}"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ToolResult"
+        },
+        {
+          "name": "toBomItemData",
+          "params": [
+            {
+              "name": "rows",
+              "type": "Array<{\n    partNumber: string;\n    manufacturer: string;\n    description: string;\n    quantity: number;\n    unitPrice: string;\n    totalPrice: string;\n    supplier: string;\n    stock: number;\n    status: string;\n    leadTime: string | null;\n  }>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "BomItemData[]"
+        },
+        {
+          "name": "toComponentPartData",
+          "params": [
+            {
+              "name": "rows",
+              "type": "Array<{\n    id: number;\n    nodeId: string | null;\n    meta: unknown;\n    connectors: unknown;\n    buses: unknown;\n    constraints: unknown;\n  }>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ComponentPartData[]"
+        },
+        {
+          "name": "toArchNodeData",
+          "params": [
+            {
+              "name": "rows",
+              "type": "Array<{\n    nodeId: string;\n    label: string;\n    nodeType: string;\n    positionX: number;\n    positionY: number;\n    data: unknown;\n  }>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ArchNodeData[]"
+        },
+        {
+          "name": "toArchEdgeData",
+          "params": [
+            {
+              "name": "rows",
+              "type": "Array<{\n    edgeId: string;\n    source: string;\n    target: string;\n    label: string | null;\n    signalType: string | null;\n    voltage: string | null;\n    busWidth: string | null;\n    netName: string | null;\n  }>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ArchEdgeData[]"
+        },
+        {
+          "name": "toCircuitInstanceData",
+          "params": [
+            {
+              "name": "rows",
+              "type": "Array<{\n    id: number;\n    partId: number | null;\n    referenceDesignator: string;\n    schematicX: number;\n    schematicY: number;\n    schematicRotation: number;\n    pcbX: number | null;\n    pcbY: number | null;\n    pcbRotation: number | null;\n    pcbSide: string | null;\n    properties: unknown;\n  }>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "CircuitInstanceData[]"
+        },
+        {
+          "name": "toCircuitNetData",
+          "params": [
+            {
+              "name": "rows",
+              "type": "Array<{\n    id: number;\n    name: string;\n    netType: string;\n    voltage: string | null;\n    busWidth: number | null;\n    segments: unknown;\n    labels: unknown;\n  }>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "CircuitNetData[]"
+        },
+        {
+          "name": "toCircuitWireData",
+          "params": [
+            {
+              "name": "rows",
+              "type": "Array<{\n    id: number;\n    netId: number;\n    view: string;\n    points: unknown;\n    layer: string | null;\n    width: number;\n  }>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "CircuitWireData[]"
+        },
+        {
+          "name": "toValidationIssueData",
+          "params": [
+            {
+              "name": "rows",
+              "type": "Array<{\n    severity: string;\n    message: string;\n    componentId: string | null;\n    suggestion: string | null;\n  }>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ValidationIssueData[]"
+        },
+        {
+          "name": "resolveCircuitId",
+          "params": [
+            {
+              "name": "storage",
+              "type": "IStorage"
+            },
+            {
+              "name": "projectId",
+              "type": "number"
+            },
+            {
+              "name": "circuitId",
+              "type": "number",
+              "optional": true
+            }
+          ],
+          "isAsync": true,
+          "isExported": false,
+          "returnType": "Promise<number | null>"
+        },
+        {
+          "name": "registerExportTools",
+          "params": [
+            {
+              "name": "registry",
+              "type": "ToolRegistry"
+            }
+          ],
+          "isAsync": false,
+          "isExported": true,
+          "returnType": "void"
+        }
+      ],
+      "classes": [],
+      "constants": []
+    },
+    "server/__tests__/ai-tools-validation.test.ts": {
+      "imports": [
+        {
+          "from": "vitest",
+          "kind": "import",
+          "imported": [
+            "describe",
+            "it",
+            "expect",
+            "vi",
+            "beforeEach"
+          ]
+        },
+        {
+          "from": "../ai-tools/registry",
+          "kind": "import",
+          "imported": [
+            "ToolRegistry"
+          ]
+        },
+        {
+          "from": "../ai-tools/validation",
+          "kind": "import",
+          "imported": [
+            "registerValidationTools"
+          ]
+        },
+        {
+          "from": "../ai-tools/types",
+          "kind": "import",
+          "imported": [
+            "ToolContext"
+          ]
+        },
+        {
+          "from": "../storage",
+          "kind": "import",
+          "imported": [
+            "IStorage"
+          ]
+        },
+        {
+          "from": "@shared/schema",
+          "kind": "import",
+          "imported": [
+            "ArchitectureNode",
+            "ArchitectureEdge",
+            "BomItem",
+            "ValidationIssue",
+            "CircuitDesignRow",
+            "CircuitInstanceRow",
+            "CircuitNetRow",
+            "Project"
+          ]
+        }
+      ],
+      "dependencies": [
+        "server/storage.ts"
+      ],
+      "functions": [
+        {
+          "name": "createRegistry",
+          "params": [],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ToolRegistry"
+        },
+        {
+          "name": "makeProject",
+          "params": [
+            {
+              "name": "overrides",
+              "type": "Partial<Project>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "Project"
+        },
+        {
+          "name": "makeNode",
+          "params": [
+            {
+              "name": "overrides",
+              "type": "Partial<ArchitectureNode>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ArchitectureNode"
+        },
+        {
+          "name": "makeEdge",
+          "params": [
+            {
+              "name": "overrides",
+              "type": "Partial<ArchitectureEdge>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ArchitectureEdge"
+        },
+        {
+          "name": "makeBomItem",
+          "params": [
+            {
+              "name": "overrides",
+              "type": "Partial<BomItem>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "BomItem"
+        },
+        {
+          "name": "makeValidationIssue",
+          "params": [
+            {
+              "name": "overrides",
+              "type": "Partial<ValidationIssue>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ValidationIssue"
+        },
+        {
+          "name": "makeCircuitDesign",
+          "params": [
+            {
+              "name": "overrides",
+              "type": "Partial<CircuitDesignRow>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "CircuitDesignRow"
+        },
+        {
+          "name": "makeCircuitInstance",
+          "params": [
+            {
+              "name": "overrides",
+              "type": "Partial<CircuitInstanceRow>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "CircuitInstanceRow"
+        },
+        {
+          "name": "makeCircuitNet",
+          "params": [
+            {
+              "name": "overrides",
+              "type": "Partial<CircuitNetRow>"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "CircuitNetRow"
+        },
+        {
+          "name": "createMockStorage",
+          "params": [
+            {
+              "name": "data",
+              "type": "MockStorageData"
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "IStorage"
+        },
+        {
+          "name": "createCtx",
+          "params": [
+            {
+              "name": "storage",
+              "type": "IStorage",
+              "optional": true
+            }
+          ],
+          "isAsync": false,
+          "isExported": false,
+          "returnType": "ToolContext"
+        }
+      ],
+      "classes": [],
+      "constants": [
+        {
+          "name": "now",
+          "initKind": "unknown",
+          "isExported": false
+        }
+      ]
+    },
+    "server/routes/design-history.ts": {
+      "imports": [
+        {
+          "from": "express",
+          "kind": "import",
+          "imported": [
+            "Express"
+          ]
+        },
+        {
+          "from": "zod",
+          "kind": "import",
+          "imported": [
+            "z"
+          ]
+        },
+        {
+          "from": "zod-validation-error",
+          "kind": "import",
+          "imported": [
+            "fromZodError"
+          ]
+        },
+        {
+          "from": "../storage",
+          "kind": "import",
+          "imported": [
+            "storage"
+          ]
+        },
+        {
+          "from": "./utils",
+          "kind": "import",
+          "imported": [
+            "asyncHandler",
+            "payloadLimit",
+            "parseIdParam"
+          ]
+        },
+        {
+          "from": "@shared/arch-diff",
+          "kind": "import",
+          "imported": [
+            "computeArchDiff"
+          ]
+        },
+        {
+          "from": "@shared/schema",
+          "kind": "import",
+          "imported": [
+            "ArchitectureNode",
+            "ArchitectureEdge"
+          ]
+        }
+      ],
+      "dependencies": [
+        "server/storage.ts"
+      ],
+      "functions": [
+        {
+          "name": "registerDesignHistoryRoutes",
+          "params": [
+            {
+              "name": "app",
+              "type": "Express"
+            }
+          ],
+          "isAsync": false,
+          "isExported": true,
+          "returnType": "void"
+        }
+      ],
+      "classes": [],
+      "constants": [
+        {
+          "name": "createSnapshotSchema",
+          "initKind": "unknown",
+          "isExported": false
+        }
+      ]
+    },
+    "client/src/components/views/LifecycleDashboard.tsx": {
+      "imports": [
+        {
+          "from": "react",
+          "kind": "import",
+          "imported": [
+            "useState",
+            "useMemo",
+            "useCallback",
+            "memo"
+          ]
+        },
+        {
+          "from": "@tanstack/react-query",
+          "kind": "import",
+          "imported": [
+            "useQuery",
+            "useMutation",
+            "useQueryClient"
+          ]
+        },
+        {
+          "from": "@/lib/queryClient",
+          "kind": "import",
+          "imported": [
+            "apiRequest",
+            "getQueryFn"
+          ]
+        },
+        {
+          "from": "@/lib/contexts/project-id-context",
+          "kind": "import",
+          "imported": [
+            "useProjectId"
+          ]
+        },
+        {
+          "from": "@/hooks/use-toast",
+          "kind": "import",
+          "imported": [
+            "useToast"
+          ]
+        },
+        {
+          "from": "date-fns",
+          "kind": "import",
+          "imported": [
+            "format"
+          ]
+        },
+        {
+          "from": "lucide-react",
+          "kind": "import",
+          "imported": [
+            "Search",
+            "Plus",
+            "Download",
+            "AlertTriangle",
+            "ChevronDown",
+            "ChevronUp",
+            "Pencil",
+            "Trash2",
+            "ArrowUpDown",
+            "Activity",
+            "ShieldCheck",
+            "AlertCircle",
+            "XCircle",
+            "HelpCircle"
+          ]
+        },
+        {
+          "from": "@/lib/utils",
+          "kind": "import",
+          "imported": [
+            "cn"
+          ]
+        },
+        {
+          "from": "@/components/ui/card",
+          "kind": "import",
+          "imported": [
+            "Card",
+            "CardContent"
+          ]
+        },
+        {
+          "from": "@/components/ui/badge",
+          "kind": "import",
+          "imported": [
+            "Badge"
+          ]
+        },
+        {
+          "from": "@/components/ui/button",
+          "kind": "import",
+          "imported": [
+            "Button"
+          ]
+        },
+        {
+          "from": "@/components/ui/input",
+          "kind": "import",
+          "imported": [
+            "Input"
+          ]
+        },
+        {
+          "from": "@/components/ui/label",
+          "kind": "import",
+          "imported": [
+            "Label"
+          ]
+        },
+        {
+          "from": "@/components/ui/textarea",
+          "kind": "import",
+          "imported": [
+            "Textarea"
+          ]
+        },
+        {
+          "from": "@/components/ui/select",
+          "kind": "import",
+          "imported": [
+            "Select",
+            "SelectTrigger",
+            "SelectValue",
+            "SelectContent",
+            "SelectItem"
+          ]
+        },
+        {
+          "from": "@/components/ui/dialog",
+          "kind": "import",
+          "imported": [
+            "Dialog",
+            "DialogContent",
+            "DialogHeader",
+            "DialogTitle",
+            "DialogDescription",
+            "DialogFooter"
+          ]
+        },
+        {
+          "from": "@/components/ui/table",
+          "kind": "import",
+          "imported": [
+            "Table",
+            "TableHeader",
+            "TableBody",
+            "TableHead",
+            "TableRow",
+            "TableCell"
+          ]
+        },
+        {
+          "from": "@shared/schema",
+          "kind": "import",
+          "imported": [
+            "ComponentLifecycle"
+          ]
+        }
+      ],
+      "dependencies": [],
+      "functions": [
+        {
+          "name": "LifecycleDashboard",
+          "params": [],
+          "isAsync": false,
+          "isExported": true
+        }
+      ],
+      "classes": [],
+      "constants": [
+        {
+          "name": "LIFECYCLE_STATUSES",
+          "initKind": "array",
+          "isExported": false,
+          "type": "LifecycleStatus[]"
+        },
+        {
+          "name": "STATUS_CONFIG",
+          "initKind": "object",
+          "isExported": false,
+          "type": "Record<LifecycleStatus, { label: string; color: string; bgColor: string; borderColor: string; icon: typeof ShieldCheck }>"
+        },
+        {
+          "name": "EMPTY_FORM",
+          "initKind": "object",
+          "isExported": false,
+          "type": "FormState"
+        },
+        {
+          "name": "StatusBadge",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
+          "name": "StatusCard",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
+          "name": "RiskBanner",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
+          "name": "LifecycleRow",
+          "initKind": "unknown",
+          "isExported": false
+        }
+      ]
+    },
+    "server/routes/spice-models.ts": {
+      "imports": [
+        {
+          "from": "express",
+          "kind": "import",
+          "imported": [
+            "Express"
+          ]
+        },
+        {
+          "from": "zod",
+          "kind": "import",
+          "imported": [
+            "z"
+          ]
+        },
+        {
+          "from": "zod-validation-error",
+          "kind": "import",
+          "imported": [
+            "fromZodError"
+          ]
+        },
+        {
+          "from": "../storage",
+          "kind": "import",
+          "imported": [
+            "storage"
+          ]
+        },
+        {
+          "from": "@shared/schema",
+          "kind": "import",
+          "imported": [
+            "insertSpiceModelSchema",
+            "InsertSpiceModel"
+          ]
+        },
+        {
+          "from": "./utils",
+          "kind": "import",
+          "imported": [
+            "asyncHandler",
+            "parseIdParam",
+            "payloadLimit"
+          ]
+        },
+        {
+          "from": "../spice-import",
+          "kind": "import",
+          "imported": [
+            "parseImportFile",
+            "validateImportFilename",
+            "validateImportSize"
+          ]
+        }
+      ],
+      "dependencies": [
+        "server/storage.ts"
+      ],
+      "functions": [
+        {
+          "name": "registerSpiceModelRoutes",
+          "params": [
+            {
+              "name": "app",
+              "type": "Express"
+            }
+          ],
+          "isAsync": false,
+          "isExported": true,
+          "returnType": "void"
+        },
+        {
+          "name": "seedStandardSpiceModels",
+          "params": [],
+          "isAsync": true,
+          "isExported": false
+        }
+      ],
+      "classes": [],
+      "constants": [
+        {
+          "name": "listQuerySchema",
+          "initKind": "unknown",
+          "isExported": false
+        },
+        {
+          "name": "STANDARD_MODELS",
+          "initKind": "array",
+          "isExported": false,
+          "type": "SeedModel[]"
+        }
+      ]
+    },
+    "client/src/components/simulation/SpiceImportButton.tsx": {
+      "imports": [
+        {
+          "from": "react",
+          "kind": "import",
+          "imported": [
+            "useRef",
+            "useState"
+          ]
+        },
+        {
+          "from": "@tanstack/react-query",
+          "kind": "import",
+          "imported": [
+            "useMutation",
+            "useQueryClient"
+          ]
+        },
+        {
+          "from": "@/components/ui/button",
+          "kind": "import",
+          "imported": [
+            "Button"
+          ]
+        },
+        {
+          "from": "lucide-react",
+          "kind": "import",
+          "imported": [
+            "Upload",
+            "Loader2"
+          ]
+        },
+        {
+          "from": "@/hooks/use-toast",
+          "kind": "import",
+          "imported": [
+            "useToast"
+          ]
+        }
+      ],
+      "dependencies": [],
+      "functions": [
+        {
+          "name": "uploadSpiceFile",
+          "params": [
+            {
+              "name": "file",
+              "type": "File"
+            }
+          ],
+          "isAsync": true,
+          "isExported": false,
+          "returnType": "Promise<ImportResult>"
+        },
+        {
+          "name": "SpiceImportButton",
+          "params": [],
+          "isAsync": false,
+          "isExported": false
+        }
+      ],
+      "classes": [],
+      "constants": [
+        {
+          "name": "ACCEPTED_EXTENSIONS",
+          "initKind": "literal",
+          "isExported": false
+        },
+        {
+          "name": "SESSION_KEY",
+          "initKind": "literal",
+          "isExported": false
+        }
+      ]
+    },
+    "server/routes/auth-middleware.ts": {
+      "imports": [
+        {
+          "from": "express",
+          "kind": "import",
+          "imported": [
+            "Request",
+            "Response",
+            "NextFunction"
+          ]
+        },
+        {
+          "from": "../auth",
+          "kind": "import",
+          "imported": [
+            "validateSession"
+          ]
+        },
+        {
+          "from": "../storage",
+          "kind": "import",
+          "imported": [
+            "storage"
+          ]
+        },
+        {
+          "from": "./utils",
+          "kind": "import",
+          "imported": [
+            "HttpError"
+          ]
+        }
+      ],
+      "dependencies": [
+        "server/auth.ts",
+        "server/storage.ts"
+      ],
+      "functions": [
+        {
+          "name": "requireProjectOwnership",
+          "params": [
+            {
+              "name": "req",
+              "type": "Request"
+            },
+            {
+              "name": "res",
+              "type": "Response"
+            },
+            {
+              "name": "next",
+              "type": "NextFunction"
             }
           ],
           "isAsync": false,

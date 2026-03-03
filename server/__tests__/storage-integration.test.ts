@@ -1151,16 +1151,20 @@ describe('Storage — updateComponentPart version logic', () => {
   it('increments version on component part update', async () => {
     const existing = { id: 1, projectId: 1, nodeId: 'n1', version: 3, name: 'MCU' };
 
-    // First call: select to find existing
-    buildSelectChain({ whereResult: [existing] });
-
-    // Second call: update chain
+    // updateComponentPart now uses db.transaction — mock the tx object
     const updateReturning = vi.fn().mockResolvedValue([{ ...existing, version: 4 }]);
     const updateWhere = vi.fn().mockReturnValue({ returning: updateReturning });
     const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
 
-    // We need select AND update — configure select first, then override update
-    mockDb.update.mockReturnValue({ set: updateSet });
+    const mockTx = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([existing]),
+        }),
+      }),
+      update: vi.fn().mockReturnValue({ set: updateSet }),
+    };
+    mockDb.transaction.mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx));
 
     const result = await storage.updateComponentPart(1, 1, { meta: { title: 'Updated MCU' } });
 
@@ -1171,7 +1175,14 @@ describe('Storage — updateComponentPart version logic', () => {
   });
 
   it('returns undefined when part does not exist', async () => {
-    buildSelectChain({ whereResult: [] });
+    const mockTx = {
+      select: vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    };
+    mockDb.transaction.mockImplementation(async (cb: (tx: typeof mockTx) => Promise<unknown>) => cb(mockTx));
 
     const result = await storage.updateComponentPart(999, 1, { meta: { title: 'Nope' } });
 

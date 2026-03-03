@@ -104,6 +104,7 @@ if (isDev) {
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Session-Id');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
     if (req.method === 'OPTIONS') {
       return res.status(204).end();
     }

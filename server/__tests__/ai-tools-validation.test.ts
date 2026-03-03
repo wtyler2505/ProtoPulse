@@ -31,6 +31,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     id: 1,
     name: 'IoT Weather Station',
     description: 'A weather monitoring device',
+    ownerId: null,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -206,6 +207,7 @@ describe('Validation tools — registration', () => {
     'dfm_check',
     'thermal_analysis',
     'generate_test_plan',
+    'design_review',
   ];
 
   it.each(expectedTools)('registers "%s"', (name) => {

@@ -9,7 +9,7 @@
 
 **The open-source EDA platform that designs circuits with you.**
 <br>
-*Schematic capture · SPICE simulation · 14+ export formats · 79 AI tools — all in your browser.*
+*Schematic capture · SPICE simulation · 14+ export formats · 82 AI tools — all in your browser.*
 
 <br>
 
@@ -65,7 +65,7 @@ Full interactive circuit editor — place component **instances**, draw **nets**
 
 <h3>AI Design Assistant</h3>
 
-An AI that **acts**, not just answers. Generate complete architectures from a sentence. Place components, wire connections, populate your BOM, run validation, export to KiCad — **79 tool actions** across 11 modules. Streams via SSE with **Claude** and **Gemini** support.
+An AI that **acts**, not just answers. Generate complete architectures from a sentence. Place components, wire connections, populate your BOM, run validation, export to KiCad — **82 tool actions** across 11 modules. Streams via SSE with **Claude** and **Gemini** support.
 
 </td>
 </tr>
@@ -149,7 +149,7 @@ Crafted dark theme with **neon cyan** (`#00F0FF`) and purple accents, built for 
 <th align="center">Altium</th>
 </tr>
 <tr><td><strong>Browser-based</strong></td><td align="center">Yes</td><td align="center">No</td><td align="center">No</td><td align="center">Yes</td><td align="center">No</td></tr>
-<tr><td><strong>AI assistant with real tools</strong></td><td align="center"><strong>79 tools</strong></td><td align="center">No</td><td align="center">No</td><td align="center">Limited</td><td align="center">No</td></tr>
+<tr><td><strong>AI assistant with real tools</strong></td><td align="center"><strong>82 tools</strong></td><td align="center">No</td><td align="center">No</td><td align="center">Limited</td><td align="center">No</td></tr>
 <tr><td><strong>Open source</strong></td><td align="center">MIT</td><td align="center">GPL</td><td align="center">GPL</td><td align="center">No</td><td align="center">No</td></tr>
 <tr><td><strong>Architecture block diagrams</strong></td><td align="center">Yes</td><td align="center">No</td><td align="center">No</td><td align="center">No</td><td align="center">No</td></tr>
 <tr><td><strong>Concept-to-export in one tool</strong></td><td align="center">Yes</td><td align="center">Partial</td><td align="center">No</td><td align="center">Partial</td><td align="center">Yes</td></tr>
@@ -220,7 +220,7 @@ npx prettier --write .  # Format
 
 ## AI Engine
 
-The AI doesn't just chat — it has **79 tool actions** that directly manipulate your design:
+The AI doesn't just chat — it has **82 tool actions** that directly manipulate your design:
 
 <table>
 <tr>
@@ -277,7 +277,7 @@ graph TB
         direction LR
         MW["Middleware<br><sub>helmet · compress<br>rate-limit · auth</sub>"]
         Routes["Routes<br><sub>18 domain routers<br>11 circuit routers</sub>"]
-        AI["AI Service<br><sub>Claude + Gemini<br>79 tools · SSE</sub>"]
+        AI["AI Service<br><sub>Claude + Gemini<br>82 tools · SSE</sub>"]
         Storage["Storage<br><sub>Drizzle ORM<br>LRU Cache</sub>"]
     end
 
@@ -369,7 +369,7 @@ server/
   circuit-routes.ts     Barrel — 11 circuit routers from server/circuit-routes/
   circuit-routes/       designs, instances, nets, wires, netlist, exports,
                         simulations, hierarchy, imports, autoroute, expansion
-  ai.ts                 AI integration — Claude + Gemini, streaming, 79 tools
+  ai.ts                 AI integration — Claude + Gemini, streaming, 82 tools
   ai-tools/             11 modules: architecture, bom, circuit, component,
                         export, navigation, project, validation, registry, types
   storage.ts            IStorage interface + DatabaseStorage (LRU cache, 1,598 lines)
@@ -431,7 +431,7 @@ Phase 1   ░░░░░░░░░░░░░░░░░░░░  Next    
 |:---------|:---------|:-------|
 | **[DEVELOPER.md](docs/DEVELOPER.md)** | Engineers | Architecture, API reference (50+ endpoints), database schema, middleware, auth flow |
 | **[USER_GUIDE.md](docs/USER_GUIDE.md)** | End users | Feature walkthroughs, keyboard shortcuts, troubleshooting, glossary |
-| **[AI_AGENT_GUIDE.md](docs/AI_AGENT_GUIDE.md)** | AI assistants | Conventions, file organization, audit status, phase roadmap, all 79 AI tools |
+| **[AI_AGENT_GUIDE.md](docs/AI_AGENT_GUIDE.md)** | AI assistants | Conventions, file organization, audit status, phase roadmap, all 82 AI tools |
 | **[CHANGELOG.md](docs/CHANGELOG.md)** | Everyone | Version history, feature additions, breaking changes |
 
 <br>

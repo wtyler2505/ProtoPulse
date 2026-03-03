@@ -1,8 +1,10 @@
 import { memo } from 'react';
-import { Layers, X, LogOut, Contrast } from 'lucide-react';
+import { Layers, X, LogOut, Contrast, Palette } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAuth } from '@/lib/auth-context';
 import { useHighContrast } from '@/hooks/useHighContrast';
+import ThemePickerPanel from '@/components/panels/ThemePickerPanel';
 
 interface SidebarHeaderProps {
   onClose: () => void;
@@ -23,6 +25,27 @@ const SidebarHeader = memo(function SidebarHeader({ onClose }: SidebarHeaderProp
           {user ? user.username : 'System Architect'}
         </span>
       </div>
+      <Popover>
+        <StyledTooltip content="Color theme" side="bottom">
+          <PopoverTrigger asChild>
+            <button
+              data-testid="button-theme-picker"
+              aria-label="Open color theme picker"
+              className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Palette className="w-4 h-4" />
+            </button>
+          </PopoverTrigger>
+        </StyledTooltip>
+        <PopoverContent
+          side="bottom"
+          align="end"
+          sideOffset={8}
+          className="w-80"
+        >
+          <ThemePickerPanel />
+        </PopoverContent>
+      </Popover>
       <StyledTooltip content={highContrast ? 'Disable high contrast' : 'Enable high contrast'} side="bottom">
         <button
           data-testid="toggle-high-contrast"

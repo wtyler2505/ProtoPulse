@@ -4,6 +4,7 @@ import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertSpiceModelSchema, type InsertSpiceModel } from '@shared/schema';
 import { asyncHandler, parseIdParam, payloadLimit } from './utils';
+import { parseImportFile, validateImportFilename, validateImportSize } from '../spice-import';
 
 const listQuerySchema = z.object({
   category: z.string().optional(),
@@ -60,6 +61,85 @@ export function registerSpiceModelRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const seeded = await seedStandardSpiceModels();
       res.status(201).json({ message: `Seeded ${seeded.length} SPICE models`, count: seeded.length });
+    }),
+  );
+
+  // Import SPICE (.lib/.mod) or IBIS (.ibs) model files
+  // Accepts application/octet-stream body with filename in X-Filename header or ?filename= query param.
+  // Also accepts text/plain body for convenience.
+  app.post(
+    '/api/spice-models/import',
+    payloadLimit(5 * 1024 * 1024),
+    asyncHandler(async (req, res) => {
+      // Extract filename from header or query
+      const filename =
+        (req.headers['x-filename'] as string | undefined) ??
+        (req.query['filename'] as string | undefined) ??
+        '';
+
+      if (!filename) {
+        return res.status(400).json({ message: 'Missing filename. Provide X-Filename header or ?filename= query parameter.' });
+      }
+
+      // Validate file extension
+      const extValidation = validateImportFilename(filename);
+      if (!extValidation.valid) {
+        return res.status(400).json({ message: extValidation.error });
+      }
+
+      // Get file content from request body
+      let content: string;
+      if (Buffer.isBuffer(req.body)) {
+        content = req.body.toString('utf-8');
+      } else if (typeof req.body === 'string') {
+        content = req.body;
+      } else {
+        return res.status(400).json({
+          message: 'Request body must be the file content. Use Content-Type: application/octet-stream or text/plain.',
+        });
+      }
+
+      // Validate size
+      const sizeValidation = validateImportSize(Buffer.byteLength(content, 'utf-8'));
+      if (!sizeValidation.valid) {
+        return res.status(413).json({ message: sizeValidation.error });
+      }
+
+      // Parse the file
+      const { models: parsedModels, errors } = parseImportFile(content, filename);
+
+      if (parsedModels.length === 0 && errors.length > 0) {
+        return res.status(422).json({ imported: 0, models: [], errors });
+      }
+
+      // Validate each parsed model against the schema and store valid ones
+      const imported: { name: string; id: number }[] = [];
+      for (const parsed of parsedModels) {
+        const insertData = {
+          name: parsed.name,
+          modelType: parsed.modelType,
+          spiceDirective: parsed.spiceDirective,
+          parameters: parsed.parameters,
+          description: parsed.description,
+          category: parsed.category,
+          datasheet: null,
+        };
+
+        const validation = insertSpiceModelSchema.safeParse(insertData);
+        if (!validation.success) {
+          errors.push(`Model "${parsed.name}": ${fromZodError(validation.error).toString()}`);
+          continue;
+        }
+
+        const created = await storage.createSpiceModel(validation.data);
+        imported.push({ name: created.name, id: created.id });
+      }
+
+      res.status(201).json({
+        imported: imported.length,
+        models: imported,
+        errors,
+      });
     }),
   );
 }

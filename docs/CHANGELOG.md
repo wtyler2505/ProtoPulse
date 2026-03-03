@@ -25,6 +25,12 @@ All notable changes to ProtoPulse are documented in this file.
 - BOM Comparison tab in ProcurementView — Tabs layout with BOM Management + BOM Comparison/BomDiffPanel (UI-34)
 - Net class management UI (`NetClassPanel.tsx`) — create/edit net classes with trace width, clearance, via diameter, color-coded badges (UI-14)
 - JSDoc documentation across all 11 AI tool modules in `server/ai-tools/` (TD-29)
+- AI tool: `suggest_components` — analyzes architecture/BOM/circuits for missing components across 9 categories (IN-05)
+- AI tool: `design_review` — comprehensive design review across 7 categories with severity-rated findings (IN-18)
+- X-Request-Id header on all HTTP responses with client-side error propagation (CAPX-OBS-04)
+- Database transactions for `updateBomItem` and `updateComponentPart` preventing race conditions (CAPX-ARCH-02-EXP)
+- Auth regression test suite — 92 tests covering 6 security implementations (CAPX-TEST-01)
+- Storage transaction tests — 15 tests covering atomic BOM/component updates (CAPX-ARCH-02-EXP)
 
 ### Changed
 - React.memo coverage increased to 29+ components across 24 files (from 9 initial)
