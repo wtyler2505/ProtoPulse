@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
@@ -54,7 +54,7 @@ interface ERCPanelProps {
   onViolationsChange?: (violations: ERCViolation[]) => void;
 }
 
-export default function ERCPanel({ circuitId, onHighlightViolation, onViolationsChange }: ERCPanelProps) {
+const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onViolationsChange }: ERCPanelProps) {
   const projectId = useProjectId();
   const { data: circuitDesign } = useCircuitDesign(projectId, circuitId);
   const { data: instances } = useCircuitInstances(circuitId);
@@ -318,4 +318,6 @@ export default function ERCPanel({ circuitId, onHighlightViolation, onViolations
       </div>
     </div>
   );
-}
+});
+
+export default ERCPanel;

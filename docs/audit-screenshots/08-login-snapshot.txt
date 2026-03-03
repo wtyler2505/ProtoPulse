@@ -1,0 +1,5 @@
+uid=55_0 RootWebArea "ProtoPulse" url="http://localhost:5000/login"
+  uid=55_1 heading "404 Page Not Found" level="1"
+  uid=55_2 StaticText "Did you forget to add the page to the router?"
+  uid=55_3 region "Notifications (F8)"
+    uid=55_4 list

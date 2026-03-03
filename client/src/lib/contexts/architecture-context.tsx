@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useRef, useCallback, useMemo } fro
 import { Node, Edge } from '@xyflow/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { toast } from '@/hooks/use-toast';
 import type { ViewMode } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 
@@ -64,6 +65,9 @@ interface ArchitectureState {
   setPendingComponentPartId: (id: number | null) => void;
 }
 
+/** Maximum number of entries in the undo/redo stacks. Oldest entries are trimmed when exceeded. */
+const MAX_UNDO_STACK_DEPTH = 50;
+
 const ArchitectureContext = createContext<ArchitectureState | undefined>(undefined);
 
 export function ArchitectureProvider({
@@ -82,7 +86,7 @@ export function ArchitectureProvider({
   const nodesQuery = useQuery({
     queryKey: [`/api/projects/${projectId}/nodes`],
     enabled: seeded,
-    select: (data: NodeApiResponse[]) => data.map((n): Node => ({
+    select: (response: { data: NodeApiResponse[]; total: number }) => response.data.map((n): Node => ({
       id: n.nodeId,
       type: 'custom',
       position: { x: n.positionX, y: n.positionY },
@@ -93,7 +97,7 @@ export function ArchitectureProvider({
   const edgesQuery = useQuery({
     queryKey: [`/api/projects/${projectId}/edges`],
     enabled: seeded,
-    select: (data: EdgeApiResponse[]) => data.map((e): Edge => ({
+    select: (response: { data: EdgeApiResponse[]; total: number }) => response.data.map((e): Edge => ({
       id: e.edgeId,
       source: e.source,
       target: e.target,
@@ -125,8 +129,10 @@ export function ArchitectureProvider({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/nodes`] });
     },
-    onError: () => {
+    onError: (error: Error) => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/nodes`] });
+      const reason = error.message.replace(/^\d{3}:\s*/, '') || 'An unexpected error occurred';
+      toast({ variant: 'destructive', title: 'Failed to save nodes', description: `Changes may not have been saved. ${reason}` });
     },
   });
 
@@ -152,8 +158,10 @@ export function ArchitectureProvider({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/edges`] });
     },
-    onError: () => {
+    onError: (error: Error) => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/edges`] });
+      const reason = error.message.replace(/^\d{3}:\s*/, '') || 'An unexpected error occurred';
+      toast({ variant: 'destructive', title: 'Failed to save connections', description: `Changes may not have been saved. ${reason}` });
     },
   });
 
@@ -161,38 +169,40 @@ export function ArchitectureProvider({
     // Optimistic cache update so consumers see new data immediately,
     // then persist to server.  On success the invalidation refetches
     // the authoritative data; on error the query reverts.
+    const mapped = newNodes.map(node => ({
+      nodeId: node.id,
+      nodeType: node.data.type,
+      label: node.data.label,
+      positionX: node.position.x,
+      positionY: node.position.y,
+      data: { description: node.data.description },
+    }));
     queryClient.setQueryData(
       [`/api/projects/${projectId}/nodes`],
-      newNodes.map(node => ({
-        nodeId: node.id,
-        nodeType: node.data.type,
-        label: node.data.label,
-        positionX: node.position.x,
-        positionY: node.position.y,
-        data: { description: node.data.description },
-      })),
+      { data: mapped, total: mapped.length },
     );
     saveNodesMutation.mutate(newNodes);
   }, [queryClient, saveNodesMutation]);
 
   const setEdges = useCallback((newEdges: Edge[]) => {
+    const mapped = newEdges.map(edge => {
+      const ed = edge.data as EdgeData | undefined;
+      return {
+        edgeId: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        animated: edge.animated ?? false,
+        style: edge.style,
+        signalType: ed?.signalType || undefined,
+        voltage: ed?.voltage || undefined,
+        busWidth: ed?.busWidth || undefined,
+        netName: ed?.netName || undefined,
+      };
+    });
     queryClient.setQueryData(
       [`/api/projects/${projectId}/edges`],
-      newEdges.map(edge => {
-        const ed = edge.data as EdgeData | undefined;
-        return {
-          edgeId: edge.id,
-          source: edge.source,
-          target: edge.target,
-          label: edge.label,
-          animated: edge.animated ?? false,
-          style: edge.style,
-          signalType: ed?.signalType || undefined,
-          voltage: ed?.voltage || undefined,
-          busWidth: ed?.busWidth || undefined,
-          netName: ed?.netName || undefined,
-        };
-      }),
+      { data: mapped, total: mapped.length },
     );
     saveEdgesMutation.mutate(newEdges);
   }, [queryClient, saveEdgesMutation]);
@@ -215,7 +225,7 @@ export function ArchitectureProvider({
   const pushUndoState = useCallback(() => {
     const currentNodes = nodesQuery.data ?? [];
     const currentEdges = edgesQuery.data ?? [];
-    setUndoStack(prev => [...prev.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
+    setUndoStack(prev => [...prev.slice(-(MAX_UNDO_STACK_DEPTH - 1)), { nodes: currentNodes, edges: currentEdges }]);
     setRedoStack([]);
   }, [nodesQuery.data, edgesQuery.data]);
 
@@ -225,7 +235,7 @@ export function ArchitectureProvider({
     const currentEdges = edgesQuery.data ?? [];
     const prev = undoStack[undoStack.length - 1];
     setUndoStack(s => s.slice(0, -1));
-    setRedoStack(s => [...s.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
+    setRedoStack(s => [...s.slice(-(MAX_UNDO_STACK_DEPTH - 1)), { nodes: currentNodes, edges: currentEdges }]);
     setNodes(prev.nodes);
     setEdges(prev.edges);
   }, [undoStack, nodesQuery.data, edgesQuery.data, setNodes, setEdges]);
@@ -236,7 +246,7 @@ export function ArchitectureProvider({
     const currentEdges = edgesQuery.data ?? [];
     const next = redoStack[redoStack.length - 1];
     setRedoStack(s => s.slice(0, -1));
-    setUndoStack(s => [...s.slice(-19), { nodes: currentNodes, edges: currentEdges }]);
+    setUndoStack(s => [...s.slice(-(MAX_UNDO_STACK_DEPTH - 1)), { nodes: currentNodes, edges: currentEdges }]);
     setNodes(next.nodes);
     setEdges(next.edges);
   }, [redoStack, nodesQuery.data, edgesQuery.data, setNodes, setEdges]);

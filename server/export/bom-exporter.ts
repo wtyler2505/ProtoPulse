@@ -6,6 +6,15 @@
  */
 
 import type { BomItem } from '@shared/schema';
+import {
+  type BomItemData,
+  type ComponentPartData,
+  type ExportResult,
+  csvRow as sharedCsvRow,
+  escapeCSV,
+  metaStr,
+  sanitizeFilename,
+} from './types';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -293,4 +302,168 @@ function extractFootprint(description: string): string {
   if (pkgMatch) return pkgMatch[0].toUpperCase();
 
   return '';
+}
+
+// ---------------------------------------------------------------------------
+// Legacy API — original export-generators.ts signatures used by ai-tools.ts
+// ---------------------------------------------------------------------------
+
+export function generateGenericBomCsv(
+  bom: BomItemData[],
+  projectName: string,
+): ExportResult {
+  const header = sharedCsvRow([
+    'Part Number',
+    'Manufacturer',
+    'Description',
+    'Quantity',
+    'Unit Price',
+    'Total Price',
+    'Supplier',
+    'Status',
+    'Stock',
+    'Lead Time',
+  ]);
+
+  const rows = bom.map((item) =>
+    sharedCsvRow([
+      item.partNumber,
+      item.manufacturer,
+      item.description,
+      item.quantity,
+      item.unitPrice,
+      item.totalPrice,
+      item.supplier,
+      item.status,
+      item.stock,
+      item.leadTime,
+    ]),
+  );
+
+  return {
+    content: [header, ...rows].join('\n'),
+    encoding: 'utf8',
+    mimeType: 'text/csv',
+    filename: `${sanitizeFilename(projectName)}_BOM.csv`,
+  };
+}
+
+export function generateJlcpcbBom(
+  bom: BomItemData[],
+  parts: ComponentPartData[],
+): ExportResult {
+  const header = sharedCsvRow(['Comment', 'Designator', 'Footprint', 'LCSC Part #']);
+
+  // Build lookup: MPN → part meta
+  const mpnToMeta = new Map<string, Record<string, unknown>>();
+  for (const part of parts) {
+    const mpn = metaStr(part.meta, 'mpn');
+    if (mpn) {
+      mpnToMeta.set(mpn.toLowerCase(), part.meta);
+    }
+  }
+
+  // Counters for auto-generated reference designators by prefix
+  const refDesCounters = new Map<string, number>();
+
+  function nextRefDes(prefix: string): string {
+    const current = (refDesCounters.get(prefix) ?? 0) + 1;
+    refDesCounters.set(prefix, current);
+    return `${prefix}${current}`;
+  }
+
+  /** Guess a ref-des prefix from a description. */
+  function guessPrefix(description: string): string {
+    const desc = description.toLowerCase();
+    if (desc.includes('resistor') || desc.includes('res ')) return 'R';
+    if (desc.includes('capacitor') || desc.includes('cap ')) return 'C';
+    if (desc.includes('inductor') || desc.includes('ind ')) return 'L';
+    if (desc.includes('diode') || desc.includes('led')) return 'D';
+    if (desc.includes('transistor') || desc.includes('mosfet') || desc.includes('bjt')) return 'Q';
+    if (desc.includes('connector') || desc.includes('header')) return 'J';
+    if (desc.includes('crystal') || desc.includes('oscillator')) return 'Y';
+    return 'U';
+  }
+
+  const rows = bom.map((item) => {
+    const meta = mpnToMeta.get(item.partNumber.toLowerCase());
+
+    let designator: string;
+    if (meta) {
+      const existingRef = metaStr(meta, 'referenceDesignator');
+      designator = existingRef || nextRefDes(guessPrefix(item.description));
+    } else {
+      designator = nextRefDes(guessPrefix(item.description));
+    }
+
+    const footprint = meta ? metaStr(meta, 'footprint', 'Unknown') : 'Unknown';
+    const lcsc = meta ? metaStr(meta, 'lcscPartNumber') : '';
+
+    return sharedCsvRow([item.description, designator, footprint, lcsc]);
+  });
+
+  return {
+    content: [header, ...rows].join('\n'),
+    encoding: 'utf8',
+    mimeType: 'text/csv',
+    filename: 'JLCPCB_BOM.csv',
+  };
+}
+
+export function generateMouserBom(bom: BomItemData[]): ExportResult {
+  const header = sharedCsvRow([
+    'Mouser Part #',
+    'MFR Part #',
+    'Manufacturer',
+    'Quantity',
+    'Description',
+    'Unit Price',
+  ]);
+
+  const rows = bom.map((item) =>
+    sharedCsvRow([
+      '', // Mouser Part # — user fills in
+      item.partNumber,
+      item.manufacturer,
+      item.quantity,
+      item.description,
+      item.unitPrice,
+    ]),
+  );
+
+  return {
+    content: [header, ...rows].join('\n'),
+    encoding: 'utf8',
+    mimeType: 'text/csv',
+    filename: 'Mouser_BOM.csv',
+  };
+}
+
+export function generateDigikeyBom(bom: BomItemData[]): ExportResult {
+  const header = sharedCsvRow([
+    'DigiKey Part #',
+    'MFR Part #',
+    'Manufacturer Name',
+    'Quantity',
+    'Unit Price',
+    'Extended Price',
+  ]);
+
+  const rows = bom.map((item) =>
+    sharedCsvRow([
+      '', // DigiKey Part # — user fills in
+      item.partNumber,
+      item.manufacturer,
+      item.quantity,
+      item.unitPrice,
+      item.totalPrice,
+    ]),
+  );
+
+  return {
+    content: [header, ...rows].join('\n'),
+    encoding: 'utf8',
+    mimeType: 'text/csv',
+    filename: 'DigiKey_BOM.csv',
+  };
 }

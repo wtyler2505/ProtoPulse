@@ -11,8 +11,6 @@ import { cn } from '@/lib/utils';
 import {
   Layers,
   Settings,
-  ChevronRight,
-  ChevronDown,
   FolderOpen,
   Search,
   Pencil,
@@ -21,7 +19,7 @@ import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { navItems } from '@/components/layout/sidebar/sidebar-constants';
 import SidebarHeader from '@/components/layout/sidebar/SidebarHeader';
 import ProjectSettingsPanel from '@/components/layout/sidebar/ProjectSettingsPanel';
-import ComponentTree from './sidebar/ComponentTree';
+import ProjectExplorer from './sidebar/ProjectExplorer';
 import HistoryList from './sidebar/HistoryList';
 
 interface SidebarProps {
@@ -40,7 +38,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
   const { history } = useHistory();
   const { addOutputLog } = useOutput();
 
-  const [blocksExpanded, setBlocksExpanded] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState(projectName);
@@ -53,7 +51,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
     return (
     <div
         data-testid="sidebar-collapsed"
-        className="hidden md:flex flex-col items-center w-10 h-full bg-sidebar/60 backdrop-blur-xl border-r border-sidebar-border shrink-0 cursor-pointer transition-all duration-300"
+        className="hidden lg:flex flex-col items-center w-10 h-full bg-sidebar/60 backdrop-blur-xl border-r border-sidebar-border shrink-0 cursor-pointer transition-all duration-300"
         onClick={onToggleCollapse}
       >
         <div className="h-14 flex items-center justify-center border-b border-sidebar-border w-full">
@@ -68,7 +66,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
                   data-testid={`sidebar-icon-${item.view}`}
                   title={item.label}
                   className={cn(
-                    "w-8 h-8 flex items-center justify-center transition-colors",
+                    "w-8 h-8 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
                     activeView === item.view
                       ? "text-primary bg-primary/10 shadow-[0_0_8px_rgba(6,182,212,0.2)]"
                       : "text-muted-foreground hover:text-primary hover:bg-muted/50"
@@ -104,24 +102,22 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
       {isOpen && (
         <div
           data-testid="sidebar-backdrop"
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
         />
       )}
       <div
         className={cn(
           "bg-sidebar/60 backdrop-blur-xl border-r border-sidebar-border flex flex-col h-full text-sm select-none shrink-0 overflow-hidden",
-          "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform md:relative md:w-auto md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform lg:relative lg:w-auto lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
         style={{ '--sidebar-w': `${width}px` } as React.CSSProperties}
       >
-        <div className="flex flex-col h-full w-64 md:w-[var(--sidebar-w)]">
+        <div className="flex flex-col h-full w-64 lg:w-[var(--sidebar-w)]">
           <SidebarHeader onClose={onClose} />
           <SidebarContent
             history={history}
-            blocksExpanded={blocksExpanded}
-            setBlocksExpanded={setBlocksExpanded}
             projectName={projectName}
             projectDescription={projectDescription}
             addOutputLog={addOutputLog}
@@ -153,8 +149,6 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
 
 interface SidebarContentProps {
   history: ProjectHistoryItem[];
-  blocksExpanded: boolean;
-  setBlocksExpanded: (v: boolean) => void;
   projectName: string;
   projectDescription: string;
   addOutputLog: (log: string) => void;
@@ -181,7 +175,6 @@ interface SidebarContentProps {
 
 function SidebarContent({
   history,
-  blocksExpanded, setBlocksExpanded,
   projectName, projectDescription, addOutputLog,
   nodes, edges, bom, issues, setNodes,
   selectedNodeId, focusNode,
@@ -199,8 +192,6 @@ function SidebarContent({
       editNameRef.current.select();
     }
   }, [editingName]);
-
-  const totalNodes = (nodes || []).length;
 
   const saveInlineName = () => {
     const trimmed = editNameValue.trim();
@@ -235,9 +226,10 @@ function SidebarContent({
                 data-testid="sidebar-search"
                 type="text"
                 placeholder="Search blocks..."
+                aria-label="Search blocks"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/30 border border-border/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:bg-muted/50 transition-colors"
+                className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:bg-muted/60 transition-colors focus-ring"
               />
             </div>
           </div>
@@ -250,6 +242,7 @@ function SidebarContent({
                   ref={editNameRef}
                   data-testid="inline-edit-name"
                   type="text"
+                  aria-label="Edit project name"
                   value={editNameValue}
                   onChange={(e) => setEditNameValue(e.target.value)}
                   onKeyDown={(e) => {
@@ -257,7 +250,7 @@ function SidebarContent({
                     if (e.key === 'Escape') cancelInlineName();
                   }}
                   onBlur={saveInlineName}
-                  className="flex-1 min-w-0 text-sm bg-muted/30 border border-primary/50 px-1.5 py-0.5 text-foreground focus:outline-none"
+                  className="flex-1 min-w-0 text-sm bg-muted/30 border border-primary/50 px-1.5 py-0.5 text-foreground focus:outline-none focus-ring"
                 />
               ) : (
                 <span
@@ -271,29 +264,18 @@ function SidebarContent({
               )}
             </div>
 
-            <div>
-              <div
-                className="px-4 py-1.5 flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-muted/50"
-                onClick={() => setBlocksExpanded(!blocksExpanded)}
-              >
-                {blocksExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                <span className="text-xs">Blocks</span>
-                <span className="text-[10px] bg-muted/50 px-1.5 py-0.5 ml-auto">{totalNodes}</span>
-              </div>
-
-              {blocksExpanded && (
-                <ComponentTree
-                  nodes={nodes}
-                  searchQuery={searchQuery}
-                  selectedNodeId={selectedNodeId}
-                  expandedCategories={expandedCategories}
-                  setExpandedCategories={setExpandedCategories}
-                  focusNode={focusNode}
-                  setNodes={setNodes}
-                  addOutputLog={addOutputLog}
-                />
-              )}
-            </div>
+            <ProjectExplorer
+              nodes={nodes}
+              bom={bom}
+              issues={issues}
+              searchQuery={searchQuery}
+              selectedNodeId={selectedNodeId}
+              expandedCategories={expandedCategories}
+              setExpandedCategories={setExpandedCategories}
+              focusNode={focusNode}
+              setNodes={setNodes}
+              addOutputLog={addOutputLog}
+            />
 
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, isNull, ilike, sql, count, or } from "drizzle-orm";
+import { eq, and, desc, asc, isNull, isNotNull, ilike, sql, count, or, inArray } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { db } from "./db";
 import { cache } from "./cache";
@@ -19,6 +19,11 @@ import {
   circuitWires, type CircuitWireRow, type InsertCircuitWire,
   simulationResults, type SimulationResultRow, type InsertSimulationResult,
   aiActions, type AiActionRow, type InsertAiAction,
+  hierarchicalPorts, type HierarchicalPortRow, type InsertHierarchicalPort,
+  spiceModels, type SpiceModelRow, type InsertSpiceModel,
+  designPreferences, type DesignPreference, type InsertDesignPreference,
+  bomSnapshots, type BomSnapshot, type InsertBomSnapshot,
+  componentLifecycle, type ComponentLifecycle, type InsertComponentLifecycle,
 } from "@shared/schema";
 
 export interface PaginationOptions {
@@ -27,12 +32,36 @@ export interface PaginationOptions {
   sort: 'asc' | 'desc';
 }
 
+function mapPgCodeToHttp(code: string | undefined): number {
+  if (!code) { return 500; }
+  switch (code) {
+    case '23505': return 409; // unique_violation
+    case '23503': return 400; // foreign_key_violation
+    case '23502': return 400; // not_null_violation
+    case '23514': return 400; // check_violation
+    case '57014': return 408; // query_canceled (timeout)
+    case '08006': // connection_failure
+    case '08001': // sqlclient_unable_to_establish_sqlconnection
+    case '08004': // sqlserver_rejected_establishment
+    case '57P01': // admin_shutdown
+      return 503;
+    default: return 500;
+  }
+}
+
 export class StorageError extends Error {
+  public readonly httpStatus: number;
+  public readonly pgCode: string | null;
+
   constructor(operation: string, entity: string, cause?: unknown) {
     const causeMsg = cause instanceof Error ? cause.message : String(cause);
     super(`Storage.${operation}(${entity}) failed: ${causeMsg}`);
     this.name = 'StorageError';
-    if (cause instanceof Error) this.stack = cause.stack;
+    if (cause instanceof Error) { this.stack = cause.stack; }
+
+    const code = (cause as Record<string, unknown> | null | undefined)?.code as string | undefined;
+    this.pgCode = code ?? null;
+    this.httpStatus = mapPgCodeToHttp(code);
   }
 }
 
@@ -71,10 +100,12 @@ export interface IStorage {
   deleteValidationIssuesByProject(projectId: number): Promise<void>;
   bulkCreateValidationIssues(issues: InsertValidationIssue[]): Promise<ValidationIssue[]>;
 
-  getChatMessages(projectId: number, opts?: PaginationOptions): Promise<ChatMessage[]>;
+  getChatMessages(projectId: number, opts?: PaginationOptions & { branchId?: string | null }): Promise<ChatMessage[]>;
   createChatMessage(msg: InsertChatMessage): Promise<ChatMessage>;
   deleteChatMessages(projectId: number): Promise<void>;
   deleteChatMessage(id: number, projectId: number): Promise<boolean>;
+  createChatBranch(projectId: number, parentMessageId: number): Promise<{ branchId: string; parentMessageId: number }>;
+  getChatBranches(projectId: number): Promise<Array<{ branchId: string; parentMessageId: number | null; messageCount: number; createdAt: Date | null }>>;
 
   getHistoryItems(projectId: number, opts?: PaginationOptions): Promise<HistoryItem[]>;
   createHistoryItem(item: InsertHistoryItem): Promise<HistoryItem>;
@@ -137,6 +168,37 @@ export interface IStorage {
   getAiActions(projectId: number): Promise<AiActionRow[]>;
   getAiActionsByMessage(chatMessageId: string): Promise<AiActionRow[]>;
   createAiAction(data: InsertAiAction): Promise<AiActionRow>;
+
+  // Hierarchical sheet navigation
+  getChildDesigns(parentDesignId: number): Promise<CircuitDesignRow[]>;
+  getRootDesigns(projectId: number): Promise<CircuitDesignRow[]>;
+  getHierarchicalPorts(designId: number): Promise<HierarchicalPortRow[]>;
+  getHierarchicalPort(id: number): Promise<HierarchicalPortRow | undefined>;
+  createHierarchicalPort(data: InsertHierarchicalPort): Promise<HierarchicalPortRow>;
+  updateHierarchicalPort(id: number, data: Partial<InsertHierarchicalPort>): Promise<HierarchicalPortRow | undefined>;
+  deleteHierarchicalPort(id: number): Promise<HierarchicalPortRow | undefined>;
+
+  // Design preferences (FG-24)
+  getDesignPreferences(projectId: number): Promise<DesignPreference[]>;
+  upsertDesignPreference(data: InsertDesignPreference): Promise<DesignPreference>;
+  deleteDesignPreference(id: number): Promise<boolean>;
+
+  // SPICE model library (EN-24)
+  getSpiceModels(opts?: { category?: string; search?: string; limit?: number; offset?: number }): Promise<{ models: SpiceModelRow[]; total: number }>;
+  getSpiceModel(id: number): Promise<SpiceModelRow | undefined>;
+  createSpiceModel(model: InsertSpiceModel): Promise<SpiceModelRow>;
+
+  // BOM snapshots (EN-21)
+  createBomSnapshot(projectId: number, label: string): Promise<BomSnapshot>;
+  getBomSnapshots(projectId: number): Promise<BomSnapshot[]>;
+  getBomSnapshot(id: number): Promise<BomSnapshot | undefined>;
+  deleteBomSnapshot(id: number): Promise<boolean>;
+
+  // Component lifecycle / obsolescence tracking (FG-32)
+  getComponentLifecycles(projectId: number): Promise<ComponentLifecycle[]>;
+  getComponentLifecycle(id: number): Promise<ComponentLifecycle | undefined>;
+  upsertComponentLifecycle(data: InsertComponentLifecycle): Promise<ComponentLifecycle>;
+  deleteComponentLifecycle(id: number): Promise<boolean>;
 }
 
 function computeTotalPrice(quantity: number, unitPrice: string | number): string {
@@ -209,16 +271,21 @@ export class DatabaseStorage implements IStorage {
   async deleteProject(id: number): Promise<boolean> {
     try {
       const now = new Date();
-      const [project] = await db.update(projects).set({ deletedAt: now }).where(and(eq(projects.id, id), isNull(projects.deletedAt))).returning();
-      if (!project) return false;
-      await db.update(architectureNodes).set({ deletedAt: now }).where(eq(architectureNodes.projectId, id));
-      await db.update(architectureEdges).set({ deletedAt: now }).where(eq(architectureEdges.projectId, id));
-      await db.update(bomItems).set({ deletedAt: now }).where(eq(bomItems.projectId, id));
-      cache.invalidate(`project:${id}`);
-      cache.invalidate(`nodes:${id}`);
-      cache.invalidate(`edges:${id}`);
-      cache.invalidate(`bom:${id}`);
-      return true;
+      const result = await db.transaction(async (tx) => {
+        const [project] = await tx.update(projects).set({ deletedAt: now }).where(and(eq(projects.id, id), isNull(projects.deletedAt))).returning();
+        if (!project) { return false; }
+        await tx.update(architectureNodes).set({ deletedAt: now }).where(eq(architectureNodes.projectId, id));
+        await tx.update(architectureEdges).set({ deletedAt: now }).where(eq(architectureEdges.projectId, id));
+        await tx.update(bomItems).set({ deletedAt: now }).where(eq(bomItems.projectId, id));
+        return true;
+      });
+      if (result) {
+        cache.invalidate(`project:${id}`);
+        cache.invalidate(`nodes:${id}`);
+        cache.invalidate(`edges:${id}`);
+        cache.invalidate(`bom:${id}`);
+      }
+      return result;
     } catch (e) {
       throw new StorageError('deleteProject', `projects/${id}`, e);
     }
@@ -456,9 +523,75 @@ export class DatabaseStorage implements IStorage {
   async replaceNodes(projectId: number, nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]> {
     try {
       const result = await db.transaction(async (tx) => {
-        await tx.delete(architectureNodes).where(eq(architectureNodes.projectId, projectId));
-        if (nodes.length === 0) return [];
-        return tx.insert(architectureNodes).values(nodes).returning();
+        // Fetch existing live nodes for this project
+        const existing = await tx.select().from(architectureNodes)
+          .where(and(eq(architectureNodes.projectId, projectId), isNull(architectureNodes.deletedAt)));
+
+        const existingByNodeId = new Map(existing.map((n) => [n.nodeId, n]));
+        const incomingByNodeId = new Map(nodes.map((n) => [n.nodeId, n]));
+
+        // Soft-delete removed nodes (exist in DB but not in incoming)
+        const removedIds = existing
+          .filter((n) => !incomingByNodeId.has(n.nodeId))
+          .map((n) => n.id);
+        if (removedIds.length > 0) {
+          await tx.update(architectureNodes)
+            .set({ deletedAt: new Date() })
+            .where(inArray(architectureNodes.id, removedIds));
+        }
+
+        // Separate incoming into inserts vs updates
+        const toInsert: InsertArchitectureNode[] = [];
+        const toUpdate: Array<{ id: number; data: Partial<InsertArchitectureNode> }> = [];
+        const unchanged: ArchitectureNode[] = [];
+
+        for (const incoming of nodes) {
+          const ex = existingByNodeId.get(incoming.nodeId);
+          if (!ex) {
+            toInsert.push(incoming);
+          } else {
+            // Compare mutable fields to detect changes
+            // Normalize null/undefined for JSONB comparison
+            const changed =
+              ex.label !== incoming.label ||
+              ex.nodeType !== incoming.nodeType ||
+              ex.positionX !== incoming.positionX ||
+              ex.positionY !== incoming.positionY ||
+              JSON.stringify(ex.data ?? null) !== JSON.stringify(incoming.data ?? null);
+            if (changed) {
+              toUpdate.push({
+                id: ex.id,
+                data: {
+                  label: incoming.label,
+                  nodeType: incoming.nodeType,
+                  positionX: incoming.positionX,
+                  positionY: incoming.positionY,
+                  data: incoming.data,
+                },
+              });
+            } else {
+              unchanged.push(ex);
+            }
+          }
+        }
+
+        // Perform inserts
+        let inserted: ArchitectureNode[] = [];
+        if (toInsert.length > 0) {
+          inserted = await tx.insert(architectureNodes).values(toInsert).returning();
+        }
+
+        // Perform updates one-by-one (each row may differ)
+        const updated: ArchitectureNode[] = [];
+        for (const { id, data } of toUpdate) {
+          const [row] = await tx.update(architectureNodes)
+            .set({ ...data, updatedAt: new Date() })
+            .where(eq(architectureNodes.id, id))
+            .returning();
+          updated.push(row);
+        }
+
+        return [...unchanged, ...updated, ...inserted];
       });
       cache.invalidate(`nodes:${projectId}`);
       return result;
@@ -470,9 +603,82 @@ export class DatabaseStorage implements IStorage {
   async replaceEdges(projectId: number, edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]> {
     try {
       const result = await db.transaction(async (tx) => {
-        await tx.delete(architectureEdges).where(eq(architectureEdges.projectId, projectId));
-        if (edges.length === 0) return [];
-        return tx.insert(architectureEdges).values(edges).returning();
+        // Fetch existing live edges for this project
+        const existing = await tx.select().from(architectureEdges)
+          .where(and(eq(architectureEdges.projectId, projectId), isNull(architectureEdges.deletedAt)));
+
+        const existingByEdgeId = new Map(existing.map((e) => [e.edgeId, e]));
+        const incomingByEdgeId = new Map(edges.map((e) => [e.edgeId, e]));
+
+        // Soft-delete removed edges (exist in DB but not in incoming)
+        const removedIds = existing
+          .filter((e) => !incomingByEdgeId.has(e.edgeId))
+          .map((e) => e.id);
+        if (removedIds.length > 0) {
+          await tx.update(architectureEdges)
+            .set({ deletedAt: new Date() })
+            .where(inArray(architectureEdges.id, removedIds));
+        }
+
+        // Separate incoming into inserts vs updates
+        const toInsert: InsertArchitectureEdge[] = [];
+        const toUpdate: Array<{ id: number; data: Partial<InsertArchitectureEdge> }> = [];
+        const unchanged: ArchitectureEdge[] = [];
+
+        for (const incoming of edges) {
+          const ex = existingByEdgeId.get(incoming.edgeId);
+          if (!ex) {
+            toInsert.push(incoming);
+          } else {
+            // Compare mutable fields to detect changes
+            const changed =
+              ex.source !== incoming.source ||
+              ex.target !== incoming.target ||
+              ex.label !== (incoming.label ?? null) ||
+              ex.animated !== (incoming.animated ?? false) ||
+              JSON.stringify(ex.style) !== JSON.stringify(incoming.style ?? null) ||
+              ex.signalType !== (incoming.signalType ?? null) ||
+              ex.voltage !== (incoming.voltage ?? null) ||
+              ex.busWidth !== (incoming.busWidth ?? null) ||
+              ex.netName !== (incoming.netName ?? null);
+            if (changed) {
+              toUpdate.push({
+                id: ex.id,
+                data: {
+                  source: incoming.source,
+                  target: incoming.target,
+                  label: incoming.label,
+                  animated: incoming.animated,
+                  style: incoming.style,
+                  signalType: incoming.signalType,
+                  voltage: incoming.voltage,
+                  busWidth: incoming.busWidth,
+                  netName: incoming.netName,
+                },
+              });
+            } else {
+              unchanged.push(ex);
+            }
+          }
+        }
+
+        // Perform inserts
+        let inserted: ArchitectureEdge[] = [];
+        if (toInsert.length > 0) {
+          inserted = await tx.insert(architectureEdges).values(toInsert).returning();
+        }
+
+        // Perform updates one-by-one (each row may differ)
+        const updated: ArchitectureEdge[] = [];
+        for (const { id, data } of toUpdate) {
+          const [row] = await tx.update(architectureEdges)
+            .set(data)
+            .where(eq(architectureEdges.id, id))
+            .returning();
+          updated.push(row);
+        }
+
+        return [...unchanged, ...updated, ...inserted];
       });
       cache.invalidate(`edges:${projectId}`);
       return result;
@@ -493,10 +699,18 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getChatMessages(projectId: number, opts?: PaginationOptions): Promise<ChatMessage[]> {
-    const { limit = 50, offset = 0, sort = 'desc' } = opts || {};
+  async getChatMessages(projectId: number, opts?: PaginationOptions & { branchId?: string | null }): Promise<ChatMessage[]> {
+    const { limit = 50, offset = 0, sort = 'desc', branchId } = opts || {};
+    const conditions = [eq(chatMessages.projectId, projectId)];
+    if (branchId !== undefined) {
+      if (branchId === null) {
+        conditions.push(isNull(chatMessages.branchId));
+      } else {
+        conditions.push(eq(chatMessages.branchId, branchId));
+      }
+    }
     return db.select().from(chatMessages)
-      .where(eq(chatMessages.projectId, projectId))
+      .where(and(...conditions))
       .orderBy(sort === 'desc' ? desc(chatMessages.timestamp) : asc(chatMessages.timestamp))
       .limit(limit)
       .offset(offset);
@@ -516,6 +730,37 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(chatMessages.id, id), eq(chatMessages.projectId, projectId)))
       .returning();
     return result.length > 0;
+  }
+
+  async createChatBranch(projectId: number, parentMessageId: number): Promise<{ branchId: string; parentMessageId: number }> {
+    // Verify the parent message exists and belongs to this project
+    const [parent] = await db.select().from(chatMessages)
+      .where(and(eq(chatMessages.id, parentMessageId), eq(chatMessages.projectId, projectId)));
+    if (!parent) {
+      throw new StorageError('createChatBranch', `projects/${projectId}/chat/${parentMessageId}`,
+        new Error('Parent message not found'));
+    }
+    const branchId = crypto.randomUUID();
+    return { branchId, parentMessageId };
+  }
+
+  async getChatBranches(projectId: number): Promise<Array<{ branchId: string; parentMessageId: number | null; messageCount: number; createdAt: Date | null }>> {
+    const rows = await db.select({
+      branchId: chatMessages.branchId,
+      parentMessageId: chatMessages.parentMessageId,
+      messageCount: count(chatMessages.id),
+      createdAt: sql<Date | null>`min(${chatMessages.timestamp})`,
+    }).from(chatMessages)
+      .where(and(eq(chatMessages.projectId, projectId), isNotNull(chatMessages.branchId)))
+      .groupBy(chatMessages.branchId, chatMessages.parentMessageId);
+
+    return rows.filter((r): r is typeof r & { branchId: string } => r.branchId !== null)
+      .map((r) => ({
+        branchId: r.branchId,
+        parentMessageId: r.parentMessageId,
+        messageCount: Number(r.messageCount),
+        createdAt: r.createdAt,
+      }));
   }
 
   async getHistoryItems(projectId: number, opts?: PaginationOptions): Promise<HistoryItem[]> {
@@ -716,21 +961,14 @@ export class DatabaseStorage implements IStorage {
 
   async upsertChatSettings(userId: number, settings: Partial<InsertUserChatSettings>): Promise<UserChatSettings> {
     try {
-      const [existing] = await db.select().from(userChatSettings)
-        .where(eq(userChatSettings.userId, userId));
-
-      if (existing) {
-        const [updated] = await db.update(userChatSettings)
-          .set({ ...settings, updatedAt: new Date() })
-          .where(eq(userChatSettings.userId, userId))
-          .returning();
-        return updated;
-      }
-
-      const [created] = await db.insert(userChatSettings)
+      const [result] = await db.insert(userChatSettings)
         .values({ userId, ...settings })
+        .onConflictDoUpdate({
+          target: userChatSettings.userId,
+          set: { ...settings, updatedAt: new Date() },
+        })
         .returning();
-      return created;
+      return result;
     } catch (e) {
       throw new StorageError('upsertChatSettings', `user/${userId}/chat-settings`, e);
     }
@@ -1055,6 +1293,304 @@ export class DatabaseStorage implements IStorage {
       return action;
     } catch (e) {
       throw new StorageError('createAiAction', `projects/${data.projectId}/actions`, e);
+    }
+  }
+
+  // --- Hierarchical Sheet Navigation ---
+
+  async getChildDesigns(parentDesignId: number): Promise<CircuitDesignRow[]> {
+    try {
+      return await db.select().from(circuitDesigns)
+        .where(eq(circuitDesigns.parentDesignId, parentDesignId))
+        .orderBy(asc(circuitDesigns.id));
+    } catch (e) {
+      throw new StorageError('getChildDesigns', `circuit-designs/${parentDesignId}/children`, e);
+    }
+  }
+
+  async getRootDesigns(projectId: number): Promise<CircuitDesignRow[]> {
+    try {
+      return await db.select().from(circuitDesigns)
+        .where(and(eq(circuitDesigns.projectId, projectId), isNull(circuitDesigns.parentDesignId)))
+        .orderBy(asc(circuitDesigns.id));
+    } catch (e) {
+      throw new StorageError('getRootDesigns', `projects/${projectId}/root-designs`, e);
+    }
+  }
+
+  async getHierarchicalPorts(designId: number): Promise<HierarchicalPortRow[]> {
+    try {
+      return await db.select().from(hierarchicalPorts)
+        .where(eq(hierarchicalPorts.designId, designId))
+        .orderBy(asc(hierarchicalPorts.id));
+    } catch (e) {
+      throw new StorageError('getHierarchicalPorts', `circuit-designs/${designId}/ports`, e);
+    }
+  }
+
+  async getHierarchicalPort(id: number): Promise<HierarchicalPortRow | undefined> {
+    try {
+      const [port] = await db.select().from(hierarchicalPorts)
+        .where(eq(hierarchicalPorts.id, id));
+      return port;
+    } catch (e) {
+      throw new StorageError('getHierarchicalPort', `hierarchical-ports/${id}`, e);
+    }
+  }
+
+  async createHierarchicalPort(data: InsertHierarchicalPort): Promise<HierarchicalPortRow> {
+    try {
+      const [port] = await db.insert(hierarchicalPorts)
+        .values(data)
+        .returning();
+      return port;
+    } catch (e) {
+      throw new StorageError('createHierarchicalPort', `circuit-designs/${data.designId}/ports`, e);
+    }
+  }
+
+  async updateHierarchicalPort(id: number, data: Partial<InsertHierarchicalPort>): Promise<HierarchicalPortRow | undefined> {
+    try {
+      const [updated] = await db.update(hierarchicalPorts)
+        .set(data)
+        .where(eq(hierarchicalPorts.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateHierarchicalPort', `hierarchical-ports/${id}`, e);
+    }
+  }
+
+  async deleteHierarchicalPort(id: number): Promise<HierarchicalPortRow | undefined> {
+    try {
+      const [deleted] = await db.delete(hierarchicalPorts)
+        .where(eq(hierarchicalPorts.id, id))
+        .returning();
+      return deleted;
+    } catch (e) {
+      throw new StorageError('deleteHierarchicalPort', `hierarchical-ports/${id}`, e);
+    }
+  }
+
+  // =========================================================================
+  // Design Preferences (FG-24)
+  // =========================================================================
+
+  async getDesignPreferences(projectId: number): Promise<DesignPreference[]> {
+    try {
+      return await db.select()
+        .from(designPreferences)
+        .where(eq(designPreferences.projectId, projectId))
+        .orderBy(asc(designPreferences.category), asc(designPreferences.key));
+    } catch (e) {
+      throw new StorageError('getDesignPreferences', `projects/${projectId}/preferences`, e);
+    }
+  }
+
+  async upsertDesignPreference(data: InsertDesignPreference): Promise<DesignPreference> {
+    try {
+      const [result] = await db.insert(designPreferences)
+        .values(data)
+        .onConflictDoUpdate({
+          target: [designPreferences.projectId, designPreferences.category, designPreferences.key],
+          set: {
+            value: data.value,
+            source: data.source,
+            confidence: data.confidence,
+            updatedAt: new Date(),
+          },
+        })
+        .returning();
+      return result;
+    } catch (e) {
+      throw new StorageError('upsertDesignPreference', `projects/${data.projectId}/preferences`, e);
+    }
+  }
+
+  async deleteDesignPreference(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(designPreferences)
+        .where(eq(designPreferences.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (e) {
+      throw new StorageError('deleteDesignPreference', `design-preferences/${id}`, e);
+    }
+  }
+
+  // =========================================================================
+  // SPICE Model Library (EN-24)
+  // =========================================================================
+
+  async getSpiceModels(opts?: { category?: string; search?: string; limit?: number; offset?: number }): Promise<{ models: SpiceModelRow[]; total: number }> {
+    try {
+      const conditions = [];
+
+      if (opts?.category) {
+        conditions.push(eq(spiceModels.category, opts.category));
+      }
+
+      if (opts?.search) {
+        conditions.push(
+          or(
+            ilike(spiceModels.name, `%${opts.search}%`),
+            ilike(spiceModels.description, `%${opts.search}%`),
+          )!,
+        );
+      }
+
+      const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+      const [totalResult] = await db.select({ value: count() })
+        .from(spiceModels)
+        .where(where);
+      const total = totalResult?.value ?? 0;
+
+      const limit = opts?.limit ?? 50;
+      const offset = opts?.offset ?? 0;
+
+      const models = await db.select()
+        .from(spiceModels)
+        .where(where)
+        .orderBy(asc(spiceModels.category), asc(spiceModels.name))
+        .limit(limit)
+        .offset(offset);
+
+      return { models, total };
+    } catch (e) {
+      throw new StorageError('getSpiceModels', 'spice-models', e);
+    }
+  }
+
+  async getSpiceModel(id: number): Promise<SpiceModelRow | undefined> {
+    try {
+      const [model] = await db.select()
+        .from(spiceModels)
+        .where(eq(spiceModels.id, id));
+      return model;
+    } catch (e) {
+      throw new StorageError('getSpiceModel', `spice-models/${id}`, e);
+    }
+  }
+
+  async createSpiceModel(model: InsertSpiceModel): Promise<SpiceModelRow> {
+    try {
+      const [created] = await db.insert(spiceModels)
+        .values(model)
+        .returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createSpiceModel', 'spice-models', e);
+    }
+  }
+  // --- BOM Snapshots (EN-21) ---
+
+  async createBomSnapshot(projectId: number, label: string): Promise<BomSnapshot> {
+    try {
+      // Capture current BOM state (all non-deleted items, no pagination limit)
+      const items = await db.select().from(bomItems)
+        .where(and(eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
+        .orderBy(asc(bomItems.id));
+
+      const [snapshot] = await db.insert(bomSnapshots)
+        .values({ projectId, label, snapshotData: items })
+        .returning();
+      return snapshot;
+    } catch (e) {
+      throw new StorageError('createBomSnapshot', `projects/${projectId}/bom-snapshots`, e);
+    }
+  }
+
+  async getBomSnapshots(projectId: number): Promise<BomSnapshot[]> {
+    try {
+      return await db.select().from(bomSnapshots)
+        .where(eq(bomSnapshots.projectId, projectId))
+        .orderBy(desc(bomSnapshots.createdAt));
+    } catch (e) {
+      throw new StorageError('getBomSnapshots', `projects/${projectId}/bom-snapshots`, e);
+    }
+  }
+
+  async getBomSnapshot(id: number): Promise<BomSnapshot | undefined> {
+    try {
+      const [snapshot] = await db.select().from(bomSnapshots)
+        .where(eq(bomSnapshots.id, id));
+      return snapshot;
+    } catch (e) {
+      throw new StorageError('getBomSnapshot', `bom-snapshots/${id}`, e);
+    }
+  }
+
+  async deleteBomSnapshot(id: number): Promise<boolean> {
+    try {
+      const [deleted] = await db.delete(bomSnapshots)
+        .where(eq(bomSnapshots.id, id))
+        .returning();
+      return !!deleted;
+    } catch (e) {
+      throw new StorageError('deleteBomSnapshot', `bom-snapshots/${id}`, e);
+    }
+  }
+
+  // =========================================================================
+  // Component Lifecycle / Obsolescence Tracking (FG-32)
+  // =========================================================================
+
+  async getComponentLifecycles(projectId: number): Promise<ComponentLifecycle[]> {
+    try {
+      return await db.select()
+        .from(componentLifecycle)
+        .where(eq(componentLifecycle.projectId, projectId))
+        .orderBy(asc(componentLifecycle.partNumber));
+    } catch (e) {
+      throw new StorageError('getComponentLifecycles', `projects/${projectId}/lifecycle`, e);
+    }
+  }
+
+  async getComponentLifecycle(id: number): Promise<ComponentLifecycle | undefined> {
+    try {
+      const [entry] = await db.select()
+        .from(componentLifecycle)
+        .where(eq(componentLifecycle.id, id));
+      return entry;
+    } catch (e) {
+      throw new StorageError('getComponentLifecycle', `component-lifecycle/${id}`, e);
+    }
+  }
+
+  async upsertComponentLifecycle(data: InsertComponentLifecycle): Promise<ComponentLifecycle> {
+    try {
+      const [result] = await db.insert(componentLifecycle)
+        .values(data)
+        .onConflictDoNothing()
+        .returning();
+      if (result) {
+        return result;
+      }
+      // Conflict — update existing row by projectId + partNumber
+      const [updated] = await db.update(componentLifecycle)
+        .set({ ...data, updatedAt: new Date() })
+        .where(
+          and(
+            eq(componentLifecycle.projectId, data.projectId),
+            eq(componentLifecycle.partNumber, data.partNumber),
+          ),
+        )
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('upsertComponentLifecycle', `projects/${data.projectId}/lifecycle`, e);
+    }
+  }
+
+  async deleteComponentLifecycle(id: number): Promise<boolean> {
+    try {
+      const result = await db.delete(componentLifecycle)
+        .where(eq(componentLifecycle.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (e) {
+      throw new StorageError('deleteComponentLifecycle', `component-lifecycle/${id}`, e);
     }
   }
 }

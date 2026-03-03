@@ -1,5 +1,13 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { mapErrorToUserMessage } from '@/lib/error-messages';
+
+const SESSION_KEY = 'protopulse-session-id';
+
+function getAuthHeaders(): Record<string, string> {
+  const sessionId = localStorage.getItem(SESSION_KEY);
+  return sessionId ? { 'X-Session-Id': sessionId } : {};
+}
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -14,9 +22,14 @@ export async function apiRequest(
   data?: unknown | undefined,
   signal?: AbortSignal,
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(),
+    ...(data ? { "Content-Type": "application/json" } : {}),
+  };
+
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers,
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
     signal,
@@ -48,6 +61,7 @@ export const getQueryFn: <T>(options: {
     const url = sanitizeUrl(rawUrl);
 
     const res = await fetch(url, {
+      headers: getAuthHeaders(),
       credentials: "include",
     });
 
@@ -100,10 +114,11 @@ export const queryClient = new QueryClient({
       retry: false,
       onError: (error: Error) => {
         console.error('[API Mutation Error]', error.message);
+        const mapped = mapErrorToUserMessage(error);
         toast({
           variant: "destructive",
-          title: "Action failed",
-          description: friendlyErrorMessage(error),
+          title: mapped.title,
+          description: mapped.description,
         });
       },
     },
@@ -114,9 +129,10 @@ export const queryClient = new QueryClient({
 // This runs in addition to any per-query onError callbacks.
 queryClient.getQueryCache().config.onError = (error: Error) => {
   console.error('[API Query Error]', error.message);
+  const mapped = mapErrorToUserMessage(error);
   toast({
     variant: "destructive",
-    title: "Failed to load data",
-    description: friendlyErrorMessage(error),
+    title: mapped.title,
+    description: mapped.description,
   });
 };

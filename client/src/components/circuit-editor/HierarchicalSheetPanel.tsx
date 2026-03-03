@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { memo, useMemo, useCallback } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useCircuitDesigns } from '@/lib/circuit-editor/hooks';
 import type { CircuitDesignRow } from '@shared/schema';
@@ -26,7 +26,7 @@ interface HierarchicalSheetPanelProps {
 // Hierarchical Sheet Panel
 // ---------------------------------------------------------------------------
 
-export default function HierarchicalSheetPanel({
+const HierarchicalSheetPanel = memo(function HierarchicalSheetPanel({
   activeCircuitId,
   onSelectCircuit,
 }: HierarchicalSheetPanelProps) {
@@ -119,4 +119,6 @@ export default function HierarchicalSheetPanel({
       )}
     </div>
   );
-}
+});
+
+export default HierarchicalSheetPanel;

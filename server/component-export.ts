@@ -236,6 +236,40 @@ function parseRotation(tag: string): number {
   return m ? parseFloat(m[1]) : 0;
 }
 
+/**
+ * Sanitizes SVG content by stripping dangerous elements and attributes
+ * that could be used for XSS attacks in imported FZPZ component files.
+ */
+function sanitizeSvgContent(svgString: string): string {
+  // Strip <script>...</script> tags and content
+  let sanitized = svgString.replace(/<script[\s\S]*?<\/script>/gi, '');
+  // Strip self-closing <script .../> tags
+  sanitized = sanitized.replace(/<script[^>]*\/>/gi, '');
+
+  // Strip <foreignObject>...</foreignObject> tags and content
+  sanitized = sanitized.replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '');
+  // Strip self-closing <foreignObject .../> tags
+  sanitized = sanitized.replace(/<foreignObject[^>]*\/>/gi, '');
+
+  // Remove all on* event handler attributes (onclick, onload, onerror, etc.)
+  sanitized = sanitized.replace(/\s+on\w+\s*=\s*"[^"]*"/gi, '');
+  sanitized = sanitized.replace(/\s+on\w+\s*=\s*'[^']*'/gi, '');
+
+  // Strip javascript: URIs from href and xlink:href attributes
+  sanitized = sanitized.replace(/(href\s*=\s*")javascript:[^"]*"/gi, '$1"');
+  sanitized = sanitized.replace(/(href\s*=\s*')javascript:[^']*'/gi, "$1'");
+  sanitized = sanitized.replace(/(xlink:href\s*=\s*")javascript:[^"]*"/gi, '$1"');
+  sanitized = sanitized.replace(/(xlink:href\s*=\s*')javascript:[^']*'/gi, "$1'");
+
+  // Strip data:text/html URIs from href and xlink:href attributes
+  sanitized = sanitized.replace(/(href\s*=\s*")data:text\/html[^"]*"/gi, '$1"');
+  sanitized = sanitized.replace(/(href\s*=\s*')data:text\/html[^']*'/gi, "$1'");
+  sanitized = sanitized.replace(/(xlink:href\s*=\s*")data:text\/html[^"]*"/gi, '$1"');
+  sanitized = sanitized.replace(/(xlink:href\s*=\s*')data:text\/html[^']*'/gi, "$1'");
+
+  return sanitized;
+}
+
 function parseSvgShapes(svgContent: string): Shape[] {
   const shapes: Shape[] = [];
 
@@ -389,7 +423,7 @@ function parseFzpBuses(fzpXml: string, connectors: Connector[]): Bus[] {
 }
 
 const MAX_ZIP_FILES = 20;
-const MAX_UNCOMPRESSED_SIZE = 20 * 1024 * 1024;
+const MAX_UNCOMPRESSED_SIZE = 50 * 1024 * 1024;
 
 export async function importFromFzpz(buffer: Buffer): Promise<PartState> {
   let zip: JSZip;
@@ -405,26 +439,17 @@ export async function importFromFzpz(buffer: Buffer): Promise<PartState> {
   }
 
   let totalUncompressed = 0;
-  for (const [, file] of fileEntries) {
-    const fileAny = file as any;
-    if (fileAny._data && typeof fileAny._data.uncompressedSize === 'number') {
-      totalUncompressed += fileAny._data.uncompressedSize;
-    } else {
-      totalUncompressed += 500 * 1024;
-    }
-  }
-  if (totalUncompressed > MAX_UNCOMPRESSED_SIZE) {
-    throw new Error(`FZPZ file uncompressed content too large (max ${MAX_UNCOMPRESSED_SIZE / 1024 / 1024}MB)`);
-  }
 
   let fzpContent = '';
   let fzpFound = false;
   for (const [filename, file] of fileEntries) {
     if (filename.endsWith('.fzp') && !file.dir) {
-      fzpContent = await file.async('string');
-      if (fzpContent.length > MAX_UNCOMPRESSED_SIZE) {
-        throw new Error('FZP file content too large');
+      const content = await file.async('string');
+      totalUncompressed += Buffer.byteLength(content, 'utf8');
+      if (totalUncompressed > MAX_UNCOMPRESSED_SIZE) {
+        throw new Error(`FZPZ file uncompressed content too large (max ${MAX_UNCOMPRESSED_SIZE / 1024 / 1024}MB)`);
       }
+      fzpContent = content;
       fzpFound = true;
       break;
     }
@@ -488,7 +513,12 @@ export async function importFromFzpz(buffer: Buffer): Promise<PartState> {
 
   for (const [filename, file] of Object.entries(zip.files)) {
     if (file.dir || !filename.endsWith('.svg')) continue;
-    const svgContent = await file.async('string');
+    const rawSvgContent = await file.async('string');
+    totalUncompressed += Buffer.byteLength(rawSvgContent, 'utf8');
+    if (totalUncompressed > MAX_UNCOMPRESSED_SIZE) {
+      throw new Error(`FZPZ file uncompressed content too large (max ${MAX_UNCOMPRESSED_SIZE / 1024 / 1024}MB)`);
+    }
+    const svgContent = sanitizeSvgContent(rawSvgContent);
     const lowerName = filename.toLowerCase();
 
     let viewKey: 'breadboard' | 'schematic' | 'pcb' | null = null;

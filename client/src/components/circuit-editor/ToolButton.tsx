@@ -1,6 +1,7 @@
 /**
  * Shared small icon-button used in breadboard and PCB toolbars.
  */
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 
 interface ToolButtonProps {
@@ -11,7 +12,7 @@ interface ToolButtonProps {
   testId: string;
 }
 
-export default function ToolButton({ icon: Icon, label, active, onClick, testId }: ToolButtonProps) {
+const ToolButton = memo(function ToolButton({ icon: Icon, label, active, onClick, testId }: ToolButtonProps) {
   return (
     <button
       data-testid={testId}
@@ -19,11 +20,13 @@ export default function ToolButton({ icon: Icon, label, active, onClick, testId 
       title={label}
       aria-label={label}
       className={cn(
-        'h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors',
-        active && 'bg-primary/20 text-primary',
+        'h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors',
+        active && 'bg-primary/20 text-primary border border-primary/40',
       )}
     >
-      <Icon className="w-3.5 h-3.5" />
+      <Icon className="w-[18px] h-[18px]" />
     </button>
   );
-}
+});
+
+export default ToolButton;

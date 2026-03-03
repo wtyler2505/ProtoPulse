@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useOutput } from '@/lib/contexts/output-context';
 import { Search, Trash2, Copy, ClipboardCheck } from 'lucide-react';
@@ -7,9 +7,15 @@ import { copyToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/hooks/use-toast';
 import { COPY_FEEDBACK_DURATION } from '@/components/panels/chat/constants';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { Badge } from '@/components/ui/badge';
 
-export default function OutputView() {
-  const { outputLog, clearOutputLog } = useOutput();
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function OutputView() {
+  const { outputLog, outputLogEntries, clearOutputLog } = useOutput();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -18,12 +24,12 @@ export default function OutputView() {
   const prevLogLength = useRef(outputLog.length);
 
   const indexedFilteredLog = useMemo(() => {
-    return outputLog
-      .map((log, index) => ({ log, index }))
+    return outputLogEntries
+      .map((entry, index) => ({ log: entry.message, timestamp: entry.timestamp, index }))
       .filter(({ log }) =>
         !searchTerm || log.toLowerCase().includes(searchTerm.toLowerCase())
       );
-  }, [outputLog, searchTerm]);
+  }, [outputLogEntries, searchTerm]);
 
   const virtualizer = useVirtualizer({
     count: indexedFilteredLog.length,
@@ -62,7 +68,7 @@ export default function OutputView() {
             <StyledTooltip content={copiedAll ? 'Copied!' : 'Copy all logs'} side="bottom">
               <button
                 data-testid="button-copy-all-logs"
-                className="p-1 hover:bg-white/10 text-muted-foreground hover:text-primary transition-colors"
+                className="p-1 hover:bg-white/10 text-muted-foreground hover:text-primary transition-colors focus-ring"
                 onClick={handleCopyAll}
                 aria-label="Copy all logs"
               >
@@ -74,7 +80,7 @@ export default function OutputView() {
                 <StyledTooltip content="Clear output" side="bottom">
                   <button
                     data-testid="button-clear-logs"
-                    className="p-1 hover:bg-white/10 text-muted-foreground hover:text-destructive transition-colors"
+                    className="p-1 hover:bg-white/10 text-muted-foreground hover:text-destructive transition-colors focus-ring"
                     aria-label="Clear logs"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -88,7 +94,7 @@ export default function OutputView() {
               variant="destructive"
             />
             <span className="text-[10px]">{outputLog.length} entries</span>
-            <span>BASH / LINUX</span>
+            <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-border pointer-events-none select-none" data-testid="label-shell-type">BASH / LINUX</Badge>
           </div>
         </div>
         <div className="relative">
@@ -96,10 +102,11 @@ export default function OutputView() {
           <input
             type="text"
             placeholder="Filter logs..."
+            aria-label="Filter logs"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             data-testid="input-search-logs"
-            className="w-full pl-8 pr-3 py-1 bg-white/5 border border-white/10 text-xs text-foreground/80 focus:outline-none focus:border-primary/50 transition-colors font-mono placeholder:text-muted-foreground"
+            className="w-full pl-8 pr-3 py-1 bg-white/5 border border-white/10 text-xs text-foreground/80 focus:outline-none focus:border-primary/50 transition-colors font-mono placeholder:text-muted-foreground focus-ring"
           />
         </div>
       </div>
@@ -109,7 +116,7 @@ export default function OutputView() {
           style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
-            const { log, index: originalIndex } = indexedFilteredLog[virtualRow.index];
+            const { log, timestamp, index: originalIndex } = indexedFilteredLog[virtualRow.index];
             return (
               <div
                 key={`log-${originalIndex}`}
@@ -125,6 +132,7 @@ export default function OutputView() {
                 }}
                 onClick={() => handleCopyEntry(log, originalIndex)}
               >
+                <span className="text-muted-foreground/50 mr-1.5">{formatTimestamp(timestamp)}</span>
                 <span className="text-muted-foreground mr-2">[{String(originalIndex).padStart(3, '0')}]</span>
                 {log}
                 {copiedIndex === originalIndex && (
@@ -139,3 +147,5 @@ export default function OutputView() {
     </div>
   );
 }
+
+export default memo(OutputView);

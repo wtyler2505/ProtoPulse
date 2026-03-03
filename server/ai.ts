@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import { LRUClientCache } from "./lib/lru-cache";
+import { logger } from "./logger";
 import { toolRegistry, DESTRUCTIVE_TOOLS, type ToolResult, type ToolContext } from "./ai-tools";
+import { anthropicBreaker, geminiBreaker, CircuitBreakerOpenError } from "./circuit-breaker";
 
 export type AIAction =
   | { type: "switch_view"; view: "architecture" | "schematic" | "procurement" | "validation" | "output" | "project_explorer" }
@@ -81,6 +83,7 @@ interface AppState {
   circuitDesigns: Array<{ id: number; name: string; description?: string; instanceCount: number; netCount: number }>;
   historyItems: Array<{ action: string; user: string; timestamp: string }>;
   bomMetadata: { totalCost: number; itemCount: number; outOfStockCount: number; lowStockCount: number };
+  designPreferences: Array<{ category: string; key: string; value: string; source: string; confidence: number }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +101,7 @@ export type AIStreamEvent =
   | { type: 'text'; text: string }
   | { type: 'tool_call'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; id: string; name: string; result: ToolResult }
+  | { type: 'provider_info'; provider: 'anthropic' | 'gemini'; model: string; isFallback: boolean }
   | { type: 'done'; message: string; actions: AIAction[]; toolCalls: ToolCallRecord[]; actionGroupId?: string }
   | { type: 'error'; message: string };
 
@@ -115,7 +119,7 @@ const MODEL_TIERS: Record<string, { fast: string; standard: string; premium: str
   anthropic: {
     fast: 'claude-haiku-4-5-20250514',
     standard: 'claude-sonnet-4-5-20250514',
-    premium: 'claude-4-6-opus-20260101',
+    premium: 'claude-opus-4-5-20250514',
   },
   gemini: {
     fast: 'gemini-2.0-flash',
@@ -163,6 +167,73 @@ export function routeToModel(params: {
     return { model: tiers.premium, reason: 'Auto: long/complex message, using premium tier' };
   }
   return { model: tiers.standard, reason: 'Auto: standard complexity' };
+}
+
+// ---------------------------------------------------------------------------
+// Context window management (EN-12)
+// ---------------------------------------------------------------------------
+
+/** Approximate token count. Uses word-count × 1.3 heuristic — accurate
+ *  to ~10% for typical English/code content. */
+function estimateTokens(text: string): number {
+  if (!text) { return 0; }
+  return Math.ceil(text.split(/\s+/).filter(Boolean).length * 1.3);
+}
+
+/** Known input context window sizes per model ID (tokens). */
+const MODEL_CONTEXT_LIMITS: Record<string, number> = {
+  // Anthropic
+  'claude-opus-4-5-20250514': 200_000,
+  'claude-sonnet-4-5-20250514': 200_000,
+  'claude-haiku-4-5-20250514': 200_000,
+  'claude-3-5-sonnet-20241022': 200_000,
+  'claude-3-5-haiku-20241022': 200_000,
+  'claude-3-haiku-20240307': 200_000,
+  // Gemini
+  'gemini-2.5-pro': 1_000_000,
+  'gemini-2.5-flash': 1_000_000,
+  'gemini-2.0-flash': 1_000_000,
+  'gemini-1.5-pro': 2_000_000,
+  'gemini-1.5-flash': 1_000_000,
+};
+
+function getModelContextLimit(model: string): number {
+  if (MODEL_CONTEXT_LIMITS[model]) { return MODEL_CONTEXT_LIMITS[model]; }
+  // Prefix match: "claude-sonnet-4-5" matches "claude-sonnet-4-5-20250514"
+  for (const [key, limit] of Object.entries(MODEL_CONTEXT_LIMITS)) {
+    if (model.startsWith(key) || key.startsWith(model)) { return limit; }
+  }
+  return 200_000; // conservative default
+}
+
+/** Select the most-recent messages that fit within the model's context budget.
+ *  Replaces the old fixed `.slice(-10)` with token-aware truncation. */
+function fitMessagesToContext(
+  chatHistory: Array<{ role: string; content: string }>,
+  systemPromptTokens: number,
+  currentMessageTokens: number,
+  model: string,
+): Array<{ role: string; content: string }> {
+  const contextLimit = getModelContextLimit(model);
+  // Reserve: max response tokens + system prompt + current message + safety margin
+  const responseReserve = Math.min(4096, Math.floor(contextLimit * 0.05));
+  const budget = contextLimit - responseReserve - systemPromptTokens - currentMessageTokens - 200;
+
+  if (budget <= 0) { return []; }
+
+  // Hard cap: never send more than 50 history messages (avoid degenerate loops)
+  const candidates = chatHistory.slice(-50);
+
+  const selected: Array<{ role: string; content: string }> = [];
+  let used = 0;
+  for (let i = candidates.length - 1; i >= 0; i--) {
+    const tokens = estimateTokens(candidates[i].content);
+    if (used + tokens > budget) { break; }
+    selected.unshift(candidates[i]);
+    used += tokens;
+  }
+
+  return selected;
 }
 
 /** Image content for multimodal messages (Phase 4). */
@@ -242,6 +313,54 @@ export function categorizeError(error: unknown): { code: AIErrorCode; userMessag
   return { code: 'UNKNOWN', userMessage: `AI error: ${redactSecrets(msg)}` };
 }
 
+// ---------------------------------------------------------------------------
+// AI provider fallback — retry with alternate provider on non-4xx errors
+// ---------------------------------------------------------------------------
+
+const FALLBACK_DISABLED = process.env.DISABLE_AI_FALLBACK === '1';
+
+/**
+ * Determine whether an error is retryable via fallback provider.
+ * 4xx errors (client errors) are NOT retryable — they indicate a problem with
+ * the request itself (bad key, invalid model, rate limited). Retrying with a
+ * different provider won't help for auth/model errors and could mask issues.
+ *
+ * Retryable: 5xx, timeouts, network errors, circuit breaker open, unknown errors
+ * without an HTTP status.
+ */
+export function isRetryableError(error: unknown): boolean {
+  const { status } = extractErrorInfo(error);
+
+  // Circuit breaker open is retryable — the other provider may be healthy
+  if (error instanceof CircuitBreakerOpenError) {
+    return true;
+  }
+
+  // 4xx errors are client errors — do NOT retry
+  if (status !== undefined && status >= 400 && status < 500) {
+    return false;
+  }
+
+  // 5xx, network errors (no status), timeouts — all retryable
+  return true;
+}
+
+/** Parameters for the alternate (fallback) AI provider. */
+export interface FallbackProviderConfig {
+  provider: 'anthropic' | 'gemini';
+  model: string;
+  apiKey: string;
+}
+
+/**
+ * Build the default fallback model for a given provider.
+ * Uses the 'standard' tier from MODEL_TIERS for the alternate provider.
+ */
+export function getDefaultFallbackModel(fallbackProvider: 'anthropic' | 'gemini'): string {
+  const tiers = MODEL_TIERS[fallbackProvider];
+  return tiers ? tiers.standard : (fallbackProvider === 'anthropic' ? 'claude-sonnet-4-5-20250514' : 'gemini-2.5-flash');
+}
+
 const activeRequests = new Map<string, Promise<{ message: string; actions: AIAction[] }>>();
 
 function requestKey(message: string, provider: string, projectId: string): string {
@@ -266,36 +385,99 @@ function getGeminiClient(apiKey: string): GoogleGenAI {
   return client;
 }
 
+// ---------------------------------------------------------------------------
+// View-aware context: include full data for active view's domain, summaries
+// for unrelated domains. Reduces prompt token count significantly.
+// ---------------------------------------------------------------------------
+
+const ARCH_VIEWS = new Set(['architecture', 'breadboard']);
+const SCHEMATIC_VIEWS = new Set(['schematic', 'pcb']);
+const BOM_VIEWS = new Set(['procurement']);
+const VALIDATION_VIEWS = new Set(['validation']);
+
+function isArchView(v: string): boolean { return ARCH_VIEWS.has(v); }
+function isSchematicView(v: string): boolean { return SCHEMATIC_VIEWS.has(v); }
+function isBomView(v: string): boolean { return BOM_VIEWS.has(v); }
+function isValidationView(v: string): boolean { return VALIDATION_VIEWS.has(v); }
+
+function buildNodesSummary(nodes: AppState['nodes']): string {
+  if (nodes.length === 0) return "  (none)";
+  const byType = new Map<string, number>();
+  for (const n of nodes) {
+    byType.set(n.type, (byType.get(n.type) || 0) + 1);
+  }
+  return `  ${nodes.length} components: ${Array.from(byType.entries()).map(([t, c]) => `${c} ${t}`).join(', ')} (use tools to query details)`;
+}
+
+function buildEdgesSummary(edges: AppState['edges']): string {
+  if (edges.length === 0) return "  (none)";
+  return `  ${edges.length} connections (use tools to query details)`;
+}
+
+function buildBomSummary(bom: AppState['bom']): string {
+  if (bom.length === 0) return "  (none)";
+  return `  ${bom.length} items (use tools to query details)`;
+}
+
+function buildValidationSummary(issues: AppState['validationIssues']): string {
+  if (issues.length === 0) return "  (none)";
+  const byLevel = new Map<string, number>();
+  for (const v of issues) {
+    byLevel.set(v.severity, (byLevel.get(v.severity) || 0) + 1);
+  }
+  return `  ${issues.length} issues: ${Array.from(byLevel.entries()).map(([s, c]) => `${c} ${s}`).join(', ')}`;
+}
+
 function buildSystemPrompt(appState: AppState): string {
-  const nodesDescription = appState.nodes.length > 0
-    ? appState.nodes.map(n => `  - "${n.label}" (type: ${n.type}, id: ${n.id}, pos: ${n.positionX},${n.positionY}${n.description ? `, desc: ${n.description}` : ""})`).join("\n")
-    : "  (none)";
+  const view = appState.activeView;
+  const archActive = isArchView(view);
+  const schematicActive = isSchematicView(view);
+  const bomActive = isBomView(view);
+  const validationActive = isValidationView(view);
 
-  const edgesDescription = appState.edges.length > 0
-    ? appState.edges.map(e => {
-        const srcNode = appState.nodes.find(n => n.id === e.source);
-        const tgtNode = appState.nodes.find(n => n.id === e.target);
-        const meta = [
-          e.signalType ? `signal: ${e.signalType}` : "",
-          e.voltage ? `voltage: ${e.voltage}` : "",
-          e.busWidth ? `bus: ${e.busWidth}` : "",
-          e.netName ? `net: ${e.netName}` : "",
-        ].filter(Boolean).join(", ");
-        return `  - "${srcNode?.label || e.source}" → "${tgtNode?.label || e.target}"${e.label ? ` [${e.label}]` : ""} (id: ${e.id}${meta ? `, ${meta}` : ""})`;
-      }).join("\n")
-    : "  (none)";
+  // Architecture nodes/edges — always full for arch view, summary otherwise
+  const nodesDescription = (archActive || appState.nodes.length <= 10)
+    ? (appState.nodes.length > 0
+      ? appState.nodes.map(n => `  - "${n.label}" (type: ${n.type}, id: ${n.id}, pos: ${n.positionX},${n.positionY}${n.description ? `, desc: ${n.description}` : ""})`).join("\n")
+      : "  (none)")
+    : buildNodesSummary(appState.nodes);
 
-  const bomDescription = appState.bom.length > 0
-    ? appState.bom.map(b => `  - ${b.partNumber} | ${b.manufacturer} | ${b.description} | qty: ${b.quantity} | $${b.unitPrice} | ${b.supplier} | ${b.status}`).join("\n")
-    : "  (none)";
+  const edgesDescription = (archActive || appState.edges.length <= 10)
+    ? (appState.edges.length > 0
+      ? appState.edges.map(e => {
+          const srcNode = appState.nodes.find(n => n.id === e.source);
+          const tgtNode = appState.nodes.find(n => n.id === e.target);
+          const meta = [
+            e.signalType ? `signal: ${e.signalType}` : "",
+            e.voltage ? `voltage: ${e.voltage}` : "",
+            e.busWidth ? `bus: ${e.busWidth}` : "",
+            e.netName ? `net: ${e.netName}` : "",
+          ].filter(Boolean).join(", ");
+          return `  - "${srcNode?.label || e.source}" → "${tgtNode?.label || e.target}"${e.label ? ` [${e.label}]` : ""} (id: ${e.id}${meta ? `, ${meta}` : ""})`;
+        }).join("\n")
+      : "  (none)")
+    : buildEdgesSummary(appState.edges);
 
-  const validationDescription = appState.validationIssues.length > 0
-    ? appState.validationIssues.map(v => `  - [${v.severity}] ${v.message}${v.componentId ? ` (component: ${v.componentId})` : ""}${v.suggestion ? ` → ${v.suggestion}` : ""}`).join("\n")
-    : "  (none)";
+  // BOM — full for procurement view, summary otherwise
+  const bomDescription = (bomActive || appState.bom.length <= 5)
+    ? (appState.bom.length > 0
+      ? appState.bom.map(b => `  - ${b.partNumber} | ${b.manufacturer} | ${b.description} | qty: ${b.quantity} | $${b.unitPrice} | ${b.supplier} | ${b.status}`).join("\n")
+      : "  (none)")
+    : buildBomSummary(appState.bom);
 
-  const sheetsDescription = appState.schematicSheets.length > 0
-    ? appState.schematicSheets.map(s => `  - "${s.name}" (id: ${s.id}${s.id === appState.activeSheetId ? ", ACTIVE" : ""})`).join("\n")
-    : "  (none)";
+  // Validation — full for validation view, summary otherwise
+  const validationDescription = (validationActive || appState.validationIssues.length <= 5)
+    ? (appState.validationIssues.length > 0
+      ? appState.validationIssues.map(v => `  - [${v.severity}] ${v.message}${v.componentId ? ` (component: ${v.componentId})` : ""}${v.suggestion ? ` → ${v.suggestion}` : ""}`).join("\n")
+      : "  (none)")
+    : buildValidationSummary(appState.validationIssues);
+
+  // Schematic sheets — full for schematic/PCB views, summary otherwise
+  const sheetsDescription = (schematicActive || appState.schematicSheets.length <= 5)
+    ? (appState.schematicSheets.length > 0
+      ? appState.schematicSheets.map(s => `  - "${s.name}" (id: ${s.id}${s.id === appState.activeSheetId ? ", ACTIVE" : ""})`).join("\n")
+      : "  (none)")
+    : `  ${appState.schematicSheets.length} sheets (active: ${appState.activeSheetId})`;
 
   // Phase 2: Component Library description (tiered)
   let componentPartsDescription: string;
@@ -409,6 +591,11 @@ ${historyDescription}
 ### BOM Summary:
 ${bomSummaryDescription}
 
+### Design Preferences:
+${appState.designPreferences.length > 0
+    ? appState.designPreferences.map(p => `  - [${p.category}] ${p.key}: ${p.value} (source: ${p.source}, confidence: ${(p.confidence * 100).toFixed(0)}%)`).join("\n")
+    : "  (none — learn preferences from the user's design choices and stated requirements)"}
+
 ## Tools
 
 You have access to tools that let you directly modify the project. When the user asks you to make changes, use the provided tools. You can call multiple tools to perform complex operations.
@@ -502,15 +689,17 @@ async function callAnthropic(
     messages.push({ role: "user", content: userMessage });
   }
 
-  const response = await client.messages.create({
-    model,
-    max_tokens: maxTokens || 4096,
-    system: systemPrompt,
-    messages,
-    temperature,
-    tools: anthropicTools as Anthropic.Messages.Tool[],
-    tool_choice: { type: "auto" },
-  });
+  const response = await anthropicBreaker.execute(() =>
+    client.messages.create({
+      model,
+      max_tokens: maxTokens || 4096,
+      system: systemPrompt,
+      messages,
+      temperature,
+      tools: anthropicTools as Anthropic.Messages.Tool[],
+      tool_choice: { type: "auto" },
+    }),
+  );
 
   // Extract text content
   const responseText = response.content
@@ -569,7 +758,9 @@ async function callGemini(
   }
   messageParts.push({ text: userMessage });
 
-  const result = await chat.sendMessage({ message: messageParts as Parameters<typeof chat.sendMessage>[0]["message"] });
+  const result = await geminiBreaker.execute(() =>
+    chat.sendMessage({ message: messageParts as Parameters<typeof chat.sendMessage>[0]["message"] }),
+  );
 
   // Extract function calls as actions (single turn — no server execution in non-streaming path)
   const functionCalls = result.functionCalls;
@@ -595,9 +786,10 @@ export async function processAIMessage(params: {
   temperature?: number;
   maxTokens?: number;
   imageContent?: ImageContent;
-}): Promise<{ message: string; actions: AIAction[] }> {
+  fallback?: FallbackProviderConfig;
+}): Promise<{ message: string; actions: AIAction[]; provider?: 'anthropic' | 'gemini' }> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, imageContent } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, imageContent, fallback } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       return {
@@ -620,17 +812,36 @@ export async function processAIMessage(params: {
       promptCache.set(stateHash, built);
       return built;
     })();
-    const recentHistory = appState.chatHistory.slice(-10);
+    const recentHistory = fitMessagesToContext(
+      appState.chatHistory,
+      estimateTokens(systemPrompt),
+      estimateTokens(message),
+      model,
+    );
 
     const dedupeKey = requestKey(message, provider, String(appState.projectName));
     const existing = activeRequests.get(dedupeKey);
     if (existing) return existing;
 
-    const promise = (async () => {
-      if (provider === "anthropic") {
-        return await callAnthropic(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent);
-      } else {
-        return await callGemini(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent);
+    const promise = (async (): Promise<{ message: string; actions: AIAction[]; provider?: 'anthropic' | 'gemini' }> => {
+      try {
+        const result = provider === "anthropic"
+          ? await callAnthropic(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent)
+          : await callGemini(apiKey, model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent);
+        return { ...result, provider };
+      } catch (primaryError: unknown) {
+        // Attempt fallback if enabled and error is retryable
+        if (!FALLBACK_DISABLED && fallback && fallback.apiKey && isRetryableError(primaryError)) {
+          const { code: primaryCode } = categorizeError(primaryError);
+          const { message: primaryMsg } = extractErrorInfo(primaryError);
+          logger.warn(`[ai:fallback] Primary provider ${provider} failed (${primaryCode}): ${redactSecrets(primaryMsg)}. Falling back to ${fallback.provider}.`);
+
+          const fallbackResult = fallback.provider === "anthropic"
+            ? await callAnthropic(fallback.apiKey, fallback.model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent)
+            : await callGemini(fallback.apiKey, fallback.model, systemPrompt, recentHistory, message, temperature, maxTokens, imageContent);
+          return { ...fallbackResult, provider: fallback.provider };
+        }
+        throw primaryError;
       }
     })();
     activeRequests.set(dedupeKey, promise);
@@ -648,6 +859,37 @@ export async function processAIMessage(params: {
   }
 }
 
+/**
+ * Execute the streaming call for a single provider and emit the done event.
+ * Returns the result so callers can inspect it (e.g. for fallback decisions).
+ */
+async function executeStreamForProvider(
+  provider: 'anthropic' | 'gemini',
+  apiKey: string,
+  model: string,
+  systemPrompt: string,
+  recentHistory: Array<{ role: string; content: string }>,
+  message: string,
+  temperature: number,
+  maxTokens: number,
+  toolContext: ToolContext | undefined,
+  onEvent: (event: AIStreamEvent) => void | Promise<void>,
+  signal: AbortSignal | undefined,
+  imageContent: ImageContent | undefined,
+): Promise<{ fullText: string; toolCalls: ToolCallRecord[] }> {
+  if (provider === 'anthropic') {
+    return streamAnthropicWithTools(
+      apiKey, model, systemPrompt, recentHistory, message,
+      temperature, maxTokens, toolContext, onEvent, signal, imageContent,
+    );
+  } else {
+    return streamGeminiWithTools(
+      apiKey, model, systemPrompt, recentHistory, message,
+      temperature, maxTokens, toolContext, onEvent, signal, imageContent,
+    );
+  }
+}
+
 export async function streamAIMessage(
   params: {
     message: string;
@@ -659,12 +901,13 @@ export async function streamAIMessage(
     maxTokens?: number;
     toolContext?: ToolContext;
     imageContent?: ImageContent;
+    fallback?: FallbackProviderConfig;
   },
   onEvent: (event: AIStreamEvent) => void | Promise<void>,
   signal?: AbortSignal
 ): Promise<void> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, toolContext, imageContent } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, toolContext, imageContent, fallback } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       const noKeyMsg = `No API key provided for ${provider}. Please add your ${provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key in the settings panel to enable AI features.`;
@@ -687,35 +930,25 @@ export async function streamAIMessage(
       promptCache.set(stateHash, built);
       return built;
     })();
-    const recentHistory = appState.chatHistory.slice(-10);
+    const recentHistory = fitMessagesToContext(
+      appState.chatHistory,
+      estimateTokens(systemPrompt),
+      estimateTokens(message),
+      model,
+    );
     const actionGroupId = crypto.randomUUID();
 
-    if (provider === "anthropic") {
-      const result = await streamAnthropicWithTools(
-        apiKey, model, systemPrompt, recentHistory, message,
-        temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent,
-      );
-      if (signal?.aborted) return;
+    let activeProvider = provider;
+    let activeModel = model;
+    let activeApiKey = apiKey;
+    let isFallback = false;
 
-      persistToolCalls(result.toolCalls, toolContext, actionGroupId).catch(() => {});
+    try {
+      // Emit provider info for the primary provider
+      await onEvent({ type: 'provider_info', provider: activeProvider, model: activeModel, isFallback: false });
 
-      // Extract client-executable actions from tool results
-      const clientActions = extractClientActions(result.toolCalls);
-      // Fallback: if no tool calls were made, parse actions from text
-      const fallbackParsed = result.toolCalls.length === 0
-        ? parseActionsFromResponse(result.fullText)
-        : { message: result.fullText, actions: [] as AIAction[] };
-
-      await onEvent({
-        type: 'done',
-        message: result.fullText.trim() || fallbackParsed.message,
-        actions: result.toolCalls.length > 0 ? clientActions : fallbackParsed.actions,
-        toolCalls: result.toolCalls,
-        actionGroupId: result.toolCalls.length > 0 ? actionGroupId : undefined,
-      });
-    } else {
-      const result = await streamGeminiWithTools(
-        apiKey, model, systemPrompt, recentHistory, message,
+      const result = await executeStreamForProvider(
+        activeProvider, activeApiKey, activeModel, systemPrompt, recentHistory, message,
         temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent,
       );
       if (signal?.aborted) return;
@@ -723,17 +956,60 @@ export async function streamAIMessage(
       persistToolCalls(result.toolCalls, toolContext, actionGroupId).catch(() => {});
 
       const clientActions = extractClientActions(result.toolCalls);
-      const fallbackParsed = result.toolCalls.length === 0
+      const textParsed = result.toolCalls.length === 0
         ? parseActionsFromResponse(result.fullText)
         : { message: result.fullText, actions: [] as AIAction[] };
 
       await onEvent({
         type: 'done',
-        message: result.fullText.trim() || fallbackParsed.message,
-        actions: result.toolCalls.length > 0 ? clientActions : fallbackParsed.actions,
+        message: result.fullText.trim() || textParsed.message,
+        actions: result.toolCalls.length > 0 ? clientActions : textParsed.actions,
         toolCalls: result.toolCalls,
         actionGroupId: result.toolCalls.length > 0 ? actionGroupId : undefined,
       });
+    } catch (primaryError: unknown) {
+      if (signal?.aborted) return;
+
+      // Attempt fallback if enabled, fallback config present, and error is retryable
+      if (!FALLBACK_DISABLED && fallback && fallback.apiKey && isRetryableError(primaryError)) {
+        const { code: primaryCode } = categorizeError(primaryError);
+        const { message: primaryMsg } = extractErrorInfo(primaryError);
+        logger.warn(
+          `[ai:fallback] Primary provider ${provider} failed (${primaryCode}): ${redactSecrets(primaryMsg)}. Falling back to ${fallback.provider}.`,
+        );
+
+        activeProvider = fallback.provider;
+        activeModel = fallback.model;
+        activeApiKey = fallback.apiKey;
+        isFallback = true;
+
+        // Notify client that we're falling back
+        await onEvent({ type: 'text', text: `\n\n[Switching to ${fallback.provider} due to ${provider} error...]\n\n` });
+        await onEvent({ type: 'provider_info', provider: activeProvider, model: activeModel, isFallback: true });
+
+        const result = await executeStreamForProvider(
+          activeProvider, activeApiKey, activeModel, systemPrompt, recentHistory, message,
+          temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent,
+        );
+        if (signal?.aborted) return;
+
+        persistToolCalls(result.toolCalls, toolContext, actionGroupId).catch(() => {});
+
+        const clientActions = extractClientActions(result.toolCalls);
+        const textParsed = result.toolCalls.length === 0
+          ? parseActionsFromResponse(result.fullText)
+          : { message: result.fullText, actions: [] as AIAction[] };
+
+        await onEvent({
+          type: 'done',
+          message: result.fullText.trim() || textParsed.message,
+          actions: result.toolCalls.length > 0 ? clientActions : textParsed.actions,
+          toolCalls: result.toolCalls,
+          actionGroupId: result.toolCalls.length > 0 ? actionGroupId : undefined,
+        });
+      } else {
+        throw primaryError;
+      }
     }
   } catch (error: unknown) {
     if (signal?.aborted) return;
@@ -765,7 +1041,7 @@ async function persistToolCalls(
         status: tc.result.success ? "completed" : "failed",
       });
     } catch (err) {
-      console.error(`[ai:persist] action=${tc.name} project=${projectId} error=${err instanceof Error ? err.message : String(err)}`);
+      logger.error(`[ai:persist] action=${tc.name} project=${projectId} error=${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }
@@ -824,31 +1100,34 @@ async function streamAnthropicWithTools(
   for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
     if (signal?.aborted) break;
 
-    const stream = client.messages.stream({
-      model,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages,
-      temperature,
-      tools: anthropicTools as Anthropic.Messages.Tool[],
-      tool_choice: { type: "auto" },
-    }, signal ? { signal } : undefined);
+    const finalMessage = await anthropicBreaker.execute(async () => {
+      const stream = client.messages.stream({
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages,
+        temperature,
+        tools: anthropicTools as Anthropic.Messages.Tool[],
+        tool_choice: { type: "auto" },
+      }, signal ? { signal } : undefined);
 
-    // Stream text chunks in real-time
-    for await (const event of stream) {
-      if (signal?.aborted) break;
-      if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-        fullText += event.delta.text;
-        await onEvent({ type: 'text', text: event.delta.text });
+      // Stream text chunks in real-time
+      for await (const event of stream) {
+        if (signal?.aborted) break;
+        if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+          fullText += event.delta.text;
+          await onEvent({ type: 'text', text: event.delta.text });
+        }
       }
-    }
 
-    if (signal?.aborted) {
-      stream.abort();
-      break;
-    }
+      if (signal?.aborted) {
+        stream.abort();
+      }
 
-    const finalMessage = await stream.finalMessage();
+      return stream.finalMessage();
+    });
+
+    if (signal?.aborted) break;
 
     // Check if model wants to call tools
     const toolUseBlocks = finalMessage.content.filter(
@@ -941,9 +1220,11 @@ async function streamGeminiWithTools(
 
     if (isFirstTurn) {
       // First turn: stream the user message (with optional image)
-      const stream = await chat.sendMessageStream({
-        message: firstTurnParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
-      });
+      const stream = await geminiBreaker.execute(() =>
+        chat.sendMessageStream({
+          message: firstTurnParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
+        }),
+      );
       try {
         for await (const chunk of stream) {
           if (signal?.aborted) break;
@@ -994,9 +1275,11 @@ async function streamGeminiWithTools(
     const frParts = functionResponses.map(fr => ({
       functionResponse: { name: fr.name, response: fr.response },
     }));
-    const nextStream = await chat.sendMessageStream({
-      message: frParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
-    });
+    const nextStream = await geminiBreaker.execute(() =>
+      chat.sendMessageStream({
+        message: frParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
+      }),
+    );
 
     turnFunctionCalls = [];
     try {
@@ -1042,9 +1325,11 @@ async function streamGeminiWithTools(
     const nextFrParts = nextResponses.map(fr => ({
       functionResponse: { name: fr.name, response: fr.response },
     }));
-    const followUpStream = await chat.sendMessageStream({
-      message: nextFrParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
-    });
+    const followUpStream = await geminiBreaker.execute(() =>
+      chat.sendMessageStream({
+        message: nextFrParts as Parameters<typeof chat.sendMessageStream>[0]["message"],
+      }),
+    );
 
     try {
       for await (const chunk of followUpStream) {

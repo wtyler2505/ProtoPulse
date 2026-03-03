@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @theme inline {
   --font-display: 'Rajdhani', sans-serif;
@@ -44,6 +45,73 @@
   --radius-2xl: 0px;
 }
 
+/*
+ * High-contrast mode — WCAG AAA (>=7:1) overrides.
+ * Activated by toggling .high-contrast on <html>.
+ * Stored in localStorage key 'protopulse-high-contrast'.
+ */
+.high-contrast {
+  --color-background: hsl(0 0% 0%);
+  --color-foreground: hsl(0 0% 100%);
+
+  --color-card: hsl(0 0% 4%);
+  --color-card-foreground: hsl(0 0% 100%);
+
+  --color-popover: hsl(0 0% 4%);
+  --color-popover-foreground: hsl(0 0% 100%);
+
+  /* Adjusted primary: brighter cyan for AAA on black bg (contrast ~8.6:1) */
+  --color-primary: hsl(190 100% 55%);
+  --color-primary-foreground: hsl(0 0% 0%);
+
+  --color-secondary: hsl(260 100% 75%);
+  --color-secondary-foreground: hsl(0 0% 0%);
+
+  --color-muted: hsl(0 0% 8%);
+  /* Muted foreground bumped to ~7.5:1 contrast against black */
+  --color-muted-foreground: hsl(0 0% 73%);
+
+  --color-accent: hsl(190 100% 55%);
+  --color-accent-foreground: hsl(0 0% 0%);
+  --color-editor-accent: hsl(190 100% 60%);
+
+  --color-destructive: hsl(0 90% 60%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+
+  --color-border: hsl(0 0% 35%);
+  --color-input: hsl(0 0% 35%);
+  --color-ring: hsl(190 100% 60%);
+
+  --color-sidebar: hsl(0 0% 2%);
+  --color-sidebar-border: hsl(0 0% 30%);
+}
+
+/* High-contrast border width increase — 2px borders for visibility */
+.high-contrast *,
+.high-contrast *::before,
+.high-contrast *::after {
+  border-width: revert;
+}
+.high-contrast [class*="border"] {
+  border-width: 2px;
+}
+.high-contrast [class*="border-t"],
+.high-contrast [class*="border-b"],
+.high-contrast [class*="border-l"],
+.high-contrast [class*="border-r"] {
+  border-width: 0;
+}
+.high-contrast [class*="border-t"] { border-top-width: 2px; }
+.high-contrast [class*="border-b"] { border-bottom-width: 2px; }
+.high-contrast [class*="border-l"] { border-left-width: 2px; }
+.high-contrast [class*="border-r"] { border-right-width: 2px; }
+
+/* Stronger focus indicators in high-contrast mode */
+.high-contrast :focus-visible {
+  outline: 3px solid hsl(190 100% 60%) !important;
+  outline-offset: 2px !important;
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -54,6 +122,20 @@
 }
 
 @layer utilities {
+  /* View transition: subtle fade-in when switching between tabs */
+  .view-enter {
+    animation: view-fade-in 150ms ease-out;
+  }
+  @keyframes view-fade-in {
+    from { opacity: 0; transform: translateY(2px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .view-enter {
+      animation: none;
+    }
+  }
+
   .chamfer {
     clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, calc(100% - 8px) 100%, 8px 100%, 0 100%, 0 8px);
   }
@@ -131,6 +213,11 @@
   }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  /* Accessible focus-visible ring for custom interactive elements that don't
+     inherit shadcn/ui Button styles. Matches the neon-cyan theme. */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 focus-visible:ring-offset-1 focus-visible:ring-offset-background;
+  }
 }
 
 * {

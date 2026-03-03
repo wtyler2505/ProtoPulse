@@ -1,4 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect, memo, lazy, Suspense } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -6,7 +7,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Download, Filter, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, MessageSquarePlus, Copy, Pencil, Check, X, GripVertical, ArrowUpDown } from 'lucide-react';
+import { Download, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, Copy, Pencil, Check, X, GripVertical, ArrowUpDown, DollarSign, TrendingUp, BarChart3 } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
@@ -26,8 +27,12 @@ import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, C
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { STORAGE_KEYS, DEFAULT_PREFERRED_SUPPLIERS, OPTIMIZATION_GOALS, getSupplierSearchUrl, type SupplierName } from '@/lib/constants';
 import { buildCSV, downloadBlob } from '@/lib/csv';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { GitCompareArrows } from 'lucide-react';
 
-export default function ProcurementView() {
+const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
+
+function ProcurementView() {
   const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem } = useBom();
   const { addOutputLog } = useOutput();
   const { toast } = useToast();
@@ -36,6 +41,7 @@ export default function ProcurementView() {
   const [showSettings, setShowSettings] = useState(false);
   const [showComponentRef, setShowComponentRef] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [highlightedItemId, setHighlightedItemId] = useState<number | null>(null);
   const [optimizationGoal, setOptimizationGoal] = useState<string>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.OPTIMIZATION_GOAL);
@@ -65,6 +71,14 @@ export default function ProcurementView() {
       try { localStorage.setItem(STORAGE_KEYS.PREFERRED_SUPPLIERS, JSON.stringify(next)); } catch { /* quota exceeded, silently fail */ }
       return next;
     });
+  }, []);
+
+  // ── BOM row click highlighting ──
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleHighlightItem = useCallback((id: number) => {
+    if (highlightTimer.current) { clearTimeout(highlightTimer.current); }
+    setHighlightedItemId(id);
+    highlightTimer.current = setTimeout(() => setHighlightedItemId(null), 1500);
   }, []);
 
   // ── Sort order state (persisted, enables DnD reorder) ──
@@ -115,6 +129,37 @@ export default function ProcurementView() {
   }, [filteredBom, saveSortOrder, toast]);
 
   const totalCost = filteredBom.reduce((acc, item) => acc + Number(item.totalPrice), 0);
+
+  const costBreakdown = useMemo(() => {
+    const statusCategories: Record<string, { total: number; count: number; color: string }> = {
+      'In Stock': { total: 0, count: 0, color: 'bg-emerald-500' },
+      'Low Stock': { total: 0, count: 0, color: 'bg-yellow-500' },
+      'Out of Stock': { total: 0, count: 0, color: 'bg-destructive' },
+      'On Order': { total: 0, count: 0, color: 'bg-blue-500' },
+    };
+
+    for (const item of bom) {
+      const cat = statusCategories[item.status];
+      if (cat) {
+        cat.total += Number(item.totalPrice);
+        cat.count += 1;
+      }
+    }
+
+    const avgUnitCost = bom.length > 0
+      ? bom.reduce((sum, item) => sum + Number(item.unitPrice), 0) / bom.length
+      : 0;
+
+    const totalBomCost = bom.reduce((sum, item) => sum + Number(item.totalPrice), 0);
+
+    const topItems = [...bom]
+      .sort((a, b) => Number(b.totalPrice) - Number(a.totalPrice))
+      .slice(0, 5);
+
+    const maxItemCost = topItems.length > 0 ? Number(topItems[0].totalPrice) : 0;
+
+    return { statusCategories, avgUnitCost, totalBomCost, topItems, maxItemCost };
+  }, [bom]);
 
   const handleExportCSV = useCallback(() => {
     try {
@@ -197,7 +242,21 @@ export default function ProcurementView() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-background/50" data-testid="procurement-view">
+    <Tabs defaultValue="management" className="h-full flex flex-col bg-background/50" data-testid="procurement-view">
+      <div className="px-4 pt-3 pb-0 border-b border-border bg-card/30 backdrop-blur">
+        <TabsList className="mb-3" data-testid="procurement-tabs">
+          <TabsTrigger value="management" data-testid="tab-bom-management">
+            <Package className="h-4 w-4 mr-1.5" />
+            BOM Management
+          </TabsTrigger>
+          <TabsTrigger value="comparison" data-testid="tab-bom-comparison">
+            <GitCompareArrows className="h-4 w-4 mr-1.5" />
+            BOM Comparison
+          </TabsTrigger>
+        </TabsList>
+      </div>
+
+      <TabsContent value="management" className="flex-1 flex flex-col overflow-hidden mt-0">
       <div className="p-4 border-b border-border flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-card/30 backdrop-blur">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
           <div className="relative group">
@@ -254,7 +313,7 @@ export default function ProcurementView() {
       </div>
 
       {showSettings && (
-        <div className="bg-muted/10 backdrop-blur-xl border-b border-border p-6 grid grid-cols-1 md:grid-cols-4 gap-8 animate-in slide-in-from-top-2" data-testid="panel-settings">
+        <div className="bg-muted/10 backdrop-blur-xl border-b border-border p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 animate-in slide-in-from-top-2" data-testid="panel-settings">
           <div className="space-y-4">
             <h4 className="text-sm font-medium text-foreground">Production Batch Size</h4>
             <div className="flex items-center gap-4">
@@ -341,9 +400,124 @@ export default function ProcurementView() {
         </div>
       )}
 
-      <div className="flex-1 overflow-auto p-3 md:p-6">
-        {/* Mobile card layout */}
-        <div className="md:hidden space-y-2" data-testid="bom-cards">
+      <div className="flex-1 overflow-auto p-3 lg:p-6">
+        {/* Cost summary section */}
+        {bom.length > 0 && (
+          <div className="mb-4 space-y-4" data-testid="section-cost-summary">
+            {/* Summary cards row */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="border border-border bg-card/80 backdrop-blur p-4" data-testid="card-total-bom-cost">
+                <div className="flex items-center gap-2 mb-1">
+                  <DollarSign className="w-4 h-4 text-primary" />
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Total BOM Cost</span>
+                </div>
+                <div className="text-xl font-mono font-bold text-foreground" data-testid="text-summary-total-cost">
+                  ${costBreakdown.totalBomCost.toFixed(2)}
+                </div>
+              </div>
+              <div className="border border-border bg-card/80 backdrop-blur p-4" data-testid="card-avg-unit-cost">
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-4 h-4 text-primary" />
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Avg Unit Price</span>
+                </div>
+                <div className="text-xl font-mono font-bold text-foreground" data-testid="text-summary-avg-cost">
+                  ${costBreakdown.avgUnitCost.toFixed(2)}
+                </div>
+              </div>
+              {Object.entries(costBreakdown.statusCategories)
+                .filter(([, data]) => data.count > 0)
+                .slice(0, 2)
+                .map(([status, data]) => (
+                  <div key={status} className="border border-border bg-card/80 backdrop-blur p-4" data-testid={`card-status-cost-${status.toLowerCase().replace(/\s+/g, '-')}`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={cn('w-2.5 h-2.5 rounded-full', data.color)} />
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">{status}</span>
+                    </div>
+                    <div className="text-xl font-mono font-bold text-foreground" data-testid={`text-status-cost-${status.toLowerCase().replace(/\s+/g, '-')}`}>
+                      ${data.total.toFixed(2)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                      {data.count} item{data.count !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Cost by status breakdown + top 5 items */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {/* Cost by status */}
+              <div className="border border-border bg-card/80 backdrop-blur p-4" data-testid="panel-cost-by-status">
+                <h4 className="text-xs font-medium text-foreground mb-3 flex items-center gap-2">
+                  <BarChart3 className="w-3.5 h-3.5 text-primary" />
+                  Cost by Status
+                </h4>
+                <div className="space-y-2.5">
+                  {Object.entries(costBreakdown.statusCategories).map(([status, data]) => {
+                    const pct = costBreakdown.totalBomCost > 0
+                      ? (data.total / costBreakdown.totalBomCost) * 100
+                      : 0;
+                    return (
+                      <div key={status} data-testid={`bar-status-${status.toLowerCase().replace(/\s+/g, '-')}`}>
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className={cn('w-2 h-2 rounded-full', data.color)} />
+                            <span className="text-muted-foreground">{status}</span>
+                            <span className="text-[10px] text-muted-foreground/60">({data.count})</span>
+                          </div>
+                          <span className="font-mono text-foreground">${data.total.toFixed(2)}</span>
+                        </div>
+                        <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden">
+                          <div
+                            className={cn('h-full rounded-full transition-all duration-500', data.color)}
+                            style={{ width: `${Math.max(pct, 0.5)}%` }}
+                            data-testid={`bar-fill-status-${status.toLowerCase().replace(/\s+/g, '-')}`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Top 5 most expensive items */}
+              <div className="border border-border bg-card/80 backdrop-blur p-4" data-testid="panel-top-cost-items">
+                <h4 className="text-xs font-medium text-foreground mb-3 flex items-center gap-2">
+                  <DollarSign className="w-3.5 h-3.5 text-primary" />
+                  Top {Math.min(5, costBreakdown.topItems.length)} by Cost
+                </h4>
+                {costBreakdown.topItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No items to display.</p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {costBreakdown.topItems.map((item) => {
+                      const pct = costBreakdown.maxItemCost > 0
+                        ? (Number(item.totalPrice) / costBreakdown.maxItemCost) * 100
+                        : 0;
+                      return (
+                        <div key={item.id} data-testid={`bar-item-${item.id}`}>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="font-mono text-foreground truncate max-w-[60%]">{item.partNumber}</span>
+                            <span className="font-mono text-foreground">${Number(item.totalPrice).toFixed(2)}</span>
+                          </div>
+                          <div className="h-1.5 bg-muted/30 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary transition-all duration-500"
+                              style={{ width: `${Math.max(pct, 2)}%` }}
+                              data-testid={`bar-fill-item-${item.id}`}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile/tablet card layout */}
+        <div className="lg:hidden space-y-2" data-testid="bom-cards">
           {filteredBom.map((item) => (
             <div key={item.id} className="border border-border bg-card/80 backdrop-blur p-3 space-y-2" data-testid={`card-bom-${item.id}`}>
               <div className="flex items-start justify-between gap-2">
@@ -376,7 +550,7 @@ export default function ProcurementView() {
               <div className="flex items-center gap-1 pt-1 border-t border-border">
                 <button
                   aria-label="Add to cart"
-                  className="p-1.5 text-primary hover:bg-primary/10 transition-colors"
+                  className="min-w-[44px] min-h-[44px] p-2.5 flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
                   onClick={() => {
                     const baseUrl = getSupplierSearchUrl(item.supplier);
                     if (!baseUrl) return;
@@ -384,21 +558,21 @@ export default function ProcurementView() {
                   }}
                   data-testid={`card-button-cart-${item.id}`}
                 >
-                  <ShoppingCart className="w-3.5 h-3.5" />
+                  <ShoppingCart className="w-4 h-4" />
                 </button>
                 <button
                   aria-label="Copy part number"
-                  className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors"
+                  className="min-w-[44px] min-h-[44px] p-2.5 flex items-center justify-center text-muted-foreground hover:bg-muted/30 transition-colors"
                   onClick={() => { copyToClipboard(item.partNumber); toast({ title: 'Copied', description: 'Part number copied.' }); }}
                   data-testid={`card-button-copy-${item.id}`}
                 >
-                  <Copy className="w-3.5 h-3.5" />
+                  <Copy className="w-4 h-4" />
                 </button>
                 <div className="flex-1" />
                 <ConfirmDialog
                   trigger={
-                    <button aria-label="Delete item" className="p-1.5 text-destructive hover:bg-destructive/10 transition-colors" data-testid={`card-button-delete-${item.id}`}>
-                      <Trash2 className="w-3.5 h-3.5" />
+                    <button aria-label="Delete item" className="min-w-[44px] min-h-[44px] p-2.5 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors" data-testid={`card-button-delete-${item.id}`}>
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   }
                   title="Remove BOM Item"
@@ -412,34 +586,25 @@ export default function ProcurementView() {
           ))}
         </div>
 
-        {/* Desktop table layout */}
+        {/* Desktop table layout — virtualized */}
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
-          <div className="hidden md:block border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm overflow-x-auto">
-            <table aria-label="Bill of Materials" className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
-              <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="w-8 px-1 py-3"><StyledTooltip content="Drag to reorder" side="right"><ArrowUpDown className="w-3 h-3 mx-auto" /></StyledTooltip></th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Part Number</th>
-                  <th className="px-4 py-3">Manufacturer</th>
-                  <th className="px-4 py-3 w-64">Description</th>
-                  <th className="px-4 py-3">Supplier</th>
-                  <th className="px-4 py-3 text-right">Stock</th>
-                  <th className="px-4 py-3 text-right">Qty</th>
-                  <th className="px-4 py-3 text-right">Unit Price</th>
-                  <th className="px-4 py-3 text-right">Total</th>
-                  <th className="px-4 py-3">Actions</th>
-                </tr>
-              </thead>
-              <SortableContext items={filteredBom.map(item => Number(item.id))} strategy={verticalListSortingStrategy}>
-                <tbody className="divide-y divide-border">
-                  {filteredBom.map((item) => (
-                    <SortableBomRow key={item.id} item={item} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} getSupplierSearchUrl={getSupplierSearchUrl} copyToClipboard={copyToClipboard} toast={toast} />
-                  ))}
-                </tbody>
-              </SortableContext>
-            </table>
-          </div>
+          <VirtualizedBomTable
+            filteredBom={filteredBom}
+            editingId={editingId}
+            editValues={editValues}
+            setEditValues={setEditValues}
+            handleEditKeyDown={handleEditKeyDown}
+            saveEdit={saveEdit}
+            cancelEdit={cancelEdit}
+            startEdit={startEdit}
+            deleteBomItem={deleteBomItem}
+            addOutputLog={addOutputLog}
+            getSupplierSearchUrl={getSupplierSearchUrl}
+            copyToClipboard={copyToClipboard}
+            toast={toast}
+            highlightedItemId={highlightedItemId}
+            handleHighlightItem={handleHighlightItem}
+          />
         </DndContext>
         {filteredBom.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground" data-testid="empty-state-bom">
@@ -643,11 +808,87 @@ export default function ProcurementView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </TabsContent>
+
+      <TabsContent value="comparison" className="flex-1 overflow-hidden mt-0">
+        <Suspense fallback={<div className="flex items-center justify-center h-64 text-muted-foreground">Loading comparison...</div>}>
+          <BomDiffPanel />
+        </Suspense>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+const BOM_ROW_HEIGHT = 48;
+
+function VirtualizedBomTable({
+  filteredBom, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, getSupplierSearchUrl, copyToClipboard, toast, highlightedItemId, handleHighlightItem,
+}: {
+  filteredBom: BomItem[];
+  editingId: number | null;
+  editValues: { partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string };
+  setEditValues: React.Dispatch<React.SetStateAction<typeof editValues>>;
+  handleEditKeyDown: (e: React.KeyboardEvent) => void;
+  saveEdit: () => void;
+  cancelEdit: () => void;
+  startEdit: (item: BomItem) => void;
+  deleteBomItem: (id: number | string) => void;
+  addOutputLog: (msg: string) => void;
+  getSupplierSearchUrl: (supplier: string) => string | null;
+  copyToClipboard: (text: string) => Promise<boolean>;
+  toast: ReturnType<typeof import('@/hooks/use-toast').useToast>['toast'];
+  highlightedItemId: number | null;
+  handleHighlightItem: (id: number) => void;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: filteredBom.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => BOM_ROW_HEIGHT,
+    overscan: 10,
+  });
+
+  return (
+    <div className="hidden lg:block border border-border overflow-hidden bg-card/80 backdrop-blur shadow-sm">
+      <table aria-label="Bill of Materials" className="w-full text-sm text-left min-w-[800px]" data-testid="table-bom">
+        <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
+          <tr>
+            <th className="w-8 px-1 py-3"><StyledTooltip content="Drag to reorder" side="right"><ArrowUpDown className="w-3 h-3 mx-auto" /></StyledTooltip></th>
+            <th className="px-4 py-3">Status</th>
+            <th className="px-4 py-3">Part Number</th>
+            <th className="px-4 py-3">Manufacturer</th>
+            <th className="px-4 py-3 w-64">Description</th>
+            <th className="px-4 py-3">Supplier</th>
+            <th className="px-4 py-3 text-right">Stock</th>
+            <th className="px-4 py-3 text-right">Qty</th>
+            <th className="px-4 py-3 text-right">Unit Price</th>
+            <th className="px-4 py-3 text-right">Total</th>
+            <th className="px-4 py-3">Actions</th>
+          </tr>
+        </thead>
+      </table>
+      <div ref={parentRef} className="overflow-auto max-h-[calc(100vh-20rem)]" style={{ contain: 'strict' }}>
+        <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+          <table className="w-full text-sm text-left min-w-[800px]" style={{ position: 'absolute', top: 0, left: 0, width: '100%' }}>
+            <SortableContext items={filteredBom.map(item => Number(item.id))} strategy={verticalListSortingStrategy}>
+              <tbody className="divide-y divide-border" style={{ transform: `translateY(${virtualizer.getVirtualItems()[0]?.start ?? 0}px)` }}>
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const item = filteredBom[virtualRow.index];
+                  return (
+                    <SortableBomRow key={item.id} item={item} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} getSupplierSearchUrl={getSupplierSearchUrl} copyToClipboard={copyToClipboard} toast={toast} highlighted={highlightedItemId === Number(item.id)} onHighlight={handleHighlightItem} />
+                  );
+                })}
+              </tbody>
+            </SortableContext>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
 
-function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, getSupplierSearchUrl: getUrl, copyToClipboard: copy, toast: t }: {
+function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, getSupplierSearchUrl: getUrl, copyToClipboard: copy, toast: t, highlighted, onHighlight }: {
   item: BomItem;
   editingId: number | null;
   editValues: { partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string };
@@ -661,6 +902,8 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
   getSupplierSearchUrl: (supplier: string) => string | null;
   copyToClipboard: (text: string) => Promise<boolean>;
   toast: ReturnType<typeof import('@/hooks/use-toast').useToast>['toast'];
+  highlighted: boolean;
+  onHighlight: (id: number) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: Number(item.id) });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -669,11 +912,26 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        <tr ref={setNodeRef} style={style} className={cn("hover:bg-muted/30 transition-colors group", isEditing && "bg-primary/5")} data-testid={`row-bom-${item.id}`}>
+        <tr
+          ref={setNodeRef}
+          style={style}
+          className={cn(
+            "hover:bg-muted/30 transition-colors group cursor-pointer",
+            isEditing && "bg-primary/10 ring-1 ring-inset ring-primary/40",
+            highlighted && "ring-1 ring-inset ring-[#00F0FF]/60 bg-[#00F0FF]/5 animate-pulse",
+          )}
+          data-testid={`row-bom-${item.id}`}
+          data-bom-item-highlight={highlighted ? "true" : undefined}
+          onClick={() => onHighlight(Number(item.id))}
+        >
           <td className="w-8 px-1 py-3 text-center">
-            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`drag-handle-${item.id}`} aria-label="Drag to reorder">
-              <GripVertical className="w-3.5 h-3.5" />
-            </button>
+            {isEditing ? (
+              <Pencil className="w-3.5 h-3.5 text-primary mx-auto animate-pulse" data-testid={`edit-indicator-${item.id}`} />
+            ) : (
+              <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`drag-handle-${item.id}`} aria-label="Drag to reorder">
+                <GripVertical className="w-3.5 h-3.5" />
+              </button>
+            )}
           </td>
           <td className="px-4 py-3">
             <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
@@ -689,17 +947,17 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
           </td>
           {isEditing ? (
             <>
-              <td className="px-4 py-1"><input data-testid={`edit-part-number-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" value={editValues.partNumber} onChange={e => setEditValues(v => ({ ...v, partNumber: e.target.value }))} onKeyDown={handleEditKeyDown} autoFocus /></td>
-              <td className="px-4 py-1"><input data-testid={`edit-manufacturer-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.manufacturer} onChange={e => setEditValues(v => ({ ...v, manufacturer: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
-              <td className="px-4 py-1"><input data-testid={`edit-description-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.description} onChange={e => setEditValues(v => ({ ...v, description: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-part-number-${item.id}`} className="w-full bg-primary/5 border border-primary/30 px-2 py-1 text-xs font-mono focus:outline-none focus:border-primary" value={editValues.partNumber} onChange={e => setEditValues(v => ({ ...v, partNumber: e.target.value }))} onKeyDown={handleEditKeyDown} autoFocus /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-manufacturer-${item.id}`} className="w-full bg-primary/5 border border-primary/30 px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.manufacturer} onChange={e => setEditValues(v => ({ ...v, manufacturer: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-description-${item.id}`} className="w-full bg-primary/5 border border-primary/30 px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.description} onChange={e => setEditValues(v => ({ ...v, description: e.target.value }))} onKeyDown={handleEditKeyDown} /></td>
               <td className="px-4 py-1">
-                <select data-testid={`edit-supplier-${item.id}`} className="w-full bg-muted/30 border border-border px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.supplier} onChange={e => setEditValues(v => ({ ...v, supplier: e.target.value }))} onKeyDown={handleEditKeyDown}>
+                <select data-testid={`edit-supplier-${item.id}`} className="w-full bg-primary/5 border border-primary/30 px-2 py-1 text-xs focus:outline-none focus:border-primary" value={editValues.supplier} onChange={e => setEditValues(v => ({ ...v, supplier: e.target.value }))} onKeyDown={handleEditKeyDown}>
                   <option value="Digi-Key">Digi-Key</option><option value="Mouser">Mouser</option><option value="LCSC">LCSC</option>
                 </select>
               </td>
               <td className="px-4 py-3 text-right font-mono text-xs">{item.stock.toLocaleString()}</td>
-              <td className="px-4 py-1"><input data-testid={`edit-quantity-${item.id}`} type="number" min={1} max={999999} className="w-16 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
-              <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} max={99999.99} step={0.01} className="w-24 bg-muted/30 border border-border px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-quantity-${item.id}`} type="number" min={1} max={999999} className="w-16 bg-primary/5 border border-primary/30 px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.quantity} onChange={e => setEditValues(v => ({ ...v, quantity: parseInt(e.target.value) || 1 }))} onKeyDown={handleEditKeyDown} /></td>
+              <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} max={99999.99} step={0.01} className="w-24 bg-primary/5 border border-primary/30 px-2 py-1 text-xs font-mono text-right focus:outline-none focus:border-primary" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
               <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${(editValues.quantity * editValues.unitPrice).toFixed(2)}</td>
               <td className="px-4 py-3 text-right flex gap-1">
                 <StyledTooltip content="Save changes" side="left"><button aria-label="Save changes" className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button></StyledTooltip>
@@ -747,3 +1005,5 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
     </ContextMenu>
   );
 }
+
+export default memo(ProcurementView);

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseActionsFromResponse, categorizeError } from '../ai';
+import { parseActionsFromResponse, categorizeError, isRetryableError, getDefaultFallbackModel, redactSecrets } from '../ai';
+import { CircuitBreakerOpenError } from '../circuit-breaker';
 
 // =============================================================================
 // parseActionsFromResponse
@@ -300,5 +301,123 @@ describe('categorizeError', () => {
     const result = categorizeError({ message: 'You exceeded your current quota' });
 
     expect(result.code).toBe('RATE_LIMITED');
+  });
+});
+
+// =============================================================================
+// isRetryableError
+// =============================================================================
+
+describe('isRetryableError', () => {
+  it('returns true for 500 Internal Server Error', () => {
+    expect(isRetryableError({ status: 500, message: 'Internal Server Error' })).toBe(true);
+  });
+
+  it('returns true for 502 Bad Gateway', () => {
+    expect(isRetryableError({ status: 502, message: 'Bad Gateway' })).toBe(true);
+  });
+
+  it('returns true for 503 Service Unavailable', () => {
+    expect(isRetryableError({ status: 503, message: 'Service Unavailable' })).toBe(true);
+  });
+
+  it('returns true for CircuitBreakerOpenError', () => {
+    const error = new CircuitBreakerOpenError('anthropic', 15000);
+    expect(isRetryableError(error)).toBe(true);
+  });
+
+  it('returns true for timeout errors (no HTTP status)', () => {
+    expect(isRetryableError({ message: 'Request timeout exceeded' })).toBe(true);
+  });
+
+  it('returns true for ETIMEDOUT network errors', () => {
+    expect(isRetryableError({ message: 'connect ETIMEDOUT 1.2.3.4:443' })).toBe(true);
+  });
+
+  it('returns true for ECONNREFUSED network errors', () => {
+    expect(isRetryableError({ message: 'connect ECONNREFUSED 127.0.0.1:443' })).toBe(true);
+  });
+
+  it('returns true for unknown errors with no status', () => {
+    expect(isRetryableError({ message: 'Something went wrong' })).toBe(true);
+  });
+
+  it('returns true for plain string errors', () => {
+    expect(isRetryableError('network failure')).toBe(true);
+  });
+
+  it('returns true for null errors', () => {
+    expect(isRetryableError(null)).toBe(true);
+  });
+
+  it('returns false for 400 Bad Request', () => {
+    expect(isRetryableError({ status: 400, message: 'Bad Request' })).toBe(false);
+  });
+
+  it('returns false for 401 Unauthorized', () => {
+    expect(isRetryableError({ status: 401, message: 'Unauthorized' })).toBe(false);
+  });
+
+  it('returns false for 403 Forbidden', () => {
+    expect(isRetryableError({ status: 403, message: 'Forbidden' })).toBe(false);
+  });
+
+  it('returns false for 404 Not Found', () => {
+    expect(isRetryableError({ status: 404, message: 'Not Found' })).toBe(false);
+  });
+
+  it('returns false for 429 Rate Limited', () => {
+    expect(isRetryableError({ status: 429, message: 'Too Many Requests' })).toBe(false);
+  });
+
+  it('returns false for 422 Unprocessable Entity', () => {
+    expect(isRetryableError({ status: 422, message: 'Unprocessable Entity' })).toBe(false);
+  });
+});
+
+// =============================================================================
+// getDefaultFallbackModel
+// =============================================================================
+
+describe('getDefaultFallbackModel', () => {
+  it('returns the standard Anthropic model for anthropic fallback', () => {
+    const model = getDefaultFallbackModel('anthropic');
+    expect(model).toBe('claude-sonnet-4-5-20250514');
+  });
+
+  it('returns the standard Gemini model for gemini fallback', () => {
+    const model = getDefaultFallbackModel('gemini');
+    expect(model).toBe('gemini-2.5-flash');
+  });
+});
+
+// =============================================================================
+// redactSecrets
+// =============================================================================
+
+describe('redactSecrets', () => {
+  it('redacts Anthropic API keys (sk-...)', () => {
+    const text = 'Failed with key sk-ant1234567890abcdef in request';
+    expect(redactSecrets(text)).not.toContain('sk-ant1234567890abcdef');
+    expect(redactSecrets(text)).toContain('[REDACTED]');
+  });
+
+  it('redacts Google API keys (AIza...)', () => {
+    const text = 'Key AIzaSyA1B2C3D4E5F6G7H8I9 is invalid';
+    expect(redactSecrets(text)).not.toContain('AIzaSyA1B2C3D4E5F6G7H8I9');
+    expect(redactSecrets(text)).toContain('[REDACTED]');
+  });
+
+  it('redacts multiple keys in one string', () => {
+    const text = 'Keys sk-abc123 and AIzaXYZ456 failed';
+    const result = redactSecrets(text);
+    expect(result).not.toContain('sk-abc123');
+    expect(result).not.toContain('AIzaXYZ456');
+    expect(result.match(/\[REDACTED\]/g)).toHaveLength(2);
+  });
+
+  it('returns text unchanged when no keys present', () => {
+    const text = 'No keys here, just a normal error message';
+    expect(redactSecrets(text)).toBe(text);
   });
 });

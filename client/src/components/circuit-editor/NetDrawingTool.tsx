@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { useReactFlow, useViewport } from '@xyflow/react';
 
 // ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ function resolveHandleClick(
 // Component
 // ---------------------------------------------------------------------------
 
-export default function NetDrawingTool({
+const NetDrawingTool = memo(function NetDrawingTool({
   active,
   snapEnabled,
   gridSize,
@@ -280,4 +280,6 @@ export default function NetDrawingTool({
       </g>
     </svg>
   );
-}
+});
+
+export default NetDrawingTool;

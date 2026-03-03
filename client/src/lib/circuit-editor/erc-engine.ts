@@ -127,7 +127,7 @@ export function runERC(input: ERCInput): ERCViolation[] {
   const pinInfoMap = new Map<string, PinInfo>();
   const pinAliasMap = new Map<string, string>();
   for (const inst of instances) {
-    const part = partsMap.get(inst.partId);
+    const part = inst.partId != null ? partsMap.get(inst.partId) : undefined;
     const connectors = (part?.connectors ?? []) as Connector[];
     const meta = (part?.meta ?? {}) as Partial<PartMeta>;
     const family = meta.family || '';
@@ -327,6 +327,7 @@ export function runERC(input: ERCInput): ERCViolation[] {
 
     // Find all IC-type instances
     const icInstances = instances.filter((inst) => {
+      if (inst.partId == null) return false;
       const part = partsMap.get(inst.partId);
       const meta = (part?.meta ?? {}) as Partial<PartMeta>;
       const family = (meta.family || '').toLowerCase();
@@ -335,6 +336,7 @@ export function runERC(input: ERCInput): ERCViolation[] {
 
     // Find all capacitor instances
     const capInstances = instances.filter((inst) => {
+      if (inst.partId == null) return false;
       const part = partsMap.get(inst.partId);
       const meta = (part?.meta ?? {}) as Partial<PartMeta>;
       return (meta.family || '').toLowerCase() === 'capacitor';
@@ -342,7 +344,7 @@ export function runERC(input: ERCInput): ERCViolation[] {
 
     for (const ic of icInstances) {
       // Check if any of the IC's power pins share a net with a capacitor
-      const part = partsMap.get(ic.partId);
+      const part = ic.partId != null ? partsMap.get(ic.partId) : undefined;
       const connectors = (part?.connectors ?? []) as Connector[];
       const icMeta = (part?.meta ?? {}) as Partial<PartMeta>;
       const icFamily = icMeta.family || '';

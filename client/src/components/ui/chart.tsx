@@ -75,6 +75,7 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   }
 
   return (
+    // SAFE: id is from React useId(), colorConfig values are developer-defined ChartConfig — no user input
     <style
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)

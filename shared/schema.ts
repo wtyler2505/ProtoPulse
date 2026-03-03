@@ -34,6 +34,7 @@ export const architectureNodes = pgTable("architecture_nodes", {
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_arch_nodes_project").on(table.projectId),
+  index("idx_arch_nodes_project_deleted").on(table.projectId, table.deletedAt),
   uniqueIndex("uq_arch_nodes_project_node").on(table.projectId, table.nodeId),
 ]);
 
@@ -64,6 +65,7 @@ export const architectureEdges = pgTable("architecture_edges", {
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_arch_edges_project").on(table.projectId),
+  index("idx_arch_edges_project_deleted").on(table.projectId, table.deletedAt),
   uniqueIndex("uq_arch_edges_project_edge").on(table.projectId, table.edgeId),
 ]);
 
@@ -90,6 +92,7 @@ export const bomItems = pgTable("bom_items", {
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_bom_items_project").on(table.projectId),
+  index("idx_bom_items_project_deleted").on(table.projectId, table.deletedAt),
 ]);
 
 export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true, totalPrice: true, updatedAt: true, deletedAt: true }).extend({
@@ -122,9 +125,12 @@ export const chatMessages = pgTable("chat_messages", {
   content: text("content").notNull(),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
   mode: text("mode").default("chat"),
+  branchId: text("branch_id"),
+  parentMessageId: integer("parent_message_id"),
 }, (table) => [
   index("idx_chat_messages_project").on(table.projectId),
   index("idx_chat_messages_project_ts").on(table.projectId, table.timestamp),
+  index("idx_chat_messages_branch").on(table.projectId, table.branchId),
 ]);
 
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, timestamp: true }).extend({
@@ -247,6 +253,7 @@ export type ComponentLibraryEntry = typeof componentLibrary.$inferSelect;
 export const circuitDesigns = pgTable("circuit_designs", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  parentDesignId: integer("parent_design_id"),
   name: text("name").notNull().default("Main Circuit"),
   description: text("description"),
   settings: jsonb("settings").notNull().default({}),
@@ -254,16 +261,38 @@ export const circuitDesigns = pgTable("circuit_designs", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_circuit_designs_project").on(table.projectId),
+  index("idx_circuit_designs_parent").on(table.parentDesignId),
 ]);
 
 export const insertCircuitDesignSchema = createInsertSchema(circuitDesigns).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCircuitDesign = z.infer<typeof insertCircuitDesignSchema>;
 export type CircuitDesignRow = typeof circuitDesigns.$inferSelect;
 
+// --- Hierarchical Ports (inter-sheet connections) ---
+
+export const hierarchicalPorts = pgTable("hierarchical_ports", {
+  id: serial("id").primaryKey(),
+  designId: integer("design_id").notNull().references(() => circuitDesigns.id, { onDelete: "cascade" }),
+  portName: text("port_name").notNull(),
+  direction: text("direction").notNull().default("bidirectional"),
+  netName: text("net_name"),
+  positionX: real("position_x").notNull().default(0),
+  positionY: real("position_y").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_hierarchical_ports_design").on(table.designId),
+]);
+
+export const insertHierarchicalPortSchema = createInsertSchema(hierarchicalPorts).omit({ id: true, createdAt: true }).extend({
+  direction: z.enum(["input", "output", "bidirectional"]).default("bidirectional"),
+});
+export type InsertHierarchicalPort = z.infer<typeof insertHierarchicalPortSchema>;
+export type HierarchicalPortRow = typeof hierarchicalPorts.$inferSelect;
+
 export const circuitInstances = pgTable("circuit_instances", {
   id: serial("id").primaryKey(),
   circuitId: integer("circuit_id").notNull().references(() => circuitDesigns.id, { onDelete: "cascade" }),
-  partId: integer("part_id").notNull().references(() => componentParts.id),
+  partId: integer("part_id").references(() => componentParts.id, { onDelete: 'set null' }),
   referenceDesignator: text("reference_designator").notNull(),
   schematicX: real("schematic_x").notNull().default(0),
   schematicY: real("schematic_y").notNull().default(0),
@@ -371,3 +400,105 @@ export const aiActions = pgTable("ai_actions", {
 export const insertAiActionSchema = createInsertSchema(aiActions).omit({ id: true, createdAt: true });
 export type InsertAiAction = z.infer<typeof insertAiActionSchema>;
 export type AiActionRow = typeof aiActions.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Design Preferences (FG-24) — AI-learned user preferences per project
+// ---------------------------------------------------------------------------
+
+export const designPreferences = pgTable("design_preferences", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+  key: text("key").notNull(),
+  value: text("value").notNull(),
+  source: text("source").notNull().default("ai"),
+  confidence: real("confidence").notNull().default(0.8),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_design_prefs_project").on(table.projectId),
+  uniqueIndex("uq_design_prefs_project_cat_key").on(table.projectId, table.category, table.key),
+]);
+
+export const insertDesignPreferenceSchema = createInsertSchema(designPreferences).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertDesignPreference = z.infer<typeof insertDesignPreferenceSchema>;
+export type DesignPreference = typeof designPreferences.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// BOM Snapshots (EN-21) — point-in-time BOM captures for diff/comparison
+// ---------------------------------------------------------------------------
+
+export const bomSnapshots = pgTable("bom_snapshots", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  label: text("label").notNull(),
+  snapshotData: jsonb("snapshot_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_bom_snapshots_project").on(table.projectId),
+]);
+
+export const insertBomSnapshotSchema = createInsertSchema(bomSnapshots).omit({ id: true, createdAt: true });
+export type InsertBomSnapshot = z.infer<typeof insertBomSnapshotSchema>;
+export type BomSnapshot = typeof bomSnapshots.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// SPICE Model Library (EN-24) — standard component model definitions
+// ---------------------------------------------------------------------------
+
+export const spiceModels = pgTable("spice_models", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  modelType: text("model_type").notNull(),
+  spiceDirective: text("spice_directive").notNull(),
+  parameters: jsonb("parameters").notNull().default({}),
+  description: text("description"),
+  category: text("category").notNull(),
+  datasheet: text("datasheet"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_spice_models_category").on(table.category),
+  index("idx_spice_models_model_type").on(table.modelType),
+  index("idx_spice_models_name").on(table.name),
+]);
+
+export const insertSpiceModelSchema = createInsertSchema(spiceModels).omit({ id: true, createdAt: true }).extend({
+  modelType: z.enum([
+    'NPN', 'PNP', 'DIODE', 'ZENER', 'SCHOTTKY', 'LED',
+    'NMOS', 'PMOS', 'MOSFET_N', 'MOSFET_P', 'JFET_N', 'JFET_P',
+    'OPAMP', 'COMPARATOR',
+    'VOLTAGE_REG', 'TIMER',
+    'RESISTOR', 'CAPACITOR', 'INDUCTOR',
+  ]),
+  category: z.enum([
+    'transistor', 'diode', 'opamp', 'passive', 'ic', 'voltage_regulator', 'mosfet', 'jfet',
+  ]),
+});
+export type InsertSpiceModel = z.infer<typeof insertSpiceModelSchema>;
+export type SpiceModelRow = typeof spiceModels.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Component Lifecycle / Obsolescence Tracking (FG-32)
+// ---------------------------------------------------------------------------
+
+export const componentLifecycle = pgTable('component_lifecycle', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  bomItemId: integer('bom_item_id'),
+  partNumber: varchar('part_number', { length: 100 }).notNull(),
+  manufacturer: varchar('manufacturer', { length: 200 }),
+  lifecycleStatus: varchar('lifecycle_status', { length: 50 }).notNull().default('active'),
+  lastCheckedAt: timestamp('last_checked_at'),
+  alternatePartNumbers: text('alternate_part_numbers'),
+  dataSource: varchar('data_source', { length: 100 }),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_component_lifecycle_project').on(table.projectId),
+  index('idx_component_lifecycle_status').on(table.lifecycleStatus),
+]);
+
+export const insertComponentLifecycleSchema = createInsertSchema(componentLifecycle).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertComponentLifecycle = z.infer<typeof insertComponentLifecycleSchema>;
+export type ComponentLifecycle = typeof componentLifecycle.$inferSelect;

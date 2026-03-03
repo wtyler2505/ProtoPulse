@@ -108,6 +108,11 @@ export function getDefaultDRCRules(): DRCRule[] {
     { type: 'pin-spacing', params: { standardPitchMils: 100 }, severity: 'warning', enabled: true },
     { type: 'silk-overlap', params: {}, severity: 'warning', enabled: true },
     { type: 'courtyard-overlap', params: { minCourtyard: 10 }, severity: 'error', enabled: true },
+    { type: 'annular-ring', params: { minAnnularRing: 5 }, severity: 'error', enabled: true },
+    { type: 'thermal-relief', params: { minSpokeWidth: 8, minSpokeCount: 2 }, severity: 'warning', enabled: true },
+    { type: 'trace-to-edge', params: { minEdgeClearance: 10 }, severity: 'error', enabled: true },
+    { type: 'via-in-pad', params: {}, severity: 'warning', enabled: true },
+    { type: 'solder-mask', params: { minSolderMaskDam: 4, minSolderMaskExpansion: 2 }, severity: 'warning', enabled: true },
   ];
 }
 
@@ -352,15 +357,8 @@ function checkCourtyardOverlap(
       const a = shapeToAABB(courtyardShapes[i]);
       const b = shapeToAABB(courtyardShapes[j]);
 
-      const expandedA: AABB = {
-        minX: a.minX - minCourtyard / 2,
-        minY: a.minY - minCourtyard / 2,
-        maxX: a.maxX + minCourtyard / 2,
-        maxY: a.maxY + minCourtyard / 2,
-      };
-
-      if (aabbOverlaps(expandedA, b)) {
-        const dist = aabbDistance(a, b);
+      const dist = aabbDistance(a, b);
+      if (dist < minCourtyard) {
         const center = aabbCenter(a);
         violations.push({
           id: nanoid(),
@@ -372,6 +370,347 @@ function checkCourtyardOverlap(
           location: center,
           actual: Math.round(dist * 10) / 10,
           required: minCourtyard,
+        });
+      }
+    }
+  }
+
+  return violations;
+}
+
+function isEdgeLayer(layer: string): boolean {
+  return layer === 'edge' || layer === 'board-outline' || layer === 'edge-cuts';
+}
+
+function isSolderMaskLayer(layer: string): boolean {
+  return layer.startsWith('mask') || layer.startsWith('solder-mask');
+}
+
+function checkAnnularRing(
+  connectors: Connector[],
+  rule: DRCRule,
+  view: 'breadboard' | 'schematic' | 'pcb'
+): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+  const minAnnularRing = rule.params.minAnnularRing ?? 5;
+
+  for (const conn of connectors) {
+    if (!conn.padSpec) continue;
+    const pad = conn.padSpec;
+    if (pad.type !== 'tht') continue;
+    if (pad.diameter === undefined || pad.drill === undefined) continue;
+
+    const annularRing = (pad.diameter - pad.drill) / 2;
+    if (annularRing < minAnnularRing) {
+      const pos = conn.terminalPositions[view];
+      violations.push({
+        id: nanoid(),
+        ruleType: 'annular-ring',
+        severity: rule.severity,
+        message: `Pad "${conn.name}" annular ring ${annularRing.toFixed(1)}px is below minimum ${minAnnularRing}px (pad: ${pad.diameter}px, drill: ${pad.drill}px)`,
+        shapeIds: [],
+        view,
+        location: pos ? { x: pos.x, y: pos.y } : { x: 0, y: 0 },
+        actual: Math.round(annularRing * 10) / 10,
+        required: minAnnularRing,
+      });
+    }
+  }
+
+  return violations;
+}
+
+function checkThermalRelief(
+  shapes: Shape[],
+  connectors: Connector[],
+  rule: DRCRule,
+  grid: SpatialGrid,
+  view: 'breadboard' | 'schematic' | 'pcb'
+): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+  const minSpokeWidth = rule.params.minSpokeWidth ?? 8;
+  const minSpokeCount = rule.params.minSpokeCount ?? 2;
+
+  // Find copper pour shapes (large copper rectangles that act as ground/power planes).
+  // A shape is considered a copper pour if it is on a copper layer and its area exceeds
+  // a threshold (arbitrarily: area > 10,000 px^2, roughly 100x100).
+  const copperPours = shapes.filter((s) => {
+    const layer = getShapeLayer(s);
+    if (!isCopperLayer(layer) && layer !== 'default') return false;
+    const area = s.width * s.height;
+    return area > 10000;
+  });
+
+  if (copperPours.length === 0) return violations;
+
+  for (const conn of connectors) {
+    if (!conn.padSpec) continue;
+    const pad = conn.padSpec;
+    if (pad.type !== 'tht') continue;
+
+    const pos = conn.terminalPositions[view];
+    if (!pos) continue;
+
+    // Check if this pad sits within a copper pour
+    const padRadius = (pad.diameter ?? 40) / 2;
+    const padAABB: AABB = {
+      minX: pos.x - padRadius,
+      minY: pos.y - padRadius,
+      maxX: pos.x + padRadius,
+      maxY: pos.y + padRadius,
+    };
+
+    for (const pour of copperPours) {
+      const pourAABB = shapeToAABB(pour);
+      if (!aabbOverlaps(padAABB, pourAABB)) continue;
+
+      // Pad is inside a copper pour — check for thermal relief traces.
+      // Look for path shapes (traces) that connect to this pad within the pour.
+      const searchAABB: AABB = {
+        minX: padAABB.minX - minSpokeWidth * 2,
+        minY: padAABB.minY - minSpokeWidth * 2,
+        maxX: padAABB.maxX + minSpokeWidth * 2,
+        maxY: padAABB.maxY + minSpokeWidth * 2,
+      };
+      const nearby = Array.from(grid.query(searchAABB));
+      let spokeCount = 0;
+      let thinSpoke = false;
+
+      for (const sid of nearby) {
+        const shape = shapes.find((s) => s.id === sid);
+        if (!shape || shape.type !== 'path') continue;
+        const sw = shape.style?.strokeWidth ?? 1;
+        spokeCount++;
+        if (sw < minSpokeWidth) {
+          thinSpoke = true;
+        }
+      }
+
+      if (spokeCount > 0 && spokeCount < minSpokeCount) {
+        violations.push({
+          id: nanoid(),
+          ruleType: 'thermal-relief',
+          severity: rule.severity,
+          message: `Pad "${conn.name}" has ${spokeCount} thermal relief spoke(s) in copper pour, minimum is ${minSpokeCount}`,
+          shapeIds: [pour.id],
+          view,
+          location: { x: pos.x, y: pos.y },
+          actual: spokeCount,
+          required: minSpokeCount,
+        });
+      }
+
+      if (thinSpoke) {
+        violations.push({
+          id: nanoid(),
+          ruleType: 'thermal-relief',
+          severity: rule.severity,
+          message: `Pad "${conn.name}" has thermal relief spoke(s) thinner than minimum ${minSpokeWidth}px`,
+          shapeIds: [pour.id],
+          view,
+          location: { x: pos.x, y: pos.y },
+          actual: undefined,
+          required: minSpokeWidth,
+        });
+      }
+    }
+  }
+
+  return violations;
+}
+
+function checkTraceToEdge(
+  shapes: Shape[],
+  rule: DRCRule,
+  view: 'breadboard' | 'schematic' | 'pcb'
+): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+  const minEdgeClearance = rule.params.minEdgeClearance ?? 10;
+
+  const edgeShapes = shapes.filter((s) => isEdgeLayer(getShapeLayer(s)));
+  if (edgeShapes.length === 0) return violations;
+
+  const copperShapes = shapes.filter((s) => {
+    const layer = getShapeLayer(s);
+    return isCopperLayer(layer) || layer === 'default';
+  });
+
+  for (const copper of copperShapes) {
+    const copperAABB = shapeToAABB(copper);
+    for (const edge of edgeShapes) {
+      const edgeAABB = shapeToAABB(edge);
+      const dist = aabbDistance(copperAABB, edgeAABB);
+
+      // If copper overlaps edge or is too close, it is a violation.
+      // We also check if the copper is inside the edge bounds but too close to the boundary.
+      if (dist < minEdgeClearance) {
+        const center = aabbCenter(copperAABB);
+        violations.push({
+          id: nanoid(),
+          ruleType: 'trace-to-edge',
+          severity: rule.severity,
+          message: `Copper shape is ${dist.toFixed(1)}px from board edge, minimum is ${minEdgeClearance}px`,
+          shapeIds: [copper.id, edge.id],
+          view,
+          location: center,
+          actual: Math.round(dist * 10) / 10,
+          required: minEdgeClearance,
+        });
+      }
+    }
+  }
+
+  return violations;
+}
+
+function checkViaInPad(
+  connectors: Connector[],
+  shapes: Shape[],
+  rule: DRCRule,
+  view: 'breadboard' | 'schematic' | 'pcb'
+): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+
+  // Find SMD pad connectors
+  const smdConnectors = connectors.filter((c) => c.padSpec?.type === 'smd');
+  if (smdConnectors.length === 0) return violations;
+
+  // Find via shapes — circles on copper layers with small diameter (heuristic: diameter <= 30px)
+  // and that have a THT-like appearance. In the component model, vias are typically small circle shapes
+  // on copper layers.
+  const viaShapes = shapes.filter((s) => {
+    if (s.type !== 'circle') return false;
+    const layer = getShapeLayer(s);
+    if (!isCopperLayer(layer) && layer !== 'default') return false;
+    const diameter = Math.min(s.width, s.height);
+    return diameter <= 30;
+  });
+
+  for (const conn of smdConnectors) {
+    const pos = conn.terminalPositions[view];
+    if (!pos) continue;
+
+    const padWidth = conn.padSpec?.width ?? conn.padSpec?.diameter ?? 20;
+    const padHeight = conn.padSpec?.height ?? conn.padSpec?.diameter ?? 20;
+    const padAABB: AABB = {
+      minX: pos.x - padWidth / 2,
+      minY: pos.y - padHeight / 2,
+      maxX: pos.x + padWidth / 2,
+      maxY: pos.y + padHeight / 2,
+    };
+
+    for (const via of viaShapes) {
+      const viaAABB = shapeToAABB(via);
+      if (aabbOverlaps(padAABB, viaAABB)) {
+        violations.push({
+          id: nanoid(),
+          ruleType: 'via-in-pad',
+          severity: rule.severity,
+          message: `Via detected in SMD pad "${conn.name}" — may cause solder wicking unless filled/capped`,
+          shapeIds: [via.id],
+          view,
+          location: { x: pos.x, y: pos.y },
+        });
+      }
+    }
+  }
+
+  return violations;
+}
+
+function checkSolderMask(
+  shapes: Shape[],
+  connectors: Connector[],
+  rule: DRCRule,
+  view: 'breadboard' | 'schematic' | 'pcb'
+): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+  const minDam = rule.params.minSolderMaskDam ?? 4;
+  const minExpansion = rule.params.minSolderMaskExpansion ?? 2;
+
+  // Check solder mask expansion: mask openings should extend beyond pads by at least minExpansion.
+  // Mask shapes represent mask openings. Each should be larger than its corresponding copper pad.
+  const maskShapes = shapes.filter((s) => isSolderMaskLayer(getShapeLayer(s)));
+  const copperShapes = shapes.filter((s) => {
+    const layer = getShapeLayer(s);
+    return isCopperLayer(layer) || layer === 'default';
+  });
+
+  // Check mask expansion: each mask shape that overlaps copper should be at least minExpansion bigger
+  for (const mask of maskShapes) {
+    const maskAABB = shapeToAABB(mask);
+    for (const copper of copperShapes) {
+      const copperAABB = shapeToAABB(copper);
+      if (!aabbOverlaps(maskAABB, copperAABB)) continue;
+
+      // Mask should extend beyond copper on each side by at least minExpansion
+      const leftExp = copperAABB.minX - maskAABB.minX;
+      const rightExp = maskAABB.maxX - copperAABB.maxX;
+      const topExp = copperAABB.minY - maskAABB.minY;
+      const bottomExp = maskAABB.maxY - copperAABB.maxY;
+      const minActualExp = Math.min(leftExp, rightExp, topExp, bottomExp);
+
+      if (minActualExp < minExpansion) {
+        const center = aabbCenter(maskAABB);
+        violations.push({
+          id: nanoid(),
+          ruleType: 'solder-mask',
+          severity: rule.severity,
+          message: `Solder mask expansion ${minActualExp.toFixed(1)}px is below minimum ${minExpansion}px`,
+          shapeIds: [mask.id, copper.id],
+          view,
+          location: center,
+          actual: Math.round(minActualExp * 10) / 10,
+          required: minExpansion,
+        });
+      }
+    }
+  }
+
+  // Check solder mask dam width between adjacent pads
+  // Dam is the mask material remaining between two pad openings
+  const positioned = connectors
+    .filter((c) => c.padSpec !== undefined)
+    .map((c) => {
+      const pos = c.terminalPositions[view];
+      const padW = c.padSpec?.width ?? c.padSpec?.diameter ?? 20;
+      const padH = c.padSpec?.height ?? c.padSpec?.diameter ?? 20;
+      const expansion = minExpansion;
+      return {
+        conn: c,
+        pos,
+        openingAABB: pos
+          ? {
+              minX: pos.x - padW / 2 - expansion,
+              minY: pos.y - padH / 2 - expansion,
+              maxX: pos.x + padW / 2 + expansion,
+              maxY: pos.y + padH / 2 + expansion,
+            }
+          : null,
+      };
+    })
+    .filter((p) => p.pos !== undefined && p.openingAABB !== null);
+
+  for (let i = 0; i < positioned.length; i++) {
+    for (let j = i + 1; j < positioned.length; j++) {
+      const a = positioned[i];
+      const b = positioned[j];
+      const dist = aabbDistance(a.openingAABB!, b.openingAABB!);
+
+      if (dist < minDam) {
+        violations.push({
+          id: nanoid(),
+          ruleType: 'solder-mask',
+          severity: rule.severity,
+          message: `Solder mask dam between pads "${a.conn.name}" and "${b.conn.name}" is ${dist.toFixed(1)}px, minimum is ${minDam}px`,
+          shapeIds: [],
+          view,
+          location: {
+            x: (a.pos!.x + b.pos!.x) / 2,
+            y: (a.pos!.y + b.pos!.y) / 2,
+          },
+          actual: Math.round(dist * 10) / 10,
+          required: minDam,
         });
       }
     }
@@ -416,6 +755,21 @@ export function runDRC(
         break;
       case 'courtyard-overlap':
         violations.push(...checkCourtyardOverlap(shapes, rule, view));
+        break;
+      case 'annular-ring':
+        violations.push(...checkAnnularRing(connectors, rule, view));
+        break;
+      case 'thermal-relief':
+        violations.push(...checkThermalRelief(shapes, connectors, rule, grid, view));
+        break;
+      case 'trace-to-edge':
+        violations.push(...checkTraceToEdge(shapes, rule, view));
+        break;
+      case 'via-in-pad':
+        violations.push(...checkViaInPad(connectors, shapes, rule, view));
+        break;
+      case 'solder-mask':
+        violations.push(...checkSolderMask(shapes, connectors, rule, view));
         break;
     }
   }

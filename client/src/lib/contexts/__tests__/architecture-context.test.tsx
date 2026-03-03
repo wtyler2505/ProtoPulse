@@ -37,9 +37,9 @@ function createTestQueryClient() {
       queries: {
         retry: false,
         gcTime: 0,
-        // Provide a default queryFn that returns an empty array, mirroring the
-        // real queryClient's getQueryFn but without hitting the network.
-        queryFn: async () => [],
+        // Provide a default queryFn that returns an empty envelope, mirroring the
+        // real server's { data, total } response shape.
+        queryFn: async () => ({ data: [], total: 0 }),
       },
       mutations: { retry: false },
     },
@@ -257,10 +257,11 @@ describe('ArchitectureContext', () => {
 
     // Cache is updated synchronously via setQueryData — this is the
     // optimistic update, visible before the mutation round-trip completes.
-    const cached = queryClient.getQueryData(['/api/projects/1/nodes']);
-    expect(cached).toEqual([
-      expect.objectContaining({ nodeId: 'n1', label: 'MCU' }),
-    ]);
+    const cached = queryClient.getQueryData(['/api/projects/1/nodes']) as { data: unknown[]; total: number };
+    expect(cached).toEqual({
+      data: [expect.objectContaining({ nodeId: 'n1', label: 'MCU' })],
+      total: 1,
+    });
 
     // The mutation function hasn't fired yet (it's async/scheduled),
     // proving the cache was updated independently of the server response.

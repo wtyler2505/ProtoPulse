@@ -1,6 +1,8 @@
+import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle } from 'lucide-react';
+import rehypeSanitize from 'rehype-sanitize';
+import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ACTION_LABELS, DESTRUCTIVE_ACTIONS } from './constants';
@@ -15,6 +17,7 @@ export function MarkdownContent({ content }: { content: string }) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
+      rehypePlugins={[rehypeSanitize]}
       components={{
         p: ({ children }) => <p className="mb-2 last:mb-0 leading-relaxed">{children}</p>,
         strong: ({ children }) => <strong className="font-bold text-primary/90">{children}</strong>,
@@ -37,7 +40,10 @@ export function MarkdownContent({ content }: { content: string }) {
         ul: ({ children }) => <ul className="list-disc list-inside space-y-0.5 mb-2">{children}</ul>,
         ol: ({ children }) => <ol className="list-decimal list-inside space-y-0.5 mb-2">{children}</ol>,
         li: ({ children }) => <li className="text-sm">{children}</li>,
-        a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">{children}</a>,
+        a: ({ href, children }) => {
+          const safeHref = href && /^https?:\/\//i.test(href) ? href : undefined;
+          return <a href={safeHref} target="_blank" rel="noopener noreferrer" className="text-primary underline hover:text-primary/80">{children}</a>;
+        },
         table: ({ children }) => <div className="overflow-x-auto my-2"><table className="w-full text-xs border border-border">{children}</table></div>,
         thead: ({ children }) => <thead className="bg-muted/30">{children}</thead>,
         th: ({ children }) => <th className="border border-border px-2 py-1 text-left font-bold">{children}</th>,
@@ -49,18 +55,21 @@ export function MarkdownContent({ content }: { content: string }) {
   );
 }
 
-export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, isLast, pendingActions, onAcceptActions, onRejectActions, tokenInfo }: {
+interface MessageBubbleProps {
   msg: ChatMessage;
   copiedId: string | null;
   onCopy: (id: string, content: string) => void;
   onRegenerate?: () => void;
   onRetry?: () => void;
+  onBranch?: (messageId: string) => void;
   isLast: boolean;
   pendingActions: { actions: AIAction[]; messageId: string } | null;
   onAcceptActions: () => void;
   onRejectActions: () => void;
   tokenInfo?: {input: number; output: number; cost: number} | null;
-}) {
+}
+
+const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, onBranch, isLast, pendingActions, onAcceptActions, onRejectActions, tokenInfo }: MessageBubbleProps) {
   return (
     <div className={cn(
       "flex gap-3 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg",
@@ -86,9 +95,10 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
             <div className="flex flex-wrap gap-1.5 mb-2">
               {msg.attachments.filter(a => a.type === 'image' && a.url).map((att, idx) => (
                 <img
-                  key={idx}
+                  key={att.url || att.name || idx}
                   src={att.url}
                   alt={att.name}
+                  loading="lazy"
                   className="max-w-[200px] max-h-[150px] object-contain border border-border/50"
                   data-testid={`msg-image-${idx}`}
                 />
@@ -101,7 +111,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
             <span className="whitespace-pre-wrap">{msg.content}</span>
           )}
           {tokenInfo && msg.role === 'assistant' && (
-            <div className="text-[10px] text-muted-foreground/50 mt-1" data-testid="text-token-info">
+            <div className="text-xs text-muted-foreground/80 mt-1" data-testid="text-token-info">
               {tokenInfo.input + tokenInfo.output} tokens · ~${tokenInfo.cost.toFixed(4)}
             </div>
           )}
@@ -129,7 +139,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
         {msg.actions && msg.actions.length > 0 && !pendingActions && !msg.toolCalls?.length && (
           <div className="flex flex-wrap gap-1 px-1">
             {msg.actions.map((action, idx) => (
-              <span key={idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 border border-primary/20 text-[10px] text-primary">
+              <span key={action.type + idx} className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary/10 border border-primary/20 text-[10px] text-primary">
                 <CheckCircle2 className="w-2.5 h-2.5" />
                 {ACTION_LABELS[action.type] || action.type}
               </span>
@@ -145,7 +155,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
             </div>
             <div className="flex flex-wrap gap-1">
               {pendingActions.actions.map((action, idx) => (
-                <span key={idx} className={cn(
+                <span key={action.type + idx} className={cn(
                   "inline-flex items-center gap-1 px-2 py-0.5 text-[10px] border",
                   DESTRUCTIVE_ACTIONS.includes(action.type) ? "border-amber-500/30 bg-amber-500/10 text-amber-400" : "border-primary/20 bg-primary/10 text-primary"
                 )}>
@@ -154,10 +164,10 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
               ))}
             </div>
             <div className="flex gap-2">
-              <button onClick={onAcceptActions} data-testid="accept-actions" aria-label="Accept" className="flex-1 py-1.5 bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors">
+              <button onClick={onAcceptActions} data-testid="accept-actions" aria-label="Accept" className="flex-1 py-1.5 bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 Apply Changes
               </button>
-              <button onClick={onRejectActions} data-testid="reject-actions" aria-label="Reject" className="flex-1 py-1.5 bg-muted border border-border text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <button onClick={onRejectActions} data-testid="reject-actions" aria-label="Reject" className="flex-1 py-1.5 bg-muted border border-border text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
                 Cancel
               </button>
             </div>
@@ -165,7 +175,7 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
         )}
 
         <div className="flex items-center gap-2 px-1">
-          <span className="text-[10px] text-muted-foreground opacity-50">
+          <span className="text-[11px] text-muted-foreground/70">
             {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </span>
           <div className="flex gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
@@ -193,9 +203,23 @@ export default function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onR
                   </button>
               </StyledTooltip>
             )}
+            {onBranch && (
+              <StyledTooltip content="Branch conversation" side="top">
+                  <button
+                    onClick={() => onBranch(msg.id)}
+                    data-testid={`branch-msg-${msg.id}`}
+                    aria-label="Branch conversation from this message"
+                    className="p-1 hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <GitBranch className="w-3 h-3" />
+                  </button>
+              </StyledTooltip>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-}
+});
+
+export default MessageBubble;

@@ -62,7 +62,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<Node<Custom
             selected ? "border-primary shadow-[0_0_20px_rgba(6,182,212,0.4)] ring-1 ring-primary" : "border-border hover:border-primary/50"
           )}
         >
-          <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-3 !h-1 !rounded-none" />
+          <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-3.5 !h-2 !rounded-none hover:!ring-2 hover:!ring-primary/60 hover:!bg-primary transition-all" data-testid={`handle-target-${id}`} />
           
           <div className="flex items-center gap-3">
             <div className={cn("p-2 bg-muted/50", selected ? "text-primary" : "text-muted-foreground")}>
@@ -74,7 +74,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<Node<Custom
             </div>
           </div>
 
-          <Handle type="source" position={Position.Bottom} className="!bg-muted-foreground !w-3 !h-1 !rounded-none" />
+          <Handle type="source" position={Position.Bottom} className="!bg-muted-foreground !w-3.5 !h-2 !rounded-none hover:!ring-2 hover:!ring-primary/60 hover:!bg-primary transition-all" data-testid={`handle-source-${id}`} />
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">

@@ -126,7 +126,18 @@ export interface PartState {
   constraints?: Constraint[];
 }
 
-export type DRCRuleType = 'min-clearance' | 'min-trace-width' | 'courtyard-overlap' | 'pin-spacing' | 'pad-size' | 'silk-overlap';
+export type DRCRuleType =
+  | 'min-clearance'
+  | 'min-trace-width'
+  | 'courtyard-overlap'
+  | 'pin-spacing'
+  | 'pad-size'
+  | 'silk-overlap'
+  | 'annular-ring'
+  | 'thermal-relief'
+  | 'trace-to-edge'
+  | 'via-in-pad'
+  | 'solder-mask';
 
 export interface DRCRule {
   type: DRCRuleType;

@@ -28,8 +28,9 @@ export async function checkConnection(maxRetries = 5): Promise<void> {
       client.release();
       logger.info("Database connection verified");
       return;
-    } catch (err: any) {
-      logger.error("Database connection attempt failed", { attempt, maxRetries, error: err.message });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error("Database connection attempt failed", { attempt, maxRetries, error: message });
       if (attempt === maxRetries) {
         throw new Error(`Could not connect to database after ${maxRetries} attempts.`);
       }

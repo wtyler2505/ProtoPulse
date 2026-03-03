@@ -172,7 +172,7 @@ export default function AssetManager({ onDragStart, onClose, onAddNode }: AssetM
   return (
     <div
       ref={containerRef}
-      className="fixed inset-x-0 top-0 bottom-0 z-30 md:absolute md:top-4 md:left-4 md:bottom-auto md:right-auto md:inset-x-auto bg-card/50 backdrop-blur-xl border border-border shadow-xl flex flex-col max-h-full md:max-h-[calc(100%-2rem)] animate-in fade-in slide-in-from-left-2 duration-300"
+      className="fixed inset-x-0 top-0 bottom-0 z-30 md:absolute md:top-4 md:left-4 md:bottom-auto md:right-auto md:inset-x-auto bg-card/90 backdrop-blur-xl border border-border shadow-xl flex flex-col max-h-full md:max-h-[calc(100%-2rem)] animate-in fade-in slide-in-from-left-2 duration-300"
       style={{ width: typeof window !== 'undefined' && window.innerWidth >= 768 ? `${panelWidth}px` : undefined }}
       tabIndex={0}
     >

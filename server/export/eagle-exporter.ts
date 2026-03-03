@@ -6,6 +6,13 @@
 // files from ProtoPulse circuit data.
 // =============================================================================
 
+import {
+  type ArchNodeData,
+  type ArchEdgeData,
+  type ExportResult,
+  sanitizeFilename,
+} from './types';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -15,7 +22,7 @@ export interface EagleInput {
   instances: Array<{
     id: number;
     referenceDesignator: string;
-    partId: number;
+    partId: number | null;
     schematicX: number;
     schematicY: number;
     schematicRotation: number;
@@ -216,10 +223,11 @@ interface EaglePart {
 function buildPartLibrary(input: EagleInput): Map<number, EaglePart> {
   const library = new Map<number, EaglePart>();
 
-  input.instances.forEach((inst) => {
+  input.instances.forEach(function deduplicatePartEntry(inst) {
+    if (inst.partId == null) return;
     if (library.has(inst.partId)) return;
 
-    const partData = input.parts.get(inst.partId);
+    const partData = inst.partId != null ? input.parts.get(inst.partId) : undefined;
     if (!partData) return;
 
     const title = extractTitle(partData.meta);
@@ -294,7 +302,7 @@ function generateSymbol(part: EaglePart): string {
   const leftPins: Array<{ id: string; name: string; index: number }> = [];
   const rightPins: Array<{ id: string; name: string; index: number }> = [];
 
-  part.connectors.forEach((conn, i) => {
+  part.connectors.forEach(function splitConnectorToSide(conn, i) {
     if (i % 2 === 0) {
       leftPins.push({ id: conn.id, name: conn.name, index: i });
     } else {
@@ -337,7 +345,7 @@ function generateSymbol(part: EaglePart): string {
   );
 
   // Left-side pins (pointing left, connected from the left)
-  leftPins.forEach((pin, i) => {
+  leftPins.forEach(function emitLeftPin(pin, i) {
     const y = halfHeight - (i + 0.5) * PIN_SPACING;
     // Lead-in wire from body edge to pin stub end
     lines.push(
@@ -351,7 +359,7 @@ function generateSymbol(part: EaglePart): string {
   });
 
   // Right-side pins (pointing right, connected from the right)
-  rightPins.forEach((pin, i) => {
+  rightPins.forEach(function emitRightPin(pin, i) {
     const y = halfHeight - (i + 0.5) * PIN_SPACING;
     lines.push(
       `            <wire x1="${SYMBOL_HALF_WIDTH}" y1="${y}" ` +
@@ -429,7 +437,7 @@ function generatePackage(part: EaglePart): string {
   if (part.connectors.length > 0) {
     const padSpacing = bodyWidth / (part.connectors.length + 1);
 
-    part.connectors.forEach((conn, i) => {
+    part.connectors.forEach(function emitPackagePad(conn, i) {
       const padX = -halfW + padSpacing * (i + 1);
       const padY = 0;
       const padName = escapeXml(conn.name || conn.id);
@@ -491,19 +499,19 @@ function buildPinNetMap(input: EagleInput): Map<PinKey, PinNetEntry> {
   // Build per-instance bidirectional alias maps (connectorName <-> connectorId)
   const instanceAliases = new Map<number, Map<string, string>>();
 
-  input.instances.forEach((inst) => {
-    const part = input.parts.get(inst.partId);
+  input.instances.forEach(function buildInstanceAliases(inst) {
+    const part = inst.partId != null ? input.parts.get(inst.partId) : undefined;
     if (!part) return;
     const aliases = new Map<string, string>();
-    part.connectors.forEach((conn) => {
+    part.connectors.forEach(function mapConnectorAlias(conn) {
       aliases.set(conn.name, conn.id);
       aliases.set(conn.id, conn.name);
     });
     instanceAliases.set(inst.id, aliases);
   });
 
-  input.nets.forEach((net) => {
-    net.segments.forEach((seg) => {
+  input.nets.forEach(function registerNetPins(net) {
+    net.segments.forEach(function registerSegmentPins(seg) {
       registerPin(map, instanceAliases, seg.fromInstanceId, seg.fromPin, net.name);
       registerPin(map, instanceAliases, seg.toInstanceId, seg.toPin, net.name);
     });
@@ -543,7 +551,7 @@ function registerPin(
  */
 function buildInstanceRefDesMap(input: EagleInput): Map<number, string> {
   const map = new Map<number, string>();
-  input.instances.forEach((inst) => {
+  input.instances.forEach(function indexInstanceRefDes(inst) {
     map.set(inst.id, inst.referenceDesignator);
   });
   return map;
@@ -656,7 +664,7 @@ function generateLibraryXml(
 
   // Packages
   lines.push('          <packages>');
-  parts.forEach((part) => {
+  parts.forEach(function emitPackageXml(part) {
     lines.push(generatePackage(part));
   });
   lines.push('          </packages>');
@@ -664,14 +672,14 @@ function generateLibraryXml(
   if (includeSymbols) {
     // Symbols
     lines.push('          <symbols>');
-    parts.forEach((part) => {
+    parts.forEach(function emitSymbolXml(part) {
       lines.push(generateSymbol(part));
     });
     lines.push('          </symbols>');
 
     // Device sets
     lines.push('          <devicesets>');
-    parts.forEach((part) => {
+    parts.forEach(function emitDeviceSetXml(part) {
       lines.push(generateDeviceSet(part));
     });
     lines.push('          </devicesets>');
@@ -705,7 +713,7 @@ function generateDeviceSet(part: EaglePart): string {
   lines.push('                <connects>');
 
   if (part.connectors.length > 0) {
-    part.connectors.forEach((conn) => {
+    part.connectors.forEach(function emitPinPadConnect(conn) {
       const pinName = escapeXml(conn.name);
       const padName = escapeXml(conn.name || conn.id);
       lines.push(
@@ -772,8 +780,8 @@ export function generateEagleSchematic(input: EagleInput): string {
 
   // Parts
   lines.push('      <parts>');
-  input.instances.forEach((inst) => {
-    const part = partLibrary.get(inst.partId);
+  input.instances.forEach(function emitSchematicPart(inst) {
+    const part = inst.partId != null ? partLibrary.get(inst.partId) : undefined;
     if (!part) {
       lines.push(`        <!-- WARNING: part ID ${inst.partId} not found for ${escapeXml(inst.referenceDesignator)} -->`);
       return;
@@ -792,8 +800,8 @@ export function generateEagleSchematic(input: EagleInput): string {
 
   // Instances
   lines.push('          <instances>');
-  input.instances.forEach((inst) => {
-    const part = partLibrary.get(inst.partId);
+  input.instances.forEach(function emitSchematicInstance(inst) {
+    const part = inst.partId != null ? partLibrary.get(inst.partId) : undefined;
     if (!part) return;
 
     const x = (inst.schematicX * SCHEMATIC_SCALE).toFixed(2);
@@ -819,13 +827,13 @@ export function generateEagleSchematic(input: EagleInput): string {
     toPin: string;
   }>>();
 
-  input.nets.forEach((net) => {
+  input.nets.forEach(function buildNetSegmentMap(net) {
     if (!netSegments.has(net.name)) {
       netSegments.set(net.name, []);
     }
     const segments = netSegments.get(net.name)!;
 
-    net.segments.forEach((seg) => {
+    net.segments.forEach(function resolveSegmentPinRefs(seg) {
       const fromRef = instanceRefDes.get(seg.fromInstanceId);
       const toRef = instanceRefDes.get(seg.toInstanceId);
       if (!fromRef || !toRef) return;
@@ -849,7 +857,7 @@ export function generateEagleSchematic(input: EagleInput): string {
     width: number;
   }>>();
 
-  input.wires.forEach((wire) => {
+  input.wires.forEach(function groupSchematicWiresByNet(wire) {
     if (wire.view !== 'schematic') return;
 
     // Find which net this wire belongs to by matching netId to net index
@@ -874,11 +882,11 @@ export function generateEagleSchematic(input: EagleInput): string {
   });
 
   // Emit each net
-  Array.from(netSegments.entries()).forEach(([netName, segments]) => {
+  Array.from(netSegments.entries()).forEach(function emitSchematicNet([netName, segments]) {
     lines.push(`            <net name="${escapeXml(netName)}" class="0">`);
 
     // Each segment pair becomes its own <segment> with pinrefs
-    segments.forEach((seg) => {
+    segments.forEach(function emitSchematicNetSegment(seg) {
       lines.push('              <segment>');
       lines.push(
         `                <pinref part="${escapeXml(seg.fromRef)}" gate="G$1" pin="${escapeXml(seg.fromPin)}"/>`,
@@ -931,18 +939,18 @@ function resolveConnectorName(
   instanceId: number,
   pinRef: string,
 ): string {
-  const inst = input.instances.find((i) => i.id === instanceId);
+  const inst = input.instances.find(function matchInstanceById(i) { return i.id === instanceId; });
   if (!inst) return pinRef;
 
-  const partData = input.parts.get(inst.partId);
+  const partData = inst.partId != null ? input.parts.get(inst.partId) : undefined;
   if (!partData) return pinRef;
 
   // Try matching by id first
-  const byId = partData.connectors.find((c) => c.id === pinRef);
+  const byId = partData.connectors.find(function matchConnectorById(c) { return c.id === pinRef; });
   if (byId) return byId.name;
 
   // Try matching by name
-  const byName = partData.connectors.find((c) => c.name === pinRef);
+  const byName = partData.connectors.find(function matchConnectorByName(c) { return c.name === pinRef; });
   if (byName) return byName.name;
 
   // Return the raw reference as fallback
@@ -1011,8 +1019,8 @@ export function generateEagleBoard(input: EagleInput): string {
 
   // Elements (component placements)
   lines.push('      <elements>');
-  input.instances.forEach((inst) => {
-    const part = partLibrary.get(inst.partId);
+  input.instances.forEach(function emitBoardElement(inst) {
+    const part = inst.partId != null ? partLibrary.get(inst.partId) : undefined;
     if (!part) {
       lines.push(
         `        <!-- WARNING: part ID ${inst.partId} not found for ${escapeXml(inst.referenceDesignator)} -->`,
@@ -1056,14 +1064,14 @@ export function generateEagleBoard(input: EagleInput): string {
   }>>();
 
   // Initialize with all net names
-  input.nets.forEach((net) => {
+  input.nets.forEach(function initSignalWireList(net) {
     if (!signalWires.has(net.name)) {
       signalWires.set(net.name, []);
     }
   });
 
   // Add PCB wires
-  input.wires.forEach((wire) => {
+  input.wires.forEach(function groupPcbWiresByNet(wire) {
     if (wire.view !== 'pcb') return;
 
     // Match netId to net by index
@@ -1087,11 +1095,11 @@ export function generateEagleBoard(input: EagleInput): string {
   });
 
   // Emit each signal
-  Array.from(signalWires.entries()).forEach(([netName, wires]) => {
+  Array.from(signalWires.entries()).forEach(function emitBoardSignal([netName, wires]) {
     lines.push(`        <signal name="${escapeXml(netName)}">`);
 
     // Emit wire geometry
-    wires.forEach((wire) => {
+    wires.forEach(function emitSignalWire(wire) {
       for (let i = 0; i < wire.points.length - 1; i++) {
         const p1 = wire.points[i];
         const p2 = wire.points[i + 1];
@@ -1106,11 +1114,11 @@ export function generateEagleBoard(input: EagleInput): string {
     // If no explicit wires, add contactref elements to indicate net connectivity
     if (wires.length === 0) {
       // Find all pins belonging to this net and emit contactrefs
-      input.instances.forEach((inst) => {
-        const partData = input.parts.get(inst.partId);
+      input.instances.forEach(function emitContactRefs(inst) {
+        const partData = inst.partId != null ? input.parts.get(inst.partId) : undefined;
         if (!partData) return;
 
-        partData.connectors.forEach((conn) => {
+        partData.connectors.forEach(function emitConnectorContactRef(conn) {
           const entry = pinNetMap.get(makePinKey(inst.id, conn.id));
           if (entry && entry.netName === netName) {
             lines.push(
@@ -1146,5 +1154,138 @@ export function generateEagleProject(input: EagleInput): EagleOutput {
   return {
     schematic: generateEagleSchematic(input),
     board: generateEagleBoard(input),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Legacy API — original export-generators.ts signature used by ai-tools.ts
+// ---------------------------------------------------------------------------
+
+export function generateEagleSch(
+  nodes: ArchNodeData[],
+  edges: ArchEdgeData[],
+  projectName: string,
+): ExportResult {
+  // Build node position lookup
+  const nodePositions = new Map<string, { x: number; y: number }>();
+  for (const node of nodes) {
+    nodePositions.set(node.nodeId, {
+      x: node.positionX * 2.54, // Convert to Eagle mil-based coords
+      y: node.positionY * 2.54,
+    });
+  }
+
+  // Generate library entries for each unique node type
+  const librarySymbols = nodes.map((node) => {
+    const safeName = node.label.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return `        <deviceset name="${escapeXml(safeName)}">
+          <gates>
+            <gate name="G$1" symbol="${escapeXml(safeName)}" x="0" y="0"/>
+          </gates>
+          <devices>
+            <device name="">
+              <technologies>
+                <technology name=""/>
+              </technologies>
+            </device>
+          </devices>
+        </deviceset>`;
+  });
+
+  const librarySymbolDefs = nodes.map((node) => {
+    const safeName = node.label.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return `        <symbol name="${escapeXml(safeName)}">
+          <wire x1="-5.08" y1="5.08" x2="5.08" y2="5.08" width="0.254" layer="94"/>
+          <wire x1="5.08" y1="5.08" x2="5.08" y2="-5.08" width="0.254" layer="94"/>
+          <wire x1="5.08" y1="-5.08" x2="-5.08" y2="-5.08" width="0.254" layer="94"/>
+          <wire x1="-5.08" y1="-5.08" x2="-5.08" y2="5.08" width="0.254" layer="94"/>
+          <text x="-5.08" y="6.35" size="1.778" layer="95">&gt;NAME</text>
+          <text x="-5.08" y="-8.89" size="1.778" layer="96">&gt;VALUE</text>
+          <pin name="IN" x="-10.16" y="0" length="middle"/>
+          <pin name="OUT" x="10.16" y="0" length="middle" rot="R180"/>
+        </symbol>`;
+  });
+
+  // Parts
+  const partEntries = nodes.map((node, i) => {
+    const safeName = node.label.replace(/[^a-zA-Z0-9_-]/g, '_');
+    return `        <part name="U${i + 1}" library="protopulse" deviceset="${escapeXml(safeName)}" device="" value="${escapeXml(node.label)}"/>`;
+  });
+
+  // Instances
+  const instanceEntries = nodes.map((node, i) => {
+    const pos = nodePositions.get(node.nodeId)!;
+    return `            <instance part="U${i + 1}" gate="G$1" x="${pos.x.toFixed(2)}" y="${pos.y.toFixed(2)}"/>`;
+  });
+
+  // Nets
+  const netEntries = edges.map((edge, i) => {
+    const src = nodePositions.get(edge.source);
+    const tgt = nodePositions.get(edge.target);
+    if (!src || !tgt) return '';
+
+    const netName = edge.netName || edge.label || `N$${i + 1}`;
+    // Connect from source OUT pin to target IN pin
+    const srcX = src.x + 10.16; // OUT pin offset
+    const tgtX = tgt.x - 10.16; // IN pin offset
+
+    return `            <net name="${escapeXml(netName)}" class="0">
+              <segment>
+                <wire x1="${srcX.toFixed(2)}" y1="${src.y.toFixed(2)}" x2="${tgtX.toFixed(2)}" y2="${tgt.y.toFixed(2)}" width="0.1524" layer="91"/>
+                <pinref part="U${nodes.findIndex((n) => n.nodeId === edge.source) + 1}" gate="G$1" pin="OUT"/>
+                <pinref part="U${nodes.findIndex((n) => n.nodeId === edge.target) + 1}" gate="G$1" pin="IN"/>
+              </segment>
+            </net>`;
+  });
+
+  const content = `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE eagle SYSTEM "eagle.dtd">
+<eagle version="9.6.2">
+  <drawing>
+    <settings>
+      <setting alwaysvectorfont="no"/>
+      <setting verticaltext="up"/>
+    </settings>
+    <grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
+    <layers>
+      <layer number="91" name="Nets" color="2" fill="1" visible="yes" active="yes"/>
+      <layer number="94" name="Symbols" color="4" fill="1" visible="yes" active="yes"/>
+      <layer number="95" name="Names" color="7" fill="1" visible="yes" active="yes"/>
+      <layer number="96" name="Values" color="7" fill="1" visible="yes" active="yes"/>
+    </layers>
+    <schematic xreflabel="%F%N/%S.%C%R" xrefpart="/%S.%C%R">
+      <libraries>
+        <library name="protopulse">
+          <symbols>
+${librarySymbolDefs.join('\n')}
+          </symbols>
+          <devicesets>
+${librarySymbols.join('\n')}
+          </devicesets>
+        </library>
+      </libraries>
+      <parts>
+${partEntries.join('\n')}
+      </parts>
+      <sheets>
+        <sheet>
+          <instances>
+${instanceEntries.join('\n')}
+          </instances>
+          <nets>
+${netEntries.filter(Boolean).join('\n')}
+          </nets>
+        </sheet>
+      </sheets>
+    </schematic>
+  </drawing>
+</eagle>
+`;
+
+  return {
+    content,
+    encoding: 'utf8',
+    mimeType: 'application/xml',
+    filename: `${sanitizeFilename(projectName)}.sch`,
   };
 }

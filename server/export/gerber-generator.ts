@@ -12,6 +12,14 @@
 // Excellon drill format: FMAT,2 with METRIC,TZ (trailing zeros)
 // =============================================================================
 
+import {
+  type CircuitInstanceData,
+  type CircuitWireData,
+  type ComponentPartData,
+  type ExportResult,
+  sanitizeFilename,
+} from './types';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -172,6 +180,91 @@ interface ResolvedPad {
 }
 
 /**
+ * Determine whether a connector is THT based on explicit padType
+ * or footprint heuristic.
+ */
+function determinePadType(connector: GerberConnector, footprint: string): 'tht' | 'smd' {
+  if (connector.padType === 'tht') return 'tht';
+  if (connector.padType === 'smd') return 'smd';
+  // No explicit type: infer from footprint
+  return isSmallPitch(footprint) ? 'smd' : 'tht';
+}
+
+/**
+ * Determine pad dimensions (width, height, drill) based on pad type
+ * and any explicit connector overrides.
+ */
+function determinePadDimensions(
+  connector: GerberConnector,
+  padType: 'tht' | 'smd',
+): { width: number; height: number; drill: number } {
+  const isTht = padType === 'tht';
+  return {
+    width: connector.padWidth ?? (isTht ? DEFAULT_THT_PAD_WIDTH : DEFAULT_SMD_PAD_WIDTH),
+    height: connector.padHeight ?? (isTht ? DEFAULT_THT_PAD_HEIGHT : DEFAULT_SMD_PAD_HEIGHT),
+    drill: isTht ? (connector.drill ?? DEFAULT_THT_DRILL) : 0,
+  };
+}
+
+/**
+ * Determine pad shape. Explicit padShape takes priority. Otherwise:
+ * - THT pin 1 → square, other THT → circle
+ * - SMD → rect
+ */
+function determinePadShape(
+  connector: GerberConnector,
+  padType: 'tht' | 'smd',
+  connectorIndex: number,
+): 'circle' | 'rect' | 'oblong' | 'square' {
+  if (connector.padShape) {
+    return connector.padShape as 'circle' | 'rect' | 'oblong' | 'square';
+  }
+  if (padType === 'tht') {
+    return connectorIndex === 0 ? 'square' : 'circle';
+  }
+  return 'rect';
+}
+
+/**
+ * Calculate the local (pre-rotation) offset of a connector relative
+ * to its instance center. Uses explicit offsets when provided, otherwise
+ * auto-distributes connectors in a DIP-like layout.
+ */
+function calculateConnectorOffset(
+  connector: GerberConnector,
+  connectorIndex: number,
+  totalConnectors: number,
+  bodyWidth: number,
+  bodyHeight: number,
+): { x: number; y: number } {
+  if (connector.offsetX !== undefined && connector.offsetY !== undefined) {
+    return { x: connector.offsetX, y: connector.offsetY };
+  }
+
+  // Auto-layout: distribute connectors evenly.
+  // For DIP-like packages, split connectors between two sides.
+  const half = Math.ceil(totalConnectors / 2);
+
+  if (connectorIndex < half) {
+    // Left side / top row
+    const step = half > 1 ? bodyHeight / (half - 1) : 0;
+    return {
+      x: -bodyWidth / 2,
+      y: -bodyHeight / 2 + step * connectorIndex,
+    };
+  }
+
+  // Right side / bottom row
+  const idx = connectorIndex - half;
+  const rightCount = totalConnectors - half;
+  const step = rightCount > 1 ? bodyHeight / (rightCount - 1) : 0;
+  return {
+    x: bodyWidth / 2,
+    y: bodyHeight / 2 - step * idx,
+  };
+}
+
+/**
  * Resolve a connector to its absolute pad position and dimensions,
  * accounting for instance position, rotation, and side.
  */
@@ -181,62 +274,22 @@ function resolvePad(
   connectorIndex: number,
   totalConnectors: number,
 ): ResolvedPad {
-  const isTht = connector.padType === 'tht' || (!connector.padType && !isSmallPitch(instance.footprint));
-  const padType: 'tht' | 'smd' = isTht ? 'tht' : 'smd';
+  const padType = determinePadType(connector, instance.footprint);
+  const { width, height, drill } = determinePadDimensions(connector, padType);
+  const padShape = determinePadShape(connector, padType, connectorIndex);
 
-  const width = connector.padWidth ?? (isTht ? DEFAULT_THT_PAD_WIDTH : DEFAULT_SMD_PAD_WIDTH);
-  const height = connector.padHeight ?? (isTht ? DEFAULT_THT_PAD_HEIGHT : DEFAULT_SMD_PAD_HEIGHT);
-  const drill = isTht ? (connector.drill ?? DEFAULT_THT_DRILL) : 0;
-
-  let padShape: 'circle' | 'rect' | 'oblong' | 'square';
-  if (connector.padShape) {
-    padShape = connector.padShape as 'circle' | 'rect' | 'oblong' | 'square';
-  } else if (isTht) {
-    // Pin 1 of THT is typically square; others circular
-    padShape = connectorIndex === 0 ? 'square' : 'circle';
-  } else {
-    padShape = 'rect';
-  }
-
-  // Calculate offset position for connector relative to instance center.
-  // If explicit offsets are provided, use them. Otherwise, estimate from
-  // footprint geometry (evenly spaced along the component body).
-  let localX: number;
-  let localY: number;
-
-  if (connector.offsetX !== undefined && connector.offsetY !== undefined) {
-    localX = connector.offsetX;
-    localY = connector.offsetY;
-  } else {
-    // Auto-layout: distribute connectors evenly.
-    // For DIP-like packages, split connectors between two sides.
-    const bodyW = instance.bodyWidth ?? DEFAULT_BODY_WIDTH;
-    const bodyH = instance.bodyHeight ?? DEFAULT_BODY_HEIGHT;
-    const half = Math.ceil(totalConnectors / 2);
-
-    if (connectorIndex < half) {
-      // Left side / top row
-      const step = half > 1 ? bodyH / (half - 1) : 0;
-      localX = -bodyW / 2;
-      localY = -bodyH / 2 + step * connectorIndex;
-    } else {
-      // Right side / bottom row
-      const idx = connectorIndex - half;
-      const rightCount = totalConnectors - half;
-      const step = rightCount > 1 ? bodyH / (rightCount - 1) : 0;
-      localX = bodyW / 2;
-      localY = bodyH / 2 - step * idx;
-    }
-  }
+  const bodyW = instance.bodyWidth ?? DEFAULT_BODY_WIDTH;
+  const bodyH = instance.bodyHeight ?? DEFAULT_BODY_HEIGHT;
+  const local = calculateConnectorOffset(connector, connectorIndex, totalConnectors, bodyW, bodyH);
 
   // Apply instance rotation
-  const rotated = rotatePoint(localX, localY, 0, 0, instance.pcbRotation);
+  const rotated = rotatePoint(local.x, local.y, 0, 0, instance.pcbRotation);
 
   // Apply instance position
   const absX = instance.pcbX + rotated.x;
   const absY = instance.pcbY + rotated.y;
 
-  const side = (instance.pcbSide === 'back' ? 'back' : 'front') as 'front' | 'back';
+  const side: 'front' | 'back' = instance.pcbSide === 'back' ? 'back' : 'front';
 
   return {
     x: absX,
@@ -940,10 +993,10 @@ function generateDrillFile(input: GerberInput): string {
 
   // Sort tool diameters ascending and assign tool numbers
   const toolDiameters: number[] = [];
-  toolMap.forEach((_hits, key) => {
+  toolMap.forEach(function collectDiameterKeys(_hits, key) {
     toolDiameters.push(key);
   });
-  toolDiameters.sort((a, b) => a - b);
+  toolDiameters.sort(function sortAscending(a, b) { return a - b; });
 
   const lines: string[] = [];
 
@@ -1082,4 +1135,175 @@ export function generateGerber(input: GerberInput): GerberOutput {
   const drillFile = generateDrillFile(input);
 
   return { layers, drillFile };
+}
+
+// ---------------------------------------------------------------------------
+// Legacy API — original export-generators.ts signature used by ai-tools.ts
+// ---------------------------------------------------------------------------
+
+export function generateLegacyGerber(
+  instances: CircuitInstanceData[],
+  wires: CircuitWireData[],
+  parts: ComponentPartData[],
+  projectName: string,
+): ExportResult {
+  const partMap = new Map<number, ComponentPartData>();
+  for (const part of parts) {
+    partMap.set(part.id, part);
+  }
+
+  // Collect all PCB coordinates to compute board outline
+  const allX: number[] = [];
+  const allY: number[] = [];
+
+  for (const inst of instances) {
+    if (inst.pcbX !== null && inst.pcbY !== null) {
+      allX.push(inst.pcbX);
+      allY.push(inst.pcbY);
+    }
+  }
+
+  for (const wire of wires) {
+    if (Array.isArray(wire.points)) {
+      for (const pt of wire.points) {
+        if (pt && typeof pt === 'object') {
+          const p = pt as Record<string, unknown>;
+          if (typeof p.x === 'number' && typeof p.y === 'number') {
+            allX.push(p.x);
+            allY.push(p.y);
+          }
+        }
+      }
+    }
+  }
+
+  // Default board if no coordinates
+  const MARGIN = 5; // mm
+  const minX = allX.length > 0 ? Math.min(...allX) - MARGIN : 0;
+  const minY = allY.length > 0 ? Math.min(...allY) - MARGIN : 0;
+  const maxX = allX.length > 0 ? Math.max(...allX) + MARGIN : 100;
+  const maxY = allY.length > 0 ? Math.max(...allY) + MARGIN : 100;
+
+  // Convert mm to Gerber integer coords (format 4.6 → multiply by 1e6)
+  const g = (mm: number) => Math.round(mm * 1e6);
+
+  // ========================================
+  // Layer 1: Board Outline (Edge.Cuts)
+  // ========================================
+  const outlineLines = [
+    `G04 Board Outline - ${projectName}*`,
+    '%FSLAX46Y46*%',
+    '%MOIN*%',
+    '%ADD10C,0.150000*%',
+    'D10*',
+    `X${g(minX)}Y${g(minY)}D02*`,
+    `X${g(maxX)}Y${g(minY)}D01*`,
+    `X${g(maxX)}Y${g(maxY)}D01*`,
+    `X${g(minX)}Y${g(maxY)}D01*`,
+    `X${g(minX)}Y${g(minY)}D01*`,
+    'M02*',
+  ];
+
+  // ========================================
+  // Layer 2: Front Copper (F.Cu)
+  // ========================================
+  const copperLines = [
+    `G04 Front Copper Layer - ${projectName}*`,
+    '%FSLAX46Y46*%',
+    '%MOIN*%',
+    '%ADD11C,0.800000*%', // Round pad aperture
+    '%ADD12R,1.600000X1.600000*%', // Rectangular pad aperture
+    '%ADD13C,0.254000*%', // Trace aperture
+  ];
+
+  // Component pads
+  copperLines.push('D11*');
+  for (const inst of instances) {
+    if (inst.pcbX === null || inst.pcbY === null) continue;
+
+    const part = inst.partId != null ? partMap.get(inst.partId) : undefined;
+    const connectorCount = part ? part.connectors.length : 2;
+    const padCount = Math.max(connectorCount, 2);
+
+    // Place pads in a row centered on the component position
+    const padSpacing = 2.54; // mm, standard 100-mil spacing
+    const startOffset = -((padCount - 1) * padSpacing) / 2;
+
+    for (let p = 0; p < padCount; p++) {
+      const padX = inst.pcbX + startOffset + p * padSpacing;
+      const padY = inst.pcbY;
+      copperLines.push(`X${g(padX)}Y${g(padY)}D03*`);
+    }
+  }
+
+  // PCB traces from wires
+  const pcbWires = wires.filter((w) => w.view === 'pcb');
+  if (pcbWires.length > 0) {
+    copperLines.push('D13*');
+    for (const wire of pcbWires) {
+      if (!Array.isArray(wire.points) || wire.points.length < 2) continue;
+      const pts = wire.points as Array<Record<string, unknown>>;
+
+      for (let i = 0; i < pts.length; i++) {
+        const pt = pts[i];
+        if (typeof pt.x !== 'number' || typeof pt.y !== 'number') continue;
+        const dCode = i === 0 ? 'D02' : 'D01';
+        copperLines.push(`X${g(pt.x as number)}Y${g(pt.y as number)}${dCode}*`);
+      }
+    }
+  }
+
+  copperLines.push('M02*');
+
+  // ========================================
+  // Layer 3: Drill File (Excellon)
+  // ========================================
+  const drillLines = [
+    `; Drill File - ${projectName}`,
+    '; Generated by ProtoPulse',
+    'M48',
+    ';FORMAT={-:-/ absolute / metric / decimal}',
+    'FMAT,2',
+    'METRIC,TZ',
+    'T01C0.800',
+    '%',
+    'T01',
+  ];
+
+  for (const inst of instances) {
+    if (inst.pcbX === null || inst.pcbY === null) continue;
+
+    const part = inst.partId != null ? partMap.get(inst.partId) : undefined;
+    const connectorCount = part ? part.connectors.length : 2;
+    const padCount = Math.max(connectorCount, 2);
+    const padSpacing = 2.54;
+    const startOffset = -((padCount - 1) * padSpacing) / 2;
+
+    for (let p = 0; p < padCount; p++) {
+      const drillX = inst.pcbX + startOffset + p * padSpacing;
+      const drillY = inst.pcbY;
+      drillLines.push(`X${drillX.toFixed(3)}Y${drillY.toFixed(3)}`);
+    }
+  }
+
+  drillLines.push('M30');
+
+  // Concatenate all layers with separator comments
+  const content = [
+    'G04 === BOARD OUTLINE (Edge.Cuts) ===*',
+    ...outlineLines,
+    '',
+    'G04 === FRONT COPPER (F.Cu) ===*',
+    ...copperLines,
+    '',
+    'G04 === DRILL FILE (Excellon) ===*',
+    ...drillLines,
+  ].join('\n');
+
+  return {
+    content,
+    encoding: 'utf8',
+    mimeType: 'application/x-gerber',
+    filename: `${sanitizeFilename(projectName)}_gerber.gbr`,
+  };
 }

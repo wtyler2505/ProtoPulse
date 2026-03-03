@@ -1123,7 +1123,7 @@ The AI system (`server/ai.ts`) provides an intelligent electronics design assist
 | Provider | SDK | Streaming | Models |
 |---|---|---|---|
 | Anthropic | `@anthropic-ai/sdk` | Yes (SSE chunks) | claude-sonnet-4-20250514, etc. |
-| Google Gemini | `@google/generative-ai` | Yes (generateContentStream) | gemini-2.5-flash, etc. |
+| Google Gemini | `@google/genai` | Yes (sendMessageStream) | gemini-2.5-flash, etc. |
 
 ### LRU Client Cache
 

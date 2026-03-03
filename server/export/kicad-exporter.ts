@@ -9,6 +9,18 @@
 // Pure function library. No Express routes, no side effects.
 // =============================================================================
 
+import crypto from 'crypto';
+import {
+  type ArchNodeData,
+  type ArchEdgeData,
+  type CircuitInstanceData,
+  type CircuitNetData,
+  type ComponentPartData,
+  type ExportResult,
+  metaStr,
+  sanitizeFilename,
+} from './types';
+
 // ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
@@ -18,7 +30,7 @@ export interface KicadInput {
   instances: Array<{
     id: number;
     referenceDesignator: string;
-    partId: number;
+    partId: number | null;
     schematicX: number;
     schematicY: number;
     schematicRotation: number;
@@ -133,7 +145,7 @@ function deterministicUuid(...ids: number[]): string {
   let h2 = 0x0c6a4a79;
   let h3 = 0x3b9aca07;
 
-  ids.forEach((id) => {
+  ids.forEach(function mixIdIntoHash(id) {
     // Mix the id into each word differently
     h0 = ((h0 ^ (id & 0xff)) * 0x01000193) >>> 0;
     h1 = ((h1 ^ ((id >>> 8) & 0xff)) * 0x01000193) >>> 0;
@@ -303,7 +315,7 @@ function buildNetIndex(input: KicadInput): {
   const netNameOrder: string[] = [];
   const netNameSet = new Set<string>();
 
-  input.nets.forEach((net) => {
+  input.nets.forEach(function collectUniqueNetNames(net) {
     if (!netNameSet.has(net.name)) {
       netNameSet.add(net.name);
       netNameOrder.push(net.name);
@@ -313,7 +325,7 @@ function buildNetIndex(input: KicadInput): {
   // Assign 1-based net codes
   const netCodeMap = new Map<string, number>();
   const netList: Array<{ name: string; code: number }> = [];
-  netNameOrder.forEach((name, idx) => {
+  netNameOrder.forEach(function assignNetCode(name, idx) {
     const code = idx + 1;
     netCodeMap.set(name, code);
     netList.push({ name, code });
@@ -321,11 +333,11 @@ function buildNetIndex(input: KicadInput): {
 
   // Build per-instance connector alias maps for bidirectional pin resolution
   const instanceAliases = new Map<number, Map<string, string>>();
-  input.instances.forEach((inst) => {
-    const part = input.parts.get(inst.partId);
+  input.instances.forEach(function buildInstanceAliases(inst) {
+    const part = inst.partId != null ? input.parts.get(inst.partId) : undefined;
     if (!part) return;
     const aliases = new Map<string, string>();
-    part.connectors.forEach((conn) => {
+    part.connectors.forEach(function mapConnectorAlias(conn) {
       aliases.set(conn.name, conn.id);
       aliases.set(conn.id, conn.name);
     });
@@ -358,8 +370,8 @@ function buildNetIndex(input: KicadInput): {
     }
   }
 
-  input.nets.forEach((net) => {
-    net.segments.forEach((seg) => {
+  input.nets.forEach(function registerNetPins(net) {
+    net.segments.forEach(function registerSegmentPins(seg) {
       registerPin(seg.fromInstanceId, seg.fromPin, net.name);
       registerPin(seg.toInstanceId, seg.toPin, net.name);
     });
@@ -532,13 +544,13 @@ function generateLibSymbols(input: KicadInput): string {
 
   // Collect unique parts that are actually used
   const usedPartIds = new Set<number>();
-  input.instances.forEach((inst) => {
-    usedPartIds.add(inst.partId);
+  input.instances.forEach(function collectUsedPartIds(inst) {
+    if (inst.partId != null) usedPartIds.add(inst.partId);
   });
 
   // Generate one symbol per unique part. Use Array.from to iterate the Set.
   const partIdArray = Array.from(usedPartIds);
-  partIdArray.forEach((partId) => {
+  partIdArray.forEach(function emitLibSymbol(partId) {
     const part = input.parts.get(partId);
     if (!part) return;
 
@@ -580,7 +592,7 @@ function generateLibSymbols(input: KicadInput): string {
 
     // Pins (in their own sub-symbol _1_1 per KiCad convention)
     lines.push(`${ind(3)}(symbol "${esc(symName)}_1_1"`);
-    part.connectors.forEach((conn, connIdx) => {
+    part.connectors.forEach(function emitSymbolPin(conn, connIdx) {
       if (connIdx >= placements.length) return;
       const pl = placements[connIdx];
       const pinType = guessPinType(conn, part.meta);
@@ -650,8 +662,8 @@ function sanitizeSymbolName(name: string): string {
 function generateSchematicSymbolInstances(input: KicadInput): string {
   const lines: string[] = [];
 
-  input.instances.forEach((inst) => {
-    const part = input.parts.get(inst.partId);
+  input.instances.forEach(function emitSchematicSymbol(inst) {
+    const part = inst.partId != null ? input.parts.get(inst.partId) : undefined;
     if (!part) return;
 
     const title = extractTitle(part.meta);
@@ -693,7 +705,7 @@ function generateSchematicWires(input: KicadInput): string {
 
   // Build netId -> net name lookup
   const netIdToName = new Map<number, string>();
-  input.nets.forEach((net, idx) => {
+  input.nets.forEach(function indexNetByPosition(net, idx) {
     // netId in the wires references the original DB row ID.
     // We need to match wires to nets. The wires array uses netId which
     // corresponds to the net's position in the nets array (0-based).
@@ -704,7 +716,7 @@ function generateSchematicWires(input: KicadInput): string {
     netIdToName.set(idx, net.name);
   });
 
-  input.wires.forEach((wire) => {
+  input.wires.forEach(function emitSchematicWire(wire) {
     // Only schematic-view wires
     if (wire.view !== 'schematic') return;
     if (wire.points.length < 2) return;
@@ -847,7 +859,7 @@ function generatePcbNets(netList: Array<{ name: string; code: number }>): string
   // Net 0 = unconnected (KiCad standard)
   lines.push(`${ind(1)}(net 0 "")`);
 
-  netList.forEach((net) => {
+  netList.forEach(function emitNetDeclaration(net) {
     lines.push(`${ind(1)}(net ${net.code} "${esc(net.name)}")`);
   });
 
@@ -917,7 +929,7 @@ function generatePcbFootprint(
   // Generate pads
   if (pinCount <= 2) {
     // Two-terminal component (resistor, cap, diode, etc): pads at ends
-    part.connectors.forEach((conn, connIdx) => {
+    part.connectors.forEach(function emitTwoTerminalPad(conn, connIdx) {
       const isSmd = mounting === 'smd' || conn.padType === 'smd';
       const padX = connIdx === 0 ? -halfW + 0.5 : halfW - 0.5;
       const padY = 0;
@@ -949,7 +961,7 @@ function generatePcbFootprint(
     const rightCount = pinCount - leftCount;
 
     // Left column
-    part.connectors.forEach((conn, connIdx) => {
+    part.connectors.forEach(function emitDipPad(conn, connIdx) {
       const isSmd = mounting === 'smd' || conn.padType === 'smd';
       let padX: number;
       let padY: number;
@@ -1003,13 +1015,13 @@ function generatePcbTraces(
 
   // Build a netId (array index) -> net code lookup
   const netCodeByIndex = new Map<number, number>();
-  input.nets.forEach((_net, idx) => {
+  input.nets.forEach(function indexNetCode(_net, idx) {
     if (idx < netList.length) {
       netCodeByIndex.set(idx, netList[idx].code);
     }
   });
 
-  input.wires.forEach((wire) => {
+  input.wires.forEach(function emitPcbTrace(wire) {
     // Only PCB-view wires become traces
     if (wire.view !== 'pcb') return;
     if (wire.points.length < 2) return;
@@ -1092,8 +1104,8 @@ export function generateKicadPcb(input: KicadInput): string {
   lines.push('');
 
   // Footprints
-  input.instances.forEach((inst) => {
-    const part = input.parts.get(inst.partId);
+  input.instances.forEach(function emitPcbFootprint(inst) {
+    const part = inst.partId != null ? input.parts.get(inst.partId) : undefined;
     if (!part) return;
     lines.push(generatePcbFootprint(inst, part, pinToNet, input));
     lines.push('');
@@ -1243,5 +1255,204 @@ export function generateKicadProject(input: KicadInput): KicadOutput {
     schematic: generateKicadSchematic(input),
     pcb: generateKicadPcb(input),
     project: generateKicadProjectFile(input),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Legacy API — original export-generators.ts signatures used by ai-tools.ts
+// ---------------------------------------------------------------------------
+
+/** Escape a string for use inside a KiCad S-expression quoted value. */
+function escapeKicad(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+/** Extract pin-to-component connections from a net's segments. */
+function extractNetPinNodes(
+  net: CircuitNetData,
+  instances: CircuitInstanceData[],
+): Array<{ ref: string; pin: string }> {
+  const results: Array<{ ref: string; pin: string }> = [];
+
+  if (Array.isArray(net.segments)) {
+    for (const seg of net.segments) {
+      if (seg && typeof seg === 'object') {
+        const s = seg as Record<string, unknown>;
+        if (typeof s.instanceId === 'number' && typeof s.pinId === 'string') {
+          const inst = instances.find((i) => i.id === s.instanceId);
+          if (inst) {
+            results.push({ ref: inst.referenceDesignator, pin: s.pinId as string });
+          }
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
+export function generateKicadSch(
+  nodes: ArchNodeData[],
+  edges: ArchEdgeData[],
+  projectName: string,
+): ExportResult {
+  const uuid = () => crypto.randomUUID();
+  const schUuid = uuid();
+
+  // Scale factor: architecture positions are in logical units, KiCad uses mils
+  const SCALE = 2.54; // 1 unit → 2.54 mm (100 mil grid)
+
+  // Build node position lookup for wiring
+  const nodePositions = new Map<string, { x: number; y: number }>();
+  for (const node of nodes) {
+    nodePositions.set(node.nodeId, {
+      x: node.positionX * SCALE,
+      y: node.positionY * SCALE,
+    });
+  }
+
+  // --- lib_symbols section ---
+  const libSymbols = nodes.map((node) => {
+    const libId = `protopulse:${node.label.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    return `    (symbol "${libId}"
+      (in_bom yes) (on_board yes)
+      (property "Reference" "U" (at 0 2.54 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "${escapeKicad(node.label)}" (at 0 -2.54 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "${libId}_0_1"
+        (rectangle (start -5.08 5.08) (end 5.08 -5.08) (stroke (width 0.254) (type default)) (fill (type background)))
+      )
+    )`;
+  });
+
+  // --- symbol instances on the sheet ---
+  const symbols = nodes.map((node, i) => {
+    const pos = nodePositions.get(node.nodeId)!;
+    const libId = `protopulse:${node.label.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    const refDes = `U${i + 1}`;
+    const desc =
+      node.data && typeof node.data.description === 'string'
+        ? node.data.description
+        : '';
+
+    return `  (symbol (lib_id "${libId}") (at ${pos.x.toFixed(2)} ${pos.y.toFixed(2)} 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no)
+    (uuid "${uuid()}")
+    (property "Reference" "${refDes}" (at ${pos.x.toFixed(2)} ${(pos.y - 5.08).toFixed(2)} 0)
+      (effects (font (size 1.27 1.27))))
+    (property "Value" "${escapeKicad(node.label)}" (at ${pos.x.toFixed(2)} ${(pos.y + 5.08).toFixed(2)} 0)
+      (effects (font (size 1.27 1.27))))
+    (property "Footprint" "" (at ${pos.x.toFixed(2)} ${pos.y.toFixed(2)} 0)
+      (effects (font (size 1.27 1.27)) hide))
+    (property "Datasheet" "" (at ${pos.x.toFixed(2)} ${pos.y.toFixed(2)} 0)
+      (effects (font (size 1.27 1.27)) hide))
+    (property "Description" "${escapeKicad(desc)}" (at ${pos.x.toFixed(2)} ${pos.y.toFixed(2)} 0)
+      (effects (font (size 1.27 1.27)) hide))
+  )`;
+  });
+
+  // --- wires ---
+  const wires = edges
+    .map((edge) => {
+      const src = nodePositions.get(edge.source);
+      const tgt = nodePositions.get(edge.target);
+      if (!src || !tgt) return null;
+      // Offset wire endpoints to the edge of the symbol rectangle (5.08mm half-width)
+      const srcX = src.x + 5.08;
+      const tgtX = tgt.x - 5.08;
+      return `  (wire (pts (xy ${srcX.toFixed(2)} ${src.y.toFixed(2)}) (xy ${tgtX.toFixed(2)} ${tgt.y.toFixed(2)}))
+    (stroke (width 0) (type default))
+    (uuid "${uuid()}")
+  )`;
+    })
+    .filter(Boolean);
+
+  const content = `(kicad_sch (version 20230121) (generator "protopulse") (generator_version "1.0")
+
+  (uuid "${schUuid}")
+
+  (paper "A4")
+
+  (lib_symbols
+${libSymbols.join('\n')}
+  )
+
+${symbols.join('\n\n')}
+
+${wires.join('\n\n')}
+
+)
+`;
+
+  return {
+    content,
+    encoding: 'utf8',
+    mimeType: 'application/x-kicad-schematic',
+    filename: `${sanitizeFilename(projectName)}.kicad_sch`,
+  };
+}
+
+export function generateKicadNetlist(
+  instances: CircuitInstanceData[],
+  nets: CircuitNetData[],
+  parts: ComponentPartData[],
+): ExportResult {
+  // Build partId → part lookup
+  const partMap = new Map<number, ComponentPartData>();
+  for (const part of parts) {
+    partMap.set(part.id, part);
+  }
+
+  // --- components ---
+  const components = instances.map((inst) => {
+    const part = inst.partId != null ? partMap.get(inst.partId) : undefined;
+    const meta = part?.meta ?? {};
+    const value = metaStr(meta, 'title', inst.referenceDesignator);
+    const footprint = metaStr(meta, 'footprint', 'Unknown:Unknown');
+    const datasheet = metaStr(meta, 'datasheet', '~');
+
+    return `    (comp (ref "${escapeKicad(inst.referenceDesignator)}")
+      (value "${escapeKicad(value)}")
+      (footprint "${escapeKicad(footprint)}")
+      (datasheet "${escapeKicad(datasheet)}")
+    )`;
+  });
+
+  // --- nets ---
+  const netEntries = nets.map((net, i) => {
+    const code = i + 1;
+    const pinNodes = extractNetPinNodes(net, instances);
+
+    const nodeLines = pinNodes.map(
+      (pn) => `      (node (ref "${escapeKicad(pn.ref)}") (pin "${pn.pin}"))`,
+    );
+
+    return `    (net (code ${code}) (name "${escapeKicad(net.name)}")
+${nodeLines.join('\n')}
+    )`;
+  });
+
+  const content = `(export (version "E")
+  (design
+    (source "ProtoPulse")
+    (date "${new Date().toISOString()}")
+    (tool "ProtoPulse Export")
+  )
+  (components
+${components.join('\n')}
+  )
+  (nets
+    (net (code 0) (name ""))
+${netEntries.join('\n')}
+  )
+)
+`;
+
+  return {
+    content,
+    encoding: 'utf8',
+    mimeType: 'application/x-kicad-netlist',
+    filename: 'netlist.net',
   };
 }

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, HierarchicalPortRow } from '@shared/schema';
 
 // ===========================================================================
 // Circuit Designs
@@ -11,7 +11,8 @@ export function useCircuitDesigns(projectId: number) {
     queryKey: ['circuit-designs', projectId],
     queryFn: async () => {
       const res = await apiRequest('GET', `/api/projects/${projectId}/circuits`);
-      return res.json();
+      const json = await res.json() as { data: CircuitDesignRow[]; total: number };
+      return json.data;
     },
   });
 }
@@ -76,7 +77,8 @@ export function useCircuitInstances(circuitId: number) {
     queryKey: ['circuit-instances', circuitId],
     queryFn: async () => {
       const res = await apiRequest('GET', `/api/circuits/${circuitId}/instances`);
-      return res.json();
+      const json = await res.json() as { data: CircuitInstanceRow[]; total: number };
+      return json.data;
     },
     enabled: circuitId > 0,
   });
@@ -166,7 +168,8 @@ export function useCircuitNets(circuitId: number) {
     queryKey: ['circuit-nets', circuitId],
     queryFn: async () => {
       const res = await apiRequest('GET', `/api/circuits/${circuitId}/nets`);
-      return res.json();
+      const json = await res.json() as { data: CircuitNetRow[]; total: number };
+      return json.data;
     },
     enabled: circuitId > 0,
   });
@@ -252,7 +255,8 @@ export function useCircuitWires(circuitId: number) {
     queryKey: ['circuit-wires', circuitId],
     queryFn: async () => {
       const res = await apiRequest('GET', `/api/circuits/${circuitId}/wires`);
-      return res.json();
+      const json = await res.json() as { data: CircuitWireRow[]; total: number };
+      return json.data;
     },
     enabled: circuitId > 0,
   });
@@ -335,6 +339,102 @@ export function useExpandArchitecture() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['circuit-designs', variables.projectId] });
+    },
+  });
+}
+
+// ===========================================================================
+// Hierarchical Sheet Navigation
+// ===========================================================================
+
+export function useChildDesigns(projectId: number, designId: number) {
+  return useQuery<CircuitDesignRow[]>({
+    queryKey: ['circuit-children', projectId, designId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/projects/${projectId}/circuits/${designId}/children`);
+      const json = await res.json() as { data: CircuitDesignRow[]; total: number };
+      return json.data;
+    },
+    enabled: designId > 0,
+  });
+}
+
+export function useRootDesigns(projectId: number) {
+  return useQuery<CircuitDesignRow[]>({
+    queryKey: ['circuit-roots', projectId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/projects/${projectId}/circuits/roots`);
+      const json = await res.json() as { data: CircuitDesignRow[]; total: number };
+      return json.data;
+    },
+  });
+}
+
+export function useHierarchicalPorts(projectId: number, designId: number) {
+  return useQuery<HierarchicalPortRow[]>({
+    queryKey: ['hierarchical-ports', projectId, designId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/projects/${projectId}/circuits/${designId}/ports`);
+      const json = await res.json() as { data: HierarchicalPortRow[]; total: number };
+      return json.data;
+    },
+    enabled: designId > 0,
+  });
+}
+
+export function useCreateHierarchicalPort() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      projectId: number;
+      designId: number;
+      portName: string;
+      direction?: 'input' | 'output' | 'bidirectional';
+      netName?: string | null;
+      positionX?: number;
+      positionY?: number;
+    }) => {
+      const { projectId, designId, ...body } = data;
+      const res = await apiRequest('POST', `/api/projects/${projectId}/circuits/${designId}/ports`, body);
+      return res.json() as Promise<HierarchicalPortRow>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['hierarchical-ports', variables.projectId, variables.designId] });
+    },
+  });
+}
+
+export function useUpdateHierarchicalPort() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      projectId: number;
+      designId: number;
+      portId: number;
+      portName?: string;
+      direction?: 'input' | 'output' | 'bidirectional';
+      netName?: string | null;
+      positionX?: number;
+      positionY?: number;
+    }) => {
+      const { projectId, designId, portId, ...body } = data;
+      const res = await apiRequest('PATCH', `/api/projects/${projectId}/circuits/${designId}/ports/${portId}`, body);
+      return res.json() as Promise<HierarchicalPortRow>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['hierarchical-ports', variables.projectId, variables.designId] });
+    },
+  });
+}
+
+export function useDeleteHierarchicalPort() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: number; designId: number; portId: number }) => {
+      await apiRequest('DELETE', `/api/projects/${data.projectId}/circuits/${data.designId}/ports/${data.portId}`);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['hierarchical-ports', variables.projectId, variables.designId] });
     },
   });
 }

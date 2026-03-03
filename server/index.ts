@@ -5,19 +5,23 @@ import compression from "compression";
 import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
-import { createServer } from "http";
+import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import { validateEnv } from "./env";
 import crypto from "crypto";
 import { logger } from "./logger";
 import { recordRequest, getMetrics } from "./metrics";
 import { apiDocs } from "./api-docs";
 import { validateSession } from "./auth";
+import { auditLogMiddleware } from "./audit-log";
 
 declare global {
   namespace Express {
     interface Request {
       id: string;
       userId?: number;
+    }
+    interface Locals {
+      cspNonce: string;
     }
   }
 }
@@ -31,12 +35,42 @@ const app = express();
 app.set("trust proxy", 1);
 
 const isDev = process.env.NODE_ENV !== "production";
+
+if (isDev && process.env.UNSAFE_DEV_BYPASS_AUTH === '1') {
+  logger.warn('Auth bypass ENABLED — requests without X-Session-Id will pass through. Do NOT use in production.');
+}
+
+// Generate a unique CSP nonce per request for inline style/script control.
+// Stored on res.locals so helmet's CSP directive functions can reference it.
+app.use((_req, res, next) => {
+  res.locals.cspNonce = crypto.randomBytes(16).toString('base64');
+  next();
+});
+
 app.use(helmet({
   contentSecurityPolicy: isDev ? false : {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      // CSP Level 3 granular style directives:
+      // - style-src-elem: nonce-based for <style> elements (blocks injected <style> without nonce)
+      // - style-src-attr: 'unsafe-inline' for inline style="" attributes (required by Radix UI
+      //   for positioning popovers, tooltips, and other floating elements)
+      // - style-src: 'unsafe-inline' fallback for browsers that don't support Level 3 granular
+      //   directives — they fall back to style-src which permits inline styles.
+      //   Browsers that DO support style-src-elem/style-src-attr ignore style-src for those cases.
+      'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      'style-src-elem': [
+        "'self'",
+        "https://fonts.googleapis.com",
+        // Helmet types res as http.ServerResponse but Express passes its Response with locals.
+        // Cast through Express.Locals so a cspNonce rename triggers a compile error here too.
+        (_req: IncomingMessage, res: ServerResponse) => {
+          const locals = (res as unknown as { locals: Express.Locals }).locals;
+          return `'nonce-${locals.cspNonce}'`;
+        },
+      ],
+      'style-src-attr': ["'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: ["'self'"],
@@ -46,16 +80,30 @@ app.use(helmet({
     },
   },
   crossOriginEmbedderPolicy: false,
+  strictTransportSecurity: {
+    maxAge: 63072000,
+    includeSubDomains: true,
+  },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
 app.use(compression());
 
 if (isDev) {
+  const ALLOWED_ORIGINS = [
+    'http://localhost:5000',
+    'http://localhost:3000',
+    'http://127.0.0.1:5000',
+  ];
+
   app.use((req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    const origin = req.headers.origin;
+    if (origin && ALLOWED_ORIGINS.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Session-Id');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
     if (req.method === 'OPTIONS') {
       return res.status(204).end();
     }
@@ -137,7 +185,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const PUBLIC_PATHS = ['/api/auth/', '/api/health', '/api/docs', '/api/metrics', '/api/settings/chat'];
+const PUBLIC_PATHS = ['/api/auth/', '/api/health', '/api/ready', '/api/docs', '/api/metrics', '/api/settings/chat'];
 
 app.use('/api', (req, res, next) => {
   if (PUBLIC_PATHS.some(p => req.path.startsWith(p.replace('/api', ''))) || req.path === '/api/seed') {
@@ -145,8 +193,9 @@ app.use('/api', (req, res, next) => {
   }
 
   const sessionId = req.headers['x-session-id'] as string;
+  const devAuthBypass = isDev && process.env.UNSAFE_DEV_BYPASS_AUTH === '1';
   if (!sessionId) {
-    if (isDev) {
+    if (devAuthBypass) {
       return next();
     }
     return res.status(401).json({ message: 'Authentication required' });
@@ -154,7 +203,7 @@ app.use('/api', (req, res, next) => {
 
   validateSession(sessionId).then(session => {
     if (!session) {
-      if (isDev) {
+      if (devAuthBypass) {
         return next();
       }
       return res.status(401).json({ message: 'Invalid or expired session' });
@@ -164,19 +213,45 @@ app.use('/api', (req, res, next) => {
   }).catch(next);
 });
 
+// Structured audit logging — captures full request context for audit trail
+app.use(auditLogMiddleware);
+
 export function log(message: string, source = "express") {
   logger.info(message, { source });
+}
+
+const SENSITIVE_KEY_PATTERN = /^(sessionid|token|encryptedkey|apikey|passwordhash|password|secret|key)$/i;
+
+function redactSensitive(obj: unknown): unknown {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(redactSensitive);
+  }
+  if (typeof obj === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      if (SENSITIVE_KEY_PATTERN.test(k)) {
+        result[k] = '[REDACTED]';
+      } else {
+        result[k] = redactSensitive(v);
+      }
+    }
+    return result;
+  }
+  return obj;
 }
 
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
   const requestId = req.id;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
+    capturedJsonResponse = bodyJson as Record<string, unknown>;
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
@@ -188,7 +263,8 @@ app.use((req, res, next) => {
         logLine += ` [${requestId}]`;
       }
       if (capturedJsonResponse) {
-        const body = JSON.stringify(capturedJsonResponse);
+        const redacted = redactSensitive(capturedJsonResponse);
+        const body = JSON.stringify(redacted);
         logLine += ` :: ${body.length > 500 ? body.slice(0, 500) + '...[truncated]' : body}`;
       }
 
@@ -217,11 +293,56 @@ app.use((req, res, next) => {
     }
   });
 
+  app.get("/api/ready", async (_req, res) => {
+    const dependencies: Record<string, { status: "up" | "down"; latencyMs?: number }> = {};
+    let overallStatus: "ready" | "degraded" | "unavailable" = "ready";
+
+    // Check database connectivity
+    const dbStart = Date.now();
+    try {
+      const { pool } = await import("./db");
+      const client = await pool.connect();
+      client.release();
+      dependencies.database = { status: "up", latencyMs: Date.now() - dbStart };
+    } catch {
+      dependencies.database = { status: "down", latencyMs: Date.now() - dbStart };
+      overallStatus = "unavailable";
+    }
+
+    // Check cache health (always up — in-memory)
+    dependencies.cache = { status: "up" };
+
+    // Check AI provider availability (key configured, not whether API is reachable)
+    const anthropicConfigured = Boolean(process.env.ANTHROPIC_API_KEY);
+    const geminiConfigured = Boolean(process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
+    dependencies.ai_anthropic = { status: anthropicConfigured ? "up" : "down" };
+    dependencies.ai_gemini = { status: geminiConfigured ? "up" : "down" };
+
+    if (!anthropicConfigured && !geminiConfigured) {
+      if (overallStatus === "ready") {
+        overallStatus = "degraded";
+      }
+    }
+
+    const statusCode = overallStatus === "unavailable" ? 503 : overallStatus === "degraded" ? 200 : 200;
+    res.status(statusCode).json({
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      dependencies,
+    });
+  });
+
   app.get("/api/metrics", (_req, res) => {
+    if (process.env.NODE_ENV === 'production' && process.env.EXPOSE_DEBUG_ENDPOINTS !== '1') {
+      return res.status(404).json({ message: 'Not found' });
+    }
     res.json(getMetrics());
   });
 
   app.get("/api/docs", (_req, res) => {
+    if (process.env.NODE_ENV === 'production' && process.env.EXPOSE_DEBUG_ENDPOINTS !== '1') {
+      return res.status(404).json({ message: 'Not found' });
+    }
     res.json({ version: 1, routes: apiDocs });
   });
 
@@ -289,4 +410,16 @@ app.use((req, res, next) => {
 
   process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
   process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+  process.on('uncaughtException', (err: Error) => {
+    logger.error('Uncaught exception', { message: err.message, stack: err.stack });
+    gracefulShutdown('uncaughtException');
+  });
+
+  process.on('unhandledRejection', (reason: unknown) => {
+    const message = reason instanceof Error ? reason.message : String(reason);
+    const stack = reason instanceof Error ? reason.stack : undefined;
+    logger.error('Unhandled rejection', { message, stack });
+    gracefulShutdown('unhandledRejection');
+  });
 })();

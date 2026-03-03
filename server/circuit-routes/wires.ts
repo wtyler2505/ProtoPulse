@@ -1,0 +1,57 @@
+import type { Express } from 'express';
+import type { IStorage } from '../storage';
+import { z } from 'zod';
+import { fromZodError } from 'zod-validation-error';
+import { insertCircuitWireSchema } from '@shared/schema';
+import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
+
+const updateWireSchema = z.object({
+  points: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
+  layer: z.string().optional(),
+  width: z.number().positive().optional(),
+  color: z.string().nullable().optional(),
+  wireType: z.enum(['wire', 'jump']).optional(),
+});
+
+export function registerCircuitWireRoutes(app: Express, storage: IStorage): void {
+  app.get('/api/circuits/:circuitId/wires', asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
+    const pagination = circuitPaginationSchema.safeParse(req.query);
+    if (!pagination.success) {
+      return res.status(400).json({ message: 'Invalid pagination: ' + fromZodError(pagination.error).toString() });
+    }
+    const { limit, offset, sort } = pagination.data;
+    const all = await storage.getCircuitWires(circuitId);
+    const sorted = sort === 'asc' ? all : [...all].reverse();
+    const data = sorted.slice(offset, offset + limit);
+    res.json({ data, total: all.length });
+  }));
+
+  app.post('/api/circuits/:circuitId/wires', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
+    const parsed = insertCircuitWireSchema.safeParse({ ...req.body, circuitId });
+    if (!parsed.success) {
+      return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
+    }
+    const wire = await storage.createCircuitWire(parsed.data);
+    res.status(201).json(wire);
+  }));
+
+  app.patch('/api/wires/:id', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const id = parseIdParam(req.params.id);
+    const parsed = updateWireSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
+    }
+    const updated = await storage.updateCircuitWire(id, parsed.data);
+    if (!updated) { return res.status(404).json({ message: 'Wire not found' }); }
+    res.json(updated);
+  }));
+
+  app.delete('/api/wires/:id', asyncHandler(async (req, res) => {
+    const id = parseIdParam(req.params.id);
+    const deleted = await storage.deleteCircuitWire(id);
+    if (!deleted) { return res.status(404).json({ message: 'Wire not found' }); }
+    res.status(204).end();
+  }));
+}

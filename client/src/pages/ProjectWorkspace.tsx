@@ -1,11 +1,12 @@
-import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, useReducer, lazy, Suspense } from 'react';
 import { useParams, Redirect } from 'wouter';
 import { ProjectProvider } from '@/lib/project-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
-import Sidebar from '@/components/layout/Sidebar';
-import ChatPanel from '@/components/panels/ChatPanel';
 import { ViewMode } from '@/lib/project-context';
 
+const Sidebar = lazy(() => import('@/components/layout/Sidebar'));
+const ChatPanel = lazy(() => import('@/components/panels/ChatPanel'));
+const DashboardView = lazy(() => import('@/components/views/DashboardView'));
 const ArchitectureView = lazy(() => import('@/components/views/ArchitectureView'));
 const ComponentEditorView = lazy(() => import('@/components/views/ComponentEditorView'));
 const ProcurementView = lazy(() => import('@/components/views/ProcurementView'));
@@ -15,15 +16,24 @@ const SchematicView = lazy(() => import('@/components/views/SchematicView'));
 const BreadboardView = lazy(() => import('@/components/circuit-editor/BreadboardView'));
 const PCBLayoutView = lazy(() => import('@/components/circuit-editor/PCBLayoutView'));
 const SimulationView = lazy(() => import('@/components/simulation/SimulationPanel'));
+const WorkflowBreadcrumb = lazy(() => import('@/components/layout/WorkflowBreadcrumb'));
+const KeyboardShortcutsModal = lazy(() => import('@/components/ui/keyboard-shortcuts-modal'));
+const CommandPalette = lazy(() => import('@/components/ui/command-palette'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
-import { KeyboardShortcutsModal } from '@/components/ui/keyboard-shortcuts-modal';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useValidation } from '@/lib/contexts/validation-context';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useBom } from '@/lib/contexts/bom-context';
+import { DndProvider } from '@/lib/dnd-context';
 
 const tabDescriptions: Record<string, string> = {
-  output: 'View build output and system logs',
+  dashboard: 'Project overview and summary stats',
+  output: 'Export design files and artifacts',
   architecture: 'Design system block diagram',
   component_editor: 'Design individual electronic components',
   schematic: 'Circuit schematic capture and net editing',
@@ -66,7 +76,7 @@ function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (d
   return (
     <div
       data-testid={`resize-handle-${side}`}
-      className="hidden md:flex w-1 cursor-col-resize items-center justify-center group hover:bg-primary/20 active:bg-primary/30 transition-colors relative z-30 shrink-0 hover:shadow-[0_0_8px_rgba(6,182,212,0.3)]"
+      className="hidden lg:flex w-1 cursor-col-resize items-center justify-center group hover:bg-primary/20 active:bg-primary/30 transition-colors relative z-30 shrink-0 hover:shadow-[0_0_8px_rgba(6,182,212,0.3)]"
       onMouseDown={handleMouseDown}
     >
       <div className="w-px h-8 bg-border group-hover:bg-primary group-active:bg-primary transition-colors" />
@@ -74,16 +84,155 @@ function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (d
   );
 }
 
+/* AS-01: Proper skeleton loading state instead of bare spinner */
 function ViewLoadingFallback() {
   return (
-    <div className="flex items-center justify-center h-full w-full">
-      <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+    <div data-testid="view-loading-fallback" className="flex flex-col items-center justify-center h-full w-full gap-6 bg-card/30">
+      <div className="flex items-center gap-8">
+        <Skeleton className="w-28 h-16 rounded-lg" />
+        <Skeleton className="w-20 h-1 rounded-full" />
+        <Skeleton className="w-28 h-16 rounded-lg" />
+      </div>
+      <div className="flex items-center gap-6">
+        <Skeleton className="w-24 h-14 rounded-lg" />
+        <Skeleton className="w-16 h-1 rounded-full" />
+        <Skeleton className="w-24 h-14 rounded-lg" />
+        <Skeleton className="w-16 h-1 rounded-full" />
+        <Skeleton className="w-24 h-14 rounded-lg" />
+      </div>
+      <div className="flex flex-col items-center gap-3 mt-2">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+        <span className="text-sm text-muted-foreground">Loading project...</span>
+      </div>
     </div>
   );
 }
 
+/* AS-05: Scrollable tab bar with fade gradients at edges */
+function ScrollableTabBar({ children }: { children: React.ReactNode }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 2);
+    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 2);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    const ro = new ResizeObserver(checkScroll);
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      ro.disconnect();
+    };
+  }, [checkScroll]);
+
+  const scroll = useCallback((dir: 'left' | 'right') => {
+    scrollRef.current?.scrollBy({ left: dir === 'left' ? -120 : 120, behavior: 'smooth' });
+  }, []);
+
+  return (
+    <div className="relative flex items-center flex-1 min-w-0">
+      {canScrollLeft && (
+        <button
+          data-testid="tab-scroll-left"
+          onClick={() => scroll('left')}
+          className="absolute left-0 z-10 h-full w-7 flex items-center justify-center bg-gradient-to-r from-background/90 to-transparent hover:from-background"
+          aria-label="Scroll tabs left"
+        >
+          <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      )}
+      <div
+        ref={scrollRef}
+        role="tablist"
+        aria-label="Main views"
+        className="flex items-center gap-0 overflow-x-auto no-scrollbar"
+      >
+        {children}
+      </div>
+      {canScrollRight && (
+        <button
+          data-testid="tab-scroll-right"
+          onClick={() => scroll('right')}
+          className="absolute right-0 z-10 h-full w-7 flex items-center justify-center bg-gradient-to-l from-background/90 to-transparent hover:from-background"
+          aria-label="Scroll tabs right"
+        >
+          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+interface WorkspaceState {
+  sidebarOpen: boolean;
+  chatOpen: boolean;
+  sidebarCollapsed: boolean;
+  chatCollapsed: boolean;
+  sidebarWidth: number;
+  chatWidth: number;
+  shortcutsOpen: boolean;
+  moreMenuOpen: boolean;
+}
+
+type WorkspaceAction =
+  | { type: 'SET_SIDEBAR_OPEN'; open: boolean }
+  | { type: 'SET_CHAT_OPEN'; open: boolean }
+  | { type: 'SET_SIDEBAR_COLLAPSED'; collapsed: boolean }
+  | { type: 'SET_CHAT_COLLAPSED'; collapsed: boolean }
+  | { type: 'SET_SIDEBAR_WIDTH'; width: number }
+  | { type: 'SET_CHAT_WIDTH'; width: number }
+  | { type: 'SET_SHORTCUTS_OPEN'; open: boolean }
+  | { type: 'SET_MORE_MENU_OPEN'; open: boolean }
+  | { type: 'TOGGLE_SHORTCUTS' };
+
+function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
+  switch (action.type) {
+    case 'SET_SIDEBAR_OPEN':
+      return { ...state, sidebarOpen: action.open };
+    case 'SET_CHAT_OPEN':
+      return { ...state, chatOpen: action.open };
+    case 'SET_SIDEBAR_COLLAPSED':
+      return { ...state, sidebarCollapsed: action.collapsed };
+    case 'SET_CHAT_COLLAPSED':
+      return { ...state, chatCollapsed: action.collapsed };
+    case 'SET_SIDEBAR_WIDTH':
+      return { ...state, sidebarWidth: action.width };
+    case 'SET_CHAT_WIDTH':
+      return { ...state, chatWidth: action.width };
+    case 'SET_SHORTCUTS_OPEN':
+      return { ...state, shortcutsOpen: action.open };
+    case 'SET_MORE_MENU_OPEN':
+      return { ...state, moreMenuOpen: action.open };
+    case 'TOGGLE_SHORTCUTS':
+      return { ...state, shortcutsOpen: !state.shortcutsOpen };
+  }
+}
+
+const initialWorkspaceState: WorkspaceState = {
+  sidebarOpen: false,
+  chatOpen: false,
+  sidebarCollapsed: false,
+  chatCollapsed: false,
+  sidebarWidth: 256,
+  chatWidth: 350,
+  shortcutsOpen: false,
+  moreMenuOpen: false,
+};
+
 function WorkspaceContent() {
-  const { activeView, setActiveView } = useProjectMeta();
+  const { activeView, setActiveView, projectName } = useProjectMeta();
+  const { runValidation, issues } = useValidation();
+  const { nodes } = useArchitecture();
+  const { bom } = useBom();
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -92,13 +241,7 @@ function WorkspaceContent() {
     }
   }, [activeView]);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [chatCollapsed, setChatCollapsed] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(256);
-  const [chatWidth, setChatWidth] = useState(350);
-  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [ws, dispatch] = useReducer(workspaceReducer, initialWorkspaceState);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -106,35 +249,90 @@ function WorkspaceContent() {
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
       if (e.key === '?') {
         e.preventDefault();
-        setShortcutsOpen(prev => !prev);
+        dispatch({ type: 'TOGGLE_SHORTCUTS' });
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
-  const handleSidebarResize = useCallback((delta: number) => {
-    setSidebarWidth(w => Math.max(180, Math.min(480, w + delta)));
+  /* RS-03: Auto-collapse sidebar at tablet landscape (<=1024px) */
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1024px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (e.matches) {
+        dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: true });
+      }
+    };
+    handler(mql);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
   }, []);
+
+  /* RS-04: Auto-collapse chat at narrow desktop (<=1280px) to avoid cramped 3-panel layout */
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 1280px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (e.matches) {
+        dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: true });
+      }
+    };
+    handler(mql);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+
+  const handleSidebarResize = useCallback((delta: number) => {
+    dispatch({ type: 'SET_SIDEBAR_WIDTH', width: Math.max(180, Math.min(480, ws.sidebarWidth + delta)) });
+  }, [ws.sidebarWidth]);
 
   const handleChatResize = useCallback((delta: number) => {
-    setChatWidth(w => Math.max(280, Math.min(600, w + delta)));
-  }, []);
+    dispatch({ type: 'SET_CHAT_WIDTH', width: Math.max(280, Math.min(600, ws.chatWidth + delta)) });
+  }, [ws.chatWidth]);
 
+  /* AS-02: Reorder tabs — Architecture first, Output last (follows hardware design workflow) */
   const tabs = useMemo<{ id: ViewMode; label: string; icon: React.ComponentType<{ className?: string }> | null }[]>(() => [
     { id: 'project_explorer', label: 'Project Explorer', icon: null },
-    { id: 'output', label: 'Output', icon: TerminalSquare },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'architecture', label: 'Architecture', icon: LayoutGrid },
-    { id: 'component_editor', label: 'Component Editor', icon: Cpu },
     { id: 'schematic', label: 'Schematic', icon: CircuitBoard },
     { id: 'breadboard', label: 'Breadboard', icon: Grid3X3 },
     { id: 'pcb', label: 'PCB', icon: Microchip },
+    { id: 'component_editor', label: 'Component Editor', icon: Cpu },
     { id: 'procurement', label: 'Procurement', icon: Package },
     { id: 'validation', label: 'Validation', icon: Activity },
+    { id: 'output', label: 'Exports', icon: TerminalSquare },
   ], []);
 
-  const visibleTabs = useMemo(() => tabs.filter(t => t.id !== 'project_explorer'), [tabs]);
+  /* UI-18: Progressive disclosure — hide advanced tabs until prerequisite content exists.
+     Always visible: Dashboard, Architecture, Component Editor (entry points).
+     Require architecture nodes: Schematic, Breadboard, PCB, Procurement, Validation, Output. */
+  const hasDesignContent = (nodes ?? []).length > 0;
+  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor']);
+
+  const visibleTabs = useMemo(
+    () => tabs.filter(t => t.id !== 'project_explorer' && (alwaysVisibleIds.has(t.id) || hasDesignContent)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tabs, hasDesignContent],
+  );
+
+  const validationErrorCount = (issues ?? []).filter(i => i.severity === 'error').length;
+  const validationWarningCount = (issues ?? []).filter(i => i.severity === 'warning').length;
+  const bomCount = (bom ?? []).length;
   const activeTabId = `tab-${activeView}`;
+
+  /* UI-18: If current view is hidden by progressive disclosure, redirect to architecture */
+  useEffect(() => {
+    if (!alwaysVisibleIds.has(activeView) && !hasDesignContent) {
+      setActiveView('architecture');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasDesignContent, activeView]);
+
+  /* RS-02: Mobile bottom nav primary/secondary split */
+  const primaryMobileTabIds = useMemo(() => new Set<ViewMode>(['dashboard', 'architecture', 'schematic', 'component_editor', 'procurement']), []);
+  const primaryMobileTabs = useMemo(() => visibleTabs.filter(t => primaryMobileTabIds.has(t.id)), [visibleTabs, primaryMobileTabIds]);
+  const secondaryMobileTabs = useMemo(() => visibleTabs.filter(t => !primaryMobileTabIds.has(t.id)), [visibleTabs, primaryMobileTabIds]);
 
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden font-sans text-foreground">
@@ -145,12 +343,12 @@ function WorkspaceContent() {
         Skip to AI assistant
       </a>
       <h1 className="sr-only">ProtoPulse</h1>
-      <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 md:hidden">
+      <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 lg:hidden">
         <StyledTooltip content="Open menu" side="bottom">
           <button
             data-testid="mobile-menu-toggle"
-            className="p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setSidebarOpen(true)}
+            className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => dispatch({ type: 'SET_SIDEBAR_OPEN', open: true })}
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -162,40 +360,53 @@ function WorkspaceContent() {
         <StyledTooltip content="Open AI assistant" side="bottom">
           <button
             data-testid="mobile-chat-toggle"
-            className="p-2 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setChatOpen(true)}
+            className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => dispatch({ type: 'SET_CHAT_OPEN', open: true })}
           >
             <MessageCircle className="w-5 h-5" />
           </button>
         </StyledTooltip>
       </div>
 
+      <DndProvider>
       <div className="flex flex-1 min-h-0">
-        <Sidebar
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          collapsed={sidebarCollapsed}
-          width={sidebarWidth}
-          onToggleCollapse={() => setSidebarCollapsed(false)}
-        />
+        <Suspense fallback={null}>
+          <Sidebar
+            isOpen={ws.sidebarOpen}
+            onClose={() => dispatch({ type: 'SET_SIDEBAR_OPEN', open: false })}
+            collapsed={ws.sidebarCollapsed}
+            width={ws.sidebarWidth}
+            onToggleCollapse={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: false })}
+          />
+        </Suspense>
 
-        {!sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
-        
+        {!ws.sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
+
         <main id="main-content" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-background">
           <h2 className="sr-only">Design workspace</h2>
-          <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden md:flex items-center px-1 gap-0 z-10">
+          <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden lg:flex items-center px-1 gap-0 z-10">
+            {/* AS-04: Larger toggle buttons with better contrast */}
             <StyledTooltip content="Toggle sidebar" side="bottom">
               <button
                 data-testid="toggle-sidebar"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors mr-1"
-                title={sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
+                onClick={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: !ws.sidebarCollapsed })}
+                className="p-2 hover:bg-muted/50 bg-muted/20 border border-border/50 rounded-sm text-muted-foreground hover:text-foreground transition-colors mr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                title={ws.sidebarCollapsed ? "Show sidebar" : "Hide sidebar"}
               >
-                {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                {ws.sidebarCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
               </button>
             </StyledTooltip>
             <div className="w-px h-5 bg-border mr-1" />
-            <div role="tablist" aria-label="Main views" className="flex items-center gap-0">
+
+            {/* AS-08: Show project name when sidebar collapsed */}
+            {ws.sidebarCollapsed && projectName && (
+              <span data-testid="header-project-name" className="text-xs text-muted-foreground truncate max-w-[200px] mr-2" title={projectName}>
+                {projectName}
+              </span>
+            )}
+
+            {/* AS-05 + RS-09: Scrollable tab bar with fade indicators */}
+            <ScrollableTabBar>
               {visibleTabs.map((tab) => (
                 <StyledTooltip key={tab.id} content={tabDescriptions[tab.id] || tab.label} side="bottom">
                   <button
@@ -206,28 +417,48 @@ function WorkspaceContent() {
                     data-testid={`tab-${tab.id}`}
                     onClick={() => setActiveView(tab.id)}
                     className={cn(
-                      "h-8 px-4 flex items-center gap-2 text-xs font-medium transition-all relative top-[1px]",
+                      /* AS-10: text-sm instead of text-xs; AS-12: h-[3px] accent */
+                      "h-8 px-4 flex items-center gap-2 text-sm font-medium transition-all relative top-[1px] whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
                       activeView === tab.id
-                        ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[2px] before:bg-primary"
+                        ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[3px] before:bg-primary before:rounded-b-sm"
                         : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"
                     )}
                   >
-                    {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
+                    {/* AS-11: Normalize icon stroke width */}
+                    {tab.icon && <tab.icon className="w-3.5 h-3.5 [stroke-width:1.75]" />}
                     {tab.label}
+                    {/* UI-18: Badge counts for Validation and Procurement */}
+                    {tab.id === 'validation' && validationErrorCount > 0 && (
+                      <span data-testid="tab-validation-badge" className="text-[10px] font-medium bg-destructive/20 text-destructive px-1.5 py-0.5 tabular-nums rounded-sm">
+                        {validationErrorCount}
+                      </span>
+                    )}
+                    {tab.id === 'validation' && validationErrorCount === 0 && validationWarningCount > 0 && (
+                      <span data-testid="tab-validation-badge" className="text-[10px] font-medium bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 tabular-nums rounded-sm">
+                        {validationWarningCount}
+                      </span>
+                    )}
+                    {tab.id === 'procurement' && bomCount > 0 && (
+                      <span data-testid="tab-procurement-badge" className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-1.5 py-0.5 tabular-nums rounded-sm">
+                        {bomCount}
+                      </span>
+                    )}
                   </button>
                 </StyledTooltip>
               ))}
-            </div>
+            </ScrollableTabBar>
+
             <div className="flex-1 border-b border-border h-full"></div>
             <div className="w-px h-5 bg-border ml-1" />
+            {/* AS-04: Larger chat toggle button with better contrast */}
             <StyledTooltip content="Toggle AI assistant" side="bottom">
               <button
                 data-testid="toggle-chat"
-                onClick={() => setChatCollapsed(!chatCollapsed)}
-                className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1"
-                title={chatCollapsed ? "Show chat" : "Hide chat"}
+                onClick={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: !ws.chatCollapsed })}
+                className="p-2 hover:bg-muted/50 bg-muted/20 border border-border/50 rounded-sm text-muted-foreground hover:text-foreground transition-colors ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                title={ws.chatCollapsed ? "Show chat" : "Hide chat"}
               >
-                {chatCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
+                {ws.chatCollapsed ? <PanelRightOpen className="w-5 h-5" /> : <PanelRightClose className="w-5 h-5" />}
               </button>
             </StyledTooltip>
 
@@ -236,7 +467,18 @@ function WorkspaceContent() {
             </div>
           </header>
 
-          <div role="tabpanel" id="main-panel" aria-labelledby={activeTabId} className="flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
+          <Suspense fallback={null}>
+            <WorkflowBreadcrumb />
+          </Suspense>
+
+          <div key={activeView} role="tabpanel" id="main-panel" aria-labelledby={activeTabId} className="view-enter flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
+              {activeView === 'dashboard' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <DashboardView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
               {activeView === 'output' && (
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
@@ -303,42 +545,101 @@ function WorkspaceContent() {
           </div>
         </main>
 
-        {!chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}
+        {!ws.chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}
 
         <ErrorBoundary>
           <div id="chat-panel">
             <h2 className="sr-only">AI Assistant</h2>
-            <ChatPanel
-              isOpen={chatOpen}
-              onClose={() => setChatOpen(false)}
-              collapsed={chatCollapsed}
-              width={chatWidth}
-              onToggleCollapse={() => setChatCollapsed(false)}
-            />
+            <Suspense fallback={null}>
+              <ChatPanel
+                isOpen={ws.chatOpen}
+                onClose={() => dispatch({ type: 'SET_CHAT_OPEN', open: false })}
+                collapsed={ws.chatCollapsed}
+                width={ws.chatWidth}
+                onToggleCollapse={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: false })}
+              />
+            </Suspense>
           </div>
         </ErrorBoundary>
       </div>
+      </DndProvider>
 
-      <KeyboardShortcutsModal open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <Suspense fallback={null}>
+        <KeyboardShortcutsModal open={ws.shortcutsOpen} onOpenChange={(open: boolean) => dispatch({ type: 'SET_SHORTCUTS_OPEN', open })} />
+      </Suspense>
 
-      <div data-testid="mobile-bottom-nav" className="h-14 border-t border-border bg-card/60 backdrop-blur-xl flex items-center justify-around md:hidden">
-        {visibleTabs.map((tab) => (
-          <StyledTooltip key={tab.id} content={tab.label} side="top">
+      <Suspense fallback={null}>
+        <CommandPalette
+          onNavigate={setActiveView}
+          onToggleSidebar={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: !ws.sidebarCollapsed })}
+          onToggleChat={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: !ws.chatCollapsed })}
+          onRunDrc={runValidation}
+          sidebarCollapsed={ws.sidebarCollapsed}
+          chatCollapsed={ws.chatCollapsed}
+        />
+      </Suspense>
+
+      {/* RS-02 + RS-08: Mobile bottom nav with primary tabs + More menu + active indicators */}
+      <div data-testid="mobile-bottom-nav" className="h-16 border-t border-border bg-card/60 backdrop-blur-xl flex items-center justify-around lg:hidden px-2">
+        {primaryMobileTabs.map((tab) => (
+          <button
+            key={tab.id}
+            data-testid={`bottom-nav-${tab.id}`}
+            onClick={() => setActiveView(tab.id)}
+            className={cn(
+              "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 transition-colors relative min-w-[44px] min-h-[44px] rounded-md",
+              activeView === tab.id
+                ? "text-primary bg-primary/10"
+                : "text-muted-foreground"
+            )}
+          >
+            {activeView === tab.id && (
+              <div className="absolute top-0 inset-x-2 h-[2px] bg-primary rounded-b-full" />
+            )}
+            {tab.icon && <tab.icon className="w-5 h-5" />}
+            <span className="text-[10px] font-medium leading-tight truncate max-w-[60px]">{tab.label}</span>
+          </button>
+        ))}
+        <Popover open={ws.moreMenuOpen} onOpenChange={(open: boolean) => dispatch({ type: 'SET_MORE_MENU_OPEN', open })}>
+          <PopoverTrigger asChild>
             <button
-              data-testid={`bottom-nav-${tab.id}`}
-              onClick={() => setActiveView(tab.id)}
+              data-testid="bottom-nav-more"
               className={cn(
-                "flex flex-col items-center gap-1 px-3 py-1.5 transition-colors",
-                activeView === tab.id
-                  ? "text-primary"
+                "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 transition-colors relative min-w-[44px] min-h-[44px] rounded-md",
+                secondaryMobileTabs.some(t => t.id === activeView)
+                  ? "text-primary bg-primary/10"
                   : "text-muted-foreground"
               )}
             >
-              {tab.icon && <tab.icon className="w-5 h-5" />}
-              <span className="hidden sm:block text-[10px] font-medium">{tab.label}</span>
+              {secondaryMobileTabs.some(t => t.id === activeView) && (
+                <div className="absolute top-0 inset-x-2 h-[2px] bg-primary rounded-b-full" />
+              )}
+              <MoreHorizontal className="w-5 h-5" />
+              <span className="text-[10px] font-medium leading-tight">More</span>
             </button>
-          </StyledTooltip>
-        ))}
+          </PopoverTrigger>
+          <PopoverContent side="top" align="end" className="w-48 p-1">
+            {secondaryMobileTabs.map((tab) => (
+              <button
+                key={tab.id}
+                data-testid={`bottom-nav-${tab.id}`}
+                onClick={() => {
+                  setActiveView(tab.id);
+                  dispatch({ type: 'SET_MORE_MENU_OPEN', open: false });
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-colors",
+                  activeView === tab.id
+                    ? "text-primary bg-primary/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                {tab.icon && <tab.icon className="w-4 h-4 shrink-0" />}
+                {tab.label}
+              </button>
+            ))}
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

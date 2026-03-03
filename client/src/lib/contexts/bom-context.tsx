@@ -1,8 +1,15 @@
 import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { toast } from '@/hooks/use-toast';
 import type { BomItem } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+
+/** Extract a human-readable reason from a mutation error. */
+function errorReason(error: Error): string {
+  const msg = error.message.replace(/^\d{3}:\s*/, '');
+  return msg || 'An unexpected error occurred';
+}
 
 interface BomState {
   bom: BomItem[];
@@ -38,7 +45,7 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
   const bomQuery = useQuery({
     queryKey: [`/api/projects/${projectId}/bom`],
     enabled: seeded,
-    select: (data: Array<Omit<BomItem, 'id'> & { id: number | string }>) => data.map((item): BomItem => ({
+    select: (response: { data: Array<Omit<BomItem, 'id'> & { id: number | string }>; total: number }) => response.data.map((item): BomItem => ({
       ...item,
       id: String(item.id),
     })),
@@ -51,23 +58,32 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bom`] });
     },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', title: 'Failed to add BOM item', description: errorReason(error) });
+    },
   });
 
   const deleteBomItemMutation = useMutation({
     mutationFn: async (id: number | string) => {
-      await apiRequest('DELETE', `/api/bom/${Number(id)}?projectId=${projectId}`);
+      await apiRequest('DELETE', `/api/projects/${projectId}/bom/${Number(id)}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bom`] });
+    },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', title: 'Failed to delete BOM item', description: errorReason(error) });
     },
   });
 
   const updateBomItemMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number | string; data: Partial<BomItem> }) => {
-      await apiRequest('PATCH', `/api/bom/${Number(id)}?projectId=${projectId}`, data);
+      await apiRequest('PATCH', `/api/projects/${projectId}/bom/${Number(id)}`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/bom`] });
+    },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', title: 'Failed to update BOM item', description: `Changes may not have been saved. ${errorReason(error)}` });
     },
   });
 

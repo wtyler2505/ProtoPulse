@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import type { Shape } from '@shared/component-types';
 
@@ -104,7 +105,7 @@ export function computeShapesBounds(shapes: Shape[]): {
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
-export default function PartSymbolRenderer({
+const PartSymbolRenderer = memo(function PartSymbolRenderer({
   shapes,
   width,
   height,
@@ -121,4 +122,6 @@ export default function PartSymbolRenderer({
       {shapes.map(renderShape)}
     </svg>
   );
-}
+});
+
+export default PartSymbolRenderer;

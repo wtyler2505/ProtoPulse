@@ -1,0 +1,178 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read|Edit|MultiEdit|Write|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run file-guard"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/protected-files.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/file-freshness.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run lint-changed"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run typecheck-changed"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run check-any-changed"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run test-changed"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run check-comment-replacement"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run check-unused-parameters"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run codebase-map-update"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/context-budget.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/read-tsc-errors.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/blocking-typecheck.sh"
+          },
+          {
+            "type": "command",
+            "command": "claudekit-hooks run lint-project"
+          },
+          {
+            "type": "command",
+            "command": "claudekit-hooks run test-project"
+          },
+          {
+            "type": "command",
+            "command": "claudekit-hooks run check-todos"
+          },
+          {
+            "type": "command",
+            "command": "claudekit-hooks run self-review"
+          },
+          {
+            "type": "command",
+            "command": "claudekit-hooks run create-checkpoint"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/check-hook-deps.sh"
+          },
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/start-tsc-watch.sh"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claudekit-hooks run codebase-map"
+          },
+          {
+            "type": "command",
+            "command": "claudekit-hooks run thinking-level"
+          }
+        ]
+      }
+    ]
+  }
+}

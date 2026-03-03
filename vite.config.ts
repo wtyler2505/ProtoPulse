@@ -39,45 +39,56 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    sourcemap: 'hidden',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
-          'xyflow-vendor': ['@xyflow/react'],
-          'tanstack-vendor': ['@tanstack/react-query'],
-          'ui-icons': ['lucide-react'],
-          'radix-vendor': [
-            '@radix-ui/react-accordion',
-            '@radix-ui/react-alert-dialog',
-            '@radix-ui/react-aspect-ratio',
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-collapsible',
-            '@radix-ui/react-context-menu',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-hover-card',
-            '@radix-ui/react-label',
-            '@radix-ui/react-menubar',
-            '@radix-ui/react-navigation-menu',
-            '@radix-ui/react-popover',
-            '@radix-ui/react-progress',
-            '@radix-ui/react-radio-group',
-            '@radix-ui/react-scroll-area',
-            '@radix-ui/react-select',
-            '@radix-ui/react-separator',
-            '@radix-ui/react-slider',
-            '@radix-ui/react-slot',
-            '@radix-ui/react-switch',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-toast',
-            '@radix-ui/react-toggle',
-            '@radix-ui/react-toggle-group',
-            '@radix-ui/react-tooltip',
-          ],
-          'motion-vendor': ['framer-motion'],
-          'markdown-vendor': ['react-markdown', 'remark-gfm'],
-          'charts-vendor': ['recharts'],
+        manualChunks(id: string) {
+          if (id.includes('node_modules')) {
+            // React core runtime (react, react-dom, scheduler)
+            if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/scheduler/')) {
+              return 'react-vendor';
+            }
+            // @xyflow
+            if (id.includes('/@xyflow/')) {
+              return 'xyflow-vendor';
+            }
+            // TanStack Query (not virtual — virtual goes with ChatPanel)
+            if (id.includes('/@tanstack/react-query') || id.includes('/@tanstack/query-core')) {
+              return 'tanstack-vendor';
+            }
+            // Lucide icons
+            if (id.includes('/lucide-react/')) {
+              return 'ui-icons';
+            }
+            // Radix UI
+            if (id.includes('/@radix-ui/')) {
+              return 'radix-vendor';
+            }
+            // Markdown rendering
+            if (id.includes('/react-markdown/') || id.includes('/remark-') || id.includes('/rehype-')
+              || id.includes('/unified/') || id.includes('/unist-') || id.includes('/mdast-')
+              || id.includes('/hast-') || id.includes('/micromark') || id.includes('/vfile')) {
+              return 'markdown-vendor';
+            }
+            // Charts
+            if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-')) {
+              return 'charts-vendor';
+            }
+            // Drag and drop
+            if (id.includes('/@dnd-kit/')) {
+              return 'dnd-vendor';
+            }
+            // Tailwind merge — large utility, isolate to own chunk
+            if (id.includes('/tailwind-merge/')) {
+              return 'tailwind-merge-vendor';
+            }
+            // cmdk — command palette dependency
+            if (id.includes('/cmdk/')) {
+              return 'cmdk-vendor';
+            }
+          }
+          // Let Rollup handle everything else with automatic chunking
+          return undefined;
         },
       },
     },

@@ -69,7 +69,7 @@ export interface FzzExportInput {
   circuit: { id: number; name: string };
   instances: Array<{
     id: number;
-    partId: number;
+    partId: number | null;
     referenceDesignator: string;
     schematicX: number;
     schematicY: number;
@@ -248,7 +248,7 @@ function generateSketchXml(
   // Instances
   lines.push(`${indent(3)}<instances>`);
   for (const inst of input.instances) {
-    const part = input.parts.get(inst.partId);
+    const part = inst.partId != null ? input.parts.get(inst.partId) : undefined;
     if (!part) continue;
 
     const moduleId = `part.${stableId(`${inst.partId}`)}`;
@@ -317,7 +317,7 @@ export async function exportFzz(input: FzzExportInput): Promise<Buffer> {
   // Generate unique parts
   const uniquePartIds = new Set<number>();
   for (const inst of input.instances) {
-    uniquePartIds.add(inst.partId);
+    if (inst.partId != null) uniquePartIds.add(inst.partId);
   }
 
   // For each unique part, create FZP + SVGs

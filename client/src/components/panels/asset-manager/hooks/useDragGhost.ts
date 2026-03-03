@@ -22,7 +22,12 @@ export function useDragGhost() {
       'background:#1a1a2e;border:1px solid #06b6d4;color:#e2e8f0;' +
       'font-size:12px;font-family:monospace;display:flex;align-items:center;' +
       'gap:6px;z-index:9999;';
-    dragEl.innerHTML = `<span style="color:#06b6d4">◆</span> ${assetName}`;
+    const icon = document.createElement('span');
+    icon.style.color = '#06b6d4';
+    icon.textContent = '◆';
+    const label = document.createTextNode(` ${assetName}`);
+    dragEl.appendChild(icon);
+    dragEl.appendChild(label);
     document.body.appendChild(dragEl);
     dragGhostRef.current = dragEl;
     event.dataTransfer.setDragImage(dragEl, 60, 16);

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   getSmoothStepPath,
   EdgeLabelRenderer,
@@ -14,7 +15,7 @@ export interface NetEdgeData {
   [key: string]: unknown; // Required by @xyflow/react — all edge data types must be indexable
 }
 
-export default function SchematicNetEdge({
+const SchematicNetEdge = memo(function SchematicNetEdge({
   id,
   sourceX,
   sourceY,
@@ -84,4 +85,6 @@ export default function SchematicNetEdge({
       )}
     </>
   );
-}
+});
+
+export default SchematicNetEdge;

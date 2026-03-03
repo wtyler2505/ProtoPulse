@@ -4,6 +4,10 @@
  * Before generating manufacturing outputs (Gerber, drill, pick-and-place),
  * the PCB layout must pass a DRC check. This module provides a pre-export
  * validation gate that enforces this requirement.
+ *
+ * Each DRC rule is implemented as a standalone function that receives the
+ * input context and pushes violations to a shared array. `runDrcGate`
+ * orchestrates them in sequence and summarises the result.
  */
 
 export interface DrcViolation {
@@ -53,20 +57,30 @@ export interface DrcGateInput {
   minTraceWidth?: number;  // mm, default 0.15
 }
 
-/**
- * Run pre-export DRC checks on the PCB layout.
- * Returns a result indicating whether it's safe to generate manufacturing files.
- */
-export function runDrcGate(input: DrcGateInput): DrcGateResult {
-  const violations: DrcViolation[] = [];
-  const clearance = input.clearance ?? 0.2;
-  const minTraceWidth = input.minTraceWidth ?? 0.15;
-  const pcbWires = input.wires.filter(w => w.view === 'pcb');
+// ---------------------------------------------------------------------------
+// Resolved parameters shared across rule functions
+// ---------------------------------------------------------------------------
 
-  // 1. Check: All instances placed on board
-  for (const inst of input.instances) {
+interface DrcContext {
+  input: DrcGateInput;
+  violations: DrcViolation[];
+  clearance: number;
+  minTraceWidth: number;
+  pcbWires: DrcGateInput['wires'];
+}
+
+// ---------------------------------------------------------------------------
+// Individual DRC rule functions
+// ---------------------------------------------------------------------------
+
+/**
+ * Check that every instance has been placed on the PCB (non-null coordinates).
+ * Also checks that placed instances are within board bounds.
+ */
+function checkComponentPlacement(ctx: DrcContext): void {
+  for (const inst of ctx.input.instances) {
     if (inst.pcbX == null || inst.pcbY == null) {
-      violations.push({
+      ctx.violations.push({
         severity: 'error',
         rule: 'unplaced-component',
         message: `${inst.referenceDesignator} has no PCB placement`,
@@ -74,9 +88,9 @@ export function runDrcGate(input: DrcGateInput): DrcGateResult {
       continue;
     }
 
-    // Check: Component within board bounds
-    if (inst.pcbX < 0 || inst.pcbY < 0 || inst.pcbX > input.boardWidth || inst.pcbY > input.boardHeight) {
-      violations.push({
+    if (inst.pcbX < 0 || inst.pcbY < 0 ||
+        inst.pcbX > ctx.input.boardWidth || inst.pcbY > ctx.input.boardHeight) {
+      ctx.violations.push({
         severity: 'warning',
         rule: 'out-of-bounds',
         message: `${inst.referenceDesignator} is outside board outline (${inst.pcbX.toFixed(1)}, ${inst.pcbY.toFixed(1)})`,
@@ -84,42 +98,56 @@ export function runDrcGate(input: DrcGateInput): DrcGateResult {
       });
     }
   }
+}
 
-  // 2. Check: Unrouted nets
+/**
+ * Check that every net with logical segments has at least one PCB trace routed.
+ */
+function checkUnroutedNets(ctx: DrcContext): void {
   const routedNetIds = new Set<number>();
-  for (const wire of pcbWires) {
+  for (const wire of ctx.pcbWires) {
     routedNetIds.add(wire.netId);
   }
 
-  for (const net of input.nets) {
+  for (const net of ctx.input.nets) {
     if (net.segments.length > 0 && !routedNetIds.has(net.id)) {
-      violations.push({
+      ctx.violations.push({
         severity: 'error',
         rule: 'unrouted-net',
         message: `Net "${net.name}" has no PCB traces`,
       });
     }
   }
+}
 
-  // 3. Check: Minimum trace width
-  for (const wire of pcbWires) {
-    if (wire.width < minTraceWidth) {
+/**
+ * Check that no PCB trace is narrower than the minimum allowed width.
+ */
+function checkMinTraceWidth(ctx: DrcContext): void {
+  for (const wire of ctx.pcbWires) {
+    if (wire.width < ctx.minTraceWidth) {
       const startPt = wire.points[0];
-      violations.push({
+      ctx.violations.push({
         severity: 'error',
         rule: 'min-trace-width',
-        message: `Trace width ${wire.width.toFixed(3)}mm is below minimum ${minTraceWidth}mm`,
+        message: `Trace width ${wire.width.toFixed(3)}mm is below minimum ${ctx.minTraceWidth}mm`,
         location: startPt ? { x: startPt.x, y: startPt.y } : undefined,
       });
     }
   }
+}
 
-  // 4. Check: Trace points within board bounds
-  for (const wire of pcbWires) {
+/**
+ * Check that trace points fall within the board outline (with clearance tolerance).
+ * Emits at most one warning per wire to avoid flooding.
+ */
+function checkTraceOutOfBounds(ctx: DrcContext): void {
+  for (const wire of ctx.pcbWires) {
     for (const pt of wire.points) {
-      if (pt.x < -clearance || pt.y < -clearance ||
-          pt.x > input.boardWidth + clearance || pt.y > input.boardHeight + clearance) {
-        violations.push({
+      if (pt.x < -ctx.clearance || pt.y < -ctx.clearance ||
+          pt.x > ctx.input.boardWidth + ctx.clearance ||
+          pt.y > ctx.input.boardHeight + ctx.clearance) {
+        ctx.violations.push({
           severity: 'warning',
           rule: 'trace-out-of-bounds',
           message: `Trace point (${pt.x.toFixed(1)}, ${pt.y.toFixed(1)}) is outside board outline`,
@@ -129,65 +157,128 @@ export function runDrcGate(input: DrcGateInput): DrcGateResult {
       }
     }
   }
+}
 
-  // 5. Check: Board outline valid
-  if (input.boardWidth <= 0 || input.boardHeight <= 0) {
-    violations.push({
+/**
+ * Check that board dimensions are positive.
+ */
+function checkBoardOutline(ctx: DrcContext): void {
+  if (ctx.input.boardWidth <= 0 || ctx.input.boardHeight <= 0) {
+    ctx.violations.push({
       severity: 'error',
       rule: 'invalid-board-outline',
-      message: `Board dimensions are invalid (${input.boardWidth}x${input.boardHeight}mm)`,
+      message: `Board dimensions are invalid (${ctx.input.boardWidth}x${ctx.input.boardHeight}mm)`,
     });
   }
+}
 
-  // 6. Check: Trace clearance between parallel segments (simplified — check endpoint proximity)
-  // Full clearance checking would require a spatial index; this is a simplified version.
-  for (let i = 0; i < pcbWires.length; i++) {
-    for (let j = i + 1; j < pcbWires.length; j++) {
-      const wireA = pcbWires[i];
-      const wireB = pcbWires[j];
+/**
+ * Simplified trace-to-trace clearance check.
+ * Compares endpoint proximity between wires on the same layer from different nets.
+ * A full implementation would use a spatial index; this checks point-to-point distances.
+ */
+function checkTraceClearance(ctx: DrcContext): void {
+  for (let i = 0; i < ctx.pcbWires.length; i++) {
+    for (let j = i + 1; j < ctx.pcbWires.length; j++) {
+      const wireA = ctx.pcbWires[i];
+      const wireB = ctx.pcbWires[j];
 
       // Only check wires on the same layer
       if (wireA.layer !== wireB.layer) continue;
       // Same net doesn't matter
       if (wireA.netId === wireB.netId) continue;
 
-      // Check endpoints of A against segments of B
-      for (const ptA of wireA.points) {
-        for (const ptB of wireB.points) {
-          const dx = ptA.x - ptB.x;
-          const dy = ptA.y - ptB.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const minDist = (wireA.width + wireB.width) / 2 + clearance;
-
-          if (dist < minDist) {
-            violations.push({
-              severity: 'error',
-              rule: 'clearance-violation',
-              message: `Clearance violation (${dist.toFixed(3)}mm < ${minDist.toFixed(3)}mm) between traces on ${wireA.layer}`,
-              location: { x: ptA.x, y: ptA.y },
-            });
-            // Break inner loops to avoid flooding
-            break;
-          }
-        }
-        // If we just added a clearance violation for this wire pair, stop
-        if (violations.length > 0 && violations[violations.length - 1].rule === 'clearance-violation') break;
-      }
+      checkWirePairClearance(ctx, wireA, wireB);
     }
   }
+}
 
-  const errors = violations.filter(v => v.severity === 'error').length;
-  const warnings = violations.filter(v => v.severity === 'warning').length;
-  const passed = errors === 0;
+/**
+ * Check clearance between two specific wires by comparing all point pairs.
+ * Stops after the first violation for the pair to avoid flooding.
+ */
+function checkWirePairClearance(
+  ctx: DrcContext,
+  wireA: DrcGateInput['wires'][number],
+  wireB: DrcGateInput['wires'][number],
+): void {
+  for (const ptA of wireA.points) {
+    for (const ptB of wireB.points) {
+      const dx = ptA.x - ptB.x;
+      const dy = ptA.y - ptB.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const minDist = (wireA.width + wireB.width) / 2 + ctx.clearance;
 
-  let message: string;
-  if (passed && warnings === 0) {
-    message = 'DRC passed — ready for manufacturing export';
-  } else if (passed) {
-    message = `DRC passed with ${warnings} warning${warnings !== 1 ? 's' : ''} — review before export`;
-  } else {
-    message = `DRC failed: ${errors} error${errors !== 1 ? 's' : ''}, ${warnings} warning${warnings !== 1 ? 's' : ''} — fix errors before export`;
+      if (dist < minDist) {
+        ctx.violations.push({
+          severity: 'error',
+          rule: 'clearance-violation',
+          message: `Clearance violation (${dist.toFixed(3)}mm < ${minDist.toFixed(3)}mm) between traces on ${wireA.layer}`,
+          location: { x: ptA.x, y: ptA.y },
+        });
+        // Break inner loops to avoid flooding
+        return;
+      }
+    }
+    // If we just added a clearance violation for this wire pair, stop
+    if (ctx.violations.length > 0 && ctx.violations[ctx.violations.length - 1].rule === 'clearance-violation') return;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rule registry — ordered list of all DRC rule functions
+// ---------------------------------------------------------------------------
+
+type DrcRuleFunction = (ctx: DrcContext) => void;
+
+const DRC_RULES: DrcRuleFunction[] = [
+  checkComponentPlacement,
+  checkUnroutedNets,
+  checkMinTraceWidth,
+  checkTraceOutOfBounds,
+  checkBoardOutline,
+  checkTraceClearance,
+];
+
+// ---------------------------------------------------------------------------
+// Result summary
+// ---------------------------------------------------------------------------
+
+function buildResultMessage(errors: number, warnings: number): string {
+  if (errors === 0 && warnings === 0) {
+    return 'DRC passed — ready for manufacturing export';
+  }
+  if (errors === 0) {
+    return `DRC passed with ${warnings} warning${warnings !== 1 ? 's' : ''} — review before export`;
+  }
+  return `DRC failed: ${errors} error${errors !== 1 ? 's' : ''}, ${warnings} warning${warnings !== 1 ? 's' : ''} — fix errors before export`;
+}
+
+// ---------------------------------------------------------------------------
+// Main entry point
+// ---------------------------------------------------------------------------
+
+/**
+ * Run pre-export DRC checks on the PCB layout.
+ * Returns a result indicating whether it's safe to generate manufacturing files.
+ */
+export function runDrcGate(input: DrcGateInput): DrcGateResult {
+  const ctx: DrcContext = {
+    input,
+    violations: [],
+    clearance: input.clearance ?? 0.2,
+    minTraceWidth: input.minTraceWidth ?? 0.15,
+    pcbWires: input.wires.filter(function filterPcbWires(w) { return w.view === 'pcb'; }),
+  };
+
+  for (const rule of DRC_RULES) {
+    rule(ctx);
   }
 
-  return { passed, errors, warnings, violations, message };
+  const errors = ctx.violations.filter(function countErrors(v) { return v.severity === 'error'; }).length;
+  const warnings = ctx.violations.filter(function countWarnings(v) { return v.severity === 'warning'; }).length;
+  const passed = errors === 0;
+  const message = buildResultMessage(errors, warnings);
+
+  return { passed, errors, warnings, violations: ctx.violations, message };
 }

@@ -4,3 +4,6 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Product analysis working directory (generated phase outputs)
+.claude/analysis/

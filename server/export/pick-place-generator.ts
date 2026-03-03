@@ -10,6 +10,14 @@
  * Columns: Designator, Val, Package, PosX, PosY, Rot, Side
  */
 
+import {
+  type CircuitInstanceData,
+  type ComponentPartData,
+  type ExportResult,
+  csvRow as sharedCsvRow,
+  metaStr,
+} from './types';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -222,5 +230,57 @@ export function generatePickPlace(input: PickPlaceInput): PickPlaceOutput {
   return {
     content: lines.join('\n'),
     componentCount: components.length,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Legacy API — original export-generators.ts signature used by ai-tools.ts
+// ---------------------------------------------------------------------------
+
+export function generateLegacyPickAndPlace(
+  instances: CircuitInstanceData[],
+  parts: ComponentPartData[],
+): ExportResult {
+  const partMap = new Map<number, ComponentPartData>();
+  for (const part of parts) {
+    partMap.set(part.id, part);
+  }
+
+  const header = sharedCsvRow([
+    'Designator',
+    'Value',
+    'Package',
+    'Mid X (mm)',
+    'Mid Y (mm)',
+    'Rotation',
+    'Layer',
+  ]);
+
+  const rows = instances
+    .filter((inst) => inst.pcbX !== null && inst.pcbY !== null)
+    .map((inst) => {
+      const part = inst.partId != null ? partMap.get(inst.partId) : undefined;
+      const meta = part?.meta ?? {};
+      const value = metaStr(meta, 'value', metaStr(meta, 'title', ''));
+      const footprint = metaStr(meta, 'footprint', 'Unknown');
+      const layer = inst.pcbSide === 'back' ? 'Bottom' : 'Top';
+      const rotation = inst.pcbRotation ?? 0;
+
+      return sharedCsvRow([
+        inst.referenceDesignator,
+        value,
+        footprint,
+        inst.pcbX!.toFixed(3),
+        inst.pcbY!.toFixed(3),
+        rotation,
+        layer,
+      ]);
+    });
+
+  return {
+    content: [header, ...rows].join('\n'),
+    encoding: 'utf8',
+    mimeType: 'text/csv',
+    filename: 'pick_and_place.csv',
   };
 }

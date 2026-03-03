@@ -1,6 +1,7 @@
 import { createContext, useContext, useRef, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { toast } from '@/hooks/use-toast';
 import type { ValidationIssue } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 
@@ -30,7 +31,7 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
   const validationQuery = useQuery({
     queryKey: [`/api/projects/${projectId}/validation`],
     enabled: seeded,
-    select: (data: Array<Omit<ValidationIssue, 'id'> & { id: number | string }>) => data.map((issue): ValidationIssue => ({
+    select: (response: { data: Array<Omit<ValidationIssue, 'id'> & { id: number | string }>; total: number }) => response.data.map((issue): ValidationIssue => ({
       ...issue,
       id: String(issue.id),
     })),
@@ -43,14 +44,22 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/validation`] });
     },
+    onError: (error: Error) => {
+      const reason = error.message.replace(/^\d{3}:\s*/, '') || 'An unexpected error occurred';
+      toast({ variant: 'destructive', title: 'Failed to add validation issue', description: reason });
+    },
   });
 
   const deleteValidationIssueMutation = useMutation({
     mutationFn: async (id: number | string) => {
-      await apiRequest('DELETE', `/api/validation/${Number(id)}?projectId=${projectId}`);
+      await apiRequest('DELETE', `/api/projects/${projectId}/validation/${Number(id)}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/validation`] });
+    },
+    onError: (error: Error) => {
+      const reason = error.message.replace(/^\d{3}:\s*/, '') || 'An unexpected error occurred';
+      toast({ variant: 'destructive', title: 'Failed to delete validation issue', description: reason });
     },
   });
 

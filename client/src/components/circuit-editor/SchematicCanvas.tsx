@@ -260,6 +260,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // Local UI state
   const [activeTool, setActiveTool] = useState<SchematicTool>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [mouseFlowPos, setMouseFlowPos] = useState<{ x: number; y: number } | null>(null);
 
   // Drag guard — prevents server refetch from resetting node mid-drag
   const isDragging = useRef(false);
@@ -284,7 +285,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // Convert DB data → React Flow nodes (instances + power symbols + net labels + no-connects)
   const rfNodes = useMemo(() => {
     const instanceNodes = (instances ?? []).map((inst) =>
-      instanceToNode(inst, partsMap.get(inst.partId)),
+      instanceToNode(inst, inst.partId != null ? partsMap.get(inst.partId) : undefined),
     );
     const powerNodes = (settings.powerSymbols ?? []).map(powerSymbolToNode);
     const labelNodes = (settings.netLabels ?? []).map(netLabelToNode);
@@ -456,21 +457,21 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       if (!sourceInstanceId || !targetInstanceId || !sourcePinId || !targetPinId)
         return;
 
-      // Resolve human-readable pin names for the net name
+      // Resolve human-readable pin names and ref designators for the net name
       const sourceNode = localNodes.find((n) => n.id === connection.source);
       const targetNode = localNodes.find((n) => n.id === connection.target);
+      const sourceData = sourceNode?.data as InstanceNodeData | undefined;
+      const targetData = targetNode?.data as InstanceNodeData | undefined;
       const sourcePinName =
-        (sourceNode?.data as InstanceNodeData)?.connectors.find(
-          (c) => c.id === sourcePinId,
-        )?.name ?? sourcePinId;
+        sourceData?.connectors.find((c) => c.id === sourcePinId)?.name ?? sourcePinId;
       const targetPinName =
-        (targetNode?.data as InstanceNodeData)?.connectors.find(
-          (c) => c.id === targetPinId,
-        )?.name ?? targetPinId;
+        targetData?.connectors.find((c) => c.id === targetPinId)?.name ?? targetPinId;
+      const sourceRef = sourceData?.referenceDesignator ?? '';
+      const targetRef = targetData?.referenceDesignator ?? '';
 
       createNet.mutate({
         circuitId,
-        name: `Net_${sourcePinName}_${targetPinName}`,
+        name: `${sourceRef}.${sourcePinName}_${targetRef}.${targetPinName}`,
         netType: 'signal',
         segments: [
           {
@@ -486,10 +487,27 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     [circuitId, createNet, localNodes],
   );
 
+  // Coordinate readout — track mouse in flow coordinates
+  const handleCanvasMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      const pos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+      setMouseFlowPos({ x: Math.round(pos.x), y: Math.round(pos.y) });
+    },
+    [reactFlowInstance],
+  );
+
+  const handleCanvasMouseLeave = useCallback(() => {
+    setMouseFlowPos(null);
+  }, []);
+
   // Toolbar actions
   const handleFitView = useCallback(() => {
     reactFlowInstance.fitView({ padding: 0.2 });
   }, [reactFlowInstance]);
+
+  const handleOpenShortcuts = useCallback(() => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
+  }, []);
 
   // Drag-over handler — accept component and power symbol drops
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -579,21 +597,21 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // Net drawing tool callback — creates a net with waypoints
   const onNetDrawn = useCallback(
     (result: NetDrawingResult) => {
-      // Resolve human-readable pin names
+      // Resolve human-readable pin names and ref designators
       const sourceNode = localNodes.find((n) => n.id === `instance-${result.sourceInstanceId}`);
       const targetNode = localNodes.find((n) => n.id === `instance-${result.targetInstanceId}`);
+      const sourceData = sourceNode?.data as InstanceNodeData | undefined;
+      const targetData = targetNode?.data as InstanceNodeData | undefined;
       const sourcePinName =
-        (sourceNode?.data as InstanceNodeData)?.connectors.find(
-          (c) => c.id === result.sourcePin,
-        )?.name ?? result.sourcePin;
+        sourceData?.connectors.find((c) => c.id === result.sourcePin)?.name ?? result.sourcePin;
       const targetPinName =
-        (targetNode?.data as InstanceNodeData)?.connectors.find(
-          (c) => c.id === result.targetPin,
-        )?.name ?? result.targetPin;
+        targetData?.connectors.find((c) => c.id === result.targetPin)?.name ?? result.targetPin;
+      const sourceRef = sourceData?.referenceDesignator ?? '';
+      const targetRef = targetData?.referenceDesignator ?? '';
 
       createNet.mutate({
         circuitId,
-        name: `Net_${sourcePinName}_${targetPinName}`,
+        name: `${sourceRef}.${sourcePinName}_${targetRef}.${targetPinName}`,
         netType: 'signal',
         segments: [
           {
@@ -651,6 +669,8 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       data-testid="schematic-canvas"
       onDragOver={onDragOver}
       onDrop={onDrop}
+      onMouseMove={handleCanvasMouseMove}
+      onMouseLeave={handleCanvasMouseLeave}
     >
       <SchematicToolbar
         activeTool={activeTool}
@@ -658,6 +678,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         snapEnabled={snapEnabled}
         onToggleSnap={() => setSnapEnabled((s) => !s)}
         onFitView={handleFitView}
+        onOpenShortcuts={handleOpenShortcuts}
       />
 
       <ReactFlow
@@ -717,6 +738,17 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
               net connections.
             </p>
           </div>
+        </div>
+      )}
+
+      {mouseFlowPos && (
+        <div
+          className="absolute bottom-3 right-3 z-10 bg-card/70 backdrop-blur-sm border border-border px-2 py-1 pointer-events-none select-none"
+          data-testid="coordinate-readout"
+        >
+          <span className="text-[11px] font-mono tabular-nums text-[#00F0FF]">
+            X: {mouseFlowPos.x} &nbsp; Y: {mouseFlowPos.y}
+          </span>
         </div>
       )}
     </div>

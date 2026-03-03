@@ -3,7 +3,7 @@
  * wire drawing, and ratsnest overlay.
  */
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
   useCircuitDesigns,
@@ -17,6 +17,7 @@ import {
 import BreadboardGrid from './BreadboardGrid';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import ToolButton from './ToolButton';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   Loader2,
@@ -27,6 +28,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Info,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -35,6 +37,7 @@ import {
   type PixelPos,
   coordKey,
   pixelToCoord,
+  getBoardDimensions,
 } from '@/lib/circuit-editor/breadboard-model';
 import type { CircuitDesignRow, CircuitWireRow } from '@shared/schema';
 
@@ -167,9 +170,27 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const [highlightedPoints, setHighlightedPoints] = useState<Set<string>>(new Set());
   const [wireInProgress, setWireInProgress] = useState<WireInProgress | null>(null);
   const [selectedWireId, setSelectedWireId] = useState<number | null>(null);
+  const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
   const lastMouse = useRef<PixelPos>({ x: 0, y: 0 });
+
+  // BB-01: Center the breadboard on mount
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const { width: containerW, height: containerH } = container.getBoundingClientRect();
+    const board = getBoardDimensions();
+    const boardPixelW = board.width * zoom;
+    const boardPixelH = board.height * zoom;
+    setPanOffset({
+      x: Math.max(20, (containerW - boardPixelW) / 2),
+      y: Math.max(20, (containerH - boardPixelH) / 2),
+    });
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Filter wires to breadboard view only
   const breadboardWires = useMemo(
@@ -326,7 +347,15 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
       lastMouse.current = { x: e.clientX, y: e.clientY };
       setPanOffset(prev => ({ x: prev.x + dx, y: prev.y + dy }));
     }
-  }, []);
+    // Track board coordinates for the readout overlay
+    const svg = svgRef.current;
+    if (svg) {
+      const rect = svg.getBoundingClientRect();
+      const bx = (e.clientX - rect.left - panOffset.x) / zoom;
+      const by = (e.clientY - rect.top - panOffset.y) / zoom;
+      setMouseBoardPos({ x: Math.round(bx * 10) / 10, y: Math.round(by * 10) / 10 });
+    }
+  }, [panOffset, zoom]);
 
   const handleMouseUp = useCallback(() => {
     isPanning.current = false;
@@ -375,10 +404,12 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
 
       {/* SVG canvas */}
       <div
-        className="flex-1 overflow-hidden bg-background cursor-crosshair"
+        ref={containerRef}
+        className="flex-1 overflow-hidden bg-background cursor-crosshair relative"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
+        onMouseLeave={() => setMouseBoardPos(null)}
         onWheel={handleWheel}
         onKeyDown={handleKeyDown}
         tabIndex={0}
@@ -482,6 +513,34 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
             />
           </g>
         </svg>
+
+        {/* Coordinate readout */}
+        {mouseBoardPos && (
+          <div
+            className="absolute bottom-3 right-3 z-10 bg-card/70 backdrop-blur-sm border border-border px-2 py-1 pointer-events-none select-none"
+            data-testid="coordinate-readout"
+          >
+            <span className="text-[11px] font-mono tabular-nums text-[#00F0FF]">
+              X: {mouseBoardPos.x} &nbsp; Y: {mouseBoardPos.y}
+            </span>
+          </div>
+        )}
+
+        {/* BB-02 / BB-03: Empty state guidance when no components are placed */}
+        {(!instances || instances.filter(i => i.breadboardX != null).length === 0) && (
+          <div
+            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-card/80 backdrop-blur-xl border border-border px-4 py-2.5 shadow-lg max-w-sm text-center"
+            data-testid="breadboard-empty-guidance"
+          >
+            <div className="flex items-center gap-2 justify-center mb-1">
+              <Info className="w-4 h-4 text-primary shrink-0" />
+              <span className="text-xs font-medium text-foreground">Getting Started</span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Components from the Schematic view will appear here. Use the <strong>Wire tool (2)</strong> to route connections between pins, or <strong>double-click</strong> to finish a wire.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

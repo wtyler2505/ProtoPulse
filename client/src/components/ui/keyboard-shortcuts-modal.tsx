@@ -51,7 +51,33 @@ function ShortcutGroup({
   );
 }
 
-export function KeyboardShortcutsModal({
+function KeyCombo({ keys }: { keys: string[] }) {
+  return (
+    <span className="flex items-center gap-1">
+      {keys.map((k, i) => (
+        <span key={i} className="flex items-center gap-1">
+          {i > 0 && <span className="text-muted-foreground text-xs">+</span>}
+          <Kbd>{k}</Kbd>
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function AltCombo({ combos }: { combos: string[][] }) {
+  return (
+    <div className="flex items-center gap-2">
+      {combos.map((combo, i) => (
+        <span key={i} className="flex items-center gap-1">
+          {i > 0 && <span className="text-muted-foreground text-xs">/</span>}
+          <KeyCombo keys={combo} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+export default function KeyboardShortcutsModal({
   open,
   onOpenChange,
 }: KeyboardShortcutsModalProps) {
@@ -59,14 +85,14 @@ export function KeyboardShortcutsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="dialog-keyboard-shortcuts"
-        className="bg-card border-border max-w-md"
+        className="bg-card border-border max-w-lg max-h-[80vh] overflow-y-auto"
       >
         <DialogHeader>
           <DialogTitle data-testid="dialog-keyboard-shortcuts-title">
             Keyboard Shortcuts
           </DialogTitle>
           <DialogDescription>
-            Quick reference for available shortcuts.
+            Quick reference for available shortcuts across all views.
           </DialogDescription>
         </DialogHeader>
 
@@ -74,63 +100,23 @@ export function KeyboardShortcutsModal({
           <ShortcutGroup title="Architecture View">
             <ShortcutRow
               description="Undo"
-              keys={
-                <>
-                  <Kbd>Ctrl</Kbd>
-                  <span className="text-muted-foreground text-xs">+</span>
-                  <Kbd>Z</Kbd>
-                </>
-              }
+              keys={<KeyCombo keys={["Ctrl", "Z"]} />}
             />
             <ShortcutRow
               description="Redo"
-              keys={
-                <div className="flex items-center gap-2">
-                  <span className="flex items-center gap-1">
-                    <Kbd>Ctrl</Kbd>
-                    <span className="text-muted-foreground text-xs">+</span>
-                    <Kbd>Y</Kbd>
-                  </span>
-                  <span className="text-muted-foreground text-xs">/</span>
-                  <span className="flex items-center gap-1">
-                    <Kbd>Ctrl</Kbd>
-                    <span className="text-muted-foreground text-xs">+</span>
-                    <Kbd>Shift</Kbd>
-                    <span className="text-muted-foreground text-xs">+</span>
-                    <Kbd>Z</Kbd>
-                  </span>
-                </div>
-              }
+              keys={<AltCombo combos={[["Ctrl", "Y"], ["Ctrl", "Shift", "Z"]]} />}
             />
             <ShortcutRow
               description="Delete selected"
-              keys={
-                <div className="flex items-center gap-2">
-                  <Kbd>Delete</Kbd>
-                  <span className="text-muted-foreground text-xs">/</span>
-                  <Kbd>Backspace</Kbd>
-                </div>
-              }
+              keys={<AltCombo combos={[["Delete"], ["Backspace"]]} />}
             />
             <ShortcutRow
               description="Select all nodes"
-              keys={
-                <>
-                  <Kbd>Ctrl</Kbd>
-                  <span className="text-muted-foreground text-xs">+</span>
-                  <Kbd>A</Kbd>
-                </>
-              }
+              keys={<KeyCombo keys={["Ctrl", "A"]} />}
             />
             <ShortcutRow
               description="Paste"
-              keys={
-                <>
-                  <Kbd>Ctrl</Kbd>
-                  <span className="text-muted-foreground text-xs">+</span>
-                  <Kbd>V</Kbd>
-                </>
-              }
+              keys={<KeyCombo keys={["Ctrl", "V"]} />}
             />
             <ShortcutRow description="Fit view" keys={<Kbd>F</Kbd>} />
             <ShortcutRow description="Toggle snap grid" keys={<Kbd>G</Kbd>} />
@@ -138,7 +124,95 @@ export function KeyboardShortcutsModal({
 
           <div className="border-t border-border" />
 
-          <ShortcutGroup title="Navigation">
+          <ShortcutGroup title="Schematic View">
+            <ShortcutRow description="Select tool" keys={<Kbd>V</Kbd>} />
+            <ShortcutRow description="Pan tool" keys={<Kbd>H</Kbd>} />
+            <ShortcutRow description="Draw net/wire" keys={<Kbd>W</Kbd>} />
+            <ShortcutRow description="Toggle snap" keys={<Kbd>G</Kbd>} />
+            <ShortcutRow description="Fit view" keys={<Kbd>F</Kbd>} />
+            <ShortcutRow description="Cancel / deselect" keys={<Kbd>Esc</Kbd>} />
+          </ShortcutGroup>
+
+          <div className="border-t border-border" />
+
+          <ShortcutGroup title="Component Editor">
+            <ShortcutRow description="Select" keys={<Kbd>S</Kbd>} />
+            <ShortcutRow description="Rectangle" keys={<Kbd>R</Kbd>} />
+            <ShortcutRow description="Circle" keys={<Kbd>C</Kbd>} />
+            <ShortcutRow description="Text" keys={<Kbd>T</Kbd>} />
+            <ShortcutRow description="Line" keys={<Kbd>L</Kbd>} />
+            <ShortcutRow description="Pin" keys={<Kbd>P</Kbd>} />
+            <ShortcutRow description="Measure" keys={<Kbd>M</Kbd>} />
+            <ShortcutRow description="Path" keys={<Kbd>B</Kbd>} />
+            <ShortcutRow
+              description="Delete selected"
+              keys={<AltCombo combos={[["Delete"], ["Backspace"]]} />}
+            />
+            <ShortcutRow
+              description="Copy"
+              keys={<KeyCombo keys={["Ctrl", "C"]} />}
+            />
+            <ShortcutRow
+              description="Paste"
+              keys={<KeyCombo keys={["Ctrl", "V"]} />}
+            />
+            <ShortcutRow
+              description="Zoom to fit"
+              keys={<AltCombo combos={[["Ctrl", "0"], ["Home"]]} />}
+            />
+            <ShortcutRow
+              description="Save"
+              keys={<KeyCombo keys={["Ctrl", "S"]} />}
+            />
+            <ShortcutRow
+              description="Undo"
+              keys={<KeyCombo keys={["Ctrl", "Z"]} />}
+            />
+            <ShortcutRow
+              description="Redo"
+              keys={<AltCombo combos={[["Ctrl", "Y"], ["Ctrl", "Shift", "Z"]]} />}
+            />
+            <ShortcutRow description="Pan canvas" keys={<Kbd>Space</Kbd>} />
+            <ShortcutRow description="Finish path" keys={<Kbd>Enter</Kbd>} />
+            <ShortcutRow description="Cancel path" keys={<Kbd>Esc</Kbd>} />
+          </ShortcutGroup>
+
+          <div className="border-t border-border" />
+
+          <ShortcutGroup title="Breadboard View">
+            <ShortcutRow description="Select tool" keys={<Kbd>1</Kbd>} />
+            <ShortcutRow description="Wire tool" keys={<Kbd>2</Kbd>} />
+            <ShortcutRow description="Delete tool" keys={<Kbd>3</Kbd>} />
+            <ShortcutRow
+              description="Delete selected wire"
+              keys={<AltCombo combos={[["Delete"], ["Backspace"]]} />}
+            />
+            <ShortcutRow description="Cancel / deselect" keys={<Kbd>Esc</Kbd>} />
+          </ShortcutGroup>
+
+          <div className="border-t border-border" />
+
+          <ShortcutGroup title="PCB Layout View">
+            <ShortcutRow description="Select tool" keys={<Kbd>1</Kbd>} />
+            <ShortcutRow description="Trace tool" keys={<Kbd>2</Kbd>} />
+            <ShortcutRow description="Delete tool" keys={<Kbd>3</Kbd>} />
+            <ShortcutRow description="Flip active layer" keys={<Kbd>F</Kbd>} />
+            <ShortcutRow
+              description="Delete selected wire"
+              keys={<AltCombo combos={[["Delete"], ["Backspace"]]} />}
+            />
+            <ShortcutRow description="Cancel / deselect" keys={<Kbd>Esc</Kbd>} />
+          </ShortcutGroup>
+
+          <div className="border-t border-border" />
+
+          <ShortcutGroup title="Chat Panel">
+            <ShortcutRow description="Close panel" keys={<Kbd>Esc</Kbd>} />
+          </ShortcutGroup>
+
+          <div className="border-t border-border" />
+
+          <ShortcutGroup title="Global">
             <ShortcutRow
               description="Show this shortcuts dialog"
               keys={<Kbd>?</Kbd>}

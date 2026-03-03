@@ -93,7 +93,7 @@ function pinToBreadboardPixel(
   const baseY = inst.breadboardY;
 
   // Attempt to find the pin's terminal offset from the part definition
-  if (partsMap) {
+  if (partsMap && inst.partId != null) {
     const part = partsMap.get(inst.partId);
     if (part) {
       const connectors = (part.connectors ?? []) as Connector[];
@@ -125,7 +125,7 @@ function pinToSchematicPixel(
   const baseX = inst.schematicX;
   const baseY = inst.schematicY;
 
-  if (partsMap) {
+  if (partsMap && inst.partId != null) {
     const part = partsMap.get(inst.partId);
     if (part) {
       const connectors = (part.connectors ?? []) as Connector[];
@@ -220,6 +220,7 @@ function resolvePixelToPin(
       return;
     }
 
+    if (inst.partId == null) return;
     const part = partsMap.get(inst.partId);
     if (!part) return;
 

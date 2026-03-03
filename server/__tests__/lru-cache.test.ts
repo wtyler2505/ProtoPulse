@@ -1,12 +1,14 @@
 /**
  * LRU Cache Tests
  *
- * Tests for LRUClientCache in server/lib/lru-cache.ts.
+ * Tests for LRUClientCache in server/lib/lru-cache.ts
+ * and SimpleCache in server/cache.ts.
  * Runs in server project config (node environment).
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { LRUClientCache } from '../lib/lru-cache';
+import { SimpleCache, SWEEP_INTERVAL_MS } from '../cache';
 
 describe('LRUClientCache', () => {
   it('set and get returns the stored value', () => {
@@ -120,5 +122,166 @@ describe('LRUClientCache', () => {
     cache.set('second', 'S');
     expect(cache.get('first')).toBeUndefined();
     expect(cache.get('second')).toBe('S');
+  });
+});
+
+describe('SimpleCache (LRU eviction with TTL)', () => {
+  it('set and get returns the stored value', () => {
+    const cache = new SimpleCache(5, 60_000);
+    cache.set('key1', 'value1');
+    expect(cache.get<string>('key1')).toBe('value1');
+  });
+
+  it('get on a non-existent key returns undefined', () => {
+    const cache = new SimpleCache(5, 60_000);
+    expect(cache.get<string>('missing')).toBeUndefined();
+  });
+
+  it('evicts the least-recently-used key when maxSize is exceeded', () => {
+    const cache = new SimpleCache(3, 60_000);
+    cache.set('a', 'A');
+    cache.set('b', 'B');
+    cache.set('c', 'C');
+    // 'a' is the LRU; adding 'd' should evict 'a'
+    cache.set('d', 'D');
+    expect(cache.get<string>('a')).toBeUndefined();
+    expect(cache.get<string>('b')).toBe('B');
+    expect(cache.get<string>('c')).toBe('C');
+    expect(cache.get<string>('d')).toBe('D');
+  });
+
+  it('get refreshes a key so it is not the next eviction target', () => {
+    const cache = new SimpleCache(3, 60_000);
+    cache.set('a', 'A');
+    cache.set('b', 'B');
+    cache.set('c', 'C');
+    // Access 'a' to make it recently used
+    cache.get<string>('a');
+    // Now 'b' is the LRU — adding 'd' should evict 'b'
+    cache.set('d', 'D');
+    expect(cache.get<string>('b')).toBeUndefined();
+    expect(cache.get<string>('a')).toBe('A');
+    expect(cache.get<string>('c')).toBe('C');
+    expect(cache.get<string>('d')).toBe('D');
+  });
+
+  it('overwriting a key refreshes its recency', () => {
+    const cache = new SimpleCache(3, 60_000);
+    cache.set('a', 'A');
+    cache.set('b', 'B');
+    cache.set('c', 'C');
+    // Overwrite 'a' — it should become the most recently used
+    cache.set('a', 'A2');
+    // 'b' is now the LRU; adding 'd' should evict 'b'
+    cache.set('d', 'D');
+    expect(cache.get<string>('b')).toBeUndefined();
+    expect(cache.get<string>('a')).toBe('A2');
+    expect(cache.get<string>('c')).toBe('C');
+    expect(cache.get<string>('d')).toBe('D');
+  });
+
+  it('overwriting an existing key does not increase size', () => {
+    const cache = new SimpleCache(3, 60_000);
+    cache.set('a', 'A');
+    cache.set('b', 'B');
+    cache.set('c', 'C');
+    cache.set('a', 'A2');
+    expect(cache.size).toBe(3);
+    // All three keys should still be accessible
+    expect(cache.get<string>('a')).toBe('A2');
+    expect(cache.get<string>('b')).toBe('B');
+    expect(cache.get<string>('c')).toBe('C');
+  });
+
+  it('returns undefined for expired entries', () => {
+    vi.useFakeTimers();
+    try {
+      const cache = new SimpleCache(5, 100);
+      cache.set('key', 'value');
+      expect(cache.get<string>('key')).toBe('value');
+      vi.advanceTimersByTime(150);
+      expect(cache.get<string>('key')).toBeUndefined();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('invalidate removes keys matching a prefix', () => {
+    const cache = new SimpleCache(10, 60_000);
+    cache.set('nodes:1:a', 'A');
+    cache.set('nodes:1:b', 'B');
+    cache.set('nodes:2:a', 'C');
+    cache.invalidate('nodes:1');
+    expect(cache.get<string>('nodes:1:a')).toBeUndefined();
+    expect(cache.get<string>('nodes:1:b')).toBeUndefined();
+    expect(cache.get<string>('nodes:2:a')).toBe('C');
+  });
+
+  it('clear removes all entries', () => {
+    const cache = new SimpleCache(5, 60_000);
+    cache.set('a', 1);
+    cache.set('b', 2);
+    cache.clear();
+    expect(cache.size).toBe(0);
+    expect(cache.get<number>('a')).toBeUndefined();
+  });
+
+  it('size never exceeds maxSize', () => {
+    const cache = new SimpleCache(3, 60_000);
+    cache.set('a', 1);
+    cache.set('b', 2);
+    cache.set('c', 3);
+    cache.set('d', 4);
+    cache.set('e', 5);
+    expect(cache.size).toBe(3);
+  });
+
+  it('SWEEP_INTERVAL_MS is exported and equals 60 seconds', () => {
+    expect(SWEEP_INTERVAL_MS).toBe(60_000);
+  });
+
+  it('periodic sweep removes expired entries', () => {
+    vi.useFakeTimers();
+    try {
+      const cache = new SimpleCache(10, 200);
+      cache.startSweep(SWEEP_INTERVAL_MS);
+      cache.set('short', 'value', 200);
+      cache.set('long', 'value', 120_000);
+      expect(cache.size).toBe(2);
+      // Advance past TTL but not yet to sweep interval
+      vi.advanceTimersByTime(500);
+      // 'short' is expired but sweep hasn't run yet — still in store by size
+      // (get would return undefined due to lazy expiry, but the entry is still in the map)
+      expect(cache.size).toBe(2);
+      // Advance to trigger the sweep
+      vi.advanceTimersByTime(SWEEP_INTERVAL_MS);
+      // Sweep should have removed the expired 'short' entry
+      expect(cache.size).toBe(1);
+      expect(cache.get<string>('short')).toBeUndefined();
+      expect(cache.get<string>('long')).toBe('value');
+      cache.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('destroy clears the sweep interval and empties the store', () => {
+    vi.useFakeTimers();
+    try {
+      const cache = new SimpleCache(10, 200);
+      cache.startSweep(SWEEP_INTERVAL_MS);
+      cache.set('a', 'A');
+      cache.set('b', 'B');
+      cache.destroy();
+      expect(cache.size).toBe(0);
+      // After destroy, advancing timers should not cause errors
+      vi.advanceTimersByTime(SWEEP_INTERVAL_MS * 2);
+      // Cache should remain empty — sweep is stopped
+      cache.set('c', 'C');
+      expect(cache.size).toBe(1);
+      cache.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -14,10 +14,12 @@ export interface InstanceNodeData {
   [key: string]: unknown; // Required by @xyflow/react — all node data types must be indexable
 }
 
-const PIN_SPACING = 30;
-const PIN_STUB = 20;
-const BODY_MIN_WIDTH = 100;
-const BODY_PADDING = 10;
+const PIN_SPACING = 20;
+const PIN_STUB = 18;
+const BODY_MIN_WIDTH = 60;
+const BODY_PADDING = 6;
+/** Approximate character width for monospace pin labels at fontSize 9 */
+const CHAR_WIDTH = 5.5;
 
 function SchematicInstanceNode({
   data,
@@ -95,7 +97,7 @@ function CustomShapeSymbol({
       <div className="absolute -bottom-4 left-0 text-[9px] text-muted-foreground whitespace-nowrap">
         {partTitle}
       </div>
-      {connectors.map((conn) => {
+      {connectors.map((conn, connIdx) => {
         const pos: TerminalPosition | undefined =
           conn.terminalPositions?.['schematic'];
         if (!pos) return null;
@@ -109,19 +111,44 @@ function CustomShapeSymbol({
             : svgH / 2;
         const isLeft = px < svgW / 2;
         return (
-          <Handle
-            key={conn.id}
-            id={`pin-${conn.id}`}
-            type="source"
-            position={isLeft ? Position.Left : Position.Right}
-            style={{
-              left: px,
-              top: py,
-              transform: 'translate(-50%, -50%)',
-              position: 'absolute',
-            }}
-            className="!w-2 !h-2 !bg-primary/60 !border-primary hover:!bg-primary"
-          />
+          <div key={conn.id} data-testid={`pin-custom-${conn.id}`}>
+            {/* Internal pin name label */}
+            <div
+              className="absolute text-[8px] font-mono text-foreground font-medium pointer-events-none whitespace-nowrap"
+              style={{
+                left: isLeft ? px + 8 : px - 8,
+                top: py - 5,
+                transform: isLeft ? 'none' : 'translateX(-100%)',
+              }}
+              data-testid={`pin-label-${conn.id}`}
+            >
+              {conn.name}
+            </div>
+            {/* External pin number */}
+            <div
+              className="absolute text-[7px] font-mono text-muted-foreground pointer-events-none whitespace-nowrap"
+              style={{
+                left: isLeft ? px - 4 : px + 4,
+                top: py - 10,
+                transform: isLeft ? 'translateX(-100%)' : 'none',
+              }}
+              data-testid={`pin-number-${conn.id}`}
+            >
+              {connIdx + 1}
+            </div>
+            <Handle
+              id={`pin-${conn.id}`}
+              type="source"
+              position={isLeft ? Position.Left : Position.Right}
+              style={{
+                left: px,
+                top: py,
+                transform: 'translate(-50%, -50%)',
+                position: 'absolute',
+              }}
+              className="!w-2 !h-2 !bg-primary/60 !border-primary hover:!bg-primary"
+            />
+          </div>
         );
       })}
     </div>
@@ -151,7 +178,11 @@ function GenericICSymbol({
   const maxPins = Math.max(leftPins.length, rightPins.length, 1);
 
   const bodyH = maxPins * PIN_SPACING + BODY_PADDING * 2;
-  const bodyW = BODY_MIN_WIDTH;
+  // Compute body width from longest pin name on each side so labels fit inside
+  const maxLeftLen = leftPins.reduce((m, c) => Math.max(m, c.name.length), 0);
+  const maxRightLen = rightPins.reduce((m, c) => Math.max(m, c.name.length), 0);
+  const labelWidth = (maxLeftLen + maxRightLen) * CHAR_WIDTH + 24; // 24 = inner margins
+  const bodyW = Math.max(BODY_MIN_WIDTH, labelWidth);
   const totalW = bodyW + PIN_STUB * 2;
   const totalH = bodyH;
 
@@ -195,11 +226,11 @@ function GenericICSymbol({
           className="text-foreground"
         />
 
-        {/* Left pin stubs + labels */}
+        {/* Left pin stubs + internal name labels + external pin numbers */}
         {leftPins.map((conn, i) => {
           const y = pinY(i, leftPins.length);
           return (
-            <g key={`left-${conn.id}`}>
+            <g key={`left-${conn.id}`} data-testid={`pin-left-${conn.id}`}>
               <line
                 x1={0}
                 y1={y}
@@ -209,25 +240,40 @@ function GenericICSymbol({
                 strokeWidth={1}
                 className="text-muted-foreground"
               />
+              {/* Pin name inside body */}
               <text
-                x={PIN_STUB + 4}
+                x={PIN_STUB + 6}
                 y={y + 3}
                 fill="currentColor"
-                fontSize={8}
+                fontSize={9}
                 fontFamily="monospace"
-                className="text-muted-foreground"
+                className="text-foreground"
+                data-testid={`pin-label-${conn.id}`}
               >
                 {conn.name}
+              </text>
+              {/* Pin number outside body */}
+              <text
+                x={PIN_STUB - 3}
+                y={y - 4}
+                fill="currentColor"
+                fontSize={7}
+                fontFamily="monospace"
+                textAnchor="end"
+                className="text-muted-foreground"
+                data-testid={`pin-number-${conn.id}`}
+              >
+                {i + 1}
               </text>
             </g>
           );
         })}
 
-        {/* Right pin stubs + labels */}
+        {/* Right pin stubs + internal name labels + external pin numbers */}
         {rightPins.map((conn, i) => {
           const y = pinY(i, rightPins.length);
           return (
-            <g key={`right-${conn.id}`}>
+            <g key={`right-${conn.id}`} data-testid={`pin-right-${conn.id}`}>
               <line
                 x1={PIN_STUB + bodyW}
                 y1={y}
@@ -237,16 +283,30 @@ function GenericICSymbol({
                 strokeWidth={1}
                 className="text-muted-foreground"
               />
+              {/* Pin name inside body */}
               <text
-                x={PIN_STUB + bodyW - 4}
+                x={PIN_STUB + bodyW - 6}
                 y={y + 3}
                 fill="currentColor"
-                fontSize={8}
+                fontSize={9}
                 fontFamily="monospace"
                 textAnchor="end"
-                className="text-muted-foreground"
+                className="text-foreground"
+                data-testid={`pin-label-${conn.id}`}
               >
                 {conn.name}
+              </text>
+              {/* Pin number outside body */}
+              <text
+                x={PIN_STUB + bodyW + 3}
+                y={y - 4}
+                fill="currentColor"
+                fontSize={7}
+                fontFamily="monospace"
+                className="text-muted-foreground"
+                data-testid={`pin-number-${conn.id}`}
+              >
+                {leftPins.length + i + 1}
               </text>
             </g>
           );

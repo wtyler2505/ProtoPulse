@@ -36,9 +36,9 @@ function createTestQueryClient() {
       queries: {
         retry: false,
         gcTime: 0,
-        // Provide a default queryFn that returns an empty array, mirroring the
-        // real queryClient's getQueryFn but without hitting the network.
-        queryFn: async () => [],
+        // Provide a default queryFn that returns an empty envelope, mirroring the
+        // real server's { data, total } response shape.
+        queryFn: async () => ({ data: [], total: 0 }),
       },
       mutations: { retry: false },
     },
@@ -143,7 +143,7 @@ describe('BomContext', () => {
     await waitFor(() => {
       expect(mockedApiRequest).toHaveBeenCalledWith(
         'DELETE',
-        '/api/bom/42?projectId=1',
+        '/api/projects/1/bom/42',
       );
     });
   });
@@ -197,7 +197,7 @@ describe('BomContext', () => {
     await waitFor(() => {
       expect(mockedApiRequest).toHaveBeenCalledWith(
         'PATCH',
-        '/api/bom/7?projectId=1',
+        '/api/projects/1/bom/7',
         patchData,
       );
     });

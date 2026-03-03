@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -19,27 +19,37 @@ import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
 import type { ProjectHistoryItem } from '@/lib/project-context';
 
-interface HistoryListProps {
-  history: ProjectHistoryItem[];
-  timelineExpanded: boolean;
-  setTimelineExpanded: (v: boolean) => void;
+const getActionIcon = (action: string) => {
+  if (/Created|New/i.test(action)) return Plus;
+  if (/Added|Add/i.test(action)) return PlusCircle;
+  if (/Connected|Connect|Edge|Wire/i.test(action)) return Link;
+  if (/Removed|Delete|Remove/i.test(action)) return Trash2;
+  if (/Updated|Renamed|Changed/i.test(action)) return Edit3;
+  if (/Validated|Validation|Check/i.test(action)) return ShieldCheck;
+  if (/Generated|Generate/i.test(action)) return Sparkles;
+  return Clock;
+};
+
+const getActionColor = (item: ProjectHistoryItem): string => {
+  if (/Added|Created/i.test(item.action)) return '#22c55e';
+  if (/Removed|Delete/i.test(item.action)) return '#ef4444';
+  if (item.user === 'AI') return '#06b6d4';
+  if (/Connected|Wire/i.test(item.action)) return '#3b82f6';
+  if (/Updated|Changed/i.test(item.action)) return '#f59e0b';
+  return '#71717a';
+};
+
+interface HistoryItemProps {
+  item: ProjectHistoryItem;
+  isExpanded: boolean;
+  isLastInGroup: boolean;
+  onToggleExpand: (id: string) => void;
   addOutputLog: (msg: string) => void;
 }
 
-export default function HistoryList({
-  history,
-  timelineExpanded,
-  setTimelineExpanded,
-  addOutputLog,
-}: HistoryListProps) {
-  const [timelineFilter, setTimelineFilter] = useState<'all' | 'User' | 'AI'>('all');
-  const [expandedTimelineItem, setExpandedTimelineItem] = useState<string | null>(null);
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => setTick(t => t + 1), 60000);
-    return () => clearInterval(timer);
-  }, []);
+const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup, onToggleExpand, addOutputLog }: HistoryItemProps) {
+  const IconComp = getActionIcon(item.action);
+  const color = getActionColor(item);
 
   const formatRelativeTime = (isoStr: string): string => {
     const now = new Date();
@@ -64,25 +74,114 @@ export default function HistoryList({
       ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   };
 
-  const getActionIcon = (action: string) => {
-    if (/Created|New/i.test(action)) return Plus;
-    if (/Added|Add/i.test(action)) return PlusCircle;
-    if (/Connected|Connect|Edge|Wire/i.test(action)) return Link;
-    if (/Removed|Delete|Remove/i.test(action)) return Trash2;
-    if (/Updated|Renamed|Changed/i.test(action)) return Edit3;
-    if (/Validated|Validation|Check/i.test(action)) return ShieldCheck;
-    if (/Generated|Generate/i.test(action)) return Sparkles;
-    return Clock;
-  };
+  return (
+    <div key={item.id} className="relative">
+      {!isLastInGroup && (
+        <div
+          className="absolute left-[5px] top-[18px] bottom-0 w-px z-0"
+          style={{ backgroundColor: color }}
+        />
+      )}
+      <div
+        role="button"
+        aria-label={`View details: ${item.action}`}
+        className="relative pl-6 py-1.5 group/item cursor-pointer"
+        onClick={() => onToggleExpand(item.id)}
+        data-testid={`timeline-item-${item.id}`}
+      >
+        <div className="absolute left-0 top-[6px] z-10 flex items-center justify-center w-3 h-3">
+          <IconComp className="w-3 h-3" style={{ color }} />
+        </div>
 
-  const getActionColor = (item: ProjectHistoryItem): string => {
-    if (/Added|Created/i.test(item.action)) return '#22c55e';
-    if (/Removed|Delete/i.test(item.action)) return '#ef4444';
-    if (item.user === 'AI') return '#06b6d4';
-    if (/Connected|Wire/i.test(item.action)) return '#3b82f6';
-    if (/Updated|Changed/i.test(item.action)) return '#f59e0b';
-    return '#71717a';
-  };
+        <button
+          aria-label="Undo action"
+          data-testid={`timeline-undo-${item.id}`}
+          className="absolute right-0 top-1.5 opacity-60 hover:opacity-100 transition-opacity p-0.5 hover:bg-muted/50 focus-ring"
+          onClick={(e) => {
+            e.stopPropagation();
+            addOutputLog('[TIMELINE] Undo requested: ' + item.action);
+          }}
+        >
+          <RotateCcw className="w-[10px] h-[10px] text-muted-foreground hover:text-foreground transition-colors" />
+        </button>
+
+        {isExpanded ? (
+          <div className="border border-border/50 bg-muted/20 p-2 mr-4">
+            <div className="text-xs font-medium text-foreground mb-1">{item.action}</div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className={cn(
+                "text-[9px] px-1.5 py-0.5 border",
+                item.user === 'AI'
+                  ? "bg-primary/20 text-primary border-primary/30"
+                  : "bg-muted/50 text-muted-foreground border-border/50"
+              )}>{item.user}</span>
+              <span className="text-[10px] text-muted-foreground">{formatExactTime(item.timestamp)}</span>
+            </div>
+            <div className="flex items-center gap-1 mt-1.5">
+              <button
+                aria-label="Copy details"
+                className="text-[10px] px-1.5 py-0.5 bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1 focus-ring"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(item.action);
+                  addOutputLog(`[TIMELINE] Copied: ${item.action}`);
+                }}
+              >
+                <Copy className="w-2.5 h-2.5" />
+                Copy
+              </button>
+              <button
+                aria-label="Close details"
+                className="text-[10px] px-1.5 py-0.5 bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1 focus-ring"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand(item.id);
+                }}
+              >
+                <X className="w-2.5 h-2.5" />
+                Close
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="text-xs font-medium text-foreground group-hover/item:text-primary transition-colors truncate pr-4" title={item.action}>{item.action}</div>
+            <div className="text-[11px] text-muted-foreground flex justify-between pr-4">
+              <span>{item.user}</span>
+              <span>{formatRelativeTime(item.timestamp)}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+});
+
+interface HistoryListProps {
+  history: ProjectHistoryItem[];
+  timelineExpanded: boolean;
+  setTimelineExpanded: (v: boolean) => void;
+  addOutputLog: (msg: string) => void;
+}
+
+export default function HistoryList({
+  history,
+  timelineExpanded,
+  setTimelineExpanded,
+  addOutputLog,
+}: HistoryListProps) {
+  const [timelineFilter, setTimelineFilter] = useState<'all' | 'User' | 'AI'>('all');
+  const [expandedTimelineItem, setExpandedTimelineItem] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick(t => t + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleToggleExpand = useCallback((id: string) => {
+    setExpandedTimelineItem((prev) => (prev === id ? null : id));
+  }, []);
 
   const getTimePeriod = (isoStr: string): string => {
     const now = new Date();
@@ -126,7 +225,7 @@ export default function HistoryList({
         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
           <History className="w-3 h-3" />
           Timeline
-          <span className="text-[10px] bg-muted/50 px-1.5 py-0.5 ml-1">({filteredHistory.length})</span>
+          <span className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-1.5 py-0.5 ml-auto tabular-nums">{filteredHistory.length}</span>
         </span>
       </div>
 
@@ -135,11 +234,12 @@ export default function HistoryList({
           <button
             key={filter}
             data-testid={`timeline-filter-${filter}`}
+            aria-label={`Filter timeline: ${filter === 'all' ? 'All' : filter}`}
             className={cn(
-              "text-[10px] px-2 py-0.5 border transition-colors",
+              "text-xs px-3 min-h-[32px] border font-medium transition-colors focus-ring",
               timelineFilter === filter
-                ? "bg-primary/20 text-primary border-primary/30"
-                : "bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/50"
+                ? "bg-accent text-accent-foreground border-primary/40"
+                : "bg-muted/30 text-muted-foreground border-border hover:bg-muted/50 hover:text-foreground"
             )}
             onClick={() => setTimelineFilter(filter)}
           >
@@ -151,9 +251,9 @@ export default function HistoryList({
       <div className="px-4 relative">
         <div className="flex items-center gap-2 mb-3" data-testid="timeline-live-indicator">
           <div className={cn(
-            "w-2 h-2 shrink-0",
+            "w-2.5 h-2.5 rounded-full shrink-0",
             hasRecentActivity
-              ? "bg-cyan-400 animate-pulse shadow-[0_0_6px_rgba(6,182,212,0.6)]"
+              ? "bg-cyan-400 animate-pulse shadow-[0_0_8px_2px_rgba(6,182,212,0.6)]"
               : "bg-muted-foreground/50"
           )} />
           {hasRecentActivity && (
@@ -165,97 +265,20 @@ export default function HistoryList({
           <div key={group.period}>
             <div className="flex items-center gap-2 mb-2 mt-1">
               <div className="h-px flex-1 bg-border/50" />
-              <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70 font-semibold">{group.period}</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{group.period}</span>
               <div className="h-px flex-1 bg-border/50" />
             </div>
             <div className="relative space-y-0">
-              {group.items.map((item, itemIdx) => {
-                const IconComp = getActionIcon(item.action);
-                const color = getActionColor(item);
-                const isExpanded = expandedTimelineItem === item.id;
-                const isLastInGroup = itemIdx === group.items.length - 1;
-                return (
-                  <div key={item.id} className="relative">
-                    {!isLastInGroup && (
-                      <div
-                        className="absolute left-[5px] top-[18px] bottom-0 w-px z-0"
-                        style={{ backgroundColor: color }}
-                      />
-                    )}
-                    <div
-                      role="button"
-                      aria-label={`View details: ${item.action}`}
-                      className="relative pl-6 py-1.5 group/item cursor-pointer"
-                      onClick={() => setExpandedTimelineItem(isExpanded ? null : item.id)}
-                      data-testid={`timeline-item-${item.id}`}
-                    >
-                      <div className="absolute left-0 top-[6px] z-10 flex items-center justify-center w-3 h-3">
-                        <IconComp className="w-3 h-3" style={{ color }} />
-                      </div>
-
-                      <button
-                        aria-label="Undo action"
-                        data-testid={`timeline-undo-${item.id}`}
-                        className="absolute right-0 top-1.5 opacity-0 group-hover/item:opacity-100 transition-opacity p-0.5 hover:bg-muted/50"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          addOutputLog('[TIMELINE] Undo requested: ' + item.action);
-                        }}
-                      >
-                        <RotateCcw className="w-[10px] h-[10px] text-muted-foreground" />
-                      </button>
-
-                      {isExpanded ? (
-                        <div className="border border-border/50 bg-muted/20 p-2 mr-4">
-                          <div className="text-xs font-medium text-foreground mb-1">{item.action}</div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={cn(
-                              "text-[9px] px-1.5 py-0.5 border",
-                              item.user === 'AI'
-                                ? "bg-primary/20 text-primary border-primary/30"
-                                : "bg-muted/50 text-muted-foreground border-border/50"
-                            )}>{item.user}</span>
-                            <span className="text-[10px] text-muted-foreground">{formatExactTime(item.timestamp)}</span>
-                          </div>
-                          <div className="flex items-center gap-1 mt-1.5">
-                            <button
-                              aria-label="Copy details"
-                              className="text-[10px] px-1.5 py-0.5 bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                copyToClipboard(item.action);
-                                addOutputLog(`[TIMELINE] Copied: ${item.action}`);
-                              }}
-                            >
-                              <Copy className="w-2.5 h-2.5" />
-                              Copy
-                            </button>
-                            <button
-                              aria-label="Close details"
-                              className="text-[10px] px-1.5 py-0.5 bg-muted/30 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex items-center gap-1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setExpandedTimelineItem(null);
-                              }}
-                            >
-                              <X className="w-2.5 h-2.5" />
-                              Close
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="text-xs font-medium text-foreground group-hover/item:text-primary transition-colors truncate pr-4">{item.action}</div>
-                          <div className="text-[10px] text-muted-foreground flex justify-between pr-4">
-                            <span>{item.user}</span>
-                            <span>{formatRelativeTime(item.timestamp)}</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              {group.items.map((item, itemIdx) => (
+                <HistoryItem
+                  key={item.id}
+                  item={item}
+                  isExpanded={expandedTimelineItem === item.id}
+                  isLastInGroup={itemIdx === group.items.length - 1}
+                  onToggleExpand={handleToggleExpand}
+                  addOutputLog={addOutputLog}
+                />
+              ))}
             </div>
           </div>
         ))}
@@ -264,7 +287,8 @@ export default function HistoryList({
         <div className="px-4 mt-2">
           <button
             data-testid="timeline-show-more"
-            className="text-xs text-primary hover:text-primary/80 transition-colors w-full text-left pl-6 py-1 flex items-center gap-1"
+            aria-label={timelineExpanded ? 'Show fewer timeline entries' : `Show ${hiddenCount} more timeline entries`}
+            className="text-xs text-primary hover:text-primary/80 transition-colors w-full text-left pl-6 py-1 flex items-center gap-1 focus-ring"
             onClick={() => setTimelineExpanded(!timelineExpanded)}
           >
             {timelineExpanded ? (

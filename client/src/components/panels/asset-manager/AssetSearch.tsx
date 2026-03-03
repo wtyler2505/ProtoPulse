@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, memo } from 'react';
 import {
   Search, X, ArrowUpDown, Component,
 } from 'lucide-react';
@@ -46,7 +46,8 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
               <StyledTooltip content="Close asset library" side="bottom">
                   <button
                     data-testid="asset-manager-close"
-                    className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Close asset library"
+                    className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-ring"
                     onClick={onClose}
                   >
                     <X className="w-4 h-4" />
@@ -60,8 +61,9 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               ref={ref}
-              className="w-full pl-8 pr-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors"
+              className="w-full pl-8 pr-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors focus-ring"
               placeholder="Search parts... ( / )"
+              aria-label="Search parts"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               data-testid="asset-search"
@@ -70,7 +72,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
           <StyledTooltip content={`Sort: ${sortBy === 'name' ? 'Alphabetical' : sortBy === 'category' ? 'By Category' : 'Recently Used'}`} side="bottom">
               <button
                 onClick={cycleSortBy}
-                className="p-1.5 bg-muted/50 border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors flex items-center gap-1"
+                className="p-1.5 bg-muted/50 border border-border text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors flex items-center gap-1 focus-ring"
                 data-testid="asset-sort"
                 aria-label="Sort assets"
               >
@@ -88,7 +90,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
                 <button
                   onClick={() => setActiveCategory(cat.id)}
                   className={cn(
-                    "relative p-1.5 transition-colors flex flex-col items-center",
+                    "relative p-1.5 transition-colors flex flex-col items-center focus-ring",
                     showLabels && "px-2 py-2",
                     activeCategory === cat.id ? 'bg-primary/20 text-primary' : 'text-muted-foreground hover:bg-muted'
                   )}
@@ -96,7 +98,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
                   title={cat.label}
                   aria-label={cat.label}
                 >
-                  <cat.icon className="w-4 h-4" />
+                  <cat.icon className="w-5 h-5" />
                   {showLabels && <span className="text-[8px] mt-0.5">{cat.label.length > 8 ? cat.label.slice(0, 7) + '…' : cat.label}</span>}
                   <span className="absolute -top-1 -right-1 w-3.5 h-3.5 flex items-center justify-center text-[9px] bg-[#21212199] text-[#dbdbdb]">
                     {search ? counts.filtered : counts.total}
@@ -112,4 +114,4 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
 
 AssetSearch.displayName = 'AssetSearch';
 
-export default AssetSearch;
+export default memo(AssetSearch);

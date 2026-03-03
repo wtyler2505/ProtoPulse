@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 import { generate, type GeneratorResult, type GeneratorConfig } from '@/lib/component-editor/generators';
 import { SHAPE_TEMPLATES, type ShapeTemplate } from '@/lib/component-editor/shape-templates';
 
@@ -151,16 +152,16 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
           <div>
             <Label className="text-sm font-semibold">Quick Templates</Label>
             <p className="text-xs text-muted-foreground mb-2">Click a template to instantly add it</p>
-            {CATEGORY_ORDER.filter(cat => templateGroups[cat]).map(cat => (
-              <div key={cat} className="mb-2">
-                <span className="text-xs text-muted-foreground font-medium" data-testid={`template-category-${cat}`}>{CATEGORY_LABELS[cat]}</span>
-                <div className="grid grid-cols-2 gap-1.5 mt-1">
+            {CATEGORY_ORDER.filter(cat => templateGroups[cat]).map((cat, idx) => (
+              <div key={cat} className={cn("pb-3", idx > 0 && "pt-3 border-t border-border/50")}>
+                <span className="text-sm font-medium text-muted-foreground block mb-2" data-testid={`template-category-${cat}`}>{CATEGORY_LABELS[cat]}</span>
+                <div className="grid grid-cols-2 gap-2">
                   {templateGroups[cat].map(template => (
                     <button
                       key={template.id}
                       data-testid={`template-card-${template.id}`}
                       onClick={() => handleTemplateClick(template)}
-                      className="text-left rounded-md border border-border bg-card p-2 hover:bg-accent hover:border-accent-foreground/20 transition-colors cursor-pointer"
+                      className="text-left rounded-md border border-border bg-card p-2.5 hover:bg-accent hover:border-accent-foreground/20 transition-colors cursor-pointer"
                     >
                       <span className="text-sm font-medium block leading-tight">{template.name}</span>
                       <span className="text-xs text-muted-foreground leading-tight">{template.description}</span>

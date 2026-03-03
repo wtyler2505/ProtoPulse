@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import {
   Plus, Star, Check, ExternalLink, Package, ChevronDown, ChevronRight,
   Copy, GripVertical, Clock,
@@ -46,7 +46,7 @@ interface AssetGridProps {
   handleBatchAdd: () => void;
 }
 
-export default function AssetGrid({
+const AssetGrid = memo(function AssetGrid({
   filteredAssets,
   allAssets,
   favorites,
@@ -130,7 +130,7 @@ export default function AssetGrid({
             onDoubleClick={() => handleAddNode(asset.type, asset.name, asset.id)}
             onClick={(e) => handleAssetClick(e, asset, index)}
             className={cn(
-              "p-2 border cursor-grab active:cursor-grabbing group transition-all",
+              "p-2 border cursor-grab active:cursor-grabbing group transition-all focus-ring",
               isExpanded ? "bg-muted/30 border-primary/30" : "bg-muted/20 border-transparent hover:border-primary/50 hover:bg-muted/40",
               isSelected && "border-primary bg-primary/10",
               isFocused && "ring-1 ring-primary/50"
@@ -161,11 +161,11 @@ export default function AssetGrid({
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleAddNode(asset.type, asset.name, asset.id); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-primary"
+                  className="opacity-60 hover:opacity-100 transition-opacity hover:text-primary"
                   data-testid={`button-add-asset-${asset.id}`}
                   aria-label="Add to canvas"
                 >
-                  <Plus className="w-3 h-3 text-muted-foreground hover:text-primary" />
+                  <Plus className="w-3.5 h-3.5 text-muted-foreground hover:text-primary" />
                 </button>
               </div>
             </div>
@@ -199,6 +199,7 @@ export default function AssetGrid({
                   {asset.datasheet && (
                     <button
                       onClick={(e) => { e.stopPropagation(); window.open(asset.datasheet, '_blank', 'noopener,noreferrer'); }}
+                      aria-label={`Open datasheet for ${asset.name}`}
                       className="text-[9px] px-2 py-1 bg-primary/20 text-primary hover:bg-primary/30 transition-colors flex items-center gap-1"
                     >
                       <ExternalLink className="w-2.5 h-2.5" /> Datasheet
@@ -206,12 +207,14 @@ export default function AssetGrid({
                   )}
                   <button
                     onClick={(e) => { e.stopPropagation(); handleAddNode(asset.type, asset.name, asset.id); }}
+                    aria-label={`Add ${asset.name} to canvas`}
                     className="text-[9px] px-2 py-1 bg-primary/20 text-primary hover:bg-primary/30 transition-colors flex items-center gap-1"
                   >
                     <Plus className="w-2.5 h-2.5" /> Add to Canvas
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); addOutputLog(`[BOM] Added ${asset.name} to BOM`); }}
+                    aria-label={`Add ${asset.name} to BOM`}
                     className="text-[9px] px-2 py-1 bg-muted/50 text-muted-foreground hover:bg-muted/80 transition-colors flex items-center gap-1"
                   >
                     <Package className="w-2.5 h-2.5" /> Add to BOM
@@ -253,6 +256,7 @@ export default function AssetGrid({
           <div data-testid="asset-favorites-section" className="mb-2">
             <button
               onClick={() => setFavoritesOpen(!favoritesOpen)}
+              aria-label={favoritesOpen ? 'Collapse favorites' : 'Expand favorites'}
               className="flex items-center gap-1 text-[10px] text-yellow-400 font-medium mb-1 w-full hover:text-yellow-300 transition-colors"
             >
               {favoritesOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -271,6 +275,7 @@ export default function AssetGrid({
           <div data-testid="asset-recent-section" className="mb-2">
             <button
               onClick={() => setRecentOpen(!recentOpen)}
+              aria-label={recentOpen ? 'Collapse recently used' : 'Expand recently used'}
               className="flex items-center gap-1 text-[10px] text-muted-foreground font-medium mb-1 w-full hover:text-foreground transition-colors"
             >
               {recentOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
@@ -299,12 +304,14 @@ export default function AssetGrid({
             <div className="flex gap-2">
               <button
                 onClick={() => { setSearch(''); setActiveCategory('all'); }}
+                aria-label="Clear filters"
                 className="text-[10px] px-3 py-1.5 bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
               >
                 Clear filters
               </button>
               <button
                 onClick={() => setShowCustomForm(true)}
+                aria-label="Add custom part"
                 className="text-[10px] px-3 py-1.5 bg-primary/20 text-primary hover:bg-primary/30 transition-colors"
               >
                 Add custom part
@@ -323,11 +330,13 @@ export default function AssetGrid({
             <input
               className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors"
               placeholder="Part name *"
+              aria-label="Custom part name"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
             />
             <select
               className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors"
+              aria-label="Custom part category"
               value={customType}
               onChange={(e) => setCustomType(e.target.value)}
             >
@@ -338,6 +347,7 @@ export default function AssetGrid({
             <textarea
               className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors resize-none"
               placeholder="Description"
+              aria-label="Custom part description"
               rows={2}
               value={customDesc}
               onChange={(e) => setCustomDesc(e.target.value)}
@@ -346,12 +356,14 @@ export default function AssetGrid({
               <button
                 onClick={handleCustomSubmit}
                 disabled={!customName.trim()}
+                aria-label="Submit custom part"
                 className="flex-1 text-[10px] px-2 py-1.5 bg-primary/20 text-primary hover:bg-primary/30 transition-colors disabled:opacity-50"
               >
                 Add Part
               </button>
               <button
                 onClick={() => { setShowCustomForm(false); setCustomName(''); setCustomType('mcu'); setCustomDesc(''); }}
+                aria-label="Cancel custom part form"
                 className="flex-1 text-[10px] px-2 py-1.5 bg-muted/50 text-muted-foreground hover:bg-muted/80 transition-colors"
               >
                 Cancel
@@ -365,6 +377,7 @@ export default function AssetGrid({
             onClick={() => setShowCustomForm(true)}
             className="w-full mt-2 p-2 border border-dashed border-border hover:border-primary/50 text-muted-foreground hover:text-primary text-[10px] flex items-center justify-center gap-1 transition-colors"
             data-testid="asset-add-custom"
+            aria-label="Add custom part"
           >
             <Plus className="w-3 h-3" /> Add Custom Part
           </button>
@@ -377,12 +390,14 @@ export default function AssetGrid({
         >
           <button
             onClick={handleBatchAdd}
+            aria-label={`Add ${selectedAssets.size} selected assets to canvas`}
             className="text-[10px] px-3 py-1.5 bg-primary/30 text-primary hover:bg-primary/40 transition-colors font-medium"
           >
             Add {selectedAssets.size} to Canvas
           </button>
           <button
             onClick={() => setSelectedAssets(new Set())}
+            aria-label="Clear selection"
             className="text-[10px] px-2 py-1.5 text-muted-foreground hover:text-foreground transition-colors"
           >
             Clear
@@ -391,4 +406,6 @@ export default function AssetGrid({
       )}
     </>
   );
-}
+});
+
+export default AssetGrid;

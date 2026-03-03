@@ -1,4 +1,5 @@
-import { useState, useMemo, useRef } from 'react';
+import { Component, useState, useMemo, useRef, memo } from 'react';
+import type { ReactNode, ErrorInfo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useValidation } from '@/lib/contexts/validation-context';
 import { useOutput } from '@/lib/contexts/output-context';
@@ -26,14 +27,101 @@ import { buttonVariants } from '@/components/ui/button';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import { validatePart } from '@/lib/component-editor/validation';
 import { runDRC, getDefaultDRCRules } from '@/lib/component-editor/drc';
-import type { PartState } from '@shared/component-types';
+import type { PartState, PartMeta, ViewData, PartViews } from '@shared/component-types';
 import { useCircuitDesigns, useCircuitInstances, useCircuitNets } from '@/lib/circuit-editor/hooks';
 import { runERC, type ERCInput } from '@/lib/circuit-editor/erc-engine';
 import { DEFAULT_ERC_RULES, DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
-import type { ERCViolation, CircuitSettings } from '@shared/circuit-types';
+import type { CircuitSettings } from '@shared/circuit-types';
 import type { ComponentPart } from '@shared/schema';
 
+/** Safely build a PartState from a ComponentPart DB row, providing defaults for nullable JSON fields. */
+function toPartState(part: ComponentPart): PartState {
+  const defaultMeta: PartMeta = { title: '', tags: [], mountingType: '', properties: [] };
+  const defaultViewData: ViewData = { shapes: [] };
+  const defaultViews: PartViews = {
+    breadboard: defaultViewData,
+    schematic: defaultViewData,
+    pcb: defaultViewData,
+  };
+  return {
+    meta: part.meta ? { ...defaultMeta, ...(part.meta as PartMeta) } : defaultMeta,
+    connectors: Array.isArray(part.connectors) ? (part.connectors as PartState['connectors']) : [],
+    buses: Array.isArray(part.buses) ? (part.buses as PartState['buses']) : [],
+    views: part.views ? { ...defaultViews, ...(part.views as PartViews) } : defaultViews,
+    constraints: Array.isArray(part.constraints) ? (part.constraints as PartState['constraints']) : undefined,
+  };
+}
+
+interface ValidationBoundaryProps {
+  children: ReactNode;
+}
+
+interface ValidationBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ValidationErrorBoundary extends Component<ValidationBoundaryProps, ValidationBoundaryState> {
+  constructor(props: ValidationBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ValidationBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.warn('[ValidationView] Error caught by boundary:', error.message, info.componentStack);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      const isDev = import.meta.env.DEV;
+      return (
+        <div
+          data-testid="validation-error-boundary"
+          className="flex items-center justify-center h-full w-full bg-background text-muted-foreground p-8"
+        >
+          <div className="text-center space-y-4 max-w-md">
+            <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto" />
+            <h3 className="text-base font-semibold text-foreground">
+              Something went wrong loading the Validation view
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              The validation engine encountered an unexpected error. This may be caused by
+              malformed component data or a missing resource. Try again, or check the browser
+              console for details.
+            </p>
+            {isDev && this.state.error && (
+              <pre className="mt-2 p-3 bg-destructive/10 border border-destructive/20 text-destructive text-xs text-left overflow-auto max-h-32 rounded">
+                {this.state.error.message}
+              </pre>
+            )}
+            <button
+              data-testid="validation-retry-button"
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="px-6 py-2 bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors focus-ring"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function ValidationView() {
+  return (
+    <ValidationErrorBoundary>
+      <ValidationViewContent />
+    </ValidationErrorBoundary>
+  );
+}
+
+function ValidationViewContent() {
   const { issues, runValidation, deleteValidationIssue } = useValidation();
   const { addOutputLog } = useOutput();
   const { setActiveView } = useProjectMeta();
@@ -45,14 +133,8 @@ export default function ValidationView() {
   const componentIssues = useMemo(() => {
     if (!componentParts || componentParts.length === 0) return [];
     return componentParts.flatMap((part) => {
-      const partState: PartState = {
-        meta: part.meta as PartState['meta'],
-        connectors: part.connectors as PartState['connectors'],
-        buses: part.buses as PartState['buses'],
-        views: part.views as PartState['views'],
-        constraints: part.constraints as PartState['constraints'],
-      };
-      const partName = partState.meta?.title || `Part #${part.id}`;
+      const partState = toPartState(part);
+      const partName = partState.meta.title || `Part #${part.id}`;
       return validatePart(partState).map((issue) => ({
         id: issue.id,
         severity: issue.severity,
@@ -69,14 +151,8 @@ export default function ValidationView() {
     if (!componentParts || componentParts.length === 0) return [];
     const views = ['breadboard', 'schematic', 'pcb'] as const;
     return componentParts.flatMap((part) => {
-      const partState: PartState = {
-        meta: part.meta as PartState['meta'],
-        connectors: part.connectors as PartState['connectors'],
-        buses: part.buses as PartState['buses'],
-        views: part.views as PartState['views'],
-        constraints: part.constraints as PartState['constraints'],
-      };
-      const partName = partState.meta?.title || `Part #${part.id}`;
+      const partState = toPartState(part);
+      const partName = partState.meta.title || `Part #${part.id}`;
       return views.flatMap((view) => {
         if (!partState.views[view]?.shapes?.length) return [];
         return runDRC(partState, drcDefaultRules, view).map((v) => ({
@@ -142,7 +218,7 @@ export default function ValidationView() {
             <button 
               data-testid="run-drc-checks"
               onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
-              className="px-6 py-2 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)]"
+              className="px-6 py-2 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] focus-ring"
             >
               Run DRC Checks
             </button>
@@ -209,7 +285,7 @@ type VirtualRow =
   | { type: 'drc'; issue: DRCIssue }
   | { type: 'erc'; issue: ERCIssue };
 
-function VirtualizedIssueList({
+const VirtualizedIssueList = memo(function VirtualizedIssueList({
   issues, componentIssues, drcIssues, ercIssues, hasComponentParts, getIcon,
   deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
 }: {
@@ -272,7 +348,7 @@ function VirtualizedIssueList({
         </p>
         <button
           onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
-          className="mt-4 px-4 py-2 text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+          className="mt-4 px-4 py-2 text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors focus-ring"
           data-testid="button-run-drc-empty"
         >
           Run DRC Checks
@@ -439,7 +515,7 @@ function VirtualizedIssueList({
       </div>
     </div>
   );
-}
+});
 
 function ActivityIcon() {
   return (

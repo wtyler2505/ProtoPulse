@@ -7,7 +7,8 @@ export function useComponentParts(projectId: number) {
     queryKey: ['component-parts', projectId],
     queryFn: async () => {
       const res = await apiRequest('GET', `/api/projects/${projectId}/component-parts`);
-      return res.json();
+      const json = await res.json() as { data: ComponentPart[]; total: number };
+      return json.data;
     },
   });
 }

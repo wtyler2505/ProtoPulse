@@ -10,6 +10,11 @@ export default defineConfig({
       '@shared': path.resolve(import.meta.dirname, 'shared'),
     },
   },
+  css: {
+    postcss: {
+      plugins: [],
+    },
+  },
   test: {
     projects: [
       {
@@ -18,8 +23,8 @@ export default defineConfig({
           name: 'server',
           environment: 'node',
           include: ['server/**/*.test.ts'],
-          // api.test.ts uses node:test runner (not Vitest) — exclude to avoid conflicts
-          exclude: ['server/__tests__/api.test.ts'],
+          // scrypt-based auth tests need headroom — each hash is ~2-3s at N=16384
+          testTimeout: 15000,
         },
       },
       {
@@ -29,6 +34,14 @@ export default defineConfig({
           environment: 'happy-dom',
           include: ['client/**/*.test.ts', 'client/**/*.test.tsx'],
           setupFiles: ['client/src/test-setup.ts'],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'shared',
+          environment: 'node',
+          include: ['shared/**/*.test.ts'],
         },
       },
     ],

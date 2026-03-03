@@ -19,7 +19,7 @@ export function HistoryProvider({ seeded, children }: { seeded: boolean; childre
   const historyQuery = useQuery({
     queryKey: [`/api/projects/${projectId}/history`],
     enabled: seeded,
-    select: (data: Array<{ id: number | string; action: string; user: 'User' | 'AI'; timestamp: string }>) => data.map((item): ProjectHistoryItem => ({
+    select: (response: { data: Array<{ id: number | string; action: string; user: 'User' | 'AI'; timestamp: string }>; total: number }) => response.data.map((item): ProjectHistoryItem => ({
       id: String(item.id),
       action: item.action,
       user: item.user,

@@ -4,11 +4,23 @@ import { apiRequest } from '@/lib/queryClient';
 import type { ChatMessage } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 
+export interface ChatBranch {
+  branchId: string;
+  parentMessageId: number | null;
+  messageCount: number;
+  createdAt: string | null;
+}
+
 interface ChatState {
   messages: ChatMessage[];
   addMessage: (msg: ChatMessage | string) => void;
   isGenerating: boolean;
   setIsGenerating: (bg: boolean) => void;
+  activeBranchId: string | null;
+  setActiveBranchId: (branchId: string | null) => void;
+  branches: ChatBranch[];
+  createBranch: (parentMessageId: number) => Promise<{ branchId: string }>;
+  isBranchesLoading: boolean;
 }
 
 const ChatContext = createContext<ChatState | undefined>(undefined);
@@ -17,11 +29,16 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
   const queryClient = useQueryClient();
   const projectId = useProjectId();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
+
+  const chatQueryKey = activeBranchId
+    ? `/api/projects/${projectId}/chat?branchId=${activeBranchId}`
+    : `/api/projects/${projectId}/chat`;
 
   const chatQuery = useQuery({
-    queryKey: [`/api/projects/${projectId}/chat`],
+    queryKey: [chatQueryKey],
     enabled: seeded,
-    select: (data: Array<{ id: number | string; role: string; content: string; timestamp: string; mode?: ChatMessage['mode'] }>) => data.map((msg): ChatMessage => ({
+    select: (response: { data: Array<{ id: number | string; role: string; content: string; timestamp: string; mode?: ChatMessage['mode'] }>; total: number }) => response.data.map((msg): ChatMessage => ({
       id: String(msg.id),
       role: msg.role as ChatMessage['role'],
       content: msg.content,
@@ -30,31 +47,60 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
     })),
   });
 
+  const branchesQuery = useQuery({
+    queryKey: [`/api/projects/${projectId}/chat/branches`],
+    enabled: seeded,
+    select: (response: { data: ChatBranch[]; total: number }) => response.data,
+  });
+
   const addChatMutation = useMutation({
-    mutationFn: async (msg: { role: string; content: string; mode?: string }) => {
+    mutationFn: async (msg: { role: string; content: string; mode?: string; branchId?: string | null }) => {
       await apiRequest('POST', `/api/projects/${projectId}/chat`, msg);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/chat`] });
+      queryClient.invalidateQueries({ queryKey: [chatQueryKey] });
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/chat/branches`] });
+    },
+  });
+
+  const createBranchMutation = useMutation({
+    mutationFn: async (parentMessageId: number) => {
+      const res = await apiRequest('POST', `/api/projects/${projectId}/chat/branches`, { parentMessageId });
+      return res.json() as Promise<{ branchId: string; parentMessageId: number }>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/chat/branches`] });
     },
   });
 
   const addMessage = useCallback((msg: ChatMessage | string) => {
     if (typeof msg === 'string') {
-      addChatMutation.mutate({ role: 'user', content: msg });
+      addChatMutation.mutate({ role: 'user', content: msg, branchId: activeBranchId });
     } else {
-      addChatMutation.mutate({ role: msg.role, content: msg.content, mode: msg.mode });
+      addChatMutation.mutate({ role: msg.role, content: msg.content, mode: msg.mode, branchId: activeBranchId });
     }
-  }, [addChatMutation]);
+  }, [addChatMutation, activeBranchId]);
+
+  const createBranch = useCallback(async (parentMessageId: number) => {
+    const result = await createBranchMutation.mutateAsync(parentMessageId);
+    setActiveBranchId(result.branchId);
+    return { branchId: result.branchId };
+  }, [createBranchMutation]);
 
   const messages = chatQuery.data ?? [];
+  const branches = branchesQuery.data ?? [];
 
   const contextValue = useMemo(() => ({
     messages,
     addMessage,
     isGenerating,
     setIsGenerating,
-  }), [messages, addMessage, isGenerating, setIsGenerating]);
+    activeBranchId,
+    setActiveBranchId,
+    branches,
+    createBranch,
+    isBranchesLoading: branchesQuery.isLoading,
+  }), [messages, addMessage, isGenerating, setIsGenerating, activeBranchId, setActiveBranchId, branches, createBranch, branchesQuery.isLoading]);
 
   return (
     <ChatContext.Provider value={contextValue}>

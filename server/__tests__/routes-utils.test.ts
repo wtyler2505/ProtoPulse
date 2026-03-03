@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import type { Request, Response, NextFunction } from 'express';
 
 // ---------------------------------------------------------------------------
 // Mock heavy dependencies so routes.ts can be imported without a database
@@ -62,14 +63,17 @@ function mockReq(contentLength?: number) {
     headers: contentLength !== undefined
       ? { 'content-length': String(contentLength) }
       : {},
-  } as any;
+  } as unknown as Request;
 }
 
 function mockRes() {
-  const res: any = {};
-  res.status = vi.fn().mockReturnValue(res);
-  res.json = vi.fn().mockReturnValue(res);
-  return res;
+  const res = {
+    status: vi.fn(),
+    json: vi.fn(),
+  };
+  res.status.mockReturnValue(res);
+  res.json.mockReturnValue(res);
+  return res as unknown as Response;
 }
 
 // ---------------------------------------------------------------------------
