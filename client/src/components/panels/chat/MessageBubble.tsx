@@ -5,12 +5,41 @@ import rehypeSanitize from 'rehype-sanitize';
 import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import ConfidenceBadge from '@/components/ui/ConfidenceBadge';
+import type { ConfidenceScore } from '@/components/ui/ConfidenceBadge';
 import { ACTION_LABELS, DESTRUCTIVE_ACTIONS } from './constants';
 import type { ChatMessage, ToolCallInfo } from '@/lib/project-context';
 
 interface AIAction {
   type: string;
   [key: string]: unknown;
+}
+
+/** Type guard — checks if unknown data contains a valid ConfidenceScore shape. */
+function isConfidenceScore(data: unknown): data is ConfidenceScore {
+  if (typeof data !== 'object' || data === null) { return false; }
+  const obj = data as Record<string, unknown>;
+  return (
+    typeof obj.score === 'number' &&
+    typeof obj.explanation === 'string' &&
+    Array.isArray(obj.factors)
+  );
+}
+
+/** Extract the highest-priority confidence score from tool call results. */
+function extractConfidence(toolCalls: ToolCallInfo[] | undefined): ConfidenceScore | null {
+  if (!toolCalls || toolCalls.length === 0) { return null; }
+  for (const tc of toolCalls) {
+    const d = tc.result.data;
+    // Direct confidence object
+    if (isConfidenceScore(d)) { return d; }
+    // Nested under a "confidence" key
+    if (typeof d === 'object' && d !== null && 'confidence' in d) {
+      const nested = (d as Record<string, unknown>).confidence;
+      if (isConfidenceScore(nested)) { return nested; }
+    }
+  }
+  return null;
 }
 
 export function MarkdownContent({ content }: { content: string }) {
@@ -133,6 +162,15 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
                 <span className="text-muted-foreground truncate">— {tc.result.message}</span>
               </div>
             ))}
+            {(() => {
+              const confidence = extractConfidence(msg.toolCalls);
+              return confidence ? (
+                <div className="flex items-center gap-1.5 px-1 pt-0.5">
+                  <span className="text-[10px] text-muted-foreground">AI Confidence:</span>
+                  <ConfidenceBadge confidence={confidence} />
+                </div>
+              ) : null;
+            })()}
           </div>
         )}
 

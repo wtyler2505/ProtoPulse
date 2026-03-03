@@ -178,7 +178,8 @@ describe('Sidebar', () => {
     renderSidebar();
     const search = screen.getByTestId('sidebar-search');
     fireEvent.change(search, { target: { value: 'ESP' } });
-    expect(screen.getByText('ESP32')).toBeDefined();
+    // Fuzzy search renders highlighted matches — verify the node row is visible
+    expect(screen.getByTestId('block-node-n1')).toBeDefined();
   });
 
   it('clicking a node in the component tree calls focusNode', () => {

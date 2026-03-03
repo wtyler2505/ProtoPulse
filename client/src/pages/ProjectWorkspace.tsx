@@ -24,9 +24,10 @@ const CommandPalette = lazy(() => import('@/components/ui/command-palette'));
 const TutorialOverlay = lazy(() => import('@/components/ui/TutorialOverlay'));
 const TutorialMenu = lazy(() => import('@/components/ui/TutorialMenu'));
 const CommentsPanel = lazy(() => import('@/components/panels/CommentsPanel').then(m => ({ default: m.CommentsPanel })));
+const CalculatorsView = lazy(() => import('@/components/views/CalculatorsView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -51,6 +52,7 @@ const tabDescriptions: Record<string, string> = {
   design_history: 'Architecture snapshot history and visual diff',
   lifecycle: 'Component lifecycle tracking and supply chain risk',
   comments: 'Design review comments and discussions',
+  calculators: 'Electronics engineering calculators',
 };
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
@@ -315,6 +317,7 @@ function WorkspaceContent() {
     { id: 'lifecycle', label: 'Lifecycle', icon: HeartPulse },
     { id: 'design_history', label: 'History', icon: History },
     { id: 'comments', label: 'Comments', icon: MessageSquare },
+    { id: 'calculators', label: 'Calculators', icon: Calculator },
     { id: 'output', label: 'Exports', icon: TerminalSquare },
   ], []);
 
@@ -322,7 +325,7 @@ function WorkspaceContent() {
      Always visible: Dashboard, Architecture, Component Editor (entry points).
      Require architecture nodes: Schematic, Breadboard, PCB, Procurement, Validation, Output. */
   const hasDesignContent = (nodes ?? []).length > 0;
-  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor']);
+  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators']);
 
   const visibleTabs = useMemo(
     () => tabs.filter(t => t.id !== 'project_explorer' && (alwaysVisibleIds.has(t.id) || hasDesignContent)),
@@ -591,6 +594,13 @@ function WorkspaceContent() {
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
                     <CommentsPanel projectId={projectId} />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'calculators' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <CalculatorsView />
                   </Suspense>
                 </ErrorBoundary>
               )}

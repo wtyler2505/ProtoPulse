@@ -70,6 +70,22 @@ export interface ToolContext {
 export type ModelTier = 'fast' | 'standard' | 'premium';
 
 /**
+ * AI confidence scoring for tool results and suggestions.
+ *
+ * Attached to AI responses that involve data lookups, component matching,
+ * or analysis where certainty varies (e.g., BOM pricing, component identification).
+ *
+ * @property score       - Numeric confidence 0-100 (100 = absolute certainty).
+ * @property explanation - Human-readable summary of why this score was assigned.
+ * @property factors     - Itemized list of signals that contributed to the score.
+ */
+export interface ConfidenceScore {
+  score: number;
+  explanation: string;
+  factors: string[];
+}
+
+/**
  * Complete definition of a single AI tool.
  *
  * Tools are registered with the {@link ToolRegistry} and converted to

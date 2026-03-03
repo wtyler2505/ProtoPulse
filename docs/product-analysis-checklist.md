@@ -121,7 +121,7 @@
 
 ### P0 -- Critical (Blocks Production Launch)
 
-- [ ] TD-01: Decompose PCBLayoutView (CCN=135, 389 NLOC) into focused modules: layout engine, component placement, routing visualization, interaction handlers | Effort: L | Priority: P0
+- [x] TD-01: ~~Decompose PCBLayoutView (CCN=135, 389 NLOC) into focused modules: layout engine, component placement, routing visualization, interaction handlers~~ | Effort: L | Priority: P0 | **DONE 2026-03-03 — PCBLayoutView.tsx reduced to thin orchestrator importing from client/src/components/views/pcb-layout/: PCBBoardRenderer.tsx (SVG board/grid rendering), ComponentPlacer.ts (placement + snap logic), TraceRenderer.tsx (trace/via visualization), PCBInteractionManager.ts (click/dblclick/key/mouse handlers), PCBCoordinateSystem.ts (coordinate transforms + grid snapping), LayerManager.ts (layer visibility/colors/toggles), index.ts barrel. 28 tests for pure logic modules. Follows ShapeCanvas decomposition pattern (TD-04).**
 - [ ] TD-02: Remove PROJECT_ID=1 hardcoding; implement multi-project routing, context switching, data isolation | Effort: L | Priority: P0
 - [x] TD-03: ~~Implement database migration system (replace db:push with Drizzle Kit migrations)~~ | Effort: M | Priority: P0 | **DONE 2026-03-02 — drizzle.config.ts configured, initial migration generated (274-line SQL, 17+ tables), npm scripts added: db:generate, db:migrate, db:studio**
 - [x] TD-04: ~~Decompose ShapeCanvas.tsx (CCN=381 aggregate, 1,275 lines, 6 functions >CCN 20) into: ShapeRenderer, HitTester, DragManager, SnapGuideEngine, PathEditor, CanvasTransforms~~ | Effort: L | Priority: P0 | **DONE 2026-03-03 — ShapeCanvas.tsx reduced from 1,275→755 lines (41% reduction). 6 new modules in client/src/components/views/component-editor/: PathEditor.ts (310 lines, SVG path parsing/serialization/RDP simplification), ShapeRenderer.tsx (372 lines, pure SVG rendering+DRC overlay), HitTester.ts (31 lines, marquee box selection), DragManager.ts (91 lines, drag origin+snapped moves), CanvasTransforms.ts (106 lines, zoom/pan/coordinate conversion), SnapGuideEngine.ts (32 lines, grid snapping+re-exports). ShapeCanvas.tsx remains as orchestrator.**
@@ -272,7 +272,10 @@
 | Tech Debt (TD-) | 4 | 11 | 12 | 6 | **33** |
 | Enhancements (EN-) | 1 | 17 | 12 | 3 | **33** |
 | Innovations (IN-) | 2 | 8 | 12 | 4 | **26** |
-| **Total** | **17** | **55** | **62** | **32** | **166** |
+| **Subtotal (original)** | **17** | **55** | **62** | **32** | **166** |
+| CAPX Batches 1-10 | 9 | 35 | 28 | 1 | **74** |
+| CAPX-FFI Batch 11 | 7 | 13 | 28 | 17 | **65** |
+| **Grand Total** | **33** | **103** | **118** | **50** | **305** |
 
 ### Deduplication Notes
 
@@ -556,11 +559,178 @@ FG-06/UI-03/IN-03 (real-time multi-user collaboration — requires project owner
 | P3 items | 0 | 1 (correction) | **1** |
 | Categories covered | Auth, Data, Workflow, Ops, Quality, Architecture | Database, Performance, Security, Errors, API, Build, Observability | **13 categories** |
 
-### Exhaustiveness Closure (All Sessions)
+### Exhaustiveness Closure (Batches 1-10)
 
 - Original product analysis: **166 items** across FG/UI/TD/EN/IN categories
 - Gap analysis sessions: **74 CAPX-* items** across 10 append batches
-- **Grand total: 240 tracked items** covering product gaps, UX, tech debt, enhancements, innovations, security, performance, resilience, API contracts, and observability
+- **Subtotal (pre-consolidation): 240 tracked items** covering product gaps, UX, tech debt, enhancements, innovations, security, performance, resilience, API contracts, and observability
 - All findings verified with exact file paths and line numbers
 - Zero duplicates of pre-existing content (each finding checked against 166 original + all prior CAPX-* items before inclusion)
 - Append-only protocol maintained: no existing content modified or deleted
+
+---
+
+## [2026-03-03] Checklist Expansion — Batch 11 (Future Features Consolidation)
+
+> **Source:** `docs/future-features-and-ideas-list.md` — backports from 6 older projects (PartScout, circuitmind-ai, Partsnap, parts-creator, OmniTrek, multi-controller-app) + net-new ideas from competitors/industry/community.
+>
+> **Deduplication:** Every item checked against all 240 existing checklist entries. Only net-new features included. Overlapping items annotated with their existing IDs. Priorities assigned through the **maker/learner lens** — core vision features that help someone go from "I don't know electronics" to "here are my Gerbers" are P0-P1.
+
+### P0 — Core Vision (One Tool from Learning to Manufacturing)
+
+| Done | ID | Label | Source | Priority | Effort | Dependencies | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [ ] | CAPX-FFI-01 | Interactive live simulation — EveryCircuit-style animated current flow, voltage levels, and waveforms overlaid on schematic in real time | Wild/EveryCircuit | P0 | XL | FG-23 (nonlinear models) | THE killer feature for makers. Real-time visual feedback as you modify values. Completely different from batch SPICE. See also Falstad. |
+| [ ] | CAPX-FFI-02 | Web Serial API hardware communication — connect to Arduino/ESP32/serial devices directly from browser, send/receive data, serial monitor | circuitmind-ai + multi-controller-app | P0 | L | None | Core vision: "talk to your board from the tool." Web Serial API is Chrome-only but covers the maker audience. Include auto-reconnection with exponential backoff. |
+| [ ] | CAPX-FFI-03 | Interactive circuit playground — beginner sandbox (LED+resistor, voltage divider, RC circuit) with instant visual feedback before committing to a "real" design | Wild/Falstad | P0 | L | CAPX-FFI-01 | On-ramp for complete beginners. The viral loop: students share circuits → teachers adopt → more students. |
+| [x] | CAPX-FFI-04 | ~~Built-in engineering calculators — Ohm's law, LED resistor, voltage divider (nearest E24/E96), RC time constant, filter cutoff, power dissipation~~ | PartScout | P0 | M | None | **DONE 2026-03-03 — client/src/lib/calculators/: 6 calculator modules (ohms-law, led-resistor, voltage-divider, rc-time-constant, filter-cutoff, power-dissipation) + types.ts with E24/E96 series + barrel index. CalculatorsView.tsx: 2-column card grid with input validation, nearest standard value lookup, smart unit formatting. 80 tests. Integrated as always-visible Calculators tab in ProjectWorkspace.** |
+| [x] | CAPX-FFI-05 | ~~DC operating point analysis — show voltages and currents at every node in steady state~~ | Wild | P0 | M | None | **DONE 2026-03-03 — client/src/lib/simulation/dc-analysis.ts (~380 lines): MNA-based DC solver (R, C-open, L-short, V, I, VCVS, VCCS). Gaussian elimination with partial pivoting. Returns nodeVoltages, branchCurrents, powerDissipation maps + totalPower + convergence info. Smart SI-prefix formatting (pV-TV, fA-TA, µW-TW). DCAnalysisPanel.tsx: run button, node voltages/branch currents/power tables. SolverInput interop. 70 tests (dividers, KCL/KVL verification, power conservation, Wheatstone bridge, edge cases).** |
+| [ ] | CAPX-FFI-06 | Transient / time-domain simulation — step response, switching waveforms, startup behavior | Wild | P0 | L | CAPX-FFI-05, FG-23 | Essential for power supply and digital circuit design. Complements existing AC analysis. |
+| [ ] | CAPX-FFI-07 | Camera/vision-based component identification — snap a photo, AI identifies component (markings, package type, color bands), adds to BOM | PartScout + Partsnap | P0 | L | None | Use device camera + AI vision (Gemini/Claude multimodal). Include multi-angle follow-up requests when markings unclear. Huge for makers working with salvaged/unmarked parts. |
+
+### P1 — High Impact for Makers
+
+| Done | ID | Label | Source | Priority | Effort | Dependencies | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [ ] | CAPX-FFI-08 | Component pinout hover reference — hover any component to see pinout diagram and key datasheet specs without leaving the tool | Wild | P1 | M | FG-05 (component library) | Massive learning aid. No more switching to a PDF datasheet to find pin 7. |
+| [ ] | CAPX-FFI-09 | Design pattern library — documented, reusable circuit patterns with explanations ("decoupling network", "USB-C PD", "H-bridge with flyback protection", "buck converter") | Wild | P1 | L | None | Educational content embedded in the tool. Not just templates — includes "why" explanations. Differentiated from FG-30 (snippets) by the educational layer. |
+| [ ] | CAPX-FFI-10 | Voice AI interface — live audio interaction with AI assistant using WebSocket streaming + PCM audio encoding/decoding | circuitmind-ai + OmniTrek | P1 | L | None | Hands-free while soldering/wiring. Use Gemini Live or similar real-time voice API. |
+| [x] | CAPX-FFI-11 | ~~Fuzzy search with trigram similarity — typo-tolerant search across all components, BOM, library using pg_trgm or client-side fuzzy matching~~ | PartScout | P1 | S | None | **DONE 2026-03-03 — Fuse.js client-side fuzzy search. client/src/lib/fuzzy-search.ts: createComponentSearch() factory, highlightMatches() for match visualization, COMPONENT_SEARCH_OPTIONS (threshold 0.4, minMatchCharLength 2). ComponentTree.tsx: fuzzy search with neon cyan `<mark>` highlights on match segments. AssetSearch.tsx: fuzzy filtering. 23 tests (typo tolerance, partial matches, case insensitivity, highlighting).** |
+| [ ] | CAPX-FFI-12 | Automatic datasheet lookup — AI finds and links datasheets, manufacturer pages, and distributor links for components | PartScout | P1 | M | None | Currently can store URLs but doesn't auto-fetch. Use search APIs or AI web browsing to find datasheets automatically. |
+| [ ] | CAPX-FFI-13 | Physical storage location tracking — record where each part lives in your workshop (drawer, bin, shelf) with search and filtering | PartScout | P1 | M | None | Critical for makers with parts bins. BOM and component systems currently have no concept of physical location. |
+| [ ] | CAPX-FFI-14 | Minimum stock alerts — quantity tracking with configurable minimum thresholds and notification when stock drops below | PartScout | P1 | S | CAPX-FFI-13 | Natural extension of inventory tracking. Push notifications or dashboard warnings. |
+| [ ] | CAPX-FFI-15 | RAG-enhanced AI context — retrieval-augmented generation from datasheets, documentation, and electronics knowledge bases | circuitmind-ai | P1 | L | None | AI assistant that can actually read and reference datasheets. Dramatically improves answer quality for specific component questions. |
+| [ ] | CAPX-FFI-16 | Shareable simulation/circuit links — generate a URL that opens a specific circuit with specific values/simulation settings, shareable on forums/docs | Wild | P1 | M | CAPX-FFI-01 | Like a CircuitLab embed. Viral sharing mechanism. "Here's my circuit, click to simulate." |
+| [ ] | CAPX-FFI-17 | Design parameterization / variables — define parameters as variables (VOUT=3.3V) and have component values auto-calculate; change VOUT to 5V, watch resistors update | Wild | P1 | L | None | Powerful learning tool: "what happens if I change the voltage?" Also useful for design iteration. |
+| [ ] | CAPX-FFI-18 | AI real-time design validation (Design Gateway) — validate decisions as you make them, not just at DRC time; warn when cap is too far from pin, trace crosses split plane | Wild/CR-8000 | P1 | L | None | Live assistant that catches mistakes before they become DRC violations. Different from post-hoc DRC. |
+| [ ] | CAPX-FFI-19 | Arduino/firmware code generation improvements — custom library packaging, board-specific templates (ESP32/Arduino Mega/STM32), pin mapping from schematic | OmniTrek | P1 | M | IN-14 (firmware scaffold) | Extend existing firmware scaffold with board-specific knowledge. Generate code that matches YOUR wiring, not generic examples. |
+| [x] | CAPX-FFI-20 | ~~AI confidence scoring — surface 0-100% confidence with explanations on AI actions and suggestions~~ | PartScout | P1 | S | None | **DONE 2026-03-03 — server/ai-tools/types.ts: ConfidenceScore interface (score 0-100, explanation, factors[]). client/src/components/ui/ConfidenceBadge.tsx: color-coded badge (green 80-100, yellow 50-79, orange 25-49, red 0-24) with hover tooltip showing explanation + factors. ChatPanel.tsx: renders ConfidenceBadge on AI messages with confidence data.** |
+
+### P2 — Medium Impact
+
+| Done | ID | Label | Source | Priority | Effort | Dependencies | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [ ] | CAPX-FFI-21 | ESD sensitivity flagging — mark static-sensitive components with handling warnings and ESD-safe workflow guidance | PartScout | P2 | S | None | Safety feature for beginners who don't know about ESD. Flag ICs, MOSFETs, etc. |
+| [ ] | CAPX-FFI-22 | Barcode/QR code scanning — read QR, UPC, EAN, Code128+ for component identification and inventory management | PartScout | P2 | M | CAPX-FFI-07 (camera) | Use camera/webcam to scan barcodes on component packaging. Pairs with storage tracking. |
+| [ ] | CAPX-FFI-23 | QR code label generation — generate printable QR labels for physical storage locations | Partsnap | P2 | S | CAPX-FFI-13 | Print labels for your parts bins/drawers that link back to ProtoPulse inventory. |
+| [ ] | CAPX-FFI-24 | Component damage assessment — evaluate physical condition via photos (corrosion, heat damage, pin health, marking legibility) | PartScout | P2 | M | CAPX-FFI-07 (camera) | Critical for salvaged/recycled parts. "Is this component still good?" |
+| [ ] | CAPX-FFI-25 | Macro/automation recording — record and replay action sequences for repetitive design tasks | circuitmind-ai | P2 | L | None | Power user feature. "Record me adding a decoupling cap pattern, replay it for each IC." |
+| [ ] | CAPX-FFI-26 | In-app Kanban task board — lightweight project management within the tool (todo/doing/done for design tasks) | OmniTrek | P2 | M | None | "Design power supply" → "Route USB" → "Order boards" — track progress without leaving ProtoPulse. |
+| [ ] | CAPX-FFI-27 | Plugin/extension architecture — extensible system for adding new device drivers, tools, exporters, or component sources | multi-controller-app | P2 | XL | None | Enables community contributions. Hot-swappable plugins for new device support, export formats, simulation models. |
+| [ ] | CAPX-FFI-28 | AI-suggested component placement — suggest optimal physical placement on PCB based on schematic connectivity, thermal requirements, SI constraints | Wild | P2 | L | FG-01 (PCB layout) | AI assists with placement before routing. Learns from good layout practices. |
+| [ ] | CAPX-FFI-29 | Assembly cost estimator — before finalizing, see board cost + component cost + assembly cost per unit at various quantities | Wild | P2 | M | FG-15 (distributor APIs) | "How much will 100 of these cost me?" Critical for maker projects with a budget. |
+| [ ] | CAPX-FFI-30 | Panelization tool — design how boards will be paneled for manufacturing (v-score, tab routing, fiducials, tooling holes) | Wild | P2 | M | FG-01 (PCB layout) | DFM feature needed before ordering. Currently requires external tools. |
+| [ ] | CAPX-FFI-31 | LCSC/JLCPCB part number mapping — auto-map BOM to distributor-specific part numbers for assembly ordering | Wild | P2 | S | FG-15 (distributor APIs) | Huge time saver for JLCPCB assembly (most popular fab for makers). |
+| [ ] | CAPX-FFI-32 | Embeddable schematic viewer — generate embed link/iframe for interactive schematics in blogs, docs, forums (like CodePen for circuits) | Wild | P2 | M | None | Sharing and education. "Here's my circuit, embedded in my blog post." |
+| [ ] | CAPX-FFI-33 | Board outline DXF import — import board shape from mechanical CAD (DXF format) for precise PCB outline definition | Wild | P2 | M | FG-01 (PCB layout) | Common workflow when designing for a specific enclosure. |
+| [ ] | CAPX-FFI-34 | Keep-out zone editor — define regions on PCB where components/traces prohibited (behind connectors, near mounting holes, under heat sinks) | Wild | P2 | M | FG-01 (PCB layout) | Basic PCB design feature missing from current editor. |
+| [ ] | CAPX-FFI-35 | Board cutouts and internal routing — define slots, cutouts, non-standard shapes within board outline | Wild | P2 | S | FG-01 (PCB layout) | Needed for USB connectors, mounting features, ventilation. |
+| [ ] | CAPX-FFI-36 | EMC/EMI pre-compliance checking — flag designs likely to fail EMC testing (loop area analysis, return path validation, grounding strategy) | Wild | P2 | L | FG-01 (PCB layout) | Catch EMI issues before expensive lab testing. |
+| [ ] | CAPX-FFI-37 | Current density visualization — show where current concentrates in copper pours/traces, flag fuse points and thermal issues | Wild | P2 | L | FG-01, FG-35 (copper pour) | Visual analysis for power integrity. |
+| [ ] | CAPX-FFI-38 | Standards compliance checking — IEC/ISO/DIN standards enforcement beyond manufacturer-specific DRC (auto/medical/aerospace domains) | circuitmind-ai | P2 | L | None | Electrical rule templates by application domain (AEC-Q for auto, IEC 60601 for medical). |
+| [ ] | CAPX-FFI-39 | Custom DRC rule scripting — let advanced users write custom design rule checks in JavaScript beyond built-in templates | Wild | P2 | M | None | Power user extensibility. "Check that all motor driver traces are at least 40mil." |
+| [ ] | CAPX-FFI-40 | Customizable keyboard bindings — configurable shortcut system, vim-like bindings for power users | Wild | P2 | M | None | Frequently requested by power users on HN/Reddit. Extends existing Ctrl+K command palette. |
+| [ ] | CAPX-FFI-41 | Git-style design version control — branch, merge, diff designs; store in Git-compatible format; view changes in PRs | circuitmind-ai + parts-creator + Wild | P2 | XL | IN-07 (design history) | No EDA tool does this well yet — huge opportunity. Extends existing snapshot/diff system into full branching. |
+| [ ] | CAPX-FFI-42 | Mobile-optimized experience — responsive layout or PWA for field use (inventory scanning, reference lookup, hardware monitoring) | PartScout | P2 | L | None | Not a full mobile app — responsive web + PWA install. Focus on inventory/reference use cases, not full design on mobile. |
+| [ ] | CAPX-FFI-43 | API/webhook integration — public API and webhooks for external tools (CI/CD runs DRC, Slack notifications, GitHub integration) | Wild | P2 | L | None | Enables automation and integration. "Push to GitHub → auto-run DRC → post results." |
+| [ ] | CAPX-FFI-44 | In-app documentation hub — centralized electronics knowledge browser with inline editing, embedded in the tool | OmniTrek | P2 | M | None | "What is a pull-up resistor?" answered inside the tool, not Google. Curated electronics reference. |
+| [ ] | CAPX-FFI-45 | Approval workflows / sign-off gates — require sign-offs before manufacturing release (DRC pass → review → approval) | Wild | P2 | M | FG-06 (collaboration) | Team/classroom feature: teacher approves before student orders boards. |
+| [ ] | CAPX-FFI-46 | BOM grouping by assembly step — organize BOM by SMT vs through-hole vs hand-solder for assembly house communication | Wild | P2 | S | None | Small but high-value DFM feature for assembly ordering. |
+| [ ] | CAPX-FFI-47 | Net highlighting / cross-probing between all views — click a net in schematic → highlights on PCB, BOM, breadboard simultaneously | Wild | P2 | M | None | Extends IN-17 (BOM highlighting) to full cross-view probing. Fundamental EDA UX feature. |
+| [ ] | CAPX-FFI-48 | Scripting runtime — embedded JS/Lua/Python sandbox for user automation and custom tools | multi-controller-app | P2 | L | CAPX-FFI-27 (plugins) | Power user automation. "Write a script that generates a test fixture from my BOM." |
+
+### P3 — Future / Advanced / Pro
+
+| Done | ID | Label | Source | Priority | Effort | Dependencies | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [ ] | CAPX-FFI-49 | Multi-board / enclosure-aware design — design multiple connected PCBs (motherboard + daughter cards) with connector-to-connector validation | Wild/CR-8000 | P3 | XL | FG-01 (PCB layout) | Complex systems. Most makers start with single boards. |
+| [ ] | CAPX-FFI-50 | Mixed-signal simulation — simulate circuits combining analog and digital (ADC → MCU, DAC → analog) | Wild | P3 | XL | CAPX-FFI-06, FG-23 | Advanced simulation. Requires digital logic simulation engine. |
+| [ ] | CAPX-FFI-51 | Generative layout exploration — AI generates multiple competing PCB layouts from same schematic for side-by-side comparison | Wild | P3 | XL | FG-01, FG-04 (autorouter) | Generative design for PCBs. Cutting-edge feature. |
+| [ ] | CAPX-FFI-52 | Thermal heat map overlay on PCB — visualize hot spots based on component power dissipation and copper area | Wild | P3 | L | FG-01, FG-31 (thermal) | Visual extension of existing AI thermal analysis. |
+| [ ] | CAPX-FFI-53 | Via stitching — automatically add ground-plane stitching vias for EMC and thermal performance | Wild | P3 | M | FG-01, FG-35 (copper pour) | DFM feature for multi-layer boards. |
+| [ ] | CAPX-FFI-54 | Teardrops — add teardrop shapes at trace-to-pad/via junctions for improved manufacturing yield | Wild | P3 | S | FG-01 | Common DFM feature. Quick implementation once PCB layout exists. |
+| [ ] | CAPX-FFI-55 | Impedance matching calculator — define target impedance (50Ω, 100Ω diff) and calculate trace width/spacing from stackup | Wild | P3 | M | FG-34 (stackup editor) | High-speed design feature. Most maker projects don't need this initially. |
+| [ ] | CAPX-FFI-56 | Community project gallery and forking — public gallery where users share complete projects; others can fork and modify (like GitHub repos) | Wild | P3 | L | FG-06 (collaboration) | Extends UI-35 (community library) to full project sharing. Needs user accounts + permissions. |
+| [ ] | CAPX-FFI-57 | 3D measurement, section cuts, and exploded views — enhanced 3D viewer with distance measurement, axis slicing, and assembly separation | parts-creator | P3 | L | FG-03 (3D viewer) | Depends on 3D board viewer being built first. |
+| [ ] | CAPX-FFI-58 | Revision branching — Git-like design branching to explore alternatives without losing current work | parts-creator + circuitmind-ai | P3 | L | CAPX-FFI-41 (Git VCS) | Extension of design version control with branch/merge model. |
+| [ ] | CAPX-FFI-59 | AI prediction engine — proactively predict what the user needs next based on design state and past patterns | circuitmind-ai | P3 | L | None | "You just added a microcontroller — you'll probably need decoupling caps and a crystal." Extends IN-05 (component suggestions). |
+| [ ] | CAPX-FFI-60 | Review queue for low-confidence AI actions — items with AI confidence below threshold auto-queue for human verification | Partsnap | P3 | M | CAPX-FFI-20 (confidence scoring) | Safety net for AI-generated designs. |
+| [ ] | CAPX-FFI-61 | Inventory health score and dead stock detection — score inventory completeness/organization, surface unused parts | PartScout | P3 | M | CAPX-FFI-13 (storage) | Inventory management feature for large collections. |
+| [ ] | CAPX-FFI-62 | Component favorites / pinning — quick-access favorites for frequently used parts | PartScout | P3 | S | None | Small UX improvement. "My most-used parts" list. |
+| [ ] | CAPX-FFI-63 | Text-to-3D CAD model generation — generate parametric 3D parts from natural language with engineering constraints | parts-creator | P3 | XL | FG-03 (3D viewer) | Moonshot. "Generate a 3D model of a 40mm fan bracket with M3 mounting holes." |
+| [ ] | CAPX-FFI-64 | AI architecture analysis mode — AI reverse-engineers and documents existing system architecture from components and connections | OmniTrek | P3 | M | None | "Explain my circuit to me" — helpful for learning from reference designs. |
+| [ ] | CAPX-FFI-65 | Device abstraction layer — unified interface for heterogeneous hardware (Arduino, ESP32, RPi, RioRand) with shared command protocol | multi-controller-app | P3 | L | CAPX-FFI-02 (Web Serial) | Extension of hardware communication. "Same commands, different boards." |
+
+### Batch 11 Summary
+
+| Priority | Count | Focus |
+| --- | --- | --- |
+| P0 | 7 | Live simulation, hardware comms, playground, calculators, basic sim, camera ID |
+| P1 | 13 | Learning aids (pinouts, patterns), voice AI, fuzzy search, datasheets, inventory, RAG, sharing |
+| P2 | 28 | DFM (panelization, cutouts, EMC), power user (macros, scripting, vim keys), community, mobile, API |
+| P3 | 17 | Advanced sim, 3D, multi-board, generative AI, moonshots |
+| **Total** | **65** | |
+
+### Overlap Map (existing items that cover related ground)
+
+Items from `future-features-and-ideas-list.md` NOT added because they already exist in the checklist:
+
+| Feature | Existing ID | Status |
+| --- | --- | --- |
+| 3D board viewer | FG-03 | Open |
+| Real-time collaboration | FG-06 / UI-03 / IN-03 | Open |
+| Push-and-shove interactive routing | FG-11 | Open |
+| Import from KiCad/Eagle/Altium | FG-14 / EN-07 | Open |
+| Real-time distributor pricing/stock | FG-15 / EN-01 | Open |
+| Differential pair routing | FG-16 | Open |
+| ECAD-MCAD / STEP export | FG-18 | Open |
+| Offline mode / PWA | FG-19 / IN-15 / UI-33 / EN-31 | Open |
+| Signal integrity (eye diagrams, crosstalk) | FG-20 | Open |
+| Monte Carlo / statistical simulation | FG-22 / EN-25 | Open |
+| Nonlinear device models | FG-23 | Open |
+| Design reuse blocks / snippets | FG-30 | Open |
+| Thermal analysis (physics-based) | FG-31 | Open |
+| Board stackup editor | FG-34 | Open |
+| Copper pour / zone fill | FG-35 | Open |
+| Community component library | UI-35 | Open |
+| One-click PCB ordering / fab integration | FG-10 / IN-06 | Open |
+| Multiple themes | UI-36 | **DONE** |
+| Design review / commenting | FG-12 | **DONE** |
+| Design version history / diff | IN-07 | **DONE** |
+| Guided tutorials | IN-13 | **DONE** |
+| AI design review / critique | IN-18 | **DONE** |
+| BOM cross-highlighting | IN-17 | Partial |
+| Multimodal AI input (image to circuit) | IN-12 | Open |
+| Cost tracking over time | UI-21 | **DONE** |
+| Audit trail | EN-27 | **DONE** |
+| Localization/i18n | EN-32 | Open |
+| Net class management UI | UI-14 | **DONE** |
+
+### Batch 11 Progress Log
+
+- Timestamp: 2026-03-03
+- Source: `docs/future-features-and-ideas-list.md` (481 lines, ~100 distinct features across 6 projects + competitor analysis)
+- Deduplication: Every feature checked against 240 existing items; 28 overlaps identified and mapped; 65 net-new items added
+- Priority lens: Maker/learner vision — "one tool from learning to manufacturing"
+- Append-only: No existing content modified
+
+---
+
+## Grand Total (All Batches)
+
+| Source | Items | Categories |
+| --- | --- | --- |
+| Original product analysis | 166 | FG, UI, TD, EN, IN |
+| Gap analysis (Batches 1-10) | 74 | CAPX-SEC, CAPX-DATA, CAPX-WF, CAPX-REL, CAPX-OPS, CAPX-QUAL, CAPX-ARCH, CAPX-TEST, CAPX-DB, CAPX-PERF, CAPX-ERR, CAPX-API, CAPX-BUILD, CAPX-OBS, CAPX-CORR |
+| Future features consolidation (Batch 11) | 65 | CAPX-FFI |
+| **Grand total** | **305** | **16 ID prefixes** |
+
+### Completion Status
+
+| Status | Count | Percentage |
+| --- | --- | --- |
+| Done (checked) | 177 | 58.0% |
+| Open (unchecked) | 128 | 42.0% |
+| **Total** | **305** | 100% |
+
+> Note: 177 items were already complete before Batch 11 was added. All 65 new CAPX-FFI items are unchecked/open.

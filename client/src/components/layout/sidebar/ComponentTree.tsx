@@ -15,6 +15,8 @@ import {
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
+import { createComponentSearch, highlightMatches } from '@/lib/fuzzy-search';
+import type { HighlightSegment } from '@/lib/fuzzy-search';
 import type { ComponentDragData } from '@/lib/dnd-context';
 
 const TYPE_CONFIG: Record<string, { label: string; icon: typeof Cpu }> = {
@@ -78,6 +80,23 @@ function DraggableCategoryHeader({ cat, config, IconComp, expanded, catNodeCount
 // DraggableNodeRow — individual node with @dnd-kit draggable + context menu
 // ---------------------------------------------------------------------------
 
+/** Renders highlighted match segments with neon cyan emphasis. */
+function HighlightedLabel({ segments }: { segments: HighlightSegment[] }) {
+  return (
+    <span className="truncate">
+      {segments.map((seg, i) =>
+        seg.isMatch ? (
+          <mark key={i} className="bg-primary/25 text-primary rounded-sm px-px" data-testid="fuzzy-match-highlight">
+            {seg.text}
+          </mark>
+        ) : (
+          <span key={i}>{seg.text}</span>
+        ),
+      )}
+    </span>
+  );
+}
+
 interface DraggableNodeRowProps {
   node: Node;
   cat: string;
@@ -87,9 +106,10 @@ interface DraggableNodeRowProps {
   setNodes: (nodes: Node[]) => void;
   addOutputLog: (msg: string) => void;
   onDragStart: (e: React.DragEvent, nodeType: string, label: string) => void;
+  highlightSegments?: HighlightSegment[];
 }
 
-function DraggableNodeRow({ node, cat, selectedNodeId, allNodes, focusNode, setNodes, addOutputLog, onDragStart }: DraggableNodeRowProps) {
+function DraggableNodeRow({ node, cat, selectedNodeId, allNodes, focusNode, setNodes, addOutputLog, onDragStart, highlightSegments }: DraggableNodeRowProps) {
   const nodeType = String(node.data?.type || cat);
   const nodeLabel = String(node.data?.label || node.id);
   const dragData: ComponentDragData = { nodeType, label: nodeLabel, source: 'component-tree' };
@@ -125,7 +145,7 @@ function DraggableNodeRow({ node, cat, selectedNodeId, allNodes, focusNode, setN
             <GripVertical className="w-3 h-3 opacity-0 group-hover/node:opacity-50 shrink-0" />
           </div>
           <div className="w-1 h-1 bg-muted-foreground/50 shrink-0"></div>
-          <span className="truncate">{nodeLabel}</span>
+          {highlightSegments ? <HighlightedLabel segments={highlightSegments} /> : <span className="truncate">{nodeLabel}</span>}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
@@ -181,12 +201,32 @@ const ComponentTree = memo(function ComponentTree({
     const categoryOrder = ['mcu', 'sensor', 'power', 'comm', 'connector', 'generic'];
     const activeCategories = categoryOrder.filter(cat => grouped[cat]?.length > 0);
 
-    const query = searchQuery.toLowerCase().trim();
+    const query = searchQuery.trim();
+    if (!query) {
+      return activeCategories.map(cat => ({
+        cat,
+        nodes: grouped[cat],
+        highlights: new Map<string, HighlightSegment[]>(),
+      })).filter(c => c.nodes.length > 0);
+    }
+
+    // Build a flat Fuse index of all nodes for fuzzy matching
+    const allNodes = activeCategories.flatMap(cat => grouped[cat]);
+    const fuse = createComponentSearch<Node>(allNodes, [{ name: 'data.label', getFn: (n) => String(n.data?.label || '') }]);
+    const fuseResults = fuse.search(query);
+
+    // Build a map of node id → highlight segments from Fuse results
+    const matchedIds = new Set<string>();
+    const highlightMap = new Map<string, HighlightSegment[]>();
+    for (const result of fuseResults) {
+      matchedIds.add(result.item.id);
+      const label = String(result.item.data?.label || '');
+      highlightMap.set(result.item.id, highlightMatches(label, result.matches));
+    }
+
     return activeCategories.map(cat => {
-      const filtered = grouped[cat].filter((n) =>
-        !query || String(n.data?.label || '').toLowerCase().includes(query)
-      );
-      return { cat, nodes: filtered };
+      const filtered = grouped[cat].filter((n) => matchedIds.has(n.id));
+      return { cat, nodes: filtered, highlights: highlightMap };
     }).filter(c => c.nodes.length > 0);
   }, [nodes, searchQuery]);
 
@@ -201,7 +241,7 @@ const ComponentTree = memo(function ComponentTree({
       {filteredCategories.length === 0 && searchQuery.trim() && (
         <div className="text-xs text-muted-foreground/60 pl-4 py-1">No results</div>
       )}
-      {filteredCategories.map(({ cat, nodes: catNodes }) => {
+      {filteredCategories.map(({ cat, nodes: catNodes, highlights }) => {
         const config = TYPE_CONFIG[cat];
         const IconComp = config.icon;
         const expanded = isCategoryExpanded(cat);
@@ -229,6 +269,7 @@ const ComponentTree = memo(function ComponentTree({
                     setNodes={setNodes}
                     addOutputLog={addOutputLog}
                     onDragStart={onDragStart}
+                    highlightSegments={highlights.get(node.id)}
                   />
                 ))}
               </div>
