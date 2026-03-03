@@ -1,12 +1,59 @@
 /**
  * Circuit tools — schematic components, nets, wires, PCB traces, ERC.
+ *
+ * Provides AI tools for circuit schematic design: creating circuits, placing
+ * and removing component instances, drawing and managing nets, placing power
+ * symbols and no-connect markers, adding net labels, running Electrical Rule
+ * Checks (ERC), breadboard wiring, PCB trace routing, and auto-routing.
+ *
+ * Tools that mutate circuit data server-side (e.g., `create_circuit`, `place_component`,
+ * `draw_net`) execute via `ctx.storage`. Tools that require client-side UI
+ * interaction (e.g., `place_power_symbol`, `run_erc`, `auto_route`) are dispatched
+ * via {@link clientAction}.
+ *
+ * @module ai-tools/circuit
  */
 
 import { z } from 'zod';
 import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
 
+/**
+ * Register all circuit schematic tools with the given registry.
+ *
+ * Tools registered (10 total):
+ *
+ * **Circuit management:**
+ * - `create_circuit`              — Create a new blank circuit design (server-side, writes to DB).
+ * - `expand_architecture_to_circuit` — Convert architecture block diagram into detailed schematic.
+ *
+ * **Component placement:**
+ * - `place_component`             — Place a component instance on a schematic (server-side, writes to DB).
+ * - `remove_component_instance`   — Remove an instance from a schematic (destructive, requires confirmation).
+ *
+ * **Net management:**
+ * - `draw_net`                    — Create a net (electrical connection) between pins (server-side).
+ * - `remove_net`                  — Delete a net (destructive, requires confirmation).
+ *
+ * **Schematic annotations:**
+ * - `place_power_symbol`          — Add VCC/GND/etc. power symbols.
+ * - `place_no_connect`            — Mark a pin as intentionally unconnected.
+ * - `add_net_label`               — Add a text label to a net connection point.
+ *
+ * **Verification:**
+ * - `run_erc`                     — Run Electrical Rule Check on a circuit.
+ *
+ * @param registry - The {@link ToolRegistry} instance to register tools into.
+ */
 export function registerCircuitTools(registry: ToolRegistry): void {
+  /**
+   * create_circuit — Create a new circuit design for the project.
+   *
+   * Executes server-side: creates a blank circuit design record via
+   * `storage.createCircuitDesign()` with the given name and optional description.
+   *
+   * @side-effect Writes a new row to the `circuit_designs` table.
+   */
   registry.register({
     name: 'create_circuit',
     description:
@@ -28,6 +75,13 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * expand_architecture_to_circuit — Convert architecture blocks into schematic components.
+   *
+   * Dispatched client-side. Reads the current architecture block diagram and
+   * generates a detailed circuit schematic with component instances and proper
+   * pin connections.
+   */
   registry.register({
     name: 'expand_architecture_to_circuit',
     description:
@@ -40,6 +94,15 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('expand_architecture_to_circuit', params),
   });
 
+  /**
+   * place_component — Place a component instance on a circuit schematic.
+   *
+   * Executes server-side: creates a new circuit instance record via
+   * `storage.createCircuitInstance()` with position, rotation, and reference
+   * designator (e.g., U1, R1, C1).
+   *
+   * @side-effect Writes a new row to the `circuit_instances` table.
+   */
   registry.register({
     name: 'place_component',
     description:
@@ -67,6 +130,15 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * remove_component_instance — Remove a component instance from a circuit schematic.
+   *
+   * Executes server-side: deletes the instance via `storage.deleteCircuitInstance()`.
+   * Requires user confirmation (`requiresConfirmation: true`) because the
+   * operation is destructive.
+   *
+   * @side-effect Deletes a row from the `circuit_instances` table.
+   */
   registry.register({
     name: 'remove_component_instance',
     description: 'Remove a component instance from a circuit schematic by its reference designator or instance ID.',
@@ -84,6 +156,14 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * draw_net — Create a net (electrical connection) between pins.
+   *
+   * Executes server-side: creates a new net record via `storage.createCircuitNet()`
+   * with name, type (signal/power/ground/bus), optional voltage, and routing segments.
+   *
+   * @side-effect Writes a new row to the `circuit_nets` table.
+   */
   registry.register({
     name: 'draw_net',
     description: 'Create a net (electrical connection) between pins in a circuit schematic.',
@@ -112,6 +192,15 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * remove_net — Delete a net from a circuit schematic.
+   *
+   * Executes server-side: deletes the net via `storage.deleteCircuitNet()`.
+   * Requires user confirmation (`requiresConfirmation: true`) because the
+   * operation is destructive and removes all associated connectivity.
+   *
+   * @side-effect Deletes a row from the `circuit_nets` table.
+   */
   registry.register({
     name: 'remove_net',
     description: 'Delete a net from a circuit schematic.',
@@ -129,6 +218,12 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * place_power_symbol — Add a power symbol (VCC, GND, etc.) to a schematic.
+   *
+   * Dispatched client-side. Places a standard power symbol at the specified
+   * position, optionally overriding the default net name.
+   */
   registry.register({
     name: 'place_power_symbol',
     description: 'Add a power symbol (VCC, GND, etc.) to a circuit schematic.',
@@ -146,6 +241,12 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('place_power_symbol', params),
   });
 
+  /**
+   * place_no_connect — Mark a pin as intentionally unconnected.
+   *
+   * Dispatched client-side. Adds a no-connect marker (X symbol) to the
+   * specified pin, suppressing ERC warnings about unconnected pins.
+   */
   registry.register({
     name: 'place_no_connect',
     description: 'Mark a pin as intentionally unconnected (no-connect marker) on the schematic.',
@@ -159,6 +260,12 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('place_no_connect', params),
   });
 
+  /**
+   * add_net_label — Add a net label to name a connection point on the schematic.
+   *
+   * Dispatched client-side. Places a text label at the specified position
+   * to identify a net by name, enabling off-page connections.
+   */
   registry.register({
     name: 'add_net_label',
     description: 'Add a net label to the schematic to name a connection point.',
@@ -173,6 +280,13 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('add_net_label', params),
   });
 
+  /**
+   * run_erc — Run Electrical Rule Check on a circuit design.
+   *
+   * Dispatched client-side. Analyzes the circuit for connection errors,
+   * missing connections, floating pins, and design rule violations.
+   * Results are displayed in the validation panel.
+   */
   registry.register({
     name: 'run_erc',
     description:
@@ -190,7 +304,35 @@ export function registerCircuitTools(registry: ToolRegistry): void {
 // PCB / breadboard tools — also category "circuit"
 // ---------------------------------------------------------------------------
 
+/**
+ * Register PCB and breadboard physical layout tools with the given registry.
+ *
+ * These tools handle the physical representation of circuits: breadboard
+ * wiring, PCB trace routing, wire removal, and automatic routing.
+ *
+ * Tools registered (4 total):
+ *
+ * **Breadboard:**
+ * - `place_breadboard_wire` — Add a wire on the breadboard view (server-side, writes to DB).
+ *
+ * **Wire management:**
+ * - `remove_wire`           — Remove a wire from any view (destructive, requires confirmation).
+ *
+ * **PCB layout:**
+ * - `draw_pcb_trace`        — Route a PCB trace between two points (server-side, writes to DB).
+ * - `auto_route`            — Automatically route all unrouted nets.
+ *
+ * @param registry - The {@link ToolRegistry} instance to register tools into.
+ */
 export function registerPcbTools(registry: ToolRegistry): void {
+  /**
+   * place_breadboard_wire — Add a wire connection on the breadboard view.
+   *
+   * Executes server-side: creates a new wire record via `storage.createCircuitWire()`
+   * with the `breadboard` view type, path points, and optional color.
+   *
+   * @side-effect Writes a new row to the `circuit_wires` table.
+   */
   registry.register({
     name: 'place_breadboard_wire',
     description: 'Add a wire connection on the breadboard view between two points.',
@@ -219,6 +361,15 @@ export function registerPcbTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * remove_wire — Remove a wire from the breadboard or PCB view.
+   *
+   * Executes server-side: deletes the wire via `storage.deleteCircuitWire()`.
+   * Requires user confirmation (`requiresConfirmation: true`) because the
+   * operation is destructive.
+   *
+   * @side-effect Deletes a row from the `circuit_wires` table.
+   */
   registry.register({
     name: 'remove_wire',
     description: 'Remove a wire from the breadboard or PCB view.',
@@ -236,6 +387,14 @@ export function registerPcbTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * draw_pcb_trace — Route a PCB trace between two points on the board layout.
+   *
+   * Executes server-side: creates a new wire record via `storage.createCircuitWire()`
+   * with the `pcb` view type, configurable trace width (mm), and layer (front/back).
+   *
+   * @side-effect Writes a new row to the `circuit_wires` table.
+   */
   registry.register({
     name: 'draw_pcb_trace',
     description: 'Route a PCB trace between two points on the board layout.',
@@ -265,6 +424,12 @@ export function registerPcbTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * auto_route — Automatically route all unrouted nets on the PCB layout.
+   *
+   * Dispatched client-side. Invokes the client-side auto-router which
+   * analyzes unrouted nets and generates optimal PCB traces.
+   */
   registry.register({
     name: 'auto_route',
     description: 'Automatically route all unrouted nets on the PCB layout.',

@@ -1,6 +1,6 @@
 # ProtoPulse User Guide
 
-Welcome to **ProtoPulse** — your browser-based, AI-assisted electronics design platform. Whether you're architecting an IoT sensor node, managing a bill of materials for a production run, or validating your design before sending it to fabrication, ProtoPulse brings everything together in one place.
+Welcome to **ProtoPulse** — your browser-based, AI-assisted electronics design platform. Whether you're architecting an IoT sensor node, capturing a schematic, managing a bill of materials for a production run, or validating your design before sending it to fabrication, ProtoPulse brings everything together in one place.
 
 This guide will walk you through every feature in detail so you can get the most out of the platform.
 
@@ -17,7 +17,11 @@ This guide will walk you through every feature in detail so you can get the most
    - [Right Chat Panel (AI Assistant)](#right-chat-panel-ai-assistant)
    - [Collapsing and Resizing Panels](#collapsing-and-resizing-panels)
    - [Mobile Layout](#mobile-layout)
-3. [Architecture View — Designing Your System](#3-architecture-view--designing-your-system)
+3. [Dashboard View — Project Overview](#3-dashboard-view--project-overview)
+   - [Quick Stats Bar](#quick-stats-bar)
+   - [Summary Cards](#summary-cards)
+   - [Welcome Overlay (New Projects)](#welcome-overlay-new-projects)
+4. [Architecture View — Designing Your System](#4-architecture-view--designing-your-system)
    - [The Block Diagram Canvas](#the-block-diagram-canvas)
    - [Adding Components](#adding-components)
    - [Moving and Selecting Components](#moving-and-selecting-components)
@@ -26,45 +30,59 @@ This guide will walk you through every feature in detail so you can get the most
    - [Context Menu (Right-Click)](#context-menu-right-click)
    - [The Asset Manager (Component Library)](#the-asset-manager-component-library)
    - [Empty Canvas: Getting Started Quickly](#empty-canvas-getting-started-quickly)
-4. [Component Editor — Designing Individual Parts](#4-component-editor--designing-individual-parts)
+5. [Schematic View — Full Circuit Capture Editor](#5-schematic-view--full-circuit-capture-editor)
+   - [The Schematic Canvas](#the-schematic-canvas)
+   - [The Schematic Toolbar](#the-schematic-toolbar)
+   - [Placing Components](#placing-components)
+   - [Connecting Pins with Net Drawing Tool](#connecting-pins-with-net-drawing-tool)
+   - [Power Symbols and Net Labels](#power-symbols-and-net-labels)
+   - [No-Connect Markers](#no-connect-markers)
+   - [Grid Snap and Coordinate Readout](#grid-snap-and-coordinate-readout)
+   - [ERC Panel — Electrical Rule Check](#erc-panel--electrical-rule-check)
+   - [Net Class Panel](#net-class-panel)
+   - [Hierarchical Sheet Panel](#hierarchical-sheet-panel)
    - [Breadboard View](#breadboard-view)
-   - [Schematic View](#schematic-view)
-   - [PCB View](#pcb-view)
+   - [PCB Layout View](#pcb-layout-view)
+6. [Component Editor — Designing Individual Parts](#6-component-editor--designing-individual-parts)
+   - [Breadboard View (Component Editor)](#breadboard-view-component-editor)
+   - [Schematic Symbol View](#schematic-symbol-view)
+   - [PCB Footprint View](#pcb-footprint-view)
    - [Metadata View](#metadata-view)
    - [Pin Table](#pin-table)
    - [Saving Your Work](#saving-your-work)
-5. [Procurement View — Bill of Materials Management](#5-procurement-view--bill-of-materials-management)
-   - [The BOM Table](#the-bom-table)
+7. [Procurement View — Bill of Materials Management](#7-procurement-view--bill-of-materials-management)
+   - [BOM Management Tab](#bom-management-tab)
    - [Adding Items](#adding-items)
    - [Searching and Filtering](#searching-and-filtering)
    - [Stock Status Indicators](#stock-status-indicators)
    - [Exporting to CSV](#exporting-to-csv)
    - [Cost Optimisation Settings](#cost-optimisation-settings)
    - [Quick Actions on BOM Items](#quick-actions-on-bom-items)
-6. [Validation View — Design Rule Checks](#6-validation-view--design-rule-checks)
+   - [BOM Comparison Tab](#bom-comparison-tab)
+8. [Validation View — Design Rule Checks](#8-validation-view--design-rule-checks)
    - [Running Validation](#running-validation)
    - [Understanding Issues](#understanding-issues)
    - [Resolving and Dismissing Issues](#resolving-and-dismissing-issues)
-7. [Output View — System Logs](#7-output-view--system-logs)
-   - [Viewing Logs](#viewing-logs)
-   - [Filtering and Searching](#filtering-and-searching)
-   - [Copying and Clearing Logs](#copying-and-clearing-logs)
-8. [Schematic View — Circuit Diagrams](#8-schematic-view--circuit-diagrams)
-   - [Navigating the Schematic](#navigating-the-schematic)
-   - [Multi-Sheet Support](#multi-sheet-support)
-9. [AI Chat Assistant — Your Design Partner](#9-ai-chat-assistant--your-design-partner)
-   - [Chatting with the AI](#chatting-with-the-ai)
-   - [What the AI Can Do](#what-the-ai-can-do)
-   - [Example Prompts to Try](#example-prompts-to-try)
-   - [Configuring AI Settings](#configuring-ai-settings)
-   - [Action Confirmation](#action-confirmation)
-   - [Error Messages](#error-messages)
-10. [Themes and Appearance](#10-themes-and-appearance)
-11. [Keyboard Shortcuts](#11-keyboard-shortcuts)
-12. [Notifications](#12-notifications)
-13. [Tips and Best Practices](#13-tips-and-best-practices)
-14. [Troubleshooting](#14-troubleshooting)
-15. [Glossary](#15-glossary)
+9. [Output View — Exports](#9-output-view--exports)
+   - [Export Formats](#export-formats)
+   - [Downloading Exports](#downloading-exports)
+10. [Simulation — Circuit Analysis](#10-simulation--circuit-analysis)
+    - [SPICE Simulation Panel](#spice-simulation-panel)
+    - [Frequency Analysis Panel](#frequency-analysis-panel)
+11. [AI Chat Assistant — Your Design Partner](#11-ai-chat-assistant--your-design-partner)
+    - [Chatting with the AI](#chatting-with-the-ai)
+    - [What the AI Can Do](#what-the-ai-can-do)
+    - [Example Prompts to Try](#example-prompts-to-try)
+    - [Configuring AI Settings](#configuring-ai-settings)
+    - [Action Confirmation](#action-confirmation)
+    - [Error Messages](#error-messages)
+12. [Command Palette](#12-command-palette)
+13. [Themes and Appearance](#13-themes-and-appearance)
+14. [Keyboard Shortcuts](#14-keyboard-shortcuts)
+15. [Notifications](#15-notifications)
+16. [Tips and Best Practices](#16-tips-and-best-practices)
+17. [Troubleshooting](#17-troubleshooting)
+18. [Glossary](#18-glossary)
 
 ---
 
@@ -72,15 +90,15 @@ This guide will walk you through every feature in detail so you can get the most
 
 ### Opening the App
 
-Open ProtoPulse in your browser. The workspace loads immediately with the **Architecture View** open by default, showing your block diagram canvas front and center.
+Open ProtoPulse in your browser. The workspace loads immediately with the **Dashboard View** open by default, giving you an instant overview of your project.
 
-> **Note:** The backend supports user accounts (registration and login via API), but the current version opens directly into the workspace without a login screen. Authentication features are being developed for a future release.
+> **Note:** The backend supports user accounts (registration and login via API). The current version opens directly into the workspace without a login screen. Authentication features are available via the API.
 
 ### First Look: The Workspace
 
 You'll see the ProtoPulse workspace — a three-panel layout designed to keep everything you need within reach.
 
-Don't worry if the canvas is empty — you can start adding components right away, or ask the AI assistant to generate an architecture for you.
+If this is a new project, a **Welcome Overlay** will appear with quick-start options. You can dismiss it at any time and it won't appear again.
 
 ---
 
@@ -89,14 +107,13 @@ Don't worry if the canvas is empty — you can start adding components right awa
 ProtoPulse uses a clean three-panel layout that you can customise to suit your workflow.
 
 ```
-┌──────────┬──────────────────────────────┬──────────┐
-│          │  Output | Architecture |      │          │
-│  Left    │  Component Editor |           │  Right   │
-│  Sidebar │  Procurement | Validation     │  Chat    │
-│          │                               │  Panel   │
-│          │     (Main Content Area)       │          │
-│          │                               │          │
-└──────────┴──────────────────────────────┴──────────┘
+┌──────────┬─────────────────────────────────────────┬──────────┐
+│          │  Dashboard | Architecture | Schematic |  │          │
+│  Left    │  Component Editor | Procurement |        │  Right   │
+│  Sidebar │  Validation | Exports | Simulation       │  Chat    │
+│          │                                          │  Panel   │
+│          │           (Main Content Area)            │          │
+└──────────┴─────────────────────────────────────────┴──────────┘
 ```
 
 ### Left Sidebar
@@ -113,11 +130,14 @@ The center area is where the real work happens. A row of **tabs** across the top
 
 | Tab | What It Does |
 |-----|-------------|
-| **Output** | View system logs, AI actions, and event history |
+| **Dashboard** | Project overview with stats, summaries, and recent activity |
 | **Architecture** | Design your system block diagram with a drag-and-drop canvas |
-| **Component Editor** | Design individual electronic components (breadboard, schematic, PCB, metadata, pin table) |
-| **Procurement** | Manage your Bill of Materials (BOM) — parts, pricing, suppliers, stock |
+| **Schematic** | Full circuit schematic capture editor with ERC, net classes, breadboard, and PCB layout |
+| **Component Editor** | Design individual electronic components (breadboard, schematic symbol, PCB footprint, metadata, pin table) |
+| **Procurement** | Manage your Bill of Materials (BOM) — parts, pricing, suppliers, stock, and BOM snapshots |
 | **Validation** | Run design rule checks and review issues |
+| **Exports** | Download your design in multiple formats (KiCad, Eagle, SPICE, Gerber, BOM, PDF, and more) |
+| **Simulation** | SPICE circuit simulation and frequency response analysis with Bode plot visualisation |
 
 Click any tab to switch. The currently active tab is highlighted with a cyan accent bar.
 
@@ -125,7 +145,7 @@ Click any tab to switch. The currently active tab is highlighted with a cyan acc
 
 The right panel is home to your AI design assistant. It's always there when you need it — type a question, describe what you want, or ask the AI to modify your design directly.
 
-More on the AI assistant in [Section 9](#9-ai-chat-assistant--your-design-partner).
+More on the AI assistant in [Section 11](#11-ai-chat-assistant--your-design-partner).
 
 ### Collapsing and Resizing Panels
 
@@ -146,9 +166,44 @@ Everything works the same — it's just rearranged to fit smaller screens.
 
 ---
 
-## 3. Architecture View — Designing Your System
+## 3. Dashboard View — Project Overview
 
-The Architecture View is the heart of ProtoPulse. It's where you lay out your system as a **block diagram** — showing which components are in your design and how they connect to each other.
+The Dashboard View provides an at-a-glance summary of your entire project. It is the default view when you open ProtoPulse.
+
+### Quick Stats Bar
+
+A row of stat pills at the top of the dashboard shows key metrics at a glance:
+
+- **Components** — Number of architecture nodes in the block diagram
+- **Connections** — Number of edges between architecture nodes
+- **BOM Items** — Number of unique parts in the Bill of Materials
+- **Est. Cost** — Estimated total BOM cost in USD
+- **Issues** — Count of open validation issues (red if errors, yellow if warnings, green if all clear)
+
+### Summary Cards
+
+Four summary cards provide deeper information, each clickable to navigate directly to the corresponding view:
+
+- **Architecture Card** — Shows node count, edge count, connection density, and a breakdown of node types (MCU, Sensor, Power, etc.)
+- **Bill of Materials Card** — Shows total quantity, unique part count, estimated cost, and stock status breakdown (In Stock, Low Stock, Out of Stock, On Order)
+- **Validation Card** — Shows overall pass/fail status and a breakdown of errors, warnings, and informational notices
+- **Recent Activity Card** — Shows the last 5 history entries (timestamped, with user or AI attribution)
+
+### Welcome Overlay (New Projects)
+
+On first launch with an empty project, a Welcome Overlay appears with quick-start options:
+
+- Start the AI-guided onboarding flow
+- Jump directly to Architecture view to begin designing
+- Browse the component library
+
+Dismiss the overlay at any time using the close button. Once dismissed, it will not reappear unless you reset the browser's local storage.
+
+---
+
+## 4. Architecture View — Designing Your System
+
+The Architecture View is where you lay out your system as a **block diagram** — showing which components are in your design and how they connect to each other.
 
 ### The Block Diagram Canvas
 
@@ -232,21 +287,209 @@ The AI will generate a complete architecture tailored to your description.
 
 ---
 
-## 4. Component Editor — Designing Individual Parts
+## 5. Schematic View — Full Circuit Capture Editor
 
-The Component Editor lets you design and define individual electronic components in detail. It's organised into five sub-views, accessible via tabs at the top of the editor.
+The Schematic View is a fully interactive circuit schematic capture editor. It supports real component instances, net connections with waypoints, power symbols, net labels, no-connect markers, ERC checking, net class management, multi-sheet hierarchical designs, and more.
+
+The Schematic view is accessed via the **Schematic** tab. Inside it, additional sub-views are accessible via a secondary tab bar: **Schematic** (the canvas editor), **Breadboard**, and **PCB Layout**.
+
+### The Schematic Canvas
+
+The canvas uses @xyflow/react as its foundation and is backed by real circuit data in the database. Instances, nets, and wires persist between sessions.
+
+- **Pan** — Hold the **H** key (Pan tool) or use the middle mouse button to drag the canvas
+- **Zoom** — Use your scroll wheel to zoom in and out
+- **Fit View** — Press **F** or click the Fit View button in the toolbar
+- **Coordinate Readout** — A live X/Y coordinate display appears in the bottom-right corner as you move your mouse
+
+### The Schematic Toolbar
+
+The toolbar along the top of the schematic canvas provides tool selection and view controls:
+
+| Tool | Shortcut | Function |
+|------|----------|---------|
+| **Select** | V | Select and drag components or nets |
+| **Pan** | H | Pan the canvas without selecting |
+| **Draw Net** | W | Draw net connections between component pins |
+| **Toggle Snap** | G | Enable or disable grid snapping |
+| **Fit View** | F | Zoom to show all components |
+| **Shortcuts** | ? | Open the keyboard shortcuts dialog |
+
+A MiniMap in the bottom-right of the canvas provides a bird's-eye view of the full schematic.
+
+### Placing Components
+
+Components from your Component Library (those you have created in the Component Editor) can be placed on the schematic canvas:
+
+1. Drag a component from the **Components panel** in the schematic sidebar onto the canvas.
+2. ProtoPulse automatically assigns a **reference designator** (e.g., U1, R3, C5) based on the component's family type (IEC/IEEE standard prefixes).
+3. The component appears as a schematic symbol using the shapes defined in its Schematic Symbol View in the Component Editor.
+
+Power symbols (VCC, GND, +3V3, +5V, VBAT, etc.) can be dragged from the **Power Symbols panel** and placed on the canvas. They persist in the circuit design settings.
+
+### Connecting Pins with Net Drawing Tool
+
+The Net Drawing Tool (shortcut **W**) lets you draw wire connections between component pins with Manhattan (orthogonal) routing:
+
+1. Activate the Net Drawing Tool by pressing **W** or clicking the draw-net button in the toolbar.
+2. Click on a component pin (the small handle dot on the symbol edge) to begin drawing.
+3. Click on the canvas to add waypoints — the wire routes horizontally then vertically between each point.
+4. Click on a target pin to complete the net connection.
+5. Press **Escape** to cancel, or **Backspace** to undo the last waypoint.
+
+When a connection is completed, a net is created in the database with a human-readable name derived from the reference designators and pin names (e.g., `U1.SDA_U2.SDA`).
+
+You can also create simple connections by dragging directly from one pin handle to another without using the draw-net tool — this creates a straight net edge.
+
+Individual net edges can be deleted by selecting them and pressing **Delete** or **Backspace**. If all segments of a net are deleted, the net is removed entirely.
+
+### Power Symbols and Net Labels
+
+**Power symbols** represent power rails (VCC, GND, etc.) and appear as standard schematic power symbols. Available types include VCC, GND, +3V3, +5V, VBAT, and custom labels.
+
+**Net labels** allow you to name a node in the schematic without drawing a physical wire to it. Nets with the same label name are electrically connected, which is standard practice in multi-sheet designs.
+
+Both power symbols and net labels are draggable and their positions persist to the database.
+
+### No-Connect Markers
+
+No-connect markers (X symbols) can be placed on pins that intentionally have no connection. This suppresses ERC warnings for unconnected pins that you have deliberately left unconnected.
+
+### Grid Snap and Coordinate Readout
+
+- Grid snap is enabled by default. Toggle it with **G** or the snap button in the toolbar.
+- The default grid size is configurable per circuit design via the circuit settings.
+- A coordinate readout in the bottom-right shows your current canvas position in flow coordinates.
+
+### ERC Panel — Electrical Rule Check
+
+The **ERC Panel** is accessible from the schematic view's side panel. It runs a set of electrical rule checks on your circuit and reports violations grouped by rule type.
+
+**Available ERC rules:**
+
+| Rule | Default Severity | What It Checks |
+|------|-----------------|---------------|
+| Unconnected Pin | Warning | Pins with no connection and no no-connect marker |
+| Shorted Power | Error | Two or more power nets connected together |
+| Floating Input | Warning | Input pins with no driving source |
+| Missing Bypass Cap | Warning | Power pins without a nearby decoupling capacitor |
+| Driver Conflict | Error | Multiple output drivers connected to the same net |
+| No-Connect Connected | Warning | A no-connect marker that has a net connected to it |
+| Power Net Unnamed | Warning | Power nets that have not been named |
+
+**Using the ERC Panel:**
+
+1. Click the **Run** button in the ERC Panel header to run all enabled checks.
+2. Violations are displayed grouped by rule type with expandable sections.
+3. A summary bar shows the total error and warning counts.
+4. Click any violation to pan and zoom the canvas to the affected location.
+5. Click the settings icon to open the rule configuration panel, where you can enable/disable individual rules or toggle their severity between error and warning.
+
+When no violations are found, a green "No violations found" message is displayed.
+
+### Net Class Panel
+
+The **Net Class Panel** allows you to define groups of nets with shared PCB trace properties. This information is used when exporting to KiCad and other PCB formats.
+
+**Net class properties:**
+
+- **Name** — Identifies the class (e.g., Power, High-Speed, Signal)
+- **Trace Width** — Minimum copper trace width in mm
+- **Clearance** — Minimum clearance between traces in mm
+- **Via Diameter** — Minimum via diameter in mm
+- **Color** — A visual colour indicator shown in the panel
+
+**Using the Net Class Panel:**
+
+1. The **Default** net class applies to all nets that have not been explicitly assigned.
+2. Click **Add** to create a new net class with custom properties.
+3. In the **Net Assignments** section, use the dropdown next to each net name to assign it to a class.
+4. Hover over any class entry to reveal Edit and Delete buttons.
+5. The Default class cannot be deleted.
+
+> **Note:** Net class assignments are currently stored in local session state and are not persisted to the database. This is planned for a future update.
+
+### Hierarchical Sheet Panel
+
+The **Hierarchical Sheet Panel** shows all circuit designs (sheets) in your project as a list. Click any sheet to switch the schematic canvas to that circuit design.
+
+- Each sheet is identified by its circuit design name and description.
+- Sheet numbers are shown for reference.
+- When multiple sheets exist, a note indicates that inter-sheet connectivity (global labels, sheet ports) is planned for a future update.
 
 ### Breadboard View
+
+The **Breadboard View** (accessible via the secondary tab inside the Schematic view) shows your circuit on an interactive solderless breadboard. It is useful for prototyping and visual communication of your layout.
+
+**Features:**
+
+- A standard 830-tie-point breadboard grid with power rails
+- **Select tool (1)** — Select and pan the canvas
+- **Wire tool (2)** — Draw wire connections between breadboard tie-points
+- **Delete tool (3)** — Delete selected wires
+- Zoom controls (zoom in/out, reset)
+- Tie-point highlighting on hover
+- Coordinate readout showing board position
+- A **ratsnest overlay** shows unrouted net connections as thin dashed lines, helping you understand which tie-points need to be wired together
+- Wire colours are assigned per net automatically
+
+**Drawing wires:**
+
+1. Activate the Wire tool by pressing **2** or clicking the Pencil icon.
+2. Click a tie-point to start a wire.
+3. Click additional tie-points to add waypoints.
+4. Double-click to finish and commit the wire to the database.
+5. Press **Escape** to cancel a wire in progress.
+6. Click a wire to select it, then press **Delete** or **Backspace** to remove it.
+
+A circuit design selector at the top lets you switch between multiple circuit designs in the same project.
+
+### PCB Layout View
+
+The **PCB Layout View** (accessible via the secondary tab inside the Schematic view) provides a basic PCB component placement and trace routing editor.
+
+**Features:**
+
+- Configurable board outline (width and height in mm, default 50 x 40 mm)
+- Dot grid at 0.5 mm spacing (50 mil)
+- **Select tool (1)** — Select and pan the canvas
+- **Trace tool (2)** — Route copper traces between pads with grid snap
+- **Delete tool (3)** — Delete selected traces
+- **Front/Back layer toggle (F)** — Switch between F.Cu (front copper, red) and B.Cu (back copper, blue)
+- Trace width presets: 0.15, 0.25, 0.5, 1.0, 2.0 mm, plus a continuous slider
+- A **ratsnest overlay** shows unrouted net connections as thin dashed lines
+- Layer legend in the bottom-left corner
+- Coordinate readout showing board position in mm
+- Component footprints shown as labelled rectangles (simplified placeholder footprints)
+
+**Routing traces:**
+
+1. Activate the Trace tool by pressing **2** or clicking the Pencil icon.
+2. Click on the canvas to place trace points (snapped to the 0.5 mm grid).
+3. Double-click to finish routing and commit the trace.
+4. Press **Escape** to cancel a trace in progress.
+5. Click a trace to select it, then press **Delete** or **Backspace** to remove it.
+6. Press **F** to toggle between front and back copper layers.
+
+---
+
+## 6. Component Editor — Designing Individual Parts
+
+The Component Editor lets you design and define individual electronic components in detail. It is organised into five sub-views, accessible via tabs at the top of the editor.
+
+### Breadboard View (Component Editor)
 
 A visual breadboard representation where you can place and arrange SVG shapes to create a breadboard-style illustration of your component. Use the shape tools to draw rectangles, circles, paths, text, and grouped elements.
 
 This is useful for creating visual documentation of how your component looks when plugged into a breadboard.
 
-### Schematic View
+### Schematic Symbol View
 
 The schematic symbol editor lets you design the schematic representation of your component — the symbol that appears on circuit diagrams. Draw pins, outlines, and labels using the interactive SVG canvas.
 
-### PCB View
+The shapes you define here are rendered on the Schematic Canvas when an instance of this component is placed.
+
+### PCB Footprint View
 
 The PCB footprint editor is where you define the physical footprint of your component — the copper pads, silkscreen outline, and courtyard that will appear on your printed circuit board.
 
@@ -274,7 +517,7 @@ The Pin Table is where you define every pin/connector on your component:
 - Terminal positions
 - Electrical function (power, signal, ground, etc.)
 
-This data links your component to the architecture diagram, ensuring that connections in the block diagram match the actual pinout of the part.
+This data is used to render pin handles on the Schematic Canvas, enabling you to draw net connections between component pins.
 
 ### Saving Your Work
 
@@ -285,13 +528,13 @@ This data links your component to the architecture diagram, ensuring that connec
 
 ---
 
-## 5. Procurement View — Bill of Materials Management
+## 7. Procurement View — Bill of Materials Management
 
-The Procurement View is your command centre for managing the Bill of Materials (BOM) — the list of every component you need to build your design, along with pricing, suppliers, and stock information.
+The Procurement View is your command centre for managing the Bill of Materials (BOM). It has two tabs: **BOM Management** and **BOM Comparison**.
 
-### The BOM Table
+### BOM Management Tab
 
-The BOM is displayed as a full-width table with the following columns:
+The BOM is displayed as a full-width virtualised table (rows are rendered on demand for performance) with the following columns:
 
 | Column | Description |
 |--------|-------------|
@@ -306,15 +549,21 @@ The BOM is displayed as a full-width table with the following columns:
 | **Total** | Quantity multiplied by unit price |
 | **Actions** | Quick action buttons (buy, delete) |
 
-At the top of the view, you'll see the **Estimated BOM Cost** displayed prominently — this is the sum of all line items, shown per unit at 1,000-quantity pricing.
+At the top of the view, you'll see the **Estimated BOM Cost** displayed prominently — this is the sum of all line items.
+
+BOM rows support **drag-and-drop reordering** using the grip handle on the left side of each row. Your custom order is saved to local storage.
+
+You can also **inline-edit** any BOM row by clicking directly on a cell (part number, description, quantity, unit price, etc.). Changes save automatically when you press Enter or click elsewhere.
 
 ### Adding Items
 
-Click the **"Add Item"** button at the top of the view. A new row will appear in the table with placeholder values that you can edit. You can also add items via the AI assistant — try "Add ESP32-S3-WROOM-1 to the BOM."
+Click the **"Add Item"** button at the top of the view. A dialog will appear where you can fill in the part details. You can also add items via the AI assistant — try "Add ESP32-S3-WROOM-1 to the BOM."
 
 ### Searching and Filtering
 
 Use the **search bar** at the top to filter the BOM by part number, manufacturer, description, or supplier. The table updates in real time as you type.
+
+Click the column headers to **sort** the BOM by that column in ascending or descending order.
 
 ### Stock Status Indicators
 
@@ -334,7 +583,7 @@ Click the **"Export CSV"** button to download your entire BOM as a spreadsheet f
 - Importing into other tools (Excel, Google Sheets, ERP systems)
 - Archiving your BOM at a specific design milestone
 
-A notification will confirm when the export is complete.
+For advanced export options including BOM in multiple formats, see the [Exports section](#9-output-view--exports).
 
 ### Cost Optimisation Settings
 
@@ -367,9 +616,34 @@ Right-click any BOM row for additional options:
 - **Copy Part Number** — Copy just the part number
 - **Remove from BOM** — Delete this item
 
+### BOM Comparison Tab
+
+The **BOM Comparison** tab (second tab in the Procurement view) allows you to compare the current BOM against a previously saved snapshot. This is useful for tracking design changes over time, reviewing what changed between hardware revisions, and auditing cost impact.
+
+**Taking a snapshot:**
+
+1. Click **"Take Snapshot"** in the BOM Comparison tab header.
+2. Enter a descriptive label (e.g., "Rev A", "Before power supply change").
+3. Click **Create Snapshot**. The current BOM state is saved to the database.
+
+**Comparing against a snapshot:**
+
+1. Use the snapshot dropdown selector to choose a previously saved snapshot.
+2. ProtoPulse computes a diff between the snapshot and the current BOM automatically.
+3. A **summary bar** shows the count of added, removed, and modified items, plus the total cost delta in USD.
+4. A **diff table** lists every changed item with colour-coded badges:
+   - **Green (Added)** — Parts present now that were not in the snapshot
+   - **Red (Removed)** — Parts in the snapshot that have since been removed
+   - **Yellow (Modified)** — Parts present in both, but with changed fields (quantity, price, supplier, etc.)
+
+**Managing snapshots:**
+
+- Click the **trash icon** next to a selected snapshot to delete it.
+- Snapshots are stored per-project and persist between sessions.
+
 ---
 
-## 6. Validation View — Design Rule Checks
+## 8. Validation View — Design Rule Checks
 
 The Validation View helps you catch potential problems in your design before you commit to fabrication. Think of it as a spell-checker for your electronics design.
 
@@ -407,50 +681,95 @@ When all issues are resolved, you'll see a reassuring **"All Systems Nominal"** 
 
 ---
 
-## 7. Output View — System Logs
+## 9. Output View — Exports
 
-The Output View shows a chronological log of everything happening in your project — think of it as the system's activity monitor.
+The Exports view (labelled **Exports** in the tab bar, internally the Output view) provides a full suite of multi-format export capabilities for your design. All export formats are fully implemented and available.
 
-### Viewing Logs
+### Export Formats
 
-Logs appear in a terminal-style display with green text on a dark background. Each entry is numbered and timestamped. You'll see entries like:
+Exports are organised into four categories:
 
-- `[SYSTEM] Initializing ProtoPulse Core...`
-- `[PROJECT] Smart_Agro_Node_v1 loaded.`
-- `[AI] Added sensor node: BME280`
-- `[RESOLVED] Marked resolved: Missing decoupling capacitor`
+**Schematic & Netlist:**
 
-### Filtering and Searching
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| KiCad Project | .kicad_sch / .kicad_pcb / .kicad_pro | Full KiCad project bundle (schematic + PCB + project file) |
+| Eagle Project | .sch / .brd (XML) | Autodesk Eagle schematic and board files |
+| SPICE Netlist | .cir | Circuit simulation netlist for LTspice, ngspice, etc. |
+| Netlist (CSV) | .csv | Connectivity netlist in CSV format |
+| Netlist (KiCad) | .net | Connectivity netlist in KiCad S-expression format |
 
-Use the **search/filter bar** at the top to narrow down the log. Type any keyword and the log will show only matching entries in real time.
+**PCB Fabrication:**
 
-### Copying and Clearing Logs
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| Gerber + Drill | .gbr / .drl (RS-274X + Excellon) | Manufacturing files: copper layers, solder mask, silkscreen, drill |
+| Pick-and-Place | .csv | SMT assembly placement file with X/Y coordinates and rotation |
 
-- **Copy all logs** — Click the copy icon at the top to copy the entire log history to your clipboard. A "Copied" notification will confirm.
-- **Clear logs** — Log entries can be managed through the AI chat or API.
+**Documentation & BOM:**
 
-The Output view shows up to 500 of the most recent entries. If there are more, a note at the top will indicate how many older entries are hidden.
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| BOM (CSV) | .csv | Bill of materials with part numbers, quantities, and pricing |
+| Fritzing Project | .fzz | Full Fritzing project archive |
+| Design Report (PDF) | .pdf | Comprehensive design report with architecture, BOM, validation, and circuits |
+| FMEA Report | .csv | Failure Mode and Effects Analysis with risk priority numbers |
+
+**Firmware:**
+
+| Format | Extension | Description |
+|--------|-----------|-------------|
+| Firmware Scaffold | .cpp / .h / .ini | Arduino/PlatformIO starter code generated from your architecture |
+
+### Downloading Exports
+
+Each export format is displayed as a card within its category. Click the **Download** button on any format card to generate and download the file. Multi-file formats (KiCad, Eagle, Gerber, Firmware) are downloaded as a ZIP archive.
+
+- A loading spinner shows while the file is being generated on the server.
+- A green checkmark confirms a successful download.
+- A red error indicator (with a retry option) appears if generation fails.
+- Log entries are written to the Output log for each export operation.
 
 ---
 
-## 8. Schematic View — Circuit Diagrams
+## 10. Simulation — Circuit Analysis
 
-The Schematic View provides an interactive circuit schematic viewer where you can explore your design at the circuit level.
+The Simulation view provides tools for analysing circuit behaviour before physical prototyping.
 
-### Navigating the Schematic
+### SPICE Simulation Panel
 
-- **Pan** — Hold the **Space** key and drag to move around the schematic, or use the middle mouse button.
-- **Zoom** — Use your scroll wheel to zoom in and out.
+The SPICE simulation panel allows you to run transient, AC, and DC sweep analyses on your circuit using a built-in circuit solver. Enter component values, select an analysis type, and view waveform results.
 
-### Multi-Sheet Support
+### Frequency Analysis Panel
 
-The Schematic View supports multiple sheets, reflecting hierarchical designs. Sheet tabs appear below the schematic for switching between different sections of your design.
+The **Frequency Analysis Panel** computes the frequency response (Bode plot) of passive filter circuits entirely in the browser — no server round-trip required.
 
-> **Note:** The Schematic View currently displays demo/reference data. Full interactive schematic capture (placing components, routing wires) is planned for a future phase. You can ask the AI assistant to "generate a schematic" — this feature is under active development.
+**Supported filter topologies:**
+
+| Topology | Description |
+|----------|-------------|
+| RC Low-Pass | First-order RC low-pass filter |
+| RC High-Pass | First-order RC high-pass filter |
+| RLC Band-Pass | Second-order RLC band-pass filter |
+| RLC Low-Pass | Second-order RLC low-pass filter |
+| Generic 2nd Order | Parametric second-order filter (specify ω₀ and ζ) |
+
+**How to use:**
+
+1. Navigate to the Simulation tab and select Frequency Analysis.
+2. Choose a **filter topology** from the selector.
+3. Enter the required **component values**. Values support SI unit suffixes: k (kilo), M (mega), m (milli), u (micro), n (nano). For example: 1k, 100n, 10M.
+4. Set the **frequency range** (minimum and maximum frequency in Hz).
+5. Click **Analyze** to run the computation.
+6. The results display a **Bode plot** with magnitude (dB) and phase (degrees) vs. frequency.
+7. A **summary panel** shows key metrics: DC gain, -3 dB cutoff frequency, resonant frequency, phase margin, and gain margin (where applicable).
+8. Click **Reset** to clear results and start fresh.
+
+The analysis runs at 50 points per decade across the specified frequency range.
 
 ---
 
-## 9. AI Chat Assistant — Your Design Partner
+## 11. AI Chat Assistant — Your Design Partner
 
 The AI assistant is one of ProtoPulse's most powerful features. It lives in the right panel and acts as an expert electronics engineer that can both advise you and directly modify your design.
 
@@ -465,7 +784,7 @@ Your chat history is saved to the database and persists between sessions, so you
 
 ### What the AI Can Do
 
-The AI assistant is far more than a chatbot — it can take direct action on your design. Here's a summary of its capabilities:
+The AI assistant is far more than a chatbot — it can take direct action on your design across approximately 80 distinct action types. Here's a summary of its capabilities:
 
 **Architecture Design:**
 - Add, remove, and update components on the block diagram
@@ -486,6 +805,12 @@ The AI assistant is far more than a chatbot — it can take direct action on you
 - Clear all validation issues
 - Perform specialised checks: power budget analysis, voltage domain verification, DFM checks, thermal analysis
 
+**Circuit and Schematic:**
+- Create and manage circuit designs (sheets)
+- Place and connect schematic instances
+- Manage net names and net types
+- Navigate to schematic sheets
+
 **Project Management:**
 - Rename the project
 - Update the project description
@@ -498,8 +823,9 @@ The AI assistant is far more than a chatbot — it can take direct action on you
 - Assign net names and pin mappings
 - Create sub-circuit templates (power supply, USB interface, SPI flash, etc.)
 - Generate design reports
-- Export to KiCad and SPICE formats (planned)
+- Export to KiCad, Eagle, SPICE, Gerber, and other formats
 - Record design decisions with rationale
+- Generate firmware scaffold code
 
 ### Example Prompts to Try
 
@@ -529,6 +855,11 @@ Here are some things you can ask the AI — these are great starting points:
 - "Run a design rule check"
 - "Analyse the power budget for this design"
 - "What ESD protection do I need for the USB-C port?"
+
+**Export:**
+- "Export to KiCad"
+- "Generate a SPICE netlist"
+- "Create a firmware scaffold for this design"
 
 **General Electronics Questions:**
 - "What pull-up resistor value should I use for I2C at 400kHz?"
@@ -573,7 +904,34 @@ If something goes wrong with the AI, you'll see a clear, helpful error message:
 
 ---
 
-## 10. Themes and Appearance
+## 12. Command Palette
+
+The **Command Palette** provides quick keyboard-driven access to navigate between views and run common actions without lifting your hands from the keyboard.
+
+**Opening the Command Palette:**
+
+Press **Ctrl+K** (or **Cmd+K** on macOS) to open the command palette from anywhere in the app.
+
+**Using the Command Palette:**
+
+1. Start typing to search across available commands. The list filters in real time.
+2. Use **arrow keys** to navigate the list.
+3. Press **Enter** to execute the highlighted command.
+4. Press **Escape** to close without executing.
+
+**Available command groups:**
+
+| Group | Commands |
+|-------|---------|
+| **Navigate** | Architecture, Schematic, PCB Layout, Breadboard, Component Editor, Procurement, Validation, Exports, Simulation |
+| **Panels** | Show/Hide Sidebar, Show/Hide AI Assistant |
+| **Actions** | Run Design Rule Check, Export Project |
+
+Each navigation command also shows its numeric shortcut (1 through 9) for direct tab access.
+
+---
+
+## 13. Themes and Appearance
 
 ProtoPulse supports two visual themes:
 
@@ -582,6 +940,8 @@ ProtoPulse supports two visual themes:
 
 To switch themes, click the **theme toggle button** in the top-right area of the header bar (next to the chat panel toggle). Your preference is saved automatically.
 
+A **high-contrast mode** is available for improved accessibility. Toggle it in the display settings area.
+
 The interface uses three carefully chosen font families:
 - **Rajdhani** — For headings and display text, giving ProtoPulse its distinctive engineering aesthetic
 - **JetBrains Mono** — For part numbers, pin names, and technical values — a monospaced font optimised for readability
@@ -589,36 +949,117 @@ The interface uses three carefully chosen font families:
 
 ---
 
-## 11. Keyboard Shortcuts
+## 14. Keyboard Shortcuts
 
-| Shortcut | Action | Where It Works |
-|----------|--------|----------------|
-| **Space + Drag** | Pan the canvas | Architecture View, Schematic View |
-| **Scroll Wheel** | Zoom in/out | Architecture View, Schematic View |
-| **Delete** / **Backspace** | Delete selected node(s) (with confirmation) | Architecture View |
-| **Escape** | Close dialog, deselect, dismiss panel | Everywhere |
-| **Right-Click** | Open context menu | Architecture View |
-| **Enter** | Send message | AI Chat |
+Press **?** at any time to open the full keyboard shortcuts dialog. Below is a summary.
+
+### Global
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+K** | Open command palette |
+| **?** | Open keyboard shortcuts dialog |
+
+### Architecture View
+
+| Shortcut | Action |
+|----------|--------|
+| **Ctrl+Z** | Undo |
+| **Ctrl+Y** / **Ctrl+Shift+Z** | Redo |
+| **Delete** / **Backspace** | Delete selected node(s) |
+| **Ctrl+A** | Select all nodes |
+| **Ctrl+V** | Paste |
+| **F** | Fit view |
+| **G** | Toggle snap grid |
+| **Space + Drag** | Pan the canvas |
+| **Scroll Wheel** | Zoom in/out |
+| **Right-Click** | Open context menu |
+| **Escape** | Deselect / close dialog |
+
+### Schematic View
+
+| Shortcut | Action |
+|----------|--------|
+| **V** | Select tool |
+| **H** | Pan tool |
+| **W** | Draw net/wire tool |
+| **G** | Toggle snap |
+| **F** | Fit view |
+| **Escape** | Cancel / deselect |
+| **Backspace** | Undo last waypoint (while drawing net) |
+
+### Component Editor
+
+| Shortcut | Action |
+|----------|--------|
+| **S** | Select tool |
+| **R** | Rectangle tool |
+| **C** | Circle tool |
+| **T** | Text tool |
+| **L** | Line tool |
+| **P** | Pin tool |
+| **M** | Measure tool |
+| **B** | Path (Bezier) tool |
+| **Delete** / **Backspace** | Delete selected |
+| **Ctrl+C** | Copy |
+| **Ctrl+V** | Paste |
+| **Ctrl+0** / **Home** | Zoom to fit |
+| **Ctrl+S** | Save |
+| **Ctrl+Z** | Undo |
+| **Ctrl+Y** / **Ctrl+Shift+Z** | Redo |
+| **Space** | Pan canvas |
+| **Enter** | Finish path |
+| **Escape** | Cancel path |
+
+### Breadboard View
+
+| Shortcut | Action |
+|----------|--------|
+| **1** | Select tool |
+| **2** | Wire tool |
+| **3** | Delete tool |
+| **Delete** / **Backspace** | Delete selected wire |
+| **Escape** | Cancel / deselect |
+
+### PCB Layout View
+
+| Shortcut | Action |
+|----------|--------|
+| **1** | Select tool |
+| **2** | Trace tool |
+| **3** | Delete tool |
+| **F** | Flip active layer (front/back) |
+| **Delete** / **Backspace** | Delete selected trace |
+| **Escape** | Cancel / deselect |
+
+### AI Chat Panel
+
+| Shortcut | Action |
+|----------|--------|
+| **Enter** | Send message |
+| **Escape** | Close panel |
 
 ---
 
-## 12. Notifications
+## 15. Notifications
 
 ProtoPulse uses small **toast notifications** — cards that briefly appear in the bottom-right corner of the screen — to confirm your actions and alert you to important events. You don't need to click them; they disappear automatically after a few seconds.
 
 Common notifications include:
 
-- **"Export Complete"** — Your BOM CSV has been downloaded successfully.
+- **"Export Complete"** — Your file has been downloaded successfully.
+- **"Snapshot created"** — A BOM snapshot has been saved.
 - **"Item Added"** — A new component has been added to the BOM.
 - **"Validation Running"** — Design rule checks have been initiated.
 - **"Issue Dismissed"** — A validation issue has been marked as resolved.
 - **"Saved"** — Your component has been saved to the database.
 - **"Copied"** — Content has been copied to your clipboard.
+- **"Reordered"** — BOM item order has been updated.
 - **"Export Failed"** / **"Save Failed"** — Something went wrong (the notification will include details).
 
 ---
 
-## 13. Tips and Best Practices
+## 16. Tips and Best Practices
 
 Here are some recommendations to help you get the most out of ProtoPulse:
 
@@ -628,12 +1069,21 @@ Here are some recommendations to help you get the most out of ProtoPulse:
 - **Use real part numbers.** The AI knows thousands of real components. Ask it to recommend specific parts — it'll give you actual manufacturer part numbers with specifications.
 - **Drag from the library.** The Asset Manager in the Architecture view is the fastest way to add components manually. Search by name to find parts quickly.
 - **Right-click for quick actions.** The context menu on nodes and BOM items provides shortcuts for common operations.
+- **Use the Command Palette (Ctrl+K).** Navigate between views and run common actions without touching the mouse.
 
 ### Managing Your BOM
 
+- **Take snapshots before major changes.** Use the BOM Comparison tab to save a snapshot before a design revision. This gives you a clear diff of what changed and what it cost.
 - **Export early, export often.** Use the CSV export to share your BOM with procurement, purchasing teams, or colleagues using other tools.
 - **Check stock status.** The colour-coded badges make it easy to spot supply chain problems at a glance. Address "Out of Stock" items early.
 - **Ask the AI for alternatives.** If a part is out of stock or too expensive, ask: "Find a cheaper alternative to [part number]" or "What can I use instead of [part]?"
+
+### Schematic Capture
+
+- **Assign net classes early.** Before routing the PCB, define net classes for power, high-speed signals, and general signal lines. This ensures KiCad exports include your design rules.
+- **Use power symbols instead of wires for power rails.** Placing GND and VCC power symbols is cleaner and less error-prone than drawing wires across the sheet.
+- **Run ERC regularly.** Click Run in the ERC Panel after placing components to catch unconnected pins and other issues before they compound.
+- **Use the Net Drawing Tool (W) for precise routing.** Click to add waypoints for orthogonal wiring — cleaner than free-hand dragging.
 
 ### Validating Your Design
 
@@ -652,15 +1102,17 @@ Here are some recommendations to help you get the most out of ProtoPulse:
 
 1. **Describe your project** to the AI and let it generate an architecture.
 2. **Refine the design** by adding, removing, and reconnecting components.
-3. **Populate the BOM** — ask the AI to add all components with pricing, or add them manually.
-4. **Run validation** to catch design issues.
-5. **Resolve issues** and iterate on your design.
-6. **Export the BOM** as CSV for your procurement team.
-7. **Use the Component Editor** to define detailed component specifications if needed.
+3. **Capture the schematic** in the Schematic view with real component instances and net connections.
+4. **Populate the BOM** — ask the AI to add all components with pricing, or add them manually.
+5. **Run ERC** in the Schematic view to catch electrical rule violations.
+6. **Run DRC** in the Validation view to catch system-level design issues.
+7. **Resolve issues** and iterate on your design.
+8. **Take a BOM snapshot** before major changes, to track deltas.
+9. **Export** in the format you need (KiCad, Gerber, BOM CSV, PDF report, firmware scaffold).
 
 ---
 
-## 14. Troubleshooting
+## 17. Troubleshooting
 
 | Problem | Possible Cause | Solution |
 |---------|---------------|----------|
@@ -674,6 +1126,8 @@ Here are some recommendations to help you get the most out of ProtoPulse:
 | BOM export not downloading | Browser blocking the download | Check your browser's download settings. Some browsers require you to allow downloads from the site. |
 | Changes not saving | Network connection issue | Check your internet connection. ProtoPulse saves changes automatically, but needs a connection to do so. |
 | Chat history missing | Page was loaded before data finished syncing | Wait for the page to fully load. Chat history is persisted to the database and should appear after initial sync. |
+| Schematic components not showing | No components in Component Library | Create components in the Component Editor first, then place instances on the Schematic canvas. |
+| Net class assignments lost after refresh | Net classes use local session state | Net class persistence to the database is planned for a future update. |
 
 If you encounter a problem not listed here, try these general steps:
 
@@ -684,7 +1138,7 @@ If you encounter a problem not listed here, try these general steps:
 
 ---
 
-## 15. Glossary
+## 18. Glossary
 
 | Term | Definition |
 |------|-----------|
@@ -692,17 +1146,23 @@ If you encounter a problem not listed here, try these general steps:
 | **Asset Manager** | The component library in the Architecture view, where you browse and drag components onto the canvas. |
 | **BLE** | Bluetooth Low Energy — a wireless protocol for short-range, low-power communication. |
 | **BOM** | Bill of Materials — a complete list of all components needed to build the design, including quantities, pricing, and sourcing. |
+| **BOM Snapshot** | A point-in-time copy of the BOM saved for future comparison. Used in the BOM Comparison tab. |
+| **Bode Plot** | A graph showing gain (dB) and phase (degrees) vs. frequency for a circuit, used in frequency response analysis. |
 | **Bus** | A shared communication pathway connecting multiple components (e.g., SPI bus, I2C bus). |
 | **Canvas** | The interactive drawing area where you place and connect components. |
 | **CAN** | Controller Area Network — a communication protocol commonly used in automotive and industrial applications. |
+| **Command Palette** | A keyboard-driven search interface (Ctrl+K) for navigating views and executing commands. |
 | **Component** | An individual electronic part in your design (e.g., microcontroller, resistor, sensor). |
 | **Connector** | A physical interface for connecting wires, cables, or other boards (e.g., USB-C, JST header). |
 | **CSV** | Comma-Separated Values — a simple spreadsheet file format, widely compatible with Excel and other tools. |
 | **DFM** | Design for Manufacturing — guidelines and checks that ensure your design can be manufactured efficiently. |
 | **DRC** | Design Rule Check — automated validation that flags potential design problems. |
 | **Edge** | A line connecting two components on the architecture diagram, representing an electrical connection. |
+| **ERC** | Electrical Rule Check — a set of checks run on the schematic to identify electrical errors and warnings. |
 | **ESD** | Electrostatic Discharge — a sudden flow of static electricity that can damage components. ESD protection circuits prevent this. |
+| **FMEA** | Failure Mode and Effects Analysis — a systematic method for evaluating potential failure modes and their impact. |
 | **Footprint** | The physical outline and pad pattern of a component on a PCB. |
+| **Gerber** | The industry-standard file format for PCB fabrication (RS-274X). Includes separate files for copper layers, solder mask, and silkscreen. |
 | **GPIO** | General Purpose Input/Output — configurable digital pins on a microcontroller. |
 | **I2C** | Inter-Integrated Circuit — a two-wire serial communication protocol commonly used for sensors. |
 | **LDO** | Low Dropout Regulator — a type of voltage regulator that can work with a small difference between input and output voltage. |
@@ -710,11 +1170,17 @@ If you encounter a problem not listed here, try these general steps:
 | **MCU** | Microcontroller Unit — a small computer on a single chip (e.g., ESP32, STM32, ATmega). |
 | **MPN** | Manufacturer Part Number — the unique identifier assigned to a part by its manufacturer. |
 | **Net** | A named electrical connection in a schematic (e.g., VCC, GND, MOSI). |
+| **Net Class** | A group of nets that share PCB trace width, clearance, and via diameter properties. |
+| **No-Connect** | A marker placed on a pin to indicate it is intentionally unconnected, suppressing ERC warnings. |
 | **Node** | A component block on the architecture diagram. |
 | **PCB** | Printed Circuit Board — the physical board that holds and connects electronic components. |
+| **Pick-and-Place** | A file listing component XY coordinates and rotation angles for SMT assembly machines. |
 | **Pin** | A connection point on a component (e.g., power pin, signal pin, ground pin). |
+| **Ratsnest** | Thin lines on the breadboard or PCB canvas showing unrouted net connections between pads. |
+| **Reference Designator** | A standard label identifying a component on a schematic (e.g., U1, R3, C5, J2). |
 | **Schematic** | A diagram showing the electrical connections between components using standardised symbols. |
 | **SMD** | Surface-Mount Device — a component designed to be soldered directly onto the surface of a PCB. |
+| **SPICE** | Simulation Program with Integrated Circuit Emphasis — a standard format for circuit simulation netlists. |
 | **SPI** | Serial Peripheral Interface — a high-speed, four-wire serial communication protocol. |
 | **THT** | Through-Hole Technology — components with wire leads that pass through holes in the PCB. |
 | **Toast** | A brief notification message that appears temporarily on screen. |

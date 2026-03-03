@@ -1,8 +1,8 @@
 # ProtoPulse — AI Agent Guide
 
-> **Audience:** AI coding agents (Replit Agent, Cursor, Copilot, Cody, etc.)
+> **Audience:** AI coding agents (Claude Code, Cursor, Copilot, Cody, etc.)
 > **Purpose:** The definitive reference for any AI agent picking up this codebase cold.
-> **Last updated:** 2026-02-17
+> **Last updated:** 2026-03-02
 
 ---
 
@@ -34,15 +34,23 @@
 | Feature | Status |
 |---------|--------|
 | Architecture block diagram editor (@xyflow/react) | ✅ Shipped |
-| Component Editor (SVG canvas, connectors, buses, DRC) | ✅ Phase 2 complete |
+| Component Editor (SVG canvas, connectors, buses, DRC) | ✅ Shipped |
 | Bill of Materials (BOM) management | ✅ Shipped |
 | Design validation with categorized issues | ✅ Shipped |
-| AI chat with 53 action types (Anthropic + Gemini) | ✅ Shipped |
+| AI chat with 80 tool actions (Anthropic + Gemini) | ✅ Shipped |
 | Session-based auth with encrypted API key storage | ✅ Shipped |
-| Circuit schematic capture | ❌ Phase 3 (future) |
-| Breadboard/PCB layout | ❌ Phase 4 (future) |
-| Manufacturing output (Gerber, KiCad export) | ❌ Phase 4 (future) |
-| Circuit simulation (SPICE) | ❌ Phase 5 (future) |
+| Circuit schematic capture | ✅ Shipped |
+| Breadboard / PCB layout views | ✅ Shipped |
+| Manufacturing output (Gerber, KiCad, Eagle, pick-and-place, netlist) | ✅ Shipped |
+| Circuit simulation (SPICE, frequency analysis) | ✅ Shipped |
+| BOM snapshot diff engine | ✅ Shipped |
+| Netlist diff / ECO engine | ✅ Shipped |
+| Multi-format export (PDF report, FMEA, firmware scaffold) | ✅ Shipped |
+| Component lifecycle / obsolescence tracking | ✅ Shipped |
+| SPICE model library | ✅ Shipped |
+| Design preferences (AI-learned per-project) | ✅ Shipped |
+| Chat branches | ✅ Shipped |
+| Audit log | ✅ Shipped |
 
 ### Target Users
 
@@ -55,16 +63,17 @@
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19, TypeScript, Vite 7, Tailwind CSS v4 |
+| Frontend | React 19, TypeScript 5.6, Vite 7, Tailwind CSS v4 |
 | Routing | Wouter |
 | Server state | TanStack React Query |
-| UI components | shadcn/ui (New York theme, Radix primitives) |
+| UI components | shadcn/ui (New York dark theme, Radix primitives) |
 | Diagram editor | @xyflow/react (React Flow) |
 | Backend | Node.js, Express 5, TypeScript (tsx) |
-| Database | PostgreSQL (Neon-backed on Replit) |
+| Database | PostgreSQL |
 | ORM | Drizzle ORM |
-| AI providers | Anthropic SDK, Google Generative AI (Gemini) |
-| Build | Vite (client), esbuild (server) |
+| AI providers | Anthropic SDK (Claude), Google Generative AI (Gemini) |
+| Build | Vite (client), esbuild (server via `tsx script/build.ts`) |
+| Testing | Vitest 4, happy-dom, @testing-library/react, @vitest/coverage-v8 |
 
 ---
 
@@ -82,18 +91,17 @@ These are non-negotiable. Violating any of these will break the project or contr
 
 ### Process Rules
 
-6. **Never edit replit.md** unless explicitly asked by the user
-7. **Never ship "Big Swing" changes** without explicit user approval — propose first, implement after
-8. **Never expose or log secrets/API keys** — redact in error messages, never console.log
-9. **Never use virtual environments or Docker** — this is a Nix environment on Replit
-10. **Never skip Phase 0 prerequisites** for later phases — dependencies must be complete first
-11. **Always keep the app in a working state** — small, incremental changes only; verify after each change
+6. **Never ship "Big Swing" changes** without explicit user approval — propose first, implement after
+7. **Never expose or log secrets/API keys** — redact in error messages, never console.log
+8. **Always keep the app in a working state** — small, incremental changes only; verify after each change
+9. **`npm run check` must pass with zero TypeScript errors** after every change — fix ALL errors immediately
+10. **`npm test` should pass** — verify no regressions after changes
 
 ### Data Rules
 
-12. **Never hard-delete** records from tables that use soft deletes (projects, nodes, edges, BOM items) — set `deletedAt` timestamp instead
-13. **Never bypass the IStorage interface** — all data access goes through `server/storage.ts`
-14. **Never insert raw SQL** for CRUD operations — use Drizzle ORM queries
+11. **Never hard-delete** records from tables that use soft deletes (projects, nodes, edges, BOM items) — set `deletedAt` timestamp instead
+12. **Never bypass the IStorage interface** — all data access goes through `server/storage.ts`
+13. **Never insert raw SQL** for CRUD operations — use Drizzle ORM queries
 
 ---
 
@@ -104,22 +112,23 @@ These are non-negotiable. Violating any of these will break the project or contr
 Every feature follows this order, top to bottom:
 
 ```
-1. shared/schema.ts        → Define table + Zod insert schema + TypeScript types
-2. server/storage.ts       → Add method to IStorage interface + implement in DatabaseStorage
-3. server/routes.ts        → Add API endpoint with Zod validation + asyncHandler
-4. client/src/lib/         → Add React Query hook or context method
-5. client/src/components/  → Build UI component
-6. client/src/pages/       → Wire into navigation/routing if needed
-7. Testing                 → Smoke test all views, verify no TypeScript errors
+1. shared/schema.ts          → Define table + Zod insert schema + TypeScript types
+2. server/storage.ts         → Add method to IStorage interface + implement in DatabaseStorage
+3. server/routes/<domain>.ts → Add API endpoint with Zod validation + asyncHandler
+4. client/src/lib/           → Add React Query hook or context method
+5. client/src/components/    → Build UI component
+6. client/src/pages/         → Wire into navigation/routing if needed
+7. Testing                   → Run npm run check + npm test, verify no regressions
 ```
 
 ### TypeScript
 
-- Strict types everywhere — avoid `any` unless absolutely necessary (document why)
-- Use `as` casts only when Drizzle/React Flow types don't align (tag with `// TODO: fix type`)
+- Strict types everywhere — `@typescript-eslint/no-explicit-any` is an **error** (not a warning)
+- Use `import type { ... }` for type-only imports (ESLint enforced)
 - Export types from `shared/schema.ts` for database entities
 - Export types from `shared/component-types.ts` for component editor entities
-- Use Zod schemas for runtime validation, infer TypeScript types from them
+- Use Zod schemas for runtime validation on all API boundaries, infer TypeScript types from them
+- Exhaustive switches on discriminated unions — extract shared base properties before the switch to avoid `never` type issues in the `default` case
 
 ### Zod Validation
 
@@ -130,7 +139,7 @@ Every feature follows this order, top to bottom:
 ### Drizzle ORM
 
 - Schema lives in `shared/schema.ts` — single source of truth
-- Use `drizzle-kit push` (`npm run db:push`) for schema sync — no versioned migrations yet
+- Use `drizzle-kit push` (`npm run db:push`) for schema sync — no versioned migrations
 - Always filter soft-deleted records: `.where(isNull(table.deletedAt))`
 - Use transactions (`db.transaction()`) for multi-table atomic operations
 - Array columns use `.array()` method syntax: `text().array()` NOT `array(text())`
@@ -141,7 +150,7 @@ Every feature follows this order, top to bottom:
 - Configuration in `client/src/lib/queryClient.ts`
 - Query keys use API path strings: `['/api/projects/1/nodes']`
 - Mutations invalidate related query keys on success
-- Global staleTime is `5 * 60 * 1000` (5 minutes) in `queryClient.ts`. However, some per-query overrides in `project-context.tsx` set `staleTime: Infinity` (known issue #66 — those queries never auto-refetch)
+- Global staleTime is `5 * 60 * 1000` (5 minutes) in `queryClient.ts`. Some per-query overrides in `project-context.tsx` set `staleTime: Infinity` (known issue #66 — those queries never auto-refetch)
 
 ### shadcn/ui
 
@@ -181,7 +190,8 @@ Tables that use **hard deletes** (no `deletedAt` column):
 - `chat_messages`
 - `history_items`
 - `users`, `sessions`, `api_keys`
-- `component_parts`
+- `component_parts`, `component_library`
+- All circuit tables (`circuit_designs`, `circuit_instances`, `circuit_nets`, `circuit_wires`, etc.)
 
 ### Error Boundaries
 
@@ -189,7 +199,7 @@ Each view in `ProjectWorkspace.tsx` is individually wrapped in `<ErrorBoundary>`
 
 ### Toast Notifications
 
-Use the `useToast` hook from `client/src/hooks/use-toast.ts` for user-facing action feedback. Already wired to: CSV export, BOM add, log copy, validation actions, component save.
+Use the `useToast` hook from `client/src/hooks/use-toast.ts` for user-facing action feedback.
 
 ### API Patterns
 
@@ -197,7 +207,9 @@ Use the `useToast` hook from `client/src/hooks/use-toast.ts` for user-facing act
 - **payloadLimit:** Middleware that checks `Content-Length` before parsing
 - **parseIdParam:** Converts URL params to numbers with validation
 - **HttpError:** Custom error class with HTTP status codes
+- **StorageError:** Storage-layer error class
 - RESTful patterns: GET (list/read), POST (create), PATCH (partial update), PUT (replace), DELETE (remove)
+- All utilities exported from `server/routes/utils.ts` for re-use in circuit routes
 
 ---
 
@@ -208,12 +220,16 @@ Use the `useToast` hook from `client/src/hooks/use-toast.ts` for user-facing act
 | New database table | `shared/schema.ts` — table definition + `createInsertSchema` + `InsertType` + `SelectType` |
 | New shared types | `shared/schema.ts` (DB entities) or `shared/component-types.ts` (component editor) |
 | New storage method | `server/storage.ts` — add to `IStorage` interface AND implement in `DatabaseStorage` |
-| New API endpoint | `server/routes.ts` — with Zod validation, asyncHandler, payloadLimit |
+| New API endpoint (domain) | New or existing file in `server/routes/` — register in `server/routes.ts` barrel |
+| New circuit API endpoint | New or existing file in `server/circuit-routes/` — register in `server/circuit-routes/index.ts` |
+| New AI tool | New or existing file in `server/ai-tools/` — register in `server/ai-tools/index.ts` |
+| New exporter/generator | `server/export/` — import in relevant circuit route or export route |
 | New React component | `client/src/components/` with subdirectories: |
 | | `views/` — full-page views (ArchitectureView, ProcurementView, etc.) |
 | | `ui/` — reusable primitives (shadcn components) |
-| | `panels/` — side panels (ChatPanel, AssetManager) |
+| | `panels/` — side panels (ChatPanel, AssetManager, ExportPanel) |
 | | `layout/` — layout components (Sidebar, navigation) |
+| | `circuit-editor/` — circuit schematic canvas components |
 | New React hook | `client/src/hooks/` |
 | New utility function | `client/src/lib/` |
 | New page/route | `client/src/pages/` — register in `client/src/App.tsx` router |
@@ -224,80 +240,126 @@ Use the `useToast` hook from `client/src/hooks/use-toast.ts` for user-facing act
 ```
 ├── client/
 │   ├── index.html
-│   ├── public/                          # Static assets (favicon, OG images)
+│   ├── public/                          # Static assets
 │   └── src/
 │       ├── App.tsx                      # Router + providers
 │       ├── main.tsx                     # Entry point
 │       ├── index.css                    # Global styles + Tailwind
 │       ├── components/
 │       │   ├── ErrorBoundary.tsx
+│       │   ├── circuit-editor/          # Schematic canvas, breadboard, PCB, ERC, net tools (~22 files)
 │       │   ├── layout/
-│       │   │   ├── Sidebar.tsx          # Main navigation sidebar (832 lines)
-│       │   │   └── sidebar/            # Sidebar sub-components
+│       │   │   ├── Sidebar.tsx
+│       │   │   ├── WorkflowBreadcrumb.tsx
+│       │   │   └── sidebar/             # Sidebar sub-components
 │       │   ├── panels/
-│       │   │   ├── ChatPanel.tsx        # AI chat panel (2363 lines)
+│       │   │   ├── ChatPanel.tsx        # AI chat panel
+│       │   │   ├── ExportPanel.tsx      # Multi-format export UI
 │       │   │   ├── AssetManager.tsx     # Component library browser
-│       │   │   ├── chat/               # Chat sub-components
-│       │   │   └── asset-manager/      # Asset manager sub-components
-│       │   ├── ui/                      # shadcn/ui components (~60 files)
+│       │   │   ├── chat/                # Chat sub-components + intent handlers
+│       │   │   └── asset-manager/       # Asset manager sub-components
+│       │   ├── simulation/              # BodePlot, FrequencyAnalysisPanel
+│       │   ├── ui/                      # shadcn/ui components (~40+ files)
 │       │   └── views/
 │       │       ├── ArchitectureView.tsx  # @xyflow/react canvas
+│       │       ├── BomDiffPanel.tsx      # BOM snapshot comparison
 │       │       ├── ComponentEditorView.tsx
-│       │       ├── CustomNode.tsx       # React Flow custom node
+│       │       ├── CustomNode.tsx        # React Flow custom node
+│       │       ├── DashboardView.tsx
 │       │       ├── OutputView.tsx
-│       │       ├── ProcurementView.tsx  # BOM table
-│       │       ├── SchematicView.tsx    # Stub (to be replaced)
+│       │       ├── ProcurementView.tsx   # BOM table
+│       │       ├── SchematicView.tsx     # Circuit schematic (uses circuit-editor/)
 │       │       ├── ValidationView.tsx
-│       │       ├── component-editor/   # Component editor sub-components
-│       │       └── schematic/          # Schematic data
+│       │       ├── WelcomeOverlay.tsx
+│       │       └── component-editor/    # Component editor sub-components
 │       ├── hooks/
 │       │   ├── use-mobile.tsx
-│       │   └── use-toast.ts
+│       │   ├── use-toast.ts
+│       │   └── useHighContrast.ts
 │       ├── lib/
-│       │   ├── clipboard.ts
-│       │   ├── context-selectors.ts
-│       │   ├── project-context.tsx      # ProjectProvider (635 lines)
-│       │   ├── queryClient.ts          # React Query config
-│       │   ├── types.ts
-│       │   ├── utils.ts                # cn() and utilities
-│       │   └── component-editor/       # ComponentEditorProvider + hooks
+│       │   ├── auth-context.tsx
+│       │   ├── circuit-editor/          # Wire router, breadboard model, ERC engine, hooks, view-sync
+│       │   ├── component-editor/        # ComponentEditorProvider, constraint solver, diff engine, snap engine
+│       │   ├── contexts/                # Split domain contexts (architecture, bom, chat, history, output, validation)
+│       │   ├── dnd-context.tsx
+│       │   ├── error-messages.ts
+│       │   ├── project-context.tsx      # ProjectProvider (monolithic, known debt)
+│       │   ├── queryClient.ts           # React Query config
+│       │   ├── simulation/              # frequency-analysis, useSpiceModels
+│       │   └── utils.ts                 # cn() and utilities
 │       └── pages/
-│           ├── ProjectWorkspace.tsx     # Main workspace (313 lines)
+│           ├── AuthPage.tsx
+│           ├── ProjectWorkspace.tsx     # Main workspace layout
 │           └── not-found.tsx
 ├── server/
 │   ├── index.ts                         # Server entry point
-│   ├── routes.ts                        # ALL API routes (765 lines)
-│   ├── storage.ts                       # IStorage + DatabaseStorage (560 lines)
-│   ├── ai.ts                           # AI system prompt + streaming (700+ lines)
-│   ├── auth.ts                         # Session auth + encryption (123 lines)
-│   ├── db.ts                           # Database connection
-│   ├── cache.ts                        # In-memory cache
-│   ├── logger.ts                       # Structured logging
-│   ├── metrics.ts                      # Route metrics
-│   ├── env.ts                          # Environment validation
-│   ├── static.ts                       # Static file serving
-│   ├── vite.ts                         # Vite dev server integration
-│   ├── api-docs.ts                     # API documentation endpoint
-│   └── __tests__/
-│       └── api.test.ts                 # API tests
+│   ├── routes.ts                        # Barrel — 18 domain routers from server/routes/ (57 lines)
+│   ├── routes/                          # Domain route modules:
+│   │   ├── auth.ts, settings.ts, projects.ts, architecture.ts
+│   │   ├── bom.ts, validation.ts, chat.ts, history.ts
+│   │   ├── components.ts, seed.ts, admin.ts, batch.ts
+│   │   ├── project-io.ts, chat-branches.ts, spice-models.ts
+│   │   ├── bom-snapshots.ts, design-preferences.ts, component-lifecycle.ts
+│   │   └── utils.ts                     # Shared route utilities (HttpError, asyncHandler, etc.)
+│   ├── circuit-routes.ts                # Barrel — re-exports from circuit-routes/index.ts (1 line)
+│   ├── circuit-routes/                  # Circuit route modules:
+│   │   ├── index.ts                     # Registers 11 circuit routers
+│   │   ├── designs.ts, instances.ts, nets.ts, wires.ts
+│   │   ├── netlist.ts, autoroute.ts, exports.ts, imports.ts
+│   │   ├── simulations.ts, hierarchy.ts, expansion.ts
+│   │   └── utils.ts
+│   ├── circuit-ai.ts                    # Circuit AI action routes
+│   ├── storage.ts                       # IStorage interface + DatabaseStorage (1,598 lines, LRU cache)
+│   ├── ai.ts                            # AI system prompt, tool dispatch, SSE streaming (1,368 lines)
+│   ├── ai-tools.ts                      # Barrel — 11 tool modules from server/ai-tools/
+│   ├── ai-tools/                        # AI tool modules:
+│   │   ├── types.ts, registry.ts, index.ts
+│   │   ├── architecture.ts, bom.ts, circuit.ts
+│   │   ├── component.ts, export.ts, navigation.ts
+│   │   ├── project.ts, validation.ts
+│   ├── export/                          # Exporters and generators (16 files):
+│   │   ├── types.ts
+│   │   ├── bom-exporter.ts, kicad-exporter.ts, eagle-exporter.ts, spice-exporter.ts
+│   │   ├── gerber-generator.ts, drill-generator.ts, pick-place-generator.ts, netlist-generator.ts
+│   │   ├── fzz-handler.ts, drc-gate.ts
+│   │   ├── design-report.ts, pdf-generator.ts, pdf-report-generator.ts
+│   │   ├── fmea-generator.ts, firmware-scaffold-generator.ts
+│   ├── auth.ts                          # Session auth + AES-256-GCM encryption
+│   ├── cache.ts                         # LRU cache implementation
+│   ├── db.ts                            # PostgreSQL connection via pg + Drizzle
+│   ├── env.ts                           # Environment variable validation
+│   ├── metrics.ts                       # Route-level request metrics
+│   ├── audit-log.ts                     # Audit log for sensitive operations
+│   ├── batch-analysis.ts                # Batch AI analysis jobs
+│   ├── circuit-breaker.ts               # Circuit breaker for external calls
+│   ├── component-export.ts              # FZPZ import/export
+│   ├── export-generators.ts             # Barrel for export modules
+│   └── __tests__/                       # 28 test files (see Testing section)
 ├── shared/
-│   ├── schema.ts                       # Drizzle schema (200 lines)
-│   └── component-types.ts              # Component editor types (178 lines)
+│   ├── schema.ts                        # 24 Drizzle tables + Zod insert schemas (504 lines)
+│   ├── component-types.ts               # Component editor type system (shapes, connectors, buses, DRC)
+│   ├── drc-engine.ts                    # Design Rule Check engine (shared server + client)
+│   ├── drc-templates.ts                 # DRC rule templates
+│   ├── bom-diff.ts                      # BOM snapshot comparison engine
+│   ├── netlist-diff.ts                  # Netlist comparison / ECO engine
+│   ├── circuit-types.ts                 # Circuit-specific shared types
+│   ├── api-types.generated.ts           # Generated API type definitions
+│   └── __tests__/                       # Schema + DRC engine tests
 ├── docs/
-│   ├── AI_AGENT_GUIDE.md              # This file
-│   ├── DEVELOPER.md                   # Developer guide
-│   ├── USER_GUIDE.md                  # User guide
-│   ├── frontend-audit-checklist.md    # 113 audit findings
-│   ├── backend-audit-checklist.md     # Backend audit
-│   └── fzpz-integration-plan.md      # Fritzing part integration
+│   ├── AI_AGENT_GUIDE.md               # This file
+│   ├── DEVELOPER.md                    # Full API reference, auth flow, DB schema
+│   ├── CHANGELOG.md                    # Version changelog
+│   ├── adr/                            # Architecture Decision Records (5 ADRs)
+│   └── plans/                          # Feature planning documents
 ├── script/
-│   └── build.ts                        # Production build script
+│   ├── build.ts                         # Production build script
+│   └── generate-api-types.ts            # API type generation script
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
+├── vitest.config.ts                     # Vitest workspace config (server + client projects)
 ├── drizzle.config.ts
-├── replit.md                           # Project overview (DO NOT EDIT)
-└── components.json                     # shadcn/ui config
+└── components.json                      # shadcn/ui config
 ```
 
 ---
@@ -317,13 +379,13 @@ Browser → Express (port 5000)
   │   ├─ POST /api/auth/logout
   │   ├─ GET  /api/auth/me
   │   ├─ GET  /api/health
-  │   ├─ GET  /api/docs
   │   ├─ GET  /api/metrics
   │   └─ POST /api/seed
   │
   ├─ Protected endpoints (requires X-Session-Id header):
   │   ├─ /api/projects/*
   │   ├─ /api/settings/api-keys/*
+  │   ├─ /api/circuits/*
   │   └─ /api/chat/ai/stream (SSE streaming)
   │
   └─ Static files:
@@ -339,24 +401,27 @@ App.tsx
       └─ QueryClientProvider (TanStack)
           └─ TooltipProvider (Radix)
               └─ Router (Wouter)
+                  ├─ /auth → AuthPage
                   ├─ / → ProjectWorkspace
                   └─ * → NotFound
-              └─ Toaster (toast notifications)
+              └─ Toaster (sonner)
 
 ProjectWorkspace
   └─ ProjectProvider (context — 40+ state values)
       └─ WorkspaceContent
           ├─ Sidebar (navigation, component tree, history)
-          │   └─ ResizeHandle (left)
           ├─ Main area
-          │   ├─ Tab bar (Output | Architecture | Component Editor | Procurement | Validation)
+          │   ├─ WorkflowBreadcrumb
+          │   ├─ Tab bar (Dashboard | Output | Architecture | Component Editor |
+          │   │           Schematic | Procurement | Validation)
           │   └─ Active view (lazy-loaded, ErrorBoundary + Suspense wrapped):
+          │       ├─ DashboardView
           │       ├─ ArchitectureView (@xyflow/react canvas)
           │       ├─ ComponentEditorView (SVG canvas + pin table)
+          │       ├─ SchematicView (circuit schematic editor)
           │       ├─ ProcurementView (BOM table)
           │       ├─ ValidationView (issue list)
           │       └─ OutputView (system log)
-          ├─ ResizeHandle (right)
           └─ ChatPanel (AI chat, settings, streaming)
 ```
 
@@ -365,9 +430,9 @@ ProjectWorkspace
 ```
 Database (PostgreSQL)
     ↕ Drizzle ORM queries
-server/storage.ts (DatabaseStorage + in-memory cache)
+server/storage.ts (DatabaseStorage + LRU cache)
     ↕ IStorage interface
-server/routes.ts (Express API endpoints + Zod validation)
+server/routes/ + server/circuit-routes/ (Express endpoints + Zod validation)
     ↕ HTTP JSON / SSE
 client/src/lib/project-context.tsx (React Query + context state)
     ↕ useProject() hook
@@ -379,7 +444,7 @@ client/src/components/* (React UI)
 ```
 1. Client sends POST /api/auth/register or /api/auth/login
 2. Server creates session, returns sessionId
-3. Client stores sessionId (in React state)
+3. Client stores sessionId (in React state via auth-context.tsx)
 4. All subsequent API calls include X-Session-Id header
 5. Server middleware validates session on protected routes
 6. Sessions expire after 7 days
@@ -391,35 +456,35 @@ client/src/components/* (React UI)
 
 | File | ~Lines | What It Does |
 |------|--------|-------------|
-| `shared/schema.ts` | 200 | ALL database tables (10 tables), Zod insert schemas, TypeScript types |
-| `shared/component-types.ts` | 178 | Component editor type system: shapes, connectors, buses, views, DRC |
-| `server/routes.ts` | 765 | ALL API endpoints, Zod request validation, seed data, pagination |
-| `server/ai.ts` | 700+ | AI system prompt builder, 53 action types, SSE streaming, error categorization, LRU client cache |
-| `server/storage.ts` | 560 | `IStorage` interface (30+ methods) + `DatabaseStorage` class with in-memory cache, soft deletes, pagination, chunked inserts |
-| `server/auth.ts` | 123 | Session auth (7-day expiry), password hashing (scrypt), AES-256-GCM API key encryption |
-| `server/cache.ts` | ~50 | Simple in-memory key-value cache with TTL and prefix-based invalidation |
-| `server/db.ts` | ~15 | PostgreSQL connection via `pg` + Drizzle initialization |
-| `server/logger.ts` | ~80 | Structured JSON logging with levels |
-| `server/metrics.ts` | ~50 | Route-level request counting and timing |
-| `server/index.ts` | ~80 | Server bootstrap: middleware chain, route registration, port binding |
-| `client/src/lib/project-context.tsx` | 635 | `ProjectProvider` context: 40+ state values, 7 React Query hooks, 8 mutations, undo/redo, change diff tracking |
-| `client/src/lib/queryClient.ts` | ~30 | React Query client config, `apiRequest()` helper, `getQueryFn()` factory |
-| `client/src/pages/ProjectWorkspace.tsx` | 313 | 3-panel layout (sidebar + main + chat), tab switching, resize handles, lazy loading |
-| `client/src/components/panels/ChatPanel.tsx` | 2363 | AI chat UI, model settings, SSE streaming, action parsing/execution, markdown rendering |
-| `client/src/components/layout/Sidebar.tsx` | 832 | Navigation menu, component tree, history list, project settings |
-| `client/src/components/panels/AssetManager.tsx` | 678 | Component library browser, search, drag-and-drop, custom asset creation |
-| `client/src/components/views/ArchitectureView.tsx` | ~600 | @xyflow/react canvas, context menu, node CRUD, edge CRUD, auto-layout |
-| `client/src/components/views/ComponentEditorView.tsx` | ~400 | SVG shape canvas, pin table, metadata editor, DRC runner |
-| `client/src/components/views/ProcurementView.tsx` | ~300 | BOM table with sorting, filtering, CSV export, add/delete items |
-| `client/src/components/views/ValidationView.tsx` | ~200 | Validation issue list, severity filtering, resolve actions |
-| `client/src/components/views/OutputView.tsx` | ~200 | System log viewer with filtering and copy |
-| `client/src/App.tsx` | ~50 | Wouter router, provider wrappers |
+| `shared/schema.ts` | 504 | ALL 24 database tables, Zod insert schemas, TypeScript types |
+| `shared/component-types.ts` | — | Component editor type system: shapes, connectors, buses, views, DRC |
+| `shared/drc-engine.ts` | — | Design rule checking engine (shared between server + client) |
+| `shared/bom-diff.ts` | — | BOM snapshot comparison engine |
+| `shared/netlist-diff.ts` | — | Netlist comparison / ECO engine |
+| `server/routes.ts` | 57 | Barrel — 18 domain routers from `server/routes/` |
+| `server/circuit-routes.ts` | 1 | Barrel — re-exports `registerCircuitRoutes` from `server/circuit-routes/index.ts` |
+| `server/ai.ts` | 1,368 | AI system prompt builder, tool dispatch, SSE streaming, multi-model routing |
+| `server/storage.ts` | 1,598 | `IStorage` interface (60+ methods) + `DatabaseStorage` with LRU cache, soft deletes, pagination |
+| `server/auth.ts` | — | Session auth (7-day expiry), password hashing (scrypt), AES-256-GCM API key encryption |
+| `server/cache.ts` | — | LRU cache implementation (evicts least-recently-used on capacity overflow) |
+| `server/audit-log.ts` | — | Structured audit log for sensitive operations |
+| `server/circuit-breaker.ts` | — | Circuit breaker for external service calls |
+| `server/export/` | 16 files | KiCad, Eagle, SPICE, BOM exporters; Gerber, drill, pick-and-place, netlist generators; PDF, FMEA, firmware scaffold |
+| `client/src/lib/project-context.tsx` | — | `ProjectProvider` context: 40+ state values, React Query mutations (known monolith debt) |
+| `client/src/lib/queryClient.ts` | — | React Query client config, `apiRequest()` helper, `getQueryFn()` factory |
+| `client/src/pages/ProjectWorkspace.tsx` | — | 3-panel layout (sidebar + main + chat), tab switching, resize handles, lazy loading |
+| `client/src/components/panels/ChatPanel.tsx` | — | AI chat UI, model settings, SSE streaming, action parsing/execution, markdown rendering |
+| `client/src/components/layout/Sidebar.tsx` | — | Navigation menu, component tree, history list, project settings |
+| `client/src/components/views/ArchitectureView.tsx` | — | @xyflow/react canvas, context menu, node CRUD, edge CRUD, auto-layout |
+| `client/src/components/views/SchematicView.tsx` | — | Circuit schematic editor (delegates to circuit-editor/ components) |
+| `client/src/components/panels/ExportPanel.tsx` | — | Multi-format export UI |
+| `client/src/App.tsx` | — | Wouter router, provider wrappers |
 
 ---
 
 ## 7. Database Schema Overview
 
-### Tables
+### Tables (24 total)
 
 | Table | PK Type | Soft Delete | Parent FK | Purpose |
 |-------|---------|-------------|-----------|---------|
@@ -428,12 +493,40 @@ client/src/components/* (React UI)
 | `architecture_edges` | serial | ✅ `deletedAt` | `projects.id` CASCADE | Block diagram connections |
 | `bom_items` | serial | ✅ `deletedAt` | `projects.id` CASCADE | Bill of Materials entries |
 | `validation_issues` | serial | ❌ | `projects.id` CASCADE | Design rule check results |
-| `chat_messages` | serial | ❌ | `projects.id` CASCADE | AI chat history |
+| `chat_messages` | serial | ❌ | `projects.id` CASCADE | AI chat history (supports branches) |
 | `history_items` | serial | ❌ | `projects.id` CASCADE | User/AI action log |
-| `component_parts` | serial | ❌ | `projects.id` CASCADE | Component editor parts (JSONB heavy) |
 | `users` | serial | ❌ | — | User accounts |
-| `sessions` | text | ❌ | `users.id` CASCADE | Auth sessions (UUID PK) |
-| `api_keys` | serial | ❌ | `users.id` CASCADE | Encrypted AI provider keys |
+| `sessions` | text | ❌ | `users.id` CASCADE | Auth sessions (UUID PK, 7-day expiry) |
+| `api_keys` | serial | ❌ | `users.id` CASCADE | Encrypted AI provider keys (AES-256-GCM) |
+| `user_chat_settings` | serial | ❌ | `users.id` CASCADE | Per-user AI provider, model, temperature, routing strategy |
+| `component_parts` | serial | ❌ | `projects.id` CASCADE | Component editor parts (JSONB heavy) |
+| `component_library` | serial | ❌ | — | Shared component library (public/private, forkable) |
+| `circuit_designs` | serial | ❌ | `projects.id` CASCADE | Circuit schematic designs (supports hierarchy) |
+| `hierarchical_ports` | serial | ❌ | `circuit_designs.id` CASCADE | Inter-sheet port connections |
+| `circuit_instances` | serial | ❌ | `circuit_designs.id` CASCADE | Component instances in schematic + breadboard + PCB positions |
+| `circuit_nets` | serial | ❌ | `circuit_designs.id` CASCADE | Electrical nets (segments, labels, style) |
+| `circuit_wires` | serial | ❌ | `circuit_designs.id` CASCADE | Wire segments per view (schematic/breadboard/PCB) |
+| `simulation_results` | serial | ❌ | `circuit_designs.id` CASCADE | SPICE simulation output |
+| `ai_actions` | serial | ❌ | `projects.id` CASCADE | AI tool execution log (audit/replay) |
+| `design_preferences` | serial | ❌ | `projects.id` CASCADE | AI-learned per-project preferences (category + key + value) |
+| `bom_snapshots` | serial | ❌ | `projects.id` CASCADE | Point-in-time BOM captures for diffing |
+| `spice_models` | serial | ❌ | — | Standard SPICE component model definitions |
+| `component_lifecycle` | serial | ❌ | `projects.id` CASCADE | Component obsolescence and lifecycle tracking |
+
+### Key Columns by Table
+
+**`circuit_instances`** — stores positions in all three views:
+- `schematicX/Y/Rotation` — schematic canvas position
+- `breadboardX/Y/Rotation` — breadboard view position
+- `pcbX/Y/Rotation/Side` — PCB layout position
+
+**`circuit_wires`** — `view` column discriminates which canvas the wire belongs to (`schematic`, `breadboard`, `pcb`)
+
+**`chat_messages`** — `branchId` + `parentMessageId` columns support chat branching
+
+**`user_chat_settings`** — `routingStrategy` controls multi-model routing (`user`, `auto`, `always_claude`, `always_gemini`)
+
+**`spice_models`** — `modelType` enum: NPN, PNP, DIODE, ZENER, SCHOTTKY, LED, NMOS, PMOS, OPAMP, COMPARATOR, VOLTAGE_REG, TIMER, RESISTOR, CAPACITOR, INDUCTOR, and JFET variants
 
 ### Key Relationships
 
@@ -442,6 +535,8 @@ client/src/components/* (React UI)
 - `architecture_edges` has unique index on `(projectId, edgeId)`
 - `bom_items.totalPrice` is computed server-side: `quantity * unitPrice`
 - `component_parts` uses JSONB columns for `meta`, `connectors`, `buses`, `views`, `constraints`
+- `circuit_designs` supports hierarchy via `parentDesignId` self-reference
+- `hierarchical_ports` links sheets together via `designId` FK + net names
 
 ### Schema Conventions
 
@@ -481,6 +576,8 @@ export type MyTable = typeof myTable.$inferSelect;
 | GET | `/api/settings/api-keys` | — | `{ providers: string[] }` |
 | POST | `/api/settings/api-keys` | `{ provider, apiKey }` | `{ message }` |
 | DELETE | `/api/settings/api-keys/:provider` | — | 204 |
+| GET | `/api/settings/chat` | — | `UserChatSettings` |
+| PATCH | `/api/settings/chat` | partial settings | `UserChatSettings` |
 
 ### Projects (Protected)
 
@@ -519,8 +616,15 @@ export type MyTable = typeof myTable.$inferSelect;
 | POST | `/api/projects/:id/bom` | item data | `BomItem` (201) |
 | PATCH | `/api/projects/:id/bom/:bomId` | partial item | `BomItem` |
 | DELETE | `/api/projects/:id/bom/:bomId` | — | 204 (soft delete) |
-| ~~PATCH~~ | ~~`/api/bom/:id?projectId=N`~~ | — | **DEPRECATED** — use project-scoped version |
-| ~~DELETE~~ | ~~`/api/bom/:id?projectId=N`~~ | — | **DEPRECATED** — use project-scoped version |
+
+### BOM Snapshots (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/projects/:id/bom-snapshots` | `{ label }` | `BomSnapshot` (201) |
+| GET | `/api/projects/:id/bom-snapshots` | — | `BomSnapshot[]` |
+| DELETE | `/api/projects/:id/bom-snapshots/:snapshotId` | — | 204 |
+| POST | `/api/projects/:id/bom-diff` | `{ snapshotId }` | BOM diff result |
 
 ### Validation Issues (Protected)
 
@@ -530,16 +634,26 @@ export type MyTable = typeof myTable.$inferSelect;
 | POST | `/api/projects/:id/validation` | issue data | `ValidationIssue` (201) |
 | DELETE | `/api/projects/:id/validation/:issueId` | — | 204 (hard delete) |
 | PUT | `/api/projects/:id/validation` | `ValidationIssue[]` | `ValidationIssue[]` (replace all) |
-| ~~DELETE~~ | ~~`/api/validation/:id?projectId=N`~~ | — | **DEPRECATED** |
 
 ### Chat Messages (Protected)
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
 | GET | `/api/projects/:id/chat` | query: pagination | `ChatMessage[]` |
-| POST | `/api/projects/:id/chat` | `{ role, content, mode? }` | `ChatMessage` (201) |
+| POST | `/api/projects/:id/chat` | `{ role, content, mode?, branchId? }` | `ChatMessage` (201) |
 | DELETE | `/api/projects/:id/chat` | — | 204 (delete all for project) |
 | DELETE | `/api/projects/:id/chat/:msgId` | — | 204 |
+| POST | `/api/chat/ai` | AI request schema | `{ message, actions }` |
+| POST | `/api/chat/ai/stream` | AI request schema | SSE stream |
+| GET | `/api/projects/:id/ai-actions` | — | `AiActionRow[]` |
+| GET | `/api/ai-actions/by-message/:messageId` | — | `AiActionRow[]` |
+
+### Chat Branches (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/projects/:id/chat/branches` | `{ parentMessageId, label? }` | branch info |
+| GET | `/api/projects/:id/chat/branches` | — | branch list |
 
 ### History (Protected)
 
@@ -560,22 +674,181 @@ export type MyTable = typeof myTable.$inferSelect;
 | POST | `/api/projects/:projectId/component-parts` | part data | `ComponentPart` (201) |
 | PATCH | `/api/projects/:projectId/component-parts/:id` | partial part | `ComponentPart` |
 | DELETE | `/api/projects/:projectId/component-parts/:id` | — | 204 |
+| POST | `/api/projects/:projectId/component-parts/:id/export/fzpz` | — | FZPZ binary |
+| POST | `/api/projects/:projectId/component-parts/import/fzpz` | multipart | `ComponentPart` |
+| POST | `/api/projects/:projectId/component-parts/:id/import/svg` | `{ svg }` | updated part |
+| GET | `/api/projects/:projectId/component-parts/:id/drc` | — | DRC results |
+| POST | `/api/projects/:projectId/component-parts/ai/generate` | `{ description }` | `ComponentPart` |
+| POST | `/api/projects/:projectId/component-parts/:id/ai/modify` | `{ instruction }` | `ComponentPart` |
+| POST | `/api/projects/:projectId/component-parts/:id/ai/extract` | — | extracted data |
+| POST | `/api/projects/:projectId/component-parts/:id/ai/suggest` | — | suggestions |
+| POST | `/api/projects/:projectId/component-parts/:id/ai/extract-pins` | — | pin data |
 
-### AI Chat (Protected)
+### Component Library (Protected)
 
 | Method | Path | Body | Response |
 |--------|------|------|----------|
-| POST | `/api/chat/ai` | AI request schema | `{ message, actions }` |
-| POST | `/api/chat/ai/stream` | AI request schema | SSE stream |
+| GET | `/api/component-library` | — | `ComponentLibraryEntry[]` |
+| GET | `/api/component-library/:id` | — | `ComponentLibraryEntry` |
+| POST | `/api/component-library` | library entry data | `ComponentLibraryEntry` (201) |
+| PATCH | `/api/component-library/:id` | partial entry | `ComponentLibraryEntry` |
+| POST | `/api/component-library/:id/fork` | — | forked entry |
+
+### Circuit Designs (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/projects/:projectId/circuits` | — | `CircuitDesignRow[]` |
+| GET | `/api/projects/:projectId/circuits/:id` | — | `CircuitDesignRow` |
+| POST | `/api/projects/:projectId/circuits` | design data | `CircuitDesignRow` (201) |
+| PATCH | `/api/projects/:projectId/circuits/:id` | partial design | `CircuitDesignRow` |
+| DELETE | `/api/projects/:projectId/circuits/:id` | — | `{ success: true }` |
+| GET | `/api/projects/:projectId/circuits/roots` | — | root designs |
+| GET | `/api/projects/:projectId/circuits/:designId/children` | — | child designs |
+| POST | `/api/projects/:projectId/circuits/expand-architecture` | `{ nodeIds? }` | expansion result |
+
+### Hierarchical Ports (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/projects/:projectId/circuits/:designId/ports` | — | `HierarchicalPortRow[]` |
+| POST | `/api/projects/:projectId/circuits/:designId/ports` | port data | `HierarchicalPortRow` (201) |
+| PATCH | `/api/projects/:projectId/circuits/:designId/ports/:portId` | partial port | `HierarchicalPortRow` |
+| DELETE | `/api/projects/:projectId/circuits/:designId/ports/:portId` | — | `{ success: true }` |
+
+### Circuit Instances (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/circuits/:circuitId/instances` | — | `CircuitInstanceRow[]` |
+| GET | `/api/circuits/:circuitId/instances/:id` | — | `CircuitInstanceRow` |
+| POST | `/api/circuits/:circuitId/instances` | instance data | `CircuitInstanceRow` (201) |
+| PATCH | `/api/circuits/:circuitId/instances/:id` | partial instance | `CircuitInstanceRow` |
+| DELETE | `/api/circuits/:circuitId/instances/:id` | — | `{ success: true }` |
+
+### Circuit Nets (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/circuits/:circuitId/nets` | — | `CircuitNetRow[]` |
+| GET | `/api/circuits/:circuitId/nets/:id` | — | `CircuitNetRow` |
+| POST | `/api/circuits/:circuitId/nets` | net data | `CircuitNetRow` (201) |
+| PATCH | `/api/circuits/:circuitId/nets/:id` | partial net | `CircuitNetRow` |
+| DELETE | `/api/circuits/:circuitId/nets/:id` | — | `{ success: true }` |
+
+### Circuit Wires (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/circuits/:circuitId/wires` | — | `CircuitWireRow[]` |
+| POST | `/api/circuits/:circuitId/wires` | wire data | `CircuitWireRow` (201) |
+| PATCH | `/api/wires/:id` | partial wire | `CircuitWireRow` |
+| DELETE | `/api/wires/:id` | — | `{ success: true }` |
+
+### Netlist (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/circuits/:circuitId/netlist` | options | netlist JSON |
+| POST | `/api/circuits/:circuitId/netlist-diff` | `{ referenceNetlist }` | diff result |
+
+### Autoroute (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/circuits/:circuitId/autoroute` | options | autoroute result |
+| POST | `/api/circuits/:circuitId/suggest-layout` | options | layout suggestion |
+
+### Simulation (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/projects/:projectId/circuits/:circuitId/simulate` | simulation config | `SimulationResultRow` |
+| GET | `/api/projects/:projectId/circuits/:circuitId/simulations` | — | `SimulationResultRow[]` |
+| GET | `/api/projects/:projectId/circuits/:circuitId/simulations/:simId` | — | `SimulationResultRow` |
+| DELETE | `/api/projects/:projectId/circuits/:circuitId/simulations/:simId` | — | `{ success: true }` |
+| GET | `/api/projects/:projectId/circuits/:circuitId/simulation/capabilities` | — | capabilities |
+| POST | `/api/projects/:projectId/circuits/:circuitId/analyze/power` | — | power analysis |
+| POST | `/api/projects/:projectId/circuits/:circuitId/analyze/signal-integrity` | — | SI analysis |
+
+### Export (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/projects/:projectId/export/bom` | options | BOM CSV/JSON |
+| POST | `/api/projects/:projectId/export/netlist` | options | netlist |
+| POST | `/api/projects/:projectId/export/gerber` | options | Gerber ZIP |
+| POST | `/api/projects/:projectId/export/pick-place` | options | pick-and-place CSV |
+| POST | `/api/projects/:projectId/export/kicad` | options | KiCad file |
+| POST | `/api/projects/:projectId/export/eagle` | options | Eagle file |
+| POST | `/api/projects/:projectId/export/spice` | options | SPICE netlist |
+| POST | `/api/projects/:projectId/export/pdf` | options | PDF schematic |
+| POST | `/api/projects/:projectId/export/report-pdf` | options | PDF design report |
+| POST | `/api/projects/:projectId/export/fmea` | options | FMEA report |
+| POST | `/api/projects/:projectId/export/fzz` | options | Fritzing project |
+| POST | `/api/projects/:projectId/export/firmware` | options | firmware scaffold |
+| GET | `/api/projects/:id/export` | query: `format` | project export JSON |
+| POST | `/api/projects/import` | project data | imported `Project` |
+
+### Import (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| POST | `/api/projects/:projectId/import/fzz` | multipart Fritzing file | import result |
+| POST | `/api/projects/:projectId/import/kicad` | multipart KiCad file | import result |
+
+### Design Preferences (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/projects/:id/preferences` | — | `DesignPreference[]` |
+| POST | `/api/projects/:id/preferences` | `{ category, key, value, source?, confidence? }` | `DesignPreference` (201) |
+| PUT | `/api/projects/:id/preferences` | preference data | upserted `DesignPreference` |
+| DELETE | `/api/projects/:id/preferences/:prefId` | — | 204 |
+
+### Component Lifecycle (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/projects/:id/lifecycle` | — | `ComponentLifecycle[]` |
+| POST | `/api/projects/:id/lifecycle` | lifecycle data | `ComponentLifecycle` (201) |
+| PATCH | `/api/projects/:id/lifecycle/:entryId` | partial data | `ComponentLifecycle` |
+| DELETE | `/api/projects/:id/lifecycle/:entryId` | — | 204 |
+
+### SPICE Models (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/spice-models` | query: `category?, modelType?` | `SpiceModelRow[]` |
+| GET | `/api/spice-models/:id` | — | `SpiceModelRow` |
+| POST | `/api/spice-models` | model data | `SpiceModelRow` (201) |
+| POST | `/api/spice-models/seed` | — | seeded count |
+
+### Batch Analysis (Protected)
+
+| Method | Path | Body | Response |
+|--------|------|------|----------|
+| GET | `/api/batch/catalog` | — | available batch jobs |
+| POST | `/api/batch/submit` | `{ jobType, projectId, params }` | `{ batchId }` |
+| GET | `/api/batch/:batchId/status` | — | job status |
+| GET | `/api/batch/:batchId/results` | — | job results |
+| POST | `/api/batch/:batchId/cancel` | — | `{ success: true }` |
+| GET | `/api/projects/:projectId/batches` | — | project batch history |
+
+### Admin (Protected)
+
+| Method | Path | Response |
+|--------|------|----------|
+| GET | `/api/admin/metrics` | server metrics |
+| DELETE | `/api/admin/purge` | purge result |
 
 ### Utility (Public)
 
 | Method | Path | Response |
 |--------|------|----------|
 | GET | `/api/health` | `{ status: "ok" }` |
-| GET | `/api/docs` | API documentation JSON |
-| GET | `/api/metrics` | Route metrics |
-| POST | `/api/seed` | Seeds default project if none exists |
+| GET | `/api/metrics` | route metrics |
+| POST | `/api/seed` | seeds default project if none exists |
 
 ### Pagination
 
@@ -584,67 +857,59 @@ All list endpoints support these query parameters:
 - `offset` (0+, default 0)
 - `sort` ("asc" | "desc", default "desc")
 
+### Response Envelope Note
+
+DELETE endpoints in `server/routes/` return **204 No Content**.
+DELETE endpoints in `server/circuit-routes/` return **`{ success: true }`** (JSON body).
+This inconsistency is known debt (GA-API-03).
+
 ---
 
 ## 9. Current Technical Debt / Audit Status
 
-Full details: `docs/frontend-audit-checklist.md`
+Full details: `docs/product-analysis-checklist.md` and `docs/app-audit-checklist.md`
 
 ### Summary
 
-| Priority | Total | Fixed | Open | Partial |
-|----------|-------|-------|------|---------|
-| P0 Critical | 16 | 10 | 4 | 2 |
-| P1 High | 31 | 11 | 20 | 0 |
-| P2 Medium | 56 | 10 | 46 | 0 |
-| P3 Low | 10 | 0 | 10 | 0 |
-| **Total** | **113** | **31** | **80** | **2** |
+- 240+ tracked items across product analysis report and gap analysis
+- 9 P0 items identified (security, performance, reliability)
+- See `docs/product-analysis-report.md` for comprehensive 5-phase analysis
 
-### P0 Critical Open Items (Fix These First)
+### P0 Security Items (Fix These First)
 
-| # | Issue | File/Area |
-|---|-------|-----------|
-| 11 | Monolithic `ProjectProvider` causes cascade re-renders on any state change | `project-context.tsx` |
-| 15 | localStorage used as primary persistence (5MB limit, silent failure) | `project-context.tsx` |
-| 19 | `PROJECT_ID = 1` hardcoded — blocks multi-project support | `project-context.tsx` |
-| 49 | No undo/redo anywhere (destructive edits can't be reversed) | Cross-cutting |
+| Issue | Area |
+|-------|------|
+| CORS dynamic origin reflection — needs allowlist | `server/index.ts` |
+| XSS via `javascript:` URIs in AI markdown — needs protocol validation | `ChatPanel.tsx` |
+| ZIP bomb vulnerability in FZPZ import — needs decompressed size check | `server/export/fzz-handler.ts` |
+| Missing `process.on('uncaughtException')` handler | `server/index.ts` |
 
-### P1 High Open Items (20 total, key ones)
+### Key Architectural Debt
 
 | # | Issue | File/Area |
 |---|-------|-----------|
-| 5 | ChatPanel.tsx is 2,363 lines — needs decomposition into ~6-8 components | `ChatPanel.tsx` |
-| 6 | project-context.tsx is 614 lines, 40+ state values — split into domain contexts | `project-context.tsx` |
-| 7 | Sidebar.tsx is 832 lines — split into sub-components | `Sidebar.tsx` |
-| 8 | AssetManager.tsx is 678 lines — split into modules | `AssetManager.tsx` |
-| 10 | No tests anywhere — zero unit/integration/e2e coverage | Cross-cutting |
-| 33 | No virtualization for long lists (BOM, chat, validation) | Multiple |
-| 66 | Per-query staleTime: Infinity overrides in project-context.tsx — those queries never auto-refetch | `project-context.tsx` |
-| 100 | BOM items not editable in-place (add/delete only) | `ProcurementView.tsx` |
-
-### Known Partially Addressed
-
-| # | Issue | Status |
-|---|-------|--------|
-| 50 | No confirmation dialogs for destructive actions | Partial: BOM delete, output clear, validation dismiss have it; AI chat destructive actions don't |
-| 61 | API keys in localStorage | Partial: NOT in localStorage (React state only), but frontend not wired to backend encrypted storage |
+| — | Monolithic `ProjectProvider` causes cascade re-renders on any state change | `project-context.tsx` |
+| — | `PROJECT_ID = 1` hardcoded — blocks multi-project support | `project-context.tsx` |
+| — | AI system prompt rebuilds full project state on every request — O(N) sequential queries | `server/ai.ts` |
+| — | No API versioning — all routes at `/api/*` with no version prefix | All routes |
+| — | Per-query `staleTime: Infinity` overrides — those queries never auto-refetch | `project-context.tsx` |
+| — | DELETEs return 204 in routes.ts but `{ success: true }` in circuit-routes.ts | API layer |
 
 ---
 
 ## 10. Phase Roadmap
 
-### Phase 0 — Current: Audit Remediation
+### Phase 0 — Audit Remediation (Ongoing)
 
-- Fix P0/P1 audit findings from `docs/frontend-audit-checklist.md`
-- Code quality improvements
-- Must be substantially complete before Phase 1
+- Fix P0/P1 security and reliability findings
+- Code quality and TypeScript strictness improvements
+- Expand test coverage
 
 ### Phase 1 — Multi-Project & Core Infrastructure
 
 - Remove `PROJECT_ID = 1` hardcoding
 - Split monolithic `ProjectProvider` into domain contexts
 - Implement proper undo/redo system
-- Add basic test coverage
 - Route-based project selection
 
 ### Phase 2 — Component Editor ✅ COMPLETE
@@ -656,148 +921,127 @@ Full details: `docs/frontend-audit-checklist.md`
 - Design Rule Check (DRC) validation
 - Persistence via `component_parts` table (JSONB)
 
-### Phase 3 — Circuit Schematic Capture
+### Phase 3 — Circuit Schematic Capture ✅ COMPLETE
 
-- Reuse @xyflow/react for schematic canvas
-- Schematic symbol library
-- Net list generation
-- Multi-sheet support (already stubbed)
-- Replace SchematicView stub with real implementation
+- Full schematic canvas using circuit-editor/ components
+- Schematic symbol library via component_parts
+- Wire routing (A* algorithm)
+- Multi-sheet support via hierarchical_ports + circuit_designs hierarchy
+- Net drawing tool, ERC panel, net class panel
+- Breadboard and PCB layout views
 
-### Phase 4 — Breadboard/PCB Layout
+### Phase 4 — Breadboard / PCB Layout ✅ COMPLETE
 
-- Breadboard placement view
-- PCB layout editor
-- Manufacturing output: Gerber files, KiCad export
-- Design for Manufacturing (DFM) validation
+- Breadboard placement view (`BreadboardView.tsx`)
+- PCB layout editor (`PCBLayoutView.tsx`)
+- Autoroute endpoint (`/api/circuits/:circuitId/autoroute`)
+- Ratsnest overlay, component placer, breadboard grid
 
-### Phase 5 — Circuit Simulation
+### Phase 5 — Manufacturing Output ✅ COMPLETE
 
-- SPICE netlist generation
-- Integration with simulation engine
-- Waveform viewer
-- Parameter sweep
+- Gerber file generation (RS-274X)
+- Drill file generation (Excellon)
+- Pick-and-place CSV
+- KiCad schematic export
+- Eagle schematic export
+- BOM export (CSV/JSON)
+- Netlist export (multiple formats)
+- SPICE netlist
+- PDF schematic + design report
+- FMEA report
+- Firmware scaffold generator
+
+### Phase 6 — Circuit Simulation ✅ COMPLETE
+
+- SPICE simulation engine (`circuit-solver.ts`)
+- Frequency analysis (`frequency-analysis.ts`)
+- Bode plot viewer (`BodePlot.tsx`, `FrequencyAnalysisPanel.tsx`)
+- Power budget analysis
+- Signal integrity analysis
+- Simulation results persistence (`simulation_results` table)
+
+### Future / Planned
+
+- Remove `PROJECT_ID = 1` hardcoding (multi-project)
+- Split `ProjectProvider` monolith
+- API versioning
+- Virtualization for long lists (BOM, chat)
 
 ---
 
 ## 11. AI Action System Reference
 
-The AI chat system (`server/ai.ts`) supports 53 action types. Actions are returned as a JSON array at the end of the AI's text response, parsed by `parseActionsFromResponse()`.
+The AI system (`server/ai.ts` + `server/ai-tools/`) exposes **80 tool actions** via the Anthropic/Gemini function-calling API. Tools are organized in 11 modules under `server/ai-tools/`.
 
-### Action Type Union
+### Tool Modules
 
-The `AIAction` type is a discriminated union defined in `server/ai.ts`. Each action has a `type` field.
+| Module | File | Responsibility |
+|--------|------|---------------|
+| Registry | `registry.ts` | Tool registration and lookup |
+| Navigation | `navigation.ts` | View switching, sheet navigation, undo/redo |
+| Architecture | `architecture.ts` | Node/edge CRUD, canvas generation, layout |
+| BOM | `bom.ts` | BOM item management, pricing, optimization |
+| Circuit | `circuit.ts` | Schematic instance/net/wire CRUD, ERC |
+| Component | `component.ts` | Component part creation, fork, DRC |
+| Export | `export.ts` | All export format triggers |
+| Validation | `validation.ts` | DRC, ERC, validation issue management |
+| Project | `project.ts` | Rename, description, preferences, decisions |
+| Navigation | `navigation.ts` | Focus, tutorials, UI state |
+| Index | `index.ts` | Barrel — registers all modules |
 
-### Categories
+### Tool Categories
 
-#### View Navigation (2 actions)
-| Action | Key Fields | Notes |
-|--------|-----------|-------|
-| `switch_view` | `view: "architecture" \| "schematic" \| "procurement" \| "validation" \| "output" \| "project_explorer"` | Changes active tab |
-| `switch_schematic_sheet` | `sheetId: string` | Switches schematic sheet |
+#### View Navigation
+`switch_view`, `switch_schematic_sheet`, `focus_node_in_view`, `start_tutorial`
 
-#### Architecture Nodes (4 actions)
-| Action | Key Fields | Notes |
-|--------|-----------|-------|
-| `add_node` | `nodeType, label, description?, positionX?, positionY?` | nodeType: "mcu", "sensor", "power", "comm", "connector", etc. |
-| `remove_node` | `nodeLabel: string` | Removes by label, not ID |
-| `update_node` | `nodeLabel, newLabel?, newType?, newDescription?` | Partial update by label |
-| `clear_canvas` | — | Removes ALL nodes and edges |
+#### Architecture Nodes & Edges
+`add_node`, `remove_node`, `update_node`, `clear_canvas`, `connect_nodes`, `remove_edge`, `generate_architecture`, `auto_layout`, `select_node`
 
-#### Architecture Edges (2 actions)
-| Action | Key Fields | Notes |
-|--------|-----------|-------|
-| `connect_nodes` | `sourceLabel, targetLabel, edgeLabel?, busType?, signalType?, voltage?, busWidth?, netName?` | Creates connection between nodes |
-| `remove_edge` | `sourceLabel, targetLabel` | Removes connection by node labels |
+#### BOM Management
+`add_bom_item`, `remove_bom_item`, `update_bom_item`, `optimize_bom`, `pricing_lookup`, `suggest_alternatives`, `check_lead_times`, `parametric_search`, `copy_architecture_json`, `copy_architecture_summary`
 
-#### Full Generation (1 action)
-| Action | Key Fields | Notes |
-|--------|-----------|-------|
-| `generate_architecture` | `components: [{label, nodeType, description, positionX, positionY}], connections: [{sourceLabel, targetLabel, label, busType?}]` | Replaces entire diagram |
+#### Validation & DRC
+`run_validation`, `clear_validation`, `add_validation_issue`, `auto_fix_validation`, `run_erc`, `dfm_check`, `voltage_domain_check`, `power_budget_analysis`, `thermal_analysis`, `validate_component`
 
-#### BOM Management (3 actions)
-| Action | Key Fields | Notes |
-|--------|-----------|-------|
-| `add_bom_item` | `partNumber, manufacturer, description, quantity?, unitPrice?, supplier?, status?` | Adds to BOM |
-| `remove_bom_item` | `partNumber: string` | Removes by part number |
-| `update_bom_item` | `partNumber, updates: Record<string, any>` | Partial update |
+#### Circuit Schematic
+`create_circuit`, `place_component`, `remove_component_instance`, `draw_net`, `remove_net`, `remove_wire`, `place_no_connect`, `place_power_symbol`, `place_breadboard_wire`, `draw_pcb_trace`, `assign_net_name`, `add_net_label`, `set_pin_map`, `auto_assign_pins`, `auto_route`, `add_subcircuit`
 
-#### Validation (3 actions)
-| Action | Key Fields | Notes |
-|--------|-----------|-------|
-| `run_validation` | — | Triggers DRC |
-| `clear_validation` | — | Clears all issues |
-| `add_validation_issue` | `severity, message, componentId?, suggestion?` | Adds finding |
+#### Hierarchical Sheets
+`create_sheet`, `rename_sheet`, `move_to_sheet`, `expand_architecture_to_circuit`
 
-#### Project Settings (3 actions)
-| Action | Key Fields | Notes |
-|--------|-----------|-------|
-| `rename_project` | `name: string` | |
-| `update_description` | `description: string` | |
-| `set_project_type` | `projectType: string` | "iot", "wearable", "industrial", etc. |
+#### Component Editor
+`create_component_part`, `modify_component`, `delete_component_part`, `fork_library_component`, `compare_components`, `search_datasheet`, `add_datasheet_link`
 
-#### Export & Output (5 actions)
-| Action | Notes |
-|--------|-------|
-| `export_bom_csv` | Triggers CSV download |
-| `export_kicad` | Generate KiCad schematic |
-| `export_spice` | Generate SPICE netlist |
-| `preview_gerber` | PCB layout preview |
-| `export_design_report` | Comprehensive report |
+#### Export & Output
+`export_bom_csv`, `export_kicad`, `export_kicad_netlist`, `export_csv_netlist`, `export_eagle`, `export_spice`, `export_gerber`, `export_pick_and_place`, `export_fritzing_project`, `export_design_report`, `preview_gerber`
 
-#### Layout & Organization (7 actions)
-| Action | Key Fields |
-|--------|-----------|
-| `auto_layout` | `layout: "hierarchical" \| "grid" \| "circular" \| "force"` |
-| `add_subcircuit` | `template: string, positionX?, positionY?` |
-| `assign_net_name` | `sourceLabel, targetLabel, netName` |
-| `create_sheet` | `name: string` |
-| `rename_sheet` | `sheetId, newName` |
-| `move_to_sheet` | `nodeLabel, sheetId` |
-| `undo` / `redo` | — |
+#### Project Settings
+`rename_project`, `update_description`, `set_project_type`, `save_design_decision`
 
-#### Pin Management (2 actions)
-| Action | Key Fields |
-|--------|-----------|
-| `set_pin_map` | `nodeLabel, pins: Record<string, string>` |
-| `auto_assign_pins` | `nodeLabel` |
+#### Analysis
+`analyze_image`, `generate_test_plan`
 
-#### Analysis (5 actions)
-| Action | Notes |
-|--------|-------|
-| `power_budget_analysis` | Tallies current draw |
-| `voltage_domain_check` | Flags voltage mismatches |
-| `thermal_analysis` | Estimates dissipation |
-| `dfm_check` | Manufacturing checks |
-| `auto_fix_validation` | Auto-resolve issues |
-
-#### BOM Intelligence (5 actions)
-| Action | Key Fields |
-|--------|-----------|
-| `pricing_lookup` | `partNumber` |
-| `suggest_alternatives` | `partNumber, reason?` |
-| `optimize_bom` | — |
-| `check_lead_times` | — |
-| `parametric_search` | `category, specs: Record<string, string>` |
-
-#### Documentation (4 actions)
-| Action | Key Fields |
-|--------|-----------|
-| `analyze_image` | `description` |
-| `save_design_decision` | `decision, rationale` |
-| `add_annotation` | `nodeLabel, note, color?` |
-| `start_tutorial` | `topic` |
-| `add_datasheet_link` | `partNumber, url` |
+#### History
+`undo`, `redo`
 
 ### How Actions Flow
 
 1. User sends message via ChatPanel
 2. ChatPanel calls `POST /api/chat/ai/stream` with message + project state
 3. Server builds system prompt with full project state (nodes, edges, BOM, validation, chat history)
-4. AI provider (Anthropic/Gemini) streams response via SSE
+4. AI provider (Anthropic/Gemini) streams response via SSE using function-calling API
 5. ChatPanel receives SSE chunks, accumulates response text
-6. On stream end, `parseActionsFromResponse()` extracts JSON action array from response
-7. ChatPanel executes each action by calling the appropriate context method or API
+6. On stream end, the tool call results are parsed and returned as a structured action list
+7. ChatPanel dispatches each action through intent handlers in `client/src/components/panels/chat/intent-handlers/`
+8. Actions call the appropriate context methods, API endpoints, or local state updates
+
+### Multi-Model Routing
+
+The `routingStrategy` in `user_chat_settings` controls which AI provider handles requests:
+- `user` — uses the provider the user has configured
+- `auto` — the server decides based on request complexity
+- `always_claude` — force Anthropic Claude
+- `always_gemini` — force Google Gemini
 
 ---
 
@@ -805,32 +1049,84 @@ The `AIAction` type is a discriminated union defined in `server/ai.ts`. Each act
 
 ### Current State
 
-**No test suite exists** (audit item #10). This is a known gap.
+49 test files, ~1,349 tests, using Vitest 4.
 
-### When Adding Features
+### Test Infrastructure
 
-1. **Add `data-testid` attributes** to all interactive and display elements (see convention in Section 3)
-2. **Smoke test** by switching through all tabs after changes
-3. **API endpoints** can be manually tested with curl:
-   ```bash
-   # Register
-   curl -X POST http://localhost:5000/api/auth/register \
-     -H "Content-Type: application/json" \
-     -d '{"username":"test","password":"test123"}'
+- **Framework:** Vitest 4 with workspace projects
+- **Client tests:** `happy-dom` environment, `@testing-library/react`, setup file `client/src/test-setup.ts`
+- **Server tests:** `node` environment (no DOM)
+- **Coverage:** `@vitest/coverage-v8` — reports to `coverage/` directory
+- **Legacy:** `server/__tests__/api.test.ts` uses `node:test` runner — excluded from Vitest config
 
-   # Use returned sessionId for protected endpoints
-   curl http://localhost:5000/api/projects/1/nodes \
-     -H "X-Session-Id: <sessionId>"
-   ```
-4. **TypeScript check:** `npm run check` (or `tsc`)
-5. **E2E tests** can use Playwright for UI verification
-6. **All views must remain functional** after changes — switch through every tab
+### Test File Locations
 
-### Test File Location
+```
+server/__tests__/           # 28 files
+  ai.test.ts, ai-tools-architecture.test.ts, ai-tools-bom.test.ts
+  ai-tools-navigation.test.ts, ai-tools-validation.test.ts
+  auth.test.ts, auth-session.test.ts, admin-purge.test.ts
+  audit-log.test.ts, batch-analysis.test.ts (excluded: api.test.ts)
+  circuit-breaker.test.ts, db-constraints.test.ts
+  lru-cache.test.ts, metrics.test.ts, routes-utils.test.ts
+  storage.test.ts, storage-integration.test.ts, stream-abuse.test.ts
+  # Exporters:
+  bom-exporter.test.ts, eagle-exporter.test.ts, gerber-generator.test.ts
+  kicad-exporter.test.ts, spice-exporter.test.ts, netlist-generator.test.ts
+  drill-generator.test.ts, pick-place-generator.test.ts
+  drc-gate.test.ts, export-snapshot.test.ts
 
-When tests are added, they should go in:
-- Backend: `server/__tests__/` (one test file exists: `api.test.ts`)
-- Frontend: `client/src/__tests__/` (to be created)
+client/src/lib/circuit-editor/__tests__/
+  wire-router.test.ts, erc-engine.test.ts, breadboard-model.test.ts
+
+client/src/lib/component-editor/__tests__/
+  constraint-solver.test.ts, diff-engine.test.ts, snap-engine.test.ts
+
+client/src/lib/simulation/__tests__/
+  circuit-solver.test.ts, spice-generator.test.ts
+
+client/src/lib/contexts/__tests__/
+  architecture-context.test.tsx, bom-context.test.tsx
+  chat-context.test.tsx, history-context.test.tsx
+
+client/src/lib/__tests__/
+  utils.test.ts
+
+client/src/components/panels/__tests__/
+  ChatPanel.test.tsx
+
+client/src/components/panels/chat/hooks/__tests__/
+  useActionExecutor.test.tsx
+
+client/src/components/layout/__tests__/
+  Sidebar.test.tsx
+
+client/src/components/views/__tests__/
+  ArchitectureView.test.tsx, ProcurementView.test.tsx, ValidationView.test.tsx
+
+shared/__tests__/
+  schema.test.ts, drc-engine.test.ts
+```
+
+### Running Tests
+
+```bash
+npm test                                    # All tests (server + client)
+npm run test:watch                          # Interactive watch mode
+npm run test:coverage                       # With v8 coverage report
+npx vitest run --project server             # Server tests only
+npx vitest run --project client             # Client tests only
+npx vitest run path/to/file.test.ts         # Single file
+npx vitest run -t "test name"               # By test name
+```
+
+### Testing Philosophy
+
+**When tests fail, fix the code, not the test.**
+- Tests should be meaningful — avoid tests that always pass regardless of behavior
+- Test actual functionality — call the functions being tested
+- Fix the root cause — when a test fails, fix the underlying issue
+- Test edge cases — tests that reveal limitations help improve the code
 
 ---
 
@@ -842,9 +1138,10 @@ When tests are added, they should go in:
 |--------|---------|
 | **Soft deletes** | Projects, nodes, edges, BOM items use `deletedAt`. Always filter with `isNull(table.deletedAt)` in queries. `DatabaseStorage` handles this, but raw queries must include it. |
 | **BOM totalPrice** | Computed server-side in `DatabaseStorage.createBomItem()` and `updateBomItem()` as `quantity * unitPrice`. Never set it from the client. |
-| **Cache invalidation** | Uses prefix matching. Invalidating `"nodes:1"` clears `"nodes:1:50:0:desc"`, `"nodes:1:100:0:asc"`, etc. Be careful with cache key naming. |
-| **PROJECT_ID = 1** | Hardcoded in `project-context.tsx`. The seed endpoint creates project ID 1 on first run. Multi-project support is blocked by this (audit #19). |
+| **LRU cache invalidation** | Uses prefix matching. Invalidating `"nodes:1"` clears `"nodes:1:50:0:desc"`, `"nodes:1:100:0:asc"`, etc. Be careful with cache key naming. |
+| **PROJECT_ID = 1** | Hardcoded in `project-context.tsx`. The seed endpoint creates project ID 1 on first run. Multi-project support is blocked by this. |
 | **replace* methods** | `replaceNodes`, `replaceEdges`, `replaceValidationIssues` do a hard DELETE + INSERT inside a transaction. They don't use soft deletes. |
+| **Circuit tables** | Circuit tables (`circuit_designs`, `circuit_instances`, etc.) do NOT use soft deletes — DELETE is immediate and permanent. |
 
 ### Authentication
 
@@ -853,29 +1150,36 @@ When tests are added, they should go in:
 | **Session header** | Uses `X-Session-Id` header, NOT cookies. Frontend must include this on every protected request. |
 | **API key encryption** | AES-256-GCM. Uses `API_KEY_ENCRYPTION_KEY` env var. In dev, falls back to random key (keys don't survive restart). |
 | **Session expiry** | 7 days (`SESSION_DURATION_MS`). Expired sessions are cleaned up on next validation attempt. |
+| **Auth context** | Client stores session in `auth-context.tsx` (React state), not localStorage. |
 
 ### Frontend
 
 | Gotcha | Details |
 |--------|---------|
 | **Component editor context** | Uses a separate `ComponentEditorProvider` (`client/src/lib/component-editor/`), not the main `ProjectProvider`. |
-| **React Flow node IDs** | Use `crypto.randomUUID()`, NOT `Date.now()`. This is a fixed audit item (#24). |
-| **Deprecated BOM/validation endpoints** | `PATCH /api/bom/:id` and `DELETE /api/bom/:id` still exist but are deprecated. The frontend currently uses them (via `project-context.tsx`). Prefer `/api/projects/:id/bom/:bomId`. |
-| **schematicSheets** | Currently hardcoded in `ProjectProvider` state, not editable by users. Static data only (audit #97). |
+| **React Flow node IDs** | Use `crypto.randomUUID()`, NOT `Date.now()`. |
 | **AI system prompt** | Rebuilds full project state (all nodes, edges, BOM, validation, chat history) on EVERY request. Can be expensive for large projects. |
-| **staleTime overrides** | Global staleTime is 5 min (`queryClient.ts`), but per-query overrides in `project-context.tsx` set `staleTime: Infinity`. Those queries never auto-refetch — only manual invalidation triggers refetch. Known issue #66. |
+| **staleTime overrides** | Global staleTime is 5 min (`queryClient.ts`), but per-query overrides in `project-context.tsx` set `staleTime: Infinity`. Those queries never auto-refetch — only manual invalidation triggers refetch. |
 | **OutputView** | Uses local React state (`outputLog`), not persisted to database. Lost on page refresh. |
-| **Node dirty tracking** | `project-context.tsx` uses `nodesDirtyRef`/`edgesDirtyRef` to skip saving on initial hydration. First `setNodes`/`setEdges` call marks dirty; second call actually saves. |
+| **Circuit routes DELETE response** | Returns `{ success: true }` JSON (not 204), unlike domain routes which return 204. |
+| **Exhaustive switch on discriminated unions** | The `Shape` type and other discriminated unions require extracting shared base properties BEFORE the switch statement to avoid `never` type issues in the `default` case. |
 
 ### AI System
 
 | Gotcha | Details |
 |--------|---------|
-| **Action parsing** | `parseActionsFromResponse()` looks for the LAST ` ```json ``` ` block in the response. Falls back to bare JSON array at end of text. |
-| **Node references** | AI actions reference nodes by LABEL, not by internal ID. Resolution happens in the frontend. |
-| **Deduplication** | `activeRequests` map prevents duplicate in-flight requests to the same provider+project+message prefix. |
+| **Tool dispatch** | Tools are dispatched via the function-calling API, not via JSON parsing a text response. The old `parseActionsFromResponse()` pattern is replaced by structured function calls. |
+| **Node references** | AI tools reference architecture nodes by LABEL, not by internal database ID. Resolution happens in the frontend. |
 | **Client caching** | LRU cache (size 10) for Anthropic/Gemini client instances, keyed by API key. |
-| **System prompt caching** | Prompt is cached and only rebuilt when project state hash changes. |
+| **Multi-model routing** | `routingStrategy` in `user_chat_settings` controls whether Claude or Gemini handles each request. |
+
+### Exports
+
+| Gotcha | Details |
+|--------|---------|
+| **DRC gate** | `server/export/drc-gate.ts` can block exports if critical DRC violations are present. Check DRC before attempting export. |
+| **FZPZ import** | ZIP bomb vulnerability exists — decompressed size check is a known P0 security item (not yet fixed). |
+| **Gerber output** | Generates RS-274X format. The drill file is separate (Excellon format), generated by `drill-generator.ts`. |
 
 ---
 
@@ -883,8 +1187,8 @@ When tests are added, they should go in:
 
 ### Before Making Changes
 
-- [ ] Read `replit.md` for current project state and user preferences
-- [ ] Check `docs/frontend-audit-checklist.md` for related open audit items
+- [ ] Read `AGENTS.md` (or the AI config symlinks) for current project state and user preferences
+- [ ] Check `docs/product-analysis-checklist.md` for related open audit items
 - [ ] Understand the vertical slice path: `schema → storage → routes → hooks → UI`
 - [ ] Check neighboring files for existing patterns before writing new code
 - [ ] Verify the library/framework is already in `package.json` before importing it
@@ -904,17 +1208,16 @@ When tests are added, they should go in:
 - [ ] Use the existing `cn()` utility for conditional Tailwind classes
 - [ ] Use `useToast` for user-facing feedback messages
 - [ ] Wrap new views in `<ErrorBoundary>` + `<Suspense>`
+- [ ] Use `import type { ... }` for type-only imports
 
 ### After Making Changes
 
-- [ ] Verify the app still runs (restart the "Start application" workflow)
-- [ ] Switch through ALL tabs to smoke test (Output, Architecture, Component Editor, Procurement, Validation)
-- [ ] Check for TypeScript errors (`npm run check`)
-- [ ] Update `docs/frontend-audit-checklist.md` if fixing an audit item (change ⬜ to ✅, add note)
-- [ ] Update `replit.md` if making a significant architectural change (only when explicitly asked)
-- [ ] Test API changes with curl
+- [ ] Run `npm run check` — must pass with **zero TypeScript errors**
+- [ ] Run `npm test` — verify no regressions
+- [ ] Switch through ALL tabs to smoke test
 - [ ] Check the browser console for runtime errors
 - [ ] Verify no secrets or API keys are logged or exposed
+- [ ] Update checklist docs if fixing an audit item
 
 ### When Adding a New Feature (Full Vertical Slice)
 
@@ -930,16 +1233,17 @@ When tests are added, they should go in:
 3. server/storage.ts
    └─ Add methods to IStorage interface
    └─ Implement in DatabaseStorage class
-   └─ Add cache invalidation on writes
+   └─ Add LRU cache invalidation on writes
    └─ Filter by isNull(deletedAt) if soft-delete table
 
-4. server/routes.ts
+4. server/routes/<domain>.ts (or circuit-routes/<domain>.ts)
    └─ Add endpoints with asyncHandler
    └─ Add Zod validation for request bodies
    └─ Add payloadLimit middleware
    └─ Use parseIdParam for URL params
+   └─ Register in server/routes.ts or server/circuit-routes/index.ts
 
-5. client/src/lib/project-context.tsx (or new context)
+5. client/src/lib/project-context.tsx (or domain context)
    └─ Add React Query hook for data fetching
    └─ Add mutation for data writing
    └─ Invalidate query keys on mutation success
@@ -954,10 +1258,14 @@ When tests are added, they should go in:
    └─ Add tab entry if new view
    └─ Add lazy import + Suspense + ErrorBoundary
 
-8. Smoke test
+8. Tests
+   └─ Add server test in server/__tests__/
+   └─ Add client test in appropriate __tests__/ directory
+
+9. Verify
+   └─ npm run check (zero errors)
+   └─ npm test (no regressions)
    └─ Switch through all tabs
-   └─ Verify no console errors
-   └─ Check TypeScript compiles
 ```
 
 ---
@@ -968,18 +1276,26 @@ When tests are added, they should go in:
 
 | Script | Command | Purpose |
 |--------|---------|---------|
-| `npm run dev` | `NODE_ENV=development tsx server/index.ts` | Start dev server with HMR |
+| `npm run dev` | `NODE_ENV=development tsx server/index.ts` | Start dev server with HMR (port 5000) |
+| `npm run dev:client` | Vite dev server | Client only (port 5000) |
 | `npm run build` | `tsx script/build.ts` | Production build |
 | `npm start` | `NODE_ENV=production node dist/index.cjs` | Start production server |
-| `npm run check` | `tsc` | TypeScript type checking |
+| `npm run check` | `tsc` | TypeScript type checking (must pass clean) |
+| `npm test` | `vitest run` | Run all tests (server + client) |
+| `npm run test:watch` | `vitest` | Interactive watch mode |
+| `npm run test:coverage` | `vitest run --coverage` | Coverage report (v8 provider) |
 | `npm run db:push` | `drizzle-kit push` | Sync Drizzle schema to database |
+| `npx eslint .` | — | Lint all files |
+| `npx prettier --write .` | — | Format all files |
 
 ### Key Environment Variables
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (auto-provided by Replit) |
-| `API_KEY_ENCRYPTION_KEY` | Production only | 32-byte hex key for AES-256-GCM API key encryption |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `API_KEY_ENCRYPTION_KEY` | Yes | 32-byte hex key for AES-256-GCM API key encryption |
+| `PORT` | No | Server port (default 5000) |
+| `LOG_LEVEL` | No | Winston logger level |
 | `NODE_ENV` | No | "development" or "production" |
 
 ### Port Binding
@@ -987,10 +1303,3 @@ When tests are added, they should go in:
 - The application binds to **port 5000** on `0.0.0.0`
 - In development, Vite dev server runs as middleware inside Express
 - In production, Express serves static files from `dist/`
-
-### Replit Workflow
-
-The application runs via a single workflow:
-- **Name:** "Start application"
-- **Command:** `npm run dev`
-- Restart this workflow after server-side changes to verify they work

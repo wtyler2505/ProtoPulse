@@ -1,8 +1,20 @@
 /**
  * Export tools — BOM CSV, KiCad, SPICE, Gerber, Eagle, Fritzing, design report.
  *
- * Also contains data-mapping helpers that convert DB rows to the flat shapes
- * expected by the export generators.
+ * Provides AI tools for exporting project data in industry-standard EDA formats:
+ * BOM CSV (generic, JLCPCB, Mouser, DigiKey), KiCad schematic and netlist,
+ * SPICE netlist, Gerber RS-274X, Eagle schematic XML, Fritzing project,
+ * CSV netlist, pick-and-place, design report, and Gerber preview.
+ *
+ * Also contains data-mapping helpers that convert database rows (with their
+ * ORM-specific shapes) into the flat data-transfer objects expected by the
+ * export generator modules in `server/export/`.
+ *
+ * All export tools execute server-side, reading project data from storage and
+ * generating file content. The exception is `preview_gerber`, which is
+ * dispatched client-side via {@link clientAction}.
+ *
+ * @module ai-tools/export
  */
 
 import { z } from 'zod';
@@ -38,6 +50,17 @@ import type {
 // Export helpers — convert ExportResult to a download_file ToolResult
 // ---------------------------------------------------------------------------
 
+/**
+ * Wrap a generated file's content into a standardized {@link ToolResult} with
+ * a `download_file` data payload.
+ *
+ * The client action executor interprets `data.type === 'download_file'` to
+ * trigger a browser file download with the given filename and MIME type.
+ *
+ * @param result - The generated export output containing file content, encoding,
+ *                 MIME type, and filename.
+ * @returns A successful {@link ToolResult} with `data.type` set to `'download_file'`.
+ */
 function fileExportResult(result: {
   content: string;
   encoding: 'utf8' | 'base64';
@@ -59,8 +82,20 @@ function fileExportResult(result: {
 
 // ---------------------------------------------------------------------------
 // Data mappers — convert DB rows to flat export shapes
+//
+// These pure functions transform ORM result rows (which may contain extra
+// columns, null-able JSON blobs, etc.) into the strict flat shapes defined
+// in `server/export/types.ts`. This decouples the export generators from
+// the database layer.
 // ---------------------------------------------------------------------------
 
+/**
+ * Convert BOM item database rows to the flat {@link BomItemData} shape
+ * expected by the BOM CSV export generators.
+ *
+ * @param rows - Array of BOM item rows from `storage.getBomItems()`.
+ * @returns Array of {@link BomItemData} objects with only the fields needed for export.
+ */
 function toBomItemData(
   rows: Array<{
     partNumber: string;
@@ -89,6 +124,15 @@ function toBomItemData(
   }));
 }
 
+/**
+ * Convert component part database rows to the flat {@link ComponentPartData} shape.
+ *
+ * Safely coerces `meta` from `unknown` to `Record<string, unknown>` (defaulting
+ * to `{}`), and ensures `connectors`, `buses`, and `constraints` are arrays.
+ *
+ * @param rows - Array of component part rows from `storage.getComponentParts()`.
+ * @returns Array of {@link ComponentPartData} objects.
+ */
 function toComponentPartData(
   rows: Array<{
     id: number;
@@ -109,6 +153,14 @@ function toComponentPartData(
   }));
 }
 
+/**
+ * Convert architecture node database rows to the flat {@link ArchNodeData} shape.
+ *
+ * Safely coerces the `data` JSON blob from `unknown` to `Record<string, unknown> | null`.
+ *
+ * @param rows - Array of architecture node rows from `storage.getNodes()`.
+ * @returns Array of {@link ArchNodeData} objects.
+ */
 function toArchNodeData(
   rows: Array<{
     nodeId: string;
@@ -129,6 +181,12 @@ function toArchNodeData(
   }));
 }
 
+/**
+ * Convert architecture edge database rows to the flat {@link ArchEdgeData} shape.
+ *
+ * @param rows - Array of architecture edge rows from `storage.getEdges()`.
+ * @returns Array of {@link ArchEdgeData} objects with source, target, label, and signal metadata.
+ */
 function toArchEdgeData(
   rows: Array<{
     edgeId: string;
@@ -153,6 +211,15 @@ function toArchEdgeData(
   }));
 }
 
+/**
+ * Convert circuit instance database rows to the flat {@link CircuitInstanceData} shape.
+ *
+ * Safely coerces the `properties` JSON blob from `unknown` to `Record<string, unknown>`.
+ * Preserves nullable PCB placement fields (`pcbX`, `pcbY`, `pcbRotation`, `pcbSide`).
+ *
+ * @param rows - Array of circuit instance rows from `storage.getCircuitInstances()`.
+ * @returns Array of {@link CircuitInstanceData} objects.
+ */
 function toCircuitInstanceData(
   rows: Array<{
     id: number;
@@ -183,6 +250,15 @@ function toCircuitInstanceData(
   }));
 }
 
+/**
+ * Convert circuit net database rows to the flat {@link CircuitNetData} shape.
+ *
+ * Ensures `segments` and `labels` are arrays even if the DB stores them as
+ * null or a non-array JSON value.
+ *
+ * @param rows - Array of circuit net rows from `storage.getCircuitNets()`.
+ * @returns Array of {@link CircuitNetData} objects.
+ */
 function toCircuitNetData(
   rows: Array<{
     id: number;
@@ -205,6 +281,15 @@ function toCircuitNetData(
   }));
 }
 
+/**
+ * Convert circuit wire database rows to the flat {@link CircuitWireData} shape.
+ *
+ * Ensures `points` is an array even if the DB stores it as null or a non-array
+ * JSON value.
+ *
+ * @param rows - Array of circuit wire rows from `storage.getCircuitWires()`.
+ * @returns Array of {@link CircuitWireData} objects.
+ */
 function toCircuitWireData(
   rows: Array<{
     id: number;
@@ -225,6 +310,12 @@ function toCircuitWireData(
   }));
 }
 
+/**
+ * Convert validation issue database rows to the flat {@link ValidationIssueData} shape.
+ *
+ * @param rows - Array of validation issue rows from `storage.getValidationIssues()`.
+ * @returns Array of {@link ValidationIssueData} objects.
+ */
 function toValidationIssueData(
   rows: Array<{
     severity: string;
@@ -241,7 +332,18 @@ function toValidationIssueData(
   }));
 }
 
-/** Fetch the first circuit design for a project, or a specific one by ID. */
+/**
+ * Resolve a circuit design ID for export operations.
+ *
+ * If an explicit `circuitId` is provided, returns it directly. Otherwise,
+ * queries `storage.getCircuitDesigns()` and returns the first circuit's ID,
+ * or `null` if the project has no circuit designs.
+ *
+ * @param storage   - The storage layer to query for circuit designs.
+ * @param projectId - The project ID to look up circuit designs for.
+ * @param circuitId - Optional explicit circuit design ID to use.
+ * @returns The resolved circuit ID, or `null` if no circuits exist.
+ */
 async function resolveCircuitId(
   storage: IStorage,
   projectId: number,
@@ -258,8 +360,44 @@ async function resolveCircuitId(
 // Export tool registration
 // ---------------------------------------------------------------------------
 
+/**
+ * Register all export-category tools with the given registry.
+ *
+ * Tools registered (12 total):
+ *
+ * **BOM export:**
+ * - `export_bom_csv`          — Export BOM as CSV (generic, JLCPCB, Mouser, DigiKey formats).
+ *
+ * **Schematic export:**
+ * - `export_kicad`            — Generate KiCad-compatible schematic (.kicad_sch).
+ * - `export_eagle`            — Generate Eagle-compatible schematic XML (.sch).
+ * - `export_fritzing_project` — Export as Fritzing project (.fzz).
+ *
+ * **Netlist export:**
+ * - `export_spice`            — Generate SPICE netlist (.cir).
+ * - `export_kicad_netlist`    — Generate KiCad netlist (.net).
+ * - `export_csv_netlist`      — Export netlist as CSV.
+ *
+ * **PCB fabrication:**
+ * - `export_gerber`           — Generate Gerber RS-274X files.
+ * - `export_pick_and_place`   — Generate pick-and-place CSV for PCB assembly.
+ * - `preview_gerber`          — Generate rough PCB layout preview (client-side).
+ *
+ * **Reporting:**
+ * - `export_design_report`    — Generate comprehensive design report (markdown).
+ *
+ * @param registry - The {@link ToolRegistry} instance to register tools into.
+ */
 export function registerExportTools(registry: ToolRegistry): void {
-  // --- BOM CSV (enhanced with format variants) ---
+  /**
+   * export_bom_csv — Export the Bill of Materials as a CSV file.
+   *
+   * Executes server-side: fetches BOM items, selects the appropriate format
+   * generator (generic, JLCPCB, Mouser, or DigiKey), and returns a downloadable
+   * CSV file. JLCPCB format also fetches component parts for LCSC part numbers.
+   *
+   * @side-effect Reads from `bom_items`, `projects`, and optionally `component_parts` tables.
+   */
   registry.register({
     name: 'export_bom_csv',
     description:
@@ -297,7 +435,14 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- KiCad Schematic ---
+  /**
+   * export_kicad — Generate a KiCad-compatible schematic file (.kicad_sch).
+   *
+   * Executes server-side: fetches architecture nodes and edges, then generates
+   * a KiCad S-expression schematic file via `generateKicadSch()`.
+   *
+   * @side-effect Reads from `architecture_nodes`, `architecture_edges`, and `projects` tables.
+   */
   registry.register({
     name: 'export_kicad',
     description:
@@ -322,7 +467,17 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- SPICE Netlist ---
+  /**
+   * export_spice — Generate a SPICE netlist (.cir) for circuit simulation.
+   *
+   * Executes server-side: resolves the target circuit (or uses the first one),
+   * fetches instances, nets, and parts, then generates a SPICE netlist via
+   * `generateSpiceNetlist()`. Falls back to a header-only file if no circuit
+   * data exists but architecture nodes are present.
+   *
+   * @side-effect Reads from `circuit_designs`, `circuit_instances`, `circuit_nets`,
+   *              `component_parts`, `architecture_nodes`, and `projects` tables.
+   */
   registry.register({
     name: 'export_spice',
     description:
@@ -359,7 +514,12 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- Preview Gerber (client-side) ---
+  /**
+   * preview_gerber — Generate a rough PCB layout preview.
+   *
+   * Dispatched client-side. Shows component placement and basic routing
+   * estimation, adding a validation info message with the size estimate.
+   */
   registry.register({
     name: 'preview_gerber',
     description:
@@ -370,7 +530,17 @@ export function registerExportTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('preview_gerber', params),
   });
 
-  // --- Design Report ---
+  /**
+   * export_design_report — Generate a comprehensive design report.
+   *
+   * Executes server-side: fetches the full project state (architecture, BOM,
+   * validation issues, circuit summaries) and generates a markdown design
+   * report via `generateDesignReportMd()`.
+   *
+   * @side-effect Reads from `projects`, `architecture_nodes`, `architecture_edges`,
+   *              `bom_items`, `validation_issues`, `circuit_designs`, `circuit_instances`,
+   *              and `circuit_nets` tables.
+   */
   registry.register({
     name: 'export_design_report',
     description:
@@ -414,7 +584,16 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- Gerber RS-274X ---
+  /**
+   * export_gerber — Generate Gerber RS-274X files from circuit PCB data.
+   *
+   * Executes server-side: resolves the target circuit, fetches instances,
+   * wires, and parts, then generates Gerber files (board outline, copper
+   * layer, drill file) via `generateGerber()`.
+   *
+   * @side-effect Reads from `circuit_designs`, `circuit_instances`, `circuit_wires`,
+   *              `component_parts`, and `projects` tables.
+   */
   registry.register({
     name: 'export_gerber',
     description:
@@ -451,7 +630,15 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- KiCad Netlist ---
+  /**
+   * export_kicad_netlist — Generate a KiCad-compatible netlist file (.net).
+   *
+   * Executes server-side: resolves the target circuit, fetches instances,
+   * nets, and parts, then generates a KiCad netlist via `generateKicadNetlist()`.
+   *
+   * @side-effect Reads from `circuit_designs`, `circuit_instances`, `circuit_nets`,
+   *              and `component_parts` tables.
+   */
   registry.register({
     name: 'export_kicad_netlist',
     description: 'Generate a KiCad-compatible netlist file (.net) from circuit design data.',
@@ -477,7 +664,16 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- CSV Netlist ---
+  /**
+   * export_csv_netlist — Export netlist as a CSV file.
+   *
+   * Executes server-side: resolves the target circuit, fetches instances,
+   * nets, and parts, then generates a CSV with columns: Net Name, Component,
+   * Pin, Net Type, Voltage via `generateCsvNetlist()`.
+   *
+   * @side-effect Reads from `circuit_designs`, `circuit_instances`, `circuit_nets`,
+   *              and `component_parts` tables.
+   */
   registry.register({
     name: 'export_csv_netlist',
     description: 'Export netlist as a CSV file with columns: Net Name, Component, Pin, Net Type, Voltage.',
@@ -503,7 +699,16 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- Pick and Place ---
+  /**
+   * export_pick_and_place — Generate a pick-and-place CSV for PCB assembly.
+   *
+   * Executes server-side: resolves the target circuit, fetches instances and
+   * parts, then generates a CSV with component placement coordinates (X, Y,
+   * rotation, side) via `generatePickAndPlace()`.
+   *
+   * @side-effect Reads from `circuit_designs`, `circuit_instances`, and
+   *              `component_parts` tables.
+   */
   registry.register({
     name: 'export_pick_and_place',
     description:
@@ -532,7 +737,14 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- Eagle Schematic ---
+  /**
+   * export_eagle — Generate a basic Eagle-compatible schematic XML file (.sch).
+   *
+   * Executes server-side: fetches architecture nodes and edges, then generates
+   * an Eagle XML schematic via `generateEagleSch()`.
+   *
+   * @side-effect Reads from `architecture_nodes`, `architecture_edges`, and `projects` tables.
+   */
   registry.register({
     name: 'export_eagle',
     description:
@@ -551,7 +763,17 @@ export function registerExportTools(registry: ToolRegistry): void {
     },
   });
 
-  // --- Fritzing Project ---
+  /**
+   * export_fritzing_project — Export circuit design as a Fritzing project (.fzz).
+   *
+   * Executes server-side: resolves the target circuit, fetches instances, nets,
+   * and parts, then generates a Fritzing-compatible XML sketch containing
+   * schematic, breadboard, and PCB views. Returned as plain UTF-8 XML rather
+   * than a ZIP archive (JSZip would add complexity; plain XML is importable).
+   *
+   * @side-effect Reads from `circuit_designs`, `circuit_instances`, `circuit_nets`,
+   *              `component_parts`, and `projects` tables.
+   */
   registry.register({
     name: 'export_fritzing_project',
     description:

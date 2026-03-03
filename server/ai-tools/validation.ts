@@ -1,5 +1,18 @@
 /**
  * Validation tools — DRC, ERC, power budget, thermal analysis, test plan generation.
+ *
+ * Provides AI tools for design verification and validation: running full DRC,
+ * clearing validation issues, adding specific findings, analyzing power budgets,
+ * checking voltage domain compatibility, auto-fixing common issues, running DFM
+ * checks, performing thermal analysis, and generating comprehensive test plans.
+ *
+ * Tools that mutate validation data server-side (e.g., `add_validation_issue`)
+ * execute via `ctx.storage`. Tools that require client-side UI interaction
+ * (e.g., `run_validation`, `power_budget_analysis`) are dispatched via
+ * {@link clientAction}. The `generate_test_plan` tool gathers full project
+ * state server-side and returns structured data for the AI to format.
+ *
+ * @module ai-tools/validation
  */
 
 import { z } from 'zod';
@@ -7,7 +20,38 @@ import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
 import type { ToolResult } from './types';
 
+/**
+ * Register all validation-category tools with the given registry.
+ *
+ * Tools registered (8 total):
+ *
+ * **Core validation:**
+ * - `run_validation`        — Trigger a full DRC on the current project.
+ * - `clear_validation`      — Clear all validation issues (destructive, requires confirmation).
+ * - `add_validation_issue`  — Add a specific validation finding (server-side, writes to DB).
+ *
+ * **Analysis:**
+ * - `power_budget_analysis` — Calculate total power budget across all rails.
+ * - `voltage_domain_check`  — Verify voltage compatibility across connections.
+ * - `thermal_analysis`      — Estimate power dissipation and flag thermal hot spots.
+ *
+ * **Automated fixes:**
+ * - `auto_fix_validation`   — Auto-fix issues (decoupling caps, pull-ups, ESD protection).
+ * - `dfm_check`             — Run Design for Manufacturing checks.
+ *
+ * **Test planning:**
+ * - `generate_test_plan`    — Gather project state and return structured data for test plan generation.
+ *
+ * @param registry - The {@link ToolRegistry} instance to register tools into.
+ */
 export function registerValidationTools(registry: ToolRegistry): void {
+  /**
+   * run_validation — Trigger a full design validation / DRC on the project.
+   *
+   * Dispatched client-side. Runs the complete design rule checking engine
+   * against the current project state and populates the validation panel
+   * with any findings.
+   */
   registry.register({
     name: 'run_validation',
     description: 'Trigger a full design validation / design rule check (DRC) on the current project.',
@@ -17,6 +61,12 @@ export function registerValidationTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('run_validation', params),
   });
 
+  /**
+   * clear_validation — Clear all validation issues from the project.
+   *
+   * Dispatched client-side. Requires user confirmation (`requiresConfirmation: true`)
+   * because it removes all existing validation findings.
+   */
   registry.register({
     name: 'clear_validation',
     description: 'Clear all validation issues from the project.',
@@ -26,6 +76,15 @@ export function registerValidationTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('clear_validation', params),
   });
 
+  /**
+   * add_validation_issue — Add a specific validation issue to the project.
+   *
+   * Executes server-side: creates a new validation issue record via
+   * `storage.createValidationIssue()` with severity, message, optional
+   * component reference, and optional suggestion.
+   *
+   * @side-effect Writes a new row to the `validation_issues` table.
+   */
   registry.register({
     name: 'add_validation_issue',
     description: 'Add a specific validation issue/finding to the project.',
@@ -52,6 +111,12 @@ export function registerValidationTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * power_budget_analysis — Calculate total power budget across all power rails.
+   *
+   * Dispatched client-side. Tallies current draw from all components on each
+   * power rail and generates a power budget summary.
+   */
   registry.register({
     name: 'power_budget_analysis',
     description:
@@ -62,6 +127,12 @@ export function registerValidationTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('power_budget_analysis', params),
   });
 
+  /**
+   * voltage_domain_check — Verify voltage compatibility across all connections.
+   *
+   * Dispatched client-side. Scans all connections between components and flags
+   * any voltage level mismatches that could cause damage or signal integrity issues.
+   */
   registry.register({
     name: 'voltage_domain_check',
     description: 'Verify voltage compatibility across all connections and flag mismatches.',
@@ -71,6 +142,13 @@ export function registerValidationTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('voltage_domain_check', params),
   });
 
+  /**
+   * auto_fix_validation — Automatically fix common validation issues.
+   *
+   * Dispatched client-side. Analyzes current validation findings and
+   * automatically adds missing decoupling capacitors, pull-up resistors,
+   * and ESD protection components.
+   */
   registry.register({
     name: 'auto_fix_validation',
     description:
@@ -81,6 +159,12 @@ export function registerValidationTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('auto_fix_validation', params),
   });
 
+  /**
+   * dfm_check — Run Design for Manufacturing checks.
+   *
+   * Dispatched client-side. Evaluates the design for manufacturing concerns:
+   * flags hard-to-solder components and suggests assembly-friendly alternatives.
+   */
   registry.register({
     name: 'dfm_check',
     description:
@@ -91,6 +175,13 @@ export function registerValidationTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('dfm_check', params),
   });
 
+  /**
+   * thermal_analysis — Estimate power dissipation and flag thermal hot spots.
+   *
+   * Dispatched client-side. Calculates per-component power dissipation,
+   * identifies thermal hot spots, and suggests heatsinks or thermal vias
+   * where needed.
+   */
   registry.register({
     name: 'thermal_analysis',
     description:
@@ -101,6 +192,22 @@ export function registerValidationTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('thermal_analysis', params),
   });
 
+  /**
+   * generate_test_plan — Gather project state for comprehensive test plan generation.
+   *
+   * Executes server-side: fetches the full project state in parallel (architecture
+   * nodes/edges, BOM items, validation issues, circuit designs with instances and
+   * nets) and returns structured data. The AI model uses this data to produce a
+   * formatted test plan covering power rail verification, communication bus
+   * validation, sensor/peripheral tests, thermal/environmental tests, mechanical
+   * fit checks, and end-to-end integration tests.
+   *
+   * @returns A {@link ToolResult} with `data` containing `projectName`, `projectDescription`,
+   *          `nodes`, `edges`, `bomItems`, `openIssues`, and `circuits` (each with
+   *          instance and net summaries).
+   *
+   * @side-effect Reads from multiple tables but does not write any data.
+   */
   registry.register({
     name: 'generate_test_plan',
     description:

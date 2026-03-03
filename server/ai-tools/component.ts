@@ -1,12 +1,52 @@
 /**
  * Component tools — create, modify, delete, fork, validate component parts.
+ *
+ * Provides AI tools for managing the project's component library: creating
+ * custom parts with metadata, modifying existing part properties, deleting
+ * parts, forking components from the public library, and running DRC
+ * validation on individual components.
+ *
+ * Tools that mutate component data server-side (e.g., `create_component_part`,
+ * `modify_component`, `delete_component_part`) execute via `ctx.storage`.
+ * Tools that require client-side UI interaction (e.g., `fork_library_component`,
+ * `validate_component`) are dispatched via {@link clientAction}.
+ *
+ * @module ai-tools/component
  */
 
 import { z } from 'zod';
 import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
 
+/**
+ * Register all component-category tools with the given registry.
+ *
+ * Tools registered (5 total):
+ *
+ * **Part CRUD:**
+ * - `create_component_part`   — Create a new component part (server-side, writes to DB).
+ * - `modify_component`        — Update an existing part's metadata (server-side, reads then writes).
+ * - `delete_component_part`   — Delete a part from the library (destructive, requires confirmation).
+ *
+ * **Library operations:**
+ * - `fork_library_component`  — Fork (copy) a component from the public library.
+ *
+ * **Validation:**
+ * - `validate_component`      — Run DRC on a specific component part.
+ *
+ * @param registry - The {@link ToolRegistry} instance to register tools into.
+ */
 export function registerComponentTools(registry: ToolRegistry): void {
+  /**
+   * create_component_part — Create a new component part in the project library.
+   *
+   * Executes server-side: builds a metadata JSON blob from the provided fields
+   * (title, family, manufacturer, mpn, category, description) and writes a new
+   * component part via `storage.createComponentPart()`. Optionally links the
+   * part to an architecture node.
+   *
+   * @side-effect Writes a new row to the `component_parts` table.
+   */
   registry.register({
     name: 'create_component_part',
     description:
@@ -44,6 +84,16 @@ export function registerComponentTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * modify_component — Update an existing component part's metadata.
+   *
+   * Executes server-side: fetches the current part via `storage.getComponentPart()`,
+   * merges the provided fields into the existing `meta` JSON blob, and writes
+   * the update via `storage.updateComponentPart()`. Only specified fields are
+   * changed; omitted fields retain their current values.
+   *
+   * @side-effect Reads then writes to the `component_parts` table.
+   */
   registry.register({
     name: 'modify_component',
     description:
@@ -94,6 +144,15 @@ export function registerComponentTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * delete_component_part — Delete a component part from the project library.
+   *
+   * Executes server-side: deletes the part via `storage.deleteComponentPart()`.
+   * Requires user confirmation (`requiresConfirmation: true`) because the
+   * operation is destructive and may affect circuit instances referencing this part.
+   *
+   * @side-effect Deletes a row from the `component_parts` table.
+   */
   registry.register({
     name: 'delete_component_part',
     description: 'Delete a component part from the project library.',
@@ -111,6 +170,13 @@ export function registerComponentTools(registry: ToolRegistry): void {
     },
   });
 
+  /**
+   * fork_library_component — Fork a component from the public library into the project.
+   *
+   * Dispatched client-side. Copies the full component definition (metadata,
+   * connectors, buses, views, constraints) from the shared public library
+   * into the current project's component library.
+   */
   registry.register({
     name: 'fork_library_component',
     description: 'Fork (copy) a component from the public library into the current project.',
@@ -122,6 +188,13 @@ export function registerComponentTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('fork_library_component', params),
   });
 
+  /**
+   * validate_component — Run DRC on a specific component part.
+   *
+   * Dispatched client-side. Executes the design rule checking engine against
+   * the specified part to verify footprint, pin definitions, and constraint
+   * compliance.
+   */
   registry.register({
     name: 'validate_component',
     description:

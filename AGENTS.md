@@ -6,7 +6,7 @@ This file provides guidance to AI coding assistants working in this repository.
 
 ## ProtoPulse
 
-Browser-based AI-assisted EDA (Electronic Design Automation) platform. Architecture block diagrams, BOM management, circuit schematic editor, design validation (DRC/ERC), AI chat with 53+ in-app action types, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place). Built for electronics engineers and hardware startups.
+Browser-based AI-assisted EDA (Electronic Design Automation) platform. Architecture block diagrams, BOM management, circuit schematic editor, design validation (DRC/ERC), AI chat with 79 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF). Built for electronics engineers and hardware startups.
 
 ## Stack
 
@@ -45,15 +45,15 @@ React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark them
 | `shared/schema.ts` | ALL database tables (24), Zod insert schemas, TypeScript types |
 | `shared/component-types.ts` | Component editor type system (shapes, connectors, buses, DRC rules) |
 | `shared/drc-engine.ts` | Design Rule Check engine (shared between server + client) |
-| `server/routes.ts` | Barrel — registers 19 domain routers from `server/routes/` |
+| `server/routes.ts` | Barrel — registers 18 domain routers from `server/routes/` |
 | `server/circuit-routes.ts` | Barrel — registers 13 circuit routers from `server/circuit-routes/` |
-| `server/ai.ts` | AI system: prompts, 53+ action types, streaming, multi-model routing |
+| `server/ai.ts` | AI system: prompts, 79 AI tools, streaming, multi-model routing |
 | `server/ai-tools.ts` | Barrel — registers 11 tool modules from `server/ai-tools/` |
 | `server/storage.ts` | `IStorage` interface + `DatabaseStorage` (LRU cache, pagination, soft deletes) |
 | `server/auth.ts` | Session auth (scrypt), API key encryption (AES-256-GCM) |
 | `server/cache.ts` | LRU cache implementation |
 | `server/component-export.ts` | FZPZ import/export |
-| `server/export/` | KiCad, Eagle, SPICE, BOM exporters; Gerber, drill, pick-and-place, netlist generators |
+| `server/export/` | 15 modules + types: KiCad, Eagle, SPICE, BOM exporters; Gerber, drill, pick-and-place, netlist generators; design-report, FMEA, firmware-scaffold, PDF, DRC-gate, FZPZ handler |
 | `shared/bom-diff.ts` | BOM snapshot comparison engine |
 | `shared/netlist-diff.ts` | Netlist comparison / ECO engine |
 | `client/src/lib/project-context.tsx` | `ProjectProvider`: 40+ state values, React Query mutations |
@@ -79,7 +79,7 @@ client/src/
   lib/component-editor/            → Constraint solver, diff engine, snap engine
 
 server/
-  routes.ts           → Barrel — imports 19 domain routers from server/routes/
+  routes.ts           → Barrel — imports 18 domain routers from server/routes/
   routes/             → auth, projects, architecture, bom, validation, chat, history,
                          components, settings, admin, seed, batch, bom-snapshots,
                          chat-branches, design-preferences, spice-models, component-lifecycle,
@@ -101,9 +101,10 @@ shared/
   schema.ts           → Drizzle schema (24 tables): projects, architecture_nodes/edges,
                          bom_items, validation_issues, chat_messages, history_items,
                          users, sessions, api_keys, component_parts, component_library,
-                         user_chat_settings, circuit_designs, circuit_instances,
-                         circuit_nets, circuit_wires, simulation_results, ai_actions,
-                         design_preferences, spice_models, bom_snapshots, component_lifecycle
+                         user_chat_settings, circuit_designs, hierarchical_ports,
+                         circuit_instances, circuit_nets, circuit_wires, simulation_results,
+                         ai_actions, design_preferences, bom_snapshots, spice_models,
+                         component_lifecycle
   component-types.ts  → Component editor type system (shapes, connectors, buses)
   drc-engine.ts       → Design rule checking engine
   bom-diff.ts         → BOM comparison engine (snapshot vs current)
@@ -204,7 +205,7 @@ shared/
 ### Test File Locations (49 test files, ~1349 tests)
 
 ```text
-server/__tests__/                          → API, auth, storage, exporters, generators, DRC, LRU cache, metrics, audit-log, circuit-breaker, stream-abuse (30 files)
+server/__tests__/                          → API, auth, storage, exporters, generators, DRC, LRU cache, metrics, audit-log, circuit-breaker, stream-abuse (28 files)
 client/src/lib/__tests__/                  → Utility tests
 client/src/lib/contexts/__tests__/         → React context tests (architecture, BOM, chat, history)
 client/src/lib/circuit-editor/__tests__/   → Wire router, breadboard model, ERC engine
@@ -342,8 +343,8 @@ ProtoPulse/
 │   ├── lib/                # Contexts, hooks, utilities, circuit/simulation logic
 │   └── pages/              # Route pages
 ├── server/                 # Express API
-│   ├── __tests__/          # Server test files (30 files)
-│   ├── routes.ts           # Barrel — 19 domain routers
+│   ├── __tests__/          # Server test files (28 files)
+│   ├── routes.ts           # Barrel — 18 domain routers
 │   ├── routes/             # Domain route modules (auth, bom, chat, etc.)
 │   ├── circuit-routes.ts   # Barrel — 13 circuit routers
 │   ├── circuit-routes/     # Circuit route modules (nets, wires, exports, etc.)
