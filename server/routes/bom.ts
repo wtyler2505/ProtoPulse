@@ -16,6 +16,24 @@ export function registerBomRoutes(app: Express): void {
   );
 
   app.get(
+    '/api/projects/:id/bom/low-stock',
+    asyncHandler(async (req, res) => {
+      const projectId = parseIdParam(req.params.id);
+      const items = await storage.getLowStockItems(projectId);
+      res.json(items);
+    }),
+  );
+
+  app.get(
+    '/api/projects/:id/bom/storage-locations',
+    asyncHandler(async (req, res) => {
+      const projectId = parseIdParam(req.params.id);
+      const locations = await storage.getStorageLocations(projectId);
+      res.json(locations);
+    }),
+  );
+
+  app.get(
     '/api/projects/:id/bom/:bomId',
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);

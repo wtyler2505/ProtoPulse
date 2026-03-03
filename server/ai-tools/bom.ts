@@ -1,10 +1,10 @@
 /**
- * BOM (Bill of Materials) tools — item management, pricing, search, comparison.
+ * BOM (Bill of Materials) tools — item management, pricing, search, comparison, datasheet lookup.
  *
  * Provides AI tools for managing the project Bill of Materials: adding/removing
  * items, updating fields, looking up pricing and availability, finding alternative
  * parts, optimizing costs, searching by parametric specs, attaching datasheets,
- * and generating component comparison tables.
+ * looking up datasheets by part number, and generating component comparison tables.
  *
  * Tools that mutate BOM data server-side (e.g., `add_bom_item`) execute via
  * `ctx.storage`. Tools that require client-side UI interaction (e.g., `remove_bom_item`,
@@ -21,7 +21,7 @@ import type { ToolResult } from './types';
 /**
  * Register all BOM-category tools with the given registry.
  *
- * Tools registered (10 total):
+ * Tools registered (11 total):
  *
  * **Item CRUD:**
  * - `add_bom_item`         — Add a component to the BOM (server-side, writes to DB).
@@ -37,6 +37,7 @@ import type { ToolResult } from './types';
  * **Search & reference:**
  * - `parametric_search`     — Search for components by parametric specifications.
  * - `add_datasheet_link`    — Attach a datasheet URL to a BOM item.
+ * - `lookup_datasheet`      — Look up datasheet/manufacturer info for a BOM item by ID.
  *
  * **Analysis:**
  * - `compare_components`    — Fetch BOM and architecture data for structured comparison.
@@ -238,6 +239,58 @@ export function registerBomTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params) => clientAction('add_datasheet_link', params),
+  });
+
+  /**
+   * lookup_datasheet — Look up datasheet URL and manufacturer info for a BOM item.
+   *
+   * Executes server-side: reads the BOM item by ID, then returns structured data
+   * (part number, manufacturer, description, existing URLs) so the AI can suggest
+   * datasheet URLs or manufacturer pages in its response.
+   *
+   * @returns A {@link ToolResult} with the item's identifying info and current datasheet/manufacturer URLs.
+   */
+  registry.register({
+    name: 'lookup_datasheet',
+    description:
+      'Look up datasheet URL and manufacturer info for a BOM item by its ID. ' +
+      'Returns part number, manufacturer, description, and any existing datasheet/manufacturer URLs ' +
+      'so you can suggest relevant datasheet links.',
+    category: 'bom',
+    parameters: z.object({
+      bomItemId: z.number().int().positive().describe('ID of the BOM item to look up'),
+    }),
+    requiresConfirmation: false,
+    execute: async (params, ctx): Promise<ToolResult> => {
+      const items = await ctx.storage.getBomItems(ctx.projectId);
+      const item = items.find((b) => b.id === params.bomItemId);
+
+      if (!item) {
+        return {
+          success: false,
+          message: `BOM item with ID ${String(params.bomItemId)} not found in this project`,
+        };
+      }
+
+      const searchQuery = [item.partNumber, item.manufacturer, item.description]
+        .filter(Boolean)
+        .join(' ');
+
+      return {
+        success: true,
+        message: `Found BOM item: ${item.partNumber} by ${item.manufacturer}`,
+        data: {
+          id: item.id,
+          partNumber: item.partNumber,
+          manufacturer: item.manufacturer,
+          description: item.description,
+          supplier: item.supplier,
+          datasheetUrl: item.datasheetUrl,
+          manufacturerUrl: item.manufacturerUrl,
+          searchQuery,
+        },
+      };
+    },
   });
 
   /**

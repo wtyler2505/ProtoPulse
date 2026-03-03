@@ -94,6 +94,7 @@ describe('BOM tools — registration', () => {
     'parametric_search',
     'add_datasheet_link',
     'compare_components',
+    'lookup_datasheet',
   ];
 
   it.each(expectedTools)('registers "%s"', (name) => {
