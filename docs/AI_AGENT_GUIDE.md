@@ -27,7 +27,11 @@
 
 ## 1. Project Identity & Vision
 
-**ProtoPulse** is an AI-assisted Electronic Design Automation (EDA) platform built for the browser. It combines features inspired by Fritzing and KiCad, enhanced with AI capabilities for electronics design.
+**ProtoPulse** is an all-in-one browser-based EDA platform built for makers, learners, and hobbyists who want a single tool that does everything — from learning basic circuits to designing, wiring, simulating, and programming real hardware. The vision is TinkerCad + Fritzing + KiCad + Wokwi unified into a single AI-powered experience.
+
+**Origin:** Built by a maker working on a rover (Arduino Mega, ESP32, RioRand motor controllers, salvaged hoverboard wheels) who couldn't find one tool that covered the full journey. Every feature is evaluated through the lens of: "Would this help someone learning electronics while building real hardware projects?"
+
+**Heading toward:** Interactive live simulation (EveryCircuit-style), Fritzing-style breadboard wiring view, Web Serial hardware communication, camera-based component ID, engineering calculators, Arduino code generation. See `docs/future-features-and-ideas-list.md`.
 
 ### Current State
 
@@ -37,7 +41,7 @@
 | Component Editor (SVG canvas, connectors, buses, DRC) | ✅ Shipped |
 | Bill of Materials (BOM) management | ✅ Shipped |
 | Design validation with categorized issues | ✅ Shipped |
-| AI chat with 80 tool actions (Anthropic + Gemini) | ✅ Shipped |
+| AI chat with 82 tool actions (Anthropic + Gemini) | ✅ Shipped |
 | Session-based auth with encrypted API key storage | ✅ Shipped |
 | Circuit schematic capture | ✅ Shipped |
 | Breadboard / PCB layout views | ✅ Shipped |
@@ -293,7 +297,7 @@ Use the `useToast` hook from `client/src/hooks/use-toast.ts` for user-facing act
 │           └── not-found.tsx
 ├── server/
 │   ├── index.ts                         # Server entry point
-│   ├── routes.ts                        # Barrel — 18 domain routers from server/routes/ (57 lines)
+│   ├── routes.ts                        # Barrel — 21 domain routers from server/routes/ (57 lines)
 │   ├── routes/                          # Domain route modules:
 │   │   ├── auth.ts, settings.ts, projects.ts, architecture.ts
 │   │   ├── bom.ts, validation.ts, chat.ts, history.ts
@@ -303,7 +307,7 @@ Use the `useToast` hook from `client/src/hooks/use-toast.ts` for user-facing act
 │   │   └── utils.ts                     # Shared route utilities (HttpError, asyncHandler, etc.)
 │   ├── circuit-routes.ts                # Barrel — re-exports from circuit-routes/index.ts (1 line)
 │   ├── circuit-routes/                  # Circuit route modules:
-│   │   ├── index.ts                     # Registers 11 circuit routers
+│   │   ├── index.ts                     # Registers 13 circuit routers
 │   │   ├── designs.ts, instances.ts, nets.ts, wires.ts
 │   │   ├── netlist.ts, autoroute.ts, exports.ts, imports.ts
 │   │   ├── simulations.ts, hierarchy.ts, expansion.ts
@@ -461,7 +465,7 @@ client/src/components/* (React UI)
 | `shared/drc-engine.ts` | — | Design rule checking engine (shared between server + client) |
 | `shared/bom-diff.ts` | — | BOM snapshot comparison engine |
 | `shared/netlist-diff.ts` | — | Netlist comparison / ECO engine |
-| `server/routes.ts` | 57 | Barrel — 18 domain routers from `server/routes/` |
+| `server/routes.ts` | 57 | Barrel — 21 domain routers from `server/routes/` |
 | `server/circuit-routes.ts` | 1 | Barrel — re-exports `registerCircuitRoutes` from `server/circuit-routes/index.ts` |
 | `server/ai.ts` | 1,368 | AI system prompt builder, tool dispatch, SSE streaming, multi-model routing |
 | `server/storage.ts` | 1,598 | `IStorage` interface (60+ methods) + `DatabaseStorage` with LRU cache, soft deletes, pagination |
@@ -971,7 +975,7 @@ Full details: `docs/product-analysis-checklist.md` and `docs/app-audit-checklist
 
 ## 11. AI Action System Reference
 
-The AI system (`server/ai.ts` + `server/ai-tools/`) exposes **80 tool actions** via the Anthropic/Gemini function-calling API. Tools are organized in 11 modules under `server/ai-tools/`.
+The AI system (`server/ai.ts` + `server/ai-tools/`) exposes **82 tool actions** via the Anthropic/Gemini function-calling API. Tools are organized in 11 modules under `server/ai-tools/`.
 
 ### Tool Modules
 
@@ -1049,7 +1053,7 @@ The `routingStrategy` in `user_chat_settings` controls which AI provider handles
 
 ### Current State
 
-49 test files, ~1,349 tests, using Vitest 4.
+54 test files, ~1,553 tests, using Vitest 4.
 
 ### Test Infrastructure
 

@@ -21,7 +21,11 @@
 
 ## Architecture in 30 Seconds
 
-Browser-based EDA (Electronic Design Automation) tool for architecture block diagrams, circuit schematic editing, BOM management, design validation (DRC/ERC), and AI-assisted design. Monolithic Express server serves both the API and the Vite-built SPA. AI chat supports 82 AI tools that directly manipulate project state (add nodes, generate architectures, manage BOM, run DRC, circuit operations, exports). Multi-format export: KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF. All state flows through a single `ProjectProvider` React context backed by React Query mutations.
+All-in-one browser-based EDA tool built for makers and learners who want a single tool from "I don't know electronics" to "here are my Gerbers." Born from a real project (a rover with Arduino Mega, ESP32, hoverboard motors) where no single tool covered the full journey. Think TinkerCad + Fritzing + KiCad unified with AI.
+
+Monolithic Express server serves both the API and the Vite-built SPA. AI chat supports 82 AI tools that directly manipulate project state (add nodes, generate architectures, manage BOM, run DRC, circuit operations, exports). Multi-format export: KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF. All state flows through a single `ProjectProvider` React context backed by React Query mutations.
+
+**Heading toward:** Interactive live simulation (EveryCircuit-style), Fritzing-style breadboard wiring, Web Serial hardware communication, camera-based component ID, engineering calculators. See `docs/future-features-and-ideas-list.md`.
 
 ## Entry Points
 

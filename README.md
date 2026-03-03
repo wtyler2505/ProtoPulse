@@ -7,15 +7,15 @@
 <br>
 <br>
 
-**The open-source EDA platform that designs circuits with you.**
+**The all-in-one electronics design tool for makers who learn by building.**
 <br>
-*Schematic capture · SPICE simulation · 14+ export formats · 82 AI tools — all in your browser.*
+*Design · Wire · Simulate · Program · Export — with AI holding your hand the whole way.*
 
 <br>
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Vitest](https://img.shields.io/badge/Tests-1,349_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Tests-1,553_passing-6da13f?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-00F0FF?style=flat-square)](LICENSE)
 
 [**Features**](#features) · [**Why ProtoPulse**](#why-protopulse) · [**Quick Start**](#quick-start) · [**AI Engine**](#ai-engine) · [**Architecture**](#architecture) · [**Roadmap**](#roadmap) · [**Docs**](#documentation)
@@ -30,11 +30,13 @@
 
 ## The Pitch
 
-Most EDA tools were designed in the 1990s and it shows — bloated desktop installs, steep learning curves, zero intelligence. ProtoPulse is what happens when you rebuild electronics design from scratch for the browser era, then hand the AI real tools instead of just a chat box.
+Every electronics learning journey currently requires bouncing between 4-6 different tools — TinkerCad to learn basics, Wokwi to simulate microcontrollers, Fritzing for breadboard layout, KiCad for schematic/PCB, and some SPICE tool for simulation. Each transition is a cliff where people drop off.
 
-**Describe a circuit in plain English. Watch it appear on screen.** The AI doesn't suggest what components you might need — it places them, wires them, populates your BOM, runs design rule checks, and exports manufacturing files. All while you're still typing the next sentence.
+**ProtoPulse is what happens when you refuse to use 6 tools and build one that does everything.** Born from a real project — a maker building a rover with Arduino Mega, ESP32, and salvaged hoverboard motors — who couldn't find a single tool that covered the full journey from "I don't know electronics" to "here are my Gerbers."
 
-> **Think Fritzing meets KiCad, rebuilt for the browser, with an AI engineer sitting next to you.**
+The AI doesn't just chat — it has **82 tool actions** that place components, wire connections, populate your BOM, run design rule checks, and export manufacturing files. Describe a circuit in plain English. Watch it appear on screen.
+
+> **Think TinkerCad + Fritzing + KiCad, unified in the browser, with an AI engineer sitting next to you who never gets tired of explaining things.**
 
 <br>
 
@@ -207,7 +209,7 @@ npm run build           # Production build (Vite + esbuild)
 npm start               # Production server
 npm run check           # TypeScript type check (must pass clean)
 npm run db:push         # Sync Drizzle schema to PostgreSQL
-npm test                # All tests (49 files, 1,349 tests)
+npm test                # All tests (54 files, 1,553 tests)
 npm run test:watch      # Vitest interactive watch mode
 npm run test:coverage   # Tests with v8 coverage report
 npx eslint .            # Lint (strict TypeScript rules)
@@ -276,12 +278,12 @@ graph TB
     subgraph Server["Express 5 — Node.js + TypeScript"]
         direction LR
         MW["Middleware<br><sub>helmet · compress<br>rate-limit · auth</sub>"]
-        Routes["Routes<br><sub>18 domain routers<br>11 circuit routers</sub>"]
+        Routes["Routes<br><sub>21 domain routers<br>13 circuit routers</sub>"]
         AI["AI Service<br><sub>Claude + Gemini<br>82 tools · SSE</sub>"]
         Storage["Storage<br><sub>Drizzle ORM<br>LRU Cache</sub>"]
     end
 
-    Storage --> DB[("PostgreSQL<br><sub>24 tables</sub>")]
+    Storage --> DB[("PostgreSQL<br><sub>27 tables</sub>")]
 
     style Browser fill:#0D1B2A,stroke:#1B3A5C,color:#E0E7FF
     style Server fill:#0D1B2A,stroke:#1B3A5C,color:#E0E7FF
@@ -307,7 +309,7 @@ graph TB
 </details>
 
 <details>
-<summary><strong>Database Schema — 24 tables</strong></summary>
+<summary><strong>Database Schema — 27 tables</strong></summary>
 <br>
 
 | Table | Purpose |
@@ -336,6 +338,8 @@ graph TB
 | `design_preferences` | Per-project design rule preferences |
 | `spice_models` | User SPICE model library |
 | `component_lifecycle` | Component obsolescence tracking |
+| `design_snapshots` | Versioned design snapshots for diffing |
+| `design_comments` | Spatially-pinned design review comments |
 
 </details>
 
@@ -361,12 +365,13 @@ client/src/
     component-editor/   Constraint solver, diff engine, snap engine
 
 server/
-  routes.ts             Barrel — 18 domain routers from server/routes/
+  routes.ts             Barrel — 21 domain routers from server/routes/
   routes/               auth, projects, architecture, bom, validation, chat,
                         history, components, settings, admin, seed, batch,
                         bom-snapshots, chat-branches, design-preferences,
-                        spice-models, component-lifecycle, project-io
-  circuit-routes.ts     Barrel — 11 circuit routers from server/circuit-routes/
+                        spice-models, component-lifecycle, project-io,
+                        design-history, comments, backup
+  circuit-routes.ts     Barrel — 13 circuit routers from server/circuit-routes/
   circuit-routes/       designs, instances, nets, wires, netlist, exports,
                         simulations, hierarchy, imports, autoroute, expansion
   ai.ts                 AI integration — Claude + Gemini, streaming, 82 tools
@@ -378,7 +383,7 @@ server/
                         PDF, DRC-gate, FZPZ handler, types
 
 shared/
-  schema.ts             24 Drizzle tables + Zod validators (504 lines)
+  schema.ts             27 Drizzle tables + Zod validators
   drc-engine.ts         Design rule checking engine (server + client)
   bom-diff.ts           BOM snapshot comparison engine
   netlist-diff.ts       Netlist comparison / ECO engine
@@ -394,11 +399,11 @@ shared/
 
 <table>
 <tr>
-<td align="center"><strong>49</strong><br><sub>test files</sub></td>
-<td align="center"><strong>1,349</strong><br><sub>tests passing</sub></td>
+<td align="center"><strong>54</strong><br><sub>test files</sub></td>
+<td align="center"><strong>1,553</strong><br><sub>tests passing</sub></td>
 <td align="center"><strong>0</strong><br><sub>TypeScript errors</sub></td>
 <td align="center"><strong>strict</strong><br><sub>mode enabled</sub></td>
-<td align="center"><strong>24</strong><br><sub>database tables</sub></td>
+<td align="center"><strong>27</strong><br><sub>database tables</sub></td>
 <td align="center"><strong>50+</strong><br><sub>API endpoints</sub></td>
 </tr>
 </table>
@@ -419,9 +424,11 @@ Phase 2   ████████████████████  Complete
 Phase 3   ████████████████████  Complete    Circuit schematic capture (instances, nets, ERC)
 Phase 4   ████████████████████  Complete    Breadboard / PCB layout, Gerber & KiCad export
 Phase 5   ████████████████████  Complete    Circuit simulation, SPICE, frequency analysis
-Phase 0   ████████████░░░░░░░░  Active      Audit remediation, security hardening (160/245)
-Phase 1   ░░░░░░░░░░░░░░░░░░░░  Next        Multi-project, context splitting, undo/redo
+Phase 0   ██████████████░░░░░░  Active      Audit + feature waves (177/245 — 72.2%)
+Phase 1   ░░░░░░░░░░░░░░░░░░░░  Next        Live simulation, breadboard wiring, hardware comms
 ```
+
+**The Vision:** ProtoPulse aims to be the single tool a maker needs from "I've never touched electronics" to "here are my Gerbers." See [`docs/future-features-and-ideas-list.md`](docs/future-features-and-ideas-list.md) for the full roadmap including live simulation, Web Serial hardware communication, camera-based component ID, and engineering calculators.
 
 <br>
 

@@ -6,7 +6,13 @@ This file provides guidance to AI coding assistants working in this repository.
 
 ## ProtoPulse
 
-Browser-based AI-assisted EDA (Electronic Design Automation) platform. Architecture block diagrams, BOM management, circuit schematic editor, design validation (DRC/ERC), AI chat with 82 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF). Built for electronics engineers and hardware startups.
+Browser-based AI-assisted EDA (Electronic Design Automation) platform built for makers, learners, and hobbyists who want **one tool that does everything** — from learning basic circuits to designing, wiring, simulating, and programming real hardware. The vision is TinkerCad Circuits + Fritzing + KiCad + Wokwi unified into a single AI-powered experience where you never have to leave the tool.
+
+**Origin story:** The creator is building a rover using Arduino Mega, NodeMCU ESP32, RioRand motor controllers, and salvaged hoverboard wheels — and couldn't find a single tool that covered the full journey from "I don't know electronics" to "here are my Gerbers." ProtoPulse exists to be that tool.
+
+**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 82 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC analysis, undo/redo, project ownership, design history, backup/restore.
+
+**Where it's heading:** Interactive live simulation (EveryCircuit-style animated current flow), Fritzing-style breadboard wiring view, hardware communication via Web Serial API (talk to Arduino/ESP32 from the browser), camera-based component identification, engineering calculators, Arduino code generation, and a learning path that takes complete beginners through to PCB manufacturing. See `docs/future-features-and-ideas-list.md` for the full feature roadmap.
 
 ## Stack
 
@@ -204,7 +210,7 @@ shared/
 - **Coverage**: `@vitest/coverage-v8` — reports to `coverage/` directory
 - **Legacy**: `server/__tests__/api.test.ts` uses `node:test` runner (excluded from Vitest config)
 
-### Test File Locations (51 test files, ~1456 tests)
+### Test File Locations (54 test files, ~1553 tests)
 
 ```text
 server/__tests__/                          → API, auth, storage, exporters, generators, DRC, LRU cache, metrics, audit-log, circuit-breaker, stream-abuse, auth-regression, storage-transactions (30 files)
@@ -308,12 +314,14 @@ See `docs/product-analysis-checklist.md` for full security findings (CAPX-SEC-*)
 
 ## Agent Mindset
 
-**Be proactive, curious, creative, and communicative.** Think like a senior engineer who cares about the product.
+**Be proactive, curious, creative, and communicative.** Think like a senior engineer building a tool for someone who's learning electronics and building real hardware projects.
 
+- **The user is the target user.** He's learning electronics while building a rover. Every feature should be evaluated through the lens of: "Would this help a maker who doesn't have a formal EE background?"
+- **Accessibility over complexity.** Prefer intuitive, visual, interactive implementations over technically impressive but opaque ones. If a feature requires the user to already understand electronics to use it, it's not done yet — add AI guidance, tooltips, or a learning mode.
+- **One tool, zero context-switching.** The core value prop is never having to leave ProtoPulse. If a workflow currently requires an external tool (calculator, datasheet lookup, code editor, serial monitor), that's a gap worth closing.
+- Draw inspiration from **TinkerCad Circuits, Fritzing, EveryCircuit, Falstad, Wokwi** (learning/maker tools) as much as from KiCad, Altium, Figma, VS Code (pro tools)
 - After every task, actively look for related improvements nearby in the code you touched
 - After meaningful changes, provide an **Improvements Radar** (3-7 ideas: Quick Win / Medium / Big Swing)
-- Don't just fix what exists — think about what ProtoPulse **could** be as a full EDA tool
-- Draw inspiration from KiCad, Altium, Figma, VS Code
 - Be direct and opinionated. Quantify technical debt impact. Flag issues early.
 - Always check audit checklists before starting work — kill two birds with one stone
 
@@ -385,6 +393,7 @@ Read these only when relevant — don't read upfront:
 | `docs/arduino-ide-integration-spec.md` | Arduino IDE integration specification |
 | `docs/arduino-ide-api-contracts.md` | Arduino IDE API contract definitions |
 | `docs/fzpz-integration-plan.md` | FZPZ component format integration plan |
+| `docs/future-features-and-ideas-list.md` | Complete feature roadmap: backports from older projects + competitive analysis + market vision |
 
 ## Project Reference
 

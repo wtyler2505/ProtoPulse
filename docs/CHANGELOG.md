@@ -4,7 +4,22 @@ All notable changes to ProtoPulse are documented in this file.
 
 ## [Unreleased]
 
-### Added
+### Added (Waves 25-26)
+- Design review commenting system — `CommentsPanel`, `design_comments` table, comments route (FG-12)
+- Multi-model AI routing with design-phase awareness (IN-08)
+- Interactive design tutorials — `TutorialMenu`, `TutorialOverlay`, tutorial context (IN-13)
+- Backup/restore automation — backup route, scripts, runbook (CAPX-OPS-03)
+- AC small-signal frequency analysis engine — MNA solver, 480 lines, 41 tests (FG-13)
+- Project ownership model — `ownerId`, auth middleware, 20 tests (CAPX-SEC-01)
+- Unified undo/redo stack — command pattern, React context, keyboard shortcuts, 36 tests (TD-25)
+- ShapeCanvas decomposed from 1,275→755 lines into 6 extracted modules (TD-04)
+- Theme picker panel with theme context
+- SPICE import functionality
+- Design history view and lifecycle dashboard
+- Architecture snapshot diff engine (`shared/arch-diff.ts`)
+- `design_snapshots` and `design_comments` tables (schema now 27 tables)
+
+### Added (Waves 1-24)
 - Architecture Decision Records (ADRs) in `docs/adr/`
 - DRC manufacturer templates (JLCPCB, PCBWay, OSHPark) with pre-configured rules
 - 5 new DRC rule types: annular-ring, thermal-relief, trace-to-edge, via-in-pad, solder-mask
@@ -37,9 +52,10 @@ All notable changes to ProtoPulse are documented in this file.
 - Export generators decomposed from 1,211-line monolith into 15 individual modules + types under `server/export/`
 - `circuit-routes.ts` (1,804 lines) decomposed into 13 domain files under `server/circuit-routes/` (TD-16)
 - `parseLocalIntent` (CCN=102) refactored to IntentHandler registry pattern with 11 handler modules (TD-05/EN-19)
-- Test suite expanded from ~350 tests (Wave 1) to 1,349 tests across 49 files
-- AI tool count increased from 53 to 79
-- Database schema expanded from 11 to 24 tables
+- Test suite expanded from ~350 tests (Wave 1) to 1,553 tests across 54 files
+- AI tool count increased from 53 to 82
+- Database schema expanded from 11 to 27 tables
+- Domain routers expanded from 18 to 21; circuit routers from 11 to 13
 - ProcurementView refactored from single-panel to tabbed layout (BOM Management + BOM Comparison)
 
 ### Fixed
@@ -50,7 +66,7 @@ All notable changes to ProtoPulse are documented in this file.
 
 ### Added
 - Initial release: architecture block diagrams, BOM management, circuit schematic editor
-- AI chat with 79 AI tools (Anthropic Claude + Google Gemini)
+- AI chat with 82 AI tools (Anthropic Claude + Google Gemini)
 - Design validation (DRC/ERC)
 - Multi-format export: KiCad, Eagle, SPICE, Gerber, drill, pick-and-place
 - Dark theme with Neon Cyan accent

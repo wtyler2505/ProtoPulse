@@ -1,6 +1,8 @@
 # ProtoPulse User Guide
 
-Welcome to **ProtoPulse** — your browser-based, AI-assisted electronics design platform. Whether you're architecting an IoT sensor node, capturing a schematic, managing a bill of materials for a production run, or validating your design before sending it to fabrication, ProtoPulse brings everything together in one place.
+Welcome to **ProtoPulse** — the all-in-one electronics design tool for makers who learn by building. Whether you're wiring up your first LED circuit or designing a multi-board rover with motor controllers and microcontrollers, ProtoPulse brings everything together in one place so you never have to bounce between TinkerCad, Fritzing, KiCad, and a SPICE simulator.
+
+Architecture block diagrams, circuit schematics, BOM management, design validation, AI-assisted design with 82 tool actions, and 14+ export formats — all in your browser, with an AI that doesn't just answer questions but actually builds circuits alongside you.
 
 This guide will walk you through every feature in detail so you can get the most out of the platform.
 

@@ -100,7 +100,7 @@
 
   <!-- Subtitle -->
   <text x="600" y="185" text-anchor="middle" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="18" fill="#5A6B8A" font-weight="400" letter-spacing="6">
-    AI-POWERED ELECTRONICS DESIGN
+    ONE TOOL FROM LEARNING TO MANUFACTURING
   </text>
 
   <!-- Accent line -->
@@ -111,22 +111,22 @@
     <!-- 24 Tables -->
     <rect x="295" y="228" width="90" height="28" rx="14" fill="#0D1B2A" stroke="#1B3A5C" stroke-width="0.5"/>
     <text x="340" y="247" font-size="12" fill="#5A6B8A">
-      <tspan fill="#00F0FF" font-weight="700">24</tspan> tables
+      <tspan fill="#00F0FF" font-weight="700">27</tspan> tables
     </text>
     <!-- 79 AI Tools -->
     <rect x="405" y="228" width="100" height="28" rx="14" fill="#0D1B2A" stroke="#1B3A5C" stroke-width="0.5"/>
     <text x="455" y="247" font-size="12" fill="#5A6B8A">
-      <tspan fill="#00F0FF" font-weight="700">79</tspan> AI tools
+      <tspan fill="#00F0FF" font-weight="700">82</tspan> AI tools
     </text>
     <!-- 14+ Formats -->
     <rect x="525" y="228" width="110" height="28" rx="14" fill="#0D1B2A" stroke="#1B3A5C" stroke-width="0.5"/>
     <text x="580" y="247" font-size="12" fill="#5A6B8A">
       <tspan fill="#00F0FF" font-weight="700">14+</tspan> formats
     </text>
-    <!-- 1,349 Tests -->
+    <!-- 1,553 Tests -->
     <rect x="655" y="228" width="105" height="28" rx="14" fill="#0D1B2A" stroke="#1B3A5C" stroke-width="0.5"/>
     <text x="707" y="247" font-size="12" fill="#5A6B8A">
-      <tspan fill="#00F0FF" font-weight="700">1,349</tspan> tests
+      <tspan fill="#00F0FF" font-weight="700">1,553</tspan> tests
     </text>
     <!-- TypeScript Strict -->
     <rect x="780" y="228" width="130" height="28" rx="14" fill="#0D1B2A" stroke="#1B3A5C" stroke-width="0.5"/>

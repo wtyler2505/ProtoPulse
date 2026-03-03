@@ -1,8 +1,10 @@
 # ProtoPulse — Developer Documentation
 
-> **Last updated:** 2026-03-02
+> **Last updated:** 2026-03-03
 > **Codebase:** ~30,000+ lines of TypeScript
 > **Stack:** React 19 · TypeScript 5.6 · Vite 7 · Express 5 · PostgreSQL · Drizzle ORM · TanStack React Query · shadcn/ui · @xyflow/react · Tailwind CSS v4
+
+**ProtoPulse** is an all-in-one browser-based EDA platform built for makers and learners who want a single tool from "I don't know electronics" to "here are my Gerbers." Think TinkerCad + Fritzing + KiCad unified with AI. See `docs/future-features-and-ideas-list.md` for the full feature vision.
 
 ---
 
@@ -112,8 +114,8 @@ The app will be available at `http://localhost:5000`.
 │       └────────────┴────────────┴──────────────────┘               │
 │                             │                                       │
 │   ┌──────────────────────────────────────────────────────────────┐  │
-│   │  routes.ts (barrel — 18 domain routers)                      │  │
-│   │  circuit-routes.ts (barrel — 11 circuit routers)             │  │
+│   │  routes.ts (barrel — 21 domain routers)                      │  │
+│   │  circuit-routes.ts (barrel — 13 circuit routers)             │  │
 │   │  circuit-ai.ts                                               │  │
 │   └──────────────────────────┬───────────────────────────────────┘  │
 │                              │                                      │
@@ -131,7 +133,7 @@ The app will be available at `http://localhost:5000`.
                                │                  ▼
                                │       ┌──────────────────┐
                                │       │   PostgreSQL      │
-                               │       │   24 tables       │
+                               │       │   27 tables       │
                                │       └──────────────────┘
                                │
                           Auth (scrypt / AES-256-GCM)
@@ -245,7 +247,7 @@ ProtoPulse/
 │
 ├── server/                              # Backend (Express 5)
 │   ├── index.ts                         # App bootstrap, middleware stack, graceful shutdown
-│   ├── routes.ts                        # Barrel (57 lines) — registers 18 domain routers
+│   ├── routes.ts                        # Barrel (57 lines) — registers 21 domain routers
 │   ├── circuit-routes.ts                # Barrel — re-exports registerCircuitRoutes
 │   ├── ai.ts                            # AI engine: 1,368 lines — Anthropic + Gemini,
 │   │                                    # streaming SSE, action parser, multi-model routing
@@ -266,7 +268,7 @@ ProtoPulse/
 │   ├── circuit-breaker.ts               # Circuit breaker pattern for external calls
 │   ├── simulation.ts                    # SPICE simulation runner
 │   ├── svg-parser.ts                    # SVG to shape primitives parser
-│   ├── routes/                          # 18 domain routers + utils.ts
+│   ├── routes/                          # 21 domain routers + utils.ts
 │   │   ├── utils.ts                     # HttpError, asyncHandler, parseIdParam,
 │   │   │                                # payloadLimit, paginationSchema
 │   │   ├── auth.ts                      # POST /api/auth/register, login, logout, GET me
@@ -288,7 +290,7 @@ ProtoPulse/
 │   │   │                                # POST /api/projects/:id/bom-diff
 │   │   ├── design-preferences.ts        # CRUD /api/projects/:id/preferences
 │   │   └── component-lifecycle.ts       # CRUD /api/projects/:id/lifecycle
-│   ├── circuit-routes/                  # 11 circuit routers + utils.ts
+│   ├── circuit-routes/                  # 13 circuit routers + utils.ts
 │   │   ├── utils.ts                     # Circuit route helpers, gatherCircuitData
 │   │   ├── index.ts                     # Barrel — registers all circuit routers
 │   │   ├── designs.ts                   # CRUD /api/projects/:projectId/circuits
@@ -334,7 +336,7 @@ ProtoPulse/
 │       └── firmware-scaffold-generator.ts # Arduino/PlatformIO scaffold code
 │
 ├── shared/                              # Shared between client and server
-│   ├── schema.ts                        # 504 lines — Drizzle ORM schema (24 tables),
+│   ├── schema.ts                        # 504 lines — Drizzle ORM schema (27 tables),
 │   │                                    # Zod insert schemas, TypeScript types
 │   ├── component-types.ts               # Component editor type system
 │   │                                    # (shapes, connectors, buses, DRC rules)
@@ -1289,7 +1291,7 @@ Wire routing uses `client/src/lib/circuit-editor/` (wire router with 90-degree r
 |---|---|---|
 | `server/storage.ts` | 1,598 | `IStorage` interface + `DatabaseStorage`. All data access goes through this layer. LRU cache with prefix-based key invalidation. Never bypass via direct DB queries. |
 | `server/ai.ts` | 1,368 | AI engine: prompt construction, tool call parsing, streaming, multi-model routing. |
-| `server/routes.ts` | 57 | Barrel file — registers 18 domain routers + circuit routes. |
+| `server/routes.ts` | 57 | Barrel file — registers 21 domain routers + circuit routes. |
 | `server/auth.ts` | ~200 | scrypt password hashing, UUID sessions (7-day TTL), AES-256-GCM API key encryption. |
 | `server/cache.ts` | ~100 | LRU cache implementation. Evicts least-recently-used. Prefix-based invalidation (invalidating `"nodes:1"` clears all keys starting with `"nodes:1"`). |
 | `server/metrics.ts` | ~100 | In-memory per-route metrics (request count, total latency, error count). |
@@ -1430,7 +1432,7 @@ TypeScript strict mode (`strict: true`, no exceptions). Errors are errors — ne
 **Framework**: Vitest 4 with workspace projects (`vitest.config.ts`).
 
 ```bash
-npm test               # All 49 test files, ~1349 tests
+npm test               # All 54 test files, ~1553 tests
 npm run test:watch     # Interactive watch mode
 npm run test:coverage  # v8 coverage report → coverage/
 npx vitest run --project server   # Server tests (node env)
