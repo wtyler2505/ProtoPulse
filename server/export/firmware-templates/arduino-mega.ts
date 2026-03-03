@@ -1,0 +1,153 @@
+/**
+ * Arduino Mega 2560 board template.
+ *
+ * Based on the ATmega2560 with the standard Arduino Mega R3 pinout.
+ * 54 digital I/O pins, 16 analog inputs, 4 UARTs, I2C, SPI.
+ */
+
+import type { BoardTemplate } from './types';
+
+export const arduinoMegaTemplate: BoardTemplate = {
+  boardId: 'arduino-mega',
+  displayName: 'Arduino Mega 2560',
+  platform: 'platformio',
+  mcu: 'ATmega2560',
+  platformioBoard: 'megaatmega2560',
+  platformioPlatform: 'atmelavr',
+  platformioFramework: 'arduino',
+  defaultLibraries: ['Wire', 'SPI', 'Servo', 'EEPROM'],
+  notes: [
+    'ATmega2560 runs at 16 MHz with 8 KB SRAM, 256 KB flash, 4 KB EEPROM.',
+    'Pins 0-1 are Serial (USB), avoid for general GPIO.',
+    'Pins 14-19 are Serial1/Serial2/Serial3 TX/RX pairs.',
+    'PWM available on pins 2-13 and 44-46.',
+    'External interrupts on pins 2, 3, 18, 19, 20, 21.',
+  ],
+  pins: [
+    // Digital pins 0-53
+    { pin: 0, name: 'D0', capabilities: ['digital', 'uart_rx'], notes: 'Serial RX (USB). Avoid for general GPIO.' },
+    { pin: 1, name: 'D1', capabilities: ['digital', 'uart_tx'], notes: 'Serial TX (USB). Avoid for general GPIO.' },
+    { pin: 2, name: 'D2', capabilities: ['digital', 'pwm'], pwmChannel: 0, notes: 'External interrupt INT4.' },
+    { pin: 3, name: 'D3', capabilities: ['digital', 'pwm'], pwmChannel: 1, notes: 'External interrupt INT5.' },
+    { pin: 4, name: 'D4', capabilities: ['digital', 'pwm'], pwmChannel: 2 },
+    { pin: 5, name: 'D5', capabilities: ['digital', 'pwm'], pwmChannel: 3 },
+    { pin: 6, name: 'D6', capabilities: ['digital', 'pwm'], pwmChannel: 4 },
+    { pin: 7, name: 'D7', capabilities: ['digital', 'pwm'], pwmChannel: 5 },
+    { pin: 8, name: 'D8', capabilities: ['digital', 'pwm'], pwmChannel: 6 },
+    { pin: 9, name: 'D9', capabilities: ['digital', 'pwm'], pwmChannel: 7 },
+    { pin: 10, name: 'D10', capabilities: ['digital', 'pwm'], pwmChannel: 8 },
+    { pin: 11, name: 'D11', capabilities: ['digital', 'pwm'], pwmChannel: 9 },
+    { pin: 12, name: 'D12', capabilities: ['digital', 'pwm'], pwmChannel: 10 },
+    { pin: 13, name: 'D13', capabilities: ['digital', 'pwm'], pwmChannel: 11, notes: 'Onboard LED.' },
+    { pin: 14, name: 'D14', capabilities: ['digital', 'uart_tx'], notes: 'Serial3 TX.' },
+    { pin: 15, name: 'D15', capabilities: ['digital', 'uart_rx'], notes: 'Serial3 RX.' },
+    { pin: 16, name: 'D16', capabilities: ['digital', 'uart_tx'], notes: 'Serial2 TX.' },
+    { pin: 17, name: 'D17', capabilities: ['digital', 'uart_rx'], notes: 'Serial2 RX.' },
+    { pin: 18, name: 'D18', capabilities: ['digital', 'uart_tx'], notes: 'Serial1 TX. External interrupt INT3.' },
+    { pin: 19, name: 'D19', capabilities: ['digital', 'uart_rx'], notes: 'Serial1 RX. External interrupt INT2.' },
+    { pin: 20, name: 'D20', capabilities: ['digital', 'i2c_sda'], notes: 'I2C SDA. External interrupt INT1.' },
+    { pin: 21, name: 'D21', capabilities: ['digital', 'i2c_scl'], notes: 'I2C SCL. External interrupt INT0.' },
+    // Pins 22-53 — general digital I/O
+    { pin: 22, name: 'D22', capabilities: ['digital'] },
+    { pin: 23, name: 'D23', capabilities: ['digital'] },
+    { pin: 24, name: 'D24', capabilities: ['digital'] },
+    { pin: 25, name: 'D25', capabilities: ['digital'] },
+    { pin: 26, name: 'D26', capabilities: ['digital'] },
+    { pin: 27, name: 'D27', capabilities: ['digital'] },
+    { pin: 28, name: 'D28', capabilities: ['digital'] },
+    { pin: 29, name: 'D29', capabilities: ['digital'] },
+    { pin: 30, name: 'D30', capabilities: ['digital'] },
+    { pin: 31, name: 'D31', capabilities: ['digital'] },
+    { pin: 32, name: 'D32', capabilities: ['digital'] },
+    { pin: 33, name: 'D33', capabilities: ['digital'] },
+    { pin: 34, name: 'D34', capabilities: ['digital'] },
+    { pin: 35, name: 'D35', capabilities: ['digital'] },
+    { pin: 36, name: 'D36', capabilities: ['digital'] },
+    { pin: 37, name: 'D37', capabilities: ['digital'] },
+    { pin: 38, name: 'D38', capabilities: ['digital'] },
+    { pin: 39, name: 'D39', capabilities: ['digital'] },
+    { pin: 40, name: 'D40', capabilities: ['digital'] },
+    { pin: 41, name: 'D41', capabilities: ['digital'] },
+    { pin: 42, name: 'D42', capabilities: ['digital'] },
+    { pin: 43, name: 'D43', capabilities: ['digital'] },
+    { pin: 44, name: 'D44', capabilities: ['digital', 'pwm'], pwmChannel: 12 },
+    { pin: 45, name: 'D45', capabilities: ['digital', 'pwm'], pwmChannel: 13 },
+    { pin: 46, name: 'D46', capabilities: ['digital', 'pwm'], pwmChannel: 14 },
+    { pin: 47, name: 'D47', capabilities: ['digital'] },
+    { pin: 48, name: 'D48', capabilities: ['digital'] },
+    { pin: 49, name: 'D49', capabilities: ['digital'] },
+    { pin: 50, name: 'D50', capabilities: ['digital', 'spi_miso'] },
+    { pin: 51, name: 'D51', capabilities: ['digital', 'spi_mosi'] },
+    { pin: 52, name: 'D52', capabilities: ['digital', 'spi_sck'] },
+    { pin: 53, name: 'D53', capabilities: ['digital', 'spi_cs'], notes: 'Default SPI SS. Must be OUTPUT for SPI master mode.' },
+    // Analog pins A0-A15
+    { pin: 'A0', name: 'A0', capabilities: ['digital', 'analog', 'adc'], adcChannel: 0 },
+    { pin: 'A1', name: 'A1', capabilities: ['digital', 'analog', 'adc'], adcChannel: 1 },
+    { pin: 'A2', name: 'A2', capabilities: ['digital', 'analog', 'adc'], adcChannel: 2 },
+    { pin: 'A3', name: 'A3', capabilities: ['digital', 'analog', 'adc'], adcChannel: 3 },
+    { pin: 'A4', name: 'A4', capabilities: ['digital', 'analog', 'adc'], adcChannel: 4 },
+    { pin: 'A5', name: 'A5', capabilities: ['digital', 'analog', 'adc'], adcChannel: 5 },
+    { pin: 'A6', name: 'A6', capabilities: ['digital', 'analog', 'adc'], adcChannel: 6 },
+    { pin: 'A7', name: 'A7', capabilities: ['digital', 'analog', 'adc'], adcChannel: 7 },
+    { pin: 'A8', name: 'A8', capabilities: ['digital', 'analog', 'adc'], adcChannel: 8 },
+    { pin: 'A9', name: 'A9', capabilities: ['digital', 'analog', 'adc'], adcChannel: 9 },
+    { pin: 'A10', name: 'A10', capabilities: ['digital', 'analog', 'adc'], adcChannel: 10 },
+    { pin: 'A11', name: 'A11', capabilities: ['digital', 'analog', 'adc'], adcChannel: 11 },
+    { pin: 'A12', name: 'A12', capabilities: ['digital', 'analog', 'adc'], adcChannel: 12 },
+    { pin: 'A13', name: 'A13', capabilities: ['digital', 'analog', 'adc'], adcChannel: 13 },
+    { pin: 'A14', name: 'A14', capabilities: ['digital', 'analog', 'adc'], adcChannel: 14 },
+    { pin: 'A15', name: 'A15', capabilities: ['digital', 'analog', 'adc'], adcChannel: 15 },
+  ],
+  buses: [
+    {
+      type: 'i2c',
+      name: 'Wire',
+      pins: [
+        { role: 'SDA', pin: '20' },
+        { role: 'SCL', pin: '21' },
+      ],
+    },
+    {
+      type: 'spi',
+      name: 'SPI',
+      pins: [
+        { role: 'MOSI', pin: '51' },
+        { role: 'MISO', pin: '50' },
+        { role: 'SCK', pin: '52' },
+        { role: 'SS', pin: '53' },
+      ],
+    },
+    {
+      type: 'uart',
+      name: 'Serial',
+      pins: [
+        { role: 'TX', pin: '1' },
+        { role: 'RX', pin: '0' },
+      ],
+    },
+    {
+      type: 'uart',
+      name: 'Serial1',
+      pins: [
+        { role: 'TX', pin: '18' },
+        { role: 'RX', pin: '19' },
+      ],
+    },
+    {
+      type: 'uart',
+      name: 'Serial2',
+      pins: [
+        { role: 'TX', pin: '16' },
+        { role: 'RX', pin: '17' },
+      ],
+    },
+    {
+      type: 'uart',
+      name: 'Serial3',
+      pins: [
+        { role: 'TX', pin: '14' },
+        { role: 'RX', pin: '15' },
+      ],
+    },
+  ],
+};

@@ -91,6 +91,11 @@ export const bomItems = pgTable("bom_items", {
   stock: integer("stock").notNull().default(0),
   status: text("status").notNull().default("In Stock"),
   leadTime: text("lead_time"),
+  datasheetUrl: text("datasheet_url"),
+  manufacturerUrl: text("manufacturer_url"),
+  storageLocation: text("storage_location"),
+  quantityOnHand: integer("quantity_on_hand"),
+  minimumStock: integer("minimum_stock"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 }, (table) => [

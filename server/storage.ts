@@ -97,6 +97,8 @@ export interface IStorage {
   createBomItem(item: InsertBomItem): Promise<BomItem>;
   updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined>;
   deleteBomItem(id: number, projectId: number): Promise<boolean>;
+  getLowStockItems(projectId: number): Promise<BomItem[]>;
+  getStorageLocations(projectId: number): Promise<string[]>;
 
   getValidationIssues(projectId: number, opts?: PaginationOptions): Promise<ValidationIssue[]>;
   createValidationIssue(issue: InsertValidationIssue): Promise<ValidationIssue>;
@@ -530,6 +532,40 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (result) cache.invalidate(`bom:${projectId}`);
     return !!result;
+  }
+
+  async getLowStockItems(projectId: number): Promise<BomItem[]> {
+    try {
+      return await db.select().from(bomItems)
+        .where(and(
+          eq(bomItems.projectId, projectId),
+          isNull(bomItems.deletedAt),
+          isNotNull(bomItems.quantityOnHand),
+          isNotNull(bomItems.minimumStock),
+          sql`${bomItems.quantityOnHand} <= ${bomItems.minimumStock}`,
+        ))
+        .orderBy(asc(bomItems.quantityOnHand));
+    } catch (e) {
+      throw new StorageError('getLowStockItems', `projects/${projectId}/bom/low-stock`, e);
+    }
+  }
+
+  async getStorageLocations(projectId: number): Promise<string[]> {
+    try {
+      const rows = await db.selectDistinct({ storageLocation: bomItems.storageLocation })
+        .from(bomItems)
+        .where(and(
+          eq(bomItems.projectId, projectId),
+          isNull(bomItems.deletedAt),
+          isNotNull(bomItems.storageLocation),
+        ))
+        .orderBy(asc(bomItems.storageLocation));
+      return rows
+        .map((r) => r.storageLocation)
+        .filter((loc): loc is string => loc !== null);
+    } catch (e) {
+      throw new StorageError('getStorageLocations', `projects/${projectId}/bom/storage-locations`, e);
+    }
   }
 
   async getValidationIssues(projectId: number, opts?: PaginationOptions): Promise<ValidationIssue[]> {
