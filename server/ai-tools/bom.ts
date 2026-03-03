@@ -180,6 +180,12 @@ export function registerBomTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('optimize_bom', params),
   });
 
+  /**
+   * check_lead_times — Check estimated lead times for all BOM items.
+   *
+   * Dispatched client-side. Reviews delivery estimates and flags items
+   * with lead times exceeding 8 weeks as potential schedule risks.
+   */
   registry.register({
     name: 'check_lead_times',
     description:
@@ -190,6 +196,13 @@ export function registerBomTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('check_lead_times', params),
   });
 
+  /**
+   * parametric_search — Search for components by parametric specifications.
+   *
+   * Dispatched client-side. Accepts a component category and a map of
+   * parameter name/value pairs (e.g., voltage: '3.3V', package: 'QFP-48')
+   * to filter matching components.
+   */
   registry.register({
     name: 'parametric_search',
     description: 'Search for components by parametric specifications (e.g., voltage, package, frequency).',
@@ -209,6 +222,12 @@ export function registerBomTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('parametric_search', params),
   });
 
+  /**
+   * add_datasheet_link — Attach a datasheet URL to a BOM item.
+   *
+   * Dispatched client-side. Associates the given URL with the specified
+   * part number for quick reference in the procurement view.
+   */
   registry.register({
     name: 'add_datasheet_link',
     description: 'Attach a datasheet URL to a BOM item for quick reference.',
@@ -221,6 +240,17 @@ export function registerBomTools(registry: ToolRegistry): void {
     execute: async (params) => clientAction('add_datasheet_link', params),
   });
 
+  /**
+   * compare_components — Fetch BOM and architecture data for structured comparison.
+   *
+   * Executes server-side: queries BOM items and architecture nodes in parallel,
+   * cross-references BOM items with architecture node types, then returns a
+   * filtered list of components with their architecture roles. Supports
+   * filtering by architecture node category and/or specific part numbers.
+   *
+   * @returns A {@link ToolResult} with `data.components` (filtered BOM items enriched
+   *          with `architectureRole`), `data.architectureNodes`, and `data.totalBomItems`.
+   */
   registry.register({
     name: 'compare_components',
     description:
