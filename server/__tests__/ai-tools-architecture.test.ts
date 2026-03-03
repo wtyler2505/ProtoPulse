@@ -25,6 +25,7 @@ function createMockStorage(): IStorage {
       positionX: 300,
       positionY: 200,
       data: null,
+      version: 1,
       updatedAt: new Date(),
       deletedAt: null,
     }),

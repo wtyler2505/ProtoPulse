@@ -1,8 +1,15 @@
 import type { Express } from 'express';
 import { fromZodError } from 'zod-validation-error';
-import { storage } from '../storage';
+import { storage, VersionConflictError } from '../storage';
 import { insertBomItemSchema } from '@shared/schema';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
+
+/** Parse the If-Match header value into a version number, or undefined if absent/invalid. */
+function parseIfMatch(header: string | undefined): number | undefined {
+  if (!header) { return undefined; }
+  const match = /^"?(\d+)"?$/.exec(header.trim());
+  return match ? Number(match[1]) : undefined;
+}
 
 export function registerBomRoutes(app: Express): void {
   app.get(
@@ -42,6 +49,7 @@ export function registerBomRoutes(app: Express): void {
       if (!item) {
         return res.status(404).json({ message: 'BOM item not found' });
       }
+      res.setHeader('ETag', `"${item.version}"`);
       res.json(item);
     }),
   );
@@ -56,6 +64,7 @@ export function registerBomRoutes(app: Express): void {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
       const item = await storage.createBomItem({ ...parsed.data, projectId });
+      res.setHeader('ETag', `"${item.version}"`);
       res.status(201).json(item);
     }),
   );
@@ -70,11 +79,24 @@ export function registerBomRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
-      const updated = await storage.updateBomItem(bomId, projectId, parsed.data);
-      if (!updated) {
-        return res.status(404).json({ message: 'BOM item not found' });
+      const expectedVersion = parseIfMatch(req.headers['if-match'] as string | undefined);
+      try {
+        const updated = await storage.updateBomItem(bomId, projectId, parsed.data, expectedVersion);
+        if (!updated) {
+          return res.status(404).json({ message: 'BOM item not found' });
+        }
+        res.setHeader('ETag', `"${updated.version}"`);
+        res.json(updated);
+      } catch (e) {
+        if (e instanceof VersionConflictError) {
+          return res.status(409).json({
+            error: 'Conflict',
+            message: 'Resource was modified by another request. Re-fetch and retry.',
+            currentVersion: e.currentVersion,
+          });
+        }
+        throw e;
       }
-      res.json(updated);
     }),
   );
 

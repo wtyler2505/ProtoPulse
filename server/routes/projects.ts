@@ -1,10 +1,17 @@
 import type { Express } from 'express';
 import { fromZodError } from 'zod-validation-error';
 import { validateSession } from '../auth';
-import { storage } from '../storage';
+import { storage, VersionConflictError } from '../storage';
 import { insertProjectSchema } from '@shared/schema';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
+
+/** Parse the If-Match header value into a version number, or undefined if absent/invalid. */
+function parseIfMatch(header: string | undefined): number | undefined {
+  if (!header) { return undefined; }
+  const match = /^"?(\d+)"?$/.exec(header.trim());
+  return match ? Number(match[1]) : undefined;
+}
 
 export function registerProjectRoutes(app: Express): void {
   app.get(
@@ -24,6 +31,7 @@ export function registerProjectRoutes(app: Express): void {
       if (!project) {
         return res.status(404).json({ message: 'Project not found' });
       }
+      res.setHeader('ETag', `"${project.version}"`);
       res.json(project);
     }),
   );
@@ -48,6 +56,7 @@ export function registerProjectRoutes(app: Express): void {
       }
 
       const project = await storage.createProject(parsed.data, ownerId);
+      res.setHeader('ETag', `"${project.version}"`);
       res.status(201).json(project);
     }),
   );
@@ -65,11 +74,24 @@ export function registerProjectRoutes(app: Express): void {
       if (parsed.data.name !== undefined && parsed.data.name.trim().length === 0) {
         return res.status(400).json({ message: 'Project name cannot be empty' });
       }
-      const updated = await storage.updateProject(id, parsed.data);
-      if (!updated) {
-        return res.status(404).json({ message: 'Project not found' });
+      const expectedVersion = parseIfMatch(req.headers['if-match'] as string | undefined);
+      try {
+        const updated = await storage.updateProject(id, parsed.data, expectedVersion);
+        if (!updated) {
+          return res.status(404).json({ message: 'Project not found' });
+        }
+        res.setHeader('ETag', `"${updated.version}"`);
+        res.json(updated);
+      } catch (e) {
+        if (e instanceof VersionConflictError) {
+          return res.status(409).json({
+            error: 'Conflict',
+            message: 'Resource was modified by another request. Re-fetch and retry.',
+            currentVersion: e.currentVersion,
+          });
+        }
+        throw e;
       }
-      res.json(updated);
     }),
   );
 

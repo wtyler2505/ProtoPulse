@@ -7,7 +7,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Download, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, Copy, Pencil, Check, X, GripVertical, ArrowUpDown, DollarSign, TrendingUp, BarChart3 } from 'lucide-react';
+import { Download, Search, ShoppingCart, SlidersHorizontal, AlertCircle, CheckCircle2, Plus, Trash2, Package, XCircle, Cpu, ChevronDown, ChevronUp, Copy, Pencil, Check, X, GripVertical, ArrowUpDown, DollarSign, TrendingUp, BarChart3, Zap, Layers } from 'lucide-react';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
@@ -32,6 +32,110 @@ import { GitCompareArrows } from 'lucide-react';
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
 
+// ---------------------------------------------------------------------------
+// ESD & Assembly Detection Utilities
+// ---------------------------------------------------------------------------
+
+const ESD_PATTERNS: RegExp[] = [
+  /\bic\b/i, /\bmcu\b/i, /\bsoc\b/i, /\bmicrocontroller\b/i, /\bmicroprocessor\b/i,
+  /\bfpga\b/i, /\bcpld\b/i, /\basic\b/i, /\bdsp\b/i,
+  /\bmosfet\b/i, /\bjfet\b/i, /\bcmos\b/i, /\bmos\b/i, /\bigbt\b/i,
+  /\bop[- ]?amp\b/i, /\bopamp\b/i, /\bcomparator\b/i, /\badc\b/i, /\bdac\b/i,
+  /\buart\b/i, /\bspi\b/i, /\bi2c\b/i, /\busb\b/i,
+  /\beeprom\b/i, /\bflash\b/i, /\bsram\b/i, /\bdram\b/i,
+  /\besp32\b/i, /\besp8266\b/i, /\bstm32\b/i, /\batmega\b/i, /\battiny\b/i,
+  /\brp2040\b/i, /\bnrf52\b/i, /\bsamd\b/i,
+  /\bldo\b/i, /\bvoltage regulator\b/i, /\bdc[- ]?dc\b/i, /\bbuck\b/i, /\bboost converter\b/i,
+];
+
+function detectEsdSensitivity(description: string, partNumber: string): boolean {
+  const combined = `${description} ${partNumber}`;
+  return ESD_PATTERNS.some((p) => p.test(combined));
+}
+
+type AssemblyCategory = 'smt' | 'through_hole' | 'hand_solder' | 'mechanical';
+
+const SMT_PATTERNS: RegExp[] = [
+  /\b0201\b/, /\b0402\b/, /\b0603\b/, /\b0805\b/, /\b1206\b/, /\b1210\b/, /\b1812\b/, /\b2010\b/, /\b2512\b/,
+  /\bsmd\b/i, /\bsmt\b/i, /\bsurface mount\b/i,
+  /\bqfp\b/i, /\btqfp\b/i, /\blqfp\b/i, /\bqfn\b/i, /\bdfn\b/i, /\bson\b/i,
+  /\bbga\b/i, /\bfbga\b/i, /\bwlcsp\b/i,
+  /\bsop\b/i, /\bssop\b/i, /\btssop\b/i, /\bmsop\b/i, /\bsoic\b/i,
+  /\bsot[- ]?23\b/i, /\bsot[- ]?223\b/i, /\bsc[- ]?70\b/i, /\bd[- ]?pak\b/i,
+  /\bto[- ]?252\b/i, /\bto[- ]?263\b/i,
+];
+
+const THROUGH_HOLE_PATTERNS: RegExp[] = [
+  /\bthrough[- ]?hole\b/i, /\btht\b/i, /\bdip\b/i, /\bpdip\b/i, /\bsip\b/i,
+  /\bto[- ]?92\b/i, /\bto[- ]?220\b/i, /\bto[- ]?247\b/i, /\bto[- ]?3\b/i,
+  /\bradial\b/i, /\baxial\b/i,
+];
+
+const HAND_SOLDER_PATTERNS: RegExp[] = [
+  /\bconnector\b/i, /\bjst\b/i, /\bmolex\b/i, /\bheader\b/i, /\bterminal\b/i,
+  /\bwire\b/i, /\bcable\b/i, /\bsocket\b/i, /\bplug\b/i, /\bjack\b/i,
+  /\bdb9\b/i, /\bdb25\b/i, /\busb[- ]?[abc]\b/i, /\bhdmi\b/i, /\brj45\b/i,
+  /\bswitch\b/i, /\bbutton\b/i, /\bpotentiometer\b/i, /\btrimmer\b/i,
+  /\bbattery holder\b/i, /\bfuse holder\b/i, /\brelay\b/i, /\btransformer\b/i,
+  /\bbuzzer\b/i, /\bspeaker\b/i, /\btest point\b/i,
+];
+
+const MECHANICAL_PATTERNS: RegExp[] = [
+  /\bstandoff\b/i, /\bscrew\b/i, /\bnut\b/i, /\bwasher\b/i, /\bspacer\b/i,
+  /\bbracket\b/i, /\bmounting\b/i, /\bheatsink\b/i, /\bheat sink\b/i,
+  /\benclosure\b/i, /\bclip\b/i, /\brivet\b/i, /\bgasket\b/i,
+  /\brubber feet\b/i, /\bbumper\b/i, /\bthermal pad\b/i, /\bthermal tape\b/i,
+];
+
+function detectAssemblyCategory(description: string, partNumber: string): AssemblyCategory | null {
+  const combined = `${description} ${partNumber}`;
+  if (MECHANICAL_PATTERNS.some((p) => p.test(combined))) { return 'mechanical'; }
+  if (HAND_SOLDER_PATTERNS.some((p) => p.test(combined))) { return 'hand_solder'; }
+  if (THROUGH_HOLE_PATTERNS.some((p) => p.test(combined))) { return 'through_hole'; }
+  if (SMT_PATTERNS.some((p) => p.test(combined))) { return 'smt'; }
+  return null;
+}
+
+interface AssemblyCategoryInfo {
+  label: string;
+  note: string;
+  color: string;
+  bgColor: string;
+}
+
+const ASSEMBLY_CATEGORY_INFO: Record<AssemblyCategory | 'unassigned', AssemblyCategoryInfo> = {
+  smt: {
+    label: 'SMT (Surface Mount)',
+    note: 'Requires solder paste stencil and reflow oven. Inspect with magnification after reflow.',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/10 border-blue-500/20',
+  },
+  through_hole: {
+    label: 'Through-Hole',
+    note: 'Wave soldering or hand soldering. Trim leads after soldering. Check for cold joints.',
+    color: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/10 border-emerald-500/20',
+  },
+  hand_solder: {
+    label: 'Hand-Solder',
+    note: 'Connectors, wires, and large components. Solder by hand with appropriate tip size and temperature.',
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-500/10 border-amber-500/20',
+  },
+  mechanical: {
+    label: 'Mechanical',
+    note: 'Standoffs, screws, spacers, and enclosure parts. No soldering required — assemble with tools.',
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/10 border-purple-500/20',
+  },
+  unassigned: {
+    label: 'Unassigned',
+    note: 'Category could not be auto-detected. Set manually or update the component description.',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted/10 border-border',
+  },
+};
+
 function ProcurementView() {
   const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem } = useBom();
   const { addOutputLog } = useOutput();
@@ -42,6 +146,8 @@ function ProcurementView() {
   const [showComponentRef, setShowComponentRef] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedItemId, setHighlightedItemId] = useState<number | null>(null);
+  const [esdFilterOnly, setEsdFilterOnly] = useState(false);
+  const [showAssemblyGroups, setShowAssemblyGroups] = useState(false);
   const [optimizationGoal, setOptimizationGoal] = useState<string>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEYS.OPTIMIZATION_GOAL);
@@ -100,22 +206,53 @@ function ProcurementView() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  // ── Enriched BOM data with auto-detected ESD + assembly category ──
+  const enrichedBom = useMemo(() => bom.map(item => ({
+    ...item,
+    _isEsd: item.esdSensitive ?? detectEsdSensitivity(item.description, item.partNumber),
+    _assemblyCategory: (item.assemblyCategory ?? detectAssemblyCategory(item.description, item.partNumber)) as AssemblyCategory | null,
+  })), [bom]);
+
   const filteredBom = useMemo(() => {
-    const filtered = !searchTerm ? bom : bom.filter(item => {
+    let filtered = enrichedBom;
+    if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      return item.partNumber.toLowerCase().includes(term) ||
+      filtered = filtered.filter(item =>
+        item.partNumber.toLowerCase().includes(term) ||
         item.manufacturer.toLowerCase().includes(term) ||
         item.description.toLowerCase().includes(term) ||
-        item.supplier.toLowerCase().includes(term);
-    });
-    if (sortOrder.length === 0) return filtered;
+        item.supplier.toLowerCase().includes(term),
+      );
+    }
+    if (esdFilterOnly) {
+      filtered = filtered.filter(item => item._isEsd);
+    }
+    if (sortOrder.length === 0) { return filtered; }
     const orderMap = new Map(sortOrder.map((id, idx) => [id, idx]));
     return [...filtered].sort((a, b) => {
       const aIdx = orderMap.get(Number(a.id)) ?? Number.MAX_SAFE_INTEGER;
       const bIdx = orderMap.get(Number(b.id)) ?? Number.MAX_SAFE_INTEGER;
       return aIdx - bIdx;
     });
-  }, [bom, searchTerm, sortOrder]);
+  }, [enrichedBom, searchTerm, esdFilterOnly, sortOrder]);
+
+  // ── Assembly grouping data ──
+  const assemblyGroups = useMemo(() => {
+    const groups: Record<string, typeof enrichedBom> = {
+      smt: [],
+      through_hole: [],
+      hand_solder: [],
+      mechanical: [],
+      unassigned: [],
+    };
+    for (const item of enrichedBom) {
+      const cat = item._assemblyCategory ?? 'unassigned';
+      groups[cat].push(item);
+    }
+    return groups;
+  }, [enrichedBom]);
+
+  const esdCount = useMemo(() => enrichedBom.filter(i => i._isEsd).length, [enrichedBom]);
 
   const handleDragEnd = useCallback((event: DragEndEvent) => {
     const { active, over } = event;
@@ -281,6 +418,30 @@ function ProcurementView() {
             >
               <SlidersHorizontal className="w-4 h-4 mr-2" />
               Cost Optimisation
+            </Button>
+          </StyledTooltip>
+          <StyledTooltip content={esdFilterOnly ? 'Show all components' : `Show ESD-sensitive only (${esdCount})`} side="bottom">
+            <Button
+              variant="outline"
+              size="sm"
+              className={esdFilterOnly ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : ''}
+              onClick={() => setEsdFilterOnly(!esdFilterOnly)}
+              data-testid="button-toggle-esd-filter"
+            >
+              <Zap className="w-4 h-4 mr-2" />
+              ESD{esdCount > 0 && <span className="ml-1 text-[10px] font-mono">({esdCount})</span>}
+            </Button>
+          </StyledTooltip>
+          <StyledTooltip content={showAssemblyGroups ? 'Show flat BOM list' : 'Group by assembly category'} side="bottom">
+            <Button
+              variant="outline"
+              size="sm"
+              className={showAssemblyGroups ? 'bg-primary/10 border-primary text-primary' : ''}
+              onClick={() => setShowAssemblyGroups(!showAssemblyGroups)}
+              data-testid="button-toggle-assembly-groups"
+            >
+              <Layers className="w-4 h-4 mr-2" />
+              Assembly
             </Button>
           </StyledTooltip>
           <StyledTooltip content="Add new BOM component" side="bottom">
@@ -516,14 +677,64 @@ function ProcurementView() {
           </div>
         )}
 
+        {/* Assembly grouping view */}
+        {showAssemblyGroups && enrichedBom.length > 0 && (
+          <div className="mb-4 space-y-3" data-testid="section-assembly-groups">
+            {(Object.entries(assemblyGroups) as [AssemblyCategory | 'unassigned', typeof enrichedBom][]).map(([category, items]) => {
+              if (items.length === 0) { return null; }
+              const info = ASSEMBLY_CATEGORY_INFO[category];
+              return (
+                <div key={category} className={cn('border p-4', info.bgColor)} data-testid={`assembly-group-${category}`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Layers className={cn('w-4 h-4', info.color)} />
+                      <h4 className={cn('text-sm font-medium', info.color)} data-testid={`assembly-group-label-${category}`}>{info.label}</h4>
+                      <span className="text-[10px] font-mono bg-background/30 px-1.5 py-0.5 text-muted-foreground" data-testid={`assembly-group-count-${category}`}>
+                        {items.length} item{items.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3" data-testid={`assembly-group-note-${category}`}>{info.note}</p>
+                  <div className="space-y-1">
+                    {items.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-xs py-1.5 px-2 bg-background/20 hover:bg-background/40 transition-colors" data-testid={`assembly-item-${item.id}`}>
+                        <div className="flex items-center gap-3 min-w-0">
+                          {item._isEsd && (
+                            <StyledTooltip content="ESD Sensitive — Handle with anti-static precautions. Use ESD wrist strap and grounded work surface." side="right">
+                              <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" data-testid={`esd-badge-assembly-${item.id}`} />
+                            </StyledTooltip>
+                          )}
+                          <span className="font-mono font-medium text-foreground truncate">{item.partNumber}</span>
+                          <span className="text-muted-foreground truncate hidden sm:inline">{item.description}</span>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0 ml-2">
+                          <span className="text-muted-foreground">x{item.quantity}</span>
+                          <span className="font-mono text-foreground">${Number(item.totalPrice).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
         {/* Mobile/tablet card layout */}
         <div className="lg:hidden space-y-2" data-testid="bom-cards">
           {filteredBom.map((item) => (
             <div key={item.id} className="border border-border bg-card/80 backdrop-blur p-3 space-y-2" data-testid={`card-bom-${item.id}`}>
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="font-mono font-medium text-foreground text-xs truncate">{item.partNumber}</div>
-                  <div className="text-muted-foreground text-xs truncate">{item.manufacturer}</div>
+                <div className="flex items-center gap-2 min-w-0">
+                  {item._isEsd && (
+                    <StyledTooltip content="ESD Sensitive — Handle with anti-static precautions. Use ESD wrist strap and grounded work surface." side="right">
+                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" data-testid={`esd-badge-card-${item.id}`} />
+                    </StyledTooltip>
+                  )}
+                  <div className="min-w-0">
+                    <div className="font-mono font-medium text-foreground text-xs truncate">{item.partNumber}</div>
+                    <div className="text-muted-foreground text-xs truncate">{item.manufacturer}</div>
+                  </div>
                 </div>
                 <span className={cn("shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide",
                   item.status === 'In Stock'
@@ -821,17 +1032,19 @@ function ProcurementView() {
 
 const BOM_ROW_HEIGHT = 48;
 
+type EnrichedBomItem = BomItem & { _isEsd: boolean; _assemblyCategory: AssemblyCategory | null };
+
 function VirtualizedBomTable({
   filteredBom, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, getSupplierSearchUrl, copyToClipboard, toast, highlightedItemId, handleHighlightItem,
 }: {
-  filteredBom: BomItem[];
+  filteredBom: EnrichedBomItem[];
   editingId: number | null;
   editValues: { partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string };
   setEditValues: React.Dispatch<React.SetStateAction<typeof editValues>>;
   handleEditKeyDown: (e: React.KeyboardEvent) => void;
   saveEdit: () => void;
   cancelEdit: () => void;
-  startEdit: (item: BomItem) => void;
+  startEdit: (item: EnrichedBomItem) => void;
   deleteBomItem: (id: number | string) => void;
   addOutputLog: (msg: string) => void;
   getSupplierSearchUrl: (supplier: string) => string | null;
@@ -889,14 +1102,14 @@ function VirtualizedBomTable({
 }
 
 function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, getSupplierSearchUrl: getUrl, copyToClipboard: copy, toast: t, highlighted, onHighlight }: {
-  item: BomItem;
+  item: EnrichedBomItem;
   editingId: number | null;
   editValues: { partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string };
   setEditValues: React.Dispatch<React.SetStateAction<typeof editValues>>;
   handleEditKeyDown: (e: React.KeyboardEvent) => void;
   saveEdit: () => void;
   cancelEdit: () => void;
-  startEdit: (item: BomItem) => void;
+  startEdit: (item: EnrichedBomItem) => void;
   deleteBomItem: (id: number | string) => void;
   addOutputLog: (msg: string) => void;
   getSupplierSearchUrl: (supplier: string) => string | null;
@@ -966,7 +1179,16 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
             </>
           ) : (
             <>
-              <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>{item.partNumber}</td>
+              <td className="px-4 py-3 font-mono font-medium text-foreground text-xs" data-testid={`text-part-number-${item.id}`}>
+                <span className="inline-flex items-center gap-1.5">
+                  {item._isEsd && (
+                    <StyledTooltip content="ESD Sensitive — Handle with anti-static precautions. Use ESD wrist strap and grounded work surface." side="right">
+                      <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" data-testid={`esd-badge-${item.id}`} />
+                    </StyledTooltip>
+                  )}
+                  {item.partNumber}
+                </span>
+              </td>
               <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
               <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
               <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>

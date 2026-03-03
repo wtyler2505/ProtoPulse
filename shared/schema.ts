@@ -8,6 +8,7 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description").default(""),
   ownerId: integer("owner_id").references(() => users.id),
+  version: integer("version").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
@@ -15,7 +16,7 @@ export const projects = pgTable("projects", {
   index("idx_projects_owner").on(table.ownerId),
 ]);
 
-export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, ownerId: true, createdAt: true, updatedAt: true, deletedAt: true });
+export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, ownerId: true, version: true, createdAt: true, updatedAt: true, deletedAt: true });
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 
@@ -33,6 +34,7 @@ export const architectureNodes = pgTable("architecture_nodes", {
   positionX: real("position_x").notNull(),
   positionY: real("position_y").notNull(),
   data: jsonb("data"),
+  version: integer("version").notNull().default(1),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
@@ -41,7 +43,7 @@ export const architectureNodes = pgTable("architecture_nodes", {
   uniqueIndex("uq_arch_nodes_project_node").on(table.projectId, table.nodeId),
 ]);
 
-export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true, updatedAt: true, deletedAt: true }).extend({
+export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true, version: true, updatedAt: true, deletedAt: true }).extend({
   nodeType: z.string().min(1).max(100),
   data: nodeDataSchema,
 });
@@ -65,6 +67,7 @@ export const architectureEdges = pgTable("architecture_edges", {
   voltage: text("voltage"),
   busWidth: text("bus_width"),
   netName: text("net_name"),
+  version: integer("version").notNull().default(1),
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_arch_edges_project").on(table.projectId),
@@ -72,7 +75,7 @@ export const architectureEdges = pgTable("architecture_edges", {
   uniqueIndex("uq_arch_edges_project_edge").on(table.projectId, table.edgeId),
 ]);
 
-export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true, deletedAt: true }).extend({
+export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges).omit({ id: true, version: true, deletedAt: true }).extend({
   style: edgeStyleSchema,
 });
 export type InsertArchitectureEdge = z.infer<typeof insertArchitectureEdgeSchema>;
@@ -96,6 +99,9 @@ export const bomItems = pgTable("bom_items", {
   storageLocation: text("storage_location"),
   quantityOnHand: integer("quantity_on_hand"),
   minimumStock: integer("minimum_stock"),
+  esdSensitive: boolean("esd_sensitive"),
+  assemblyCategory: text("assembly_category"),
+  version: integer("version").notNull().default(1),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
@@ -103,7 +109,7 @@ export const bomItems = pgTable("bom_items", {
   index("idx_bom_items_project_deleted").on(table.projectId, table.deletedAt),
 ]);
 
-export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true, totalPrice: true, updatedAt: true, deletedAt: true }).extend({
+export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true, totalPrice: true, version: true, updatedAt: true, deletedAt: true }).extend({
   status: z.enum(["In Stock", "Low Stock", "Out of Stock", "On Order"]).default("In Stock"),
 });
 export type InsertBomItem = z.infer<typeof insertBomItemSchema>;
@@ -265,6 +271,7 @@ export const circuitDesigns = pgTable("circuit_designs", {
   name: text("name").notNull().default("Main Circuit"),
   description: text("description"),
   settings: jsonb("settings").notNull().default({}),
+  version: integer("version").notNull().default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
@@ -272,7 +279,7 @@ export const circuitDesigns = pgTable("circuit_designs", {
   index("idx_circuit_designs_parent").on(table.parentDesignId),
 ]);
 
-export const insertCircuitDesignSchema = createInsertSchema(circuitDesigns).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCircuitDesignSchema = createInsertSchema(circuitDesigns).omit({ id: true, version: true, createdAt: true, updatedAt: true });
 export type InsertCircuitDesign = z.infer<typeof insertCircuitDesignSchema>;
 export type CircuitDesignRow = typeof circuitDesigns.$inferSelect;
 

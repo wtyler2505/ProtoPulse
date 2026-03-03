@@ -67,24 +67,35 @@ export class StorageError extends Error {
   }
 }
 
+export class VersionConflictError extends StorageError {
+  public override readonly httpStatus = 409;
+  public readonly currentVersion: number;
+
+  constructor(entity: string, id: number, currentVersion: number) {
+    super('update', `${entity}/${id}`, new Error('Version conflict — resource was modified by another request'));
+    this.name = 'VersionConflictError';
+    this.currentVersion = currentVersion;
+  }
+}
+
 export interface IStorage {
   getProjects(opts?: PaginationOptions): Promise<Project[]>;
   getProject(id: number): Promise<Project | undefined>;
   getProjectsByOwner(userId: number): Promise<Project[]>;
   isProjectOwner(projectId: number, userId: number): Promise<boolean>;
   createProject(project: InsertProject, ownerId?: number): Promise<Project>;
-  updateProject(id: number, data: Partial<InsertProject>): Promise<Project | undefined>;
+  updateProject(id: number, data: Partial<InsertProject>, expectedVersion?: number): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;
 
   getNodes(projectId: number, opts?: PaginationOptions): Promise<ArchitectureNode[]>;
   createNode(node: InsertArchitectureNode): Promise<ArchitectureNode>;
-  updateNode(id: number, projectId: number, data: Partial<InsertArchitectureNode>): Promise<ArchitectureNode | undefined>;
+  updateNode(id: number, projectId: number, data: Partial<InsertArchitectureNode>, expectedVersion?: number): Promise<ArchitectureNode | undefined>;
   deleteNodesByProject(projectId: number): Promise<void>;
   bulkCreateNodes(nodes: InsertArchitectureNode[]): Promise<ArchitectureNode[]>;
 
   getEdges(projectId: number, opts?: PaginationOptions): Promise<ArchitectureEdge[]>;
   createEdge(edge: InsertArchitectureEdge): Promise<ArchitectureEdge>;
-  updateEdge(id: number, projectId: number, data: Partial<InsertArchitectureEdge>): Promise<ArchitectureEdge | undefined>;
+  updateEdge(id: number, projectId: number, data: Partial<InsertArchitectureEdge>, expectedVersion?: number): Promise<ArchitectureEdge | undefined>;
   deleteEdgesByProject(projectId: number): Promise<void>;
   bulkCreateEdges(edges: InsertArchitectureEdge[]): Promise<ArchitectureEdge[]>;
 
@@ -95,7 +106,7 @@ export interface IStorage {
   getBomItems(projectId: number, opts?: PaginationOptions): Promise<BomItem[]>;
   getBomItem(id: number, projectId: number): Promise<BomItem | undefined>;
   createBomItem(item: InsertBomItem): Promise<BomItem>;
-  updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined>;
+  updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>, expectedVersion?: number): Promise<BomItem | undefined>;
   deleteBomItem(id: number, projectId: number): Promise<boolean>;
   getLowStockItems(projectId: number): Promise<BomItem[]>;
   getStorageLocations(projectId: number): Promise<string[]>;
@@ -139,7 +150,7 @@ export interface IStorage {
   getCircuitDesigns(projectId: number): Promise<CircuitDesignRow[]>;
   getCircuitDesign(id: number): Promise<CircuitDesignRow | undefined>;
   createCircuitDesign(data: InsertCircuitDesign): Promise<CircuitDesignRow>;
-  updateCircuitDesign(id: number, data: Partial<InsertCircuitDesign>): Promise<CircuitDesignRow | undefined>;
+  updateCircuitDesign(id: number, data: Partial<InsertCircuitDesign>, expectedVersion?: number): Promise<CircuitDesignRow | undefined>;
   deleteCircuitDesign(id: number): Promise<CircuitDesignRow | undefined>;
 
   // Circuit instances
@@ -303,12 +314,27 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateProject(id: number, data: Partial<InsertProject>): Promise<Project | undefined> {
+  async updateProject(id: number, data: Partial<InsertProject>, expectedVersion?: number): Promise<Project | undefined> {
     try {
-      const [updated] = await db.update(projects).set({ ...data, updatedAt: new Date() }).where(and(eq(projects.id, id), isNull(projects.deletedAt))).returning();
-      if (updated) cache.invalidate(`project:${id}`);
+      const conditions = [eq(projects.id, id), isNull(projects.deletedAt)];
+      if (expectedVersion !== undefined) {
+        conditions.push(eq(projects.version, expectedVersion));
+      }
+      const [updated] = await db.update(projects)
+        .set({ ...data, version: sql`${projects.version} + 1`, updatedAt: new Date() })
+        .where(and(...conditions))
+        .returning();
+      if (expectedVersion !== undefined && !updated) {
+        const [existing] = await db.select({ id: projects.id, version: projects.version })
+          .from(projects).where(and(eq(projects.id, id), isNull(projects.deletedAt)));
+        if (existing) {
+          throw new VersionConflictError('projects', id, existing.version);
+        }
+      }
+      if (updated) { cache.invalidate(`project:${id}`); }
       return updated;
     } catch (e) {
+      if (e instanceof StorageError) { throw e; }
       throw new StorageError('updateProject', `projects/${id}`, e);
     }
   }
@@ -364,17 +390,29 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateNode(id: number, projectId: number, data: Partial<InsertArchitectureNode>): Promise<ArchitectureNode | undefined> {
+  async updateNode(id: number, projectId: number, data: Partial<InsertArchitectureNode>, expectedVersion?: number): Promise<ArchitectureNode | undefined> {
     try {
       const safeData = { ...data };
       delete safeData.projectId;
+      const conditions = [eq(architectureNodes.id, id), eq(architectureNodes.projectId, projectId), isNull(architectureNodes.deletedAt)];
+      if (expectedVersion !== undefined) {
+        conditions.push(eq(architectureNodes.version, expectedVersion));
+      }
       const [updated] = await db.update(architectureNodes)
-        .set({ ...safeData, updatedAt: new Date() })
-        .where(and(eq(architectureNodes.id, id), eq(architectureNodes.projectId, projectId), isNull(architectureNodes.deletedAt)))
+        .set({ ...safeData, version: sql`${architectureNodes.version} + 1`, updatedAt: new Date() })
+        .where(and(...conditions))
         .returning();
-      if (updated) cache.invalidate(`nodes:${projectId}`);
+      if (expectedVersion !== undefined && !updated) {
+        const [existing] = await db.select({ id: architectureNodes.id, version: architectureNodes.version })
+          .from(architectureNodes).where(and(eq(architectureNodes.id, id), eq(architectureNodes.projectId, projectId), isNull(architectureNodes.deletedAt)));
+        if (existing) {
+          throw new VersionConflictError('nodes', id, existing.version);
+        }
+      }
+      if (updated) { cache.invalidate(`nodes:${projectId}`); }
       return updated;
     } catch (e) {
+      if (e instanceof StorageError) { throw e; }
       throw new StorageError('updateNode', `nodes/${id}`, e);
     }
   }
@@ -423,17 +461,29 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateEdge(id: number, projectId: number, data: Partial<InsertArchitectureEdge>): Promise<ArchitectureEdge | undefined> {
+  async updateEdge(id: number, projectId: number, data: Partial<InsertArchitectureEdge>, expectedVersion?: number): Promise<ArchitectureEdge | undefined> {
     try {
       const safeData = { ...data };
       delete safeData.projectId;
+      const conditions = [eq(architectureEdges.id, id), eq(architectureEdges.projectId, projectId), isNull(architectureEdges.deletedAt)];
+      if (expectedVersion !== undefined) {
+        conditions.push(eq(architectureEdges.version, expectedVersion));
+      }
       const [updated] = await db.update(architectureEdges)
-        .set(safeData)
-        .where(and(eq(architectureEdges.id, id), eq(architectureEdges.projectId, projectId), isNull(architectureEdges.deletedAt)))
+        .set({ ...safeData, version: sql`${architectureEdges.version} + 1` })
+        .where(and(...conditions))
         .returning();
-      if (updated) cache.invalidate(`edges:${projectId}`);
+      if (expectedVersion !== undefined && !updated) {
+        const [existing] = await db.select({ id: architectureEdges.id, version: architectureEdges.version })
+          .from(architectureEdges).where(and(eq(architectureEdges.id, id), eq(architectureEdges.projectId, projectId), isNull(architectureEdges.deletedAt)));
+        if (existing) {
+          throw new VersionConflictError('edges', id, existing.version);
+        }
+      }
+      if (updated) { cache.invalidate(`edges:${projectId}`); }
       return updated;
     } catch (e) {
+      if (e instanceof StorageError) { throw e; }
       throw new StorageError('updateEdge', `edges/${id}`, e);
     }
   }
@@ -492,21 +542,31 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>): Promise<BomItem | undefined> {
+  async updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>, expectedVersion?: number): Promise<BomItem | undefined> {
     try {
       const safeData = { ...item };
       delete safeData.projectId;
 
+      const baseConditions = [eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)];
+      const versionConditions = expectedVersion !== undefined
+        ? [...baseConditions, eq(bomItems.version, expectedVersion)]
+        : baseConditions;
+
+      const versionBump = { version: sql`${bomItems.version} + 1` };
+
       if (safeData.quantity !== undefined || safeData.unitPrice !== undefined) {
         const updated = await db.transaction(async (tx) => {
-          const [existing] = await tx.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)));
+          const [existing] = await tx.select().from(bomItems).where(and(...baseConditions));
           if (!existing) { return undefined; }
+          if (expectedVersion !== undefined && existing.version !== expectedVersion) {
+            throw new VersionConflictError('bom', id, existing.version);
+          }
           const quantity = safeData.quantity ?? existing.quantity;
           const unitPrice = safeData.unitPrice ?? existing.unitPrice;
           const totalPrice = computeTotalPrice(quantity, unitPrice);
           const [result] = await tx.update(bomItems)
-            .set({ ...safeData, totalPrice, updatedAt: new Date() })
-            .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
+            .set({ ...safeData, totalPrice, ...versionBump, updatedAt: new Date() })
+            .where(and(...baseConditions))
             .returning();
           return result;
         });
@@ -515,12 +575,20 @@ export class DatabaseStorage implements IStorage {
       }
 
       const [updated] = await db.update(bomItems)
-        .set({ ...safeData, updatedAt: new Date() })
-        .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
+        .set({ ...safeData, ...versionBump, updatedAt: new Date() })
+        .where(and(...versionConditions))
         .returning();
+      if (expectedVersion !== undefined && !updated) {
+        const [existing] = await db.select({ id: bomItems.id, version: bomItems.version })
+          .from(bomItems).where(and(...baseConditions));
+        if (existing) {
+          throw new VersionConflictError('bom', id, existing.version);
+        }
+      }
       if (updated) { cache.invalidate(`bom:${projectId}`); }
       return updated;
     } catch (e) {
+      if (e instanceof StorageError) { throw e; }
       throw new StorageError('updateBomItem', `bom/${id}`, e);
     }
   }
@@ -1090,14 +1158,26 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async updateCircuitDesign(id: number, data: Partial<InsertCircuitDesign>): Promise<CircuitDesignRow | undefined> {
+  async updateCircuitDesign(id: number, data: Partial<InsertCircuitDesign>, expectedVersion?: number): Promise<CircuitDesignRow | undefined> {
     try {
+      const conditions = [eq(circuitDesigns.id, id)];
+      if (expectedVersion !== undefined) {
+        conditions.push(eq(circuitDesigns.version, expectedVersion));
+      }
       const [updated] = await db.update(circuitDesigns)
-        .set({ ...data, updatedAt: new Date() })
-        .where(eq(circuitDesigns.id, id))
+        .set({ ...data, version: sql`${circuitDesigns.version} + 1`, updatedAt: new Date() })
+        .where(and(...conditions))
         .returning();
+      if (expectedVersion !== undefined && !updated) {
+        const [existing] = await db.select({ id: circuitDesigns.id, version: circuitDesigns.version })
+          .from(circuitDesigns).where(eq(circuitDesigns.id, id));
+        if (existing) {
+          throw new VersionConflictError('circuit-designs', id, existing.version);
+        }
+      }
       return updated;
     } catch (e) {
+      if (e instanceof StorageError) { throw e; }
       throw new StorageError('updateCircuitDesign', `circuit-designs/${id}`, e);
     }
   }

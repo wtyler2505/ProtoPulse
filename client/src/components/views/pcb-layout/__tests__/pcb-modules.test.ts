@@ -42,6 +42,14 @@ import {
   TRACE_WIDTH_PRESETS,
   DEFAULT_TRACE_WIDTH,
 } from '../LayerManager';
+import {
+  handleCanvasClick,
+  handleDoubleClick,
+  handleKeyDown,
+  handleMouseDown,
+  handleMouseUp,
+} from '../PCBInteractionManager';
+import type { CanvasCallbacks, PanState, TraceFinishParams, DeleteParams } from '../PCBInteractionManager';
 import type { CircuitInstanceRow } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -417,6 +425,242 @@ describe('LayerManager', () => {
 
     it('has a default trace width in the presets', () => {
       expect(TRACE_WIDTH_PRESETS).toContain(DEFAULT_TRACE_WIDTH);
+    });
+  });
+});
+
+// ============================================================================
+// PCBInteractionManager
+// ============================================================================
+
+describe('PCBInteractionManager', () => {
+  // Helpers for creating mock callbacks and event objects
+  function makeCallbacks(overrides: Partial<CanvasCallbacks> = {}): CanvasCallbacks {
+    return {
+      setTool: overrides.setTool ?? (() => undefined),
+      setActiveLayer: overrides.setActiveLayer ?? (() => undefined),
+      setZoom: overrides.setZoom ?? (() => undefined),
+      setPanOffset: overrides.setPanOffset ?? (() => undefined),
+      setSelectedInstanceId: overrides.setSelectedInstanceId ?? (() => undefined),
+      setSelectedWireId: overrides.setSelectedWireId ?? (() => undefined),
+      setTracePoints: overrides.setTracePoints ?? (() => undefined),
+      setMouseBoardPos: overrides.setMouseBoardPos ?? (() => undefined),
+    };
+  }
+
+  function makeMouseEvent(overrides: Partial<React.MouseEvent> = {}): React.MouseEvent {
+    return {
+      clientX: 100,
+      clientY: 50,
+      button: 0,
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+      ...overrides,
+    } as unknown as React.MouseEvent;
+  }
+
+  function makeKeyEvent(key: string): React.KeyboardEvent {
+    return { key } as unknown as React.KeyboardEvent;
+  }
+
+  describe('handleCanvasClick', () => {
+    it('clears selection when tool is select', () => {
+      let clearedInstanceId = false;
+      let clearedWireId = false;
+      const cbs = makeCallbacks({
+        setSelectedInstanceId: () => { clearedInstanceId = true; },
+        setSelectedWireId: () => { clearedWireId = true; },
+      });
+      handleCanvasClick('select', null, { x: 0, y: 0 }, 1, cbs, makeMouseEvent());
+      expect(clearedInstanceId).toBe(true);
+      expect(clearedWireId).toBe(true);
+    });
+
+    it('adds a trace point when tool is trace and svg element exists', () => {
+      let traceUpdated = false;
+      const cbs = makeCallbacks({
+        setTracePoints: () => { traceUpdated = true; },
+      });
+      // Create a minimal SVG element mock with getBoundingClientRect
+      const mockSvg = {
+        getBoundingClientRect: () => makeSvgRect(0, 0, 800, 600),
+      } as unknown as SVGSVGElement;
+      handleCanvasClick('trace', mockSvg, { x: 0, y: 0 }, 1, cbs, makeMouseEvent());
+      expect(traceUpdated).toBe(true);
+    });
+
+    it('does nothing in trace mode when svg is null', () => {
+      let traceUpdated = false;
+      const cbs = makeCallbacks({
+        setTracePoints: () => { traceUpdated = true; },
+      });
+      handleCanvasClick('trace', null, { x: 0, y: 0 }, 1, cbs, makeMouseEvent());
+      expect(traceUpdated).toBe(false);
+    });
+  });
+
+  describe('handleDoubleClick', () => {
+    it('creates a wire when trace tool has 2+ points and a net', () => {
+      let wireCreated = false;
+      const params: TraceFinishParams = {
+        circuitId: 1,
+        activeLayer: 'front',
+        traceWidth: 2.0,
+        firstNetId: 5,
+        createWire: () => { wireCreated = true; },
+      };
+      const points = [{ x: 10, y: 10 }, { x: 50, y: 50 }];
+      let cleared = false;
+      handleDoubleClick('trace', points, params, () => { cleared = true; });
+      expect(wireCreated).toBe(true);
+      expect(cleared).toBe(true);
+    });
+
+    it('does not create wire with fewer than 2 points', () => {
+      let wireCreated = false;
+      const params: TraceFinishParams = {
+        circuitId: 1,
+        activeLayer: 'front',
+        traceWidth: 2.0,
+        firstNetId: 5,
+        createWire: () => { wireCreated = true; },
+      };
+      handleDoubleClick('trace', [{ x: 10, y: 10 }], params, () => undefined);
+      expect(wireCreated).toBe(false);
+    });
+
+    it('does not create wire when firstNetId is undefined', () => {
+      let wireCreated = false;
+      const params: TraceFinishParams = {
+        circuitId: 1,
+        activeLayer: 'front',
+        traceWidth: 2.0,
+        firstNetId: undefined,
+        createWire: () => { wireCreated = true; },
+      };
+      handleDoubleClick('trace', [{ x: 10, y: 10 }, { x: 50, y: 50 }], params, () => undefined);
+      expect(wireCreated).toBe(false);
+    });
+
+    it('does not create wire when tool is not trace', () => {
+      let wireCreated = false;
+      const params: TraceFinishParams = {
+        circuitId: 1,
+        activeLayer: 'front',
+        traceWidth: 2.0,
+        firstNetId: 5,
+        createWire: () => { wireCreated = true; },
+      };
+      handleDoubleClick('select', [{ x: 10, y: 10 }, { x: 50, y: 50 }], params, () => undefined);
+      expect(wireCreated).toBe(false);
+    });
+
+    it('passes correct layer color in createWire call', () => {
+      let receivedColor = '';
+      const params: TraceFinishParams = {
+        circuitId: 1,
+        activeLayer: 'back',
+        traceWidth: 1.0,
+        firstNetId: 3,
+        createWire: (p) => { receivedColor = p.color; },
+      };
+      handleDoubleClick('trace', [{ x: 0, y: 0 }, { x: 10, y: 10 }], params, () => undefined);
+      expect(receivedColor).toBe(TRACE_COLORS.back);
+    });
+  });
+
+  describe('handleKeyDown', () => {
+    it('Escape clears trace points and selection', () => {
+      let traceCalled = false;
+      let instanceCleared = false;
+      let wireCleared = false;
+      const cbs = makeCallbacks({
+        setTracePoints: () => { traceCalled = true; },
+        setSelectedInstanceId: () => { instanceCleared = true; },
+        setSelectedWireId: () => { wireCleared = true; },
+      });
+      const delParams: DeleteParams = { circuitId: 1, deleteWire: () => undefined };
+      handleKeyDown(makeKeyEvent('Escape'), null, delParams, cbs);
+      expect(traceCalled).toBe(true);
+      expect(instanceCleared).toBe(true);
+      expect(wireCleared).toBe(true);
+    });
+
+    it('Delete key deletes selected wire', () => {
+      let deletedId: number | null = null;
+      const delParams: DeleteParams = {
+        circuitId: 1,
+        deleteWire: (p) => { deletedId = p.id; },
+      };
+      handleKeyDown(makeKeyEvent('Delete'), 42, delParams, makeCallbacks());
+      expect(deletedId).toBe(42);
+    });
+
+    it('Backspace key deletes selected wire', () => {
+      let deletedId: number | null = null;
+      const delParams: DeleteParams = {
+        circuitId: 1,
+        deleteWire: (p) => { deletedId = p.id; },
+      };
+      handleKeyDown(makeKeyEvent('Backspace'), 7, delParams, makeCallbacks());
+      expect(deletedId).toBe(7);
+    });
+
+    it('Delete does nothing when no wire is selected', () => {
+      let deleteCalled = false;
+      const delParams: DeleteParams = {
+        circuitId: 1,
+        deleteWire: () => { deleteCalled = true; },
+      };
+      handleKeyDown(makeKeyEvent('Delete'), null, delParams, makeCallbacks());
+      expect(deleteCalled).toBe(false);
+    });
+
+    it('number keys switch tools', () => {
+      const toolSet: string[] = [];
+      const cbs = makeCallbacks({ setTool: (t) => { toolSet.push(t); } });
+      const delParams: DeleteParams = { circuitId: 1, deleteWire: () => undefined };
+      handleKeyDown(makeKeyEvent('1'), null, delParams, cbs);
+      handleKeyDown(makeKeyEvent('2'), null, delParams, cbs);
+      handleKeyDown(makeKeyEvent('3'), null, delParams, cbs);
+      expect(toolSet).toEqual(['select', 'trace', 'delete']);
+    });
+
+    it('f key toggles active layer', () => {
+      let layerToggled = false;
+      const cbs = makeCallbacks({ setActiveLayer: () => { layerToggled = true; } });
+      const delParams: DeleteParams = { circuitId: 1, deleteWire: () => undefined };
+      handleKeyDown(makeKeyEvent('f'), null, delParams, cbs);
+      expect(layerToggled).toBe(true);
+    });
+  });
+
+  describe('handleMouseDown', () => {
+    it('starts panning on middle mouse button', () => {
+      const panState: PanState = { isPanning: false, lastMouse: { x: 0, y: 0 } };
+      handleMouseDown(makeMouseEvent({ button: 1, clientX: 50, clientY: 60 }), 'select', null, panState);
+      expect(panState.isPanning).toBe(true);
+      expect(panState.lastMouse).toEqual({ x: 50, y: 60 });
+    });
+
+    it('starts panning on left click with select tool and no selection', () => {
+      const panState: PanState = { isPanning: false, lastMouse: { x: 0, y: 0 } };
+      handleMouseDown(makeMouseEvent({ button: 0, clientX: 30, clientY: 40 }), 'select', null, panState);
+      expect(panState.isPanning).toBe(true);
+    });
+
+    it('does not start panning when an instance is selected with select tool', () => {
+      const panState: PanState = { isPanning: false, lastMouse: { x: 0, y: 0 } };
+      handleMouseDown(makeMouseEvent({ button: 0 }), 'select', 5, panState);
+      expect(panState.isPanning).toBe(false);
+    });
+  });
+
+  describe('handleMouseUp', () => {
+    it('stops panning', () => {
+      const panState: PanState = { isPanning: true, lastMouse: { x: 50, y: 60 } };
+      handleMouseUp(panState);
+      expect(panState.isPanning).toBe(false);
     });
   });
 });

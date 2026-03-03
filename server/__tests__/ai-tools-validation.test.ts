@@ -32,6 +32,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     name: 'IoT Weather Station',
     description: 'A weather monitoring device',
     ownerId: null,
+    version: 1,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -49,6 +50,7 @@ function makeNode(overrides: Partial<ArchitectureNode> = {}): ArchitectureNode {
     positionX: 300,
     positionY: 200,
     data: null,
+    version: 1,
     updatedAt: now,
     deletedAt: null,
     ...overrides,
@@ -69,6 +71,7 @@ function makeEdge(overrides: Partial<ArchitectureEdge> = {}): ArchitectureEdge {
     voltage: '3.3V',
     busWidth: null,
     netName: null,
+    version: 1,
     deletedAt: null,
     ...overrides,
   };
@@ -93,6 +96,9 @@ function makeBomItem(overrides: Partial<BomItem> = {}): BomItem {
     storageLocation: null,
     quantityOnHand: null,
     minimumStock: null,
+    esdSensitive: null,
+    assemblyCategory: null,
+    version: 1,
     updatedAt: now,
     deletedAt: null,
     ...overrides,
@@ -119,10 +125,11 @@ function makeCircuitDesign(overrides: Partial<CircuitDesignRow> = {}): CircuitDe
     description: null,
     parentDesignId: null,
     settings: {},
+    version: 1,
     createdAt: now,
     updatedAt: now,
     ...overrides,
-  };
+  } as CircuitDesignRow;
 }
 
 function makeCircuitInstance(overrides: Partial<CircuitInstanceRow> = {}): CircuitInstanceRow {

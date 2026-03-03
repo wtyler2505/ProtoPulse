@@ -51,6 +51,8 @@ export interface BomItem {
   stock: number;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'On Order';
   leadTime?: string;
+  esdSensitive?: boolean | null;
+  assemblyCategory?: 'smt' | 'through_hole' | 'hand_solder' | 'mechanical' | null;
 }
 
 export interface ValidationIssue {

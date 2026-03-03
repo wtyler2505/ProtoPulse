@@ -36,10 +36,13 @@ function makeBomItem(overrides: Partial<BomItem> = {}): BomItem {
     storageLocation: null,
     quantityOnHand: null,
     minimumStock: null,
+    esdSensitive: null,
+    assemblyCategory: null,
+    version: 1,
     updatedAt: now,
     deletedAt: null,
     ...overrides,
-  };
+  } as BomItem;
 }
 
 function makeNode(overrides: Partial<ArchitectureNode> = {}): ArchitectureNode {
@@ -52,10 +55,11 @@ function makeNode(overrides: Partial<ArchitectureNode> = {}): ArchitectureNode {
     positionX: 300,
     positionY: 200,
     data: null,
+    version: 1,
     updatedAt: now,
     deletedAt: null,
     ...overrides,
-  };
+  } as ArchitectureNode;
 }
 
 function createMockStorage(

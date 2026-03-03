@@ -551,6 +551,172 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.send(buffer);
   }));
 
+  // Export ODB++ (manufacturing package ZIP)
+  app.post('/api/projects/:projectId/export/odb-plus-plus', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const dims = boardDimensionsSchema.safeParse(req.body);
+    const boardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
+    const boardHeight = dims.success ? (dims.data.boardHeight ?? DEFAULT_BOARD_HEIGHT) : DEFAULT_BOARD_HEIGHT;
+
+    const [project, circuits, bomItems] = await Promise.all([
+      storage.getProject(projectId),
+      storage.getCircuitDesigns(projectId),
+      storage.getBomItems(projectId),
+    ]);
+
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    if (circuits.length === 0) {
+      return res.status(404).json({ message: 'No circuit designs found' });
+    }
+
+    const data = await gatherCircuitData(storage, circuits[0].id);
+    if (!data) { return res.status(404).json({ message: 'Circuit not found' }); }
+
+    const { generateOdbPlusPlus } = await import('../export/odb-plus-plus-generator');
+
+    const result = await generateOdbPlusPlus({
+      projectName: project.name,
+      instances: data.instances.map(i => ({
+        id: i.id,
+        partId: i.partId,
+        referenceDesignator: i.referenceDesignator,
+        schematicX: i.schematicX,
+        schematicY: i.schematicY,
+        schematicRotation: i.schematicRotation,
+        pcbX: i.pcbX,
+        pcbY: i.pcbY,
+        pcbRotation: i.pcbRotation,
+        pcbSide: i.pcbSide,
+        properties: (i.properties ?? {}) as Record<string, unknown>,
+      })),
+      nets: data.nets.map(n => ({
+        id: n.id,
+        name: n.name,
+        netType: n.netType,
+        voltage: n.voltage,
+        busWidth: n.busWidth,
+        segments: (n.segments ?? []) as unknown[],
+        labels: (n.labels ?? []) as unknown[],
+      })),
+      wires: data.wires.map(w => ({
+        id: w.id,
+        netId: w.netId,
+        view: w.view,
+        points: (w.points ?? []) as unknown[],
+        layer: w.layer,
+        width: w.width,
+      })),
+      parts: new Map(Array.from(data.partsMap.entries()).map(([id, p]) => [id, {
+        meta: (p.meta ?? {}) as Record<string, unknown>,
+        connectors: ((p.connectors ?? []) as Array<{ id: string; name: string; padType?: string }>),
+      }])),
+      bom: bomItems.map(b => ({
+        partNumber: b.partNumber ?? '',
+        manufacturer: b.manufacturer ?? '',
+        description: b.description ?? '',
+        quantity: b.quantity ?? 0,
+        unitPrice: String(b.unitPrice ?? '0'),
+        totalPrice: String(b.totalPrice ?? '0'),
+        supplier: b.supplier ?? '',
+        stock: b.stock ?? 0,
+        status: b.status ?? 'unknown',
+        leadTime: b.leadTime ?? null,
+      })),
+      boardWidth,
+      boardHeight,
+    });
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${project.name}.odb++.zip"`);
+    res.send(result.buffer);
+  }));
+
+  // Export IPC-2581 (XML manufacturing data)
+  app.post('/api/projects/:projectId/export/ipc2581', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const dims = boardDimensionsSchema.safeParse(req.body);
+    const boardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
+    const boardHeight = dims.success ? (dims.data.boardHeight ?? DEFAULT_BOARD_HEIGHT) : DEFAULT_BOARD_HEIGHT;
+
+    const [project, circuits, bomItems] = await Promise.all([
+      storage.getProject(projectId),
+      storage.getCircuitDesigns(projectId),
+      storage.getBomItems(projectId),
+    ]);
+
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    if (circuits.length === 0) {
+      return res.status(404).json({ message: 'No circuit designs found' });
+    }
+
+    const data = await gatherCircuitData(storage, circuits[0].id);
+    if (!data) { return res.status(404).json({ message: 'Circuit not found' }); }
+
+    const { generateIpc2581 } = await import('../export/ipc2581-generator');
+
+    const result = generateIpc2581({
+      projectName: project.name,
+      instances: data.instances.map(i => ({
+        id: i.id,
+        partId: i.partId,
+        referenceDesignator: i.referenceDesignator,
+        schematicX: i.schematicX,
+        schematicY: i.schematicY,
+        schematicRotation: i.schematicRotation,
+        pcbX: i.pcbX,
+        pcbY: i.pcbY,
+        pcbRotation: i.pcbRotation,
+        pcbSide: i.pcbSide,
+        properties: (i.properties ?? {}) as Record<string, unknown>,
+      })),
+      nets: data.nets.map(n => ({
+        id: n.id,
+        name: n.name,
+        netType: n.netType,
+        voltage: n.voltage,
+        busWidth: n.busWidth,
+        segments: (n.segments ?? []) as unknown[],
+        labels: (n.labels ?? []) as unknown[],
+      })),
+      wires: data.wires.map(w => ({
+        id: w.id,
+        netId: w.netId,
+        view: w.view,
+        points: (w.points ?? []) as unknown[],
+        layer: w.layer,
+        width: w.width,
+      })),
+      parts: new Map(Array.from(data.partsMap.entries()).map(([id, p]) => [id, {
+        meta: (p.meta ?? {}) as Record<string, unknown>,
+        connectors: ((p.connectors ?? []) as Array<{ id: string; name: string; padType?: string }>),
+      }])),
+      bom: bomItems.map(b => ({
+        partNumber: b.partNumber ?? '',
+        manufacturer: b.manufacturer ?? '',
+        description: b.description ?? '',
+        quantity: b.quantity ?? 0,
+        unitPrice: String(b.unitPrice ?? '0'),
+        totalPrice: String(b.totalPrice ?? '0'),
+        supplier: b.supplier ?? '',
+        stock: b.stock ?? 0,
+        status: b.status ?? 'unknown',
+        leadTime: b.leadTime ?? null,
+      })),
+      boardWidth,
+      boardHeight,
+    });
+
+    res.setHeader('Content-Type', 'application/xml');
+    res.setHeader('Content-Disposition', `attachment; filename="${project.name}.ipc2581.xml"`);
+    res.send(result.xml);
+  }));
+
   // Export Firmware Scaffold (Arduino/PlatformIO)
   app.post('/api/projects/:projectId/export/firmware', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);

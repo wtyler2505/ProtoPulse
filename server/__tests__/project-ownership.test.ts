@@ -101,11 +101,12 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     name: 'Test Project',
     description: 'A test project',
     ownerId: null,
+    version: 1,
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
     ...overrides,
-  };
+  } as Project;
 }
 
 function resetMocks(): void {
