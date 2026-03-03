@@ -137,7 +137,21 @@ export type DRCRuleType =
   | 'thermal-relief'
   | 'trace-to-edge'
   | 'via-in-pad'
-  | 'solder-mask';
+  | 'solder-mask'
+  | PcbDrcRuleType;
+
+/** PCB-level DRC rule types for board-level design rule checking. */
+export type PcbDrcRuleType =
+  | 'trace_clearance'
+  | 'trace_width_min'
+  | 'trace_width_max'
+  | 'via_drill_min'
+  | 'via_annular_ring'
+  | 'pad_clearance'
+  | 'silk_clearance'
+  | 'board_edge_clearance'
+  | 'diff_pair_spacing'
+  | 'copper_pour_clearance';
 
 export interface DRCRule {
   type: DRCRuleType;

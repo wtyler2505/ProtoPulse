@@ -1,4 +1,4 @@
-import type { Shape, CircleShape, Connector, DRCRule, DRCViolation, PartState } from './component-types';
+import type { Shape, CircleShape, Connector, DRCRule, DRCViolation, PartState, PcbDrcRuleType } from './component-types';
 import { nanoid } from 'nanoid';
 
 interface AABB {
@@ -772,6 +772,655 @@ export function runDRC(
         violations.push(...checkSolderMask(shapes, connectors, rule, view));
         break;
     }
+  }
+
+  return violations;
+}
+
+// =============================================================================
+// PCB-Level DRC — Net-Aware Board Design Rule Checking
+// =============================================================================
+
+/** A PCB trace segment on a specific layer belonging to a net. */
+export interface PcbTrace {
+  id: string;
+  netId: string;
+  layer: string;
+  width: number; // mils
+  points: Array<{ x: number; y: number }>;
+}
+
+/** A PCB via connecting layers, belonging to a net. */
+export interface PcbVia {
+  id: string;
+  netId: string;
+  x: number;
+  y: number;
+  drillDiameter: number; // mils
+  outerDiameter: number; // mils
+}
+
+/** A PCB pad belonging to a component instance and net. */
+export interface PcbPad {
+  id: string;
+  netId: string;
+  instanceId: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Board outline as a closed polygon. */
+export interface PcbBoardOutline {
+  points: Array<{ x: number; y: number }>;
+}
+
+/** Complete set of PCB DRC rule thresholds (all values in mils). */
+export interface PcbDrcRuleSet {
+  traceClearance: number;
+  traceWidthMin: number;
+  traceWidthMax: number;
+  viaDrillMin: number;
+  viaAnnularRing: number;
+  padClearance: number;
+  silkClearance: number;
+  boardEdgeClearance: number;
+  copperPourClearance: number;
+}
+
+/** Net class with per-net-class rule overrides. */
+export interface NetClassRules {
+  name: string;
+  traceWidth: number; // mils
+  clearance: number; // mils
+  viaDrill: number; // mils
+  viaAnnular: number; // mils
+}
+
+/** Manufacturer preset combining a name, description, and rule set. */
+export interface ManufacturerPreset {
+  name: string;
+  description: string;
+  rules: PcbDrcRuleSet;
+}
+
+/** Input data for a full PCB DRC run. */
+export interface PcbDrcInput {
+  traces: PcbTrace[];
+  vias: PcbVia[];
+  pads: PcbPad[];
+  outline?: PcbBoardOutline;
+}
+
+// -----------------------------------------------------------------------------
+// Manufacturer Presets
+// -----------------------------------------------------------------------------
+
+export const MANUFACTURER_PRESETS: Record<string, ManufacturerPreset> = {
+  basic: {
+    name: 'Basic (8/8 mil)',
+    description: 'Beginner-friendly rules accepted by most fabs',
+    rules: {
+      traceClearance: 8,
+      traceWidthMin: 8,
+      traceWidthMax: 250,
+      viaDrillMin: 12,
+      viaAnnularRing: 6,
+      padClearance: 8,
+      silkClearance: 6,
+      boardEdgeClearance: 15,
+      copperPourClearance: 10,
+    },
+  },
+  standard: {
+    name: 'Standard (6/6 mil)',
+    description: 'Standard capability for most board houses',
+    rules: {
+      traceClearance: 6,
+      traceWidthMin: 6,
+      traceWidthMax: 250,
+      viaDrillMin: 10,
+      viaAnnularRing: 5,
+      padClearance: 6,
+      silkClearance: 5,
+      boardEdgeClearance: 10,
+      copperPourClearance: 8,
+    },
+  },
+  advanced: {
+    name: 'Advanced (4/4 mil)',
+    description: 'Advanced capability for high-density designs',
+    rules: {
+      traceClearance: 4,
+      traceWidthMin: 4,
+      traceWidthMax: 250,
+      viaDrillMin: 8,
+      viaAnnularRing: 4,
+      padClearance: 4,
+      silkClearance: 4,
+      boardEdgeClearance: 8,
+      copperPourClearance: 6,
+    },
+  },
+};
+
+/** Default net class definitions. */
+export const DEFAULT_NET_CLASSES: NetClassRules[] = [
+  { name: 'default', traceWidth: 10, clearance: 8, viaDrill: 12, viaAnnular: 6 },
+  { name: 'power', traceWidth: 20, clearance: 10, viaDrill: 16, viaAnnular: 8 },
+  { name: 'signal', traceWidth: 8, clearance: 6, viaDrill: 10, viaAnnular: 5 },
+  { name: 'high_speed', traceWidth: 6, clearance: 8, viaDrill: 8, viaAnnular: 4 },
+];
+
+// -----------------------------------------------------------------------------
+// Geometry Helpers
+// -----------------------------------------------------------------------------
+
+/** Euclidean distance between two points. */
+function pointDistance(ax: number, ay: number, bx: number, by: number): number {
+  const dx = ax - bx;
+  const dy = ay - by;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+/**
+ * Minimum distance from a point to a line segment defined by (sx,sy)-(ex,ey).
+ */
+export function pointToSegmentDistance(
+  px: number,
+  py: number,
+  sx: number,
+  sy: number,
+  ex: number,
+  ey: number,
+): number {
+  const dx = ex - sx;
+  const dy = ey - sy;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) {
+    return pointDistance(px, py, sx, sy);
+  }
+  let t = ((px - sx) * dx + (py - sy) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const projX = sx + t * dx;
+  const projY = sy + t * dy;
+  return pointDistance(px, py, projX, projY);
+}
+
+/**
+ * Minimum distance between two line segments.
+ */
+export function segmentToSegmentDistance(
+  a1x: number,
+  a1y: number,
+  a2x: number,
+  a2y: number,
+  b1x: number,
+  b1y: number,
+  b2x: number,
+  b2y: number,
+): number {
+  // Check if segments intersect using cross-product orientation test
+  if (segmentsIntersect(a1x, a1y, a2x, a2y, b1x, b1y, b2x, b2y)) {
+    return 0;
+  }
+
+  // Minimum of point-to-segment distances for all four endpoint-segment pairs
+  return Math.min(
+    pointToSegmentDistance(a1x, a1y, b1x, b1y, b2x, b2y),
+    pointToSegmentDistance(a2x, a2y, b1x, b1y, b2x, b2y),
+    pointToSegmentDistance(b1x, b1y, a1x, a1y, a2x, a2y),
+    pointToSegmentDistance(b2x, b2y, a1x, a1y, a2x, a2y),
+  );
+}
+
+/** Cross product of vectors (bx-ax,by-ay) and (cx-ax,cy-ay). */
+function cross(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number {
+  return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+}
+
+/** Check if value c is between a and b (inclusive). */
+function onSegment(a: number, b: number, c: number): boolean {
+  return Math.min(a, b) <= c + 1e-9 && c - 1e-9 <= Math.max(a, b);
+}
+
+/** Test whether two line segments intersect. */
+function segmentsIntersect(
+  a1x: number,
+  a1y: number,
+  a2x: number,
+  a2y: number,
+  b1x: number,
+  b1y: number,
+  b2x: number,
+  b2y: number,
+): boolean {
+  const d1 = cross(b1x, b1y, b2x, b2y, a1x, a1y);
+  const d2 = cross(b1x, b1y, b2x, b2y, a2x, a2y);
+  const d3 = cross(a1x, a1y, a2x, a2y, b1x, b1y);
+  const d4 = cross(a1x, a1y, a2x, a2y, b2x, b2y);
+
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+    return true;
+  }
+
+  // Collinear cases
+  if (d1 === 0 && onSegment(b1x, b2x, a1x) && onSegment(b1y, b2y, a1y)) {
+    return true;
+  }
+  if (d2 === 0 && onSegment(b1x, b2x, a2x) && onSegment(b1y, b2y, a2y)) {
+    return true;
+  }
+  if (d3 === 0 && onSegment(a1x, a2x, b1x) && onSegment(a1y, a2y, b1y)) {
+    return true;
+  }
+  if (d4 === 0 && onSegment(a1x, a2x, b2x) && onSegment(a1y, a2y, b2y)) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Minimum distance from a point to a closed polygon edge.
+ */
+export function pointToPolygonDistance(px: number, py: number, polygon: Array<{ x: number; y: number }>): number {
+  if (polygon.length < 2) {
+    return polygon.length === 1 ? pointDistance(px, py, polygon[0].x, polygon[0].y) : Infinity;
+  }
+
+  let minDist = Infinity;
+  for (let i = 0; i < polygon.length; i++) {
+    const j = (i + 1) % polygon.length;
+    const dist = pointToSegmentDistance(px, py, polygon[i].x, polygon[i].y, polygon[j].x, polygon[j].y);
+    if (dist < minDist) {
+      minDist = dist;
+    }
+  }
+  return minDist;
+}
+
+// -----------------------------------------------------------------------------
+// PCB DRC Violation Factory
+// -----------------------------------------------------------------------------
+
+function pcbViolation(
+  ruleType: PcbDrcRuleType,
+  severity: 'error' | 'warning',
+  message: string,
+  location: { x: number; y: number },
+  elementIds: string[],
+  actual?: number,
+  required?: number,
+): DRCViolation {
+  return {
+    id: nanoid(),
+    ruleType,
+    severity,
+    message,
+    shapeIds: elementIds,
+    view: 'pcb',
+    location,
+    actual,
+    required,
+  };
+}
+
+// -----------------------------------------------------------------------------
+// PCB DRC Check Functions
+// -----------------------------------------------------------------------------
+
+/**
+ * Check minimum clearance between traces on the same layer belonging to different nets.
+ */
+export function checkTraceClearance(traces: PcbTrace[], rules: PcbDrcRuleSet, netClasses?: Map<string, NetClassRules>): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+
+  for (let i = 0; i < traces.length; i++) {
+    for (let j = i + 1; j < traces.length; j++) {
+      const a = traces[i];
+      const b = traces[j];
+
+      // Only check traces on the same layer and different nets
+      if (a.layer !== b.layer) {
+        continue;
+      }
+      if (a.netId === b.netId) {
+        continue;
+      }
+
+      // Determine required clearance (use net-class override if available)
+      let requiredClearance = rules.traceClearance;
+      if (netClasses) {
+        const classA = netClasses.get(a.netId);
+        const classB = netClasses.get(b.netId);
+        if (classA) {
+          requiredClearance = Math.max(requiredClearance, classA.clearance);
+        }
+        if (classB) {
+          requiredClearance = Math.max(requiredClearance, classB.clearance);
+        }
+      }
+
+      // Check each segment pair between the two traces
+      let violated = false;
+      for (let si = 0; si < a.points.length - 1 && !violated; si++) {
+        for (let sj = 0; sj < b.points.length - 1 && !violated; sj++) {
+          const dist = segmentToSegmentDistance(
+            a.points[si].x,
+            a.points[si].y,
+            a.points[si + 1].x,
+            a.points[si + 1].y,
+            b.points[sj].x,
+            b.points[sj].y,
+            b.points[sj + 1].x,
+            b.points[sj + 1].y,
+          );
+
+          // Account for trace widths: center-to-center distance minus half-widths
+          const edgeDist = dist - a.width / 2 - b.width / 2;
+
+          if (edgeDist < requiredClearance) {
+            const midX = (a.points[si].x + b.points[sj].x) / 2;
+            const midY = (a.points[si].y + b.points[sj].y) / 2;
+            violations.push(
+              pcbViolation(
+                'trace_clearance',
+                'error',
+                `Trace clearance ${edgeDist.toFixed(1)}mil is below minimum ${requiredClearance}mil between nets ${a.netId} and ${b.netId}`,
+                { x: midX, y: midY },
+                [a.id, b.id],
+                Math.round(edgeDist * 10) / 10,
+                requiredClearance,
+              ),
+            );
+            violated = true;
+          }
+        }
+      }
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Check trace widths against minimum and maximum constraints.
+ */
+export function checkTraceWidth(traces: PcbTrace[], rules: PcbDrcRuleSet, netClasses?: Map<string, NetClassRules>): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+
+  for (const trace of traces) {
+    let minWidth = rules.traceWidthMin;
+    if (netClasses) {
+      const nc = netClasses.get(trace.netId);
+      if (nc) {
+        minWidth = nc.traceWidth;
+      }
+    }
+
+    if (trace.width < minWidth) {
+      const loc = trace.points.length > 0 ? trace.points[0] : { x: 0, y: 0 };
+      violations.push(
+        pcbViolation(
+          'trace_width_min',
+          'error',
+          `Trace width ${trace.width}mil is below minimum ${minWidth}mil on net ${trace.netId}`,
+          loc,
+          [trace.id],
+          trace.width,
+          minWidth,
+        ),
+      );
+    }
+
+    if (trace.width > rules.traceWidthMax) {
+      const loc = trace.points.length > 0 ? trace.points[0] : { x: 0, y: 0 };
+      violations.push(
+        pcbViolation(
+          'trace_width_max',
+          'warning',
+          `Trace width ${trace.width}mil exceeds maximum ${rules.traceWidthMax}mil on net ${trace.netId}`,
+          loc,
+          [trace.id],
+          trace.width,
+          rules.traceWidthMax,
+        ),
+      );
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Check via drill diameters against minimum.
+ */
+export function checkViaDrill(vias: PcbVia[], rules: PcbDrcRuleSet, netClasses?: Map<string, NetClassRules>): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+
+  for (const via of vias) {
+    let minDrill = rules.viaDrillMin;
+    if (netClasses) {
+      const nc = netClasses.get(via.netId);
+      if (nc) {
+        minDrill = nc.viaDrill;
+      }
+    }
+
+    if (via.drillDiameter < minDrill) {
+      violations.push(
+        pcbViolation(
+          'via_drill_min',
+          'error',
+          `Via drill diameter ${via.drillDiameter}mil is below minimum ${minDrill}mil on net ${via.netId}`,
+          { x: via.x, y: via.y },
+          [via.id],
+          via.drillDiameter,
+          minDrill,
+        ),
+      );
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Check via annular ring: (outerDiameter - drillDiameter) / 2 must meet minimum.
+ */
+export function checkViaAnnularRing(vias: PcbVia[], rules: PcbDrcRuleSet, netClasses?: Map<string, NetClassRules>): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+
+  for (const via of vias) {
+    let minAnnular = rules.viaAnnularRing;
+    if (netClasses) {
+      const nc = netClasses.get(via.netId);
+      if (nc) {
+        minAnnular = nc.viaAnnular;
+      }
+    }
+
+    const annularRing = (via.outerDiameter - via.drillDiameter) / 2;
+    if (annularRing < minAnnular) {
+      violations.push(
+        pcbViolation(
+          'via_annular_ring',
+          'error',
+          `Via annular ring ${annularRing.toFixed(1)}mil is below minimum ${minAnnular}mil (outer: ${via.outerDiameter}mil, drill: ${via.drillDiameter}mil)`,
+          { x: via.x, y: via.y },
+          [via.id],
+          Math.round(annularRing * 10) / 10,
+          minAnnular,
+        ),
+      );
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Check minimum clearance between pads on different nets.
+ */
+export function checkPadClearance(pads: PcbPad[], rules: PcbDrcRuleSet, netClasses?: Map<string, NetClassRules>): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+
+  for (let i = 0; i < pads.length; i++) {
+    for (let j = i + 1; j < pads.length; j++) {
+      const a = pads[i];
+      const b = pads[j];
+
+      // Same net: exempt from clearance check
+      if (a.netId === b.netId) {
+        continue;
+      }
+
+      let requiredClearance = rules.padClearance;
+      if (netClasses) {
+        const classA = netClasses.get(a.netId);
+        const classB = netClasses.get(b.netId);
+        if (classA) {
+          requiredClearance = Math.max(requiredClearance, classA.clearance);
+        }
+        if (classB) {
+          requiredClearance = Math.max(requiredClearance, classB.clearance);
+        }
+      }
+
+      // Calculate edge-to-edge distance using AABB
+      const aLeft = a.x - a.width / 2;
+      const aRight = a.x + a.width / 2;
+      const aTop = a.y - a.height / 2;
+      const aBottom = a.y + a.height / 2;
+
+      const bLeft = b.x - b.width / 2;
+      const bRight = b.x + b.width / 2;
+      const bTop = b.y - b.height / 2;
+      const bBottom = b.y + b.height / 2;
+
+      const dx = Math.max(0, Math.max(aLeft - bRight, bLeft - aRight));
+      const dy = Math.max(0, Math.max(aTop - bBottom, bTop - aBottom));
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < requiredClearance) {
+        violations.push(
+          pcbViolation(
+            'pad_clearance',
+            'error',
+            `Pad clearance ${dist.toFixed(1)}mil is below minimum ${requiredClearance}mil between nets ${a.netId} and ${b.netId}`,
+            { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+            [a.id, b.id],
+            Math.round(dist * 10) / 10,
+            requiredClearance,
+          ),
+        );
+      }
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Check board edge clearance for traces, pads, and vias.
+ */
+export function checkBoardEdgeClearance(
+  traces: PcbTrace[],
+  pads: PcbPad[],
+  vias: PcbVia[],
+  outline: PcbBoardOutline,
+  rules: PcbDrcRuleSet,
+): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+  const poly = outline.points;
+  if (poly.length < 3) {
+    return violations;
+  }
+
+  // Check trace points against board edge
+  for (const trace of traces) {
+    for (const pt of trace.points) {
+      const dist = pointToPolygonDistance(pt.x, pt.y, poly);
+      const edgeDist = dist - trace.width / 2;
+      if (edgeDist < rules.boardEdgeClearance) {
+        violations.push(
+          pcbViolation(
+            'board_edge_clearance',
+            'error',
+            `Trace is ${edgeDist.toFixed(1)}mil from board edge, minimum is ${rules.boardEdgeClearance}mil`,
+            pt,
+            [trace.id],
+            Math.round(edgeDist * 10) / 10,
+            rules.boardEdgeClearance,
+          ),
+        );
+        break; // One violation per trace
+      }
+    }
+  }
+
+  // Check pads against board edge
+  for (const pad of pads) {
+    const dist = pointToPolygonDistance(pad.x, pad.y, poly);
+    const padRadius = Math.max(pad.width, pad.height) / 2;
+    const edgeDist = dist - padRadius;
+    if (edgeDist < rules.boardEdgeClearance) {
+      violations.push(
+        pcbViolation(
+          'board_edge_clearance',
+          'error',
+          `Pad is ${edgeDist.toFixed(1)}mil from board edge, minimum is ${rules.boardEdgeClearance}mil`,
+          { x: pad.x, y: pad.y },
+          [pad.id],
+          Math.round(edgeDist * 10) / 10,
+          rules.boardEdgeClearance,
+        ),
+      );
+    }
+  }
+
+  // Check vias against board edge
+  for (const via of vias) {
+    const dist = pointToPolygonDistance(via.x, via.y, poly);
+    const edgeDist = dist - via.outerDiameter / 2;
+    if (edgeDist < rules.boardEdgeClearance) {
+      violations.push(
+        pcbViolation(
+          'board_edge_clearance',
+          'error',
+          `Via is ${edgeDist.toFixed(1)}mil from board edge, minimum is ${rules.boardEdgeClearance}mil`,
+          { x: via.x, y: via.y },
+          [via.id],
+          Math.round(edgeDist * 10) / 10,
+          rules.boardEdgeClearance,
+        ),
+      );
+    }
+  }
+
+  return violations;
+}
+
+/**
+ * Run all PCB-level DRC checks and return combined violations.
+ */
+export function runPcbDrc(
+  data: PcbDrcInput,
+  rules: PcbDrcRuleSet,
+  netClasses?: Map<string, NetClassRules>,
+): DRCViolation[] {
+  const violations: DRCViolation[] = [];
+
+  violations.push(...checkTraceClearance(data.traces, rules, netClasses));
+  violations.push(...checkTraceWidth(data.traces, rules, netClasses));
+  violations.push(...checkViaDrill(data.vias, rules, netClasses));
+  violations.push(...checkViaAnnularRing(data.vias, rules, netClasses));
+  violations.push(...checkPadClearance(data.pads, rules, netClasses));
+
+  if (data.outline) {
+    violations.push(...checkBoardEdgeClearance(data.traces, data.pads, data.vias, data.outline, rules));
   }
 
   return violations;
