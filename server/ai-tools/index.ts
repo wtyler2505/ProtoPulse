@@ -26,6 +26,7 @@ import { registerProjectTools } from './project';
 import { registerCircuitTools, registerPcbTools } from './circuit';
 import { registerComponentTools } from './component';
 import { registerExportTools } from './export';
+import { registerVisionTools } from './vision';
 
 function createRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
@@ -38,6 +39,7 @@ function createRegistry(): ToolRegistry {
   registerComponentTools(registry);
   registerPcbTools(registry);
   registerExportTools(registry);
+  registerVisionTools(registry);
   return registry;
 }
 
