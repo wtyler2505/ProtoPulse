@@ -210,7 +210,7 @@ shared/
 - **Coverage**: `@vitest/coverage-v8` — reports to `coverage/` directory
 - **Legacy**: `server/__tests__/api.test.ts` uses `node:test` runner (excluded from Vitest config)
 
-### Test File Locations (79 test files, ~3878 tests)
+### Test File Locations (84 test files, ~4377 tests)
 
 ```text
 server/__tests__/                          → API, auth, storage, exporters, generators, DRC, LRU cache, metrics, audit-log, circuit-breaker, stream-abuse, auth-regression, storage-transactions (30 files)
