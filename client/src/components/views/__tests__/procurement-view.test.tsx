@@ -18,11 +18,14 @@ import type { BomItem } from '@/lib/project-context';
 
 // ── Mock dependencies ──
 
-vi.mock('@/lib/damage-assessment', () => ({
-  DamageAssessor: vi.fn().mockImplementation(() => ({
-    getIndicators: () => [{ indicator: 'Burnt marks', category: 'visual', defaultSeverity: 'severe' }],
-  })),
-}));
+vi.mock('@/lib/damage-assessment', () => {
+  class MockDamageAssessor {
+    getIndicators() {
+      return [{ indicator: 'Burnt marks', category: 'visual', defaultSeverity: 'severe' }];
+    }
+  }
+  return { DamageAssessor: MockDamageAssessor };
+});
 
 vi.mock('@/components/ui/styled-tooltip', () => ({
   StyledTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,

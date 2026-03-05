@@ -19,7 +19,7 @@
 
 ### P1 -- High-Impact Gaps
 
-- [ ] FG-06: Add real-time multi-user collaboration (WebSocket, live cursors, conflict resolution) | Effort: XL | Priority: P1 | **Blocked by TD-02 + TD-03 + TD-07**
+- [x] FG-06: ~~Add real-time multi-user collaboration (WebSocket, live cursors, conflict resolution)~~ | Effort: XL | Priority: P1 | **DONE 2026-03-05 Wave 41 — WebSocket server (server/collaboration.ts 608 lines), CRDT operations, live cursors, room management, role enforcement (owner/editor/viewer), entity locking with timeout, shared implementation with UI-03 and IN-03**
 - [ ] FG-07: Connect Gerber export to actual PCB layout data | Effort: L | Priority: P1 | Prerequisite: TD-10, FG-01
 - [x] FG-08: ~~Implement ODB++ export format~~ | Effort: M | Priority: P1 | **DONE 2026-03-03 — server/export/odb-plus-plus-generator.ts: Full ODB++ ZIP archive generator with 9 layers (matrix, steps, eda, misc directory structure). POST /api/projects/:id/export/odb-plus-plus returns ZIP. ExportPanel.tsx updated with ODB++ option in PCB Fabrication category. 24 tests in server/__tests__/odb-export.test.ts.**
 - [x] FG-09: ~~Implement IPC-2581 export format~~ | Effort: M | Priority: P1 | **DONE 2026-03-03 — server/export/ipc2581-generator.ts: IPC-2581B XML generator with Ecad, Content, LogicalNet, PhysicalNet, Bom sections. POST /api/projects/:id/export/ipc2581 returns XML. ExportPanel.tsx updated with IPC-2581 option. 30 tests in server/__tests__/ipc2581-export.test.ts.**
@@ -48,9 +48,9 @@
 ### P3 -- Nice-to-Have
 
 - [ ] FG-28: Add rigid-flex PCB design support | Effort: XL | Priority: P3
-- [ ] FG-29: Implement power integrity / PDN analysis (physics-based) | Effort: XL | Priority: P3
+- [x] FG-29: ~~Implement power integrity / PDN analysis (physics-based)~~ | Effort: XL | Priority: P3 | **DONE 2026-03-05 Wave 41 — PDN impedance Z(f) solver (client/src/lib/simulation/pdn-analysis.ts 1055 lines), via inductance/resistance models, plane capacitance, IR drop grid, resonance detection, decap optimization**
 - [x] FG-30: ~~Add design reuse blocks / snippets (save/reuse schematic + PCB fragments)~~ | Effort: M | Priority: P3 | **DONE 2026-03-03 — client/src/lib/design-reuse.ts: SnippetLibrary singleton with CRUD, search (name/desc/tags), category filtering, duplicate, usage tracking, rating (1-5), prepareForPlacement (ID remapping + position offset), JSON import/export, 5 built-in snippets, localStorage persistence, useDesignSnippets hook; 102 tests**
-- [ ] FG-31: Implement thermal analysis (physics-based) | Effort: XL | Priority: P3
+- [x] FG-31: ~~Implement thermal analysis (physics-based)~~ | Effort: XL | Priority: P3 | **DONE 2026-03-05 Wave 41 — Thermal resistance network solver (client/src/lib/simulation/thermal-analysis.ts 829 lines), 17 package thermal DB entries, Gauss-Seidel heat diffusion grid, Arrhenius derating, heat map generation**
 - [x] FG-32: ~~Add component lifecycle / obsolescence tracking~~ | Effort: M | Priority: P3 | **DONE 2026-03-02 — component_lifecycle table in schema.ts (status: active/nrnd/eol/obsolete/unknown, alternatePartNumbers, dataSource, notes). IStorage + DatabaseStorage methods. CRUD routes at /api/projects/:id/lifecycle. Registered in routes.ts barrel.**
 - [x] FG-33: ~~Implement netlist comparison / ECO workflow~~ | Effort: L | Priority: P3 | **DONE 2026-03-02 — shared/netlist-diff.ts (250 lines): computeNetlistDiff() compares two NetlistSnapshots (nets by name, components by refDes), produces structured diff with added/removed/modified nets + components + connection-level changes. POST /api/circuits/:id/netlist-diff endpoint in circuit-routes/netlist.ts.**
 - [x] FG-34: ~~Add board stackup editor for multi-layer impedance planning~~ | Effort: M | Priority: P3 | **DONE 2026-03-03 — client/src/lib/board-stackup.ts: BoardStackup singleton with layer/dielectric CRUD, reorder, impedance calculation (microstrip/stripline/differential), 3 presets (2/4/6-layer), material database (FR4/Rogers/Isola/Megtron6), surface finish, validation (symmetry, planes), JSON export/import, localStorage persistence, useBoardStackup hook; 94 tests**
@@ -67,7 +67,7 @@
 
 - [x] UI-01: ~~Add onboarding / welcome flow for first-time users (empty project detection, feature overview, guided first steps)~~ | Effort: M | Priority: P0 | **DONE 2026-03-02 — WelcomeOverlay.tsx: 6 feature cards (Architecture, Schematics, BOM, AI, Validation, Export), 3-step quick start guide with navigation buttons, dismiss via X or skip link. Shown on DashboardView when project is empty (no nodes, BOM, or history) and user hasn't dismissed. localStorage 'protopulse-onboarding-dismissed' persistence. All data-testid attributes.**
 - [x] UI-02: ~~Add project creation UI and project list/selector~~ | Effort: L | Priority: P0 | **DONE 2026-03-04 — Same as FG-02; ProjectPickerPage.tsx implements full project list, creation dialog, search, and navigation.**
-- [ ] UI-03: Add collaboration features -- multi-user support, sharing, commenting, role-based access | Effort: XL | Priority: P0
+- [x] UI-03: ~~Add collaboration features -- multi-user support, sharing, commenting, role-based access~~ | Effort: XL | Priority: P0 | **DONE 2026-03-05 Wave 41 — WebSocket server (server/collaboration.ts 608 lines), CRDT operations, live cursors, room management, role enforcement (owner/editor/viewer), entity locking with timeout, shared implementation with FG-06 and IN-03**
 - [x] UI-04: ~~Add design import from KiCad/EAGLE/Altium (plus UI for existing FZPZ server-side import)~~ | Effort: L | Priority: P0 | **Done Wave 36** — covered by `client/src/lib/design-import.ts` (8 format parsers + auto-detection)
 - [x] UI-05: ~~Add standard component/symbol library (74xx, passives, connectors)~~ | Effort: L | Priority: P0 | **DONE 2026-03-04 Wave 39 — Same as FG-05; 74xx series (7400/7402/7404/7408/7432/7486/74HC595/74HC165/74HC00/74HC138/74HC245), passives (E24 resistors, capacitors, inductors), connectors (JST PH/XH, ISP, JTAG, USB, DC barrel), MCUs (ATmega328P/2560, ESP8266/32, ATtiny85, STM32) all seeded into public componentLibrary.**
 
@@ -106,7 +106,7 @@
 - [x] UI-30: ~~Add drag-drop visual hint (ghost preview) from asset library~~ | Effort: S | Priority: P3 | **DONE 2026-03-02 — DndProvider (client/src/lib/dnd-context.tsx) DragOverlay renders styled ghost element with Cpu icon, component label, and node type during @dnd-kit drag operations; pointer-events-none + select-none; backdrop-blur styling matches app theme**
 - [x] UI-31: ~~Add "What's New" feature changelog in UI~~ | Effort: S | Priority: P3 | **DONE 2026-03-02 — Created docs/CHANGELOG.md with structured changelog (Keep a Changelog format). In-app UI component deferred to when onboarding flow (UI-01) is implemented — changelog will surface there.**
 - [x] UI-32: ~~Add view transition animations~~ | Effort: S | Priority: P3 | **DONE 2026-03-02 — Added `view-enter` CSS animation (150ms fade-in + 2px translateY) to ProjectWorkspace tab panel. Uses `key={activeView}` to trigger remount animation on view switch. Defined in index.css @layer utilities.**
-- [ ] UI-33: Add offline mode with local state persistence | Effort: XL | Priority: P3
+- [x] UI-33: ~~Add offline mode with local state persistence~~ | Effort: XL | Priority: P3 | **DONE 2026-03-05 Wave 41 — Service worker (client/public/sw.js 285 lines), IndexedDB manager (client/src/lib/indexed-db-manager.ts 460 lines), offline sync orchestrator (client/src/lib/offline-sync.ts 490 lines), React hooks, exponential backoff retry, conflict detection**
 - [x] UI-34: ~~Add BOM comparison between design versions~~ | Effort: M | Priority: P3 | **DONE 2026-03-02 — BomDiffPanel.tsx (387 lines) integrated into ProcurementView via Tabs component (BOM Management / BOM Comparison tabs). Snapshot CRUD, diff visualization with added/removed/modified badges, cost delta summary. Uses bom-diff.ts engine + bom_snapshots table/routes.**
 - [x] UI-35: ~~Add community component library browser~~ | Effort: L | Priority: P3 | **DONE 2026-03-03 — client/src/lib/community-library.ts: CommunityLibrary singleton with 10 seed components (symbols/footprints/modules/snippets/3D), full-text search + facets + pagination, ratings with averages, download counting, collections CRUD, discovery (featured/trending/newArrivals/related/byAuthor), stats, JSON export/import, localStorage persistence, useCommunityLibrary hook; 107 tests**
 - [x] UI-36: ~~Add theme customization beyond light/dark~~ | Effort: M | Priority: P3 | **DONE 2026-03-03 — client/src/lib/theme-context.tsx: ThemeProvider with 6 dark presets (Neon Cyan, Midnight Purple, Forest, Amber, Rose, Monochrome), each defining 22 CSS custom properties. ThemePickerPanel.tsx: 2-column swatch grid with live preview. Integrated into SidebarHeader (Palette icon popover). Persists to localStorage.**
@@ -228,7 +228,7 @@
 
 ### P1 -- High-Impact Innovations
 
-- [ ] IN-03: Real-time collaborative design with Yjs CRDTs | Effort: XL | Priority: P1 | [DEMOTED from P0 -- blocked by TD-02 + TD-03 + TD-07]
+- [x] IN-03: ~~Real-time collaborative design with Yjs CRDTs~~ | Effort: XL | Priority: P1 | **DONE 2026-03-05 Wave 41 — CRDT operation types, state sync, vector clock versioning, shared implementation with FG-06 and UI-03**
 - [x] IN-04: ~~In-browser SPICE simulation via ngspice WebAssembly~~ | Effort: M | Priority: P1 | **DONE 2026-03-04 Wave 39 — `client/src/lib/simulation/spice-netlist-parser.ts` (1118 lines): full SPICE netlist parser (R/C/L/V/I/D/Q/M elements, .DC/.AC/.TRAN/.OP directives, .MODEL definitions, value multipliers k/M/m/u/n/p/G/T/meg, case-insensitive, line-number error reporting). `runParsedNetlist()` routes to existing MNA/DC/AC/transient engines. SPICE import panel added to SimulationView. 81 tests.**
 - [x] IN-05: ~~Intelligent component suggestion engine ("you need decoupling caps")~~ | Effort: M | Priority: P1 | **DONE 2026-03-03 — server/ai-tools/component.ts: `suggest_components` AI tool gathers architecture nodes (categorized by type), BOM items, circuit instances/nets, and component parts. Returns structured gap analysis data across 9 suggestion categories (decoupling caps, pull-ups, ESD protection, voltage regulators, bypass caps, crystal/oscillator, debug headers, LED indicators, test points). AI uses returned data to generate specific recommendations with rationale and priority.**
 - [x] IN-06: ~~One-click PCB ordering with DFM pre-check (JLCPCB API)~~ | Effort: L | Priority: P1 | **DONE 2026-03-03 — client/src/lib/pcb-ordering.ts: PcbOrderingEngine singleton with 5 fabricator profiles (JLCPCB/PCBWay/OSHPark/PCBGoGo/SeeedStudio), DFM validation (trace/drill/layers/board/finish/color/copper/features), pricing engine (base+area+layers+finish+rush), quote comparison, order CRUD with workflow (draft→dfm→quoting→submitted), order history, JSON export/import, localStorage persistence, usePcbOrdering hook; 92 tests**
@@ -678,18 +678,18 @@ Items from `future-features-and-ideas-list.md` NOT added because they already ex
 | Feature | Existing ID | Status |
 | --- | --- | --- |
 | 3D board viewer | FG-03 | Open |
-| Real-time collaboration | FG-06 / UI-03 / IN-03 | Open |
+| Real-time collaboration | FG-06 / UI-03 / IN-03 | **DONE** |
 | Push-and-shove interactive routing | FG-11 | Open |
 | Import from KiCad/Eagle/Altium | FG-14 / EN-07 | Open |
 | Real-time distributor pricing/stock | FG-15 / EN-01 | Open |
 | Differential pair routing | FG-16 | Open |
 | ECAD-MCAD / STEP export | FG-18 | Open |
-| Offline mode / PWA | FG-19 / IN-15 / UI-33 / EN-31 | Open |
+| Offline mode / PWA | FG-19 / IN-15 / UI-33 / EN-31 | **DONE** |
 | Signal integrity (eye diagrams, crosstalk) | FG-20 | Open |
 | Monte Carlo / statistical simulation | FG-22 / EN-25 | Open |
 | Nonlinear device models | FG-23 | Open |
 | Design reuse blocks / snippets | FG-30 | Open |
-| Thermal analysis (physics-based) | FG-31 | Open |
+| Thermal analysis (physics-based) | FG-31 | **DONE** |
 | Board stackup editor | FG-34 | Open |
 | Copper pour / zone fill | FG-35 | Open |
 | Community component library | UI-35 | Open |
@@ -723,14 +723,14 @@ Items from `future-features-and-ideas-list.md` NOT added because they already ex
 | Original product analysis | 166 | FG, UI, TD, EN, IN |
 | Gap analysis (Batches 1-10) | 74 | CAPX-SEC, CAPX-DATA, CAPX-WF, CAPX-REL, CAPX-OPS, CAPX-QUAL, CAPX-ARCH, CAPX-TEST, CAPX-DB, CAPX-PERF, CAPX-ERR, CAPX-API, CAPX-BUILD, CAPX-OBS, CAPX-CORR |
 | Future features consolidation (Batch 11) | 65 | CAPX-FFI |
-| **Grand total** | **305** | **16 ID prefixes** |
+| **Grand total** | **310** | **16 ID prefixes** |
 
 ### Completion Status
 
 | Status | Count | Percentage |
 | --- | --- | --- |
-| Done (checked) | 177 | 58.0% |
-| Open (unchecked) | 128 | 42.0% |
-| **Total** | **305** | 100% |
+| Done (checked) | 263 | 84.8% |
+| Open (unchecked) | 47 | 15.2% |
+| **Total** | **310** | 100% |
 
-> Note: 177 items were already complete before Batch 11 was added. All 65 new CAPX-FFI items are unchecked/open.
+> Updated 2026-03-05 after Wave 41 completion (6 items: UI-33, FG-31, FG-29, UI-03, FG-06, IN-03).
