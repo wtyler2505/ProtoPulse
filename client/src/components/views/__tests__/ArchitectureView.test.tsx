@@ -70,6 +70,17 @@ vi.mock('@/lib/contexts/project-meta-context', () => ({
   }),
 }));
 
+vi.mock('@/lib/contexts/bom-context', () => ({
+  useBom: () => ({
+    bom: [],
+    bomSettings: { maxCost: 50, batchSize: 1000, inStockOnly: true, manufacturingDate: new Date() },
+    setBomSettings: vi.fn(),
+    addBomItem: vi.fn(),
+    deleteBomItem: vi.fn(),
+    updateBomItem: vi.fn(),
+  }),
+}));
+
 vi.mock('@/lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }));

@@ -92,6 +92,7 @@ export interface ChatMessage {
   actions?: ChatAction[];
   toolCalls?: ToolCallInfo[];
   isError?: boolean;
+  isKeyError?: boolean;
   isStreaming?: boolean;
 }
 
@@ -102,7 +103,7 @@ export interface ProjectHistoryItem {
   user: 'User' | 'AI';
 }
 
-export type ViewMode = 'dashboard' | 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'schematic' | 'breadboard' | 'pcb' | 'procurement' | 'validation' | 'simulation' | 'design_history' | 'lifecycle' | 'comments' | 'calculators' | 'design_patterns' | 'storage';
+export type ViewMode = 'dashboard' | 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'schematic' | 'breadboard' | 'pcb' | 'procurement' | 'validation' | 'simulation' | 'design_history' | 'lifecycle' | 'comments' | 'calculators' | 'design_patterns' | 'storage' | 'kanban' | 'knowledge' | 'viewer_3d' | 'community' | 'ordering';
 
 /**
  * Inner provider that nests all domain providers once seeded state is ready.

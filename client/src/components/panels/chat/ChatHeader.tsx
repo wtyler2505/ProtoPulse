@@ -2,7 +2,9 @@ import { memo } from 'react';
 import { Sparkles, Search, Download, Settings2, X, GitBranch, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import ConnectionStatusDot from './ConnectionStatusDot';
 import type { ChatBranch } from '@/lib/contexts/chat-context';
+import type { KeyStatus } from '@/hooks/useApiKeyStatus';
 
 interface ChatHeaderProps {
   onSearch: () => void;
@@ -14,6 +16,8 @@ interface ChatHeaderProps {
   branches: ChatBranch[];
   activeBranchId: string | null;
   onBranchSelect: (branchId: string | null) => void;
+  keyStatus: KeyStatus;
+  hasKey: boolean;
 }
 
 function ChatHeader({
@@ -26,12 +30,15 @@ function ChatHeader({
   branches,
   activeBranchId,
   onBranchSelect,
+  keyStatus,
+  hasKey,
 }: ChatHeaderProps) {
   return (
     <div className="h-14 border-b border-border bg-card/30 backdrop-blur flex items-center justify-between px-4 shrink-0">
       <div className="flex items-center gap-2">
         <Sparkles className="w-4 h-4 text-primary" />
         <h3 className="font-display font-bold tracking-wider text-sm">ProtoPulse AI</h3>
+        <ConnectionStatusDot keyStatus={keyStatus} hasKey={hasKey} />
         {branches.length > 0 && (
           <div className="relative ml-1">
             <label htmlFor="branch-selector" className="sr-only">Select conversation branch</label>

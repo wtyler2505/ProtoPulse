@@ -15,6 +15,12 @@ import {
   ShieldCheck,
   FileOutput,
   FlaskConical,
+  KanbanSquare,
+  BookMarked,
+  Box,
+  Globe,
+  ShoppingBag,
+  Warehouse,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ViewMode } from '@/lib/project-context';
@@ -73,6 +79,12 @@ export default function CommandPalette({
     { id: 'nav-validation', label: 'Validation', icon: Activity, shortcut: '7', action: () => onNavigate('validation'), keywords: ['drc', 'check', 'rule'] },
     { id: 'nav-output', label: 'Exports', icon: TerminalSquare, shortcut: '8', action: () => onNavigate('output'), keywords: ['export', 'gerber', 'kicad'] },
     { id: 'nav-simulation', label: 'Simulation', icon: FlaskConical, shortcut: '9', action: () => onNavigate('simulation'), keywords: ['spice', 'simulate', 'analysis', 'waveform'] },
+    { id: 'nav-kanban', label: 'Task Board', icon: KanbanSquare, action: () => onNavigate('kanban'), keywords: ['kanban', 'tasks', 'board', 'todo'] },
+    { id: 'nav-knowledge', label: 'Learn', icon: BookMarked, action: () => onNavigate('knowledge'), keywords: ['knowledge', 'learn', 'article', 'reference', 'electronics'] },
+    { id: 'nav-viewer-3d', label: '3D View', icon: Box, action: () => onNavigate('viewer_3d'), keywords: ['3d', 'viewer', 'board', 'mechanical'] },
+    { id: 'nav-community', label: 'Community', icon: Globe, action: () => onNavigate('community'), keywords: ['community', 'library', 'shared', 'components'] },
+    { id: 'nav-ordering', label: 'Order PCB', icon: ShoppingBag, action: () => onNavigate('ordering'), keywords: ['order', 'pcb', 'fabricate', 'manufacture', 'jlcpcb'] },
+    { id: 'nav-storage', label: 'Inventory', icon: Warehouse, action: () => onNavigate('storage'), keywords: ['inventory', 'storage', 'stock', 'location', 'warehouse'] },
   ];
 
   const panelItems: CommandItemDef[] = [

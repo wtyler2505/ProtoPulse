@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
  * App-wide tooltip styling constant.
  * Previously copy-pasted 30+ times across components (audit item #113).
  */
-export const TOOLTIP_CLASS = "bg-card/90 backdrop-blur border-border text-xs";
+export const TOOLTIP_CLASS = "bg-card/90 backdrop-blur border-border text-xs text-foreground";
 
 interface StyledTooltipProps {
   children: React.ReactNode;

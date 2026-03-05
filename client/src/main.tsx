@@ -1,6 +1,8 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { I18n } from "./lib/i18n";
+import { PwaManager } from "./lib/pwa-manager";
 
 const resizeObserverErr = /ResizeObserver loop (limit exceeded|completed with undelivered notifications)/;
 window.addEventListener('error', (e) => {
@@ -16,6 +18,15 @@ window.addEventListener('unhandledrejection', (e) => {
     e.preventDefault();
     return;
   }
+});
+
+// Initialize i18n framework (loads saved locale from localStorage)
+I18n.getInstance();
+
+// Initialize PWA manager (registers service worker, monitors connection)
+const pwa = PwaManager.getInstance();
+pwa.registerServiceWorker().catch(() => {
+  // Service worker registration is optional — fail silently in dev
 });
 
 createRoot(document.getElementById("root")!).render(<App />);

@@ -189,7 +189,7 @@ app.use((req, res, next) => {
 const PUBLIC_PATHS = ['/api/auth/', '/api/health', '/api/ready', '/api/docs', '/api/metrics', '/api/settings/chat'];
 
 app.use('/api', (req, res, next) => {
-  if (PUBLIC_PATHS.some(p => req.path.startsWith(p.replace('/api', ''))) || req.path === '/api/seed') {
+  if (PUBLIC_PATHS.some(p => req.path.startsWith(p.replace('/api', ''))) || req.path === '/api/seed' || req.path === '/api/admin/seed-library') {
     return next();
   }
 
@@ -282,6 +282,21 @@ app.use((req, res, next) => {
   await checkConnection();
 
   await registerRoutes(app);
+
+  // Auto-seed standard component library on first run
+  try {
+    const { componentLibrary } = await import('@shared/schema');
+    const { eq, count: countFn } = await import('drizzle-orm');
+    const { db: database } = await import('./db');
+    const [result] = await database.select({ cnt: countFn() }).from(componentLibrary).where(eq(componentLibrary.isPublic, true));
+    if (result.cnt === 0) {
+      const { seedStandardLibrary } = await import('./routes/seed');
+      const seeded = await seedStandardLibrary();
+      logger.info(`Standard component library seeded with ${seeded} components`);
+    }
+  } catch (err) {
+    logger.warn('Failed to auto-seed standard library', { error: err instanceof Error ? err.message : String(err) });
+  }
 
   app.get("/api/health", async (_req, res) => {
     try {

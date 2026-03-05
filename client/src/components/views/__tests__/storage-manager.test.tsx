@@ -6,14 +6,26 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 // Mocks
 // ----------------------------------------------------------------
 
-// Mock lucide-react icons to simple elements
-vi.mock('lucide-react', () => ({
-  ChevronDown: () => <span data-testid="icon-chevron-down" />,
-  ChevronRight: () => <span data-testid="icon-chevron-right" />,
-  Package: () => <span data-testid="icon-package" />,
-  Search: () => <span data-testid="icon-search" />,
-  MapPin: () => <span data-testid="icon-map-pin" />,
-}));
+// Mock lucide-react — must list every icon the component uses
+vi.mock('lucide-react', () => {
+  const icon = (name: string) => (props: Record<string, unknown>) => <span data-testid={`icon-${name}`} {...props} />;
+  return {
+    ChevronDown: icon('chevron-down'),
+    ChevronRight: icon('chevron-right'),
+    Package: icon('package'),
+    Search: icon('search'),
+    MapPin: icon('map-pin'),
+    ScanBarcode: icon('scan-barcode'),
+    Printer: icon('printer'),
+    Activity: icon('activity'),
+    AlertTriangle: icon('alert-triangle'),
+    Info: icon('info'),
+    X: icon('x'),
+    Video: icon('video'),
+    VideoOff: icon('video-off'),
+  };
+});
+
 
 // Mock shadcn/ui primitives
 vi.mock('@/components/ui/card', () => ({

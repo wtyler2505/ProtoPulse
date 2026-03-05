@@ -74,7 +74,10 @@ export {
   LayerLegend,
   CoordinateReadout,
   EmptyGuidance,
+  DrcConstraintOverlay,
+  DrcConstraintToggle,
 } from './PCBBoardRenderer';
+export type { DrcConstraintOverlayProps, ClearanceRule } from './PCBBoardRenderer';
 
 export {
   BackLayerTraces,

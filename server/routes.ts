@@ -21,6 +21,10 @@ import { registerComponentLifecycleRoutes } from './routes/component-lifecycle';
 import { registerDesignHistoryRoutes } from './routes/design-history';
 import { registerCommentRoutes } from './routes/comments';
 import { registerBackupRoutes } from './routes/backup';
+import { registerJobRoutes } from './routes/jobs';
+import { registerEmbedRoutes } from './routes/embed';
+import { registerRAGRoutes } from './routes/rag';
+import { registerAgentRoutes } from './routes/agent';
 
 // Re-export shared utilities for backward compatibility
 // (consumed by circuit-routes.ts, circuit-ai.ts, and tests)
@@ -52,6 +56,10 @@ export async function registerRoutes(app: Express): Promise<void> {
   registerDesignHistoryRoutes(app);
   registerCommentRoutes(app);
   registerBackupRoutes(app);
+  registerJobRoutes(app);
+  registerEmbedRoutes(app);
+  registerRAGRoutes(app);
+  registerAgentRoutes(app);
 
   // --- Circuit Schematic Routes ---
   const { registerCircuitRoutes } = await import('./circuit-routes');

@@ -1,9 +1,20 @@
 import type { Express } from 'express';
+import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from '../auth';
 import { storage } from '../storage';
 import { asyncHandler, payloadLimit } from './utils';
+
+const validateKeyLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { valid: false, error: 'Too many validation requests. Please wait a minute.' },
+});
 
 export function registerSettingsRoutes(app: Express): void {
   // --- API Key Management ---
@@ -55,6 +66,47 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(404).json({ message: 'No API key found for this provider' });
       }
       res.status(204).end();
+    }),
+  );
+
+  // --- API Key Validation ---
+
+  app.post(
+    '/api/settings/api-keys/validate',
+    validateKeyLimiter,
+    payloadLimit(4 * 1024),
+    asyncHandler(async (req, res) => {
+      const schema = z.object({
+        provider: z.enum(['anthropic', 'gemini']),
+        apiKey: z.string().min(1).max(500),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ valid: false, error: fromZodError(parsed.error).toString() });
+      }
+
+      const { provider, apiKey } = parsed.data;
+
+      try {
+        if (provider === 'anthropic') {
+          const client = new Anthropic({ apiKey });
+          await client.messages.create({
+            model: 'claude-haiku-4-5-20250514',
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'Hi' }],
+          });
+        } else {
+          const genAI = new GoogleGenAI({ apiKey });
+          await genAI.models.generateContent({
+            model: 'gemini-2.0-flash',
+            contents: 'Hi',
+          });
+        }
+        res.json({ valid: true });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Validation failed';
+        res.json({ valid: false, error: message });
+      }
     }),
   );
 

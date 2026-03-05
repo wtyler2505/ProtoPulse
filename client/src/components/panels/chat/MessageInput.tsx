@@ -1,10 +1,11 @@
 import type { RefObject, CSSProperties } from 'react';
-import { Send, Plus, AlertTriangle, Mic, ImagePlus, Cpu, Cloud } from 'lucide-react';
+import { Send, Plus, AlertTriangle, Mic, ImagePlus, Cpu, Cloud, Camera, FileImage, PenTool, ScanLine, BookOpen, Presentation, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { AI_MODELS } from './constants';
 import QuickActionsBar from './QuickActionsBar';
+import type { InputType, ProcessingStatus } from '@/lib/multimodal-input';
 
 // CAPX-PERF-01: Static style extracted to module scope to avoid new object each render
 const TEXTAREA_STYLE: CSSProperties = { minHeight: '44px', maxHeight: '120px' };
@@ -29,6 +30,13 @@ interface MessageInputProps {
   attachedImage?: { base64: string; mimeType: string; name: string; previewUrl: string } | null;
   onRemoveImage?: () => void;
   onOpenSettings?: () => void;
+  // Multimodal input
+  showMultimodalMenu?: boolean;
+  onToggleMultimodalMenu?: () => void;
+  onMultimodalTypeSelect?: (type: InputType) => void;
+  multimodalStatus?: ProcessingStatus;
+  multimodalFileRef?: RefObject<HTMLInputElement | null>;
+  onMultimodalFile?: (file: File) => void;
 }
 
 export default function MessageInput({
@@ -51,6 +59,12 @@ export default function MessageInput({
   attachedImage,
   onRemoveImage,
   onOpenSettings,
+  showMultimodalMenu,
+  onToggleMultimodalMenu,
+  onMultimodalTypeSelect,
+  multimodalStatus,
+  multimodalFileRef,
+  onMultimodalFile,
 }: MessageInputProps) {
   return (
     <div className="p-4 border-t border-border bg-card/40 backdrop-blur shrink-0 min-w-0 overflow-hidden">
@@ -136,6 +150,81 @@ export default function MessageInput({
           >
             <ImagePlus className="h-4 w-4" />
           </Button>
+          {onToggleMultimodalMenu && (
+            <div className="relative">
+              {multimodalFileRef && (
+                <>
+                  <label htmlFor="multimodal-file-input" className="sr-only">Multimodal image input</label>
+                  <input
+                    id="multimodal-file-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    ref={multimodalFileRef}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file && onMultimodalFile) {
+                        onMultimodalFile(file);
+                      }
+                      // Reset so same file can be selected again
+                      e.target.value = '';
+                    }}
+                    data-testid="input-multimodal-file"
+                  />
+                </>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8",
+                  showMultimodalMenu ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
+                  multimodalStatus === 'preprocessing' && 'text-yellow-400',
+                  multimodalStatus === 'complete' && 'text-green-400',
+                  multimodalStatus === 'error' && 'text-red-400',
+                )}
+                onClick={onToggleMultimodalMenu}
+                data-testid="button-multimodal-input"
+                aria-label="Multimodal input"
+                title="Capture circuit image for AI analysis"
+              >
+                {multimodalStatus === 'capturing' || multimodalStatus === 'preprocessing' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+              </Button>
+              {showMultimodalMenu && onMultimodalTypeSelect && (
+                <div
+                  className="absolute bottom-full right-0 mb-2 w-48 bg-card/95 backdrop-blur-xl border border-border shadow-xl z-50 py-1"
+                  data-testid="multimodal-menu"
+                >
+                  <p className="px-3 py-1.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Capture Type</p>
+                  {([
+                    { type: 'photo' as InputType, icon: Camera, label: 'Photo', desc: 'Physical circuit / breadboard' },
+                    { type: 'screenshot' as InputType, icon: FileImage, label: 'Screenshot', desc: 'EDA tool screenshot' },
+                    { type: 'sketch' as InputType, icon: PenTool, label: 'Sketch', desc: 'Hand-drawn diagram' },
+                    { type: 'schematic-scan' as InputType, icon: ScanLine, label: 'Schematic Scan', desc: 'Printed schematic' },
+                    { type: 'datasheet' as InputType, icon: BookOpen, label: 'Datasheet', desc: 'Component datasheet page' },
+                    { type: 'whiteboard' as InputType, icon: Presentation, label: 'Whiteboard', desc: 'Whiteboard diagram' },
+                  ]).map(({ type, icon: Icon, label, desc }) => (
+                    <button
+                      key={type}
+                      className="w-full px-3 py-1.5 flex items-center gap-2.5 hover:bg-muted/50 transition-colors text-left"
+                      onClick={() => onMultimodalTypeSelect(type)}
+                      data-testid={`multimodal-type-${type}`}
+                    >
+                      <Icon className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-xs text-foreground">{label}</div>
+                        <div className="text-[10px] text-muted-foreground truncate">{desc}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           {('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) && (
           <Button
             variant="ghost"

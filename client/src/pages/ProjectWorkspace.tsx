@@ -27,9 +27,14 @@ const CommentsPanel = lazy(() => import('@/components/panels/CommentsPanel').the
 const CalculatorsView = lazy(() => import('@/components/views/CalculatorsView'));
 const DesignPatternsView = lazy(() => import('@/components/views/DesignPatternsView'));
 const StorageManagerPanel = lazy(() => import('@/components/views/StorageManagerPanel'));
+const KanbanView = lazy(() => import('@/components/views/KanbanView'));
+const KnowledgeView = lazy(() => import('@/components/views/KnowledgeView'));
+const BoardViewer3DView = lazy(() => import('@/components/views/BoardViewer3DView'));
+const CommunityView = lazy(() => import('@/components/views/CommunityView'));
+const PcbOrderingView = lazy(() => import('@/components/views/PcbOrderingView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,6 +62,12 @@ const tabDescriptions: Record<string, string> = {
   calculators: 'Electronics engineering calculators',
   design_patterns: 'Reusable circuit design patterns with educational explanations',
   storage: 'Inventory tracking and storage location management',
+  kanban: 'Track design tasks with a kanban board',
+  knowledge: 'Electronics reference articles and learning resources',
+  viewer_3d: '3D PCB board visualization and mechanical fit check',
+  community: 'Browse and share community component library',
+  ordering: 'Order PCBs from fabricators with DFM checks',
+  simulation: 'SPICE simulation, AC/DC analysis, and waveform viewer',
 };
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
@@ -324,6 +335,12 @@ function WorkspaceContent() {
     { id: 'calculators', label: 'Calculators', icon: Calculator },
     { id: 'design_patterns', label: 'Patterns', icon: BookOpen },
     { id: 'storage', label: 'Inventory', icon: Warehouse },
+    { id: 'kanban', label: 'Tasks', icon: KanbanSquare },
+    { id: 'knowledge', label: 'Learn', icon: BookMarked },
+    { id: 'viewer_3d', label: '3D View', icon: Box },
+    { id: 'community', label: 'Community', icon: Globe },
+    { id: 'ordering', label: 'Order PCB', icon: ShoppingBag },
+    { id: 'simulation', label: 'Simulation', icon: Zap },
     { id: 'output', label: 'Exports', icon: TerminalSquare },
   ], []);
 
@@ -331,7 +348,7 @@ function WorkspaceContent() {
      Always visible: Dashboard, Architecture, Component Editor (entry points).
      Require architecture nodes: Schematic, Breadboard, PCB, Procurement, Validation, Output. */
   const hasDesignContent = (nodes ?? []).length > 0;
-  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns']);
+  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns', 'kanban', 'knowledge', 'community', 'ordering', 'simulation']);
 
   const visibleTabs = useMemo(
     () => tabs.filter(t => t.id !== 'project_explorer' && (alwaysVisibleIds.has(t.id) || hasDesignContent)),
@@ -471,7 +488,7 @@ function WorkspaceContent() {
               ))}
             </ScrollableTabBar>
 
-            <div className="flex-1 border-b border-border h-full"></div>
+            <div className="border-b border-border h-full w-2 shrink-0"></div>
             <div className="w-px h-5 bg-border ml-1" />
             {/* AS-04: Larger chat toggle button with better contrast */}
             <StyledTooltip content="Toggle AI assistant" side="bottom">
@@ -486,6 +503,40 @@ function WorkspaceContent() {
             </StyledTooltip>
 
             <div className="ml-2 flex items-center gap-1">
+              <StyledTooltip content="Import design file" side="bottom">
+                <button
+                  data-testid="import-design-button"
+                  className="p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.kicad_sch,.kicad_pcb,.sch,.brd,.SchDoc,.PcbDoc,.asc,.dsn,.net,.json';
+                    input.onchange = () => {
+                      const file = input.files?.[0];
+                      if (file) {
+                        file.text().then((content) => {
+                          import('@/lib/design-import').then(({ DesignImporter }) => {
+                            const importer = DesignImporter.getInstance();
+                            const result = importer.importFile(content, file.name);
+                            if (result.status === 'complete' && result.design) {
+                              const proto = importer.convertToProtoPulse(result.design);
+                              setActiveView('output');
+                              // eslint-disable-next-line no-console
+                              console.log(`[DesignImport] Imported ${proto.nodes.length} nodes, ${proto.edges.length} edges from ${file.name}`);
+                            } else if (result.status === 'error') {
+                              // eslint-disable-next-line no-console
+                              console.error(`[DesignImport] Failed: ${result.errorCount} errors in ${file.name}`);
+                            }
+                          }).catch(() => { /* dynamic import failed */ });
+                        }).catch(() => { /* file read failed */ });
+                      }
+                    };
+                    input.click();
+                  }}
+                >
+                  <Upload className="w-4 h-4" />
+                </button>
+              </StyledTooltip>
               <Popover>
                 <PopoverTrigger asChild>
                   <StyledTooltip content="Tutorials" side="bottom">
@@ -621,6 +672,41 @@ function WorkspaceContent() {
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
                     <StorageManagerPanel projectId={projectId} />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'kanban' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <KanbanView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'knowledge' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <KnowledgeView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'viewer_3d' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <BoardViewer3DView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'community' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <CommunityView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'ordering' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <PcbOrderingView />
                   </Suspense>
                 </ErrorBoundary>
               )}

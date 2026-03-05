@@ -208,3 +208,6 @@ const EmptyGuidance = memo(function EmptyGuidance({ hasPlacedComponents }: Empty
 });
 
 export { BoardGrid, ComponentFootprints, LayerLegend, CoordinateReadout, EmptyGuidance };
+export { DrcConstraintOverlay } from './DrcConstraintOverlay';
+export type { DrcConstraintOverlayProps, ClearanceRule } from './DrcConstraintOverlay';
+export { DrcConstraintToggle } from './DrcConstraintToggle';

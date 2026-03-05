@@ -10,8 +10,11 @@ import {
   chatMessages,
   historyItems,
   componentParts,
+  componentLibrary,
 } from '@shared/schema';
 import { asyncHandler, payloadLimit } from './utils';
+import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
+import { eq, and, count } from 'drizzle-orm';
 
 function buildSeedComponentPart(projectId: number) {
   const pinNames = ['VCC', 'PB0', 'PB1', 'PB2', 'PB3', 'PB4', 'GND', 'PB5'];
@@ -215,7 +218,52 @@ function buildSeedComponentPart(projectId: number) {
   };
 }
 
+/**
+ * Seed the standard component library. Upserts by title + isPublic=true.
+ * Returns the number of components inserted.
+ */
+export async function seedStandardLibrary(): Promise<number> {
+  let inserted = 0;
+  for (const comp of STANDARD_LIBRARY_COMPONENTS) {
+    // Check if already exists
+    const existing = await db
+      .select({ cnt: count() })
+      .from(componentLibrary)
+      .where(and(eq(componentLibrary.title, comp.title), eq(componentLibrary.isPublic, true)));
+
+    if (existing[0].cnt === 0) {
+      await db.insert(componentLibrary).values({
+        title: comp.title,
+        description: comp.description,
+        category: comp.category,
+        tags: comp.tags,
+        meta: comp.meta,
+        connectors: comp.connectors,
+        buses: comp.buses,
+        views: comp.views,
+        constraints: comp.constraints,
+        isPublic: true,
+      });
+      inserted++;
+    }
+  }
+  return inserted;
+}
+
 export function registerSeedRoutes(app: Express): void {
+  // Seed standard library endpoint
+  app.post(
+    '/api/admin/seed-library',
+    payloadLimit(16 * 1024),
+    asyncHandler(async (_req, res) => {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ message: 'Not found' });
+      }
+      const inserted = await seedStandardLibrary();
+      res.json({ message: `Standard library seeded`, inserted, total: STANDARD_LIBRARY_COMPONENTS.length });
+    }),
+  );
+
   app.post(
     '/api/seed',
     payloadLimit(16 * 1024),

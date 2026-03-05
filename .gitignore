@@ -7,3 +7,7 @@ vite.config.ts.*
 
 # Product analysis working directory (generated phase outputs)
 .claude/analysis/
+
+# Playwright
+e2e-results/
+e2e/.auth-state.json

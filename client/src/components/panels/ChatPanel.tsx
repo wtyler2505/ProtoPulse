@@ -22,11 +22,16 @@ import StreamingIndicator from './chat/StreamingIndicator';
 import FollowUpSuggestions from './chat/FollowUpSuggestions';
 import MessageInput from './chat/MessageInput';
 import { useChatSettings } from '@/hooks/useChatSettings';
+import { useApiKeyStatus } from '@/hooks/useApiKeyStatus';
 import { queryClient } from '@/lib/queryClient';
+import ApiKeySetupDialog from './chat/ApiKeySetupDialog';
 import type { AIAction } from './chat/chat-types';
 import { useActionExecutor } from './chat/hooks/useActionExecutor';
 import { parseLocalIntent } from './chat/parseLocalIntent';
 import { mapErrorToUserMessage, mapStreamErrorToUserMessage } from '@/lib/error-messages';
+import { useMultimodalInput } from '@/lib/multimodal-input';
+import type { InputType, ProcessingStatus } from '@/lib/multimodal-input';
+import DesignAgentPanel from './chat/DesignAgentPanel';
 
 /** Maximum number of SSE reconnection attempts on network failure. */
 const SSE_MAX_RETRIES = 3;
@@ -60,6 +65,7 @@ interface MessageListProps {
   chatSearch: string;
   handleSendSuggestion: (cmd: string) => void;
   createBranch: (parentMessageId: number) => Promise<{ branchId: string }>;
+  onOpenSettings: () => void;
 }
 
 const MessageList = memo(function MessageList({
@@ -81,6 +87,7 @@ const MessageList = memo(function MessageList({
   chatSearch,
   handleSendSuggestion,
   createBranch,
+  onOpenSettings,
 }: MessageListProps) {
   // CAPX-PERF-11: Memoize virtualizer callbacks to prevent unnecessary recalculations
   const getScrollElement = useCallback(() => scrollRef.current, [scrollRef]);
@@ -172,6 +179,7 @@ const MessageList = memo(function MessageList({
                     onRegenerate={msg.role === 'assistant' && msg.id === lastMsgId ? handleRegenerate : undefined}
                     onRetry={msg.isError ? () => handleRetry(lastUserMessage) : undefined}
                     onBranch={(messageId) => { void createBranch(Number(messageId)); }}
+                    onOpenSettings={onOpenSettings}
                     isLast={msg.id === lastMsgId}
                     pendingActions={pendingActions?.messageId === msg.id ? pendingActions : null}
                     onAcceptActions={acceptPendingActions}
@@ -229,6 +237,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
   const projectId = useProjectId();
   const { aiProvider, setAiProvider, aiModel, setAiModel, aiTemperature, setAiTemperature, customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy } = useChatSettings();
+  const { status: keyStatus, errorMessage: keyErrorMessage, validate: validateKey, reset: resetKeyStatus } = useApiKeyStatus();
+  const [showSetupDialog, setShowSetupDialog] = useState(false);
   // UI-07: Persist AI API key in localStorage
   const [aiApiKey, setAiApiKey] = useState(() => {
     try {
@@ -242,12 +252,75 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [chatSearch, setChatSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [showDesignAgent, setShowDesignAgent] = useState(false);
   const [pendingActions, setPendingActions] = useState<{ actions: AIAction[]; messageId: string } | null>(null);
   const [streamingContent, setStreamingContent] = useState('');
   const [lastUserMessage, setLastUserMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [tokenInfo, setTokenInfo] = useState<{input: number; output: number; cost: number} | null>(null);
   const [attachedImage, setAttachedImage] = useState<{ base64: string; mimeType: string; name: string; previewUrl: string } | null>(null);
+
+  // Multimodal input integration
+  const multimodal = useMultimodalInput();
+  const [showMultimodalMenu, setShowMultimodalMenu] = useState(false);
+  const [multimodalInputType, setMultimodalInputType] = useState<InputType | null>(null);
+  const [multimodalStatus, setMultimodalStatus] = useState<ProcessingStatus>('idle');
+  const multimodalFileRef = useRef<HTMLInputElement>(null);
+
+  const handleMultimodalTypeSelect = useCallback((type: InputType) => {
+    setMultimodalInputType(type);
+    setShowMultimodalMenu(false);
+    if (type === 'photo') {
+      // For photo, try camera first if available, fallback to file
+      if (typeof navigator.mediaDevices?.getUserMedia === 'function') {
+        multimodalFileRef.current?.setAttribute('capture', 'environment');
+      }
+    } else {
+      multimodalFileRef.current?.removeAttribute('capture');
+    }
+    // Trigger file selection
+    multimodalFileRef.current?.click();
+  }, []);
+
+  const handleMultimodalFile = useCallback((file: File) => {
+    setMultimodalStatus('capturing');
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const validation = multimodal.validateImage(dataUrl);
+      if (!validation.valid) {
+        addOutputLog(`[MULTIMODAL] Validation failed: ${validation.errors.join(', ')}`);
+        setMultimodalStatus('error');
+        setTimeout(() => setMultimodalStatus('idle'), 3000);
+        return;
+      }
+
+      const detectedType = multimodalInputType ?? multimodal.detectInputType(dataUrl, file.name);
+      setMultimodalStatus('preprocessing');
+
+      const capture = multimodal.captureFromDataUrl(dataUrl, 'file', detectedType);
+      const preprocessed = multimodal.preprocessImage(capture.id);
+
+      const base64 = preprocessed.processed.dataUrl.split(',')[1];
+      setAttachedImage({
+        base64,
+        mimeType: file.type || 'image/png',
+        name: file.name,
+        previewUrl: preprocessed.processed.dataUrl,
+      });
+      setMultimodalStatus('complete');
+      setMultimodalInputType(null);
+      addOutputLog(`[MULTIMODAL] Captured ${detectedType}: ${file.name} (${preprocessed.processed.width}x${preprocessed.processed.height})`);
+      addToHistory(`Multimodal input: ${detectedType} - ${file.name}`, 'User');
+      setTimeout(() => setMultimodalStatus('idle'), 2000);
+    };
+    reader.onerror = () => {
+      setMultimodalStatus('error');
+      addOutputLog('[MULTIMODAL] Failed to read file');
+      setTimeout(() => setMultimodalStatus('idle'), 3000);
+    };
+    reader.readAsDataURL(file);
+  }, [multimodal, multimodalInputType, addOutputLog, addToHistory]);
 
   // UI-07: Sync API key to localStorage whenever it changes
   useEffect(() => {
@@ -261,6 +334,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       // localStorage may be unavailable (private browsing, storage full)
     }
   }, [aiApiKey]);
+
+  // Reset key validation status when provider or key changes
+  useEffect(() => {
+    resetKeyStatus();
+  }, [aiApiKey, aiProvider, resetKeyStatus]);
 
   const clearSavedApiKey = useCallback(() => {
     setAiApiKey('');
@@ -420,6 +498,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     let fetchTimeoutId: ReturnType<typeof setTimeout> | undefined;
     try {
       if (!s.aiApiKey) {
+        setShowSetupDialog(true);
         setTimeout(() => {
           // Re-read ref for latest state inside setTimeout
           const latest = sendStateRef.current;
@@ -625,12 +704,14 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         });
       } else {
         const mapped = mapErrorToUserMessage(err);
+        const isKeyError = /api.?key|authentication/i.test(mapped.title);
         latest.addMessage({
           id: crypto.randomUUID(),
           role: 'assistant',
           content: `${mapped.title}: ${mapped.description}`,
           timestamp: Date.now(),
           isError: true,
+          isKeyError,
         });
       }
     } finally {
@@ -777,14 +858,47 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             branches={branches}
             activeBranchId={activeBranchId}
             onBranchSelect={setActiveBranchId}
+            keyStatus={keyStatus}
+            hasKey={!!aiApiKey}
           />
+
+          {/* Design Agent / Chat tab switcher */}
+          <div className="flex border-b border-border text-xs shrink-0">
+            <button
+              data-testid="chat-tab-chat"
+              type="button"
+              onClick={() => setShowDesignAgent(false)}
+              className={cn(
+                'flex-1 py-1.5 text-center transition-colors',
+                !showDesignAgent ? 'text-primary border-b border-primary' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              Chat
+            </button>
+            <button
+              data-testid="chat-tab-agent"
+              type="button"
+              onClick={() => setShowDesignAgent(true)}
+              className={cn(
+                'flex-1 py-1.5 text-center transition-colors flex items-center justify-center gap-1',
+                showDesignAgent ? 'text-primary border-b border-primary' : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              <Bot className="w-3 h-3" />
+              Design Agent
+            </button>
+          </div>
 
           <ChatSearchBar
             value={chatSearch}
             onChange={setChatSearch}
-            visible={showSearch}
+            visible={showSearch && !showDesignAgent}
           />
 
+          {showDesignAgent ? (
+            <DesignAgentPanel projectId={projectId} apiKey={aiApiKey} />
+          ) : (
+          <>
           {/* CAPX-PERF-10: Isolated MessageList — copiedId changes only re-render this sub-tree */}
           <MessageList
             filteredMessages={filteredMessages}
@@ -805,6 +919,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             chatSearch={chatSearch}
             handleSendSuggestion={handleSend}
             createBranch={createBranch}
+            onOpenSettings={() => setShowSettings(true)}
           />
 
           {!showSettings && (
@@ -843,6 +958,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   apiKeyValid={apiKeyValid}
                   onClearApiKey={clearSavedApiKey}
                   onClose={() => setShowSettings(false)}
+                  keyStatus={keyStatus}
+                  keyErrorMessage={keyErrorMessage}
+                  onValidateKey={() => { void validateKey(aiProvider, aiApiKey); }}
+                  isValidating={keyStatus === 'validating'}
                 />
               </div>
             </div>
@@ -883,9 +1002,24 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             textareaRef={textareaRef}
             fileInputRef={fileInputRef}
             onOpenSettings={() => setShowSettings(true)}
+            showMultimodalMenu={showMultimodalMenu}
+            onToggleMultimodalMenu={() => setShowMultimodalMenu((prev) => !prev)}
+            onMultimodalTypeSelect={handleMultimodalTypeSelect}
+            multimodalStatus={multimodalStatus}
+            multimodalFileRef={multimodalFileRef}
+            onMultimodalFile={handleMultimodalFile}
           />
+          </>
+          )}
         </div>
       </div>
+
+      <ApiKeySetupDialog
+        open={showSetupDialog}
+        onOpenChange={setShowSetupDialog}
+        aiProvider={aiProvider}
+        onApiKeySet={(key) => { setAiApiKey(key); setShowSetupDialog(false); }}
+      />
     </>
   );
 }

@@ -320,7 +320,7 @@ export function registerChatRoutes(app: Express): void {
     '/api/projects/:id/chat',
     asyncHandler(async (req, res) => {
       const opts = paginationSchema.safeParse(req.query);
-      const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
+      const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'asc' as const };
       const branchId = typeof req.query.branchId === 'string' ? req.query.branchId : undefined;
       const messages = await storage.getChatMessages(parseIdParam(req.params.id), { ...pagination, branchId });
       res.json({ data: messages, total: messages.length });

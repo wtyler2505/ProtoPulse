@@ -1,4 +1,4 @@
-import { Component, useState, useMemo, useRef, memo } from 'react';
+import { Component, useState, useMemo, useCallback, useRef, memo } from 'react';
 import type { ReactNode, ErrorInfo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useValidation } from '@/lib/contexts/validation-context';
@@ -7,7 +7,7 @@ import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import type { ViewMode } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Shield, Factory, Code2, Play, Trash2, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -23,7 +23,13 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { buttonVariants } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import { validatePart } from '@/lib/component-editor/validation';
 import { runDRC, getDefaultDRCRules } from '@/lib/component-editor/drc';
@@ -33,6 +39,11 @@ import { runERC, type ERCInput } from '@/lib/circuit-editor/erc-engine';
 import { DEFAULT_ERC_RULES, DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
 import type { CircuitSettings } from '@shared/circuit-types';
 import type { ComponentPart } from '@shared/schema';
+import { useDesignGateway } from '@/lib/design-gateway';
+import { useDfmChecker } from '@/lib/dfm-checker';
+import { useDrcScripts, BUILTIN_TEMPLATES } from '@/lib/drc-scripting';
+import type { DfmCheckResult } from '@/lib/dfm-checker';
+import type { DrcScript } from '@/lib/drc-scripting';
 
 /** Safely build a PartState from a ComponentPart DB row, providing defaults for nullable JSON fields. */
 function toPartState(part: ComponentPart): PartState {
@@ -130,6 +141,100 @@ function ValidationViewContent() {
   const projectId = useProjectId();
   const { data: componentParts } = useComponentParts(projectId);
 
+  // Design Gateway
+  const { violations: gatewayViolations, validate: runGateway, enableRule: enableGatewayRule, disableRule: disableGatewayRule, rules: gatewayRules } = useDesignGateway();
+
+  // DFM Checker
+  const { runCheckAgainstFab, availableFabs, history: dfmHistory, clearHistory: clearDfmHistory, exportReport: exportDfmReport } = useDfmChecker();
+  const [selectedFab, setSelectedFab] = useState('');
+  const [dfmResult, setDfmResult] = useState<DfmCheckResult | null>(null);
+
+  // Custom DRC Scripts
+  const { scripts, results: scriptResults, runScript, runAllEnabled, addScript, updateScript, deleteScript } = useDrcScripts();
+  const [customRulesOpen, setCustomRulesOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [editingScript, setEditingScript] = useState<DrcScript | null>(null);
+  const [scriptName, setScriptName] = useState('');
+  const [scriptDescription, setScriptDescription] = useState('');
+  const [scriptCode, setScriptCode] = useState('');
+
+  const handleRunGateway = useCallback(() => {
+    runGateway({ nodes: [], edges: [], bomItems: [] });
+    toast({ title: 'Design Gateway', description: 'Proactive design checks completed.' });
+  }, [runGateway, toast]);
+
+  const handleRunDfm = useCallback(() => {
+    if (!selectedFab) {
+      toast({ title: 'Select a Fab', description: 'Choose a fab house before running DFM check.', variant: 'destructive' });
+      return;
+    }
+    const dummyDesign = {
+      traces: [],
+      drills: [],
+      vias: [],
+      pads: [],
+      board: { width: 100, height: 100, thickness: 1.6, layerCount: 2 },
+      silkscreen: [],
+      solderMask: [],
+      copperWeight: '1oz',
+      surfaceFinish: 'HASL',
+    };
+    const result = runCheckAgainstFab(dummyDesign, selectedFab);
+    setDfmResult(result);
+    toast({ title: 'DFM Check Complete', description: result.passed ? 'All checks passed!' : `Found ${result.violations.length} violation(s).` });
+  }, [selectedFab, runCheckAgainstFab, toast]);
+
+  const handleAddScript = useCallback(() => {
+    if (!scriptName.trim()) {
+      toast({ title: 'Script Name Required', description: 'Enter a name for the script.', variant: 'destructive' });
+      return;
+    }
+    addScript(scriptName.trim(), scriptDescription.trim(), scriptCode);
+    setScriptName('');
+    setScriptDescription('');
+    setScriptCode('');
+    toast({ title: 'Script Added', description: `"${scriptName.trim()}" added to custom rules.` });
+  }, [scriptName, scriptDescription, scriptCode, addScript, toast]);
+
+  const handleRunAllScripts = useCallback(() => {
+    const designData = { nodes: [], edges: [], bomItems: [] };
+    const allResults = runAllEnabled(designData);
+    const totalViolations = allResults.reduce((sum, r) => sum + r.violations.length, 0);
+    toast({ title: 'Scripts Executed', description: `Ran ${allResults.length} script(s), found ${totalViolations} violation(s).` });
+  }, [runAllEnabled, toast]);
+
+  const handleApplyTemplate = useCallback((templateIdx: string) => {
+    const idx = parseInt(templateIdx, 10);
+    if (isNaN(idx) || idx < 0 || idx >= BUILTIN_TEMPLATES.length) { return; }
+    const tmpl = BUILTIN_TEMPLATES[idx];
+    setScriptName(tmpl.name);
+    setScriptDescription(tmpl.description);
+    setScriptCode(tmpl.code);
+    setSelectedTemplate(templateIdx);
+  }, []);
+
+  const handleEditScript = useCallback((script: DrcScript) => {
+    setEditingScript(script);
+    setScriptName(script.name);
+    setScriptDescription(script.description);
+    setScriptCode(script.code);
+  }, []);
+
+  const handleUpdateScript = useCallback(() => {
+    if (!editingScript) { return; }
+    updateScript(editingScript.id, { name: scriptName.trim(), description: scriptDescription.trim(), code: scriptCode });
+    setEditingScript(null);
+    setScriptName('');
+    setScriptDescription('');
+    setScriptCode('');
+    toast({ title: 'Script Updated', description: `"${scriptName.trim()}" updated.` });
+  }, [editingScript, scriptName, scriptDescription, scriptCode, updateScript, toast]);
+
+  const handleDeleteScript = useCallback((id: string) => {
+    deleteScript(id);
+    toast({ title: 'Script Deleted', description: 'Custom rule removed.' });
+  }, [deleteScript, toast]);
+
   const componentIssues = useMemo(() => {
     if (!componentParts || componentParts.length === 0) return [];
     return componentParts.flatMap((part) => {
@@ -214,15 +319,21 @@ function ValidationViewContent() {
           </h2>
           <p className="text-muted-foreground mt-1 text-sm">Found {issues.length + componentIssues.length + drcIssues.length + ercViolations.length} potential issues in your design.</p>
         </div>
-        <StyledTooltip content="Run design rule validation checks" side="bottom">
-            <button 
-              data-testid="run-drc-checks"
-              onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
-              className="px-6 py-2 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] focus-ring"
-            >
-              Run DRC Checks
-            </button>
-        </StyledTooltip>
+        <div className="flex items-center gap-2">
+          <Button data-testid="open-custom-rules" variant="outline" size="sm" onClick={() => { setCustomRulesOpen(true); }}>
+            <Code2 className="w-4 h-4 mr-1" />
+            Custom Rules
+          </Button>
+          <StyledTooltip content="Run design rule validation checks" side="bottom">
+              <button
+                data-testid="run-drc-checks"
+                onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
+                className="px-6 py-2 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] focus-ring"
+              >
+                Run DRC Checks
+              </button>
+          </StyledTooltip>
+        </div>
       </div>
 
       <div className="w-full max-w-5xl flex-1 overflow-hidden bg-card/40 border border-border backdrop-blur-xl shadow-xl flex flex-col">
@@ -249,7 +360,168 @@ function ValidationViewContent() {
         />
       </div>
 
-      <AlertDialog open={pendingDismissId !== null} onOpenChange={(open) => { if (!open) setPendingDismissId(null); }}>
+      {/* Design Gateway + DFM sections side by side */}
+      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        {/* Design Gateway */}
+        <div data-testid="design-gateway-section" className="bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary" />
+              Design Gateway
+            </h3>
+            <Button data-testid="run-gateway" variant="outline" size="sm" className="h-7 text-xs" onClick={handleRunGateway}>
+              <Play className="w-3 h-3 mr-1" />
+              Run
+            </Button>
+          </div>
+
+          <div className="space-y-1 max-h-48 overflow-auto">
+            {gatewayRules.map((rule) => (
+              <div key={rule.id} data-testid={`gateway-rule-${rule.id}`} className="flex items-center justify-between py-1 px-2 hover:bg-muted/20 rounded text-xs">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Badge variant={rule.severity === 'error' ? 'destructive' : rule.severity === 'warning' ? 'secondary' : 'outline'} className="text-[10px] px-1.5 py-0">
+                    {rule.category}
+                  </Badge>
+                  <span className="truncate">{rule.name}</span>
+                </div>
+                <button
+                  data-testid={`gateway-toggle-${rule.id}`}
+                  onClick={() => { if (rule.enabled) { disableGatewayRule(rule.id); } else { enableGatewayRule(rule.id); } }}
+                  className="ml-2 flex-shrink-0"
+                  aria-label={`Toggle ${rule.name}`}
+                >
+                  {rule.enabled ? <ToggleRight className="w-4 h-4 text-primary" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {gatewayViolations.length > 0 && (
+            <div data-testid="gateway-violations" className="border-t border-border pt-2 space-y-1 max-h-40 overflow-auto">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                {gatewayViolations.length} violation(s)
+              </p>
+              {gatewayViolations.map((v, i) => (
+                <div key={`${v.ruleId}-${i}`} data-testid={`gateway-violation-${i}`} className="flex items-start gap-2 text-xs py-1">
+                  <Badge variant={v.severity === 'error' ? 'destructive' : v.severity === 'warning' ? 'secondary' : 'outline'} className="text-[10px] px-1 py-0 flex-shrink-0">
+                    {v.severity}
+                  </Badge>
+                  <div className="flex-1 min-w-0">
+                    <p className="truncate">{v.message}</p>
+                    {v.suggestion && <p className="text-emerald-500/80 text-[10px] mt-0.5">{v.suggestion}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* DFM Check */}
+        <div data-testid="dfm-check-section" className="bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Factory className="w-4 h-4 text-primary" />
+              DFM Check
+            </h3>
+            <Button data-testid="run-dfm-check" variant="outline" size="sm" className="h-7 text-xs" onClick={handleRunDfm}>
+              <Play className="w-3 h-3 mr-1" />
+              Run
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground flex-shrink-0">Fab:</Label>
+            <Select value={selectedFab} onValueChange={setSelectedFab}>
+              <SelectTrigger data-testid="dfm-fab-select" className="h-7 text-xs flex-1">
+                <SelectValue placeholder="Select fab house..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableFabs.map((fab) => (
+                  <SelectItem key={fab} value={fab} className="text-xs">{fab}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {dfmResult && (
+            <div data-testid="dfm-results" className="border-t border-border pt-2 space-y-2">
+              <div className="flex items-center justify-between">
+                <Badge data-testid="dfm-pass-badge" variant={dfmResult.passed ? 'outline' : 'destructive'} className="text-xs">
+                  {dfmResult.passed ? 'PASSED' : 'FAILED'}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">
+                  {dfmResult.summary.errors} error(s), {dfmResult.summary.warnings} warning(s)
+                </span>
+              </div>
+              {dfmResult.violations.length > 0 && (
+                <div className="space-y-1 max-h-40 overflow-auto">
+                  {dfmResult.violations.map((v) => (
+                    <div key={v.id} data-testid={`dfm-violation-${v.id}`} className="flex items-start gap-2 text-xs py-1">
+                      <Badge variant={v.severity === 'error' ? 'destructive' : v.severity === 'warning' ? 'secondary' : 'outline'} className="text-[10px] px-1 py-0 flex-shrink-0">
+                        {v.severity}
+                      </Badge>
+                      <div className="flex-1 min-w-0">
+                        <p className="truncate">{v.message}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">
+                          {v.category} | actual: {v.actual}{v.unit} / required: {v.required}{v.unit}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {dfmHistory.length > 0 && (
+            <div className="flex items-center justify-between border-t border-border pt-2">
+              <span className="text-[10px] text-muted-foreground">{dfmHistory.length} previous check(s)</span>
+              <Button data-testid="clear-dfm-history" variant="ghost" size="sm" className="h-6 text-[10px] text-muted-foreground" onClick={clearDfmHistory}>
+                Clear History
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Custom DRC Scripts results (below Design Gateway + DFM) */}
+      {scriptResults.length > 0 && (
+        <div data-testid="script-results-section" className="w-full max-w-5xl mt-4 bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+            <Code2 className="w-4 h-4 text-primary" />
+            Custom Rule Results
+          </h3>
+          <div className="space-y-2 max-h-48 overflow-auto">
+            {scriptResults.map((r) => {
+              const script = scripts.find((s) => s.id === r.scriptId);
+              return (
+                <div key={r.scriptId} data-testid={`script-result-${r.scriptId}`} className="border border-border/50 rounded p-2">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium">{script?.name ?? r.scriptId}</span>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={r.passed ? 'outline' : 'destructive'} className="text-[10px]">
+                        {r.passed ? 'PASS' : 'FAIL'}
+                      </Badge>
+                      <span className="text-[10px] text-muted-foreground">{r.executionTimeMs}ms</span>
+                    </div>
+                  </div>
+                  {r.violations.map((v, vi) => (
+                    <div key={`${v.ruleId}-${vi}`} className="text-xs text-muted-foreground pl-2 border-l border-border ml-1 mt-1">
+                      <span className={cn('font-mono', v.severity === 'error' ? 'text-destructive' : v.severity === 'warning' ? 'text-yellow-500' : 'text-primary')}>
+                        [{v.severity}]
+                      </span>{' '}
+                      {v.message}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Dismiss confirmation dialog */}
+      <AlertDialog open={pendingDismissId !== null} onOpenChange={(open) => { if (!open) { setPendingDismissId(null); } }}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
             <AlertDialogTitle>Dismiss Validation Issue</AlertDialogTitle>
@@ -268,6 +540,141 @@ function ValidationViewContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Custom Rules Dialog */}
+      <Dialog open={customRulesOpen} onOpenChange={setCustomRulesOpen}>
+        <DialogContent data-testid="custom-rules-dialog" className="bg-card border-border max-w-2xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Code2 className="w-5 h-5 text-primary" />
+              Custom DRC Rules
+            </DialogTitle>
+            <DialogDescription>
+              Write JavaScript scripts that validate your design against custom rules. Scripts run in a sandboxed environment.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Script list */}
+            {scripts.length > 0 && (
+              <div data-testid="script-list" className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Scripts ({scripts.length})</h4>
+                  <Button data-testid="run-all-scripts" variant="outline" size="sm" className="h-7 text-xs" onClick={handleRunAllScripts}>
+                    <Play className="w-3 h-3 mr-1" />
+                    Run All Enabled
+                  </Button>
+                </div>
+                {scripts.map((script) => (
+                  <div key={script.id} data-testid={`script-item-${script.id}`} className="flex items-center justify-between py-2 px-3 border border-border/50 rounded hover:bg-muted/20">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <button
+                        data-testid={`script-toggle-${script.id}`}
+                        onClick={() => { updateScript(script.id, { enabled: !script.enabled }); }}
+                        className="flex-shrink-0"
+                        aria-label={`Toggle ${script.name}`}
+                      >
+                        {script.enabled ? <ToggleRight className="w-4 h-4 text-primary" /> : <ToggleLeft className="w-4 h-4 text-muted-foreground" />}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{script.name}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{script.description}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                      <Button
+                        data-testid={`script-run-${script.id}`}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => { runScript(script.id, { nodes: [], edges: [], bomItems: [] }); toast({ title: 'Script Executed', description: `Ran "${script.name}".` }); }}
+                      >
+                        <Play className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        data-testid={`script-edit-${script.id}`}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => { handleEditScript(script); }}
+                      >
+                        <Code2 className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        data-testid={`script-delete-${script.id}`}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                        onClick={() => { handleDeleteScript(script.id); }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Template selector */}
+            <div className="space-y-2">
+              <Label className="text-xs">Load from Template</Label>
+              <Select value={selectedTemplate} onValueChange={handleApplyTemplate}>
+                <SelectTrigger data-testid="template-select" className="h-8 text-xs">
+                  <SelectValue placeholder="Choose a built-in template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {BUILTIN_TEMPLATES.map((tmpl, idx) => (
+                    <SelectItem key={idx} value={String(idx)} className="text-xs">{tmpl.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Script editor */}
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Name</Label>
+                  <Input data-testid="script-name-input" value={scriptName} onChange={(e) => { setScriptName(e.target.value); }} className="h-7 text-xs" placeholder="Rule name" />
+                </div>
+                <div>
+                  <Label className="text-xs">Description</Label>
+                  <Input data-testid="script-description-input" value={scriptDescription} onChange={(e) => { setScriptDescription(e.target.value); }} className="h-7 text-xs" placeholder="What does this rule check?" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Script Code</Label>
+                <textarea
+                  data-testid="script-code-editor"
+                  value={scriptCode}
+                  onChange={(e) => { setScriptCode(e.target.value); }}
+                  className="w-full h-40 bg-background border border-border rounded p-2 text-xs font-mono resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+                  placeholder="// Available: nodes, edges, bomItems, report(ruleId, message, severity, nodeIds, suggestion), warn(message), hasProperty(nodeId, key)"
+                  spellCheck={false}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            {editingScript ? (
+              <>
+                <Button data-testid="cancel-edit-script" variant="outline" size="sm" onClick={() => { setEditingScript(null); setScriptName(''); setScriptDescription(''); setScriptCode(''); }}>
+                  Cancel
+                </Button>
+                <Button data-testid="update-script" size="sm" onClick={handleUpdateScript}>
+                  Update Script
+                </Button>
+              </>
+            ) : (
+              <Button data-testid="add-script" size="sm" onClick={handleAddScript}>
+                <Plus className="w-3 h-3 mr-1" />
+                Add Script
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

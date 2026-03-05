@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, useRoute } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
@@ -7,9 +7,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ProtoPulseThemeProvider, THEME_PRESETS } from "@/lib/theme-context";
 import { Loader2 } from "lucide-react";
+import { lazy, Suspense } from "react";
 import ProjectWorkspace from "@/pages/ProjectWorkspace";
+import ProjectPickerPage from "@/pages/ProjectPickerPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "@/pages/not-found";
+
+const EmbedViewerPage = lazy(() => import("@/pages/EmbedViewerPage"));
 
 // Apply high-contrast class eagerly to avoid flash of unstyled content.
 // The useHighContrast hook keeps it in sync after React mounts.
@@ -60,23 +64,53 @@ function Router() {
   return (
     <Switch>
       <Route path="/projects/:projectId" component={ProjectWorkspace} />
-      <Route path="/">{() => <Redirect to="/projects/1" />}</Route>
+      <Route path="/" component={ProjectPickerPage} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
+/** Render embed viewer for /embed/* routes — bypasses AuthGate */
+function EmbedRouter() {
+  const [matchData, paramsData] = useRoute("/embed/:data");
+  const [matchShort, paramsShort] = useRoute("/embed/s/:code");
+
+  if (matchShort) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>}>
+        <EmbedViewerPage codeParam={paramsShort.code} />
+      </Suspense>
+    );
+  }
+
+  if (matchData) {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>}>
+        <EmbedViewerPage dataParam={paramsData.data} />
+      </Suspense>
+    );
+  }
+
+  return null;
+}
+
 function App() {
+  const [isEmbed] = useRoute("/embed/*");
+
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <ProtoPulseThemeProvider>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
-            <AuthProvider>
-              <AuthGate>
-                <Router />
-              </AuthGate>
-            </AuthProvider>
+            {isEmbed ? (
+              <EmbedRouter />
+            ) : (
+              <AuthProvider>
+                <AuthGate>
+                  <Router />
+                </AuthGate>
+              </AuthProvider>
+            )}
             <Toaster />
           </TooltipProvider>
         </QueryClientProvider>

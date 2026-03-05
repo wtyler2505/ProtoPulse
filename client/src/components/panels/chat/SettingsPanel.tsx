@@ -1,7 +1,8 @@
 import { memo } from 'react';
-import { Settings2, Eye, EyeOff, ChevronDown, Trash2 } from 'lucide-react';
+import { Settings2, Eye, EyeOff, ChevronDown, Trash2, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AI_MODELS, type RoutingStrategy } from './constants';
+import type { KeyStatus } from '@/hooks/useApiKeyStatus';
 
 interface AIModel {
   id: string;
@@ -26,13 +27,17 @@ interface SettingsPanelProps {
   apiKeyValid: () => boolean;
   onClearApiKey: () => void;
   onClose: () => void;
+  keyStatus?: KeyStatus;
+  keyErrorMessage?: string | null;
+  onValidateKey?: () => void;
+  isValidating?: boolean;
 }
 
 function SettingsPanel({
   aiProvider, setAiProvider, aiModel, setAiModel, aiApiKey, setAiApiKey,
   showApiKey, setShowApiKey, aiTemperature, setAiTemperature,
   customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy,
-  apiKeyValid, onClearApiKey, onClose,
+  apiKeyValid, onClearApiKey, onClose, keyStatus, keyErrorMessage, onValidateKey, isValidating,
 }: SettingsPanelProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
@@ -155,10 +160,40 @@ function SettingsPanel({
             Clear saved key
           </button>
         )}
+        {aiApiKey && apiKeyValid() && onValidateKey && (
+          <button
+            data-testid="test-connection-btn"
+            type="button"
+            onClick={onValidateKey}
+            disabled={isValidating}
+            className={cn(
+              'flex items-center gap-1.5 text-[11px] mt-2 transition-colors font-medium',
+              keyStatus === 'valid'
+                ? 'text-emerald-400'
+                : keyStatus === 'invalid' || keyStatus === 'error'
+                  ? 'text-destructive'
+                  : 'text-primary/70 hover:text-primary',
+              isValidating && 'opacity-60 cursor-not-allowed',
+            )}
+          >
+            {isValidating && <Loader2 className="w-3 h-3 animate-spin" />}
+            {keyStatus === 'valid' && <CheckCircle2 className="w-3 h-3" />}
+            {(keyStatus === 'invalid' || keyStatus === 'error') && <XCircle className="w-3 h-3" />}
+            {isValidating ? 'Testing...' : keyStatus === 'valid' ? 'API key verified' : 'Test Connection'}
+          </button>
+        )}
+        {(keyStatus === 'invalid' || keyStatus === 'error') && keyErrorMessage && (
+          <p className="text-[10px] text-destructive mt-1" data-testid="settings-key-error">
+            {keyErrorMessage}
+          </p>
+        )}
         <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-          Get your key at{' '}
-          <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">console.anthropic.com</a> or{' '}
-          <a href="https://aistudio.google.dev" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">aistudio.google.dev</a>
+          Need a key?{' '}
+          {aiProvider === 'anthropic' ? (
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">console.anthropic.com/settings/keys</a>
+          ) : (
+            <a href="https://aistudio.google.dev/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">aistudio.google.dev/apikeys</a>
+          )}
         </p>
         <p className="text-[10px] text-amber-400/60 mt-1">
           Key is stored in browser localStorage (unencrypted).

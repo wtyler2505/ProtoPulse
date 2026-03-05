@@ -2,7 +2,7 @@ import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle, GitBranch } from 'lucide-react';
+import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle, GitBranch, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import ConfidenceBadge from '@/components/ui/ConfidenceBadge';
@@ -91,6 +91,7 @@ interface MessageBubbleProps {
   onRegenerate?: () => void;
   onRetry?: () => void;
   onBranch?: (messageId: string) => void;
+  onOpenSettings?: () => void;
   isLast: boolean;
   pendingActions: { actions: AIAction[]; messageId: string } | null;
   onAcceptActions: () => void;
@@ -98,7 +99,7 @@ interface MessageBubbleProps {
   tokenInfo?: {input: number; output: number; cost: number} | null;
 }
 
-const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, onBranch, isLast, pendingActions, onAcceptActions, onRejectActions, tokenInfo }: MessageBubbleProps) {
+const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, onBranch, onOpenSettings, isLast, pendingActions, onAcceptActions, onRejectActions, tokenInfo }: MessageBubbleProps) {
   return (
     <div className={cn(
       "flex gap-3 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg",
@@ -143,6 +144,16 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
             <div className="text-xs text-muted-foreground/80 mt-1" data-testid="text-token-info">
               {tokenInfo.input + tokenInfo.output} tokens · ~${tokenInfo.cost.toFixed(4)}
             </div>
+          )}
+          {msg.isError && msg.isKeyError && onOpenSettings && (
+            <button
+              data-testid="update-api-key-btn"
+              onClick={onOpenSettings}
+              className="flex items-center gap-1.5 mt-2 px-2.5 py-1.5 bg-primary/10 border border-primary/20 text-xs text-primary font-medium hover:bg-primary/20 transition-colors"
+            >
+              <Settings2 className="w-3 h-3" />
+              Update API Key
+            </button>
           )}
         </div>
 

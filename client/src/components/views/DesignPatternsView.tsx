@@ -1,12 +1,15 @@
 /**
- * DesignPatternsView — Curated library of circuit design patterns for makers and learners.
+ * DesignPatternsView — Curated library of circuit design patterns for makers and learners,
+ * plus a "My Snippets" tab for managing reusable design fragments.
  *
- * Card grid grouped by category with search, category filter, and difficulty filter.
- * Clicking a card expands it to show full educational content: whyItWorks, components,
+ * Tab 1 "Patterns": Card grid grouped by category with search, category filter, and difficulty filter.
+ * Tab 2 "My Snippets": Snippet library with create/edit/delete, search, category filter.
+ *
+ * Clicking a pattern card expands it to show full educational content: whyItWorks, components,
  * connections, tips, and common mistakes.
  */
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import {
   Search,
   Cpu,
@@ -21,15 +24,33 @@ import {
   AlertTriangle,
   Lightbulb,
   Link,
+  Plus,
+  Pencil,
+  Trash2,
+  Copy,
+  Layers,
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { getAllPatterns, getPatternsByCategory, getPatternsByDifficulty, searchPatterns } from '@/lib/design-patterns';
+import { useDesignSnippets } from '@/lib/design-reuse';
 
 import type { PatternCategory, PatternDifficulty, DesignPattern } from '@/lib/design-patterns';
+import type { SnippetCategory, DesignSnippet, CreateSnippetInput } from '@/lib/design-reuse';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -61,8 +82,32 @@ const DIFFICULTY_COLORS: Record<PatternDifficulty, string> = {
   advanced: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
 };
 
+const SNIPPET_CATEGORY_LABELS: Record<SnippetCategory, string> = {
+  power: 'Power',
+  sensor: 'Sensor',
+  communication: 'Communication',
+  'motor-control': 'Motor Control',
+  filtering: 'Filtering',
+  protection: 'Protection',
+  digital: 'Digital',
+  analog: 'Analog',
+  custom: 'Custom',
+};
+
+const SNIPPET_CATEGORY_COLORS: Record<SnippetCategory, string> = {
+  power: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  sensor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  communication: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  'motor-control': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  filtering: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
+  protection: 'bg-red-500/20 text-red-400 border-red-500/30',
+  digital: 'bg-green-500/20 text-green-400 border-green-500/30',
+  analog: 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+  custom: 'bg-muted text-muted-foreground border-muted',
+};
+
 // ---------------------------------------------------------------------------
-// Sub-components
+// Sub-components (Patterns tab)
 // ---------------------------------------------------------------------------
 
 function DifficultyBadge({ difficulty }: { difficulty: PatternDifficulty }) {
@@ -252,10 +297,10 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main View
+// Patterns Tab Content
 // ---------------------------------------------------------------------------
 
-export default function DesignPatternsView() {
+function PatternsTabContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<PatternCategory | 'all'>('all');
   const [difficultyFilter, setDifficultyFilter] = useState<PatternDifficulty | 'all'>('all');
@@ -263,20 +308,17 @@ export default function DesignPatternsView() {
   const filteredPatterns = useMemo(() => {
     let result: DesignPattern[];
 
-    // Start with search or all
     if (searchQuery.trim()) {
       result = searchPatterns(searchQuery.trim());
     } else {
       result = getAllPatterns();
     }
 
-    // Apply category filter
     if (categoryFilter !== 'all') {
       const categoryIds = new Set(getPatternsByCategory(categoryFilter).map((p) => p.id));
       result = result.filter((p) => categoryIds.has(p.id));
     }
 
-    // Apply difficulty filter
     if (difficultyFilter !== 'all') {
       const difficultyIds = new Set(getPatternsByDifficulty(difficultyFilter).map((p) => p.id));
       result = result.filter((p) => difficultyIds.has(p.id));
@@ -285,7 +327,6 @@ export default function DesignPatternsView() {
     return result;
   }, [searchQuery, categoryFilter, difficultyFilter]);
 
-  // Group patterns by category for display
   const groupedPatterns = useMemo(() => {
     const groups = new Map<PatternCategory, DesignPattern[]>();
     for (const p of filteredPatterns) {
@@ -296,6 +337,566 @@ export default function DesignPatternsView() {
     return groups;
   }, [filteredPatterns]);
 
+  return (
+    <div className="space-y-6">
+      {/* Filters */}
+      <div data-testid="design-patterns-filters" className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            data-testid="design-patterns-search"
+            placeholder="Search patterns..."
+            value={searchQuery}
+            onChange={(e) => { setSearchQuery(e.target.value); }}
+            className="pl-8"
+          />
+        </div>
+        <Select
+          value={categoryFilter}
+          onValueChange={(v) => { setCategoryFilter(v as PatternCategory | 'all'); }}
+        >
+          <SelectTrigger data-testid="design-patterns-category-filter" className="w-full sm:w-[160px]">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {(Object.keys(CATEGORY_LABELS) as PatternCategory[]).map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {CATEGORY_LABELS[cat]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={difficultyFilter}
+          onValueChange={(v) => { setDifficultyFilter(v as PatternDifficulty | 'all'); }}
+        >
+          <SelectTrigger data-testid="design-patterns-difficulty-filter" className="w-full sm:w-[160px]">
+            <SelectValue placeholder="Difficulty" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Levels</SelectItem>
+            <SelectItem value="beginner">Beginner</SelectItem>
+            <SelectItem value="intermediate">Intermediate</SelectItem>
+            <SelectItem value="advanced">Advanced</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Results count */}
+      <div className="text-xs text-muted-foreground">
+        Showing {filteredPatterns.length} of {getAllPatterns().length} patterns
+      </div>
+
+      {/* Grouped cards */}
+      {filteredPatterns.length === 0 ? (
+        <div
+          data-testid="design-patterns-empty"
+          className="text-center py-12 text-muted-foreground"
+        >
+          <Search className="w-8 h-8 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No patterns match your filters.</p>
+          <p className="text-xs mt-1">Try a different search term or clear filters.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {Array.from(groupedPatterns.entries()).map(([category, patterns]) => {
+            const CategoryIcon = CATEGORY_ICONS[category];
+            return (
+              <div key={category} data-testid={`pattern-group-${category}`}>
+                <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <CategoryIcon className="w-4 h-4 text-[#00F0FF]" />
+                  {CATEGORY_LABELS[category]}
+                  <span className="text-xs text-muted-foreground font-normal">
+                    ({patterns.length})
+                  </span>
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {patterns.map((pattern) => (
+                    <PatternCard key={pattern.id} pattern={pattern} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Snippet Card
+// ---------------------------------------------------------------------------
+
+function SnippetCard({
+  snippet,
+  onEdit,
+  onDelete,
+  onDuplicate,
+}: {
+  snippet: DesignSnippet;
+  onEdit: (snippet: DesignSnippet) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (snippet: DesignSnippet) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isBuiltin = snippet.id.startsWith('builtin-');
+
+  return (
+    <Card
+      data-testid={`snippet-card-${snippet.id}`}
+      className="bg-card/60 backdrop-blur-xl border-border hover:border-[#00F0FF]/30 transition-colors cursor-pointer"
+      onClick={() => { setExpanded((prev) => !prev); }}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+            <Layers className="w-4 h-4 text-[#00F0FF] shrink-0" />
+            {snippet.name}
+          </CardTitle>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Badge
+              variant="outline"
+              className={cn('text-[10px] capitalize', SNIPPET_CATEGORY_COLORS[snippet.category])}
+            >
+              {SNIPPET_CATEGORY_LABELS[snippet.category]}
+            </Badge>
+            {expanded ? (
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            )}
+          </div>
+        </div>
+        <CardDescription className="text-xs leading-relaxed mt-1">
+          {snippet.description || 'No description.'}
+        </CardDescription>
+      </CardHeader>
+
+      {expanded && (
+        <CardContent
+          data-testid={`snippet-detail-${snippet.id}`}
+          className="space-y-3 pt-0"
+          onClick={(e) => { e.stopPropagation(); }}
+        >
+          {/* Stats */}
+          <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+            <span data-testid={`snippet-nodes-${snippet.id}`}>
+              {snippet.nodes.length} node{snippet.nodes.length !== 1 ? 's' : ''}
+            </span>
+            <span data-testid={`snippet-edges-${snippet.id}`}>
+              {snippet.edges.length} edge{snippet.edges.length !== 1 ? 's' : ''}
+            </span>
+            <span data-testid={`snippet-wires-${snippet.id}`}>
+              {snippet.wires.length} wire{snippet.wires.length !== 1 ? 's' : ''}
+            </span>
+            {snippet.metadata.usageCount > 0 && (
+              <span>Used {snippet.metadata.usageCount}x</span>
+            )}
+          </div>
+
+          {/* Nodes list */}
+          {snippet.nodes.length > 0 && (
+            <div>
+              <h4 className="text-[10px] font-semibold text-[#00F0FF] uppercase tracking-wider mb-1">
+                Nodes
+              </h4>
+              <div className="space-y-1">
+                {snippet.nodes.map((node) => (
+                  <div
+                    key={node.id}
+                    className="rounded bg-muted/30 px-2 py-1 text-[10px]"
+                    data-testid={`snippet-node-${snippet.id}-${node.id}`}
+                  >
+                    <span className="font-medium text-foreground">{node.label}</span>
+                    <span className="text-muted-foreground ml-1.5">({node.type})</span>
+                    {node.properties.value != null && (
+                      <span className="font-mono text-[#00F0FF] ml-1.5">{String(node.properties.value)}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tags */}
+          {snippet.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {snippet.tags.map((tag) => (
+                <Badge
+                  key={tag}
+                  variant="outline"
+                  className="text-[9px] px-1.5 py-0 border-border/50 text-muted-foreground"
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          <div className="flex items-center gap-1.5 pt-1 border-t border-border/50">
+            {!isBuiltin && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] px-2"
+                  onClick={() => { onEdit(snippet); }}
+                  data-testid={`snippet-edit-${snippet.id}`}
+                >
+                  <Pencil className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] px-2 text-destructive hover:text-destructive"
+                  onClick={() => { onDelete(snippet.id); }}
+                  data-testid={`snippet-delete-${snippet.id}`}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Delete
+                </Button>
+              </>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[10px] px-2"
+              onClick={() => { onDuplicate(snippet); }}
+              data-testid={`snippet-duplicate-${snippet.id}`}
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              Duplicate
+            </Button>
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Create/Edit Snippet Dialog
+// ---------------------------------------------------------------------------
+
+function SnippetFormDialog({
+  open,
+  onOpenChange,
+  editSnippet,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  editSnippet: DesignSnippet | null;
+  onSave: (input: CreateSnippetInput, editId?: string) => void;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<SnippetCategory>('custom');
+  const [tagsInput, setTagsInput] = useState('');
+
+  // Populate form when editing
+  const resetForm = useCallback((snippet: DesignSnippet | null) => {
+    if (snippet) {
+      setName(snippet.name);
+      setDescription(snippet.description);
+      setCategory(snippet.category);
+      setTagsInput(snippet.tags.join(', '));
+    } else {
+      setName('');
+      setDescription('');
+      setCategory('custom');
+      setTagsInput('');
+    }
+  }, []);
+
+  // Reset when dialog opens/closes or editSnippet changes
+  useState(() => { resetForm(editSnippet); });
+
+  // Use effect to reset form when dialog becomes open
+  // (useState initializer only runs once)
+  const handleOpenChange = useCallback((v: boolean) => {
+    if (v) {
+      resetForm(editSnippet);
+    }
+    onOpenChange(v);
+  }, [editSnippet, onOpenChange, resetForm]);
+
+  const handleSubmit = useCallback(() => {
+    if (!name.trim()) {
+      return;
+    }
+
+    const tags = tagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+
+    const input: CreateSnippetInput = {
+      name: name.trim(),
+      description: description.trim(),
+      category,
+      tags,
+    };
+
+    // If editing, preserve nodes/edges/wires from the existing snippet
+    if (editSnippet) {
+      input.nodes = editSnippet.nodes;
+      input.edges = editSnippet.edges;
+      input.wires = editSnippet.wires;
+    }
+
+    onSave(input, editSnippet?.id);
+    onOpenChange(false);
+  }, [name, description, category, tagsInput, editSnippet, onSave, onOpenChange]);
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-md" data-testid="snippet-form-dialog">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-sm">
+            <Layers className="h-4 w-4 text-[#00F0FF]" />
+            {editSnippet ? 'Edit Snippet' : 'Create Snippet'}
+          </DialogTitle>
+          <DialogDescription className="text-xs">
+            {editSnippet
+              ? 'Update the snippet metadata. Nodes and edges are preserved.'
+              : 'Create a new reusable design snippet.'}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs">Name</Label>
+            <Input
+              value={name}
+              onChange={(e) => { setName(e.target.value); }}
+              placeholder="e.g., H-Bridge Motor Driver"
+              className="mt-1"
+              data-testid="snippet-form-name"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs">Description</Label>
+            <Input
+              value={description}
+              onChange={(e) => { setDescription(e.target.value); }}
+              placeholder="Brief description of the snippet..."
+              className="mt-1"
+              data-testid="snippet-form-description"
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs">Category</Label>
+            <Select value={category} onValueChange={(v) => { setCategory(v as SnippetCategory); }}>
+              <SelectTrigger className="mt-1" data-testid="snippet-form-category">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(SNIPPET_CATEGORY_LABELS) as SnippetCategory[]).map((cat) => (
+                  <SelectItem key={cat} value={cat}>
+                    {SNIPPET_CATEGORY_LABELS[cat]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label className="text-xs">Tags (comma-separated)</Label>
+            <Input
+              value={tagsInput}
+              onChange={(e) => { setTagsInput(e.target.value); }}
+              placeholder="e.g., motor, h-bridge, pwm"
+              className="mt-1"
+              data-testid="snippet-form-tags"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { onOpenChange(false); }}
+            data-testid="snippet-form-cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!name.trim()}
+            data-testid="snippet-form-save"
+          >
+            {editSnippet ? 'Save Changes' : 'Create Snippet'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// My Snippets Tab Content
+// ---------------------------------------------------------------------------
+
+function MySnippetsTabContent() {
+  const {
+    snippets,
+    addSnippet,
+    removeSnippet,
+    updateSnippet,
+    search: searchSnippets,
+    getByCategory,
+  } = useDesignSnippets();
+
+  const [snippetSearch, setSnippetSearch] = useState('');
+  const [snippetCategoryFilter, setSnippetCategoryFilter] = useState<SnippetCategory | 'all'>('all');
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingSnippet, setEditingSnippet] = useState<DesignSnippet | null>(null);
+
+  const filteredSnippets = useMemo(() => {
+    let result: DesignSnippet[];
+
+    if (snippetSearch.trim()) {
+      result = searchSnippets(snippetSearch.trim());
+    } else {
+      result = snippets;
+    }
+
+    if (snippetCategoryFilter !== 'all') {
+      const categorySnippets = new Set(getByCategory(snippetCategoryFilter).map((s) => s.id));
+      result = result.filter((s) => categorySnippets.has(s.id));
+    }
+
+    return result;
+  }, [snippets, snippetSearch, snippetCategoryFilter, searchSnippets, getByCategory]);
+
+  const handleCreateNew = useCallback(() => {
+    setEditingSnippet(null);
+    setFormOpen(true);
+  }, []);
+
+  const handleEdit = useCallback((snippet: DesignSnippet) => {
+    setEditingSnippet(snippet);
+    setFormOpen(true);
+  }, []);
+
+  const handleDelete = useCallback((id: string) => {
+    removeSnippet(id);
+  }, [removeSnippet]);
+
+  const handleDuplicate = useCallback((snippet: DesignSnippet) => {
+    addSnippet({
+      name: `${snippet.name} (Copy)`,
+      description: snippet.description,
+      category: snippet.category,
+      tags: [...snippet.tags],
+      nodes: snippet.nodes,
+      edges: snippet.edges,
+      wires: snippet.wires,
+    });
+  }, [addSnippet]);
+
+  const handleSave = useCallback((input: CreateSnippetInput, editId?: string) => {
+    if (editId) {
+      updateSnippet(editId, input);
+    } else {
+      addSnippet(input);
+    }
+  }, [addSnippet, updateSnippet]);
+
+  return (
+    <div className="space-y-6">
+      {/* Filters and Create button */}
+      <div className="flex flex-col sm:flex-row gap-3" data-testid="snippets-filters">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            data-testid="snippets-search"
+            placeholder="Search snippets..."
+            value={snippetSearch}
+            onChange={(e) => { setSnippetSearch(e.target.value); }}
+            className="pl-8"
+          />
+        </div>
+        <Select
+          value={snippetCategoryFilter}
+          onValueChange={(v) => { setSnippetCategoryFilter(v as SnippetCategory | 'all'); }}
+        >
+          <SelectTrigger data-testid="snippets-category-filter" className="w-full sm:w-[160px]">
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {(Object.keys(SNIPPET_CATEGORY_LABELS) as SnippetCategory[]).map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {SNIPPET_CATEGORY_LABELS[cat]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          onClick={handleCreateNew}
+          data-testid="snippets-create-btn"
+        >
+          <Plus className="h-4 w-4 mr-1.5" />
+          Create
+        </Button>
+      </div>
+
+      {/* Results count */}
+      <div className="text-xs text-muted-foreground">
+        Showing {filteredSnippets.length} of {snippets.length} snippets
+      </div>
+
+      {/* Snippets grid */}
+      {filteredSnippets.length === 0 ? (
+        <div
+          data-testid="snippets-empty"
+          className="text-center py-12 text-muted-foreground"
+        >
+          <Layers className="w-8 h-8 mx-auto mb-3 opacity-40" />
+          <p className="text-sm">No snippets match your filters.</p>
+          <p className="text-xs mt-1">Create a new snippet or try different search terms.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="snippets-grid">
+          {filteredSnippets.map((snippet) => (
+            <SnippetCard
+              key={snippet.id}
+              snippet={snippet}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onDuplicate={handleDuplicate}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Create/Edit dialog */}
+      <SnippetFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        editSnippet={editingSnippet}
+        onSave={handleSave}
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main View
+// ---------------------------------------------------------------------------
+
+export default function DesignPatternsView() {
   return (
     <div
       data-testid="design-patterns-view"
@@ -312,88 +913,25 @@ export default function DesignPatternsView() {
           </p>
         </div>
 
-        {/* Filters */}
-        <div data-testid="design-patterns-filters" className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              data-testid="design-patterns-search"
-              placeholder="Search patterns..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); }}
-              className="pl-8"
-            />
-          </div>
-          <Select
-            value={categoryFilter}
-            onValueChange={(v) => { setCategoryFilter(v as PatternCategory | 'all'); }}
-          >
-            <SelectTrigger data-testid="design-patterns-category-filter" className="w-full sm:w-[160px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {(Object.keys(CATEGORY_LABELS) as PatternCategory[]).map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {CATEGORY_LABELS[cat]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={difficultyFilter}
-            onValueChange={(v) => { setDifficultyFilter(v as PatternDifficulty | 'all'); }}
-          >
-            <SelectTrigger data-testid="design-patterns-difficulty-filter" className="w-full sm:w-[160px]">
-              <SelectValue placeholder="Difficulty" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Levels</SelectItem>
-              <SelectItem value="beginner">Beginner</SelectItem>
-              <SelectItem value="intermediate">Intermediate</SelectItem>
-              <SelectItem value="advanced">Advanced</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Tabs: Patterns | My Snippets */}
+        <Tabs defaultValue="patterns" data-testid="design-patterns-tabs">
+          <TabsList data-testid="design-patterns-tabslist">
+            <TabsTrigger value="patterns" data-testid="tab-patterns">
+              Patterns
+            </TabsTrigger>
+            <TabsTrigger value="snippets" data-testid="tab-snippets">
+              My Snippets
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Results count */}
-        <div className="text-xs text-muted-foreground">
-          Showing {filteredPatterns.length} of {getAllPatterns().length} patterns
-        </div>
+          <TabsContent value="patterns" data-testid="tab-content-patterns">
+            <PatternsTabContent />
+          </TabsContent>
 
-        {/* Grouped cards */}
-        {filteredPatterns.length === 0 ? (
-          <div
-            data-testid="design-patterns-empty"
-            className="text-center py-12 text-muted-foreground"
-          >
-            <Search className="w-8 h-8 mx-auto mb-3 opacity-40" />
-            <p className="text-sm">No patterns match your filters.</p>
-            <p className="text-xs mt-1">Try a different search term or clear filters.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {Array.from(groupedPatterns.entries()).map(([category, patterns]) => {
-              const CategoryIcon = CATEGORY_ICONS[category];
-              return (
-                <div key={category} data-testid={`pattern-group-${category}`}>
-                  <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <CategoryIcon className="w-4 h-4 text-[#00F0FF]" />
-                    {CATEGORY_LABELS[category]}
-                    <span className="text-xs text-muted-foreground font-normal">
-                      ({patterns.length})
-                    </span>
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {patterns.map((pattern) => (
-                      <PatternCard key={pattern.id} pattern={pattern} />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+          <TabsContent value="snippets" data-testid="tab-content-snippets">
+            <MySnippetsTabContent />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

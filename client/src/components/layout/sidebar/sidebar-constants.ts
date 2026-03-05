@@ -9,6 +9,12 @@ import {
   CircuitBoard,
   Grid3X3,
   Microchip,
+  KanbanSquare,
+  BookMarked,
+  Box,
+  Globe,
+  ShoppingBag,
+  Warehouse,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -27,5 +33,11 @@ export const navItems: NavItem[] = [
   { icon: Package, view: 'procurement', label: 'Procurement' },
   { icon: Activity, view: 'validation', label: 'Validation' },
   { icon: Zap, view: 'simulation', label: 'Simulation' },
+  { icon: KanbanSquare, view: 'kanban', label: 'Tasks' },
+  { icon: BookMarked, view: 'knowledge', label: 'Learn' },
+  { icon: Box, view: 'viewer_3d', label: '3D View' },
+  { icon: Globe, view: 'community', label: 'Community' },
+  { icon: ShoppingBag, view: 'ordering', label: 'Order PCB' },
+  { icon: Warehouse, view: 'storage', label: 'Inventory' },
   { icon: TerminalSquare, view: 'output', label: 'Output' },
 ];

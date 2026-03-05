@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Connection, Edge, Node, ReactFlowProvider, useReactFlow } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useDroppable, useDndMonitor } from '@dnd-kit/core';
@@ -6,16 +6,20 @@ import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useChat } from '@/lib/contexts/chat-context';
 import { useOutput } from '@/lib/contexts/output-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useBom } from '@/lib/contexts/bom-context';
 import { useDndState, type ComponentDragData } from '@/lib/dnd-context';
 import CustomNode from './CustomNode';
 import AssetManager from '@/components/panels/AssetManager';
 import { cn } from '@/lib/utils';
-import { MousePointer2, Grid, Move, Maximize, Cpu, Component, Pencil } from 'lucide-react';
+import { MousePointer2, Grid, Move, Maximize, Cpu, Component, Pencil, Brain, X, RefreshCw, Zap, AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from '@/components/ui/context-menu';
+import { Badge } from '@/components/ui/badge';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useSyncedFlowState } from '@/hooks/useSyncedFlowState';
 import { useToast } from '@/hooks/use-toast';
+import { ArchitectureAnalyzer } from '@/lib/architecture-analyzer';
+import type { DesignAnalysisReport, SubsystemCategory, ComplexityLevel } from '@/lib/architecture-analyzer';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -28,11 +32,35 @@ const toolLabels: Record<string, string> = {
   fit: 'Fit view to canvas',
 };
 
+const SUBSYSTEM_COLORS: Record<SubsystemCategory, string> = {
+  power: 'bg-red-500/20 text-red-400 border-red-500/30',
+  sensing: 'bg-green-500/20 text-green-400 border-green-500/30',
+  control: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  communication: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  actuation: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  protection: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  'user-interface': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+  unknown: 'bg-muted text-muted-foreground border-border',
+};
+
+const COMPLEXITY_COLORS: Record<ComplexityLevel, string> = {
+  simple: 'bg-green-500/20 text-green-400',
+  moderate: 'bg-yellow-500/20 text-yellow-400',
+  complex: 'bg-red-500/20 text-red-400',
+};
+
+const PRIORITY_COLORS: Record<string, string> = {
+  high: 'bg-red-500/20 text-red-400',
+  medium: 'bg-yellow-500/20 text-yellow-400',
+  low: 'bg-green-500/20 text-green-400',
+};
+
 function ArchitectureFlow() {
   const { nodes, edges, setNodes, setEdges, focusNodeId, selectedNodeId, setSelectedNodeId, pushUndoState, undo, redo, setPendingComponentPartId } = useArchitecture();
   const { isGenerating, addMessage, setIsGenerating } = useChat();
   const { addOutputLog } = useOutput();
   const { setActiveView } = useProjectMeta();
+  const { bom } = useBom();
   const { toast } = useToast();
   const { activeDrag } = useDndState();
   const contextMenuHintShown = useRef(false);
@@ -43,6 +71,63 @@ function ArchitectureFlow() {
   const [showAssetManager, setShowAssetManager] = useState(true);
   const [activeTool, setActiveTool] = useState<'select' | 'pan'>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
+
+  // Analysis panel state
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [analysisReport, setAnalysisReport] = useState<DesignAnalysisReport | null>(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    subsystems: true,
+    patterns: true,
+    power: false,
+    suggestions: true,
+    roles: false,
+    education: false,
+  });
+
+  const analyzer = useMemo(() => new ArchitectureAnalyzer(), []);
+
+  const runAnalysis = useCallback(() => {
+    setAnalysisLoading(true);
+    // Use setTimeout to avoid blocking the UI thread
+    setTimeout(() => {
+      const analysisNodes = nodes.map((n) => ({
+        id: n.id,
+        label: (n.data as Record<string, unknown>)?.label as string ?? n.id,
+        type: (n.data as Record<string, unknown>)?.type as string | undefined,
+      }));
+      const analysisEdges = edges.map((e) => ({
+        source: e.source,
+        target: e.target,
+        label: typeof e.label === 'string' ? e.label : undefined,
+      }));
+      const analysisBom = bom.map((b) => ({
+        name: b.description || b.partNumber,
+        category: undefined,
+        value: undefined,
+        quantity: b.quantity,
+      }));
+      const report = analyzer.analyze({
+        nodes: analysisNodes,
+        edges: analysisEdges,
+        bomItems: analysisBom,
+      });
+      setAnalysisReport(report);
+      setAnalysisLoading(false);
+      addOutputLog(`[ARCH] Analysis complete: ${report.designType} (${report.complexity})`);
+    }, 0);
+  }, [nodes, edges, bom, analyzer, addOutputLog]);
+
+  const handleToggleAnalysis = useCallback(() => {
+    if (!showAnalysis) {
+      runAnalysis();
+    }
+    setShowAnalysis((prev) => !prev);
+  }, [showAnalysis, runAnalysis]);
+
+  const toggleSection = useCallback((section: string) => {
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }, []);
 
   const [localNodes, setLocalNodes, onNodesChange] = useNodesState(nodes);
   const [localEdges, setLocalEdges, onEdgesChange] = useEdgesState(edges);
@@ -455,6 +540,20 @@ function ArchitectureFlow() {
                 </button>
               </StyledTooltip>
             ))}
+            <div className="w-px h-5 bg-border mx-0.5" />
+            <StyledTooltip content={showAnalysis ? 'Close analysis' : 'Analyze design'} side="bottom">
+              <button
+                data-testid="tool-analyze"
+                aria-label="Analyze design"
+                className={cn(
+                  "p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors focus-ring",
+                  showAnalysis && "bg-primary/20 text-primary border border-primary/40",
+                )}
+                onClick={handleToggleAnalysis}
+              >
+                <Brain className="w-5 h-5" />
+              </button>
+            </StyledTooltip>
           </div>
 
           <ReactFlow
@@ -507,6 +606,266 @@ function ArchitectureFlow() {
                   <span className="w-3 h-0.5 bg-yellow-400 inline-block" />
                   <span className="text-[9px] text-muted-foreground">Control</span>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Analysis slide-over panel */}
+          {showAnalysis && (
+            <div
+              className="absolute top-0 right-0 bottom-0 z-20 w-[340px] max-w-[90%] bg-card/95 backdrop-blur-xl border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-200"
+              data-testid="analysis-panel"
+            >
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
+                <div className="flex items-center gap-2">
+                  <Brain className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-bold text-foreground" data-testid="analysis-panel-title">Design Analysis</h3>
+                </div>
+                <div className="flex items-center gap-1">
+                  <StyledTooltip content="Re-run analysis" side="bottom">
+                    <button
+                      data-testid="analysis-refresh"
+                      aria-label="Refresh analysis"
+                      className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={runAnalysis}
+                      disabled={analysisLoading}
+                    >
+                      <RefreshCw className={cn("w-4 h-4", analysisLoading && "animate-spin")} />
+                    </button>
+                  </StyledTooltip>
+                  <button
+                    data-testid="analysis-close"
+                    aria-label="Close analysis panel"
+                    className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setShowAnalysis(false)}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {analysisLoading && (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3" data-testid="analysis-loading">
+                    <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin" />
+                    <p className="text-xs text-muted-foreground">Analyzing design...</p>
+                  </div>
+                )}
+
+                {!analysisLoading && analysisReport && (
+                  <>
+                    {/* Summary */}
+                    <div className="space-y-2" data-testid="analysis-summary">
+                      <p className="text-xs text-muted-foreground leading-relaxed">{analysisReport.summary}</p>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge variant="outline" className="text-[10px]" data-testid="analysis-design-type">
+                          {analysisReport.designType}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn("text-[10px]", COMPLEXITY_COLORS[analysisReport.complexity])}
+                          data-testid="analysis-complexity"
+                        >
+                          {analysisReport.complexity}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    {/* Subsystems */}
+                    <div data-testid="analysis-subsystems">
+                      <button
+                        className="flex items-center justify-between w-full text-left"
+                        onClick={() => toggleSection('subsystems')}
+                        data-testid="analysis-toggle-subsystems"
+                      >
+                        <span className="text-xs font-semibold text-foreground">Subsystems ({analysisReport.subsystems.length})</span>
+                        {expandedSections.subsystems ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </button>
+                      {expandedSections.subsystems && (
+                        <div className="mt-2 space-y-1.5">
+                          {analysisReport.subsystems.map((sub, i) => (
+                            <div
+                              key={`${sub.category}-${i}`}
+                              className={cn("px-2.5 py-2 border text-[10px]", SUBSYSTEM_COLORS[sub.category])}
+                              data-testid={`analysis-subsystem-${sub.category}`}
+                            >
+                              <div className="font-semibold">{sub.name}</div>
+                              <div className="opacity-80 mt-0.5">{sub.description}</div>
+                              <div className="opacity-60 mt-0.5">{sub.nodeIds.length} component{sub.nodeIds.length !== 1 ? 's' : ''}</div>
+                            </div>
+                          ))}
+                          {analysisReport.subsystems.length === 0 && (
+                            <p className="text-[10px] text-muted-foreground italic">No subsystems detected</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Detected Patterns */}
+                    <div data-testid="analysis-patterns">
+                      <button
+                        className="flex items-center justify-between w-full text-left"
+                        onClick={() => toggleSection('patterns')}
+                        data-testid="analysis-toggle-patterns"
+                      >
+                        <span className="text-xs font-semibold text-foreground">Detected Patterns ({analysisReport.detectedPatterns.length})</span>
+                        {expandedSections.patterns ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </button>
+                      {expandedSections.patterns && (
+                        <div className="mt-2 space-y-1.5">
+                          {analysisReport.detectedPatterns.map((pat, i) => (
+                            <div key={`${pat.name}-${i}`} className="px-2.5 py-2 bg-muted/30 border border-border text-[10px]">
+                              <div className="font-semibold text-foreground">{pat.name}</div>
+                              <div className="text-muted-foreground mt-0.5">{pat.description}</div>
+                              <div className="text-muted-foreground/60 mt-0.5">
+                                Confidence: {Math.round(pat.confidence * 100)}% | {pat.nodeIds.length} node{pat.nodeIds.length !== 1 ? 's' : ''}
+                              </div>
+                            </div>
+                          ))}
+                          {analysisReport.detectedPatterns.length === 0 && (
+                            <p className="text-[10px] text-muted-foreground italic">No patterns detected</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Power Architecture */}
+                    <div data-testid="analysis-power">
+                      <button
+                        className="flex items-center justify-between w-full text-left"
+                        onClick={() => toggleSection('power')}
+                        data-testid="analysis-toggle-power"
+                      >
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                          <Zap className="w-3 h-3 text-yellow-400" />
+                          Power Architecture
+                        </span>
+                        {expandedSections.power ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </button>
+                      {expandedSections.power && (
+                        <div className="mt-2 space-y-1 text-[10px]">
+                          {analysisReport.powerArchitecture.sources.length > 0 && (
+                            <div className="px-2.5 py-1.5 bg-red-500/10 border border-red-500/20">
+                              <span className="font-semibold text-red-400">Sources:</span>{' '}
+                              <span className="text-muted-foreground">{analysisReport.powerArchitecture.sources.join(', ')}</span>
+                            </div>
+                          )}
+                          {analysisReport.powerArchitecture.regulators.length > 0 && (
+                            <div className="px-2.5 py-1.5 bg-orange-500/10 border border-orange-500/20">
+                              <span className="font-semibold text-orange-400">Regulators:</span>{' '}
+                              <span className="text-muted-foreground">{analysisReport.powerArchitecture.regulators.join(', ')}</span>
+                            </div>
+                          )}
+                          {analysisReport.powerArchitecture.voltageDomains.length > 0 && (
+                            <div className="px-2.5 py-1.5 bg-yellow-500/10 border border-yellow-500/20">
+                              <span className="font-semibold text-yellow-400">Voltage Domains:</span>{' '}
+                              <span className="text-muted-foreground">{analysisReport.powerArchitecture.voltageDomains.join(', ')}</span>
+                            </div>
+                          )}
+                          {analysisReport.powerArchitecture.distribution && (
+                            <div className="px-2.5 py-1.5 bg-muted/30 border border-border">
+                              <span className="font-semibold text-foreground">Distribution:</span>{' '}
+                              <span className="text-muted-foreground">{analysisReport.powerArchitecture.distribution}</span>
+                            </div>
+                          )}
+                          {analysisReport.powerArchitecture.sources.length === 0 &&
+                            analysisReport.powerArchitecture.regulators.length === 0 && (
+                            <p className="text-muted-foreground italic px-2.5">No power architecture detected</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Suggestions */}
+                    <div data-testid="analysis-suggestions">
+                      <button
+                        className="flex items-center justify-between w-full text-left"
+                        onClick={() => toggleSection('suggestions')}
+                        data-testid="analysis-toggle-suggestions"
+                      >
+                        <span className="text-xs font-semibold text-foreground">Suggestions ({analysisReport.suggestions.length})</span>
+                        {expandedSections.suggestions ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </button>
+                      {expandedSections.suggestions && (
+                        <div className="mt-2 space-y-1.5">
+                          {analysisReport.suggestions.map((sug, i) => (
+                            <div key={`sug-${i}`} className="px-2.5 py-2 bg-muted/30 border border-border text-[10px]">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                {sug.priority === 'high' && <AlertTriangle className="w-3 h-3 text-red-400 shrink-0" />}
+                                {sug.priority === 'medium' && <Info className="w-3 h-3 text-yellow-400 shrink-0" />}
+                                {sug.priority === 'low' && <Info className="w-3 h-3 text-green-400 shrink-0" />}
+                                <span className="font-semibold text-foreground">{sug.suggestion}</span>
+                                <Badge variant="outline" className={cn("text-[8px] ml-auto shrink-0", PRIORITY_COLORS[sug.priority])}>
+                                  {sug.priority}
+                                </Badge>
+                              </div>
+                              <div className="text-muted-foreground">{sug.reason}</div>
+                            </div>
+                          ))}
+                          {analysisReport.suggestions.length === 0 && (
+                            <p className="text-[10px] text-muted-foreground italic">No suggestions</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Component Roles */}
+                    <div data-testid="analysis-roles">
+                      <button
+                        className="flex items-center justify-between w-full text-left"
+                        onClick={() => toggleSection('roles')}
+                        data-testid="analysis-toggle-roles"
+                      >
+                        <span className="text-xs font-semibold text-foreground">Component Roles ({analysisReport.componentRoles.length})</span>
+                        {expandedSections.roles ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </button>
+                      {expandedSections.roles && (
+                        <div className="mt-2 space-y-1">
+                          {analysisReport.componentRoles.map((role) => (
+                            <div key={role.nodeId} className="flex items-center justify-between px-2.5 py-1 bg-muted/20 border border-border/50 text-[10px]">
+                              <span className="text-foreground font-medium truncate mr-2">{role.label}</span>
+                              <span className="text-muted-foreground shrink-0">{role.role}</span>
+                            </div>
+                          ))}
+                          {analysisReport.componentRoles.length === 0 && (
+                            <p className="text-[10px] text-muted-foreground italic">No roles assigned</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Educational Notes */}
+                    <div data-testid="analysis-education">
+                      <button
+                        className="flex items-center justify-between w-full text-left"
+                        onClick={() => toggleSection('education')}
+                        data-testid="analysis-toggle-education"
+                      >
+                        <span className="text-xs font-semibold text-foreground">Educational Notes ({analysisReport.educationalNotes.length})</span>
+                        {expandedSections.education ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </button>
+                      {expandedSections.education && (
+                        <div className="mt-2 space-y-1">
+                          {analysisReport.educationalNotes.map((note, i) => (
+                            <div key={`edu-${i}`} className="px-2.5 py-1.5 bg-primary/5 border border-primary/10 text-[10px] text-muted-foreground">
+                              {note}
+                            </div>
+                          ))}
+                          {analysisReport.educationalNotes.length === 0 && (
+                            <p className="text-[10px] text-muted-foreground italic">No educational notes</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {!analysisLoading && !analysisReport && (
+                  <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+                    <Brain className="w-8 h-8 text-muted-foreground opacity-50" />
+                    <p className="text-xs text-muted-foreground">Click Refresh to analyze your design</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
