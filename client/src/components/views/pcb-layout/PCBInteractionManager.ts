@@ -33,6 +33,7 @@ export interface CanvasCallbacks {
   setSelectedWireId: (id: number | null) => void;
   setTracePoints: (updater: (prev: Point[]) => Point[]) => void;
   setMouseBoardPos: (pos: Point | null) => void;
+  setInstanceRotation: (instanceId: number, rotation: number) => void;
 }
 
 export interface TraceFinishParams {
@@ -117,6 +118,9 @@ export function handleKeyDown(
   selectedWireId: number | null,
   deleteParams: DeleteParams,
   callbacks: CanvasCallbacks,
+  selectedInstanceId: number | null = null,
+  tool: PcbTool = 'select',
+  currentRotation: number = 0,
 ): void {
   if (e.key === 'Escape') {
     callbacks.setTracePoints(() => []);
@@ -138,8 +142,16 @@ export function handleKeyDown(
   if (e.key === '3') {
     callbacks.setTool('delete');
   }
+  if (e.key === '4') {
+    callbacks.setTool('via');
+  }
   if (e.key === 'f' || e.key === 'F') {
     callbacks.setActiveLayer(toggleLayer);
+  }
+
+  if ((e.key === 'r' || e.key === 'R') && selectedInstanceId != null && tool === 'select') {
+    const newRotation = (currentRotation + 90) % 360;
+    callbacks.setInstanceRotation(selectedInstanceId, newRotation);
   }
 }
 

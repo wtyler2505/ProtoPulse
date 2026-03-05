@@ -13,7 +13,7 @@
 export type ActiveLayer = 'front' | 'back';
 
 /** Available PCB interaction tools. */
-export type PcbTool = 'select' | 'trace' | 'delete';
+export type PcbTool = 'select' | 'trace' | 'delete' | 'via';
 
 // ---------------------------------------------------------------------------
 // Color palettes

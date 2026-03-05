@@ -445,6 +445,7 @@ describe('PCBInteractionManager', () => {
       setSelectedWireId: overrides.setSelectedWireId ?? (() => undefined),
       setTracePoints: overrides.setTracePoints ?? (() => undefined),
       setMouseBoardPos: overrides.setMouseBoardPos ?? (() => undefined),
+      setInstanceRotation: overrides.setInstanceRotation ?? (() => undefined),
     };
   }
 
@@ -623,7 +624,8 @@ describe('PCBInteractionManager', () => {
       handleKeyDown(makeKeyEvent('1'), null, delParams, cbs);
       handleKeyDown(makeKeyEvent('2'), null, delParams, cbs);
       handleKeyDown(makeKeyEvent('3'), null, delParams, cbs);
-      expect(toolSet).toEqual(['select', 'trace', 'delete']);
+      handleKeyDown(makeKeyEvent('4'), null, delParams, cbs);
+      expect(toolSet).toEqual(['select', 'trace', 'delete', 'via']);
     });
 
     it('f key toggles active layer', () => {

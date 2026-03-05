@@ -183,6 +183,9 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
       setSelectedWireId,
       setTracePoints,
       setMouseBoardPos,
+      setInstanceRotation: (_instanceId: number, _rotation: number) => {
+        // TODO: Wire to updateInstanceMutation in Task #5
+      },
     }),
     [],
   );
@@ -202,13 +205,21 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
     }, () => setTracePoints([]));
   }, [tool, tracePoints, circuitId, activeLayer, traceWidth, nets, createWireMutation]);
 
+  const selectedInstanceRotation = useMemo(() => {
+    if (selectedInstanceId == null || !instances) {
+      return 0;
+    }
+    const inst = instances.find((i) => i.id === selectedInstanceId);
+    return inst?.pcbRotation ?? 0;
+  }, [selectedInstanceId, instances]);
+
   const handleKey = useCallback(
     (e: React.KeyboardEvent) =>
       onKeyDown(e, selectedWireId, {
         circuitId,
         deleteWire: (params) => deleteWireMutation.mutate(params),
-      }, callbacks),
-    [selectedWireId, circuitId, deleteWireMutation, callbacks],
+      }, callbacks, selectedInstanceId, tool, selectedInstanceRotation),
+    [selectedWireId, circuitId, deleteWireMutation, callbacks, selectedInstanceId, tool, selectedInstanceRotation],
   );
 
   const handleMDown = useCallback(
@@ -348,7 +359,7 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
           <g transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoom})`}>
             <BoardGrid boardWidth={boardWidth} boardHeight={boardHeight} />
             <BackLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
-            <ComponentFootprints instances={instances ?? []} selectedInstanceId={selectedInstanceId} onInstanceClick={handleInstanceClick} />
+            <ComponentFootprints instances={instances ?? []} selectedInstanceId={selectedInstanceId} activeLayer={activeLayer} onInstanceClick={handleInstanceClick} />
             <FrontLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
             <TraceInProgress points={tracePoints} activeLayer={activeLayer} traceWidth={traceWidth} />
             <RatsnestOverlay nets={ratsnestNets} opacity={0.4} showLabels />

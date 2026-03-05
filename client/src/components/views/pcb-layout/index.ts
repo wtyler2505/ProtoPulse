@@ -45,6 +45,8 @@ export {
   buildRatsnestNets,
   isInstancePlaced,
   countPlacedInstances,
+  getFootprintBoundingBox,
+  checkCourtyardCollision,
   footprintFill,
   footprintStroke,
   footprintStrokeWidth,
@@ -78,6 +80,9 @@ export {
   DrcConstraintToggle,
 } from './PCBBoardRenderer';
 export type { DrcConstraintOverlayProps, ClearanceRule } from './PCBBoardRenderer';
+
+export { PadRenderer } from './PadRenderer';
+export type { PadRendererProps } from './PadRenderer';
 
 export {
   BackLayerTraces,

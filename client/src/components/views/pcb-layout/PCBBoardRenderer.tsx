@@ -10,7 +10,10 @@ import { memo } from 'react';
 import { CircuitBoard } from 'lucide-react';
 import { GRID_STEP } from './PCBCoordinateSystem';
 import { footprintFill, footprintStroke, footprintStrokeWidth } from './ComponentPlacer';
+import { PadRenderer } from './PadRenderer';
+import { FootprintLibrary } from '@/lib/pcb/footprint-library';
 import type { CircuitInstanceRow } from '@shared/schema';
+import type { ActiveLayer } from './LayerManager';
 
 // ---------------------------------------------------------------------------
 // Board grid + outline
@@ -59,12 +62,27 @@ const BoardGrid = memo(function BoardGrid({ boardWidth, boardHeight }: BoardGrid
 interface FootprintsProps {
   instances: CircuitInstanceRow[];
   selectedInstanceId: number | null;
+  activeLayer: ActiveLayer;
   onInstanceClick: (instanceId: number, e: React.MouseEvent) => void;
+}
+
+/**
+ * Resolve the package type from an instance's properties JSONB.
+ * Falls back to guessing from the reference designator prefix.
+ */
+function resolvePackageType(inst: CircuitInstanceRow): string | null {
+  const props = (inst.properties ?? {}) as Record<string, unknown>;
+  const explicit = props.packageType as string | undefined;
+  if (explicit && FootprintLibrary.getFootprint(explicit)) {
+    return explicit;
+  }
+  return null;
 }
 
 const ComponentFootprints = memo(function ComponentFootprints({
   instances,
   selectedInstanceId,
+  activeLayer,
   onInstanceClick,
 }: FootprintsProps) {
   return (
@@ -75,11 +93,14 @@ const ComponentFootprints = memo(function ComponentFootprints({
         }
 
         const isSelected = selectedInstanceId === inst.id;
+        const rotation = inst.pcbRotation ?? 0;
+        const packageType = resolvePackageType(inst);
+        const footprint = packageType ? FootprintLibrary.getFootprint(packageType) : null;
 
         return (
           <g
             key={inst.id}
-            transform={`translate(${inst.pcbX}, ${inst.pcbY}) rotate(${inst.pcbRotation ?? 0})`}
+            transform={`translate(${inst.pcbX}, ${inst.pcbY})`}
             className="cursor-move"
             onClick={(e) => {
               e.stopPropagation();
@@ -87,28 +108,110 @@ const ComponentFootprints = memo(function ComponentFootprints({
             }}
             data-testid={`pcb-instance-${inst.id}`}
           >
-            {/* Simplified footprint placeholder — 8x12 rect */}
-            <rect
-              x={-4}
-              y={-6}
-              width={8}
-              height={12}
-              fill={footprintFill(inst.pcbSide)}
-              stroke={footprintStroke(inst.pcbSide, isSelected)}
-              strokeWidth={footprintStrokeWidth(isSelected)}
-              rx={0.5}
-            />
-            <text
-              x={0}
-              y={1}
-              fontSize={3}
-              fill="#aaa"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              pointerEvents="none"
-            >
-              {inst.referenceDesignator}
-            </text>
+            {footprint ? (
+              <>
+                {/* Real footprint pads */}
+                {footprint.pads.map((pad) => (
+                  <PadRenderer
+                    key={pad.number}
+                    pad={pad}
+                    componentX={0}
+                    componentY={0}
+                    rotation={rotation}
+                    scale={1}
+                    selected={isSelected}
+                    activeLayer={activeLayer}
+                  />
+                ))}
+                {/* Silkscreen outline */}
+                {footprint.silkscreen.map((silk, i) => {
+                  if (silk.type === 'rect') {
+                    const p = silk.params;
+                    return (
+                      <rect
+                        key={`silk-${i}`}
+                        x={Number(p.x)}
+                        y={Number(p.y)}
+                        width={Number(p.width)}
+                        height={Number(p.height)}
+                        fill="none"
+                        stroke="#f5f5dc80"
+                        strokeWidth={silk.lineWidth}
+                        transform={rotation ? `rotate(${rotation})` : undefined}
+                      />
+                    );
+                  }
+                  if (silk.type === 'line') {
+                    return (
+                      <line
+                        key={`silk-${i}`}
+                        x1={Number(silk.params.x1)}
+                        y1={Number(silk.params.y1)}
+                        x2={Number(silk.params.x2)}
+                        y2={Number(silk.params.y2)}
+                        stroke="#f5f5dc80"
+                        strokeWidth={silk.lineWidth}
+                        transform={rotation ? `rotate(${rotation})` : undefined}
+                      />
+                    );
+                  }
+                  if (silk.type === 'circle') {
+                    return (
+                      <circle
+                        key={`silk-${i}`}
+                        cx={Number(silk.params.cx)}
+                        cy={Number(silk.params.cy)}
+                        r={Number(silk.params.radius)}
+                        fill="none"
+                        stroke="#f5f5dc80"
+                        strokeWidth={silk.lineWidth}
+                        transform={rotation ? `rotate(${rotation})` : undefined}
+                      />
+                    );
+                  }
+                  return null;
+                })}
+                {/* Reference designator */}
+                <text
+                  x={0}
+                  y={footprint.boundingBox.y + footprint.boundingBox.height + 2}
+                  fontSize={2}
+                  fill="#aaa"
+                  textAnchor="middle"
+                  dominantBaseline="hanging"
+                  pointerEvents="none"
+                  transform={rotation ? `rotate(${rotation})` : undefined}
+                >
+                  {inst.referenceDesignator}
+                </text>
+              </>
+            ) : (
+              <>
+                {/* Fallback: simplified footprint placeholder — 8x12 rect */}
+                <rect
+                  x={-4}
+                  y={-6}
+                  width={8}
+                  height={12}
+                  fill={footprintFill(inst.pcbSide)}
+                  stroke={footprintStroke(inst.pcbSide, isSelected)}
+                  strokeWidth={footprintStrokeWidth(isSelected)}
+                  rx={0.5}
+                  transform={rotation ? `rotate(${rotation})` : undefined}
+                />
+                <text
+                  x={0}
+                  y={1}
+                  fontSize={3}
+                  fill="#aaa"
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  pointerEvents="none"
+                >
+                  {inst.referenceDesignator}
+                </text>
+              </>
+            )}
           </g>
         );
       })}
