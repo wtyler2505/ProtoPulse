@@ -84,6 +84,12 @@ export type { DrcConstraintOverlayProps, ClearanceRule } from './PCBBoardRendere
 export { PadRenderer } from './PadRenderer';
 export type { PadRendererProps } from './PadRenderer';
 
+export { ViaRenderer, ViaOverlay } from './ViaRenderer';
+export type { ViaRendererProps, ViaOverlayProps } from './ViaRenderer';
+
+export { LayerStackPanel } from './LayerStackPanel';
+export type { LayerStackPanelProps } from './LayerStackPanel';
+
 export {
   BackLayerTraces,
   FrontLayerTraces,

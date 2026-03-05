@@ -35,6 +35,7 @@ import {
   ZoomOut,
   RotateCcw,
   FlipHorizontal,
+  Circle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -65,8 +66,11 @@ import {
   BackLayerTraces,
   FrontLayerTraces,
   TraceInProgress,
+  ViaOverlay,
+  LayerStackPanel,
 } from '@/components/views/pcb-layout';
 import type { ActiveLayer, PcbTool, PanState } from '@/components/views/pcb-layout';
+import type { Via } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitWireRow } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -152,6 +156,9 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
   const [boardWidth, setBoardWidth] = useState(DEFAULT_BOARD.width);
   const [boardHeight, setBoardHeight] = useState(DEFAULT_BOARD.height);
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
+  // Via state — populated by via placement tool (Phase 3) and trace-routing via drops
+  const [vias, _setVias] = useState<Via[]>([]);
+  const [selectedViaId, setSelectedViaId] = useState<string | null>(null);
 
   // --- Refs ---
   const svgRef = useRef<SVGSVGElement>(null);
@@ -253,6 +260,7 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
         <ToolButton icon={MousePointer2} label="Select (1)" active={tool === 'select'} onClick={() => setTool('select')} testId="pcb-tool-select" />
         <ToolButton icon={Pencil} label="Trace (2)" active={tool === 'trace'} onClick={() => setTool('trace')} testId="pcb-tool-trace" />
         <ToolButton icon={Trash2} label="Delete (3)" active={tool === 'delete'} onClick={() => setTool('delete')} testId="pcb-tool-delete" />
+        <ToolButton icon={Circle} label="Via (4)" active={tool === 'via'} onClick={() => setTool('via')} testId="pcb-tool-via" />
         <div className="w-px h-4 bg-border mx-1" />
         <button
           data-testid="pcb-layer-toggle"
@@ -362,9 +370,13 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
             <ComponentFootprints instances={instances ?? []} selectedInstanceId={selectedInstanceId} activeLayer={activeLayer} onInstanceClick={handleInstanceClick} />
             <FrontLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
             <TraceInProgress points={tracePoints} activeLayer={activeLayer} traceWidth={traceWidth} />
+            <ViaOverlay vias={vias} selectedViaId={selectedViaId} onViaClick={(id) => setSelectedViaId(id)} />
             <RatsnestOverlay nets={ratsnestNets} opacity={0.4} showLabels />
           </g>
         </svg>
+        <div className="absolute top-3 left-3 z-10">
+          <LayerStackPanel activeLayer={activeLayer} onLayerSelect={setActiveLayer} />
+        </div>
         <LayerLegend boardWidth={boardWidth} boardHeight={boardHeight} />
         <CoordinateReadout mouseBoardPos={mouseBoardPos} />
         <EmptyGuidance hasPlacedComponents={hasPlacedComponents} />
