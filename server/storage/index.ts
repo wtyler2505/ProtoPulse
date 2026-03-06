@@ -6,6 +6,7 @@ export { ChatStorage } from './chat';
 export { ComponentStorage } from './components';
 export { CircuitStorage } from './circuit';
 export { MiscStorage } from './misc';
+export { OrderingStorage } from './ordering';
 export { StorageError, VersionConflictError } from './errors';
 export type { PaginationOptions, IStorage } from './interfaces';
 export type { StorageDeps, DbClient, CacheClient } from './types';

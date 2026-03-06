@@ -225,14 +225,15 @@ describe('LayerStackPanel', () => {
   });
 
   // -----------------------------------------------------------------------
-  // 8. Inner layers are not clickable as active layer
+  // 8. Inner layers are selectable as active layer (multi-layer support)
   // -----------------------------------------------------------------------
-  it('inner layers do not trigger onLayerSelect', () => {
+  it('inner layers trigger onLayerSelect with standard names', () => {
     const onLayerSelect = vi.fn();
     render(<LayerStackPanel {...defaultProps({ onLayerSelect })} />);
     fireEvent.click(screen.getByTestId('copper-layer-2'));
+    expect(onLayerSelect).toHaveBeenCalledWith('In1.Cu');
     fireEvent.click(screen.getByTestId('copper-layer-3'));
-    expect(onLayerSelect).not.toHaveBeenCalled();
+    expect(onLayerSelect).toHaveBeenCalledWith('In2.Cu');
   });
 
   // -----------------------------------------------------------------------

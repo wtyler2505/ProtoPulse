@@ -8,6 +8,7 @@ import { ChatStorage } from './storage/chat';
 import { ComponentStorage } from './storage/components';
 import { CircuitStorage } from './storage/circuit';
 import { MiscStorage } from './storage/misc';
+import { OrderingStorage } from './storage/ordering';
 import type { StorageDeps } from './storage/types';
 
 // Re-export public API — callers continue importing from './storage'
@@ -25,6 +26,7 @@ export class DatabaseStorage {
   private _components = new ComponentStorage(deps);
   private _circuit = new CircuitStorage(deps);
   private _misc = new MiscStorage(deps);
+  private _ordering = new OrderingStorage(deps);
 
   // --- Projects ---
   getProjects = this._projects.getProjects.bind(this._projects);
@@ -157,6 +159,13 @@ export class DatabaseStorage {
   resolveComment = this._misc.resolveComment.bind(this._misc);
   unresolveComment = this._misc.unresolveComment.bind(this._misc);
   deleteComment = this._misc.deleteComment.bind(this._misc);
+
+  // --- PCB Orders ---
+  getOrders = this._ordering.getOrders.bind(this._ordering);
+  getOrder = this._ordering.getOrder.bind(this._ordering);
+  createOrder = this._ordering.createOrder.bind(this._ordering);
+  updateOrder = this._ordering.updateOrder.bind(this._ordering);
+  deleteOrder = this._ordering.deleteOrder.bind(this._ordering);
 }
 
 export const storage = new DatabaseStorage();

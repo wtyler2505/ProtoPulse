@@ -27,7 +27,7 @@ import {
 export interface GerberLayer {
   name: string;
   type: 'copper' | 'silkscreen' | 'soldermask' | 'paste' | 'outline';
-  side: 'front' | 'back';
+  side: string; // 'front', 'back', or inner layer name (e.g. 'In1.Cu')
   content: string;
 }
 
@@ -77,6 +77,7 @@ export interface GerberInput {
   wires: GerberWire[];
   vias?: GerberVia[];     // through-hole vias
   boardOutline?: Array<{ x: number; y: number }>; // custom outline polygon (mm)
+  layerCount?: number;    // total copper layers (default: 2)
 }
 
 export interface GerberOutput {
@@ -697,8 +698,9 @@ function filterPadsForCopper(pads: ResolvedPad[], side: 'front' | 'back'): Resol
 
 /**
  * Filter wires for a specific PCB side/layer.
+ * Matches by exact layer name (e.g. 'front', 'back', 'In1.Cu', 'F.Cu').
  */
-function filterWiresForSide(wires: GerberWire[], side: 'front' | 'back'): GerberWire[] {
+function filterWiresForSide(wires: GerberWire[], side: string): GerberWire[] {
   const result: GerberWire[] = [];
   for (let i = 0; i < wires.length; i++) {
     if (wires[i].layer === side) {
@@ -706,6 +708,99 @@ function filterWiresForSide(wires: GerberWire[], side: 'front' | 'back'): Gerber
     }
   }
   return result;
+}
+
+/**
+ * Generate an inner copper layer in Gerber RS-274X format.
+ *
+ * Inner layers contain only traces (wires routed on that layer) and
+ * through-hole via pads. SMD pads and component pads do not appear on inner layers.
+ *
+ * @param input - Full Gerber input data
+ * @param layerName - Standard layer name (e.g. 'In1.Cu', 'In2.Cu')
+ * @param layerIndex - 1-based inner layer index (In1.Cu = 1, In2.Cu = 2, etc.)
+ */
+export function generateInnerCopperLayer(
+  input: GerberInput,
+  layerName: string,
+  layerIndex: number,
+): string {
+  const layerWires = filterWiresForSide(input.wires, layerName);
+  const vias = input.vias ?? [];
+  const allPads = resolveAllPads(input.instances);
+
+  // Inner layers only get THT pads (through-hole pads span all layers)
+  const thtPads = allPads.filter((pad) => pad.padType === 'tht');
+
+  // Build apertures for inner layer traces, THT pads, and vias
+  // Pass 'front' as side param since buildApertures filters by side for SMD —
+  // THT pads have no side filter, and inner layer wires are already filtered
+  const { defs, lookup } = buildApertures(thtPads, layerWires, 'front', { vias });
+
+  const layerNum = `L${String(layerIndex + 1)}`; // L2 for In1.Cu, L3 for In2.Cu, etc.
+
+  const lines: string[] = [];
+
+  // Header
+  lines.push(gerberHeader({
+    comment: `Inner Copper ${String(layerIndex)} (${layerName})`,
+    fileFunction: `Copper,${layerNum},Inr`,
+  }));
+
+  // Aperture definitions
+  lines.push(gerberApertureDefs(defs));
+
+  // Set linear interpolation mode
+  lines.push('G01*');
+
+  // Draw traces
+  for (let i = 0; i < layerWires.length; i++) {
+    const wire = layerWires[i];
+    if (wire.points.length < 2) { continue; }
+
+    const aKey = traceApertureKey(wire.width, 0);
+    const dCode = lookup.get(aKey);
+    if (dCode === undefined) { continue; }
+
+    lines.push(`D${dCode}*`);
+
+    // Move to first point (pen up)
+    const p0 = wire.points[0];
+    lines.push(`X${fmtCoord(p0.x)}Y${fmtCoord(p0.y)}D02*`);
+
+    // Draw to subsequent points (pen down)
+    for (let j = 1; j < wire.points.length; j++) {
+      const p = wire.points[j];
+      lines.push(`X${fmtCoord(p.x)}Y${fmtCoord(p.y)}D01*`);
+    }
+  }
+
+  // Flash THT pads (through-hole pads span all copper layers)
+  for (let i = 0; i < thtPads.length; i++) {
+    const pad = thtPads[i];
+    const aKey = padApertureKey(pad, 0);
+    const dCode = lookup.get(aKey);
+    if (dCode === undefined) { continue; }
+
+    lines.push(`D${dCode}*`);
+    lines.push(`X${fmtCoord(pad.x)}Y${fmtCoord(pad.y)}D03*`);
+  }
+
+  // Flash via pads — through vias appear on all copper layers
+  for (let i = 0; i < vias.length; i++) {
+    const via = vias[i];
+    const aKey = viaApertureKey(via, 0);
+    const dCode = lookup.get(aKey);
+    if (dCode === undefined) { continue; }
+
+    lines.push(`D${dCode}*`);
+    lines.push(`X${fmtCoord(via.x)}Y${fmtCoord(via.y)}D03*`);
+  }
+
+  // Footer
+  lines.push(gerberFooter());
+
+  return lines.join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -1127,27 +1222,48 @@ function filterInstancesForSide(instances: GerberInstance[], side: 'front' | 'ba
  * Generate a complete set of Gerber manufacturing files from PCB layout data.
  *
  * Returns:
- * - 9 Gerber layers: front/back copper, silkscreen, soldermask, paste + board outline
+ * - Copper layers: front + inner (if layerCount > 2) + back
+ * - Silkscreen, soldermask, paste for front/back
+ * - Board outline
  * - 1 Excellon drill file
  *
  * All coordinates in the input are in millimeters.
  * Output uses Gerber RS-274X format (FSLAX36Y36, MOMM) and Excellon FMAT,2 METRIC.
  */
 export function generateGerber(input: GerberInput): GerberOutput {
+  const layerCount = input.layerCount ?? 2;
+
   const layers: GerberLayer[] = [
-    // Copper layers
+    // Front copper layer
     {
       name: 'F.Cu',
       type: 'copper',
       side: 'front',
       content: generateCopperLayer(input, 'front'),
     },
-    {
-      name: 'B.Cu',
+  ];
+
+  // Inner copper layers (In1.Cu, In2.Cu, ..., InN.Cu)
+  for (let i = 1; i < layerCount - 1; i++) {
+    const layerName = `In${String(i)}.Cu`;
+    layers.push({
+      name: layerName,
       type: 'copper',
-      side: 'back',
-      content: generateCopperLayer(input, 'back'),
-    },
+      side: layerName,
+      content: generateInnerCopperLayer(input, layerName, i),
+    });
+  }
+
+  // Back copper layer
+  layers.push({
+    name: 'B.Cu',
+    type: 'copper',
+    side: 'back',
+    content: generateCopperLayer(input, 'back'),
+  });
+
+  // Non-copper layers
+  layers.push(
 
     // Silkscreen layers
     {
@@ -1198,7 +1314,7 @@ export function generateGerber(input: GerberInput): GerberOutput {
       side: 'front', // outline has no meaningful side; 'front' is conventional
       content: generateBoardOutline(input),
     },
-  ];
+  );
 
   const drillFile = generateDrillFile(input);
 

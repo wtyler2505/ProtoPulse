@@ -33,23 +33,30 @@ export interface LayerStackPanelProps {
 
 /**
  * Map a stackup copper layer to an ActiveLayer based on its position.
- * Returns null for inner layers (not selectable as active layer).
+ * All copper layers are selectable: front, back, and inner layers.
  */
 function stackupLayerToActiveLayer(
   layer: StackupLayer,
   allLayers: StackupLayer[],
 ): ActiveLayer | null {
+  if (layer.type !== 'signal' && layer.type !== 'power' && layer.type !== 'ground' && layer.type !== 'mixed') {
+    return null;
+  }
   const sorted = [...allLayers].sort((a, b) => a.order - b.order);
   if (sorted.length === 0) {
     return null;
   }
-  if (layer.id === sorted[0].id) {
+  const idx = sorted.findIndex((l) => l.id === layer.id);
+  if (idx === -1) {
+    return null;
+  }
+  if (idx === 0) {
     return 'front';
   }
-  if (layer.id === sorted[sorted.length - 1].id) {
+  if (idx === sorted.length - 1) {
     return 'back';
   }
-  return null;
+  return `In${String(idx)}.Cu`;
 }
 
 /** Tailwind class for the layer-type color dot. */

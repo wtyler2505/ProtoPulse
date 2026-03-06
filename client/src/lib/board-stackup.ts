@@ -116,6 +116,62 @@ export const MATERIAL_DATABASE: Record<DielectricMaterial, { dielectricConstant:
 // Presets
 // ---------------------------------------------------------------------------
 
+/** Helper to generate a symmetric high-layer-count stackup preset. */
+function generateHighLayerPreset(
+  name: string,
+  description: string,
+  count: number,
+): StackupPreset {
+  const layers: Array<Omit<StackupLayer, 'id'>> = [];
+  const dielectrics: Array<Omit<DielectricLayer, 'id'>> = [];
+
+  // Typical pattern: Sig-Gnd-Sig-Pwr repeating, symmetric
+  const layerTypes: LayerType[] = [];
+  for (let i = 0; i < count; i++) {
+    if (i === 0 || i === count - 1) {
+      layerTypes.push('signal');
+    } else if (i % 2 === 1) {
+      layerTypes.push(i < count / 2 ? 'ground' : 'power');
+    } else {
+      layerTypes.push('signal');
+    }
+  }
+
+  for (let i = 0; i < count; i++) {
+    const layerName = i === 0
+      ? 'Top (Signal)'
+      : i === count - 1
+        ? 'Bottom (Signal)'
+        : `Inner ${String(i)} (${layerTypes[i].charAt(0).toUpperCase() + layerTypes[i].slice(1)})`;
+
+    layers.push({
+      name: layerName,
+      type: layerTypes[i],
+      material: 'FR4',
+      thickness: 1.4,
+      copperWeight: '1oz',
+      dielectricConstant: 4.4,
+      lossTangent: 0.02,
+      order: i * 2,
+    });
+
+    // Add dielectric between layers (not after the last)
+    if (i < count - 1) {
+      const isCore = i % 2 === 1;
+      dielectrics.push({
+        name: isCore ? `Core ${String(Math.floor(i / 2) + 1)}` : `Prepreg ${String(Math.ceil(i / 2))}`,
+        material: 'FR4',
+        thickness: isCore ? 10 : 5,
+        dielectricConstant: 4.4,
+        lossTangent: 0.02,
+        order: i * 2 + 1,
+      });
+    }
+  }
+
+  return { name, description, layers, dielectrics };
+}
+
 const PRESETS: StackupPreset[] = [
   {
     name: '2-layer',
@@ -333,6 +389,10 @@ const PRESETS: StackupPreset[] = [
       },
     ],
   },
+  generateHighLayerPreset('8-layer', '8-layer: Sig-Gnd-Sig-Pwr-Pwr-Sig-Gnd-Sig', 8),
+  generateHighLayerPreset('10-layer', '10-layer high-density design', 10),
+  generateHighLayerPreset('16-layer', '16-layer high-density design', 16),
+  generateHighLayerPreset('32-layer', '32-layer ultra-dense design', 32),
 ];
 
 // ---------------------------------------------------------------------------

@@ -58,6 +58,7 @@ interface MazeRouterConfig {
   gridSizeMm?: number;
   viaCost?: number;
   layerChangeCost?: number;
+  layerCount?: number;
 }
 
 interface AStarNode {
@@ -81,15 +82,16 @@ const DIRS: ReadonlyArray<readonly [number, number, number]> = [
   [-1, -1, Math.SQRT2], // NW
 ];
 
-const LAYER_FRONT = 0;
-const LAYER_BACK = 1;
+import { getLayerIndex, getLayerName, normalizeLegacyLayer } from '@/lib/pcb/layer-utils';
 
-function layerNameToIndex(name: string): number {
-  return name === 'back' ? LAYER_BACK : LAYER_FRONT;
+const LAYER_FRONT = 0;
+
+function layerNameToIndex(name: string, layerCount: number): number {
+  return getLayerIndex(name, layerCount);
 }
 
-function layerIndexToName(idx: number): string {
-  return idx === LAYER_BACK ? 'back' : 'front';
+function layerIndexToName(idx: number, layerCount: number): string {
+  return getLayerName(idx, layerCount);
 }
 
 // ---------------------------------------------------------------------------
@@ -169,22 +171,22 @@ export class MazeRouter {
   private gridSizeMm: number;
   private viaCost: number;
   private layerChangeCost: number;
+  private layerCount: number;
 
   private cols = 0;
   private rows = 0;
 
-  // Two flat Uint8Arrays, one per layer (0 = unblocked, 1 = blocked)
-  private blockedFront: Uint8Array = new Uint8Array(0);
-  private blockedBack: Uint8Array = new Uint8Array(0);
+  // N flat Uint8Arrays, one per layer (0 = unblocked, 1 = blocked)
+  private blockedLayers: Uint8Array[] = [];
 
-  // Track which net occupies each cell (for rip-up). '' = unoccupied.
-  private netOccFront: string[] = [];
-  private netOccBack: string[] = [];
+  // Track which net occupies each cell per layer (for rip-up). '' = unoccupied.
+  private netOccLayers: string[][] = [];
 
   constructor(config?: MazeRouterConfig) {
     this.gridSizeMm = config?.gridSizeMm ?? 0.25;
     this.viaCost = config?.viaCost ?? 50;
     this.layerChangeCost = config?.layerChangeCost ?? 50;
+    this.layerCount = config?.layerCount ?? 2;
   }
 
   // -----------------------------------------------------------------------
@@ -196,10 +198,12 @@ export class MazeRouter {
     this.rows = Math.ceil(boardHeightMm / this.gridSizeMm);
     const total = this.cols * this.rows;
 
-    this.blockedFront = new Uint8Array(total);
-    this.blockedBack = new Uint8Array(total);
-    this.netOccFront = new Array<string>(total).fill('');
-    this.netOccBack = new Array<string>(total).fill('');
+    this.blockedLayers = [];
+    this.netOccLayers = [];
+    for (let i = 0; i < this.layerCount; i++) {
+      this.blockedLayers.push(new Uint8Array(total));
+      this.netOccLayers.push(new Array<string>(total).fill(''));
+    }
   }
 
   addObstacle(obstacle: {
@@ -279,8 +283,8 @@ export class MazeRouter {
     const srcGy = this.mmToGrid(request.sourcePad.y);
     const tgtGx = this.mmToGrid(request.targetPad.x);
     const tgtGy = this.mmToGrid(request.targetPad.y);
-    const srcLayer = layerNameToIndex(request.sourcePad.layer);
-    const tgtLayer = layerNameToIndex(request.targetPad.layer);
+    const srcLayer = layerNameToIndex(request.sourcePad.layer, this.layerCount);
+    const tgtLayer = layerNameToIndex(request.targetPad.layer, this.layerCount);
 
     // Same cell — trivial route
     if (srcGx === tgtGx && srcGy === tgtGy && srcLayer === tgtLayer) {
@@ -376,14 +380,14 @@ export class MazeRouter {
    */
   ripUpNet(netId: string): void {
     const total = this.cols * this.rows;
-    for (let i = 0; i < total; i++) {
-      if (this.netOccFront[i] === netId) {
-        this.blockedFront[i] = 0;
-        this.netOccFront[i] = '';
-      }
-      if (this.netOccBack[i] === netId) {
-        this.blockedBack[i] = 0;
-        this.netOccBack[i] = '';
+    for (let li = 0; li < this.layerCount; li++) {
+      const blocked = this.blockedLayers[li];
+      const netOcc = this.netOccLayers[li];
+      for (let i = 0; i < total; i++) {
+        if (netOcc[i] === netId) {
+          blocked[i] = 0;
+          netOcc[i] = '';
+        }
       }
     }
   }
@@ -623,7 +627,7 @@ export class MazeRouter {
     const ty = Math.max(0, Math.min(this.rows - 1, tgtGy));
 
     // Visited set: flat array indexed by (layer * rows * cols + gy * cols + gx)
-    const totalCells = 2 * this.rows * this.cols;
+    const totalCells = this.layerCount * this.rows * this.cols;
     const visited = new Uint8Array(totalCells);
     // Best-g tracking for duplicate detection
     const bestG = new Float32Array(totalCells);
@@ -702,19 +706,23 @@ export class MazeRouter {
         }
       }
 
-      // Layer change (via) at current position
-      const otherLayer = current.layer === LAYER_FRONT ? LAYER_BACK : LAYER_FRONT;
-      const viaFlatIdx = otherLayer * this.rows * this.cols + current.gy * this.cols + current.gx;
+      // Layer change (via) at current position — try all other layers
+      for (let otherLayer = 0; otherLayer < this.layerCount; otherLayer++) {
+        if (otherLayer === current.layer) {
+          continue;
+        }
+        const viaFlatIdx = otherLayer * this.rows * this.cols + current.gy * this.cols + current.gx;
 
-      if (!visited[viaFlatIdx] && !this.isCellBlockedForNet(current.gx, current.gy, otherLayer, netId)) {
-        const viaG = current.g + this.viaCost;
-        if (viaG < bestG[viaFlatIdx]) {
-          bestG[viaFlatIdx] = viaG;
-          const viaH = heuristic(current.gx, current.gy, otherLayer);
-          open.push({
-            gx: current.gx, gy: current.gy, layer: otherLayer,
-            g: viaG, f: viaG + viaH, parentIdx: currentIdx,
-          });
+        if (!visited[viaFlatIdx] && !this.isCellBlockedForNet(current.gx, current.gy, otherLayer, netId)) {
+          const viaG = current.g + this.viaCost;
+          if (viaG < bestG[viaFlatIdx]) {
+            bestG[viaFlatIdx] = viaG;
+            const viaH = heuristic(current.gx, current.gy, otherLayer);
+            open.push({
+              gx: current.gx, gy: current.gy, layer: otherLayer,
+              g: viaG, f: viaG + viaH, parentIdx: currentIdx,
+            });
+          }
         }
       }
     }
@@ -774,12 +782,19 @@ export class MazeRouter {
     }
 
     // Use the primary layer (the layer with the most steps)
-    const layerCounts = [0, 0];
+    const layerCounts = new Array<number>(this.layerCount).fill(0);
     for (const step of path) {
       layerCounts[step.layer]++;
     }
-    const primaryLayer = layerCounts[LAYER_FRONT] >= layerCounts[LAYER_BACK]
-      ? 'front' : 'back';
+    let maxCount = 0;
+    let primaryLayerIdx = LAYER_FRONT;
+    for (let i = 0; i < this.layerCount; i++) {
+      if (layerCounts[i] > maxCount) {
+        maxCount = layerCounts[i];
+        primaryLayerIdx = i;
+      }
+    }
+    const primaryLayer = layerIndexToName(primaryLayerIdx, this.layerCount);
 
     return {
       netId: request.netId,
@@ -876,12 +891,10 @@ export class MazeRouter {
     const gx = this.mmToGrid(x);
     const gy = this.mmToGrid(y);
 
-    for (const layerName of ['front', 'back']) {
-      const grid = this.getBlockedGrid(layerName);
-      const netGrid = this.getNetGrid(layerName);
-      if (!grid || !netGrid) {
-        continue;
-      }
+    // Vias block on all layers
+    for (let li = 0; li < this.layerCount; li++) {
+      const grid = this.blockedLayers[li];
+      const netGrid = this.netOccLayers[li];
 
       for (let iy = -inflation; iy <= inflation; iy++) {
         for (let ix = -inflation; ix <= inflation; ix++) {
@@ -902,28 +915,21 @@ export class MazeRouter {
   // -----------------------------------------------------------------------
 
   private getBlockedGrid(layer: string): Uint8Array | null {
-    if (layer === 'front') {
-      return this.blockedFront;
-    }
-    if (layer === 'back') {
-      return this.blockedBack;
-    }
-    return null;
+    const idx = getLayerIndex(layer, this.layerCount);
+    return this.blockedLayers[idx] ?? null;
   }
 
   private getNetGrid(layer: string): string[] | null {
-    if (layer === 'front') {
-      return this.netOccFront;
-    }
-    if (layer === 'back') {
-      return this.netOccBack;
-    }
-    return null;
+    const idx = getLayerIndex(layer, this.layerCount);
+    return this.netOccLayers[idx] ?? null;
   }
 
   private isCellBlockedForNet(gx: number, gy: number, layer: number, netId: string): boolean {
-    const grid = layer === LAYER_FRONT ? this.blockedFront : this.blockedBack;
-    const netGrid = layer === LAYER_FRONT ? this.netOccFront : this.netOccBack;
+    const grid = this.blockedLayers[layer];
+    const netGrid = this.netOccLayers[layer];
+    if (!grid || !netGrid) {
+      return true;
+    }
     const idx = gy * this.cols + gx;
 
     if (grid[idx] === 0) {
@@ -972,12 +978,12 @@ export class MazeRouter {
     while (true) {
       if (cx >= 0 && cx < this.cols && cy >= 0 && cy < this.rows) {
         const idx = cy * this.cols + cx;
-        // Check both layers
-        if (this.netOccFront[idx] !== '' && this.netOccFront[idx] !== request.netId) {
-          conflicts.add(this.netOccFront[idx]);
-        }
-        if (this.netOccBack[idx] !== '' && this.netOccBack[idx] !== request.netId) {
-          conflicts.add(this.netOccBack[idx]);
+        // Check all layers
+        for (let li = 0; li < this.layerCount; li++) {
+          const netOcc = this.netOccLayers[li];
+          if (netOcc[idx] !== '' && netOcc[idx] !== request.netId) {
+            conflicts.add(netOcc[idx]);
+          }
         }
       }
 

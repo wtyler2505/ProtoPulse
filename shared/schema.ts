@@ -567,3 +567,36 @@ export const insertDesignCommentSchema = createInsertSchema(designComments).omit
 });
 export type InsertDesignComment = z.infer<typeof insertDesignCommentSchema>;
 export type DesignComment = typeof designComments.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// PCB Orders (FG-10) — PCB fabrication order tracking
+// ---------------------------------------------------------------------------
+
+export const pcbOrders = pgTable('pcb_orders', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  fabricatorId: varchar('fabricator_id', { length: 50 }).notNull(),
+  boardSpec: jsonb('board_spec').notNull(),
+  quantity: integer('quantity').notNull().default(5),
+  turnaround: varchar('turnaround', { length: 20 }).default('standard'),
+  status: varchar('status', { length: 30 }).notNull().default('draft'),
+  quoteData: jsonb('quote_data'),
+  fabOrderNumber: varchar('fab_order_number', { length: 100 }),
+  trackingNumber: varchar('tracking_number', { length: 100 }),
+  notes: text('notes'),
+  submittedAt: timestamp('submitted_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_pcb_orders_project').on(table.projectId),
+  index('idx_pcb_orders_status').on(table.status),
+]);
+
+export const insertPcbOrderSchema = createInsertSchema(pcbOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PcbOrder = typeof pcbOrders.$inferSelect;
+export type InsertPcbOrder = z.infer<typeof insertPcbOrderSchema>;

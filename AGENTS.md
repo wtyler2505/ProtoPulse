@@ -51,7 +51,7 @@ React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark them
 | `shared/schema.ts` | ALL database tables (27), Zod insert schemas, TypeScript types |
 | `shared/component-types.ts` | Component editor type system (shapes, connectors, buses, DRC rules) |
 | `shared/drc-engine.ts` | Design Rule Check engine (shared between server + client) |
-| `server/routes.ts` | Barrel — registers 21 domain routers from `server/routes/` |
+| `server/routes.ts` | Barrel — registers 28 domain routers from `server/routes/` |
 | `server/circuit-routes.ts` | Barrel — registers 13 circuit routers from `server/circuit-routes/` |
 | `server/ai.ts` | AI system: prompts, 84 AI tools, streaming, multi-model routing |
 | `server/ai-tools.ts` | Barrel — registers 11 tool modules from `server/ai-tools/` |
@@ -86,7 +86,7 @@ client/src/
   lib/component-editor/            → Constraint solver, diff engine, snap engine
 
 server/
-  routes.ts           → Barrel — imports 21 domain routers from server/routes/
+  routes.ts           → Barrel — imports 28 domain routers from server/routes/
   routes/             → auth, projects, architecture, bom, validation, chat, history,
                          components, settings, admin, seed, batch, bom-snapshots,
                          chat-branches, design-preferences, spice-models, component-lifecycle,
@@ -210,7 +210,7 @@ shared/
 - **Coverage**: `@vitest/coverage-v8` — reports to `coverage/` directory
 - **Legacy**: `server/__tests__/api.test.ts` uses `node:test` runner (excluded from Vitest config)
 
-### Test File Locations (147 test files, ~7054 tests)
+### Test File Locations (151 test files, ~7242 tests)
 
 ```text
 server/__tests__/                          → API, auth, storage, exporters, generators, DRC, LRU cache, metrics, audit-log, circuit-breaker, stream-abuse, auth-regression, storage-transactions (30 files)
@@ -354,7 +354,7 @@ ProtoPulse/
 │   └── pages/              # Route pages
 ├── server/                 # Express API
 │   ├── __tests__/          # Server test files (30 files)
-│   ├── routes.ts           # Barrel — 21 domain routers
+│   ├── routes.ts           # Barrel — 28 domain routers
 │   ├── routes/             # Domain route modules (auth, bom, chat, etc.)
 │   ├── circuit-routes.ts   # Barrel — 13 circuit routers
 │   ├── circuit-routes/     # Circuit route modules (nets, wires, exports, etc.)

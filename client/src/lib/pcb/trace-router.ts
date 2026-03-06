@@ -300,14 +300,14 @@ export class TraceRouter {
     }
   }
 
-  insertVia(): Via {
+  insertVia(targetLayer?: ActiveLayer): Via {
     if (this.state !== 'routing') {
       throw new Error('Cannot insert via: not routing');
     }
 
     const lastVertex = this.vertices[this.vertices.length - 1];
     const fromLayer = this.currentLayer;
-    const toLayer: ActiveLayer = this.currentLayer === 'front' ? 'back' : 'front';
+    const toLayer: ActiveLayer = targetLayer ?? ViaModel.getOppositeLayer(this.currentLayer);
 
     // Commit the current segment as a wire on the current layer
     if (this.vertices.length >= 2) {

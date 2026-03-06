@@ -7,6 +7,12 @@
  * Pure functions — no React, no side effects.
  */
 
+import {
+  getLayerIndex,
+  getLayerName,
+  isOuterLayer,
+} from '@/lib/pcb/layer-utils';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -236,5 +242,42 @@ export class ViaModel {
       x: Math.round(position.x / gridStep) * gridStep,
       y: Math.round(position.y / gridStep) * gridStep,
     };
+  }
+
+  /**
+   * Get the default opposite layer for multi-layer via placement.
+   *
+   * - Outer layers map to the opposite outer layer.
+   * - Inner layers map to the next layer in the stackup.
+   */
+  static getOppositeLayerMulti(layer: string, layerCount: number = 2): string {
+    const idx = getLayerIndex(layer, layerCount);
+    if (idx === 0) { return getLayerName(layerCount - 1, layerCount); }
+    if (idx === layerCount - 1) { return getLayerName(0, layerCount); }
+    // For inner layers, go to the next layer
+    return getLayerName(idx + 1, layerCount);
+  }
+
+  /**
+   * Classify a via type based on its from/to layers and total layer count.
+   *
+   * - through: spans from front to back (both outer layers)
+   * - blind: one outer layer + one or more inner layers
+   * - buried: both layers are inner
+   */
+  static classifyViaType(fromLayer: string, toLayer: string, layerCount: number = 2): ViaType {
+    const fromOuter = isOuterLayer(fromLayer, layerCount);
+    const toOuter = isOuterLayer(toLayer, layerCount);
+
+    if (fromOuter && toOuter) { return 'through'; }
+    if (fromOuter || toOuter) { return 'blind'; }
+    return 'buried';
+  }
+
+  /**
+   * Return the default ViaRules. Useful when callers need to override specific fields.
+   */
+  static getDefaultRules(): ViaRules {
+    return { ...DEFAULT_VIA_RULES };
   }
 }

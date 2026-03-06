@@ -15,6 +15,7 @@ import {
   FileSpreadsheet,
   Drill,
   LayoutGrid,
+  Box,
 } from 'lucide-react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useOutput } from '@/lib/contexts/output-context';
@@ -195,6 +196,22 @@ const EXPORT_CATEGORIES: ExportCategory[] = [
     ],
   },
   {
+    id: '3d-cad',
+    label: '3D & CAD',
+    icon: Box,
+    formats: [
+      {
+        id: 'step',
+        label: 'STEP 3D Model (.step)',
+        extension: '.step (ISO-10303)',
+        description: 'ISO-10303 3D assembly for mechanical CAD (SolidWorks, FreeCAD, Fusion 360)',
+        icon: Box,
+        endpoint: '/export/step',
+        method: 'POST',
+      },
+    ],
+  },
+  {
     id: 'firmware',
     label: 'Firmware',
     icon: Cpu,
@@ -232,6 +249,7 @@ function ExportPanel() {
     schematic: true,
     fabrication: true,
     documentation: true,
+    '3d-cad': true,
     firmware: true,
   });
 

@@ -34,7 +34,7 @@ export interface PadRendererProps {
   rotation: number; // degrees
   scale: number; // px per mm
   selected: boolean;
-  activeLayer: 'front' | 'back';
+  activeLayer: string;
   onPadClick?: (padNumber: number) => void;
 }
 
@@ -52,7 +52,7 @@ function getLayerColor(layer: string): string {
   return LAYER_COLORS.both;
 }
 
-function getPadOpacity(padLayer: string, activeLayer: 'front' | 'back'): number {
+function getPadOpacity(padLayer: string, activeLayer: string): number {
   if (padLayer === 'both') {
     return 1;
   }

@@ -34,8 +34,10 @@ export {
   WIRE_COLORS,
   TRACE_WIDTH_PRESETS,
   DEFAULT_TRACE_WIDTH,
+  getTraceColor,
   layerLabel,
   toggleLayer,
+  nextLayer,
   wireOpacity,
   layerToggleClasses,
 } from './LayerManager';

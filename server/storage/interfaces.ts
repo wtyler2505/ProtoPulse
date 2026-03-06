@@ -22,6 +22,7 @@ import type {
   ComponentLifecycle, InsertComponentLifecycle,
   DesignSnapshot, InsertDesignSnapshot,
   DesignComment, InsertDesignComment,
+  PcbOrder, InsertPcbOrder,
 } from '@shared/schema';
 
 export interface PaginationOptions {
@@ -183,4 +184,11 @@ export interface IStorage {
   resolveComment(id: number, resolvedBy?: number): Promise<DesignComment | undefined>;
   unresolveComment(id: number): Promise<DesignComment | undefined>;
   deleteComment(id: number): Promise<boolean>;
+
+  // PCB Orders
+  getOrders(projectId: number): Promise<PcbOrder[]>;
+  getOrder(id: number): Promise<PcbOrder | undefined>;
+  createOrder(data: InsertPcbOrder): Promise<PcbOrder>;
+  updateOrder(id: number, data: Partial<InsertPcbOrder>): Promise<PcbOrder | undefined>;
+  deleteOrder(id: number): Promise<boolean>;
 }
