@@ -70,10 +70,10 @@ export function layerLabel(layer: ActiveLayer): string {
   return layer;
 }
 
-/** Toggle to the opposite layer (legacy 2-layer toggle). */
+/** Toggle to the opposite layer (2-layer toggle). */
 export function toggleLayer(current: ActiveLayer): ActiveLayer {
-  if (current === 'front' || current === 'F.Cu') { return 'back'; }
-  return 'front';
+  if (current === 'front' || current === 'F.Cu') { return 'B.Cu'; }
+  return 'F.Cu';
 }
 
 /** Cycle to the next layer for N-layer boards. */

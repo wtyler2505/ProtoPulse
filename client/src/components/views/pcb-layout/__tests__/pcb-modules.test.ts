@@ -368,12 +368,12 @@ describe('ComponentPlacer', () => {
 
 describe('LayerManager', () => {
   describe('toggleLayer', () => {
-    it('toggles front to back', () => {
-      expect(toggleLayer('front')).toBe('back');
+    it('toggles front to B.Cu', () => {
+      expect(toggleLayer('front')).toBe('B.Cu');
     });
 
-    it('toggles back to front', () => {
-      expect(toggleLayer('back')).toBe('front');
+    it('toggles back to F.Cu', () => {
+      expect(toggleLayer('back')).toBe('F.Cu');
     });
   });
 

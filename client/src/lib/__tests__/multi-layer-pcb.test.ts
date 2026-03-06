@@ -22,17 +22,17 @@ import {
 // ---------------------------------------------------------------------------
 
 describe('LayerManager — multi-layer', () => {
-  describe('toggleLayer (2-layer backward compat)', () => {
-    it('toggles front to back', () => {
-      expect(toggleLayer('front')).toBe('back');
+  describe('toggleLayer (2-layer)', () => {
+    it('toggles front to B.Cu', () => {
+      expect(toggleLayer('front')).toBe('B.Cu');
     });
 
-    it('toggles back to front', () => {
-      expect(toggleLayer('back')).toBe('front');
+    it('toggles back to F.Cu', () => {
+      expect(toggleLayer('back')).toBe('F.Cu');
     });
 
-    it('toggles F.Cu to back', () => {
-      expect(toggleLayer('F.Cu')).toBe('back');
+    it('toggles F.Cu to B.Cu', () => {
+      expect(toggleLayer('F.Cu')).toBe('B.Cu');
     });
   });
 
