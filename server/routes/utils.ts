@@ -1,3 +1,6 @@
+// Convention: DELETE handlers return 204 No Content (no body).
+// POST returns 201 with created resource. PATCH returns 200 with updated resource.
+// Exception: admin batch operations (e.g. purge) may return JSON with result counts.
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 

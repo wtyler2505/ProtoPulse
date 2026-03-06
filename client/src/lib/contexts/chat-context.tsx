@@ -1,8 +1,46 @@
 import { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import type { ChatMessage } from '@/lib/project-context';
+import type { ChatMessage, ChatAction, ToolCallInfo } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+
+interface ChatMessageMetadata {
+  actions?: ChatAction[];
+  toolCalls?: ToolCallInfo[];
+  isError?: boolean;
+  isKeyError?: boolean;
+}
+
+function deserializeMetadata(raw: string | null | undefined): ChatMessageMetadata {
+  if (!raw) {
+    return {};
+  }
+  try {
+    return JSON.parse(raw) as ChatMessageMetadata;
+  } catch {
+    return {};
+  }
+}
+
+function serializeMetadata(msg: ChatMessage): string | undefined {
+  const meta: ChatMessageMetadata = {};
+  if (msg.actions && msg.actions.length > 0) {
+    meta.actions = msg.actions;
+  }
+  if (msg.toolCalls && msg.toolCalls.length > 0) {
+    meta.toolCalls = msg.toolCalls;
+  }
+  if (msg.isError) {
+    meta.isError = msg.isError;
+  }
+  if (msg.isKeyError) {
+    meta.isKeyError = msg.isKeyError;
+  }
+  if (Object.keys(meta).length === 0) {
+    return undefined;
+  }
+  return JSON.stringify(meta);
+}
 
 export interface ChatBranch {
   branchId: string;
@@ -38,13 +76,17 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
   const chatQuery = useQuery({
     queryKey: [chatQueryKey],
     enabled: seeded,
-    select: (response: { data: Array<{ id: number | string; role: string; content: string; timestamp: string; mode?: ChatMessage['mode'] }>; total: number }) => response.data.map((msg): ChatMessage => ({
-      id: String(msg.id),
-      role: msg.role as ChatMessage['role'],
-      content: msg.content,
-      timestamp: new Date(msg.timestamp).getTime(),
-      mode: msg.mode,
-    })),
+    select: (response: { data: Array<{ id: number | string; role: string; content: string; timestamp: string; mode?: ChatMessage['mode']; metadata?: string | null }>; total: number }) => response.data.map((msg): ChatMessage => {
+      const meta = deserializeMetadata(msg.metadata);
+      return {
+        id: String(msg.id),
+        role: msg.role as ChatMessage['role'],
+        content: msg.content,
+        timestamp: new Date(msg.timestamp).getTime(),
+        mode: msg.mode,
+        ...meta,
+      };
+    }),
   });
 
   const branchesQuery = useQuery({
@@ -54,7 +96,7 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
   });
 
   const addChatMutation = useMutation({
-    mutationFn: async (msg: { role: string; content: string; mode?: string; branchId?: string | null }) => {
+    mutationFn: async (msg: { role: string; content: string; mode?: string; branchId?: string | null; metadata?: string }) => {
       await apiRequest('POST', `/api/projects/${projectId}/chat`, msg);
     },
     onSuccess: () => {
@@ -77,7 +119,8 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
     if (typeof msg === 'string') {
       addChatMutation.mutate({ role: 'user', content: msg, branchId: activeBranchId });
     } else {
-      addChatMutation.mutate({ role: msg.role, content: msg.content, mode: msg.mode, branchId: activeBranchId });
+      const metadata = serializeMetadata(msg);
+      addChatMutation.mutate({ role: msg.role, content: msg.content, mode: msg.mode, branchId: activeBranchId, metadata });
     }
   }, [addChatMutation, activeBranchId]);
 

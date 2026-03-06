@@ -164,7 +164,7 @@ export function registerArchitectureTools(registry: ToolRegistry): void {
       busType: z.string().optional().describe('Bus protocol: SPI, I2C, UART, USB, Power, GPIO, CAN, Ethernet'),
       signalType: z.string().optional().describe('Signal type: SPI, analog, digital, power, etc.'),
       voltage: z.string().optional().describe('Voltage level: 3.3V, 5V, 12V, etc.'),
-      busWidth: z.string().optional().describe('Bus width: 4-bit, 8-bit, etc.'),
+      busWidth: z.number().int().positive().optional().describe('Bus width in bits: 4, 8, 16, 32, etc.'),
       netName: z.string().optional().describe('Net name for the connection'),
     }),
     requiresConfirmation: false,

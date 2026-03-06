@@ -65,7 +65,7 @@ export const architectureEdges = pgTable("architecture_edges", {
   style: jsonb("style"),
   signalType: text("signal_type"),
   voltage: text("voltage"),
-  busWidth: text("bus_width"),
+  busWidth: integer("bus_width"),
   netName: text("net_name"),
   version: integer("version").notNull().default(1),
   deletedAt: timestamp("deleted_at"),
@@ -141,6 +141,7 @@ export const chatMessages = pgTable("chat_messages", {
   mode: text("mode").default("chat"),
   branchId: text("branch_id"),
   parentMessageId: integer("parent_message_id"),
+  metadata: text("metadata"),
 }, (table) => [
   index("idx_chat_messages_project").on(table.projectId),
   index("idx_chat_messages_project_ts").on(table.projectId, table.timestamp),
@@ -149,6 +150,7 @@ export const chatMessages = pgTable("chat_messages", {
 
 export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true, timestamp: true }).extend({
   role: z.enum(["user", "assistant", "system"]),
+  metadata: z.string().optional(),
 });
 export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;

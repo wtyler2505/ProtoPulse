@@ -204,7 +204,7 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
         <ContextMenuItem onSelect={() => { const baseUrl = getSupplierSearchUrl(item.supplier); if (!baseUrl) { return; } window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer'); }}>Buy from {item.supplier}</ContextMenuItem>
         <ContextMenuItem onSelect={() => copyToClipboard(item.partNumber)}>Copy Part Number</ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem className="text-destructive" onSelect={() => deleteBomItem(item.id)}>Remove from BOM</ContextMenuItem>
+        <ContextMenuItem className="text-destructive" onSelect={(e) => { e.preventDefault(); if (window.confirm(`Remove "${item.partNumber}" from the BOM?`)) { deleteBomItem(item.id); } }}>Remove from BOM</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   );

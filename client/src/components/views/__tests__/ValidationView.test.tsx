@@ -59,6 +59,20 @@ vi.mock('@/lib/circuit-editor/hooks', () => ({
   useCircuitNets: () => ({ data: [] }),
 }));
 
+// Mock architecture & BOM contexts used for real-data wiring
+vi.mock('@/lib/contexts/architecture-context', () => ({
+  useArchitecture: () => ({
+    nodes: [],
+    edges: [],
+  }),
+}));
+
+vi.mock('@/lib/contexts/bom-context', () => ({
+  useBom: () => ({
+    bom: [],
+  }),
+}));
+
 // Mock DRC / ERC engines
 vi.mock('@/lib/component-editor/drc', () => ({
   runDRC: () => [],

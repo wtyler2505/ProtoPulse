@@ -42,6 +42,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useValidation } from '@/lib/contexts/validation-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
+import { useToast } from '@/hooks/use-toast';
 import { DndProvider } from '@/lib/dnd-context';
 import { TutorialProvider } from '@/lib/tutorial-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
@@ -259,8 +260,9 @@ function WorkspaceContent() {
   const projectId = useProjectId();
   const { activeView, setActiveView, projectName } = useProjectMeta();
   const { runValidation, issues } = useValidation();
-  const { nodes } = useArchitecture();
-  const { bom } = useBom();
+  const { nodes, edges, setNodes, setEdges, pushUndoState } = useArchitecture();
+  const { bom, addBomItem } = useBom();
+  const { toast } = useToast();
   const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -520,15 +522,63 @@ function WorkspaceContent() {
                             const result = importer.importFile(content, file.name);
                             if (result.status === 'complete' && result.design) {
                               const proto = importer.convertToProtoPulse(result.design);
-                              setActiveView('output');
-                              // eslint-disable-next-line no-console
-                              console.log(`[DesignImport] Imported ${proto.nodes.length} nodes, ${proto.edges.length} edges from ${file.name}`);
+                              const summary = `Import will add ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, and ${String(proto.bomItems.length)} BOM items from "${file.name}". Continue?`;
+                              if (!window.confirm(summary)) {
+                                return;
+                              }
+                              pushUndoState();
+                              const newNodes = proto.nodes.map((n) => ({
+                                id: n.id,
+                                type: 'custom' as const,
+                                position: n.position,
+                                data: { label: n.label, type: n.type },
+                              }));
+                              const newEdges = proto.edges.map((e) => ({
+                                id: e.id,
+                                source: e.source,
+                                target: e.target,
+                                label: e.label,
+                              }));
+                              setNodes([...nodes, ...newNodes]);
+                              setEdges([...edges, ...newEdges]);
+                              for (const item of proto.bomItems) {
+                                addBomItem({
+                                  partNumber: item.partNumber || 'N/A',
+                                  manufacturer: 'Imported',
+                                  description: item.name,
+                                  quantity: item.quantity,
+                                  unitPrice: 0,
+                                  totalPrice: 0,
+                                  supplier: 'Unknown',
+                                  stock: 0,
+                                  status: 'In Stock',
+                                });
+                              }
+                              setActiveView('architecture');
+                              toast({
+                                title: 'Design imported',
+                                description: `Added ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, and ${String(proto.bomItems.length)} BOM items from "${file.name}".`,
+                              });
+                              if (result.warningCount > 0) {
+                                toast({
+                                  variant: 'destructive',
+                                  title: 'Import warnings',
+                                  description: `${String(result.warningCount)} warning(s) encountered during import. Check console for details.`,
+                                });
+                              }
                             } else if (result.status === 'error') {
-                              // eslint-disable-next-line no-console
-                              console.error(`[DesignImport] Failed: ${result.errorCount} errors in ${file.name}`);
+                              toast({
+                                variant: 'destructive',
+                                title: 'Import failed',
+                                description: `${String(result.errorCount)} error(s) in "${file.name}". The file could not be imported.`,
+                              });
                             }
-                          }).catch(() => { /* dynamic import failed */ });
-                        }).catch(() => { /* file read failed */ });
+                          }).catch(() => {
+                            toast({ variant: 'destructive', title: 'Import failed', description: 'Could not load the design import module.' });
+                          });
+                        }).catch(() => {
+                          toast({ variant: 'destructive', title: 'Import failed', description: 'Could not read the file.' });
+                        });
                       }
                     };
                     input.click();

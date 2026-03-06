@@ -32,6 +32,11 @@ export interface ProbeOverlayProps {
   onAddVoltageProbe?: (netName: string, x: number, y: number) => void;
   onAddCurrentProbe?: (refDes: string, x: number, y: number) => void;
   onRemoveProbe?: (probeId: string) => void;
+  onMoveProbe?: (probeId: string, x: number, y: number) => void;
+  /** Circuit instances for hit-testing probe placement targets */
+  circuitInstances?: Array<{ id: number; referenceDesignator: string; schematicX: number; schematicY: number }>;
+  /** Circuit nets for hit-testing voltage probe targets */
+  circuitNets?: Array<{ id: number; name: string }>;
   mode: 'view' | 'place-voltage' | 'place-current';
   showValues?: boolean;
   scale?: number;
@@ -423,6 +428,9 @@ const ProbeOverlay = memo(function ProbeOverlay({
   onAddVoltageProbe,
   onAddCurrentProbe,
   onRemoveProbe,
+  onMoveProbe,
+  circuitInstances,
+  circuitNets,
   mode,
   showValues = true,
   scale = 1,
@@ -484,24 +492,49 @@ const ProbeOverlay = memo(function ProbeOverlay({
   // Placement mode: click to place probe
   // -----------------------------------------------------------------------
 
+  // Find the nearest circuit instance to a given SVG position (within a threshold)
+  const findNearestInstance = useCallback(
+    (x: number, y: number): string => {
+      if (!circuitInstances || circuitInstances.length === 0) { return ''; }
+      const HIT_RADIUS = 40 / scale; // 40px screen-space hit radius
+      let closest = '';
+      let minDist = HIT_RADIUS;
+      for (const inst of circuitInstances) {
+        const dx = inst.schematicX - x;
+        const dy = inst.schematicY - y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < minDist) {
+          minDist = dist;
+          closest = inst.referenceDesignator;
+        }
+      }
+      return closest;
+    },
+    [circuitInstances, scale],
+  );
+
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (mode === 'place-voltage' && onAddVoltageProbe) {
         const pos = clientToSVG(e.clientX, e.clientY);
         if (pos) {
-          // The parent is expected to supply the net name by resolving the
-          // position to the nearest net; here we pass a placeholder that can
-          // be replaced at the call-site with hit-testing logic.
-          onAddVoltageProbe('', pos.x, pos.y);
+          // Resolve net name from nearest instance or use first available net
+          const nearestRef = findNearestInstance(pos.x, pos.y);
+          const netName = nearestRef
+            ? nearestRef
+            : (circuitNets && circuitNets.length > 0 ? circuitNets[0].name : `net_${Math.floor(pos.x)}_${Math.floor(pos.y)}`);
+          onAddVoltageProbe(netName, pos.x, pos.y);
         }
       } else if (mode === 'place-current' && onAddCurrentProbe) {
         const pos = clientToSVG(e.clientX, e.clientY);
         if (pos) {
-          onAddCurrentProbe('', pos.x, pos.y);
+          // Resolve refDes from nearest circuit instance
+          const refDes = findNearestInstance(pos.x, pos.y);
+          onAddCurrentProbe(refDes || `probe_${Math.floor(pos.x)}_${Math.floor(pos.y)}`, pos.x, pos.y);
         }
       }
     },
-    [mode, clientToSVG, onAddVoltageProbe, onAddCurrentProbe],
+    [mode, clientToSVG, onAddVoltageProbe, onAddCurrentProbe, findNearestInstance, circuitNets],
   );
 
   // -----------------------------------------------------------------------
@@ -548,12 +581,6 @@ const ProbeOverlay = memo(function ProbeOverlay({
         document.removeEventListener('mouseup', handleDragEnd);
         setDragState(null);
 
-        // Compute the final position and report it via the appropriate callback.
-        // Since we don't have a dedicated onMoveProbe callback, we remove and
-        // re-add at the new position. A more sophisticated implementation would
-        // expose an onMoveProbe prop; for now we just reset the visual.
-        // The parent should listen to onRemoveProbe + onAddVoltageProbe/onAddCurrentProbe
-        // as a move sequence, or extend the props interface with onMoveProbe later.
         const dx = (ev.clientX - startClientX) / scale;
         const dy = (ev.clientY - startClientY) / scale;
 
@@ -568,21 +595,27 @@ const ProbeOverlay = memo(function ProbeOverlay({
           return;
         }
 
-        // For a real drag: the caller should implement onMoveProbe to handle
-        // position updates. Until then, we reset the visual transform and log
-        // the intended final position.
-        const el = overlayRef.current?.querySelector(
-          `[data-testid="voltage-probe-${probeId}"], [data-testid="current-probe-${probeId}"]`,
-        );
-        if (el && probe) {
-          el.setAttribute('transform', `translate(${probe.x}, ${probe.y})`);
+        const newX = probe.x + dx;
+        const newY = probe.y + dy;
+
+        if (onMoveProbe) {
+          // Report the new position to the parent
+          onMoveProbe(probeId, newX, newY);
+        } else {
+          // No move handler: reset to original position
+          const el = overlayRef.current?.querySelector(
+            `[data-testid="voltage-probe-${probeId}"], [data-testid="current-probe-${probeId}"]`,
+          );
+          if (el && probe) {
+            el.setAttribute('transform', `translate(${probe.x}, ${probe.y})`);
+          }
         }
       };
 
       document.addEventListener('mousemove', handleDragMove);
       document.addEventListener('mouseup', handleDragEnd);
     },
-    [voltageProbes, currentProbes, scale],
+    [voltageProbes, currentProbes, scale, onMoveProbe],
   );
 
   // -----------------------------------------------------------------------
@@ -651,6 +684,23 @@ const ProbeOverlay = memo(function ProbeOverlay({
           />
         ))}
       </g>
+
+      {/* Probe tool state label (UX-035) */}
+      {isPlacing && (
+        <text
+          data-testid="probe-tool-label"
+          x={20 / scaleFactor}
+          y={20 / scaleFactor}
+          fill="#00F0FF"
+          fontSize={12 / scaleFactor}
+          fontFamily="monospace"
+          fontWeight={600}
+          opacity={0.8}
+          pointerEvents="none"
+        >
+          {mode === 'place-voltage' ? 'Placing Voltage Probe — click to place' : 'Placing Current Probe — click to place'}
+        </text>
+      )}
 
       {/* Ghost probe in placement mode */}
       {isPlacing && ghostPos && (

@@ -97,7 +97,7 @@ export function registerCircuitExpansionRoutes(app: Express, storage: IStorage):
         name: netName,
         netType,
         voltage: edge.voltage || undefined,
-        busWidth: edge.busWidth ? parseInt(String(edge.busWidth), 10) : undefined,
+        busWidth: edge.busWidth ?? undefined,
         segments: [{
           fromInstanceId: sourceInstanceId,
           fromPin: firstPinId(instancePartMap, sourceInstanceId),

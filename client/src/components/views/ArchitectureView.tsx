@@ -385,9 +385,11 @@ function ArchitectureFlow() {
   }, [setSelectedNodeId]);
 
   const handleGenerateArchitecture = useCallback(() => {
-    addMessage({ id: crypto.randomUUID(), role: 'user', content: 'Generate Architecture', timestamp: Date.now(), mode: 'chat' });
-    setIsGenerating(false);
-  }, [addMessage, setIsGenerating]);
+    const message = 'Generate a complete architecture for this project. Analyze the project description and create appropriate architecture nodes and connections.';
+    addMessage({ id: crypto.randomUUID(), role: 'user', content: message, timestamp: Date.now(), mode: 'chat' });
+    // Dispatch event so ChatPanel picks up the message and sends it to the AI
+    window.dispatchEvent(new CustomEvent('protopulse:chat-send', { detail: { message } }));
+  }, [addMessage]);
 
   const handleContextFitView = useCallback(() => {
     reactFlowInstance.fitView({ padding: 0.2 });

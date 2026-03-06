@@ -17,6 +17,7 @@ import {
   Edit3,
   KanbanSquare,
 } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -182,15 +183,23 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
             >
               <Edit3 className="w-3 h-3" />
             </Button>
-            <Button
-              data-testid={`task-delete-${task.id}`}
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-destructive"
-              onClick={() => { onDelete(task.id); }}
-            >
-              <Trash2 className="w-3 h-3" />
-            </Button>
+            <ConfirmDialog
+              trigger={
+                <Button
+                  data-testid={`task-delete-${task.id}`}
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-destructive"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              }
+              title="Delete Task"
+              description={`Are you sure you want to delete "${task.title}"? This action cannot be undone.`}
+              confirmLabel="Delete"
+              variant="destructive"
+              onConfirm={() => { onDelete(task.id); }}
+            />
           </div>
         </div>
       </CardContent>
@@ -242,15 +251,23 @@ const ColumnView = memo(function ColumnView({
           </Badge>
         </div>
         {allColumns.length > 1 && (
-          <Button
-            data-testid={`column-remove-${column.id}`}
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-destructive"
-            onClick={() => { onRemoveColumn(column.id); }}
-          >
-            <X className="w-3 h-3" />
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button
+                data-testid={`column-remove-${column.id}`}
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            }
+            title="Remove Column"
+            description={`Remove the "${column.name}" column? Tasks in this column will be deleted.`}
+            confirmLabel="Remove"
+            variant="destructive"
+            onConfirm={() => { onRemoveColumn(column.id); }}
+          />
         )}
       </div>
 

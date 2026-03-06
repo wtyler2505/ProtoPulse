@@ -64,7 +64,7 @@ const importSchema = z.object({
     style: z.unknown().optional().nullable(),
     signalType: z.string().optional().nullable(),
     voltage: z.string().optional().nullable(),
-    busWidth: z.string().optional().nullable(),
+    busWidth: z.number().int().optional().nullable(),
     netName: z.string().optional().nullable(),
   })).default([]),
   bomItems: z.array(z.object({

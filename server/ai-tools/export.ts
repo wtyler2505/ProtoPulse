@@ -195,7 +195,7 @@ function toArchEdgeData(
     label: string | null;
     signalType: string | null;
     voltage: string | null;
-    busWidth: string | null;
+    busWidth: number | null;
     netName: string | null;
   }>,
 ): ArchEdgeData[] {

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react';
+import { useIsMutating } from '@tanstack/react-query';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
@@ -14,6 +15,8 @@ import {
   FolderOpen,
   Search,
   Pencil,
+  Cloud,
+  Loader2,
 } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { navItems } from '@/components/layout/sidebar/sidebar-constants';
@@ -299,6 +302,53 @@ function SidebarContent({
         issues={issues}
         addOutputLog={addOutputLog}
       />
+      <SaveStatusIndicator />
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Save Status Indicator (UX-010)
+// ---------------------------------------------------------------------------
+
+function SaveStatusIndicator() {
+  const mutatingCount = useIsMutating();
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const prevMutating = useRef(0);
+
+  useEffect(() => {
+    // When mutations transition from >0 to 0, record the timestamp
+    if (prevMutating.current > 0 && mutatingCount === 0) {
+      setLastSavedAt(new Date());
+    }
+    prevMutating.current = mutatingCount;
+  }, [mutatingCount]);
+
+  const formatTime = (date: Date): string => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div
+      data-testid="save-status-indicator"
+      className="px-4 py-2 border-t border-sidebar-border flex items-center gap-1.5 text-[10px] text-muted-foreground"
+    >
+      {mutatingCount > 0 ? (
+        <>
+          <Loader2 className="w-3 h-3 animate-spin text-primary" />
+          <span>Saving changes...</span>
+        </>
+      ) : lastSavedAt ? (
+        <>
+          <Cloud className="w-3 h-3 text-emerald-400" />
+          <span>Last saved at {formatTime(lastSavedAt)}</span>
+        </>
+      ) : (
+        <>
+          <Cloud className="w-3 h-3" />
+          <span>All changes saved</span>
+        </>
+      )}
+    </div>
   );
 }

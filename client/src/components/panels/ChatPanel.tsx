@@ -571,7 +571,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         try {
           const response = await fetch('/api/chat/ai/stream', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Session-Id': localStorage.getItem('protopulse-session-id') ?? '',
+            },
             signal: controller.signal,
             body: fetchRequestBody,
           });
@@ -752,6 +755,18 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
   const handleRetry = useCallback((msg: string) => {
     handleSend(msg);
+  }, [handleSend]);
+
+  // Listen for cross-view chat-send events (e.g., "Generate Architecture" from ArchitectureView)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ message: string }>).detail;
+      if (detail?.message) {
+        void handleSend(detail.message);
+      }
+    };
+    window.addEventListener('protopulse:chat-send', handler);
+    return () => window.removeEventListener('protopulse:chat-send', handler);
   }, [handleSend]);
 
   const exportChat = useCallback(() => {

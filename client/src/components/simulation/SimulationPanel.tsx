@@ -1,7 +1,8 @@
-import { useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useCircuitDesigns, useCircuitInstances } from '@/lib/circuit-editor/hooks';
 import { cn } from '@/lib/utils';
 import type { WaveformTrace, PlotType } from './WaveformViewer';
 import {
@@ -683,13 +684,32 @@ export default function SimulationPanel() {
 
   // Simulation state
   const [isRunning, setIsRunning] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<SimulationResult | null>(null);
   const [resultHistory, setResultHistory] = useState<SimulationRun[]>([]);
 
-  // Placeholder: in a real circuit these would come from the circuit netlist.
-  // For now, use an empty array. Future integration will populate from circuit context.
-  const circuitSources = useMemo<string[]>(() => [], []);
+  // AbortController for cancelling in-flight simulation requests
+  const abortRef = useRef<AbortController | null>(null);
+
+  // Populate DC sweep source list from actual circuit instances
+  const { data: circuits } = useCircuitDesigns(projectId);
+  const firstCircuitId = circuits?.[0]?.id ?? 0;
+  const { data: circuitInstances } = useCircuitInstances(firstCircuitId);
+
+  const circuitSources = useMemo<string[]>(() => {
+    if (!circuitInstances || circuitInstances.length === 0) { return []; }
+    // Voltage and current sources use SPICE convention: refDes starts with V or I
+    const props = (inst: typeof circuitInstances[number]) =>
+      (inst.properties && typeof inst.properties === 'object' ? inst.properties : {}) as Record<string, unknown>;
+    return circuitInstances
+      .filter((inst) => {
+        const refDes = inst.referenceDesignator;
+        const compType = String(props(inst).componentType ?? '');
+        return /^[VI]/i.test(refDes) || /voltage.source|current.source|dc.source|ac.source/i.test(compType);
+      })
+      .map((inst) => inst.referenceDesignator);
+  }, [circuitInstances]);
 
   // ---------------------------
   // Resolve current params
@@ -745,7 +765,12 @@ export default function SimulationPanel() {
       return;
     }
 
+    // Create a new AbortController for this run
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setIsRunning(true);
+    setIsStopping(false);
     setError(null);
     setResults(null);
 
@@ -754,7 +779,7 @@ export default function SimulationPanel() {
         analysisType,
         params: currentParams,
         probes: probes.map((p) => ({ name: p.name, type: p.type, nodeOrComponent: p.nodeOrComponent })),
-      });
+      }, controller.signal);
 
       const data: SimulationResult = await response.json();
       setResults(data);
@@ -770,22 +795,29 @@ export default function SimulationPanel() {
 
       toast({ title: 'Simulation Complete', description: `${ANALYSIS_TYPES.find((a) => a.id === analysisType)?.label} finished successfully.` });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Simulation failed';
-      setError(message);
-      toast({ variant: 'destructive', title: 'Simulation Failed', description: message });
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        toast({ title: 'Simulation Stopped', description: 'The running simulation was cancelled.' });
+      } else {
+        const message = err instanceof Error ? err.message : 'Simulation failed';
+        setError(message);
+        toast({ variant: 'destructive', title: 'Simulation Failed', description: message });
+      }
     } finally {
       setIsRunning(false);
+      setIsStopping(false);
+      abortRef.current = null;
     }
   }, [validate, projectId, analysisType, currentParams, probes, toast]);
 
   // ---------------------------
-  // Stop (abort) — placeholder for future AbortController integration
+  // Stop (abort) via AbortController
   // ---------------------------
   const handleStop = useCallback(() => {
-    // In the future this will abort the in-flight request via AbortController.
-    setIsRunning(false);
-    toast({ title: 'Simulation Stopped', description: 'The running simulation was cancelled.' });
-  }, [toast]);
+    if (abortRef.current) {
+      setIsStopping(true);
+      abortRef.current.abort();
+    }
+  }, []);
 
   // ---------------------------
   // Export SPICE netlist
@@ -1043,10 +1075,25 @@ export default function SimulationPanel() {
                 type="button"
                 data-testid="stop-simulation"
                 onClick={handleStop}
-                className="h-9 px-6 flex items-center gap-2 text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-all"
+                disabled={isStopping}
+                className={cn(
+                  'h-9 px-6 flex items-center gap-2 text-sm font-medium transition-all',
+                  isStopping
+                    ? 'bg-muted text-muted-foreground cursor-wait'
+                    : 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+                )}
               >
-                <Square className="w-4 h-4" />
-                Stop
+                {isStopping ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Stopping...
+                  </>
+                ) : (
+                  <>
+                    <Square className="w-4 h-4" />
+                    Stop
+                  </>
+                )}
               </button>
             ) : (
               <button

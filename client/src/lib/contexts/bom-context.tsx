@@ -45,9 +45,11 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
   const bomQuery = useQuery({
     queryKey: [`/api/projects/${projectId}/bom`],
     enabled: seeded,
-    select: (response: { data: Array<Omit<BomItem, 'id'> & { id: number | string }>; total: number }) => response.data.map((item): BomItem => ({
+    select: (response: { data: Array<Omit<BomItem, 'id'> & { id: number | string; unitPrice: number | string; totalPrice: number | string }>; total: number }) => response.data.map((item): BomItem => ({
       ...item,
       id: String(item.id),
+      unitPrice: Number(item.unitPrice),
+      totalPrice: Number(item.totalPrice),
     })),
   });
 

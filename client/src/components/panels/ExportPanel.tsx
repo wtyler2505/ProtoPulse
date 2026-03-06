@@ -25,6 +25,8 @@ import { Badge } from '@/components/ui/badge';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { downloadBlob } from '@/lib/csv';
 
+const SESSION_KEY = 'protopulse-session-id';
+
 // ---------------------------------------------------------------------------
 // Export format definitions
 // ---------------------------------------------------------------------------
@@ -173,7 +175,6 @@ const EXPORT_CATEGORIES: ExportCategory[] = [
         icon: Layers,
         endpoint: '/export/fzz',
         method: 'POST',
-        jsonResponse: true,
       },
       {
         id: 'pdf',
@@ -265,9 +266,13 @@ function ExportPanel() {
 
     try {
       const url = `/api/projects/${projectId}${format.endpoint}`;
+      const sessionId = localStorage.getItem(SESSION_KEY) ?? '';
       const res = await fetch(url, {
         method: format.method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': sessionId,
+        },
         body: JSON.stringify(format.body ?? {}),
       });
 
@@ -276,18 +281,30 @@ function ExportPanel() {
         throw new Error(errorBody || `HTTP ${res.status}`);
       }
 
+      const exportedFiles: string[] = [];
+
       if (format.jsonResponse) {
-        // JSON response with file(s) array
+        // JSON response with file(s) or layer(s) array
         const json = await res.json() as Record<string, unknown>;
 
-        // Handle `files` array (KiCad, Eagle, Gerber)
+        // Handle `files` array (KiCad, Eagle, Firmware)
         const files = json.files as { filename: string; content: string }[] | undefined;
         if (files && Array.isArray(files)) {
           for (const file of files) {
             const blob = new Blob([file.content], { type: 'application/octet-stream' });
             downloadBlob(blob, file.filename);
+            exportedFiles.push(file.filename);
           }
-          addOutputLog(`[EXPORT] Downloaded ${files.length} file(s) for ${format.label}`);
+        }
+
+        // Handle `layers` array (Gerber export)
+        const layers = json.layers as { filename: string; content: string }[] | undefined;
+        if (layers && Array.isArray(layers)) {
+          for (const layer of layers) {
+            const blob = new Blob([layer.content], { type: 'application/octet-stream' });
+            downloadBlob(blob, layer.filename);
+            exportedFiles.push(layer.filename);
+          }
         }
 
         // Handle drill sub-object from Gerber export
@@ -295,9 +312,12 @@ function ExportPanel() {
         if (drill) {
           const blob = new Blob([drill.content], { type: 'application/octet-stream' });
           downloadBlob(blob, drill.filename);
+          exportedFiles.push(drill.filename);
         }
+
+        addOutputLog(`[EXPORT] Downloaded ${exportedFiles.length} file(s) for ${format.label}`);
       } else {
-        // Raw content response (SPICE, CSV, SVG, etc.)
+        // Raw content response (SPICE, CSV, SVG, FZZ ZIP, etc.)
         const contentDisposition = res.headers.get('Content-Disposition');
         let filename = `export${format.extension.split('/')[0].split('(')[0].trim()}`;
         if (contentDisposition) {
@@ -308,11 +328,17 @@ function ExportPanel() {
         }
         const blob = await res.blob();
         downloadBlob(blob, filename);
+        exportedFiles.push(filename);
         addOutputLog(`[EXPORT] Downloaded ${format.label}: ${filename}`);
       }
 
       setDownloadStates((prev) => ({ ...prev, [format.id]: 'success' }));
-      toast({ title: 'Export complete', description: `${format.label} exported successfully.` });
+      toast({
+        title: 'Export complete',
+        description: exportedFiles.length > 1
+          ? `${format.label}: ${exportedFiles.length} files exported (${exportedFiles.join(', ')})`
+          : `${format.label} exported successfully.`,
+      });
 
       // Reset success state after 3 seconds
       setTimeout(() => {

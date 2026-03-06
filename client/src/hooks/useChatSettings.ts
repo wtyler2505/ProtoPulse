@@ -79,7 +79,11 @@ export function useChatSettings() {
     queryKey: ['/api/settings/chat'],
     queryFn: async () => {
       try {
-        const res = await fetch('/api/settings/chat', { credentials: 'include' });
+        const sessionId = localStorage.getItem('protopulse-session-id') ?? '';
+        const res = await fetch('/api/settings/chat', {
+          credentials: 'include',
+          headers: { 'X-Session-Id': sessionId },
+        });
         if (!res.ok) return null;
         return await res.json() as ChatSettings;
       } catch {

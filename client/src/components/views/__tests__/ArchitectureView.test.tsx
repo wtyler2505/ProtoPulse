@@ -92,6 +92,7 @@ vi.mock('@/hooks/useSyncedFlowState', () => ({
   }),
 }));
 
+
 vi.mock('@/components/ui/styled-tooltip', () => ({
   StyledTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -205,14 +206,17 @@ describe('ArchitectureView', () => {
     expect(screen.getByTestId('button-generate-architecture')).toBeDefined();
   });
 
-  it('"Generate Architecture" button adds a user message and calls setIsGenerating', () => {
+  it('"Generate Architecture" button adds a user message and dispatches chat-send event', () => {
+    const eventSpy = vi.fn();
+    window.addEventListener('protopulse:chat-send', eventSpy);
     renderArchView();
     const btn = screen.getByTestId('button-generate-architecture');
     fireEvent.click(btn);
     expect(mockAddMessage).toHaveBeenCalledWith(
-      expect.objectContaining({ role: 'user', content: 'Generate Architecture' }),
+      expect.objectContaining({ role: 'user', content: expect.stringContaining('Generate a complete architecture') as string }),
     );
-    expect(mockSetIsGenerating).toHaveBeenCalledWith(false);
+    expect(eventSpy).toHaveBeenCalledTimes(1);
+    window.removeEventListener('protopulse:chat-send', eventSpy);
   });
 
   it('renders the ReactFlow canvas and toolbar when nodes exist', () => {

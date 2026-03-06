@@ -46,6 +46,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { getAllPatterns, getPatternsByCategory, getPatternsByDifficulty, searchPatterns } from '@/lib/design-patterns';
 import { useDesignSnippets } from '@/lib/design-reuse';
 
@@ -549,16 +550,24 @@ function SnippetCard({
                   <Pencil className="h-3 w-3 mr-1" />
                   Edit
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[10px] px-2 text-destructive hover:text-destructive"
-                  onClick={() => { onDelete(snippet.id); }}
-                  data-testid={`snippet-delete-${snippet.id}`}
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Delete
-                </Button>
+                <ConfirmDialog
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 text-destructive hover:text-destructive"
+                      data-testid={`snippet-delete-${snippet.id}`}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Delete
+                    </Button>
+                  }
+                  title="Delete Snippet"
+                  description={`Are you sure you want to delete "${snippet.name}"? This action cannot be undone.`}
+                  confirmLabel="Delete"
+                  variant="destructive"
+                  onConfirm={() => { onDelete(snippet.id); }}
+                />
               </>
             )}
             <Button

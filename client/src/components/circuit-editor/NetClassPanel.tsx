@@ -31,6 +31,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { CircuitNetRow } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -360,15 +361,23 @@ const NetClassPanel = memo(function NetClassPanel({ circuitId }: NetClassPanelPr
                       <Pencil className="w-3 h-3 text-muted-foreground" />
                     </button>
                     {nc.name !== 'Default' && (
-                      <button
-                        data-testid={`button-delete-net-class-${nc.name}`}
-                        onClick={() => handleDelete(nc.name)}
-                        className="p-0.5 rounded hover:bg-destructive/20 transition-colors"
-                        title={`Delete ${nc.name}`}
-                        aria-label={`Delete ${nc.name}`}
-                      >
-                        <Trash2 className="w-3 h-3 text-destructive" />
-                      </button>
+                      <ConfirmDialog
+                        trigger={
+                          <button
+                            data-testid={`button-delete-net-class-${nc.name}`}
+                            className="p-0.5 rounded hover:bg-destructive/20 transition-colors"
+                            title={`Delete ${nc.name}`}
+                            aria-label={`Delete ${nc.name}`}
+                          >
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </button>
+                        }
+                        title="Delete Net Class"
+                        description={`Remove the "${nc.name}" net class? Assigned nets will revert to the Default class.`}
+                        confirmLabel="Delete"
+                        variant="destructive"
+                        onConfirm={() => handleDelete(nc.name)}
+                      />
                     )}
                   </div>
                 </div>

@@ -167,7 +167,7 @@ describe('insertArchitectureEdgeSchema', () => {
       animated: true,
       signalType: 'digital',
       voltage: '3.3V',
-      busWidth: '8',
+      busWidth: 8,
       netName: 'SPI_CLK',
       style: { stroke: '#ff0000' },
     });

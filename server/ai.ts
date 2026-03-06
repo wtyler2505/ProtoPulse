@@ -11,7 +11,7 @@ export type AIAction =
   | { type: "add_node"; nodeType: string; label: string; description?: string; positionX?: number; positionY?: number }
   | { type: "remove_node"; nodeLabel: string }
   | { type: "update_node"; nodeLabel: string; newLabel?: string; newType?: string; newDescription?: string }
-  | { type: "connect_nodes"; sourceLabel: string; targetLabel: string; edgeLabel?: string; busType?: string; signalType?: string; voltage?: string; busWidth?: string; netName?: string }
+  | { type: "connect_nodes"; sourceLabel: string; targetLabel: string; edgeLabel?: string; busType?: string; signalType?: string; voltage?: string; busWidth?: number; netName?: string }
   | { type: "remove_edge"; sourceLabel: string; targetLabel: string }
   | { type: "clear_canvas" }
   | { type: "generate_architecture"; components: Array<{ label: string; nodeType: string; description: string; positionX: number; positionY: number }>; connections: Array<{ sourceLabel: string; targetLabel: string; label: string; busType?: string }> }
@@ -70,7 +70,7 @@ interface AppState {
   activeView: string;
   selectedNodeId?: string | null;
   nodes: Array<{ id: string; label: string; type: string; description?: string; positionX: number; positionY: number }>;
-  edges: Array<{ id: string; source: string; target: string; label?: string; signalType?: string; voltage?: string; busWidth?: string; netName?: string }>;
+  edges: Array<{ id: string; source: string; target: string; label?: string; signalType?: string; voltage?: string; busWidth?: number; netName?: string }>;
   bom: Array<{ id: string; partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string; status: string }>;
   validationIssues: Array<{ id: string; severity: string; message: string; componentId?: string; suggestion?: string }>;
   schematicSheets: Array<{ id: string; name: string }>;

@@ -44,6 +44,7 @@ import {
   TableRow,
   TableCell,
 } from '@/components/ui/table';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { ComponentLifecycle } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -352,8 +353,7 @@ export default function LifecycleDashboard() {
   }, [form, editingEntry, createMutation, updateMutation, toast]);
 
   const handleDelete = useCallback(
-    (id: number, e: React.MouseEvent) => {
-      e.stopPropagation();
+    (id: number) => {
       deleteMutation.mutate(id);
     },
     [deleteMutation],
@@ -712,7 +712,7 @@ const LifecycleRow = memo(function LifecycleRow({
   isExpanded: boolean;
   onToggle: (id: number) => void;
   onEdit: (entry: ComponentLifecycle) => void;
-  onDelete: (id: number, e: React.MouseEvent) => void;
+  onDelete: (id: number) => void;
 }) {
   const alternates = entry.alternatePartNumbers
     ? entry.alternatePartNumbers.split(',').map((s) => s.trim()).filter(Boolean)
@@ -762,14 +762,24 @@ const LifecycleRow = memo(function LifecycleRow({
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
-            <button
-              data-testid={`button-delete-${entry.id}`}
-              onClick={(e) => onDelete(entry.id, e)}
-              className="p-1.5 hover:bg-destructive/10 rounded-sm text-muted-foreground hover:text-destructive transition-colors"
-              aria-label={`Delete ${entry.partNumber}`}
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            <span onClick={(e) => { e.stopPropagation(); }}>
+              <ConfirmDialog
+                trigger={
+                  <button
+                    data-testid={`button-delete-${entry.id}`}
+                    className="p-1.5 hover:bg-destructive/10 rounded-sm text-muted-foreground hover:text-destructive transition-colors"
+                    aria-label={`Delete ${entry.partNumber}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                }
+                title="Delete Lifecycle Entry"
+                description={`Are you sure you want to delete the lifecycle entry for "${entry.partNumber}"? This action cannot be undone.`}
+                confirmLabel="Delete"
+                variant="destructive"
+                onConfirm={() => { onDelete(entry.id); }}
+              />
+            </span>
           </div>
         </TableCell>
       </TableRow>

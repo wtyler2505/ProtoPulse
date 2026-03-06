@@ -40,10 +40,36 @@ import { DEFAULT_ERC_RULES, DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-typ
 import type { CircuitSettings } from '@shared/circuit-types';
 import type { ComponentPart } from '@shared/schema';
 import { useDesignGateway } from '@/lib/design-gateway';
+import type { DesignState } from '@/lib/design-gateway';
 import { useDfmChecker } from '@/lib/dfm-checker';
 import { useDrcScripts, BUILTIN_TEMPLATES } from '@/lib/drc-scripting';
 import type { DfmCheckResult } from '@/lib/dfm-checker';
 import type { DrcScript } from '@/lib/drc-scripting';
+import type { ScriptDesignData } from '@/lib/drc-scripting';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useBom } from '@/lib/contexts/bom-context';
+
+/** Brief explanations for validation rule categories (UX-043: "why this rule matters" tooltips). */
+const RULE_EXPLANATIONS: Record<string, string> = {
+  connectivity: 'Ensures all nodes are properly connected and no signals are left floating',
+  power: 'Verifies power rails, decoupling, and voltage compatibility across the design',
+  naming: 'Checks for consistent and unambiguous naming of nets, nodes, and components',
+  completeness: 'Validates that the design has all required elements before fabrication',
+  clearance: 'Ensures minimum spacing between traces, pads, and copper features',
+  annular_ring: 'Checks pad ring width around drill holes meets manufacturing minimums',
+  drill: 'Validates drill hole sizes are within fabrication capabilities',
+  trace_width: 'Ensures traces can carry required current without overheating',
+  silkscreen: 'Checks silkscreen text and graphics meet readability requirements',
+  solder_mask: 'Validates solder mask openings and bridges for reliable soldering',
+  board_edge: 'Ensures components and copper maintain safe distance from board edges',
+  via: 'Checks via sizes and spacing meet manufacturing and signal integrity requirements',
+  courtyard: 'Detects component courtyard overlaps that would prevent physical assembly',
+  unconnected_pin: 'Flags pins that should be connected but are not wired to any net',
+  power_pin_conflict: 'Detects conflicting power connections that could damage components',
+  duplicate_refdes: 'Catches duplicate reference designators that cause BOM and assembly errors',
+  missing_value: 'Ensures all components have required values (resistance, capacitance, etc.)',
+  esd: 'Flags ESD-sensitive components that may need protection circuitry',
+};
 
 /** Safely build a PartState from a ComponentPart DB row, providing defaults for nullable JSON fields. */
 function toPartState(part: ComponentPart): PartState {
@@ -141,6 +167,63 @@ function ValidationViewContent() {
   const projectId = useProjectId();
   const { data: componentParts } = useComponentParts(projectId);
 
+  // Real project data for validation checks
+  const { nodes, edges } = useArchitecture();
+  const { bom } = useBom();
+
+  // Build DesignState for gateway from real architecture + BOM data
+  const gatewayDesignState = useMemo((): DesignState => ({
+    nodes: nodes.map((n) => ({
+      id: String(n.id),
+      label: typeof n.data?.label === 'string' ? n.data.label : String(n.id),
+      type: n.type ?? 'default',
+      properties: (n.data && typeof n.data === 'object' ? Object.fromEntries(
+        Object.entries(n.data as Record<string, unknown>).filter(([, v]) => typeof v === 'string').map(([k, v]) => [k, v as string])
+      ) : {}) as Record<string, string>,
+    })),
+    edges: edges.map((e) => ({
+      id: String(e.id),
+      source: String(e.source),
+      target: String(e.target),
+      label: typeof e.label === 'string' ? e.label : undefined,
+      signalType: typeof e.data?.signalType === 'string' ? e.data.signalType : undefined,
+      voltage: typeof e.data?.voltage === 'string' ? e.data.voltage : undefined,
+    })),
+    bomItems: bom.map((b) => ({
+      id: String(b.id),
+      partNumber: b.partNumber,
+      description: b.description,
+      quantity: b.quantity,
+    })),
+  }), [nodes, edges, bom]);
+
+  // Build ScriptDesignData for custom DRC scripts from real data
+  const scriptDesignData = useMemo((): ScriptDesignData => ({
+    nodes: nodes.map((n) => ({
+      id: String(n.id),
+      label: typeof n.data?.label === 'string' ? n.data.label : String(n.id),
+      type: n.type ?? 'default',
+      x: n.position?.x ?? 0,
+      y: n.position?.y ?? 0,
+      width: typeof n.measured?.width === 'number' ? n.measured.width : (typeof n.width === 'number' ? n.width : 150),
+      height: typeof n.measured?.height === 'number' ? n.measured.height : (typeof n.height === 'number' ? n.height : 50),
+      properties: (n.data && typeof n.data === 'object' ? Object.fromEntries(
+        Object.entries(n.data as Record<string, unknown>).filter(([, v]) => typeof v === 'string').map(([k, v]) => [k, v as string])
+      ) : {}) as Record<string, string>,
+    })),
+    edges: edges.map((e) => ({
+      source: String(e.source),
+      target: String(e.target),
+      label: typeof e.label === 'string' ? e.label : undefined,
+    })),
+    bomItems: bom.map((b) => ({
+      name: b.description || b.partNumber,
+      category: b.supplier ?? 'Unknown',
+      value: b.partNumber,
+      quantity: b.quantity,
+    })),
+  }), [nodes, edges, bom]);
+
   // Design Gateway
   const { violations: gatewayViolations, validate: runGateway, enableRule: enableGatewayRule, disableRule: disableGatewayRule, rules: gatewayRules } = useDesignGateway();
 
@@ -159,9 +242,9 @@ function ValidationViewContent() {
   const [scriptCode, setScriptCode] = useState('');
 
   const handleRunGateway = useCallback(() => {
-    runGateway({ nodes: [], edges: [], bomItems: [] });
+    runGateway(gatewayDesignState);
     toast({ title: 'Design Gateway', description: 'Proactive design checks completed.' });
-  }, [runGateway, toast]);
+  }, [runGateway, gatewayDesignState, toast]);
 
   const handleRunDfm = useCallback(() => {
     if (!selectedFab) {
@@ -197,11 +280,10 @@ function ValidationViewContent() {
   }, [scriptName, scriptDescription, scriptCode, addScript, toast]);
 
   const handleRunAllScripts = useCallback(async () => {
-    const designData = { nodes: [], edges: [], bomItems: [] };
-    const allResults = await runAllEnabled(designData);
+    const allResults = await runAllEnabled(scriptDesignData);
     const totalViolations = allResults.reduce((sum, r) => sum + r.violations.length, 0);
     toast({ title: 'Scripts Executed', description: `Ran ${allResults.length} script(s), found ${totalViolations} violation(s).` });
-  }, [runAllEnabled, toast]);
+  }, [runAllEnabled, scriptDesignData, toast]);
 
   const handleApplyTemplate = useCallback((templateIdx: string) => {
     const idx = parseInt(templateIdx, 10);
@@ -382,7 +464,9 @@ function ValidationViewContent() {
                   <Badge variant={rule.severity === 'error' ? 'destructive' : rule.severity === 'warning' ? 'secondary' : 'outline'} className="text-[10px] px-1.5 py-0">
                     {rule.category}
                   </Badge>
-                  <span className="truncate">{rule.name}</span>
+                  <StyledTooltip content={RULE_EXPLANATIONS[rule.category] ?? 'Validates design quality'} side="right">
+                    <span className="truncate cursor-help">{rule.name}</span>
+                  </StyledTooltip>
                 </div>
                 <button
                   data-testid={`gateway-toggle-${rule.id}`}
@@ -587,7 +671,7 @@ function ValidationViewContent() {
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => { void runScript(script.id, { nodes: [], edges: [], bomItems: [] }).then(() => { toast({ title: 'Script Executed', description: `Ran "${script.name}".` }); }); }}
+                        onClick={() => { void runScript(script.id, scriptDesignData).then(() => { toast({ title: 'Script Executed', description: `Ran "${script.name}".` }); }); }}
                       >
                         <Play className="w-3 h-3" />
                       </Button>
@@ -712,22 +796,32 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rows = useMemo<VirtualRow[]>(() => {
-    const result: VirtualRow[] = issues.map((issue) => ({ type: 'arch' as const, issue }));
+    // Sort by severity within each group: error > warning > info (UX-041)
+    const severityOrder: Record<string, number> = { error: 0, warning: 1, info: 2 };
+    const bySeverity = <T extends { severity: string }>(a: T, b: T) =>
+      (severityOrder[a.severity] ?? 3) - (severityOrder[b.severity] ?? 3);
+
+    const sortedArch = [...issues].sort(bySeverity);
+    const result: VirtualRow[] = sortedArch.map((issue) => ({ type: 'arch' as const, issue }));
+
     if (hasComponentParts && componentIssues.length > 0) {
-      result.push({ type: 'section_header' as const, count: componentIssues.length });
-      for (const issue of componentIssues) {
+      const sortedComp = [...componentIssues].sort(bySeverity);
+      result.push({ type: 'section_header' as const, count: sortedComp.length });
+      for (const issue of sortedComp) {
         result.push({ type: 'comp' as const, issue });
       }
     }
     if (drcIssues.length > 0) {
-      result.push({ type: 'drc_header' as const, count: drcIssues.length });
-      for (const issue of drcIssues) {
+      const sortedDrc = [...drcIssues].sort(bySeverity);
+      result.push({ type: 'drc_header' as const, count: sortedDrc.length });
+      for (const issue of sortedDrc) {
         result.push({ type: 'drc' as const, issue });
       }
     }
     if (ercIssues.length > 0) {
-      result.push({ type: 'erc_header' as const, count: ercIssues.length });
-      for (const issue of ercIssues) {
+      const sortedErc = [...ercIssues].sort(bySeverity);
+      result.push({ type: 'erc_header' as const, count: sortedErc.length });
+      for (const issue of sortedErc) {
         result.push({ type: 'erc' as const, issue });
       }
     }
@@ -868,7 +962,9 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
-                    <div className="mt-1 text-[10px] text-muted-foreground font-mono">{row.issue.ruleType} ({row.issue.view})</div>
+                    <StyledTooltip content={RULE_EXPLANATIONS[row.issue.ruleType] ?? `DRC rule: ${row.issue.ruleType}`} side="bottom">
+                      <div className="mt-1 text-[10px] text-muted-foreground font-mono cursor-help inline-block">{row.issue.ruleType} ({row.issue.view})</div>
+                    </StyledTooltip>
                   </div>
                   <div className="md:w-32 text-xs font-mono text-rose-500 bg-rose-500/10 px-2 py-1 self-start text-center">
                     {row.issue.componentId}
@@ -899,7 +995,9 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
-                    <div className="mt-1 text-[10px] text-muted-foreground font-mono">{row.issue.ruleType}</div>
+                    <StyledTooltip content={RULE_EXPLANATIONS[row.issue.ruleType] ?? `ERC rule: ${row.issue.ruleType}`} side="bottom">
+                      <div className="mt-1 text-[10px] text-muted-foreground font-mono cursor-help inline-block">{row.issue.ruleType}</div>
+                    </StyledTooltip>
                   </div>
                   <div className="md:w-32 text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-1 self-start text-center">
                     ERC

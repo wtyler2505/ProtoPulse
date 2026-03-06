@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Save, Trash2, GitCompareArrows, Clock, Plus, Minus, Pencil, ArrowRight, Layers } from 'lucide-react';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { ArchDiffResult, ArchNodeDiffEntry, ArchEdgeDiffEntry, ArchFieldChange } from '@shared/arch-diff';
 
 // ---------------------------------------------------------------------------
@@ -194,16 +195,24 @@ export default function DesignHistoryView() {
                         <GitCompareArrows className="w-3.5 h-3.5" />
                         {diffLoading === snapshot.id ? 'Comparing...' : 'Compare to Current'}
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        data-testid={`btn-delete-snapshot-${snapshot.id}`}
-                        onClick={() => deleteMutation.mutate(snapshot.id)}
-                        disabled={deleteMutation.isPending}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                      <ConfirmDialog
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            data-testid={`btn-delete-snapshot-${snapshot.id}`}
+                            disabled={deleteMutation.isPending}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        }
+                        title="Delete Snapshot"
+                        description={`Are you sure you want to delete the snapshot "${String(snapshot.name)}"? This action cannot be undone.`}
+                        confirmLabel="Delete"
+                        variant="destructive"
+                        onConfirm={() => deleteMutation.mutate(snapshot.id)}
+                      />
                     </div>
                   </div>
                 </CardHeader>

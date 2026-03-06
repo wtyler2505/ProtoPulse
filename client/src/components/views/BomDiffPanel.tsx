@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { BomDiffResult, BomDiffEntry } from '@shared/bom-diff';
 
 // ---------------------------------------------------------------------------
@@ -136,16 +137,24 @@ export default function BomDiffPanel() {
         </Select>
 
         {selectedSnapshotId && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            onClick={() => deleteSnapshot.mutate(Number(selectedSnapshotId))}
-            disabled={deleteSnapshot.isPending}
-            data-testid="delete-snapshot-button"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                disabled={deleteSnapshot.isPending}
+                data-testid="delete-snapshot-button"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            }
+            title="Delete BOM Snapshot"
+            description={`Are you sure you want to delete this snapshot? This action cannot be undone.`}
+            confirmLabel="Delete"
+            variant="destructive"
+            onConfirm={() => deleteSnapshot.mutate(Number(selectedSnapshotId))}
+          />
         )}
       </div>
 

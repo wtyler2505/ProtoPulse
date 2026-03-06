@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { DesignComment } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -169,15 +170,23 @@ function CommentItem({
             </Button>
           )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-xs text-zinc-400 hover:text-red-400"
-            onClick={() => { onDelete(comment.id); }}
-            data-testid={`comment-delete-btn-${comment.id}`}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs text-zinc-400 hover:text-red-400"
+                data-testid={`comment-delete-btn-${comment.id}`}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+            }
+            title="Delete Comment"
+            description="Are you sure you want to delete this comment? This action cannot be undone."
+            confirmLabel="Delete"
+            variant="destructive"
+            onConfirm={() => { onDelete(comment.id); }}
+          />
         </div>
       </div>
 
