@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { asyncHandler, payloadLimit, parseIdParam, HttpError } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 const createCommentSchema = z.object({
   content: z.string().min(1).max(5000),
@@ -20,6 +21,7 @@ export function registerCommentRoutes(app: Express): void {
   // List comments for a project, with optional filters
   app.get(
     '/api/projects/:id/comments',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
 
@@ -44,6 +46,7 @@ export function registerCommentRoutes(app: Express): void {
   // Create a comment
   app.post(
     '/api/projects/:id/comments',
+    requireProjectOwnership,
     payloadLimit(16 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
@@ -75,6 +78,7 @@ export function registerCommentRoutes(app: Express): void {
   // Update comment content
   app.patch(
     '/api/projects/:id/comments/:commentId',
+    requireProjectOwnership,
     payloadLimit(16 * 1024),
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id);
@@ -95,6 +99,7 @@ export function registerCommentRoutes(app: Express): void {
   // Resolve a comment
   app.post(
     '/api/projects/:id/comments/:commentId/resolve',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
@@ -111,6 +116,7 @@ export function registerCommentRoutes(app: Express): void {
   // Unresolve a comment
   app.post(
     '/api/projects/:id/comments/:commentId/unresolve',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
@@ -126,6 +132,7 @@ export function registerCommentRoutes(app: Express): void {
   // Delete a comment (hard delete)
   app.delete(
     '/api/projects/:id/comments/:commentId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);

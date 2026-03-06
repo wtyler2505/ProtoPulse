@@ -72,9 +72,9 @@ export const CURSOR_COLORS = [
   '#F1948A', '#85C1E9', '#F0B27A', '#AED6F1',
 ] as const;
 
-/** Build a deterministic lock key from entity type + id. */
-export function lockKey(entityType: string, entityId: string): string {
-  return `${entityType}:${entityId}`;
+/** Build a deterministic lock key from project, entity type + id. */
+export function lockKey(projectId: number | string, entityType: string, entityId: string): string {
+  return `${projectId}:${entityType}:${entityId}`;
 }
 
 /** Validate a CollabMessage has required fields. */

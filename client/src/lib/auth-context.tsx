@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, queryClient } from '@/lib/queryClient';
 
 interface User {
   id: number;
@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser(data);
           } else {
             // Session invalid — clear it
+            queryClient.clear();
             localStorage.removeItem(SESSION_KEY);
             setSessionId(null);
             setUser(null);
@@ -53,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch {
         if (!cancelled) {
+          queryClient.clear();
           localStorage.removeItem(SESSION_KEY);
           setSessionId(null);
           setUser(null);
@@ -71,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const res = await apiRequest('POST', '/api/auth/login', { username, password });
     const data = (await res.json()) as { sessionId: string; user: User };
+    queryClient.clear();
     localStorage.setItem(SESSION_KEY, data.sessionId);
     setSessionId(data.sessionId);
     setUser(data.user);
@@ -79,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (username: string, password: string) => {
     const res = await apiRequest('POST', '/api/auth/register', { username, password });
     const data = (await res.json()) as { sessionId: string; user: User };
+    queryClient.clear();
     localStorage.setItem(SESSION_KEY, data.sessionId);
     setSessionId(data.sessionId);
     setUser(data.user);
@@ -95,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Logout best-effort — clear local state regardless
       }
     }
+    queryClient.clear();
     localStorage.removeItem(SESSION_KEY);
     setSessionId(null);
     setUser(null);

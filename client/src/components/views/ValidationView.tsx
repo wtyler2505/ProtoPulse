@@ -196,9 +196,9 @@ function ValidationViewContent() {
     toast({ title: 'Script Added', description: `"${scriptName.trim()}" added to custom rules.` });
   }, [scriptName, scriptDescription, scriptCode, addScript, toast]);
 
-  const handleRunAllScripts = useCallback(() => {
+  const handleRunAllScripts = useCallback(async () => {
     const designData = { nodes: [], edges: [], bomItems: [] };
-    const allResults = runAllEnabled(designData);
+    const allResults = await runAllEnabled(designData);
     const totalViolations = allResults.reduce((sum, r) => sum + r.violations.length, 0);
     toast({ title: 'Scripts Executed', description: `Ran ${allResults.length} script(s), found ${totalViolations} violation(s).` });
   }, [runAllEnabled, toast]);
@@ -560,7 +560,7 @@ function ValidationViewContent() {
               <div data-testid="script-list" className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Scripts ({scripts.length})</h4>
-                  <Button data-testid="run-all-scripts" variant="outline" size="sm" className="h-7 text-xs" onClick={handleRunAllScripts}>
+                  <Button data-testid="run-all-scripts" variant="outline" size="sm" className="h-7 text-xs" onClick={() => void handleRunAllScripts()}>
                     <Play className="w-3 h-3 mr-1" />
                     Run All Enabled
                   </Button>
@@ -587,7 +587,7 @@ function ValidationViewContent() {
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
-                        onClick={() => { runScript(script.id, { nodes: [], edges: [], bomItems: [] }); toast({ title: 'Script Executed', description: `Ran "${script.name}".` }); }}
+                        onClick={() => { void runScript(script.id, { nodes: [], edges: [], bomItems: [] }).then(() => { toast({ title: 'Script Executed', description: `Ran "${script.name}".` }); }); }}
                       >
                         <Play className="w-3 h-3" />
                       </Button>

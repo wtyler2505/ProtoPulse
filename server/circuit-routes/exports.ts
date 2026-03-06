@@ -12,10 +12,11 @@ import {
   DEFAULT_BOARD_WIDTH,
   DEFAULT_BOARD_HEIGHT,
 } from './utils';
+import { requireProjectOwnership } from '../routes/auth-middleware';
 
 export function registerCircuitExportRoutes(app: Express, storage: IStorage): void {
   // Export BOM
-  app.post('/api/projects/:projectId/export/bom', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/bom', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const parsed = exportFormatSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -37,7 +38,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export Netlist (standalone -- supplements the existing inline netlist route)
-  app.post('/api/projects/:projectId/export/netlist', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/netlist', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const parsed = exportFormatSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -87,7 +88,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export Gerber + Drill (manufacturing package)
-  app.post('/api/projects/:projectId/export/gerber', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/gerber', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const dims = boardDimensionsSchema.safeParse(req.body);
     const boardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
@@ -183,7 +184,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export Pick-and-Place
-  app.post('/api/projects/:projectId/export/pick-place', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/pick-place', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const parsed = exportFormatSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -228,7 +229,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export KiCad Project
-  app.post('/api/projects/:projectId/export/kicad', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/kicad', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const dims = boardDimensionsSchema.safeParse(req.body);
     const kicadBoardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
@@ -288,7 +289,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export Eagle Project
-  app.post('/api/projects/:projectId/export/eagle', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/eagle', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const eagleDims = boardDimensionsSchema.safeParse(req.body);
     const eagleBoardWidth = eagleDims.success ? (eagleDims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
@@ -347,7 +348,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export PDF/SVG view
-  app.post('/api/projects/:projectId/export/pdf', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/pdf', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const parsed = exportFormatSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -375,7 +376,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export PDF Design Report
-  app.post('/api/projects/:projectId/export/report-pdf', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/report-pdf', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
     // Gather project data
@@ -452,7 +453,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export FMEA Report (CSV)
-  app.post('/api/projects/:projectId/export/fmea', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/fmea', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
     const [project, nodes, edges, issues] = await Promise.all([
@@ -502,7 +503,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export FZZ (Fritzing full project)
-  app.post('/api/projects/:projectId/export/fzz', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/fzz', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const circuits = await storage.getCircuitDesigns(projectId);
     if (circuits.length === 0) {
@@ -552,7 +553,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export ODB++ (manufacturing package ZIP)
-  app.post('/api/projects/:projectId/export/odb-plus-plus', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/odb-plus-plus', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const dims = boardDimensionsSchema.safeParse(req.body);
     const boardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
@@ -635,7 +636,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export IPC-2581 (XML manufacturing data)
-  app.post('/api/projects/:projectId/export/ipc2581', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/ipc2581', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const dims = boardDimensionsSchema.safeParse(req.body);
     const boardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
@@ -718,7 +719,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   }));
 
   // Export Firmware Scaffold (Arduino/PlatformIO)
-  app.post('/api/projects/:projectId/export/firmware', payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/firmware', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
     const [project, nodes, edges] = await Promise.all([

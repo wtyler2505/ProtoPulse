@@ -7,6 +7,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
+import { isSafeUrl } from '@shared/url-validation';
 import type { Asset } from './asset-constants';
 
 interface AssetGridProps {
@@ -196,7 +197,7 @@ const AssetGrid = memo(function AssetGrid({
                   </div>
                 )}
                 <div className="flex gap-1 flex-wrap">
-                  {asset.datasheet && (
+                  {asset.datasheet && isSafeUrl(asset.datasheet) && (
                     <button
                       onClick={(e) => { e.stopPropagation(); window.open(asset.datasheet, '_blank', 'noopener,noreferrer'); }}
                       aria-label={`Open datasheet for ${asset.name}`}
@@ -229,7 +230,7 @@ const AssetGrid = memo(function AssetGrid({
             <Plus className="w-3.5 h-3.5 mr-2" /> Add to Canvas
           </ContextMenuItem>
           <ContextMenuItem
-            onSelect={() => asset.datasheet && window.open(asset.datasheet, '_blank', 'noopener,noreferrer')}
+            onSelect={() => asset.datasheet && isSafeUrl(asset.datasheet) && window.open(asset.datasheet, '_blank', 'noopener,noreferrer')}
             disabled={!asset.datasheet}
           >
             <ExternalLink className="w-3.5 h-3.5 mr-2" /> Search Datasheet

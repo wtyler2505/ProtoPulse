@@ -384,7 +384,7 @@ describe('CollaborationServer', () => {
       sendMessage(ws, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 30000 }, 1));
       const granted = parseSent(ws);
       expect(granted.type).toBe('lock-granted');
-      expect(granted.payload.entityKey).toBe('node:n1');
+      expect(granted.payload.entityKey).toBe('1:node:n1');
     });
 
     it('should deny lock if held by another user', async () => {
@@ -415,7 +415,7 @@ describe('CollaborationServer', () => {
       const ws2 = await simulateJoin(1, 'session-b', { userId: 2, isOwner: false });
 
       sendMessage(ws1, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 30000 }, 1));
-      sendMessage(ws1, makeMsg('lock-released', { entityKey: 'node:n1' }, 1));
+      sendMessage(ws1, makeMsg('lock-released', { entityKey: '1:node:n1' }, 1));
 
       const released = ws2.sent.map((s) => JSON.parse(s) as CollabMessage).filter((m) => m.type === 'lock-released');
       expect(released.length).toBeGreaterThanOrEqual(1);
@@ -428,11 +428,11 @@ describe('CollaborationServer', () => {
       sendMessage(ws1, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 30000 }, 1));
 
       // User 2 tries to release user 1's lock
-      sendMessage(ws2, makeMsg('lock-released', { entityKey: 'node:n1' }, 2));
+      sendMessage(ws2, makeMsg('lock-released', { entityKey: '1:node:n1' }, 2));
 
       // Lock should still exist
       const locks = server.getLocks();
-      expect(locks.has('node:n1')).toBe(true);
+      expect(locks.has('1:node:n1')).toBe(true);
     });
 
     it('should release locks on user disconnect', async () => {
@@ -443,17 +443,17 @@ describe('CollaborationServer', () => {
       ws1.emit('close');
 
       const locks = server.getLocks();
-      expect(locks.has('node:n1')).toBe(false);
+      expect(locks.has('1:node:n1')).toBe(false);
     });
 
     it('should auto-expire locks after timeout', async () => {
       const ws = await simulateJoin(1, 'session-a', { userId: 1 });
 
       sendMessage(ws, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 5000 }, 1));
-      expect(server.getLocks().has('node:n1')).toBe(true);
+      expect(server.getLocks().has('1:node:n1')).toBe(true);
 
       vi.advanceTimersByTime(11_000); // Past lock timeout (5s) + cleanup interval (5s) + buffer
-      expect(server.getLocks().has('node:n1')).toBe(false);
+      expect(server.getLocks().has('1:node:n1')).toBe(false);
     });
 
     it('should cap lock timeout at DEFAULT_LOCK_TIMEOUT_MS', async () => {
@@ -461,7 +461,7 @@ describe('CollaborationServer', () => {
 
       sendMessage(ws, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 999999 }, 1));
 
-      const lock = server.getLocks().get('node:n1');
+      const lock = server.getLocks().get('1:node:n1');
       expect(lock).toBeDefined();
       // Timeout should be capped
       const maxExpiry = Date.now() + DEFAULT_LOCK_TIMEOUT_MS + 1000; // small buffer
@@ -707,7 +707,7 @@ describe('CollaborationServer', () => {
 
   describe('shared utilities', () => {
     it('lockKey should join entity type and id', () => {
-      expect(lockKey('node', 'abc')).toBe('node:abc');
+      expect(lockKey(1, 'node', 'abc')).toBe('1:node:abc');
     });
 
     it('isValidCollabMessage should validate required fields', () => {

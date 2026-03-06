@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { asyncHandler, payloadLimit, parseIdParam, HttpError } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 const VALID_FABRICATORS = ['jlcpcb', 'pcbway', 'oshpark', 'pcbgogo', 'seeed'] as const;
 const VALID_STATUSES = ['draft', 'dfm-check', 'quoting', 'ready', 'submitted', 'processing', 'shipped', 'delivered', 'error'] as const;
@@ -35,6 +36,7 @@ export function registerOrderingRoutes(app: Express): void {
   // List orders for a project
   app.get(
     '/api/projects/:projectId/orders',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orders = await storage.getOrders(projectId);
@@ -45,6 +47,7 @@ export function registerOrderingRoutes(app: Express): void {
   // Get single order
   app.get(
     '/api/projects/:projectId/orders/:orderId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orderId = parseIdParam(req.params.orderId);
@@ -59,6 +62,7 @@ export function registerOrderingRoutes(app: Express): void {
   // Create new order
   app.post(
     '/api/projects/:projectId/orders',
+    requireProjectOwnership,
     payloadLimit(64 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -86,6 +90,7 @@ export function registerOrderingRoutes(app: Express): void {
   // Update order
   app.put(
     '/api/projects/:projectId/orders/:orderId',
+    requireProjectOwnership,
     payloadLimit(64 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -113,6 +118,7 @@ export function registerOrderingRoutes(app: Express): void {
   // Submit order (transition status to 'submitted')
   app.post(
     '/api/projects/:projectId/orders/:orderId/submit',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orderId = parseIdParam(req.params.orderId);
@@ -140,6 +146,7 @@ export function registerOrderingRoutes(app: Express): void {
   // Delete order
   app.delete(
     '/api/projects/:projectId/orders/:orderId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orderId = parseIdParam(req.params.orderId);

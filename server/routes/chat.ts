@@ -6,6 +6,7 @@ import { insertChatMessageSchema } from '@shared/schema';
 import { processAIMessage, streamAIMessage, categorizeError, routeToModel } from '../ai';
 import { getApiKey } from '../auth';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema, HttpError } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 const MAX_CHAT_HISTORY = 10;
 
@@ -318,6 +319,7 @@ export function registerChatRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:id/chat',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const opts = paginationSchema.safeParse(req.query);
       const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'asc' as const };
@@ -329,6 +331,7 @@ export function registerChatRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:id/chat',
+    requireProjectOwnership,
     payloadLimit(32 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
@@ -343,6 +346,7 @@ export function registerChatRoutes(app: Express): void {
 
   app.delete(
     '/api/projects/:id/chat',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       await storage.deleteChatMessages(projectId);
@@ -352,6 +356,7 @@ export function registerChatRoutes(app: Express): void {
 
   app.delete(
     '/api/projects/:id/chat/:msgId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const msgId = parseIdParam(req.params.msgId);
@@ -423,6 +428,8 @@ export function registerChatRoutes(app: Express): void {
               mediaType: parsed.data.imageMimeType || 'image/png',
             }
           : undefined,
+        projectId: pid,
+        userId: req.userId,
       });
 
       res.json(result);
@@ -590,6 +597,7 @@ export function registerChatRoutes(app: Express): void {
                   mediaType: parsed.data.imageMimeType || 'image/png',
                 }
               : undefined,
+            userId: req.userId,
           },
           async (event) => {
             if (!closed) {
@@ -619,6 +627,7 @@ export function registerChatRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:id/ai-actions',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const pid = parseIdParam(req.params.id);
       const project = await storage.getProject(pid);

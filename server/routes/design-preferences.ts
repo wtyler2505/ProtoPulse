@@ -4,11 +4,13 @@ import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertDesignPreferenceSchema } from '@shared/schema';
 import { asyncHandler, parseIdParam } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 export function registerDesignPreferenceRoutes(app: Express): void {
   // List all preferences for a project
   app.get(
     '/api/projects/:id/preferences',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const prefs = await storage.getDesignPreferences(projectId);
@@ -19,6 +21,7 @@ export function registerDesignPreferenceRoutes(app: Express): void {
   // Upsert a design preference (insert or update on conflict)
   app.post(
     '/api/projects/:id/preferences',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = insertDesignPreferenceSchema.safeParse({ ...req.body, projectId });
@@ -33,6 +36,7 @@ export function registerDesignPreferenceRoutes(app: Express): void {
   // Bulk upsert preferences
   app.put(
     '/api/projects/:id/preferences',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const bodySchema = z.array(insertDesignPreferenceSchema.omit({ projectId: true }));
@@ -50,6 +54,7 @@ export function registerDesignPreferenceRoutes(app: Express): void {
   // Delete a specific preference
   app.delete(
     '/api/projects/:id/preferences/:prefId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id); // validate project id
       const prefId = parseIdParam(req.params.prefId);

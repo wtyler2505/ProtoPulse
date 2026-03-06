@@ -24,6 +24,7 @@ const {
 
 vi.mock('../storage', () => ({
   storage: {
+    getProject: vi.fn().mockResolvedValue({ id: 1, name: 'Test Project', ownerId: null }),
     getOrders: mockGetOrders,
     getOrder: mockGetOrder,
     createOrder: mockCreateOrder,
@@ -32,11 +33,25 @@ vi.mock('../storage', () => ({
   },
 }));
 
+// Mock auth for requireProjectOwnership middleware
+vi.mock('../auth', () => ({
+  validateSession: vi.fn().mockResolvedValue({ userId: 1, sessionId: 'test-session' }),
+}));
+
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
 
 const NOW = new Date('2026-03-05T12:00:00Z');
+
+/** Wrapper around fetch that injects X-Session-Id for requireProjectOwnership middleware */
+function authFetch(url: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('X-Session-Id')) {
+    headers.set('X-Session-Id', 'test-session');
+  }
+  return fetch(url, { ...init, headers });
+}
 
 function makeOrder(overrides: Partial<PcbOrder> = {}): PcbOrder {
   return {
@@ -107,7 +122,7 @@ beforeEach(() => {
 describe('GET /api/projects/:projectId/orders', () => {
   it('returns empty array when no orders exist', async () => {
     mockGetOrders.mockResolvedValue([]);
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`);
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toEqual([]);
@@ -118,7 +133,7 @@ describe('GET /api/projects/:projectId/orders', () => {
   it('returns list of orders for a project', async () => {
     const orders = [makeOrder({ id: 1 }), makeOrder({ id: 2, fabricatorId: 'pcbway' })];
     mockGetOrders.mockResolvedValue(orders);
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`);
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.data).toHaveLength(2);
@@ -126,7 +141,7 @@ describe('GET /api/projects/:projectId/orders', () => {
   });
 
   it('returns 400 for invalid project ID', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/abc/orders`);
+    const res = await authFetch(`${baseUrl}/api/projects/abc/orders`);
     expect(res.status).toBe(400);
   });
 });
@@ -139,7 +154,7 @@ describe('GET /api/projects/:projectId/orders/:orderId', () => {
   it('returns single order', async () => {
     const order = makeOrder();
     mockGetOrder.mockResolvedValue(order);
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`);
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.id).toBe(1);
@@ -148,19 +163,19 @@ describe('GET /api/projects/:projectId/orders/:orderId', () => {
 
   it('returns 404 when order not found', async () => {
     mockGetOrder.mockResolvedValue(undefined);
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/999`);
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/999`);
     expect(res.status).toBe(404);
   });
 
   it('returns 404 when order belongs to different project', async () => {
     const order = makeOrder({ projectId: 2 });
     mockGetOrder.mockResolvedValue(order);
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`);
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`);
     expect(res.status).toBe(404);
   });
 
   it('returns 400 for invalid order ID', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/xyz`);
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/xyz`);
     expect(res.status).toBe(400);
   });
 });
@@ -174,7 +189,7 @@ describe('POST /api/projects/:projectId/orders', () => {
     const created = makeOrder();
     mockCreateOrder.mockResolvedValue(created);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -199,7 +214,7 @@ describe('POST /api/projects/:projectId/orders', () => {
     const created = makeOrder({ quantity: 10, turnaround: 'express', notes: 'Rush order' });
     mockCreateOrder.mockResolvedValue(created);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -220,7 +235,7 @@ describe('POST /api/projects/:projectId/orders', () => {
   });
 
   it('returns 400 for invalid fabricatorId', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -235,7 +250,7 @@ describe('POST /api/projects/:projectId/orders', () => {
   });
 
   it('returns 400 when boardSpec is missing', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -247,7 +262,7 @@ describe('POST /api/projects/:projectId/orders', () => {
   });
 
   it('returns 400 when fabricatorId is missing', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -259,7 +274,7 @@ describe('POST /api/projects/:projectId/orders', () => {
   });
 
   it('returns 400 for negative quantity', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -273,7 +288,7 @@ describe('POST /api/projects/:projectId/orders', () => {
   });
 
   it('returns 400 for invalid turnaround', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -290,7 +305,7 @@ describe('POST /api/projects/:projectId/orders', () => {
     const fabs = ['jlcpcb', 'pcbway', 'oshpark', 'pcbgogo', 'seeed'];
     for (const fab of fabs) {
       mockCreateOrder.mockResolvedValue(makeOrder({ fabricatorId: fab }));
-      const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+      const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -303,7 +318,7 @@ describe('POST /api/projects/:projectId/orders', () => {
   });
 
   it('returns 400 for invalid project ID', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/notanumber/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/notanumber/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -327,7 +342,7 @@ describe('PUT /api/projects/:projectId/orders/:orderId', () => {
     mockGetOrder.mockResolvedValue(existing);
     mockUpdateOrder.mockResolvedValue(updated);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quantity: 20 }),
@@ -345,7 +360,7 @@ describe('PUT /api/projects/:projectId/orders/:orderId', () => {
     mockGetOrder.mockResolvedValue(existing);
     mockUpdateOrder.mockResolvedValue(updated);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'quoting' }),
@@ -359,7 +374,7 @@ describe('PUT /api/projects/:projectId/orders/:orderId', () => {
   it('returns 404 when order not found', async () => {
     mockGetOrder.mockResolvedValue(undefined);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/999`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/999`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quantity: 10 }),
@@ -371,7 +386,7 @@ describe('PUT /api/projects/:projectId/orders/:orderId', () => {
   it('returns 404 when order belongs to different project', async () => {
     mockGetOrder.mockResolvedValue(makeOrder({ projectId: 2 }));
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ quantity: 10 }),
@@ -383,7 +398,7 @@ describe('PUT /api/projects/:projectId/orders/:orderId', () => {
   it('returns 400 for invalid fabricatorId update', async () => {
     mockGetOrder.mockResolvedValue(makeOrder());
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fabricatorId: 'fakefab' }),
@@ -395,7 +410,7 @@ describe('PUT /api/projects/:projectId/orders/:orderId', () => {
   it('returns 400 for invalid status update', async () => {
     mockGetOrder.mockResolvedValue(makeOrder());
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'nonexistent_status' }),
@@ -410,7 +425,7 @@ describe('PUT /api/projects/:projectId/orders/:orderId', () => {
     mockGetOrder.mockResolvedValue(existing);
     mockUpdateOrder.mockResolvedValue(updated);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ trackingNumber: 'TRACK123' }),
@@ -427,7 +442,7 @@ describe('PUT /api/projects/:projectId/orders/:orderId', () => {
     mockGetOrder.mockResolvedValue(existing);
     mockUpdateOrder.mockResolvedValue(updated);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notes: 'Updated note' }),
@@ -449,7 +464,7 @@ describe('POST /api/projects/:projectId/orders/:orderId/submit', () => {
     mockGetOrder.mockResolvedValue(existing);
     mockUpdateOrder.mockResolvedValue(submitted);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
       method: 'POST',
     });
 
@@ -466,7 +481,7 @@ describe('POST /api/projects/:projectId/orders/:orderId/submit', () => {
   it('returns 400 when order is in draft status', async () => {
     mockGetOrder.mockResolvedValue(makeOrder({ status: 'draft' }));
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
       method: 'POST',
     });
 
@@ -478,7 +493,7 @@ describe('POST /api/projects/:projectId/orders/:orderId/submit', () => {
   it('returns 400 when order is already submitted', async () => {
     mockGetOrder.mockResolvedValue(makeOrder({ status: 'submitted' }));
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
       method: 'POST',
     });
 
@@ -488,7 +503,7 @@ describe('POST /api/projects/:projectId/orders/:orderId/submit', () => {
   it('returns 404 when order not found', async () => {
     mockGetOrder.mockResolvedValue(undefined);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/999/submit`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/999/submit`, {
       method: 'POST',
     });
 
@@ -498,7 +513,7 @@ describe('POST /api/projects/:projectId/orders/:orderId/submit', () => {
   it('returns 404 when order belongs to different project', async () => {
     mockGetOrder.mockResolvedValue(makeOrder({ status: 'ready', projectId: 2 }));
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
       method: 'POST',
     });
 
@@ -509,7 +524,7 @@ describe('POST /api/projects/:projectId/orders/:orderId/submit', () => {
     const nonReadyStatuses = ['draft', 'dfm-check', 'quoting', 'submitted', 'processing', 'shipped', 'delivered', 'error'];
     for (const status of nonReadyStatuses) {
       mockGetOrder.mockResolvedValue(makeOrder({ status }));
-      const res = await fetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
+      const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/submit`, {
         method: 'POST',
       });
       expect(res.status).toBe(400);
@@ -526,7 +541,7 @@ describe('DELETE /api/projects/:projectId/orders/:orderId', () => {
     mockGetOrder.mockResolvedValue(makeOrder());
     mockDeleteOrder.mockResolvedValue(true);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'DELETE',
     });
 
@@ -537,7 +552,7 @@ describe('DELETE /api/projects/:projectId/orders/:orderId', () => {
   it('returns 404 when order not found', async () => {
     mockGetOrder.mockResolvedValue(undefined);
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/999`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/999`, {
       method: 'DELETE',
     });
 
@@ -547,7 +562,7 @@ describe('DELETE /api/projects/:projectId/orders/:orderId', () => {
   it('returns 404 when order belongs to different project', async () => {
     mockGetOrder.mockResolvedValue(makeOrder({ projectId: 2 }));
 
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/1`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1`, {
       method: 'DELETE',
     });
 
@@ -555,7 +570,7 @@ describe('DELETE /api/projects/:projectId/orders/:orderId', () => {
   });
 
   it('returns 400 for invalid order ID', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders/abc`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/abc`, {
       method: 'DELETE',
     });
 
@@ -569,7 +584,7 @@ describe('DELETE /api/projects/:projectId/orders/:orderId', () => {
 
 describe('Schema validation edge cases', () => {
   it('rejects quantity of zero', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -582,7 +597,7 @@ describe('Schema validation edge cases', () => {
   });
 
   it('rejects quantity exceeding max', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -596,7 +611,7 @@ describe('Schema validation edge cases', () => {
 
   it('accepts boardSpec with arbitrary properties', async () => {
     mockCreateOrder.mockResolvedValue(makeOrder());
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -616,7 +631,7 @@ describe('Schema validation edge cases', () => {
 
   it('handles null optional fields in create', async () => {
     mockCreateOrder.mockResolvedValue(makeOrder());
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -632,7 +647,7 @@ describe('Schema validation edge cases', () => {
   });
 
   it('rejects empty body on create', async () => {
-    const res = await fetch(`${baseUrl}/api/projects/1/orders`, {
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),

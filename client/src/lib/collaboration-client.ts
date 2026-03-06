@@ -370,7 +370,7 @@ export class CollaborationClient {
   /* ---------------------------------------------------------------- */
 
   requestLock(entityType: string, entityId: string): Promise<boolean> {
-    const key = lockKey(entityType, entityId);
+    const key = lockKey(this.projectId, entityType, entityId);
 
     return new Promise<boolean>((resolve) => {
       // If we already hold the lock, resolve immediately
@@ -402,7 +402,7 @@ export class CollaborationClient {
   }
 
   releaseLock(entityType: string, entityId: string): void {
-    const key = lockKey(entityType, entityId);
+    const key = lockKey(this.projectId, entityType, entityId);
     this.activeLocks.delete(key);
 
     this.send({
@@ -415,7 +415,7 @@ export class CollaborationClient {
   }
 
   isLocked(entityType: string, entityId: string): { locked: boolean; byUserId?: number } {
-    const key = lockKey(entityType, entityId);
+    const key = lockKey(this.projectId, entityType, entityId);
     const holder = this.activeLocks.get(key);
     if (holder !== undefined) {
       return { locked: true, byUserId: holder };

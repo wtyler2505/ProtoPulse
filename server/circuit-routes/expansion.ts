@@ -1,9 +1,10 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { asyncHandler, parseIdParam, payloadLimit, nextRefDes, firstPinId } from './utils';
+import { requireProjectOwnership } from '../routes/auth-middleware';
 
 export function registerCircuitExpansionRoutes(app: Express, storage: IStorage): void {
-  app.post('/api/projects/:projectId/circuits/expand-architecture', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/expand-architecture', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const { circuitName } = req.body as { circuitName?: string };
 

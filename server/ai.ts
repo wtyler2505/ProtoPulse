@@ -433,8 +433,9 @@ const geminiClients = new LRUClientCache<GoogleGenAI>(MAX_CLIENT_CACHE);
  */
 const promptCache = new LRUClientCache<string>(20);
 
-function hashAppState(appState: AppState): string {
+function hashAppState(appState: AppState, userId?: number): string {
   return JSON.stringify({
+    userId: userId ?? null,
     name: appState.projectName,
     desc: appState.projectDescription,
     nodes: appState.nodes.length,
@@ -966,9 +967,11 @@ export async function processAIMessage(params: {
   maxTokens?: number;
   imageContent?: ImageContent;
   fallback?: FallbackProviderConfig;
+  projectId?: number;
+  userId?: number;
 }): Promise<{ message: string; actions: AIAction[]; provider?: 'anthropic' | 'gemini' }> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, imageContent, fallback } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, imageContent, fallback, projectId, userId } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       return {
@@ -984,7 +987,7 @@ export async function processAIMessage(params: {
       };
     }
 
-    const stateHash = hashAppState(appState);
+    const stateHash = hashAppState(appState, userId);
     const cachedPrompt = promptCache.get(stateHash);
     const systemPrompt = cachedPrompt ?? (() => {
       const built = buildSystemPrompt(appState);
@@ -998,7 +1001,7 @@ export async function processAIMessage(params: {
       model,
     );
 
-    const dedupeKey = requestKey(message, provider, String(appState.projectName));
+    const dedupeKey = requestKey(message, provider, String(projectId ?? appState.projectName));
     const existing = activeRequests.get(dedupeKey);
     if (existing) return existing;
 
@@ -1081,12 +1084,13 @@ export async function streamAIMessage(
     toolContext?: ToolContext;
     imageContent?: ImageContent;
     fallback?: FallbackProviderConfig;
+    userId?: number;
   },
   onEvent: (event: AIStreamEvent) => void | Promise<void>,
   signal?: AbortSignal
 ): Promise<void> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, toolContext, imageContent, fallback } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, toolContext, imageContent, fallback, userId } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       const noKeyMsg = `No API key provided for ${provider}. Please add your ${provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key in the settings panel to enable AI features.`;
@@ -1102,7 +1106,7 @@ export async function streamAIMessage(
       return;
     }
 
-    const stateHash = hashAppState(appState);
+    const stateHash = hashAppState(appState, userId);
     const cachedPrompt2 = promptCache.get(stateHash);
     const systemPrompt = cachedPrompt2 ?? (() => {
       const built = buildSystemPrompt(appState);

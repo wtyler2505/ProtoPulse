@@ -9,6 +9,7 @@
 import type { Express } from 'express';
 import { z } from 'zod';
 import { asyncHandler, HttpError } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 import {
   submitBatchAnalysis,
   getBatchStatus,
@@ -138,7 +139,7 @@ export function registerBatchRoutes(app: Express): void {
 
   // ---- List batches for a project ----
 
-  app.get('/api/projects/:projectId/batches', asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/batches', requireProjectOwnership, asyncHandler(async (req, res) => {
     const projectId = Number(req.params.projectId);
     if (!Number.isFinite(projectId) || projectId <= 0) {
       throw new HttpError('Invalid projectId', 400);

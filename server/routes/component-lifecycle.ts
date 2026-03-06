@@ -3,11 +3,13 @@ import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertComponentLifecycleSchema } from '@shared/schema';
 import { asyncHandler, parseIdParam } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 export function registerComponentLifecycleRoutes(app: Express): void {
   // List all lifecycle entries for a project
   app.get(
     '/api/projects/:id/lifecycle',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const entries = await storage.getComponentLifecycles(projectId);
@@ -18,6 +20,7 @@ export function registerComponentLifecycleRoutes(app: Express): void {
   // Create / upsert a lifecycle entry
   app.post(
     '/api/projects/:id/lifecycle',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = insertComponentLifecycleSchema.safeParse({ ...req.body, projectId });
@@ -32,6 +35,7 @@ export function registerComponentLifecycleRoutes(app: Express): void {
   // Update a lifecycle entry
   app.patch(
     '/api/projects/:id/lifecycle/:entryId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id); // validate project id
       const entryId = parseIdParam(req.params.entryId);
@@ -56,6 +60,7 @@ export function registerComponentLifecycleRoutes(app: Express): void {
   // Delete a lifecycle entry
   app.delete(
     '/api/projects/:id/lifecycle/:entryId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id); // validate project id
       const entryId = parseIdParam(req.params.entryId);

@@ -155,139 +155,66 @@ export class DrcScriptEngine {
   }
 
   /**
-   * Execute a DRC script inside a sandbox and return its results.
+   * Execute a DRC script inside an isolated Web Worker with a hard timeout.
+   *
+   * The Worker has no DOM/window access and the prototype chain is blocked.
+   * If the script exceeds MAX_EXECUTION_MS the worker is terminated.
    */
-  run(script: DrcScript, data: ScriptDesignData): DrcScriptResult {
-    const violations: DrcViolation[] = [];
-    const warnings: DrcWarning[] = [];
-    let violationLimitHit = false;
+  async run(script: DrcScript, data: ScriptDesignData): Promise<DrcScriptResult> {
+    return new Promise<DrcScriptResult>((resolve) => {
+      const worker = new Worker(new URL('./drc-script-worker.ts', import.meta.url), { type: 'module' });
 
-    // --- Build adjacency lookup ------------------------------------------------
-    const adjacency = new Map<string, string[]>();
-    for (const edge of data.edges) {
-      const fwd = adjacency.get(edge.source);
-      if (fwd) {
-        fwd.push(edge.target);
-      } else {
-        adjacency.set(edge.source, [edge.target]);
-      }
-      const rev = adjacency.get(edge.target);
-      if (rev) {
-        rev.push(edge.source);
-      } else {
-        adjacency.set(edge.target, [edge.source]);
-      }
-    }
-
-    const nodeMap = new Map<string, ScriptNode>();
-    for (const n of data.nodes) {
-      nodeMap.set(n.id, n);
-    }
-
-    // --- Context API exposed to user scripts -----------------------------------
-
-    const report = (
-      ruleId: string,
-      message: string,
-      severity: 'error' | 'warning' | 'info' = 'error',
-      nodeIds: string[] = [],
-      suggestion?: string,
-    ): void => {
-      if (violationLimitHit) {
-        return;
-      }
-      violations.push({ ruleId, message, severity, nodeIds, suggestion });
-      if (violations.length >= MAX_VIOLATIONS) {
-        violationLimitHit = true;
-      }
-    };
-
-    const warn = (message: string): void => {
-      warnings.push({ message: String(message) });
-    };
-
-    const info = (message: string): void => {
-      warnings.push({ message: String(message) });
-    };
-
-    const getConnected = (nodeId: string): string[] => {
-      return adjacency.get(nodeId)?.slice() ?? [];
-    };
-
-    const hasProperty = (nodeId: string, key: string): boolean => {
-      const node = nodeMap.get(nodeId);
-      if (!node) {
-        return false;
-      }
-      return key in node.properties;
-    };
-
-    // --- Build sandbox parameter lists -----------------------------------------
-
-    // Block dangerous globals by shadowing them as parameters set to undefined.
-    const blockedParams = BLOCKED_GLOBALS.join(', ');
-    const blockedArgs = BLOCKED_GLOBALS.map(() => undefined);
-
-    const contextParams = 'nodes, edges, bomItems, report, warn, info, getConnected, hasProperty';
-    const contextArgs = [
-      // Freeze arrays to prevent user scripts from mutating design data.
-      Object.freeze(data.nodes.map((n) => Object.freeze({ ...n, properties: Object.freeze({ ...n.properties }) }))),
-      Object.freeze(data.edges.map((e) => Object.freeze({ ...e }))),
-      Object.freeze(data.bomItems.map((b) => Object.freeze({ ...b }))),
-      report,
-      warn,
-      info,
-      getConnected,
-      hasProperty,
-    ];
-
-    const allParams = `${blockedParams}, ${contextParams}`;
-    const allArgs = [...blockedArgs, ...contextArgs];
-
-    // --- Execute ---------------------------------------------------------------
-
-    const start = Date.now();
-
-    try {
-      // Block `eval` and `arguments` by redefining them as local vars
-      // (they cannot be used as parameter names in strict mode).
-      const preamble = 'var eval = undefined; var arguments = undefined;\n';
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      const fn = new Function(allParams, preamble + script.code);
-      fn(...allArgs);
-    } catch (err: unknown) {
-      const elapsed = Date.now() - start;
-      if (elapsed >= MAX_EXECUTION_MS) {
-        violations.push({
-          ruleId: '__timeout__',
-          message: `Script "${script.name}" exceeded the ${MAX_EXECUTION_MS}ms execution limit`,
-          severity: 'error',
-          nodeIds: [],
+      const timeout = setTimeout(() => {
+        worker.terminate();
+        resolve({
+          violations: [
+            {
+              ruleId: '__timeout__',
+              message: `Script "${script.name}" exceeded the ${MAX_EXECUTION_MS}ms execution limit`,
+              severity: 'error',
+              nodeIds: [],
+            },
+          ],
+          warnings: [],
+          passed: false,
+          executionTimeMs: MAX_EXECUTION_MS,
+          scriptId: script.id,
         });
-      } else {
-        violations.push({
-          ruleId: '__runtime_error__',
-          message: `Script "${script.name}" threw: ${err instanceof Error ? err.message : String(err)}`,
-          severity: 'error',
-          nodeIds: [],
+      }, MAX_EXECUTION_MS);
+
+      worker.onmessage = (event: MessageEvent<DrcScriptResult>) => {
+        clearTimeout(timeout);
+        worker.terminate();
+        resolve(event.data);
+      };
+
+      worker.onerror = (event) => {
+        clearTimeout(timeout);
+        worker.terminate();
+        resolve({
+          violations: [
+            {
+              ruleId: '__runtime_error__',
+              message: `Script "${script.name}" threw: ${event.message ?? 'Unknown worker error'}`,
+              severity: 'error',
+              nodeIds: [],
+            },
+          ],
+          warnings: [],
+          passed: false,
+          executionTimeMs: 0,
+          scriptId: script.id,
         });
-      }
-    }
+      };
 
-    const executionTimeMs = Date.now() - start;
-
-    return {
-      violations,
-      warnings,
-      passed: violations.length === 0,
-      executionTimeMs,
-      scriptId: script.id,
-    };
+      worker.postMessage({ script, data });
+    });
   }
 
   /** Run all enabled scripts and aggregate results. */
-  runAll(scripts: DrcScript[], data: ScriptDesignData): DrcScriptResult[] {
-    return scripts.filter((s) => s.enabled).map((s) => this.run(s, data));
+  async runAll(scripts: DrcScript[], data: ScriptDesignData): Promise<DrcScriptResult[]> {
+    const enabled = scripts.filter((s) => s.enabled);
+    return Promise.all(enabled.map((s) => this.run(s, data)));
   }
 }
 
@@ -499,8 +426,8 @@ for (var i = 0; i < nodes.length; i++) {
 export interface UseDrcScriptsReturn {
   scripts: DrcScript[];
   results: DrcScriptResult[];
-  runScript: (scriptId: string, data: ScriptDesignData) => DrcScriptResult | null;
-  runAllEnabled: (data: ScriptDesignData) => DrcScriptResult[];
+  runScript: (scriptId: string, data: ScriptDesignData) => Promise<DrcScriptResult | null>;
+  runAllEnabled: (data: ScriptDesignData) => Promise<DrcScriptResult[]>;
   addScript: (name: string, description: string, code: string) => DrcScript;
   updateScript: (id: string, patch: Partial<Pick<DrcScript, 'name' | 'description' | 'code' | 'enabled'>>) => DrcScript | null;
   deleteScript: (id: string) => boolean;
@@ -517,12 +444,12 @@ export function useDrcScripts(): UseDrcScriptsReturn {
   }, [library]);
 
   const runScript = useCallback(
-    (scriptId: string, data: ScriptDesignData): DrcScriptResult | null => {
+    async (scriptId: string, data: ScriptDesignData): Promise<DrcScriptResult | null> => {
       const script = library.get(scriptId);
       if (!script) {
         return null;
       }
-      const result = engine.run(script, data);
+      const result = await engine.run(script, data);
       setResults((prev) => {
         const filtered = prev.filter((r) => r.scriptId !== scriptId);
         return [...filtered, result];
@@ -533,9 +460,8 @@ export function useDrcScripts(): UseDrcScriptsReturn {
   );
 
   const runAllEnabled = useCallback(
-    (data: ScriptDesignData): DrcScriptResult[] => {
-      const enabled = scripts.filter((s) => s.enabled);
-      const allResults = enabled.map((s) => engine.run(s, data));
+    async (data: ScriptDesignData): Promise<DrcScriptResult[]> => {
+      const allResults = await engine.runAll(scripts, data);
       setResults(allResults);
       return allResults;
     },

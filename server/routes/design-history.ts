@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { asyncHandler, payloadLimit, parseIdParam } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 import { computeArchDiff } from '@shared/arch-diff';
 import type { ArchitectureNode, ArchitectureEdge } from '@shared/schema';
 
@@ -15,6 +16,7 @@ export function registerDesignHistoryRoutes(app: Express): void {
   // List all design snapshots for a project
   app.get(
     '/api/projects/:id/snapshots',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshots = await storage.getDesignSnapshots(projectId);
@@ -25,6 +27,7 @@ export function registerDesignHistoryRoutes(app: Express): void {
   // Get a single design snapshot
   app.get(
     '/api/projects/:id/snapshots/:snapshotId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id); // validate project id
       const snapshotId = parseIdParam(req.params.snapshotId);
@@ -39,6 +42,7 @@ export function registerDesignHistoryRoutes(app: Express): void {
   // Create a design snapshot (captures current architecture nodes + edges)
   app.post(
     '/api/projects/:id/snapshots',
+    requireProjectOwnership,
     payloadLimit(8 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
@@ -67,6 +71,7 @@ export function registerDesignHistoryRoutes(app: Express): void {
   // Delete a design snapshot
   app.delete(
     '/api/projects/:id/snapshots/:snapshotId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id); // validate project id
       const snapshotId = parseIdParam(req.params.snapshotId);
@@ -81,6 +86,7 @@ export function registerDesignHistoryRoutes(app: Express): void {
   // Compare a snapshot to the current architecture state
   app.post(
     '/api/projects/:id/snapshots/:snapshotId/diff',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);

@@ -3,6 +3,7 @@ import { fromZodError } from 'zod-validation-error';
 import { storage, VersionConflictError } from '../storage';
 import { insertBomItemSchema } from '@shared/schema';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 /** Parse the If-Match header value into a version number, or undefined if absent/invalid. */
 function parseIfMatch(header: string | undefined): number | undefined {
@@ -14,6 +15,7 @@ function parseIfMatch(header: string | undefined): number | undefined {
 export function registerBomRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/bom',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const opts = paginationSchema.safeParse(req.query);
       const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
@@ -24,6 +26,7 @@ export function registerBomRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:id/bom/low-stock',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const items = await storage.getLowStockItems(projectId);
@@ -33,6 +36,7 @@ export function registerBomRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:id/bom/storage-locations',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const locations = await storage.getStorageLocations(projectId);
@@ -42,6 +46,7 @@ export function registerBomRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:id/bom/:bomId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const bomId = parseIdParam(req.params.bomId);
@@ -56,6 +61,7 @@ export function registerBomRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:id/bom',
+    requireProjectOwnership,
     payloadLimit(32 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
@@ -71,6 +77,7 @@ export function registerBomRoutes(app: Express): void {
 
   app.patch(
     '/api/projects/:id/bom/:bomId',
+    requireProjectOwnership,
     payloadLimit(32 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
@@ -102,6 +109,7 @@ export function registerBomRoutes(app: Express): void {
 
   app.delete(
     '/api/projects/:id/bom/:bomId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const bomId = parseIdParam(req.params.bomId);

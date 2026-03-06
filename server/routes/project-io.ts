@@ -4,6 +4,7 @@ import { fromZodError } from 'zod-validation-error';
 import { db } from '../db';
 import { storage } from '../storage';
 import { asyncHandler, HttpError, parseIdParam, payloadLimit } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 import { logger } from '../logger';
 import {
   architectureNodes,
@@ -162,6 +163,7 @@ export function registerProjectIORoutes(app: Express): void {
 
   app.get(
     '/api/projects/:id/export',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
 

@@ -7,6 +7,7 @@ import { toolRegistry } from '../ai-tools';
 import type { ToolContext, ToolResult } from '../ai-tools';
 import { getApiKey } from '../auth';
 import { asyncHandler, parseIdParam, HttpError } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 import { logger } from '../logger';
 
 // ---------------------------------------------------------------------------
@@ -118,6 +119,7 @@ export const _agentInternals = {
 export function registerAgentRoutes(app: Express): void {
   app.post(
     '/api/projects/:id/agent',
+    requireProjectOwnership,
     agentRateLimiter,
     asyncHandler(async (req: Request, res: Response) => {
       const projectId = parseIdParam(req.params.id);

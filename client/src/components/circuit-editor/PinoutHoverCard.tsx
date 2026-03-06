@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { lookupPinout, getGenericPinout } from '@/lib/pinout-data';
+import { isSafeUrl } from '@shared/url-validation';
 import type { PinInfo, PinoutEntry } from '@/lib/pinout-data';
 
 // ---------------------------------------------------------------------------
@@ -624,7 +625,7 @@ export function PinoutHoverCard({
       <KeySpecs partMeta={partMeta} />
 
       {/* Datasheet link */}
-      {datasheetUrl && (
+      {datasheetUrl && isSafeUrl(datasheetUrl) && (
         <div data-testid="pinout-datasheet" className="px-3 py-1.5 border-t border-zinc-700/50">
           <a
             href={datasheetUrl}

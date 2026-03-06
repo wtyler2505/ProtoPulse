@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { asyncHandler, payloadLimit, parseIdParam } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 import { computeBomDiff } from '@shared/bom-diff';
 import type { BomItem } from '@shared/schema';
 
@@ -18,6 +19,7 @@ export function registerBomSnapshotRoutes(app: Express): void {
   // Create a BOM snapshot (captures current BOM state)
   app.post(
     '/api/projects/:id/bom-snapshots',
+    requireProjectOwnership,
     payloadLimit(8 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
@@ -33,6 +35,7 @@ export function registerBomSnapshotRoutes(app: Express): void {
   // List all snapshots for a project
   app.get(
     '/api/projects/:id/bom-snapshots',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshots = await storage.getBomSnapshots(projectId);
@@ -43,6 +46,7 @@ export function registerBomSnapshotRoutes(app: Express): void {
   // Delete a snapshot
   app.delete(
     '/api/projects/:id/bom-snapshots/:snapshotId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const _projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);
@@ -57,6 +61,7 @@ export function registerBomSnapshotRoutes(app: Express): void {
   // Compute diff between a snapshot and the current BOM
   app.post(
     '/api/projects/:id/bom-diff',
+    requireProjectOwnership,
     payloadLimit(8 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);

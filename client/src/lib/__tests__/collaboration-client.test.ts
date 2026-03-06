@@ -485,7 +485,7 @@ describe('CollaborationClient', () => {
       expect(parsed.type).toBe('lock-request');
 
       // Simulate server granting the lock
-      ws.simulateMessage(makeMsg('lock-granted', { entityKey: 'node:n1', userId: 1 }, 1));
+      ws.simulateMessage(makeMsg('lock-granted', { entityKey: '1:node:n1', userId: 1 }, 1));
       const result = await promise;
       expect(result).toBe(true);
     });
@@ -498,7 +498,7 @@ describe('CollaborationClient', () => {
       ws.simulateOpen();
 
       const promise = client.requestLock('node', 'n1');
-      ws.simulateMessage(makeMsg('lock-denied', { entityKey: 'node:n1', heldBy: 2 }, 1));
+      ws.simulateMessage(makeMsg('lock-denied', { entityKey: '1:node:n1', heldBy: 2 }, 1));
       const result = await promise;
       expect(result).toBe(false);
     });
@@ -524,7 +524,7 @@ describe('CollaborationClient', () => {
 
       // Grant lock first
       const p1 = client.requestLock('node', 'n1');
-      ws.simulateMessage(makeMsg('lock-granted', { entityKey: 'node:n1', userId: 1 }, 1));
+      ws.simulateMessage(makeMsg('lock-granted', { entityKey: '1:node:n1', userId: 1 }, 1));
       await p1;
 
       // Request again — should resolve immediately without sending
@@ -551,10 +551,10 @@ describe('CollaborationClient', () => {
       client.connect();
       getLastWs().simulateOpen();
 
-      getLastWs().simulateMessage(makeMsg('lock-granted', { entityKey: 'node:n1', userId: 3 }, 3));
+      getLastWs().simulateMessage(makeMsg('lock-granted', { entityKey: '1:node:n1', userId: 3 }, 3));
       expect(client.isLocked('node', 'n1')).toEqual({ locked: true, byUserId: 3 });
 
-      getLastWs().simulateMessage(makeMsg('lock-released', { entityKey: 'node:n1' }, 3));
+      getLastWs().simulateMessage(makeMsg('lock-released', { entityKey: '1:node:n1' }, 3));
       expect(client.isLocked('node', 'n1')).toEqual({ locked: false });
     });
 
@@ -566,7 +566,7 @@ describe('CollaborationClient', () => {
       getLastWs().simulateMessage(makeMsg('state-sync', {
         users: [],
         version: 1,
-        locks: { 'node:n1': 5, 'edge:e2': 3 },
+        locks: { '1:node:n1': 5, '1:edge:e2': 3 },
       }));
 
       expect(client.isLocked('node', 'n1')).toEqual({ locked: true, byUserId: 5 });
@@ -739,9 +739,9 @@ describe('CollaborationClient', () => {
       client.connect();
       getLastWs().simulateOpen();
 
-      getLastWs().simulateMessage(makeMsg('lock-denied', { entityKey: 'node:n1', heldBy: 7 }));
+      getLastWs().simulateMessage(makeMsg('lock-denied', { entityKey: '1:node:n1', heldBy: 7 }));
       expect(events).toHaveLength(1);
-      expect(events[0]).toEqual({ entityKey: 'node:n1', heldBy: 7 });
+      expect(events[0]).toEqual({ entityKey: '1:node:n1', heldBy: 7 });
     });
 
     it('should emit lock-released event', () => {
@@ -751,7 +751,7 @@ describe('CollaborationClient', () => {
       client.connect();
       getLastWs().simulateOpen();
 
-      getLastWs().simulateMessage(makeMsg('lock-released', { entityKey: 'edge:e1' }));
+      getLastWs().simulateMessage(makeMsg('lock-released', { entityKey: '1:edge:e1' }));
       expect(events).toHaveLength(1);
     });
 
@@ -762,7 +762,7 @@ describe('CollaborationClient', () => {
       client.connect();
       getLastWs().simulateOpen();
 
-      getLastWs().simulateMessage(makeMsg('lock-granted', { entityKey: 'wire:w1', userId: 3 }, 3));
+      getLastWs().simulateMessage(makeMsg('lock-granted', { entityKey: '1:wire:w1', userId: 3 }, 3));
       expect(events).toHaveLength(1);
     });
 

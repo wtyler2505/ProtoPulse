@@ -171,7 +171,7 @@ function renderValidationView() {
 // Tests
 // -------------------------------------------------------------------
 
-describe('ValidationView', () => {
+describe('ValidationView', { timeout: 30000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIssues = [];

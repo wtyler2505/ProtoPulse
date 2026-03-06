@@ -3,10 +3,12 @@ import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertHistoryItemSchema } from '@shared/schema';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 export function registerHistoryRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/history',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const opts = paginationSchema.safeParse(req.query);
       const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
@@ -17,6 +19,7 @@ export function registerHistoryRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:id/history',
+    requireProjectOwnership,
     payloadLimit(32 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
@@ -31,6 +34,7 @@ export function registerHistoryRoutes(app: Express): void {
 
   app.delete(
     '/api/projects/:id/history',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       await storage.deleteHistoryItems(projectId);
@@ -40,6 +44,7 @@ export function registerHistoryRoutes(app: Express): void {
 
   app.delete(
     '/api/projects/:id/history/:itemId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const itemId = parseIdParam(req.params.itemId);

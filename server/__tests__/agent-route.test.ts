@@ -20,7 +20,7 @@ vi.mock('@anthropic-ai/sdk', () => {
 // Mock storage
 vi.mock('../storage', () => ({
   storage: {
-    getProject: vi.fn().mockResolvedValue({ id: 1, name: 'Test Project' }),
+    getProject: vi.fn().mockResolvedValue({ id: 1, name: 'Test Project', ownerId: null }),
     getNodes: vi.fn().mockResolvedValue([]),
     getEdges: vi.fn().mockResolvedValue([]),
     getBomItems: vi.fn().mockResolvedValue([]),
@@ -39,6 +39,7 @@ vi.mock('../storage', () => ({
 // Mock auth
 vi.mock('../auth', () => ({
   getApiKey: vi.fn().mockResolvedValue(null),
+  validateSession: vi.fn().mockResolvedValue({ userId: 1, sessionId: 'test-session' }),
 }));
 
 // Mock logger
@@ -92,10 +93,10 @@ beforeEach(() => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function postAgent(body: Record<string, unknown>): Promise<Response> {
+function postAgent(body: Record<string, unknown>, headers: Record<string, string> = {}): Promise<Response> {
   return fetch(`${baseUrl}/api/projects/1/agent`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session', ...headers },
     body: JSON.stringify(body),
   });
 }
@@ -247,13 +248,13 @@ describe('POST /api/projects/:id/agent', () => {
     it('returns 404 for non-existent project', async () => {
       const res = await fetch(`${baseUrl}/api/projects/99999/agent`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session' },
         body: JSON.stringify({ description: 'test', apiKey: 'sk-ant-test123' }),
       });
       // The mock always returns a project, so let's test invalid ID
       const res2 = await fetch(`${baseUrl}/api/projects/abc/agent`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session' },
         body: JSON.stringify({ description: 'test', apiKey: 'sk-ant-test123' }),
       });
       expect(res2.status).toBe(400);

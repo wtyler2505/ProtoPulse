@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { asyncHandler, parseIdParam } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 const createBranchSchema = z.object({
   parentMessageId: z.number().int().positive(),
@@ -12,6 +13,7 @@ export function registerChatBranchRoutes(app: Express): void {
   // Create a new conversation branch from a specific message
   app.post(
     '/api/projects/:id/chat/branches',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = createBranchSchema.safeParse(req.body);
@@ -26,6 +28,7 @@ export function registerChatBranchRoutes(app: Express): void {
   // List all branches for a project
   app.get(
     '/api/projects/:id/chat/branches',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const branches = await storage.getChatBranches(projectId);

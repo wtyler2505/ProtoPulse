@@ -362,7 +362,7 @@ export class CollaborationServer {
   /* ---------------------------------------------------------------- */
 
   private handleLockRequest(projectId: number, userId: number, request: LockRequest): void {
-    const key = lockKey(request.entityType, request.entityId);
+    const key = lockKey(projectId, request.entityType, request.entityId);
     const existing = this.locks.get(key);
 
     if (existing && existing.expiresAt > Date.now() && existing.userId !== userId) {

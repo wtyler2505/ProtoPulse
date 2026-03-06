@@ -3,6 +3,7 @@ import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { asyncHandler, parseIdParam, payloadLimit, gatherCircuitData } from './utils';
+import { requireProjectOwnership } from '../routes/auth-middleware';
 
 const simulateSchema = z.object({
   analysisType: z.enum(['op', 'tran', 'ac', 'dc']),
@@ -28,7 +29,7 @@ const simulateSchema = z.object({
 
 export function registerCircuitSimulationRoutes(app: Express, storage: IStorage): void {
   // POST /api/projects/:projectId/circuits/:circuitId/simulate
-  app.post('/api/projects/:projectId/circuits/:circuitId/simulate', payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/:circuitId/simulate', requireProjectOwnership, payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
     const _projectId = parseIdParam(req.params.projectId);
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = simulateSchema.safeParse(req.body);
@@ -106,7 +107,7 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // GET /api/projects/:projectId/circuits/:circuitId/simulations -- list stored results
-  app.get('/api/projects/:projectId/circuits/:circuitId/simulations', asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/circuits/:circuitId/simulations', requireProjectOwnership, asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const results = await storage.getSimulationResults(circuitId);
 
@@ -126,7 +127,7 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // GET /api/projects/:projectId/circuits/:circuitId/simulations/:simId -- get full result
-  app.get('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', requireProjectOwnership, asyncHandler(async (req, res) => {
     const simId = parseIdParam(req.params.simId);
     const result = await storage.getSimulationResult(simId);
     if (!result) { return res.status(404).json({ message: 'Simulation result not found' }); }
@@ -134,7 +135,7 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // DELETE /api/projects/:projectId/circuits/:circuitId/simulations/:simId -- delete result
-  app.delete('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', asyncHandler(async (req, res) => {
+  app.delete('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', requireProjectOwnership, asyncHandler(async (req, res) => {
     const simId = parseIdParam(req.params.simId);
     const deleted = await storage.deleteSimulationResult(simId);
     if (!deleted) { return res.status(404).json({ message: 'Simulation result not found' }); }
@@ -142,14 +143,14 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // GET /api/projects/:projectId/circuits/:circuitId/simulation/capabilities
-  app.get('/api/projects/:projectId/circuits/:circuitId/simulation/capabilities', asyncHandler(async (_req, res) => {
+  app.get('/api/projects/:projectId/circuits/:circuitId/simulation/capabilities', requireProjectOwnership, asyncHandler(async (_req, res) => {
     const { getSimulationCapabilities } = await import('../simulation');
     const caps = await getSimulationCapabilities();
     res.json(caps);
   }));
 
   // POST /api/projects/:projectId/export/spice -- SPICE netlist export
-  app.post('/api/projects/:projectId/export/spice', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/spice', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const circuits = await storage.getCircuitDesigns(projectId);
     if (circuits.length === 0) { return res.status(404).json({ message: 'No circuit designs found' }); }
@@ -179,7 +180,7 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // POST /api/projects/:projectId/circuits/:circuitId/analyze/power -- power estimation (13.10)
-  app.post('/api/projects/:projectId/circuits/:circuitId/analyze/power', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/:circuitId/analyze/power', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const circuit = await storage.getCircuitDesign(circuitId);
     if (!circuit) { return res.status(404).json({ message: 'Circuit design not found' }); }
@@ -280,7 +281,7 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // POST /api/projects/:projectId/circuits/:circuitId/analyze/signal-integrity (13.12)
-  app.post('/api/projects/:projectId/circuits/:circuitId/analyze/signal-integrity', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/:circuitId/analyze/signal-integrity', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const circuit = await storage.getCircuitDesign(circuitId);
     if (!circuit) { return res.status(404).json({ message: 'Circuit design not found' }); }

@@ -4,10 +4,12 @@ import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertValidationIssueSchema } from '@shared/schema';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 
 export function registerValidationRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/validation',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const opts = paginationSchema.safeParse(req.query);
       const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
@@ -18,6 +20,7 @@ export function registerValidationRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:id/validation',
+    requireProjectOwnership,
     payloadLimit(32 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
@@ -32,6 +35,7 @@ export function registerValidationRoutes(app: Express): void {
 
   app.delete(
     '/api/projects/:id/validation/:issueId',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const issueId = parseIdParam(req.params.issueId);
@@ -45,6 +49,7 @@ export function registerValidationRoutes(app: Express): void {
 
   app.put(
     '/api/projects/:id/validation',
+    requireProjectOwnership,
     payloadLimit(512 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);

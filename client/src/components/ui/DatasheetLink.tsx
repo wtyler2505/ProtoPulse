@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { ExternalLink, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isSafeUrl } from '@shared/url-validation';
 
 interface DatasheetLinkProps {
   datasheetUrl?: string | null;
@@ -16,7 +17,7 @@ interface DatasheetLinkProps {
  * - When no URL: shows "No datasheet" text and an optional "Find" button.
  */
 const DatasheetLink = memo(function DatasheetLink({ datasheetUrl, onLookup, className }: DatasheetLinkProps) {
-  if (datasheetUrl) {
+  if (datasheetUrl && isSafeUrl(datasheetUrl)) {
     return (
       <a
         href={datasheetUrl}
