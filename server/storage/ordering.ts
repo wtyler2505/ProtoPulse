@@ -47,7 +47,7 @@ export class OrderingStorage {
     }
   }
 
-  async updateOrder(id: number, data: Partial<InsertPcbOrder>): Promise<PcbOrder | undefined> {
+  async updateOrder(id: number, data: Partial<InsertPcbOrder> & { submittedAt?: Date }): Promise<PcbOrder | undefined> {
     try {
       const safeData = { ...data };
       delete safeData.projectId;

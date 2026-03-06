@@ -197,7 +197,7 @@ describe('MazeRouter — Simple routing', () => {
     expect(result).not.toBeNull();
     expect(result!.netId).toBe('net1');
     expect(result!.points.length).toBeGreaterThanOrEqual(2);
-    expect(result!.layer).toBe('front');
+    expect(result!.layer).toBe('F.Cu');
     expect(result!.vias).toHaveLength(0);
 
     // First and last points should match source/target
@@ -719,7 +719,7 @@ describe('MazeRouter — Route result structure', () => {
 
     expect(result).not.toBeNull();
     expect(result!.netId).toBe('net1');
-    expect(result!.layer).toBe('front');
+    expect(result!.layer).toBe('F.Cu');
     expect(result!.width).toBe(0.3);
     expect(Array.isArray(result!.points)).toBe(true);
     expect(Array.isArray(result!.vias)).toBe(true);

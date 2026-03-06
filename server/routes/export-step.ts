@@ -1,6 +1,7 @@
 import type { Express } from 'express';
 import { asyncHandler, parseIdParam } from './utils';
 import { storage } from '../storage';
+import { generateStep } from '../export/step-generator';
 import type { StepInput } from '../export/step-generator';
 
 export function registerExportStepRoutes(app: Express): void {
@@ -48,7 +49,6 @@ export function registerExportStepRoutes(app: Express): void {
       vias,
     };
 
-    const { generateStep } = await import('../export/step-generator');
     const result = generateStep(input);
 
     res.setHeader('Content-Type', 'application/step');

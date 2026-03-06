@@ -5,8 +5,8 @@
  * shows total thickness, surface finish, layer count, and provides quick
  * preset buttons for common stackup configurations.
  *
- * Copper layers are clickable when they map to an ActiveLayer (front/back);
- * inner layers are displayed but not selectable as active.
+ * All copper layers (front, inner, back) are clickable to select the
+ * active routing layer.
  */
 
 import { memo, useState } from 'react';
@@ -14,6 +14,7 @@ import { ChevronDown, ChevronRight, Layers } from 'lucide-react';
 import { useBoardStackup } from '@/lib/board-stackup';
 import type { StackupLayer, DielectricLayer, LayerType } from '@/lib/board-stackup';
 import type { ActiveLayer } from './LayerManager';
+import { getLayerName } from '@/lib/pcb/layer-utils';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -50,13 +51,7 @@ function stackupLayerToActiveLayer(
   if (idx === -1) {
     return null;
   }
-  if (idx === 0) {
-    return 'front';
-  }
-  if (idx === sorted.length - 1) {
-    return 'back';
-  }
-  return `In${String(idx)}.Cu`;
+  return getLayerName(idx, sorted.length);
 }
 
 /** Tailwind class for the layer-type color dot. */

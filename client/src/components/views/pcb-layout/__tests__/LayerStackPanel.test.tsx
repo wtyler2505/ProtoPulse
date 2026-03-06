@@ -190,7 +190,7 @@ describe('LayerStackPanel', () => {
   // 4. Highlights the active layer (front)
   // -----------------------------------------------------------------------
   it('highlights the active layer (front)', () => {
-    render(<LayerStackPanel {...defaultProps({ activeLayer: 'front' })} />);
+    render(<LayerStackPanel {...defaultProps({ activeLayer: 'F.Cu' })} />);
     const topLayer = screen.getByTestId('copper-layer-1');
     expect(topLayer.className).toContain('border-primary');
   });
@@ -199,7 +199,7 @@ describe('LayerStackPanel', () => {
   // 5. Highlights the active layer (back)
   // -----------------------------------------------------------------------
   it('highlights the active layer (back)', () => {
-    render(<LayerStackPanel {...defaultProps({ activeLayer: 'back' })} />);
+    render(<LayerStackPanel {...defaultProps({ activeLayer: 'B.Cu' })} />);
     const bottomLayer = screen.getByTestId('copper-layer-4');
     expect(bottomLayer.className).toContain('border-primary');
   });
@@ -207,21 +207,21 @@ describe('LayerStackPanel', () => {
   // -----------------------------------------------------------------------
   // 6. Calls onLayerSelect('front') when clicking top copper layer
   // -----------------------------------------------------------------------
-  it('calls onLayerSelect(\'front\') when clicking top copper layer', () => {
+  it('calls onLayerSelect with F.Cu when clicking top copper layer', () => {
     const onLayerSelect = vi.fn();
     render(<LayerStackPanel {...defaultProps({ onLayerSelect })} />);
     fireEvent.click(screen.getByTestId('copper-layer-1'));
-    expect(onLayerSelect).toHaveBeenCalledWith('front');
+    expect(onLayerSelect).toHaveBeenCalledWith('F.Cu');
   });
 
   // -----------------------------------------------------------------------
   // 7. Calls onLayerSelect('back') when clicking bottom copper layer
   // -----------------------------------------------------------------------
-  it('calls onLayerSelect(\'back\') when clicking bottom copper layer', () => {
+  it('calls onLayerSelect with B.Cu when clicking bottom copper layer', () => {
     const onLayerSelect = vi.fn();
     render(<LayerStackPanel {...defaultProps({ onLayerSelect })} />);
     fireEvent.click(screen.getByTestId('copper-layer-4'));
-    expect(onLayerSelect).toHaveBeenCalledWith('back');
+    expect(onLayerSelect).toHaveBeenCalledWith('B.Cu');
   });
 
   // -----------------------------------------------------------------------

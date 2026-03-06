@@ -596,6 +596,7 @@ export const insertPcbOrderSchema = createInsertSchema(pcbOrders).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  submittedAt: true,
 });
 
 export type PcbOrder = typeof pcbOrders.$inferSelect;

@@ -7,7 +7,7 @@
  *     blind not allowed, fromLayer === toLayer, outer < drill
  *   - ViaModel.calculateAnnularRing() — standard, micro, edge case (drill = outer)
  *   - ViaModel.checkDrillToDrillClearance() — overlapping, non-overlapping, exactly at limit
- *   - ViaModel.getOppositeLayer() — front/back, Top/Bottom, unknown layer
+ *   - ViaModel.getOppositeLayer() — F.Cu/B.Cu, front/back (legacy), unknown layer
  *   - ViaModel.snapToGrid() — already on grid, needs snapping, custom grid step
  *   - Constants: DEFAULT_VIA_RULES, VIA_SIZE_PRESETS, DEFAULT_VIA_PRESET
  */
@@ -110,8 +110,8 @@ describe('ViaModel.create()', () => {
     expect(via.type).toBe('through');
     expect(via.drillDiameter).toBe(0.3);
     expect(via.outerDiameter).toBe(0.6);
-    expect(via.fromLayer).toBe('front');
-    expect(via.toLayer).toBe('back');
+    expect(via.fromLayer).toBe('F.Cu');
+    expect(via.toLayer).toBe('B.Cu');
     expect(via.tented).toBe(true);
     expect(via.netId).toBeUndefined();
   });
@@ -539,12 +539,12 @@ describe('ViaModel.getOppositeLayer()', () => {
     expect(ViaModel.getOppositeLayer('back')).toBe('front');
   });
 
-  it('should return "Bottom" for "Top"', () => {
-    expect(ViaModel.getOppositeLayer('Top')).toBe('Bottom');
+  it('should return "B.Cu" for "F.Cu"', () => {
+    expect(ViaModel.getOppositeLayer('F.Cu')).toBe('B.Cu');
   });
 
-  it('should return "Top" for "Bottom"', () => {
-    expect(ViaModel.getOppositeLayer('Bottom')).toBe('Top');
+  it('should return "F.Cu" for "B.Cu"', () => {
+    expect(ViaModel.getOppositeLayer('B.Cu')).toBe('F.Cu');
   });
 
   it('should return the same string for unknown layers', () => {

@@ -189,6 +189,6 @@ export interface IStorage {
   getOrders(projectId: number): Promise<PcbOrder[]>;
   getOrder(id: number): Promise<PcbOrder | undefined>;
   createOrder(data: InsertPcbOrder): Promise<PcbOrder>;
-  updateOrder(id: number, data: Partial<InsertPcbOrder>): Promise<PcbOrder | undefined>;
+  updateOrder(id: number, data: Partial<InsertPcbOrder> & { submittedAt?: Date }): Promise<PcbOrder | undefined>;
   deleteOrder(id: number): Promise<boolean>;
 }

@@ -25,7 +25,7 @@ export interface Via {
   drillDiameter: number; // mm
   outerDiameter: number; // mm (drill + 2 * annular ring)
   type: ViaType;
-  fromLayer: string; // layer name, e.g. 'Top', 'Inner 1', 'Bottom'
+  fromLayer: string; // layer name, e.g. 'F.Cu', 'In1.Cu', 'B.Cu'
   toLayer: string;
   netId?: number; // associated net
   tented: boolean; // solder mask covers via
@@ -86,10 +86,11 @@ const EPSILON = 1e-6;
 // ---------------------------------------------------------------------------
 
 const LAYER_OPPOSITES: Record<string, string> = {
+  'F.Cu': 'B.Cu',
+  'B.Cu': 'F.Cu',
+  // Legacy aliases for backward compatibility
   front: 'back',
   back: 'front',
-  Top: 'Bottom',
-  Bottom: 'Top',
 };
 
 // ---------------------------------------------------------------------------
@@ -100,7 +101,7 @@ export class ViaModel {
   /**
    * Create a new via with sensible defaults.
    *
-   * Defaults: through via, 0.3mm drill, 0.6mm outer, front→back, tented.
+   * Defaults: through via, 0.3mm drill, 0.6mm outer, F.Cu→B.Cu, tented.
    */
   static create(
     position: { x: number; y: number },
@@ -120,8 +121,8 @@ export class ViaModel {
       drillDiameter: options?.drillDiameter ?? DEFAULT_VIA_PRESET.drill,
       outerDiameter: options?.outerDiameter ?? DEFAULT_VIA_PRESET.outer,
       type: options?.type ?? 'through',
-      fromLayer: options?.fromLayer ?? 'front',
-      toLayer: options?.toLayer ?? 'back',
+      fromLayer: options?.fromLayer ?? 'F.Cu',
+      toLayer: options?.toLayer ?? 'B.Cu',
       netId: options?.netId,
       tented: options?.tented ?? true,
     };
@@ -221,7 +222,7 @@ export class ViaModel {
   /**
    * Get the opposite layer for a through via (front/back shortcut).
    *
-   * Maps: front↔back, Top↔Bottom. Unknown layers return themselves.
+   * Maps: F.Cu↔B.Cu, front↔back (legacy). Unknown layers return themselves.
    */
   static getOppositeLayer(layer: string): string {
     return LAYER_OPPOSITES[layer] ?? layer;
