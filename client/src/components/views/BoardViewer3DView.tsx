@@ -1,6 +1,7 @@
 /**
  * BoardViewer3DView — 3D PCB board visualization using CSS 3D transforms.
- * Shows board, components, camera angle buttons, layer visibility toggles, and dimensions.
+ * Shows board, components with real footprint data, traces, vias,
+ * camera angle buttons, layer visibility toggles, and dimensions.
  */
 
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -23,7 +24,33 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useBoardViewer3D, BoardViewer3D } from '@/lib/board-viewer-3d';
-import type { ViewAngle, LayerType3D, Component3D, BoardDimensions, BoardScene } from '@/lib/board-viewer-3d';
+import type { ViewAngle, LayerType3D, Component3D, BoardDimensions, BoardScene, Via3D, Trace3D } from '@/lib/board-viewer-3d';
+import { FootprintLibrary } from '@/lib/pcb/footprint-library';
+
+// ---------------------------------------------------------------------------
+// Package height database (mm above board surface)
+// ---------------------------------------------------------------------------
+
+export const PACKAGE_HEIGHTS: Record<string, number> = {
+  'DIP-8': 5.0, 'DIP-14': 5.0, 'DIP-16': 5.0, 'DIP-28': 5.0, 'DIP-40': 5.0,
+  'SOIC-8': 1.75, 'SOIC-14': 1.75, 'SOIC-16': 1.75,
+  'SOT-23': 1.1, 'SOT-23-5': 1.1, 'SOT-23-6': 1.1,
+  'QFP-44': 1.6, 'QFP-64': 1.6, 'QFP-100': 1.6, 'QFP-144': 1.6,
+  'QFN-16': 0.85, 'QFN-32': 0.85, 'QFN-48': 0.85,
+  'SOP-8': 1.75,
+  'TO-220': 4.5, 'TO-92': 4.5, 'TO-263': 2.5,
+  '0402': 0.5, '0603': 0.6, '0805': 0.7, '1206': 0.8,
+  'SOD-123': 1.1, 'SOD-323': 0.6,
+};
+
+// ---------------------------------------------------------------------------
+// Trace layer colors
+// ---------------------------------------------------------------------------
+
+const TRACE_LAYER_COLORS: Record<string, string> = {
+  'top-copper': '#cc5533',
+  'bottom-copper': '#3366bb',
+};
 
 // ---------------------------------------------------------------------------
 // View angle CSS rotation map
@@ -64,7 +91,7 @@ const LAYER_ORDER: LayerType3D[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// ComponentBox — CSS 3D component box
+// ComponentBox — CSS 3D component box with real footprint data
 // ---------------------------------------------------------------------------
 
 interface ComponentBoxProps {
@@ -82,11 +109,17 @@ const ComponentBox = memo(function ComponentBox({
   boardHeight,
   scale,
 }: ComponentBoxProps) {
+  const footprint = FootprintLibrary.getFootprint(component.package);
+
+  const bodyWidth = footprint ? footprint.boundingBox.width : component.bodyWidth;
+  const bodyHeight = footprint ? footprint.boundingBox.height : component.bodyHeight;
+  const bodyDepth = PACKAGE_HEIGHTS[component.package] ?? component.bodyDepth;
+
   const x = (component.position.x / boardWidth) * 100;
   const y = (component.position.y / boardHeight) * 100;
-  const w = (component.bodyWidth / boardWidth) * 100;
-  const h = (component.bodyHeight / boardHeight) * 100;
-  const depth = component.bodyDepth * scale;
+  const w = (bodyWidth / boardWidth) * 100;
+  const h = (bodyHeight / boardHeight) * 100;
+  const depth = bodyDepth * scale;
   const zOffset = component.side === 'top' ? boardThickness * scale : -depth;
 
   return (
@@ -130,6 +163,153 @@ const ComponentBox = memo(function ComponentBox({
       >
         {component.refDes}
       </div>
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Trace3DElement — renders a single trace as colored segments on the board
+// ---------------------------------------------------------------------------
+
+interface Trace3DElementProps {
+  trace: Trace3D;
+  boardThickness: number;
+  boardWidth: number;
+  boardHeight: number;
+  scale: number;
+}
+
+const Trace3DElement = memo(function Trace3DElement({
+  trace,
+  boardThickness,
+  boardWidth,
+  boardHeight,
+  scale,
+}: Trace3DElementProps) {
+  const color = TRACE_LAYER_COLORS[trace.layer] ?? '#b87333';
+  const isTopLayer = trace.layer === 'top-copper';
+  const zOffset = isTopLayer ? boardThickness * scale : 0;
+  const traceVisualHeight = 0.2; // px, slightly exaggerated for visibility
+
+  return (
+    <div
+      data-testid={`trace-3d-${trace.id}`}
+      className="absolute inset-0 pointer-events-none"
+      style={{
+        backgroundColor: color,
+        opacity: 0,
+        transformStyle: 'preserve-3d',
+      }}
+    >
+      {trace.points.slice(0, -1).map((pt, i) => {
+        const next = trace.points[i + 1];
+        if (!next) { return null; }
+
+        const x1Pct = (pt.x / boardWidth) * 100;
+        const y1Pct = (pt.y / boardHeight) * 100;
+        const x2Pct = (next.x / boardWidth) * 100;
+        const y2Pct = (next.y / boardHeight) * 100;
+
+        const dx = x2Pct - x1Pct;
+        const dy = y2Pct - y1Pct;
+        const length = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+        const widthPct = (trace.width / boardWidth) * 100;
+
+        return (
+          <div
+            key={`${trace.id}-seg-${i}`}
+            data-testid={`trace-segment-${trace.id}-${i}`}
+            className="absolute"
+            style={{
+              left: `${x1Pct}%`,
+              top: `${y1Pct - widthPct / 2}%`,
+              width: `${length}%`,
+              height: `${Math.max(widthPct, 0.3)}%`,
+              backgroundColor: color,
+              opacity: 0.85,
+              transform: `translateZ(${zOffset}px) rotate(${angle}deg)`,
+              transformOrigin: '0 50%',
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+});
+
+// ---------------------------------------------------------------------------
+// Via3DElement — renders a via as a copper circle with drill hole
+// ---------------------------------------------------------------------------
+
+interface Via3DElementProps {
+  via: Via3D;
+  boardThickness: number;
+  boardWidth: number;
+  boardHeight: number;
+  scale: number;
+}
+
+const Via3DElement = memo(function Via3DElement({
+  via,
+  boardThickness,
+  boardWidth,
+  boardHeight,
+  scale,
+}: Via3DElementProps) {
+  const xPct = (via.position.x / boardWidth) * 100;
+  const yPct = (via.position.y / boardHeight) * 100;
+  const outerPctW = (via.outerDiameter / boardWidth) * 100;
+  const outerPctH = (via.outerDiameter / boardHeight) * 100;
+  const drillPctW = (via.drillDiameter / boardWidth) * 100;
+  const drillPctH = (via.drillDiameter / boardHeight) * 100;
+  const viaHeight = boardThickness * scale;
+
+  return (
+    <div
+      data-testid={`via-3d-${via.id}`}
+      className="absolute"
+      style={{
+        left: `${xPct - outerPctW / 2}%`,
+        top: `${yPct - outerPctH / 2}%`,
+        width: `${outerPctW}%`,
+        height: `${outerPctH}%`,
+        transformStyle: 'preserve-3d',
+      }}
+    >
+      {/* Outer copper ring (top face) */}
+      <div
+        data-testid={`via-outer-${via.id}`}
+        className="absolute inset-0 rounded-full"
+        style={{
+          backgroundColor: '#b87333',
+          opacity: 0.9,
+          transform: `translateZ(${viaHeight}px)`,
+        }}
+      />
+      {/* Inner drill hole */}
+      <div
+        data-testid={`via-hole-${via.id}`}
+        className="absolute rounded-full"
+        style={{
+          left: `${(outerPctW - drillPctW) / outerPctW * 50}%`,
+          top: `${(outerPctH - drillPctH) / outerPctH * 50}%`,
+          width: `${(drillPctW / outerPctW) * 100}%`,
+          height: `${(drillPctH / outerPctH) * 100}%`,
+          backgroundColor: '#1a1a1a',
+          opacity: 0.95,
+          transform: `translateZ(${viaHeight + 0.1}px)`,
+        }}
+      />
+      {/* Bottom face copper ring */}
+      <div
+        className="absolute inset-0 rounded-full"
+        style={{
+          backgroundColor: '#b87333',
+          opacity: 0.7,
+        }}
+      />
     </div>
   );
 });
@@ -228,6 +408,8 @@ export default function BoardViewer3DView() {
     board,
     setBoard,
     components,
+    vias,
+    traces,
     scene,
     renderOptions,
     layerVisibility,
@@ -374,6 +556,30 @@ export default function BoardViewer3DView() {
                     transform: `translateZ(${board.thickness * scale}px)`,
                   }}
                 />
+
+                {/* Traces */}
+                {traces.map((trace) => (
+                  <Trace3DElement
+                    key={trace.id}
+                    trace={trace}
+                    boardThickness={board.thickness}
+                    boardWidth={board.width}
+                    boardHeight={board.height}
+                    scale={scale}
+                  />
+                ))}
+
+                {/* Vias */}
+                {vias.map((via) => (
+                  <Via3DElement
+                    key={via.id}
+                    via={via}
+                    boardThickness={board.thickness}
+                    boardWidth={board.width}
+                    boardHeight={board.height}
+                    scale={scale}
+                  />
+                ))}
 
                 {/* Components */}
                 {components.map((comp) => (

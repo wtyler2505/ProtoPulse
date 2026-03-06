@@ -62,11 +62,20 @@ export interface GerberWire {
   width: number;          // mm
 }
 
+export interface GerberVia {
+  x: number;              // mm — board position
+  y: number;              // mm — board position
+  drillDiameter: number;  // mm
+  outerDiameter: number;  // mm (drill + 2 * annular ring)
+  tented: boolean;        // if true, solder mask covers via (no mask opening)
+}
+
 export interface GerberInput {
   boardWidth: number;     // mm
   boardHeight: number;    // mm
   instances: GerberInstance[];
   wires: GerberWire[];
+  vias?: GerberVia[];     // through-hole vias
   boardOutline?: Array<{ x: number; y: number }>; // custom outline polygon (mm)
 }
 
@@ -361,9 +370,11 @@ function buildApertures(
   pads: ResolvedPad[],
   wires: GerberWire[],
   side: 'front' | 'back',
-  extra?: { clearance?: number },
+  extra?: { clearance?: number; vias?: GerberVia[]; tentedFilter?: boolean },
 ): { defs: ApertureDef[]; lookup: Map<string, number> } {
   const clearance = extra?.clearance ?? 0;
+  const vias = extra?.vias ?? [];
+  const tentedFilter = extra?.tentedFilter ?? false;
   const seen = new Map<string, number>();
   const defs: ApertureDef[] = [];
   let nextCode = 10; // D10 is the first user aperture per Gerber convention
@@ -403,6 +414,15 @@ function buildApertures(
     }
   }
 
+  // Via apertures — vias are circular pads on both copper layers
+  for (let i = 0; i < vias.length; i++) {
+    const via = vias[i];
+    // When tentedFilter is true, skip tented vias (used for soldermask)
+    if (tentedFilter && via.tented) continue;
+    const d = via.outerDiameter + clearance * 2;
+    addAperture('C', formatMm(d));
+  }
+
   return { defs, lookup: seen };
 }
 
@@ -431,6 +451,13 @@ function padApertureKey(pad: ResolvedPad, clearance: number): string {
  */
 function traceApertureKey(width: number, clearance: number): string {
   return `C:${formatMm(width + clearance * 2)}`;
+}
+
+/**
+ * Look up the D-code for a via pad aperture.
+ */
+function viaApertureKey(via: GerberVia, clearance: number): string {
+  return `C:${formatMm(via.outerDiameter + clearance * 2)}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -582,8 +609,9 @@ export function generateCopperLayer(input: GerberInput, side: 'front' | 'back'):
   const allPads = resolveAllPads(input.instances);
   const sidePads = filterPadsForCopper(allPads, side);
   const sideWires = filterWiresForSide(input.wires, side);
+  const vias = input.vias ?? [];
 
-  const { defs, lookup } = buildApertures(sidePads, sideWires, side);
+  const { defs, lookup } = buildApertures(sidePads, sideWires, side, { vias });
 
   const layerNum = side === 'front' ? 'L1' : 'L2';
   const layerPos = side === 'front' ? 'Top' : 'Bot';
@@ -633,6 +661,17 @@ export function generateCopperLayer(input: GerberInput, side: 'front' | 'back'):
 
     lines.push(`D${dCode}*`);
     lines.push(`X${fmtCoord(pad.x)}Y${fmtCoord(pad.y)}D03*`);
+  }
+
+  // Flash via pads — vias are through-hole, appear on both copper layers
+  for (let i = 0; i < vias.length; i++) {
+    const via = vias[i];
+    const aKey = viaApertureKey(via, 0);
+    const dCode = lookup.get(aKey);
+    if (dCode === undefined) continue;
+
+    lines.push(`D${dCode}*`);
+    lines.push(`X${fmtCoord(via.x)}Y${fmtCoord(via.y)}D03*`);
   }
 
   // Footer
@@ -785,9 +824,15 @@ export function generateSilkscreenLayer(input: GerberInput, side: 'front' | 'bac
 export function generateSoldermaskLayer(input: GerberInput, side: 'front' | 'back'): string {
   const allPads = resolveAllPads(input.instances);
   const sidePads = filterPadsForCopper(allPads, side);
+  const vias = input.vias ?? [];
 
   // Build apertures with soldermask clearance expansion
-  const { defs, lookup } = buildApertures(sidePads, [], side, { clearance: SOLDERMASK_CLEARANCE });
+  // tentedFilter: true means tented vias are excluded from aperture list
+  const { defs, lookup } = buildApertures(sidePads, [], side, {
+    clearance: SOLDERMASK_CLEARANCE,
+    vias,
+    tentedFilter: true,
+  });
 
   const lines: string[] = [];
 
@@ -816,6 +861,18 @@ export function generateSoldermaskLayer(input: GerberInput, side: 'front' | 'bac
 
     lines.push(`D${dCode}*`);
     lines.push(`X${fmtCoord(pad.x)}Y${fmtCoord(pad.y)}D03*`);
+  }
+
+  // Via mask openings — non-tented vias need soldermask removed
+  for (let i = 0; i < vias.length; i++) {
+    const via = vias[i];
+    if (via.tented) continue; // tented vias keep mask coverage
+    const aKey = viaApertureKey(via, SOLDERMASK_CLEARANCE);
+    const dCode = lookup.get(aKey);
+    if (dCode === undefined) continue;
+
+    lines.push(`D${dCode}*`);
+    lines.push(`X${fmtCoord(via.x)}Y${fmtCoord(via.y)}D03*`);
   }
 
   // Footer
@@ -954,6 +1011,7 @@ interface DrillHit {
  */
 function generateDrillFile(input: GerberInput): string {
   const allPads = resolveAllPads(input.instances);
+  const vias = input.vias ?? [];
 
   // Collect drill hits from THT pads
   const drillHits: DrillHit[] = [];
@@ -964,6 +1022,16 @@ function generateDrillFile(input: GerberInput): string {
       x: pad.x,
       y: pad.y,
       diameter: pad.drill,
+    });
+  }
+
+  // Collect drill hits from vias
+  for (let i = 0; i < vias.length; i++) {
+    const via = vias[i];
+    drillHits.push({
+      x: via.x,
+      y: via.y,
+      diameter: via.drillDiameter,
     });
   }
 
@@ -1135,6 +1203,111 @@ export function generateGerber(input: GerberInput): GerberOutput {
   const drillFile = generateDrillFile(input);
 
   return { layers, drillFile };
+}
+
+// ---------------------------------------------------------------------------
+// Bridge: DB types → GerberInput
+// ---------------------------------------------------------------------------
+
+export interface BuildGerberOptions {
+  boardWidth: number;
+  boardHeight: number;
+  boardOutline?: Array<{ x: number; y: number }>;
+  vias?: GerberVia[];
+}
+
+/**
+ * Convert raw database types (CircuitInstanceData, CircuitWireData, ComponentPartData)
+ * into a typed GerberInput for the pure Gerber generation pipeline.
+ *
+ * - Filters wires to only PCB-view wires
+ * - Maps part connectors to GerberConnector format
+ * - Extracts footprint from part meta
+ * - Handles null pcbX/pcbY/pcbRotation/pcbSide with sensible defaults
+ */
+export function buildGerberInput(
+  instances: CircuitInstanceData[],
+  wires: CircuitWireData[],
+  parts: ComponentPartData[],
+  options: BuildGerberOptions,
+): GerberInput {
+  // Build a part lookup map
+  const partMap = new Map<number, ComponentPartData>();
+  for (let i = 0; i < parts.length; i++) {
+    partMap.set(parts[i].id, parts[i]);
+  }
+
+  // Convert instances
+  const gerberInstances: GerberInstance[] = [];
+  for (let i = 0; i < instances.length; i++) {
+    const inst = instances[i];
+    const part = inst.partId != null ? partMap.get(inst.partId) : undefined;
+    const meta = (part?.meta ?? {}) as Record<string, unknown>;
+    const rawConnectors = (part?.connectors ?? []) as Array<Record<string, unknown>>;
+
+    const connectors: GerberConnector[] = [];
+    for (let j = 0; j < rawConnectors.length; j++) {
+      const c = rawConnectors[j];
+      connectors.push({
+        id: String(c.id ?? `pin${j}`),
+        name: String(c.name ?? `PIN${j + 1}`),
+        padType: typeof c.padType === 'string' ? c.padType : undefined,
+        padWidth: typeof c.padWidth === 'number' ? c.padWidth : undefined,
+        padHeight: typeof c.padHeight === 'number' ? c.padHeight : undefined,
+        padShape: typeof c.padShape === 'string' ? c.padShape : undefined,
+        drill: typeof c.drill === 'number' ? c.drill : undefined,
+        offsetX: typeof c.offsetX === 'number' ? c.offsetX : undefined,
+        offsetY: typeof c.offsetY === 'number' ? c.offsetY : undefined,
+      });
+    }
+
+    gerberInstances.push({
+      id: inst.id,
+      referenceDesignator: inst.referenceDesignator,
+      pcbX: inst.pcbX ?? 0,
+      pcbY: inst.pcbY ?? 0,
+      pcbRotation: inst.pcbRotation ?? 0,
+      pcbSide: inst.pcbSide ?? 'front',
+      connectors,
+      footprint: (typeof meta.package === 'string' ? meta.package : ''),
+      bodyWidth: typeof meta.bodyWidth === 'number' ? meta.bodyWidth : undefined,
+      bodyHeight: typeof meta.bodyHeight === 'number' ? meta.bodyHeight : undefined,
+    });
+  }
+
+  // Convert wires — filter to PCB view only
+  const gerberWires: GerberWire[] = [];
+  for (let i = 0; i < wires.length; i++) {
+    const wire = wires[i];
+    if (wire.view !== 'pcb') continue;
+
+    const rawPoints = Array.isArray(wire.points) ? wire.points : [];
+    const points: Array<{ x: number; y: number }> = [];
+    for (let j = 0; j < rawPoints.length; j++) {
+      const pt = rawPoints[j];
+      if (pt && typeof pt === 'object') {
+        const p = pt as Record<string, unknown>;
+        if (typeof p.x === 'number' && typeof p.y === 'number') {
+          points.push({ x: p.x, y: p.y });
+        }
+      }
+    }
+
+    gerberWires.push({
+      layer: wire.layer ?? 'front',
+      points,
+      width: wire.width,
+    });
+  }
+
+  return {
+    boardWidth: options.boardWidth,
+    boardHeight: options.boardHeight,
+    instances: gerberInstances,
+    wires: gerberWires,
+    vias: options.vias,
+    boardOutline: options.boardOutline,
+  };
 }
 
 // ---------------------------------------------------------------------------

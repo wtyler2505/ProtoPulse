@@ -17,6 +17,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import type { PourObstacle } from '@/lib/pcb/copper-pour-bridge';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -588,6 +590,54 @@ export class CopperPourEngine {
     this.padObstacles.clear();
     this.traceObstacles.clear();
     this.viaObstacles.clear();
+  }
+
+  /**
+   * Replace all routing obstacles from CopperPourBridge data.
+   *
+   * Clears existing obstacles and ingests PourObstacle[] from the bridge,
+   * converting them into the engine's native PadObstacle / TraceObstacle /
+   * ViaObstacle types. This is the primary integration point for feeding
+   * live routing data into the pour engine.
+   */
+  setRoutingObstacles(obstacles: PourObstacle[]): void {
+    this.clearObstacles();
+
+    for (const obs of obstacles) {
+      const id = crypto.randomUUID();
+
+      if (obs.type === 'pad') {
+        this.padObstacles.set(id, {
+          id,
+          center: { x: obs.x, y: obs.y },
+          width: obs.width,
+          height: obs.height,
+          netName: obs.netId ?? '',
+          rotation: obs.rotation,
+        });
+      } else if (obs.type === 'trace') {
+        // Reconstruct segment endpoints from center + dimensions + rotation
+        const halfLen = obs.width / 2;
+        const angleRad = ((obs.rotation ?? 0) * Math.PI) / 180;
+        const cosA = Math.cos(angleRad);
+        const sinA = Math.sin(angleRad);
+        this.traceObstacles.set(id, {
+          id,
+          start: { x: obs.x - halfLen * cosA, y: obs.y - halfLen * sinA },
+          end: { x: obs.x + halfLen * cosA, y: obs.y + halfLen * sinA },
+          width: obs.height, // height = trace width in the bridge encoding
+          netName: obs.netId ?? '',
+        });
+      } else if (obs.type === 'via') {
+        this.viaObstacles.set(id, {
+          id,
+          center: { x: obs.x, y: obs.y },
+          drillDiameter: obs.width * 0.5, // approximate drill as half outer
+          outerDiameter: obs.width,
+          netName: obs.netId ?? '',
+        });
+      }
+    }
   }
 
   /** Get all obstacles. */
