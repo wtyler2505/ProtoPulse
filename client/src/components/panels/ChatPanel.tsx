@@ -35,7 +35,10 @@ import DesignAgentPanel from './chat/DesignAgentPanel';
 
 /** Maximum number of SSE reconnection attempts on network failure. */
 const SSE_MAX_RETRIES = 3;
-const API_KEY_STORAGE_KEY = 'protopulse-ai-api-key';
+const API_KEY_STORAGE_KEYS = {
+  anthropic: 'protopulse-ai-api-key-anthropic',
+  gemini: 'protopulse-ai-api-key-gemini',
+} as const;
 
 // CAPX-PERF-01: Static style objects extracted to module scope to avoid
 // creating new references on every render.
@@ -239,10 +242,16 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const { aiProvider, setAiProvider, aiModel, setAiModel, aiTemperature, setAiTemperature, customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy } = useChatSettings();
   const { status: keyStatus, errorMessage: keyErrorMessage, validate: validateKey, reset: resetKeyStatus } = useApiKeyStatus();
   const [showSetupDialog, setShowSetupDialog] = useState(false);
-  // UI-07: Persist AI API key in localStorage
+  // UI-07: Persist AI API key in localStorage (per-provider)
   const [aiApiKey, setAiApiKey] = useState(() => {
     try {
-      return localStorage.getItem(API_KEY_STORAGE_KEY) ?? '';
+      // Migrate legacy single-key to anthropic if present
+      const legacyKey = localStorage.getItem('protopulse-ai-api-key');
+      if (legacyKey) {
+        localStorage.setItem(API_KEY_STORAGE_KEYS.anthropic, legacyKey);
+        localStorage.removeItem('protopulse-ai-api-key');
+      }
+      return localStorage.getItem(API_KEY_STORAGE_KEYS[aiProvider]) ?? '';
     } catch {
       return '';
     }
@@ -322,18 +331,27 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     reader.readAsDataURL(file);
   }, [multimodal, multimodalInputType, addOutputLog, addToHistory]);
 
-  // UI-07: Sync API key to localStorage whenever it changes
+  // UI-07: Sync API key to localStorage whenever it changes (per-provider)
   useEffect(() => {
     try {
       if (aiApiKey) {
-        localStorage.setItem(API_KEY_STORAGE_KEY, aiApiKey);
+        localStorage.setItem(API_KEY_STORAGE_KEYS[aiProvider], aiApiKey);
       } else {
-        localStorage.removeItem(API_KEY_STORAGE_KEY);
+        localStorage.removeItem(API_KEY_STORAGE_KEYS[aiProvider]);
       }
     } catch {
       // localStorage may be unavailable (private browsing, storage full)
     }
-  }, [aiApiKey]);
+  }, [aiApiKey, aiProvider]);
+
+  // Load the correct API key when provider changes
+  useEffect(() => {
+    try {
+      setAiApiKey(localStorage.getItem(API_KEY_STORAGE_KEYS[aiProvider]) ?? '');
+    } catch {
+      setAiApiKey('');
+    }
+  }, [aiProvider]);
 
   // Reset key validation status when provider or key changes
   useEffect(() => {
@@ -343,11 +361,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const clearSavedApiKey = useCallback(() => {
     setAiApiKey('');
     try {
-      localStorage.removeItem(API_KEY_STORAGE_KEY);
+      localStorage.removeItem(API_KEY_STORAGE_KEYS[aiProvider]);
     } catch {
       // Ignore localStorage errors
     }
-  }, []);
+  }, [aiProvider]);
 
   const filteredMessages = useMemo(() =>
     chatSearch

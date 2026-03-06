@@ -210,7 +210,7 @@ shared/
 - **Coverage**: `@vitest/coverage-v8` — reports to `coverage/` directory
 - **Legacy**: `server/__tests__/api.test.ts` uses `node:test` runner (excluded from Vitest config)
 
-### Test File Locations (159 test files, ~7524 tests)
+### Test File Locations (162 test files, ~7625 tests)
 
 ```text
 server/__tests__/                          → API, auth, storage, exporters, generators, DRC, LRU cache, metrics, audit-log, circuit-breaker, stream-abuse, auth-regression, storage-transactions (30 files)
@@ -289,6 +289,7 @@ See `docs/product-analysis-checklist.md` for full security findings (CAPX-SEC-*)
 
 ## Guardrails
 
+- **ALWAYS use `/agent-teams`** (real Claude Code agent teams with in-process teammates, Shift+Up/Down navigation, shared task list) for ALL parallel implementation work. NEVER use background `Agent` subagents for implementation. Subagents are ONLY for read-only research/exploration.
 - Never swap Wouter, Drizzle, shadcn/ui, @xyflow/react, or TanStack Query; these are core
 - Never add Redux/Zustand/MobX; use React Query + context
 - Never silently change API response shapes; update all callers
