@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -193,6 +193,7 @@ export default function ModifyModal({ open, onOpenChange, currentPart, projectId
           <DialogTitle data-testid="modify-modal-title">
             {modalState === 'review' ? 'Review AI Changes' : 'AI Modify Component'}
           </DialogTitle>
+          <DialogDescription className="sr-only">Use AI to modify component properties and review changes</DialogDescription>
         </DialogHeader>
 
         {modalState === 'input' && (

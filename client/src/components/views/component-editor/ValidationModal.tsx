@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { ComponentValidationIssue } from '@shared/component-types';
 import { AlertCircle, AlertTriangle, Info, CheckCircle, ArrowRight } from 'lucide-react';
@@ -29,6 +29,7 @@ export default function ValidationModal({ open, onClose, issues, onNavigate }: V
       <DialogContent className="sm:max-w-lg bg-card border-border" data-testid="validation-modal">
         <DialogHeader>
           <DialogTitle className="text-foreground">Validation Results</DialogTitle>
+          <DialogDescription className="sr-only">Component validation errors, warnings, and information</DialogDescription>
         </DialogHeader>
 
         <div className="flex items-center gap-3 text-sm py-2">

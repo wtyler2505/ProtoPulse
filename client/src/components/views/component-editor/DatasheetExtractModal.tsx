@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -219,6 +219,7 @@ export default function DatasheetExtractModal({
           <DialogTitle data-testid="datasheet-extract-title">
             {modalState === 'review' ? 'Review Extracted Metadata' : 'Extract from Datasheet'}
           </DialogTitle>
+          <DialogDescription className="sr-only">Extract component metadata from a datasheet</DialogDescription>
         </DialogHeader>
 
         {modalState === 'upload' && (

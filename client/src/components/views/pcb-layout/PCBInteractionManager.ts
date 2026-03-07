@@ -217,7 +217,7 @@ export function handleMouseUp(panState: PanState): void {
 // ---------------------------------------------------------------------------
 
 export function handleWheel(
-  e: React.WheelEvent,
+  e: WheelEvent,
   callbacks: Pick<CanvasCallbacks, 'setZoom'>,
 ): void {
   e.preventDefault();

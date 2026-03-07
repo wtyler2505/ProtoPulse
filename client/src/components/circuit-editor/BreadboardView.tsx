@@ -361,9 +361,15 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
     isPanning.current = false;
   }, []);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    setZoom(prev => Math.max(1, Math.min(8, prev + (e.deltaY > 0 ? -0.3 : 0.3))));
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setZoom(prev => Math.max(1, Math.min(8, prev + (e.deltaY > 0 ? -0.3 : 0.3))));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
   }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -410,7 +416,6 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={() => setMouseBoardPos(null)}
-        onWheel={handleWheel}
         onKeyDown={handleKeyDown}
         tabIndex={0}
         data-testid="breadboard-canvas"

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -146,6 +146,7 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto" data-testid="generator-modal">
         <DialogHeader>
           <DialogTitle>Generate Package</DialogTitle>
+          <DialogDescription className="sr-only">Generate a component package from templates or custom parameters</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-2">

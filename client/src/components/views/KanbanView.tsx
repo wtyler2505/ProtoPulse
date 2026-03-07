@@ -29,6 +29,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -450,6 +451,7 @@ function TaskDialog({ open, onOpenChange, onSubmit, columns, defaultColumnId, ed
       <DialogContent data-testid="task-dialog" className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Edit Task' : 'Create Task'}</DialogTitle>
+          <DialogDescription className="sr-only">{isEditing ? 'Edit task details and status' : 'Create a new task for the board'}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -568,6 +570,7 @@ function AddColumnDialog({ open, onOpenChange, onAdd }: { open: boolean; onOpenC
       <DialogContent data-testid="add-column-dialog" className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Add Column</DialogTitle>
+          <DialogDescription className="sr-only">Add a new column to the board</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>

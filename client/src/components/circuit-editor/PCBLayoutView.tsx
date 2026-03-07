@@ -11,7 +11,7 @@
  *   - TraceRenderer        (trace SVG rendering)
  */
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
   useCircuitDesigns,
@@ -162,6 +162,7 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
 
   // --- Refs ---
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const panStateRef = useRef<PanState>({ isPanning: false, lastMouse: { x: 0, y: 0 } });
 
   // --- Derived data ---
@@ -241,7 +242,13 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
 
   const handleMUp = useCallback(() => onMouseUp(panStateRef.current), []);
 
-  const handleWhl = useCallback((e: React.WheelEvent) => onWheel(e, callbacks), [callbacks]);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const wheelHandler = (e: WheelEvent) => onWheel(e, callbacks);
+    el.addEventListener('wheel', wheelHandler, { passive: false });
+    return () => el.removeEventListener('wheel', wheelHandler);
+  }, [callbacks]);
 
   const handleWireClick = useCallback(
     (wireId: number, _e: React.MouseEvent) => setSelectedWireId(wireId),
@@ -351,12 +358,12 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
 
       {/* SVG canvas */}
       <div
+        ref={containerRef}
         className="flex-1 overflow-hidden bg-[#1a1a1a] relative"
         onMouseDown={handleMDown}
         onMouseMove={handleMMove}
         onMouseUp={handleMUp}
         onMouseLeave={() => setMouseBoardPos(null)}
-        onWheel={handleWhl}
         onKeyDown={handleKey}
         onClick={handleClick}
         onDoubleClick={handleDblClick}

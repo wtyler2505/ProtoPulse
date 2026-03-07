@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Download, Package, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -71,6 +71,7 @@ export default function ComponentLibraryBrowser({ open, onClose, projectId, onFo
             <Package className="w-5 h-5 text-editor-accent" />
             Component Library
           </DialogTitle>
+          <DialogDescription className="sr-only">Browse and import components from the library</DialogDescription>
         </DialogHeader>
 
         <div className="relative">

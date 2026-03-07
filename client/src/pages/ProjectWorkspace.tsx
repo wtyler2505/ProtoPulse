@@ -49,6 +49,68 @@ import { DndProvider } from '@/lib/dnd-context';
 import { TutorialProvider } from '@/lib/tutorial-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 
+/**
+ * Prefetch lazy-loaded view chunks during idle time so that first-click
+ * navigation doesn't block on network fetch + parse (500ms-3377ms jank).
+ * Chunks are fetched in priority order: high-traffic views first.
+ */
+const prefetchQueue: Array<() => Promise<unknown>> = [
+  // Tier 1 — most-visited views (prefetch immediately on idle)
+  () => import('@/components/views/ArchitectureView'),
+  () => import('@/components/views/DashboardView'),
+  () => import('@/components/panels/ChatPanel'),
+  () => import('@/components/layout/Sidebar'),
+  // Tier 2 — common workflow views
+  () => import('@/components/views/SchematicView'),
+  () => import('@/components/circuit-editor/BreadboardView'),
+  () => import('@/components/circuit-editor/PCBLayoutView'),
+  () => import('@/components/views/ProcurementView'),
+  () => import('@/components/views/ValidationView'),
+  () => import('@/components/views/OutputView'),
+  () => import('@/components/simulation/SimulationPanel'),
+  // Tier 3 — secondary views (prefetch last)
+  () => import('@/components/views/ComponentEditorView'),
+  () => import('@/components/views/DesignHistoryView'),
+  () => import('@/components/views/LifecycleDashboard'),
+  () => import('@/components/views/CalculatorsView'),
+  () => import('@/components/views/DesignPatternsView'),
+  () => import('@/components/views/KanbanView'),
+  () => import('@/components/views/KnowledgeView'),
+  () => import('@/components/views/BoardViewer3DView'),
+  () => import('@/components/views/CommunityView'),
+  () => import('@/components/views/PcbOrderingView'),
+  () => import('@/components/views/StorageManagerPanel'),
+  () => import('@/components/panels/SerialMonitorPanel'),
+  () => import('@/components/panels/CommentsPanel'),
+];
+
+let prefetchStarted = false;
+
+function startPrefetch() {
+  if (prefetchStarted) { return; }
+  prefetchStarted = true;
+
+  let idx = 0;
+  const next = () => {
+    if (idx >= prefetchQueue.length) { return; }
+    const loader = prefetchQueue[idx++];
+    // Fire and forget — we only care about caching the module
+    loader().catch(() => { /* chunk load failure is non-fatal */ });
+    // Schedule next chunk on next idle period to avoid blocking main thread
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(next);
+    } else {
+      setTimeout(next, 50);
+    }
+  };
+
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(next);
+  } else {
+    setTimeout(next, 100);
+  }
+}
+
 const tabDescriptions: Record<string, string> = {
   dashboard: 'Project overview and summary stats',
   output: 'Export design files and artifacts',
@@ -277,6 +339,11 @@ function WorkspaceContent() {
       mainRef.current.focus({ preventScroll: true });
     }
   }, [activeView]);
+
+  // Prefetch lazy-loaded view chunks after initial render
+  useEffect(() => {
+    startPrefetch();
+  }, []);
 
   const [ws, dispatch] = useReducer(workspaceReducer, initialWorkspaceState);
 

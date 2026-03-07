@@ -29,7 +29,7 @@ import { runDRC, getDefaultDRCRules } from '@/lib/component-editor/drc';
 import type { ComponentValidationIssue, DRCViolation, DRCRule } from '@shared/component-types';
 import { createDefaultPartState } from '@shared/component-types';
 import ComponentLibraryBrowser from '@/components/views/component-editor/ComponentLibraryBrowser';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { ComponentPart } from '@shared/schema';
 
@@ -921,6 +921,7 @@ function ComponentEditorContent() {
         <DialogContent className="max-w-md bg-background border-border" data-testid="dialog-publish">
           <DialogHeader>
             <DialogTitle>Publish to Library</DialogTitle>
+            <DialogDescription className="sr-only">Publish this component to the shared library</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-1.5">

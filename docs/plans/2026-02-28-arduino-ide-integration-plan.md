@@ -2,203 +2,261 @@
 
 > **Planning document only.** No runtime implementation was performed.
 
-**Goal:** Deliver a full Arduino IDE-style workbench inside ProtoPulse using the existing React/Express/Drizzle stack.  
-**Architecture:** Add a project-scoped Arduino vertical slice: shared schema -> storage interface -> API routes -> React domain context -> workspace UI -> tests/docs.  
-**Tech Stack:** React 19, TypeScript, TanStack React Query, Express 5, Drizzle ORM, arduino-cli.
+**Goal:** Deliver a production-ready Arduino Workbench in ProtoPulse using the existing React/Express/Drizzle stack.  
+**Architecture:** Add a project-scoped Arduino vertical slice: schema -> storage -> routes/services -> React context -> workspace UI -> tests/docs.  
+**Tech Stack:** React 19, TypeScript, TanStack React Query, Express 5, Drizzle ORM, `arduino-cli`.
 
-## Skill Note
-I’m using the Writing Plans and Architecture approaches to produce an implementation-ready spec and phased execution plan.
+## 1. Locked Ground Rules
+1. Feature flag key: `FEATURE_ARDUINO_WORKBENCH`.
+2. Route namespace: `/api/projects/:id/arduino/*`.
+3. Job status enum: `pending|running|completed|failed|cancelled`.
+4. Primary stream transport: SSE.
+5. Storage model: hybrid (filesystem for sketch content, DB for metadata/jobs/sessions).
+6. Command palette integration uses existing `Ctrl/Cmd+K` flow.
 
-## 1. Feature Planning
+## 2. Scope and Phases
 
-### 1.1 Scope Definition
-1. **MVP (Phase P1):** workspace shell, board/port discovery, board manager, library manager, compile/upload jobs, serial monitor, verbose logs.
-2. **Phase P2:** language server features, split editor, serial plotter, build profiles.
-3. **Phase P3:** debugger integration, cloud sketchbook sync, firmware updater, SSL cert uploader.
-4. **Phase P4:** extension/plugin model with controlled security boundaries.
+### 2.1 P1 (MVP)
+1. Arduino workspace shell and new `arduino` view.
+2. File tree/edit/save for sketch files.
+3. Board/port discovery.
+4. Platform/library list + install/uninstall basics.
+5. Compile/upload job lifecycle with live logs.
+6. Serial monitor open/write/close/stream.
+7. CLI preflight health endpoint.
 
-### 1.2 Acceptance Criteria
-1. `arduino` tab appears in workspace under feature flag.
-2. User can create/edit sketches and compile successfully.
-3. User can upload to selected board/port.
-4. User can open Serial Monitor and send/receive messages.
-5. Board/library management APIs and UI are operational.
+### 2.2 P2
+1. LSP diagnostics + navigation.
+2. Split editor.
+3. Serial plotter.
+4. Profile UX polish (`sketch.yaml` mapping tools).
 
-## 2. Research and Analysis Tasks
-1. Confirm `arduino-cli` availability and version in target environments.
-2. Define supported board families for GA (`arduino:avr`, `arduino:samd`, `esp32:esp32`, `rp2040:*`).
-3. Evaluate Monaco + LSP integration strategy for C/C++ Arduino flows.
-4. Confirm hardware access permissions/security model in deployment environment.
+### 2.3 P3
+1. Debugger (supported-board gated).
+2. Cloud pull/push endpoints.
+3. Firmware updater + certificate upload.
 
-## 3. Architecture Design Tasks
-1. Create architecture doc: `docs/arduino-ide-integration-spec.md`.
-2. Add ADR for CLI-process model and job orchestration.
-3. Define data flow for compile/upload and serial streaming.
-4. Define failure-handling strategy for CLI and device disconnects.
+### 2.4 P4
+1. Controlled extension points (no untrusted VSIX execution).
 
-## 4. Environment Setup Plan (When Executing)
-1. Create branch: `feature/arduino-ide-integration`.
-2. Ensure dependencies/tools are up to date (`npm install`, `arduino-cli version`).
-3. Add env flags:
+## 3. Definition of Done (Strict P1 Gate)
+P1 is not complete until every item below is true:
+1. Feature flag gate is verified both directions:
+- ON: Arduino tab/routes available.
+- OFF: Arduino tab hidden and Arduino routes blocked.
+2. User can create/edit/save/delete sketch files with safe path enforcement.
+3. User can detect/select board and port with deterministic errors for busy/missing states.
+4. Compile and upload jobs run through `pending|running|completed|failed|cancelled` and stream logs over SSE.
+5. Serial monitor open/write/stream/close is stable, including disconnect recovery.
+6. Routes are authenticated and project-scoped for every endpoint.
+7. `sketch.yaml` profile mapping (including `default_profile`) is verified end-to-end.
+8. Required test matrix in section 12 passes with artifacts attached.
+9. `npm run check` and `npm test` pass with zero new failures.
+
+## 4. Research and Validation Tasks
+1. Confirm `arduino-cli` version support matrix and pin supported range.
+2. Validate command behavior across Linux/macOS/Windows in CI docs.
+3. Confirm board families for GA support:
+- `arduino:avr`
+- `arduino:samd`
+- `esp32:esp32`
+- `rp2040:*`
+4. Validate upload/monitor behavior with and without `sketch.yaml default_profile`.
+5. Validate path normalization/security boundaries for sketch files.
+6. Validate CLI compatibility policy for pinned version range (`>=1.2.0 <2.0.0`).
+
+## 5. Architecture Tasks
+1. Keep source of truth in `docs/arduino-ide-integration-spec.md`.
+2. Keep wire-level route contracts in `docs/arduino-ide-api-contracts.md`.
+3. Add ADR: Arduino process orchestration + persistence decisions.
+4. Add sequence diagrams for compile/upload and serial streaming.
+
+## 6. Environment Setup (Execution Phase)
+1. Create branch `feature/arduino-ide-integration`.
+2. Verify toolchain:
+- `npm install`
+- `npm run check`
+- `arduino-cli version`
+3. Add environment keys:
 - `FEATURE_ARDUINO_WORKBENCH`
 - `ARDUINO_CLI_PATH`
 - `ARDUINO_DATA_DIR`
 - `ARDUINO_SKETCH_ROOT`
+- `ARDUINO_ALLOWED_FQBNS`
 
-## 5. Implementation Strategy (Phased)
+### 6.1 Capability Probe Checklist
+1. `arduino-cli version` returns supported range.
+2. `arduino-cli board list --json` works in target env.
+3. `arduino-cli core update-index` succeeds.
+4. Process user has permission to read/write `ARDUINO_DATA_DIR` and `ARDUINO_SKETCH_ROOT`.
 
-### P1 Core Platform
-1. Add schema/types for Arduino workspace, profiles, jobs, sessions.
-2. Extend storage interface + database implementation.
-3. Add server routes + service layer with CLI adapter.
-4. Add React `arduino-context` with query/mutation hooks.
-5. Add `ArduinoWorkbenchView` and wire into workspace tabs/sidebar.
+## 7. Database Plan
 
-### P2 Editor Intelligence
-1. Add LSP bridge endpoints and diagnostics transport.
-2. Add split editor and code navigation interactions.
-3. Add format-on-demand and `.clang-format` support.
-
-### P3 Cloud + Debug
-1. Add cloud sync APIs and auth-link status.
-2. Add debugger session management with board capability checks.
-3. Add firmware and SSL upload workflow.
-
-### P4 Extensions
-1. Add extension registry with allowlisted providers.
-2. Add extension UI settings and permission model.
-
-## 6. Database Change Plan
-
-### New Tables (Proposed)
+### 7.1 New Tables
 1. `arduino_workspaces`
 2. `arduino_build_profiles`
 3. `arduino_jobs`
 4. `arduino_serial_sessions`
-5. `arduino_sketch_files`
+5. `arduino_sketch_files` (metadata only)
 
-### Migration Rules
-1. Add nullable-safe columns where possible.
-2. Keep backward compatibility with existing projects.
-3. Add down-migration notes and data retention strategy.
+### 7.2 Migration Rules
+1. Use additive migrations only.
+2. Maintain backward compatibility for existing project flows.
+3. Add indexes for project-scoped lookups and job history queries.
+4. Document retention policy for job logs and serial session records.
 
-## 7. API Development Plan
+## 8. Backend Plan
 
-### Route Namespace
-- `/api/projects/:id/arduino/*`
+### 8.1 Storage Layer
+1. Extend `IStorage` with Arduino methods.
+2. Add `server/storage/arduino.ts` module.
+3. Expose methods via `DatabaseStorage` composition pattern.
 
-### Initial Endpoints
-1. Workspace/file operations.
-2. Board discovery and core management.
-3. Library search/install/uninstall.
-4. Compile/upload job start/status/log/cancel.
-5. Serial open/write/close/stream.
+### 8.2 Service Layer
+1. Implement `arduino-service.ts` for command construction and validation.
+2. Implement `arduino-process-manager.ts` for process lifecycle and cancellation.
+3. Harden allowlisted command set:
+- board discovery
+- platform install/upgrade
+- library install/uninstall/search/index update
+- compile
+- upload
+- monitor
 
-### Contract Requirements
-1. Zod validation for all request/response boundaries.
-2. Standardized error payload `{ message, code?, details? }`.
-3. Correct status codes (`200/201/204/400/401/403/404/409/422/500`).
+### 8.3 Routes
+1. Add `server/routes/arduino.ts`.
+2. Register route module in `server/routes.ts`.
+3. Apply Zod validation to all request payloads.
+4. Keep non-2xx errors in `{ message, code?, details? }` shape.
 
-## 8. Frontend Implementation Plan
+## 9. Frontend Plan
 
-### Affected UI Areas
-1. `client/src/pages/ProjectWorkspace.tsx` (new tab/view)
-2. `client/src/components/layout/sidebar/sidebar-constants.ts` (sidebar nav)
-3. `client/src/lib/project-context.tsx` (extend `ViewMode` and provider composition)
-4. New files under `client/src/components/views/arduino/*`
-5. New context: `client/src/lib/contexts/arduino-context.tsx`
+### 9.1 Core Wiring
+1. Add `arduino` to `ViewMode`.
+2. Add sidebar item and workspace tab.
+3. Add lazy-loaded `ArduinoWorkbenchView`.
 
-### UX Requirements
-1. Command palette (`Ctrl+Shift+P`) with Arduino actions.
-2. Dockable serial console and optional plot panel.
-3. Build console with streaming logs and job status.
-4. Clear loading/error/empty states for every panel.
+### 9.2 Context and Queries
+1. Add `client/src/lib/contexts/arduino-context.tsx`.
+2. Add React Query hooks for workspace/boards/libraries/jobs/serial.
+3. Ensure optimistic updates are used only where safe.
 
-## 9. Testing Plan
-
-### Unit
-1. CLI command builder validation.
-2. Job lifecycle transitions.
-3. Serial parsing and plot channel extraction.
-
-### Integration
-1. Express route tests with mocked CLI adapter.
-2. Storage tests for new Arduino entities.
-3. Auth and project scoping checks.
-
-### E2E
-1. Open Arduino tab -> edit file -> compile.
-2. Select board/port -> upload.
-3. Open serial monitor -> send/receive data.
+### 9.3 Panels
+1. Workspace file tree/editor.
+2. Boards/platform manager.
+3. Library manager.
+4. Build console with streamed logs.
+5. Serial monitor dock.
+6. Arduino command group inside existing command palette.
 
 ## 10. Security Plan
-1. Hard allowlist for `arduino-cli` subcommands.
-2. Argument sanitization and path canonicalization.
-3. No direct shell interpolation from client payloads.
-4. Rate limits and auth checks on all Arduino endpoints.
-5. Secret redaction in logs.
+1. No raw shell interpolation from client payloads.
+2. Canonicalize all file paths under per-project root.
+3. Strict command allowlist and arg shape validation.
+4. Enforce auth + ownership middleware on all Arduino routes.
+5. Add stream abuse protections (session concurrency + rate limits + timeout).
+6. Redact sensitive strings from logs.
 
 ## 11. Performance Plan
-1. Async job queue for compile/upload.
-2. TTL cache for board/library index queries.
-3. Paginated job history and log truncation policy.
-4. Debounced board discovery refresh in UI.
+1. Queue jobs asynchronously and prevent per-port upload contention.
+2. Stream logs incrementally to client via SSE.
+3. Add TTL caches for board/platform/library listings.
+4. Add job log truncation + pagination policy.
+5. Debounce board refresh in the UI.
 
-## 12. Documentation Plan
-1. Update `docs/DEVELOPER.md` with Arduino architecture and APIs.
+### 11.1 Concrete Limits for P1
+1. File write payload limit: 1 MiB.
+2. Job log retention cap: 2 MiB per job.
+3. SSE inactivity timeout: 120s.
+4. SSE absolute timeout: 300s.
+5. Max concurrent Arduino jobs per project: 2.
+
+## 12. Testing Plan
+
+### 12.1 Unit
+1. Command builder correctness.
+2. Job state transitions.
+3. Path guard and workspace root enforcement.
+4. `sketch.yaml` profile/default mapping behavior.
+
+### 12.2 Integration
+1. Route tests with mocked CLI adapter.
+2. Storage tests for Arduino entities.
+3. Auth/project ownership tests on Arduino endpoints.
+4. Streaming tests for job log SSE and serial SSE endpoints.
+
+### 12.3 E2E
+1. Open Arduino tab -> edit file -> compile.
+2. Select board/port -> upload.
+3. Open serial monitor -> send/receive.
+
+### 12.4 Break-It Matrix (Required)
+All failure scenarios below are required for P1 sign-off:
+
+| ID | Failure Scenario | Expected Behavior |
+| --- | --- | --- |
+| BRK-01 | CLI missing (`ARDUINO_CLI_PATH` invalid) | `/health` returns `503` + `ARDUINO_CLI_NOT_FOUND`; compile/upload blocked. |
+| BRK-02 | CLI version out of supported range | `/health` reports incompatible version; jobs blocked with clear error. |
+| BRK-03 | Hung compile/upload process | Process timeout + kill; job ends `failed` with `ARDUINO_CLI_TIMEOUT`. |
+| BRK-04 | Workspace path traversal attempt (`../`) | Request rejected with `PATH_OUTSIDE_WORKSPACE`; no write side effect. |
+| BRK-05 | File payload exceeds 1 MiB | Request rejected (`413`); no partial write. |
+| BRK-06 | Compile with invalid sketch path | Request rejected with `INVALID_SKETCH_PATH`. |
+| BRK-07 | Concurrent uploads on same port | First runs; second rejected with `409` + `PORT_BUSY`. |
+| BRK-08 | Cancel running job | Process terminated; final status `cancelled`; stream closes cleanly. |
+| BRK-09 | Serial disconnect while streaming | Stream emits error/status and session closes without server crash. |
+| BRK-10 | SSE disconnect + reconnect | Reconnect gets current status quickly; no duplicate terminal transitions. |
+| BRK-11 | Duplicate idempotency key | Existing job returned; duplicate process not created. |
+| BRK-12 | Board not detected at upload time | Request fails deterministically with `BOARD_NOT_DETECTED`. |
+
+### 12.5 Required Test Matrix (Pass/Fail)
+| Test ID | Layer | What Must Pass |
+| --- | --- | --- |
+| TST-U01 | Unit | Path guard blocks traversal + absolute escapes. |
+| TST-U02 | Unit | Command builder allows only approved CLI command set. |
+| TST-U03 | Unit | Job state machine rejects illegal transitions. |
+| TST-I01 | Integration | Auth + ownership enforced on all Arduino endpoints. |
+| TST-I02 | Integration | Compile/upload job lifecycle and SSE event contract. |
+| TST-I03 | Integration | Upload contention returns `PORT_BUSY`. |
+| TST-I04 | Integration | Idempotency key returns same job ID for duplicate request. |
+| TST-I05 | Integration | Serial open/write/close + disconnect behavior is stable. |
+| TST-E01 | E2E | Happy path: edit -> compile -> upload -> serial output. |
+| TST-E02 | E2E | Error UX path: missing CLI, busy port, board not found. |
+| TST-B01 | Break-It | BRK-01 through BRK-12 pass and are recorded in PR checklist. |
+
+## 13. Documentation Plan
+1. Update `docs/DEVELOPER.md` with architecture and route details.
 2. Update `docs/USER_GUIDE.md` with Arduino Workbench usage.
-3. Add troubleshooting section for board detection/upload/serial errors.
-4. Add runbook entry for `arduino-cli` runtime health checks.
+3. Add troubleshooting for:
+- CLI missing/misconfigured
+- board not detected
+- port busy
+- upload failure
+- serial session interruptions
+4. Add runbook for Arduino preflight health checks.
 
-## 13. Code Review Preparation Checklist (For Execution Phase)
-1. `npm run check` must pass with zero errors.
-2. All new tests pass.
-3. No unbounded process spawning or unvalidated command args.
-4. Feature flag verified on/off.
-
-## 14. Integration Test Plan
-1. Regression test existing views (architecture/bom/validation/chat).
-2. Validate sidebar and tab navigation stability.
-3. Confirm no breakage in project seeding and auth flows.
-
-## 15. Commit Plan (For Execution Phase)
-Suggested atomic commits:
+## 14. Commit Plan (Execution Phase)
 1. `feat(schema): add arduino workspace/profile/job/session tables`
-2. `feat(server): add arduino service and API routes`
-3. `feat(client): add arduino context and workbench view`
-4. `test(arduino): add API/context/e2e coverage`
-5. `docs(arduino): add developer and user docs`
+2. `feat(storage): add arduino storage module and interface methods`
+3. `feat(server): add arduino service/process manager/routes`
+4. `feat(client): add arduino context, workbench view, and command palette actions`
+5. `test(arduino): add unit/integration/e2e coverage`
+6. `docs(arduino): update spec/contracts/dev+user docs`
 
-## 16. Pull Request Plan
-1. Include architecture diagram and API matrix.
-2. Include screenshots of Workbench, board manager, serial monitor.
-3. Include hardware assumptions and tested board matrix.
-4. Include feature-flag rollout instructions.
+## 15. PR Plan
+1. Include architecture diagram + sequence diagrams.
+2. Include API matrix linked to contracts doc.
+3. Include screenshots of key panels (workbench, boards, build, serial).
+4. Include tested board/OS matrix.
+5. Include feature-flag rollout and rollback instructions.
 
-## 17. QA Plan
-1. Manual matrix by OS and board family.
-2. Accessibility checks: keyboard-only and screen-reader pass.
-3. Failure-path checks: missing CLI, port disconnected mid-upload, compile failure.
+## 16. Rollout Plan
+1. Internal rollout behind `FEATURE_ARDUINO_WORKBENCH`.
+2. Observe compile/upload success and latency metrics.
+3. Expand gradually to beta cohorts.
+4. Roll back by disabling feature flag and route guard.
 
-## 18. Deployment and Rollout Plan
-1. Internal rollout under feature flag.
-2. Observe compile/upload success rate and latency.
-3. Expand to beta users by cohort.
-4. Prepare rollback by disabling feature flag and route guards.
-
-## Suggested Task Breakdown for Engineers (Execution Backlog)
-1. Add schema + migrations.
-2. Add storage interface + database methods.
-3. Implement Arduino service wrapper around CLI.
-4. Implement routes and validators.
-5. Add frontend Arduino context.
-6. Add workbench shell UI.
-7. Add board/library management UI.
-8. Add compile/upload job UI.
-9. Add serial monitor UI.
-10. Add tests and docs updates.
-
-## Out-of-Scope for First Merge
-1. Full VSIX ecosystem support.
-2. Full cloud account management UX.
-3. Universal debugger support across all boards/probes.
+## 17. Out-of-Scope for First Merge
+1. Full VSIX ecosystem execution.
+2. Full Arduino Cloud account management UX.
+3. Universal debugger support across all probes.
+4. Serial plotter and advanced debugger UX.

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -175,6 +175,7 @@ export default function PinExtractModal({
           <DialogTitle data-testid="pin-extract-title">
             {modalState === 'review' ? 'Review Extracted Pins' : 'Extract Pins from Photo'}
           </DialogTitle>
+          <DialogDescription className="sr-only">Extract pin definitions from a component photo</DialogDescription>
         </DialogHeader>
 
         {modalState === 'upload' && (

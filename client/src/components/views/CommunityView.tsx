@@ -28,6 +28,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
@@ -360,6 +361,7 @@ const CollectionsPanel = memo(function CollectionsPanel({ collections, onCreate 
         <DialogContent data-testid="create-collection-dialog" className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Create Collection</DialogTitle>
+            <DialogDescription className="sr-only">Create a new component collection</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
