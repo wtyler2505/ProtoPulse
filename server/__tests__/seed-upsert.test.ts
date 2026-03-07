@@ -116,8 +116,22 @@ describe('computeComponentHash', () => {
 });
 
 // ---------------------------------------------------------------------------
-// seedStandardLibrary upsert behavior
+// seedStandardLibrary upsert behavior (batch operations)
 // ---------------------------------------------------------------------------
+
+/**
+ * Helper to set up mocks for the batch select pattern.
+ * The new implementation calls select().from().where() ONCE to fetch all
+ * existing public components, then does batch insert + individual updates.
+ */
+function setupSelectMock(existingRows: Array<Record<string, unknown>>) {
+  const mockFromResult = {
+    where: vi.fn().mockResolvedValue(existingRows),
+  };
+  const mockFromFn = vi.fn().mockReturnValue(mockFromResult);
+  mockSelect.mockReturnValue({ from: mockFromFn });
+  return { mockFromFn, mockFromResult };
+}
 
 describe('seedStandardLibrary', () => {
   beforeEach(() => {
@@ -125,18 +139,13 @@ describe('seedStandardLibrary', () => {
   });
 
   it('inserts new components when none exist', async () => {
-    // Mock: select returns empty (count = 0 style — but we're selecting fields now)
-    const mockFromResult = {
-      where: vi.fn().mockResolvedValue([]),
-    };
-    const mockFromFn = vi.fn().mockReturnValue(mockFromResult);
-    mockSelect.mockReturnValue({ from: mockFromFn });
+    // Mock: single select returns empty array (no existing components)
+    setupSelectMock([]);
 
-    // Mock: insert().values() returns
+    // Mock: single batch insert().values([...]) call
     const mockValues = vi.fn().mockResolvedValue(undefined);
     mockInsert.mockReturnValue({ values: mockValues });
 
-    // Dynamic import to get the function after mocks are set
     const { seedStandardLibrary } = await import('../routes/seed');
     const result = await seedStandardLibrary();
 
@@ -145,20 +154,24 @@ describe('seedStandardLibrary', () => {
     expect(result.unchanged).toBe(0);
     expect(result.inserted + result.updated + result.unchanged).toBeGreaterThan(0);
 
-    // Verify insert was called for each component
-    expect(mockInsert).toHaveBeenCalled();
-    expect(mockValues).toHaveBeenCalled();
+    // Verify batch insert was called exactly ONCE (not per component)
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(mockValues).toHaveBeenCalledTimes(1);
+
+    // Verify the values call received an array of all components
+    const insertedValues = mockValues.mock.calls[0][0] as unknown[];
+    expect(Array.isArray(insertedValues)).toBe(true);
+    expect(insertedValues.length).toBe(result.inserted);
   });
 
   it('skips unchanged components (content hash matches)', async () => {
-    // For this test we need to match the exact hash of the first standard lib component.
-    // We'll mock select to return data that produces the same hash as the component def.
     const { STANDARD_LIBRARY_COMPONENTS } = await import('@shared/standard-library');
     const firstComp = STANDARD_LIBRARY_COMPONENTS[0];
 
-    // Return existing data that matches the component exactly
+    // Return one existing row that matches the first component exactly
     const existingRow = {
       id: 1,
+      title: firstComp.title,
       description: firstComp.description,
       category: firstComp.category,
       tags: firstComp.tags,
@@ -169,19 +182,7 @@ describe('seedStandardLibrary', () => {
       constraints: firstComp.constraints,
     };
 
-    let callCount = 0;
-    const mockFromResult = {
-      where: vi.fn().mockImplementation(() => {
-        callCount++;
-        // First call returns existing match, rest return empty (so they insert)
-        if (callCount === 1) {
-          return Promise.resolve([existingRow]);
-        }
-        return Promise.resolve([]);
-      }),
-    };
-    const mockFromFn = vi.fn().mockReturnValue(mockFromResult);
-    mockSelect.mockReturnValue({ from: mockFromFn });
+    setupSelectMock([existingRow]);
 
     const mockValues = vi.fn().mockResolvedValue(undefined);
     mockInsert.mockReturnValue({ values: mockValues });
@@ -190,18 +191,22 @@ describe('seedStandardLibrary', () => {
     const result = await seedStandardLibrary();
 
     // The first component should be unchanged, rest inserted
-    expect(result.unchanged).toBeGreaterThanOrEqual(1);
+    expect(result.unchanged).toBe(1);
     expect(result.inserted).toBe(STANDARD_LIBRARY_COMPONENTS.length - 1);
     expect(result.updated).toBe(0);
+
+    // Select called exactly once (batch fetch)
+    expect(mockSelect).toHaveBeenCalledTimes(1);
   });
 
   it('updates components when content hash differs', async () => {
     const { STANDARD_LIBRARY_COMPONENTS } = await import('@shared/standard-library');
     const firstComp = STANDARD_LIBRARY_COMPONENTS[0];
 
-    // Return existing data with a DIFFERENT description to trigger update
+    // Return existing row with a DIFFERENT description to trigger update
     const existingRow = {
       id: 42,
+      title: firstComp.title,
       description: 'OLD DESCRIPTION THAT DIFFERS',
       category: firstComp.category,
       tags: firstComp.tags,
@@ -212,18 +217,7 @@ describe('seedStandardLibrary', () => {
       constraints: firstComp.constraints,
     };
 
-    let callCount = 0;
-    const mockFromResult = {
-      where: vi.fn().mockImplementation(() => {
-        callCount++;
-        if (callCount === 1) {
-          return Promise.resolve([existingRow]);
-        }
-        return Promise.resolve([]);
-      }),
-    };
-    const mockFromFn = vi.fn().mockReturnValue(mockFromResult);
-    mockSelect.mockReturnValue({ from: mockFromFn });
+    setupSelectMock([existingRow]);
 
     // Mock insert for new components
     const mockValues = vi.fn().mockResolvedValue(undefined);
@@ -238,22 +232,18 @@ describe('seedStandardLibrary', () => {
     const result = await seedStandardLibrary();
 
     // First component should be updated (different description)
-    expect(result.updated).toBeGreaterThanOrEqual(1);
+    expect(result.updated).toBe(1);
     expect(result.inserted).toBe(STANDARD_LIBRARY_COMPONENTS.length - 1);
     expect(result.unchanged).toBe(0);
 
-    // Verify update was called
-    expect(mockUpdate).toHaveBeenCalled();
-    expect(mockSet).toHaveBeenCalled();
+    // Verify update was called exactly once (for the one changed component)
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
+    expect(mockSet).toHaveBeenCalledTimes(1);
   });
 
   it('returns correct total across all categories', async () => {
     // All components are new
-    const mockFromResult = {
-      where: vi.fn().mockResolvedValue([]),
-    };
-    const mockFromFn = vi.fn().mockReturnValue(mockFromResult);
-    mockSelect.mockReturnValue({ from: mockFromFn });
+    setupSelectMock([]);
 
     const mockValues = vi.fn().mockResolvedValue(undefined);
     mockInsert.mockReturnValue({ values: mockValues });
@@ -263,5 +253,85 @@ describe('seedStandardLibrary', () => {
     const result = await seedStandardLibrary();
 
     expect(result.inserted + result.updated + result.unchanged).toBe(STANDARD_LIBRARY_COMPONENTS.length);
+  });
+
+  it('performs batch insert instead of per-component queries', async () => {
+    // Verifies the key optimization: one SELECT + one INSERT instead of N each
+    setupSelectMock([]);
+
+    const mockValues = vi.fn().mockResolvedValue(undefined);
+    mockInsert.mockReturnValue({ values: mockValues });
+
+    const { seedStandardLibrary } = await import('../routes/seed');
+    const { STANDARD_LIBRARY_COMPONENTS } = await import('@shared/standard-library');
+    await seedStandardLibrary();
+
+    // SELECT called exactly once (batch fetch all existing)
+    expect(mockSelect).toHaveBeenCalledTimes(1);
+
+    // INSERT called exactly once (batch insert all new)
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(mockValues).toHaveBeenCalledTimes(1);
+
+    // The single insert received all components as an array
+    const insertedValues = mockValues.mock.calls[0][0] as unknown[];
+    expect(insertedValues.length).toBe(STANDARD_LIBRARY_COMPONENTS.length);
+  });
+
+  it('handles mix of insert, update, and unchanged correctly', async () => {
+    const { STANDARD_LIBRARY_COMPONENTS } = await import('@shared/standard-library');
+
+    // Use first 3 components: one unchanged, one updated, rest inserted
+    const unchanged = STANDARD_LIBRARY_COMPONENTS[0];
+    const changed = STANDARD_LIBRARY_COMPONENTS[1];
+
+    const existingRows = [
+      {
+        id: 1,
+        title: unchanged.title,
+        description: unchanged.description,
+        category: unchanged.category,
+        tags: unchanged.tags,
+        meta: unchanged.meta,
+        connectors: unchanged.connectors,
+        buses: unchanged.buses,
+        views: unchanged.views,
+        constraints: unchanged.constraints,
+      },
+      {
+        id: 2,
+        title: changed.title,
+        description: 'STALE DESCRIPTION',
+        category: changed.category,
+        tags: changed.tags,
+        meta: changed.meta,
+        connectors: changed.connectors,
+        buses: changed.buses,
+        views: changed.views,
+        constraints: changed.constraints,
+      },
+    ];
+
+    setupSelectMock(existingRows);
+
+    const mockValues = vi.fn().mockResolvedValue(undefined);
+    mockInsert.mockReturnValue({ values: mockValues });
+
+    const mockSetWhere = vi.fn().mockResolvedValue(undefined);
+    const mockSet = vi.fn().mockReturnValue({ where: mockSetWhere });
+    mockUpdate.mockReturnValue({ set: mockSet });
+
+    const { seedStandardLibrary } = await import('../routes/seed');
+    const result = await seedStandardLibrary();
+
+    expect(result.unchanged).toBe(1);
+    expect(result.updated).toBe(1);
+    expect(result.inserted).toBe(STANDARD_LIBRARY_COMPONENTS.length - 2);
+    expect(result.inserted + result.updated + result.unchanged).toBe(STANDARD_LIBRARY_COMPONENTS.length);
+
+    // 1 SELECT + 1 batch INSERT + 1 UPDATE = 3 queries total
+    expect(mockSelect).toHaveBeenCalledTimes(1);
+    expect(mockInsert).toHaveBeenCalledTimes(1);
+    expect(mockUpdate).toHaveBeenCalledTimes(1);
   });
 });

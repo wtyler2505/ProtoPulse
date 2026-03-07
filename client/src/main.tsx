@@ -25,8 +25,12 @@ I18n.getInstance();
 
 // Initialize PWA manager (registers service worker, monitors connection)
 const pwa = PwaManager.getInstance();
-pwa.registerServiceWorker().catch(() => {
-  // Service worker registration is optional — fail silently in dev
-});
+if (import.meta.env.PROD) {
+  pwa.registerServiceWorker().catch(() => {});
+} else if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    regs.forEach((r) => { r.unregister(); });
+  }).catch(() => {});
+}
 
 createRoot(document.getElementById("root")!).render(<App />);

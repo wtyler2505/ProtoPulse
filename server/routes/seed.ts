@@ -247,38 +247,50 @@ export interface SeedResult {
 }
 
 /**
- * Seed the standard component library. True upsert by title + isPublic=true.
- * - If component does not exist: INSERT.
- * - If component exists but content hash differs: UPDATE.
- * - If component exists and content hash matches: SKIP (unchanged).
+ * Seed the standard component library. Batch upsert by title + isPublic=true.
+ * - Fetches ALL existing public components in ONE query.
+ * - Classifies each standard library component as insert/update/unchanged.
+ * - Batch INSERTs all new components in ONE query.
+ * - Updates changed components individually (no batch update in Drizzle).
+ *
+ * Reduces ~200 queries (2 per component) to ~3 queries total.
  */
 export async function seedStandardLibrary(): Promise<SeedResult> {
   let inserted = 0;
   let updated = 0;
   let unchanged = 0;
 
+  // 1. Fetch ALL existing public components in ONE query
+  const existing = await db
+    .select({
+      id: componentLibrary.id,
+      title: componentLibrary.title,
+      description: componentLibrary.description,
+      category: componentLibrary.category,
+      tags: componentLibrary.tags,
+      meta: componentLibrary.meta,
+      connectors: componentLibrary.connectors,
+      buses: componentLibrary.buses,
+      views: componentLibrary.views,
+      constraints: componentLibrary.constraints,
+    })
+    .from(componentLibrary)
+    .where(eq(componentLibrary.isPublic, true));
+
+  // 2. Build a Map of existing by title for O(1) lookup
+  const existingByTitle = new Map(existing.map((e) => [e.title, e]));
+
+  // 3. Classify components into insert/update/unchanged
+  const toInsert: Array<typeof componentLibrary.$inferInsert> = [];
+  const toUpdate: Array<{ id: number; values: Partial<typeof componentLibrary.$inferInsert> }> = [];
+
   for (const comp of STANDARD_LIBRARY_COMPONENTS) {
     const newHash = computeComponentHash(comp);
+    const ex = existingByTitle.get(comp.title);
 
-    // Check if already exists
-    const existing = await db
-      .select({
-        id: componentLibrary.id,
-        description: componentLibrary.description,
-        category: componentLibrary.category,
-        tags: componentLibrary.tags,
-        meta: componentLibrary.meta,
-        connectors: componentLibrary.connectors,
-        buses: componentLibrary.buses,
-        views: componentLibrary.views,
-        constraints: componentLibrary.constraints,
-      })
-      .from(componentLibrary)
-      .where(and(eq(componentLibrary.title, comp.title), eq(componentLibrary.isPublic, true)));
-
-    if (existing.length === 0) {
-      // INSERT new component
-      await db.insert(componentLibrary).values({
+    if (!ex) {
+      // New component — batch insert
+      toInsert.push({
         title: comp.title,
         description: comp.description,
         category: comp.category,
@@ -292,22 +304,27 @@ export async function seedStandardLibrary(): Promise<SeedResult> {
       });
       inserted++;
     } else {
-      // Compute hash of existing row content to compare
-      const existingHash = crypto.createHash('sha256').update(JSON.stringify({
-        description: existing[0].description,
-        category: existing[0].category,
-        tags: existing[0].tags,
-        meta: existing[0].meta,
-        connectors: existing[0].connectors,
-        buses: existing[0].buses,
-        views: existing[0].views,
-        constraints: existing[0].constraints,
-      })).digest('hex');
+      // Existing — check hash
+      const existingHash = crypto
+        .createHash('sha256')
+        .update(
+          JSON.stringify({
+            description: ex.description,
+            category: ex.category,
+            tags: ex.tags,
+            meta: ex.meta,
+            connectors: ex.connectors,
+            buses: ex.buses,
+            views: ex.views,
+            constraints: ex.constraints,
+          }),
+        )
+        .digest('hex');
 
       if (existingHash !== newHash) {
-        // UPDATE existing component
-        await db.update(componentLibrary)
-          .set({
+        toUpdate.push({
+          id: ex.id,
+          values: {
             description: comp.description,
             category: comp.category,
             tags: comp.tags,
@@ -317,13 +334,26 @@ export async function seedStandardLibrary(): Promise<SeedResult> {
             views: comp.views,
             constraints: comp.constraints,
             updatedAt: new Date(),
-          })
-          .where(eq(componentLibrary.id, existing[0].id));
+          },
+        });
         updated++;
       } else {
         unchanged++;
       }
     }
+  }
+
+  // 4. Batch INSERT all new components in ONE query
+  if (toInsert.length > 0) {
+    await db.insert(componentLibrary).values(toInsert);
+  }
+
+  // 5. Update changed components individually (no batch update in Drizzle)
+  for (const item of toUpdate) {
+    await db
+      .update(componentLibrary)
+      .set(item.values)
+      .where(eq(componentLibrary.id, item.id));
   }
 
   return { inserted, updated, unchanged };

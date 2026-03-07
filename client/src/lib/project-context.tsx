@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { apiRequest } from '@/lib/queryClient';
+import { ProjectLoadingSkeleton } from '@/components/ui/ProjectLoadingSkeleton';
 
 // Domain context providers
 import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
@@ -151,15 +152,22 @@ export function ProjectProvider({ projectId, children }: { projectId: number; ch
   const [seeded, setSeeded] = useState(false);
 
   useEffect(() => {
-    apiRequest('POST', '/api/seed').then(() => {
-      setSeeded(true);
-    }).catch(() => {
-      setSeeded(true);
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => { controller.abort(); }, 5000);
+
+    apiRequest('POST', '/api/seed', undefined, controller.signal)
+      .then(() => { setSeeded(true); })
+      .catch(() => { setSeeded(true); })
+      .finally(() => { clearTimeout(timeout); });
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
   }, []);
 
   if (!seeded) {
-    return null;
+    return <ProjectLoadingSkeleton />;
   }
 
   return (

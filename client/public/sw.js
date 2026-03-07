@@ -10,7 +10,7 @@
 // Constants
 // ---------------------------------------------------------------------------
 
-const SW_VERSION = '1.0.0';
+const SW_VERSION = '1.1.0';
 const CACHE_PREFIX = 'protopulse-v1';
 
 /** App shell resources to pre-cache on install. */
