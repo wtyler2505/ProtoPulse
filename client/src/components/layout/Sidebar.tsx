@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
+import { Link } from 'wouter';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
@@ -17,6 +18,7 @@ import {
   Pencil,
   Cloud,
   Loader2,
+  ChevronLeft,
 } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { navItems } from '@/components/layout/sidebar/sidebar-constants';
@@ -57,7 +59,18 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
         className="hidden lg:flex flex-col items-center w-10 h-full bg-sidebar/60 backdrop-blur-xl border-r border-sidebar-border shrink-0 cursor-pointer transition-all duration-300"
         onClick={onToggleCollapse}
       >
-        <div className="h-14 flex items-center justify-center border-b border-sidebar-border w-full">
+        {/* UX-015: Back to Projects (collapsed) */}
+        <StyledTooltip content="Back to Projects" side="right">
+          <Link
+            href="/projects"
+            data-testid="sidebar-back-to-projects"
+            className="w-full h-8 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors border-b border-sidebar-border/50"
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Link>
+        </StyledTooltip>
+        <div className="h-10 flex items-center justify-center border-b border-sidebar-border w-full">
           <div className="w-7 h-7 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
             <Layers className="w-4 h-4 text-primary" />
           </div>
@@ -213,6 +226,15 @@ function SidebarContent({
 
   return (
     <>
+      {/* UX-015: Back to Projects link */}
+      <Link
+        href="/projects"
+        data-testid="sidebar-back-to-projects-expanded"
+        className="flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors border-b border-sidebar-border/50"
+      >
+        <ChevronLeft className="w-3.5 h-3.5" />
+        <span>Back to Projects</span>
+      </Link>
       <div className="flex-1 overflow-y-auto py-2">
         <div className="mb-6">
           <div className="px-4 py-2 flex items-center justify-between group cursor-pointer hover:bg-muted/30">

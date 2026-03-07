@@ -9,16 +9,25 @@ import {
   Undo2,
   Redo2,
   Keyboard,
+  Magnet,
+  Eye,
 } from 'lucide-react';
 import type { SchematicTool } from '@shared/circuit-types';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+
+export type AngleConstraint = 'free' | '45' | '90';
 
 interface SchematicToolbarProps {
   activeTool: SchematicTool;
   onToolChange: (tool: SchematicTool) => void;
   snapEnabled: boolean;
   onToggleSnap: () => void;
+  gridVisible?: boolean;
+  onToggleGridVisible?: () => void;
+  angleConstraint?: AngleConstraint;
+  onAngleConstraintChange?: (angle: AngleConstraint) => void;
   onFitView: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -45,6 +54,10 @@ export default function SchematicToolbar({
   onToolChange,
   snapEnabled,
   onToggleSnap,
+  gridVisible = true,
+  onToggleGridVisible,
+  angleConstraint = 'free',
+  onAngleConstraintChange,
   onFitView,
   onUndo,
   onRedo,
@@ -104,19 +117,80 @@ export default function SchematicToolbar({
         </button>
       </StyledTooltip>
       <div className="w-px h-5 bg-border mx-0.5" />
-      <StyledTooltip content="Toggle grid snap (G)" side="bottom">
+
+      {/* Snap / Grid / Angle compact strip (UX-037) */}
+      <StyledTooltip content="Snap to grid (G)" side="bottom">
         <button
-          data-testid="schematic-tool-grid"
-          aria-label="Toggle grid snap"
+          data-testid="schematic-tool-snap"
+          aria-label="Toggle snap to grid"
           className={cn(
             'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
             snapEnabled && 'bg-primary/20 text-primary border border-primary/40',
           )}
           onClick={onToggleSnap}
         >
+          <Magnet className="w-5 h-5" />
+        </button>
+      </StyledTooltip>
+      <StyledTooltip content="Toggle grid visibility" side="bottom">
+        <button
+          data-testid="schematic-tool-grid-visible"
+          aria-label="Toggle grid visibility"
+          className={cn(
+            'p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+            gridVisible && 'bg-primary/20 text-primary border border-primary/40',
+          )}
+          onClick={onToggleGridVisible}
+        >
           <Grid3x3 className="w-5 h-5" />
         </button>
       </StyledTooltip>
+      {onAngleConstraintChange && (
+        <ToggleGroup
+          type="single"
+          value={angleConstraint}
+          onValueChange={(val) => {
+            if (val) {
+              onAngleConstraintChange(val as AngleConstraint);
+            }
+          }}
+          size="sm"
+          data-testid="schematic-angle-constraint"
+        >
+          <StyledTooltip content="Free angle" side="bottom">
+            <ToggleGroupItem
+              value="free"
+              aria-label="Free angle routing"
+              data-testid="angle-free"
+              className="px-1.5 py-1 text-xs"
+            >
+              <Eye className="w-4 h-4" />
+            </ToggleGroupItem>
+          </StyledTooltip>
+          <StyledTooltip content="45 degree" side="bottom">
+            <ToggleGroupItem
+              value="45"
+              aria-label="45 degree angle constraint"
+              data-testid="angle-45"
+              className="px-1.5 py-1 text-xs font-mono"
+            >
+              45
+            </ToggleGroupItem>
+          </StyledTooltip>
+          <StyledTooltip content="90 degree" side="bottom">
+            <ToggleGroupItem
+              value="90"
+              aria-label="90 degree angle constraint"
+              data-testid="angle-90"
+              className="px-1.5 py-1 text-xs font-mono"
+            >
+              90
+            </ToggleGroupItem>
+          </StyledTooltip>
+        </ToggleGroup>
+      )}
+
+      <div className="w-px h-5 bg-border mx-0.5" />
       <StyledTooltip content="Fit view (F)" side="bottom">
         <button
           data-testid="schematic-tool-fit"

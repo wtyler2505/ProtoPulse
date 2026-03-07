@@ -1,0 +1,652 @@
+import { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  useWebSerial,
+  COMMON_BAUD_RATES,
+  KNOWN_BOARD_FILTERS,
+} from '@/lib/web-serial';
+import type {
+  LineEnding,
+  SerialMonitorLine,
+} from '@/lib/web-serial';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Zap,
+  ZapOff,
+  Trash2,
+  Send,
+  RotateCcw,
+  Plug,
+  Unplug,
+  AlertTriangle,
+  Save,
+  FolderOpen,
+  X,
+} from 'lucide-react';
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const LINE_ENDING_OPTIONS: { value: LineEnding; label: string }[] = [
+  { value: 'none', label: 'No line ending' },
+  { value: 'cr', label: 'CR (\\r)' },
+  { value: 'lf', label: 'LF (\\n)' },
+  { value: 'crlf', label: 'CR+LF (\\r\\n)' },
+];
+
+const PRESETS_STORAGE_KEY = 'protopulse-serial-presets';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface SavedPreset {
+  name: string;
+  baudRate: number;
+  lineEnding: LineEnding;
+  dtr: boolean;
+  rts: boolean;
+  boardProfile?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', fractionalSecondDigits: 3 } as Intl.DateTimeFormatOptions);
+}
+
+function loadPresets(): SavedPreset[] {
+  try {
+    const raw = localStorage.getItem(PRESETS_STORAGE_KEY);
+    if (!raw) {
+      return [];
+    }
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.filter(
+      (p): p is SavedPreset =>
+        typeof p === 'object' &&
+        p !== null &&
+        typeof (p as Record<string, unknown>).name === 'string' &&
+        typeof (p as Record<string, unknown>).baudRate === 'number',
+    );
+  } catch {
+    return [];
+  }
+}
+
+function savePresetsToStorage(presets: SavedPreset[]): void {
+  try {
+    localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+function loadLastUsedPreset(): string | null {
+  try {
+    return localStorage.getItem('protopulse-serial-last-preset');
+  } catch {
+    return null;
+  }
+}
+
+function saveLastUsedPreset(name: string): void {
+  try {
+    localStorage.setItem('protopulse-serial-last-preset', name);
+  } catch {
+    // localStorage may be unavailable
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export default function SerialMonitorPanel() {
+  const {
+    state,
+    requestPort,
+    connect,
+    disconnect,
+    send,
+    setSignals,
+    resetBoard,
+    setBaudRate,
+    setLineEnding,
+    clearMonitor,
+    isSupported,
+  } = useWebSerial();
+
+  const [sendValue, setSendValue] = useState('');
+  const [selectedBoardProfile, setSelectedBoardProfile] = useState<string>('');
+  const [autoScroll, setAutoScroll] = useState(true);
+  const [showTimestamps, setShowTimestamps] = useState(true);
+  const monitorEndRef = useRef<HTMLDivElement>(null);
+  const sendInputRef = useRef<HTMLInputElement>(null);
+
+  // Preset management state
+  const [presets, setPresets] = useState<SavedPreset[]>(() => loadPresets());
+  const [presetName, setPresetName] = useState('');
+  const [showPresetSave, setShowPresetSave] = useState(false);
+
+  // Auto-load last-used preset on mount
+  useEffect(() => {
+    const lastName = loadLastUsedPreset();
+    if (lastName) {
+      const preset = presets.find((p) => p.name === lastName);
+      if (preset) {
+        setBaudRate(preset.baudRate);
+        setLineEnding(preset.lineEnding);
+        void setSignals({ dtr: preset.dtr, rts: preset.rts });
+        if (preset.boardProfile) {
+          setSelectedBoardProfile(preset.boardProfile);
+        }
+      }
+    }
+    // Only run on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-scroll to bottom when new monitor lines arrive
+  useEffect(() => {
+    if (autoScroll && monitorEndRef.current) {
+      monitorEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [state.monitor.length, autoScroll]);
+
+  const handleConnect = useCallback(async () => {
+    const boardFilter = KNOWN_BOARD_FILTERS.find((p) => p.label === selectedBoardProfile);
+    const filters = boardFilter ? [{ usbVendorId: boardFilter.usbVendorId, ...(boardFilter.usbProductId !== undefined ? { usbProductId: boardFilter.usbProductId } : {}) }] : undefined;
+    const gotPort = await requestPort(filters);
+    if (gotPort) {
+      await connect({ baudRate: state.baudRate });
+    }
+  }, [requestPort, connect, state.baudRate, selectedBoardProfile]);
+
+  const handleDisconnect = useCallback(async () => {
+    await disconnect();
+  }, [disconnect]);
+
+  const handleSend = useCallback(async () => {
+    const trimmed = sendValue.trim();
+    if (!trimmed) {
+      return;
+    }
+    const ok = await send(trimmed);
+    if (ok) {
+      setSendValue('');
+      sendInputRef.current?.focus();
+    }
+  }, [send, sendValue]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        void handleSend();
+      }
+    },
+    [handleSend],
+  );
+
+  const handleResetBoard = useCallback(async () => {
+    await resetBoard();
+  }, [resetBoard]);
+
+  // Preset management
+  const handleSavePreset = useCallback(() => {
+    const name = presetName.trim();
+    if (!name) {
+      return;
+    }
+    const newPreset: SavedPreset = {
+      name,
+      baudRate: state.baudRate,
+      lineEnding: state.lineEnding,
+      dtr: state.dtr,
+      rts: state.rts,
+      boardProfile: selectedBoardProfile || undefined,
+    };
+    const updated = [...presets.filter((p) => p.name !== name), newPreset];
+    setPresets(updated);
+    savePresetsToStorage(updated);
+    saveLastUsedPreset(name);
+    setPresetName('');
+    setShowPresetSave(false);
+  }, [presetName, state.baudRate, state.lineEnding, state.dtr, state.rts, selectedBoardProfile, presets]);
+
+  const handleLoadPreset = useCallback(
+    (preset: SavedPreset) => {
+      setBaudRate(preset.baudRate);
+      setLineEnding(preset.lineEnding);
+      void setSignals({ dtr: preset.dtr, rts: preset.rts });
+      if (preset.boardProfile) {
+        setSelectedBoardProfile(preset.boardProfile);
+      }
+      saveLastUsedPreset(preset.name);
+    },
+    [setBaudRate, setLineEnding, setSignals],
+  );
+
+  const handleDeletePreset = useCallback(
+    (name: string) => {
+      const updated = presets.filter((p) => p.name !== name);
+      setPresets(updated);
+      savePresetsToStorage(updated);
+    },
+    [presets],
+  );
+
+  // Unsupported browser
+  if (!isSupported) {
+    return (
+      <div data-testid="serial-monitor-unsupported" className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
+        <AlertTriangle className="w-12 h-12 text-yellow-500" />
+        <h2 className="text-lg font-semibold text-foreground">Web Serial Not Supported</h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          The Web Serial API is only available in Chrome and Edge browsers. Please switch to a supported browser to use the Serial Monitor.
+        </p>
+      </div>
+    );
+  }
+
+  const isConnected = state.connectionState === 'connected';
+  const isConnecting = state.connectionState === 'connecting';
+
+  return (
+    <div data-testid="serial-monitor-panel" className="flex flex-col h-full overflow-hidden">
+      {/* Header / Connection Controls */}
+      <div className="border-b border-border bg-card/60 p-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-[#00F0FF]" />
+            <h2 className="text-sm font-semibold text-foreground">Serial Monitor</h2>
+            <span
+              data-testid="serial-connection-status"
+              className={cn(
+                'inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full',
+                isConnected && 'bg-emerald-500/15 text-emerald-400',
+                isConnecting && 'bg-yellow-500/15 text-yellow-400',
+                state.connectionState === 'disconnected' && 'bg-muted/50 text-muted-foreground',
+                state.connectionState === 'error' && 'bg-destructive/15 text-destructive',
+              )}
+            >
+              <span
+                className={cn(
+                  'w-1.5 h-1.5 rounded-full',
+                  isConnected && 'bg-emerald-400',
+                  isConnecting && 'bg-yellow-400 animate-pulse',
+                  state.connectionState === 'disconnected' && 'bg-muted-foreground',
+                  state.connectionState === 'error' && 'bg-destructive',
+                )}
+              />
+              {state.connectionState === 'connected' && 'Connected'}
+              {state.connectionState === 'connecting' && 'Connecting...'}
+              {state.connectionState === 'disconnected' && 'Disconnected'}
+              {state.connectionState === 'error' && 'Error'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            {isConnected ? (
+              <Button
+                data-testid="serial-disconnect-btn"
+                variant="destructive"
+                size="sm"
+                onClick={() => void handleDisconnect()}
+                className="h-7 text-xs gap-1"
+              >
+                <Unplug className="w-3 h-3" />
+                Disconnect
+              </Button>
+            ) : (
+              <Button
+                data-testid="serial-connect-btn"
+                variant="default"
+                size="sm"
+                onClick={() => void handleConnect()}
+                disabled={isConnecting}
+                className="h-7 text-xs gap-1"
+              >
+                <Plug className="w-3 h-3" />
+                Connect
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Configuration Row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Board Profile */}
+          <div className="flex items-center gap-1.5">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Board:</Label>
+            <Select
+              value={selectedBoardProfile}
+              onValueChange={setSelectedBoardProfile}
+            >
+              <SelectTrigger data-testid="serial-board-select" className="h-7 w-[160px] text-xs">
+                <SelectValue placeholder="Any device" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Any device</SelectItem>
+                {KNOWN_BOARD_FILTERS.map((board) => (
+                  <SelectItem key={board.label} value={board.label}>
+                    {board.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Baud Rate */}
+          <div className="flex items-center gap-1.5">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Baud:</Label>
+            <Select
+              value={String(state.baudRate)}
+              onValueChange={(v) => setBaudRate(Number(v))}
+            >
+              <SelectTrigger data-testid="serial-baud-select" className="h-7 w-[100px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {COMMON_BAUD_RATES.map((rate) => (
+                  <SelectItem key={rate} value={String(rate)}>
+                    {rate.toLocaleString()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Line Ending */}
+          <div className="flex items-center gap-1.5">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">Ending:</Label>
+            <Select
+              value={state.lineEnding}
+              onValueChange={(v) => setLineEnding(v as LineEnding)}
+            >
+              <SelectTrigger data-testid="serial-line-ending-select" className="h-7 w-[130px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LINE_ENDING_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {/* DTR/RTS + Presets Row */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-1.5">
+            <Switch
+              data-testid="serial-dtr-toggle"
+              id="serial-dtr"
+              checked={state.dtr}
+              onCheckedChange={(checked) => void setSignals({ dtr: checked })}
+              className="h-4 w-7"
+            />
+            <Label htmlFor="serial-dtr" className="text-xs text-muted-foreground cursor-pointer">DTR</Label>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Switch
+              data-testid="serial-rts-toggle"
+              id="serial-rts"
+              checked={state.rts}
+              onCheckedChange={(checked) => void setSignals({ rts: checked })}
+              className="h-4 w-7"
+            />
+            <Label htmlFor="serial-rts" className="text-xs text-muted-foreground cursor-pointer">RTS</Label>
+          </div>
+
+          <div className="h-4 w-px bg-border" />
+
+          <div className="flex items-center gap-1.5">
+            <Switch
+              data-testid="serial-autoscroll-toggle"
+              id="serial-autoscroll"
+              checked={autoScroll}
+              onCheckedChange={setAutoScroll}
+              className="h-4 w-7"
+            />
+            <Label htmlFor="serial-autoscroll" className="text-xs text-muted-foreground cursor-pointer">Auto-scroll</Label>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <Switch
+              data-testid="serial-timestamps-toggle"
+              id="serial-timestamps"
+              checked={showTimestamps}
+              onCheckedChange={setShowTimestamps}
+              className="h-4 w-7"
+            />
+            <Label htmlFor="serial-timestamps" className="text-xs text-muted-foreground cursor-pointer">Timestamps</Label>
+          </div>
+
+          <div className="h-4 w-px bg-border" />
+
+          {/* Preset buttons */}
+          <Button
+            data-testid="serial-save-preset-btn"
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs gap-1 px-2"
+            onClick={() => setShowPresetSave(!showPresetSave)}
+          >
+            <Save className="w-3 h-3" />
+            Save
+          </Button>
+
+          {presets.length > 0 && (
+            <Select
+              value=""
+              onValueChange={(name) => {
+                const preset = presets.find((p) => p.name === name);
+                if (preset) {
+                  handleLoadPreset(preset);
+                }
+              }}
+            >
+              <SelectTrigger data-testid="serial-load-preset-select" className="h-6 w-[120px] text-xs">
+                <span className="flex items-center gap-1">
+                  <FolderOpen className="w-3 h-3" />
+                  Load Preset
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {presets.map((p) => (
+                  <div key={p.name} className="flex items-center justify-between px-2 py-1 hover:bg-muted/50 group">
+                    <SelectItem value={p.name} className="flex-1 p-0 text-xs">
+                      {p.name} ({p.baudRate.toLocaleString()})
+                    </SelectItem>
+                    <button
+                      data-testid={`serial-delete-preset-${p.name}`}
+                      className="ml-2 p-0.5 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePreset(p.name);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {/* Preset Save Input (collapsible) */}
+        {showPresetSave && (
+          <div data-testid="serial-preset-save-form" className="flex items-center gap-2">
+            <Input
+              data-testid="serial-preset-name-input"
+              type="text"
+              placeholder="Preset name..."
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSavePreset();
+                }
+                if (e.key === 'Escape') {
+                  setShowPresetSave(false);
+                }
+              }}
+              className="h-7 text-xs flex-1"
+              autoFocus
+            />
+            <Button
+              data-testid="serial-preset-save-confirm"
+              variant="default"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={handleSavePreset}
+              disabled={!presetName.trim()}
+            >
+              Save
+            </Button>
+            <Button
+              data-testid="serial-preset-save-cancel"
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setShowPresetSave(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        )}
+
+        {/* Error Display */}
+        {state.error && (
+          <div data-testid="serial-error" className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-2 py-1.5">
+            <AlertTriangle className="w-3 h-3 shrink-0" />
+            <span className="truncate">{state.error}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Monitor Output */}
+      <ScrollArea className="flex-1 min-h-0">
+        <div
+          data-testid="serial-monitor-output"
+          className="p-2 font-mono text-xs leading-relaxed"
+        >
+          {state.monitor.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+              {isConnected ? (
+                <ZapOff className="w-8 h-8 opacity-50" />
+              ) : (
+                <Zap className="w-8 h-8 opacity-50" />
+              )}
+              <span className="text-sm">
+                {isConnected
+                  ? 'Waiting for data...'
+                  : 'Connect to a device to start monitoring'}
+              </span>
+            </div>
+          ) : (
+            state.monitor.map((line: SerialMonitorLine, i: number) => (
+              <div
+                key={`${String(line.timestamp)}-${String(i)}`}
+                className={cn(
+                  'flex gap-2 py-0.5 hover:bg-muted/30 rounded-sm px-1',
+                  line.direction === 'tx' && 'text-[#00F0FF]',
+                  line.direction === 'rx' && 'text-emerald-300',
+                )}
+              >
+                {showTimestamps && (
+                  <span className="text-muted-foreground shrink-0 tabular-nums select-none">
+                    [{formatTimestamp(line.timestamp)}]
+                  </span>
+                )}
+                <span className="text-muted-foreground shrink-0 select-none w-4 text-center">
+                  {line.direction === 'tx' ? '>' : '<'}
+                </span>
+                <span className="break-all whitespace-pre-wrap">{line.data}</span>
+              </div>
+            ))
+          )}
+          <div ref={monitorEndRef} />
+        </div>
+      </ScrollArea>
+
+      {/* Stats Bar */}
+      {isConnected && (
+        <div data-testid="serial-stats-bar" className="border-t border-b border-border bg-card/40 px-3 py-1 flex items-center gap-4 text-[10px] text-muted-foreground">
+          <span>RX: {state.bytesReceived.toLocaleString()} B</span>
+          <span>TX: {state.bytesSent.toLocaleString()} B</span>
+          <span>{state.monitor.length} lines</span>
+        </div>
+      )}
+
+      {/* Send Input + Actions */}
+      <div className="border-t border-border bg-card/60 p-2 flex items-center gap-2">
+        <Input
+          ref={sendInputRef}
+          data-testid="serial-send-input"
+          type="text"
+          placeholder={isConnected ? 'Type a message and press Enter...' : 'Connect to a device first'}
+          value={sendValue}
+          onChange={(e) => setSendValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          disabled={!isConnected}
+          className="h-8 text-xs font-mono flex-1"
+        />
+        <Button
+          data-testid="serial-send-btn"
+          variant="default"
+          size="sm"
+          onClick={() => void handleSend()}
+          disabled={!isConnected || !sendValue.trim()}
+          className="h-8 text-xs gap-1"
+        >
+          <Send className="w-3 h-3" />
+          Send
+        </Button>
+        <Button
+          data-testid="serial-reset-btn"
+          variant="outline"
+          size="sm"
+          onClick={() => void handleResetBoard()}
+          disabled={!isConnected}
+          className="h-8 text-xs gap-1"
+          title="Reset board (toggle DTR)"
+        >
+          <RotateCcw className="w-3 h-3" />
+        </Button>
+        <Button
+          data-testid="serial-clear-btn"
+          variant="outline"
+          size="sm"
+          onClick={clearMonitor}
+          className="h-8 text-xs gap-1"
+          title="Clear monitor"
+        >
+          <Trash2 className="w-3 h-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}

@@ -1062,7 +1062,7 @@ describe('DesignImporter', () => {
   describe('getSupportedFormats', () => {
     it('returns all supported formats', () => {
       const formats = importer.getSupportedFormats();
-      expect(formats.length).toBe(8);
+      expect(formats.length).toBe(12);
       const formatNames = formats.map((f) => f.format);
       expect(formatNames).toContain('kicad-schematic');
       expect(formatNames).toContain('kicad-pcb');
@@ -1072,6 +1072,10 @@ describe('DesignImporter', () => {
       expect(formatNames).toContain('eagle-library');
       expect(formatNames).toContain('altium-schematic');
       expect(formatNames).toContain('altium-pcb');
+      expect(formatNames).toContain('geda-schematic');
+      expect(formatNames).toContain('ltspice-schematic');
+      expect(formatNames).toContain('proteus-schematic');
+      expect(formatNames).toContain('orcad-schematic');
     });
 
     it('each format has extensions and description', () => {

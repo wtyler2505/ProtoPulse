@@ -32,12 +32,14 @@ const KnowledgeView = lazy(() => import('@/components/views/KnowledgeView'));
 const BoardViewer3DView = lazy(() => import('@/components/views/BoardViewer3DView'));
 const CommunityView = lazy(() => import('@/components/views/CommunityView'));
 const PcbOrderingView = lazy(() => import('@/components/views/PcbOrderingView'));
+const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap, Plug } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
+import { PanelSkeleton } from '@/components/ui/PanelSkeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useValidation } from '@/lib/contexts/validation-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
@@ -69,6 +71,7 @@ const tabDescriptions: Record<string, string> = {
   community: 'Browse and share community component library',
   ordering: 'Order PCBs from fabricators with DFM checks',
   simulation: 'SPICE simulation, AC/DC analysis, and waveform viewer',
+  serial_monitor: 'Serial monitor for Arduino, ESP32, and other hardware devices',
 };
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
@@ -112,28 +115,9 @@ function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (d
   );
 }
 
-/* AS-01: Proper skeleton loading state instead of bare spinner */
+/* AS-01 / UX-103: Panel skeleton loading state for lazy-loaded views */
 function ViewLoadingFallback() {
-  return (
-    <div data-testid="view-loading-fallback" className="flex flex-col items-center justify-center h-full w-full gap-6 bg-card/30">
-      <div className="flex items-center gap-8">
-        <Skeleton className="w-28 h-16 rounded-lg" />
-        <Skeleton className="w-20 h-1 rounded-full" />
-        <Skeleton className="w-28 h-16 rounded-lg" />
-      </div>
-      <div className="flex items-center gap-6">
-        <Skeleton className="w-24 h-14 rounded-lg" />
-        <Skeleton className="w-16 h-1 rounded-full" />
-        <Skeleton className="w-24 h-14 rounded-lg" />
-        <Skeleton className="w-16 h-1 rounded-full" />
-        <Skeleton className="w-24 h-14 rounded-lg" />
-      </div>
-      <div className="flex flex-col items-center gap-3 mt-2">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-full" />
-        <span className="text-sm text-muted-foreground">Loading project...</span>
-      </div>
-    </div>
-  );
+  return <PanelSkeleton className="bg-card/30" rows={5} />;
 }
 
 /* AS-05: Scrollable tab bar with fade gradients at edges */
@@ -245,13 +229,36 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
   }
 }
 
+const PANEL_LAYOUT_KEY = 'protopulse-panel-layout';
+
+interface PersistedPanelLayout {
+  sidebarCollapsed: boolean;
+  chatCollapsed: boolean;
+  sidebarWidth: number;
+  chatWidth: number;
+}
+
+function loadPersistedLayout(): Partial<PersistedPanelLayout> {
+  try {
+    const raw = localStorage.getItem(PANEL_LAYOUT_KEY);
+    if (raw) {
+      return JSON.parse(raw) as Partial<PersistedPanelLayout>;
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return {};
+}
+
+const persisted = loadPersistedLayout();
+
 const initialWorkspaceState: WorkspaceState = {
   sidebarOpen: false,
   chatOpen: false,
-  sidebarCollapsed: false,
-  chatCollapsed: false,
-  sidebarWidth: 256,
-  chatWidth: 350,
+  sidebarCollapsed: persisted.sidebarCollapsed ?? false,
+  chatCollapsed: persisted.chatCollapsed ?? false,
+  sidebarWidth: persisted.sidebarWidth ?? 256,
+  chatWidth: persisted.chatWidth ?? 350,
   shortcutsOpen: false,
   moreMenuOpen: false,
 };
@@ -272,6 +279,24 @@ function WorkspaceContent() {
   }, [activeView]);
 
   const [ws, dispatch] = useReducer(workspaceReducer, initialWorkspaceState);
+
+  // UX-011: Persist panel sizes and collapsed states to localStorage (debounced)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      try {
+        const layout: PersistedPanelLayout = {
+          sidebarCollapsed: ws.sidebarCollapsed,
+          chatCollapsed: ws.chatCollapsed,
+          sidebarWidth: ws.sidebarWidth,
+          chatWidth: ws.chatWidth,
+        };
+        localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout));
+      } catch {
+        // localStorage unavailable
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [ws.sidebarCollapsed, ws.chatCollapsed, ws.sidebarWidth, ws.chatWidth]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -343,6 +368,7 @@ function WorkspaceContent() {
     { id: 'community', label: 'Community', icon: Globe },
     { id: 'ordering', label: 'Order PCB', icon: ShoppingBag },
     { id: 'simulation', label: 'Simulation', icon: Zap },
+    { id: 'serial_monitor', label: 'Serial', icon: Plug },
     { id: 'output', label: 'Exports', icon: TerminalSquare },
   ], []);
 
@@ -350,7 +376,7 @@ function WorkspaceContent() {
      Always visible: Dashboard, Architecture, Component Editor (entry points).
      Require architecture nodes: Schematic, Breadboard, PCB, Procurement, Validation, Output. */
   const hasDesignContent = (nodes ?? []).length > 0;
-  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns', 'kanban', 'knowledge', 'community', 'ordering', 'simulation']);
+  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns', 'kanban', 'knowledge', 'community', 'ordering', 'simulation', 'serial_monitor']);
 
   const visibleTabs = useMemo(
     () => tabs.filter(t => t.id !== 'project_explorer' && (alwaysVisibleIds.has(t.id) || hasDesignContent)),
@@ -757,6 +783,13 @@ function WorkspaceContent() {
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
                     <PcbOrderingView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'serial_monitor' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <SerialMonitorPanel />
                   </Suspense>
                 </ErrorBoundary>
               )}

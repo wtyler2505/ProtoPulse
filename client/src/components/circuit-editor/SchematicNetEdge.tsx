@@ -12,6 +12,7 @@ export interface NetEdgeData {
   netType: NetType;
   color?: string;
   busWidth?: number;
+  highlighted?: boolean;
   [key: string]: unknown; // Required by @xyflow/react — all edge data types must be indexable
 }
 
@@ -28,8 +29,9 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
   markerEnd,
   selected,
 }: EdgeProps<Edge<NetEdgeData>>) {
-  const { netName, netType, color, busWidth } = data ?? {};
+  const { netName, netType, color, busWidth, highlighted } = data ?? {};
   const isBus = netType === 'bus';
+  const isHighlighted = highlighted || selected;
 
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
@@ -41,7 +43,7 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
     borderRadius: 0,
   });
 
-  const strokeColor =
+  const baseStrokeColor =
     color ??
     (netType === 'power'
       ? '#ef4444'
@@ -51,12 +53,28 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
           ? '#f59e0b'
           : '#06b6d4');
 
+  // When highlighted via net selection, use bright neon cyan
+  const strokeColor = isHighlighted ? '#00F0FF' : baseStrokeColor;
+
   // Bus nets render thicker to indicate multiple signals
   const baseWidth = isBus ? 3 : 1.5;
-  const strokeWidth = selected ? baseWidth + 1 : baseWidth;
+  const strokeWidth = isHighlighted ? baseWidth + 2 : baseWidth;
 
   return (
     <>
+      {/* Glow effect for highlighted net */}
+      {isHighlighted && (
+        <path
+          d={edgePath}
+          style={{
+            stroke: '#00F0FF',
+            strokeWidth: strokeWidth + 4,
+            fill: 'none',
+            opacity: 0.25,
+            filter: 'blur(3px)',
+          }}
+        />
+      )}
       <path
         id={id}
         className="react-flow__edge-path"

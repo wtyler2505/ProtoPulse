@@ -1,8 +1,8 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpDown, GripVertical, Pencil, Check, X, ShoppingCart, Trash2, Shield, Zap, CheckCircle2, AlertCircle, XCircle } from 'lucide-react';
+import { ArrowUpDown, GripVertical, Pencil, Check, X, ShoppingCart, Trash2, Shield, Zap, CheckCircle2, AlertCircle, XCircle, RefreshCw, Clock } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
@@ -30,12 +30,31 @@ export interface BomTableProps {
   highlightedItemId: number | null;
   handleHighlightItem: (id: number) => void;
   onAssessDamage: (item: BomItem) => void;
+  onFindAlternates?: (partNumber: string) => void;
 }
 
 export function BomTable({
-  filteredBom, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlightedItemId, handleHighlightItem, onAssessDamage,
+  filteredBom, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlightedItemId, handleHighlightItem, onAssessDamage, onFindAlternates,
 }: BomTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+
+  // Detect duplicate part numbers
+  const duplicatePartNumbers = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of filteredBom) {
+      const pn = item.partNumber.toLowerCase().trim();
+      if (pn) {
+        counts.set(pn, (counts.get(pn) ?? 0) + 1);
+      }
+    }
+    const dupes = new Set<string>();
+    for (const [pn, count] of Array.from(counts.entries())) {
+      if (count > 1) {
+        dupes.add(pn);
+      }
+    }
+    return dupes;
+  }, [filteredBom]);
 
   const virtualizer = useVirtualizer({
     count: filteredBom.length,
@@ -71,7 +90,7 @@ export function BomTable({
                 {virtualizer.getVirtualItems().map((virtualRow) => {
                   const item = filteredBom[virtualRow.index];
                   return (
-                    <SortableBomRow key={item.id} item={item} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlighted={highlightedItemId === Number(item.id)} onHighlight={handleHighlightItem} onAssessDamage={onAssessDamage} />
+                    <SortableBomRow key={item.id} item={item} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlighted={highlightedItemId === Number(item.id)} onHighlight={handleHighlightItem} onAssessDamage={onAssessDamage} isDuplicate={duplicatePartNumbers.has(item.partNumber.toLowerCase().trim())} onFindAlternates={onFindAlternates} />
                   );
                 })}
               </tbody>
@@ -83,7 +102,7 @@ export function BomTable({
   );
 }
 
-function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlighted, onHighlight, onAssessDamage }: {
+function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlighted, onHighlight, onAssessDamage, isDuplicate, onFindAlternates }: {
   item: EnrichedBomItem;
   editingId: number | null;
   editValues: EditValues;
@@ -98,6 +117,8 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
   highlighted: boolean;
   onHighlight: (id: number) => void;
   onAssessDamage: (item: BomItem) => void;
+  isDuplicate?: boolean;
+  onFindAlternates?: (partNumber: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: Number(item.id) });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
@@ -113,6 +134,7 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
             'hover:bg-muted/30 transition-colors group cursor-pointer',
             isEditing && 'bg-primary/10 ring-1 ring-inset ring-primary/40',
             highlighted && 'ring-1 ring-inset ring-[#00F0FF]/60 bg-[#00F0FF]/5 animate-pulse',
+            isDuplicate && !isEditing && !highlighted && 'bg-amber-500/5 ring-1 ring-inset ring-amber-500/30',
           )}
           data-testid={`row-bom-${item.id}`}
           data-bom-item-highlight={highlighted ? 'true' : undefined}
@@ -131,11 +153,13 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
             <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium border uppercase tracking-wide',
               item.status === 'In Stock' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                 : item.status === 'Low Stock' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
-                  : 'bg-destructive/10 text-destructive border-destructive/20',
+                  : item.status === 'On Order' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                    : 'bg-destructive/10 text-destructive border-destructive/20',
             )} data-testid={`status-bom-${item.id}`}>
               {item.status === 'In Stock' && <CheckCircle2 className="w-3 h-3" />}
               {item.status === 'Low Stock' && <AlertCircle className="w-3 h-3" />}
               {item.status === 'Out of Stock' && <XCircle className="w-3 h-3" />}
+              {item.status === 'On Order' && <Clock className="w-3 h-3" />}
               {item.status}
             </span>
           </td>
@@ -168,6 +192,13 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
                     </StyledTooltip>
                   )}
                   {item.partNumber}
+                  {isDuplicate && (
+                    <StyledTooltip content="Duplicate part number detected in BOM" side="right">
+                      <span className="inline-flex items-center px-1 py-0 text-[9px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase tracking-wider" data-testid={`duplicate-badge-${item.id}`}>
+                        DUP
+                      </span>
+                    </StyledTooltip>
+                  )}
                 </span>
               </td>
               <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
@@ -180,6 +211,9 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
               <td className="px-4 py-3 text-right flex gap-1">
                 <StyledTooltip content="Edit item" side="left"><button aria-label="Edit item" className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button></StyledTooltip>
                 <StyledTooltip content="Assess damage" side="left"><button aria-label="Assess damage" className="p-1.5 text-amber-500 hover:bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => onAssessDamage(item)} data-testid={`button-damage-${item.id}`}><Shield className="w-4 h-4" /></button></StyledTooltip>
+                {onFindAlternates && (
+                  <StyledTooltip content="Find alternate parts" side="left"><button aria-label="Find alternates" className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => onFindAlternates(item.partNumber)} data-testid={`button-alternates-${item.id}`}><RefreshCw className="w-4 h-4" /></button></StyledTooltip>
+                )}
                 <StyledTooltip content="Buy from supplier" side="left">
                   <button aria-label="Add to cart" className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { const baseUrl = getSupplierSearchUrl(item.supplier); if (!baseUrl) { return; } window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer'); }} data-testid={`button-cart-${item.id}`}><ShoppingCart className="w-4 h-4" /></button>
                 </StyledTooltip>

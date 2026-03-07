@@ -1,4 +1,4 @@
-import { DollarSign, TrendingUp, BarChart3 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BomItem } from '@/lib/project-context';
 
@@ -12,9 +12,16 @@ export interface CostBreakdown {
 
 export interface CostSummaryProps {
   costBreakdown: CostBreakdown;
+  /** Previous snapshot total cost — used to calculate delta. Omit if no snapshot exists. */
+  previousTotalCost?: number;
 }
 
-export function CostSummary({ costBreakdown }: CostSummaryProps) {
+export function CostSummary({ costBreakdown, previousTotalCost }: CostSummaryProps) {
+  const delta = previousTotalCost !== undefined ? costBreakdown.totalBomCost - previousTotalCost : null;
+  const deltaPct = previousTotalCost !== undefined && previousTotalCost > 0
+    ? ((costBreakdown.totalBomCost - previousTotalCost) / previousTotalCost) * 100
+    : null;
+
   return (
     <div className="mb-4 space-y-4" data-testid="section-cost-summary">
       {/* Summary cards row */}
@@ -27,6 +34,20 @@ export function CostSummary({ costBreakdown }: CostSummaryProps) {
           <div className="text-xl font-mono font-bold text-foreground" data-testid="text-summary-total-cost">
             ${costBreakdown.totalBomCost.toFixed(2)}
           </div>
+          {delta !== null && (
+            <div
+              className={cn(
+                'flex items-center gap-1 mt-1 text-[10px] font-mono font-medium',
+                delta > 0 ? 'text-destructive' : delta < 0 ? 'text-emerald-500' : 'text-muted-foreground',
+              )}
+              data-testid="text-cost-delta"
+            >
+              {delta > 0 ? <TrendingUp className="w-3 h-3" /> : delta < 0 ? <TrendingDown className="w-3 h-3" /> : null}
+              {delta > 0 ? '+' : ''}{delta.toFixed(2)}
+              {deltaPct !== null && ` (${delta > 0 ? '+' : ''}${deltaPct.toFixed(1)}%)`}
+              <span className="text-muted-foreground/60 ml-1">vs snapshot</span>
+            </div>
+          )}
         </div>
         <div className="border border-border bg-card/80 backdrop-blur p-4" data-testid="card-avg-unit-cost">
           <div className="flex items-center gap-2 mb-1">

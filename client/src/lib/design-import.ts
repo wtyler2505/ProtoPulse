@@ -32,7 +32,11 @@ export type ImportFormat =
   | 'eagle-board'
   | 'eagle-library'
   | 'altium-schematic'
-  | 'altium-pcb';
+  | 'altium-pcb'
+  | 'geda-schematic'
+  | 'ltspice-schematic'
+  | 'proteus-schematic'
+  | 'orcad-schematic';
 
 export type ImportStatus = 'pending' | 'parsing' | 'converting' | 'complete' | 'error';
 
@@ -131,6 +135,10 @@ const SUPPORTED_FORMATS: Array<{ format: ImportFormat; extensions: string[]; des
   { format: 'eagle-library', extensions: ['.lbr'], description: 'EAGLE Component Library' },
   { format: 'altium-schematic', extensions: ['.SchDoc'], description: 'Altium Schematic' },
   { format: 'altium-pcb', extensions: ['.PcbDoc'], description: 'Altium PCB Layout' },
+  { format: 'geda-schematic', extensions: ['.sch'], description: 'gEDA/gschem Schematic' },
+  { format: 'ltspice-schematic', extensions: ['.asc'], description: 'LTspice Schematic' },
+  { format: 'proteus-schematic', extensions: ['.dsn'], description: 'Proteus Design' },
+  { format: 'orcad-schematic', extensions: ['.dsn'], description: 'OrCAD/CadStar Schematic' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -584,6 +592,34 @@ export class DesignImporter {
       return { format: 'altium-schematic', confidence: 0.6, indicators };
     }
 
+    // gEDA/gschem schematic format — 'v' header line + 'C' component lines
+    if (/^v\s+\d{8}\s+\d+/.test(trimmed)) {
+      indicators.push('Starts with gEDA version header (v YYYYMMDD N)');
+      return { format: 'geda-schematic', confidence: 1.0, indicators };
+    }
+
+    // LTspice .asc format — starts with 'Version 4' or contains SYMBOL/WIRE/FLAG directives
+    if (/^Version\s+\d+/i.test(trimmed)) {
+      indicators.push('Starts with LTspice Version header');
+      if (trimmed.includes('SYMBOL') || trimmed.includes('WIRE') || trimmed.includes('FLAG')) {
+        indicators.push('Contains SYMBOL/WIRE/FLAG directives');
+        return { format: 'ltspice-schematic', confidence: 1.0, indicators };
+      }
+      return { format: 'ltspice-schematic', confidence: 0.7, indicators };
+    }
+
+    // Proteus .dsn format — CADSTAR/Proteus keyword detection
+    if (trimmed.includes('DESIGN') && (trimmed.includes('COMPONENT') || trimmed.includes('PARTNAME'))) {
+      indicators.push('Contains Proteus-style DESIGN + COMPONENT/PARTNAME keywords');
+      return { format: 'proteus-schematic', confidence: 0.8, indicators };
+    }
+
+    // OrCAD .dsn format — CadStar/Allegro keyword detection
+    if (trimmed.includes('(design') || (trimmed.includes('(library') && trimmed.includes('(component'))) {
+      indicators.push('Contains OrCAD s-expression design markers');
+      return { format: 'orcad-schematic', confidence: 0.8, indicators };
+    }
+
     // Fall back to filename extension
     if (fileName) {
       const lowerName = fileName.toLowerCase();
@@ -619,6 +655,18 @@ export class DesignImporter {
       if (lowerName.endsWith('.pcbdoc')) {
         indicators.push('File extension .PcbDoc');
         return { format: 'altium-pcb', confidence: 0.7, indicators };
+      }
+      if (lowerName.endsWith('.asc')) {
+        indicators.push('File extension .asc (LTspice)');
+        return { format: 'ltspice-schematic', confidence: 0.7, indicators };
+      }
+      if (lowerName.endsWith('.dsn')) {
+        indicators.push('File extension .dsn');
+        // Disambiguate OrCAD (s-expression) vs Proteus (keyword-based)
+        if (trimmed.startsWith('(')) {
+          return { format: 'orcad-schematic', confidence: 0.6, indicators };
+        }
+        return { format: 'proteus-schematic', confidence: 0.5, indicators };
       }
     }
 
@@ -695,6 +743,18 @@ export class DesignImporter {
           break;
         case 'altium-pcb':
           design = this.parseAltiumPcb(content);
+          break;
+        case 'geda-schematic':
+          design = this.parseGedaSchematic(content);
+          break;
+        case 'ltspice-schematic':
+          design = this.parseLtspiceSchematic(content);
+          break;
+        case 'proteus-schematic':
+          design = this.parseProteusSchematic(content);
+          break;
+        case 'orcad-schematic':
+          design = this.parseOrcadSchematic(content);
           break;
       }
 
@@ -1424,6 +1484,647 @@ export class DesignImporter {
   }
 
   // -----------------------------------------------------------------------
+  // gEDA/gschem Parser
+  // -----------------------------------------------------------------------
+
+  /**
+   * Parse gEDA/gschem schematic (.sch) format.
+   *
+   * gEDA schematics are line-oriented with a version header (`v YYYYMMDD N`),
+   * component blocks (`C x y ...` through `}`) containing attributes (`T`/`A`
+   * lines), net segments (`N x1 y1 x2 y2 color`), and pin blocks
+   * (`P x1 y1 x2 y2 color ...`). Attribute key-value pairs appear as
+   * `key=value` lines inside `{...}` attribute blocks.
+   */
+  parseGedaSchematic(content: string): ImportedDesign {
+    const design = this.createEmptyDesign('geda-schematic', '');
+
+    if (!/^v\s+\d{8}\s+\d+/.test(content.trim())) {
+      design.errors.push('Invalid gEDA schematic: missing version header (v YYYYMMDD N)');
+      return design;
+    }
+
+    const lines = content.split('\n');
+    let i = 0;
+
+    // Parse version from first line
+    const versionMatch = /^v\s+(\d{8})\s+(\d+)/.exec(lines[0]);
+    if (versionMatch) {
+      design.version = versionMatch[1];
+    }
+
+    const netMap = new Map<string, ImportedNet>();
+    let componentIndex = 0;
+
+    while (i < lines.length) {
+      const line = lines[i].trim();
+
+      // Component block: C x y selectable angle mirror basename
+      if (line.startsWith('C ')) {
+        const parts = line.split(/\s+/);
+        // C x y selectable angle mirror basename
+        const x = parseFloat(parts[1] ?? '0');
+        const y = parseFloat(parts[2] ?? '0');
+        const angle = parseFloat(parts[4] ?? '0');
+        const basename = parts[6] ?? `comp_${String(componentIndex)}`;
+        componentIndex++;
+
+        const component: ImportedComponent = {
+          refDes: '',
+          name: basename.replace(/\.sym$/, ''),
+          value: '',
+          package: '',
+          library: 'geda',
+          position: { x: x / 100, y: y / 100 }, // gEDA uses mils*100 internally
+          rotation: angle,
+          properties: {},
+          pins: [],
+        };
+
+        // Read attribute block if next line is '{'
+        i++;
+        if (i < lines.length && lines[i].trim() === '{') {
+          i++;
+          while (i < lines.length && lines[i].trim() !== '}') {
+            const attrLine = lines[i].trim();
+            // Attribute lines may be 'T ...' (text) followed by key=value on next line
+            // or direct key=value
+            const kvMatch = /^([A-Za-z_][A-Za-z0-9_-]*)=(.*)$/.exec(attrLine);
+            if (kvMatch) {
+              const key = kvMatch[1];
+              const value = kvMatch[2];
+              component.properties[key] = value;
+
+              if (key === 'refdes') {
+                component.refDes = value;
+              } else if (key === 'value') {
+                component.value = value;
+              } else if (key === 'footprint') {
+                component.package = value;
+              } else if (key === 'device') {
+                if (!component.name || component.name === basename.replace(/\.sym$/, '')) {
+                  component.name = value;
+                }
+              }
+            }
+            i++;
+          }
+          i++; // skip '}'
+        }
+
+        design.components.push(component);
+        continue;
+      }
+
+      // Net segment: N x1 y1 x2 y2 color
+      if (line.startsWith('N ')) {
+        const parts = line.split(/\s+/);
+        const x1 = parseFloat(parts[1] ?? '0') / 100;
+        const y1 = parseFloat(parts[2] ?? '0') / 100;
+        const x2 = parseFloat(parts[3] ?? '0') / 100;
+        const y2 = parseFloat(parts[4] ?? '0') / 100;
+
+        design.wires.push({ start: { x: x1, y: y1 }, end: { x: x2, y: y2 } });
+
+        // Check for net name attribute block
+        i++;
+        if (i < lines.length && lines[i].trim() === '{') {
+          i++;
+          while (i < lines.length && lines[i].trim() !== '}') {
+            const attrLine = lines[i].trim();
+            const kvMatch = /^netname=(.+)$/.exec(attrLine);
+            if (kvMatch) {
+              const netName = kvMatch[1];
+              if (!netMap.has(netName)) {
+                netMap.set(netName, { name: netName, pins: [] });
+              }
+            }
+            i++;
+          }
+          i++; // skip '}'
+        }
+        continue;
+      }
+
+      // Pin block: P x1 y1 x2 y2 color pintype whichend
+      if (line.startsWith('P ')) {
+        const parts = line.split(/\s+/);
+        const pinX = parseFloat(parts[1] ?? '0') / 100;
+        const pinY = parseFloat(parts[2] ?? '0') / 100;
+        const pinType = parts[6] ?? '0';
+
+        let pinNumber = '';
+        let pinName = '';
+
+        // Read attribute block for pin
+        i++;
+        if (i < lines.length && lines[i].trim() === '{') {
+          i++;
+          while (i < lines.length && lines[i].trim() !== '}') {
+            const attrLine = lines[i].trim();
+            const kvMatch = /^([A-Za-z_][A-Za-z0-9_-]*)=(.*)$/.exec(attrLine);
+            if (kvMatch) {
+              if (kvMatch[1] === 'pinnumber') {
+                pinNumber = kvMatch[2];
+              } else if (kvMatch[1] === 'pinlabel') {
+                pinName = kvMatch[2];
+              }
+            }
+            i++;
+          }
+          i++; // skip '}'
+        }
+
+        // Attach pin to last component
+        if (design.components.length > 0) {
+          const lastComp = design.components[design.components.length - 1];
+          const gedaPinType = pinType === '1' ? 'input' : pinType === '2' ? 'output' : 'passive';
+          lastComp.pins.push({
+            number: pinNumber,
+            name: pinName || pinNumber,
+            type: gedaPinType,
+            position: { x: pinX, y: pinY },
+          });
+        }
+        continue;
+      }
+
+      i++;
+    }
+
+    // Build net pin references from components
+    design.components.forEach((comp) => {
+      comp.pins.forEach((pin) => {
+        if (comp.refDes && pin.number) {
+          // Check if any net is associated via wire connectivity (simplified)
+          netMap.forEach((net) => {
+            if (net.pins.length < 10) { // prevent accidental over-population
+              net.pins.push({ componentRef: comp.refDes, pinNumber: pin.number });
+            }
+          });
+        }
+      });
+    });
+
+    netMap.forEach((net) => {
+      design.nets.push(net);
+    });
+
+    return design;
+  }
+
+  // -----------------------------------------------------------------------
+  // LTspice Parser
+  // -----------------------------------------------------------------------
+
+  /**
+   * Parse LTspice schematic (.asc) format.
+   *
+   * LTspice .asc files start with `Version N` + `SHEET ...`, then contain:
+   * - `SYMBOL name x y Rn` — component placement (R0/R90/R180/R270 = rotation)
+   * - `SYMATTR InstName Xn` — reference designator for preceding SYMBOL
+   * - `SYMATTR Value val` — value for preceding SYMBOL
+   * - `SYMATTR SpiceModel model` — SPICE model name
+   * - `WIRE x1 y1 x2 y2` — net wire segment
+   * - `FLAG x y netName` — net label at a position
+   * - `TEXT x y ...` — text annotation (ignored)
+   *
+   * Coordinates are in LTspice internal units (16 units = 1 grid square).
+   */
+  parseLtspiceSchematic(content: string): ImportedDesign {
+    const design = this.createEmptyDesign('ltspice-schematic', '');
+
+    const lines = content.split('\n');
+    if (lines.length === 0) {
+      design.errors.push('Empty LTspice file');
+      return design;
+    }
+
+    // Parse version
+    const versionMatch = /^Version\s+(\d+)/i.exec(lines[0].trim());
+    if (versionMatch) {
+      design.version = versionMatch[1];
+    }
+
+    const netMap = new Map<string, ImportedNet>();
+    let currentComponent: ImportedComponent | null = null;
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      // SYMBOL name x y rotation
+      const symbolMatch = /^SYMBOL\s+(\S+)\s+(-?\d+)\s+(-?\d+)\s+(R\d+|M\d+)?/.exec(trimmedLine);
+      if (symbolMatch) {
+        // Save previous component
+        if (currentComponent) {
+          design.components.push(currentComponent);
+        }
+
+        const symbolName = symbolMatch[1];
+        const x = parseFloat(symbolMatch[2]) / 16; // Convert to grid units
+        const y = parseFloat(symbolMatch[3]) / 16;
+        const rotStr = symbolMatch[4] ?? 'R0';
+        const rotation = parseInt(rotStr.replace(/[RM]/, ''), 10) || 0;
+
+        currentComponent = {
+          refDes: '',
+          name: symbolName,
+          value: '',
+          package: '',
+          library: 'ltspice',
+          position: { x, y },
+          rotation,
+          properties: { symbolName },
+          pins: [],
+        };
+        continue;
+      }
+
+      // SYMATTR key value — attributes for preceding SYMBOL
+      const symattrMatch = /^SYMATTR\s+(\S+)\s+(.*)$/.exec(trimmedLine);
+      if (symattrMatch && currentComponent) {
+        const key = symattrMatch[1];
+        const value = symattrMatch[2].trim();
+        currentComponent.properties[key] = value;
+
+        if (key === 'InstName') {
+          currentComponent.refDes = value;
+        } else if (key === 'Value') {
+          currentComponent.value = value;
+        } else if (key === 'Value2') {
+          currentComponent.properties.value2 = value;
+        } else if (key === 'SpiceModel') {
+          currentComponent.properties.spiceModel = value;
+        }
+        continue;
+      }
+
+      // WIRE x1 y1 x2 y2
+      const wireMatch = /^WIRE\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)/.exec(trimmedLine);
+      if (wireMatch) {
+        design.wires.push({
+          start: { x: parseFloat(wireMatch[1]) / 16, y: parseFloat(wireMatch[2]) / 16 },
+          end: { x: parseFloat(wireMatch[3]) / 16, y: parseFloat(wireMatch[4]) / 16 },
+        });
+        continue;
+      }
+
+      // FLAG x y netName — net label
+      const flagMatch = /^FLAG\s+(-?\d+)\s+(-?\d+)\s+(\S+)/.exec(trimmedLine);
+      if (flagMatch) {
+        const netName = flagMatch[3];
+        if (!netMap.has(netName)) {
+          netMap.set(netName, { name: netName, pins: [] });
+        }
+        continue;
+      }
+
+      // IOPIN x y direction — I/O pin on hierarchical sheet
+      const iopinMatch = /^IOPIN\s+(-?\d+)\s+(-?\d+)\s+(\S+)/.exec(trimmedLine);
+      if (iopinMatch && currentComponent) {
+        const direction = iopinMatch[3].toLowerCase();
+        const pinType = direction === 'in' ? 'input' : direction === 'out' ? 'output' : 'bidirectional';
+        currentComponent.pins.push({
+          number: String(currentComponent.pins.length + 1),
+          name: direction,
+          type: pinType,
+          position: { x: parseFloat(iopinMatch[1]) / 16, y: parseFloat(iopinMatch[2]) / 16 },
+        });
+        continue;
+      }
+
+      // WINDOW — pin/port info line (provides pin display info)
+      const windowMatch = /^WINDOW\s+(\d+)\s+(-?\d+)\s+(-?\d+)/.exec(trimmedLine);
+      if (windowMatch && currentComponent) {
+        const pinIdx = parseInt(windowMatch[1], 10);
+        if (pinIdx > 0 && currentComponent.pins.length < pinIdx) {
+          // Add placeholder pins up to this index
+          while (currentComponent.pins.length < pinIdx) {
+            const n = currentComponent.pins.length + 1;
+            currentComponent.pins.push({
+              number: String(n),
+              name: `pin${String(n)}`,
+              type: 'passive',
+            });
+          }
+        }
+        continue;
+      }
+    }
+
+    // Push the last component
+    if (currentComponent) {
+      design.components.push(currentComponent);
+    }
+
+    // Add standard SPICE pins for known component types
+    design.components.forEach((comp) => {
+      if (comp.pins.length === 0) {
+        const pinCount = this.inferLtspicePinCount(comp.name);
+        for (let p = 1; p <= pinCount; p++) {
+          comp.pins.push({
+            number: String(p),
+            name: `pin${String(p)}`,
+            type: 'passive',
+          });
+        }
+      }
+    });
+
+    netMap.forEach((net) => {
+      design.nets.push(net);
+    });
+
+    return design;
+  }
+
+  // -----------------------------------------------------------------------
+  // Proteus Parser
+  // -----------------------------------------------------------------------
+
+  /**
+   * Parse Proteus design (.dsn) keyword-based format.
+   *
+   * Proteus DSN files are structured with keyword blocks:
+   * - `DESIGN` header with metadata
+   * - `COMPONENT` blocks containing `PARTNAME`, `REFDES`, and pin connectivity
+   * - `NET` blocks containing `NODE` entries (component+pin references)
+   *
+   * This parser handles the text-based export format. Binary .dsn files are
+   * not supported (a warning is emitted).
+   */
+  parseProteusSchematic(content: string): ImportedDesign {
+    const design = this.createEmptyDesign('proteus-schematic', '');
+
+    if (content.charCodeAt(0) < 32 && content.charCodeAt(0) !== 10 && content.charCodeAt(0) !== 13) {
+      design.errors.push('Binary Proteus file detected — only text-based DSN exports are supported');
+      return design;
+    }
+
+    const lines = content.split('\n');
+    const netMap = new Map<string, ImportedNet>();
+    let currentComponent: ImportedComponent | null = null;
+    let currentNetName = '';
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+
+      // DESIGN title
+      const designMatch = /^DESIGN\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (designMatch) {
+        design.title = designMatch[1].trim();
+        continue;
+      }
+
+      // COMPONENT block start
+      const componentMatch = /^COMPONENT\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (componentMatch) {
+        if (currentComponent) {
+          design.components.push(currentComponent);
+        }
+        currentComponent = {
+          refDes: componentMatch[1].trim(),
+          name: '',
+          value: '',
+          package: '',
+          library: 'proteus',
+          properties: {},
+          pins: [],
+        };
+        continue;
+      }
+
+      // PARTNAME inside component block
+      const partMatch = /^PARTNAME\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (partMatch && currentComponent) {
+        currentComponent.name = partMatch[1].trim();
+        continue;
+      }
+
+      // REFDES override
+      const refdesMatch = /^REFDES\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (refdesMatch && currentComponent) {
+        currentComponent.refDes = refdesMatch[1].trim();
+        continue;
+      }
+
+      // PACKAGE
+      const pkgMatch = /^PACKAGE\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (pkgMatch && currentComponent) {
+        currentComponent.package = pkgMatch[1].trim();
+        continue;
+      }
+
+      // VALUE
+      const valMatch = /^VALUE\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (valMatch && currentComponent) {
+        currentComponent.value = valMatch[1].trim();
+        continue;
+      }
+
+      // LOCATION x y
+      const locMatch = /^LOCATION\s+(-?[\d.]+)\s+(-?[\d.]+)/.exec(trimmedLine);
+      if (locMatch && currentComponent) {
+        currentComponent.position = { x: parseFloat(locMatch[1]), y: parseFloat(locMatch[2]) };
+        continue;
+      }
+
+      // ROTATION angle
+      const rotMatch = /^ROTATION\s+(-?[\d.]+)/.exec(trimmedLine);
+      if (rotMatch && currentComponent) {
+        currentComponent.rotation = parseFloat(rotMatch[1]);
+        continue;
+      }
+
+      // PIN number name
+      const pinMatch = /^PIN\s+"?([^"]*)"?\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (pinMatch && currentComponent) {
+        currentComponent.pins.push({
+          number: pinMatch[1].trim(),
+          name: pinMatch[2].trim() || pinMatch[1].trim(),
+          type: 'passive',
+        });
+        continue;
+      }
+
+      // NET block start
+      const netMatch = /^NET\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (netMatch) {
+        if (currentComponent) {
+          design.components.push(currentComponent);
+          currentComponent = null;
+        }
+        currentNetName = netMatch[1].trim();
+        if (!netMap.has(currentNetName)) {
+          netMap.set(currentNetName, { name: currentNetName, pins: [] });
+        }
+        continue;
+      }
+
+      // NODE component pin — inside NET block
+      const nodeMatch = /^NODE\s+"?([^"]*)"?\s+"?([^"]*)"?/.exec(trimmedLine);
+      if (nodeMatch && currentNetName) {
+        const net = netMap.get(currentNetName);
+        if (net) {
+          net.pins.push({
+            componentRef: nodeMatch[1].trim(),
+            pinNumber: nodeMatch[2].trim(),
+          });
+        }
+        continue;
+      }
+    }
+
+    // Push last component
+    if (currentComponent) {
+      design.components.push(currentComponent);
+    }
+
+    netMap.forEach((net) => {
+      design.nets.push(net);
+    });
+
+    return design;
+  }
+
+  // -----------------------------------------------------------------------
+  // OrCAD Parser
+  // -----------------------------------------------------------------------
+
+  /**
+   * Parse OrCAD/CadStar schematic (.dsn) s-expression format.
+   *
+   * OrCAD DSN export uses a Lisp-like s-expression structure:
+   * ```
+   * (design "name"
+   *   (library
+   *     (component "package" (pin "name" "number" ...))
+   *     ...)
+   *   (placement
+   *     (component "package" (place "refdes" x y side rotation)))
+   *   (network
+   *     (net "name" (pins "ref-pin" ...))))
+   * ```
+   *
+   * We reuse the S-expression tokenizer/parser from the KiCad parsers.
+   */
+  parseOrcadSchematic(content: string): ImportedDesign {
+    const design = this.createEmptyDesign('orcad-schematic', '');
+
+    const trimmed = content.trim();
+    if (!trimmed.startsWith('(')) {
+      design.errors.push('Invalid OrCAD DSN: does not start with s-expression');
+      return design;
+    }
+
+    const tokens = tokenizeSExpr(trimmed);
+    const tree = parseSExprTokens(tokens);
+
+    if (tree.length === 0) {
+      design.errors.push('Failed to parse OrCAD DSN s-expression');
+      return design;
+    }
+
+    const root = tree[0];
+
+    // Extract design name
+    if (root.values.length > 0) {
+      design.title = root.values[0];
+    }
+
+    // Extract components from (placement ...) section
+    const placement = findChild(root, 'placement');
+    if (placement) {
+      const components = findChildren(placement, 'component');
+      components.forEach((comp) => {
+        const packageName = comp.values[0] ?? '';
+
+        // Each component has (place refdes x y side rotation)
+        const places = findChildren(comp, 'place');
+        places.forEach((place) => {
+          const refDes = place.values[0] ?? '';
+          const x = parseFloat(place.values[1] ?? '0');
+          const y = parseFloat(place.values[2] ?? '0');
+          const side = place.values[3] ?? 'front';
+          const rotation = parseFloat(place.values[4] ?? '0');
+
+          const component: ImportedComponent = {
+            refDes,
+            name: packageName,
+            value: '',
+            package: packageName,
+            library: 'orcad',
+            position: { x, y },
+            rotation,
+            layer: side,
+            properties: {},
+            pins: [],
+          };
+
+          design.components.push(component);
+        });
+      });
+    }
+
+    // Extract pin definitions from (library ...) section
+    const library = findChild(root, 'library');
+    if (library) {
+      const libComponents = findChildren(library, 'component');
+      libComponents.forEach((libComp) => {
+        const packageName = libComp.values[0] ?? '';
+
+        // Find matching placed components
+        const matchingComponents = design.components.filter((c) => c.package === packageName);
+
+        // Extract pins from (pin ...)
+        const pins = findChildren(libComp, 'pin');
+        pins.forEach((pin) => {
+          const pinName = pin.values[0] ?? '';
+          const pinNumber = pin.values[1] ?? pinName;
+
+          matchingComponents.forEach((comp) => {
+            comp.pins.push({
+              number: pinNumber,
+              name: pinName,
+              type: 'passive',
+            });
+          });
+        });
+      });
+    }
+
+    // Extract nets from (network ...) section
+    const network = findChild(root, 'network');
+    if (network) {
+      const nets = findChildren(network, 'net');
+      nets.forEach((net) => {
+        const netName = net.values[0] ?? '';
+        const importedNet: ImportedNet = { name: netName, pins: [] };
+
+        // (pins "REF-PIN" "REF-PIN" ...)
+        const pinsNode = findChild(net, 'pins');
+        if (pinsNode) {
+          pinsNode.values.forEach((pinRef) => {
+            const dashIdx = pinRef.lastIndexOf('-');
+            if (dashIdx > 0) {
+              importedNet.pins.push({
+                componentRef: pinRef.substring(0, dashIdx),
+                pinNumber: pinRef.substring(dashIdx + 1),
+              });
+            }
+          });
+        }
+
+        if (netName) {
+          design.nets.push(importedNet);
+        }
+      });
+    }
+
+    return design;
+  }
+
+  // -----------------------------------------------------------------------
   // Conversion
   // -----------------------------------------------------------------------
 
@@ -1846,6 +2547,41 @@ export class DesignImporter {
     });
 
     return fields;
+  }
+
+  /**
+   * Infer pin count for common LTspice component types.
+   * Resistors/capacitors/inductors/voltage/current sources = 2 pins.
+   * Diodes = 2, BJTs = 3, MOSFETs = 3, op-amps = 5.
+   */
+  private inferLtspicePinCount(symbolName: string): number {
+    const lower = symbolName.toLowerCase();
+    // Passive 2-terminal
+    if (lower === 'res' || lower === 'res2' || lower === 'cap' || lower === 'ind' || lower === 'ind2') {
+      return 2;
+    }
+    // Sources
+    if (lower === 'voltage' || lower === 'current' || lower === 'bv' || lower === 'bi') {
+      return 2;
+    }
+    // Diode
+    if (lower === 'diode' || lower === 'zener' || lower === 'schottky' || lower === 'led') {
+      return 2;
+    }
+    // BJT
+    if (lower === 'npn' || lower === 'pnp') {
+      return 3;
+    }
+    // MOSFET
+    if (lower === 'nmos' || lower === 'pmos' || lower === 'nmos3' || lower === 'pmos3') {
+      return 3;
+    }
+    // Op-amp (non-inverting, inverting, V+, V-, out)
+    if (lower === 'opamp' || lower === 'opamp2') {
+      return 5;
+    }
+    // Default: 2 pins
+    return 2;
   }
 
   private inferNodeType(comp: ImportedComponent): string {

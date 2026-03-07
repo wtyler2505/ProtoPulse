@@ -12,6 +12,7 @@ import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -840,20 +841,15 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
 
   if (issues.length === 0 && componentIssues.length === 0 && drcIssues.length === 0 && ercIssues.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center py-24 text-muted-foreground" data-testid="empty-state-validation">
-        <ShieldCheck className="w-16 h-16 mb-4 text-emerald-500/20" />
-        <p className="text-lg font-medium text-foreground">All Systems Nominal</p>
-        <p className="text-sm mt-1">No design rule violations detected.</p>
-        <p className="text-xs mt-3 max-w-sm text-center">
-          Run DRC checks to validate your architecture against design rules, or use AI chat to analyze your design for potential issues.
-        </p>
-        <button
-          onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
-          className="mt-4 px-4 py-2 text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors focus-ring"
-          data-testid="button-run-drc-empty"
-        >
-          Run DRC Checks
-        </button>
+      <div className="flex-1 flex items-center justify-center" data-testid="empty-state-validation">
+        <EmptyState
+          icon={ShieldCheck}
+          title="All Systems Nominal"
+          description="No design rule violations detected. Run DRC checks to validate your architecture against design rules."
+          actionLabel="Run DRC Checks"
+          actionTestId="button-run-drc-empty"
+          onAction={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
+        />
       </div>
     );
   }

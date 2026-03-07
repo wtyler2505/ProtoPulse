@@ -45,6 +45,20 @@ function ProcurementView() {
   const projectId = useProjectId();
   const { data: componentParts, isLoading: partsLoading } = useComponentParts(projectId);
 
+  // ── Previous BOM cost (for cost delta indicator) ──
+  // Read from localStorage — populated when user takes a BOM snapshot via the
+  // BOM Comparison tab. No network requests needed.
+  const previousTotalCost = useMemo(() => {
+    try {
+      const raw = localStorage.getItem(`protopulse:bom-snapshot-cost:${String(projectId)}`);
+      if (raw) {
+        const val = Number(raw);
+        if (!Number.isNaN(val)) { return val; }
+      }
+    } catch { /* ignore */ }
+    return undefined;
+  }, [projectId]);
+
   // ── UI state ──
   const [showSettings, setShowSettings] = useState(false);
   const [showComponentRef, setShowComponentRef] = useState(false);
@@ -300,11 +314,11 @@ function ProcurementView() {
         {showSettings && <BomSettings bomSettings={bomSettings} onBomSettingsChange={setBomSettings} optimizationGoal={optimizationGoal} onOptimizationGoalChange={updateOptimizationGoal} preferredSuppliers={preferredSuppliers} onPreferredSuppliersChange={updatePreferredSuppliers} showSupplierEdit={showSupplierEdit} onToggleSupplierEdit={() => setShowSupplierEdit(!showSupplierEdit)} />}
 
         <div className="flex-1 overflow-auto p-3 lg:p-6">
-          {bom.length > 0 && <CostSummary costBreakdown={costBreakdown} />}
+          {bom.length > 0 && <CostSummary costBreakdown={costBreakdown} previousTotalCost={previousTotalCost} />}
           {showAssemblyGroups && enrichedBom.length > 0 && <AssemblyGroups assemblyGroups={assemblyGroups} />}
           <BomCards filteredBom={filteredBom} deleteBomItem={deleteBomItem} toast={toast} />
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
-            <BomTable filteredBom={filteredBom} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlightedItemId={highlightedItemId} handleHighlightItem={handleHighlightItem} onAssessDamage={handleOpenDamageDialog} />
+            <BomTable filteredBom={filteredBom} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlightedItemId={highlightedItemId} handleHighlightItem={handleHighlightItem} onAssessDamage={handleOpenDamageDialog} onFindAlternates={handleFindAlternates} />
           </DndContext>
           {filteredBom.length === 0 && <BomEmptyState searchTerm={searchTerm} onClearSearch={() => setSearchTerm('')} onAddItem={resetAndShowAddDialog} />}
           <ComponentReference showComponentRef={showComponentRef} onToggleComponentRef={() => setShowComponentRef(!showComponentRef)} componentParts={componentParts} partsLoading={partsLoading} />

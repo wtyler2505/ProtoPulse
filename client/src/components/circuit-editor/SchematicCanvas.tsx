@@ -35,6 +35,7 @@ import SchematicNoConnectNode, { type NoConnectNodeData } from './SchematicNoCon
 import SchematicNetEdge from './SchematicNetEdge';
 import NetDrawingTool, { type NetDrawingResult } from './NetDrawingTool';
 import SchematicToolbar from './SchematicToolbar';
+import type { AngleConstraint } from './SchematicToolbar';
 import type { SchematicTool, CircuitSettings, PowerSymbol, SchematicNetLabel, NoConnectMarker, ERCViolation } from '@shared/circuit-types';
 import { DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
 import type { CircuitInstanceRow, CircuitNetRow, ComponentPart } from '@shared/schema';
@@ -260,6 +261,9 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // Local UI state
   const [activeTool, setActiveTool] = useState<SchematicTool>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [gridVisible, setGridVisible] = useState(true);
+  const [angleConstraint, setAngleConstraint] = useState<AngleConstraint>('free');
+  const [selectedNetName, setSelectedNetName] = useState<string | null>(null);
   const [mouseFlowPos, setMouseFlowPos] = useState<{ x: number; y: number } | null>(null);
 
   // Drag guard — prevents server refetch from resetting node mid-drag
@@ -293,8 +297,21 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     return [...instanceNodes, ...powerNodes, ...labelNodes, ...ncNodes] as Node[];
   }, [instances, partsMap, settings.powerSymbols, settings.netLabels, settings.noConnectMarkers]);
 
-  // Convert DB data → React Flow edges
-  const rfEdges = useMemo(() => (nets ?? []).flatMap(netToEdges), [nets]);
+  // Convert DB data → React Flow edges, marking selected net
+  const rfEdges = useMemo(() => {
+    const edges = (nets ?? []).flatMap(netToEdges);
+    if (selectedNetName) {
+      return edges.map((e) => ({
+        ...e,
+        selected: e.data?.netName === selectedNetName,
+        data: {
+          ...e.data,
+          highlighted: e.data?.netName === selectedNetName,
+        },
+      }));
+    }
+    return edges;
+  }, [nets, selectedNetName]);
 
   // Local React Flow state
   const [localNodes, setLocalNodes, onNodesChange] = useNodesState(rfNodes);
@@ -677,6 +694,10 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         onToolChange={setActiveTool}
         snapEnabled={snapEnabled}
         onToggleSnap={() => setSnapEnabled((s) => !s)}
+        gridVisible={gridVisible}
+        onToggleGridVisible={() => setGridVisible((v) => !v)}
+        angleConstraint={angleConstraint}
+        onAngleConstraintChange={setAngleConstraint}
         onFitView={handleFitView}
         onOpenShortcuts={handleOpenShortcuts}
       />
@@ -691,6 +712,13 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
+        onEdgeClick={(_event, edge) => {
+          const netName = (edge.data as Record<string, unknown> | undefined)?.netName;
+          if (typeof netName === 'string') {
+            setSelectedNetName((prev) => (prev === netName ? null : netName));
+          }
+        }}
+        onPaneClick={() => setSelectedNetName(null)}
         isValidConnection={isValidConnection}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -703,7 +731,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         connectionMode={ConnectionMode.Loose}
         deleteKeyCode={['Backspace', 'Delete']}
       >
-        <Background color="#333" gap={gridSize} size={1} />
+        {gridVisible && <Background color="#333" gap={gridSize} size={1} />}
         <Controls className="!bg-card !border-border !fill-foreground" />
         <MiniMap
           className="!bg-card !border-border overflow-hidden"
@@ -738,6 +766,50 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
               net connections.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* UX-031: Selected net pill label */}
+      {selectedNetName && (
+        <div
+          data-testid="selected-net-pill"
+          className="absolute top-3 right-3 z-10 flex items-center gap-2 bg-primary/20 border border-primary/40 px-3 py-1.5 rounded-full backdrop-blur-sm"
+        >
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <span className="text-xs font-medium text-primary">
+            Net: {selectedNetName}
+          </span>
+          <button
+            data-testid="deselect-net"
+            className="ml-1 text-primary/60 hover:text-primary transition-colors"
+            onClick={() => setSelectedNetName(null)}
+            aria-label="Deselect net"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
+      {/* UX-032: Inline ERC violations near cursor */}
+      {ercViolations && ercViolations.length > 0 && mouseFlowPos && (
+        <div
+          data-testid="inline-erc-errors"
+          className="absolute bottom-12 left-3 z-10 max-w-xs space-y-1 pointer-events-none"
+        >
+          {ercViolations.slice(0, 3).map((v) => (
+            <div
+              key={v.id}
+              className="flex items-center gap-1.5 bg-destructive/15 border border-destructive/30 px-2 py-1 rounded text-[10px] text-destructive backdrop-blur-sm"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
+              <span className="truncate">{v.message}</span>
+            </div>
+          ))}
+          {ercViolations.length > 3 && (
+            <div className="text-[10px] text-destructive/70 px-2">
+              +{ercViolations.length - 3} more
+            </div>
+          )}
         </div>
       )}
 

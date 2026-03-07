@@ -15,6 +15,7 @@ import {
   Globe,
   ShoppingBag,
   Warehouse,
+  Plug,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -39,5 +40,6 @@ export const navItems: NavItem[] = [
   { icon: Globe, view: 'community', label: 'Community' },
   { icon: ShoppingBag, view: 'ordering', label: 'Order PCB' },
   { icon: Warehouse, view: 'storage', label: 'Inventory' },
+  { icon: Plug, view: 'serial_monitor', label: 'Serial Monitor' },
   { icon: TerminalSquare, view: 'output', label: 'Output' },
 ];

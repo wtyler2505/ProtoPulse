@@ -5,6 +5,8 @@
  * All dimensions are in millimeters. Pure class, no React dependencies.
  */
 
+import type { CopperZone, FillResult, ZoneConflict } from '@/lib/copper-pour';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -25,7 +27,18 @@ export interface PCBObstacle {
 }
 
 export interface PCBDrcViolation {
-  type: 'trace-trace' | 'trace-pad' | 'trace-via' | 'via-via' | 'trace-edge' | 'min-width' | 'unrouted';
+  type:
+    | 'trace-trace'
+    | 'trace-pad'
+    | 'trace-via'
+    | 'via-via'
+    | 'trace-edge'
+    | 'min-width'
+    | 'unrouted'
+    | 'pour-min-width'
+    | 'pour-island'
+    | 'pour-conflict'
+    | 'thermal-relief';
   message: string;
   position: { x: number; y: number };
   severity: 'error' | 'warning';
@@ -921,6 +934,132 @@ export class PCBDrcChecker {
   }
 
   // -------------------------------------------------------------------------
+  // Copper pour validation
+  // -------------------------------------------------------------------------
+
+  /**
+   * Validate copper pour zones for DRC violations.
+   *
+   * Checks:
+   * - **pour-conflict**: Overlapping zones on the same layer with equal priority
+   * - **pour-min-width**: Fill polygons narrower than the zone's minWidth
+   * - **pour-island**: Disconnected copper fill fragments (more than 1 polygon
+   *   after fill = potential orphan islands)
+   * - **thermal-relief**: Zones with thermal relief set to 'none' on same-net
+   *   pads (warns about potential cold solder joints)
+   *
+   * @param zones       All copper pour zones
+   * @param conflicts   Zone overlap conflicts (from CopperPourEngine.detectConflicts)
+   * @param fillResults Fill results per zone (from CopperPourEngine.fillZone)
+   */
+  validateCopperPour(
+    zones: CopperZone[],
+    conflicts: ZoneConflict[],
+    fillResults: Map<string, FillResult>,
+  ): PCBDrcViolation[] {
+    const results: PCBDrcViolation[] = [];
+
+    // --- pour-conflict: overlapping zones with same priority ---
+    for (const conflict of conflicts) {
+      if (conflict.resolution === 'error') {
+        const z1 = zones.find((z) => z.id === conflict.zone1Id);
+        const z2 = zones.find((z) => z.id === conflict.zone2Id);
+        const pos = this.zoneCentroid(z1);
+
+        results.push({
+          type: 'pour-conflict',
+          message: `Zone overlap conflict: "${z1?.name ?? conflict.zone1Id}" and "${z2?.name ?? conflict.zone2Id}" share ${String(conflict.overlapArea.toFixed(1))} sq mil overlap with equal priority`,
+          position: pos,
+          severity: 'error',
+          obstacleIds: [conflict.zone1Id, conflict.zone2Id],
+          clearanceRequired: 0,
+          clearanceActual: 0,
+        });
+      }
+    }
+
+    // --- per-zone checks ---
+    for (const zone of zones) {
+      if (zone.isKeepout || zone.pourType === 'none') {
+        continue;
+      }
+
+      const fill = fillResults.get(zone.id);
+      if (!fill) {
+        continue;
+      }
+
+      const zoneCentroid = this.zoneCentroid(zone);
+
+      // --- pour-min-width: check each fill polygon ---
+      for (const poly of fill.polygons) {
+        if (poly.length < 3) {
+          continue;
+        }
+
+        const width = this.estimatePolygonMinWidth(poly);
+        if (width < zone.minWidth && width > 0) {
+          // Find centroid of the thin polygon for violation position
+          const polyCentroid = this.polygonCentroid(poly);
+          results.push({
+            type: 'pour-min-width',
+            message: `Copper pour "${zone.name}" has fill strip ~${String(width.toFixed(1))} mils wide (minimum: ${String(zone.minWidth)} mils)`,
+            position: polyCentroid,
+            severity: 'error',
+            obstacleIds: [zone.id],
+            clearanceRequired: zone.minWidth,
+            clearanceActual: width,
+          });
+        }
+      }
+
+      // --- pour-island: disconnected fill fragments ---
+      if (fill.polygons.length > 1) {
+        results.push({
+          type: 'pour-island',
+          message: `Copper pour "${zone.name}" has ${String(fill.polygons.length)} disconnected fill fragments — ${String(fill.polygons.length - 1)} potential orphan island(s)`,
+          position: zoneCentroid,
+          severity: 'warning',
+          obstacleIds: [zone.id],
+          clearanceRequired: 0,
+          clearanceActual: 0,
+        });
+      }
+
+      // --- thermal-relief: warn when thermal relief is 'none' ---
+      if (zone.thermalRelief === 'none' && fill.thermalConnections.length > 0) {
+        results.push({
+          type: 'thermal-relief',
+          message: `Copper pour "${zone.name}" has thermal relief disabled — ${String(fill.thermalConnections.length)} same-net pad(s) will have no thermal isolation, risking cold solder joints`,
+          position: zoneCentroid,
+          severity: 'warning',
+          obstacleIds: [zone.id],
+          clearanceRequired: 0,
+          clearanceActual: 0,
+        });
+      }
+    }
+
+    // Append to internal violations list
+    this.violations.push(...results);
+    return results;
+  }
+
+  /**
+   * Run full DRC including copper pour validation.
+   * Convenience method that calls checkAll() then validateCopperPour().
+   */
+  checkAllWithPour(
+    zones: CopperZone[],
+    conflicts: ZoneConflict[],
+    fillResults: Map<string, FillResult>,
+  ): PCBDrcViolation[] {
+    const routingViolations = this.checkAll();
+    const pourViolations = this.validateCopperPour(zones, conflicts, fillResults);
+    return [...routingViolations, ...pourViolations];
+  }
+
+  // -------------------------------------------------------------------------
   // Results
   // -------------------------------------------------------------------------
 
@@ -1023,6 +1162,58 @@ export class PCBDrcChecker {
 
     // Unknown combination — assume no violation
     return { clearance: Infinity, midX: 0, midY: 0 };
+  }
+
+  private zoneCentroid(zone: CopperZone | undefined): { x: number; y: number } {
+    if (!zone || zone.boundary.length === 0) {
+      return { x: 0, y: 0 };
+    }
+    let sumX = 0;
+    let sumY = 0;
+    for (const p of zone.boundary) {
+      sumX += p.x;
+      sumY += p.y;
+    }
+    return { x: sumX / zone.boundary.length, y: sumY / zone.boundary.length };
+  }
+
+  private polygonCentroid(poly: Array<{ x: number; y: number }>): { x: number; y: number } {
+    if (poly.length === 0) {
+      return { x: 0, y: 0 };
+    }
+    let sumX = 0;
+    let sumY = 0;
+    for (const p of poly) {
+      sumX += p.x;
+      sumY += p.y;
+    }
+    return { x: sumX / poly.length, y: sumY / poly.length };
+  }
+
+  /**
+   * Estimate the minimum width of a polygon using the area/perimeter heuristic.
+   * approxWidth = 2 * area / perimeter
+   */
+  private estimatePolygonMinWidth(poly: Array<{ x: number; y: number }>): number {
+    if (poly.length < 3) {
+      return 0;
+    }
+    let area = 0;
+    let perimeter = 0;
+    const n = poly.length;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      area += poly[i].x * poly[j].y;
+      area -= poly[j].x * poly[i].y;
+      const dx = poly[j].x - poly[i].x;
+      const dy = poly[j].y - poly[i].y;
+      perimeter += Math.sqrt(dx * dx + dy * dy);
+    }
+    area = Math.abs(area) / 2;
+    if (perimeter === 0) {
+      return 0;
+    }
+    return (2 * area) / perimeter;
   }
 
   private classifyPairViolation(a: PCBObstacle, b: PCBObstacle): PCBDrcViolation['type'] {

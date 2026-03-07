@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { copyToClipboard } from '@/lib/clipboard';
 import { useSyncedFlowState } from '@/hooks/useSyncedFlowState';
 import { useToast } from '@/hooks/use-toast';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { ArchitectureAnalyzer } from '@/lib/architecture-analyzer';
 import type { DesignAnalysisReport, SubsystemCategory, ComplexityLevel } from '@/lib/architecture-analyzer';
 
@@ -883,21 +884,15 @@ function ArchitectureFlow() {
 
           {localNodes.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-              <div className="text-center space-y-4 max-w-md">
-                <div className="w-20 h-20 bg-muted/30 flex items-center justify-center mx-auto border border-dashed border-border">
-                  <Cpu className="w-10 h-10 text-muted-foreground opacity-50" />
-                </div>
-                <h3 className="text-xl font-display font-bold text-foreground">No diagram yet</h3>
-                <p className="text-muted-foreground">Ask Chat to generate a system architecture or drag components from the Asset Library.</p>
-                <StyledTooltip content="Ask AI to suggest a system architecture" side="bottom">
-                  <button
-                    data-testid="button-generate-architecture"
-                    className="pointer-events-auto px-6 py-2 bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/20 hover:scale-105 transition-all focus-ring"
-                    onClick={handleGenerateArchitecture}
-                  >
-                    Generate Architecture
-                  </button>
-                </StyledTooltip>
+              <div className="pointer-events-auto">
+                <EmptyState
+                  icon={Cpu}
+                  title="No diagram yet"
+                  description="Ask Chat to generate a system architecture or drag components from the Asset Library."
+                  actionLabel="Generate Architecture"
+                  actionTestId="button-generate-architecture"
+                  onAction={handleGenerateArchitecture}
+                />
               </div>
             </div>
           )}
