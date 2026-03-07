@@ -137,6 +137,18 @@ export class ToolRegistry {
     }
 
     const tool = this.tools.get(toolName)!;
+
+    // Server-side enforcement: destructive tools require explicit user confirmation.
+    // If the tool has requiresConfirmation=true and the context doesn't have confirmed=true,
+    // reject the execution. The client must re-submit with confirmed=true after user approval.
+    if (tool.requiresConfirmation && ctx.confirmed !== true) {
+      return {
+        success: false,
+        message: `This action (${toolName}) requires user confirmation. The client must re-submit with confirmed=true.`,
+        data: { requiresConfirmation: true, toolName },
+      };
+    }
+
     return tool.execute(validation.params, ctx);
   }
 

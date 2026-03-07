@@ -172,7 +172,7 @@ export function registerAgentRoutes(app: Express): void {
         }
       };
 
-      const toolContext: ToolContext = { projectId, storage };
+      const toolContext: ToolContext = { projectId, storage, confirmed: true };
       const anthropicTools = toolRegistry.toAnthropicTools();
       const client = getAnthropicClient(apiKeyToUse);
 

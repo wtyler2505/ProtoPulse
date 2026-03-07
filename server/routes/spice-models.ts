@@ -4,7 +4,7 @@ import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertSpiceModelSchema, type InsertSpiceModel } from '@shared/schema';
 import { asyncHandler, parseIdParam, payloadLimit } from './utils';
-import { parseImportFile, validateImportFilename, validateImportSize } from '../spice-import';
+import { parseImportFile, validateImportFilename, validateImportSize, sanitizeSpiceDirective } from '../spice-import';
 
 const listQuerySchema = z.object({
   category: z.string().optional(),
@@ -50,7 +50,20 @@ export function registerSpiceModelRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
-      const model = await storage.createSpiceModel(parsed.data);
+
+      // Sanitize the SPICE directive before storing
+      let sanitizedData = { ...parsed.data };
+      if (sanitizedData.spiceDirective) {
+        try {
+          sanitizedData = { ...sanitizedData, spiceDirective: sanitizeSpiceDirective(sanitizedData.spiceDirective) };
+        } catch (sanitizeErr: unknown) {
+          return res.status(400).json({
+            message: `Invalid SPICE directive: ${sanitizeErr instanceof Error ? sanitizeErr.message : String(sanitizeErr)}`,
+          });
+        }
+      }
+
+      const model = await storage.createSpiceModel(sanitizedData);
       res.status(201).json(model);
     }),
   );

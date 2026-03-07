@@ -140,6 +140,11 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
           ) : (
             <span className="whitespace-pre-wrap">{msg.content}</span>
           )}
+          {msg.role === 'assistant' && 'modelId' in msg && typeof (msg as Record<string, unknown>).modelId === 'string' && (
+            <div className="text-xs text-muted-foreground/60 mt-1" data-testid="msg-model-info">
+              via {(msg as Record<string, unknown>).modelId as string}
+            </div>
+          )}
           {tokenInfo && msg.role === 'assistant' && (
             <div className="text-xs text-muted-foreground/80 mt-1" data-testid="text-token-info">
               {tokenInfo.input + tokenInfo.output} tokens · ~${tokenInfo.cost.toFixed(4)}

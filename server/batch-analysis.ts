@@ -228,7 +228,7 @@ async function gatherProjectSnapshot(projectId: number): Promise<ProjectSnapshot
  * Returns the batch ID for polling.
  */
 export async function submitBatchAnalysis(req: BatchAnalysisRequest): Promise<BatchAnalysisStatus> {
-  const { projectId, analyses, apiKey, model = 'claude-haiku-4-5-20250514' } = req;
+  const { projectId, analyses, apiKey, model = 'claude-haiku-4-5-20251001' } = req;
 
   const client = getAnthropicClient(apiKey);
   const snapshot = await gatherProjectSnapshot(projectId);

@@ -183,6 +183,7 @@ const aiRequestSchema = z.object({
   selectedNodeId: z.string().nullable().optional(),
   changeDiff: z.string().max(50000).optional(),
   routingStrategy: z.enum(['user', 'auto', 'quality', 'speed', 'cost']).optional(),
+  confirmed: z.boolean().optional(),
   // Phase 4: Vision/multimodal — optional image attachment
   imageBase64: z.string().max(10_000_000).optional(),
   imageMimeType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']).optional(),
@@ -590,7 +591,7 @@ export function registerChatRoutes(app: Express): void {
             appState,
             temperature: temperature ?? 0.7,
             maxTokens,
-            toolContext: { projectId: pid, storage },
+            toolContext: { projectId: pid, storage, confirmed: parsed.data.confirmed },
             imageContent: parsed.data.imageBase64
               ? {
                   base64: parsed.data.imageBase64,

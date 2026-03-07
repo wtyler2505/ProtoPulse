@@ -91,14 +91,14 @@ export function registerSettingsRoutes(app: Express): void {
         if (provider === 'anthropic') {
           const client = new Anthropic({ apiKey });
           await client.messages.create({
-            model: 'claude-haiku-4-5-20250514',
+            model: 'claude-haiku-4-5-20251001',
             max_tokens: 1,
             messages: [{ role: 'user', content: 'Hi' }],
           });
         } else {
           const genAI = new GoogleGenAI({ apiKey });
           await genAI.models.generateContent({
-            model: 'gemini-2.0-flash',
+            model: 'gemini-2.5-flash',
             contents: 'Hi',
           });
         }

@@ -15,16 +15,15 @@ export const quickActionDescriptions: Record<string, string> = {
 export const AI_MODELS = {
   anthropic: [
     { id: 'claude-sonnet-4-5-20250514', label: 'Claude 4.5 Sonnet' },
-    { id: 'claude-4-6-sonnet-20260101', label: 'Claude 4.6 Sonnet' },
+    { id: 'claude-sonnet-4-6-20250514', label: 'Claude 4.6 Sonnet' },
     { id: 'claude-sonnet-4-20250514', label: 'Claude 4 Sonnet' },
     { id: 'claude-opus-4-20250514', label: 'Claude 4 Opus' },
-    { id: 'claude-4-6-opus-20260101', label: 'Claude 4.6 Opus' },
-    { id: 'claude-haiku-4-5-20250514', label: 'Claude 4.5 Haiku' },
+    { id: 'claude-opus-4-6-20250514', label: 'Claude 4.6 Opus' },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude 4.5 Haiku' },
   ],
   gemini: [
     { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
   ],
 };
 

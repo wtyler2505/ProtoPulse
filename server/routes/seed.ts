@@ -1,3 +1,5 @@
+import crypto from 'crypto';
+
 import type { Express } from 'express';
 import { db } from '../db';
 import { storage } from '../storage';
@@ -15,6 +17,8 @@ import {
 import { asyncHandler, payloadLimit } from './utils';
 import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
 import { eq, and, count } from 'drizzle-orm';
+
+import type { StandardComponentDef } from '@shared/standard-library';
 
 function buildSeedComponentPart(projectId: number) {
   const pinNames = ['VCC', 'PB0', 'PB1', 'PB2', 'PB3', 'PB4', 'GND', 'PB5'];
@@ -219,19 +223,61 @@ function buildSeedComponentPart(projectId: number) {
 }
 
 /**
- * Seed the standard component library. Upserts by title + isPublic=true.
- * Returns the number of components inserted.
+ * Compute a SHA-256 content hash for a standard library component definition.
+ * Used to detect whether an existing DB row needs updating.
  */
-export async function seedStandardLibrary(): Promise<number> {
+export function computeComponentHash(comp: StandardComponentDef): string {
+  const payload = JSON.stringify({
+    description: comp.description,
+    category: comp.category,
+    tags: comp.tags,
+    meta: comp.meta,
+    connectors: comp.connectors,
+    buses: comp.buses,
+    views: comp.views,
+    constraints: comp.constraints,
+  });
+  return crypto.createHash('sha256').update(payload).digest('hex');
+}
+
+export interface SeedResult {
+  inserted: number;
+  updated: number;
+  unchanged: number;
+}
+
+/**
+ * Seed the standard component library. True upsert by title + isPublic=true.
+ * - If component does not exist: INSERT.
+ * - If component exists but content hash differs: UPDATE.
+ * - If component exists and content hash matches: SKIP (unchanged).
+ */
+export async function seedStandardLibrary(): Promise<SeedResult> {
   let inserted = 0;
+  let updated = 0;
+  let unchanged = 0;
+
   for (const comp of STANDARD_LIBRARY_COMPONENTS) {
+    const newHash = computeComponentHash(comp);
+
     // Check if already exists
     const existing = await db
-      .select({ cnt: count() })
+      .select({
+        id: componentLibrary.id,
+        description: componentLibrary.description,
+        category: componentLibrary.category,
+        tags: componentLibrary.tags,
+        meta: componentLibrary.meta,
+        connectors: componentLibrary.connectors,
+        buses: componentLibrary.buses,
+        views: componentLibrary.views,
+        constraints: componentLibrary.constraints,
+      })
       .from(componentLibrary)
       .where(and(eq(componentLibrary.title, comp.title), eq(componentLibrary.isPublic, true)));
 
-    if (existing[0].cnt === 0) {
+    if (existing.length === 0) {
+      // INSERT new component
       await db.insert(componentLibrary).values({
         title: comp.title,
         description: comp.description,
@@ -245,9 +291,42 @@ export async function seedStandardLibrary(): Promise<number> {
         isPublic: true,
       });
       inserted++;
+    } else {
+      // Compute hash of existing row content to compare
+      const existingHash = crypto.createHash('sha256').update(JSON.stringify({
+        description: existing[0].description,
+        category: existing[0].category,
+        tags: existing[0].tags,
+        meta: existing[0].meta,
+        connectors: existing[0].connectors,
+        buses: existing[0].buses,
+        views: existing[0].views,
+        constraints: existing[0].constraints,
+      })).digest('hex');
+
+      if (existingHash !== newHash) {
+        // UPDATE existing component
+        await db.update(componentLibrary)
+          .set({
+            description: comp.description,
+            category: comp.category,
+            tags: comp.tags,
+            meta: comp.meta,
+            connectors: comp.connectors,
+            buses: comp.buses,
+            views: comp.views,
+            constraints: comp.constraints,
+            updatedAt: new Date(),
+          })
+          .where(eq(componentLibrary.id, existing[0].id));
+        updated++;
+      } else {
+        unchanged++;
+      }
     }
   }
-  return inserted;
+
+  return { inserted, updated, unchanged };
 }
 
 export function registerSeedRoutes(app: Express): void {
@@ -259,8 +338,14 @@ export function registerSeedRoutes(app: Express): void {
       if (process.env.NODE_ENV === 'production') {
         return res.status(404).json({ message: 'Not found' });
       }
-      const inserted = await seedStandardLibrary();
-      res.json({ message: `Standard library seeded`, inserted, total: STANDARD_LIBRARY_COMPONENTS.length });
+      const result = await seedStandardLibrary();
+      res.json({
+        message: 'Standard library seeded',
+        inserted: result.inserted,
+        updated: result.updated,
+        unchanged: result.unchanged,
+        total: STANDARD_LIBRARY_COMPONENTS.length,
+      });
     }),
   );
 

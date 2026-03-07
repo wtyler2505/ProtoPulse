@@ -3,7 +3,8 @@
  *
  * Provides priority-based scheduling, configurable concurrency, retries with
  * exponential backoff, cancellation via AbortController, progress reporting,
- * TTL-based auto-cleanup, and an EventEmitter interface.
+ * TTL-based auto-cleanup, tenant scoping (projectId/userId), per-job watchdog
+ * timeout, and an EventEmitter interface.
  *
  * All state is held in memory — no database dependency. One singleton instance
  * is exported for use across the server.
@@ -39,6 +40,8 @@ export interface JobRecord {
   retryCount: number;
   maxRetries: number;
   priority: number;
+  projectId: number | null;
+  userId: number | null;
 }
 
 export type JobEventType =
@@ -58,6 +61,14 @@ export interface JobExecutionContext {
   reportProgress: (pct: number) => void;
 }
 
+export interface SubmitOptions {
+  priority?: number;
+  maxRetries?: number;
+  projectId?: number;
+  userId?: number;
+  maxRunTimeMs?: number;
+}
+
 export interface JobQueueOptions {
   /** Maximum number of concurrently running jobs. Default 3. */
   concurrency?: number;
@@ -74,6 +85,18 @@ export interface JobQueueOptions {
 }
 
 // ---------------------------------------------------------------------------
+// Default watchdog timeouts per job type
+// ---------------------------------------------------------------------------
+
+const DEFAULT_MAX_RUN_TIME: Record<JobType, number> = {
+  ai_analysis: 300_000,
+  export_generation: 600_000,
+  batch_drc: 300_000,
+  report_generation: 600_000,
+  import_processing: 300_000,
+};
+
+// ---------------------------------------------------------------------------
 // JobQueue
 // ---------------------------------------------------------------------------
 
@@ -82,6 +105,8 @@ export class JobQueue extends EventEmitter {
   private abortControllers = new Map<string, AbortController>();
   private executors = new Map<JobType, JobExecutor>();
   private runningCount = 0;
+  private jobTimeoutMs = new Map<string, number>();
+  private watchdogTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   readonly concurrency: number;
   readonly defaultMaxRetries: number;
@@ -112,7 +137,7 @@ export class JobQueue extends EventEmitter {
 
   // ---- Job submission -------------------------------------------------------
 
-  submit(type: JobType, payload: unknown, options?: { priority?: number; maxRetries?: number }): JobRecord {
+  submit(type: JobType, payload: unknown, options?: SubmitOptions): JobRecord {
     const id = crypto.randomUUID();
     const now = Date.now();
 
@@ -130,7 +155,14 @@ export class JobQueue extends EventEmitter {
       retryCount: 0,
       maxRetries: options?.maxRetries ?? this.defaultMaxRetries,
       priority: Math.min(10, Math.max(1, options?.priority ?? 5)),
+      projectId: options?.projectId ?? null,
+      userId: options?.userId ?? null,
     };
+
+    // Store per-job timeout if provided (used by watchdog in executeJob)
+    if (options?.maxRunTimeMs !== undefined) {
+      this.jobTimeoutMs.set(id, options.maxRunTimeMs);
+    }
 
     this.jobs.set(id, job);
     this.emit('job:created', job);
@@ -176,6 +208,22 @@ export class JobQueue extends EventEmitter {
     return { jobs: result.map((j) => ({ ...j })), total };
   }
 
+  // ---- Tenant-scoped queries ------------------------------------------------
+
+  listByProject(projectId: number): JobRecord[] {
+    return Array.from(this.jobs.values())
+      .filter((j) => j.projectId === projectId)
+      .map((j) => ({ ...j }))
+      .sort((a, b) => b.priority - a.priority || a.createdAt - b.createdAt);
+  }
+
+  listByUser(userId: number): JobRecord[] {
+    return Array.from(this.jobs.values())
+      .filter((j) => j.userId === userId)
+      .map((j) => ({ ...j }))
+      .sort((a, b) => b.priority - a.priority || a.createdAt - b.createdAt);
+  }
+
   // ---- Cancellation ---------------------------------------------------------
 
   cancel(id: string): JobRecord | undefined {
@@ -199,6 +247,9 @@ export class JobQueue extends EventEmitter {
       controller.abort();
       this.abortControllers.delete(id);
     }
+
+    // Clear watchdog timer
+    this.clearWatchdog(id);
 
     if (wasRunning) {
       this.runningCount--;
@@ -227,6 +278,7 @@ export class JobQueue extends EventEmitter {
 
     this.jobs.delete(id);
     this.abortControllers.delete(id);
+    this.jobTimeoutMs.delete(id);
     return true;
   }
 
@@ -261,6 +313,13 @@ export class JobQueue extends EventEmitter {
       this.cleanupTimer = null;
     }
 
+    // Clear all watchdog timers
+    Array.from(this.watchdogTimers.values()).forEach((timer) => {
+      clearTimeout(timer);
+    });
+    this.watchdogTimers.clear();
+    this.jobTimeoutMs.clear();
+
     // Cancel all running and pending jobs
     const allJobs = Array.from(this.jobs.values());
     for (const job of allJobs) {
@@ -276,6 +335,111 @@ export class JobQueue extends EventEmitter {
 
     this.abortControllers.clear();
     this.runningCount = 0;
+  }
+
+  // ---- Async shutdown with grace period -------------------------------------
+
+  async shutdownGraceful(graceMs = 10_000): Promise<void> {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+
+    // Cancel all pending jobs immediately
+    const allJobs = Array.from(this.jobs.values());
+    for (const job of allJobs) {
+      if (job.status === 'pending') {
+        job.status = 'cancelled';
+        job.completedAt = Date.now();
+      }
+    }
+
+    // Wait for running jobs up to graceMs
+    const runningJobs = allJobs.filter((j) => j.status === 'running');
+    if (runningJobs.length > 0) {
+      logger.info('job-queue:shutdown-waiting', { runningCount: runningJobs.length, graceMs });
+
+      await new Promise<void>((resolve) => {
+        const check = () => {
+          const stillRunning = Array.from(this.jobs.values()).filter((j) => j.status === 'running');
+          if (stillRunning.length === 0) {
+            resolve();
+          }
+        };
+
+        // Listen for job completion events
+        const onComplete = () => { check(); };
+        const onFail = () => { check(); };
+        const onCancel = () => { check(); };
+        this.on('job:completed', onComplete);
+        this.on('job:failed', onFail);
+        this.on('job:cancelled', onCancel);
+
+        // Force abort after grace period
+        const graceTimer = setTimeout(() => {
+          this.removeListener('job:completed', onComplete);
+          this.removeListener('job:failed', onFail);
+          this.removeListener('job:cancelled', onCancel);
+          resolve();
+        }, graceMs);
+
+        if (typeof graceTimer === 'object' && 'unref' in graceTimer) {
+          graceTimer.unref();
+        }
+
+        // Check immediately in case all already finished
+        check();
+      });
+    }
+
+    // Force-cancel any remaining running jobs
+    this.shutdown();
+  }
+
+  // ---- Internal: watchdog ---------------------------------------------------
+
+  private startWatchdog(job: JobRecord): void {
+    const timeoutMs = this.jobTimeoutMs.get(job.id) ?? DEFAULT_MAX_RUN_TIME[job.type];
+    const timer = setTimeout(() => {
+      this.watchdogTimers.delete(job.id);
+      // Only trigger if job is still running
+      if (job.status !== 'running') {
+        return;
+      }
+
+      logger.warn('job-queue:watchdog-timeout', { jobId: job.id, type: job.type, timeoutMs });
+
+      // Abort via controller
+      const controller = this.abortControllers.get(job.id);
+      if (controller) {
+        controller.abort();
+        this.abortControllers.delete(job.id);
+      }
+
+      job.status = 'failed';
+      job.error = `Job timed out after ${timeoutMs}ms`;
+      job.completedAt = Date.now();
+      this.runningCount--;
+
+      this.emit('job:failed', { ...job });
+      this.drain();
+    }, timeoutMs);
+
+    // Don't block process exit
+    if (typeof timer === 'object' && 'unref' in timer) {
+      timer.unref();
+    }
+
+    this.watchdogTimers.set(job.id, timer);
+  }
+
+  private clearWatchdog(id: string): void {
+    const timer = this.watchdogTimers.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      this.watchdogTimers.delete(id);
+    }
+    this.jobTimeoutMs.delete(id);
   }
 
   // ---- Internal: priority drain ---------------------------------------------
@@ -316,6 +480,9 @@ export class JobQueue extends EventEmitter {
     const controller = new AbortController();
     this.abortControllers.set(job.id, controller);
 
+    // Start watchdog timer
+    this.startWatchdog(job);
+
     this.emit('job:started', { ...job });
     logger.info('job-queue:started', { jobId: job.id, type: job.type });
 
@@ -330,6 +497,9 @@ export class JobQueue extends EventEmitter {
 
     executor(job.payload, context)
       .then((result) => {
+        // Clear watchdog on success
+        this.clearWatchdog(job.id);
+
         // Check if cancelled while running
         if (job.status === 'cancelled') {
           return;
@@ -349,8 +519,16 @@ export class JobQueue extends EventEmitter {
         this.drain();
       })
       .catch((err: unknown) => {
+        // Clear watchdog on error
+        this.clearWatchdog(job.id);
+
         // Check if cancelled while running
         if (job.status === 'cancelled') {
+          return;
+        }
+
+        // If already marked failed by watchdog, don't double-process
+        if (job.status === 'failed') {
           return;
         }
 
@@ -423,6 +601,7 @@ export class JobQueue extends EventEmitter {
     for (const id of toRemove) {
       this.jobs.delete(id);
       this.abortControllers.delete(id);
+      this.jobTimeoutMs.delete(id);
     }
 
     if (toRemove.length > 0) {

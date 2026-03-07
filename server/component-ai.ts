@@ -37,7 +37,7 @@ function getGenAIClient(apiKey: string): GoogleGenAI {
 // Constants
 // ---------------------------------------------------------------------------
 
-const DEFAULT_MODEL = "gemini-2.0-flash";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 
 /**
  * Temperature for structured output tasks (part generation, modification,

@@ -18,6 +18,7 @@ function createCtx(): ToolContext {
   return {
     projectId: 1,
     storage: {} as IStorage,
+    confirmed: true,
   };
 }
 

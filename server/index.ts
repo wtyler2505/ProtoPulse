@@ -73,7 +73,9 @@ app.use(helmet({
       'style-src-attr': ["'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'"],
+      connectSrc: isDev
+        ? ["'self'", "ws://localhost:5000", "ws://localhost:5173", "ws://127.0.0.1:5000"]
+        : ["'self'"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -89,28 +91,41 @@ app.use(helmet({
 
 app.use(compression());
 
-if (isDev) {
-  const ALLOWED_ORIGINS = [
-    'http://localhost:5000',
-    'http://localhost:3000',
-    'http://127.0.0.1:5000',
-  ];
+// CORS allowlist — unified for dev and production.
+// In dev: always allow common localhost origins.
+// In production: only origins explicitly listed in CORS_ALLOWED_ORIGINS env var (comma-separated).
+// If no env var is set in production, no Access-Control-Allow-Origin header is sent (same-origin only).
+const DEV_ORIGINS = [
+  'http://localhost:5000',
+  'http://localhost:3000',
+  'http://127.0.0.1:5000',
+];
 
-  app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    if (origin && ALLOWED_ORIGINS.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Credentials', 'true');
-    }
+const CORS_ALLOWED_ORIGINS: Set<string> = new Set(
+  isDev
+    ? DEV_ORIGINS.concat(
+        (process.env.CORS_ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+      )
+    : (process.env.CORS_ALLOWED_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean),
+);
+
+app.use((req, res, next) => {
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : undefined;
+  if (origin && CORS_ALLOWED_ORIGINS.has(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Vary', 'Origin');
+  }
+  if (CORS_ALLOWED_ORIGINS.size > 0) {
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Session-Id');
-    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
-    if (req.method === 'OPTIONS') {
-      return res.status(204).end();
-    }
-    next();
-  });
-}
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Session-Id,If-Match');
+    res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id,ETag');
+  }
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});
 
 app.use((req, _res, next) => {
   req.id = crypto.randomUUID();
@@ -292,7 +307,7 @@ app.use((req, res, next) => {
     if (result.cnt === 0) {
       const { seedStandardLibrary } = await import('./routes/seed');
       const seeded = await seedStandardLibrary();
-      logger.info(`Standard component library seeded with ${seeded} components`);
+      logger.info(`Standard component library seeded: ${seeded.inserted} inserted, ${seeded.updated} updated, ${seeded.unchanged} unchanged`);
     }
   } catch (err) {
     logger.warn('Failed to auto-seed standard library', { error: err instanceof Error ? err.message : String(err) });
@@ -406,36 +421,20 @@ app.use((req, res, next) => {
     },
   );
 
-  function gracefulShutdown(signal: string) {
-    logger.info("Shutting down...", { signal });
-    httpServer.close(async () => {
-      try {
-        const { pool } = await import("./db");
-        await pool.end();
-        logger.info("Database pool closed");
-      } catch (err) {
-        logger.error("Error closing database pool", { error: err instanceof Error ? err.message : String(err) });
-      }
-      process.exit(0);
-    });
-    setTimeout(() => {
-      logger.error("Forced shutdown after timeout");
-      process.exit(1);
-    }, 10000);
-  }
+  const { performGracefulShutdown } = await import('./shutdown');
 
-  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+  process.on("SIGTERM", () => performGracefulShutdown(httpServer, "SIGTERM"));
+  process.on("SIGINT", () => performGracefulShutdown(httpServer, "SIGINT"));
 
   process.on('uncaughtException', (err: Error) => {
     logger.error('Uncaught exception', { message: err.message, stack: err.stack });
-    gracefulShutdown('uncaughtException');
+    performGracefulShutdown(httpServer, 'uncaughtException');
   });
 
   process.on('unhandledRejection', (reason: unknown) => {
     const message = reason instanceof Error ? reason.message : String(reason);
     const stack = reason instanceof Error ? reason.stack : undefined;
     logger.error('Unhandled rejection', { message, stack });
-    gracefulShutdown('unhandledRejection');
+    performGracefulShutdown(httpServer, 'unhandledRejection');
   });
 })();

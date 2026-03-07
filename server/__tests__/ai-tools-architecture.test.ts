@@ -38,6 +38,7 @@ function createCtx(storage?: IStorage): ToolContext {
   return {
     projectId: 1,
     storage: storage ?? createMockStorage(),
+    confirmed: true,
   };
 }
 

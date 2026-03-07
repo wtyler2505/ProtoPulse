@@ -55,6 +55,8 @@ export interface ToolResult {
 export interface ToolContext {
   projectId: number;
   storage: IStorage;
+  /** When true, the user has explicitly confirmed a destructive action. */
+  confirmed?: boolean;
 }
 
 /**

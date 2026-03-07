@@ -123,12 +123,12 @@ export type TaskComplexity = 'simple' | 'moderate' | 'complex';
 
 const MODEL_TIERS: Record<string, { fast: string; standard: string; premium: string }> = {
   anthropic: {
-    fast: 'claude-haiku-4-5-20250514',
+    fast: 'claude-haiku-4-5-20251001',
     standard: 'claude-sonnet-4-5-20250514',
     premium: 'claude-opus-4-5-20250514',
   },
   gemini: {
-    fast: 'gemini-2.0-flash',
+    fast: 'gemini-2.5-flash',
     standard: 'gemini-2.5-flash',
     premium: 'gemini-2.5-pro',
   },
@@ -364,14 +364,13 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   // Anthropic
   'claude-opus-4-5-20250514': 200_000,
   'claude-sonnet-4-5-20250514': 200_000,
-  'claude-haiku-4-5-20250514': 200_000,
+  'claude-haiku-4-5-20251001': 200_000,
   'claude-3-5-sonnet-20241022': 200_000,
   'claude-3-5-haiku-20241022': 200_000,
   'claude-3-haiku-20240307': 200_000,
   // Gemini
   'gemini-2.5-pro': 1_000_000,
   'gemini-2.5-flash': 1_000_000,
-  'gemini-2.0-flash': 1_000_000,
   'gemini-1.5-pro': 2_000_000,
   'gemini-1.5-flash': 1_000_000,
 };

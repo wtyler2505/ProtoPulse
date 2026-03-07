@@ -25,6 +25,80 @@ export interface ParseResult {
 }
 
 // ---------------------------------------------------------------------------
+// SPICE directive sanitization
+// ---------------------------------------------------------------------------
+
+/** Maximum allowed length for a single SPICE directive (characters). */
+const MAX_DIRECTIVE_LENGTH = 10_000;
+
+/**
+ * Allowlist of valid SPICE directive keywords (case-insensitive).
+ * Everything else is stripped or rejected.
+ */
+const ALLOWED_DIRECTIVE_KEYWORDS = new Set([
+  '.MODEL', '.SUBCKT', '.ENDS', '.PARAM', '.LIB', '.INCLUDE',
+  '.FUNC', '.GLOBAL', '.OPTIONS', '.TEMP', '.END',
+]);
+
+/**
+ * Blocklist of dangerous directives and shell metacharacters.
+ * These could allow command injection if SPICE content is ever passed to a shell.
+ */
+const DANGEROUS_DIRECTIVE_RE = /\.(SYSTEM|SHELL)\b/i;
+const SHELL_METACHAR_RE = /[`$|;]/;
+const COMMAND_SUBSTITUTION_RE = /\$\(|\$\{/;
+
+/**
+ * Sanitize a SPICE directive string.
+ *
+ * - Rejects directives containing dangerous keywords (.SYSTEM, .SHELL)
+ * - Rejects shell metacharacters (backticks, $(), pipes, semicolons)
+ * - Enforces max length
+ * - Validates that each non-comment, non-element line starts with a known directive keyword
+ *
+ * @returns The sanitized directive (trimmed), or throws an error describing the violation.
+ */
+export function sanitizeSpiceDirective(input: string): string {
+  if (input.length > MAX_DIRECTIVE_LENGTH) {
+    throw new Error(`SPICE directive exceeds maximum length of ${MAX_DIRECTIVE_LENGTH} characters`);
+  }
+
+  // Check for dangerous patterns across the entire input
+  if (DANGEROUS_DIRECTIVE_RE.test(input)) {
+    throw new Error('SPICE directive contains forbidden keyword (.SYSTEM or .SHELL)');
+  }
+
+  if (COMMAND_SUBSTITUTION_RE.test(input)) {
+    throw new Error('SPICE directive contains shell command substitution pattern ($( or ${)');
+  }
+
+  // Check each line for shell metacharacters (but allow $ in SPICE comments starting with *)
+  const lines = input.split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === '' || trimmed.startsWith('*')) {
+      continue; // Comments and blank lines are safe
+    }
+
+    // Check for backticks and pipes in non-comment lines
+    if (/[`|]/.test(trimmed)) {
+      throw new Error(`SPICE directive contains forbidden shell metacharacter in line: ${trimmed.slice(0, 80)}`);
+    }
+
+    // Validate directive lines start with known keywords or are element/continuation lines
+    if (trimmed.startsWith('.')) {
+      const keyword = trimmed.split(/[\s(]/)[0].toUpperCase();
+      if (!ALLOWED_DIRECTIVE_KEYWORDS.has(keyword)) {
+        throw new Error(`SPICE directive contains unknown/forbidden directive: ${keyword}`);
+      }
+    }
+    // Non-dot lines are SPICE element instances (R1, C1, etc.) or continuation lines (+) — allowed
+  }
+
+  return input.trim();
+}
+
+// ---------------------------------------------------------------------------
 // SPICE type → ProtoPulse modelType / category mapping
 // ---------------------------------------------------------------------------
 
@@ -186,15 +260,20 @@ function parseModelDirectives(lines: string[], filename: string): { models: Pars
 
     const parameters = parseSpiceParams(restOfLine);
 
-    models.push({
-      name,
-      modelType: mapping.modelType,
-      spiceDirective: line,
-      parameters,
-      description: `Imported from ${filename}`,
-      category: mapping.category,
-      sourceFile: filename,
-    });
+    try {
+      const sanitizedDirective = sanitizeSpiceDirective(line);
+      models.push({
+        name,
+        modelType: mapping.modelType,
+        spiceDirective: sanitizedDirective,
+        parameters,
+        description: `Imported from ${filename}`,
+        category: mapping.category,
+        sourceFile: filename,
+      });
+    } catch (sanitizeErr: unknown) {
+      errors.push(`Model "${name}" in ${filename}: ${sanitizeErr instanceof Error ? sanitizeErr.message : String(sanitizeErr)}`);
+    }
   }
 
   return { models, errors };
@@ -261,15 +340,20 @@ function parseSubcktBlocks(lines: string[], filename: string): { models: ParsedS
 
     const { modelType, category } = guessSubcktCategory(name, pinNames);
 
-    models.push({
-      name,
-      modelType,
-      spiceDirective: blockLines.join('\n'),
-      parameters,
-      description: `Subcircuit imported from ${filename} (${pinNames.length} pins: ${pinNames.join(', ')})`,
-      category,
-      sourceFile: filename,
-    });
+    try {
+      const sanitizedDirective = sanitizeSpiceDirective(blockLines.join('\n'));
+      models.push({
+        name,
+        modelType,
+        spiceDirective: sanitizedDirective,
+        parameters,
+        description: `Subcircuit imported from ${filename} (${pinNames.length} pins: ${pinNames.join(', ')})`,
+        category,
+        sourceFile: filename,
+      });
+    } catch (sanitizeErr: unknown) {
+      errors.push(`Subcircuit "${name}" in ${filename}: ${sanitizeErr instanceof Error ? sanitizeErr.message : String(sanitizeErr)}`);
+    }
   }
 
   return { models, errors };

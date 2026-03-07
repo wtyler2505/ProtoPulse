@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Settings2, Eye, EyeOff, ChevronDown, Trash2, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Settings2, Eye, EyeOff, ChevronDown, Trash2, Loader2, CheckCircle2, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AI_MODELS, type RoutingStrategy } from './constants';
 import type { KeyStatus } from '@/hooks/useApiKeyStatus';
@@ -31,6 +31,8 @@ interface SettingsPanelProps {
   keyErrorMessage?: string | null;
   onValidateKey?: () => void;
   isValidating?: boolean;
+  settingsLoadError?: string | null;
+  onRetrySettingsLoad?: () => void;
 }
 
 function SettingsPanel({
@@ -38,6 +40,7 @@ function SettingsPanel({
   showApiKey, setShowApiKey, aiTemperature, setAiTemperature,
   customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy,
   apiKeyValid, onClearApiKey, onClose, keyStatus, keyErrorMessage, onValidateKey, isValidating,
+  settingsLoadError, onRetrySettingsLoad,
 }: SettingsPanelProps) {
   return (
     <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
@@ -45,6 +48,31 @@ function SettingsPanel({
         <Settings2 className="w-4 h-4 text-primary" />
         <h4 className="font-display font-bold tracking-wider text-sm">AI Settings</h4>
       </div>
+
+      {settingsLoadError && (
+        <div
+          className="flex items-start gap-2 p-3 border border-amber-500/30 bg-amber-500/10 text-amber-300 text-xs"
+          role="alert"
+          data-testid="settings-load-error"
+        >
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="font-medium">Could not load saved settings. Using defaults.</p>
+            <p className="text-amber-400/70 mt-0.5">Error: {settingsLoadError}</p>
+            {onRetrySettingsLoad && (
+              <button
+                type="button"
+                onClick={onRetrySettingsLoad}
+                data-testid="retry-settings-load"
+                className="flex items-center gap-1 mt-1.5 text-[11px] text-primary/80 hover:text-primary font-medium transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Retry
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div>
         <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Provider</label>
