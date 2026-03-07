@@ -33,9 +33,10 @@ const BoardViewer3DView = lazy(() => import('@/components/views/BoardViewer3DVie
 const CommunityView = lazy(() => import('@/components/views/CommunityView'));
 const PcbOrderingView = lazy(() => import('@/components/views/PcbOrderingView'));
 const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
+const CircuitCodeView = lazy(() => import('@/components/views/CircuitCodeView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap, Plug } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap, Plug, Code2 } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -81,6 +82,7 @@ const prefetchQueue: Array<() => Promise<unknown>> = [
   () => import('@/components/views/PcbOrderingView'),
   () => import('@/components/views/StorageManagerPanel'),
   () => import('@/components/panels/SerialMonitorPanel'),
+  () => import('@/components/views/CircuitCodeView'),
   () => import('@/components/panels/CommentsPanel'),
 ];
 
@@ -134,6 +136,7 @@ const tabDescriptions: Record<string, string> = {
   ordering: 'Order PCBs from fabricators with DFM checks',
   simulation: 'SPICE simulation, AC/DC analysis, and waveform viewer',
   serial_monitor: 'Serial monitor for Arduino, ESP32, and other hardware devices',
+  circuit_code: 'Arduino/C++ code editor with hardware-aware generation and upload',
 };
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
@@ -436,6 +439,7 @@ function WorkspaceContent() {
     { id: 'ordering', label: 'Order PCB', icon: ShoppingBag },
     { id: 'simulation', label: 'Simulation', icon: Zap },
     { id: 'serial_monitor', label: 'Serial', icon: Plug },
+    { id: 'circuit_code', label: 'Code', icon: Code2 },
     { id: 'output', label: 'Exports', icon: TerminalSquare },
   ], []);
 
@@ -443,7 +447,7 @@ function WorkspaceContent() {
      Always visible: Dashboard, Architecture, Component Editor (entry points).
      Require architecture nodes: Schematic, Breadboard, PCB, Procurement, Validation, Output. */
   const hasDesignContent = (nodes ?? []).length > 0;
-  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns', 'kanban', 'knowledge', 'community', 'ordering', 'simulation', 'serial_monitor']);
+  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns', 'kanban', 'knowledge', 'community', 'ordering', 'simulation', 'serial_monitor', 'circuit_code']);
 
   const visibleTabs = useMemo(
     () => tabs.filter(t => t.id !== 'project_explorer' && (alwaysVisibleIds.has(t.id) || hasDesignContent)),
@@ -857,6 +861,13 @@ function WorkspaceContent() {
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
                     <SerialMonitorPanel />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'circuit_code' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <CircuitCodeView />
                   </Suspense>
                 </ErrorBoundary>
               )}

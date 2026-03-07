@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Warehouse,
   Plug,
+  Code2,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -28,6 +29,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { icon: LayoutGrid, view: 'architecture', label: 'Architecture' },
   { icon: CircuitBoard, view: 'schematic', label: 'Schematic' },
+  { icon: Code2, view: 'circuit_code', label: 'Circuit Code' },
   { icon: Grid3X3, view: 'breadboard', label: 'Breadboard' },
   { icon: Microchip, view: 'pcb', label: 'PCB' },
   { icon: Cpu, view: 'component_editor', label: 'Component Editor' },

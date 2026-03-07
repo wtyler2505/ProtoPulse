@@ -23,7 +23,7 @@ import { registerArchitectureTools } from './architecture';
 import { registerBomTools } from './bom';
 import { registerValidationTools } from './validation';
 import { registerProjectTools } from './project';
-import { registerCircuitTools, registerPcbTools } from './circuit';
+import { registerCircuitTools, registerPcbTools, registerCircuitCodeTools } from './circuit';
 import { registerComponentTools } from './component';
 import { registerExportTools } from './export';
 import { registerVisionTools } from './vision';
@@ -38,6 +38,7 @@ function createRegistry(): ToolRegistry {
   registerCircuitTools(registry);
   registerComponentTools(registry);
   registerPcbTools(registry);
+  registerCircuitCodeTools(registry);
   registerExportTools(registry);
   registerVisionTools(registry);
   return registry;

@@ -21,6 +21,7 @@ import {
   Globe,
   ShoppingBag,
   Warehouse,
+  Code2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ViewMode } from '@/lib/project-context';
@@ -85,6 +86,7 @@ export default function CommandPalette({
     { id: 'nav-community', label: 'Community', icon: Globe, action: () => onNavigate('community'), keywords: ['community', 'library', 'shared', 'components'] },
     { id: 'nav-ordering', label: 'Order PCB', icon: ShoppingBag, action: () => onNavigate('ordering'), keywords: ['order', 'pcb', 'fabricate', 'manufacture', 'jlcpcb'] },
     { id: 'nav-storage', label: 'Inventory', icon: Warehouse, action: () => onNavigate('storage'), keywords: ['inventory', 'storage', 'stock', 'location', 'warehouse'] },
+    { id: 'nav-circuit-code', label: 'Circuit Code', icon: Code2, action: () => onNavigate('circuit_code'), keywords: ['code', 'arduino', 'firmware', 'program', 'cpp', 'upload'] },
   ];
 
   const panelItems: CommandItemDef[] = [
