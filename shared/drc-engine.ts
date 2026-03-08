@@ -156,6 +156,10 @@ function checkMinClearance(
       if (!otherAABB) continue;
 
       const dist = aabbDistance(aabb, otherAABB);
+      // BL-0011: For non-PCB views, skip overlapping shapes (dist === 0) — these are
+      // intentionally stacked UI elements producing meaningless "clearance 0.0px".
+      // For PCB view, dist === 0 IS a real clearance violation (shapes touching).
+      if (dist === 0 && view !== 'pcb') continue;
       if (dist < minClearance && dist >= 0) {
         const center = aabbCenter(aabb);
         violations.push({
@@ -774,7 +778,22 @@ export function runDRC(
     }
   }
 
-  return violations;
+  // BL-0011: Deduplicate shape-pair violations (e.g. clearance, courtyard-overlap)
+  // to prevent the same pair from being reported multiple times. Only dedup when
+  // shapeIds are present — connector-based checks (annular-ring, pad-size) use
+  // empty shapeIds and are already unique per connector.
+  const seen = new Set<string>();
+  const deduped: DRCViolation[] = [];
+  for (const v of violations) {
+    if (v.shapeIds.length >= 2) {
+      const key = [...v.shapeIds].sort().join(':') + '|' + v.ruleType;
+      if (seen.has(key)) continue;
+      seen.add(key);
+    }
+    deduped.push(v);
+  }
+
+  return deduped;
 }
 
 // =============================================================================

@@ -2,7 +2,7 @@
 
 > **Single source of truth** for all open work: bugs, security fixes, features, tech debt, UX polish, and moonshots.
 > Consolidated 2026-03-07 from 9 source documents (see [Source Map](#source-document-map) at bottom).
-> Items completed in Waves 1-52 have been removed or marked DONE. Only **open/remaining** work is listed.
+> Items completed in Waves 1-53 have been removed or marked DONE. Only **open/remaining** work is listed.
 
 ## How to Use This Document
 
@@ -16,7 +16,7 @@
 
 | Priority | Count | Description |
 |----------|-------|-------------|
-| P0 | 2 | Security holes, crashes, data loss — fix before shipping (11 resolved in Wave 52, 1 PARTIAL) |
+| P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
 | P1 | 57 | Broken workflows, major UX trust issues, test gaps |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
@@ -47,8 +47,8 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0010 | **Breadboard/PCB JSON parse crash** — API returns HTML `<!DOCTYPE` instead of JSON. Both views broken for the circuit. | OPEN | app-audit §5, §6 |
-| BL-0011 | **DRC false positives (123 duplicates)** — DRC runs against raw SVG coordinates, not real-world dimensions. Produces meaningless "clearance 0.0px" violations. | OPEN | app-audit §8 |
+| BL-0010 | **Breadboard/PCB JSON parse crash** — API returns HTML `<!DOCTYPE` instead of JSON. Fixed: added `/api/*` catch-all returning JSON 404 before SPA catch-all (Wave 53). | DONE | app-audit §5, §6 |
+| BL-0011 | **DRC false positives (123 duplicates)** — DRC runs against raw SVG coordinates, not real-world dimensions. Fixed: skip 0.0px overlapping shapes in non-PCB views + shape-pair deduplication in runDRC() (Wave 53). | DONE | app-audit §8 |
 
 ---
 

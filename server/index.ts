@@ -377,6 +377,12 @@ app.use((req, res, next) => {
     res.json({ version: 1, routes: apiDocs });
   });
 
+  // BL-0010: Catch-all for unmatched /api/* routes — return JSON 404 instead of
+  // falling through to the SPA catch-all which would return HTML (index.html)
+  app.all('/api/{*path}', (_req: Request, res: Response) => {
+    res.status(404).json({ message: 'API endpoint not found' });
+  });
+
   app.use((err: Error & { status?: number; statusCode?: number }, _req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
       return next(err);
