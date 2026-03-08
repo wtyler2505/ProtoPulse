@@ -1,7 +1,7 @@
 # ProtoPulse Master Backlog
 
 > **Single source of truth** for all open work: bugs, security fixes, features, tech debt, UX polish, and moonshots.
-> Consolidated 2026-03-07 from 8 source documents (see [Source Map](#source-document-map) at bottom).
+> Consolidated 2026-03-07 from 9 source documents (see [Source Map](#source-document-map) at bottom).
 > Items completed in Waves 1-51 have been removed. Only **open/remaining** work is listed.
 
 ## How to Use This Document
@@ -16,11 +16,11 @@
 
 | Priority | Count | Description |
 |----------|-------|-------------|
-| P0 | 11 | Security holes, crashes, data loss — fix before shipping |
-| P1 | 52 | Broken workflows, major UX trust issues, test gaps |
-| P2 | 118 | Feature gaps, polish, partial implementations |
+| P0 | 14 | Security holes, crashes, data loss — fix before shipping |
+| P1 | 57 | Broken workflows, major UX trust issues, test gaps |
+| P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
-| **Total** | **323** | |
+| **Total** | **353** | |
 
 ---
 
@@ -39,6 +39,9 @@
 | BL-0007 | **XSS in `useDragGhost.ts`** — `innerHTML` interpolates user-editable `assetName` without sanitization. | OPEN | app-audit §14 |
 | BL-0008 | **LIKE wildcards not escaped** in library search queries — user can use `%` and `_`. | OPEN | app-audit §14 |
 | BL-0009 | **Multiple `z.any()` fields** in Zod schemas bypass type validation. | OPEN | app-audit §14 |
+| BL-0070 | **ZIP bomb vulnerability on FZPZ import** — no decompressed size limit. Add 50MB cap + stream-decompress with byte counter. | OPEN | GA-SEC-13 |
+| BL-0071 | **SVG content parsed without sanitization** — add DOMPurify or equivalent before storing/rendering SVG. | OPEN | GA-SEC-17 |
+| BL-0072 | **Session tokens stored in plaintext** in DB — store hashed tokens, compare hashes, rotate on auth actions. | OPEN | GA-SEC-09 |
 
 ### Crashes & Data Loading
 
@@ -72,6 +75,16 @@
 | BL-0021 | **No login/register UI** — Backend auth exists but zero frontend auth pages. `/login`, `/register` all 404. | OPEN | app-audit §12 |
 | BL-0022 | **No session management** — No X-Session-Id stored/sent by client. Auth layer is dead code. | OPEN | app-audit §12 |
 | BL-0023 | **App fully accessible without auth** — No protected routes client-side. Anyone can view/edit/delete. | OPEN | app-audit §12 |
+
+### Reliability
+
+| ID | Description | Status | Source |
+|----|-------------|--------|--------|
+| BL-0073 | **SSE stream client doesn't check `response.ok`** — add status check before `getReader()`. Parse error JSON on failure. | OPEN | GA-ERR-03 |
+| BL-0074 | **N+1 query in `buildAppStateFromProject()`** — sequential queries per AI request. Refactor to `Promise.all()`. | OPEN | GA-DB-01 |
+| BL-0075 | **No circuit breaker for AI provider** — after N failures, mark provider "open" for cooldown. | OPEN | GA-ERR-06 |
+| BL-0076 | **No automatic AI provider fallback** — on error, retry with alternate provider. | OPEN | GA-ERR-07 |
+| BL-0077 | **Race condition in `upsertChatSettings`** — use `ON CONFLICT DO UPDATE` instead of read-then-write. | OPEN | GA-DB-03 |
 
 ### Performance
 
@@ -293,6 +306,36 @@
 | BL-0252 | Suppression workflow with reason + expiration | OPEN | UX-048 |
 | BL-0253 | Guided remediation wizard (step-by-step fixes) | OPEN | UX-049 |
 | BL-0254 | Risk score card for release readiness | OPEN | UX-050, IFX-031 |
+
+### Security Hardening (P2)
+
+| ID | Description | Status | Source |
+|----|-------------|--------|--------|
+| BL-0280 | **HSTS header missing** — enable via Helmet `hsts: { maxAge: 63072000, includeSubDomains: true }` | OPEN | GA-SEC-14 |
+| BL-0281 | **Referrer-Policy header** — add `strict-origin-when-cross-origin` | OPEN | GA-SEC-15 |
+| BL-0282 | **CSP `unsafe-inline` for styles** — replace with nonce-based or hash-based | OPEN | GA-SEC-16 |
+| BL-0283 | **scrypt cost factor not configured** — set `N=32768, r=8, p=1` explicitly | OPEN | GA-SEC-19 |
+| BL-0284 | **Auth endpoints lack brute-force protection** — strict limiter + temp lockout | OPEN | GA-SEC-07 |
+
+### API & Data Contracts
+
+| ID | Description | Status | Source |
+|----|-------------|--------|--------|
+| BL-0285 | **No pagination on circuit endpoints** — add `limit/offset/sort` on instances/nets/wires | OPEN | GA-API-02 |
+| BL-0286 | **No API versioning** — introduce `/api/v1/` prefix + `Deprecation`/`Sunset` headers | OPEN | GA-API-03 |
+| BL-0287 | **No SSE reconnection logic** — retry with exponential backoff + "Reconnecting..." UI | OPEN | GA-API-05 |
+| BL-0288 | **No SSE heartbeat events** — emit `:heartbeat\n\n` every 15-30s during idle | OPEN | GA-API-06 |
+| BL-0289 | **Delete lifecycle inconsistent** — define global soft-vs-hard policy matrix by entity | OPEN | GA-DATA-01 |
+| BL-0290 | **No generated API types** — use zod-to-ts or OpenAPI; enforce in CI | OPEN | GA-API-04 |
+
+### Performance (P2)
+
+| ID | Description | Status | Source |
+|----|-------------|--------|--------|
+| BL-0291 | **53 inline style objects** create new references on every render — extract to `const` | OPEN | GA-PERF-01 |
+| BL-0292 | **Missing composite indexes** on soft-delete queries — add `(projectId, deletedAt)` | OPEN | GA-DB-02 |
+| BL-0293 | **`ChatPanel.handleSend` 22-item useCallback dependency** — consolidate to ref/reducer | OPEN | GA-PERF-02 |
+| BL-0294 | **Undo/redo stacks have no depth limit** — add configurable max (e.g. 100) | OPEN | GA-PERF-07 |
 
 ### Platform & Ops
 
@@ -539,6 +582,7 @@
 | Backend audit checklist | `docs/backend-audit-checklist.md` | 116 findings | 110 done, 4 open, 2 partial |
 | Audit v2 checklist | `docs/audit-v2-checklist.md` | 288 checks (213 pass, 7 partial) | 3 remaining fails |
 | Product analysis checklist | `docs/product-analysis-checklist.md` | 166 items | **166/166 DONE** |
+| Product analysis report | `docs/product-analysis-report.md` | 74 GA-* findings | Many fixed Waves A-E, ~30 remaining |
 | Codex master fix plan | `docs/plans/2026-03-06-codex-audit-master-fix-plan.md` | Waves A-G | A-E DONE, F-G open |
 
 ---
