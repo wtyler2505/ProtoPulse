@@ -42,8 +42,15 @@ import type { CircuitInstanceRow, CircuitNetRow, ComponentPart } from '@shared/s
 import type { Connector, Shape, PartMeta, PartViews } from '@shared/component-types';
 import { COMPONENT_DRAG_TYPE, type ComponentDragData } from './ComponentPlacer';
 import { POWER_SYMBOL_DRAG_TYPE, type PowerSymbolDragData } from './PowerSymbolPalette';
-import { CircuitBoard } from 'lucide-react';
+import { CircuitBoard, Plus, Cable, Zap, ClipboardPaste, CheckSquare, ShieldAlert } from 'lucide-react';
 import ERCOverlay from './ERCOverlay';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
 
 // ---------------------------------------------------------------------------
 // React Flow type registrations
@@ -721,15 +728,59 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleFitView]);
 
+  // Context menu handlers
+  const handleCtxAddComponent = useCallback(() => {
+    // Focus the sidebar component search so the user can pick a component to place
+    window.dispatchEvent(new CustomEvent('protopulse:focus-component-search'));
+  }, []);
+
+  const handleCtxAddWire = useCallback(() => {
+    setActiveTool('draw-net');
+  }, []);
+
+  const handleCtxAddPower = useCallback(() => {
+    const pos = reactFlowInstance.screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+    const snapped = snapEnabled
+      ? { x: Math.round(pos.x / gridSize) * gridSize, y: Math.round(pos.y / gridSize) * gridSize }
+      : pos;
+    const newSymbol: PowerSymbol = {
+      id: crypto.randomUUID(),
+      type: 'VCC',
+      netName: 'VCC',
+      x: snapped.x,
+      y: snapped.y,
+      rotation: 0,
+    };
+    const currentSymbols = settings.powerSymbols ?? [];
+    updateDesign.mutate({
+      projectId,
+      id: circuitId,
+      settings: { ...settings, powerSymbols: [...currentSymbols, newSymbol] },
+    });
+  }, [reactFlowInstance, snapEnabled, gridSize, settings, updateDesign, projectId, circuitId]);
+
+  const handleCtxSelectAll = useCallback(() => {
+    setLocalNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
+  }, [setLocalNodes]);
+
+  const handleCtxRunErc = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('protopulse:run-erc'));
+  }, []);
+
   return (
-    <div
-      className="w-full h-full relative"
-      data-testid="schematic-canvas"
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onMouseMove={handleCanvasMouseMove}
-      onMouseLeave={handleCanvasMouseLeave}
-    >
+    <ContextMenu>
+      <ContextMenuTrigger asChild>
+        <div
+          className="w-full h-full relative"
+          data-testid="schematic-canvas"
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseLeave={handleCanvasMouseLeave}
+        >
       <SchematicToolbar
         activeTool={activeTool}
         onToolChange={setActiveTool}
@@ -864,7 +915,40 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           </span>
         </div>
       )}
-    </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
+        <ContextMenuItem data-testid="ctx-add-component" onSelect={handleCtxAddComponent}>
+          <Plus className="w-4 h-4 mr-2" />
+          Add Component
+        </ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-add-wire" onSelect={handleCtxAddWire}>
+          <Cable className="w-4 h-4 mr-2" />
+          Add Wire
+          <span className="ml-auto text-muted-foreground text-[10px]">W</span>
+        </ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-add-power" onSelect={handleCtxAddPower}>
+          <Zap className="w-4 h-4 mr-2" />
+          Add Power Symbol
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem data-testid="ctx-paste" onSelect={() => { /* paste handled by keyboard */ }}>
+          <ClipboardPaste className="w-4 h-4 mr-2" />
+          Paste
+          <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+V</span>
+        </ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-select-all" onSelect={handleCtxSelectAll}>
+          <CheckSquare className="w-4 h-4 mr-2" />
+          Select All
+          <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span>
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem data-testid="ctx-run-erc" onSelect={handleCtxRunErc}>
+          <ShieldAlert className="w-4 h-4 mr-2" />
+          Run ERC
+        </ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }
 

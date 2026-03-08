@@ -40,7 +40,7 @@ describe('computeComponentHash', () => {
   const baseComponent: StandardComponentDef = {
     title: 'Test Resistor',
     description: '10k resistor',
-    category: 'Resistors',
+    category: 'Passives',
     tags: ['resistor', '10k'],
     meta: { value: '10k', tolerance: '5%' },
     connectors: [],
@@ -71,7 +71,7 @@ describe('computeComponentHash', () => {
   });
 
   it('changes when category changes', () => {
-    const modified = { ...baseComponent, category: 'Capacitors' };
+    const modified = { ...baseComponent, category: 'Diodes' as const };
     expect(computeComponentHash(baseComponent)).not.toBe(computeComponentHash(modified));
   });
 

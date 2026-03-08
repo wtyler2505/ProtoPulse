@@ -11,7 +11,7 @@ import { useDndState, type ComponentDragData } from '@/lib/dnd-context';
 import CustomNode from './CustomNode';
 import AssetManager from '@/components/panels/AssetManager';
 import { cn } from '@/lib/utils';
-import { MousePointer2, Grid, Move, Maximize, Cpu, Component, Pencil, Brain, X, RefreshCw, Zap, AlertTriangle, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { MousePointer2, Grid, Move, Maximize, Cpu, Component, Pencil, Brain, X, RefreshCw, Zap, AlertTriangle, Info, ChevronDown, ChevronUp, Plus, ClipboardPaste, CheckSquare, ShieldCheck, FileJson, FileText } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from '@/components/ui/context-menu';
 import { Badge } from '@/components/ui/badge';
@@ -495,6 +495,11 @@ function ArchitectureFlow() {
     }
   }, [selectedNodeId, localNodes, setPendingComponentPartId, addOutputLog, setActiveView]);
 
+  const handleContextRunValidation = useCallback(() => {
+    addOutputLog('[ARCH] Navigating to Validation view');
+    setActiveView('validation');
+  }, [addOutputLog, setActiveView]);
+
   return (
     <ContextMenu onOpenChange={(open) => { if (open) handleContextMenuHint(); }}>
       <ContextMenuTrigger asChild>
@@ -900,24 +905,56 @@ function ArchitectureFlow() {
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
         <ContextMenuSub>
-          <ContextMenuSubTrigger>Add Component</ContextMenuSubTrigger>
+          <ContextMenuSubTrigger data-testid="ctx-add-node">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Node
+          </ContextMenuSubTrigger>
           <ContextMenuSubContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
             {['MCU', 'Sensor', 'Power', 'Communication', 'Connector'].map((t) => (
               <ContextMenuItem key={t} onSelect={() => handleAddComponent(t)}>{t}</ContextMenuItem>
             ))}
           </ContextMenuSubContent>
         </ContextMenuSub>
-        <ContextMenuItem data-testid="context-paste" onSelect={handleContextPaste}>Paste <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+V</span></ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-paste" onSelect={handleContextPaste}>
+          <ClipboardPaste className="w-4 h-4 mr-2" />
+          Paste
+          <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+V</span>
+        </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={handleContextFitView}>Fit View <span className="ml-auto text-muted-foreground text-[10px]">F</span></ContextMenuItem>
-        <ContextMenuItem onSelect={handleContextToggleGrid}>Toggle Grid <span className="ml-auto text-muted-foreground text-[10px]">G</span></ContextMenuItem>
-        <ContextMenuItem data-testid="context-select-all" onSelect={handleContextSelectAll}>Select All <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span></ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-select-all" onSelect={handleContextSelectAll}>
+          <CheckSquare className="w-4 h-4 mr-2" />
+          Select All
+          <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+A</span>
+        </ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-zoom-to-fit" onSelect={handleContextFitView}>
+          <Maximize className="w-4 h-4 mr-2" />
+          Zoom to Fit
+          <span className="ml-auto text-muted-foreground text-[10px]">F</span>
+        </ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-toggle-grid" onSelect={handleContextToggleGrid}>
+          <Grid className="w-4 h-4 mr-2" />
+          Toggle Grid
+          <span className="ml-auto text-muted-foreground text-[10px]">G</span>
+        </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={handleContextExportSummary}>Copy Summary <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+Shift+S</span></ContextMenuItem>
-        <ContextMenuItem onSelect={handleContextExportJSON}>Copy JSON <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+Shift+J</span></ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-run-validation" onSelect={handleContextRunValidation}>
+          <ShieldCheck className="w-4 h-4 mr-2" />
+          Run Validation
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem data-testid="ctx-copy-summary" onSelect={handleContextExportSummary}>
+          <FileText className="w-4 h-4 mr-2" />
+          Copy Summary
+          <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+Shift+S</span>
+        </ContextMenuItem>
+        <ContextMenuItem data-testid="ctx-copy-json" onSelect={handleContextExportJSON}>
+          <FileJson className="w-4 h-4 mr-2" />
+          Copy JSON
+          <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+Shift+J</span>
+        </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
-          data-testid="context-edit-component"
+          data-testid="ctx-edit-component"
           disabled={!selectedNodeId}
           onSelect={handleContextEditComponent}
         >

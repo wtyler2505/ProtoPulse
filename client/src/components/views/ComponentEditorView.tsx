@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield, Share2, Library, Plus, Sparkles, Camera } from 'lucide-react';
+import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield, Share2, Library, Plus, Sparkles, Camera, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
 import PinTable from '@/components/views/component-editor/PinTable';
@@ -227,7 +227,7 @@ function ComponentEditorContent() {
   const [publishIsPublic, setPublishIsPublic] = useState(true);
   const queryClient = useQueryClient();
 
-  const { data: parts, isLoading: partsLoading } = useComponentParts(projectId);
+  const { data: parts, isLoading: partsLoading, isError: partsError, error: partsFetchError, refetch: refetchParts } = useComponentParts(projectId);
   const createMutation = useCreateComponentPart();
   const updateMutation = useUpdateComponentPart();
   const publishMutation = usePublishToLibrary();
@@ -842,7 +842,22 @@ function ComponentEditorContent() {
           </div>
         </div>
         <div className="flex-1 overflow-auto">
-          {partsLoading ? (
+          {partsError ? (
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 h-full" data-testid="component-editor-error">
+              <Cpu className="w-10 h-10 text-destructive/60" />
+              <p className="text-sm text-destructive">
+                {partsFetchError instanceof Error ? partsFetchError.message : 'Failed to load component data'}
+              </p>
+              <button
+                data-testid="retry-component-editor"
+                onClick={() => void refetchParts()}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border bg-muted hover:bg-muted/80 hover:text-foreground text-muted-foreground transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Retry
+              </button>
+            </div>
+          ) : partsLoading ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-3 h-full" data-testid="loading-editor">
               <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
               <p className="text-muted-foreground text-sm">Loading component data…</p>

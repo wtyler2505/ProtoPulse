@@ -36,8 +36,19 @@ import {
   RotateCcw,
   FlipHorizontal,
   Circle,
+  RefreshCw,
+  CheckSquare,
+  Maximize,
+  ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
 import {
   DEFAULT_BOARD,
   DEFAULT_ZOOM,
@@ -79,7 +90,7 @@ import type { CircuitDesignRow, CircuitWireRow } from '@shared/schema';
 
 export default function PCBLayoutView() {
   const projectId = useProjectId();
-  const { data: circuits, isLoading } = useCircuitDesigns(projectId);
+  const { data: circuits, isLoading, isError, error, refetch } = useCircuitDesigns(projectId);
   const [activeCircuitId, setActiveCircuitId] = useState<number | null>(null);
   const activeCircuit = circuits?.find((c) => c.id === activeCircuitId) ?? circuits?.[0] ?? null;
 
@@ -87,6 +98,25 @@ export default function PCBLayoutView() {
     return (
       <div className="flex items-center justify-center h-full" data-testid="pcb-loading">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3" data-testid="pcb-error">
+        <CircuitBoard className="w-10 h-10 text-destructive/60" />
+        <p className="text-sm text-destructive">
+          {error instanceof Error ? error.message : 'Failed to load circuit designs'}
+        </p>
+        <button
+          data-testid="retry-pcb"
+          onClick={() => void refetch()}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border bg-muted hover:bg-muted/80 hover:text-foreground text-muted-foreground transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Retry
+        </button>
       </div>
     );
   }
@@ -260,6 +290,29 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
     [],
   );
 
+  // Context menu handlers
+  const handleCtxAddVia = useCallback(() => {
+    setTool('via');
+  }, []);
+
+  const handleCtxAddTrace = useCallback(() => {
+    setTool('trace');
+  }, []);
+
+  const handleCtxRunDrc = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('protopulse:run-drc'));
+  }, []);
+
+  const handleCtxZoomToFit = useCallback(() => {
+    setZoom(DEFAULT_ZOOM);
+    setPanOffset(DEFAULT_PAN);
+  }, []);
+
+  const handleCtxSelectAll = useCallback(() => {
+    setSelectedInstanceId(null);
+    setSelectedWireId(null);
+  }, []);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Toolbar */}
@@ -357,37 +410,67 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
       </div>
 
       {/* SVG canvas */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-hidden bg-[#1a1a1a] relative"
-        onMouseDown={handleMDown}
-        onMouseMove={handleMMove}
-        onMouseUp={handleMUp}
-        onMouseLeave={() => setMouseBoardPos(null)}
-        onKeyDown={handleKey}
-        onClick={handleClick}
-        onDoubleClick={handleDblClick}
-        tabIndex={0}
-        data-testid="pcb-canvas"
-      >
-        <svg ref={svgRef} width="100%" height="100%" data-testid="pcb-svg">
-          <g transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoom})`}>
-            <BoardGrid boardWidth={boardWidth} boardHeight={boardHeight} />
-            <BackLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
-            <ComponentFootprints instances={instances ?? []} selectedInstanceId={selectedInstanceId} activeLayer={activeLayer} onInstanceClick={handleInstanceClick} />
-            <FrontLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
-            <TraceInProgress points={tracePoints} activeLayer={activeLayer} traceWidth={traceWidth} />
-            <ViaOverlay vias={vias} selectedViaId={selectedViaId} onViaClick={(id) => setSelectedViaId(id)} />
-            <RatsnestOverlay nets={ratsnestNets} opacity={0.4} showLabels />
-          </g>
-        </svg>
-        <div className="absolute top-3 left-3 z-10">
-          <LayerStackPanel activeLayer={activeLayer} onLayerSelect={setActiveLayer} />
-        </div>
-        <LayerLegend boardWidth={boardWidth} boardHeight={boardHeight} />
-        <CoordinateReadout mouseBoardPos={mouseBoardPos} />
-        <EmptyGuidance hasPlacedComponents={hasPlacedComponents} />
-      </div>
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          <div
+            ref={containerRef}
+            className="flex-1 overflow-hidden bg-[#1a1a1a] relative"
+            onMouseDown={handleMDown}
+            onMouseMove={handleMMove}
+            onMouseUp={handleMUp}
+            onMouseLeave={() => setMouseBoardPos(null)}
+            onKeyDown={handleKey}
+            onClick={handleClick}
+            onDoubleClick={handleDblClick}
+            tabIndex={0}
+            data-testid="pcb-canvas"
+          >
+            <svg ref={svgRef} width="100%" height="100%" data-testid="pcb-svg">
+              <g transform={`translate(${panOffset.x}, ${panOffset.y}) scale(${zoom})`}>
+                <BoardGrid boardWidth={boardWidth} boardHeight={boardHeight} />
+                <BackLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
+                <ComponentFootprints instances={instances ?? []} selectedInstanceId={selectedInstanceId} activeLayer={activeLayer} onInstanceClick={handleInstanceClick} />
+                <FrontLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
+                <TraceInProgress points={tracePoints} activeLayer={activeLayer} traceWidth={traceWidth} />
+                <ViaOverlay vias={vias} selectedViaId={selectedViaId} onViaClick={(id) => setSelectedViaId(id)} />
+                <RatsnestOverlay nets={ratsnestNets} opacity={0.4} showLabels />
+              </g>
+            </svg>
+            <div className="absolute top-3 left-3 z-10">
+              <LayerStackPanel activeLayer={activeLayer} onLayerSelect={setActiveLayer} />
+            </div>
+            <LayerLegend boardWidth={boardWidth} boardHeight={boardHeight} />
+            <CoordinateReadout mouseBoardPos={mouseBoardPos} />
+            <EmptyGuidance hasPlacedComponents={hasPlacedComponents} />
+          </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
+          <ContextMenuItem data-testid="ctx-add-via" onSelect={handleCtxAddVia}>
+            <Circle className="w-4 h-4 mr-2" />
+            Add Via
+            <span className="ml-auto text-muted-foreground text-[10px]">4</span>
+          </ContextMenuItem>
+          <ContextMenuItem data-testid="ctx-add-trace" onSelect={handleCtxAddTrace}>
+            <Pencil className="w-4 h-4 mr-2" />
+            Add Trace
+            <span className="ml-auto text-muted-foreground text-[10px]">2</span>
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem data-testid="ctx-run-drc" onSelect={handleCtxRunDrc}>
+            <ShieldCheck className="w-4 h-4 mr-2" />
+            Run DRC
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem data-testid="ctx-zoom-to-fit" onSelect={handleCtxZoomToFit}>
+            <Maximize className="w-4 h-4 mr-2" />
+            Zoom to Fit
+          </ContextMenuItem>
+          <ContextMenuItem data-testid="ctx-select-all" onSelect={handleCtxSelectAll}>
+            <CheckSquare className="w-4 h-4 mr-2" />
+            Select All
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
     </div>
   );
 }

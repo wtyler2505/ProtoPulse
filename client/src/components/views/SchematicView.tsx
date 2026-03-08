@@ -4,7 +4,7 @@ import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useCircuitDesigns, useCreateCircuitDesign, useExpandArchitecture } from '@/lib/circuit-editor/hooks';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Plus, Loader2, CircuitBoard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Cpu, Zap, ShieldCheck, GitBranchPlus, FileStack } from 'lucide-react';
+import { Plus, Loader2, CircuitBoard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Cpu, Zap, ShieldCheck, GitBranchPlus, FileStack, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CircuitDesignRow } from '@shared/schema';
 import type { ERCViolation } from '@shared/circuit-types';
@@ -16,7 +16,7 @@ import HierarchicalSheetPanel from '@/components/circuit-editor/HierarchicalShee
 
 function SchematicViewContent() {
   const projectId = useProjectId();
-  const { data: circuits, isLoading } = useCircuitDesigns(projectId);
+  const { data: circuits, isLoading, isError, error, refetch } = useCircuitDesigns(projectId);
   const createMutation = useCreateCircuitDesign();
   const expandMutation = useExpandArchitecture();
   const [activeCircuitId, setActiveCircuitId] = useState<number | null>(null);
@@ -46,6 +46,25 @@ function SchematicViewContent() {
     return (
       <div className="flex items-center justify-center h-full" data-testid="schematic-loading">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3" data-testid="schematic-error">
+        <CircuitBoard className="w-10 h-10 text-destructive/60" />
+        <p className="text-sm text-destructive">
+          {error instanceof Error ? error.message : 'Failed to load circuit designs'}
+        </p>
+        <button
+          data-testid="retry-schematic"
+          onClick={() => void refetch()}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border bg-muted hover:bg-muted/80 hover:text-foreground text-muted-foreground transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Retry
+        </button>
       </div>
     );
   }

@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 13 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 20 verified-done + 12 fixed Wave 56) |
+| P1 | 9 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 20 verified-done + 12 fixed Wave 56, 4 fixed Wave 57) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -92,7 +92,7 @@
 |----|-------------|--------|--------|
 | BL-0024 | **CircuitCodeView chunk 724 KB** — Fixed: split CodeMirror (470KB) and Sucrase (206KB) into separate vendor chunks. CircuitCodeView 724→47KB. No 500KB warning. (Wave 55) | DONE | app-audit §15 |
 | BL-0025 | **7 context providers create unmemoized values** — Already fixed: all 7 providers (Architecture, BOM, Chat, Validation, History, Output, ProjectMeta) use useMemo on context values. | DONE | app-audit §15 |
-| BL-0026 | **ChatPanel has 22 useState hooks** — any state change re-renders entire 829-line component. | OPEN | app-audit §15 |
+| BL-0026 | **ChatPanel has 22 useState hooks** — any state change re-renders entire 829-line component. | DONE (Wave 57) — 21 useState → 3 useReducer hooks (useChatPanelUI, useChatMessaging, useMultimodalState) + 2 standalone | app-audit §15 |
 | BL-0027 | **Mutations invalidate full query lists** — every message triggers full refetch instead of optimistic update. | OPEN | app-audit §15 |
 
 ### Accessibility (Critical)
@@ -121,7 +121,7 @@
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
 | BL-0039 | **Collaboration runtime activation** — WebSocket rooms, CRDT ops exist (Wave 41) but not fully activated in production flow. | PARTIAL | MF-023 |
-| BL-0040 | **Standard categories not unified** — UI filter categories don't match storage categories end-to-end. | PARTIAL | MF-026 |
+| BL-0040 | **Standard categories not unified** — UI filter categories don't match storage categories end-to-end. | DONE (Wave 57) — shared/component-categories.ts as single source of truth, compile-time ComponentCategory type | MF-026 |
 | BL-0041 | **Metrics lifecycle not fully wired** — Fixed: startMetricsCollection() called on server listen, stopMetricsCollection()+flushMetrics() added to graceful shutdown (Wave 56). /api/metrics endpoint already exists. | DONE | MF-030 |
 | BL-0042 | **Route-level test coverage** weaker than actual route surface area. | PARTIAL | MF-032 |
 | BL-0043 | **Migration chain out of sync** with runtime schema (Drizzle push works but formal migrations drift). | PARTIAL | MF-014 |
@@ -136,7 +136,7 @@
 | BL-0047 | **Confirm modal for destructive actions** — Already implemented: ConfirmDialog on snapshot delete (DesignHistoryView), BOM delete (BomCards+BomTable), BOM snapshot delete (BomDiffPanel), output clear (OutputView). | DONE | UX-004 |
 | BL-0048 | **Replace misleading labels** — Fixed: "Fix all issues" → "Help me fix these issues" in ChatPanel suggestion (Wave 56). | DONE | UX-005 |
 | BL-0049 | **Consistent toast style** — Fixed: added success (emerald), warning (amber), info (cyan) variants to toast CVA alongside existing default + destructive (Wave 56). | DONE | UX-007 |
-| BL-0050 | **Retry button** on all network/API failure states. | OPEN | UX-008 |
+| BL-0050 | **Retry button** on all network/API failure states. | DONE (Wave 57) — retry buttons on 6 views (Schematic, PCB, DesignHistory, BomDiff, Lifecycle, ComponentEditor) | UX-008 |
 | BL-0051 | **"Last saved at"** — Already fixed: SaveStatusIndicator in Sidebar.tsx (lines 344-384) tracks mutations via useIsMutating, shows "Saving changes..."/"Last saved at HH:MM"/"All changes saved". | DONE | UX-010 |
 | BL-0052 | **Chat help links not clickable** — Already fixed: SettingsPanel.tsx has proper `<a>` elements with href/target/rel for Anthropic and Google console links. | DONE | app-audit §11 |
 | BL-0053 | **Chat model names inconsistent** — Already fixed: constants.ts uses consistent "Claude X.Y ModelName" pattern for all models (4.5 Sonnet, 4.6 Sonnet, 4 Opus, etc.). | DONE | app-audit §11 |
@@ -148,7 +148,7 @@
 | BL-0059 | **DRC violations not grouped** — Fixed: grouped by ruleType with sub-headers showing rule name + count (Wave 56). | DONE | app-audit §8, UX-042 |
 | BL-0060 | **BOM delete has no confirmation** — Already fixed: ConfirmDialog wraps delete in both BomCards.tsx (line 77-88) and BomTable.tsx (line 220-227) with "Remove BOM Item" title + variant=destructive. | DONE | app-audit §7 |
 | BL-0061 | **BOM column sorting** — Fixed: sortable headers (status, part number, manufacturer, stock, qty, unit price, total) with asc/desc/none toggle, ArrowUp/ArrowDown icons (Wave 56). | DONE | app-audit §7 |
-| BL-0062 | **No context menu** on Architecture/Schematic/PCB canvases. Common EDA actions undiscoverable. | OPEN | app-audit §2 |
+| BL-0062 | **No context menu** on Architecture/Schematic/PCB canvases. Common EDA actions undiscoverable. | DONE (Wave 57) — Radix ContextMenu on all 3 canvases with icons, data-testids, keyboard hints | app-audit §2 |
 | BL-0063 | **No visible undo/redo buttons** — Already fixed: SchematicToolbar.tsx has visible Undo2/Redo2 buttons (lines 91-118) with tooltips "Undo (Ctrl+Z)"/"Redo (Ctrl+Shift+Z)", disabled states, data-testids. | DONE | app-audit §2 |
 
 ---

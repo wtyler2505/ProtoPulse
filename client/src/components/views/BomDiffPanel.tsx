@@ -5,7 +5,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Camera, Trash2, GitCompareArrows, Plus, Minus, Pencil, Loader2, ArrowUpDown, DollarSign } from 'lucide-react';
+import { Camera, Trash2, GitCompareArrows, Plus, Minus, Pencil, Loader2, ArrowUpDown, DollarSign, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -44,7 +44,7 @@ export default function BomDiffPanel() {
   const [selectedSnapshotId, setSelectedSnapshotId] = useState<string>('');
 
   // Fetch snapshots
-  const { data: snapshotsResponse, isLoading: snapshotsLoading } = useQuery<{ data: BomSnapshotListItem[]; total: number }>({
+  const { data: snapshotsResponse, isLoading: snapshotsLoading, isError: snapshotsError, error: snapshotsFetchError, refetch: refetchSnapshots } = useQuery<{ data: BomSnapshotListItem[]; total: number }>({
     queryKey: [`/api/projects/${projectId}/bom-snapshots`],
   });
 
@@ -98,6 +98,25 @@ export default function BomDiffPanel() {
   }, [newLabel, createSnapshot]);
 
   const diff = diffResponse?.diff;
+
+  if (snapshotsError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3" data-testid="bom-diff-error">
+        <GitCompareArrows className="w-10 h-10 text-destructive/60" />
+        <p className="text-sm text-destructive">
+          {snapshotsFetchError instanceof Error ? snapshotsFetchError.message : 'Failed to load BOM snapshots'}
+        </p>
+        <button
+          data-testid="retry-bom-diff"
+          onClick={() => void refetchSnapshots()}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border bg-muted hover:bg-muted/80 hover:text-foreground text-muted-foreground transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 p-4 h-full overflow-auto" data-testid="bom-diff-panel">

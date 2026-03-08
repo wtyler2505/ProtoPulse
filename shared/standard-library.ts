@@ -9,6 +9,8 @@
  * Diodes, LEDs, Connectors, Displays & UI, Sensors, Communication Modules.
  */
 
+import type { ComponentCategory } from './component-categories';
+
 // ---------------------------------------------------------------------------
 // Types — we define our own shape to avoid coupling to Drizzle insert schema
 // which uses jsonb (unknown). The seed route will cast as needed.
@@ -53,7 +55,7 @@ interface Connector {
 export interface StandardComponentDef {
   title: string;
   description: string;
-  category: string;
+  category: ComponentCategory;
   tags: string[];
   meta: Record<string, unknown>;
   connectors: Connector[];
@@ -467,20 +469,8 @@ export const STANDARD_LIBRARY_COMPONENTS: StandardComponentDef[] = [
 
 /**
  * Category names present in the standard library.
+ *
+ * Re-exported from shared/component-categories.ts — the single source of truth.
  */
-export const STANDARD_LIBRARY_CATEGORIES = [
-  'Logic ICs',
-  'Passives',
-  'Microcontrollers',
-  'Power',
-  'Op-Amps',
-  'Transistors',
-  'Diodes',
-  'LEDs',
-  'Connectors',
-  'Displays & UI',
-  'Sensors',
-  'Communication',
-] as const;
-
-export type StandardLibraryCategory = (typeof STANDARD_LIBRARY_CATEGORIES)[number];
+export { COMPONENT_CATEGORIES as STANDARD_LIBRARY_CATEGORIES } from './component-categories';
+export type { ComponentCategory as StandardLibraryCategory } from './component-categories';

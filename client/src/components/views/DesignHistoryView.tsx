@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Save, Trash2, GitCompareArrows, Clock, Plus, Minus, Pencil, ArrowRight, Layers } from 'lucide-react';
+import { Save, Trash2, GitCompareArrows, Clock, Plus, Minus, Pencil, ArrowRight, Layers, RefreshCw } from 'lucide-react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import type { ArchDiffResult, ArchNodeDiffEntry, ArchEdgeDiffEntry, ArchFieldChange } from '@shared/arch-diff';
 
@@ -52,7 +52,7 @@ export default function DesignHistoryView() {
   const [diffLoading, setDiffLoading] = useState<number | null>(null);
 
   // Fetch snapshots
-  const { data: snapshotsResponse, isLoading } = useQuery<{ data: DesignSnapshotSummary[]; total: number }>({
+  const { data: snapshotsResponse, isLoading, isError, error, refetch } = useQuery<{ data: DesignSnapshotSummary[]; total: number }>({
     queryKey: [`/api/projects/${projectId}/snapshots`],
     queryFn: getQueryFn({ on401: 'throw' }),
   });
@@ -121,6 +121,25 @@ export default function DesignHistoryView() {
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3" data-testid="design-history-error">
+        <Layers className="w-10 h-10 text-destructive/60" />
+        <p className="text-sm text-destructive">
+          {error instanceof Error ? error.message : 'Failed to load design history'}
+        </p>
+        <button
+          data-testid="retry-design-history"
+          onClick={() => void refetch()}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border bg-muted hover:bg-muted/80 hover:text-foreground text-muted-foreground transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Retry
+        </button>
       </div>
     );
   }

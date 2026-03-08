@@ -19,6 +19,7 @@ import {
   AlertCircle,
   XCircle,
   HelpCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
@@ -179,7 +180,7 @@ export default function LifecycleDashboard() {
   const { toast } = useToast();
 
   // Data fetching
-  const { data: apiResponse, isLoading } = useQuery<LifecycleApiResponse>({
+  const { data: apiResponse, isLoading, isError, error, refetch } = useQuery<LifecycleApiResponse>({
     queryKey: [`/api/projects/${projectId}/lifecycle`],
     queryFn: getQueryFn({ on401: 'throw' }),
   });
@@ -412,6 +413,25 @@ export default function LifecycleDashboard() {
           <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-full" />
           <span className="text-sm text-muted-foreground">Loading lifecycle data...</span>
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-3" data-testid="lifecycle-error">
+        <Activity className="w-10 h-10 text-destructive/60" />
+        <p className="text-sm text-destructive">
+          {error instanceof Error ? error.message : 'Failed to load lifecycle data'}
+        </p>
+        <button
+          data-testid="retry-lifecycle"
+          onClick={() => void refetch()}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-border bg-muted hover:bg-muted/80 hover:text-foreground text-muted-foreground transition-colors"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Retry
+        </button>
       </div>
     );
   }

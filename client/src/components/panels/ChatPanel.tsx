@@ -27,10 +27,13 @@ import { queryClient } from '@/lib/queryClient';
 import ApiKeySetupDialog from './chat/ApiKeySetupDialog';
 import type { AIAction } from './chat/chat-types';
 import { useActionExecutor } from './chat/hooks/useActionExecutor';
+import useChatPanelUI from './chat/hooks/useChatPanelUI';
+import useChatMessaging from './chat/hooks/useChatMessaging';
+import useMultimodalState from './chat/hooks/useMultimodalState';
 import { parseLocalIntent } from './chat/parseLocalIntent';
 import { mapErrorToUserMessage, mapStreamErrorToUserMessage } from '@/lib/error-messages';
 import { useMultimodalInput } from '@/lib/multimodal-input';
-import type { InputType, ProcessingStatus } from '@/lib/multimodal-input';
+import type { InputType } from '@/lib/multimodal-input';
 import DesignAgentPanel from './chat/DesignAgentPanel';
 
 /** Maximum number of SSE reconnection attempts on network failure. */
@@ -231,8 +234,30 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const { activeView, setActiveView, activeSheetId, setActiveSheetId, projectName, setProjectName, projectDescription, setProjectDescription } = useProjectMeta();
   const { addToHistory } = useHistory();
   const { addOutputLog } = useOutput();
-  const [input, setInput] = useState('');
-  const [showQuickActions, setShowQuickActions] = useState(true);
+  // BL-0026: Consolidated UI visibility state (8 booleans → 1 useReducer)
+  const {
+    showSettings, showApiKey, showSetupDialog, showSearch,
+    showDesignAgent, showQuickActions, showScrollBtn, showMultimodalMenu,
+    toggleSettings, toggleApiKey, toggleSearch, toggleDesignAgent,
+    toggleQuickActions, toggleMultimodalMenu,
+    setShowScrollBtn, setShowSettings, setShowApiKey, setShowSetupDialog,
+    setShowSearch, setShowDesignAgent, setShowQuickActions, setShowMultimodalMenu,
+  } = useChatPanelUI();
+
+  // BL-0026: Consolidated messaging state (7 values → 1 useReducer)
+  const {
+    input, chatSearch, lastUserMessage, streamingContent,
+    pendingActions, copiedId, tokenInfo,
+    setInput, setChatSearch, setLastUserMessage, setStreamingContent,
+    setPendingActions, setCopiedId, setTokenInfo,
+  } = useChatMessaging();
+
+  // BL-0026: Consolidated multimodal state (3 values → 1 useReducer)
+  const {
+    multimodalInputType, multimodalStatus, attachedImage,
+    setMultimodalInputType, setMultimodalStatus, setAttachedImage,
+  } = useMultimodalState();
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -241,7 +266,6 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const projectId = useProjectId();
   const { aiProvider, setAiProvider, aiModel, setAiModel, aiTemperature, setAiTemperature, customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy } = useChatSettings();
   const { status: keyStatus, errorMessage: keyErrorMessage, validate: validateKey, reset: resetKeyStatus } = useApiKeyStatus();
-  const [showSetupDialog, setShowSetupDialog] = useState(false);
   // UI-07: Persist AI API key in localStorage (per-provider)
   const [aiApiKey, setAiApiKey] = useState(() => {
     try {
@@ -256,24 +280,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       return '';
     }
   });
-  const [showSettings, setShowSettings] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [chatSearch, setChatSearch] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
-  const [showDesignAgent, setShowDesignAgent] = useState(false);
-  const [pendingActions, setPendingActions] = useState<{ actions: AIAction[]; messageId: string } | null>(null);
-  const [streamingContent, setStreamingContent] = useState('');
-  const [lastUserMessage, setLastUserMessage] = useState('');
   const [isListening, setIsListening] = useState(false);
-  const [tokenInfo, setTokenInfo] = useState<{input: number; output: number; cost: number} | null>(null);
-  const [attachedImage, setAttachedImage] = useState<{ base64: string; mimeType: string; name: string; previewUrl: string } | null>(null);
 
   // Multimodal input integration
   const multimodal = useMultimodalInput();
-  const [showMultimodalMenu, setShowMultimodalMenu] = useState(false);
-  const [multimodalInputType, setMultimodalInputType] = useState<InputType | null>(null);
-  const [multimodalStatus, setMultimodalStatus] = useState<ProcessingStatus>('idle');
   const multimodalFileRef = useRef<HTMLInputElement>(null);
 
   const handleMultimodalTypeSelect = useCallback((type: InputType) => {
@@ -1038,7 +1048,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             fileInputRef={fileInputRef}
             onOpenSettings={() => setShowSettings(true)}
             showMultimodalMenu={showMultimodalMenu}
-            onToggleMultimodalMenu={() => setShowMultimodalMenu((prev) => !prev)}
+            onToggleMultimodalMenu={toggleMultimodalMenu}
             onMultimodalTypeSelect={handleMultimodalTypeSelect}
             multimodalStatus={multimodalStatus}
             multimodalFileRef={multimodalFileRef}
