@@ -93,25 +93,54 @@ interface NetSegmentJSON {
   waypoints?: Array<{ x: number; y: number }>;
 }
 
-function netToEdges(net: CircuitNetRow): Edge[] {
+/**
+ * Resolve a pin reference to a connector ID. If the pin reference is already
+ * a valid connector ID, return it. Otherwise, try matching by connector name
+ * (case-insensitive) — this handles AI/import-generated nets that use pin
+ * names (e.g. "PB0") instead of connector IDs (e.g. "pin1"). (BL-0014)
+ */
+function resolvePinId(
+  pin: string,
+  instanceId: number,
+  connectorsByInstance: Map<number, Connector[]>,
+): string {
+  const connectors = connectorsByInstance.get(instanceId);
+  if (!connectors) { return pin; }
+  // Direct match by ID — already correct
+  if (connectors.some((c) => c.id === pin)) { return pin; }
+  // Fallback: match by name (case-insensitive)
+  const byName = connectors.find((c) => c.name.toLowerCase() === pin.toLowerCase());
+  if (byName) { return byName.id; }
+  // No match found — return as-is (will cause React Flow warning)
+  return pin;
+}
+
+function netToEdges(
+  net: CircuitNetRow,
+  connectorsByInstance: Map<number, Connector[]>,
+): Edge[] {
   const segments = (net.segments ?? []) as NetSegmentJSON[];
   const style = (net.style ?? {}) as { color?: string };
 
-  return segments.map((seg) => ({
-    // Stable ID derived from segment endpoints — survives reordering
-    id: `net-${net.id}-${seg.fromInstanceId}:${seg.fromPin}-${seg.toInstanceId}:${seg.toPin}`,
-    type: 'schematic-net',
-    source: `instance-${seg.fromInstanceId}`,
-    sourceHandle: `pin-${seg.fromPin}`,
-    target: `instance-${seg.toInstanceId}`,
-    targetHandle: `pin-${seg.toPin}`,
-    data: {
-      netName: net.name,
-      netType: net.netType,
-      color: style.color,
-      busWidth: net.busWidth ?? undefined,
-    },
-  }));
+  return segments.map((seg) => {
+    const fromPin = resolvePinId(seg.fromPin, seg.fromInstanceId, connectorsByInstance);
+    const toPin = resolvePinId(seg.toPin, seg.toInstanceId, connectorsByInstance);
+    return {
+      // Stable ID derived from segment endpoints — survives reordering
+      id: `net-${net.id}-${seg.fromInstanceId}:${seg.fromPin}-${seg.toInstanceId}:${seg.toPin}`,
+      type: 'schematic-net',
+      source: `instance-${seg.fromInstanceId}`,
+      sourceHandle: `pin-${fromPin}`,
+      target: `instance-${seg.toInstanceId}`,
+      targetHandle: `pin-${toPin}`,
+      data: {
+        netName: net.name,
+        netType: net.netType,
+        color: style.color,
+        busWidth: net.busWidth ?? undefined,
+      },
+    };
+  });
 }
 
 function powerSymbolToNode(ps: PowerSymbol): Node<PowerNodeData> {
@@ -297,9 +326,21 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     return [...instanceNodes, ...powerNodes, ...labelNodes, ...ncNodes] as Node[];
   }, [instances, partsMap, settings.powerSymbols, settings.netLabels, settings.noConnectMarkers]);
 
+  // Build connector lookup by instance ID for pin resolution (BL-0014)
+  const connectorsByInstance = useMemo(() => {
+    const map = new Map<number, Connector[]>();
+    for (const inst of instances ?? []) {
+      const part = inst.partId != null ? partsMap.get(inst.partId) : undefined;
+      if (part) {
+        map.set(inst.id, (part.connectors ?? []) as Connector[]);
+      }
+    }
+    return map;
+  }, [instances, partsMap]);
+
   // Convert DB data → React Flow edges, marking selected net
   const rfEdges = useMemo(() => {
-    const edges = (nets ?? []).flatMap(netToEdges);
+    const edges = (nets ?? []).flatMap((net) => netToEdges(net, connectorsByInstance));
     if (selectedNetName) {
       return edges.map((e) => ({
         ...e,
@@ -311,7 +352,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       }));
     }
     return edges;
-  }, [nets, selectedNetName]);
+  }, [nets, selectedNetName, connectorsByInstance]);
 
   // Local React Flow state
   const [localNodes, setLocalNodes, onNodesChange] = useNodesState(rfNodes);
