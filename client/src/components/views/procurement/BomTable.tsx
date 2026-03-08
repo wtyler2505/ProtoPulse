@@ -1,8 +1,8 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useState, useCallback } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpDown, GripVertical, Pencil, Check, X, ShoppingCart, Trash2, Shield, Zap, CheckCircle2, AlertCircle, XCircle, RefreshCw, Clock } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Pencil, Check, X, ShoppingCart, Trash2, Shield, Zap, CheckCircle2, AlertCircle, XCircle, RefreshCw, Clock } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
@@ -14,6 +14,33 @@ import type { BomItem } from '@/lib/project-context';
 import type { EnrichedBomItem, EditValues } from './types';
 
 const BOM_ROW_HEIGHT = 48;
+
+type SortField = 'status' | 'partNumber' | 'manufacturer' | 'stock' | 'quantity' | 'unitPrice' | 'totalPrice';
+type SortDir = 'asc' | 'desc';
+
+function SortableHeader({ field, label, sortField, sortDir, onToggle, align }: {
+  field: SortField;
+  label: string;
+  sortField: SortField | null;
+  sortDir: SortDir;
+  onToggle: (field: SortField) => void;
+  align?: 'right';
+}) {
+  const active = sortField === field;
+  return (
+    <th className={cn('px-4 py-3', align === 'right' && 'text-right')}>
+      <button
+        type="button"
+        data-testid={`sort-${field}`}
+        onClick={() => { onToggle(field); }}
+        className={cn('inline-flex items-center gap-1 hover:text-foreground transition-colors', active && 'text-primary')}
+      >
+        {label}
+        {active ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />) : <ArrowUpDown className="w-2.5 h-2.5 opacity-40" />}
+      </button>
+    </th>
+  );
+}
 
 export interface BomTableProps {
   filteredBom: EnrichedBomItem[];
@@ -37,6 +64,37 @@ export function BomTable({
   filteredBom, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlightedItemId, handleHighlightItem, onAssessDamage, onFindAlternates,
 }: BomTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
+
+  const toggleSort = useCallback((field: SortField) => {
+    if (sortField === field) {
+      if (sortDir === 'asc') { setSortDir('desc'); }
+      else { setSortField(null); setSortDir('asc'); }
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  }, [sortField, sortDir]);
+
+  const sortedBom = useMemo(() => {
+    if (!sortField) { return filteredBom; }
+    const sorted = [...filteredBom];
+    const dir = sortDir === 'asc' ? 1 : -1;
+    sorted.sort((a, b) => {
+      switch (sortField) {
+        case 'status': return dir * a.status.localeCompare(b.status);
+        case 'partNumber': return dir * a.partNumber.localeCompare(b.partNumber);
+        case 'manufacturer': return dir * a.manufacturer.localeCompare(b.manufacturer);
+        case 'stock': return dir * (a.stock - b.stock);
+        case 'quantity': return dir * (a.quantity - b.quantity);
+        case 'unitPrice': return dir * (Number(a.unitPrice) - Number(b.unitPrice));
+        case 'totalPrice': return dir * (Number(a.totalPrice) - Number(b.totalPrice));
+        default: return 0;
+      }
+    });
+    return sorted;
+  }, [filteredBom, sortField, sortDir]);
 
   // Detect duplicate part numbers
   const duplicatePartNumbers = useMemo(() => {
@@ -57,7 +115,7 @@ export function BomTable({
   }, [filteredBom]);
 
   const virtualizer = useVirtualizer({
-    count: filteredBom.length,
+    count: sortedBom.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => BOM_ROW_HEIGHT,
     overscan: 10,
@@ -69,15 +127,15 @@ export function BomTable({
         <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-[10px] tracking-wider">
           <tr>
             <th className="w-8 px-1 py-3"><StyledTooltip content="Drag to reorder" side="right"><ArrowUpDown className="w-3 h-3 mx-auto" /></StyledTooltip></th>
-            <th className="px-4 py-3">Status</th>
-            <th className="px-4 py-3">Part Number</th>
-            <th className="px-4 py-3">Manufacturer</th>
+            <SortableHeader field="status" label="Status" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} />
+            <SortableHeader field="partNumber" label="Part Number" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} />
+            <SortableHeader field="manufacturer" label="Manufacturer" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} />
             <th className="px-4 py-3 w-64">Description</th>
             <th className="px-4 py-3">Supplier</th>
-            <th className="px-4 py-3 text-right">Stock</th>
-            <th className="px-4 py-3 text-right">Qty</th>
-            <th className="px-4 py-3 text-right">Unit Price</th>
-            <th className="px-4 py-3 text-right">Total</th>
+            <SortableHeader field="stock" label="Stock" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} align="right" />
+            <SortableHeader field="quantity" label="Qty" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} align="right" />
+            <SortableHeader field="unitPrice" label="Unit Price" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} align="right" />
+            <SortableHeader field="totalPrice" label="Total" sortField={sortField} sortDir={sortDir} onToggle={toggleSort} align="right" />
             <th className="px-4 py-3">Actions</th>
           </tr>
         </thead>
@@ -85,10 +143,10 @@ export function BomTable({
       <div ref={parentRef} className="overflow-auto max-h-[calc(100vh-20rem)]" style={{ contain: 'strict' }}>
         <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
           <table className="w-full text-sm text-left min-w-[800px]" style={{ position: 'absolute', top: 0, left: 0, width: '100%' }}>
-            <SortableContext items={filteredBom.map(item => Number(item.id))} strategy={verticalListSortingStrategy}>
+            <SortableContext items={sortedBom.map(item => Number(item.id))} strategy={verticalListSortingStrategy}>
               <tbody className="divide-y divide-border" style={{ transform: `translateY(${virtualizer.getVirtualItems()[0]?.start ?? 0}px)` }}>
                 {virtualizer.getVirtualItems().map((virtualRow) => {
-                  const item = filteredBom[virtualRow.index];
+                  const item = sortedBom[virtualRow.index];
                   return (
                     <SortableBomRow key={item.id} item={item} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlighted={highlightedItemId === Number(item.id)} onHighlight={handleHighlightItem} onAssessDamage={onAssessDamage} isDuplicate={duplicatePartNumbers.has(item.partNumber.toLowerCase().trim())} onFindAlternates={onFindAlternates} />
                   );

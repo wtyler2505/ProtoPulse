@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 25 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 9 verified-done + 6 fixed Wave 56) |
+| P1 | 22 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 12 verified-done + 9 fixed Wave 56) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -145,9 +145,9 @@
 | BL-0056 | **"BASH / LINUX" label misleading** — Fixed: changed to "SYSTEM LOG" in OutputView.tsx (Wave 56). | DONE | app-audit §9 |
 | BL-0057 | **Validation severity numbers** — Already fixed: ValidationView uses semantic text ("error"/"warning"/"info") with color-coded badges and icons, not numeric values. | DONE | app-audit §8 |
 | BL-0058 | **No severity filtering** — Fixed: added severity filter bar (error/warning/info toggles with counts) to ValidationView (Wave 56). | DONE | app-audit §8, UX-041 |
-| BL-0059 | **DRC violations not grouped** — identical violations listed individually, should group by rule type. | OPEN | app-audit §8, UX-042 |
+| BL-0059 | **DRC violations not grouped** — Fixed: grouped by ruleType with sub-headers showing rule name + count (Wave 56). | DONE | app-audit §8, UX-042 |
 | BL-0060 | **BOM delete has no confirmation** — Already fixed: ConfirmDialog wraps delete in both BomCards.tsx (line 77-88) and BomTable.tsx (line 220-227) with "Remove BOM Item" title + variant=destructive. | DONE | app-audit §7 |
-| BL-0061 | **BOM no column sorting** — can't sort by status, part number, price, stock. | OPEN | app-audit §7 |
+| BL-0061 | **BOM column sorting** — Fixed: sortable headers (status, part number, manufacturer, stock, qty, unit price, total) with asc/desc/none toggle, ArrowUp/ArrowDown icons (Wave 56). | DONE | app-audit §7 |
 | BL-0062 | **No context menu** on Architecture/Schematic/PCB canvases. Common EDA actions undiscoverable. | OPEN | app-audit §2 |
 | BL-0063 | **No visible undo/redo buttons** — Already fixed: SchematicToolbar.tsx has visible Undo2/Redo2 buttons (lines 91-118) with tooltips "Undo (Ctrl+Z)"/"Redo (Ctrl+Shift+Z)", disabled states, data-testids. | DONE | app-audit §2 |
 

@@ -847,6 +847,7 @@ type VirtualRow =
   | { type: 'arch'; issue: ArchIssue }
   | { type: 'section_header'; count: number }
   | { type: 'drc_header'; count: number }
+  | { type: 'drc_rule_header'; ruleType: string; count: number }
   | { type: 'erc_header'; count: number }
   | { type: 'comp'; issue: CompIssue }
   | { type: 'drc'; issue: DRCIssue }
@@ -890,8 +891,19 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
     if (drcIssues.length > 0) {
       const sortedDrc = [...drcIssues].sort(bySeverity);
       result.push({ type: 'drc_header' as const, count: sortedDrc.length });
+      // Group by ruleType (BL-0059)
+      const byRule = new Map<string, DRCIssue[]>();
       for (const issue of sortedDrc) {
-        result.push({ type: 'drc' as const, issue });
+        const group = byRule.get(issue.ruleType);
+        if (group) { group.push(issue); } else { byRule.set(issue.ruleType, [issue]); }
+      }
+      for (const [ruleType, ruleIssues] of Array.from(byRule.entries())) {
+        if (byRule.size > 1) {
+          result.push({ type: 'drc_rule_header' as const, ruleType, count: ruleIssues.length });
+        }
+        for (const issue of ruleIssues) {
+          result.push({ type: 'drc' as const, issue });
+        }
       }
     }
     if (ercIssues.length > 0) {
@@ -909,7 +921,9 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
     getScrollElement: () => parentRef.current,
     estimateSize: (index) => {
       const t = rows[index].type;
-      return (t === 'section_header' || t === 'erc_header' || t === 'drc_header') ? 48 : 72;
+      if (t === 'section_header' || t === 'erc_header' || t === 'drc_header') { return 48; }
+      if (t === 'drc_rule_header') { return 36; }
+      return 72;
     },
     overscan: 10,
   });
@@ -1023,6 +1037,12 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                 <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/20 backdrop-blur">
                   <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Design Rule Check (DRC)</h3>
                   <span className="text-xs text-muted-foreground">({row.count})</span>
+                </div>
+              )}
+              {row.type === 'drc_rule_header' && (
+                <div className="flex items-center gap-2 px-6 py-2 border-b border-border/30 bg-muted/10" data-testid={`drc-rule-group-${row.ruleType}`}>
+                  <span className="text-[10px] font-mono text-muted-foreground">{row.ruleType}</span>
+                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">{row.count}</Badge>
                 </div>
               )}
               {row.type === 'drc' && (
