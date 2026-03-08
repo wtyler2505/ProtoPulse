@@ -383,6 +383,33 @@ function ValidationViewContent() {
     return runERC(input);
   }, [circuitInstances, circuitNets, componentParts, circuits]);
 
+  // Severity filter state (BL-0058)
+  const [severityFilter, setSeverityFilter] = useState<Record<string, boolean>>({ error: true, warning: true, info: true });
+
+  const toggleSeverity = useCallback((sev: string) => {
+    setSeverityFilter((prev) => ({ ...prev, [sev]: !prev[sev] }));
+  }, []);
+
+  // Filter all issue arrays by severity
+  const filteredIssues = useMemo(() => issues.filter((i) => severityFilter[i.severity] !== false), [issues, severityFilter]);
+  const filteredComponentIssues = useMemo(() => componentIssues.filter((i) => severityFilter[i.severity] !== false), [componentIssues, severityFilter]);
+  const filteredDrcIssues = useMemo(() => drcIssues.filter((i) => severityFilter[i.severity] !== false), [drcIssues, severityFilter]);
+  const filteredErcViolations = useMemo(() => ercViolations.filter((v) => severityFilter[v.severity] !== false), [ercViolations, severityFilter]);
+
+  const totalIssues = issues.length + componentIssues.length + drcIssues.length + ercViolations.length;
+  const filteredTotal = filteredIssues.length + filteredComponentIssues.length + filteredDrcIssues.length + filteredErcViolations.length;
+
+  // Count by severity across all issue types
+  const severityCounts = useMemo(() => {
+    const all = [
+      ...issues.map((i) => i.severity),
+      ...componentIssues.map((i) => i.severity),
+      ...drcIssues.map((i) => i.severity),
+      ...ercViolations.map((v) => v.severity),
+    ];
+    return { error: all.filter((s) => s === 'error').length, warning: all.filter((s) => s === 'warning').length, info: all.filter((s) => s === 'info').length };
+  }, [issues, componentIssues, drcIssues, ercViolations]);
+
   const getIcon = (severity: string) => {
     switch (severity) {
       case 'error': return <XCircle className="w-5 h-5 text-destructive" />;
@@ -397,10 +424,14 @@ function ValidationViewContent() {
       <div className="w-full max-w-5xl flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-8 gap-4">
         <div>
           <h2 className="text-xl md:text-2xl font-display font-bold flex items-center gap-3">
-             <ActivityIcon /> 
+             <ActivityIcon />
              System Validation
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm">Found {issues.length + componentIssues.length + drcIssues.length + ercViolations.length} potential issues in your design.</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {filteredTotal === totalIssues
+              ? `Found ${totalIssues} potential issues in your design.`
+              : `Showing ${filteredTotal} of ${totalIssues} issues.`}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button data-testid="open-custom-rules" variant="outline" size="sm" onClick={() => { setCustomRulesOpen(true); }}>
@@ -420,18 +451,62 @@ function ValidationViewContent() {
       </div>
 
       <div className="w-full max-w-5xl flex-1 overflow-hidden bg-card/40 border border-border backdrop-blur-xl shadow-xl flex flex-col">
+        {/* Severity filter bar (BL-0058) */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/5" data-testid="severity-filter-bar">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mr-1">Filter:</span>
+          <button
+            data-testid="filter-error"
+            onClick={() => { toggleSeverity('error'); }}
+            className={cn(
+              'flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border transition-colors',
+              severityFilter.error
+                ? 'border-destructive/50 bg-destructive/10 text-destructive'
+                : 'border-border bg-transparent text-muted-foreground/50',
+            )}
+          >
+            <XCircle className="w-3 h-3" />
+            Errors ({severityCounts.error})
+          </button>
+          <button
+            data-testid="filter-warning"
+            onClick={() => { toggleSeverity('warning'); }}
+            className={cn(
+              'flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border transition-colors',
+              severityFilter.warning
+                ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-500'
+                : 'border-border bg-transparent text-muted-foreground/50',
+            )}
+          >
+            <AlertTriangle className="w-3 h-3" />
+            Warnings ({severityCounts.warning})
+          </button>
+          <button
+            data-testid="filter-info"
+            onClick={() => { toggleSeverity('info'); }}
+            className={cn(
+              'flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium border transition-colors',
+              severityFilter.info
+                ? 'border-primary/50 bg-primary/10 text-primary'
+                : 'border-border bg-transparent text-muted-foreground/50',
+            )}
+          >
+            <AlertCircle className="w-3 h-3" />
+            Info ({severityCounts.info})
+          </button>
+        </div>
+
         <div className="hidden md:flex items-center gap-6 p-4 border-b border-border bg-muted/10 backdrop-blur text-xs font-semibold text-muted-foreground uppercase tracking-wider">
            <div className="w-8 text-center">Sev</div>
            <div className="flex-1">Description</div>
            <div className="w-32">Component</div>
            <div className="w-32">Action</div>
         </div>
-        
+
         <VirtualizedIssueList
-          issues={issues}
-          componentIssues={componentIssues}
-          drcIssues={drcIssues}
-          ercIssues={ercViolations.map((v) => ({ id: v.id, severity: v.severity, message: v.message, ruleType: v.ruleType }))}
+          issues={filteredIssues}
+          componentIssues={filteredComponentIssues}
+          drcIssues={filteredDrcIssues}
+          ercIssues={filteredErcViolations.map((v) => ({ id: v.id, severity: v.severity, message: v.message, ruleType: v.ruleType }))}
           hasComponentParts={!!componentParts && componentParts.length > 0}
           getIcon={getIcon}
           deleteValidationIssue={deleteValidationIssue}

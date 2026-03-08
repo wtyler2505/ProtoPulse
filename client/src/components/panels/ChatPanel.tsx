@@ -808,7 +808,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       suggestions.push('Switch to Procurement');
     }
     if (content.includes('validation') || content.includes('issue') || content.includes('error')) {
-      suggestions.push('Fix all issues');
+      suggestions.push('Help me fix these issues');
       suggestions.push('Project Summary');
     }
     if (content.includes('generated') || content.includes('created') || content.includes('added')) {

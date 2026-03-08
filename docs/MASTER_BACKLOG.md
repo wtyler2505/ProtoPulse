@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 37 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55) |
+| P1 | 28 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 6 verified-done + 3 fixed Wave 56) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -133,23 +133,23 @@
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
 | BL-0046 | **Show real status labels** — remove fake "success" states, add working/success/failed chips. | OPEN | UX-001, UX-006 |
-| BL-0047 | **Confirm modal for destructive actions** (delete snapshot, clear data, etc). | OPEN | UX-004 |
-| BL-0048 | **Replace misleading labels** like "Fix all issues" with truthful wording. | OPEN | UX-005 |
+| BL-0047 | **Confirm modal for destructive actions** — Already implemented: ConfirmDialog on snapshot delete (DesignHistoryView), BOM delete (BomCards+BomTable), BOM snapshot delete (BomDiffPanel), output clear (OutputView). | DONE | UX-004 |
+| BL-0048 | **Replace misleading labels** — Fixed: "Fix all issues" → "Help me fix these issues" in ChatPanel suggestion (Wave 56). | DONE | UX-005 |
 | BL-0049 | **Consistent toast style** — success, warning, error, info variants. | OPEN | UX-007 |
 | BL-0050 | **Retry button** on all network/API failure states. | OPEN | UX-008 |
 | BL-0051 | **"Last saved at"** and "unsaved changes" indicator in editor header. | OPEN | UX-010 |
 | BL-0052 | **Chat help links not clickable** — Already fixed: SettingsPanel.tsx has proper `<a>` elements with href/target/rel for Anthropic and Google console links. | DONE | app-audit §11 |
 | BL-0053 | **Chat model names inconsistent** — Already fixed: constants.ts uses consistent "Claude X.Y ModelName" pattern for all models (4.5 Sonnet, 4.6 Sonnet, 4 Opus, etc.). | DONE | app-audit §11 |
-| BL-0054 | **No validation feedback on settings save** — no toast/status after "Save & Close". | OPEN | app-audit §11 |
-| BL-0055 | **Output view shows fake data** — 3 hardcoded mock log entries pretending to be system activity. | OPEN | app-audit §9 |
-| BL-0056 | **"BASH / LINUX" label misleading** — styled as terminal but is just a log viewer. | OPEN | app-audit §9 |
-| BL-0057 | **Validation severity numbers** with no legend — "3" and "1" with no context. | OPEN | app-audit §8 |
-| BL-0058 | **No severity filtering** on 139 validation issues. | OPEN | app-audit §8, UX-041 |
+| BL-0054 | **No validation feedback on settings save** — Fixed: added toast notification on "Save & Close" (Wave 55). | DONE | app-audit §11 |
+| BL-0055 | **Output view shows fake data** — Already fixed: OutputView uses real context data from useOutput() hook. No hardcoded mock entries remain. | DONE | app-audit §9 |
+| BL-0056 | **"BASH / LINUX" label misleading** — Fixed: changed to "SYSTEM LOG" in OutputView.tsx (Wave 56). | DONE | app-audit §9 |
+| BL-0057 | **Validation severity numbers** — Already fixed: ValidationView uses semantic text ("error"/"warning"/"info") with color-coded badges and icons, not numeric values. | DONE | app-audit §8 |
+| BL-0058 | **No severity filtering** — Fixed: added severity filter bar (error/warning/info toggles with counts) to ValidationView (Wave 56). | DONE | app-audit §8, UX-041 |
 | BL-0059 | **DRC violations not grouped** — identical violations listed individually, should group by rule type. | OPEN | app-audit §8, UX-042 |
-| BL-0060 | **BOM delete has no confirmation** — icon-only delete button with immediate action, no undo. | OPEN | app-audit §7 |
+| BL-0060 | **BOM delete has no confirmation** — Already fixed: ConfirmDialog wraps delete in both BomCards.tsx (line 77-88) and BomTable.tsx (line 220-227) with "Remove BOM Item" title + variant=destructive. | DONE | app-audit §7 |
 | BL-0061 | **BOM no column sorting** — can't sort by status, part number, price, stock. | OPEN | app-audit §7 |
 | BL-0062 | **No context menu** on Architecture/Schematic/PCB canvases. Common EDA actions undiscoverable. | OPEN | app-audit §2 |
-| BL-0063 | **No visible undo/redo buttons** — keyboard shortcuts work but undiscoverable. | OPEN | app-audit §2 |
+| BL-0063 | **No visible undo/redo buttons** — Already fixed: SchematicToolbar.tsx has visible Undo2/Redo2 buttons (lines 91-118) with tooltips "Undo (Ctrl+Z)"/"Redo (Ctrl+Shift+Z)", disabled states, data-testids. | DONE | app-audit §2 |
 
 ---
 

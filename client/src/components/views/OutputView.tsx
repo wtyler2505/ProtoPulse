@@ -94,7 +94,7 @@ function OutputView() {
               variant="destructive"
             />
             <span className="text-[10px]">{outputLog.length} entries</span>
-            <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-border pointer-events-none select-none" data-testid="label-shell-type">BASH / LINUX</Badge>
+            <Badge variant="outline" className="text-[10px] font-mono text-muted-foreground border-border pointer-events-none select-none" data-testid="label-shell-type">SYSTEM LOG</Badge>
           </div>
         </div>
         <div className="relative">
