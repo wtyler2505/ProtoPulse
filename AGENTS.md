@@ -10,7 +10,7 @@ Browser-based AI-assisted EDA (Electronic Design Automation) platform built for 
 
 **Origin story:** The creator is building a rover using Arduino Mega, NodeMCU ESP32, RioRand motor controllers, and salvaged hoverboard wheels — and couldn't find a single tool that covered the full journey from "I don't know electronics" to "here are my Gerbers." ProtoPulse exists to be that tool.
 
-**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 84 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC analysis, undo/redo, project ownership, design history, backup/restore.
+**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 88 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC analysis, undo/redo, project ownership, design history, backup/restore.
 
 **Where it's heading:** Interactive live simulation (EveryCircuit-style animated current flow), Fritzing-style breadboard wiring view, hardware communication via Web Serial API (talk to Arduino/ESP32 from the browser), camera-based component identification, engineering calculators, Arduino code generation, and a learning path that takes complete beginners through to PCB manufacturing. See `docs/future-features-and-ideas-list.md` for the full feature roadmap.
 
@@ -53,8 +53,8 @@ React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark them
 | `shared/drc-engine.ts` | Design Rule Check engine (shared between server + client) |
 | `server/routes.ts` | Barrel — registers 28 domain routers from `server/routes/` |
 | `server/circuit-routes.ts` | Barrel — registers 13 circuit routers from `server/circuit-routes/` |
-| `server/ai.ts` | AI system: prompts, 84 AI tools, streaming, multi-model routing |
-| `server/ai-tools.ts` | Barrel — registers 11 tool modules from `server/ai-tools/` |
+| `server/ai.ts` | AI system: prompts, 88 AI tools, streaming, multi-model routing |
+| `server/ai-tools.ts` | Barrel — registers 12 tool modules from `server/ai-tools/` |
 | `server/storage.ts` | `IStorage` interface + `DatabaseStorage` (LRU cache, pagination, soft deletes) |
 | `server/auth.ts` | Session auth (scrypt), API key encryption (AES-256-GCM) |
 | `server/cache.ts` | LRU cache implementation |
@@ -95,7 +95,7 @@ server/
   circuit-routes/     → designs, instances, nets, wires, netlist, exports, simulations,
                          hierarchy, imports, autoroute, expansion, utils, index
   ai.ts               → Anthropic + Gemini streaming, system prompt builder, action parser
-  ai-tools.ts         → Barrel — imports 11 tool modules from server/ai-tools/
+  ai-tools.ts         → Barrel — imports 12 tool modules from server/ai-tools/
   ai-tools/           → types, registry, navigation, architecture, circuit, component,
                          bom, validation, export, project, index
   storage.ts          → IStorage interface, DatabaseStorage with LRU cache

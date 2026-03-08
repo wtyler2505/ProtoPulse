@@ -17,6 +17,8 @@ import {
   Warehouse,
   Plug,
   Code2,
+  Wand2,
+  Radio,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -43,5 +45,7 @@ export const navItems: NavItem[] = [
   { icon: ShoppingBag, view: 'ordering', label: 'Order PCB' },
   { icon: Warehouse, view: 'storage', label: 'Inventory' },
   { icon: Plug, view: 'serial_monitor', label: 'Serial Monitor' },
+  { icon: Wand2, view: 'generative_design', label: 'Generative Design' },
+  { icon: Radio, view: 'digital_twin', label: 'Digital Twin' },
   { icon: TerminalSquare, view: 'output', label: 'Output' },
 ];

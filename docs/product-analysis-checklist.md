@@ -254,10 +254,10 @@
 
 ### P3 -- Moonshots
 
-- [ ] IN-23: Generative circuit design with reinforcement learning | Effort: XL | Priority: P3
-- [ ] IN-24: WebGPU-accelerated circuit simulation | Effort: XL | Priority: P3
+- [x] IN-23: Generative circuit design with reinforcement learning | Effort: XL | Priority: P3
+- [x] IN-24: WebGPU-accelerated circuit simulation | Effort: XL | Priority: P3
 - [x] IN-25: Circuit design as code (tscircuit paradigm) | Effort: XL | Priority: P3
-- [ ] IN-26: Digital twin with IoT feedback loop | Effort: XL | Priority: P3
+- [x] IN-26: Digital twin with IoT feedback loop | Effort: XL | Priority: P3
 
 **IN Total: 26** (P0: 2, P1: 8, P2: 12, P3: 4)
 

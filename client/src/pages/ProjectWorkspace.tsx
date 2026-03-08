@@ -34,9 +34,11 @@ const CommunityView = lazy(() => import('@/components/views/CommunityView'));
 const PcbOrderingView = lazy(() => import('@/components/views/PcbOrderingView'));
 const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
 const CircuitCodeView = lazy(() => import('@/components/views/CircuitCodeView'));
+const GenerativeDesignView = lazy(() => import('@/components/views/GenerativeDesignView'));
+const DigitalTwinView = lazy(() => import('@/components/views/DigitalTwinView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap, Plug, Code2 } from 'lucide-react';
+import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap, Plug, Code2, Wand2, Radio } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,6 +85,8 @@ const prefetchQueue: Array<() => Promise<unknown>> = [
   () => import('@/components/views/StorageManagerPanel'),
   () => import('@/components/panels/SerialMonitorPanel'),
   () => import('@/components/views/CircuitCodeView'),
+  () => import('@/components/views/GenerativeDesignView'),
+  () => import('@/components/views/DigitalTwinView'),
   () => import('@/components/panels/CommentsPanel'),
 ];
 
@@ -137,6 +141,8 @@ const tabDescriptions: Record<string, string> = {
   simulation: 'SPICE simulation, AC/DC analysis, and waveform viewer',
   serial_monitor: 'Serial monitor for Arduino, ESP32, and other hardware devices',
   circuit_code: 'Arduino/C++ code editor with hardware-aware generation and upload',
+  generative_design: 'AI-guided generative circuit design with evolutionary optimization',
+  digital_twin: 'Live hardware digital twin with IoT telemetry and sim comparison',
 };
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
@@ -440,6 +446,8 @@ function WorkspaceContent() {
     { id: 'simulation', label: 'Simulation', icon: Zap },
     { id: 'serial_monitor', label: 'Serial', icon: Plug },
     { id: 'circuit_code', label: 'Code', icon: Code2 },
+    { id: 'generative_design', label: 'Generative', icon: Wand2 },
+    { id: 'digital_twin', label: 'Twin', icon: Radio },
     { id: 'output', label: 'Exports', icon: TerminalSquare },
   ], []);
 
@@ -447,7 +455,7 @@ function WorkspaceContent() {
      Always visible: Dashboard, Architecture, Component Editor (entry points).
      Require architecture nodes: Schematic, Breadboard, PCB, Procurement, Validation, Output. */
   const hasDesignContent = (nodes ?? []).length > 0;
-  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns', 'kanban', 'knowledge', 'community', 'ordering', 'simulation', 'serial_monitor', 'circuit_code']);
+  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns', 'kanban', 'knowledge', 'community', 'ordering', 'simulation', 'serial_monitor', 'circuit_code', 'generative_design', 'digital_twin']);
 
   const visibleTabs = useMemo(
     () => tabs.filter(t => t.id !== 'project_explorer' && (alwaysVisibleIds.has(t.id) || hasDesignContent)),
@@ -868,6 +876,20 @@ function WorkspaceContent() {
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
                     <CircuitCodeView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'generative_design' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <GenerativeDesignView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'digital_twin' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <DigitalTwinView />
                   </Suspense>
                 </ErrorBoundary>
               )}

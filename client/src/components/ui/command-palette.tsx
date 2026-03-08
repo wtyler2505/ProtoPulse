@@ -22,6 +22,8 @@ import {
   ShoppingBag,
   Warehouse,
   Code2,
+  Wand2,
+  Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ViewMode } from '@/lib/project-context';
@@ -87,6 +89,8 @@ export default function CommandPalette({
     { id: 'nav-ordering', label: 'Order PCB', icon: ShoppingBag, action: () => onNavigate('ordering'), keywords: ['order', 'pcb', 'fabricate', 'manufacture', 'jlcpcb'] },
     { id: 'nav-storage', label: 'Inventory', icon: Warehouse, action: () => onNavigate('storage'), keywords: ['inventory', 'storage', 'stock', 'location', 'warehouse'] },
     { id: 'nav-circuit-code', label: 'Circuit Code', icon: Code2, action: () => onNavigate('circuit_code'), keywords: ['code', 'arduino', 'firmware', 'program', 'cpp', 'upload'] },
+    { id: 'nav-generative-design', label: 'Generative Design', icon: Wand2, action: () => onNavigate('generative_design'), keywords: ['generative', 'evolve', 'optimize', 'candidate', 'fitness', 'ai'] },
+    { id: 'nav-digital-twin', label: 'Digital Twin', icon: Radio, action: () => onNavigate('digital_twin'), keywords: ['twin', 'iot', 'telemetry', 'serial', 'live', 'hardware', 'sensor'] },
   ];
 
   const panelItems: CommandItemDef[] = [

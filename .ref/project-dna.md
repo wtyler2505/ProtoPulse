@@ -23,7 +23,7 @@
 
 All-in-one browser-based EDA tool built for makers and learners who want a single tool from "I don't know electronics" to "here are my Gerbers." Born from a real project (a rover with Arduino Mega, ESP32, hoverboard motors) where no single tool covered the full journey. Think TinkerCad + Fritzing + KiCad unified with AI.
 
-Monolithic Express server serves both the API and the Vite-built SPA. AI chat supports 82 AI tools that directly manipulate project state (add nodes, generate architectures, manage BOM, run DRC, circuit operations, exports). Multi-format export: KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF. All state flows through a single `ProjectProvider` React context backed by React Query mutations.
+Monolithic Express server serves both the API and the Vite-built SPA. AI chat supports 88 AI tools that directly manipulate project state (add nodes, generate architectures, manage BOM, run DRC, circuit operations, exports). Multi-format export: KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF. All state flows through a single `ProjectProvider` React context backed by React Query mutations.
 
 **Heading toward:** Interactive live simulation (EveryCircuit-style), Fritzing-style breadboard wiring, Web Serial hardware communication, camera-based component ID, engineering calculators. See `docs/future-features-and-ideas-list.md`.
 
@@ -44,7 +44,7 @@ Monolithic Express server serves both the API and the Vite-built SPA. AI chat su
 | LRU cache | `server/cache.ts` |
 | Exporters | `server/export/` (KiCad, Eagle, SPICE, BOM exporters) |
 | Generators | `server/export/` (Gerber, drill, pick-and-place, netlist generators) |
-| AI tools | `server/ai-tools.ts` (barrel → 11 tool modules in `server/ai-tools/`) |
+| AI tools | `server/ai-tools.ts` (barrel → 12 tool modules in `server/ai-tools/`) |
 | BOM comparison | `shared/bom-diff.ts` |
 | Architecture diff | `shared/arch-diff.ts` |
 | Netlist comparison | `shared/netlist-diff.ts` |
@@ -57,7 +57,7 @@ Monolithic Express server serves both the API and the Vite-built SPA. AI chat su
 4. `server/storage.ts` — `IStorage` interface + `DatabaseStorage` with LRU cache
 5. `server/routes.ts` — main REST endpoints; maps URLs to storage + AI calls
 6. `server/circuit-routes.ts` — circuit schematic API endpoints
-7. `server/ai.ts` — AI prompt construction, 82 AI tools, streaming SSE responses, multi-model routing
+7. `server/ai.ts` — AI prompt construction, 88 AI tools, streaming SSE responses, multi-model routing
 8. `client/src/lib/project-context.tsx` — monolithic context with 40+ state values + mutations
 9. `client/src/pages/ProjectWorkspace.tsx` — 3-panel layout wiring everything together
 
