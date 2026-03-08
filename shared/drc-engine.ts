@@ -1444,3 +1444,76 @@ export function runPcbDrc(
 
   return violations;
 }
+
+// -----------------------------------------------------------------------------
+// DRC Rule Explanations — beginner-friendly plain-language descriptions
+// -----------------------------------------------------------------------------
+
+/**
+ * Plain-language explanations for every DRC/ERC rule type. Aimed at beginners
+ * who are learning electronics for the first time. Each explanation describes
+ * what the rule checks and what could go wrong in real life if it is violated.
+ */
+export const DRC_EXPLANATIONS: Record<string, string> = {
+  // Component-level DRC rules (DRCRuleType from component-types.ts)
+  'min-clearance':
+    'Components or copper features are too close together. This can cause accidental short circuits during manufacturing, or make hand-soldering very difficult. Increasing the gap prevents solder bridges and electrical arcing.',
+  'min-trace-width':
+    'A trace (the copper wire on the board) is thinner than the minimum allowed. Thin traces can overheat and burn out when carrying current, and are harder for the factory to etch reliably.',
+  'pad-size':
+    'A solder pad is smaller than recommended for its component. Undersized pads make soldering unreliable — the joint may crack or fail over time, especially under vibration or thermal cycling.',
+  'pin-spacing':
+    'Pins on a component are spaced too close together or don\'t match the expected pitch. Incorrect spacing makes it impossible to solder the component onto the board, or causes bridged pins.',
+  'silk-overlap':
+    'Silkscreen labels or markings overlap each other or cover solder pads. This makes the board harder to read during assembly and can interfere with soldering if ink covers exposed copper.',
+  'courtyard-overlap':
+    'Two components\' physical outlines (courtyards) overlap, meaning they would collide on the real board. You need to move them apart so they both physically fit without touching.',
+  'annular-ring':
+    'The ring of copper around a drill hole is too narrow. If the drill drifts slightly during manufacturing, the copper ring could break, making the electrical connection unreliable or impossible.',
+  'thermal-relief':
+    'A pad connected to a large copper area (like a ground plane) is missing thermal relief — small spoke-like connections that limit heat flow. Without them, the plane acts as a heat sink and makes the pad nearly impossible to solder by hand.',
+  'trace-to-edge':
+    'A trace or pad is too close to the edge of the board. Board edges are cut with a router or V-score, which can nick nearby copper and create short circuits or break traces.',
+  'via-in-pad':
+    'A via (hole connecting layers) is placed directly in a solder pad. During reflow soldering, solder can wick down through the via leaving an unreliable joint. Use tented or filled vias, or move the via away from the pad.',
+  'solder-mask':
+    'The solder mask (the colored coating that protects the board) has openings that are too small, overlap incorrectly, or expose copper that should be covered. This can cause unintended solder bridges between adjacent pads.',
+
+  // PCB-level DRC rules (PcbDrcRuleType from component-types.ts)
+  'trace_clearance':
+    'Two traces belonging to different electrical nets are too close together. If they\'re close enough, voltage differences can cause arcing or crosstalk — unwanted signal interference that corrupts data or causes erratic behavior.',
+  'trace_width_min':
+    'A trace is narrower than the minimum width your board manufacturer can reliably produce. The factory may over-etch or break the trace entirely, creating an open circuit.',
+  'trace_width_max':
+    'A trace is wider than the maximum allowed. Excessively wide traces waste board space and can cause uneven copper distribution, leading to warping during manufacturing.',
+  'via_drill_min':
+    'A via\'s drill hole is smaller than what your manufacturer supports. The drill bit may break or the hole may not plate properly, leaving no electrical connection between layers.',
+  'via_annular_ring':
+    'The copper ring around a via hole is too thin. Manufacturing tolerances mean the drill can shift slightly — a thin ring may break, severing the connection between PCB layers.',
+  'pad_clearance':
+    'Two solder pads on different nets are too close. During soldering, a tiny bridge of solder can form between them, creating a short circuit that\'s hard to find and fix.',
+  'silk_clearance':
+    'Silkscreen printing is too close to exposed copper (pads or vias). Ink on copper can prevent proper solder wetting, leading to cold or weak solder joints.',
+  'board_edge_clearance':
+    'Copper features are too close to the board outline. The cutting process (routing or V-scoring) can damage nearby traces, causing open circuits or exposing copper to the environment.',
+  'diff_pair_spacing':
+    'The two traces in a differential pair (like USB or HDMI data lines) aren\'t spaced correctly. Differential pairs rely on precise spacing to maintain their impedance — incorrect spacing degrades signal quality and causes communication errors.',
+  'copper_pour_clearance':
+    'A copper fill zone is too close to a trace or pad on a different net. Without enough clearance, the pour can short-circuit to nearby signals, especially after minor manufacturing variations.',
+
+  // ERC rules (ERCRuleType from circuit-types.ts)
+  'unconnected-pin':
+    'A pin that should be wired to something is left floating. The circuit won\'t work correctly if signals can\'t reach their destination. Check your schematic for missing wires.',
+  'shorted-power':
+    'Two power rails with different voltages are connected together. This creates a direct short circuit that will damage components or blow a fuse the instant you power on.',
+  'floating-input':
+    'An input pin isn\'t connected to any signal or pulled to a known voltage. Floating inputs pick up random electrical noise and cause unpredictable behavior — the chip may oscillate, overheat, or produce garbage output.',
+  'missing-bypass-cap':
+    'An IC (integrated circuit) is missing a bypass capacitor on its power pin. Bypass caps filter out high-frequency noise on the power supply. Without one, the chip may malfunction, reset randomly, or emit electromagnetic interference.',
+  'driver-conflict':
+    'Two or more outputs are driving the same net. When one output tries to push high while another pushes low, excessive current flows through both, potentially burning out the output stages of both chips.',
+  'no-connect-connected':
+    'A pin marked as "no-connect" (NC) actually has a wire attached to it. NC pins are intentionally left unconnected — wiring them can cause unexpected behavior or violate the chip\'s datasheet requirements.',
+  'power-net-unnamed':
+    'A power net doesn\'t have a clear name like VCC, 3V3, or GND. Unnamed power nets make the schematic confusing and increase the risk of accidentally connecting the wrong voltage to a component.',
+};

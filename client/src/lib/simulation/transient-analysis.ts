@@ -40,6 +40,8 @@ import type {
   BJTParams,
   MOSFETParams,
 } from './device-models';
+import type { SimulationLimits } from './sim-limits';
+import { DEFAULT_SIM_LIMITS, checkSimLimits } from './sim-limits';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -157,6 +159,8 @@ export interface TransientAnalysisConfig {
   minStep?: number;
   /** Maximum adaptive timestep in seconds. */
   maxStep?: number;
+  /** Resource limits (wall time, iterations, output points). Defaults apply if omitted. */
+  limits?: SimulationLimits;
 }
 
 /** Result of transient analysis. */
@@ -557,6 +561,7 @@ export function runTransientAnalysis(config: TransientAnalysisConfig): Transient
     tolerance = 1e-9,
     minStep,
     maxStep,
+    limits = DEFAULT_SIM_LIMITS,
   } = config;
 
   const { nodes, groundNode, components, sources } = circuit;
@@ -698,7 +703,13 @@ export function runTransientAnalysis(config: TransientAnalysisConfig): Transient
   // Maximum total iterations to prevent infinite loops
   const MAX_TOTAL_STEPS = 1000000;
 
+  const wallStart = performance.now();
+
   while (t <= tStop && totalSteps + rejectedSteps < MAX_TOTAL_STEPS) {
+    // Check resource limits every 100 accepted steps
+    if (totalSteps % 100 === 0) {
+      checkSimLimits(wallStart, totalSteps + rejectedSteps, timePoints.length, limits);
+    }
     // Adjust step size to hit breakpoints precisely
     if (bpIndex < breakpoints.length) {
       // Skip past breakpoints we've already passed

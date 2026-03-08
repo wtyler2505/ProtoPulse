@@ -17,6 +17,7 @@ import type {
 } from '@shared/circuit-types';
 import { DEFAULT_CIRCUIT_SETTINGS, DEFAULT_ERC_RULES } from '@shared/circuit-types';
 import type { ComponentPart } from '@shared/schema';
+import { DRC_EXPLANATIONS } from '@shared/drc-engine';
 import {
   AlertTriangle,
   XCircle,
@@ -27,6 +28,7 @@ import {
   Settings2,
   Eye,
   EyeOff,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +69,7 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
   const [expandedRules, setExpandedRules] = useState<Set<ERCRuleType>>(new Set());
   const [showSettings, setShowSettings] = useState(false);
   const [rules, setRules] = useState<ERCRule[]>(DEFAULT_ERC_RULES);
+  const [expandedExplanations, setExpandedExplanations] = useState<Set<ERCRuleType>>(new Set());
 
   // Build parts map
   const partsMap = useMemo(() => {
@@ -122,6 +125,19 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
   // Toggle rule group expansion
   const toggleGroup = useCallback((ruleType: ERCRuleType) => {
     setExpandedRules((prev) => {
+      const next = new Set(prev);
+      if (next.has(ruleType)) {
+        next.delete(ruleType);
+      } else {
+        next.add(ruleType);
+      }
+      return next;
+    });
+  }, []);
+
+  // Toggle explanation visibility for a rule group
+  const toggleExplanation = useCallback((ruleType: ERCRuleType) => {
+    setExpandedExplanations((prev) => {
       const next = new Set(prev);
       if (next.has(ruleType)) {
         next.delete(ruleType);
@@ -297,6 +313,28 @@ const ERCPanel = memo(function ERCPanel({ circuitId, onHighlightViolation, onVio
 
                 {expandedRules.has(ruleType) && (
                   <div className="ml-5">
+                    {/* "Why does this matter?" expandable explanation */}
+                    {DRC_EXPLANATIONS[ruleType] && (
+                      <div className="px-2 py-1">
+                        <button
+                          data-testid={`rule-explanation-toggle-${ruleType}`}
+                          className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => toggleExplanation(ruleType)}
+                          aria-label={`${expandedExplanations.has(ruleType) ? 'Hide' : 'Show'} explanation for ${RULE_LABELS[ruleType]}`}
+                        >
+                          <HelpCircle className="w-3 h-3" />
+                          <span>Why does this matter?</span>
+                        </button>
+                        {expandedExplanations.has(ruleType) && (
+                          <p
+                            data-testid={`rule-explanation-${ruleType}`}
+                            className="mt-1 ml-4 text-xs text-muted-foreground leading-relaxed"
+                          >
+                            {DRC_EXPLANATIONS[ruleType]}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     {ruleViolations.map((violation) => (
                       <button
                         key={violation.id}

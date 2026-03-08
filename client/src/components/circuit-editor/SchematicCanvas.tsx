@@ -830,9 +830,12 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         {gridVisible && <Background color="#333" gap={gridSize} size={1} />}
         <Controls className="!bg-card !border-border !fill-foreground" />
         <MiniMap
-          className="!bg-card !border-border overflow-hidden"
-          nodeColor={() => '#06b6d4'}
+          className="!bg-card/80 !border-border overflow-hidden"
+          nodeColor={(node) => node.selected ? '#00F0FF' : '#555'}
           maskColor="rgba(0, 0, 0, 0.6)"
+          pannable
+          zoomable
+          data-testid="schematic-minimap"
         />
       </ReactFlow>
 

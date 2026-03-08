@@ -12,6 +12,9 @@
  *   - Generic 2nd order: H(s) = w0^2 / (s^2 + 2*zeta*w0*s + w0^2)
  */
 
+import type { SimulationLimits } from './sim-limits';
+import { DEFAULT_SIM_LIMITS, checkSimLimits } from './sim-limits';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -63,6 +66,8 @@ export interface FrequencyAnalysisInput {
   topology: FilterTopology;
   components: FilterComponents;
   sweep?: FrequencySweepConfig;
+  /** Resource limits (wall time, iterations, output points). Defaults apply if omitted. */
+  limits?: SimulationLimits;
 }
 
 /** Summary metrics extracted from a Bode plot. */
@@ -513,23 +518,34 @@ export function analyzeFrequencyResponse(input: FrequencyAnalysisInput): Frequen
     throw new Error('Points per decade must be between 1 and 1000');
   }
 
+  // Resource limits
+  const simLimits = input.limits ?? DEFAULT_SIM_LIMITS;
+
   // Generate frequency sweep
   const frequencies = generateLogFrequencies(fMin, fMax, pointsPerDecade);
 
   // Evaluate transfer function at each frequency
-  const data: FrequencyPoint[] = frequencies.map((freq) => {
+  const data: FrequencyPoint[] = [];
+  const wallStart = performance.now();
+  for (let i = 0; i < frequencies.length; i++) {
+    // Check resource limits every 100 points
+    if (i % 100 === 0 && i > 0) {
+      checkSimLimits(wallStart, i, data.length, simLimits);
+    }
+
+    const freq = frequencies[i];
     const omega = 2 * Math.PI * freq;
     const h = evaluateTransferFunction(topology, components, omega);
     const magnitude = complexMag(h);
     const magnitudeDb = magnitude > 0 ? 20 * Math.log10(magnitude) : -200;
     const phaseDeg = wrapPhase(radToDeg(complexPhaseRad(h)));
 
-    return {
+    data.push({
       frequency: freq,
       magnitudeDb,
       phaseDegrees: phaseDeg,
-    };
-  });
+    });
+  }
 
   // Extract summary metrics
   const summary = extractSummary(data, topology, components);

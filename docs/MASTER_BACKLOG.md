@@ -18,9 +18,9 @@
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, BL-0005 DONE Wave 60) |
 | P1 | 0 | All resolved (BL-0005 Wave 60, 3 verified-done Wave 59, 4 fixed Wave 58, 4 fixed Wave 57, 20+12 Wave 56, 9+4 Wave 55, 7 Wave 54) |
-| P2 | 118 | Feature gaps, polish, partial implementations (18 done Wave 60, 4 done Wave 61) |
+| P2 | 113 | Feature gaps, polish, partial implementations (18 done Wave 60, 4 done Wave 61, 5 done Wave 62) |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
-| **Total** | **260** | |
+| **Total** | **255** | |
 
 ---
 
@@ -168,7 +168,7 @@
 | BL-0106 | Auto decoupling/power network placement suggestions | OPEN | MF-064 |
 | BL-0107 | AI placement optimization assistant | OPEN | MF-065 |
 | BL-0108 | Node inline label editing on canvas — double-click to edit on Architecture (CustomNode), Schematic (InstanceNode, PowerNode) | DONE | Wave 61 |
-| BL-0109 | Node properties inspector panel | OPEN | app-audit §2 |
+| BL-0109 | Node properties inspector panel | DONE (Wave 62) — NodeInspectorPanel.tsx: editable label/type/description, position, edge count, delete w/ undo | app-audit §2 |
 | BL-0110 | Canvas copy/paste support — Architecture has Ctrl+C/V (internal clipboard with ID remapping). Schematic + PCB still need it. | PARTIAL | app-audit §2, Wave 60 verified |
 | BL-0111 | Multi-select rectangle on canvas — ReactFlow selectionOnDrag on Architecture + Schematic, PCB marquee types + renderer defined | PARTIAL | Wave 61 |
 | BL-0112 | Empty state guidance on canvases — all 4 canvases now have empty states (Architecture, Schematic, PCB, Breadboard). | DONE | Wave 60 |
@@ -186,10 +186,10 @@
 | BL-0124 | Simulation scenario manager with presets | OPEN | MF-076, IFX-018 |
 | BL-0125 | Simulation compare mode (before/after changes) | OPEN | MF-077, IFX-014 |
 | BL-0126 | Shared unit/scale contract across sim + DRC engines | PARTIAL | MF-078 |
-| BL-0127 | Simulation resource guardrails (time, memory, output) | OPEN | MF-079 |
+| BL-0127 | Simulation resource guardrails (time, memory, output) | DONE (Wave 62) — sim-limits.ts: SimulationLimits interface + checkSimLimits() wired into circuit-solver, transient, monte-carlo, frequency-analysis | MF-079 |
 | BL-0128 | Live current/voltage animation overlay (EveryCircuit-style) | OPEN | MF-080, IFX-011 |
 | BL-0129 | Failure injection mode (open/short/noisy sensor) | OPEN | IFX-013 |
-| BL-0130 | What-if slider for instant value sweeps | OPEN | IFX-012 |
+| BL-0130 | What-if slider for instant value sweeps | DONE (Wave 62) — what-if-engine.ts + WhatIfSliderPanel.tsx: parameter extraction, SI prefix formatting, per-param sliders with reset | IFX-012 |
 
 ### Hardware & Firmware
 
@@ -284,10 +284,10 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0230 | Mini-map for large schematic/PCB canvases | OPEN | UX-038 |
+| BL-0230 | Mini-map for large schematic/PCB canvases | DONE (Wave 62) — PCBMiniMap in PCBLayoutView.tsx + SchematicCanvas MiniMap enhanced with pan/zoom/neon cyan styling | UX-038 |
 | BL-0231 | Smart contextual radial menu on right-click | OPEN | UX-040 |
 | BL-0232 | Click validation issue → focus camera + flash component — ReactFlow fitView + CSS validation-focus-pulse animation | DONE | Wave 60 |
-| BL-0233 | "Why this rule matters" plain-language explanation | OPEN | UX-043 |
+| BL-0233 | "Why this rule matters" plain-language explanation | DONE (Wave 62) — DRC_EXPLANATIONS (28 rules) in drc-engine.ts, wired into ERCPanel + ValidationView with expandable toggles | UX-043 |
 | BL-0234 | Persist panel sizes/collapsed state (localStorage) — debounced writes, ViewMode validation on restore | DONE | Wave 60 |
 | BL-0235 | Command palette categories by workflow stage | OPEN | UX-016 |
 | BL-0236 | Context-aware shortcuts panel (`?` overlay) | OPEN | UX-017 |

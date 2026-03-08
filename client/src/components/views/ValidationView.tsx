@@ -7,7 +7,7 @@ import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import type { ViewMode } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Shield, Factory, Code2, Play, Trash2, Plus, ToggleLeft, ToggleRight } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Shield, Factory, Code2, Play, Trash2, Plus, ToggleLeft, ToggleRight, HelpCircle } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -40,6 +40,7 @@ import { runERC, type ERCInput } from '@/lib/circuit-editor/erc-engine';
 import { DEFAULT_ERC_RULES, DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
 import type { CircuitSettings } from '@shared/circuit-types';
 import type { ComponentPart } from '@shared/schema';
+import { DRC_EXPLANATIONS } from '@shared/drc-engine';
 import { useDesignGateway } from '@/lib/design-gateway';
 import type { DesignState } from '@/lib/design-gateway';
 import { useDfmChecker } from '@/lib/dfm-checker';
@@ -50,8 +51,12 @@ import type { ScriptDesignData } from '@/lib/drc-scripting';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
 
-/** Brief explanations for validation rule categories (UX-043: "why this rule matters" tooltips). */
-const RULE_EXPLANATIONS: Record<string, string> = {
+/** Brief explanations for validation rule categories (UX-043: "why this rule matters" tooltips).
+ *  DRC_EXPLANATIONS (from shared/drc-engine) provides detailed beginner-friendly text for every
+ *  DRC/ERC ruleType. This local map covers high-level validation *categories* used by the
+ *  architecture-level validator that don't map 1:1 to DRC rule types.
+ */
+const RULE_CATEGORY_EXPLANATIONS: Record<string, string> = {
   connectivity: 'Ensures all nodes are properly connected and no signals are left floating',
   power: 'Verifies power rails, decoupling, and voltage compatibility across the design',
   naming: 'Checks for consistent and unambiguous naming of nets, nodes, and components',
@@ -71,6 +76,12 @@ const RULE_EXPLANATIONS: Record<string, string> = {
   missing_value: 'Ensures all components have required values (resistance, capacitance, etc.)',
   esd: 'Flags ESD-sensitive components that may need protection circuitry',
 };
+
+/** Look up explanation for a ruleType — prefers the detailed DRC_EXPLANATIONS, falls back to
+ *  the category-level map, and finally a generic fallback string. */
+function getRuleExplanation(ruleType: string, fallbackPrefix: string): string {
+  return DRC_EXPLANATIONS[ruleType] ?? RULE_CATEGORY_EXPLANATIONS[ruleType] ?? `${fallbackPrefix} rule: ${ruleType}`;
+}
 
 /** Safely build a PartState from a ComponentPart DB row, providing defaults for nullable JSON fields. */
 function toPartState(part: ComponentPart): PartState {
@@ -566,7 +577,7 @@ function ValidationViewContent() {
                   <Badge variant={rule.severity === 'error' ? 'destructive' : rule.severity === 'warning' ? 'secondary' : 'outline'} className="text-[10px] px-1.5 py-0">
                     {rule.category}
                   </Badge>
-                  <StyledTooltip content={RULE_EXPLANATIONS[rule.category] ?? 'Validates design quality'} side="right">
+                  <StyledTooltip content={getRuleExplanation(rule.category, 'Validation')} side="right">
                     <span className="truncate cursor-help">{rule.name}</span>
                   </StyledTooltip>
                 </div>
@@ -879,6 +890,39 @@ type VirtualRow =
   | { type: 'drc'; issue: DRCIssue }
   | { type: 'erc'; issue: ERCIssue };
 
+/** Expandable DRC rule group header with "Why does this matter?" explanation toggle. */
+function RuleGroupHeader({ ruleType, count }: { ruleType: string; count: number }) {
+  const [showExplanation, setShowExplanation] = useState(false);
+  const explanation = DRC_EXPLANATIONS[ruleType];
+  return (
+    <div data-testid={`drc-rule-group-${ruleType}`} className="border-b border-border/30 bg-muted/10">
+      <div className="flex items-center gap-2 px-6 py-2">
+        <span className="text-[10px] font-mono text-muted-foreground">{ruleType}</span>
+        <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">{count}</Badge>
+        {explanation && (
+          <button
+            data-testid={`rule-explanation-toggle-${ruleType}`}
+            className="flex items-center gap-1 text-[9px] text-muted-foreground hover:text-foreground transition-colors ml-auto"
+            onClick={() => setShowExplanation((v) => !v)}
+            aria-label={`${showExplanation ? 'Hide' : 'Show'} explanation for ${ruleType}`}
+          >
+            <HelpCircle className="w-3 h-3" />
+            <span>Why does this matter?</span>
+          </button>
+        )}
+      </div>
+      {showExplanation && explanation && (
+        <p
+          data-testid={`rule-explanation-${ruleType}`}
+          className="px-6 pb-2 text-xs text-muted-foreground leading-relaxed"
+        >
+          {explanation}
+        </p>
+      )}
+    </div>
+  );
+}
+
 const VirtualizedIssueList = memo(function VirtualizedIssueList({
   issues, componentIssues, drcIssues, ercIssues, hasComponentParts, getIcon,
   deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
@@ -1068,10 +1112,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                 </div>
               )}
               {row.type === 'drc_rule_header' && (
-                <div className="flex items-center gap-2 px-6 py-2 border-b border-border/30 bg-muted/10" data-testid={`drc-rule-group-${row.ruleType}`}>
-                  <span className="text-[10px] font-mono text-muted-foreground">{row.ruleType}</span>
-                  <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">{row.count}</Badge>
-                </div>
+                <RuleGroupHeader ruleType={row.ruleType} count={row.count} />
               )}
               {row.type === 'drc' && (
                 <div data-testid={`row-drc-issue-${row.issue.id}`} role="button" tabIndex={0} onClick={() => setActiveView('component_editor')} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('component_editor'); } }} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group cursor-pointer">
@@ -1081,7 +1122,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
-                    <StyledTooltip content={RULE_EXPLANATIONS[row.issue.ruleType] ?? `DRC rule: ${row.issue.ruleType}`} side="bottom">
+                    <StyledTooltip content={getRuleExplanation(row.issue.ruleType, 'DRC')} side="bottom">
                       <div className="mt-1 text-[10px] text-muted-foreground font-mono cursor-help inline-block">{row.issue.ruleType} ({row.issue.view})</div>
                     </StyledTooltip>
                   </div>
@@ -1114,7 +1155,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                   </div>
                   <div className="flex-1">
                     <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
-                    <StyledTooltip content={RULE_EXPLANATIONS[row.issue.ruleType] ?? `ERC rule: ${row.issue.ruleType}`} side="bottom">
+                    <StyledTooltip content={getRuleExplanation(row.issue.ruleType, 'ERC')} side="bottom">
                       <div className="mt-1 text-[10px] text-muted-foreground font-mono cursor-help inline-block">{row.issue.ruleType}</div>
                     </StyledTooltip>
                   </div>

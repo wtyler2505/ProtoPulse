@@ -17,6 +17,8 @@
  */
 
 import { mulberry32 } from '@shared/prng';
+import type { SimulationLimits } from './sim-limits';
+import { DEFAULT_SIM_LIMITS, SimulationLimitError } from './sim-limits';
 
 // Re-export for backward compatibility (gpu-monte-carlo.ts imports from here)
 export { mulberry32 };
@@ -45,6 +47,8 @@ export interface MonteCarloConfig {
   parameters: Map<string, ToleranceSpec>;
   /** Evaluator function: given randomized parameter values, returns the output metric. */
   evaluator: (params: Map<string, number>) => number;
+  /** Resource limits (wall time, iterations, output points). Defaults apply if omitted. */
+  limits?: SimulationLimits;
 }
 
 /** Statistical summary of Monte Carlo results. */
@@ -110,12 +114,24 @@ export class MonteCarloAnalysis {
    * @returns Full analysis results including statistics, sensitivity, and histogram
    */
   run(config: MonteCarloConfig): MonteCarloResult {
-    const { iterations, seed, parameters, evaluator } = config;
+    const { iterations, seed, parameters, evaluator, limits = DEFAULT_SIM_LIMITS } = config;
     const rng = seed !== undefined ? mulberry32(seed) : Math.random;
 
     // Run all iterations
     const values: number[] = [];
+    const wallStart = performance.now();
     for (let i = 0; i < iterations; i++) {
+      // Check wall-time limit every 100 iterations
+      if (i % 100 === 0 && i > 0) {
+        const elapsed = performance.now() - wallStart;
+        if (elapsed > limits.maxDurationMs) {
+          throw new SimulationLimitError(
+            'time',
+            `Monte Carlo exceeded time limit (${(limits.maxDurationMs / 1000).toFixed(1)}s) after ${i} iterations`,
+          );
+        }
+      }
+
       const randomizedParams = new Map<string, number>();
       parameters.forEach((spec, name) => {
         randomizedParams.set(name, MonteCarloAnalysis.generateRandomValue(spec, rng));

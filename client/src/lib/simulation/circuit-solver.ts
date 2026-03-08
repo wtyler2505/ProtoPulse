@@ -14,6 +14,9 @@
  *   - Max ~100 nodes (practical for embedded solver)
  */
 
+import type { SimulationLimits } from './sim-limits';
+import { DEFAULT_SIM_LIMITS, checkSimLimits } from './sim-limits';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -367,6 +370,7 @@ export function solveTransient(
   stopTime: number,
   timeStep: number,
   maxPoints: number = 10000,
+  limits: SimulationLimits = DEFAULT_SIM_LIMITS,
 ): TransientResult {
   const { numNodes, components } = input;
 
@@ -425,7 +429,13 @@ export function solveTransient(
   }
 
   // Time stepping
+  const wallStart = performance.now();
   for (let step = 0; step <= numSteps; step++) {
+    // Check resource limits every 100 steps to avoid excessive perf.now() calls
+    if (step % 100 === 0) {
+      checkSimLimits(wallStart, step, timePoints.length, limits);
+    }
+
     const t = startTime + step * h;
     timePoints.push(t);
 
@@ -545,6 +555,7 @@ export function solveDCSweep(
   stopValue: number,
   stepValue: number,
   maxPoints: number = 10000,
+  limits: SimulationLimits = DEFAULT_SIM_LIMITS,
 ): DCSweepResult {
   const numSteps = Math.min(
     Math.ceil(Math.abs(stopValue - startValue) / Math.abs(stepValue)) + 1,
@@ -563,7 +574,13 @@ export function solveDCSweep(
     branchCurrentArrays[comp.id] = [];
   }
 
+  const wallStart = performance.now();
   for (let i = 0; i < numSteps; i++) {
+    // Check resource limits every 100 sweep points
+    if (i % 100 === 0) {
+      checkSimLimits(wallStart, i, sweepValues.length, limits);
+    }
+
     const sweepVal = startValue + i * actualStep;
     sweepValues.push(sweepVal);
 

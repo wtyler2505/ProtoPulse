@@ -21,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ArchitectureAnalyzer } from '@/lib/architecture-analyzer';
 import type { DesignAnalysisReport, SubsystemCategory, ComplexityLevel } from '@/lib/architecture-analyzer';
+import { NodeInspectorPanel } from './architecture/NodeInspectorPanel';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -391,6 +392,27 @@ function ArchitectureFlow() {
   const handleSelectionChange = useCallback(({ nodes: selectedNodes }: { nodes: Node[] }) => {
     const firstSelected = selectedNodes.length > 0 ? selectedNodes[0].id : null;
     setSelectedNodeId(firstSelected);
+  }, [setSelectedNodeId]);
+
+  const handleInspectorUpdateNode = useCallback((nodeId: string, updates: Record<string, unknown>) => {
+    pushUndoState();
+    markNodeInteracted();
+    setLocalNodes((nds) =>
+      nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...updates } } : n)),
+    );
+  }, [setLocalNodes, markNodeInteracted, pushUndoState]);
+
+  const handleInspectorDeleteNode = useCallback((nodeId: string) => {
+    pushUndoState();
+    markNodeInteracted();
+    setLocalNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setLocalEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    setSelectedNodeId(null);
+    addOutputLog('[INSPECTOR] Deleted node: ' + nodeId);
+  }, [setLocalNodes, setLocalEdges, markNodeInteracted, pushUndoState, setSelectedNodeId, addOutputLog]);
+
+  const handleInspectorClose = useCallback(() => {
+    setSelectedNodeId(null);
   }, [setSelectedNodeId]);
 
   const handleGenerateArchitecture = useCallback(() => {
@@ -887,6 +909,20 @@ function ArchitectureFlow() {
               </div>
             </div>
           )}
+
+          {/* Node inspector panel — shown when a node is selected and analysis is not open */}
+          {selectedNodeId && !showAnalysis && (() => {
+            const inspectedNode = localNodes.find((n) => n.id === selectedNodeId);
+            return inspectedNode ? (
+              <NodeInspectorPanel
+                node={inspectedNode}
+                edges={localEdges}
+                onUpdateNode={handleInspectorUpdateNode}
+                onDeleteNode={handleInspectorDeleteNode}
+                onClose={handleInspectorClose}
+              />
+            ) : null;
+          })()}
 
           {isGenerating && (
             <div className="absolute inset-0 z-50 bg-background/50 backdrop-blur flex items-center justify-center pointer-events-none">

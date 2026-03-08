@@ -82,7 +82,7 @@ import {
 } from '@/components/views/pcb-layout';
 import type { ActiveLayer, PcbTool, PanState } from '@/components/views/pcb-layout';
 import type { Via } from '@/lib/pcb/via-model';
-import type { CircuitDesignRow, CircuitWireRow } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
 // Top-level view (circuit selector + canvas)
@@ -156,6 +156,121 @@ export default function PCBLayoutView() {
         </span>
       </div>
       {activeCircuit && <PCBCanvas circuitId={activeCircuit.id} />}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PCB Mini-map — small overview of board + viewport indicator
+// ---------------------------------------------------------------------------
+
+interface PCBMiniMapProps {
+  boardWidth: number;
+  boardHeight: number;
+  instances: CircuitInstanceRow[];
+  panOffset: { x: number; y: number };
+  zoom: number;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  onPan: (offset: { x: number; y: number }) => void;
+}
+
+const MINIMAP_W = 150;
+const MINIMAP_H = 100;
+
+function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, containerRef, onPan }: PCBMiniMapProps) {
+  // Scale board to fit inside the minimap with some padding
+  const padding = 8;
+  const innerW = MINIMAP_W - padding * 2;
+  const innerH = MINIMAP_H - padding * 2;
+  const scaleX = innerW / boardWidth;
+  const scaleY = innerH / boardHeight;
+  const scale = Math.min(scaleX, scaleY);
+  const offsetX = padding + (innerW - boardWidth * scale) / 2;
+  const offsetY = padding + (innerH - boardHeight * scale) / 2;
+
+  // Compute viewport rect in minimap coordinates
+  const container = containerRef.current;
+  const containerW = container?.clientWidth ?? 800;
+  const containerH = container?.clientHeight ?? 600;
+
+  // The visible area in board coordinates:
+  // board coords = (screenCoord - panOffset) / zoom
+  const vpLeft = -panOffset.x / zoom;
+  const vpTop = -panOffset.y / zoom;
+  const vpW = containerW / zoom;
+  const vpH = containerH / zoom;
+
+  // Map to minimap coordinates
+  const vpMiniX = offsetX + vpLeft * scale;
+  const vpMiniY = offsetY + vpTop * scale;
+  const vpMiniW = vpW * scale;
+  const vpMiniH = vpH * scale;
+
+  const handleMinimapClick = useCallback(
+    (e: React.MouseEvent<SVGSVGElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+
+      // Convert minimap click to board coordinates
+      const boardX = (clickX - offsetX) / scale;
+      const boardY = (clickY - offsetY) / scale;
+
+      // Center the viewport on the clicked board position
+      const newPanX = -(boardX * zoom - containerW / 2);
+      const newPanY = -(boardY * zoom - containerH / 2);
+      onPan({ x: newPanX, y: newPanY });
+    },
+    [offsetX, offsetY, scale, zoom, containerW, containerH, onPan],
+  );
+
+  return (
+    <div
+      className="absolute bottom-2 right-2 z-10 bg-card/80 border border-border rounded-sm overflow-hidden"
+      data-testid="pcb-minimap"
+    >
+      <svg
+        width={MINIMAP_W}
+        height={MINIMAP_H}
+        className="cursor-pointer"
+        onClick={handleMinimapClick}
+      >
+        {/* Board outline */}
+        <rect
+          x={offsetX}
+          y={offsetY}
+          width={boardWidth * scale}
+          height={boardHeight * scale}
+          fill="#1a1a1a"
+          stroke="#444"
+          strokeWidth={1}
+        />
+        {/* Instance dots */}
+        {instances.map((inst) => {
+          const ix = inst.pcbX ?? inst.schematicX;
+          const iy = inst.pcbY ?? inst.schematicY;
+          return (
+            <circle
+              key={inst.id}
+              cx={offsetX + ix * scale}
+              cy={offsetY + iy * scale}
+              r={2}
+              fill="#06b6d4"
+            />
+          );
+        })}
+        {/* Viewport indicator */}
+        <rect
+          x={vpMiniX}
+          y={vpMiniY}
+          width={vpMiniW}
+          height={vpMiniH}
+          fill="rgba(0, 240, 255, 0.12)"
+          stroke="#00F0FF"
+          strokeWidth={1}
+          rx={1}
+        />
+      </svg>
     </div>
   );
 }
@@ -444,6 +559,15 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
             <LayerLegend boardWidth={boardWidth} boardHeight={boardHeight} />
             <CoordinateReadout mouseBoardPos={mouseBoardPos} />
             <EmptyGuidance hasPlacedComponents={hasPlacedComponents} />
+            <PCBMiniMap
+              boardWidth={boardWidth}
+              boardHeight={boardHeight}
+              instances={instances ?? []}
+              panOffset={panOffset}
+              zoom={zoom}
+              containerRef={containerRef}
+              onPan={setPanOffset}
+            />
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
