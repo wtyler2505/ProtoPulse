@@ -6,13 +6,13 @@ This file provides guidance to AI coding assistants working in this repository.
 
 ## ProtoPulse
 
-Browser-based AI-assisted EDA (Electronic Design Automation) platform built for makers, learners, and hobbyists who want **one tool that does everything** — from learning basic circuits to designing, wiring, simulating, and programming real hardware. The vision is TinkerCad Circuits + Fritzing + KiCad + Wokwi unified into a single AI-powered experience where you never have to leave the tool.
+Browser-based AI-assisted EDA (Electronic Design Automation) platform — the all-in-one suite for makers, learners, hobbyists, and anyone working with microcontrollers, electronics, robotics, or embedded systems. The vision is TinkerCad Circuits + Fritzing + KiCad + Wokwi + Arduino IDE unified into a single AI-powered experience where you never have to leave the tool. Not tied to any specific project — ProtoPulse is meant to be the tool you reach for regardless of what you're building.
 
-**Origin story:** The creator is building a rover using Arduino Mega, NodeMCU ESP32, RioRand motor controllers, and salvaged hoverboard wheels — and couldn't find a single tool that covered the full journey from "I don't know electronics" to "here are my Gerbers." ProtoPulse exists to be that tool.
+**Origin story:** Born from the OmniTrek Nexus rover project (Arduino Mega, NodeMCU ESP32, RioRand motor controllers, salvaged hoverboard wheels) where no single tool covered the full journey from "I don't know electronics" to "here are my Gerbers." That frustration became the mission: build one tool that does everything for any electronics/robotics/embedded project.
 
-**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 88 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC analysis, undo/redo, project ownership, design history, backup/restore.
+**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 88 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC/DC/transient simulation, Monte Carlo tolerance analysis, generative circuit design, WebGPU acceleration, digital twin with IoT telemetry, Web Serial hardware communication, engineering calculators, 3D board viewer, PCB ordering, undo/redo, project ownership, design history, backup/restore, offline PWA, collaboration.
 
-**Where it's heading:** Interactive live simulation (EveryCircuit-style animated current flow), Fritzing-style breadboard wiring view, hardware communication via Web Serial API (talk to Arduino/ESP32 from the browser), camera-based component identification, engineering calculators, Arduino code generation, and a learning path that takes complete beginners through to PCB manufacturing. See `docs/future-features-and-ideas-list.md` for the full feature roadmap.
+**Where it's heading:** See `docs/MASTER_BACKLOG.md` for the single source of truth on all future work, tech debt, and feature ideas.
 
 ## Stack
 

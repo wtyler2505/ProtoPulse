@@ -21,11 +21,11 @@
 
 ## Architecture in 30 Seconds
 
-All-in-one browser-based EDA tool built for makers and learners who want a single tool from "I don't know electronics" to "here are my Gerbers." Born from a real project (a rover with Arduino Mega, ESP32, hoverboard motors) where no single tool covered the full journey. Think TinkerCad + Fritzing + KiCad unified with AI.
+All-in-one browser-based EDA suite for makers, hobbyists, and anyone working with microcontrollers, electronics, robotics, or embedded systems. Born from the OmniTrek Nexus rover project where no single tool covered the full journey from "I don't know electronics" to "here are my Gerbers." Not project-specific — ProtoPulse is the universal tool. Think TinkerCad + Fritzing + KiCad + Arduino IDE unified with AI.
 
 Monolithic Express server serves both the API and the Vite-built SPA. AI chat supports 88 AI tools that directly manipulate project state (add nodes, generate architectures, manage BOM, run DRC, circuit operations, exports). Multi-format export: KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF. All state flows through a single `ProjectProvider` React context backed by React Query mutations.
 
-**Heading toward:** Interactive live simulation (EveryCircuit-style), Fritzing-style breadboard wiring, Web Serial hardware communication, camera-based component ID, engineering calculators. See `docs/future-features-and-ideas-list.md`.
+**Future work:** See `docs/MASTER_BACKLOG.md` for the single source of truth on all planned work, tech debt, and feature ideas.
 
 ## Entry Points
 
