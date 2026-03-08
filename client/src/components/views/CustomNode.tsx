@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Handle, Position, NodeProps, Node, Edge } from '@xyflow/react';
 import { CircuitBoard, Cpu, Radio, Battery, Zap, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ interface CustomNodeData {
   type: string;
   label: string;
   description?: string;
+  onLabelChange?: (newLabel: string) => void;
   [key: string]: unknown;
 }
 
@@ -43,7 +44,34 @@ export default function CustomNode({ id, data, selected }: NodeProps<Node<Custom
   const { nodes, edges, setNodes, setEdges } = useArchitecture();
   const { addOutputLog } = useOutput();
   const [pendingDelete, setPendingDelete] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(data.label);
+  const inputRef = useRef<HTMLInputElement>(null);
   const Icon = iconMap[data.type] || CircuitBoard;
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const commitEdit = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== data.label) {
+      if (data.onLabelChange) {
+        data.onLabelChange(trimmed);
+      } else {
+        setNodes(nodes.map((n: Node) => n.id === id ? { ...n, data: { ...n.data, label: trimmed } } : n));
+      }
+    }
+    setIsEditing(false);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditValue(data.label);
+  };
   
   return (
     <ContextMenu>
@@ -70,7 +98,30 @@ export default function CustomNode({ id, data, selected }: NodeProps<Node<Custom
             </div>
             <div>
               <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">{data.type}</div>
-              <div className="font-display font-medium text-sm text-foreground">{data.label}</div>
+              {isEditing ? (
+                <input
+                  ref={inputRef}
+                  data-testid="node-label-input"
+                  className="font-display font-medium text-sm text-foreground bg-transparent border-0 outline-none ring-1 ring-primary rounded px-1 py-0 w-full min-w-[60px]"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') { commitEdit(); }
+                    if (e.key === 'Escape') { cancelEdit(); }
+                    e.stopPropagation();
+                  }}
+                  onBlur={commitEdit}
+                  onMouseDown={(e) => e.stopPropagation()}
+                />
+              ) : (
+                <div
+                  className="font-display font-medium text-sm text-foreground cursor-text"
+                  onDoubleClick={() => { setEditValue(data.label); setIsEditing(true); }}
+                  data-testid="node-label-display"
+                >
+                  {data.label}
+                </div>
+              )}
             </div>
           </div>
 

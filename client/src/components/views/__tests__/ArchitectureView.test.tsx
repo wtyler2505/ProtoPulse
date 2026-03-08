@@ -161,6 +161,7 @@ vi.mock('@xyflow/react', () => ({
   Background: () => <div data-testid="rf-background" />,
   Controls: () => <div data-testid="rf-controls" />,
   MiniMap: () => <div data-testid="rf-minimap" />,
+  SelectionMode: { Full: 0, Partial: 1 },
 }));
 
 // -------------------------------------------------------------------

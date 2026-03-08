@@ -166,7 +166,7 @@ interface HistoryListProps {
   addOutputLog: (msg: string) => void;
 }
 
-export default function HistoryList({
+function HistoryList({
   history,
   timelineExpanded,
   setTimelineExpanded,
@@ -310,3 +310,5 @@ export default function HistoryList({
     </div>
   );
 }
+
+export default memo(HistoryList);

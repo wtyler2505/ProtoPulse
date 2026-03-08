@@ -63,7 +63,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function Router() {
   return (
     <Switch>
-      <Route path="/projects/:projectId" component={ProjectWorkspace} />
+      <Route path="/projects/:projectId/*?" component={ProjectWorkspace} />
       <Route path="/projects" component={ProjectPickerPage} />
       <Route path="/" component={ProjectPickerPage} />
       <Route component={NotFound} />

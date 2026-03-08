@@ -310,7 +310,36 @@ const EmptyGuidance = memo(function EmptyGuidance({ hasPlacedComponents }: Empty
   );
 });
 
-export { BoardGrid, ComponentFootprints, LayerLegend, CoordinateReadout, EmptyGuidance };
+// ---------------------------------------------------------------------------
+// Selection marquee rectangle overlay (rendered inside SVG board group)
+// ---------------------------------------------------------------------------
+
+interface SelectionMarqueeProps {
+  rect: { x: number; y: number; width: number; height: number } | null;
+}
+
+const SelectionMarquee = memo(function SelectionMarquee({ rect }: SelectionMarqueeProps) {
+  if (!rect || rect.width === 0 || rect.height === 0) {
+    return null;
+  }
+
+  return (
+    <rect
+      x={rect.x}
+      y={rect.y}
+      width={rect.width}
+      height={rect.height}
+      fill="rgba(0, 240, 255, 0.08)"
+      stroke="#00F0FF"
+      strokeWidth={0.5}
+      strokeDasharray="3,2"
+      pointerEvents="none"
+      data-testid="pcb-selection-rect"
+    />
+  );
+});
+
+export { BoardGrid, ComponentFootprints, LayerLegend, CoordinateReadout, EmptyGuidance, SelectionMarquee };
 export { DrcConstraintOverlay } from './DrcConstraintOverlay';
 export type { DrcConstraintOverlayProps, ClearanceRule } from './DrcConstraintOverlay';
 export { DrcConstraintToggle } from './DrcConstraintToggle';

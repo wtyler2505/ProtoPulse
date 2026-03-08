@@ -1,4 +1,4 @@
-import { memo, type ReactNode } from 'react';
+import { memo, useState, useRef, useEffect, type ReactNode } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import type { PowerSymbolType } from '@shared/circuit-types';
@@ -13,6 +13,7 @@ export interface PowerNodeData {
   netName: string;
   rotation: number;
   customLabel?: string;
+  onNetNameChange?: (newNetName: string) => void;
   [key: string]: unknown;
 }
 
@@ -130,12 +131,37 @@ function SchematicPowerNode({
   data,
   selected,
 }: NodeProps<Node<PowerNodeData>>) {
-  const { symbolType, netName, rotation, customLabel } = data;
+  const { symbolType, netName, rotation, customLabel, onNetNameChange } = data;
 
   const SymbolRenderer = SYMBOL_RENDERERS[symbolType] ?? VCCSymbol;
   const color = getColor(symbolType);
   const label = customLabel || netName;
   const ground = isGroundType(symbolType);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(label);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const commitEdit = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== label) {
+      onNetNameChange?.(trimmed);
+    }
+    setIsEditing(false);
+    setEditValue(label);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditValue(label);
+  };
 
   return (
     <div
@@ -156,12 +182,32 @@ function SchematicPowerNode({
       </svg>
 
       {/* Label */}
-      <div
-        className="absolute left-full ml-1 text-[9px] font-bold whitespace-nowrap"
-        style={{ color, top: '50%', transform: 'translateY(-50%)' }}
-      >
-        {label}
-      </div>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          data-testid="node-label-input"
+          className="absolute left-full ml-1 text-[9px] font-bold bg-transparent border-0 outline-none ring-1 ring-primary rounded px-0.5 py-0 whitespace-nowrap min-w-[30px]"
+          style={{ color, top: '50%', transform: 'translateY(-50%)' }}
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { commitEdit(); }
+            if (e.key === 'Escape') { cancelEdit(); }
+            e.stopPropagation();
+          }}
+          onBlur={commitEdit}
+          onMouseDown={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <div
+          className="absolute left-full ml-1 text-[9px] font-bold whitespace-nowrap cursor-text"
+          style={{ color, top: '50%', transform: 'translateY(-50%)' }}
+          onDoubleClick={() => { setEditValue(label); setIsEditing(true); }}
+          data-testid="node-label-display"
+        >
+          {label}
+        </div>
+      )}
 
       {/* Single pin handle — connection point */}
       <Handle

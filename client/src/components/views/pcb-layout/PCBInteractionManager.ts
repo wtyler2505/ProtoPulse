@@ -24,6 +24,20 @@ export interface PanState {
   lastMouse: Point;
 }
 
+/** Mutable ref state for marquee selection tracking. */
+export interface SelectionDragState {
+  isDragging: boolean;
+  origin: Point;
+}
+
+/** Immutable rect describing an active selection marquee in board coordinates. */
+export interface SelectionRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface CanvasCallbacks {
   setTool: (tool: PcbTool) => void;
   setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void;
@@ -34,6 +48,8 @@ export interface CanvasCallbacks {
   setTracePoints: (updater: (prev: Point[]) => Point[]) => void;
   setMouseBoardPos: (pos: Point | null) => void;
   setInstanceRotation: (instanceId: number, rotation: number) => void;
+  setSelectionRect?: (rect: SelectionRect | null) => void;
+  setSelectedInstanceIds?: (ids: number[]) => void;
 }
 
 export interface TraceFinishParams {
@@ -156,7 +172,7 @@ export function handleKeyDown(
 }
 
 // ---------------------------------------------------------------------------
-// Mouse: pan start
+// Mouse: pan start + selection rect start
 // ---------------------------------------------------------------------------
 
 export function handleMouseDown(
@@ -164,10 +180,30 @@ export function handleMouseDown(
   tool: PcbTool,
   selectedInstanceId: number | null,
   panState: PanState,
+  selectionState?: SelectionDragState,
+  svgEl?: SVGSVGElement | null,
+  panOffset?: Point,
+  zoom?: number,
 ): void {
-  if (e.button === 1 || (e.button === 0 && tool === 'select' && selectedInstanceId == null)) {
+  if (e.button === 1) {
+    // Middle-click always pans
     panState.isPanning = true;
     panState.lastMouse = { x: e.clientX, y: e.clientY };
+    return;
+  }
+
+  if (e.button === 0 && tool === 'select' && selectedInstanceId == null) {
+    // Left-click on empty space with select tool — start selection rect
+    if (selectionState && svgEl && panOffset != null && zoom != null) {
+      const rect = svgEl.getBoundingClientRect();
+      const bc = screenToBoardCoords(e.clientX, e.clientY, rect, panOffset.x, panOffset.y, zoom);
+      selectionState.isDragging = true;
+      selectionState.origin = bc;
+    } else {
+      // Fallback: pan if selection state not provided
+      panState.isPanning = true;
+      panState.lastMouse = { x: e.clientX, y: e.clientY };
+    }
   }
 }
 
@@ -181,7 +217,8 @@ export function handleMouseMove(
   svgEl: SVGSVGElement | null,
   panOffset: Point,
   zoom: number,
-  callbacks: Pick<CanvasCallbacks, 'setPanOffset' | 'setMouseBoardPos'>,
+  callbacks: Pick<CanvasCallbacks, 'setPanOffset' | 'setMouseBoardPos' | 'setSelectionRect'>,
+  selectionState?: SelectionDragState,
 ): void {
   if (panState.isPanning) {
     const dx = e.clientX - panState.lastMouse.x;
@@ -202,14 +239,55 @@ export function handleMouseMove(
     x: roundForDisplay(bc.x),
     y: roundForDisplay(bc.y),
   });
+
+  // Update selection marquee rect while dragging
+  if (selectionState?.isDragging && callbacks.setSelectionRect) {
+    const ox = selectionState.origin.x;
+    const oy = selectionState.origin.y;
+    callbacks.setSelectionRect({
+      x: Math.min(ox, bc.x),
+      y: Math.min(oy, bc.y),
+      width: Math.abs(bc.x - ox),
+      height: Math.abs(bc.y - oy),
+    });
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Mouse: pan end
 // ---------------------------------------------------------------------------
 
-export function handleMouseUp(panState: PanState): void {
+export function handleMouseUp(
+  panState: PanState,
+  selectionState?: SelectionDragState,
+  selectionRect?: SelectionRect | null,
+  instances?: Array<{ id: number; pcbX: number | null; pcbY: number | null }>,
+  callbacks?: Pick<CanvasCallbacks, 'setSelectionRect' | 'setSelectedInstanceIds'>,
+): void {
   panState.isPanning = false;
+
+  // Finalize marquee selection
+  if (selectionState?.isDragging) {
+    selectionState.isDragging = false;
+
+    if (selectionRect && instances && callbacks?.setSelectedInstanceIds) {
+      const { x, y, width, height } = selectionRect;
+      const selected = instances
+        .filter((inst) => {
+          if (inst.pcbX == null || inst.pcbY == null) { return false; }
+          return (
+            inst.pcbX >= x &&
+            inst.pcbX <= x + width &&
+            inst.pcbY >= y &&
+            inst.pcbY <= y + height
+          );
+        })
+        .map((inst) => inst.id);
+      callbacks.setSelectedInstanceIds(selected);
+    }
+
+    callbacks?.setSelectionRect?.(null);
+  }
 }
 
 // ---------------------------------------------------------------------------

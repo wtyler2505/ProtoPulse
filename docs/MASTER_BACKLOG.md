@@ -16,11 +16,11 @@
 
 | Priority | Count | Description |
 |----------|-------|-------------|
-| P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 1 | BL-0005 remaining (3 verified-done Wave 59, 4 fixed Wave 58, 4 fixed Wave 57, 20 verified + 12 fixed Wave 56, 9 verified + 4 fixed Wave 55, 7 Wave 54) |
-| P2 | 128 | Feature gaps, polish, partial implementations (12 verified-done Wave 60: security headers, perf, SSE, health/admin) |
+| P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, BL-0005 DONE Wave 60) |
+| P1 | 0 | All resolved (BL-0005 Wave 60, 3 verified-done Wave 59, 4 fixed Wave 58, 4 fixed Wave 57, 20+12 Wave 56, 9+4 Wave 55, 7 Wave 54) |
+| P2 | 118 | Feature gaps, polish, partial implementations (18 done Wave 60, 4 done Wave 61) |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
-| **Total** | **271** | |
+| **Total** | **260** | |
 
 ---
 
@@ -34,7 +34,7 @@
 | BL-0002 | **`/api/seed` is public** — listed in `PUBLIC_PATHS`. Any non-prod deployment allows unauthenticated DB seeding. | DONE (Wave 52) | app-audit §14 |
 | BL-0003 | **API keys sent in plaintext** in every `/api/chat/ai/stream` POST body. Visible in DevTools, potentially logged by proxies. | DONE (Wave 52) | app-audit §14 |
 | BL-0004 | **Response body logging captures API keys** — server logs first 500 chars of every JSON response. | DONE (Wave E) | app-audit §14 |
-| BL-0005 | **API keys in localStorage** — `gemini_api_key` / `anthropic_api_key` accessible to any XSS on same origin. Auth UI now exists (BL-0021 DONE). Need to migrate BYOK key storage from localStorage to server-side encrypted storage (AES-256-GCM via existing `api_keys` table). | OPEN | app-audit §14 |
+| BL-0005 | **API keys in localStorage** — migrated to server-side encrypted storage (AES-256-GCM via `api_keys` table) when authenticated, localStorage fallback for unauthenticated users. `useApiKeys` hook, ChatPanel/ModifyModal/PinExtractModal/DatasheetExtractModal updated. | DONE | Wave 60 |
 | BL-0006 | **Admin purge has no role check** — `DELETE /api/admin/purge` callable by any user. | DONE (Wave 52) | app-audit §14 |
 | BL-0007 | **XSS in `useDragGhost.ts`** — `innerHTML` interpolates user-editable `assetName` without sanitization. | DONE | app-audit §14 |
 | BL-0008 | **LIKE wildcards not escaped** in library search queries — user can use `%` and `_`. | DONE (Wave 52) | app-audit §14 |
@@ -167,13 +167,13 @@
 | BL-0105 | Live pin-compatibility checks for replacements | OPEN | MF-063 |
 | BL-0106 | Auto decoupling/power network placement suggestions | OPEN | MF-064 |
 | BL-0107 | AI placement optimization assistant | OPEN | MF-065 |
-| BL-0108 | Node inline label editing on canvas | OPEN | app-audit §2 |
+| BL-0108 | Node inline label editing on canvas — double-click to edit on Architecture (CustomNode), Schematic (InstanceNode, PowerNode) | DONE | Wave 61 |
 | BL-0109 | Node properties inspector panel | OPEN | app-audit §2 |
-| BL-0110 | Canvas copy/paste support — Architecture has Ctrl+C/V (internal clipboard with ID remapping). Schematic + PCB still need it. | PARTIAL | app-audit §2 |
-| BL-0111 | Multi-select rectangle on canvas | OPEN | app-audit §2 |
-| BL-0112 | Empty state guidance on canvases — SchematicCanvas + PCBLayoutView already have empty states. Architecture + Breadboard need them. | PARTIAL | app-audit §2, §4, §5, §6 |
+| BL-0110 | Canvas copy/paste support — Architecture has Ctrl+C/V (internal clipboard with ID remapping). Schematic + PCB still need it. | PARTIAL | app-audit §2, Wave 60 verified |
+| BL-0111 | Multi-select rectangle on canvas — ReactFlow selectionOnDrag on Architecture + Schematic, PCB marquee types + renderer defined | PARTIAL | Wave 61 |
+| BL-0112 | Empty state guidance on canvases — all 4 canvases now have empty states (Architecture, Schematic, PCB, Breadboard). | DONE | Wave 60 |
 | BL-0113 | Sidebar collapsed nav mismatch — different views shown depending on sidebar state | OPEN | app-audit §1 |
-| BL-0114 | URL deep linking per view tab (currently static `/projects/1`) | OPEN | app-audit §1 |
+| BL-0114 | URL deep linking per view tab — `/projects/:id/:viewName` with URL priority over localStorage, wouter route extension | DONE | Wave 61 |
 
 ### Simulation & Analysis
 
@@ -286,9 +286,9 @@
 |----|-------------|--------|--------|
 | BL-0230 | Mini-map for large schematic/PCB canvases | OPEN | UX-038 |
 | BL-0231 | Smart contextual radial menu on right-click | OPEN | UX-040 |
-| BL-0232 | Click validation issue → focus camera + flash component | OPEN | UX-042 |
+| BL-0232 | Click validation issue → focus camera + flash component — ReactFlow fitView + CSS validation-focus-pulse animation | DONE | Wave 60 |
 | BL-0233 | "Why this rule matters" plain-language explanation | OPEN | UX-043 |
-| BL-0234 | Persist panel sizes/collapsed state (localStorage) | OPEN | UX-011, D8 |
+| BL-0234 | Persist panel sizes/collapsed state (localStorage) — debounced writes, ViewMode validation on restore | DONE | Wave 60 |
 | BL-0235 | Command palette categories by workflow stage | OPEN | UX-016 |
 | BL-0236 | Context-aware shortcuts panel (`?` overlay) | OPEN | UX-017 |
 | BL-0237 | Recent projects with filters and pinning | OPEN | UX-019 |
@@ -333,7 +333,7 @@
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
 | BL-0291 | **99 inline style objects** — reviewed: mostly dynamic (transforms, colors, positioning). Static styles already use Tailwind. No action needed. | DONE (verified Wave 60) | GA-PERF-01 |
-| BL-0292 | **Missing composite indexes** on soft-delete queries — 3/4 tables have `(projectId, deletedAt)`. `projects` table needs `(ownerId, deletedAt)`. | PARTIAL | GA-DB-02 |
+| BL-0292 | **Composite indexes** on soft-delete queries — all 4 tables now have proper indexes including `projects(ownerId, deletedAt)`. | DONE | Wave 60 |
 | BL-0293 | **`ChatPanel.handleSend` 22-item useCallback dependency** — Already optimized: `sendStateRef` pattern reduces to single `[sendStateRef]` dependency. All state read at call time via ref. | DONE (verified Wave 60) | GA-PERF-02 |
 | BL-0294 | **Undo/redo stacks have no depth limit** — Already configured: `DEFAULT_MAX_SIZE = 50` in undo-redo.ts with FIFO eviction on both undo and redo stacks. | DONE (verified Wave 60) | GA-PERF-07 |
 
@@ -347,7 +347,7 @@
 | BL-0263 | Data retention policies and cleanup tooling | OPEN | MF-174 |
 | BL-0264 | Deployment profiles (dev/staging/prod) with config validation | OPEN | MF-179 |
 | BL-0265 | CI coverage gates and test quality thresholds | OPEN | MF-180 |
-| BL-0266 | CSP policy parity across dev/prod | PARTIAL | MF-167 |
+| BL-0266 | CSP policy parity across dev/prod — always-on CSP, `reportOnly: isDev`, wasm-unsafe-eval, dev connectSrc wildcards | DONE | Wave 61 |
 | BL-0267 | Health/readiness checks tied to real dependencies — Already implemented: `/api/health` checks PostgreSQL connectivity, `/api/ready` checks DB + latency + cache + AI provider keys. Returns 503 if DB down. | DONE (verified Wave 60) | MF-172 |
 | BL-0268 | Auth timing-safe compare + throttling for admin ops — Already implemented: `safeCompareAdminKey()` uses SHA-256 + timingSafeEqual. `adminRateLimiter` (5 req/60s) on admin endpoints. | DONE (verified Wave 60) | MF-168 |
 
@@ -355,11 +355,11 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0270 | `mulberry32` PRNG duplicated in monte-carlo.ts and gpu-monte-carlo.ts — extract to shared util | OPEN | Wave 51 review |
+| BL-0270 | `mulberry32` PRNG extracted to `shared/prng.ts` — monte-carlo.ts, gpu-monte-carlo.ts, generative.ts all import from shared | DONE | Wave 60 |
 | BL-0271 | GPU Monte Carlo evaluator runs on CPU — implement actual GPU batch-solve pipeline | OPEN | Wave 51 review |
 | BL-0272 | TelemetryLogger not connected to DeviceShadow live overlay | OPEN | Wave 51 review |
 | BL-0273 | Component Editor auto-save fires every 2s during active drawing (mouse-move driven) | OPEN | app-audit §15 |
-| BL-0274 | Only 2 components use `React.memo` — high-frequency children need memoization | OPEN | app-audit §15 |
+| BL-0274 | React.memo on high-frequency components — HistoryList, ProjectExplorer, SortableBomRow, BomCardItem memoized | DONE | Wave 61 |
 | BL-0275 | `backdrop-blur-xl` GPU jank on low-end devices | OPEN | app-audit §15 |
 | BL-0276 | No cache headers on API responses — relying entirely on client-side React Query cache | OPEN | app-audit §16 |
 

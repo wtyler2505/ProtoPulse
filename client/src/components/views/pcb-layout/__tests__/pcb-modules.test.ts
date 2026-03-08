@@ -446,6 +446,8 @@ describe('PCBInteractionManager', () => {
       setTracePoints: overrides.setTracePoints ?? (() => undefined),
       setMouseBoardPos: overrides.setMouseBoardPos ?? (() => undefined),
       setInstanceRotation: overrides.setInstanceRotation ?? (() => undefined),
+      setSelectionRect: overrides.setSelectionRect ?? (() => undefined),
+      setSelectedInstanceIds: overrides.setSelectedInstanceIds ?? (() => undefined),
     };
   }
 

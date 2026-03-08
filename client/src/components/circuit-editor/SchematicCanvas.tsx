@@ -9,6 +9,7 @@ import {
   useNodesState,
   useEdgesState,
   ConnectionMode,
+  SelectionMode,
   type Node,
   type Edge,
   type Connection,
@@ -821,6 +822,8 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         snapToGrid={snapEnabled}
         snapGrid={[gridSize, gridSize]}
         panOnDrag={activeTool === 'pan'}
+        selectionOnDrag={activeTool !== 'pan'}
+        selectionMode={SelectionMode.Partial}
         connectionMode={ConnectionMode.Loose}
         deleteKeyCode={['Backspace', 'Delete']}
       >

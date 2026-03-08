@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Connection, Edge, Node, ReactFlowProvider, useReactFlow } from '@xyflow/react';
+import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Connection, Edge, Node, ReactFlowProvider, useReactFlow, SelectionMode } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useDroppable, useDndMonitor } from '@dnd-kit/core';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
@@ -592,6 +592,8 @@ function ArchitectureFlow() {
             snapToGrid={snapEnabled}
             snapGrid={[20, 20]}
             panOnDrag={activeTool === 'pan'}
+            selectionOnDrag={activeTool !== 'pan'}
+            selectionMode={SelectionMode.Partial}
           >
             <Background color="#333" gap={20} size={1} />
             <Controls className="!bg-card !border-border !fill-foreground" />

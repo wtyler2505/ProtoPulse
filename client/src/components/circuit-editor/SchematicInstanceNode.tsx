@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useRef, useEffect } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import type { Connector, Shape, TerminalPosition } from '@shared/component-types';
 import PartSymbolRenderer, { computeShapesBounds } from './PartSymbolRenderer';
@@ -11,6 +11,7 @@ export interface InstanceNodeData {
   partTitle: string;
   connectors: Connector[];
   schematicShapes: Shape[];
+  onRefdesChange?: (newRefdes: string) => void;
   [key: string]: unknown; // Required by @xyflow/react — all node data types must be indexable
 }
 
@@ -25,7 +26,7 @@ function SchematicInstanceNode({
   data,
   selected,
 }: NodeProps<Node<InstanceNodeData>>) {
-  const { connectors, schematicShapes, referenceDesignator, partTitle, rotation } =
+  const { connectors, schematicShapes, referenceDesignator, partTitle, rotation, onRefdesChange } =
     data;
   const hasCustomShapes = schematicShapes.length > 0;
 
@@ -38,6 +39,7 @@ function SchematicInstanceNode({
         partTitle={partTitle}
         rotation={rotation}
         selected={selected}
+        onRefdesChange={onRefdesChange}
       />
     );
   }
@@ -49,6 +51,7 @@ function SchematicInstanceNode({
       partTitle={partTitle}
       rotation={rotation}
       selected={selected}
+      onRefdesChange={onRefdesChange}
     />
   );
 }
@@ -64,6 +67,7 @@ function CustomShapeSymbol({
   partTitle,
   rotation,
   selected,
+  onRefdesChange,
 }: {
   shapes: Shape[];
   connectors: Connector[];
@@ -71,10 +75,36 @@ function CustomShapeSymbol({
   partTitle: string;
   rotation: number;
   selected: boolean;
+  onRefdesChange?: (newRefdes: string) => void;
 }) {
   const bounds = computeShapesBounds(shapes);
   const svgW = Math.max(bounds.width, 60);
   const svgH = Math.max(bounds.height, 40);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(referenceDesignator);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const commitEdit = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== referenceDesignator) {
+      onRefdesChange?.(trimmed);
+    }
+    setIsEditing(false);
+    setEditValue(referenceDesignator);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditValue(referenceDesignator);
+  };
 
   return (
     <div
@@ -85,9 +115,30 @@ function CustomShapeSymbol({
       )}
       style={{ transform: rotation ? `rotate(${rotation}deg)` : undefined }}
     >
-      <div className="absolute -top-5 left-0 text-[10px] font-bold text-primary whitespace-nowrap">
-        {referenceDesignator}
-      </div>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          data-testid="node-label-input"
+          className="absolute -top-5 left-0 text-[10px] font-bold text-primary bg-transparent border-0 outline-none ring-1 ring-primary rounded px-0.5 py-0 whitespace-nowrap min-w-[40px]"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { commitEdit(); }
+            if (e.key === 'Escape') { cancelEdit(); }
+            e.stopPropagation();
+          }}
+          onBlur={commitEdit}
+          onMouseDown={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <div
+          className="absolute -top-5 left-0 text-[10px] font-bold text-primary whitespace-nowrap cursor-text"
+          onDoubleClick={() => { setEditValue(referenceDesignator); setIsEditing(true); }}
+          data-testid="node-label-display"
+        >
+          {referenceDesignator}
+        </div>
+      )}
       <PartSymbolRenderer
         shapes={shapes}
         width={svgW}
@@ -165,12 +216,14 @@ function GenericICSymbol({
   partTitle,
   rotation,
   selected,
+  onRefdesChange,
 }: {
   connectors: Connector[];
   referenceDesignator: string;
   partTitle: string;
   rotation: number;
   selected: boolean;
+  onRefdesChange?: (newRefdes: string) => void;
 }) {
   const halfIndex = Math.ceil(connectors.length / 2);
   const leftPins = connectors.slice(0, halfIndex);
@@ -185,6 +238,31 @@ function GenericICSymbol({
   const bodyW = Math.max(BODY_MIN_WIDTH, labelWidth);
   const totalW = bodyW + PIN_STUB * 2;
   const totalH = bodyH;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(referenceDesignator);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const commitEdit = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== referenceDesignator) {
+      onRefdesChange?.(trimmed);
+    }
+    setIsEditing(false);
+    setEditValue(referenceDesignator);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setEditValue(referenceDesignator);
+  };
 
   const pinY = (index: number, count: number) =>
     count <= 1
@@ -204,9 +282,30 @@ function GenericICSymbol({
         transform: rotation ? `rotate(${rotation}deg)` : undefined,
       }}
     >
-      <div className="absolute -top-5 left-0 text-[10px] font-bold text-primary whitespace-nowrap">
-        {referenceDesignator}
-      </div>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          data-testid="node-label-input"
+          className="absolute -top-5 left-0 text-[10px] font-bold text-primary bg-transparent border-0 outline-none ring-1 ring-primary rounded px-0.5 py-0 whitespace-nowrap min-w-[40px]"
+          value={editValue}
+          onChange={(e) => setEditValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { commitEdit(); }
+            if (e.key === 'Escape') { cancelEdit(); }
+            e.stopPropagation();
+          }}
+          onBlur={commitEdit}
+          onMouseDown={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <div
+          className="absolute -top-5 left-0 text-[10px] font-bold text-primary whitespace-nowrap cursor-text"
+          onDoubleClick={() => { setEditValue(referenceDesignator); setIsEditing(true); }}
+          data-testid="node-label-display"
+        >
+          {referenceDesignator}
+        </div>
+      )}
 
       <svg
         width={totalW}

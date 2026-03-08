@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo, useReducer, lazy, Suspense } from 'react';
-import { useParams, Redirect } from 'wouter';
+import { useParams, useLocation, Redirect } from 'wouter';
 import { ProjectProvider } from '@/lib/project-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { ViewMode } from '@/lib/project-context';
@@ -144,6 +144,15 @@ const tabDescriptions: Record<string, string> = {
   generative_design: 'AI-guided generative circuit design with evolutionary optimization',
   digital_twin: 'Live hardware digital twin with IoT telemetry and sim comparison',
 };
+
+/** All valid ViewMode values — used for URL deep link validation. */
+const VALID_VIEW_MODES: ReadonlySet<string> = new Set<ViewMode>([
+  'dashboard', 'project_explorer', 'output', 'architecture', 'component_editor',
+  'schematic', 'breadboard', 'pcb', 'procurement', 'validation', 'simulation',
+  'design_history', 'lifecycle', 'comments', 'calculators', 'design_patterns',
+  'storage', 'kanban', 'knowledge', 'viewer_3d', 'community', 'ordering',
+  'serial_monitor', 'circuit_code', 'generative_design', 'digital_twin',
+]);
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
   const isDragging = useRef(false);
@@ -343,6 +352,8 @@ function WorkspaceContent() {
   const { bom, addBomItem } = useBom();
   const { toast } = useToast();
   const mainRef = useRef<HTMLElement>(null);
+  const [location, setLocation] = useLocation();
+  const initialUrlApplied = useRef(false);
 
   useEffect(() => {
     if (mainRef.current) {
@@ -357,22 +368,28 @@ function WorkspaceContent() {
 
   const [ws, dispatch] = useReducer(workspaceReducer, initialWorkspaceState);
 
-  // BL-0234: Restore persisted activeView on mount
+  // BL-0114 + BL-0234: Restore activeView from URL (priority) or localStorage (fallback) on mount
   useEffect(() => {
-    const saved = persisted.activeView;
-    if (saved && saved !== activeView) {
-      // Validate it's a known ViewMode before applying
-      const validViews: ReadonlySet<string> = new Set<ViewMode>([
-        'dashboard', 'project_explorer', 'output', 'architecture', 'component_editor',
-        'schematic', 'breadboard', 'pcb', 'procurement', 'validation', 'simulation',
-        'design_history', 'lifecycle', 'comments', 'calculators', 'design_patterns',
-        'storage', 'kanban', 'knowledge', 'viewer_3d', 'community', 'ordering',
-        'serial_monitor', 'circuit_code', 'generative_design', 'digital_twin',
-      ]);
-      if (validViews.has(saved)) {
+    // Parse viewName from current URL path: /projects/:projectId/:viewName
+    const segments = location.split('/').filter(Boolean);
+    // Expected: ['projects', projectId, viewName?]
+    const urlViewName = segments.length >= 3 && segments[0] === 'projects' ? segments[2] : undefined;
+
+    if (urlViewName && VALID_VIEW_MODES.has(urlViewName)) {
+      // URL takes priority
+      if (urlViewName !== activeView) {
+        setActiveView(urlViewName as ViewMode);
+      }
+    } else {
+      // Fallback to localStorage
+      const saved = persisted.activeView;
+      if (saved && saved !== activeView && VALID_VIEW_MODES.has(saved)) {
         setActiveView(saved as ViewMode);
       }
+      // Update URL to reflect the resolved view (no viewName in URL yet)
+      setLocation(`/projects/${String(projectId)}/${activeView}`, { replace: true });
     }
+    initialUrlApplied.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -394,6 +411,15 @@ function WorkspaceContent() {
     }, 500);
     return () => clearTimeout(timer);
   }, [ws.sidebarCollapsed, ws.chatCollapsed, ws.sidebarWidth, ws.chatWidth, activeView]);
+
+  // BL-0114: Sync URL when activeView changes (after initial mount)
+  useEffect(() => {
+    if (!initialUrlApplied.current) { return; }
+    const expectedPath = `/projects/${String(projectId)}/${activeView}`;
+    if (location !== expectedPath) {
+      setLocation(expectedPath, { replace: true });
+    }
+  }, [activeView, projectId, location, setLocation]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {

@@ -50,10 +50,13 @@ app.use((_req, res, next) => {
 });
 
 app.use(helmet({
-  contentSecurityPolicy: isDev ? false : {
+  contentSecurityPolicy: {
+    // BL-0266: CSP enabled in all environments for dev/prod parity.
+    // In dev mode, reportOnly logs violations to console without blocking resources.
+    reportOnly: isDev,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
       // CSP Level 3 granular style directives:
       // - style-src-elem: nonce-based for <style> elements (blocks injected <style> without nonce)
       // - style-src-attr: 'unsafe-inline' for inline style="" attributes (required by Radix UI
@@ -76,7 +79,7 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: isDev
-        ? ["'self'", "ws://localhost:5000", "ws://localhost:5173", "ws://127.0.0.1:5000"]
+        ? ["'self'", "ws://localhost:*", "ws://127.0.0.1:*", "http://localhost:*"]
         : ["'self'"],
       frameSrc: ["'none'"],
       frameAncestors: ["'none'"],

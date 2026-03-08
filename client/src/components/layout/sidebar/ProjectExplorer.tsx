@@ -1,4 +1,4 @@
-import { useState, useCallback, type Dispatch, type SetStateAction } from 'react';
+import { useState, useCallback, memo, type Dispatch, type SetStateAction } from 'react';
 import type { Node } from '@xyflow/react';
 import {
   ChevronRight,
@@ -141,7 +141,7 @@ interface ProjectExplorerProps {
   addOutputLog: (msg: string) => void;
 }
 
-export default function ProjectExplorer({
+function ProjectExplorer({
   nodes,
   bom,
   issues,
@@ -240,3 +240,5 @@ export default function ProjectExplorer({
     </div>
   );
 }
+
+export default memo(ProjectExplorer);

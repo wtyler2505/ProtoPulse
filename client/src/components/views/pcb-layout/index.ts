@@ -67,6 +67,8 @@ export {
 export type {
   Point,
   PanState,
+  SelectionDragState,
+  SelectionRect,
   CanvasCallbacks,
   TraceFinishParams,
   DeleteParams,
@@ -78,6 +80,7 @@ export {
   LayerLegend,
   CoordinateReadout,
   EmptyGuidance,
+  SelectionMarquee,
   DrcConstraintOverlay,
   DrcConstraintToggle,
 } from './PCBBoardRenderer';

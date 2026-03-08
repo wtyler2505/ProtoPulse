@@ -1,4 +1,4 @@
-import { useRef, useMemo, useState, useCallback } from 'react';
+import { useRef, useMemo, useState, useCallback, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -160,7 +160,7 @@ export function BomTable({
   );
 }
 
-function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlighted, onHighlight, onAssessDamage, isDuplicate, onFindAlternates }: {
+const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlighted, onHighlight, onAssessDamage, isDuplicate, onFindAlternates }: {
   item: EnrichedBomItem;
   editingId: number | null;
   editValues: EditValues;
@@ -300,4 +300,4 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
       </ContextMenuContent>
     </ContextMenu>
   );
-}
+});

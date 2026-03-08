@@ -222,8 +222,10 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
       setTracePoints,
       setMouseBoardPos,
       setInstanceRotation: (_instanceId: number, _rotation: number) => {
-        // TODO: Wire to updateInstanceMutation in Task #5
+        // TODO: Wire to updateInstanceMutation
       },
+      setSelectionRect: () => {},
+      setSelectedInstanceIds: () => {},
     }),
     [],
   );
