@@ -47,10 +47,10 @@ export function BomCards({ filteredBom, deleteBomItem, toast }: BomCardsProps) {
           <div className="flex items-center justify-between text-xs">
             <div className="flex items-center gap-3 text-muted-foreground">
               <span>Qty: <span className="font-mono text-foreground">{item.quantity}</span></span>
-              <span>@ <span className="font-mono text-foreground">${Number(item.unitPrice).toFixed(2)}</span></span>
+              <span>@ <span className="font-mono text-foreground">${(Math.round(Number(item.unitPrice) * 100) / 100).toFixed(2)}</span></span>
               <span>{item.supplier}</span>
             </div>
-            <span className="font-mono font-bold text-foreground">${Number(item.totalPrice).toFixed(2)}</span>
+            <span className="font-mono font-bold text-foreground">${(Math.round(Number(item.totalPrice) * 100) / 100).toFixed(2)}</span>
           </div>
           <div className="flex items-center gap-1 pt-1 border-t border-border">
             <button

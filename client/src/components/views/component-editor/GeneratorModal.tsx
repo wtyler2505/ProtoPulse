@@ -220,7 +220,7 @@ export default function GeneratorModal({ open, onClose, onGenerate }: GeneratorM
                 min={0.1}
                 step={0.01}
                 value={round2(pitch)}
-                onChange={(e) => setPitch(Math.max(0.1, parseFloat(e.target.value) || 0.1))}
+                onChange={(e) => setPitch(round2(Math.max(0.1, parseFloat(e.target.value) || 0.1)))}
               />
             </div>
           )}

@@ -83,10 +83,10 @@ export function AddItemDialog({ open, onOpenChange, newItem, onNewItemChange, on
               <Input
                 id="add-quantity"
                 type="number"
-                min={1}
-                max={999999}
+                min="1"
+                max="999999"
                 value={newItem.quantity}
-                onChange={(e) => onNewItemChange(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
+                onChange={(e) => onNewItemChange(prev => ({ ...prev, quantity: Math.max(1, parseInt(e.target.value) || 1) }))}
                 data-testid="input-add-quantity"
               />
             </div>
@@ -95,11 +95,11 @@ export function AddItemDialog({ open, onOpenChange, newItem, onNewItemChange, on
               <Input
                 id="add-unit-price"
                 type="number"
-                min={0}
-                max={99999.99}
-                step={0.01}
+                min="0"
+                max="99999.99"
+                step="0.01"
                 value={newItem.unitPrice}
-                onChange={(e) => onNewItemChange(prev => ({ ...prev, unitPrice: parseFloat(e.target.value) || 0 }))}
+                onChange={(e) => onNewItemChange(prev => ({ ...prev, unitPrice: Math.max(0, parseFloat(e.target.value) || 0) }))}
                 data-testid="input-add-unit-price"
               />
             </div>

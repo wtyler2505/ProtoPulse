@@ -54,6 +54,7 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
   const formatRelativeTime = (isoStr: string): string => {
     const now = new Date();
     const date = new Date(isoStr);
+    if (isNaN(date.getTime())) return 'Unknown date';
     const diffMs = now.getTime() - date.getTime();
     const diffSec = Math.floor(diffMs / 1000);
     const diffMin = Math.floor(diffSec / 60);
@@ -70,6 +71,7 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
 
   const formatExactTime = (isoStr: string): string => {
     const date = new Date(isoStr);
+    if (isNaN(date.getTime())) return 'Unknown date';
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) +
       ' at ' + date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
   };

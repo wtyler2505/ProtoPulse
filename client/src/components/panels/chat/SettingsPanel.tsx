@@ -231,7 +231,7 @@ function SettingsPanel({
       <div>
         <div className="flex items-center justify-between mb-2">
           <label htmlFor="settings-temperature" className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold">Temperature</label>
-          <span className="text-xs text-primary font-mono">{aiTemperature.toFixed(1)}</span>
+          <span className="text-xs text-primary font-mono">{(Math.round(aiTemperature * 10) / 10).toFixed(1)}</span>
         </div>
         <input
           id="settings-temperature"
@@ -242,7 +242,7 @@ function SettingsPanel({
           step="0.1"
           value={aiTemperature}
           onChange={(e) => setAiTemperature(Math.round(parseFloat(e.target.value) * 10) / 10)}
-          aria-valuetext={aiTemperature.toFixed(1)}
+          aria-valuetext={(Math.round(aiTemperature * 10) / 10).toFixed(1)}
           className="w-full h-1.5 bg-muted/50 appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border-0"
         />
         <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-1">

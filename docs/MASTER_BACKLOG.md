@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 57 | Broken workflows, major UX trust issues, test gaps |
+| P1 | 50 | Broken workflows, major UX trust issues, test gaps (7 resolved in Wave 54) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -58,14 +58,14 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0012 | **"Invalid Date" in timeline** — All 3 sidebar history entries show "Invalid Date" instead of timestamps. | OPEN | app-audit §1 |
-| BL-0013 | **401 on every page load** — `GET /api/settings/chat` returns 401 (missing X-Session-Id header). | OPEN | app-audit §1 |
+| BL-0012 | **"Invalid Date" in timeline** — Fixed: added isNaN guard in formatRelativeTime/formatExactTime (Wave 54). | DONE | app-audit §1 |
+| BL-0013 | **401 on every page load** — Already fixed: `/api/settings/chat` is in PUBLIC_PATHS bypass. | DONE | app-audit §1 |
 | BL-0014 | **Schematic net edges silently fail** — 10x React Flow errors: `Couldn't create edge for source handle id: "pin-PB0"`. Nets don't render. | OPEN | app-audit §4 |
-| BL-0015 | **BOM spinbutton constraints broken** — `valuemax=0` with `valuemin=1`. Price spinbutton `valuemax=0`. | OPEN | app-audit §7 |
-| BL-0016 | **BOM float precision** — Unit Price shows `0.6499999761581421` instead of `0.65` (32-bit float issue). | OPEN | app-audit §7 |
-| BL-0017 | **Chat temperature slider float** — Internal value `0.699999988079071` instead of `0.7`. | OPEN | app-audit §11 |
-| BL-0018 | **Component Editor float noise** — Generate modal shows pitch `2.5399999618530273` instead of `2.54`. | OPEN | app-audit §3 |
-| BL-0019 | **CSP `frame-ancestors` via `<meta>`** — Must be HTTP header, not meta tag. Ignored by browser. | OPEN | app-audit §1 |
+| BL-0015 | **BOM spinbutton constraints broken** — Fixed: string min/max attrs + Math.max clamping in onChange (Wave 54). | DONE | app-audit §7 |
+| BL-0016 | **BOM float precision** — Fixed: Math.round(n * 100) / 100 before toFixed(2) in BomCards + BomTable (Wave 54). | DONE | app-audit §7 |
+| BL-0017 | **Chat temperature slider float** — Fixed: Math.round rounding in display + aria-valuetext (Wave 54). | DONE | app-audit §11 |
+| BL-0018 | **Component Editor float noise** — Fixed: round2() applied to pitch input onChange handler (Wave 54). | DONE | app-audit §3 |
+| BL-0019 | **CSP `frame-ancestors` via `<meta>`** — Fixed: removed from meta tag, added frameAncestors to Helmet CSP header (Wave 54). | DONE | app-audit §1 |
 | BL-0020 | **Duplicate API requests on load** — component-parts, circuits, instances, nets each called 3x. seed called 3x. | OPEN | app-audit §16 |
 
 ### Auth & Session

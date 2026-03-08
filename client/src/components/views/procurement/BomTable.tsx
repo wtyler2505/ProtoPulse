@@ -206,8 +206,8 @@ function SortableBomRow({ item, editingId, editValues, setEditValues, handleEdit
               <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
               <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
               <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
-              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${Number(item.unitPrice).toFixed(2)}</td>
-              <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${Number(item.totalPrice).toFixed(2)}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${(Math.round(Number(item.unitPrice) * 100) / 100).toFixed(2)}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${(Math.round(Number(item.totalPrice) * 100) / 100).toFixed(2)}</td>
               <td className="px-4 py-3 text-right flex gap-1">
                 <StyledTooltip content="Edit item" side="left"><button aria-label="Edit item" className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button></StyledTooltip>
                 <StyledTooltip content="Assess damage" side="left"><button aria-label="Assess damage" className="p-1.5 text-amber-500 hover:bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => onAssessDamage(item)} data-testid={`button-damage-${item.id}`}><Shield className="w-4 h-4" /></button></StyledTooltip>
