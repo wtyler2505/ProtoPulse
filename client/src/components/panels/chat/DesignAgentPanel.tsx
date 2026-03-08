@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
-import { Bot, CheckCircle, AlertCircle, Loader2, ChevronDown, ChevronUp, Play, RotateCcw, Wrench } from 'lucide-react';
+import { Bot, CheckCircle, AlertCircle, Loader2, ChevronDown, ChevronUp, Play, RotateCcw, Wrench, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { resilientStreamFetch, StreamServerError } from '@/lib/stream-resilience';
 
 // ---------------------------------------------------------------------------
 // Types — local definitions to avoid importing server-only modules
@@ -44,6 +45,8 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
   const [maxSteps, setMaxSteps] = useState(8);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const [steps, setSteps] = useState<StepEntry[]>([]);
   const [completeSummary, setCompleteSummary] = useState<string | null>(null);
   const [stepsUsed, setStepsUsed] = useState<number | null>(null);
@@ -61,6 +64,8 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
     if (!description.trim() || isRunning) { return; }
 
     setIsRunning(true);
+    setIsReconnecting(false);
+    setReconnectAttempt(0);
     setSteps([]);
     setCompleteSummary(null);
     setStepsUsed(null);
@@ -70,69 +75,85 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
     abortRef.current = controller;
 
     try {
-      const response = await fetch(`/api/projects/${String(projectId)}/agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await resilientStreamFetch({
+        url: `/api/projects/${String(projectId)}/agent`,
+        fetchInit: {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Session-Id': localStorage.getItem('protopulse-session-id') ?? '',
+          },
+          body: JSON.stringify({
+            description: description.trim(),
+            maxSteps,
+            apiKey,
+          }),
+        },
         signal: controller.signal,
-        body: JSON.stringify({
-          description: description.trim(),
-          maxSteps,
-          apiKey,
-        }),
-      });
+        onData: (parsed) => {
+          const event = parsed as AgentSSEEvent;
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({ message: 'Unknown error' })) as { message?: string };
-        throw new Error(errData.message ?? `Server error: ${String(response.status)}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) { throw new Error('No response body'); }
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) { break; }
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) { continue; }
-          try {
-            const event = JSON.parse(line.slice(6)) as AgentSSEEvent;
-
-            if (event.type === 'complete') {
-              setCompleteSummary(event.summary ?? 'Design complete');
-              setStepsUsed(event.stepsUsed ?? null);
-            } else if (event.type === 'error') {
-              setError(event.message);
-            } else {
-              setSteps((prev) => [...prev, {
-                step: event.step,
-                type: event.type,
-                message: event.message,
-                toolName: event.toolName,
-                result: event.result,
-              }]);
-            }
-            // Auto-scroll
-            setTimeout(scrollToBottom, 50);
-          } catch {
-            // Ignore parse errors (heartbeats, etc.)
+          if (event.type === 'complete') {
+            setCompleteSummary(event.summary ?? 'Design complete');
+            setStepsUsed(event.stepsUsed ?? null);
+          } else if (event.type === 'error') {
+            setError(event.message);
+          } else {
+            setSteps((prev) => [...prev, {
+              step: event.step,
+              type: event.type,
+              message: event.message,
+              toolName: event.toolName,
+              result: event.result,
+            }]);
           }
-        }
-      }
+          // Auto-scroll
+          setTimeout(scrollToBottom, 50);
+        },
+        lifecycle: {
+          onReconnecting: (attempt, maxRetries) => {
+            setIsReconnecting(true);
+            setReconnectAttempt(attempt);
+            setSteps((prev) => [...prev, {
+              step: 0,
+              type: 'thinking',
+              message: `Connection lost. Reconnecting... (attempt ${String(attempt)}/${String(maxRetries)})`,
+            }]);
+            setTimeout(scrollToBottom, 50);
+          },
+          onReconnected: () => {
+            setIsReconnecting(false);
+            setReconnectAttempt(0);
+            setSteps((prev) => [...prev, {
+              step: 0,
+              type: 'text',
+              message: 'Reconnected successfully.',
+            }]);
+            setTimeout(scrollToBottom, 50);
+          },
+          onRetriesExhausted: (lastError) => {
+            setIsReconnecting(false);
+            setError(`Connection lost: ${lastError.message}. The partial results above may still be useful.`);
+          },
+        },
+        retryConfig: {
+          maxRetries: 3,
+          initialDelayMs: 1000,
+          maxDelayMs: 30_000,
+          idleTimeoutMs: 120_000,
+        },
+      });
     } catch (err: unknown) {
-      if (err instanceof Error && err.name === 'AbortError') {
+      if (err instanceof DOMException && err.name === 'AbortError') {
         setError('Agent run cancelled.');
+      } else if (err instanceof StreamServerError) {
+        setError(err.message);
       } else {
         setError(err instanceof Error ? err.message : String(err));
       }
     } finally {
       setIsRunning(false);
+      setIsReconnecting(false);
       abortRef.current = null;
     }
   }, [description, maxSteps, isRunning, projectId, apiKey, scrollToBottom]);
@@ -230,6 +251,17 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
         )}
       </div>
 
+      {/* Reconnecting indicator */}
+      {isReconnecting && (
+        <div
+          className="flex items-center gap-2 px-3 py-2 border border-amber-500/30 bg-amber-500/10 text-xs text-amber-300"
+          data-testid="agent-reconnecting"
+        >
+          <WifiOff className="w-3.5 h-3.5 animate-pulse" />
+          Reconnecting... (attempt {reconnectAttempt}/3)
+        </div>
+      )}
+
       {/* Progress log */}
       {steps.length > 0 && (
         <div
@@ -249,7 +281,7 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
               </div>
             </div>
           ))}
-          {isRunning && (
+          {isRunning && !isReconnecting && (
             <div className="flex items-center gap-2 text-xs text-primary">
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
               Running...

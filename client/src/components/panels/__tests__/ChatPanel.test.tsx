@@ -137,6 +137,30 @@ vi.mock('@/components/panels/chat/parseLocalIntent', () => ({
   parseLocalIntent: vi.fn().mockReturnValue({ actions: [], response: 'Local response' }),
 }));
 
+// Mock auth context — useApiKeys depends on useAuth
+vi.mock('@/lib/auth-context', () => ({
+  useAuth: () => ({
+    sessionId: null,
+    user: null,
+    loading: false,
+    connectionStatus: 'connected',
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
+
+// Mock useApiKeys — server-side API key management hook
+vi.mock('@/hooks/useApiKeys', () => ({
+  useApiKeys: () => ({
+    apiKey: '',
+    setApiKey: vi.fn(),
+    clearApiKey: vi.fn(),
+    isLoading: false,
+    providers: [],
+  }),
+}));
+
 // Mock virtualizer since happy-dom lacks layout
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: ({ count }: { count: number }) => ({

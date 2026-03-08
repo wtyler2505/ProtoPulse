@@ -307,6 +307,7 @@ interface PersistedPanelLayout {
   chatCollapsed: boolean;
   sidebarWidth: number;
   chatWidth: number;
+  activeView?: string;
 }
 
 function loadPersistedLayout(): Partial<PersistedPanelLayout> {
@@ -356,7 +357,26 @@ function WorkspaceContent() {
 
   const [ws, dispatch] = useReducer(workspaceReducer, initialWorkspaceState);
 
-  // UX-011: Persist panel sizes and collapsed states to localStorage (debounced)
+  // BL-0234: Restore persisted activeView on mount
+  useEffect(() => {
+    const saved = persisted.activeView;
+    if (saved && saved !== activeView) {
+      // Validate it's a known ViewMode before applying
+      const validViews: ReadonlySet<string> = new Set<ViewMode>([
+        'dashboard', 'project_explorer', 'output', 'architecture', 'component_editor',
+        'schematic', 'breadboard', 'pcb', 'procurement', 'validation', 'simulation',
+        'design_history', 'lifecycle', 'comments', 'calculators', 'design_patterns',
+        'storage', 'kanban', 'knowledge', 'viewer_3d', 'community', 'ordering',
+        'serial_monitor', 'circuit_code', 'generative_design', 'digital_twin',
+      ]);
+      if (validViews.has(saved)) {
+        setActiveView(saved as ViewMode);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // UX-011 + BL-0234: Persist panel sizes, collapsed states, and activeView to localStorage (debounced)
   useEffect(() => {
     const timer = setTimeout(() => {
       try {
@@ -365,14 +385,15 @@ function WorkspaceContent() {
           chatCollapsed: ws.chatCollapsed,
           sidebarWidth: ws.sidebarWidth,
           chatWidth: ws.chatWidth,
+          activeView,
         };
         localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout));
       } catch {
         // localStorage unavailable
       }
-    }, 300);
+    }, 500);
     return () => clearTimeout(timer);
-  }, [ws.sidebarCollapsed, ws.chatCollapsed, ws.sidebarWidth, ws.chatWidth]);
+  }, [ws.sidebarCollapsed, ws.chatCollapsed, ws.sidebarWidth, ws.chatWidth, activeView]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {

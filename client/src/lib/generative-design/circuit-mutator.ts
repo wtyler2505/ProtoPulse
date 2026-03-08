@@ -15,6 +15,7 @@
  */
 
 import type { CircuitIR, IRComponent, IRNet } from '@/lib/circuit-dsl/circuit-ir';
+import { mulberry32 } from '@shared/prng';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,20 +33,6 @@ export interface MutationConfig {
   seed: number;
   mutationRate: number;
   allowedMutations: MutationType[];
-}
-
-// ---------------------------------------------------------------------------
-// Seeded PRNG — mulberry32 (copied from monte-carlo.ts to avoid circular deps)
-// ---------------------------------------------------------------------------
-
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
 
 // ---------------------------------------------------------------------------

@@ -44,6 +44,7 @@ import { COMPONENT_DRAG_TYPE, type ComponentDragData } from './ComponentPlacer';
 import { POWER_SYMBOL_DRAG_TYPE, type PowerSymbolDragData } from './PowerSymbolPalette';
 import { CircuitBoard, Plus, Cable, Zap, ClipboardPaste, CheckSquare, ShieldAlert } from 'lucide-react';
 import ERCOverlay from './ERCOverlay';
+import { EmptyState } from '@/components/ui/EmptyState';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -848,15 +849,15 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
       {(!instances || instances.length === 0) && (
         <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">
-          <div className="text-center space-y-3 max-w-sm">
-            <CircuitBoard className="w-16 h-16 text-muted-foreground/30 mx-auto" />
-            <h3 className="text-lg font-medium text-foreground">
-              Empty Schematic
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Place components from the sidebar or drag between pins to create
-              net connections.
-            </p>
+          <div className="pointer-events-auto">
+            <EmptyState
+              icon={CircuitBoard}
+              title="Empty Schematic"
+              description="Your schematic is empty. Add components from the library or import an existing design."
+              actionLabel="Add Component"
+              actionTestId="button-add-schematic-component"
+              onAction={handleCtxAddComponent}
+            />
           </div>
         </div>
       )}

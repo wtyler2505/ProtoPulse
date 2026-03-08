@@ -128,7 +128,7 @@ export default function PCBLayoutView() {
         <div>
           <h3 className="text-lg font-medium text-foreground">No Circuit Designs</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Create a circuit in the Schematic view first, then switch to PCB Layout.
+            Create a schematic first, then switch here to lay out your PCB.
           </p>
         </div>
       </div>

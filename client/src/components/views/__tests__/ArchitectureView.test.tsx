@@ -202,7 +202,7 @@ describe('ArchitectureView', () => {
 
   it('renders empty state with "Generate Architecture" button when no nodes', () => {
     renderArchView();
-    expect(screen.getByText('No diagram yet')).toBeDefined();
+    expect(screen.getByText('Start Building Your Architecture')).toBeDefined();
     expect(screen.getByTestId('button-generate-architecture')).toBeDefined();
   });
 

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Upload, FileText, ArrowRight } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { useApiKeys } from '@/hooks/useApiKeys';
 import type { PartMeta } from '@shared/component-types';
 
 interface DatasheetExtractModalProps {
@@ -20,8 +21,6 @@ interface DatasheetExtractModalProps {
 }
 
 type ModalState = 'upload' | 'loading' | 'review';
-
-const API_KEY_STORAGE_KEY = 'gemini_api_key';
 
 const META_FIELD_LABELS: Record<string, string> = {
   title: 'Title',
@@ -58,7 +57,8 @@ export default function DatasheetExtractModal({
   onApply,
 }: DatasheetExtractModalProps) {
   const [modalState, setModalState] = useState<ModalState>('upload');
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE_KEY) ?? '');
+  const { apiKey, setApiKey: setApiKeyForProvider } = useApiKeys('gemini');
+  const setApiKey = useCallback((key: string) => { setApiKeyForProvider('gemini', key); }, [setApiKeyForProvider]);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extracted, setExtracted] = useState<Partial<PartMeta> | null>(null);
@@ -104,10 +104,6 @@ export default function DatasheetExtractModal({
 
     setError(null);
     setModalState('loading');
-
-    if (apiKey) {
-      localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
-    }
 
     // Create preview
     const url = URL.createObjectURL(file);

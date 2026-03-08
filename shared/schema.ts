@@ -14,6 +14,7 @@ export const projects = pgTable("projects", {
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_projects_owner").on(table.ownerId),
+  index("idx_projects_owner_deleted").on(table.ownerId, table.deletedAt),
 ]);
 
 export const insertProjectSchema = createInsertSchema(projects).omit({ id: true, ownerId: true, version: true, createdAt: true, updatedAt: true, deletedAt: true });

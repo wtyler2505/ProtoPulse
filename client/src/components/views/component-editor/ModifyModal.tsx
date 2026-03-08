@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { computePartDiff, applyPartialDiff } from '@/lib/component-editor/diff-engine';
+import { useApiKeys } from '@/hooks/useApiKeys';
 import DiffPreview from './DiffPreview';
 import type { PartState } from '@shared/component-types';
 import type { PartDiff } from '@/lib/component-editor/types';
@@ -22,12 +23,11 @@ interface ModifyModalProps {
 
 type ModalState = 'input' | 'loading' | 'review';
 
-const API_KEY_STORAGE_KEY = 'gemini_api_key';
-
 export default function ModifyModal({ open, onOpenChange, currentPart, projectId, partId, onApply }: ModifyModalProps) {
   const [modalState, setModalState] = useState<ModalState>('input');
   const [instruction, setInstruction] = useState('');
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE_KEY) ?? '');
+  const { apiKey, setApiKey: setApiKeyForProvider } = useApiKeys('gemini');
+  const setApiKey = useCallback((key: string) => { setApiKeyForProvider('gemini', key); }, [setApiKeyForProvider]);
   const [error, setError] = useState<string | null>(null);
 
   const [diff, setDiff] = useState<PartDiff | null>(null);
@@ -69,10 +69,6 @@ export default function ModifyModal({ open, onOpenChange, currentPart, projectId
 
     setModalState('loading');
     setError(null);
-
-    if (apiKey) {
-      localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
-    }
 
     const controller = new AbortController();
     abortRef.current = controller;

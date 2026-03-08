@@ -270,3 +270,14 @@
 .react-flow__panel {
   border-radius: 0 !important;
 }
+
+/* BL-0232: Flash animation when clicking a validation issue focuses a node */
+@keyframes validation-focus-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.7); }
+  50% { box-shadow: 0 0 16px 4px rgba(0, 240, 255, 0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 240, 255, 0); }
+}
+.react-flow__node.validation-focus-flash {
+  animation: validation-focus-pulse 0.6s ease-out;
+  border-color: #00F0FF !important;
+}

@@ -163,6 +163,7 @@ function ValidationViewContent() {
   const { issues, runValidation, deleteValidationIssue } = useValidation();
   const { addOutputLog } = useOutput();
   const { setActiveView } = useProjectMeta();
+  const { focusNode, nodes: archNodes } = useArchitecture();
   const { toast } = useToast();
   const [pendingDismissId, setPendingDismissId] = useState<number | string | null>(null);
   const projectId = useProjectId();
@@ -419,6 +420,30 @@ function ValidationViewContent() {
     }
   };
 
+  // BL-0232: Focus architecture node when clicking a validation issue row
+  const handleIssueFocus = useCallback((componentId: string | undefined) => {
+    if (!componentId) {
+      setActiveView('architecture');
+      return;
+    }
+    // componentId may be a node ID directly, or a node label — try both
+    const nodeById = archNodes.find((n) => String(n.id) === componentId);
+    if (nodeById) {
+      focusNode(String(nodeById.id));
+      return;
+    }
+    const nodeByLabel = archNodes.find((n) => {
+      const label = (n.data as Record<string, unknown> | undefined)?.label;
+      return typeof label === 'string' && label === componentId;
+    });
+    if (nodeByLabel) {
+      focusNode(String(nodeByLabel.id));
+      return;
+    }
+    // Fallback: just switch to architecture view
+    setActiveView('architecture');
+  }, [archNodes, focusNode, setActiveView]);
+
   return (
     <div className="h-full p-3 md:p-6 bg-background/50 flex flex-col items-center">
       <div className="w-full max-w-5xl flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-8 gap-4">
@@ -515,6 +540,7 @@ function ValidationViewContent() {
           setPendingDismissId={setPendingDismissId}
           runValidation={runValidation}
           toast={toast}
+          onIssueFocus={handleIssueFocus}
         />
       </div>
 
@@ -856,6 +882,7 @@ type VirtualRow =
 const VirtualizedIssueList = memo(function VirtualizedIssueList({
   issues, componentIssues, drcIssues, ercIssues, hasComponentParts, getIcon,
   deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
+  onIssueFocus,
 }: {
   issues: ArchIssue[];
   componentIssues: CompIssue[];
@@ -869,6 +896,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
   setPendingDismissId: (id: number | string | null) => void;
   runValidation: () => void;
   toast: ReturnType<typeof useToast>['toast'];
+  onIssueFocus?: (componentId: string | undefined) => void;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -968,7 +996,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
               {row.type === 'arch' && (
                 <ContextMenu>
                   <ContextMenuTrigger asChild>
-                    <div data-testid={`row-issue-${row.issue.id}`} onClick={() => { if (row.issue.componentId) { setActiveView('architecture'); } }} className={cn("flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group", row.issue.componentId ? "cursor-pointer" : "cursor-default")} role={row.issue.componentId ? "button" : undefined} tabIndex={row.issue.componentId ? 0 : undefined} onKeyDown={row.issue.componentId ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveView('architecture'); } } : undefined}>
+                    <div data-testid={`row-issue-${row.issue.id}`} onClick={() => { if (row.issue.componentId) { onIssueFocus ? onIssueFocus(row.issue.componentId) : setActiveView('architecture'); } }} className={cn("flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group", row.issue.componentId ? "cursor-pointer" : "cursor-default")} role={row.issue.componentId ? "button" : undefined} tabIndex={row.issue.componentId ? 0 : undefined} onKeyDown={row.issue.componentId ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onIssueFocus ? onIssueFocus(row.issue.componentId) : setActiveView('architecture'); } } : undefined}>
                       <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
                         {getIcon(row.issue.severity)}
                         <span className="text-xs font-medium uppercase md:hidden">{row.issue.severity}</span>
@@ -996,7 +1024,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                   </ContextMenuTrigger>
                   <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
                     <ContextMenuItem onSelect={() => { deleteValidationIssue(row.issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${row.issue.message}`); }}>Mark Resolved</ContextMenuItem>
-                    <ContextMenuItem onSelect={() => setActiveView('architecture')}>View in Architecture</ContextMenuItem>
+                    <ContextMenuItem onSelect={() => { onIssueFocus ? onIssueFocus(row.issue.componentId) : setActiveView('architecture'); }}>View in Architecture</ContextMenuItem>
                     <ContextMenuItem onSelect={() => copyToClipboard(row.issue.message)}>Copy Issue Details</ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem className="text-destructive" onSelect={() => setPendingDismissId(row.issue.id)}>Dismiss Issue</ContextMenuItem>

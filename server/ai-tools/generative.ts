@@ -10,6 +10,7 @@
 
 import { z } from 'zod';
 import type { ToolRegistry } from './registry';
+import { mulberry32 } from '@shared/prng';
 
 // ---------------------------------------------------------------------------
 // Component templates for candidate generation
@@ -52,16 +53,7 @@ const COMPONENT_TEMPLATES: Record<string, ComponentTemplate[]> = {
   ],
 };
 
-/** Simple seeded PRNG for reproducible candidate generation. */
-function mulberry32(seed: number): () => number {
-  let s = seed | 0;
-  return () => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// mulberry32 PRNG imported from @shared/prng
 
 /** Resistor E12 values for random selection. */
 const RESISTOR_VALUES = ['100', '220', '330', '470', '1k', '2.2k', '4.7k', '10k', '22k', '47k', '100k'];

@@ -182,7 +182,15 @@ function ArchitectureFlow() {
         setLocalNodes(nds => nds.map(n => ({
           ...n,
           selected: n.id === focusNodeId,
+          className: n.id === focusNodeId ? 'validation-focus-flash' : (n.className === 'validation-focus-flash' ? '' : n.className),
         })));
+        // Remove the flash class after animation completes
+        const timer = setTimeout(() => {
+          setLocalNodes(nds => nds.map(n =>
+            n.className === 'validation-focus-flash' ? { ...n, className: '' } : n,
+          ));
+        }, 600);
+        return () => { clearTimeout(timer); };
       }
     }
   }, [focusNodeId, reactFlowInstance, setLocalNodes]);
@@ -892,8 +900,8 @@ function ArchitectureFlow() {
               <div className="pointer-events-auto">
                 <EmptyState
                   icon={Cpu}
-                  title="No diagram yet"
-                  description="Ask Chat to generate a system architecture or drag components from the Asset Library."
+                  title="Start Building Your Architecture"
+                  description="Start building your system architecture. Add blocks from the sidebar or ask the AI assistant to generate one."
                   actionLabel="Generate Architecture"
                   actionTestId="button-generate-architecture"
                   onAction={handleGenerateArchitecture}

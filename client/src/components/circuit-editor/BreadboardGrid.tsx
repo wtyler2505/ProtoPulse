@@ -27,6 +27,8 @@ interface BreadboardGridProps {
   occupiedPoints?: Set<string>;
   /** Currently hovered coordinate (for visual feedback) */
   hoveredCoord?: BreadboardCoord | null;
+  /** When true, shows an empty-state guidance overlay on the board */
+  showEmptyGuidance?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -156,6 +158,7 @@ function BreadboardGridInner({
   highlightedPoints,
   occupiedPoints,
   hoveredCoord,
+  showEmptyGuidance,
 }: BreadboardGridProps) {
   const { width, height } = useMemo(() => getBoardDimensions(), []);
   const hoveredKey = hoveredCoord ? coordKey(hoveredCoord) : null;
@@ -417,6 +420,44 @@ function BreadboardGridInner({
 
       {/* Terminal strip holes */}
       {terminalHoles}
+
+      {/* Empty state guidance */}
+      {showEmptyGuidance && (
+        <g data-testid="breadboard-empty-overlay">
+          <rect
+            x={width / 2 - 130}
+            y={height / 2 - 30}
+            width={260}
+            height={60}
+            rx={6}
+            fill="rgba(0,0,0,0.7)"
+            stroke="#333"
+            strokeWidth={1}
+          />
+          <text
+            x={width / 2}
+            y={height / 2 - 5}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={11}
+            fill="#a1a1aa"
+            fontFamily="system-ui, sans-serif"
+          >
+            Add components to your schematic
+          </text>
+          <text
+            x={width / 2}
+            y={height / 2 + 15}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={10}
+            fill="#71717a"
+            fontFamily="system-ui, sans-serif"
+          >
+            to see them on the breadboard.
+          </text>
+        </g>
+      )}
     </svg>
   );
 }

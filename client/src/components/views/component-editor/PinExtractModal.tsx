@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Upload, MapPin, Camera } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { apiRequest } from '@/lib/queryClient';
+import { useApiKeys } from '@/hooks/useApiKeys';
 import type { Connector, PartMeta } from '@shared/component-types';
 
 interface PinExtractModalProps {
@@ -21,8 +22,6 @@ interface PinExtractModalProps {
 }
 
 type ModalState = 'upload' | 'loading' | 'review';
-
-const API_KEY_STORAGE_KEY = 'gemini_api_key';
 
 const CONNECTOR_TYPE_STYLES: Record<string, { label: string; className: string }> = {
   pad: { label: 'SMD Pad', className: 'bg-blue-500/10 text-blue-500' },
@@ -39,7 +38,8 @@ export default function PinExtractModal({
   onApply,
 }: PinExtractModalProps) {
   const [modalState, setModalState] = useState<ModalState>('upload');
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem(API_KEY_STORAGE_KEY) ?? '');
+  const { apiKey, setApiKey: setApiKeyForProvider } = useApiKeys('gemini');
+  const setApiKey = useCallback((key: string) => { setApiKeyForProvider('gemini', key); }, [setApiKeyForProvider]);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extractedPins, setExtractedPins] = useState<Connector[]>([]);
@@ -85,10 +85,6 @@ export default function PinExtractModal({
 
     setError(null);
     setModalState('loading');
-
-    if (apiKey) {
-      localStorage.setItem(API_KEY_STORAGE_KEY, apiKey);
-    }
 
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
