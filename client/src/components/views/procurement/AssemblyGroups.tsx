@@ -40,7 +40,7 @@ export function AssemblyGroups({ assemblyGroups }: AssemblyGroupsProps) {
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-2">
                     <span className="text-muted-foreground">x{item.quantity}</span>
-                    <span className="font-mono text-foreground">${Number(item.totalPrice).toFixed(2)}</span>
+                    <span className="font-mono text-foreground">${(Math.round(Number(item.totalPrice) * 100) / 100).toFixed(2)}</span>
                   </div>
                 </div>
               ))}

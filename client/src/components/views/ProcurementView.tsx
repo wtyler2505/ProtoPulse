@@ -214,7 +214,7 @@ function ProcurementView() {
       const headers = ['Part Number', 'Manufacturer', 'Description', 'Quantity', 'Unit Price', 'Total Price', 'Supplier', 'Stock', 'Status'];
       const rows = filteredBom.map(item => [
         item.partNumber, item.manufacturer, item.description, item.quantity,
-        Number(item.unitPrice).toFixed(2), Number(item.totalPrice).toFixed(2), item.supplier, item.stock, item.status,
+        (Math.round(Number(item.unitPrice) * 100) / 100).toFixed(2), (Math.round(Number(item.totalPrice) * 100) / 100).toFixed(2), item.supplier, item.stock, item.status,
       ]);
       const csv = buildCSV(headers, rows);
       downloadBlob(new Blob([csv], { type: 'text/csv' }), 'bom_export.csv');
