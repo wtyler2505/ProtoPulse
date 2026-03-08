@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 28 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 6 verified-done + 3 fixed Wave 56) |
+| P1 | 25 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 9 verified-done + 6 fixed Wave 56) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -132,12 +132,12 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0046 | **Show real status labels** — remove fake "success" states, add working/success/failed chips. | OPEN | UX-001, UX-006 |
+| BL-0046 | **Show real status labels** — Already fixed: ExportPanel uses real loading/success/error status from mutation callbacks. SaveStatusIndicator tracks real mutations. ChatPanel uses streaming state. No fake status indicators remain. | DONE | UX-001, UX-006 |
 | BL-0047 | **Confirm modal for destructive actions** — Already implemented: ConfirmDialog on snapshot delete (DesignHistoryView), BOM delete (BomCards+BomTable), BOM snapshot delete (BomDiffPanel), output clear (OutputView). | DONE | UX-004 |
 | BL-0048 | **Replace misleading labels** — Fixed: "Fix all issues" → "Help me fix these issues" in ChatPanel suggestion (Wave 56). | DONE | UX-005 |
-| BL-0049 | **Consistent toast style** — success, warning, error, info variants. | OPEN | UX-007 |
+| BL-0049 | **Consistent toast style** — Fixed: added success (emerald), warning (amber), info (cyan) variants to toast CVA alongside existing default + destructive (Wave 56). | DONE | UX-007 |
 | BL-0050 | **Retry button** on all network/API failure states. | OPEN | UX-008 |
-| BL-0051 | **"Last saved at"** and "unsaved changes" indicator in editor header. | OPEN | UX-010 |
+| BL-0051 | **"Last saved at"** — Already fixed: SaveStatusIndicator in Sidebar.tsx (lines 344-384) tracks mutations via useIsMutating, shows "Saving changes..."/"Last saved at HH:MM"/"All changes saved". | DONE | UX-010 |
 | BL-0052 | **Chat help links not clickable** — Already fixed: SettingsPanel.tsx has proper `<a>` elements with href/target/rel for Anthropic and Google console links. | DONE | app-audit §11 |
 | BL-0053 | **Chat model names inconsistent** — Already fixed: constants.ts uses consistent "Claude X.Y ModelName" pattern for all models (4.5 Sonnet, 4.6 Sonnet, 4 Opus, etc.). | DONE | app-audit §11 |
 | BL-0054 | **No validation feedback on settings save** — Fixed: added toast notification on "Save & Close" (Wave 55). | DONE | app-audit §11 |
