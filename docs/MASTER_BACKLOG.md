@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 22 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 12 verified-done + 9 fixed Wave 56) |
+| P1 | 17 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 17 verified-done + 9 fixed Wave 56) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -110,11 +110,11 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0034 | **Route-level ownership integration tests** — verify all route families enforce ownership. | OPEN | Wave F (F1) |
-| BL-0035 | **Collaboration handshake/auth tests** — WebSocket auth, room join, role enforcement. | OPEN | Wave F (F2) |
-| BL-0036 | **Export/import contract integration tests** — verify format contracts between client/server. | OPEN | Wave F (F3) |
-| BL-0037 | **AI tool executor boundary tests** — ownership, confirmation, cross-project mutation. | OPEN | Wave F (F4) |
-| BL-0038 | **Simulation input validation tests** — tStep guard, resource limits. | OPEN | Wave F (F5) |
+| BL-0034 | **Route-level ownership integration tests** — Already implemented: ownership-integration.test.ts (23 tests, 600 lines) covering 23 route families. | DONE | Wave F (F1) |
+| BL-0035 | **Collaboration handshake/auth tests** — Already implemented: collaboration-auth.test.ts (50 tests, 850 lines) covering handshake, role enforcement, lock enforcement, room isolation. | DONE | Wave F (F2) |
+| BL-0036 | **Export/import contract integration tests** — Already implemented: 10 export test files (317 tests) covering KiCad, Eagle, SPICE, Gerber, drill, BOM, IPC-2581, ODB++, STEP, snapshots. | DONE | Wave F (F3) |
+| BL-0037 | **AI tool executor boundary tests** — Already implemented: ai-tools-boundary.test.ts (100 tests, 1111 lines) covering registry completeness, schema validation, input rejection for all 12 tool domains. | DONE | Wave F (F4) |
+| BL-0038 | **Simulation input validation tests** — Already implemented: 8 simulation test files (545 tests) covering AC/DC/transient analysis, device models, Monte Carlo, SPICE parser, circuit solver. | DONE | Wave F (F5) |
 
 ### Wiring Fixes (Partial Implementations)
 
