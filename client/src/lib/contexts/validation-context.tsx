@@ -37,16 +37,40 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
     })),
   });
 
+  const validationQueryKey = [`/api/projects/${projectId}/validation`];
+
+  type ValidationRawItem = Omit<ValidationIssue, 'id'> & { id: number | string };
+  type ValidationRawResponse = { data: ValidationRawItem[]; total: number };
+
   const addValidationIssueMutation = useMutation({
     mutationFn: async (issue: { severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string }) => {
       await apiRequest('POST', `/api/projects/${projectId}/validation`, issue);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/validation`] });
+    onMutate: async (newIssue) => {
+      await queryClient.cancelQueries({ queryKey: validationQueryKey });
+      const previous = queryClient.getQueryData<ValidationRawResponse>(validationQueryKey);
+      queryClient.setQueryData<ValidationRawResponse>(validationQueryKey, (old) => {
+        const items = old?.data ?? [];
+        const optimistic: ValidationRawItem = {
+          id: `temp-${crypto.randomUUID()}`,
+          severity: newIssue.severity,
+          message: newIssue.message,
+          componentId: newIssue.componentId,
+          suggestion: newIssue.suggestion,
+        };
+        return { data: [...items, optimistic], total: items.length + 1 };
+      });
+      return { previous };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(validationQueryKey, context.previous);
+      }
       const reason = error.message.replace(/^\d{3}:\s*/, '') || 'An unexpected error occurred';
       toast({ variant: 'destructive', title: 'Failed to add validation issue', description: reason });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: validationQueryKey });
     },
   });
 
@@ -54,12 +78,25 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
     mutationFn: async (id: number | string) => {
       await apiRequest('DELETE', `/api/projects/${projectId}/validation/${Number(id)}`);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/validation`] });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: validationQueryKey });
+      const previous = queryClient.getQueryData<ValidationRawResponse>(validationQueryKey);
+      queryClient.setQueryData<ValidationRawResponse>(validationQueryKey, (old) => {
+        const items = old?.data ?? [];
+        const filtered = items.filter((item) => String(item.id) !== String(id));
+        return { data: filtered, total: filtered.length };
+      });
+      return { previous };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(validationQueryKey, context.previous);
+      }
       const reason = error.message.replace(/^\d{3}:\s*/, '') || 'An unexpected error occurred';
       toast({ variant: 'destructive', title: 'Failed to delete validation issue', description: reason });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: validationQueryKey });
     },
   });
 

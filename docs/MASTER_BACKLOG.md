@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 9 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 20 verified-done + 12 fixed Wave 56, 4 fixed Wave 57) |
+| P1 | 5 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 20 verified-done + 12 fixed Wave 56, 4 fixed Wave 57, 4 fixed Wave 58) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -93,7 +93,7 @@
 | BL-0024 | **CircuitCodeView chunk 724 KB** — Fixed: split CodeMirror (470KB) and Sucrase (206KB) into separate vendor chunks. CircuitCodeView 724→47KB. No 500KB warning. (Wave 55) | DONE | app-audit §15 |
 | BL-0025 | **7 context providers create unmemoized values** — Already fixed: all 7 providers (Architecture, BOM, Chat, Validation, History, Output, ProjectMeta) use useMemo on context values. | DONE | app-audit §15 |
 | BL-0026 | **ChatPanel has 22 useState hooks** — any state change re-renders entire 829-line component. | DONE (Wave 57) — 21 useState → 3 useReducer hooks (useChatPanelUI, useChatMessaging, useMultimodalState) + 2 standalone | app-audit §15 |
-| BL-0027 | **Mutations invalidate full query lists** — every message triggers full refetch instead of optimistic update. | OPEN | app-audit §15 |
+| BL-0027 | **Mutations invalidate full query lists** — every message triggers full refetch instead of optimistic update. | DONE (Wave 58) — optimistic onMutate/onError/onSettled in bom, chat, validation contexts | app-audit §15 |
 
 ### Accessibility (Critical)
 
@@ -120,11 +120,11 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0039 | **Collaboration runtime activation** — WebSocket rooms, CRDT ops exist (Wave 41) but not fully activated in production flow. | PARTIAL | MF-023 |
+| BL-0039 | **Collaboration runtime activation** — WebSocket rooms, CRDT ops exist (Wave 41) but not fully activated in production flow. | DONE (Wave 58) — attachCollaborationServer() wired to httpServer in index.ts with DISABLE_COLLABORATION env flag | MF-023 |
 | BL-0040 | **Standard categories not unified** — UI filter categories don't match storage categories end-to-end. | DONE (Wave 57) — shared/component-categories.ts as single source of truth, compile-time ComponentCategory type | MF-026 |
 | BL-0041 | **Metrics lifecycle not fully wired** — Fixed: startMetricsCollection() called on server listen, stopMetricsCollection()+flushMetrics() added to graceful shutdown (Wave 56). /api/metrics endpoint already exists. | DONE | MF-030 |
-| BL-0042 | **Route-level test coverage** weaker than actual route surface area. | PARTIAL | MF-032 |
-| BL-0043 | **Migration chain out of sync** with runtime schema (Drizzle push works but formal migrations drift). | PARTIAL | MF-014 |
+| BL-0042 | **Route-level test coverage** weaker than actual route surface area. | DONE (Wave 58) — 11 new test files, 121 tests covering architecture/bom/chat/history/validation/comments/settings/circuit routes | MF-032 |
+| BL-0043 | **Migration chain out of sync** with runtime schema (Drizzle push works but formal migrations drift). | DONE (Wave 58) — migration 0002 generated (8 new tables + column additions), CHECK constraints preserved | MF-014 |
 | BL-0044 | **Import transactions** — Already fixed: project-io.ts uses `db.transaction()` wrapping all 9 insert operations (nodes, edges, BOM, validation, chat, history, parts, circuits) with full atomicity. | DONE | MF-015 |
 | BL-0045 | **API error/status consistency** — DELETE responses now all use 204. Remaining inconsistency is non-DELETE response shape (`{ message }` vs `{ data }` vs direct arrays) — accepted pattern for REST APIs. | DONE | MF-020 |
 

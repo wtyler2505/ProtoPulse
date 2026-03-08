@@ -13,6 +13,8 @@ import { recordRequest, getMetrics, startMetricsCollection } from "./metrics";
 import { apiDocs } from "./api-docs";
 import { validateSession } from "./auth";
 import { auditLogMiddleware } from "./audit-log";
+import { attachCollaborationServer } from "./collaboration";
+import { registerCollaborationServer } from "./shutdown";
 
 declare global {
   namespace Express {
@@ -426,6 +428,12 @@ app.use((req, res, next) => {
     () => {
       log(`serving on port ${port}`);
       startMetricsCollection();
+
+      // BL-0039: Wire WebSocket collaboration to the HTTP server
+      if (process.env.DISABLE_COLLABORATION !== '1') {
+        const collabServer = attachCollaborationServer(httpServer);
+        registerCollaborationServer(collabServer);
+      }
     },
   );
 

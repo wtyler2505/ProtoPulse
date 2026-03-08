@@ -95,11 +95,36 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
     select: (response: { data: ChatBranch[]; total: number }) => response.data,
   });
 
+  type ChatRawMessage = { id: number | string; role: string; content: string; timestamp: string; mode?: ChatMessage['mode']; metadata?: string | null };
+  type ChatRawResponse = { data: ChatRawMessage[]; total: number };
+
   const addChatMutation = useMutation({
     mutationFn: async (msg: { role: string; content: string; mode?: string; branchId?: string | null; metadata?: string }) => {
       await apiRequest('POST', `/api/projects/${projectId}/chat`, msg);
     },
-    onSuccess: () => {
+    onMutate: async (newMsg) => {
+      await queryClient.cancelQueries({ queryKey: [chatQueryKey] });
+      const previous = queryClient.getQueryData<ChatRawResponse>([chatQueryKey]);
+      queryClient.setQueryData<ChatRawResponse>([chatQueryKey], (old) => {
+        const msgs = old?.data ?? [];
+        const optimistic: ChatRawMessage = {
+          id: `temp-${crypto.randomUUID()}`,
+          role: newMsg.role,
+          content: newMsg.content,
+          timestamp: new Date().toISOString(),
+          mode: newMsg.mode as ChatMessage['mode'],
+          metadata: newMsg.metadata ?? null,
+        };
+        return { data: [...msgs, optimistic], total: msgs.length + 1 };
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData([chatQueryKey], context.previous);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: [chatQueryKey] });
       queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/chat/branches`] });
     },
