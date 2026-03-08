@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 15 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 19 verified-done + 11 fixed Wave 56) |
+| P1 | 14 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 20 verified-done + 11 fixed Wave 56) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -126,7 +126,7 @@
 | BL-0042 | **Route-level test coverage** weaker than actual route surface area. | PARTIAL | MF-032 |
 | BL-0043 | **Migration chain out of sync** with runtime schema (Drizzle push works but formal migrations drift). | PARTIAL | MF-014 |
 | BL-0044 | **Import transactions** — Already fixed: project-io.ts uses `db.transaction()` wrapping all 9 insert operations (nodes, edges, BOM, validation, chat, history, parts, circuits) with full atomicity. | DONE | MF-015 |
-| BL-0045 | **API error/status consistency** — response envelopes still vary across route families. | PARTIAL | MF-020 |
+| BL-0045 | **API error/status consistency** — DELETE responses now all use 204. Remaining inconsistency is non-DELETE response shape (`{ message }` vs `{ data }` vs direct arrays) — accepted pattern for REST APIs. | DONE | MF-020 |
 
 ### UX Trust Fixes
 
