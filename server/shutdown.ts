@@ -16,6 +16,7 @@
 
 import { logger } from './logger';
 import { jobQueue } from './job-queue';
+import { stopMetricsCollection, flushMetrics } from './metrics';
 
 import type { Server } from 'http';
 
@@ -84,6 +85,12 @@ export async function performGracefulShutdown(httpServer: Server, signal: string
       collaborationServer.shutdown();
       logger.info('Shutdown: collaboration server closed');
     }
+
+    // 3b. Stop metrics collection and flush (BL-0041)
+    logger.info('Shutdown: stopping metrics collection');
+    stopMetricsCollection();
+    await flushMetrics();
+    logger.info('Shutdown: metrics flushed');
 
     // 4. Close HTTP server (stop accepting new connections, wait for existing)
     logger.info('Shutdown: closing HTTP server');

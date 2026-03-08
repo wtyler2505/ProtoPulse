@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 17 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 17 verified-done + 9 fixed Wave 56) |
+| P1 | 15 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 19 verified-done + 11 fixed Wave 56) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -122,10 +122,10 @@
 |----|-------------|--------|--------|
 | BL-0039 | **Collaboration runtime activation** — WebSocket rooms, CRDT ops exist (Wave 41) but not fully activated in production flow. | PARTIAL | MF-023 |
 | BL-0040 | **Standard categories not unified** — UI filter categories don't match storage categories end-to-end. | PARTIAL | MF-026 |
-| BL-0041 | **Metrics lifecycle not fully wired** in runtime (metrics collection exists but dashboard/export missing). | PARTIAL | MF-030 |
+| BL-0041 | **Metrics lifecycle not fully wired** — Fixed: startMetricsCollection() called on server listen, stopMetricsCollection()+flushMetrics() added to graceful shutdown (Wave 56). /api/metrics endpoint already exists. | DONE | MF-030 |
 | BL-0042 | **Route-level test coverage** weaker than actual route surface area. | PARTIAL | MF-032 |
 | BL-0043 | **Migration chain out of sync** with runtime schema (Drizzle push works but formal migrations drift). | PARTIAL | MF-014 |
-| BL-0044 | **Import transactions** — multi-step import writes lack real transaction safety. | PARTIAL | MF-015 |
+| BL-0044 | **Import transactions** — Already fixed: project-io.ts uses `db.transaction()` wrapping all 9 insert operations (nodes, edges, BOM, validation, chat, history, parts, circuits) with full atomicity. | DONE | MF-015 |
 | BL-0045 | **API error/status consistency** — response envelopes still vary across route families. | PARTIAL | MF-020 |
 
 ### UX Trust Fixes

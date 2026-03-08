@@ -9,7 +9,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import { validateEnv } from "./env";
 import crypto from "crypto";
 import { logger } from "./logger";
-import { recordRequest, getMetrics } from "./metrics";
+import { recordRequest, getMetrics, startMetricsCollection } from "./metrics";
 import { apiDocs } from "./api-docs";
 import { validateSession } from "./auth";
 import { auditLogMiddleware } from "./audit-log";
@@ -425,6 +425,7 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      startMetricsCollection();
     },
   );
 
