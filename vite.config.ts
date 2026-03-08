@@ -86,6 +86,14 @@ export default defineConfig({
             if (id.includes('/cmdk/')) {
               return 'cmdk-vendor';
             }
+            // CodeMirror — Circuit Code editor (BL-0024)
+            if (id.includes('/@codemirror/') || id.includes('/codemirror/') || id.includes('/@lezer/')) {
+              return 'codemirror-vendor';
+            }
+            // Sucrase — JS transpiler for Circuit DSL sandbox (BL-0024)
+            if (id.includes('/sucrase/')) {
+              return 'sucrase-vendor';
+            }
           }
           // Let Rollup handle everything else with automatic chunking
           return undefined;

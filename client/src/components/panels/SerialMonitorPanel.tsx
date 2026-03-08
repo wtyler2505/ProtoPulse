@@ -503,6 +503,7 @@ export default function SerialMonitorPanel() {
               data-testid="serial-preset-name-input"
               type="text"
               placeholder="Preset name..."
+              aria-label="Preset name"
               value={presetName}
               onChange={(e) => setPresetName(e.target.value)}
               onKeyDown={(e) => {
@@ -608,6 +609,7 @@ export default function SerialMonitorPanel() {
           data-testid="serial-send-input"
           type="text"
           placeholder={isConnected ? 'Type a message and press Enter...' : 'Connect to a device first'}
+          aria-label="Serial message"
           value={sendValue}
           onChange={(e) => setSendValue(e.target.value)}
           onKeyDown={handleKeyDown}

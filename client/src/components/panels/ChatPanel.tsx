@@ -872,7 +872,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   return (
     <>
       {isOpen && (
-        <div data-testid="chat-backdrop" className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} />
+        <div data-testid="chat-backdrop" role="button" tabIndex={-1} aria-label="Close chat panel" className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={onClose} onKeyDown={(e) => { if (e.key === 'Escape') { onClose(); } }} />
       )}
       <div
         className={cn(

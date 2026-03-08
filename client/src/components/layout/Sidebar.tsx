@@ -56,8 +56,12 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
     return (
     <div
         data-testid="sidebar-collapsed"
+        role="button"
+        tabIndex={0}
+        aria-label="Expand sidebar"
         className="hidden lg:flex flex-col items-center w-10 h-full bg-sidebar/60 backdrop-blur-xl border-r border-sidebar-border shrink-0 cursor-pointer transition-all duration-300"
         onClick={onToggleCollapse}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleCollapse?.(); } }}
       >
         {/* UX-015: Back to Projects (collapsed) */}
         <StyledTooltip content="Back to Projects" side="right">
@@ -118,8 +122,12 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
       {isOpen && (
         <div
           data-testid="sidebar-backdrop"
+          role="button"
+          tabIndex={-1}
+          aria-label="Close sidebar"
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
+          onKeyDown={(e) => { if (e.key === 'Escape') { onClose(); } }}
         />
       )}
       <div

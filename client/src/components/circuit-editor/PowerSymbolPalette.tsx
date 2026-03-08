@@ -123,6 +123,7 @@ function CustomSymbolInput({
           value={customNet}
           onChange={(e) => setCustomNet(e.target.value)}
           placeholder="Net name..."
+          aria-label="Custom power net name"
           className="h-6 text-xs flex-1"
         />
         <div

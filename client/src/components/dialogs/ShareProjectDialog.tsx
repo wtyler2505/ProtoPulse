@@ -157,9 +157,10 @@ export function ShareProjectDialog({
         {/* Invite */}
         {isOwner && (
           <div className="space-y-1.5 border-t border-border pt-3" data-testid="section-invite">
-            <label className="text-xs text-muted-foreground">Invite Collaborator</label>
+            <label htmlFor="invite-session-id" className="text-xs text-muted-foreground">Invite Collaborator</label>
             <div className="flex gap-2">
               <Input
+                id="invite-session-id"
                 placeholder="Session ID"
                 value={inviteSessionId}
                 onChange={(e) => setInviteSessionId(e.target.value)}

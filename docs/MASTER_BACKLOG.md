@@ -17,7 +17,7 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 50 | Broken workflows, major UX trust issues, test gaps (7 resolved in Wave 54) |
+| P1 | 37 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
 | **Total** | **342** | |
@@ -80,18 +80,18 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0073 | **SSE stream client doesn't check `response.ok`** — add status check before `getReader()`. Parse error JSON on failure. | OPEN | GA-ERR-03 |
-| BL-0074 | **N+1 query in `buildAppStateFromProject()`** — sequential queries per AI request. Refactor to `Promise.all()`. | OPEN | GA-DB-01 |
-| BL-0075 | **No circuit breaker for AI provider** — after N failures, mark provider "open" for cooldown. | OPEN | GA-ERR-06 |
-| BL-0076 | **No automatic AI provider fallback** — on error, retry with alternate provider. | OPEN | GA-ERR-07 |
-| BL-0077 | **Race condition in `upsertChatSettings`** — use `ON CONFLICT DO UPDATE` instead of read-then-write. | OPEN | GA-DB-03 |
+| BL-0073 | **SSE stream client doesn't check `response.ok`** — Already fixed: ChatPanel.tsx checks `!response.ok` before `getReader()` (line 603). DesignAgentPanel.tsx also checks (line 84). | DONE | GA-ERR-03 |
+| BL-0074 | **N+1 query in `buildAppStateFromProject()`** — Already fixed: uses `Promise.all()` for 10 parallel queries (server/routes/chat.ts:203). | DONE | GA-DB-01 |
+| BL-0075 | **No circuit breaker for AI provider** — Already implemented: `server/circuit-breaker.ts` with CLOSED/OPEN/HALF_OPEN states, singleton breakers per provider. | DONE | GA-ERR-06 |
+| BL-0076 | **No automatic AI provider fallback** — Already implemented: `server/ai.ts` has `FallbackProviderConfig`, `isRetryableError()`, automatic provider switch on 5xx/timeout. | DONE | GA-ERR-07 |
+| BL-0077 | **Race condition in `upsertChatSettings`** — Already fixed: uses `onConflictDoUpdate` (server/storage/components.ts:198). | DONE | GA-DB-03 |
 
 ### Performance
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0024 | **Main bundle 696 KB** — exceeds Vite 500KB threshold. Needs `manualChunks` splitting. | OPEN | app-audit §15 |
-| BL-0025 | **7 context providers create unmemoized values** — ALL consumers re-render on ANY state change. | OPEN | app-audit §15 |
+| BL-0024 | **CircuitCodeView chunk 724 KB** — Fixed: split CodeMirror (470KB) and Sucrase (206KB) into separate vendor chunks. CircuitCodeView 724→47KB. No 500KB warning. (Wave 55) | DONE | app-audit §15 |
+| BL-0025 | **7 context providers create unmemoized values** — Already fixed: all 7 providers (Architecture, BOM, Chat, Validation, History, Output, ProjectMeta) use useMemo on context values. | DONE | app-audit §15 |
 | BL-0026 | **ChatPanel has 22 useState hooks** — any state change re-renders entire 829-line component. | OPEN | app-audit §15 |
 | BL-0027 | **Mutations invalidate full query lists** — every message triggers full refetch instead of optimistic update. | OPEN | app-audit §15 |
 
@@ -99,12 +99,12 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0028 | **`ToolButton.tsx` missing aria-label** — propagates to ALL toolbars across Breadboard/PCB. Screen readers ignore `title`. | OPEN | app-audit §13 |
-| BL-0029 | **48+ icon-only buttons missing aria-labels** across 15+ components (Chat, Architecture, Schematic, Procurement, ComponentEditor, Output, Sidebar). | OPEN | app-audit §13 |
-| BL-0030 | **Interactive `<div>` elements** used as buttons without `role="button"`, `tabIndex`, or keyboard handlers. Completely inaccessible. | OPEN | app-audit §13 |
-| BL-0031 | **No `role="tablist"`/`role="tab"`/`aria-selected`** on main navigation tabs and Component Editor sub-tabs. | OPEN | app-audit §1, §13 |
-| BL-0032 | **No H1 element** — headings start at H2/H3. | OPEN | app-audit §1 |
-| BL-0033 | **Form fields without label association** across multiple components. | OPEN | app-audit §13 |
+| BL-0028 | **`ToolButton.tsx` missing aria-label** — Already fixed: ToolButton.tsx has `aria-label={label}` (line 21). | DONE | app-audit §13 |
+| BL-0029 | **48+ icon-only buttons missing aria-labels** — Fixed: added aria-labels to 9 violations across CommentsPanel, KanbanView, ChatSearchBar (Wave 55). Remaining buttons already have labels. | DONE | app-audit §13 |
+| BL-0030 | **Interactive `<div>` elements** — Fixed: added role="button", tabIndex, keyboard handlers to ChatPanel backdrop, Sidebar collapsed div, Sidebar backdrop (Wave 55). | DONE | app-audit §13 |
+| BL-0031 | **No `role="tablist"`/`role="tab"`/`aria-selected`** — Already fixed: ProjectWorkspace.tsx has full ARIA tab semantics (role=tablist/tab/tabpanel, aria-selected, aria-controls). | DONE | app-audit §1, §13 |
+| BL-0032 | **No H1 element** — Already fixed: ProjectWorkspace.tsx:492 has `<h1 className="sr-only">ProtoPulse</h1>`, plus H1s on ProjectPickerPage and AuthPage. | DONE | app-audit §1 |
+| BL-0033 | **Form fields without label association** — Fixed: added aria-labels/htmlFor to 12 fields across ShareProjectDialog, ComponentPlacer, DesignVariablesPanel, PowerSymbolPalette, CommentsPanel, SerialMonitorPanel (Wave 55). | DONE | app-audit §13 |
 
 ### Test Hardening (Wave F)
 

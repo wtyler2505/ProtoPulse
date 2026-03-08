@@ -177,6 +177,7 @@ function CommentItem({
                 size="sm"
                 className="h-6 px-2 text-xs text-zinc-400 hover:text-red-400"
                 data-testid={`comment-delete-btn-${comment.id}`}
+                aria-label="Delete comment"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
@@ -456,6 +457,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
         <div className="flex gap-2">
           <Textarea
             placeholder={replyToId ? 'Write a reply...' : 'Add a comment...'}
+            aria-label={replyToId ? 'Write a reply' : 'Add a comment'}
             className="min-h-[60px] max-h-[120px] resize-none bg-zinc-900 border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-[#00F0FF]/30"
             value={newContent}
             onChange={(e) => { setNewContent(e.target.value); }}

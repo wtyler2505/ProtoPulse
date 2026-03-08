@@ -186,6 +186,7 @@ export default function ComponentPlacer() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search parts..."
+            aria-label="Search components"
             className="h-7 pl-7 text-xs"
           />
         </div>

@@ -18,6 +18,7 @@ export default function ChatSearchBar({ value, onChange, visible }: ChatSearchBa
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Search messages..."
+        aria-label="Search messages"
         className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none"
         autoFocus
       />

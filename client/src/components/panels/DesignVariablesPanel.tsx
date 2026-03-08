@@ -308,6 +308,7 @@ export function DesignVariablesPanel({ open, onOpenChange }: DesignVariablesPane
               <div className="grid grid-cols-[1fr_80px] gap-2">
                 <Input
                   placeholder="Variable name (e.g. VCC)"
+                  aria-label="Variable name"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   onKeyDown={handleAddKeyDown}
@@ -317,6 +318,7 @@ export function DesignVariablesPanel({ open, onOpenChange }: DesignVariablesPane
                 />
                 <Input
                   placeholder="Unit"
+                  aria-label="Variable unit"
                   value={newUnit}
                   onChange={(e) => setNewUnit(e.target.value)}
                   onKeyDown={handleAddKeyDown}
@@ -326,6 +328,7 @@ export function DesignVariablesPanel({ open, onOpenChange }: DesignVariablesPane
               </div>
               <Input
                 placeholder="Expression (e.g. 3.3, 10k, VCC * 2)"
+                aria-label="Variable expression"
                 value={newExpression}
                 onChange={(e) => setNewExpression(e.target.value)}
                 onKeyDown={handleAddKeyDown}
@@ -334,6 +337,7 @@ export function DesignVariablesPanel({ open, onOpenChange }: DesignVariablesPane
               />
               <Input
                 placeholder="Description (optional)"
+                aria-label="Variable description"
                 value={newDescription}
                 onChange={(e) => setNewDescription(e.target.value)}
                 onKeyDown={handleAddKeyDown}

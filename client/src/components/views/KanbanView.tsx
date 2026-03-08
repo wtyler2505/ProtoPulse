@@ -160,6 +160,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
               className="h-6 w-6"
               disabled={currentColIdx <= 0}
               onClick={handleMoveLeft}
+              aria-label="Move task left"
             >
               <ChevronLeft className="w-3 h-3" />
             </Button>
@@ -170,6 +171,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
               className="h-6 w-6"
               disabled={currentColIdx >= columns.length - 1}
               onClick={handleMoveRight}
+              aria-label="Move task right"
             >
               <ChevronRight className="w-3 h-3" />
             </Button>
@@ -181,6 +183,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
               size="icon"
               className="h-6 w-6"
               onClick={() => { onEdit(task); }}
+              aria-label="Edit task"
             >
               <Edit3 className="w-3 h-3" />
             </Button>
@@ -191,6 +194,7 @@ const TaskCard = memo(function TaskCard({ task, columns, onEdit, onMove, onDelet
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-destructive"
+                  aria-label="Delete task"
                 >
                   <Trash2 className="w-3 h-3" />
                 </Button>
@@ -259,6 +263,7 @@ const ColumnView = memo(function ColumnView({
                 variant="ghost"
                 size="icon"
                 className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                aria-label="Remove column"
               >
                 <X className="w-3 h-3" />
               </Button>
