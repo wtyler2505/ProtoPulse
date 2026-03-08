@@ -56,8 +56,9 @@ function captureHandler(): AsyncRouteHandler {
 
   const fakeApp = {
     get: vi.fn(),
-    delete: (_path: string, handler: AsyncRouteHandler) => {
-      captured = handler;
+    delete: (_path: string, ...args: unknown[]) => {
+      // Last argument is the handler; preceding args are middleware (e.g. rate limiter)
+      captured = args[args.length - 1] as AsyncRouteHandler;
     },
   } as unknown as import('express').Express;
 

@@ -5,6 +5,8 @@ import {
   userChatSettings, type UserChatSettings, type InsertUserChatSettings,
 } from '@shared/schema';
 import { StorageError } from './errors';
+import { escapeLikeWildcards } from './utils';
+
 import type { StorageDeps } from './types';
 
 export class ComponentStorage {
@@ -101,10 +103,11 @@ export class ComponentStorage {
         conditions.push(eq(componentLibrary.category, category));
       }
       if (search) {
+        const escaped = escapeLikeWildcards(search);
         conditions.push(
           or(
-            ilike(componentLibrary.title, `%${search}%`),
-            sql`EXISTS (SELECT 1 FROM unnest(${componentLibrary.tags}) AS t WHERE t ILIKE ${'%' + search + '%'})`,
+            ilike(componentLibrary.title, `%${escaped}%`),
+            sql`EXISTS (SELECT 1 FROM unnest(${componentLibrary.tags}) AS t WHERE t ILIKE ${'%' + escaped + '%'})`,
           )!,
         );
       }

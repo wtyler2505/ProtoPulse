@@ -204,7 +204,7 @@ app.use((req, res, next) => {
 const PUBLIC_PATHS = ['/api/auth/', '/api/health', '/api/ready', '/api/docs', '/api/metrics', '/api/settings/chat'];
 
 app.use('/api', (req, res, next) => {
-  if (PUBLIC_PATHS.some(p => req.path.startsWith(p.replace('/api', ''))) || req.path === '/api/seed' || req.path === '/api/admin/seed-library') {
+  if (PUBLIC_PATHS.some(p => req.path.startsWith(p.replace('/api', '')))) {
     return next();
   }
 

@@ -548,11 +548,13 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const changeDiff = s.getChangeDiff();
 
       // CAPX-API-05: SSE fetch with exponential backoff on network errors
+      // BL-0003: Don't send API key in plaintext when server-stored key is available
+      const hasSession = !!localStorage.getItem('protopulse-session-id');
       const fetchRequestBody = JSON.stringify({
         message: msgText,
         provider: s.aiProvider,
         model: s.aiModel,
-        apiKey: s.aiApiKey,
+        apiKey: hasSession ? '' : s.aiApiKey,
         projectId: s.projectId,
         temperature: s.aiTemperature,
         customSystemPrompt: s.customSystemPrompt,

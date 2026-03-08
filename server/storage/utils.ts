@@ -1,6 +1,11 @@
 import type { PgTable } from 'drizzle-orm/pg-core';
 import type { DbClient } from './types';
 
+/** Escape SQL LIKE/ILIKE wildcard characters in user input. */
+export function escapeLikeWildcards(input: string): string {
+  return input.replace(/[%_\\]/g, (ch) => '\\' + ch);
+}
+
 export async function chunkedInsert<R>(
   db: DbClient,
   table: PgTable,

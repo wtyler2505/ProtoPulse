@@ -1,6 +1,8 @@
 import { spawn } from 'child_process';
+import crypto from 'crypto';
 
 import { sql } from 'drizzle-orm';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
 import { db } from '../db';
@@ -27,6 +29,16 @@ function parseDatabaseUrl(url: string): {
   };
 }
 
+/** Timing-safe comparison of admin API keys using SHA-256 digests. */
+function safeCompareAdminKey(provided: string, expected: string): boolean {
+  if (!provided || !expected) {
+    return false;
+  }
+  const providedHash = crypto.createHash('sha256').update(provided).digest();
+  const expectedHash = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(providedHash, expectedHash);
+}
+
 /** Validate the X-Admin-Key header and return 403 if invalid. Returns true if authorized. */
 function requireAdminKey(
   req: { headers: Record<string, string | string[] | undefined> },
@@ -35,12 +47,20 @@ function requireAdminKey(
   const adminKey = req.headers['x-admin-key'];
   const expectedKey = process.env.ADMIN_API_KEY;
 
-  if (!expectedKey || adminKey !== expectedKey) {
+  if (!safeCompareAdminKey(String(adminKey), expectedKey ?? '')) {
     res.status(403).json({ error: 'Forbidden: valid admin key required' });
     return false;
   }
   return true;
 }
+
+const backupRateLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many admin requests. Try again later.' },
+});
 
 const backupQuerySchema = z.object({
   format: z.enum(['sql', 'custom']).default('sql'),
@@ -60,6 +80,7 @@ export function registerBackupRoutes(app: Express): void {
 
   app.post(
     '/api/admin/backup',
+    backupRateLimiter,
     asyncHandler(async (req, res) => {
       if (!requireAdminKey(req, res)) {
         return;
@@ -167,6 +188,7 @@ export function registerBackupRoutes(app: Express): void {
 
   app.post(
     '/api/admin/restore',
+    backupRateLimiter,
     payloadLimit(100 * 1024 * 1024),
     asyncHandler(async (req, res) => {
       if (!requireAdminKey(req, res)) {
@@ -275,6 +297,7 @@ export function registerBackupRoutes(app: Express): void {
 
   app.get(
     '/api/admin/backup/status',
+    backupRateLimiter,
     asyncHandler(async (req, res) => {
       if (!requireAdminKey(req, res)) {
         return;

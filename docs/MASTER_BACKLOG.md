@@ -2,7 +2,7 @@
 
 > **Single source of truth** for all open work: bugs, security fixes, features, tech debt, UX polish, and moonshots.
 > Consolidated 2026-03-07 from 9 source documents (see [Source Map](#source-document-map) at bottom).
-> Items completed in Waves 1-51 have been removed. Only **open/remaining** work is listed.
+> Items completed in Waves 1-52 have been removed or marked DONE. Only **open/remaining** work is listed.
 
 ## How to Use This Document
 
@@ -16,11 +16,11 @@
 
 | Priority | Count | Description |
 |----------|-------|-------------|
-| P0 | 14 | Security holes, crashes, data loss — fix before shipping |
+| P0 | 2 | Security holes, crashes, data loss — fix before shipping (11 resolved in Wave 52, 1 PARTIAL) |
 | P1 | 57 | Broken workflows, major UX trust issues, test gaps |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
-| **Total** | **353** | |
+| **Total** | **342** | |
 
 ---
 
@@ -30,18 +30,18 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0001 | **Auth bypass in dev mode** — `NODE_ENV !== 'production'` skips all session validation. Every endpoint is unauthenticated in dev. | OPEN | app-audit §14 |
-| BL-0002 | **`/api/seed` is public** — listed in `PUBLIC_PATHS`. Any non-prod deployment allows unauthenticated DB seeding. | OPEN | app-audit §14 |
-| BL-0003 | **API keys sent in plaintext** in every `/api/chat/ai/stream` POST body. Visible in DevTools, potentially logged by proxies. | OPEN | app-audit §14 |
-| BL-0004 | **Response body logging captures API keys** — server logs first 500 chars of every JSON response. | OPEN | app-audit §14 |
-| BL-0005 | **API keys in localStorage** — `gemini_api_key` accessible to any XSS on same origin. | OPEN | app-audit §14 |
-| BL-0006 | **Admin purge has no role check** — `DELETE /api/admin/purge` callable by any user. | OPEN | app-audit §14 |
-| BL-0007 | **XSS in `useDragGhost.ts`** — `innerHTML` interpolates user-editable `assetName` without sanitization. | OPEN | app-audit §14 |
-| BL-0008 | **LIKE wildcards not escaped** in library search queries — user can use `%` and `_`. | OPEN | app-audit §14 |
-| BL-0009 | **Multiple `z.any()` fields** in Zod schemas bypass type validation. | OPEN | app-audit §14 |
-| BL-0070 | **ZIP bomb vulnerability on FZPZ import** — no decompressed size limit. Add 50MB cap + stream-decompress with byte counter. | OPEN | GA-SEC-13 |
-| BL-0071 | **SVG content parsed without sanitization** — add DOMPurify or equivalent before storing/rendering SVG. | OPEN | GA-SEC-17 |
-| BL-0072 | **Session tokens stored in plaintext** in DB — store hashed tokens, compare hashes, rotate on auth actions. | OPEN | GA-SEC-09 |
+| BL-0001 | **Auth bypass in dev mode** — `NODE_ENV !== 'production'` skips all session validation. Every endpoint is unauthenticated in dev. | DONE (Wave E) | app-audit §14 |
+| BL-0002 | **`/api/seed` is public** — listed in `PUBLIC_PATHS`. Any non-prod deployment allows unauthenticated DB seeding. | DONE (Wave 52) | app-audit §14 |
+| BL-0003 | **API keys sent in plaintext** in every `/api/chat/ai/stream` POST body. Visible in DevTools, potentially logged by proxies. | DONE (Wave 52) | app-audit §14 |
+| BL-0004 | **Response body logging captures API keys** — server logs first 500 chars of every JSON response. | DONE (Wave E) | app-audit §14 |
+| BL-0005 | **API keys in localStorage** — `gemini_api_key` accessible to any XSS on same origin. localStorage still used for unauthenticated BYOK; full fix requires auth UI (BL-0021). | PARTIAL | app-audit §14 |
+| BL-0006 | **Admin purge has no role check** — `DELETE /api/admin/purge` callable by any user. | DONE (Wave 52) | app-audit §14 |
+| BL-0007 | **XSS in `useDragGhost.ts`** — `innerHTML` interpolates user-editable `assetName` without sanitization. | DONE | app-audit §14 |
+| BL-0008 | **LIKE wildcards not escaped** in library search queries — user can use `%` and `_`. | DONE (Wave 52) | app-audit §14 |
+| BL-0009 | **Multiple `z.any()` fields** in Zod schemas bypass type validation. | DONE | app-audit §14 |
+| BL-0070 | **ZIP bomb vulnerability on FZPZ import** — no decompressed size limit. Add 50MB cap + stream-decompress with byte counter. | DONE (Wave 52) | GA-SEC-13 |
+| BL-0071 | **SVG content parsed without sanitization** — add DOMPurify or equivalent before storing/rendering SVG. | DONE (CAPX-SEC-17) | GA-SEC-17 |
+| BL-0072 | **Session tokens stored in plaintext** in DB — store hashed tokens, compare hashes, rotate on auth actions. | DONE | GA-SEC-09 |
 
 ### Crashes & Data Loading
 

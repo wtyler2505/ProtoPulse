@@ -1,10 +1,16 @@
-import type { Express } from 'express';
+import crypto from 'crypto';
+
 import { isNotNull, lte, and, count } from 'drizzle-orm';
-import { db } from '../db';
+import rateLimit from 'express-rate-limit';
+
 import { architectureNodes, architectureEdges, bomItems, projects } from '@shared/schema';
-import { asyncHandler } from './utils';
+
+import { db } from '../db';
 import { logger } from '../logger';
 import { getMetrics } from '../metrics';
+import { asyncHandler } from './utils';
+
+import type { Express } from 'express';
 
 function maskKey(key: string): string {
   if (key.length <= 8) {
@@ -13,16 +19,35 @@ function maskKey(key: string): string {
   return key.slice(0, 8) + '...';
 }
 
+/** Timing-safe comparison of admin API keys using SHA-256 digests. */
+export function safeCompareAdminKey(provided: string, expected: string): boolean {
+  if (!provided || !expected) {
+    return false;
+  }
+  const providedHash = crypto.createHash('sha256').update(provided).digest();
+  const expectedHash = crypto.createHash('sha256').update(expected).digest();
+  return crypto.timingSafeEqual(providedHash, expectedHash);
+}
+
+const adminRateLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many admin requests. Try again later.' },
+});
+
 export function registerAdminRoutes(app: Express): void {
   // --- Admin: Metrics ---
 
   app.get(
     '/api/admin/metrics',
+    adminRateLimiter,
     asyncHandler(async (req, res) => {
       const adminKey = req.headers['x-admin-key'];
       const expectedKey = process.env.ADMIN_API_KEY;
 
-      if (!expectedKey || adminKey !== expectedKey) {
+      if (!safeCompareAdminKey(String(adminKey), expectedKey ?? '')) {
         return res.status(403).json({ error: 'Forbidden: valid admin key required' });
       }
 
@@ -34,12 +59,13 @@ export function registerAdminRoutes(app: Express): void {
 
   app.delete(
     '/api/admin/purge',
+    adminRateLimiter,
     asyncHandler(async (req, res) => {
       // --- Admin authorization ---
       const adminKey = req.headers['x-admin-key'];
       const expectedKey = process.env.ADMIN_API_KEY;
 
-      if (!expectedKey || adminKey !== expectedKey) {
+      if (!safeCompareAdminKey(String(adminKey), expectedKey ?? '')) {
         return res.status(403).json({ error: 'Forbidden: valid admin key required' });
       }
 

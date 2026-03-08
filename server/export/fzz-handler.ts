@@ -12,6 +12,9 @@
 
 import JSZip from 'jszip';
 
+const MAX_FZZ_FILES = 100;
+const MAX_FZZ_UNCOMPRESSED_SIZE = 50 * 1024 * 1024; // 50 MB
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -525,6 +528,14 @@ export async function importFzz(buffer: Buffer): Promise<FzzImportResult> {
   const zip = await JSZip.loadAsync(buffer);
   const warnings: string[] = [];
 
+  // ZIP bomb protection (mirrors FZPZ guards in component-export.ts)
+  const allFiles = Object.entries(zip.files).filter(([, f]) => !f.dir);
+  if (allFiles.length > MAX_FZZ_FILES) {
+    throw new Error(`FZZ archive contains too many entries (${String(allFiles.length)}, max ${String(MAX_FZZ_FILES)})`);
+  }
+
+  let totalUncompressed = 0;
+
   // 1. Parse all FZP files → parts
   const parts: FzzPart[] = [];
   const partByModuleId = new Map<string, FzzPart>();
@@ -533,6 +544,10 @@ export async function importFzz(buffer: Buffer): Promise<FzzImportResult> {
   for (const fzpPath of fzpFiles) {
     const content = await zip.file(fzpPath)?.async('string');
     if (!content) continue;
+    totalUncompressed += Buffer.byteLength(content, 'utf8');
+    if (totalUncompressed > MAX_FZZ_UNCOMPRESSED_SIZE) {
+      throw new Error(`FZZ archive uncompressed content too large (max ${String(MAX_FZZ_UNCOMPRESSED_SIZE / 1024 / 1024)}MB)`);
+    }
     try {
       const part = parseFzp(content);
       parts.push(part);
@@ -548,6 +563,14 @@ export async function importFzz(buffer: Buffer): Promise<FzzImportResult> {
     const bbSvg = await zip.file(`svg/${svgPrefix}.breadboard.svg`)?.async('string');
     const schSvg = await zip.file(`svg/${svgPrefix}.schematic.svg`)?.async('string');
     const pcbSvg = await zip.file(`svg/${svgPrefix}.pcb.svg`)?.async('string');
+    for (const svg of [bbSvg, schSvg, pcbSvg]) {
+      if (svg) {
+        totalUncompressed += Buffer.byteLength(svg, 'utf8');
+        if (totalUncompressed > MAX_FZZ_UNCOMPRESSED_SIZE) {
+          throw new Error(`FZZ archive uncompressed content too large (max ${String(MAX_FZZ_UNCOMPRESSED_SIZE / 1024 / 1024)}MB)`);
+        }
+      }
+    }
     if (bbSvg) part.svgBreadboard = bbSvg;
     if (schSvg) part.svgSchematic = schSvg;
     if (pcbSvg) part.svgPcb = pcbSvg;
@@ -561,6 +584,10 @@ export async function importFzz(buffer: Buffer): Promise<FzzImportResult> {
   for (const viewPath of viewPriority) {
     const content = await zip.file(viewPath)?.async('string');
     if (!content) continue;
+    totalUncompressed += Buffer.byteLength(content, 'utf8');
+    if (totalUncompressed > MAX_FZZ_UNCOMPRESSED_SIZE) {
+      throw new Error(`FZZ archive uncompressed content too large (max ${String(MAX_FZZ_UNCOMPRESSED_SIZE / 1024 / 1024)}MB)`);
+    }
     try {
       const parsed = parseSketchXml(content);
       allSketches[viewPath] = parsed;
@@ -648,6 +675,10 @@ export async function importFzz(buffer: Buffer): Promise<FzzImportResult> {
   const metadata: Record<string, string> = {};
   const metaContent = await zip.file('fz/meta.xml')?.async('string');
   if (metaContent) {
+    totalUncompressed += Buffer.byteLength(metaContent, 'utf8');
+    if (totalUncompressed > MAX_FZZ_UNCOMPRESSED_SIZE) {
+      throw new Error(`FZZ archive uncompressed content too large (max ${String(MAX_FZZ_UNCOMPRESSED_SIZE / 1024 / 1024)}MB)`);
+    }
     metadata.title = extractSingleTagContent(metaContent, 'title');
     metadata.author = extractSingleTagContent(metaContent, 'author');
     metadata.date = extractSingleTagContent(metaContent, 'date');

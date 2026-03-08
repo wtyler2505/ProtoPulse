@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect, memo } from 'react';
+import { sanitizeSvg } from '@/lib/svg-sanitize';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import {
@@ -729,7 +730,7 @@ function PrintLabelsDialog({
               </div>
               <div
                 className="flex items-center justify-center bg-white rounded-md p-2 border border-border/50"
-                dangerouslySetInnerHTML={{ __html: previewSvg }}
+                dangerouslySetInnerHTML={{ __html: sanitizeSvg(previewSvg) }}
               />
             </div>
           )}

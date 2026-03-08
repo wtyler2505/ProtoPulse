@@ -9,6 +9,8 @@ import {
   designComments, type DesignComment, type InsertDesignComment,
 } from '@shared/schema';
 import { StorageError } from './errors';
+import { escapeLikeWildcards } from './utils';
+
 import type { StorageDeps } from './types';
 import type { PaginationOptions } from './interfaces';
 
@@ -134,10 +136,11 @@ export class MiscStorage {
       }
 
       if (opts?.search) {
+        const escaped = escapeLikeWildcards(opts.search);
         conditions.push(
           or(
-            ilike(spiceModels.name, `%${opts.search}%`),
-            ilike(spiceModels.description, `%${opts.search}%`),
+            ilike(spiceModels.name, `%${escaped}%`),
+            ilike(spiceModels.description, `%${escaped}%`),
           )!,
         );
       }
