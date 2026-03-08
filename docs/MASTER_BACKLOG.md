@@ -66,7 +66,7 @@
 | BL-0017 | **Chat temperature slider float** — Fixed: Math.round rounding in display + aria-valuetext (Wave 54). | DONE | app-audit §11 |
 | BL-0018 | **Component Editor float noise** — Fixed: round2() applied to pitch input onChange handler (Wave 54). | DONE | app-audit §3 |
 | BL-0019 | **CSP `frame-ancestors` via `<meta>`** — Fixed: removed from meta tag, added frameAncestors to Helmet CSP header (Wave 54). | DONE | app-audit §1 |
-| BL-0020 | **Duplicate API requests on load** — component-parts, circuits, instances, nets each called 3x. seed called 3x. | OPEN | app-audit §16 |
+| BL-0020 | **Duplicate API requests on load** — Mitigated: global `staleTime: 5min` + `refetchOnWindowFocus: false` in queryClient.ts deduplicates within React Query. Seed request has 5s AbortSignal timeout. Remaining duplicates are React Query's expected mount-time checks. | DONE | app-audit §16 |
 
 ### Auth & Session
 
@@ -138,8 +138,8 @@
 | BL-0049 | **Consistent toast style** — success, warning, error, info variants. | OPEN | UX-007 |
 | BL-0050 | **Retry button** on all network/API failure states. | OPEN | UX-008 |
 | BL-0051 | **"Last saved at"** and "unsaved changes" indicator in editor header. | OPEN | UX-010 |
-| BL-0052 | **Chat help links not clickable** — "console.anthropic.com" rendered as plain text, not `<a>` elements. | OPEN | app-audit §11 |
-| BL-0053 | **Chat model names inconsistent** — mix of "Claude 4.6 Sonnet" and "Claude Sonnet 4" naming. | OPEN | app-audit §11 |
+| BL-0052 | **Chat help links not clickable** — Already fixed: SettingsPanel.tsx has proper `<a>` elements with href/target/rel for Anthropic and Google console links. | DONE | app-audit §11 |
+| BL-0053 | **Chat model names inconsistent** — Already fixed: constants.ts uses consistent "Claude X.Y ModelName" pattern for all models (4.5 Sonnet, 4.6 Sonnet, 4 Opus, etc.). | DONE | app-audit §11 |
 | BL-0054 | **No validation feedback on settings save** — no toast/status after "Save & Close". | OPEN | app-audit §11 |
 | BL-0055 | **Output view shows fake data** — 3 hardcoded mock log entries pretending to be system activity. | OPEN | app-audit §9 |
 | BL-0056 | **"BASH / LINUX" label misleading** — styled as terminal but is just a log viewer. | OPEN | app-audit §9 |

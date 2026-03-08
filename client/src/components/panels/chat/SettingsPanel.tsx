@@ -1,5 +1,6 @@
-import { memo } from 'react';
+import { memo, useCallback } from 'react';
 import { Settings2, Eye, EyeOff, ChevronDown, Trash2, Loader2, CheckCircle2, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { AI_MODELS, type RoutingStrategy } from './constants';
 import type { KeyStatus } from '@/hooks/useApiKeyStatus';
@@ -42,6 +43,11 @@ function SettingsPanel({
   apiKeyValid, onClearApiKey, onClose, keyStatus, keyErrorMessage, onValidateKey, isValidating,
   settingsLoadError, onRetrySettingsLoad,
 }: SettingsPanelProps) {
+  const handleSaveAndClose = useCallback(() => {
+    onClose();
+    toast({ title: 'Settings saved', description: 'Your AI settings have been updated.' });
+  }, [onClose]);
+
   return (
     <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
       <div className="flex items-center gap-2 mb-2">
@@ -268,7 +274,7 @@ function SettingsPanel({
 
       <button
         data-testid="save-settings"
-        onClick={onClose}
+        onClick={handleSaveAndClose}
         className="w-full py-2.5 bg-primary text-primary-foreground font-bold text-sm tracking-wider hover:bg-primary/90 transition-colors"
       >
         Save & Close
