@@ -17,10 +17,10 @@
 | Priority | Count | Description |
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, 1 PARTIAL BL-0005) |
-| P1 | 5 | Broken workflows, major UX trust issues, test gaps (7 Wave 54, 9 verified-done + 4 fixed Wave 55, 20 verified-done + 12 fixed Wave 56, 4 fixed Wave 57, 4 fixed Wave 58) |
+| P1 | 1 | BL-0005 remaining (3 verified-done Wave 59, 4 fixed Wave 58, 4 fixed Wave 57, 20 verified + 12 fixed Wave 56, 9 verified + 4 fixed Wave 55, 7 Wave 54) |
 | P2 | 140 | Feature gaps, polish, partial implementations |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
-| **Total** | **342** | |
+| **Total** | **283** | |
 
 ---
 
@@ -34,7 +34,7 @@
 | BL-0002 | **`/api/seed` is public** — listed in `PUBLIC_PATHS`. Any non-prod deployment allows unauthenticated DB seeding. | DONE (Wave 52) | app-audit §14 |
 | BL-0003 | **API keys sent in plaintext** in every `/api/chat/ai/stream` POST body. Visible in DevTools, potentially logged by proxies. | DONE (Wave 52) | app-audit §14 |
 | BL-0004 | **Response body logging captures API keys** — server logs first 500 chars of every JSON response. | DONE (Wave E) | app-audit §14 |
-| BL-0005 | **API keys in localStorage** — `gemini_api_key` accessible to any XSS on same origin. localStorage still used for unauthenticated BYOK; full fix requires auth UI (BL-0021). | PARTIAL | app-audit §14 |
+| BL-0005 | **API keys in localStorage** — `gemini_api_key` / `anthropic_api_key` accessible to any XSS on same origin. Auth UI now exists (BL-0021 DONE). Need to migrate BYOK key storage from localStorage to server-side encrypted storage (AES-256-GCM via existing `api_keys` table). | OPEN | app-audit §14 |
 | BL-0006 | **Admin purge has no role check** — `DELETE /api/admin/purge` callable by any user. | DONE (Wave 52) | app-audit §14 |
 | BL-0007 | **XSS in `useDragGhost.ts`** — `innerHTML` interpolates user-editable `assetName` without sanitization. | DONE | app-audit §14 |
 | BL-0008 | **LIKE wildcards not escaped** in library search queries — user can use `%` and `_`. | DONE (Wave 52) | app-audit §14 |
@@ -72,9 +72,9 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0021 | **No login/register UI** — Backend auth exists but zero frontend auth pages. `/login`, `/register` all 404. | OPEN | app-audit §12 |
-| BL-0022 | **No session management** — No X-Session-Id stored/sent by client. Auth layer is dead code. | OPEN | app-audit §12 |
-| BL-0023 | **App fully accessible without auth** — No protected routes client-side. Anyone can view/edit/delete. | OPEN | app-audit §12 |
+| BL-0021 | **No login/register UI** — Backend auth exists but zero frontend auth pages. `/login`, `/register` all 404. | DONE (verified Wave 59) — AuthPage.tsx 163 lines with login/register toggle, validation, error display. POST /register + /login + /logout + GET /me all exist. | app-audit §12 |
+| BL-0022 | **No session management** — No X-Session-Id stored/sent by client. Auth layer is dead code. | DONE (verified Wave 59) — auth-context.tsx 237 lines: login/register/logout, localStorage session, X-Session-Id injected via queryClient.ts getAuthHeaders(), network retry, 12 tests. | app-audit §12 |
+| BL-0023 | **App fully accessible without auth** — No protected routes client-side. Anyone can view/edit/delete. | DONE (verified Wave 59) — App.tsx AuthGate wraps all routes, shows AuthPage when unauthenticated. Server-side PUBLIC_PATHS whitelist + requireProjectOwnership on 22+ routes. | app-audit §12 |
 
 ### Reliability
 
