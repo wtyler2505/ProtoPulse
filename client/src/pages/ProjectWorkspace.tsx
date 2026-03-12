@@ -320,6 +320,10 @@ const initialWorkspaceState: WorkspaceState = {
   moreMenuOpen: false,
 };
 
+import { useActionExecutor } from '@/components/panels/chat/hooks/useActionExecutor';
+import PredictionPanel from '@/components/ui/PredictionPanel';
+import { usePredictions } from '@/hooks/usePredictions';
+
 function WorkspaceContent() {
   const projectId = useProjectId();
   const { activeView, setActiveView, projectName } = useProjectMeta();
@@ -330,6 +334,30 @@ function WorkspaceContent() {
   const mainRef = useRef<HTMLElement>(null);
   const [location, setLocation] = useLocation();
   const initialUrlApplied = useRef(false);
+
+  // Initialize prediction engine
+  const executeActions = useActionExecutor();
+  const { predictions, dismiss, accept, clearAll, isAnalyzing } = usePredictions(
+    nodes.map(n => ({ id: n.id, type: n.type ?? 'generic', label: (n.data as any)?.label || n.id })),
+    edges.map(e => ({ id: e.id, source: e.source, target: e.target, label: e.label as string })),
+    bom.map(b => ({ id: String(b.id), partNumber: b.partNumber, description: b.description, quantity: b.quantity }))
+  );
+
+  const handlePredictionAccept = useCallback((id: string) => {
+    const pred = predictions.find(p => p.id === id);
+    if (pred && pred.action) {
+      if (pred.action.type === 'add_component') {
+        const payload = pred.action.payload as { component: string; value: string };
+        executeActions([{
+          type: 'add_node',
+          nodeType: payload.component,
+          label: `${payload.value} ${payload.component}`,
+        }]);
+        toast({ title: 'Component added', description: `Added ${payload.value} ${payload.component} to architecture.` });
+      }
+    }
+    accept(id);
+  }, [predictions, executeActions, accept, toast]);
 
   useEffect(() => {
     if (mainRef.current) {
@@ -885,6 +913,16 @@ function WorkspaceContent() {
                   </Suspense>
                 </ErrorBoundary>
               )}
+          </div>
+
+          <div className="absolute bottom-4 right-4 z-40 w-80 shadow-2xl">
+            <PredictionPanel
+              predictions={predictions}
+              onAccept={handlePredictionAccept}
+              onDismiss={dismiss}
+              onClearAll={clearAll}
+              isAnalyzing={isAnalyzing}
+            />
           </div>
         </main>
 

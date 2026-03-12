@@ -165,8 +165,8 @@
 | BL-0103 | Teardrop generation — Added 'teardrop' to pcbZones zoneType enum. Wrote AI tool (generate_teardrops) to scan trace endpoints and attach teardrop polygons to connected vias/pads. Rendered seamlessly on PCB view. | DONE | Wave 63 |
 | BL-0104 | Multi-sheet schematic hierarchy management — Added subDesignId to circuit_instances; created SchematicSheetNode for 'Sheet Symbols' with port rendering and 'Enter Sheet' navigation; implemented useInstantiateSubSheet hook and backend route. | DONE | Wave 63 |
 | BL-0105 | Live pin-compatibility checks for replacements — Enhanced AlternatePartsEngine with checkPinCompatibility algorithm; built ComponentReplacementDialog with live pin match/mismatch preview; added 'Replace Component' context menu to SchematicCanvas. | DONE | Wave 63 |
-| BL-0106 | Auto decoupling/power network placement suggestions | OPEN | MF-064 |
-| BL-0107 | AI placement optimization assistant | OPEN | MF-065 |
+| BL-0106 | Auto decoupling/power network placement suggestions — Integrated PredictionEngine into ProjectWorkspace via PredictionPanel overlay; added 'Add Decoupling Caps' context menu action to SchematicCanvas with auto pin-detection and wiring logic. | DONE | Wave 63 |
+| BL-0107 | AI placement optimization assistant — Wired usePredictions hook to provide live layout and design optimization suggestions; implemented handePredictionAccept to execute suggested AI actions. | DONE | Wave 63 |
 | BL-0108 | Node inline label editing on canvas — double-click to edit on Architecture (CustomNode), Schematic (InstanceNode, PowerNode) | DONE | Wave 61 |
 | BL-0109 | Node properties inspector panel | DONE (Wave 62) — NodeInspectorPanel.tsx: editable label/type/description, position, edge count, delete w/ undo | app-audit §2 |
 | BL-0110 | Canvas copy/paste support — Architecture, Schematic, and PCB all support Ctrl+C/V and context menu paste with ID remapping and system clipboard sync. | DONE | Wave 63 |

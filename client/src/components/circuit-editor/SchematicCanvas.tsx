@@ -1025,6 +1025,91 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     }
   }, [reactFlowInstance, instances, partsMap]);
 
+  const handleCtxAddDecoupling = useCallback(() => {
+    const selected = reactFlowInstance.getNodes().filter(n => n.selected);
+    if (selected.length !== 1 || selected[0].type !== 'schematic-instance') return;
+
+    const instId = Number(selected[0].id.replace('instance-', ''));
+    const inst = instances?.find(i => i.id === instId);
+    if (!inst) return;
+
+    const part = partsMap.get(inst.partId!);
+    if (!part) return;
+
+    const connectors = (part.connectors ?? []) as Connector[];
+    const vccPins = connectors.filter(c => /vcc|vdd|vpp|v\+|power/i.test(c.name));
+    const gndPins = connectors.filter(c => /gnd|ground|vss|v\-/i.test(c.name));
+
+    if (vccPins.length === 0 || gndPins.length === 0) {
+      toast({
+        title: 'No power pins found',
+        description: `Could not identify power/ground pins for ${inst.referenceDesignator}.`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    pushUndoState();
+
+    // 1. Create two capacitors (100nF and 10uF)
+    const caps = [
+      { value: '100nF', dx: 150, dy: -100 },
+      { value: '10uF', dx: 150, dy: 100 }
+    ];
+
+    const createPromises = caps.map(async (cap, i) => {
+      const cInstance = await createInstance.mutateAsync({
+        circuitId,
+        partId: null, // Generic capacitor
+        referenceDesignator: `C_DEC${i + 1}`,
+        schematicX: (inst.schematicX || 0) + cap.dx,
+        schematicY: (inst.schematicY || 0) + cap.dy,
+        properties: { type: 'capacitor', value: cap.value },
+      });
+
+      // 2. Connect to first VCC and first GND pin
+      const vccPin = vccPins[0].id;
+      const gndPin = gndPins[0].id;
+
+      // Pin 1 to VCC
+      await createNet.mutateAsync({
+        circuitId,
+        name: `VCC_DEC_${inst.referenceDesignator}`,
+        netType: 'power',
+        segments: [{
+          fromInstanceId: cInstance.id,
+          fromPin: '1',
+          toInstanceId: inst.id,
+          toPin: vccPin
+        }]
+      });
+
+      // Pin 2 to GND
+      await createNet.mutateAsync({
+        circuitId,
+        name: `GND_DEC_${inst.referenceDesignator}`,
+        netType: 'ground',
+        segments: [{
+          fromInstanceId: cInstance.id,
+          fromPin: '2',
+          toInstanceId: inst.id,
+          toPin: gndPin
+        }]
+      });
+    });
+
+    Promise.all(createPromises).then(() => {
+      toast({
+        title: 'Decoupling added',
+        description: `Added 100nF and 10uF capacitors to ${inst.referenceDesignator}.`,
+      });
+    }).catch(err => {
+      console.error('Failed to add decoupling:', err);
+      toast({ title: 'Error', description: 'Failed to add decoupling capacitors.', variant: 'destructive' });
+    });
+
+  }, [reactFlowInstance, instances, partsMap, circuitId, createInstance, createNet, pushUndoState, toast]);
+
   const handleCtxRunErc = useCallback(() => {
     window.dispatchEvent(new CustomEvent('protopulse:run-erc'));
   }, []);
@@ -1212,6 +1297,14 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         >
           <ArrowRightLeft className="w-4 h-4 mr-2" />
           Replace Component
+        </ContextMenuItem>
+        <ContextMenuItem
+          data-testid="ctx-add-decoupling"
+          onSelect={handleCtxAddDecoupling}
+          disabled={reactFlowInstance.getNodes().filter(n => n.selected && n.type === 'schematic-instance').length !== 1}
+        >
+          <Zap className="w-4 h-4 mr-2" />
+          Add Decoupling Caps
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem data-testid="ctx-paste" onSelect={triggerPaste}>
