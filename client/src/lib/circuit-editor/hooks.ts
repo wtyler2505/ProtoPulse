@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, HierarchicalPortRow, PcbZone, DesignComment } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow, HierarchicalPortRow, PcbZone, DesignComment } from '@shared/schema';
 
 // ===========================================================================
 // Circuit Designs
@@ -575,6 +575,97 @@ export function useDeleteComment() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['design-comments', variables.projectId] });
+    },
+  });
+}
+
+// ===========================================================================
+// Circuit Vias
+// ===========================================================================
+
+export function useCircuitVias(circuitId: number) {
+  return useQuery<CircuitViaRow[]>({
+    queryKey: ['circuit-vias', circuitId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/circuits/${circuitId}/vias`);
+      const json = await res.json() as { data: CircuitViaRow[]; total: number };
+      return json.data;
+    },
+    enabled: circuitId > 0,
+  });
+}
+
+export function useCreateCircuitVia() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      circuitId: number;
+      netId: number;
+      x: number;
+      y: number;
+      outerDiameter: number;
+      drillDiameter: number;
+      viaType?: 'through' | 'blind' | 'buried' | 'micro';
+      layerStart?: string;
+      layerEnd?: string;
+      tented?: boolean;
+    }) => {
+      const { circuitId, ...body } = data;
+      const res = await apiRequest('POST', `/api/circuits/${circuitId}/vias`, body);
+      return res.json() as Promise<CircuitViaRow>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['circuit-vias', variables.circuitId] });
+    },
+  });
+}
+
+export function useCreateCircuitVias() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { circuitId: number; vias: Omit<CircuitViaRow, 'id' | 'circuitId' | 'createdAt'>[] }) => {
+      const res = await apiRequest('POST', `/api/circuits/${params.circuitId}/vias/bulk`, params.vias);
+      return res.json() as Promise<{ count: number, data: CircuitViaRow[] }>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['circuit-vias', variables.circuitId] });
+    },
+  });
+}
+
+export function useUpdateCircuitVia() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      circuitId: number;
+      id: number;
+      x?: number;
+      y?: number;
+      outerDiameter?: number;
+      drillDiameter?: number;
+      viaType?: 'through' | 'blind' | 'buried' | 'micro';
+      layerStart?: string;
+      layerEnd?: string;
+      tented?: boolean;
+    }) => {
+      const { circuitId, id, ...body } = data;
+      const res = await apiRequest('PATCH', `/api/vias/${id}`, body);
+      return res.json() as Promise<CircuitViaRow>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['circuit-vias', variables.circuitId] });
+    },
+  });
+}
+
+export function useDeleteCircuitVia() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { circuitId: number; id: number }) => {
+      await apiRequest('DELETE', `/api/vias/${data.id}`);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['circuit-vias', variables.circuitId] });
     },
   });
 }

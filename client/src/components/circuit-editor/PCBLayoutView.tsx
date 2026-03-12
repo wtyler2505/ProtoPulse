@@ -18,6 +18,7 @@ import {
   useCircuitInstances,
   useCircuitNets,
   useCircuitWires,
+  useCircuitVias,
   useCreateCircuitWire,
   useDeleteCircuitWire,
   useUpdateCircuitInstance,
@@ -107,8 +108,8 @@ import {
 } from '@/components/views/pcb-layout';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState } from '@/components/views/pcb-layout';
-import type { Via } from '@/lib/pcb/via-model';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow } from '@shared/schema';
+import type { Via, ViaType } from '@/lib/pcb/via-model';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
 // Top-level view (circuit selector + canvas)
@@ -310,6 +311,7 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: nets } = useCircuitNets(circuitId);
   const { data: wires } = useCircuitWires(circuitId);
+  const { data: circuitVias } = useCircuitVias(circuitId);
   const { data: zones } = usePcbZones(projectId);
   const { data: commentResult } = useComments(projectId, { targetType: 'spatial', resolved: false });
   const comments = commentResult?.data ?? [];
@@ -348,8 +350,6 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
   const [boardWidth, setBoardWidth] = useState(DEFAULT_BOARD.width);
   const [boardHeight, setBoardHeight] = useState(DEFAULT_BOARD.height);
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
-  // Via state — populated by via placement tool (Phase 3) and trace-routing via drops
-  const [vias, _setVias] = useState<Via[]>([]);
   const [selectedViaId, setSelectedViaId] = useState<string | null>(null);
 
   // Marquee selection state
@@ -366,6 +366,20 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
 
   // --- Derived data ---
   const pcbWires = useMemo(() => (wires ?? []).filter((w: CircuitWireRow) => w.view === 'pcb'), [wires]);
+
+  const vias: Via[] = useMemo(() => {
+    return (circuitVias ?? []).map((v) => ({
+      id: String(v.id),
+      position: { x: v.x, y: v.y },
+      drillDiameter: v.drillDiameter,
+      outerDiameter: v.outerDiameter,
+      type: (v.viaType as ViaType) || 'through',
+      fromLayer: v.layerStart,
+      toLayer: v.layerEnd,
+      netId: v.netId ?? undefined,
+      tented: v.tented,
+    }));
+  }, [circuitVias]);
 
   const ratsnestNets = useMemo(() => {
     if (!nets || !instances) {

@@ -13,6 +13,7 @@ import type {
   CircuitInstanceRow, InsertCircuitInstance,
   CircuitNetRow, InsertCircuitNet,
   CircuitWireRow, InsertCircuitWire,
+  CircuitViaRow, InsertCircuitVia,
   SimulationResultRow, InsertSimulationResult,
   AiActionRow, InsertAiAction,
   HierarchicalPortRow, InsertHierarchicalPort,
@@ -127,6 +128,14 @@ export interface IStorage {
   createCircuitWire(data: InsertCircuitWire): Promise<CircuitWireRow>;
   updateCircuitWire(id: number, data: Partial<InsertCircuitWire>): Promise<CircuitWireRow | undefined>;
   deleteCircuitWire(id: number): Promise<CircuitWireRow | undefined>;
+
+  // Circuit vias
+  getCircuitVias(circuitId: number): Promise<CircuitViaRow[]>;
+  getCircuitVia(id: number): Promise<CircuitViaRow | undefined>;
+  createCircuitVia(data: InsertCircuitVia): Promise<CircuitViaRow>;
+  createCircuitVias(data: InsertCircuitVia[]): Promise<CircuitViaRow[]>;
+  updateCircuitVia(id: number, data: Partial<InsertCircuitVia>): Promise<CircuitViaRow | undefined>;
+  deleteCircuitVia(id: number): Promise<CircuitViaRow | undefined>;
 
   // Simulation results
   getSimulationResults(circuitId: number): Promise<SimulationResultRow[]>;

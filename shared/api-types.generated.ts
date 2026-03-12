@@ -34,6 +34,8 @@ import type {
   InsertCircuitNet,
   CircuitWireRow,
   InsertCircuitWire,
+  CircuitViaRow,
+  InsertCircuitVia,
   SimulationResultRow,
   InsertSimulationResult,
   AiActionRow,
@@ -44,8 +46,8 @@ import type {
 // Re-exported entity types
 // ---------------------------------------------------------------------------
 
-export type { Project, ArchitectureNode, ArchitectureEdge, BomItem, ValidationIssue, ChatMessage, HistoryItem, User, Session, ApiKeyRecord, UserChatSettings, ComponentPart, ComponentLibraryEntry, CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, SimulationResultRow, AiActionRow } from './schema';
-export type { InsertProject, InsertArchitectureNode, InsertArchitectureEdge, InsertBomItem, InsertValidationIssue, InsertChatMessage, InsertHistoryItem, InsertUser, InsertUserChatSettings, InsertComponentPart, InsertComponentLibrary, InsertCircuitDesign, InsertCircuitInstance, InsertCircuitNet, InsertCircuitWire, InsertSimulationResult, InsertAiAction } from './schema';
+export type { Project, ArchitectureNode, ArchitectureEdge, BomItem, ValidationIssue, ChatMessage, HistoryItem, User, Session, ApiKeyRecord, UserChatSettings, ComponentPart, ComponentLibraryEntry, CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow, SimulationResultRow, AiActionRow } from './schema';
+export type { InsertProject, InsertArchitectureNode, InsertArchitectureEdge, InsertBomItem, InsertValidationIssue, InsertChatMessage, InsertHistoryItem, InsertUser, InsertUserChatSettings, InsertComponentPart, InsertComponentLibrary, InsertCircuitDesign, InsertCircuitInstance, InsertCircuitNet, InsertCircuitWire, InsertCircuitVia, InsertSimulationResult, InsertAiAction } from './schema';
 
 // ---------------------------------------------------------------------------
 // Patch types — Partial<InsertType> for update/PATCH operations
@@ -66,6 +68,7 @@ export type PatchCircuitDesign = Partial<InsertCircuitDesign>;
 export type PatchCircuitInstance = Partial<InsertCircuitInstance>;
 export type PatchCircuitNet = Partial<InsertCircuitNet>;
 export type PatchCircuitWire = Partial<InsertCircuitWire>;
+export type PatchCircuitVia = Partial<InsertCircuitVia>;
 export type PatchSimulationResult = Partial<InsertSimulationResult>;
 export type PatchAiAction = Partial<InsertAiAction>;
 
@@ -131,6 +134,8 @@ export type CircuitNetResponse = ApiResponse<CircuitNetRow>;
 export type CircuitNetListResponse = ApiListResponse<CircuitNetRow>;
 export type CircuitWireResponse = ApiResponse<CircuitWireRow>;
 export type CircuitWireListResponse = ApiListResponse<CircuitWireRow>;
+export type CircuitViaResponse = ApiResponse<CircuitViaRow>;
+export type CircuitViaListResponse = ApiListResponse<CircuitViaRow>;
 export type SimulationResultResponse = ApiResponse<SimulationResultRow>;
 export type SimulationResultListResponse = ApiListResponse<SimulationResultRow>;
 export type AiActionResponse = ApiResponse<AiActionRow>;
@@ -140,4 +145,4 @@ export type AiActionListResponse = ApiListResponse<AiActionRow>;
 // Zod schema re-exports (runtime validators)
 // ---------------------------------------------------------------------------
 
-export { insertProjectSchema, insertArchitectureNodeSchema, insertArchitectureEdgeSchema, insertBomItemSchema, insertValidationIssueSchema, insertChatMessageSchema, insertHistoryItemSchema, insertUserSchema, insertUserChatSettingsSchema, insertComponentPartSchema, insertComponentLibrarySchema, insertCircuitDesignSchema, insertCircuitInstanceSchema, insertCircuitNetSchema, insertCircuitWireSchema, insertSimulationResultSchema, insertAiActionSchema } from './schema';
+export { insertProjectSchema, insertArchitectureNodeSchema, insertArchitectureEdgeSchema, insertBomItemSchema, insertValidationIssueSchema, insertChatMessageSchema, insertHistoryItemSchema, insertUserSchema, insertUserChatSettingsSchema, insertComponentPartSchema, insertComponentLibrarySchema, insertCircuitDesignSchema, insertCircuitInstanceSchema, insertCircuitNetSchema, insertCircuitWireSchema, insertCircuitViaSchema, insertSimulationResultSchema, insertAiActionSchema } from './schema';

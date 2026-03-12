@@ -4,6 +4,7 @@ import {
   circuitInstances, type CircuitInstanceRow, type InsertCircuitInstance,
   circuitNets, type CircuitNetRow, type InsertCircuitNet,
   circuitWires, type CircuitWireRow, type InsertCircuitWire,
+  circuitVias, type CircuitViaRow, type InsertCircuitVia,
   simulationResults, type SimulationResultRow, type InsertSimulationResult,
   hierarchicalPorts, type HierarchicalPortRow, type InsertHierarchicalPort,
   pcbZones, type PcbZone, type InsertPcbZone,
@@ -241,6 +242,69 @@ export class CircuitStorage {
       return deleted;
     } catch (e) {
       throw new StorageError('deleteCircuitWire', `circuit-wires/${id}`, e);
+    }
+  }
+
+  // --- Circuit Vias ---
+
+  async getCircuitVias(circuitId: number): Promise<CircuitViaRow[]> {
+    try {
+      return await this.db.select().from(circuitVias)
+        .where(eq(circuitVias.circuitId, circuitId))
+        .orderBy(asc(circuitVias.id));
+    } catch (e) {
+      throw new StorageError('getCircuitVias', `circuits/${circuitId}/vias`, e);
+    }
+  }
+
+  async getCircuitVia(id: number): Promise<CircuitViaRow | undefined> {
+    try {
+      const [via] = await this.db.select().from(circuitVias)
+        .where(eq(circuitVias.id, id));
+      return via;
+    } catch (e) {
+      throw new StorageError('getCircuitVia', `circuit-vias/${id}`, e);
+    }
+  }
+
+  async createCircuitVia(data: InsertCircuitVia): Promise<CircuitViaRow> {
+    try {
+      const [created] = await this.db.insert(circuitVias).values(data).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createCircuitVia', 'circuit-vias', e);
+    }
+  }
+
+  async createCircuitVias(data: InsertCircuitVia[]): Promise<CircuitViaRow[]> {
+    if (!data.length) return [];
+    try {
+      return await this.db.insert(circuitVias).values(data).returning();
+    } catch (e) {
+      throw new StorageError('createCircuitVias', 'circuit-vias', e);
+    }
+  }
+
+  async updateCircuitVia(id: number, data: Partial<InsertCircuitVia>): Promise<CircuitViaRow | undefined> {
+    try {
+      const [updated] = await this.db.update(circuitVias)
+        .set(data)
+        .where(eq(circuitVias.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateCircuitVia', `circuit-vias/${id}`, e);
+    }
+  }
+
+  async deleteCircuitVia(id: number): Promise<CircuitViaRow | undefined> {
+    try {
+      const [deleted] = await this.db.delete(circuitVias)
+        .where(eq(circuitVias.id, id))
+        .returning();
+      return deleted;
+    } catch (e) {
+      throw new StorageError('deleteCircuitVia', `circuit-vias/${id}`, e);
     }
   }
 

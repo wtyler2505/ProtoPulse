@@ -4,6 +4,7 @@ import { registerCircuitDesignRoutes } from './designs';
 import { registerCircuitInstanceRoutes } from './instances';
 import { registerCircuitNetRoutes } from './nets';
 import { registerCircuitWireRoutes } from './wires';
+import { registerCircuitViaRoutes } from './vias';
 import { registerCircuitExpansionRoutes } from './expansion';
 import { registerCircuitNetlistRoutes } from './netlist';
 import { registerCircuitAutorouteRoutes } from './autoroute';
@@ -18,6 +19,7 @@ export function registerCircuitRoutes(app: Express, storage: IStorage): void {
   registerCircuitInstanceRoutes(app, storage);
   registerCircuitNetRoutes(app, storage);
   registerCircuitWireRoutes(app, storage);
+  registerCircuitViaRoutes(app, storage);
   registerCircuitExpansionRoutes(app, storage);
   registerCircuitNetlistRoutes(app, storage);
   registerCircuitAutorouteRoutes(app, storage);

@@ -117,6 +117,12 @@ export class DatabaseStorage {
   createCircuitWire = this._circuit.createCircuitWire.bind(this._circuit);
   updateCircuitWire = this._circuit.updateCircuitWire.bind(this._circuit);
   deleteCircuitWire = this._circuit.deleteCircuitWire.bind(this._circuit);
+  getCircuitVias = this._circuit.getCircuitVias.bind(this._circuit);
+  getCircuitVia = this._circuit.getCircuitVia.bind(this._circuit);
+  createCircuitVia = this._circuit.createCircuitVia.bind(this._circuit);
+  createCircuitVias = this._circuit.createCircuitVias.bind(this._circuit);
+  updateCircuitVia = this._circuit.updateCircuitVia.bind(this._circuit);
+  deleteCircuitVia = this._circuit.deleteCircuitVia.bind(this._circuit);
   getSimulationResults = this._circuit.getSimulationResults.bind(this._circuit);
   getSimulationResult = this._circuit.getSimulationResult.bind(this._circuit);
   createSimulationResult = this._circuit.createSimulationResult.bind(this._circuit);

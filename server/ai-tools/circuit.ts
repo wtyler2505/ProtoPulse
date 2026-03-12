@@ -701,4 +701,87 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
       };
     },
   });
+
+  /**
+   * auto_stitch_vias — Automatically generate stitching vias for a copper pour zone.
+   *
+   * Analyzes a polygon zone (like a ground pour) and fills it with a grid of vias 
+   * to tie layers together, improving thermal and EMC performance.
+   */
+  registry.register({
+    name: 'auto_stitch_vias',
+    description: 'Automatically generate a grid of stitching vias within a copper pour zone to tie layers together for thermal and EMC performance.',
+    category: 'circuit',
+    parameters: z.object({
+      circuitId: z.number().int().min(1).describe('The ID of the circuit design.'),
+      zoneId: z.number().int().min(1).describe('The ID of the PCB zone (copper pour) to fill with vias.'),
+      spacing: z.number().positive().optional().describe('Spacing between vias in mm (default: 2.0).'),
+    }),
+    requiresConfirmation: false,
+    execute: async (params, ctx) => {
+      const zone = await ctx.storage.getPcbZone(params.zoneId);
+      if (!zone) {
+        return { success: false, message: `Zone ${params.zoneId} not found.` };
+      }
+      if (!zone.netId) {
+        return { success: false, message: `Zone ${params.zoneId} must be assigned to a net for stitching.` };
+      }
+
+      const pts = zone.points as Array<{x: number; y: number}>;
+      if (!pts || pts.length < 3) {
+        return { success: false, message: `Zone ${params.zoneId} does not have a valid polygon shape.` };
+      }
+
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const p of pts) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+
+      const spacing = params.spacing || 2.0; // mm
+      const margin = 0.5; // Stay slightly away from the absolute edge
+      const gridPts: Array<{x: number; y: number}> = [];
+
+      for (let x = minX + margin; x <= maxX - margin; x += spacing) {
+        for (let y = minY + margin; y <= maxY - margin; y += spacing) {
+          let inside = false;
+          for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+            const xi = pts[i].x, yi = pts[i].y;
+            const xj = pts[j].x, yj = pts[j].y;
+            const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+          }
+          if (inside) {
+            gridPts.push({ x, y });
+          }
+        }
+      }
+
+      if (gridPts.length === 0) {
+        return { success: true, message: `Zone too small or irregular for spacing ${spacing}mm; 0 vias added.` };
+      }
+
+      const viasToInsert = gridPts.map(pt => ({
+        circuitId: params.circuitId,
+        netId: zone.netId as number,
+        x: pt.x,
+        y: pt.y,
+        outerDiameter: 0.6,
+        drillDiameter: 0.3,
+        viaType: 'through' as const,
+        layerStart: 'front',
+        layerEnd: 'back',
+        tented: true,
+      }));
+
+      await ctx.storage.createCircuitVias(viasToInsert);
+
+      return {
+        success: true,
+        message: `Generated ${gridPts.length} stitching vias in zone ${params.zoneId} for net ${zone.netId}.`,
+      };
+    },
+  });
 }

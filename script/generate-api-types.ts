@@ -46,6 +46,7 @@ const entities: EntityDef[] = [
   { selectType: 'CircuitInstanceRow', insertType: 'InsertCircuitInstance', insertSchemaName: 'insertCircuitInstanceSchema', apiName: 'CircuitInstance' },
   { selectType: 'CircuitNetRow', insertType: 'InsertCircuitNet', insertSchemaName: 'insertCircuitNetSchema', apiName: 'CircuitNet' },
   { selectType: 'CircuitWireRow', insertType: 'InsertCircuitWire', insertSchemaName: 'insertCircuitWireSchema', apiName: 'CircuitWire' },
+  { selectType: 'CircuitViaRow', insertType: 'InsertCircuitVia', insertSchemaName: 'insertCircuitViaSchema', apiName: 'CircuitVia' },
   { selectType: 'SimulationResultRow', insertType: 'InsertSimulationResult', insertSchemaName: 'insertSimulationResultSchema', apiName: 'SimulationResult' },
   { selectType: 'AiActionRow', insertType: 'InsertAiAction', insertSchemaName: 'insertAiActionSchema', apiName: 'AiAction' },
 ];

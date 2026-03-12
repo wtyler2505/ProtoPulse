@@ -374,6 +374,28 @@ export const insertCircuitWireSchema = createInsertSchema(circuitWires).omit({ i
 export type InsertCircuitWire = z.infer<typeof insertCircuitWireSchema>;
 export type CircuitWireRow = typeof circuitWires.$inferSelect;
 
+export const circuitVias = pgTable("circuit_vias", {
+  id: serial("id").primaryKey(),
+  circuitId: integer("circuit_id").notNull().references(() => circuitDesigns.id, { onDelete: "cascade" }),
+  netId: integer("net_id").notNull().references(() => circuitNets.id, { onDelete: "cascade" }),
+  x: real("x").notNull(),
+  y: real("y").notNull(),
+  outerDiameter: real("outer_diameter").notNull(),
+  drillDiameter: real("drill_diameter").notNull(),
+  viaType: text("via_type").notNull().default("through"), // through, blind, buried, micro
+  layerStart: text("layer_start").notNull().default("front"),
+  layerEnd: text("layer_end").notNull().default("back"),
+  tented: boolean("tented").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_circuit_vias_circuit").on(table.circuitId),
+  index("idx_circuit_vias_net").on(table.netId),
+]);
+
+export const insertCircuitViaSchema = createInsertSchema(circuitVias).omit({ id: true, createdAt: true });
+export type InsertCircuitVia = z.infer<typeof insertCircuitViaSchema>;
+export type CircuitViaRow = typeof circuitVias.$inferSelect;
+
 // ---------------------------------------------------------------------------
 // Simulation Results (Phase 13.13)
 // ---------------------------------------------------------------------------
