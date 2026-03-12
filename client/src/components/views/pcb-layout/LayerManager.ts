@@ -23,7 +23,7 @@ import {
 export type ActiveLayer = string;
 
 /** Available PCB interaction tools. */
-export type PcbTool = 'select' | 'trace' | 'delete' | 'via';
+export type PcbTool = 'select' | 'trace' | 'delete' | 'via' | 'pour' | 'keepout' | 'keepin' | 'comment';
 
 // ---------------------------------------------------------------------------
 // Color palettes

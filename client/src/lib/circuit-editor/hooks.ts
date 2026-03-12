@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, HierarchicalPortRow } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, HierarchicalPortRow, PcbZone, DesignComment } from '@shared/schema';
 
 // ===========================================================================
 // Circuit Designs
@@ -442,6 +442,139 @@ export function useDeleteHierarchicalPort() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['hierarchical-ports', variables.projectId, variables.designId] });
+    },
+  });
+}
+
+// ===========================================================================
+// PCB Zones (BL-0100)
+// ===========================================================================
+
+export function usePcbZones(projectId: number) {
+  return useQuery<PcbZone[]>({
+    queryKey: ['pcb-zones', projectId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/projects/${projectId}/pcb-zones`);
+      return res.json() as Promise<PcbZone[]>;
+    },
+  });
+}
+
+export function useCreatePcbZone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      projectId: number;
+      zoneType: 'pour' | 'keepout' | 'keepin';
+      layer: string;
+      points: Array<{ x: number; y: number }>;
+      netId?: number | null;
+      name?: string | null;
+      properties?: Record<string, any>;
+    }) => {
+      const { projectId, ...body } = data;
+      const res = await apiRequest('POST', `/api/projects/${projectId}/pcb-zones`, body);
+      return res.json() as Promise<PcbZone>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['pcb-zones', variables.projectId] });
+    },
+  });
+}
+
+export function useUpdatePcbZone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      projectId: number;
+      zoneId: number;
+      update: Partial<PcbZone>;
+    }) => {
+      const res = await apiRequest('PATCH', `/api/projects/${data.projectId}/pcb-zones/${data.zoneId}`, data.update);
+      return res.json() as Promise<PcbZone>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['pcb-zones', variables.projectId] });
+    },
+  });
+}
+
+export function useDeletePcbZone() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: number; zoneId: number }) => {
+      await apiRequest('DELETE', `/api/projects/${data.projectId}/pcb-zones/${data.zoneId}`);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['pcb-zones', variables.projectId] });
+    },
+  });
+}
+
+// ===========================================================================
+// Design Comments (Review) (BL-0180)
+// ===========================================================================
+
+export function useComments(projectId: number, filters?: { targetType?: string; targetId?: string; resolved?: boolean }) {
+  return useQuery<{ data: DesignComment[]; total: number }>({
+    queryKey: ['design-comments', projectId, filters],
+    queryFn: async () => {
+      const sp = new URLSearchParams();
+      if (filters?.targetType) sp.append('targetType', filters.targetType);
+      if (filters?.targetId) sp.append('targetId', filters.targetId);
+      if (filters?.resolved !== undefined) sp.append('resolved', String(filters.resolved));
+      
+      const res = await apiRequest('GET', `/api/projects/${projectId}/comments?${sp.toString()}`);
+      return res.json() as Promise<{ data: DesignComment[]; total: number }>;
+    },
+  });
+}
+
+export function useCreateComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      projectId: number;
+      content: string;
+      targetType: 'node' | 'edge' | 'bom_item' | 'general' | 'spatial';
+      targetId?: string | null;
+      spatialX?: number | null;
+      spatialY?: number | null;
+      spatialView?: 'architecture' | 'schematic' | 'pcb' | 'breadboard' | null;
+      parentId?: number | null;
+      userId?: number | null;
+    }) => {
+      const { projectId, ...body } = data;
+      const res = await apiRequest('POST', `/api/projects/${projectId}/comments`, body);
+      return res.json() as Promise<DesignComment>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['design-comments', variables.projectId] });
+    },
+  });
+}
+
+export function useResolveComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: number; commentId: number; resolvedBy?: number }) => {
+      const res = await apiRequest('POST', `/api/projects/${data.projectId}/comments/${data.commentId}/resolve`, { resolvedBy: data.resolvedBy });
+      return res.json() as Promise<DesignComment>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['design-comments', variables.projectId] });
+    },
+  });
+}
+
+export function useDeleteComment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: number; commentId: number }) => {
+      await apiRequest('DELETE', `/api/projects/${data.projectId}/comments/${data.commentId}`);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['design-comments', variables.projectId] });
     },
   });
 }

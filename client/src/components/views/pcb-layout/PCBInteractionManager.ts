@@ -45,8 +45,12 @@ export interface CanvasCallbacks {
   setPanOffset: (updater: (prev: Point) => Point) => void;
   setSelectedInstanceId: (id: number | null) => void;
   setSelectedWireId: (id: number | null) => void;
+  setSelectedCommentId: (id: number | null) => void;
   setTracePoints: (updater: (prev: Point[]) => Point[]) => void;
+  setZonePoints: (updater: (prev: Point[]) => Point[]) => void;
   setMouseBoardPos: (pos: Point | null) => void;
+  setNewCommentPos?: (pos: Point | null) => void;
+  setIsCommentDialogOpen?: (open: boolean) => void;
   setInstanceRotation: (instanceId: number, rotation: number) => void;
   setSelectionRect?: (rect: SelectionRect | null) => void;
   setSelectedInstanceIds?: (ids: number[]) => void;
@@ -83,7 +87,7 @@ export function handleCanvasClick(
   svgEl: SVGSVGElement | null,
   panOffset: Point,
   zoom: number,
-  callbacks: Pick<CanvasCallbacks, 'setSelectedInstanceId' | 'setSelectedWireId' | 'setTracePoints'>,
+  callbacks: Pick<CanvasCallbacks, 'setSelectedInstanceId' | 'setSelectedWireId' | 'setTracePoints' | 'setZonePoints' | 'setNewCommentPos' | 'setIsCommentDialogOpen'>,
   e: React.MouseEvent,
 ): void {
   if (tool === 'trace') {
@@ -94,7 +98,29 @@ export function handleCanvasClick(
     const bc = screenToBoardCoords(e.clientX, e.clientY, rect, panOffset.x, panOffset.y, zoom);
     const snapped = snapToGrid(bc.x, bc.y);
     callbacks.setTracePoints((prev) => [...prev, snapped]);
-  } else {
+    return;
+  }
+
+  if (['pour', 'keepout', 'keepin'].includes(tool)) {
+    if (!svgEl) return;
+    const rect = svgEl.getBoundingClientRect();
+    const bc = screenToBoardCoords(e.clientX, e.clientY, rect, panOffset.x, panOffset.y, zoom);
+    const snapped = snapToGrid(bc.x, bc.y);
+    callbacks.setZonePoints((prev) => [...prev, snapped]);
+    return;
+  }
+
+  if (tool === 'comment') {
+    if (!svgEl) return;
+    const rect = svgEl.getBoundingClientRect();
+    const bc = screenToBoardCoords(e.clientX, e.clientY, rect, panOffset.x, panOffset.y, zoom);
+    const snapped = snapToGrid(bc.x, bc.y);
+    callbacks.setNewCommentPos?.(snapped);
+    callbacks.setIsCommentDialogOpen?.(true);
+    return;
+  }
+
+  if (tool === 'select') {
     callbacks.setSelectedInstanceId(null);
     callbacks.setSelectedWireId(null);
   }
@@ -160,6 +186,14 @@ export function handleKeyDown(
   }
   if (e.key === '4') {
     callbacks.setTool('via');
+  }
+  if (e.key.toLowerCase() === 'p') {
+    callbacks.setTool('pour');
+  }
+  if (e.key === 'K') {
+    callbacks.setTool('keepin');
+  } else if (e.key.toLowerCase() === 'k') {
+    callbacks.setTool('keepout');
   }
   if (e.key === 'f' || e.key === 'F') {
     callbacks.setActiveLayer(toggleLayer);

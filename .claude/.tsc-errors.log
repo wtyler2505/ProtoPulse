@@ -2,3 +2,300 @@
 
 
 7:19:46 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:24:55 PM - File change detected. Starting incremental compilation...
+
+
+7:25:05 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:25:05 PM - File change detected. Starting incremental compilation...
+
+server/routes.ts(70,30): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes.ts(74,32): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/agent.ts(175,53): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/chat.ts(594,44): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+
+7:27:54 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H7:27:54 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(167,26): error TS2741: Property 'projectId' is missing in type '{ circuitId: number; }' but required in type '{ circuitId: number; projectId: number; }'.
+server/routes.ts(72,30): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes.ts(76,32): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/agent.ts(175,53): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/chat.ts(594,44): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/pcb-zones.ts(14,35): error TS2339: Property 'getPcbZones' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(24,34): error TS2339: Property 'getPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(42,34): error TS2339: Property 'createPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(57,37): error TS2339: Property 'updatePcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(70,37): error TS2339: Property 'deletePcbZone' does not exist on type 'DatabaseStorage'.
+
+7:30:46 PM - Found 10 errors. Watching for file changes.
+[2J[3J[H7:30:49 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(167,26): error TS2741: Property 'projectId' is missing in type '{ circuitId: number; }' but required in type '{ circuitId: number; projectId: number; }'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(523,5): error TS2554: Expected 4 arguments, but got 3.
+client/src/components/circuit-editor/PCBLayoutView.tsx(753,29): error TS18046: 'zone.points' is of type 'unknown'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setZonePoints' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 8 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+server/routes.ts(72,30): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes.ts(76,32): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/agent.ts(175,53): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/chat.ts(594,44): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/pcb-zones.ts(14,35): error TS2339: Property 'getPcbZones' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(24,34): error TS2339: Property 'getPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(42,34): error TS2339: Property 'createPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(57,37): error TS2339: Property 'updatePcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(70,37): error TS2339: Property 'deletePcbZone' does not exist on type 'DatabaseStorage'.
+
+7:31:00 PM - Found 13 errors. Watching for file changes.
+[2J[3J[H7:31:17 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(167,26): error TS2741: Property 'projectId' is missing in type '{ circuitId: number; }' but required in type '{ circuitId: number; projectId: number; }'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(523,5): error TS2554: Expected 4 arguments, but got 3.
+client/src/components/circuit-editor/PCBLayoutView.tsx(640,27): error TS2304: Cannot find name 'ShieldAlert'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(757,29): error TS18046: 'zone.points' is of type 'unknown'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setZonePoints' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 8 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+server/routes.ts(72,30): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes.ts(76,32): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/agent.ts(175,53): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/chat.ts(594,44): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/pcb-zones.ts(14,35): error TS2339: Property 'getPcbZones' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(24,34): error TS2339: Property 'getPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(42,34): error TS2339: Property 'createPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(57,37): error TS2339: Property 'updatePcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(70,37): error TS2339: Property 'deletePcbZone' does not exist on type 'DatabaseStorage'.
+
+7:31:22 PM - Found 14 errors. Watching for file changes.
+[2J[3J[H7:31:46 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(167,26): error TS2741: Property 'projectId' is missing in type '{ circuitId: number; }' but required in type '{ circuitId: number; projectId: number; }'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(523,5): error TS2554: Expected 4 arguments, but got 3.
+client/src/components/circuit-editor/PCBLayoutView.tsx(640,27): error TS2304: Cannot find name 'ShieldAlert'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(757,29): error TS18046: 'zone.points' is of type 'unknown'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setZonePoints' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 8 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+server/routes.ts(72,30): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes.ts(76,32): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/agent.ts(175,53): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/chat.ts(594,44): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/pcb-zones.ts(14,35): error TS2339: Property 'getPcbZones' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(24,34): error TS2339: Property 'getPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(42,34): error TS2339: Property 'createPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(57,37): error TS2339: Property 'updatePcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(70,37): error TS2339: Property 'deletePcbZone' does not exist on type 'DatabaseStorage'.
+
+7:31:47 PM - Found 14 errors. Watching for file changes.
+[2J[3J[H7:32:04 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(523,5): error TS2554: Expected 4 arguments, but got 3.
+client/src/components/circuit-editor/PCBLayoutView.tsx(640,27): error TS2304: Cannot find name 'ShieldAlert'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(757,29): error TS18046: 'zone.points' is of type 'unknown'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setZonePoints' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 8 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+server/routes.ts(72,30): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes.ts(76,32): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/agent.ts(175,53): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/chat.ts(594,44): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/pcb-zones.ts(14,35): error TS2339: Property 'getPcbZones' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(24,34): error TS2339: Property 'getPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(42,34): error TS2339: Property 'createPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(57,37): error TS2339: Property 'updatePcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(70,37): error TS2339: Property 'deletePcbZone' does not exist on type 'DatabaseStorage'.
+
+7:32:10 PM - Found 13 errors. Watching for file changes.
+[2J[3J[H7:32:42 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(523,5): error TS2554: Expected 4 arguments, but got 3.
+client/src/components/circuit-editor/PCBLayoutView.tsx(640,27): error TS2304: Cannot find name 'ShieldAlert'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(757,29): error TS18046: 'zone.points' is of type 'unknown'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setZonePoints' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 8 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+server/routes.ts(72,30): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes.ts(76,32): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/agent.ts(175,53): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/chat.ts(594,44): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/pcb-zones.ts(14,35): error TS2339: Property 'getPcbZones' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(24,34): error TS2339: Property 'getPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(42,34): error TS2339: Property 'createPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(57,37): error TS2339: Property 'updatePcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(70,37): error TS2339: Property 'deletePcbZone' does not exist on type 'DatabaseStorage'.
+
+7:32:47 PM - Found 13 errors. Watching for file changes.
+[2J[3J[H7:32:56 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(700,1): error TS1128: Declaration or statement expected.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(700,2): error TS1128: Declaration or statement expected.
+
+7:32:57 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H7:33:04 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(523,5): error TS2554: Expected 4 arguments, but got 3.
+client/src/components/circuit-editor/PCBLayoutView.tsx(640,27): error TS2304: Cannot find name 'ShieldAlert'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(757,29): error TS18046: 'zone.points' is of type 'unknown'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setZonePoints' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 8 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+server/routes.ts(72,30): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes.ts(76,32): error TS2345: Argument of type 'DatabaseStorage' is not assignable to parameter of type 'IStorage'.
+  Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/agent.ts(175,53): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/chat.ts(594,44): error TS2739: Type 'DatabaseStorage' is missing the following properties from type 'IStorage': getPcbZones, getPcbZone, createPcbZone, updatePcbZone, deletePcbZone
+server/routes/pcb-zones.ts(14,35): error TS2339: Property 'getPcbZones' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(24,34): error TS2339: Property 'getPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(42,34): error TS2339: Property 'createPcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(57,37): error TS2339: Property 'updatePcbZone' does not exist on type 'DatabaseStorage'.
+server/routes/pcb-zones.ts(70,37): error TS2339: Property 'deletePcbZone' does not exist on type 'DatabaseStorage'.
+
+7:33:06 PM - Found 13 errors. Watching for file changes.
+[2J[3J[H7:34:02 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(523,5): error TS2554: Expected 4 arguments, but got 3.
+client/src/components/circuit-editor/PCBLayoutView.tsx(640,27): error TS2304: Cannot find name 'ShieldAlert'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(757,29): error TS18046: 'zone.points' is of type 'unknown'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setZonePoints' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 8 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+
+7:37:20 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H7:37:21 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(524,25): error TS2345: Argument of type 'number | null' is not assignable to parameter of type 'Point[]'.
+  Type 'null' is not assignable to type 'Point[]'.
+
+7:37:37 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:39:31 PM - File change detected. Starting incremental compilation...
+
+
+7:39:38 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:41:49 PM - File change detected. Starting incremental compilation...
+
+
+7:45:17 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:45:17 PM - File change detected. Starting incremental compilation...
+
+server/routes/comments.ts(74,9): error TS2322: Type 'string | null' is not assignable to type 'number | null | undefined'.
+  Type 'string' is not assignable to type 'number'.
+server/routes/comments.ts(75,9): error TS2322: Type 'string | null' is not assignable to type 'number | null | undefined'.
+  Type 'string' is not assignable to type 'number'.
+server/routes/comments.ts(76,9): error TS2322: Type '"architecture" | "schematic" | "pcb" | "breadboard" | null' is not assignable to type '"architecture" | "schematic" | "pcb" | "breadboard" | undefined'.
+  Type 'null' is not assignable to type '"architecture" | "schematic" | "pcb" | "breadboard" | undefined'.
+
+7:49:39 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H7:49:39 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(839,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(840,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(844,22): error TS2304: Cannot find name 'StyledTooltip'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(859,34): error TS2552: Cannot find name 'deleteCommentMutation'. Did you mean 'createCommentMutation'?
+client/src/components/circuit-editor/PCBLayoutView.tsx(883,23): error TS2304: Cannot find name 'StyledTooltip'.
+client/src/components/views/pcb-layout/PCBInteractionManager.ts(118,15): error TS2339: Property 'setNewCommentPos' does not exist on type 'Pick<CanvasCallbacks, "setSelectedInstanceId" | "setSelectedWireId" | "setTracePoints" | "setZonePoints">'.
+client/src/components/views/pcb-layout/PCBInteractionManager.ts(119,15): error TS2339: Property 'setIsCommentDialogOpen' does not exist on type 'Pick<CanvasCallbacks, "setSelectedInstanceId" | "setSelectedWireId" | "setTracePoints" | "setZonePoints">'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setSelectedCommentId' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 9 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+server/routes/comments.ts(74,9): error TS2322: Type 'string | null' is not assignable to type 'number | null | undefined'.
+  Type 'string' is not assignable to type 'number'.
+server/routes/comments.ts(75,9): error TS2322: Type 'string | null' is not assignable to type 'number | null | undefined'.
+  Type 'string' is not assignable to type 'number'.
+server/routes/comments.ts(76,9): error TS2322: Type '"architecture" | "schematic" | "pcb" | "breadboard" | null' is not assignable to type '"architecture" | "schematic" | "pcb" | "breadboard" | undefined'.
+  Type 'null' is not assignable to type '"architecture" | "schematic" | "pcb" | "breadboard" | undefined'.
+
+7:49:54 PM - Found 11 errors. Watching for file changes.
+[2J[3J[H7:52:48 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(839,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(840,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(844,22): error TS2304: Cannot find name 'StyledTooltip'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(859,34): error TS2552: Cannot find name 'deleteCommentMutation'. Did you mean 'createCommentMutation'?
+client/src/components/circuit-editor/PCBLayoutView.tsx(883,23): error TS2304: Cannot find name 'StyledTooltip'.
+client/src/components/views/pcb-layout/PCBInteractionManager.ts(118,15): error TS2339: Property 'setNewCommentPos' does not exist on type 'Pick<CanvasCallbacks, "setSelectedInstanceId" | "setSelectedWireId" | "setTracePoints" | "setZonePoints">'.
+client/src/components/views/pcb-layout/PCBInteractionManager.ts(119,15): error TS2339: Property 'setIsCommentDialogOpen' does not exist on type 'Pick<CanvasCallbacks, "setSelectedInstanceId" | "setSelectedWireId" | "setTracePoints" | "setZonePoints">'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setSelectedCommentId' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 9 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+
+7:52:52 PM - Found 8 errors. Watching for file changes.
+[2J[3J[H7:52:58 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(839,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(840,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(844,22): error TS2304: Cannot find name 'StyledTooltip'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(859,34): error TS2552: Cannot find name 'deleteCommentMutation'. Did you mean 'createCommentMutation'?
+client/src/components/circuit-editor/PCBLayoutView.tsx(883,23): error TS2304: Cannot find name 'StyledTooltip'.
+client/src/components/views/pcb-layout/__tests__/pcb-modules.test.ts(439,5): error TS2741: Property 'setSelectedCommentId' is missing in type '{ setTool: (tool: PcbTool) => void; setActiveLayer: (updater: (prev: ActiveLayer) => ActiveLayer) => void; ... 9 more ...; setSelectedInstanceIds: (ids: number[]) => void; }' but required in type 'CanvasCallbacks'.
+
+7:53:12 PM - Found 6 errors. Watching for file changes.
+[2J[3J[H7:53:12 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(839,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(840,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(844,22): error TS2304: Cannot find name 'StyledTooltip'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(859,34): error TS2552: Cannot find name 'deleteCommentMutation'. Did you mean 'createCommentMutation'?
+client/src/components/circuit-editor/PCBLayoutView.tsx(883,23): error TS2304: Cannot find name 'StyledTooltip'.
+
+7:53:15 PM - Found 5 errors. Watching for file changes.
+[2J[3J[H7:53:22 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(105,1): error TS1003: Identifier expected.
+client/src/components/circuit-editor/PCBLayoutView.tsx(105,8): error TS1005: ',' expected.
+client/src/components/circuit-editor/PCBLayoutView.tsx(107,3): error TS1005: ';' expected.
+
+7:53:24 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H7:53:38 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(840,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(841,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(860,34): error TS2552: Cannot find name 'deleteCommentMutation'. Did you mean 'createCommentMutation'?
+
+7:53:50 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H7:53:50 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(841,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(842,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+
+7:53:57 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H7:53:58 PM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/PCBLayoutView.tsx(846,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+client/src/components/circuit-editor/PCBLayoutView.tsx(847,40): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+
+7:54:04 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H7:54:10 PM - File change detected. Starting incremental compilation...
+
+
+7:54:16 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:57:53 PM - File change detected. Starting incremental compilation...
+
+
+7:58:03 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:10:59 PM - File change detected. Starting incremental compilation...
+
+
+8:11:00 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:14:45 PM - File change detected. Starting incremental compilation...
+
+
+8:14:46 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:14:52 PM - File change detected. Starting incremental compilation...
+
+
+8:14:58 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:15:22 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/pcb-layout/index.ts(27,3): error TS2300: Duplicate identifier 'roundForDisplay'.
+client/src/components/views/pcb-layout/index.ts(30,3): error TS2300: Duplicate identifier 'roundForDisplay'.
+
+8:15:28 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H8:15:32 PM - File change detected. Starting incremental compilation...
+
+
+8:15:39 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:19:48 PM - File change detected. Starting incremental compilation...
+
+
+8:19:49 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:19:56 PM - File change detected. Starting incremental compilation...
+
+
+8:20:00 PM - Found 0 errors. Watching for file changes.

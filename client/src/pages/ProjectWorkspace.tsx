@@ -119,7 +119,15 @@ function startPrefetch() {
 }
 
 /** All valid ViewMode values — used for URL deep link validation. */
-const VALID_VIEW_MODES: ReadonlySet<string> = new Set<string>(navItems.map(i => i.view).concat(['dashboard', 'project_explorer', 'output', 'design_history', 'lifecycle', 'comments']));
+const VALID_VIEW_MODES: ReadonlySet<string> = new Set<string>([
+  ...navItems.map(i => i.view),
+  'project_explorer',
+  'dashboard',
+  'output',
+  'design_history',
+  'lifecycle',
+  'comments'
+]);
 
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {

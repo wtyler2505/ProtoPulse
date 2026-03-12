@@ -550,9 +550,12 @@ export const designComments = pgTable('design_comments', {
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
   userId: integer('user_id').references(() => users.id),
   parentId: integer('parent_id'),
-  targetType: text('target_type').notNull().default('general'),
-  targetId: text('target_id'),
-  content: text('content').notNull(),
+  targetType: text("target_type").notNull().default('general'),
+  targetId: text("target_id"),
+  spatialX: real("spatial_x"),
+  spatialY: real("spatial_y"),
+  spatialView: text("spatial_view"), // 'architecture', 'schematic', 'pcb', 'breadboard'
+  content: text("content").notNull(),
   resolved: boolean('resolved').notNull().default(false),
   resolvedBy: integer('resolved_by').references(() => users.id),
   resolvedAt: timestamp('resolved_at'),
@@ -565,7 +568,8 @@ export const designComments = pgTable('design_comments', {
 ]);
 
 export const insertDesignCommentSchema = createInsertSchema(designComments).omit({ id: true, resolved: true, resolvedBy: true, resolvedAt: true, createdAt: true, updatedAt: true }).extend({
-  targetType: z.enum(['node', 'edge', 'bom_item', 'general']).default('general'),
+  targetType: z.enum(['node', 'edge', 'bom_item', 'general', 'spatial']).default('general'),
+  spatialView: z.enum(['architecture', 'schematic', 'pcb', 'breadboard']).optional(),
   content: z.string().min(1).max(5000),
 });
 export type InsertDesignComment = z.infer<typeof insertDesignCommentSchema>;

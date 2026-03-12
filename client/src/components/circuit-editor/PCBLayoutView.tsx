@@ -22,12 +22,29 @@ import {
   useDeleteCircuitWire,
   useUpdateCircuitInstance,
   useCreateCircuitInstance,
+  usePcbZones,
+  useCreatePcbZone,
+  useUpdatePcbZone,
+  useDeletePcbZone,
+  useComments,
+  useCreateComment,
+  useResolveComment,
+  useDeleteComment,
 } from '@/lib/circuit-editor/hooks';
 import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import RatsnestOverlay from './RatsnestOverlay';
 import ToolButton from './ToolButton';
 import { useToast } from '@/hooks/use-toast';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Loader2,
   CircuitBoard,
@@ -43,7 +60,10 @@ import {
   CheckSquare,
   Maximize,
   ShieldCheck,
+  ShieldAlert,
   ClipboardPaste,
+  Pentagon,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -84,6 +104,7 @@ import {
   ViaOverlay,
   LayerStackPanel,
 } from '@/components/views/pcb-layout';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState } from '@/components/views/pcb-layout';
 import type { Via } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow } from '@shared/schema';
@@ -159,7 +180,7 @@ export default function PCBLayoutView() {
           {activeCircuit ? activeCircuit.name : 'No circuit selected'} — PCB Layout
         </span>
       </div>
-      {activeCircuit && <PCBCanvas circuitId={activeCircuit.id} />}
+      {activeCircuit && <PCBCanvas circuitId={activeCircuit.id} projectId={projectId} />}
     </div>
   );
 }
@@ -283,14 +304,23 @@ function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, conta
 // PCB Canvas — wires together all extracted modules
 // ---------------------------------------------------------------------------
 
-function PCBCanvas({ circuitId }: { circuitId: number }) {
+function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: number }) {
   // --- Data hooks ---
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: nets } = useCircuitNets(circuitId);
   const { data: wires } = useCircuitWires(circuitId);
+  const { data: zones } = usePcbZones(projectId);
+  const { data: commentResult } = useComments(projectId, { targetType: 'spatial', resolved: false });
+  const comments = commentResult?.data ?? [];
+
   const createWireMutation = useCreateCircuitWire();
   const deleteWireMutation = useDeleteCircuitWire();
   const createInstanceMutation = useCreateCircuitInstance();
+  const createZoneMutation = useCreatePcbZone();
+  const deleteZoneMutation = useDeletePcbZone();
+  const createCommentMutation = useCreateComment();
+  const resolveCommentMutation = useResolveComment();
+  const deleteCommentMutation = useDeleteComment();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _updateInstanceMutation = useUpdateCircuitInstance();
 
@@ -304,8 +334,16 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<number[]>([]);
   const [selectedWireId, setSelectedWireId] = useState<number | null>(null);
+  const [selectedZoneId, setSelectedZoneId] = useState<number | null>(null);
+  const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null);
+
+  // New comment dialog state
+  const [isCommentDialogOpen, setIsCommentDialogOpen] = useState(false);
+  const [newCommentPos, setNewCommentPos] = useState<{ x: number; y: number } | null>(null);
+  const [newCommentText, setNewCommentNewText] = useState('');
   const [traceWidth, setTraceWidth] = useState(DEFAULT_TRACE_WIDTH);
   const [tracePoints, setTracePoints] = useState<Array<{ x: number; y: number }>>([]);
+  const [zonePoints, setZonePoints] = useState<Array<{ x: number; y: number }>>([]);
   const [boardWidth, setBoardWidth] = useState(DEFAULT_BOARD.width);
   const [boardHeight, setBoardHeight] = useState(DEFAULT_BOARD.height);
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
@@ -350,8 +388,13 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
       setSelectedInstanceId,
       setSelectedInstanceIds,
       setSelectedWireId,
+      setSelectedZoneId,
+      setSelectedCommentId,
       setTracePoints,
+      setZonePoints,
       setMouseBoardPos,
+      setNewCommentPos,
+      setIsCommentDialogOpen,
       setInstanceRotation: (_instanceId: number, _rotation: number) => {
         // TODO: Wire to updateInstanceMutation
       },
@@ -469,20 +512,64 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
     if (bundle) void handlePaste(bundle);
   }, [handlePaste]);
 
+  const handleSaveComment = useCallback(async () => {
+    if (!newCommentPos || !newCommentText.trim()) return;
+    try {
+      await createCommentMutation.mutateAsync({
+        projectId,
+        content: newCommentText,
+        targetType: 'spatial',
+        spatialX: newCommentPos.x,
+        spatialY: newCommentPos.y,
+        spatialView: 'pcb',
+      });
+      setIsCommentDialogOpen(false);
+      setNewCommentNewText('');
+      setNewCommentPos(null);
+      toast({ title: 'Comment pinned' });
+    } catch (err) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Failed to save comment.' });
+    }
+  }, [projectId, newCommentPos, newCommentText, createCommentMutation, toast]);
+
   const handleClick = useCallback(
     (e: React.MouseEvent) => onCanvasClick(tool, svgRef.current, panOffset, zoom, callbacks, e),
     [tool, panOffset, zoom, callbacks],
   );
 
-  const handleDblClick = useCallback(() => {
-    onDoubleClick(tool, tracePoints, {
-      circuitId,
-      activeLayer,
-      traceWidth,
-      firstNetId: nets?.[0]?.id,
-      createWire: (params) => createWireMutation.mutate(params),
-    }, () => setTracePoints([]));
-  }, [tool, tracePoints, circuitId, activeLayer, traceWidth, nets, createWireMutation]);
+  const handleDblClick = useCallback(async () => {
+    if (['pour', 'keepout', 'keepin'].includes(tool)) {
+      if (zonePoints.length >= 3) {
+        try {
+          await createZoneMutation.mutateAsync({
+            projectId,
+            zoneType: tool as 'pour' | 'keepout' | 'keepin',
+            layer: activeLayer,
+            points: zonePoints,
+            name: `${tool.toUpperCase()} Zone`,
+          });
+          setZonePoints([]);
+          toast({ title: 'Zone created', description: `New ${tool} zone added.` });
+        } catch (err) {
+          toast({ variant: 'destructive', title: 'Error', description: 'Failed to create zone.' });
+        }
+      } else {
+        setZonePoints([]);
+      }
+      return;
+    }
+
+    if (tool === 'trace') {
+      onDoubleClick(tool, tracePoints, {
+        circuitId,
+        activeLayer,
+        traceWidth,
+        firstNetId: nets?.[0]?.id,
+        createWire: (params) => createWireMutation.mutate(params),
+      }, () => setTracePoints([]));
+      return;
+    }
+  }, [tool, zonePoints, projectId, activeLayer, createZoneMutation, toast, tracePoints, circuitId, traceWidth, nets, createWireMutation]);
 
   const selectedInstanceRotation = useMemo(() => {
     if (selectedInstanceId == null || !instances) {
@@ -508,12 +595,25 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
         return;
       }
 
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedZoneId) {
+          void deleteZoneMutation.mutateAsync({ projectId, zoneId: selectedZoneId });
+          setSelectedZoneId(null);
+          return;
+        }
+        if (selectedCommentId) {
+          void deleteCommentMutation.mutateAsync({ projectId, commentId: selectedCommentId });
+          setSelectedCommentId(null);
+          return;
+        }
+      }
+
       onKeyDown(e, selectedWireId, {
         circuitId,
         deleteWire: (params) => deleteWireMutation.mutate(params),
       }, callbacks, selectedInstanceId, tool, selectedInstanceRotation);
     },
-    [selectedWireId, circuitId, deleteWireMutation, callbacks, selectedInstanceId, tool, selectedInstanceRotation, handleCopy, triggerPaste],
+    [selectedWireId, circuitId, deleteWireMutation, callbacks, selectedInstanceId, tool, selectedInstanceRotation, handleCopy, triggerPaste, selectedZoneId, deleteZoneMutation, projectId],
   );
 
   const handleMDown = useCallback(
@@ -588,6 +688,11 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
         <ToolButton icon={Pencil} label="Trace (2)" active={tool === 'trace'} onClick={() => setTool('trace')} testId="pcb-tool-trace" />
         <ToolButton icon={Trash2} label="Delete (3)" active={tool === 'delete'} onClick={() => setTool('delete')} testId="pcb-tool-delete" />
         <ToolButton icon={Circle} label="Via (4)" active={tool === 'via'} onClick={() => setTool('via')} testId="pcb-tool-via" />
+        <div className="w-px h-4 bg-border mx-1" />
+        <ToolButton icon={Pentagon} label="Pour (P)" active={tool === 'pour'} onClick={() => setTool('pour')} testId="pcb-tool-pour" />
+        <ToolButton icon={ShieldAlert} label="Keepout (K)" active={tool === 'keepout'} onClick={() => setTool('keepout')} testId="pcb-tool-keepout" />
+        <ToolButton icon={ShieldCheck} label="Keepin" active={tool === 'keepin'} onClick={() => setTool('keepin')} testId="pcb-tool-keepin" />
+        <ToolButton icon={MessageSquarePlus} label="Comment (C)" active={tool === 'comment'} onClick={() => setTool('comment')} testId="pcb-tool-comment" />
         <div className="w-px h-4 bg-border mx-1" />
         <button
           data-testid="pcb-layer-toggle"
@@ -698,6 +803,133 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
                 <BackLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
                 <ComponentFootprints instances={instances ?? []} selectedInstanceId={selectedInstanceId} activeLayer={activeLayer} onInstanceClick={handleInstanceClick} />
                 <FrontLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
+
+                {/* Render Zones (BL-0100) */}
+                {(zones ?? []).map((zone) => (
+                  <polygon
+                    key={zone.id}
+                    points={(zone.points as any[]).map((p: any) => `${p.x},${p.y}`).join(' ')}
+                    fill={
+                      zone.zoneType === 'pour' ? 'rgba(0, 255, 0, 0.2)' :
+                      zone.zoneType === 'keepout' ? 'rgba(255, 0, 0, 0.2)' :
+                      'rgba(0, 0, 255, 0.2)'
+                    }
+                    stroke={
+                      selectedZoneId === zone.id ? '#00F0FF' :
+                      zone.zoneType === 'pour' ? '#00FF00' :
+                      zone.zoneType === 'keepout' ? '#FF0000' :
+                      '#0000FF'
+                    }
+                    strokeWidth={selectedZoneId === zone.id ? 2 / zoom : 1 / zoom}
+                    strokeDasharray={zone.zoneType === 'keepout' ? `${2/zoom},${2/zoom}` : undefined}
+                    className={cn(
+                      "cursor-pointer transition-opacity duration-200",
+                      activeLayer !== zone.layer && "opacity-20 pointer-events-none"
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (tool === 'delete') {
+                        void deleteZoneMutation.mutateAsync({ projectId, zoneId: zone.id });
+                      } else {
+                        setSelectedZoneId(zone.id);
+                        setSelectedInstanceId(null);
+                        setSelectedWireId(null);
+                        setSelectedCommentId(null);
+                      }
+                    }}
+                  />
+                ))}
+
+                {/* Render Spatial Comments (BL-0180) */}
+                {comments.map((comment) => {
+                  if (comment.spatialX == null || comment.spatialY == null) return null;
+                  const x = typeof comment.spatialX === 'string' ? parseFloat(comment.spatialX) : (comment.spatialX as number);
+                  const y = typeof comment.spatialY === 'string' ? parseFloat(comment.spatialY) : (comment.spatialY as number);
+                  const isSelected = selectedCommentId === comment.id;
+
+                  return (
+                    <StyledTooltip
+                      key={comment.id}
+                      content={
+                        <div className="max-w-xs">
+                          <div className="font-bold text-[10px] mb-1 opacity-70">Review Comment</div>
+                          <div className="text-xs">{comment.content}</div>
+                        </div>
+                      }
+                    >
+                      <g
+                        transform={`translate(${x}, ${y})`}
+                        className="cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (tool === 'delete') {
+                            void deleteCommentMutation.mutateAsync({ projectId, commentId: comment.id });
+                          } else {
+                            setSelectedCommentId(comment.id);
+                            setSelectedInstanceId(null);
+                            setSelectedZoneId(null);
+                          }
+                        }}
+                      >
+                        <circle
+                          r={6 / zoom}
+                          fill={comment.resolved ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)"}
+                          stroke={isSelected ? "#00F0FF" : (comment.resolved ? "#22c55e" : "#eab308")}
+                          strokeWidth={2 / zoom}
+                        />
+                        <text
+                          y={1 / zoom}
+                          textAnchor="middle"
+                          fontSize={8 / zoom}
+                          className="select-none pointer-events-none font-bold"
+                          fill={comment.resolved ? "#22c55e" : "#eab308"}
+                        >
+                          ?
+                        </text>
+                      </g>
+                    </StyledTooltip>
+                  );
+                })}
+
+                {/* Render active polygon drawing */}
+                {zonePoints.length > 0 && (
+                  <g>
+                    <polyline
+                      points={zonePoints.map(p => `${p.x},${p.y}`).join(' ')}
+                      fill="none"
+                      stroke="#00F0FF"
+                      strokeWidth={2 / zoom}
+                    />
+                    {/* Preview line to mouse */}
+                    {mouseBoardPos && (
+                      <line
+                        x1={zonePoints[zonePoints.length - 1].x}
+                        y1={zonePoints[zonePoints.length - 1].y}
+                        x2={mouseBoardPos.x}
+                        y2={mouseBoardPos.y}
+                        stroke="#00F0FF"
+                        strokeWidth={1 / zoom}
+                        strokeDasharray={`${2/zoom},${2/zoom}`}
+                        opacity={0.6}
+                      />
+                    )}
+                    {zonePoints.length >= 3 && (
+                      <line
+                        x1={zonePoints[zonePoints.length - 1].x}
+                        y1={zonePoints[zonePoints.length - 1].y}
+                        x2={zonePoints[0].x}
+                        y2={zonePoints[0].y}
+                        stroke="#00F0FF"
+                        strokeWidth={1 / zoom}
+                        strokeDasharray={`${4/zoom},${4/zoom}`}
+                      />
+                    )}
+                    {zonePoints.map((p, i) => (
+                      <circle key={i} cx={p.x} cy={p.y} r={3 / zoom} fill="#00F0FF" />
+                    ))}
+                  </g>
+                )}
+
                 <TraceInProgress points={tracePoints} activeLayer={activeLayer} traceWidth={traceWidth} />
                 <ViaOverlay vias={vias} selectedViaId={selectedViaId} onViaClick={(id) => setSelectedViaId(id)} />
                 <RatsnestOverlay nets={ratsnestNets} opacity={0.4} showLabels />
@@ -770,6 +1002,29 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
+
+      <Dialog open={isCommentDialogOpen} onOpenChange={setIsCommentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Review Comment</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Input
+              autoFocus
+              placeholder="What needs to be fixed here?"
+              value={newCommentText}
+              onChange={(e) => setNewCommentNewText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void handleSaveComment();
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCommentDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveComment}>Pin Comment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -443,7 +443,9 @@ describe('PCBInteractionManager', () => {
       setPanOffset: overrides.setPanOffset ?? (() => undefined),
       setSelectedInstanceId: overrides.setSelectedInstanceId ?? (() => undefined),
       setSelectedWireId: overrides.setSelectedWireId ?? (() => undefined),
+      setSelectedCommentId: overrides.setSelectedCommentId ?? (() => undefined),
       setTracePoints: overrides.setTracePoints ?? (() => undefined),
+      setZonePoints: overrides.setZonePoints ?? (() => undefined),
       setMouseBoardPos: overrides.setMouseBoardPos ?? (() => undefined),
       setInstanceRotation: overrides.setInstanceRotation ?? (() => undefined),
       setSelectionRect: overrides.setSelectionRect ?? (() => undefined),
@@ -499,6 +501,18 @@ describe('PCBInteractionManager', () => {
       });
       handleCanvasClick('trace', null, { x: 0, y: 0 }, 1, cbs, makeMouseEvent());
       expect(traceUpdated).toBe(false);
+    });
+
+    it('adds a zone point when tool is pour/keepout/keepin and svg element exists', () => {
+      let zoneUpdated = false;
+      const cbs = makeCallbacks({
+        setZonePoints: () => { zoneUpdated = true; },
+      });
+      const mockSvg = {
+        getBoundingClientRect: () => makeSvgRect(0, 0, 800, 600),
+      } as unknown as SVGSVGElement;
+      handleCanvasClick('pour', mockSvg, { x: 0, y: 0 }, 1, cbs, makeMouseEvent());
+      expect(zoneUpdated).toBe(true);
     });
   });
 

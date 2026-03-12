@@ -166,6 +166,13 @@ export class DatabaseStorage {
   createOrder = this._ordering.createOrder.bind(this._ordering);
   updateOrder = this._ordering.updateOrder.bind(this._ordering);
   deleteOrder = this._ordering.deleteOrder.bind(this._ordering);
+
+  // PCB Zones
+  getPcbZones = this._circuit.getPcbZones.bind(this._circuit);
+  getPcbZone = this._circuit.getPcbZone.bind(this._circuit);
+  createPcbZone = this._circuit.createPcbZone.bind(this._circuit);
+  updatePcbZone = this._circuit.updatePcbZone.bind(this._circuit);
+  deletePcbZone = this._circuit.deletePcbZone.bind(this._circuit);
 }
 
 export const storage = new DatabaseStorage();

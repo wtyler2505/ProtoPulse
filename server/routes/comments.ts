@@ -7,8 +7,11 @@ import { requireProjectOwnership } from './auth-middleware';
 
 const createCommentSchema = z.object({
   content: z.string().min(1).max(5000),
-  targetType: z.enum(['node', 'edge', 'bom_item', 'general']).default('general'),
+  targetType: z.enum(['node', 'edge', 'bom_item', 'general', 'spatial']).default('general'),
   targetId: z.string().nullish(),
+  spatialX: z.number().nullish(),
+  spatialY: z.number().nullish(),
+  spatialView: z.enum(['architecture', 'schematic', 'pcb', 'breadboard']).nullish(),
   parentId: z.number().int().positive().nullish(),
   userId: z.number().int().positive().nullish(),
 });
@@ -68,6 +71,9 @@ export function registerCommentRoutes(app: Express): void {
         content: parsed.data.content,
         targetType: parsed.data.targetType,
         targetId: parsed.data.targetId ?? null,
+        spatialX: parsed.data.spatialX,
+        spatialY: parsed.data.spatialY,
+        spatialView: parsed.data.spatialView ?? undefined,
         parentId: parsed.data.parentId ?? null,
         userId: parsed.data.userId ?? null,
       });

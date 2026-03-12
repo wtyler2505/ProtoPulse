@@ -165,6 +165,29 @@ describe('POST /api/projects/:id/comments', () => {
     expect(body.id).toBe(10);
   });
 
+  it('creates a spatial comment', async () => {
+    mockCreateComment.mockResolvedValue(makeComment({ id: 11, targetType: 'spatial', spatialX: 100, spatialY: 200, spatialView: 'pcb' }));
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: 'Spatial fix',
+        targetType: 'spatial',
+        spatialX: 100,
+        spatialY: 200,
+        spatialView: 'pcb'
+      }),
+    });
+    expect(res.status).toBe(201);
+    expect(mockCreateComment).toHaveBeenCalledWith(expect.objectContaining({
+      targetType: 'spatial',
+      spatialX: 100,
+      spatialY: 200,
+      spatialView: 'pcb'
+    }));
+  });
+
   it('returns 400 for empty content', async () => {
     const res = await authFetch(`${baseUrl}/api/projects/1/comments`, {
       method: 'POST',

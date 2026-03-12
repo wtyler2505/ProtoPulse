@@ -23,6 +23,7 @@ import type {
   DesignSnapshot, InsertDesignSnapshot,
   DesignComment, InsertDesignComment,
   PcbOrder, InsertPcbOrder,
+  PcbZone, InsertPcbZone,
 } from '@shared/schema';
 
 export interface PaginationOptions {
@@ -191,4 +192,11 @@ export interface IStorage {
   createOrder(data: InsertPcbOrder): Promise<PcbOrder>;
   updateOrder(id: number, data: Partial<InsertPcbOrder> & { submittedAt?: Date }): Promise<PcbOrder | undefined>;
   deleteOrder(id: number): Promise<boolean>;
+
+  // PCB Zones
+  getPcbZones(projectId: number): Promise<PcbZone[]>;
+  getPcbZone(id: number): Promise<PcbZone | undefined>;
+  createPcbZone(data: InsertPcbZone): Promise<PcbZone>;
+  updatePcbZone(id: number, data: Partial<InsertPcbZone>): Promise<PcbZone | undefined>;
+  deletePcbZone(id: number): Promise<boolean>;
 }

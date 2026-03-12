@@ -1,0 +1,254 @@
+{
+  "version": 1,
+  "persistedAt": "2026-03-12T01:25:25.534Z",
+  "routes": {
+    "GET /api/auth/me": {
+      "count": 3,
+      "totalDuration": 169,
+      "errors": 0,
+      "min": 15,
+      "max": 121,
+      "samples": [
+        15,
+        33,
+        121
+      ]
+    },
+    "POST /api/seed": {
+      "count": 3,
+      "totalDuration": 112,
+      "errors": 0,
+      "min": 25,
+      "max": 45,
+      "samples": [
+        25,
+        42,
+        45
+      ]
+    },
+    "GET /api/projects/:id/nodes": {
+      "count": 3,
+      "totalDuration": 2897,
+      "errors": 0,
+      "min": 28,
+      "max": 1713,
+      "samples": [
+        28,
+        1156,
+        1713
+      ]
+    },
+    "GET /api/projects/:id": {
+      "count": 3,
+      "totalDuration": 13,
+      "errors": 0,
+      "min": 3,
+      "max": 6,
+      "samples": [
+        3,
+        4,
+        6
+      ]
+    },
+    "GET /api/projects/:id/validation": {
+      "count": 3,
+      "totalDuration": 219,
+      "errors": 0,
+      "min": 25,
+      "max": 117,
+      "samples": [
+        25,
+        77,
+        117
+      ]
+    },
+    "GET /api/projects/:id/edges": {
+      "count": 3,
+      "totalDuration": 274,
+      "errors": 0,
+      "min": 73,
+      "max": 121,
+      "samples": [
+        73,
+        80,
+        121
+      ]
+    },
+    "GET /api/projects/:id/chat": {
+      "count": 3,
+      "totalDuration": 426,
+      "errors": 0,
+      "min": 48,
+      "max": 291,
+      "samples": [
+        48,
+        87,
+        291
+      ]
+    },
+    "GET /api/projects/:id/history": {
+      "count": 3,
+      "totalDuration": 315,
+      "errors": 0,
+      "min": 62,
+      "max": 164,
+      "samples": [
+        62,
+        89,
+        164
+      ]
+    },
+    "GET /api/projects/:id/bom": {
+      "count": 3,
+      "totalDuration": 907,
+      "errors": 0,
+      "min": 84,
+      "max": 597,
+      "samples": [
+        84,
+        226,
+        597
+      ]
+    },
+    "GET /api/projects/:id/chat/branches": {
+      "count": 3,
+      "totalDuration": 373,
+      "errors": 0,
+      "min": 47,
+      "max": 218,
+      "samples": [
+        47,
+        108,
+        218
+      ]
+    },
+    "GET /api/projects/:id/circuits": {
+      "count": 3,
+      "totalDuration": 87,
+      "errors": 0,
+      "min": 13,
+      "max": 56,
+      "samples": [
+        13,
+        18,
+        56
+      ]
+    },
+    "GET /api/settings/chat": {
+      "count": 3,
+      "totalDuration": 14,
+      "errors": 0,
+      "min": 3,
+      "max": 7,
+      "samples": [
+        3,
+        4,
+        7
+      ]
+    },
+    "GET /api/settings/api-keys": {
+      "count": 3,
+      "totalDuration": 42,
+      "errors": 0,
+      "min": 6,
+      "max": 28,
+      "samples": [
+        6,
+        8,
+        28
+      ]
+    },
+    "GET /api/circuits/:circuitId/instances": {
+      "count": 2,
+      "totalDuration": 33,
+      "errors": 0,
+      "min": 16,
+      "max": 17,
+      "samples": [
+        16,
+        17
+      ]
+    },
+    "GET /api/circuits/:circuitId/nets": {
+      "count": 2,
+      "totalDuration": 28,
+      "errors": 0,
+      "min": 8,
+      "max": 20,
+      "samples": [
+        8,
+        20
+      ]
+    },
+    "GET /api/circuits/:circuitId/wires": {
+      "count": 2,
+      "totalDuration": 29,
+      "errors": 0,
+      "min": 6,
+      "max": 23,
+      "samples": [
+        6,
+        23
+      ]
+    },
+    "GET /api/projects/:id/pcb-zones": {
+      "count": 5,
+      "totalDuration": 208,
+      "errors": 2,
+      "min": 9,
+      "max": 121,
+      "samples": [
+        9,
+        13,
+        20,
+        45,
+        121
+      ]
+    },
+    "GET /api/projects/:id/comments": {
+      "count": 4,
+      "totalDuration": 138,
+      "errors": 2,
+      "min": 16,
+      "max": 74,
+      "samples": [
+        16,
+        19,
+        29,
+        74
+      ]
+    },
+    "POST /api/projects/:id/comments": {
+      "count": 2,
+      "totalDuration": 71,
+      "errors": 1,
+      "min": 28,
+      "max": 43,
+      "samples": [
+        28,
+        43
+      ]
+    },
+    "GET /api/health": {
+      "count": 1,
+      "totalDuration": 35,
+      "errors": 0,
+      "min": 35,
+      "max": 35,
+      "samples": [
+        35
+      ]
+    },
+    "POST /api/projects/:id/pcb-zones": {
+      "count": 2,
+      "totalDuration": 52,
+      "errors": 0,
+      "min": 22,
+      "max": 30,
+      "samples": [
+        22,
+        30
+      ]
+    }
+  }
+}

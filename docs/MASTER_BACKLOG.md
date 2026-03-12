@@ -159,7 +159,7 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0100 | Keep-out/keep-in region editor | OPEN | MF-052 |
+| BL-0100 | Keep-out/keep-in region editor — Full polygon drawing support on PCB canvas, CRUD API, storage, hooks, and SVG rendering for pours, keepouts, and keepins. | DONE | Wave 63 |
 | BL-0101 | Board cutouts/slots/internal milling editor | OPEN | MF-053 |
 | BL-0102 | Via stitching automation | OPEN | MF-054 |
 | BL-0103 | Teardrop generation | OPEN | MF-055 |
@@ -237,7 +237,7 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0180 | Spatial review comments pinned to coordinates | OPEN | MF-114, IFX-051 |
+| BL-0180 | Spatial review comments pinned to coordinates — Full coordinate-based comment pinning on PCB canvas (and others), spatial field schema, CRUD routes, and interactive SVG markers with tooltips. | DONE | Wave 63 |
 | BL-0181 | Review resolution workflow (open/resolved/blocked) | OPEN | MF-115 |
 | BL-0182 | Approval gates before release/export | OPEN | MF-116, IFX-053 |
 | BL-0183 | ECO workflow (propose/review/approve/apply) | OPEN | MF-117, IFX-058 |

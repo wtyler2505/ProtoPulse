@@ -6,6 +6,7 @@ import {
   circuitWires, type CircuitWireRow, type InsertCircuitWire,
   simulationResults, type SimulationResultRow, type InsertSimulationResult,
   hierarchicalPorts, type HierarchicalPortRow, type InsertHierarchicalPort,
+  pcbZones, type PcbZone, type InsertPcbZone,
 } from '@shared/schema';
 import { StorageError, VersionConflictError } from './errors';
 import type { StorageDeps } from './types';
@@ -384,6 +385,60 @@ export class CircuitStorage {
       return deleted;
     } catch (e) {
       throw new StorageError('deleteHierarchicalPort', `hierarchical-ports/${id}`, e);
+    }
+  }
+
+  // --- PCB Zones ---
+
+  async getPcbZones(projectId: number): Promise<PcbZone[]> {
+    try {
+      return await this.db.select().from(pcbZones)
+        .where(eq(pcbZones.projectId, projectId))
+        .orderBy(asc(pcbZones.id));
+    } catch (e) {
+      throw new StorageError('getPcbZones', `projects/${projectId}/pcb-zones`, e);
+    }
+  }
+
+  async getPcbZone(id: number): Promise<PcbZone | undefined> {
+    try {
+      const [zone] = await this.db.select().from(pcbZones)
+        .where(eq(pcbZones.id, id));
+      return zone;
+    } catch (e) {
+      throw new StorageError('getPcbZone', `pcb-zones/${id}`, e);
+    }
+  }
+
+  async createPcbZone(data: InsertPcbZone): Promise<PcbZone> {
+    try {
+      const [created] = await this.db.insert(pcbZones).values(data).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createPcbZone', 'pcb-zones', e);
+    }
+  }
+
+  async updatePcbZone(id: number, data: Partial<InsertPcbZone>): Promise<PcbZone | undefined> {
+    try {
+      const [updated] = await this.db.update(pcbZones)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(pcbZones.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updatePcbZone', `pcb-zones/${id}`, e);
+    }
+  }
+
+  async deletePcbZone(id: number): Promise<boolean> {
+    try {
+      const result = await this.db.delete(pcbZones)
+        .where(eq(pcbZones.id, id))
+        .returning();
+      return result.length > 0;
+    } catch (e) {
+      throw new StorageError('deletePcbZone', `pcb-zones/${id}`, e);
     }
   }
 }

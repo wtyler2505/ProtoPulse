@@ -24,9 +24,9 @@ export {
   snapToGrid,
   clampZoom,
   computeWheelZoom,
-  roundForDisplay,
   svgUnitsToMm,
   mmToSvgUnits,
+  roundForDisplay,
 } from './PCBCoordinateSystem';
 
 export {
