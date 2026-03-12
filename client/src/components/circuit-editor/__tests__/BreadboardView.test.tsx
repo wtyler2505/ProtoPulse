@@ -74,11 +74,26 @@ const mockWires = [
 ];
 
 const mockCreateWire = { mutate: vi.fn() };
+const mockCreateInstance = { mutate: vi.fn() };
 const mockDeleteWire = { mutate: vi.fn() };
 const mockUpdateInstance = { mutate: vi.fn() };
 
 vi.mock('@/lib/contexts/project-id-context', () => ({
   useProjectId: () => 1,
+}));
+
+vi.mock('@/lib/contexts/simulation-context', () => ({
+  useSimulation: () => ({
+    isLive: false,
+    setIsLive: vi.fn(),
+    clearStates: vi.fn(),
+    componentStates: {},
+    updateComponentState: vi.fn(),
+  }),
+}));
+
+vi.mock('@/lib/component-editor/hooks', () => ({
+  useComponentParts: (_projectId: number) => ({ data: [] }),
 }));
 
 vi.mock('@/lib/circuit-editor/hooks', () => ({
@@ -87,6 +102,7 @@ vi.mock('@/lib/circuit-editor/hooks', () => ({
   useCircuitNets: (_circuitId: number) => ({ data: mockNets }),
   useCircuitWires: (_circuitId: number) => ({ data: mockWires }),
   useCreateCircuitWire: () => mockCreateWire,
+  useCreateCircuitInstance: () => mockCreateInstance,
   useDeleteCircuitWire: () => mockDeleteWire,
   useUpdateCircuitInstance: () => mockUpdateInstance,
 }));
@@ -152,6 +168,12 @@ vi.mock('lucide-react', () => ({
   ZoomOut: () => <svg data-testid="icon-zoom-out" />,
   RotateCcw: () => <svg data-testid="icon-rotate-ccw" />,
   Info: () => <svg data-testid="icon-info" />,
+  Activity: () => <svg data-testid="icon-activity" />,
+  Square: () => <svg data-testid="icon-square" />,
+}));
+
+vi.mock('../BreadboardComponentRenderer', () => ({
+  BreadboardComponentOverlay: () => <g data-testid="mock-component-overlay" />,
 }));
 
 vi.mock('@/lib/utils', () => ({
@@ -281,6 +303,112 @@ describe('BreadboardView', () => {
     });
   });
 });
+
+// ============================================================================
+// Drag-to-place (BL-0478)
+// ============================================================================
+
+describe('BreadboardView — drag-to-place', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('canvas accepts dragOver with correct data type', () => {
+    render(<BreadboardView />);
+    const canvas = screen.getByTestId('breadboard-canvas');
+    const event = new Event('dragover', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', {
+      value: {
+        types: ['application/reactflow/type'],
+        dropEffect: '',
+      },
+    });
+    Object.defineProperty(event, 'clientX', { value: 200 });
+    Object.defineProperty(event, 'clientY', { value: 200 });
+    const prevented = !canvas.dispatchEvent(event);
+    // preventDefault was called → event default was prevented
+    expect(prevented).toBe(true);
+  });
+
+  it('canvas ignores dragOver without correct data type', () => {
+    render(<BreadboardView />);
+    const canvas = screen.getByTestId('breadboard-canvas');
+    const event = new Event('dragover', { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'dataTransfer', {
+      value: {
+        types: ['text/plain'],
+        dropEffect: '',
+      },
+    });
+    const prevented = !canvas.dispatchEvent(event);
+    expect(prevented).toBe(false);
+  });
+
+  it('drop creates a new instance via mutation', () => {
+    render(<BreadboardView />);
+    const canvas = screen.getByTestId('breadboard-canvas');
+
+    // Simulate drop with component data
+    const dropEvent = createDropEvent('mcu', 'ATmega328P', 200, 200);
+    fireEvent(canvas, dropEvent);
+
+    expect(mockCreateInstance.mutate).toHaveBeenCalledTimes(1);
+    const callArgs = mockCreateInstance.mutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(callArgs.circuitId).toBe(1);
+    expect(callArgs.partId).toBeNull();
+    expect(callArgs.referenceDesignator).toBeDefined();
+    expect(typeof callArgs.breadboardX).toBe('number');
+    expect(typeof callArgs.breadboardY).toBe('number');
+  });
+
+  it('drop without component data type does NOT create instance', () => {
+    render(<BreadboardView />);
+    const canvas = screen.getByTestId('breadboard-canvas');
+
+    // Drop with empty node type (no reactflow data)
+    const event = new Event('drop', { bubbles: true, cancelable: true });
+    const emptyStore: Record<string, string> = {};
+    Object.defineProperty(event, 'dataTransfer', {
+      value: {
+        types: [],
+        getData: (key: string) => emptyStore[key] ?? '',
+        setData: vi.fn(),
+        dropEffect: 'copy',
+        effectAllowed: 'all',
+      },
+    });
+    Object.defineProperty(event, 'clientX', { value: 200 });
+    Object.defineProperty(event, 'clientY', { value: 200 });
+    fireEvent(canvas, event);
+
+    expect(mockCreateInstance.mutate).not.toHaveBeenCalled();
+  });
+});
+
+/** Helper to create a synthetic drop event with dataTransfer data. */
+function createDropEvent(nodeType: string, label: string, clientX: number, clientY: number) {
+  const event = new Event('drop', { bubbles: true, cancelable: true }) as Event & {
+    dataTransfer: DataTransfer;
+    clientX: number;
+    clientY: number;
+  };
+  const dataStore: Record<string, string> = {
+    'application/reactflow/type': nodeType,
+    'application/reactflow/label': label,
+  };
+  Object.defineProperty(event, 'dataTransfer', {
+    value: {
+      types: Object.keys(dataStore),
+      getData: (key: string) => dataStore[key] ?? '',
+      setData: vi.fn(),
+      dropEffect: 'copy',
+      effectAllowed: 'all',
+    },
+  });
+  Object.defineProperty(event, 'clientX', { value: clientX });
+  Object.defineProperty(event, 'clientY', { value: clientY });
+  return event;
+}
 
 // ============================================================================
 // Loading and empty states (separate mock overrides)

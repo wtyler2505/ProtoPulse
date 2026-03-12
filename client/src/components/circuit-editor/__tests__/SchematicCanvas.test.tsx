@@ -27,6 +27,12 @@ vi.mock('@/lib/contexts/project-id-context', () => ({
   useProjectId: () => 1,
 }));
 
+vi.mock('@/lib/contexts/architecture-context', () => ({
+  useArchitecture: () => ({
+    pushUndoState: vi.fn(),
+  }),
+}));
+
 vi.mock('@/lib/circuit-editor/hooks', () => ({
   useCircuitDesign: () => mockUseCircuitDesign(),
   useCircuitInstances: () => mockUseCircuitInstances(),

@@ -547,7 +547,12 @@ describe('CollaborationServer', () => {
 
       const updateMsg = parseSent(ws1);
       expect(updateMsg.type).toBe('state-update');
-      expect(updateMsg.payload.operations).toEqual(ops);
+      // CRDT merge enriches ops with timestamp + clientId metadata
+      const receivedOps = updateMsg.payload.operations as Array<Record<string, unknown>>;
+      expect(receivedOps).toHaveLength(1);
+      expect(receivedOps[0]).toMatchObject({ op: 'insert', path: ['nodes'], value: { id: 'x' } });
+      expect(receivedOps[0]).toHaveProperty('timestamp');
+      expect(receivedOps[0]).toHaveProperty('clientId', 2);
       expect(updateMsg.payload.version).toBe(1);
     });
 

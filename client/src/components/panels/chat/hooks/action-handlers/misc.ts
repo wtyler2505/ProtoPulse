@@ -92,6 +92,83 @@ const analyzeImage: ActionHandler = (action, ctx) => {
   ctx.output.addOutputLog(`[AI] Analyzed image: ${action.description}`);
 };
 
+const visionAnalysis: ActionHandler = (action, ctx) => {
+  ctx.output.addOutputLog(`[AI] Vision analysis complete: ${action.message || 'Component identified'}`);
+  ctx.history.addToHistory(`Vision analysis: ${action.message}`, 'AI');
+  
+  const data = action.data as Record<string, unknown> | undefined;
+  if (data?.suggestedBOM) {
+    const bom = data.suggestedBOM as Record<string, unknown>;
+    ctx.validation.addValidationIssue({
+      severity: 'info',
+      message: `Vision suggested part: ${bom.partNumber} (${bom.manufacturer})`,
+      suggestion: `Add identified component to design. Description: ${bom.description}`,
+    });
+  }
+};
+
+const circuitExtraction: ActionHandler = (action, ctx) => {
+  const data = action.data as Record<string, unknown> | undefined;
+  ctx.output.addOutputLog(`[AI] Circuit extraction complete: ${action.message || 'Circuit diagram interpreted'}`);
+  ctx.history.addToHistory(`Circuit extraction from ${data?.inputType || 'image'}`, 'AI');
+  
+  if (data?.description) {
+    ctx.validation.addValidationIssue({
+      severity: 'info',
+      message: `Extracted ${data.circuitType || 'circuit'}: ${data.description}`,
+      suggestion: 'The AI is now generating the schematic nodes and connections from this analysis.',
+    });
+  }
+};
+
+const netNameSuggestions: ActionHandler = (action, ctx) => {
+  const suggestions = (action.suggestions || []) as Array<{ netId: number, currentName: string, suggestedName: string, rationale: string }>;
+  ctx.output.addOutputLog(`[AI] Found ${suggestions.length} net naming suggestions.`);
+  
+  suggestions.forEach(s => {
+    ctx.validation.addValidationIssue({
+      severity: 'info',
+      message: `Suggest renaming net "${s.currentName}" to "${s.suggestedName}"`,
+      suggestion: s.rationale,
+    });
+  });
+};
+
+const tracePathSuggestion: ActionHandler = (action, ctx) => {
+  ctx.output.addOutputLog(`[AI] Routing copilot has suggested a path for net ID ${action.netId}.`);
+  ctx.validation.addValidationIssue({
+    severity: 'info',
+    message: `Routing suggestion available for net ${action.netId}`,
+    suggestion: `Use the suggested ${action.layer} layer path to route this connection.`,
+  });
+};
+
+const hardwareDebugGuide: ActionHandler = (action, ctx) => {
+  ctx.output.addOutputLog(`[AI] Hardware debug assistant has analyzed your design.`);
+  ctx.history.addToHistory('Hardware debug analysis complete.', 'AI');
+  
+  const debugData = action.data as Record<string, unknown> | undefined;
+  const risks = (debugData?.risks as Record<string, unknown[]> | undefined) ?? {};
+  if (risks.power?.length > 0) {
+    ctx.validation.addValidationIssue({
+      severity: 'warning',
+      message: `Hardware Debug: ${risks.power.length} power delivery risks detected`,
+      suggestion: 'Review power rail stability and sequencing before prototype bring-up.',
+    });
+  }
+};
+
+const setExplainMode: ActionHandler = (action, ctx) => {
+  const enabled = !!action.enabled;
+  ctx.output.addOutputLog(`[AI] Explain Mode ${enabled ? 'ENABLED' : 'DISABLED'}.`);
+  ctx.history.addToHistory(`Explain mode ${enabled ? 'on' : 'off'}`, 'AI');
+  ctx.validation.addValidationIssue({
+    severity: 'info',
+    message: `AI Explain Mode: ${enabled ? 'Active' : 'Inactive'}`,
+    suggestion: enabled ? 'The AI will now provide simpler, educational explanations.' : 'The AI has returned to standard technical language.',
+  });
+};
+
 const parametricSearch: ActionHandler = (action, ctx) => {
   const results = PARAMETRIC_SEARCH_DB[action.category!] || [
     { pn: 'GENERIC-001', mfr: 'Various', price: 0.10, desc: `${action.category} component` },
@@ -125,6 +202,12 @@ const startTutorial: ActionHandler = (action, ctx) => {
 export const miscHandlers: Record<string, ActionHandler> = {
   save_design_decision: saveDesignDecision,
   analyze_image: analyzeImage,
+  vision_analysis: visionAnalysis,
+  circuit_extraction: circuitExtraction,
+  net_name_suggestions: netNameSuggestions,
+  trace_path_suggestion: tracePathSuggestion,
+  hardware_debug_guide: hardwareDebugGuide,
+  set_explain_mode: setExplainMode,
   parametric_search: parametricSearch,
   start_tutorial: startTutorial,
 };

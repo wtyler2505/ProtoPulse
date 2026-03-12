@@ -14,6 +14,7 @@ import type {
   CollabRole,
   CRDTOperation,
   LockRequest,
+  MergeVerdict,
 } from '@shared/collaboration';
 import {
   CURSOR_COLORS,
@@ -23,6 +24,9 @@ import {
   MAX_MISSED_PONGS,
   isValidCollabMessage,
   lockKey,
+  operationEntityKey,
+  lwwWins,
+  structuralMerge,
 } from '@shared/collaboration';
 import { validateSession, getUserById } from './auth';
 import { storage } from './storage';
@@ -55,6 +59,23 @@ export class CollaborationServer {
   private readonly stateVersions = new Map<number, number>();
   private readonly heartbeatTimer: ReturnType<typeof setInterval>;
   private readonly lockCleanupTimer: ReturnType<typeof setInterval>;
+
+  /**
+   * Per-room Lamport clock — monotonically increasing logical timestamp
+   * used for LWW conflict resolution. Each accepted operation bumps the
+   * clock; the server timestamp is authoritative.
+   */
+  private readonly lamportClocks = new Map<number, number>();
+
+  /**
+   * Sliding window of recently accepted operations per room, keyed by
+   * `projectId`. Used for intent-preserving structural merge: when a
+   * new batch arrives we check it against the recent window to detect
+   * concurrent conflicts.  Window is pruned on every state-update to
+   * keep only the last MERGE_WINDOW_SIZE entries.
+   */
+  private readonly recentOps = new Map<number, Array<{ op: CRDTOperation; serverTs: number; clientId: number }>>();
+  private static readonly MERGE_WINDOW_SIZE = 200;
 
   constructor(server: Server) {
     this.wss = new WebSocketServer({ server, path: '/ws/collab' });
@@ -313,8 +334,56 @@ export class CollaborationServer {
   private handleStateUpdate(projectId: number, userId: number, operations: CRDTOperation[]): void {
     if (!Array.isArray(operations) || operations.length === 0) { return; }
 
-    // Role check already happened in handleMessage
-    this.applyAndBroadcastOps(projectId, userId, operations);
+    const room = this.rooms.get(projectId);
+    const entry = room?.get(userId);
+    if (!entry) { return; }
+
+    // --- BL-0488: RBAC enforcement for editors ---
+    // Editors cannot delete root-level design entities (only owner can)
+    if (entry.user.role === 'editor') {
+      const blocked = operations.find((op) =>
+        op.op === 'delete' && op.path.length === 0,
+      );
+      if (blocked) {
+        this.sendErrorToUser(projectId, userId, 'Editors cannot delete the root design');
+        return;
+      }
+    }
+
+    // --- BL-0487: Lock enforcement ---
+    // Reject operations that target a locked entity held by someone else
+    const now = Date.now();
+    const rejectedOps: CRDTOperation[] = [];
+    const acceptedOps: CRDTOperation[] = [];
+
+    for (const op of operations) {
+      const entityRef = operationEntityKey(op);
+      if (entityRef) {
+        // Check all locks — the entity key in locks is `projectId:entityType:entityId`
+        // operationEntityKey returns `collectionName:entityId` — we need to check
+        // against all locks that end with the entity id for this project
+        const lockedByOther = this.isLockedByOther(projectId, entityRef, userId, now);
+        if (lockedByOther) {
+          rejectedOps.push(op);
+          continue;
+        }
+      }
+      acceptedOps.push(op);
+    }
+
+    // Notify the user about rejected operations
+    if (rejectedOps.length > 0) {
+      this.sendErrorToUser(
+        projectId,
+        userId,
+        `${String(rejectedOps.length)} operation(s) rejected: target entity is locked by another user`,
+      );
+    }
+
+    if (acceptedOps.length === 0) { return; }
+
+    // --- BL-0486: CRDT merge ---
+    this.mergeAndBroadcastOps(projectId, userId, acceptedOps);
   }
 
   private syncStateToNewUser(projectId: number, userId: number): void {
@@ -355,6 +424,92 @@ export class CollaborationServer {
       timestamp: Date.now(),
       payload: { operations: ops, version },
     }, userId);
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  BL-0487: Lock enforcement helper                                 */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Returns true if the entity described by `entityRef` (format:
+   * `collectionName:entityId`) is currently locked by a user other
+   * than `userId`.
+   */
+  private isLockedByOther(projectId: number, entityRef: string, userId: number, now: number): boolean {
+    const entityId = entityRef.split(':').pop() ?? '';
+    if (!entityId) { return false; }
+
+    for (const [key, lock] of Array.from(this.locks)) {
+      if (lock.expiresAt <= now) { continue; }
+      if (lock.userId === userId) { continue; }
+      // Lock keys are `projectId:entityType:entityId`
+      if (key.startsWith(`${String(projectId)}:`) && key.endsWith(`:${entityId}`)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  BL-0486: CRDT merge + broadcast                                  */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Applies structural merge (insert-wins-over-delete) and LWW for
+   * property updates, then broadcasts the surviving operations with
+   * authoritative server timestamps.
+   */
+  private mergeAndBroadcastOps(projectId: number, userId: number, ops: CRDTOperation[]): void {
+    // Bump Lamport clock
+    let clock = this.lamportClocks.get(projectId) ?? 0;
+
+    // Get recent ops for structural merge window
+    const recent = this.recentOps.get(projectId) ?? [];
+
+    const survivingOps: CRDTOperation[] = [];
+
+    for (const op of ops) {
+      clock++;
+
+      // Tag the operation with server timestamp and clientId
+      const taggedOp: CRDTOperation = { ...op, timestamp: clock, clientId: userId };
+
+      // Structural merge for insert/delete
+      if (op.op === 'insert' || op.op === 'delete') {
+        const recentCrdtOps = recent.map((r) => r.op);
+        const verdict: MergeVerdict = structuralMerge(taggedOp, recentCrdtOps);
+        if (verdict === 'reject' || verdict === 'superseded') {
+          continue; // Drop this operation
+        }
+      }
+
+      // LWW for updates: check if a more recent update for the same key exists
+      if (op.op === 'update') {
+        const opKey = `${op.path.join('.')}:${op.key}`;
+        const newerExists = recent.some((r) => {
+          if (r.op.op !== 'update') { return false; }
+          const rKey = `${r.op.path.join('.')}:${r.op.key}`;
+          return rKey === opKey && !lwwWins(r.serverTs, r.clientId, clock, userId);
+        });
+        if (newerExists) { continue; }
+      }
+
+      survivingOps.push(taggedOp);
+      recent.push({ op: taggedOp, serverTs: clock, clientId: userId });
+    }
+
+    this.lamportClocks.set(projectId, clock);
+
+    // Prune recent ops window
+    if (recent.length > CollaborationServer.MERGE_WINDOW_SIZE) {
+      recent.splice(0, recent.length - CollaborationServer.MERGE_WINDOW_SIZE);
+    }
+    this.recentOps.set(projectId, recent);
+
+    if (survivingOps.length === 0) { return; }
+
+    // Delegate to the existing broadcast
+    this.applyAndBroadcastOps(projectId, userId, survivingOps);
   }
 
   /* ---------------------------------------------------------------- */
@@ -594,6 +749,8 @@ export class CollaborationServer {
     this.rooms.clear();
     this.locks.clear();
     this.stateVersions.clear();
+    this.lamportClocks.clear();
+    this.recentOps.clear();
     this.wss.close();
   }
 }

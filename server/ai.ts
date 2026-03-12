@@ -62,7 +62,19 @@ export type AIAction =
   | { type: "export_csv_netlist"; circuitId?: number }
   | { type: "export_pick_and_place"; circuitId?: number }
   | { type: "export_eagle" }
-  | { type: "export_fritzing_project"; circuitId?: number };
+  | { type: "export_fritzing_project"; circuitId?: number }
+  | { type: "export_tinkercad_project"; circuitId?: number }
+  | { type: "vision_analysis"; message: string; data: any }
+  | { type: "circuit_extraction"; message: string; data: any }
+  | { type: "suggest_net_names"; circuitId: number }
+  | { type: "suggest_trace_path"; circuitId: number; netId: number; layer?: string }
+  | { type: "hardware_debug_analysis"; circuitId?: number }
+  | { type: "set_explain_mode"; enabled: boolean }
+  | { type: "generate_arduino_sketch"; intent: string; boardType?: string }
+  | { type: "compile_sketch"; fqbn: string }
+  | { type: "upload_firmware"; fqbn: string; port: string }
+  | { type: "search_arduino_libraries"; query: string }
+  | { type: "list_arduino_boards" };
 
 interface AppState {
   projectName: string;
@@ -788,7 +800,23 @@ Guidelines when using tools:
 - Explain your reasoning in text alongside tool calls.
 - You can call multiple tools in sequence to perform complex operations atomically.
 
-Always provide expert-level, detailed electronics advice. When suggesting components, include real part numbers, manufacturers, and typical specifications. When discussing design choices, explain trade-offs and best practices.${appState.customSystemPrompt ? `\n\n## Custom User Instructions\n\n${appState.customSystemPrompt}` : ''}`;
+Always provide expert-level, detailed electronics advice. When suggesting components, include real part numbers, manufacturers, and typical specifications. When discussing design choices, explain trade-offs and best practices.
+
+## Multimodal & Vision
+
+If the user provides an image (photo, sketch, or scan), you MUST use the appropriate vision tool to analyze it:
+- Use **identify_component_from_image** if the image shows a single electronic component (like an IC or resistor) that needs identification and BOM parameters.
+- Use **extract_circuit_from_image** if the image shows a circuit diagram, breadboard layout, or sketch that should be converted into a schematic design.
+
+After receiving the analysis from these tools, you should then proceed to call standard tools like **add_node**, **connect_nodes**, or **add_bom_item** to realize the design in the application.## Arduino Workbench
+
+If the user is working on firmware or asks about Arduino/ESP32 code:
+- You can generate boilerplate sketches using **generate_arduino_sketch**.
+- You can help them manage their build environment with **list_arduino_boards** and **search_arduino_libraries**.
+- You can trigger builds and uploads using **compile_sketch** and **upload_firmware**.
+- Use your knowledge of the current circuit (pins, components) to ensure generated code is hardware-accurate.
+
+${appState.customSystemPrompt ? `\n\n## Custom User Instructions\n\n${appState.customSystemPrompt}` : ''}`;
 }
 
 export function parseActionsFromResponse(text: string): { message: string; actions: AIAction[] } {
@@ -1057,16 +1085,17 @@ async function executeStreamForProvider(
   onEvent: (event: AIStreamEvent) => void | Promise<void>,
   signal: AbortSignal | undefined,
   imageContent: ImageContent | undefined,
+  toolAllowlist: string[] | undefined,
 ): Promise<{ fullText: string; toolCalls: ToolCallRecord[] }> {
   if (provider === 'anthropic') {
     return streamAnthropicWithTools(
       apiKey, model, systemPrompt, recentHistory, message,
-      temperature, maxTokens, toolContext, onEvent, signal, imageContent,
+      temperature, maxTokens, toolContext, onEvent, signal, imageContent, toolAllowlist,
     );
   } else {
     return streamGeminiWithTools(
       apiKey, model, systemPrompt, recentHistory, message,
-      temperature, maxTokens, toolContext, onEvent, signal, imageContent,
+      temperature, maxTokens, toolContext, onEvent, signal, imageContent, toolAllowlist,
     );
   }
 }
@@ -1081,6 +1110,7 @@ export async function streamAIMessage(
     temperature?: number;
     maxTokens?: number;
     toolContext?: ToolContext;
+    toolAllowlist?: string[];
     imageContent?: ImageContent;
     fallback?: FallbackProviderConfig;
     userId?: number;
@@ -1089,7 +1119,7 @@ export async function streamAIMessage(
   signal?: AbortSignal
 ): Promise<void> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, toolContext, imageContent, fallback, userId } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, toolContext, toolAllowlist, imageContent, fallback, userId } = params;
 
     if (!apiKey || apiKey.trim().length === 0) {
       const noKeyMsg = `No API key provided for ${provider}. Please add your ${provider === "anthropic" ? "Anthropic" : "Google Gemini"} API key in the settings panel to enable AI features.`;
@@ -1131,7 +1161,7 @@ export async function streamAIMessage(
 
       const result = await executeStreamForProvider(
         activeProvider, activeApiKey, activeModel, systemPrompt, recentHistory, message,
-        temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent,
+        temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent, toolAllowlist,
       );
       if (signal?.aborted) return;
 
@@ -1171,7 +1201,7 @@ export async function streamAIMessage(
 
         const result = await executeStreamForProvider(
           activeProvider, activeApiKey, activeModel, systemPrompt, recentHistory, message,
-          temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent,
+          temperature, maxTokens || 4096, toolContext, onEvent, signal, imageContent, toolAllowlist,
         );
         if (signal?.aborted) return;
 
@@ -1244,9 +1274,10 @@ async function streamAnthropicWithTools(
   onEvent: (event: AIStreamEvent) => void | Promise<void>,
   signal?: AbortSignal,
   imageContent?: ImageContent,
+  toolAllowlist?: string[],
 ): Promise<{ fullText: string; toolCalls: ToolCallRecord[] }> {
   const client = getAnthropicClient(apiKey);
-  const anthropicTools = toolRegistry.toAnthropicTools();
+  const anthropicTools = toolRegistry.toAnthropicTools(toolAllowlist);
 
   // Build initial messages array — needs to support both string and block content for multi-turn
   const messages: Anthropic.MessageParam[] = [];
@@ -1364,9 +1395,10 @@ async function streamGeminiWithTools(
   onEvent: (event: AIStreamEvent) => void | Promise<void>,
   signal?: AbortSignal,
   imageContent?: ImageContent,
+  toolAllowlist?: string[],
 ): Promise<{ fullText: string; toolCalls: ToolCallRecord[] }> {
   const genAI = getGeminiClient(apiKey);
-  const geminiFunctionDeclarations = toolRegistry.toGeminiFunctionDeclarations();
+  const geminiFunctionDeclarations = toolRegistry.toGeminiFunctionDeclarations(toolAllowlist);
 
   const history = chatHistory.map((msg) => ({
     role: msg.role === "assistant" ? ("model" as const) : ("user" as const),

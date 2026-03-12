@@ -15,6 +15,7 @@ import type {
   CircuitWireRow, InsertCircuitWire,
   CircuitViaRow, InsertCircuitVia,
   SimulationResultRow, InsertSimulationResult,
+  SimulationScenario, InsertSimulationScenario,
   AiActionRow, InsertAiAction,
   HierarchicalPortRow, InsertHierarchicalPort,
   SpiceModelRow, InsertSpiceModel,
@@ -25,6 +26,11 @@ import type {
   DesignComment, InsertDesignComment,
   PcbOrder, InsertPcbOrder,
   PcbZone, InsertPcbZone,
+  ArduinoWorkspace, InsertArduinoWorkspace,
+  ArduinoBuildProfile, InsertArduinoBuildProfile,
+  ArduinoJob, InsertArduinoJob,
+  ArduinoSerialSession, InsertArduinoSerialSession,
+  ArduinoSketchFile, InsertArduinoSketchFile,
 } from '@shared/schema';
 
 export interface PaginationOptions {
@@ -144,7 +150,14 @@ export interface IStorage {
   deleteSimulationResult(id: number): Promise<SimulationResultRow | undefined>;
   cleanupSimulationResults(circuitId: number, maxResults: number): Promise<number>;
 
-  // AI action log
+  // Simulation scenarios
+  getSimulationScenarios(circuitId: number): Promise<SimulationScenario[]>;
+  getSimulationScenario(id: number): Promise<SimulationScenario | undefined>;
+  createSimulationScenario(data: InsertSimulationScenario): Promise<SimulationScenario>;
+  updateSimulationScenario(id: number, data: Partial<InsertSimulationScenario>): Promise<SimulationScenario | undefined>;
+  deleteSimulationScenario(id: number): Promise<SimulationScenario | undefined>;
+
+  // AI actions
   getAiActions(projectId: number): Promise<AiActionRow[]>;
   getAiActionsByMessage(chatMessageId: string): Promise<AiActionRow[]>;
   createAiAction(data: InsertAiAction): Promise<AiActionRow>;
@@ -194,6 +207,37 @@ export interface IStorage {
   resolveComment(id: number, resolvedBy?: number): Promise<DesignComment | undefined>;
   unresolveComment(id: number): Promise<DesignComment | undefined>;
   deleteComment(id: number): Promise<boolean>;
+
+  // Arduino Workspace
+  getArduinoWorkspaces(): Promise<ArduinoWorkspace[]>;
+  getArduinoWorkspace(projectId: number): Promise<ArduinoWorkspace | undefined>;
+  createArduinoWorkspace(data: InsertArduinoWorkspace): Promise<ArduinoWorkspace>;
+  updateArduinoWorkspace(projectId: number, data: Partial<InsertArduinoWorkspace>): Promise<ArduinoWorkspace | undefined>;
+
+  // Arduino Build Profiles
+  getArduinoBuildProfiles(projectId: number): Promise<ArduinoBuildProfile[]>;
+  getArduinoBuildProfile(id: number): Promise<ArduinoBuildProfile | undefined>;
+  createArduinoBuildProfile(data: InsertArduinoBuildProfile): Promise<ArduinoBuildProfile>;
+  updateArduinoBuildProfile(id: number, data: Partial<InsertArduinoBuildProfile>): Promise<ArduinoBuildProfile | undefined>;
+  deleteArduinoBuildProfile(id: number): Promise<boolean>;
+
+  // Arduino Jobs
+  getArduinoJobs(projectId: number, limit?: number): Promise<ArduinoJob[]>;
+  getArduinoJob(id: number): Promise<ArduinoJob | undefined>;
+  createArduinoJob(data: InsertArduinoJob): Promise<ArduinoJob>;
+  updateArduinoJob(id: number, data: Partial<InsertArduinoJob> & { finishedAt?: Date }): Promise<ArduinoJob | undefined>;
+
+  // Arduino Serial Sessions
+  getArduinoSerialSessions(projectId: number): Promise<ArduinoSerialSession[]>;
+  getArduinoSerialSession(id: number): Promise<ArduinoSerialSession | undefined>;
+  createArduinoSerialSession(data: InsertArduinoSerialSession): Promise<ArduinoSerialSession>;
+  updateArduinoSerialSession(id: number, data: Partial<InsertArduinoSerialSession> & { endedAt?: Date }): Promise<ArduinoSerialSession | undefined>;
+
+  // Arduino Sketch Files (Metadata)
+  getArduinoSketchFiles(workspaceId: number): Promise<ArduinoSketchFile[]>;
+  getArduinoSketchFile(id: number): Promise<ArduinoSketchFile | undefined>;
+  upsertArduinoSketchFile(data: InsertArduinoSketchFile): Promise<ArduinoSketchFile>;
+  deleteArduinoSketchFile(id: number): Promise<boolean>;
 
   // PCB Orders
   getOrders(projectId: number): Promise<PcbOrder[]>;

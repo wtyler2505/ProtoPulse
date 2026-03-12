@@ -6,6 +6,7 @@ import {
   circuitWires, type CircuitWireRow, type InsertCircuitWire,
   circuitVias, type CircuitViaRow, type InsertCircuitVia,
   simulationResults, type SimulationResultRow, type InsertSimulationResult,
+  simulationScenarios, type SimulationScenario, type InsertSimulationScenario,
   hierarchicalPorts, type HierarchicalPortRow, type InsertHierarchicalPort,
   pcbZones, type PcbZone, type InsertPcbZone,
 } from '@shared/schema';
@@ -351,6 +352,60 @@ export class CircuitStorage {
       return deleted;
     } catch (e) {
       throw new StorageError('deleteSimulationResult', `simulations/${id}`, e);
+    }
+  }
+
+  // --- Simulation Scenarios ---
+
+  async getSimulationScenarios(circuitId: number): Promise<SimulationScenario[]> {
+    try {
+      return await this.db.select().from(simulationScenarios)
+        .where(eq(simulationScenarios.circuitId, circuitId))
+        .orderBy(desc(simulationScenarios.createdAt));
+    } catch (e) {
+      throw new StorageError('getSimulationScenarios', `circuits/${circuitId}/scenarios`, e);
+    }
+  }
+
+  async getSimulationScenario(id: number): Promise<SimulationScenario | undefined> {
+    try {
+      const [scenario] = await this.db.select().from(simulationScenarios)
+        .where(eq(simulationScenarios.id, id));
+      return scenario;
+    } catch (e) {
+      throw new StorageError('getSimulationScenario', `simulation-scenarios/${id}`, e);
+    }
+  }
+
+  async createSimulationScenario(data: InsertSimulationScenario): Promise<SimulationScenario> {
+    try {
+      const [created] = await this.db.insert(simulationScenarios).values(data).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('createSimulationScenario', 'simulation-scenarios', e);
+    }
+  }
+
+  async updateSimulationScenario(id: number, data: Partial<InsertSimulationScenario>): Promise<SimulationScenario | undefined> {
+    try {
+      const [updated] = await this.db.update(simulationScenarios)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(simulationScenarios.id, id))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateSimulationScenario', `simulation-scenarios/${id}`, e);
+    }
+  }
+
+  async deleteSimulationScenario(id: number): Promise<SimulationScenario | undefined> {
+    try {
+      const [deleted] = await this.db.delete(simulationScenarios)
+        .where(eq(simulationScenarios.id, id))
+        .returning();
+      return deleted;
+    } catch (e) {
+      throw new StorageError('deleteSimulationScenario', `simulation-scenarios/${id}`, e);
     }
   }
 

@@ -1,4 +1,4 @@
-import { Search, Store } from 'lucide-react';
+import { AlertTriangle, Search, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,22 @@ export function SupplierPricingPanel({
 }: SupplierPricingPanelProps) {
   return (
     <div className="max-w-5xl mx-auto space-y-4">
+      {/* Simulated data disclaimer */}
+      <div
+        className="flex items-start gap-3 rounded-md border border-yellow-500/30 bg-yellow-500/5 px-4 py-3"
+        role="alert"
+        data-testid="supplier-mock-disclaimer"
+      >
+        <AlertTriangle className="h-5 w-5 shrink-0 text-yellow-500 mt-0.5" />
+        <div className="text-sm">
+          <p className="font-medium text-yellow-500">Simulated pricing data</p>
+          <p className="text-muted-foreground mt-0.5">
+            Stock, pricing, and lead-time data shown here is generated from static fixtures for demonstration purposes.
+            It does not reflect real-time distributor availability. Connect to live supplier APIs in Settings for actual data.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <Button
           onClick={onQuoteBom}
@@ -77,8 +93,9 @@ export function SupplierPricingPanel({
             data-testid={`distributor-card-${dist.distributorId}`}
           >
             <div className="text-xs font-medium text-foreground">{dist.name}</div>
-            <div className={cn('text-[10px] mt-1', dist.enabled ? 'text-emerald-500' : 'text-muted-foreground')}>
+            <div className={cn('text-[10px] mt-1 flex items-center justify-center gap-1', dist.enabled ? 'text-emerald-500' : 'text-muted-foreground')}>
               {dist.enabled ? 'Active' : 'Disabled'}
+              <Badge variant="outline" className="text-[8px] px-1 py-0 text-yellow-500 border-yellow-500/30" data-testid={`demo-badge-${dist.distributorId}`}>DEMO</Badge>
             </div>
           </div>
         ))}

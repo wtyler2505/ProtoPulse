@@ -1,10 +1,21 @@
 import { useState, useCallback } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
-import { useCircuitDesigns, useCreateCircuitDesign, useExpandArchitecture } from '@/lib/circuit-editor/hooks';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useCircuitDesigns, useCircuitInstances, useCreateCircuitDesign, useExpandArchitecture, usePushToPcb } from '@/lib/circuit-editor/hooks';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Plus, Loader2, CircuitBoard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Cpu, Zap, ShieldCheck, GitBranchPlus, FileStack, RefreshCw } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Plus, Loader2, CircuitBoard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Cpu, Zap, ShieldCheck, GitBranchPlus, FileStack, RefreshCw, ChevronUp, ArrowLeft, History, ArrowRightToLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { CircuitDesignRow } from '@shared/schema';
 import type { ERCViolation } from '@shared/circuit-types';
@@ -13,20 +24,41 @@ import ComponentPlacer from '@/components/circuit-editor/ComponentPlacer';
 import PowerSymbolPalette from '@/components/circuit-editor/PowerSymbolPalette';
 import ERCPanel from '@/components/circuit-editor/ERCPanel';
 import HierarchicalSheetPanel from '@/components/circuit-editor/HierarchicalSheetPanel';
+import SimulationScenarioPanel from '@/components/circuit-editor/SimulationScenarioPanel';
+import { useToast } from '@/hooks/use-toast';
 
 function SchematicViewContent() {
   const projectId = useProjectId();
   const { data: circuits, isLoading, isError, error, refetch } = useCircuitDesigns(projectId);
+  const { setActiveView } = useProjectMeta();
   const createMutation = useCreateCircuitDesign();
   const expandMutation = useExpandArchitecture();
+  const pushToPcbMutation = usePushToPcb();
+  const { toast } = useToast();
   const [activeCircuitId, setActiveCircuitId] = useState<number | null>(null);
   const [partsPanel, setPartsPanel] = useState(true);
   const [ercPanel, setErcPanel] = useState(false);
-  const [panelTab, setPanelTab] = useState<'components' | 'power' | 'sheets'>('components');
+  const [panelTab, setPanelTab] = useState<'components' | 'power' | 'sheets' | 'sim'>('components');
   const [ercViolations, setErcViolations] = useState<ERCViolation[]>([]);
   const [highlightedViolationId, setHighlightedViolationId] = useState<string | null>(null);
+  const [currentSimConfig, setCurrentSimConfig] = useState<Record<string, unknown>>({ analysisType: 'op' });
+  const [pushDialogOpen, setPushDialogOpen] = useState(false);
 
   const activeCircuit = circuits?.find(c => c.id === activeCircuitId) ?? circuits?.[0] ?? null;
+
+  // Fetch instances for the active circuit to power the "Push to PCB" feature
+  const { data: instances } = useCircuitInstances(activeCircuit?.id ?? 0);
+  const unplacedInstances = instances?.filter((inst) => inst.pcbX == null || inst.pcbY == null) ?? [];
+
+  const handleEnterSheet = useCallback((id: number) => {
+    setActiveCircuitId(id);
+  }, []);
+
+  const handleGoToParent = useCallback(() => {
+    if (activeCircuit?.parentDesignId) {
+      setActiveCircuitId(activeCircuit.parentDesignId);
+    }
+  }, [activeCircuit]);
 
   const handleCreateCircuit = useCallback(async () => {
     const result = await createMutation.mutateAsync({ projectId, name: 'New Circuit' });
@@ -41,6 +73,24 @@ function SchematicViewContent() {
   const handleHighlightViolation = useCallback((violation: ERCViolation | null) => {
     setHighlightedViolationId(violation?.id ?? null);
   }, []);
+
+  const handlePushToPcb = useCallback(async () => {
+    if (!activeCircuit) { return; }
+    try {
+      const result = await pushToPcbMutation.mutateAsync({ circuitId: activeCircuit.id });
+      setPushDialogOpen(false);
+      toast({
+        title: 'Pushed to PCB',
+        description: `${String(result.pushed)} component${result.pushed === 1 ? '' : 's'} placed in unplaced area.${result.alreadyPlaced > 0 ? ` ${String(result.alreadyPlaced)} already placed.` : ''}`,
+      });
+    } catch (err) {
+      toast({
+        title: 'Push to PCB failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  }, [activeCircuit, pushToPcbMutation, toast]);
 
   if (isLoading) {
     return (
@@ -122,21 +172,34 @@ function SchematicViewContent() {
           )}
         </Button>
         <div className="w-px h-5 bg-border" />
-        <Select
-          value={String(activeCircuit?.id ?? '')}
-          onValueChange={v => setActiveCircuitId(Number(v))}
-        >
-          <SelectTrigger className="h-7 w-48 text-xs" data-testid="select-circuit">
-            <SelectValue placeholder="Select circuit" />
-          </SelectTrigger>
-          <SelectContent>
-            {circuits.map((c: CircuitDesignRow) => (
-              <SelectItem key={c.id} value={String(c.id)}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-1">
+          {activeCircuit?.parentDesignId && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleGoToParent}
+              className="h-7 px-1.5 text-primary hover:text-primary hover:bg-primary/10"
+              title="Go to parent sheet"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </Button>
+          )}
+          <Select
+            value={String(activeCircuit?.id ?? '')}
+            onValueChange={v => setActiveCircuitId(Number(v))}
+          >
+            <SelectTrigger className="h-7 w-48 text-xs" data-testid="select-circuit">
+              <SelectValue placeholder="Select circuit" />
+            </SelectTrigger>
+            <SelectContent>
+              {circuits.map((c: CircuitDesignRow) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -147,6 +210,19 @@ function SchematicViewContent() {
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="text-xs">New</span>
+        </Button>
+        <div className="w-px h-5 bg-border" />
+        <Button
+          variant="ghost"
+          size="sm"
+          data-testid="button-push-to-pcb"
+          onClick={() => setPushDialogOpen(true)}
+          disabled={!activeCircuit || !instances || instances.length === 0 || unplacedInstances.length === 0 || pushToPcbMutation.isPending}
+          className="h-7 gap-1 text-muted-foreground hover:text-foreground"
+          title={unplacedInstances.length === 0 ? 'All components already placed on PCB' : `Push ${String(unplacedInstances.length)} component${unplacedInstances.length === 1 ? '' : 's'} to PCB`}
+        >
+          {pushToPcbMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightToLine className="w-3.5 h-3.5" />}
+          <span className="text-xs">Push to PCB</span>
         </Button>
         <div className="flex-1" />
         <span className="text-xs text-muted-foreground">
@@ -218,6 +294,19 @@ function SchematicViewContent() {
                 <FileStack className="w-3 h-3" />
                 Sheets
               </button>
+              <button
+                data-testid="panel-tab-sim"
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium transition-colors',
+                  panelTab === 'sim'
+                    ? 'text-primary border-b-2 border-primary'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+                onClick={() => setPanelTab('sim')}
+              >
+                <History className="w-3 h-3" />
+                Sim
+              </button>
             </div>
             {/* Panel content */}
             <div className="flex-1 overflow-hidden">
@@ -225,10 +314,16 @@ function SchematicViewContent() {
                 <ComponentPlacer />
               ) : panelTab === 'power' ? (
                 <PowerSymbolPalette />
-              ) : (
+              ) : panelTab === 'sheets' ? (
                 <HierarchicalSheetPanel
                   activeCircuitId={activeCircuit?.id ?? null}
                   onSelectCircuit={setActiveCircuitId}
+                />
+              ) : (
+                <SimulationScenarioPanel
+                  circuitId={activeCircuit?.id ?? 0}
+                  currentConfig={currentSimConfig}
+                  onLoadConfig={setCurrentSimConfig}
                 />
               )}
             </div>
@@ -240,6 +335,7 @@ function SchematicViewContent() {
               circuitId={activeCircuit.id}
               ercViolations={ercViolations}
               highlightedViolationId={highlightedViolationId}
+              onEnterSheet={handleEnterSheet}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
@@ -257,6 +353,50 @@ function SchematicViewContent() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={pushDialogOpen} onOpenChange={setPushDialogOpen}>
+        <AlertDialogContent data-testid="push-to-pcb-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Push to PCB</AlertDialogTitle>
+            <AlertDialogDescription>
+              Push {unplacedInstances.length} component{unplacedInstances.length === 1 ? '' : 's'} to
+              the PCB layout as unplaced footprints?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {unplacedInstances.length > 0 && (
+            <ul className="max-h-40 overflow-y-auto text-xs text-muted-foreground space-y-0.5 pl-4 list-disc" data-testid="push-to-pcb-list">
+              {unplacedInstances.map((inst) => (
+                <li key={inst.id}>
+                  {inst.referenceDesignator}
+                  {(inst.properties as Record<string, string> | null)?.packageType
+                    ? ` (${(inst.properties as Record<string, string>).packageType})`
+                    : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="push-to-pcb-cancel">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              data-testid="push-to-pcb-confirm"
+              onClick={handlePushToPcb}
+              disabled={pushToPcbMutation.isPending}
+            >
+              {pushToPcbMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                  Pushing...
+                </>
+              ) : (
+                'Push to PCB'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+          <p className="text-xs text-muted-foreground mt-2">
+            After pushing, you can switch to the PCB view to arrange the footprints.
+          </p>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

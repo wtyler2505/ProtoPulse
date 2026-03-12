@@ -25,6 +25,7 @@ import {
   History,
   HeartPulse,
   MessageSquare,
+  FileCode,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -38,6 +39,7 @@ export const navItems: NavItem[] = [
   { icon: LayoutDashboard, view: 'dashboard', label: 'Dashboard' },
   { icon: LayoutGrid, view: 'architecture', label: 'Architecture' },
   { icon: CircuitBoard, view: 'schematic', label: 'Schematic' },
+  { icon: FileCode, view: 'arduino', label: 'Arduino' },
   { icon: Code2, view: 'circuit_code', label: 'Circuit Code' },
   { icon: Grid3X3, view: 'breadboard', label: 'Breadboard' },
   { icon: Microchip, view: 'pcb', label: 'PCB' },
@@ -87,6 +89,7 @@ export const tabDescriptions: Record<string, string> = {
   simulation: 'SPICE simulation, AC/DC analysis, and waveform viewer',
   serial_monitor: 'Serial monitor for Arduino, ESP32, and other hardware devices',
   circuit_code: 'Arduino/C++ code editor with hardware-aware generation and upload',
+  arduino: 'Embedded firmware workbench with board/library management and CLI integration',
   generative_design: 'AI-guided generative circuit design with evolutionary optimization',
   digital_twin: 'Live hardware digital twin with IoT telemetry and sim comparison',
 };
@@ -95,6 +98,7 @@ export const alwaysVisibleIds = new Set<ViewMode>([
   'dashboard',
   'architecture',
   'component_editor',
+  'arduino',
   'calculators',
   'design_patterns',
   'kanban',

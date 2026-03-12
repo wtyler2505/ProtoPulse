@@ -4,6 +4,7 @@ import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { asyncHandler, payloadLimit, parseIdParam, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
+import { gatherCircuitData, DEFAULT_BOARD_WIDTH, DEFAULT_BOARD_HEIGHT } from '../circuit-routes/utils';
 
 const VALID_FABRICATORS = ['jlcpcb', 'pcbway', 'oshpark', 'pcbgogo', 'seeed'] as const;
 const VALID_STATUSES = ['draft', 'dfm-check', 'quoting', 'ready', 'submitted', 'processing', 'shipped', 'delivered', 'error'] as const;
@@ -140,6 +141,112 @@ export function registerOrderingRoutes(app: Express): void {
         throw new HttpError('Order not found', 404);
       }
       res.json(updated);
+    }),
+  );
+
+  // Generate Gerber files and attach to an order
+  app.post(
+    '/api/projects/:projectId/orders/:orderId/generate-gerbers',
+    requireProjectOwnership,
+    asyncHandler(async (req, res) => {
+      const projectId = parseIdParam(req.params.projectId);
+      const orderId = parseIdParam(req.params.orderId);
+
+      const existing = await storage.getOrder(orderId);
+      if (!existing || existing.projectId !== projectId) {
+        throw new HttpError('Order not found', 404);
+      }
+
+      // Get the first circuit design for this project
+      const circuits = await storage.getCircuitDesigns(projectId);
+      if (circuits.length === 0) {
+        throw new HttpError('No circuit designs found for this project', 404);
+      }
+
+      const data = await gatherCircuitData(storage, circuits[0].id);
+      if (!data) {
+        throw new HttpError('Circuit data not found', 404);
+      }
+
+      // Read board dimensions from circuit settings or use defaults
+      const settings = (circuits[0].settings ?? {}) as Record<string, unknown>;
+      const boardWidth = typeof settings.pcbBoardWidth === 'number' && settings.pcbBoardWidth > 0
+        ? settings.pcbBoardWidth / 10 // SVG units → mm
+        : DEFAULT_BOARD_WIDTH;
+      const boardHeight = typeof settings.pcbBoardHeight === 'number' && settings.pcbBoardHeight > 0
+        ? settings.pcbBoardHeight / 10 // SVG units → mm
+        : DEFAULT_BOARD_HEIGHT;
+
+      const { generateGerber } = await import('../export/gerber-generator');
+      const pcbWires = data.wires.filter((w) => w.view === 'pcb');
+
+      const gerberOutput = generateGerber({
+        boardWidth,
+        boardHeight,
+        instances: data.instances.map((i) => {
+          const part = i.partId != null ? data.partsMap.get(i.partId) : undefined;
+          const meta = ((part?.meta ?? {}) as Record<string, unknown>);
+          return {
+            id: i.id,
+            referenceDesignator: i.referenceDesignator,
+            pcbX: i.pcbX ?? 0,
+            pcbY: i.pcbY ?? 0,
+            pcbRotation: i.pcbRotation ?? 0,
+            pcbSide: i.pcbSide ?? 'front',
+            connectors: ((part?.connectors ?? []) as Array<{ id: string; name: string; padType?: string; padWidth?: number; padHeight?: number }>),
+            footprint: (meta.package as string) || '',
+          };
+        }),
+        wires: pcbWires.map((w) => ({
+          layer: w.layer ?? 'front',
+          points: (w.points ?? []) as Array<{ x: number; y: number }>,
+          width: w.width,
+        })),
+      });
+
+      // Build file ID list from generated layers + drill
+      const gerberFileIds: string[] = gerberOutput.layers.map((l) => {
+        const filename = `${l.name.replace(/\./g, '_')}.gbr`;
+        return filename;
+      });
+      gerberFileIds.push('drill.drl');
+
+      // Store Gerber data in the order's boardSpec alongside existing spec data
+      const existingSpec = (existing.boardSpec ?? {}) as Record<string, unknown>;
+      const updatedBoardSpec = {
+        ...existingSpec,
+        gerberData: {
+          layers: gerberOutput.layers.map((l) => ({
+            name: l.name,
+            type: l.type,
+            side: l.side,
+            filename: `${l.name.replace(/\./g, '_')}.gbr`,
+            content: l.content,
+          })),
+          drill: {
+            filename: 'drill.drl',
+            content: gerberOutput.drillFile,
+          },
+          generatedAt: new Date().toISOString(),
+        },
+        gerberFileIds,
+      };
+
+      const updated = await storage.updateOrder(orderId, {
+        boardSpec: updatedBoardSpec,
+        status: existing.status === 'draft' ? 'ready' : existing.status,
+      });
+
+      if (!updated) {
+        throw new HttpError('Failed to update order', 500);
+      }
+
+      res.json({
+        message: `Generated ${gerberOutput.layers.length} Gerber layers + drill file`,
+        gerberFileIds,
+        layerCount: gerberOutput.layers.length,
+        order: updated,
+      });
     }),
   );
 

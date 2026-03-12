@@ -35,6 +35,8 @@ import { generateLegacyGerber as generateGerber } from '../export/gerber-generat
 import { generateLegacyPickAndPlace as generatePickAndPlace } from '../export/pick-place-generator';
 import { generateEagleSch } from '../export/eagle-exporter';
 import { generateDesignReportMd } from '../export/design-report';
+import { generateFritzingProject } from '../export/fritzing-exporter';
+import { generateTinkercadProject } from '../export/tinkercad-exporter';
 import type {
   BomItemData,
   ComponentPartData,
@@ -767,12 +769,7 @@ export function registerExportTools(registry: ToolRegistry): void {
    * export_fritzing_project — Export circuit design as a Fritzing project (.fzz).
    *
    * Executes server-side: resolves the target circuit, fetches instances, nets,
-   * and parts, then generates a Fritzing-compatible XML sketch containing
-   * schematic, breadboard, and PCB views. Returned as plain UTF-8 XML rather
-   * than a ZIP archive (JSZip would add complexity; plain XML is importable).
-   *
-   * @side-effect Reads from `circuit_designs`, `circuit_instances`, `circuit_nets`,
-   *              `component_parts`, and `projects` tables.
+   * and parts, then generates a Fritzing-compatible .fzz archive.
    */
   registry.register({
     name: 'export_fritzing_project',
@@ -793,50 +790,55 @@ export function registerExportTools(registry: ToolRegistry): void {
       if (!cid) {
         return { success: false, message: 'No circuit designs found. Create a circuit design first.' };
       }
-      const instances = toCircuitInstanceData(await ctx.storage.getCircuitInstances(cid));
-      const nets = toCircuitNetData(await ctx.storage.getCircuitNets(cid));
-      const parts = toComponentPartData(await ctx.storage.getComponentParts(ctx.projectId));
-      const project = await ctx.storage.getProject(ctx.projectId);
-      const projectName = project?.name || 'design';
+      const [instances, nets, parts, project] = await Promise.all([
+        ctx.storage.getCircuitInstances(cid),
+        ctx.storage.getCircuitNets(cid),
+        ctx.storage.getComponentParts(ctx.projectId),
+        ctx.storage.getProject(ctx.projectId),
+      ]);
 
-      // Generate Fritzing XML sketch content
-      const partEntries = instances.map((inst, i) => {
-        const part = parts.find((p) => p.id === inst.partId);
-        const meta = part?.meta as Record<string, unknown> | undefined;
-        const title = (meta?.title as string) || inst.referenceDesignator;
-        return `    <instance moduleIdRef="part${String(i)}" modelIndex="${String(i)}" path="">
-      <title>${title}</title>
-      <views>
-        <schematicView layer="schematic">
-          <geometry x="${String(inst.schematicX)}" y="${String(inst.schematicY)}" z="${String(i)}" />
-        </schematicView>
-        ${inst.pcbX != null ? `<pcbView layer="copper0"><geometry x="${String(inst.pcbX)}" y="${String(inst.pcbY)}" z="${String(i)}" /></pcbView>` : ''}
-      </views>
-    </instance>`;
-      });
+      return fileExportResult(await generateFritzingProject({
+        projectName: project?.name || 'design',
+        instances,
+        nets,
+        parts,
+      }));
+    },
+  });
 
-      const netEntries = nets.map(
-        (net, i) => `    <net id="net${String(i)}" name="${net.name}" type="${net.netType}" />`,
-      );
+  /**
+   * export_tinkercad_project — Export the circuit as a TinkerCad Circuits project.
+   *
+   * Executes server-side: gathers circuit data and returns a TinkerCad-compatible 
+   * JSON structure.
+   */
+  registry.register({
+    name: 'export_tinkercad_project',
+    description: 'Export your circuit design as a TinkerCad Circuits project file (JSON), compatible with the TinkerCad breadboard and simulation environment.',
+    category: 'export',
+    parameters: z.object({
+      circuitId: z.number().int().min(1).optional().describe('The ID of the circuit to export.'),
+    }),
+    requiresConfirmation: false,
+    execute: async (params, ctx) => {
+      const cid = await resolveCircuitId(ctx.storage, ctx.projectId, params.circuitId);
+      if (!cid) {
+        return { success: false, message: 'No circuit designs found.' };
+      }
 
-      const sketch = `<?xml version="1.0" encoding="UTF-8"?>
-<module fritzingVersion="0.9.10">
-  <title>${projectName}</title>
-  <instances>
-${partEntries.join('\n')}
-  </instances>
-  <nets>
-${netEntries.join('\n')}
-  </nets>
-</module>`;
+      const [project, instances, nets, parts] = await Promise.all([
+        ctx.storage.getProject(ctx.projectId),
+        ctx.storage.getCircuitInstances(cid),
+        ctx.storage.getCircuitNets(cid),
+        ctx.storage.getComponentParts(ctx.projectId),
+      ]);
 
-      // Return as UTF-8 XML (not ZIP — JSZip adds complexity; plain XML is importable)
-      return fileExportResult({
-        content: sketch,
-        encoding: 'utf8',
-        mimeType: 'application/xml',
-        filename: `${projectName.replace(/[^a-zA-Z0-9_-]/g, '_')}.fzz`,
-      });
+      return fileExportResult(await generateTinkercadProject({
+        projectName: project?.name || 'design',
+        instances,
+        nets,
+        parts,
+      }));
     },
   });
 }

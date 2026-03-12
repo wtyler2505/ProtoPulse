@@ -665,3 +665,130 @@ export const insertPcbZoneSchema = createInsertSchema(pcbZones).omit({
 export type PcbZone = typeof pcbZones.$inferSelect;
 export type InsertPcbZone = z.infer<typeof insertPcbZoneSchema>;
 
+// ---------------------------------------------------------------------------
+// Simulation Scenarios (BL-0124) — stored simulation presets/configs
+// ---------------------------------------------------------------------------
+
+export const simulationScenarios = pgTable('simulation_scenarios', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  circuitId: integer('circuit_id').notNull().references(() => circuitDesigns.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  config: jsonb('config').notNull().default({}), // Simulation type, stop time, step, etc.
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_simulation_scenarios_project').on(table.projectId),
+  index('idx_simulation_scenarios_circuit').on(table.circuitId),
+]);
+
+export const insertSimulationScenarioSchema = createInsertSchema(simulationScenarios).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SimulationScenario = typeof simulationScenarios.$inferSelect;
+export type InsertSimulationScenario = z.infer<typeof insertSimulationScenarioSchema>;
+
+// ---------------------------------------------------------------------------
+// Arduino Workbench (BL-0200) — firmware development and management
+// ---------------------------------------------------------------------------
+
+export const arduinoWorkspaces = pgTable('arduino_workspaces', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  rootPath: text('root_path').notNull(), // Absolute path on host filesystem
+  activeSketchPath: text('active_sketch_path'), // Relative to rootPath
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_arduino_workspaces_project').on(table.projectId),
+]);
+
+export const arduinoBuildProfiles = pgTable('arduino_build_profiles', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  profileName: text('profile_name'), // Maps to sketch.yaml
+  fqbn: text('fqbn').notNull(),
+  port: text('port'),
+  protocol: text('protocol').default('serial'),
+  boardOptions: jsonb('board_options').default({}),
+  portConfig: jsonb('port_config').default({}),
+  libOverrides: jsonb('lib_overrides').default({}),
+  verboseCompile: boolean('verbose_compile').default(false),
+  verboseUpload: boolean('verbose_upload').default(false),
+  isDefault: boolean('is_default').default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_arduino_profiles_project').on(table.projectId),
+]);
+
+export const arduinoJobs = pgTable('arduino_jobs', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  profileId: integer('profile_id').references(() => arduinoBuildProfiles.id, { onDelete: 'set null' }),
+  jobType: text('job_type').notNull(), // compile, upload, etc.
+  status: text('status').notNull().default('pending'), // pending, running, completed, failed, cancelled
+  command: text('command').notNull(),
+  args: jsonb('args').default({}),
+  startedAt: timestamp('started_at'),
+  finishedAt: timestamp('finished_at'),
+  exitCode: integer('exit_code'),
+  summary: text('summary'),
+  errorCode: text('error_code'),
+  log: text('log'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_arduino_jobs_project').on(table.projectId),
+  index('idx_arduino_jobs_status').on(table.status),
+]);
+
+export const arduinoSerialSessions = pgTable('arduino_serial_sessions', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  port: text('port').notNull(),
+  protocol: text('protocol').notNull().default('serial'),
+  baudRate: integer('baud_rate').notNull().default(115200),
+  status: text('status').notNull().default('closed'), // open, closed, error
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  endedAt: timestamp('ended_at'),
+  settings: jsonb('settings').default({}),
+}, (table) => [
+  index('idx_arduino_serial_project').on(table.projectId),
+]);
+
+export const arduinoSketchFiles = pgTable('arduino_sketch_files', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  workspaceId: integer('workspace_id').notNull().references(() => arduinoWorkspaces.id, { onDelete: 'cascade' }),
+  relativePath: text('relative_path').notNull(),
+  language: text('language').notNull(), // ino, h, cpp, etc.
+  sizeBytes: integer('size_bytes').notNull().default(0),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_arduino_files_project').on(table.projectId),
+  index('idx_arduino_files_workspace').on(table.workspaceId),
+]);
+
+export const insertArduinoWorkspaceSchema = createInsertSchema(arduinoWorkspaces).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertArduinoBuildProfileSchema = createInsertSchema(arduinoBuildProfiles).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertArduinoJobSchema = createInsertSchema(arduinoJobs).omit({ id: true, createdAt: true });
+export const insertArduinoSerialSessionSchema = createInsertSchema(arduinoSerialSessions).omit({ id: true, startedAt: true });
+export const insertArduinoSketchFileSchema = createInsertSchema(arduinoSketchFiles).omit({ id: true });
+
+export type ArduinoWorkspace = typeof arduinoWorkspaces.$inferSelect;
+export type ArduinoBuildProfile = typeof arduinoBuildProfiles.$inferSelect;
+export type ArduinoJob = typeof arduinoJobs.$inferSelect;
+export type ArduinoSerialSession = typeof arduinoSerialSessions.$inferSelect;
+export type ArduinoSketchFile = typeof arduinoSketchFiles.$inferSelect;
+
+export type InsertArduinoWorkspace = z.infer<typeof insertArduinoWorkspaceSchema>;
+export type InsertArduinoBuildProfile = z.infer<typeof insertArduinoBuildProfileSchema>;
+export type InsertArduinoJob = z.infer<typeof insertArduinoJobSchema>;
+export type InsertArduinoSerialSession = z.infer<typeof insertArduinoSerialSessionSchema>;
+export type InsertArduinoSketchFile = z.infer<typeof insertArduinoSketchFileSchema>;
+

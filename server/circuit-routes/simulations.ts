@@ -25,6 +25,8 @@ const simulateSchema = z.object({
     stepValue: z.number(),
   }).optional(),
   temperature: z.number().optional(),
+  cornerMode: z.enum(['random_extreme']).optional(), // BL-0120
+  seed: z.number().optional(),
 });
 
 export function registerCircuitSimulationRoutes(app: Express, storage: IStorage): void {
@@ -64,6 +66,8 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
     const result = await runSimulation({
       netlist: spiceResult.netlist,
       analysisType: parsed.data.analysisType,
+      cornerMode: parsed.data.cornerMode,
+      seed: parsed.data.seed,
       timeout: 30000,
     });
 
@@ -403,5 +407,49 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
       totalErrors: warnings.filter(w => w.severity === 'error').length,
       totalInfo: warnings.filter(w => w.severity === 'info').length,
     });
+  }));
+
+  // --- Simulation Scenarios (BL-0124) ---
+
+  // GET /api/projects/:projectId/circuits/:circuitId/scenarios
+  app.get('/api/projects/:projectId/circuits/:circuitId/scenarios', requireProjectOwnership, asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
+    const scenarios = await storage.getSimulationScenarios(circuitId);
+    res.json({ data: scenarios, total: scenarios.length });
+  }));
+
+  // POST /api/projects/:projectId/circuits/:circuitId/scenarios
+  app.post('/api/projects/:projectId/circuits/:circuitId/scenarios', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const circuitId = parseIdParam(req.params.circuitId);
+    const { insertSimulationScenarioSchema } = await import('@shared/schema');
+    
+    const parsed = insertSimulationScenarioSchema.safeParse({ ...req.body, projectId, circuitId });
+    if (!parsed.success) {
+      return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
+    }
+
+    const created = await storage.createSimulationScenario(parsed.data);
+    res.status(201).json(created);
+  }));
+
+  // PATCH /api/projects/:projectId/scenarios/:scenarioId
+  app.patch('/api/projects/:projectId/scenarios/:scenarioId', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const scenarioId = parseIdParam(req.params.scenarioId);
+    const updated = await storage.updateSimulationScenario(scenarioId, req.body);
+    if (!updated) {
+      return res.status(404).json({ message: 'Simulation scenario not found' });
+    }
+    res.json(updated);
+  }));
+
+  // DELETE /api/projects/:projectId/scenarios/:scenarioId
+  app.delete('/api/projects/:projectId/scenarios/:scenarioId', requireProjectOwnership, asyncHandler(async (req, res) => {
+    const scenarioId = parseIdParam(req.params.scenarioId);
+    const deleted = await storage.deleteSimulationScenario(scenarioId);
+    if (!deleted) {
+      return res.status(404).json({ message: 'Simulation scenario not found' });
+    }
+    res.status(204).end();
   }));
 }

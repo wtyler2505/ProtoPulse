@@ -368,6 +368,89 @@ describe('checkCollision', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Multi-pin IC collision (BL-0477)
+// ---------------------------------------------------------------------------
+
+describe('multi-pin IC collision detection (BL-0477)', () => {
+  it('16-pin DIP IC (8 rows) occupies 16 points, not 8', () => {
+    const placement: ComponentPlacement = {
+      refDes: 'U1',
+      startCol: 'e',
+      startRow: 1,
+      rowSpan: 8, // 16 pins / 2 sides = 8 rows
+      crossesChannel: true,
+    };
+    const points = getOccupiedPoints(placement);
+    expect(points).toHaveLength(16); // 8 rows × 2 cols (e, f)
+  });
+
+  it('28-pin DIP IC (14 rows) occupies 28 points', () => {
+    const placement: ComponentPlacement = {
+      refDes: 'U2',
+      startCol: 'e',
+      startRow: 10,
+      rowSpan: 14,
+      crossesChannel: true,
+    };
+    const points = getOccupiedPoints(placement);
+    expect(points).toHaveLength(28);
+    // Rows 10..23
+    const rows = Array.from(new Set(points.map(p => p.row))).sort((a, b) => a - b);
+    expect(rows).toEqual(Array.from({ length: 14 }, (_, i) => 10 + i));
+  });
+
+  it('two 8-pin DIP ICs in adjacent rows collide', () => {
+    const ic1: ComponentPlacement = {
+      refDes: 'U1',
+      startCol: 'e',
+      startRow: 1,
+      rowSpan: 4,
+      crossesChannel: true,
+    };
+    const ic2: ComponentPlacement = {
+      refDes: 'U2',
+      startCol: 'e',
+      startRow: 3, // overlaps rows 3-4 of ic1
+      rowSpan: 4,
+      crossesChannel: true,
+    };
+    expect(checkCollision(ic2, [ic1])).toBe(true);
+  });
+
+  it('two 8-pin DIP ICs placed with proper spacing do not collide', () => {
+    const ic1: ComponentPlacement = {
+      refDes: 'U1',
+      startCol: 'e',
+      startRow: 1,
+      rowSpan: 4,
+      crossesChannel: true,
+    };
+    const ic2: ComponentPlacement = {
+      refDes: 'U2',
+      startCol: 'e',
+      startRow: 5, // starts right after ic1 ends
+      rowSpan: 4,
+      crossesChannel: true,
+    };
+    expect(checkCollision(ic2, [ic1])).toBe(false);
+  });
+
+  it('40-pin DIP IC at row boundary does not exceed board', () => {
+    const placement: ComponentPlacement = {
+      refDes: 'U1',
+      startCol: 'e',
+      startRow: 44, // 20 rows → rows 44..63, exactly at limit
+      rowSpan: 20,
+      crossesChannel: true,
+    };
+    const points = getOccupiedPoints(placement);
+    expect(points).toHaveLength(40);
+    const maxRow = Math.max(...points.map(p => p.row));
+    expect(maxRow).toBe(63);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // getBoardDimensions
 // ---------------------------------------------------------------------------
 

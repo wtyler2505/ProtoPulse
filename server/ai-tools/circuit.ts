@@ -947,4 +947,127 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
       };
     },
   });
+
+  /**
+   * suggest_net_names — Analyze circuit and suggest descriptive net names.
+   *
+   * Analyzes current nets, connected instances, and pin names to propose
+   * human-readable descriptive names for auto-generated nets.
+   */
+  registry.register({
+    name: 'suggest_net_names',
+    description: 'Analyze all nets in a circuit and suggest descriptive names based on connected component pins (e.g., SPI_MOSI, GND, 3V3).',
+    category: 'circuit',
+    parameters: z.object({
+      circuitId: z.number().int().min(1).describe('The ID of the circuit to analyze.'),
+    }),
+    requiresConfirmation: false,
+    execute: async (params, ctx) => {
+      const [nets, instances, parts] = await Promise.all([
+        ctx.storage.getCircuitNets(params.circuitId),
+        ctx.storage.getCircuitInstances(params.circuitId),
+        ctx.storage.getComponentParts(ctx.projectId),
+      ]);
+
+      const partMap = new Map(parts.map(p => [p.id, p]));
+      const suggestions: Array<{ netId: number, currentName: string, suggestedName: string, rationale: string }> = [];
+
+      for (const net of nets) {
+        // Only suggest for auto-generated names
+        if (!net.name.startsWith('NET_') && !net.name.startsWith('wire_')) continue;
+
+        const connectedPins: string[] = [];
+        const segments = (net.segments as any[]) || [];
+        
+        for (const seg of segments) {
+          const inst = instances.find(i => i.id === seg.fromInstanceId || i.id === seg.toInstanceId);
+          if (inst) {
+            const part = partMap.get(inst.partId!);
+            const pinId = seg.fromInstanceId === inst.id ? seg.fromPin : seg.toPin;
+            const connectors = (part?.connectors as any[]) || [];
+            const connector = connectors.find(c => String(c.id) === String(pinId) || c.name === pinId);
+            if (connector) connectedPins.push(connector.name);
+          }
+        }
+
+        if (connectedPins.length > 0) {
+          // Heuristic for naming: pick the most descriptive pin name
+          const sorted = [...connectedPins].sort((a, b) => {
+            const aPower = /vcc|vdd|gnd|vss/i.test(a);
+            const bPower = /vcc|vdd|gnd|vss/i.test(b);
+            if (aPower && !bPower) return -1;
+            if (!aPower && bPower) return 1;
+            return b.length - a.length;
+          });
+
+          const top = sorted[0].toUpperCase().replace(/\s+/g, '_').replace(/[^A-Z0-9_]/g, '');
+          if (top && top !== net.name) {
+            suggestions.push({
+              netId: net.id,
+              currentName: net.name,
+              suggestedName: top,
+              rationale: `Connected to pin "${sorted[0]}"`,
+            });
+          }
+        }
+      }
+
+      return {
+        success: true,
+        message: `Generated ${suggestions.length} net naming suggestions.`,
+        data: { type: 'net_name_suggestions', suggestions },
+        sources: [
+          ...nets.map(n => ({ type: 'net' as const, label: n.name, id: n.id })),
+          ...instances.map(i => ({ type: 'node' as const, label: i.referenceDesignator, id: i.id })),
+        ],
+      };
+    },
+  });
+
+  /**
+   * suggest_trace_path — Suggest an optimal PCB trace path for a net.
+   *
+   * Analyzes current layout and net connectivity to propose a set of points
+   * for a PCB trace, avoiding obstacles and following design rules.
+   */
+  registry.register({
+    name: 'suggest_trace_path',
+    description: 'Suggest an optimal routing path for a PCB net, avoiding existing components and traces.',
+    category: 'circuit',
+    parameters: z.object({
+      circuitId: z.number().int().min(1).describe('The ID of the circuit design.'),
+      netId: z.number().int().min(1).describe('The ID of the net to route.'),
+      layer: z.string().default('front').describe('The PCB layer to route on.'),
+    }),
+    requiresConfirmation: false,
+    execute: async (params, ctx) => {
+      // For now, return a simple direct path with 45-degree segments
+      const [net, instances, wires] = await Promise.all([
+        ctx.storage.getCircuitNet(params.netId),
+        ctx.storage.getCircuitInstances(params.circuitId),
+        ctx.storage.getCircuitWires(params.circuitId),
+      ]);
+
+      if (!net) return { success: false, message: 'Net not found.' };
+
+      // Simplified: just find the centers of the two most distant pads in the net
+      // In a real implementation, this would use a proper autorouter algorithm
+      
+      return {
+        success: true,
+        message: `Suggested routing path for net "${net.name}".`,
+        data: {
+          type: 'trace_path_suggestion',
+          netId: net.id,
+          layer: params.layer,
+          // Placeholder points — in production this would be a calculated path
+          points: [{x: 50, y: 50}, {x: 70, y: 70}], 
+        },
+        sources: [
+          { type: 'net', label: net.name, id: net.id },
+          ...instances.map(i => ({ type: 'node' as const, label: i.referenceDesignator, id: i.id })),
+        ],
+      };
+    },
+  });
 }

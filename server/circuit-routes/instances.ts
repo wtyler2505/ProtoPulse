@@ -1,5 +1,6 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
+import type { CircuitInstanceRow } from '@shared/schema';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
@@ -83,5 +84,49 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
     const deleted = await storage.deleteCircuitInstance(id);
     if (!deleted) { return res.status(404).json({ message: 'Circuit instance not found' }); }
     res.status(204).end();
+  }));
+
+  // ---------------------------------------------------------------------------
+  // Push to PCB — forward annotation from schematic to PCB layout
+  // ---------------------------------------------------------------------------
+
+  app.post('/api/circuits/:circuitId/push-to-pcb', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
+    const instances = await storage.getCircuitInstances(circuitId);
+
+    if (instances.length === 0) {
+      return res.status(400).json({ message: 'No instances in this circuit design' });
+    }
+
+    // Separate placed vs unplaced instances
+    const unplaced = instances.filter((inst) => inst.pcbX == null || inst.pcbY == null);
+    const alreadyPlaced = instances.length - unplaced.length;
+
+    // Assign default positions in an "unplaced parts" area to the left of the board origin
+    // Stack vertically with spacing, at negative X so they appear outside the board
+    const UNPLACED_X = -30; // mm, left of board origin
+    const START_Y = 5;      // mm
+    const SPACING_Y = 15;   // mm between components
+
+    const pushedInstances: CircuitInstanceRow[] = [];
+    for (let i = 0; i < unplaced.length; i++) {
+      const inst = unplaced[i]!;
+      const updated = await storage.updateCircuitInstance(inst.id, {
+        pcbX: UNPLACED_X,
+        pcbY: START_Y + i * SPACING_Y,
+        pcbRotation: 0,
+        pcbSide: 'front',
+      });
+      if (updated) {
+        pushedInstances.push(updated);
+      }
+    }
+
+    res.json({
+      pushed: pushedInstances.length,
+      alreadyPlaced,
+      total: instances.length,
+      instances: pushedInstances,
+    });
   }));
 }

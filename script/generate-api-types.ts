@@ -48,6 +48,12 @@ const entities: EntityDef[] = [
   { selectType: 'CircuitWireRow', insertType: 'InsertCircuitWire', insertSchemaName: 'insertCircuitWireSchema', apiName: 'CircuitWire' },
   { selectType: 'CircuitViaRow', insertType: 'InsertCircuitVia', insertSchemaName: 'insertCircuitViaSchema', apiName: 'CircuitVia' },
   { selectType: 'SimulationResultRow', insertType: 'InsertSimulationResult', insertSchemaName: 'insertSimulationResultSchema', apiName: 'SimulationResult' },
+  { selectType: 'SimulationScenario', insertType: 'InsertSimulationScenario', insertSchemaName: 'insertSimulationScenarioSchema', apiName: 'SimulationScenario' },
+  { selectType: 'ArduinoWorkspace', insertType: 'InsertArduinoWorkspace', insertSchemaName: 'insertArduinoWorkspaceSchema', apiName: 'ArduinoWorkspace' },
+  { selectType: 'ArduinoBuildProfile', insertType: 'InsertArduinoBuildProfile', insertSchemaName: 'insertArduinoBuildProfileSchema', apiName: 'ArduinoBuildProfile' },
+  { selectType: 'ArduinoJob', insertType: 'InsertArduinoJob', insertSchemaName: 'insertArduinoJobSchema', apiName: 'ArduinoJob' },
+  { selectType: 'ArduinoSerialSession', insertType: 'InsertArduinoSerialSession', insertSchemaName: 'insertArduinoSerialSessionSchema', apiName: 'ArduinoSerialSession' },
+  { selectType: 'ArduinoSketchFile', insertType: 'InsertArduinoSketchFile', insertSchemaName: 'insertArduinoSketchFileSchema', apiName: 'ArduinoSketchFile' },
   { selectType: 'AiActionRow', insertType: 'InsertAiAction', insertSchemaName: 'insertAiActionSchema', apiName: 'AiAction' },
 ];
 

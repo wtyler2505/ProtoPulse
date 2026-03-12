@@ -7,6 +7,7 @@ import { ValidationStorage } from './storage/validation';
 import { ChatStorage } from './storage/chat';
 import { ComponentStorage } from './storage/components';
 import { CircuitStorage } from './storage/circuit';
+import { ArduinoStorage } from './storage/arduino';
 import { MiscStorage } from './storage/misc';
 import { OrderingStorage } from './storage/ordering';
 import type { StorageDeps } from './storage/types';
@@ -25,6 +26,7 @@ export class DatabaseStorage {
   private _chat = new ChatStorage(deps);
   private _components = new ComponentStorage(deps);
   private _circuit = new CircuitStorage(deps);
+  private _arduino = new ArduinoStorage(deps);
   private _misc = new MiscStorage(deps);
   private _ordering = new OrderingStorage(deps);
 
@@ -128,8 +130,13 @@ export class DatabaseStorage {
   createSimulationResult = this._circuit.createSimulationResult.bind(this._circuit);
   deleteSimulationResult = this._circuit.deleteSimulationResult.bind(this._circuit);
   cleanupSimulationResults = this._circuit.cleanupSimulationResults.bind(this._circuit);
-  getChildDesigns = this._circuit.getChildDesigns.bind(this._circuit);
+  getSimulationScenarios = this._circuit.getSimulationScenarios.bind(this._circuit);
+  getSimulationScenario = this._circuit.getSimulationScenario.bind(this._circuit);
+  createSimulationScenario = this._circuit.createSimulationScenario.bind(this._circuit);
+  updateSimulationScenario = this._circuit.updateSimulationScenario.bind(this._circuit);
+  deleteSimulationScenario = this._circuit.deleteSimulationScenario.bind(this._circuit);
   getRootDesigns = this._circuit.getRootDesigns.bind(this._circuit);
+  getChildDesigns = this._circuit.getChildDesigns.bind(this._circuit);
   getHierarchicalPorts = this._circuit.getHierarchicalPorts.bind(this._circuit);
   getHierarchicalPort = this._circuit.getHierarchicalPort.bind(this._circuit);
   createHierarchicalPort = this._circuit.createHierarchicalPort.bind(this._circuit);
@@ -179,6 +186,29 @@ export class DatabaseStorage {
   createPcbZone = this._circuit.createPcbZone.bind(this._circuit);
   updatePcbZone = this._circuit.updatePcbZone.bind(this._circuit);
   deletePcbZone = this._circuit.deletePcbZone.bind(this._circuit);
+
+  // --- Arduino Workbench ---
+  getArduinoWorkspaces = this._arduino.getArduinoWorkspaces.bind(this._arduino);
+  getArduinoWorkspace = this._arduino.getArduinoWorkspace.bind(this._arduino);
+  createArduinoWorkspace = this._arduino.createArduinoWorkspace.bind(this._arduino);
+  updateArduinoWorkspace = this._arduino.updateArduinoWorkspace.bind(this._arduino);
+  getArduinoBuildProfiles = this._arduino.getArduinoBuildProfiles.bind(this._arduino);
+  getArduinoBuildProfile = this._arduino.getArduinoBuildProfile.bind(this._arduino);
+  createArduinoBuildProfile = this._arduino.createArduinoBuildProfile.bind(this._arduino);
+  updateArduinoBuildProfile = this._arduino.updateArduinoBuildProfile.bind(this._arduino);
+  deleteArduinoBuildProfile = this._arduino.deleteArduinoBuildProfile.bind(this._arduino);
+  getArduinoJobs = this._arduino.getArduinoJobs.bind(this._arduino);
+  getArduinoJob = this._arduino.getArduinoJob.bind(this._arduino);
+  createArduinoJob = this._arduino.createArduinoJob.bind(this._arduino);
+  updateArduinoJob = this._arduino.updateArduinoJob.bind(this._arduino);
+  getArduinoSerialSessions = this._arduino.getArduinoSerialSessions.bind(this._arduino);
+  getArduinoSerialSession = this._arduino.getArduinoSerialSession.bind(this._arduino);
+  createArduinoSerialSession = this._arduino.createArduinoSerialSession.bind(this._arduino);
+  updateArduinoSerialSession = this._arduino.updateArduinoSerialSession.bind(this._arduino);
+  getArduinoSketchFiles = this._arduino.getArduinoSketchFiles.bind(this._arduino);
+  getArduinoSketchFile = this._arduino.getArduinoSketchFile.bind(this._arduino);
+  upsertArduinoSketchFile = this._arduino.upsertArduinoSketchFile.bind(this._arduino);
+  deleteArduinoSketchFile = this._arduino.deleteArduinoSketchFile.bind(this._arduino);
 }
 
 export const storage = new DatabaseStorage();

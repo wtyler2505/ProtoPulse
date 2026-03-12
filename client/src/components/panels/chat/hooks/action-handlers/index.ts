@@ -4,6 +4,7 @@ import { bomHandlers } from './bom';
 import { validationHandlers } from './validation';
 import { exportHandlers } from './export';
 import { miscHandlers } from './misc';
+import { arduinoHandlers } from './arduino';
 import type { ActionHandler } from './types';
 
 export type { ActionHandler, ActionContext, ActionState } from './types';
@@ -14,5 +15,6 @@ export const ACTION_HANDLERS: Record<string, ActionHandler> = {
   ...bomHandlers,
   ...validationHandlers,
   ...exportHandlers,
+  ...arduinoHandlers,
   ...miscHandlers,
 };

@@ -95,4 +95,5 @@ export const ACTION_LABELS: Record<string, string> = {
   export_pick_and_place: 'Exported pick & place',
   export_eagle: 'Exported Eagle',
   export_fritzing_project: 'Exported Fritzing',
+  export_tinkercad_project: 'Exported TinkerCad',
 };

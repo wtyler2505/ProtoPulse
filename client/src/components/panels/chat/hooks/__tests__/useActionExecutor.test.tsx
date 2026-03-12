@@ -117,6 +117,31 @@ vi.mock('@/lib/contexts/output-context', () => ({
   }),
 }));
 
+vi.mock('@/lib/contexts/arduino-context', () => ({
+  useArduino: () => ({
+    generateSketch: vi.fn().mockResolvedValue('// generated sketch'),
+    compileJob: vi.fn().mockResolvedValue({ id: 1, status: 'completed' }),
+    uploadJob: vi.fn().mockResolvedValue({ id: 2, status: 'completed' }),
+    searchLibraries: vi.fn().mockResolvedValue([]),
+    listBoards: vi.fn().mockResolvedValue([]),
+    health: undefined,
+    workspace: undefined,
+    profiles: [],
+    jobs: [],
+    files: [],
+    isHealthLoading: false,
+    isWorkspaceLoading: false,
+    isFilesLoading: false,
+    createProfile: vi.fn(),
+    updateProfile: vi.fn(),
+    deleteProfile: vi.fn(),
+    readFile: vi.fn().mockResolvedValue(''),
+    writeFile: vi.fn(),
+    createFile: vi.fn(),
+    deleteFile: vi.fn().mockResolvedValue(true),
+  }),
+}));
+
 // Mock csv utilities used by export_bom_csv
 const mockBuildCSV = vi.fn<(headers: string[], rows: (string | number)[][]) => string>(
   () => 'Part Number,Manufacturer\nESP32,Espressif',

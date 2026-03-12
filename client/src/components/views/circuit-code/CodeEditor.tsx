@@ -2,6 +2,8 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 
 import { EditorView, lineNumbers, keymap } from '@codemirror/view';
 import { EditorState, Compartment } from '@codemirror/state';
 import { javascript } from '@codemirror/lang-javascript';
+import { cpp } from '@codemirror/lang-cpp';
+import { markdown } from '@codemirror/lang-markdown';
 import { bracketMatching, indentOnInput } from '@codemirror/language';
 import { autocompletion } from '@codemirror/autocomplete';
 import { lintGutter, linter } from '@codemirror/lint';
@@ -90,6 +92,7 @@ const protoPulseTheme = EditorView.theme(
 export interface CodeEditorProps {
   value: string;
   onChange: (code: string) => void;
+  language?: 'javascript' | 'cpp' | 'markdown';
   errors?: Array<{ message: string; line?: number }>;
   readOnly?: boolean;
   className?: string;
@@ -105,7 +108,7 @@ export interface CodeEditorHandle {
 // ---------------------------------------------------------------------------
 
 const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor(
-  { value, onChange, errors, readOnly = false, className },
+  { value, onChange, language = 'javascript', errors, readOnly = false, className },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -113,6 +116,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
   const onChangeRef = useRef(onChange);
   const readOnlyCompartment = useRef(new Compartment());
   const linterCompartment = useRef(new Compartment());
+  const languageCompartment = useRef(new Compartment());
 
   // Keep onChange ref current so the listener closure doesn't go stale
   onChangeRef.current = onChange;
@@ -135,6 +139,14 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
     [],
   );
 
+  const getLanguageExtension = useCallback((lang: string): Extension => {
+    switch (lang) {
+      case 'cpp': return cpp();
+      case 'markdown': return markdown();
+      default: return javascript({ typescript: true });
+    }
+  }, []);
+
   // Create editor on mount
   useEffect(() => {
     const container = containerRef.current;
@@ -150,7 +162,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
       autocompletion(),
       highlightSelectionMatches(),
       lintGutter(),
-      javascript({ typescript: true }),
+      languageCompartment.current.of(getLanguageExtension(language)),
       protoPulseTheme,
       keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
       readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly)),
@@ -212,6 +224,17 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
       ),
     });
   }, [readOnly]);
+
+  // Sync language prop
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+    view.dispatch({
+      effects: languageCompartment.current.reconfigure(getLanguageExtension(language)),
+    });
+  }, [language, getLanguageExtension]);
 
   // Sync error diagnostics
   useEffect(() => {

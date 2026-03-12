@@ -157,17 +157,17 @@ export class ToolRegistry {
   // -------------------------------------------------------------------------
 
   /**
-   * Convert all registered tools to Anthropic's native tool format.
+   * Convert registered tools to Anthropic's native tool format.
    *
-   * Transforms each tool's Zod parameter schema to JSON Schema (OpenAPI 3 target)
-   * and strips meta keys (`$schema`, `additionalProperties`) that the Anthropic
-   * API does not accept.
-   *
-   * @returns Array of Anthropic tool objects ready for the `tools` API parameter.
-   * @see https://docs.anthropic.com/en/docs/build-with-claude/tool-use
+   * @param allowlist - Optional array of tool names to include. If omitted, all tools are returned.
+   * @returns Array of Anthropic tool objects.
    */
-  toAnthropicTools(): AnthropicTool[] {
-    return this.getAll().map((tool) => {
+  toAnthropicTools(allowlist?: string[]): AnthropicTool[] {
+    const toolsToFormat = allowlist 
+      ? this.getAll().filter(t => allowlist.includes(t.name))
+      : this.getAll();
+
+    return toolsToFormat.map((tool) => {
       const jsonSchema = zodToJsonSchema(tool.parameters, {
         target: 'openApi3',
         $refStrategy: 'none',
@@ -186,16 +186,17 @@ export class ToolRegistry {
   }
 
   /**
-   * Convert all registered tools to Gemini's `functionDeclarations` format.
+   * Convert registered tools to Gemini's `functionDeclarations` format.
    *
-   * Transforms each tool's Zod parameter schema to JSON Schema (OpenAPI 3 target)
-   * and strips meta keys that Gemini does not expect.
-   *
+   * @param allowlist - Optional array of tool names to include. If omitted, all tools are returned.
    * @returns Array of Gemini function declaration objects.
-   * @see https://ai.google.dev/gemini-api/docs/function-calling
    */
-  toGeminiFunctionDeclarations(): GeminiFunctionDeclaration[] {
-    return this.getAll().map((tool) => {
+  toGeminiFunctionDeclarations(allowlist?: string[]): GeminiFunctionDeclaration[] {
+    const toolsToFormat = allowlist 
+      ? this.getAll().filter(t => allowlist.includes(t.name))
+      : this.getAll();
+
+    return toolsToFormat.map((tool) => {
       const jsonSchema = zodToJsonSchema(tool.parameters, {
         target: 'openApi3',
         $refStrategy: 'none',

@@ -38,6 +38,18 @@ import type {
   InsertCircuitVia,
   SimulationResultRow,
   InsertSimulationResult,
+  SimulationScenario,
+  InsertSimulationScenario,
+  ArduinoWorkspace,
+  InsertArduinoWorkspace,
+  ArduinoBuildProfile,
+  InsertArduinoBuildProfile,
+  ArduinoJob,
+  InsertArduinoJob,
+  ArduinoSerialSession,
+  InsertArduinoSerialSession,
+  ArduinoSketchFile,
+  InsertArduinoSketchFile,
   AiActionRow,
   InsertAiAction,
 } from './schema';
@@ -46,8 +58,8 @@ import type {
 // Re-exported entity types
 // ---------------------------------------------------------------------------
 
-export type { Project, ArchitectureNode, ArchitectureEdge, BomItem, ValidationIssue, ChatMessage, HistoryItem, User, Session, ApiKeyRecord, UserChatSettings, ComponentPart, ComponentLibraryEntry, CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow, SimulationResultRow, AiActionRow } from './schema';
-export type { InsertProject, InsertArchitectureNode, InsertArchitectureEdge, InsertBomItem, InsertValidationIssue, InsertChatMessage, InsertHistoryItem, InsertUser, InsertUserChatSettings, InsertComponentPart, InsertComponentLibrary, InsertCircuitDesign, InsertCircuitInstance, InsertCircuitNet, InsertCircuitWire, InsertCircuitVia, InsertSimulationResult, InsertAiAction } from './schema';
+export type { Project, ArchitectureNode, ArchitectureEdge, BomItem, ValidationIssue, ChatMessage, HistoryItem, User, Session, ApiKeyRecord, UserChatSettings, ComponentPart, ComponentLibraryEntry, CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow, SimulationResultRow, SimulationScenario, ArduinoWorkspace, ArduinoBuildProfile, ArduinoJob, ArduinoSerialSession, ArduinoSketchFile, AiActionRow } from './schema';
+export type { InsertProject, InsertArchitectureNode, InsertArchitectureEdge, InsertBomItem, InsertValidationIssue, InsertChatMessage, InsertHistoryItem, InsertUser, InsertUserChatSettings, InsertComponentPart, InsertComponentLibrary, InsertCircuitDesign, InsertCircuitInstance, InsertCircuitNet, InsertCircuitWire, InsertCircuitVia, InsertSimulationResult, InsertSimulationScenario, InsertArduinoWorkspace, InsertArduinoBuildProfile, InsertArduinoJob, InsertArduinoSerialSession, InsertArduinoSketchFile, InsertAiAction } from './schema';
 
 // ---------------------------------------------------------------------------
 // Patch types — Partial<InsertType> for update/PATCH operations
@@ -70,6 +82,12 @@ export type PatchCircuitNet = Partial<InsertCircuitNet>;
 export type PatchCircuitWire = Partial<InsertCircuitWire>;
 export type PatchCircuitVia = Partial<InsertCircuitVia>;
 export type PatchSimulationResult = Partial<InsertSimulationResult>;
+export type PatchSimulationScenario = Partial<InsertSimulationScenario>;
+export type PatchArduinoWorkspace = Partial<InsertArduinoWorkspace>;
+export type PatchArduinoBuildProfile = Partial<InsertArduinoBuildProfile>;
+export type PatchArduinoJob = Partial<InsertArduinoJob>;
+export type PatchArduinoSerialSession = Partial<InsertArduinoSerialSession>;
+export type PatchArduinoSketchFile = Partial<InsertArduinoSketchFile>;
 export type PatchAiAction = Partial<InsertAiAction>;
 
 // ---------------------------------------------------------------------------
@@ -138,6 +156,18 @@ export type CircuitViaResponse = ApiResponse<CircuitViaRow>;
 export type CircuitViaListResponse = ApiListResponse<CircuitViaRow>;
 export type SimulationResultResponse = ApiResponse<SimulationResultRow>;
 export type SimulationResultListResponse = ApiListResponse<SimulationResultRow>;
+export type SimulationScenarioResponse = ApiResponse<SimulationScenario>;
+export type SimulationScenarioListResponse = ApiListResponse<SimulationScenario>;
+export type ArduinoWorkspaceResponse = ApiResponse<ArduinoWorkspace>;
+export type ArduinoWorkspaceListResponse = ApiListResponse<ArduinoWorkspace>;
+export type ArduinoBuildProfileResponse = ApiResponse<ArduinoBuildProfile>;
+export type ArduinoBuildProfileListResponse = ApiListResponse<ArduinoBuildProfile>;
+export type ArduinoJobResponse = ApiResponse<ArduinoJob>;
+export type ArduinoJobListResponse = ApiListResponse<ArduinoJob>;
+export type ArduinoSerialSessionResponse = ApiResponse<ArduinoSerialSession>;
+export type ArduinoSerialSessionListResponse = ApiListResponse<ArduinoSerialSession>;
+export type ArduinoSketchFileResponse = ApiResponse<ArduinoSketchFile>;
+export type ArduinoSketchFileListResponse = ApiListResponse<ArduinoSketchFile>;
 export type AiActionResponse = ApiResponse<AiActionRow>;
 export type AiActionListResponse = ApiListResponse<AiActionRow>;
 
@@ -145,4 +175,4 @@ export type AiActionListResponse = ApiListResponse<AiActionRow>;
 // Zod schema re-exports (runtime validators)
 // ---------------------------------------------------------------------------
 
-export { insertProjectSchema, insertArchitectureNodeSchema, insertArchitectureEdgeSchema, insertBomItemSchema, insertValidationIssueSchema, insertChatMessageSchema, insertHistoryItemSchema, insertUserSchema, insertUserChatSettingsSchema, insertComponentPartSchema, insertComponentLibrarySchema, insertCircuitDesignSchema, insertCircuitInstanceSchema, insertCircuitNetSchema, insertCircuitWireSchema, insertCircuitViaSchema, insertSimulationResultSchema, insertAiActionSchema } from './schema';
+export { insertProjectSchema, insertArchitectureNodeSchema, insertArchitectureEdgeSchema, insertBomItemSchema, insertValidationIssueSchema, insertChatMessageSchema, insertHistoryItemSchema, insertUserSchema, insertUserChatSettingsSchema, insertComponentPartSchema, insertComponentLibrarySchema, insertCircuitDesignSchema, insertCircuitInstanceSchema, insertCircuitNetSchema, insertCircuitWireSchema, insertCircuitViaSchema, insertSimulationResultSchema, insertSimulationScenarioSchema, insertArduinoWorkspaceSchema, insertArduinoBuildProfileSchema, insertArduinoJobSchema, insertArduinoSerialSessionSchema, insertArduinoSketchFileSchema, insertAiActionSchema } from './schema';

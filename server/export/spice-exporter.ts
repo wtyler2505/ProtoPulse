@@ -259,6 +259,32 @@ function generateComponentLine(
       };
     }
 
+    // BL-0121: Mixed-signal XSPICE digital logic
+    case 'and':
+    case 'or':
+    case 'nand':
+    case 'nor':
+    case 'xor':
+    case 'xnor':
+    case 'inv':
+    case 'buffer':
+    case 'dff': {
+      const gateType = family === 'inv' ? 'not' : family;
+      const modelName = `proto_${gateType}`;
+      
+      // Separate inputs and outputs based on typical gate connector names
+      const inputs = connectors.filter(c => /in|a|b|c|d|clk|data/i.test(c.name));
+      const outputs = connectors.filter(c => /out|q|y/i.test(c.name));
+      
+      const inNodes = inputs.map(c => node(c.id)).join(' ');
+      const outNodes = outputs.map(c => node(c.id)).join(' ');
+      
+      return {
+        line: `A${refDes.replace(/^[AU]/i, '')} [${inNodes}] [${outNodes}] ${modelName}`,
+        model: `.MODEL ${modelName} d_${gateType}(rise_delay=1n fall_delay=1n input_load=0.5p)`,
+      };
+    }
+
     case 'voltage source':
     case 'battery': {
       const value = props.value || props.voltage || '5';

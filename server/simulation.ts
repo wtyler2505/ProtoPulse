@@ -21,6 +21,8 @@ export interface SimulationRequest {
   netlist: string;
   analysisType: 'op' | 'tran' | 'ac' | 'dc';
   timeout?: number;  // ms, default 30000
+  cornerMode?: 'random_extreme'; // BL-0120
+  seed?: number;
 }
 
 export interface SimulationTrace {
@@ -84,6 +86,45 @@ async function runNgspice(request: SimulationRequest): Promise<SimulationOutput>
 
   // Modify netlist to write raw output
   let netlist = request.netlist;
+
+  // BL-0120: Apply corner variations if requested
+  if (request.cornerMode === 'random_extreme') {
+    const { mulberry32 } = await import('../shared/prng');
+    const rng = mulberry32(request.seed || Date.now());
+    
+    // Parse netlist and vary R/C values
+    // This is a simple regex-based variation for resistors and capacitors
+    netlist = netlist.split('\n').map(line => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('*') || trimmed.startsWith('.')) return line;
+      
+      const parts = trimmed.split(/\s+/);
+      const id = parts[0].toUpperCase();
+      
+      // Resistors (R) and Capacitors (C)
+      if ((id.startsWith('R') || id.startsWith('C')) && parts.length >= 4) {
+        const valStr = parts[3];
+        // Skip if not a simple numeric value (like expressions or model names)
+        if (!/^[0-9.]+[A-Z]*$/i.test(valStr)) return line;
+        
+        // 10% default tolerance for extreme variation
+        const tol = 0.10;
+        const offset = (rng() * 2 - 1) * tol;
+        const multiplier = 1 + offset;
+        
+        // Basic scaling: just append the multiplier to the string value
+        // SPICE ignores {val}*{multiplier} unless we use params, 
+        // so we'll do literal scaling here.
+        const numPart = valStr.match(/^[0-9.]+/)?.[0] || '1';
+        const suffixPart = valStr.substring(numPart.length);
+        const scaledVal = (parseFloat(numPart) * multiplier).toFixed(4);
+        
+        parts[3] = `${scaledVal}${suffixPart}`;
+        return parts.join(' ');
+      }
+      return line;
+    }).join('\n');
+  }
 
   // Insert write command before .ENDC
   const writeCmd = `write ${outputPath} all`;

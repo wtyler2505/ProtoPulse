@@ -70,7 +70,7 @@ export interface DCComponent {
   /** Unique component identifier. */
   id: string;
   /** Component type. */
-  type: 'R' | 'C' | 'L' | 'V' | 'I' | 'VCVS' | 'VCCS';
+  type: 'R' | 'C' | 'L' | 'V' | 'I' | 'VCVS' | 'VCCS' | 'D' | 'Q' | 'M';
   /** Component value (ohms, farads, henries, volts, amps, or gain). */
   value: number;
   /** [positive node, negative node] as string IDs. */

@@ -1,9 +1,12 @@
-import { useState, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useCircuitDesigns, useCircuitInstances } from '@/lib/circuit-editor/hooks';
 import { cn } from '@/lib/utils';
+import type { CircuitDesignRow } from '@shared/schema';
+import SimulationScenarioPanel from '@/components/circuit-editor/SimulationScenarioPanel';
+import { useSimulation } from '@/lib/contexts/simulation-context';
 import type { WaveformTrace, PlotType } from './WaveformViewer';
 import {
   parseSpiceNetlist,
@@ -682,6 +685,10 @@ export default function SimulationPanel() {
   // Probes
   const [probes, setProbes] = useState<Probe[]>([]);
 
+  // Corner Analysis (BL-0120)
+  const [cornerAnalysis, setCornerAnalysis] = useState(false);
+  const [cornerIterations, setCornerIterations] = useState(5);
+
   // Simulation state
   const [isRunning, setIsRunning] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
@@ -689,13 +696,38 @@ export default function SimulationPanel() {
   const [results, setResults] = useState<SimulationResult | null>(null);
   const [resultHistory, setResultHistory] = useState<SimulationRun[]>([]);
 
+  // Resolve current full config for saving as preset
+  const currentFullConfig = useMemo(() => ({
+    analysisType,
+    transientParams,
+    acParams,
+    dcsweepParams,
+    probes,
+  }), [analysisType, transientParams, acParams, dcsweepParams, probes]);
+
+  const handleLoadPreset = useCallback((config: Record<string, unknown>) => {
+    if (!config) return;
+    if (config.analysisType) setAnalysisType(config.analysisType as AnalysisType);
+    if (config.transientParams) setTransientParams(config.transientParams as TransientParams);
+    if (config.acParams) setACParams(config.acParams as ACParams);
+    if (config.dcsweepParams) setDCSweepParams(config.dcsweepParams as DCSweepParams);
+    if (config.probes) setProbes(config.probes as Probe[]);
+    
+    toast({
+      title: 'Preset loaded',
+      description: `Restored simulation configuration.`,
+    });
+  }, [toast]);
+
   // AbortController for cancelling in-flight simulation requests
   const abortRef = useRef<AbortController | null>(null);
+  const { isLive } = useSimulation();
 
   // Populate DC sweep source list from actual circuit instances
   const { data: circuits } = useCircuitDesigns(projectId);
   const firstCircuitId = circuits?.[0]?.id ?? 0;
   const { data: circuitInstances } = useCircuitInstances(firstCircuitId);
+  const { updateComponentState } = useSimulation();
 
   const circuitSources = useMemo<string[]>(() => {
     if (!circuitInstances || circuitInstances.length === 0) { return []; }
@@ -757,11 +789,11 @@ export default function SimulationPanel() {
   // ---------------------------
   // Run simulation
   // ---------------------------
-  const handleRun = useCallback(async () => {
+  const handleRun = useCallback(async (isSilent = false) => {
     const validationError = validate();
     if (validationError) {
       setError(validationError);
-      toast({ variant: 'destructive', title: 'Validation Error', description: validationError });
+      if (!isSilent) toast({ variant: 'destructive', title: 'Validation Error', description: validationError });
       return;
     }
 
@@ -781,8 +813,59 @@ export default function SimulationPanel() {
         probes: probes.map((p) => ({ name: p.name, type: p.type, nodeOrComponent: p.nodeOrComponent })),
       }, controller.signal);
 
-      const data: SimulationResult = await response.json();
+      let data: SimulationResult = await response.json();
+
+      // BL-0120: Worst-case corner analysis
+      if (cornerAnalysis && data.type === 'waveform' && cornerIterations > 0) {
+        const cornerRuns = Math.min(cornerIterations, 10); // Safety limit
+        const combinedTraces: WaveformTrace[] = [...data.traces.map(t => ({ ...t, label: `${t.label} (Nominal)` }))];
+        
+        for (let i = 0; i < cornerRuns; i++) {
+          if (controller.signal.aborted) break;
+          
+          // Request a corner variation from the backend
+          // We pass a 'seed' and 'mode: corner' to the simulator
+          const cornerResponse = await apiRequest('POST', `/api/projects/${projectId}/simulate`, {
+            analysisType,
+            params: currentParams,
+            probes: probes.map((p) => ({ name: p.name, type: p.type, nodeOrComponent: p.nodeOrComponent })),
+            cornerMode: 'random_extreme',
+            seed: i + 100, // Different seed per corner
+          }, controller.signal);
+          
+          const cornerData: SimulationResult = await cornerResponse.json();
+          if (cornerData.type === 'waveform') {
+            cornerData.traces.forEach(t => {
+              combinedTraces.push({
+                ...t,
+                label: `${t.label} (Corner ${i + 1})`,
+                // Use slightly different opacities/colors if possible or just rely on legend
+              });
+            });
+          }
+        }
+        data = { ...data, traces: combinedTraces };
+      }
+
       setResults(data);
+
+      // BL-0151: Reflect results in component live states
+      if (data.type === 'waveform' && circuitInstances) {
+        circuitInstances.forEach(inst => {
+          // Look for probes or nodes related to this instance
+          // Heuristic: if probe matches refDes, use its last value
+          const relevantTraces = data.traces.filter(t => t.label.includes(inst.referenceDesignator));
+          if (relevantTraces.length > 0) {
+            const lastTrace = relevantTraces[0];
+            const lastVal = lastTrace.data[lastTrace.data.length - 1]?.y || 0;
+            
+            updateComponentState(inst.referenceDesignator, {
+              isActive: lastVal > 1.0, // Basic threshold
+              brightness: Math.min(1, Math.max(0, lastVal / 5.0)), // Normalized 5V scale
+            });
+          }
+        });
+      }
 
       const run: SimulationRun = {
         id: crypto.randomUUID(),
@@ -793,21 +876,38 @@ export default function SimulationPanel() {
       };
       setResultHistory((prev) => [run, ...prev]);
 
-      toast({ title: 'Simulation Complete', description: `${ANALYSIS_TYPES.find((a) => a.id === analysisType)?.label} finished successfully.` });
+      if (!isSilent) {
+        toast({ title: 'Simulation Complete', description: `${ANALYSIS_TYPES.find((a) => a.id === analysisType)?.label} finished successfully.` });
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        toast({ title: 'Simulation Stopped', description: 'The running simulation was cancelled.' });
+        if (!isSilent) toast({ title: 'Simulation Stopped', description: 'The running simulation was cancelled.' });
       } else {
         const message = err instanceof Error ? err.message : 'Simulation failed';
         setError(message);
-        toast({ variant: 'destructive', title: 'Simulation Failed', description: message });
+        if (!isSilent) toast({ variant: 'destructive', title: 'Simulation Failed', description: message });
       }
     } finally {
       setIsRunning(false);
       setIsStopping(false);
       abortRef.current = null;
     }
-  }, [validate, projectId, analysisType, currentParams, probes, toast]);
+  }, [validate, projectId, analysisType, currentParams, probes, toast, cornerAnalysis, cornerIterations, circuitInstances, updateComponentState]);
+
+  // BL-0150: Live simulation loop
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isLive && !isRunning) {
+      // Trigger a run immediately, then every 500ms
+      void handleRun(true);
+      timer = setInterval(() => {
+        if (!isRunning) void handleRun(true);
+      }, 500);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isLive, isRunning, handleRun]);
 
   // ---------------------------
   // Stop (abort) via AbortController
@@ -1068,6 +1168,44 @@ export default function SimulationPanel() {
             </button>
           </CollapsibleSection>
 
+          {/* ------- Corner Analysis (BL-0120) ------- */}
+          <CollapsibleSection title="Corner Analysis" testId="section-corners" defaultOpen={false}>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-0.5">
+                  <span className="text-[11px] font-bold text-foreground uppercase tracking-tight">Enable Corner Analysis</span>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    Runs multiple simulations varying component tolerances to find worst-case performance.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={cornerAnalysis}
+                  onChange={(e) => setCornerAnalysis(e.target.checked)}
+                  className="w-4 h-4 rounded border-border bg-background text-primary focus:ring-primary/20"
+                  data-testid="corner-analysis-toggle"
+                />
+              </div>
+
+              {cornerAnalysis && (
+                <div className="pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <ParamField
+                    label="Iterations (Worst-case samples)"
+                    value={String(cornerIterations)}
+                    onChange={(v) => setCornerIterations(Math.max(1, Math.min(10, parseInt(v) || 1)))}
+                    placeholder="5"
+                    testId="corner-iterations-input"
+                    disabled={isRunning}
+                  />
+                  <p className="text-[9px] text-amber-500/80 mt-2 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Note: Corner analysis performs sequential requests and may take longer.
+                  </p>
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+
           {/* ------- Run Button ------- */}
           <div className="flex items-center gap-3 px-4 py-4 border-b border-border/50">
             {isRunning ? (
@@ -1098,10 +1236,10 @@ export default function SimulationPanel() {
             ) : (
               <button
                 type="button"
-                data-testid="run-simulation"
-                onClick={handleRun}
+                onClick={() => handleRun()}
                 disabled={isRunning}
                 className={runButtonClasses}
+                data-testid="button-run-simulation"
               >
                 <Play className="w-4 h-4" />
                 Run Simulation
@@ -1158,6 +1296,7 @@ export default function SimulationPanel() {
 
           {/* ------- Result History ------- */}
           <CollapsibleSection title="Result History" defaultOpen={false} testId="section-result-history">
+            {/* ... historical entries ... */}
             <div data-testid="result-history">
               {resultHistory.length === 0 ? (
                 <p className="text-xs text-muted-foreground italic">
@@ -1204,6 +1343,15 @@ export default function SimulationPanel() {
                 </>
               )}
             </div>
+          </CollapsibleSection>
+
+          {/* ------- Simulation Presets (BL-0124) ------- */}
+          <CollapsibleSection title="Presets" defaultOpen={true} testId="section-simulation-presets">
+            <SimulationScenarioPanel
+              circuitId={firstCircuitId}
+              currentConfig={currentFullConfig}
+              onLoadConfig={handleLoadPreset}
+            />
           </CollapsibleSection>
         </div>
       </div>

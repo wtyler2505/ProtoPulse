@@ -3,7 +3,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { ProjectLoadingSkeleton } from '@/components/ui/ProjectLoadingSkeleton';
 
 // Domain context providers
-import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
+import { ProjectIdProvider, useProjectId } from '@/lib/contexts/project-id-context';
 import { OutputProvider, useOutput } from '@/lib/contexts/output-context';
 import { ChatProvider, useChat } from '@/lib/contexts/chat-context';
 import { HistoryProvider, useHistory } from '@/lib/contexts/history-context';
@@ -11,6 +11,8 @@ import { BomProvider, useBom } from '@/lib/contexts/bom-context';
 import { ValidationProvider, useValidation } from '@/lib/contexts/validation-context';
 import { ProjectMetaProvider, useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { ArchitectureProvider, useArchitecture } from '@/lib/contexts/architecture-context';
+import { ArduinoProvider, useArduino } from '@/lib/contexts/arduino-context';
+import { SimulationProvider, useSimulation } from '@/lib/contexts/simulation-context';
 
 // Re-export domain hooks for direct use by consumers
 export { useProjectId } from '@/lib/contexts/project-id-context';
@@ -21,6 +23,8 @@ export { useBom } from '@/lib/contexts/bom-context';
 export { useValidation } from '@/lib/contexts/validation-context';
 export { useProjectMeta } from '@/lib/contexts/project-meta-context';
 export { useArchitecture } from '@/lib/contexts/architecture-context';
+export { useArduino } from '@/lib/contexts/arduino-context';
+export { useSimulation } from '@/lib/contexts/simulation-context';
 
 export interface Position {
   x: number;
@@ -125,7 +129,7 @@ export interface ProjectHistoryItem {
   user: 'User' | 'AI';
 }
 
-export type ViewMode = 'dashboard' | 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'schematic' | 'breadboard' | 'pcb' | 'procurement' | 'validation' | 'simulation' | 'design_history' | 'lifecycle' | 'comments' | 'calculators' | 'design_patterns' | 'storage' | 'kanban' | 'knowledge' | 'viewer_3d' | 'community' | 'ordering' | 'serial_monitor' | 'circuit_code' | 'generative_design' | 'digital_twin';
+export type ViewMode = 'dashboard' | 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'schematic' | 'breadboard' | 'pcb' | 'procurement' | 'validation' | 'simulation' | 'design_history' | 'lifecycle' | 'comments' | 'calculators' | 'design_patterns' | 'storage' | 'kanban' | 'knowledge' | 'viewer_3d' | 'community' | 'ordering' | 'serial_monitor' | 'circuit_code' | 'generative_design' | 'digital_twin' | 'arduino';
 
 /**
  * Inner provider that nests all domain providers once seeded state is ready.
@@ -133,6 +137,7 @@ export type ViewMode = 'dashboard' | 'project_explorer' | 'output' | 'architectu
  * must be nested inside ProjectMetaProvider.
  */
 function SeededProviders({ children }: { children: React.ReactNode }) {
+  const pid = useProjectId();
   return (
     <OutputProvider>
       <ChatProvider seeded>
@@ -140,9 +145,13 @@ function SeededProviders({ children }: { children: React.ReactNode }) {
           <BomProvider seeded>
             <ValidationProvider seeded>
               <ProjectMetaProvider seeded>
-                <ArchitectureBridge>
-                  {children}
-                </ArchitectureBridge>
+                <ArduinoProvider projectId={pid}>
+                  <SimulationProvider>
+                    <ArchitectureBridge>
+                      {children}
+                    </ArchitectureBridge>
+                  </SimulationProvider>
+                </ArduinoProvider>
               </ProjectMetaProvider>
             </ValidationProvider>
           </BomProvider>

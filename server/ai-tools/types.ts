@@ -27,7 +27,8 @@ export type ToolCategory =
   | 'validation'
   | 'export'
   | 'project'
-  | 'navigation';
+  | 'navigation'
+  | 'arduino';
 
 /**
  * Reference to a design element used as a source for an AI answer.

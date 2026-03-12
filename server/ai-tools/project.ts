@@ -221,4 +221,21 @@ export function registerProjectTools(registry: ToolRegistry): void {
     requiresConfirmation: false,
     execute: async (params) => clientAction('analyze_image', params),
   });
+
+  /**
+   * set_explain_mode — Toggle "Explain Mode" for simpler AI language.
+   *
+   * Dispatched client-side. Configures the AI to use simpler language, 
+   * analogies, and step-by-step educational explanations for engineering concepts.
+   */
+  registry.register({
+    name: 'set_explain_mode',
+    description: 'Toggle Explain Mode to receive simpler, educational explanations of engineering concepts.',
+    category: 'project',
+    parameters: z.object({
+      enabled: z.boolean().describe('Whether explain mode should be active.'),
+    }),
+    requiresConfirmation: false,
+    execute: async (params) => clientAction('set_explain_mode', params),
+  });
 }

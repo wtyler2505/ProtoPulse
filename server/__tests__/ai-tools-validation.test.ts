@@ -222,6 +222,7 @@ describe('Validation tools — registration', () => {
     'thermal_analysis',
     'generate_test_plan',
     'design_review',
+    'hardware_debug_analysis',
   ];
 
   it.each(expectedTools)('registers "%s"', (name) => {

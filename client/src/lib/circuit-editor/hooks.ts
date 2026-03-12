@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow, HierarchicalPortRow, PcbZone, DesignComment } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow, HierarchicalPortRow, PcbZone, DesignComment, SimulationScenario } from '@shared/schema';
 
 // ===========================================================================
 // Circuit Designs
@@ -100,7 +100,7 @@ export function useCreateCircuitInstance() {
   return useMutation({
     mutationFn: async (data: {
       circuitId: number;
-      partId: number;
+      partId: number | null;
       referenceDesignator: string;
       schematicX?: number;
       schematicY?: number;
@@ -348,6 +348,30 @@ export function useExpandArchitecture() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['circuit-designs', variables.projectId] });
+    },
+  });
+}
+
+// ===========================================================================
+// Schematic → PCB Forward Annotation
+// ===========================================================================
+
+export interface PushToPcbResult {
+  pushed: number;
+  alreadyPlaced: number;
+  total: number;
+  instances: CircuitInstanceRow[];
+}
+
+export function usePushToPcb() {
+  const queryClient = useQueryClient();
+  return useMutation<PushToPcbResult, Error, { circuitId: number }>({
+    mutationFn: async ({ circuitId }) => {
+      const res = await apiRequest('POST', `/api/circuits/${circuitId}/push-to-pcb`, {});
+      return res.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['circuit-instances', variables.circuitId] });
     },
   });
 }
@@ -682,6 +706,72 @@ export function useDeleteCircuitVia() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['circuit-vias', variables.circuitId] });
+    },
+  });
+}
+
+// ===========================================================================
+// Simulation Scenarios (BL-0124)
+// ===========================================================================
+
+export function useSimulationScenarios(projectId: number, circuitId: number) {
+  return useQuery<SimulationScenario[]>({
+    queryKey: ['simulation-scenarios', projectId, circuitId],
+    queryFn: async () => {
+      const res = await apiRequest('GET', `/api/projects/${projectId}/circuits/${circuitId}/scenarios`);
+      const json = await res.json() as { data: SimulationScenario[]; total: number };
+      return json.data;
+    },
+    enabled: projectId > 0 && circuitId > 0,
+  });
+}
+
+export function useCreateSimulationScenario() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      projectId: number;
+      circuitId: number;
+      name: string;
+      description?: string;
+      config: Record<string, any>;
+    }) => {
+      const { projectId, circuitId, ...body } = data;
+      const res = await apiRequest('POST', `/api/projects/${projectId}/circuits/${circuitId}/scenarios`, body);
+      return res.json() as Promise<SimulationScenario>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['simulation-scenarios', variables.projectId, variables.circuitId] });
+    },
+  });
+}
+
+export function useUpdateSimulationScenario() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      projectId: number;
+      circuitId: number;
+      scenarioId: number;
+      update: Partial<SimulationScenario>;
+    }) => {
+      const res = await apiRequest('PATCH', `/api/projects/${data.projectId}/scenarios/${data.scenarioId}`, data.update);
+      return res.json() as Promise<SimulationScenario>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['simulation-scenarios', variables.projectId, variables.circuitId] });
+    },
+  });
+}
+
+export function useDeleteSimulationScenario() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: number; circuitId: number; scenarioId: number }) => {
+      await apiRequest('DELETE', `/api/projects/${data.projectId}/scenarios/${data.scenarioId}`);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['simulation-scenarios', variables.projectId, variables.circuitId] });
     },
   });
 }

@@ -23,6 +23,7 @@ import {
   useDeleteCircuitWire,
   useUpdateCircuitInstance,
   useCreateCircuitInstance,
+  useUpdateCircuitDesign,
   usePcbZones,
   useCreatePcbZone,
   useUpdatePcbZone,
@@ -32,6 +33,7 @@ import {
   useResolveComment,
   useDeleteComment,
 } from '@/lib/circuit-editor/hooks';
+import { useUndoRedo } from '@/lib/undo-redo-context';
 import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import RatsnestOverlay from './RatsnestOverlay';
 import ToolButton from './ToolButton';
@@ -113,6 +115,26 @@ import type { Via, ViaType } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
+// Clipboard bundle type for PCB copy/paste
+// ---------------------------------------------------------------------------
+
+interface PcbClipboardInstance {
+  partId: number | null;
+  referenceDesignator: string;
+  pcbX: number | null;
+  pcbY: number | null;
+  pcbRotation: number | null;
+  pcbSide: string | null;
+  properties: unknown;
+  oldId: number;
+}
+
+interface PcbClipboardBundle {
+  type: 'protopulse-pcb-bundle';
+  instances: PcbClipboardInstance[];
+}
+
+// ---------------------------------------------------------------------------
 // Top-level view (circuit selector + canvas)
 // ---------------------------------------------------------------------------
 
@@ -183,7 +205,7 @@ export default function PCBLayoutView() {
           {activeCircuit ? activeCircuit.name : 'No circuit selected'} — PCB Layout
         </span>
       </div>
-      {activeCircuit && <PCBCanvas circuitId={activeCircuit.id} projectId={projectId} />}
+      {activeCircuit && <PCBCanvas circuitId={activeCircuit.id} projectId={projectId} circuitSettings={activeCircuit.settings} />}
     </div>
   );
 }
@@ -307,7 +329,7 @@ function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, conta
 // PCB Canvas — wires together all extracted modules
 // ---------------------------------------------------------------------------
 
-function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: number }) {
+function PCBCanvas({ circuitId, projectId, circuitSettings }: { circuitId: number; projectId: number; circuitSettings: unknown }) {
   // --- Data hooks ---
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: nets } = useCircuitNets(circuitId);
@@ -320,6 +342,7 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
   const createWireMutation = useCreateCircuitWire();
   const deleteWireMutation = useDeleteCircuitWire();
   const createInstanceMutation = useCreateCircuitInstance();
+  const updateDesignMutation = useUpdateCircuitDesign();
   const createZoneMutation = useCreatePcbZone();
   const deleteZoneMutation = useDeletePcbZone();
   const createCommentMutation = useCreateComment();
@@ -329,6 +352,9 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
   const _updateInstanceMutation = useUpdateCircuitInstance();
 
   const { toast } = useToast();
+
+  // --- Undo/Redo ---
+  const { push: pushUndo } = useUndoRedo();
 
   // --- State ---
   const [tool, setTool] = useState<PcbTool>('select');
@@ -348,8 +374,16 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
   const [traceWidth, setTraceWidth] = useState(DEFAULT_TRACE_WIDTH);
   const [tracePoints, setTracePoints] = useState<Array<{ x: number; y: number }>>([]);
   const [zonePoints, setZonePoints] = useState<Array<{ x: number; y: number }>>([]);
-  const [boardWidth, setBoardWidth] = useState(DEFAULT_BOARD.width);
-  const [boardHeight, setBoardHeight] = useState(DEFAULT_BOARD.height);
+  // Board dimensions — load from circuit settings, fall back to defaults
+  const savedSettings = circuitSettings as Record<string, unknown> | null;
+  const [boardWidth, setBoardWidth] = useState(() => {
+    const saved = savedSettings?.pcbBoardWidth;
+    return typeof saved === 'number' && saved > 0 ? saved : DEFAULT_BOARD.width;
+  });
+  const [boardHeight, setBoardHeight] = useState(() => {
+    const saved = savedSettings?.pcbBoardHeight;
+    return typeof saved === 'number' && saved > 0 ? saved : DEFAULT_BOARD.height;
+  });
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
   const [selectedViaId, setSelectedViaId] = useState<string | null>(null);
 
@@ -358,7 +392,31 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
   const selectionStateRef = useRef<SelectionDragState>({ isDragging: false, origin: { x: 0, y: 0 } });
 
   // Clipboard state
-  const clipboardRef = useRef<any>(null);
+  const clipboardRef = useRef<PcbClipboardBundle | null>(null);
+
+  // --- Persist board dimensions to circuit settings (debounced) ---
+  const boardDimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    // Skip if dimensions match what was loaded from settings
+    const currentSaved = circuitSettings as Record<string, unknown> | null;
+    const savedW = typeof currentSaved?.pcbBoardWidth === 'number' ? currentSaved.pcbBoardWidth : DEFAULT_BOARD.width;
+    const savedH = typeof currentSaved?.pcbBoardHeight === 'number' ? currentSaved.pcbBoardHeight : DEFAULT_BOARD.height;
+    if (boardWidth === savedW && boardHeight === savedH) {
+      return;
+    }
+    if (boardDimTimerRef.current) {
+      clearTimeout(boardDimTimerRef.current);
+    }
+    boardDimTimerRef.current = setTimeout(() => {
+      const mergedSettings = { ...(currentSaved ?? {}), pcbBoardWidth: boardWidth, pcbBoardHeight: boardHeight };
+      updateDesignMutation.mutate({ projectId, id: circuitId, settings: mergedSettings });
+    }, 500);
+    return () => {
+      if (boardDimTimerRef.current) {
+        clearTimeout(boardDimTimerRef.current);
+      }
+    };
+  }, [boardWidth, boardHeight, circuitId, projectId, circuitSettings, updateDesignMutation]);
 
   // --- Refs ---
   const svgRef = useRef<SVGSVGElement>(null);
@@ -423,8 +481,8 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
     const selectedIds = selectedInstanceIds.length > 0 ? selectedInstanceIds : (selectedInstanceId ? [selectedInstanceId] : []);
     if (selectedIds.length === 0) return;
 
-    const bundle = {
-      type: 'protopulse-pcb-bundle',
+    const bundle: PcbClipboardBundle = {
+      type: 'protopulse-pcb-bundle' as const,
       instances: (instances ?? [])
         .filter(inst => selectedIds.includes(inst.id))
         .map(inst => ({
@@ -448,7 +506,7 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
     }
   }, [selectedInstanceIds, selectedInstanceId, instances, toast]);
 
-  const handlePaste = useCallback(async (bundle: any) => {
+  const handlePaste = useCallback(async (bundle: PcbClipboardBundle | null) => {
     if (!bundle || bundle.type !== 'protopulse-pcb-bundle') return;
 
     // Center of viewport in board coordinates
@@ -463,8 +521,8 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
     const insts = bundle.instances || [];
     if (insts.length === 0) return;
 
-    const allX = insts.map((i: any) => i.pcbX ?? 0);
-    const allY = insts.map((i: any) => i.pcbY ?? 0);
+    const allX = insts.map((i: PcbClipboardInstance) => i.pcbX ?? 0);
+    const allY = insts.map((i: PcbClipboardInstance) => i.pcbY ?? 0);
     const minX = Math.min(...allX);
     const maxX = Math.max(...allX);
     const minY = Math.min(...allY);
@@ -503,8 +561,8 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
           pcbX: (inst.pcbX ?? 0) + offsetX,
           pcbY: (inst.pcbY ?? 0) + offsetY,
           pcbRotation: inst.pcbRotation,
-          pcbSide: inst.pcbSide,
-          properties: inst.properties,
+          pcbSide: (inst.pcbSide as 'front' | 'back') ?? undefined,
+          properties: (inst.properties as Record<string, string>) ?? undefined,
         });
       }
       toast({ title: 'Pasted successfully', description: `Added ${insts.length} components.` });
@@ -581,11 +639,26 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
         activeLayer,
         traceWidth,
         firstNetId: nets?.[0]?.id,
-        createWire: (params) => createWireMutation.mutate(params),
+        createWire: (params) => {
+          createWireMutation.mutate(params, {
+            onSuccess: (createdWire: CircuitWireRow) => {
+              pushUndo({
+                type: 'create-wire',
+                description: `Add trace (${tracePoints.length} points)`,
+                async execute() {
+                  await createWireMutation.mutateAsync(params);
+                },
+                async undo() {
+                  await deleteWireMutation.mutateAsync({ circuitId, id: createdWire.id });
+                },
+              });
+            },
+          });
+        },
       }, () => setTracePoints([]));
       return;
     }
-  }, [tool, zonePoints, projectId, activeLayer, createZoneMutation, toast, tracePoints, circuitId, traceWidth, nets, createWireMutation]);
+  }, [tool, zonePoints, projectId, activeLayer, createZoneMutation, toast, tracePoints, circuitId, traceWidth, nets, createWireMutation, deleteWireMutation, pushUndo]);
 
   const selectedInstanceRotation = useMemo(() => {
     if (selectedInstanceId == null || !instances) {
@@ -626,10 +699,36 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
 
       onKeyDown(e, selectedWireId, {
         circuitId,
-        deleteWire: (params) => deleteWireMutation.mutate(params),
+        deleteWire: (params) => {
+          // Capture wire data before deletion for undo
+          const deletedWire = pcbWires.find((w) => w.id === params.id);
+          deleteWireMutation.mutate(params, {
+            onSuccess: () => {
+              if (deletedWire) {
+                pushUndo({
+                  type: 'delete-wire',
+                  description: 'Delete trace',
+                  async execute() {
+                    await deleteWireMutation.mutateAsync(params);
+                  },
+                  async undo() {
+                    await createWireMutation.mutateAsync({
+                      circuitId: deletedWire.circuitId,
+                      netId: deletedWire.netId ?? undefined,
+                      view: deletedWire.view,
+                      layer: deletedWire.layer ?? undefined,
+                      points: deletedWire.points as Array<{ x: number; y: number }>,
+                      width: deletedWire.width,
+                    });
+                  },
+                });
+              }
+            },
+          });
+        },
       }, callbacks, selectedInstanceId, tool, selectedInstanceRotation);
     },
-    [selectedWireId, circuitId, deleteWireMutation, callbacks, selectedInstanceId, tool, selectedInstanceRotation, handleCopy, triggerPaste, selectedZoneId, deleteZoneMutation, projectId],
+    [selectedWireId, circuitId, deleteWireMutation, createWireMutation, pushUndo, pcbWires, callbacks, selectedInstanceId, tool, selectedInstanceRotation, handleCopy, triggerPaste, selectedZoneId, deleteZoneMutation, projectId],
   );
 
   const handleMDown = useCallback(
@@ -829,7 +928,7 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
                   return (
                     <polygon
                       key={zone.id}
-                      points={(zone.points as any[]).map((p: any) => `${p.x},${p.y}`).join(' ')}
+                      points={(zone.points as Array<{ x: number; y: number }>).map((p) => `${p.x},${p.y}`).join(' ')}
                       fill={
                         isTeardrop ? layerColor :
                         zone.zoneType === 'pour' ? 'rgba(0, 255, 0, 0.2)' :

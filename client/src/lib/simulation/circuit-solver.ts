@@ -16,6 +16,8 @@
 
 import type { SimulationLimits } from './sim-limits';
 import { DEFAULT_SIM_LIMITS, checkSimLimits } from './sim-limits';
+import type { DiodeParams, BJTParams, MOSFETParams } from './device-models';
+import { evaluateDiode, evaluateBJT, evaluateMOSFET, DIODE_DEFAULTS, BJT_DEFAULTS, NMOS_DEFAULTS } from './device-models';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -23,16 +25,38 @@ import { DEFAULT_SIM_LIMITS, checkSimLimits } from './sim-limits';
 
 export interface SolverComponent {
   id: string;
-  type: 'R' | 'C' | 'L' | 'V' | 'I' | 'VCVS' | 'VCCS';
+  type: 'R' | 'C' | 'L' | 'V' | 'I' | 'VCVS' | 'VCCS' | 'D' | 'Q' | 'M';
   value: number;
   nodes: [number, number];          // [positive, negative] for 2-terminal
   controlNodes?: [number, number];  // For controlled sources
+  /** Diode parameters (type 'D'). nodes: [anode, cathode]. */
+  diodeParams?: DiodeParams;
+  /** BJT parameters (type 'Q'). nodes: [collector, base]. value unused. Extra node for emitter via thirdNode. */
+  bjtParams?: BJTParams;
+  /** MOSFET parameters (type 'M'). nodes: [drain, gate]. value unused. Extra node for source via thirdNode. */
+  mosfetParams?: MOSFETParams;
+  /** Third terminal node (emitter for BJT, source for MOSFET). */
+  thirdNode?: number;
+}
+
+/** Newton-Raphson convergence options for nonlinear DC analysis. */
+export interface NROptions {
+  /** Maximum NR iterations (default 150). */
+  maxIterations?: number;
+  /** Voltage tolerance — convergence when max |deltaV| < VNTOL (default 1e-6 V). */
+  vntol?: number;
+  /** Absolute current tolerance (default 1e-12 A). */
+  abstol?: number;
+  /** Damping factor limit — if |dx| exceeds this, halve the step (default 5 * Vt ~ 0.13V). */
+  dampLimit?: number;
 }
 
 export interface SolverInput {
   numNodes: number;           // Excluding ground (node 0)
   components: SolverComponent[];
   groundNode: number;         // Usually 0
+  /** Newton-Raphson options for circuits containing nonlinear devices (D, Q, M). */
+  nrOptions?: NROptions;
 }
 
 export interface DCResult {
@@ -228,30 +252,22 @@ function stampVoltageSource(
 // ---------------------------------------------------------------------------
 
 /**
- * Solve for DC operating point.
+ * Check if the circuit contains any nonlinear devices (D, Q, M).
  */
-export function solveDCOperatingPoint(input: SolverInput): DCResult {
-  const { numNodes, components } = input;
+function hasNonlinearDevices(components: SolverComponent[]): boolean {
+  return components.some(c => c.type === 'D' || c.type === 'Q' || c.type === 'M');
+}
 
-  // Count voltage sources to determine matrix size
-  const voltageSources = components.filter(c => c.type === 'V');
-  const matrixSize = numNodes + voltageSources.length;
-
-  if (matrixSize === 0) {
-    return { nodeVoltages: {}, branchCurrents: {}, converged: true, iterations: 0 };
-  }
-
-  const G = createMatrix(matrixSize);
-  const b = createVector(matrixSize);
-
-  // Assign voltage source indices
-  const vsIndexMap = new Map<string, number>();
-  let vsIdx = numNodes;
-  for (const vs of voltageSources) {
-    vsIndexMap.set(vs.id, vsIdx++);
-  }
-
-  // Stamp all components
+/**
+ * Stamp linear components into the MNA matrix. Shared between linear
+ * and nonlinear solve paths.
+ */
+function stampLinearComponents(
+  G: number[][],
+  b: number[],
+  components: SolverComponent[],
+  vsIndexMap: Map<string, number>,
+): void {
   for (const comp of components) {
     const [nPlus, nMinus] = comp.nodes;
 
@@ -266,7 +282,6 @@ export function solveDCOperatingPoint(input: SolverInput): DCResult {
 
       case 'L':
         // In DC, inductor is short circuit — stamp as zero-resistance wire
-        // Use voltage source with V=0
         {
           const idx = vsIndexMap.get(comp.id);
           if (idx !== undefined) {
@@ -289,39 +304,164 @@ export function solveDCOperatingPoint(input: SolverInput): DCResult {
         break;
 
       case 'VCVS':
-        // Voltage-Controlled Voltage Source: V_out = gain * V_control
         if (comp.controlNodes) {
           const idx = vsIndexMap.get(comp.id);
           if (idx !== undefined) {
             stampVoltageSource(G, b, nPlus, nMinus, 0, idx);
             const [cPlus, cMinus] = comp.controlNodes;
-            if (cPlus > 0) G[idx][cPlus - 1] -= comp.value;
-            if (cMinus > 0) G[idx][cMinus - 1] += comp.value;
+            if (cPlus > 0) { G[idx][cPlus - 1] -= comp.value; }
+            if (cMinus > 0) { G[idx][cMinus - 1] += comp.value; }
           }
         }
         break;
 
       case 'VCCS':
-        // Voltage-Controlled Current Source: I_out = gm * V_control
         if (comp.controlNodes) {
           const [cPlus, cMinus] = comp.controlNodes;
-          if (nPlus > 0 && cPlus > 0) G[nPlus - 1][cPlus - 1] += comp.value;
-          if (nPlus > 0 && cMinus > 0) G[nPlus - 1][cMinus - 1] -= comp.value;
-          if (nMinus > 0 && cPlus > 0) G[nMinus - 1][cPlus - 1] -= comp.value;
-          if (nMinus > 0 && cMinus > 0) G[nMinus - 1][cMinus - 1] += comp.value;
+          if (nPlus > 0 && cPlus > 0) { G[nPlus - 1][cPlus - 1] += comp.value; }
+          if (nPlus > 0 && cMinus > 0) { G[nPlus - 1][cMinus - 1] -= comp.value; }
+          if (nMinus > 0 && cPlus > 0) { G[nMinus - 1][cPlus - 1] -= comp.value; }
+          if (nMinus > 0 && cMinus > 0) { G[nMinus - 1][cMinus - 1] += comp.value; }
         }
+        break;
+
+      // Nonlinear devices (D, Q, M) are stamped separately per NR iteration
+      default:
         break;
     }
   }
+}
 
-  // Solve
-  const solution = solveLinearSystem(G, b);
+/**
+ * Stamp nonlinear device companion models into the MNA matrix for one NR iteration.
+ * Each nonlinear device is linearized around its current operating point voltage(s)
+ * and replaced by a parallel Geq + Ieq (conductance + current source).
+ */
+function stampNonlinearCompanions(
+  G: number[][],
+  b: number[],
+  components: SolverComponent[],
+  nodeVoltages: Record<number, number>,
+): void {
+  for (const comp of components) {
+    if (comp.type === 'D') {
+      // Diode: nodes = [anode, cathode]
+      const [nAnode, nCathode] = comp.nodes;
+      const vAnode = nodeVoltages[nAnode] ?? 0;
+      const vCathode = nodeVoltages[nCathode] ?? 0;
+      const Vd = vAnode - vCathode;
+      const params = comp.diodeParams ?? DIODE_DEFAULTS;
+      const { I, dIdV } = evaluateDiode(Vd, params);
 
-  if (!solution) {
-    return { nodeVoltages: {}, branchCurrents: {}, converged: false, iterations: 1 };
+      // Companion model: I = Geq * V + Ieq where V = Vanode - Vcathode
+      const G_MIN = 1e-12;
+      const Geq = Math.max(dIdV, G_MIN);
+      const Ieq = I - Geq * Vd;
+
+      // Stamp conductance Geq across anode-cathode
+      stampConductance(G, nAnode, nCathode, Geq);
+
+      // Stamp equivalent current source Ieq (from cathode to anode)
+      if (nAnode > 0) { b[nAnode - 1] -= Ieq; }
+      if (nCathode > 0) { b[nCathode - 1] += Ieq; }
+    } else if (comp.type === 'Q') {
+      // BJT: nodes = [collector, base], thirdNode = emitter
+      const [nCollector, nBase] = comp.nodes;
+      const nEmitter = comp.thirdNode ?? 0;
+      const params = comp.bjtParams ?? BJT_DEFAULTS;
+
+      const vBase = nodeVoltages[nBase] ?? 0;
+      const vCollector = nodeVoltages[nCollector] ?? 0;
+      const vEmitter = nodeVoltages[nEmitter] ?? 0;
+      const Vbe = vBase - vEmitter;
+      const Vce = vCollector - vEmitter;
+
+      const result = evaluateBJT(Vbe, Vce, params);
+
+      // Linearize Ic around (Vbe, Vce):
+      //   Ic ≈ Ic0 + gm*(Vbe - Vbe0) + go*(Vce - Vce0)
+      // Companion: Ic = gm*Vbe + go*Vce + Ieq_c
+      //   where Ieq_c = Ic0 - gm*Vbe0 - go*Vce0
+      // Similarly Ib ≈ gpi*Vbe + Ieq_b
+      //   where Ieq_b = Ib0 - gpi*Vbe0
+
+      const gm = result.gm;
+      const go = result.go;
+      const gpi = result.gpi;
+
+      // Stamp gm as VCCS: Ic += gm * Vbe (controlled by base-emitter, output at collector-emitter)
+      // gm stamp: G[nC][nB] += gm, G[nC][nE] -= gm, G[nE][nB] -= gm, G[nE][nE] += gm
+      if (nCollector > 0 && nBase > 0) { G[nCollector - 1][nBase - 1] += gm; }
+      if (nCollector > 0 && nEmitter > 0) { G[nCollector - 1][nEmitter - 1] -= gm; }
+      if (nEmitter > 0 && nBase > 0) { G[nEmitter - 1][nBase - 1] -= gm; }
+      if (nEmitter > 0 && nEmitter > 0) { G[nEmitter - 1][nEmitter - 1] += gm; }
+
+      // Stamp go (output conductance) across collector-emitter
+      stampConductance(G, nCollector, nEmitter, go);
+
+      // Stamp gpi (input conductance) across base-emitter
+      stampConductance(G, nBase, nEmitter, gpi);
+
+      // Current source equivalents
+      const Ieq_c = result.Ic - gm * Vbe - go * Vce;
+      const Ieq_b = result.Ib - gpi * Vbe;
+
+      // Stamp Ieq_c: current into collector, out of emitter
+      if (nCollector > 0) { b[nCollector - 1] -= Ieq_c; }
+      if (nEmitter > 0) { b[nEmitter - 1] += Ieq_c; }
+
+      // Stamp Ieq_b: current into base, out of emitter
+      if (nBase > 0) { b[nBase - 1] -= Ieq_b; }
+      if (nEmitter > 0) { b[nEmitter - 1] += Ieq_b; }
+    } else if (comp.type === 'M') {
+      // MOSFET: nodes = [drain, gate], thirdNode = source
+      const [nDrain, nGate] = comp.nodes;
+      const nSource = comp.thirdNode ?? 0;
+      const params = comp.mosfetParams ?? NMOS_DEFAULTS;
+
+      const vGate = nodeVoltages[nGate] ?? 0;
+      const vDrain = nodeVoltages[nDrain] ?? 0;
+      const vSource = nodeVoltages[nSource] ?? 0;
+      const Vgs = vGate - vSource;
+      const Vds = vDrain - vSource;
+
+      const result = evaluateMOSFET(Vgs, Vds, params);
+
+      // Linearize Id around (Vgs, Vds):
+      //   Id ≈ Id0 + gm*(Vgs - Vgs0) + gds*(Vds - Vds0)
+      // Companion: Id = gm*Vgs + gds*Vds + Ieq
+      //   where Ieq = Id0 - gm*Vgs0 - gds*Vds0
+
+      const { gm: gmM, gds } = result;
+
+      // Stamp gm as VCCS: Id += gm * Vgs (gate-source controls drain-source)
+      if (nDrain > 0 && nGate > 0) { G[nDrain - 1][nGate - 1] += gmM; }
+      if (nDrain > 0 && nSource > 0) { G[nDrain - 1][nSource - 1] -= gmM; }
+      if (nSource > 0 && nGate > 0) { G[nSource - 1][nGate - 1] -= gmM; }
+      if (nSource > 0 && nSource > 0) { G[nSource - 1][nSource - 1] += gmM; }
+
+      // Stamp gds across drain-source
+      stampConductance(G, nDrain, nSource, gds);
+
+      // Current source equivalent
+      const Ieq = result.Id - gmM * Vgs - gds * Vds;
+
+      // Stamp Ieq: current into drain, out of source
+      if (nDrain > 0) { b[nDrain - 1] -= Ieq; }
+      if (nSource > 0) { b[nSource - 1] += Ieq; }
+    }
   }
+}
 
-  // Extract results
+/**
+ * Extract node voltages and branch currents from a solved MNA solution vector.
+ */
+function extractResults(
+  solution: number[],
+  numNodes: number,
+  components: SolverComponent[],
+  vsIndexMap: Map<string, number>,
+): { nodeVoltages: Record<number, number>; branchCurrents: Record<string, number> } {
   const nodeVoltages: Record<number, number> = { 0: 0 };
   for (let i = 0; i < numNodes; i++) {
     nodeVoltages[i + 1] = solution[i];
@@ -350,7 +490,195 @@ export function solveDCOperatingPoint(input: SolverInput): DCResult {
     }
   }
 
-  return { nodeVoltages, branchCurrents, converged: true, iterations: 1 };
+  // Diode currents from the device model
+  for (const comp of components) {
+    if (comp.type === 'D') {
+      const vAnode = nodeVoltages[comp.nodes[0]] ?? 0;
+      const vCathode = nodeVoltages[comp.nodes[1]] ?? 0;
+      const Vd = vAnode - vCathode;
+      const params = comp.diodeParams ?? DIODE_DEFAULTS;
+      branchCurrents[comp.id] = evaluateDiode(Vd, params).I;
+    }
+  }
+
+  // BJT currents
+  for (const comp of components) {
+    if (comp.type === 'Q') {
+      const params = comp.bjtParams ?? BJT_DEFAULTS;
+      const vBase = nodeVoltages[comp.nodes[1]] ?? 0;
+      const vCollector = nodeVoltages[comp.nodes[0]] ?? 0;
+      const vEmitter = nodeVoltages[comp.thirdNode ?? 0] ?? 0;
+      const result = evaluateBJT(vBase - vEmitter, vCollector - vEmitter, params);
+      branchCurrents[`${comp.id}_Ic`] = result.Ic;
+      branchCurrents[`${comp.id}_Ib`] = result.Ib;
+      branchCurrents[`${comp.id}_Ie`] = result.Ie;
+    }
+  }
+
+  // MOSFET currents
+  for (const comp of components) {
+    if (comp.type === 'M') {
+      const params = comp.mosfetParams ?? NMOS_DEFAULTS;
+      const vGate = nodeVoltages[comp.nodes[1]] ?? 0;
+      const vDrain = nodeVoltages[comp.nodes[0]] ?? 0;
+      const vSource = nodeVoltages[comp.thirdNode ?? 0] ?? 0;
+      branchCurrents[comp.id] = evaluateMOSFET(vGate - vSource, vDrain - vSource, params).Id;
+    }
+  }
+
+  return { nodeVoltages, branchCurrents };
+}
+
+/**
+ * Solve for DC operating point.
+ *
+ * For purely linear circuits (R, V, I, C, L, VCVS, VCCS): single MNA solve.
+ * For circuits with nonlinear devices (D, Q, M): Newton-Raphson iteration
+ * using companion model linearization until convergence.
+ *
+ * NR convergence criteria:
+ *   - |deltaV| < VNTOL for all node voltages
+ *   - Max iterations exceeded → converged: false
+ *   - Damped Newton step when |deltaV| exceeds dampLimit (halves the step)
+ */
+export function solveDCOperatingPoint(input: SolverInput): DCResult {
+  const { numNodes, components } = input;
+
+  // Count voltage sources to determine matrix size
+  const voltageSources = components.filter(c => c.type === 'V');
+  const matrixSize = numNodes + voltageSources.length;
+
+  if (matrixSize === 0) {
+    return { nodeVoltages: {}, branchCurrents: {}, converged: true, iterations: 0 };
+  }
+
+  // Assign voltage source indices
+  const vsIndexMap = new Map<string, number>();
+  let vsIdx = numNodes;
+  for (const vs of voltageSources) {
+    vsIndexMap.set(vs.id, vsIdx++);
+  }
+
+  // Fast path for purely linear circuits — single solve, no NR iteration needed.
+  if (!hasNonlinearDevices(components)) {
+    const G = createMatrix(matrixSize);
+    const b = createVector(matrixSize);
+    stampLinearComponents(G, b, components, vsIndexMap);
+
+    const solution = solveLinearSystem(G, b);
+    if (!solution) {
+      return { nodeVoltages: {}, branchCurrents: {}, converged: false, iterations: 1 };
+    }
+
+    const { nodeVoltages, branchCurrents } = extractResults(solution, numNodes, components, vsIndexMap);
+    return { nodeVoltages, branchCurrents, converged: true, iterations: 1 };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Newton-Raphson iteration for nonlinear circuits
+  // ---------------------------------------------------------------------------
+  const opts = input.nrOptions ?? {};
+  const maxIter = opts.maxIterations ?? 150;
+  const VNTOL = opts.vntol ?? 1e-6;
+  const ABSTOL = opts.abstol ?? 1e-12;
+  const VT_ROOM = 0.02585; // ~26mV at 300K
+  const dampLimit = opts.dampLimit ?? 5 * VT_ROOM; // ~130mV
+
+  // Initial guess: all nodes at 0V
+  let nodeVoltages: Record<number, number> = { 0: 0 };
+  for (let i = 1; i <= numNodes; i++) {
+    nodeVoltages[i] = 0;
+  }
+
+  // Heuristic initial guess: set nodes connected to voltage sources
+  for (const comp of components) {
+    if (comp.type === 'V') {
+      const [nPlus, nMinus] = comp.nodes;
+      if (nPlus > 0) { nodeVoltages[nPlus] = comp.value + (nodeVoltages[nMinus] ?? 0); }
+    }
+  }
+
+  let prevSolution: number[] | null = null;
+
+  for (let iter = 0; iter < maxIter; iter++) {
+    // Build MNA matrix from scratch each iteration (nonlinear stamps change)
+    const G = createMatrix(matrixSize);
+    const b = createVector(matrixSize);
+
+    // Stamp linear components (constant across iterations)
+    stampLinearComponents(G, b, components, vsIndexMap);
+
+    // Stamp nonlinear companion models based on current node voltages
+    stampNonlinearCompanions(G, b, components, nodeVoltages);
+
+    // Solve the linearized system
+    const solution = solveLinearSystem(G, b);
+    if (!solution) {
+      return { nodeVoltages, branchCurrents: {}, converged: false, iterations: iter + 1 };
+    }
+
+    // Check convergence: max |deltaV| across all node voltages
+    let maxDelta = 0;
+    const newVoltages: Record<number, number> = { 0: 0 };
+
+    for (let i = 0; i < numNodes; i++) {
+      let newV = solution[i];
+      const oldV = nodeVoltages[i + 1] ?? 0;
+      let delta = newV - oldV;
+
+      // Damped Newton step: if delta exceeds limit, halve repeatedly
+      if (Math.abs(delta) > dampLimit) {
+        // Apply damping: keep halving until within limit or min 1/16 of original
+        let dampFactor = 1.0;
+        while (Math.abs(delta * dampFactor) > dampLimit && dampFactor > 0.0625) {
+          dampFactor *= 0.5;
+        }
+        newV = oldV + delta * dampFactor;
+        delta = newV - oldV;
+      }
+
+      newVoltages[i + 1] = newV;
+      maxDelta = Math.max(maxDelta, Math.abs(delta));
+    }
+
+    nodeVoltages = newVoltages;
+    prevSolution = solution;
+
+    // Convergence check: all node voltage changes below VNTOL
+    if (maxDelta < VNTOL) {
+      // Also check that we're past at least 1 iteration (to avoid false convergence from initial guess)
+      if (iter > 0 || maxDelta < ABSTOL) {
+        const { nodeVoltages: finalV, branchCurrents } = extractResults(
+          // Re-extract using converged node voltages (solution may be damped)
+          (() => {
+            // Rebuild solution vector from nodeVoltages for accurate extraction
+            const sol = createVector(matrixSize);
+            for (let i = 0; i < numNodes; i++) {
+              sol[i] = nodeVoltages[i + 1] ?? 0;
+            }
+            // Copy voltage source branch currents from last solution
+            for (let i = numNodes; i < matrixSize; i++) {
+              sol[i] = solution[i];
+            }
+            return sol;
+          })(),
+          numNodes,
+          components,
+          vsIndexMap,
+        );
+        return { nodeVoltages: finalV, branchCurrents, converged: true, iterations: iter + 1 };
+      }
+    }
+  }
+
+  // Did not converge — return best result so far
+  const finalSol = prevSolution ?? createVector(matrixSize);
+  // Update finalSol with damped voltages
+  for (let i = 0; i < numNodes; i++) {
+    finalSol[i] = nodeVoltages[i + 1] ?? 0;
+  }
+  const { nodeVoltages: finalV, branchCurrents } = extractResults(finalSol, numNodes, components, vsIndexMap);
+  return { nodeVoltages: finalV, branchCurrents, converged: false, iterations: maxIter };
 }
 
 // ---------------------------------------------------------------------------
@@ -614,10 +942,18 @@ export function solveDCSweep(
 
 export interface SimplifiedComponent {
   id: string;
-  type: 'R' | 'C' | 'L' | 'V' | 'I';
+  type: 'R' | 'C' | 'L' | 'V' | 'I' | 'D' | 'Q' | 'M';
   value: number;
   nodePlus: number;
   nodeMinus: number;
+  /** Third terminal node (emitter for BJT, source for MOSFET). */
+  thirdNode?: number;
+  /** Diode parameters (type 'D'). */
+  diodeParams?: DiodeParams;
+  /** BJT parameters (type 'Q'). */
+  bjtParams?: BJTParams;
+  /** MOSFET parameters (type 'M'). */
+  mosfetParams?: MOSFETParams;
 }
 
 /**
@@ -630,11 +966,18 @@ export function buildSolverInput(components: SimplifiedComponent[]): SolverInput
 
   for (const c of components) {
     maxNode = Math.max(maxNode, c.nodePlus, c.nodeMinus);
+    if (c.thirdNode !== undefined) {
+      maxNode = Math.max(maxNode, c.thirdNode);
+    }
     solverComponents.push({
       id: c.id,
       type: c.type,
       value: c.value,
       nodes: [c.nodePlus, c.nodeMinus],
+      thirdNode: c.thirdNode,
+      diodeParams: c.diodeParams,
+      bjtParams: c.bjtParams,
+      mosfetParams: c.mosfetParams,
     });
   }
 

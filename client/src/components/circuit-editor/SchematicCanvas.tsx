@@ -16,6 +16,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
 import {
   useCircuitDesign,
   useCircuitInstances,
@@ -258,6 +259,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // TODO: Implement batch ports API or sequential fetch if sub-sheet count is low
   
   const { data: parts } = useComponentParts(projectId);
+  const { pushUndoState } = useArchitecture();
 
   // Mutations
   const createInstance = useCreateCircuitInstance();

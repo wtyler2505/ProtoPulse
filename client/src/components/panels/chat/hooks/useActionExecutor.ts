@@ -6,6 +6,7 @@ import { useValidation } from '@/lib/contexts/validation-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useHistory } from '@/lib/contexts/history-context';
 import { useOutput } from '@/lib/contexts/output-context';
+import { useArduino } from '@/lib/contexts/arduino-context';
 import type { BomItem } from '@/lib/project-context';
 import { ACTION_LABELS } from '../constants';
 import type { AIAction } from '../chat-types';
@@ -36,6 +37,7 @@ export function useActionExecutor(): (actions: AIAction[]) => string[] {
   } = useProjectMeta();
   const { addToHistory } = useHistory();
   const { addOutputLog } = useOutput();
+  const { generateSketch, compileJob, uploadJob, searchLibraries, listBoards } = useArduino();
 
   return useCallback((actions: AIAction[]): string[] => {
     pushUndoState();
@@ -54,12 +56,14 @@ export function useActionExecutor(): (actions: AIAction[]) => string[] {
     // ---- Build context object passed to every handler ----
     const ctx: ActionContext = {
       state,
+      setActiveView,
       arch: { setActiveView, undo, redo },
       bom: { addBomItem, deleteBomItem, updateBomItem },
       validation: { runValidation, deleteValidationIssue, addValidationIssue },
       meta: { projectName, projectDescription, setProjectName, setProjectDescription },
       history: { addToHistory },
       output: { addOutputLog },
+      arduino: { generateSketch, compileJob, uploadJob, searchLibraries, listBoards },
     };
 
     for (const action of actions) {
@@ -83,5 +87,6 @@ export function useActionExecutor(): (actions: AIAction[]) => string[] {
     runValidation, deleteValidationIssue, addValidationIssue,
     setActiveView, setProjectName, setProjectDescription,
     addToHistory, addOutputLog, pushUndoState, undo, redo,
+    generateSketch, compileJob, uploadJob, searchLibraries, listBoards,
   ]);
 }

@@ -14,12 +14,24 @@ const {
   mockCreateOrder,
   mockUpdateOrder,
   mockDeleteOrder,
+  mockGetCircuitDesigns,
+  mockGetCircuitDesign,
+  mockGetCircuitInstances,
+  mockGetCircuitNets,
+  mockGetCircuitWires,
+  mockGetComponentParts,
 } = vi.hoisted(() => ({
   mockGetOrders: vi.fn(),
   mockGetOrder: vi.fn(),
   mockCreateOrder: vi.fn(),
   mockUpdateOrder: vi.fn(),
   mockDeleteOrder: vi.fn(),
+  mockGetCircuitDesigns: vi.fn(),
+  mockGetCircuitDesign: vi.fn(),
+  mockGetCircuitInstances: vi.fn(),
+  mockGetCircuitNets: vi.fn(),
+  mockGetCircuitWires: vi.fn(),
+  mockGetComponentParts: vi.fn(),
 }));
 
 vi.mock('../storage', () => ({
@@ -30,6 +42,12 @@ vi.mock('../storage', () => ({
     createOrder: mockCreateOrder,
     updateOrder: mockUpdateOrder,
     deleteOrder: mockDeleteOrder,
+    getCircuitDesigns: mockGetCircuitDesigns,
+    getCircuitDesign: mockGetCircuitDesign,
+    getCircuitInstances: mockGetCircuitInstances,
+    getCircuitNets: mockGetCircuitNets,
+    getCircuitWires: mockGetCircuitWires,
+    getComponentParts: mockGetComponentParts,
   },
 }));
 
@@ -653,5 +671,160 @@ describe('Schema validation edge cases', () => {
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/projects/:projectId/orders/:orderId/generate-gerbers
+// ---------------------------------------------------------------------------
+
+describe('POST /api/projects/:projectId/orders/:orderId/generate-gerbers', () => {
+  const mockCircuit = {
+    id: 10,
+    projectId: 1,
+    name: 'Main Circuit',
+    settings: { pcbBoardWidth: 500, pcbBoardHeight: 400 },
+    version: 1,
+    createdAt: NOW,
+    updatedAt: NOW,
+    parentDesignId: null,
+    description: null,
+  };
+
+  function setupCircuitMocks() {
+    mockGetCircuitDesigns.mockResolvedValue([mockCircuit]);
+    mockGetCircuitDesign.mockResolvedValue(mockCircuit);
+    mockGetCircuitInstances.mockResolvedValue([]);
+    mockGetCircuitNets.mockResolvedValue([]);
+    mockGetCircuitWires.mockResolvedValue([]);
+    mockGetComponentParts.mockResolvedValue([]);
+  }
+
+  it('generates gerbers and attaches to order', async () => {
+    const existing = makeOrder({ status: 'draft' });
+    mockGetOrder.mockResolvedValue(existing);
+    const updatedOrder = makeOrder({ status: 'ready', boardSpec: { gerberFileIds: ['F_Cu.gbr'] } });
+    mockUpdateOrder.mockResolvedValue(updatedOrder);
+    setupCircuitMocks();
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/generate-gerbers`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.gerberFileIds).toBeDefined();
+    expect(Array.isArray(body.gerberFileIds)).toBe(true);
+    expect((body.gerberFileIds as string[]).length).toBeGreaterThan(0);
+    expect((body.gerberFileIds as string[])).toContain('drill.drl');
+    expect(body.layerCount).toBeGreaterThan(0);
+
+    // Verify storage.updateOrder was called with gerber data
+    expect(mockUpdateOrder).toHaveBeenCalledTimes(1);
+    const updateArgs = mockUpdateOrder.mock.calls[0];
+    expect(updateArgs[0]).toBe(1); // orderId
+    const updateData = updateArgs[1] as Record<string, unknown>;
+    expect(updateData.status).toBe('ready'); // draft → ready
+    const boardSpec = updateData.boardSpec as Record<string, unknown>;
+    expect(boardSpec.gerberData).toBeDefined();
+    expect(boardSpec.gerberFileIds).toBeDefined();
+  });
+
+  it('transitions draft order to ready status', async () => {
+    mockGetOrder.mockResolvedValue(makeOrder({ status: 'draft' }));
+    mockUpdateOrder.mockResolvedValue(makeOrder({ status: 'ready' }));
+    setupCircuitMocks();
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/generate-gerbers`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    const updateArgs = mockUpdateOrder.mock.calls[0][1] as Record<string, unknown>;
+    expect(updateArgs.status).toBe('ready');
+  });
+
+  it('keeps non-draft status unchanged', async () => {
+    mockGetOrder.mockResolvedValue(makeOrder({ status: 'quoting' }));
+    mockUpdateOrder.mockResolvedValue(makeOrder({ status: 'quoting' }));
+    setupCircuitMocks();
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/generate-gerbers`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    const updateArgs = mockUpdateOrder.mock.calls[0][1] as Record<string, unknown>;
+    expect(updateArgs.status).toBe('quoting');
+  });
+
+  it('returns 404 when order not found', async () => {
+    mockGetOrder.mockResolvedValue(undefined);
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/999/generate-gerbers`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 404 when order belongs to different project', async () => {
+    mockGetOrder.mockResolvedValue(makeOrder({ projectId: 2 }));
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/generate-gerbers`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 404 when no circuit designs exist', async () => {
+    mockGetOrder.mockResolvedValue(makeOrder());
+    mockGetCircuitDesigns.mockResolvedValue([]);
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/generate-gerbers`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(404);
+    const body = await res.json() as Record<string, unknown>;
+    expect(body.message).toContain('No circuit designs');
+  });
+
+  it('uses default board dimensions when settings are empty', async () => {
+    const circuitNoSettings = { ...mockCircuit, settings: {} };
+    mockGetOrder.mockResolvedValue(makeOrder());
+    mockGetCircuitDesigns.mockResolvedValue([circuitNoSettings]);
+    mockGetCircuitDesign.mockResolvedValue(circuitNoSettings);
+    mockGetCircuitInstances.mockResolvedValue([]);
+    mockGetCircuitNets.mockResolvedValue([]);
+    mockGetCircuitWires.mockResolvedValue([]);
+    mockGetComponentParts.mockResolvedValue([]);
+    mockUpdateOrder.mockResolvedValue(makeOrder({ status: 'ready' }));
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/generate-gerbers`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockUpdateOrder).toHaveBeenCalledTimes(1);
+  });
+
+  it('includes drill file in gerber file IDs', async () => {
+    mockGetOrder.mockResolvedValue(makeOrder());
+    mockUpdateOrder.mockResolvedValue(makeOrder({ status: 'ready' }));
+    setupCircuitMocks();
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/orders/1/generate-gerbers`, {
+      method: 'POST',
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as Record<string, unknown>;
+    const fileIds = body.gerberFileIds as string[];
+    expect(fileIds).toContain('drill.drl');
+    // Gerber files should have .gbr extension
+    const gbrFiles = fileIds.filter((f) => f.endsWith('.gbr'));
+    expect(gbrFiles.length).toBeGreaterThan(0);
   });
 });

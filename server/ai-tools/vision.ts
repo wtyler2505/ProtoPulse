@@ -128,4 +128,51 @@ export function registerVisionTools(registry: ToolRegistry): void {
       };
     },
   });
+
+  /**
+   * extract_circuit_from_image — Extract components and connections from a circuit image.
+   *
+   * Analyzes a sketch, photo, or scan of a circuit and returns a structured list 
+   * of components and their interconnections.
+   */
+  registry.register({
+    name: 'extract_circuit_from_image',
+    description: 'Extract components and connections from a photo, sketch, or scan of a circuit diagram.',
+    category: 'circuit',
+    parameters: z.object({
+      image_data: z.string().min(1).describe('Base64-encoded image data of the circuit diagram (JPEG or PNG)'),
+      type: z.enum(['sketch', 'photo', 'schematic-scan', 'whiteboard']).default('sketch').describe('The type of input image to help the AI optimize its extraction strategy.'),
+    }),
+    requiresConfirmation: false,
+    modelPreference: 'premium',
+    execute: async (params): Promise<ToolResult> => {
+      const typePrompts = {
+        sketch: 'This is a hand-drawn circuit sketch. Identify circuit symbols and trace the connections.',
+        photo: 'This is a photo of a physical circuit/breadboard. Identify components, connections, and suggest a schematic.',
+        'schematic-scan': 'This is a scanned formal schematic diagram. Extract all components with their reference designators, values, and net connections.',
+        whiteboard: 'This is a whiteboard diagram of a circuit. Identify functional blocks, signal flow, and interconnections.',
+      };
+
+      const analysisPrompt = `${(typePrompts as any)[params.type]} 
+Return a structured JSON result with the following format:
+{
+  "components": [{ "name": "Component Name", "type": "resistor|capacitor|ic|etc", "value": "10k|100nF|etc", "refDes": "R1|C1|U1|etc" }],
+  "connections": [{ "from": { "component": "refDes1", "pin": "1" }, "to": { "component": "refDes2", "pin": "2" } }],
+  "circuitType": "Power Supply|Amplifier|etc",
+  "description": "Short description of the circuit"
+}`;
+
+      return {
+        success: true,
+        message: 'Circuit image received for extraction analysis.',
+        data: {
+          type: 'circuit_extraction',
+          imageProvided: true,
+          imageLength: params.image_data.length,
+          analysisPrompt,
+          inputType: params.type,
+        },
+      };
+    },
+  });
 }

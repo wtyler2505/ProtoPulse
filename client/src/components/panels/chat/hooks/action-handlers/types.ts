@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/react';
 import type { BomItem, ValidationIssue, ViewMode } from '@/lib/project-context';
 import type { AIAction } from '../../chat-types';
+import type { ArduinoJob } from '@shared/schema';
 
 /** Mutable accumulator state passed by reference to all handlers. */
 export interface ActionState {
@@ -15,6 +16,7 @@ export interface ActionState {
 /** Context hooks and metadata that handlers use to dispatch side-effects. */
 export interface ActionContext {
   state: ActionState;
+  setActiveView: (view: ViewMode) => void;
   arch: {
     setActiveView: (view: ViewMode) => void;
     undo: () => void;
@@ -41,6 +43,14 @@ export interface ActionContext {
   };
   output: {
     addOutputLog: (message: string) => void;
+  };
+  /** Arduino workbench mutations — only present when ArduinoProvider is in the tree. */
+  arduino?: {
+    generateSketch: (intent: string) => Promise<string>;
+    compileJob: (args: { fqbn: string; sketchPath: string }) => Promise<ArduinoJob>;
+    uploadJob: (args: { fqbn: string; port: string; sketchPath: string }) => Promise<ArduinoJob>;
+    searchLibraries: (query: string) => Promise<unknown>;
+    listBoards: () => Promise<unknown[]>;
   };
 }
 

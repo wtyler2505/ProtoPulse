@@ -621,4 +621,54 @@ export function registerValidationTools(registry: ToolRegistry): void {
       };
     },
   });
+
+  /**
+   * hardware_debug_analysis — Analyze design for hardware debugging strategy.
+   *
+   * Gathers project state and returns structured debugging guidance for
+   * bringing up or troubleshooting physical prototypes.
+   */
+  registry.register({
+    name: 'hardware_debug_analysis',
+    description: 'Analyze the circuit design and provide a structured hardware debugging strategy, identifying high-risk areas and suggested test procedures.',
+    category: 'validation',
+    parameters: z.object({
+      circuitId: z.number().int().min(1).optional().describe('Optional specific circuit to focus on.'),
+    }),
+    requiresConfirmation: false,
+    execute: async (params, ctx) => {
+      const [designs, nodes, edges, bomItems, issues] = await Promise.all([
+        ctx.storage.getCircuitDesigns(ctx.projectId),
+        ctx.storage.getNodes(ctx.projectId),
+        ctx.storage.getEdges(ctx.projectId),
+        ctx.storage.getBomItems(ctx.projectId),
+        ctx.storage.getValidationIssues(ctx.projectId),
+      ]);
+
+      const circuitId = params.circuitId || (designs[0]?.id);
+      
+      // Categorize risks
+      const risks = {
+        power: issues.filter(i => i.message.toLowerCase().includes('power') || i.message.toLowerCase().includes('voltage')),
+        communication: issues.filter(i => i.message.toLowerCase().includes('i2c') || i.message.toLowerCase().includes('spi') || i.message.toLowerCase().includes('uart')),
+        bom: bomItems.filter(b => b.status === 'Out of Stock' || b.status === 'On Order'),
+      };
+
+      return {
+        success: true,
+        message: 'Hardware debug analysis complete.',
+        data: {
+          type: 'hardware_debug_guide',
+          risks,
+          designCount: designs.length,
+          nodeCount: nodes.length,
+          edgeCount: edges.length,
+        },
+        sources: [
+          ...issues.map(i => ({ type: 'validation_issue' as const, label: i.message, id: i.id })),
+          ...bomItems.map(b => ({ type: 'bom_item' as const, label: b.partNumber, id: b.id })),
+        ],
+      };
+    },
+  });
 }

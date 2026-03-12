@@ -11,12 +11,17 @@ import {
   useCircuitNets,
   useCircuitWires,
   useCreateCircuitWire,
+  useCreateCircuitInstance,
   useDeleteCircuitWire,
   useUpdateCircuitInstance,
 } from '@/lib/circuit-editor/hooks';
+import { useComponentParts } from '@/lib/component-editor/hooks';
+import { useSimulation } from '@/lib/contexts/simulation-context';
 import BreadboardGrid from './BreadboardGrid';
+import { BreadboardComponentOverlay } from './BreadboardComponentRenderer';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import ToolButton from './ToolButton';
+import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
@@ -29,6 +34,8 @@ import {
   ZoomOut,
   RotateCcw,
   Info,
+  Activity,
+  Square,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -36,10 +43,14 @@ import {
   type BreadboardCoord,
   type PixelPos,
   coordKey,
+  coordToPixel,
   pixelToCoord,
   getBoardDimensions,
+  getOccupiedPoints,
+  checkCollision,
+  type ComponentPlacement,
 } from '@/lib/circuit-editor/breadboard-model';
-import type { CircuitDesignRow, CircuitWireRow } from '@shared/schema';
+import type { CircuitDesignRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -126,6 +137,8 @@ function BreadboardToolbar({
   activeCircuit: CircuitDesignRow | null;
   onSelectCircuit: (id: number) => void;
 }) {
+  const { isLive, setIsLive, clearStates } = useSimulation();
+
   return (
     <div className="h-10 border-b border-border bg-card/60 backdrop-blur-xl flex items-center px-3 gap-2 shrink-0" data-testid="breadboard-toolbar">
       <Select
@@ -143,6 +156,27 @@ function BreadboardToolbar({
           ))}
         </SelectContent>
       </Select>
+      
+      <div className="w-px h-4 bg-border mx-1" />
+      
+      <Button
+        variant="outline"
+        size="sm"
+        className={cn(
+          "h-7 gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider transition-all",
+          isLive 
+            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20" 
+            : "text-muted-foreground hover:text-foreground"
+        )}
+        onClick={() => {
+          if (isLive) clearStates();
+          setIsLive(!isLive);
+        }}
+      >
+        {isLive ? <Square className="w-3 h-3 fill-current" /> : <Activity className="w-3 h-3" />}
+        {isLive ? 'Stop Simulation' : 'Live Simulation'}
+      </Button>
+
       <div className="flex-1" />
       <span className="text-xs text-muted-foreground">
         {activeCircuit ? activeCircuit.name : 'No circuit selected'} — Breadboard
@@ -156,10 +190,15 @@ function BreadboardToolbar({
 // ---------------------------------------------------------------------------
 
 function BreadboardCanvas({ circuitId }: { circuitId: number }) {
+  const projectId = useProjectId();
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: nets } = useCircuitNets(circuitId);
   const { data: wires } = useCircuitWires(circuitId);
+  const { data: parts } = useComponentParts(projectId);
+  const { isLive } = useSimulation();
+  
   const createWireMutation = useCreateCircuitWire();
+  const createInstanceMutation = useCreateCircuitInstance();
   const deleteWireMutation = useDeleteCircuitWire();
   const updateInstanceMutation = useUpdateCircuitInstance();
 
@@ -170,6 +209,7 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const [highlightedPoints, setHighlightedPoints] = useState<Set<string>>(new Set());
   const [wireInProgress, setWireInProgress] = useState<WireInProgress | null>(null);
   const [selectedWireId, setSelectedWireId] = useState<number | null>(null);
+  const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -198,26 +238,48 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
     [wires],
   );
 
-  // Occupied points from placed instances — maps instance breadboard
-  // positions to the nearest tie-points they cover.
-  const occupiedPoints = useMemo(() => {
-    const set = new Set<string>();
-    if (!instances) return set;
+  // Build ComponentPlacement for each placed instance (used by collision + drag-to-place)
+  const instancePlacements = useMemo(() => {
+    if (!instances) return [];
+    const partsMap = new Map((parts ?? []).map((p: ComponentPart) => [p.id, p]));
+    const placements: Array<{ instanceId: number; placement: ComponentPlacement }> = [];
     for (const inst of instances) {
       if (inst.breadboardX == null || inst.breadboardY == null) continue;
-      // Snap the instance origin to a tie-point and mark it + surrounding
-      // rows based on a default 4-row span (DIP-8). A more accurate
-      // implementation would read the part's pin count from component_parts.
       const snapped = pixelToCoord({ x: inst.breadboardX, y: inst.breadboardY });
-      if (snapped && snapped.type === 'terminal') {
-        const rowSpan = 4;
-        for (let r = snapped.row; r < snapped.row + rowSpan && r <= BB.ROWS; r++) {
-          set.add(coordKey({ type: 'terminal', col: snapped.col, row: r }));
-        }
+      if (!snapped || snapped.type !== 'terminal') continue;
+
+      const part = inst.partId ? partsMap.get(inst.partId) : undefined;
+      const pinCount = (part?.connectors as unknown[])?.length ?? 2;
+      const compType = ((part?.meta as Record<string, unknown>)?.type as string)?.toLowerCase() ?? 'generic';
+
+      // DIP ICs straddle the center channel (e-f columns)
+      const isDIP = compType === 'ic' || compType === 'mcu';
+      const rowSpan = isDIP ? Math.ceil(pinCount / 2) : Math.max(1, Math.ceil(pinCount / 2));
+
+      placements.push({
+        instanceId: inst.id,
+        placement: {
+          refDes: inst.referenceDesignator,
+          startCol: snapped.col,
+          startRow: snapped.row,
+          rowSpan,
+          crossesChannel: isDIP,
+        },
+      });
+    }
+    return placements;
+  }, [instances, parts]);
+
+  // Occupied points from placed instances
+  const occupiedPoints = useMemo(() => {
+    const set = new Set<string>();
+    for (const { placement } of instancePlacements) {
+      for (const pt of getOccupiedPoints(placement)) {
+        set.add(coordKey(pt));
       }
     }
     return set;
-  }, [instances]);
+  }, [instancePlacements]);
 
   // Build ratsnest nets
   const ratsnestNets = useMemo((): RatsnestNet[] => {
@@ -380,6 +442,90 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
     if (e.key === '3') setTool('delete');
   }, [handleEscape, handleDeleteWire]);
 
+  // --- Drag-to-place from component palette ---
+
+  /** Convert a client-space mouse position to board-space pixel coords. */
+  const clientToBoardPixel = useCallback((clientX: number, clientY: number): PixelPos | null => {
+    const svg = svgRef.current;
+    if (!svg) return null;
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - panOffset.x) / zoom,
+      y: (clientY - rect.top - panOffset.y) / zoom,
+    };
+  }, [panOffset, zoom]);
+
+  const [dropPreviewCoord, setDropPreviewCoord] = useState<BreadboardCoord | null>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    const hasType = e.dataTransfer.types.includes('application/reactflow/type');
+    if (!hasType) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+
+    // Show a snap preview
+    const boardPx = clientToBoardPixel(e.clientX, e.clientY);
+    if (boardPx) {
+      const coord = pixelToCoord(boardPx);
+      setDropPreviewCoord(coord);
+    }
+  }, [clientToBoardPixel]);
+
+  const handleDragLeave = useCallback(() => {
+    setDropPreviewCoord(null);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setDropPreviewCoord(null);
+
+    const nodeType = e.dataTransfer.getData('application/reactflow/type');
+    const label = e.dataTransfer.getData('application/reactflow/label');
+    if (!nodeType) return;
+
+    const boardPx = clientToBoardPixel(e.clientX, e.clientY);
+    if (!boardPx) return;
+    const coord = pixelToCoord(boardPx);
+    if (!coord || coord.type !== 'terminal') return;
+
+    // Build a temporary placement for collision check
+    const isDIP = nodeType === 'ic' || nodeType === 'mcu';
+    const rowSpan = isDIP ? 4 : 1; // Default for palette drops; will be refined once part is resolved
+    const newPlacement: ComponentPlacement = {
+      refDes: label || nodeType,
+      startCol: coord.col,
+      startRow: coord.row,
+      rowSpan,
+      crossesChannel: isDIP,
+    };
+
+    // Check collision against existing placements
+    const existingPlacements = instancePlacements.map(ip => ip.placement);
+    if (checkCollision(newPlacement, existingPlacements)) {
+      return; // Silently reject — occupied
+    }
+
+    // Snap to pixel position of the coord for storage
+    const snapPx = coordToPixel(coord);
+
+    // Generate a unique reference designator
+    const prefix = nodeType === 'mcu' ? 'U' : nodeType === 'ic' ? 'U' : nodeType.charAt(0).toUpperCase();
+    const existingRefs = (instances ?? []).map(i => i.referenceDesignator);
+    let idx = 1;
+    while (existingRefs.includes(`${prefix}${idx}`)) {
+      idx++;
+    }
+
+    createInstanceMutation.mutate({
+      circuitId,
+      partId: null,
+      referenceDesignator: `${prefix}${idx}`,
+      breadboardX: snapPx.x,
+      breadboardY: snapPx.y,
+      properties: { type: nodeType, label: label || nodeType },
+    });
+  }, [clientToBoardPixel, instancePlacements, instances, createInstanceMutation, circuitId]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden" data-testid="breadboard-canvas-container">
       {/* Tool bar */}
@@ -417,6 +563,10 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
         onMouseUp={handleMouseUp}
         onMouseLeave={() => setMouseBoardPos(null)}
         onKeyDown={handleKeyDown}
+        onDoubleClick={handleDoubleClick}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
         tabIndex={0}
         data-testid="breadboard-canvas"
       >
@@ -434,6 +584,14 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
               highlightedPoints={highlightedPoints}
               occupiedPoints={occupiedPoints}
               hoveredCoord={hoveredCoord}
+            />
+
+            {/* Components Overlay (BL-0151) */}
+            <BreadboardComponentOverlay
+              instances={instances ?? []}
+              parts={parts ?? []}
+              selectedId={selectedInstanceId}
+              onInstanceClick={(id) => setSelectedInstanceId(id)}
             />
 
             {/* Existing wires */}
@@ -510,6 +668,27 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
               </g>
             )}
 
+            {/* Drop preview indicator */}
+            {dropPreviewCoord && dropPreviewCoord.type === 'terminal' && (() => {
+              const px = coordToPixel(dropPreviewCoord);
+              const isCollision = occupiedPoints.has(coordKey(dropPreviewCoord));
+              return (
+                <g data-testid="drop-preview" pointerEvents="none">
+                  <rect
+                    x={px.x - 6}
+                    y={px.y - 6}
+                    width={12}
+                    height={12}
+                    rx={2}
+                    fill={isCollision ? 'rgba(239,68,68,0.3)' : 'rgba(0,240,255,0.3)'}
+                    stroke={isCollision ? '#ef4444' : '#00F0FF'}
+                    strokeWidth={1}
+                    strokeDasharray="2,1"
+                  />
+                </g>
+              );
+            })()}
+
             {/* Ratsnest overlay */}
             <RatsnestOverlay
               nets={ratsnestNets}
@@ -550,5 +729,3 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
     </div>
   );
 }
-
-// ToolButton imported from ./ToolButton
