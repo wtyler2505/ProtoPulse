@@ -64,6 +64,7 @@ import {
   ClipboardPaste,
   Pentagon,
   MessageSquarePlus,
+  Scissors,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -538,13 +539,13 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
   );
 
   const handleDblClick = useCallback(async () => {
-    if (['pour', 'keepout', 'keepin'].includes(tool)) {
+    if (['pour', 'keepout', 'keepin', 'cutout'].includes(tool)) {
       if (zonePoints.length >= 3) {
         try {
           await createZoneMutation.mutateAsync({
             projectId,
-            zoneType: tool as 'pour' | 'keepout' | 'keepin',
-            layer: activeLayer,
+            zoneType: tool as 'pour' | 'keepout' | 'keepin' | 'cutout',
+            layer: tool === 'cutout' ? 'Edge.Cuts' : activeLayer,
             points: zonePoints,
             name: `${tool.toUpperCase()} Zone`,
           });
@@ -692,6 +693,7 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
         <ToolButton icon={Pentagon} label="Pour (P)" active={tool === 'pour'} onClick={() => setTool('pour')} testId="pcb-tool-pour" />
         <ToolButton icon={ShieldAlert} label="Keepout (K)" active={tool === 'keepout'} onClick={() => setTool('keepout')} testId="pcb-tool-keepout" />
         <ToolButton icon={ShieldCheck} label="Keepin" active={tool === 'keepin'} onClick={() => setTool('keepin')} testId="pcb-tool-keepin" />
+        <ToolButton icon={Scissors} label="Cutout (X)" active={tool === 'cutout'} onClick={() => setTool('cutout')} testId="pcb-tool-cutout" />
         <ToolButton icon={MessageSquarePlus} label="Comment (C)" active={tool === 'comment'} onClick={() => setTool('comment')} testId="pcb-tool-comment" />
         <div className="w-px h-4 bg-border mx-1" />
         <button
@@ -812,19 +814,21 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
                     fill={
                       zone.zoneType === 'pour' ? 'rgba(0, 255, 0, 0.2)' :
                       zone.zoneType === 'keepout' ? 'rgba(255, 0, 0, 0.2)' :
+                      zone.zoneType === 'cutout' ? 'rgba(0, 0, 0, 0.6)' :
                       'rgba(0, 0, 255, 0.2)'
                     }
                     stroke={
                       selectedZoneId === zone.id ? '#00F0FF' :
                       zone.zoneType === 'pour' ? '#00FF00' :
                       zone.zoneType === 'keepout' ? '#FF0000' :
+                      zone.zoneType === 'cutout' ? '#FFFFFF' :
                       '#0000FF'
                     }
                     strokeWidth={selectedZoneId === zone.id ? 2 / zoom : 1 / zoom}
-                    strokeDasharray={zone.zoneType === 'keepout' ? `${2/zoom},${2/zoom}` : undefined}
+                    strokeDasharray={(zone.zoneType === 'keepout' || zone.zoneType === 'cutout') ? `${2/zoom},${2/zoom}` : undefined}
                     className={cn(
                       "cursor-pointer transition-opacity duration-200",
-                      activeLayer !== zone.layer && "opacity-20 pointer-events-none"
+                      (activeLayer !== zone.layer && zone.zoneType !== 'cutout') && "opacity-20 pointer-events-none"
                     )}
                     onClick={(e) => {
                       e.stopPropagation();

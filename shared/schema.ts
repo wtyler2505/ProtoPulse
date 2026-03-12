@@ -616,7 +616,7 @@ export type InsertPcbOrder = z.infer<typeof insertPcbOrderSchema>;
 export const pcbZones = pgTable('pcb_zones', {
   id: serial('id').primaryKey(),
   projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
-  zoneType: varchar('zone_type', { length: 50 }).notNull(), // 'pour', 'keepout', 'keepin'
+  zoneType: varchar('zone_type', { length: 50 }).notNull(), // 'pour', 'keepout', 'keepin', 'cutout'
   layer: varchar('layer', { length: 50 }).notNull(),
   points: jsonb('points').notNull().default([]), // Array of {x, y}
   netId: integer('net_id').references(() => circuitNets.id, { onDelete: 'set null' }),
@@ -634,7 +634,7 @@ export const insertPcbZoneSchema = createInsertSchema(pcbZones).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  zoneType: z.enum(['pour', 'keepout', 'keepin']),
+  zoneType: z.enum(['pour', 'keepout', 'keepin', 'cutout']),
   points: z.array(z.object({ x: z.number(), y: z.number() })),
 });
 

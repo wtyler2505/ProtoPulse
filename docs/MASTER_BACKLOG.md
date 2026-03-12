@@ -160,7 +160,7 @@
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
 | BL-0100 | Keep-out/keep-in region editor — Full polygon drawing support on PCB canvas, CRUD API, storage, hooks, and SVG rendering for pours, keepouts, and keepins. | DONE | Wave 63 |
-| BL-0101 | Board cutouts/slots/internal milling editor | OPEN | MF-053 |
+| BL-0101 | Board cutouts/slots/internal milling editor — Reused zone editor logic for cutout regions; implemented Edge.Cuts layer mapping and SVG rendering with dashed white borders. | DONE | Wave 63 |
 | BL-0102 | Via stitching automation | OPEN | MF-054 |
 | BL-0103 | Teardrop generation | OPEN | MF-055 |
 | BL-0104 | Multi-sheet schematic hierarchy management | OPEN | MF-060 |

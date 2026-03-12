@@ -101,7 +101,7 @@ export function handleCanvasClick(
     return;
   }
 
-  if (['pour', 'keepout', 'keepin'].includes(tool)) {
+  if (['pour', 'keepout', 'keepin', 'cutout'].includes(tool)) {
     if (!svgEl) return;
     const rect = svgEl.getBoundingClientRect();
     const bc = screenToBoardCoords(e.clientX, e.clientY, rect, panOffset.x, panOffset.y, zoom);
@@ -194,6 +194,9 @@ export function handleKeyDown(
     callbacks.setTool('keepin');
   } else if (e.key.toLowerCase() === 'k') {
     callbacks.setTool('keepout');
+  }
+  if (e.key.toLowerCase() === 'x') {
+    callbacks.setTool('cutout');
   }
   if (e.key === 'f' || e.key === 'F') {
     callbacks.setActiveLayer(toggleLayer);

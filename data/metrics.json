@@ -1,204 +1,246 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-12T01:25:25.534Z",
+  "persistedAt": "2026-03-12T01:44:59.732Z",
   "routes": {
     "GET /api/auth/me": {
-      "count": 3,
-      "totalDuration": 169,
+      "count": 5,
+      "totalDuration": 265,
       "errors": 0,
       "min": 15,
       "max": 121,
       "samples": [
         15,
+        24,
         33,
+        72,
         121
       ]
     },
     "POST /api/seed": {
-      "count": 3,
-      "totalDuration": 112,
+      "count": 5,
+      "totalDuration": 153,
       "errors": 0,
-      "min": 25,
+      "min": 19,
       "max": 45,
       "samples": [
+        19,
+        22,
         25,
         42,
         45
       ]
     },
     "GET /api/projects/:id/nodes": {
-      "count": 3,
-      "totalDuration": 2897,
+      "count": 6,
+      "totalDuration": 4709,
       "errors": 0,
-      "min": 28,
-      "max": 1713,
+      "min": 27,
+      "max": 1741,
       "samples": [
+        27,
         28,
+        44,
         1156,
-        1713
+        1713,
+        1741
       ]
     },
     "GET /api/projects/:id": {
-      "count": 3,
-      "totalDuration": 13,
+      "count": 5,
+      "totalDuration": 22,
       "errors": 0,
       "min": 3,
       "max": 6,
       "samples": [
         3,
         4,
+        4,
+        5,
         6
       ]
     },
     "GET /api/projects/:id/validation": {
-      "count": 3,
-      "totalDuration": 219,
+      "count": 5,
+      "totalDuration": 416,
       "errors": 0,
       "min": 25,
-      "max": 117,
+      "max": 172,
       "samples": [
         25,
+        25,
         77,
-        117
+        117,
+        172
       ]
     },
     "GET /api/projects/:id/edges": {
-      "count": 3,
-      "totalDuration": 274,
+      "count": 5,
+      "totalDuration": 450,
       "errors": 0,
-      "min": 73,
-      "max": 121,
+      "min": 53,
+      "max": 123,
       "samples": [
+        53,
         73,
         80,
-        121
+        121,
+        123
       ]
     },
     "GET /api/projects/:id/chat": {
-      "count": 3,
-      "totalDuration": 426,
+      "count": 7,
+      "totalDuration": 1245,
       "errors": 0,
-      "min": 48,
-      "max": 291,
+      "min": 19,
+      "max": 728,
       "samples": [
+        19,
+        27,
+        45,
         48,
         87,
-        291
+        291,
+        728
       ]
     },
     "GET /api/projects/:id/history": {
-      "count": 3,
-      "totalDuration": 315,
+      "count": 7,
+      "totalDuration": 500,
       "errors": 0,
-      "min": 62,
+      "min": 10,
       "max": 164,
       "samples": [
+        10,
+        18,
+        29,
         62,
         89,
+        128,
         164
       ]
     },
     "GET /api/projects/:id/bom": {
-      "count": 3,
-      "totalDuration": 907,
+      "count": 5,
+      "totalDuration": 1111,
       "errors": 0,
-      "min": 84,
+      "min": 26,
       "max": 597,
       "samples": [
+        26,
         84,
+        178,
         226,
         597
       ]
     },
     "GET /api/projects/:id/chat/branches": {
-      "count": 3,
-      "totalDuration": 373,
+      "count": 7,
+      "totalDuration": 604,
       "errors": 0,
-      "min": 47,
+      "min": 15,
       "max": 218,
       "samples": [
+        15,
+        18,
+        31,
         47,
         108,
+        167,
         218
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 3,
-      "totalDuration": 87,
+      "count": 5,
+      "totalDuration": 115,
       "errors": 0,
-      "min": 13,
+      "min": 11,
       "max": 56,
       "samples": [
+        11,
         13,
+        17,
         18,
         56
       ]
     },
     "GET /api/settings/chat": {
-      "count": 3,
-      "totalDuration": 14,
+      "count": 5,
+      "totalDuration": 21,
       "errors": 0,
       "min": 3,
       "max": 7,
       "samples": [
         3,
+        3,
+        4,
         4,
         7
       ]
     },
     "GET /api/settings/api-keys": {
-      "count": 3,
-      "totalDuration": 42,
+      "count": 5,
+      "totalDuration": 51,
       "errors": 0,
-      "min": 6,
+      "min": 4,
       "max": 28,
       "samples": [
+        4,
+        5,
         6,
         8,
         28
       ]
     },
     "GET /api/circuits/:circuitId/instances": {
-      "count": 2,
-      "totalDuration": 33,
+      "count": 4,
+      "totalDuration": 53,
       "errors": 0,
-      "min": 16,
+      "min": 10,
       "max": 17,
       "samples": [
+        10,
+        10,
         16,
         17
       ]
     },
     "GET /api/circuits/:circuitId/nets": {
-      "count": 2,
-      "totalDuration": 28,
+      "count": 4,
+      "totalDuration": 56,
       "errors": 0,
       "min": 8,
       "max": 20,
       "samples": [
         8,
+        12,
+        16,
         20
       ]
     },
     "GET /api/circuits/:circuitId/wires": {
-      "count": 2,
-      "totalDuration": 29,
+      "count": 4,
+      "totalDuration": 44,
       "errors": 0,
       "min": 6,
       "max": 23,
       "samples": [
         6,
+        6,
+        9,
         23
       ]
     },
     "GET /api/projects/:id/pcb-zones": {
-      "count": 5,
-      "totalDuration": 208,
+      "count": 8,
+      "totalDuration": 236,
       "errors": 2,
-      "min": 9,
+      "min": 8,
       "max": 121,
       "samples": [
+        8,
         9,
+        10,
+        10,
         13,
         20,
         45,
@@ -206,13 +248,15 @@
       ]
     },
     "GET /api/projects/:id/comments": {
-      "count": 4,
-      "totalDuration": 138,
+      "count": 6,
+      "totalDuration": 171,
       "errors": 2,
-      "min": 16,
+      "min": 14,
       "max": 74,
       "samples": [
+        14,
         16,
+        19,
         19,
         29,
         74
@@ -240,14 +284,67 @@
       ]
     },
     "POST /api/projects/:id/pcb-zones": {
-      "count": 2,
-      "totalDuration": 52,
+      "count": 3,
+      "totalDuration": 76,
       "errors": 0,
       "min": 22,
       "max": 30,
       "samples": [
         22,
+        24,
         30
+      ]
+    },
+    "GET /api/projects/:id/component-parts": {
+      "count": 1,
+      "totalDuration": 20,
+      "errors": 0,
+      "min": 20,
+      "max": 20,
+      "samples": [
+        20
+      ]
+    },
+    "GET /api/projects/:id/circuits/:circuitId": {
+      "count": 1,
+      "totalDuration": 8,
+      "errors": 0,
+      "min": 8,
+      "max": 8,
+      "samples": [
+        8
+      ]
+    },
+    "POST /api/projects/:id/chat": {
+      "count": 2,
+      "totalDuration": 52,
+      "errors": 0,
+      "min": 21,
+      "max": 31,
+      "samples": [
+        21,
+        31
+      ]
+    },
+    "POST /api/projects/:id/history": {
+      "count": 2,
+      "totalDuration": 47,
+      "errors": 0,
+      "min": 18,
+      "max": 29,
+      "samples": [
+        18,
+        29
+      ]
+    },
+    "PUT /api/projects/:id/nodes": {
+      "count": 1,
+      "totalDuration": 57,
+      "errors": 0,
+      "min": 57,
+      "max": 57,
+      "samples": [
+        57
       ]
     }
   }

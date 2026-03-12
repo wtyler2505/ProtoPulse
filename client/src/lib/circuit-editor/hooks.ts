@@ -465,7 +465,7 @@ export function useCreatePcbZone() {
   return useMutation({
     mutationFn: async (data: {
       projectId: number;
-      zoneType: 'pour' | 'keepout' | 'keepin';
+      zoneType: 'pour' | 'keepout' | 'keepin' | 'cutout';
       layer: string;
       points: Array<{ x: number; y: number }>;
       netId?: number | null;
