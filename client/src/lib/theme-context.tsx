@@ -1,4 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, useMemo } from 'react';
+import { useTheme } from 'next-themes';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -43,6 +44,8 @@ export interface ThemeContextValue {
   currentTheme: string;
   setTheme: (name: string) => void;
   themes: ThemePreset[];
+  isDark: boolean;
+  toggleThemeMode: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +226,64 @@ const MONOCHROME: ThemePreset = {
   },
 };
 
+const OLED_BLACK: ThemePreset = {
+  id: 'oled-black',
+  label: 'OLED Black',
+  colors: {
+    '--color-background': 'hsl(0 0% 0%)',
+    '--color-foreground': 'hsl(190 100% 90%)',
+    '--color-card': 'hsl(0 0% 2%)',
+    '--color-card-foreground': 'hsl(190 100% 90%)',
+    '--color-popover': 'hsl(0 0% 2%)',
+    '--color-popover-foreground': 'hsl(190 100% 90%)',
+    '--color-primary': 'hsl(190 100% 50%)',
+    '--color-primary-foreground': 'hsl(0 0% 0%)',
+    '--color-secondary': 'hsl(260 100% 70%)',
+    '--color-secondary-foreground': 'hsl(0 0% 0%)',
+    '--color-muted': 'hsl(0 0% 5%)',
+    '--color-muted-foreground': 'hsl(190 20% 60%)',
+    '--color-accent': 'hsl(190 100% 50%)',
+    '--color-accent-foreground': 'hsl(0 0% 0%)',
+    '--color-editor-accent': '#00F0FF',
+    '--color-destructive': 'hsl(0 90% 60%)',
+    '--color-destructive-foreground': 'hsl(0 0% 100%)',
+    '--color-border': 'hsl(0 0% 10%)',
+    '--color-input': 'hsl(0 0% 10%)',
+    '--color-ring': 'hsl(190 100% 50%)',
+    '--color-sidebar': 'hsl(0 0% 1%)',
+    '--color-sidebar-border': 'hsl(0 0% 8%)',
+  },
+};
+
+const LIGHT: ThemePreset = {
+  id: 'light',
+  label: 'Light Mode',
+  colors: {
+    '--color-background': 'hsl(210 20% 98%)',
+    '--color-foreground': 'hsl(225 20% 5%)',
+    '--color-card': 'hsl(0 0% 100%)',
+    '--color-card-foreground': 'hsl(225 20% 5%)',
+    '--color-popover': 'hsl(0 0% 100%)',
+    '--color-popover-foreground': 'hsl(225 20% 5%)',
+    '--color-primary': 'hsl(221 83% 53%)',
+    '--color-primary-foreground': 'hsl(210 20% 98%)',
+    '--color-secondary': 'hsl(210 20% 90%)',
+    '--color-secondary-foreground': 'hsl(225 20% 5%)',
+    '--color-muted': 'hsl(210 20% 94%)',
+    '--color-muted-foreground': 'hsl(215 15% 40%)',
+    '--color-accent': 'hsl(221 83% 53%)',
+    '--color-accent-foreground': 'hsl(210 20% 98%)',
+    '--color-editor-accent': '#2563EB',
+    '--color-destructive': 'hsl(0 84% 60%)',
+    '--color-destructive-foreground': 'hsl(210 20% 98%)',
+    '--color-border': 'hsl(214 32% 91%)',
+    '--color-input': 'hsl(214 32% 91%)',
+    '--color-ring': 'hsl(221 83% 53%)',
+    '--color-sidebar': 'hsl(210 20% 96%)',
+    '--color-sidebar-border': 'hsl(214 32% 88%)',
+  },
+};
+
 export const THEME_PRESETS: ThemePreset[] = [
   NEON_CYAN,
   MIDNIGHT_PURPLE,
@@ -230,6 +291,8 @@ export const THEME_PRESETS: ThemePreset[] = [
   AMBER,
   ROSE,
   MONOCHROME,
+  OLED_BLACK,
+  LIGHT,
 ];
 
 const DEFAULT_THEME_ID = 'neon-cyan';
@@ -243,21 +306,12 @@ const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 /**
  * Apply a theme preset's CSS custom properties to document.documentElement.
- * When switching back to the default preset we *remove* inline styles so the
- * @theme block in index.css takes over — this avoids inline styles pinning
- * values that would otherwise be overridden by .high-contrast.
  */
 function applyThemeColors(preset: ThemePreset): void {
   const root = document.documentElement;
-  const isDefault = preset.id === DEFAULT_THEME_ID;
-
-  const vars = Object.keys(preset.colors) as (keyof ThemeColors)[];
-  for (const varName of vars) {
-    if (isDefault) {
-      root.style.removeProperty(varName);
-    } else {
-      root.style.setProperty(varName, preset.colors[varName]);
-    }
+  const vars = Object.entries(preset.colors);
+  for (const [varName, value] of vars) {
+    root.style.setProperty(varName, value);
   }
 }
 
@@ -266,6 +320,7 @@ function applyThemeColors(preset: ThemePreset): void {
 // ---------------------------------------------------------------------------
 
 export function ProtoPulseThemeProvider({ children }: { children: React.ReactNode }) {
+  const { setTheme: setNextTheme } = useTheme();
   const [currentTheme, setCurrentTheme] = useState<string>(() => {
     try {
       return localStorage.getItem(STORAGE_KEY) ?? DEFAULT_THEME_ID;
@@ -274,21 +329,28 @@ export function ProtoPulseThemeProvider({ children }: { children: React.ReactNod
     }
   });
 
+  const [lastDarkTheme, setLastDarkTheme] = useState<string>(() => {
+    return currentTheme === 'light' ? DEFAULT_THEME_ID : currentTheme;
+  });
+
   // Apply on mount and whenever the theme changes.
   useEffect(() => {
     const preset = THEME_PRESETS.find((t) => t.id === currentTheme) ?? THEME_PRESETS[0];
     applyThemeColors(preset);
 
+    // Sync with next-themes for dark: class support
+    setNextTheme(currentTheme === 'light' ? 'light' : 'dark');
+
+    if (currentTheme !== 'light') {
+      setLastDarkTheme(currentTheme);
+    }
+
     try {
-      if (currentTheme === DEFAULT_THEME_ID) {
-        localStorage.removeItem(STORAGE_KEY);
-      } else {
-        localStorage.setItem(STORAGE_KEY, currentTheme);
-      }
+      localStorage.setItem(STORAGE_KEY, currentTheme);
     } catch {
       // localStorage unavailable — gracefully degrade
     }
-  }, [currentTheme]);
+  }, [currentTheme, setNextTheme]);
 
   const setTheme = useCallback((name: string) => {
     if (THEME_PRESETS.some((t) => t.id === name)) {
@@ -296,14 +358,27 @@ export function ProtoPulseThemeProvider({ children }: { children: React.ReactNod
     }
   }, []);
 
-  const value: ThemeContextValue = {
+  const toggleThemeMode = useCallback(() => {
+    if (currentTheme === 'light') {
+      setCurrentTheme(lastDarkTheme);
+    } else {
+      setCurrentTheme('light');
+    }
+  }, [currentTheme, lastDarkTheme]);
+
+  const isDark = currentTheme !== 'light';
+
+  const value: ThemeContextValue = useMemo(() => ({
     currentTheme,
     setTheme,
     themes: THEME_PRESETS,
-  };
+    isDark,
+    toggleThemeMode,
+  }), [currentTheme, setTheme, isDark, toggleThemeMode]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
+
 
 export function useProtoPulseTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);

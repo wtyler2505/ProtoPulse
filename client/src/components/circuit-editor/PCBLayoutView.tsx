@@ -21,9 +21,12 @@ import {
   useCreateCircuitWire,
   useDeleteCircuitWire,
   useUpdateCircuitInstance,
+  useCreateCircuitInstance,
 } from '@/lib/circuit-editor/hooks';
+import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import RatsnestOverlay from './RatsnestOverlay';
 import ToolButton from './ToolButton';
+import { useToast } from '@/hooks/use-toast';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import {
   Loader2,
@@ -40,6 +43,7 @@ import {
   CheckSquare,
   Maximize,
   ShieldCheck,
+  ClipboardPaste,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -80,7 +84,7 @@ import {
   ViaOverlay,
   LayerStackPanel,
 } from '@/components/views/pcb-layout';
-import type { ActiveLayer, PcbTool, PanState } from '@/components/views/pcb-layout';
+import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState } from '@/components/views/pcb-layout';
 import type { Via } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow } from '@shared/schema';
 
@@ -286,8 +290,11 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
   const { data: wires } = useCircuitWires(circuitId);
   const createWireMutation = useCreateCircuitWire();
   const deleteWireMutation = useDeleteCircuitWire();
+  const createInstanceMutation = useCreateCircuitInstance();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _updateInstanceMutation = useUpdateCircuitInstance();
+
+  const { toast } = useToast();
 
   // --- State ---
   const [tool, setTool] = useState<PcbTool>('select');
@@ -295,6 +302,7 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [panOffset, setPanOffset] = useState(DEFAULT_PAN);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
+  const [selectedInstanceIds, setSelectedInstanceIds] = useState<number[]>([]);
   const [selectedWireId, setSelectedWireId] = useState<number | null>(null);
   const [traceWidth, setTraceWidth] = useState(DEFAULT_TRACE_WIDTH);
   const [tracePoints, setTracePoints] = useState<Array<{ x: number; y: number }>>([]);
@@ -304,6 +312,13 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
   // Via state — populated by via placement tool (Phase 3) and trace-routing via drops
   const [vias, _setVias] = useState<Via[]>([]);
   const [selectedViaId, setSelectedViaId] = useState<string | null>(null);
+
+  // Marquee selection state
+  const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
+  const selectionStateRef = useRef<SelectionDragState>({ isDragging: false, origin: { x: 0, y: 0 } });
+
+  // Clipboard state
+  const clipboardRef = useRef<any>(null);
 
   // --- Refs ---
   const svgRef = useRef<SVGSVGElement>(null);
@@ -333,17 +348,126 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
       setZoom,
       setPanOffset,
       setSelectedInstanceId,
+      setSelectedInstanceIds,
       setSelectedWireId,
       setTracePoints,
       setMouseBoardPos,
       setInstanceRotation: (_instanceId: number, _rotation: number) => {
         // TODO: Wire to updateInstanceMutation
       },
-      setSelectionRect: () => {},
-      setSelectedInstanceIds: () => {},
+      setSelectionRect,
     }),
     [],
   );
+
+  const handleCopy = useCallback(async () => {
+    const selectedIds = selectedInstanceIds.length > 0 ? selectedInstanceIds : (selectedInstanceId ? [selectedInstanceId] : []);
+    if (selectedIds.length === 0) return;
+
+    const bundle = {
+      type: 'protopulse-pcb-bundle',
+      instances: (instances ?? [])
+        .filter(inst => selectedIds.includes(inst.id))
+        .map(inst => ({
+          partId: inst.partId,
+          referenceDesignator: inst.referenceDesignator,
+          pcbX: inst.pcbX,
+          pcbY: inst.pcbY,
+          pcbRotation: inst.pcbRotation,
+          pcbSide: inst.pcbSide,
+          properties: inst.properties,
+          oldId: inst.id
+        })),
+    };
+
+    clipboardRef.current = bundle;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
+      toast({ title: 'Copied', description: `Copied ${bundle.instances.length} components.` });
+    } catch (err) {
+      console.error('Copy failed', err);
+    }
+  }, [selectedInstanceIds, selectedInstanceId, instances, toast]);
+
+  const handlePaste = useCallback(async (bundle: any) => {
+    if (!bundle || bundle.type !== 'protopulse-pcb-bundle') return;
+
+    // Center of viewport in board coordinates
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const center = {
+      x: (rect.width / 2 - panOffset.x) / zoom,
+      y: (rect.height / 2 - panOffset.y) / zoom,
+    };
+
+    const insts = bundle.instances || [];
+    if (insts.length === 0) return;
+
+    const allX = insts.map((i: any) => i.pcbX ?? 0);
+    const allY = insts.map((i: any) => i.pcbY ?? 0);
+    const minX = Math.min(...allX);
+    const maxX = Math.max(...allX);
+    const minY = Math.min(...allY);
+    const maxY = Math.max(...allY);
+    const bboxCenterX = (minX + maxX) / 2;
+    const bboxCenterY = (minY + maxY) / 2;
+
+    const offsetX = center.x - bboxCenterX;
+    const offsetY = center.y - bboxCenterY;
+
+    const usedRefDes = new Set((instances ?? []).map(i => i.referenceDesignator));
+
+    try {
+      for (const inst of insts) {
+        // Find part info for refDes generation
+        // Note: partsMap not available in PCBCanvas currently? 
+        // SchematicCanvas had it. Let's see if we need it.
+        // generateRefDes in pcb-layout doesn't seem to need partsMap if we provide prefix.
+        
+        // Actually, let's just use the copied refDes and find next available
+        let uniqueRefDes = inst.referenceDesignator;
+        let suffix = 1;
+        while (usedRefDes.has(uniqueRefDes)) {
+          const prefix = inst.referenceDesignator.replace(/\d+$/, '');
+          const match = inst.referenceDesignator.match(/\d+$/);
+          const num = match ? parseInt(match[0], 10) : 0;
+          uniqueRefDes = `${prefix}${num + suffix}`;
+          suffix++;
+        }
+        usedRefDes.add(uniqueRefDes);
+
+        await createInstanceMutation.mutateAsync({
+          circuitId,
+          partId: inst.partId,
+          referenceDesignator: uniqueRefDes,
+          pcbX: (inst.pcbX ?? 0) + offsetX,
+          pcbY: (inst.pcbY ?? 0) + offsetY,
+          pcbRotation: inst.pcbRotation,
+          pcbSide: inst.pcbSide,
+          properties: inst.properties,
+        });
+      }
+      toast({ title: 'Pasted successfully', description: `Added ${insts.length} components.` });
+    } catch (err) {
+      console.error('Paste failed', err);
+      toast({ variant: 'destructive', title: 'Paste failed', description: 'Error duplicating components.' });
+    }
+  }, [circuitId, instances, panOffset, zoom, createInstanceMutation, toast]);
+
+  const triggerPaste = useCallback(async () => {
+    let bundle = clipboardRef.current;
+    if (!bundle) {
+      try {
+        const text = await navigator.clipboard.readText();
+        const parsed = JSON.parse(text);
+        if (parsed.type === 'protopulse-pcb-bundle') {
+          bundle = parsed;
+        }
+      } catch {}
+    }
+    if (bundle) void handlePaste(bundle);
+  }, [handlePaste]);
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => onCanvasClick(tool, svgRef.current, panOffset, zoom, callbacks, e),
@@ -369,25 +493,51 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
   }, [selectedInstanceId, instances]);
 
   const handleKey = useCallback(
-    (e: React.KeyboardEvent) =>
+    (e: React.KeyboardEvent) => {
+      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+      if (modKey && e.key.toLowerCase() === 'c' && !e.shiftKey) {
+        e.preventDefault();
+        void handleCopy();
+        return;
+      }
+      if (modKey && e.key.toLowerCase() === 'v' && !e.shiftKey) {
+        e.preventDefault();
+        void triggerPaste();
+        return;
+      }
+
       onKeyDown(e, selectedWireId, {
         circuitId,
         deleteWire: (params) => deleteWireMutation.mutate(params),
-      }, callbacks, selectedInstanceId, tool, selectedInstanceRotation),
-    [selectedWireId, circuitId, deleteWireMutation, callbacks, selectedInstanceId, tool, selectedInstanceRotation],
+      }, callbacks, selectedInstanceId, tool, selectedInstanceRotation);
+    },
+    [selectedWireId, circuitId, deleteWireMutation, callbacks, selectedInstanceId, tool, selectedInstanceRotation, handleCopy, triggerPaste],
   );
 
   const handleMDown = useCallback(
-    (e: React.MouseEvent) => onMouseDown(e, tool, selectedInstanceId, panStateRef.current),
-    [tool, selectedInstanceId],
+    (e: React.MouseEvent) => onMouseDown(
+      e, tool, selectedInstanceId, panStateRef.current,
+      selectionStateRef.current, svgRef.current, panOffset, zoom
+    ),
+    [tool, selectedInstanceId, panOffset, zoom],
   );
 
   const handleMMove = useCallback(
-    (e: React.MouseEvent) => onMouseMove(e, panStateRef.current, svgRef.current, panOffset, zoom, callbacks),
+    (e: React.MouseEvent) => onMouseMove(
+      e, panStateRef.current, svgRef.current, panOffset, zoom, callbacks,
+      selectionStateRef.current
+    ),
     [panOffset, zoom, callbacks],
   );
 
-  const handleMUp = useCallback(() => onMouseUp(panStateRef.current), []);
+  const handleMUp = useCallback(
+    () => onMouseUp(
+      panStateRef.current, selectionStateRef.current, selectionRect, instances, callbacks
+    ),
+    [selectionRect, instances, callbacks],
+  );
 
   useEffect(() => {
     const el = containerRef.current;
@@ -551,6 +701,18 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
                 <TraceInProgress points={tracePoints} activeLayer={activeLayer} traceWidth={traceWidth} />
                 <ViaOverlay vias={vias} selectedViaId={selectedViaId} onViaClick={(id) => setSelectedViaId(id)} />
                 <RatsnestOverlay nets={ratsnestNets} opacity={0.4} showLabels />
+                {selectionRect && (
+                  <rect
+                    x={selectionRect.x}
+                    y={selectionRect.y}
+                    width={selectionRect.width}
+                    height={selectionRect.height}
+                    fill="rgba(0, 240, 255, 0.1)"
+                    stroke="#00F0FF"
+                    strokeWidth={1 / zoom}
+                    strokeDasharray={`${4 / zoom},${2 / zoom}`}
+                  />
+                )}
               </g>
             </svg>
             <div className="absolute top-3 left-3 z-10">
@@ -594,6 +756,17 @@ function PCBCanvas({ circuitId }: { circuitId: number }) {
           <ContextMenuItem data-testid="ctx-select-all" onSelect={handleCtxSelectAll}>
             <CheckSquare className="w-4 h-4 mr-2" />
             Select All
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem data-testid="ctx-copy" onSelect={handleCopy}>
+            <Circle className="w-4 h-4 mr-2" />
+            Copy
+            <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+C</span>
+          </ContextMenuItem>
+          <ContextMenuItem data-testid="ctx-paste" onSelect={triggerPaste}>
+            <ClipboardPaste className="w-4 h-4 mr-2" />
+            Paste
+            <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+V</span>
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

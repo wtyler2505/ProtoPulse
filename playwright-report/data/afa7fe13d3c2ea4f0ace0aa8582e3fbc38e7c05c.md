@@ -1,0 +1,142 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - heading "ProtoPulse" [level=1] [ref=e7]
+        - paragraph [ref=e8]: Select a project to continue
+      - button "New Project" [ref=e9]:
+        - img
+        - text: New Project
+    - generic [ref=e10]:
+      - img [ref=e11]
+      - textbox "Search projects..." [ref=e14]
+    - generic [ref=e15]:
+      - button "E2E Test Project 5h ago v1" [ref=e16] [cursor=pointer]:
+        - generic [ref=e18]:
+          - generic [ref=e19]: E2E Test Project
+          - img [ref=e20]
+        - generic [ref=e23]:
+          - generic [ref=e24]:
+            - img [ref=e25]
+            - text: 5h ago
+          - generic [ref=e28]:
+            - img [ref=e29]
+            - text: v1
+      - button "E2E Test Project 5h ago v1" [ref=e33] [cursor=pointer]:
+        - generic [ref=e35]:
+          - generic [ref=e36]: E2E Test Project
+          - img [ref=e37]
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - img [ref=e42]
+            - text: 5h ago
+          - generic [ref=e45]:
+            - img [ref=e46]
+            - text: v1
+      - button "E2E Test Project 5h ago v1" [ref=e50] [cursor=pointer]:
+        - generic [ref=e52]:
+          - generic [ref=e53]: E2E Test Project
+          - img [ref=e54]
+        - generic [ref=e57]:
+          - generic [ref=e58]:
+            - img [ref=e59]
+            - text: 5h ago
+          - generic [ref=e62]:
+            - img [ref=e63]
+            - text: v1
+      - button "E2E Test Project 5h ago v1" [ref=e67] [cursor=pointer]:
+        - generic [ref=e69]:
+          - generic [ref=e70]: E2E Test Project
+          - img [ref=e71]
+        - generic [ref=e74]:
+          - generic [ref=e75]:
+            - img [ref=e76]
+            - text: 5h ago
+          - generic [ref=e79]:
+            - img [ref=e80]
+            - text: v1
+      - button "E2E Test Project 5h ago v1" [ref=e84] [cursor=pointer]:
+        - generic [ref=e86]:
+          - generic [ref=e87]: E2E Test Project
+          - img [ref=e88]
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - img [ref=e93]
+            - text: 5h ago
+          - generic [ref=e96]:
+            - img [ref=e97]
+            - text: v1
+      - button "E2E Test Project 5h ago v1" [ref=e101] [cursor=pointer]:
+        - generic [ref=e103]:
+          - generic [ref=e104]: E2E Test Project
+          - img [ref=e105]
+        - generic [ref=e108]:
+          - generic [ref=e109]:
+            - img [ref=e110]
+            - text: 5h ago
+          - generic [ref=e113]:
+            - img [ref=e114]
+            - text: v1
+      - button "E2E Test Project 5h ago v1" [ref=e118] [cursor=pointer]:
+        - generic [ref=e120]:
+          - generic [ref=e121]: E2E Test Project
+          - img [ref=e122]
+        - generic [ref=e125]:
+          - generic [ref=e126]:
+            - img [ref=e127]
+            - text: 5h ago
+          - generic [ref=e130]:
+            - img [ref=e131]
+            - text: v1
+      - button "E2E Test Project 5h ago v1" [ref=e135] [cursor=pointer]:
+        - generic [ref=e137]:
+          - generic [ref=e138]: E2E Test Project
+          - img [ref=e139]
+        - generic [ref=e142]:
+          - generic [ref=e143]:
+            - img [ref=e144]
+            - text: 5h ago
+          - generic [ref=e147]:
+            - img [ref=e148]
+            - text: v1
+      - button "E2E Test Project 5h ago v1" [ref=e152] [cursor=pointer]:
+        - generic [ref=e154]:
+          - generic [ref=e155]: E2E Test Project
+          - img [ref=e156]
+        - generic [ref=e159]:
+          - generic [ref=e160]:
+            - img [ref=e161]
+            - text: 5h ago
+          - generic [ref=e164]:
+            - img [ref=e165]
+            - text: v1
+      - button "DevelopmentTest 4d ago v1" [ref=e169] [cursor=pointer]:
+        - generic [ref=e171]:
+          - generic [ref=e172]: DevelopmentTest
+          - img [ref=e173]
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - img [ref=e178]
+            - text: 4d ago
+          - generic [ref=e181]:
+            - img [ref=e182]
+            - text: v1
+      - button "Smart_Agro_Node_v1 IoT Agriculture Sensor Node 10d ago v1" [ref=e186] [cursor=pointer]:
+        - generic [ref=e187]:
+          - generic [ref=e188]:
+            - generic [ref=e189]: Smart_Agro_Node_v1
+            - img [ref=e190]
+          - generic [ref=e192]: IoT Agriculture Sensor Node
+        - generic [ref=e194]:
+          - generic [ref=e195]:
+            - img [ref=e196]
+            - text: 10d ago
+          - generic [ref=e199]:
+            - img [ref=e200]
+            - text: v1
+  - region "Notifications (F8)":
+    - list
+```

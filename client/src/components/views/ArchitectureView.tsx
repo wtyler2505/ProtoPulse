@@ -199,8 +199,84 @@ function ArchitectureFlow() {
   const markNodeInteracted = useCallback(() => { nodeInteracted.current = true; }, []);
   const markEdgeInteracted = useCallback(() => { edgeInteracted.current = true; }, []);
 
+  const handlePaste = useCallback((bundle: any) => {
+    if (!bundle || !bundle.nodes || bundle.nodes.length === 0) return;
+
+    const { nodes: copiedNodes, edges: copiedEdges } = bundle;
+
+    // Build old-ID → new-ID mapping
+    const idMap = new Map<string, string>();
+    for (const n of copiedNodes) {
+      idMap.set(n.id, crypto.randomUUID());
+    }
+
+    // Compute paste offset: center of viewport + small jitter
+    const center = reactFlowInstance.screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+    // Bounding box center of copied nodes
+    const minX = Math.min(...copiedNodes.map((n: Node) => n.position.x));
+    const minY = Math.min(...copiedNodes.map((n: Node) => n.position.y));
+    const maxX = Math.max(...copiedNodes.map((n: Node) => n.position.x));
+    const maxY = Math.max(...copiedNodes.map((n: Node) => n.position.y));
+    const bboxCenterX = (minX + maxX) / 2;
+    const bboxCenterY = (minY + maxY) / 2;
+    const offsetX = center.x - bboxCenterX + 30;
+    const offsetY = center.y - bboxCenterY + 30;
+
+    const pastedNodes = copiedNodes.map((n: Node) => ({
+      ...n,
+      id: idMap.get(n.id)!,
+      position: {
+        x: n.position.x + offsetX,
+        y: n.position.y + offsetY,
+      },
+      selected: true,
+    }));
+
+    const pastedEdges = copiedEdges.map((ed: Edge) => ({
+      ...ed,
+      id: crypto.randomUUID(),
+      source: idMap.get(ed.source) ?? ed.source,
+      target: idMap.get(ed.target) ?? ed.target,
+    }));
+
+    pushUndoState();
+    markNodeInteracted();
+    if (pastedEdges.length > 0) markEdgeInteracted();
+    // Deselect existing nodes before pasting
+    setLocalNodes(nds => [
+      ...nds.map(n => ({ ...n, selected: false })),
+      ...pastedNodes,
+    ]);
+    if (pastedEdges.length > 0) {
+      setLocalEdges(eds => [...eds, ...pastedEdges]);
+    }
+    addOutputLog(`[ARCH] Pasted ${pastedNodes.length} node(s) and ${pastedEdges.length} edge(s)`);
+  }, [reactFlowInstance, pushUndoState, markNodeInteracted, markEdgeInteracted, setLocalNodes, setLocalEdges, addOutputLog]);
+
+  const handleContextPaste = useCallback(async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const parsed = JSON.parse(text);
+      if (parsed.type === 'protopulse-architecture-bundle' || (parsed.nodes && Array.isArray(parsed.nodes))) {
+        handlePaste(parsed);
+        return;
+      }
+    } catch {
+      // Clipboard empty or invalid
+    }
+    // Default: just add a new generic component if clipboard fails
+    const center = reactFlowInstance.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+    pushUndoState();
+    markNodeInteracted();
+    setLocalNodes((nds) => [...nds, { id: crypto.randomUUID(), type: 'custom' as const, position: center, data: { label: 'New Component', type: 'mcu' } }]);
+    addOutputLog('[ARCH] Added new component (no clipboard data)');
+  }, [handlePaste, reactFlowInstance, pushUndoState, markNodeInteracted, setLocalNodes, addOutputLog]);
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       // Ignore shortcuts when the user is typing in an input/textarea
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return;
@@ -222,70 +298,44 @@ function ArchitectureFlow() {
         const connectedEdges = localEdges.filter(
           ed => selectedIds.has(ed.source) && selectedIds.has(ed.target),
         );
+        const bundle = {
+          type: 'protopulse-architecture-bundle',
+          nodes: selected,
+          edges: connectedEdges,
+        };
         clipboardRef.current = { nodes: selected, edges: connectedEdges };
-        addOutputLog(`[ARCH] Copied ${selected.length} node(s) and ${connectedEdges.length} edge(s)`);
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
+          addOutputLog(`[ARCH] Copied ${selected.length} node(s) and ${connectedEdges.length} edge(s) to system clipboard`);
+        } catch (err) {
+          console.error('Copy failed', err);
+          addOutputLog(`[ARCH] Copied ${selected.length} node(s) and ${connectedEdges.length} edge(s) to internal clipboard only`);
+        }
       }
-      // Ctrl+V — paste from internal clipboard with new IDs
+      // Ctrl+V — paste from internal or system clipboard with new IDs
       if ((e.metaKey || e.ctrlKey) && e.key === 'v' && !e.shiftKey) {
-        if (!clipboardRef.current || clipboardRef.current.nodes.length === 0) return;
-        e.preventDefault();
-        const { nodes: copiedNodes, edges: copiedEdges } = clipboardRef.current;
-
-        // Build old-ID → new-ID mapping
-        const idMap = new Map<string, string>();
-        for (const n of copiedNodes) {
-          idMap.set(n.id, crypto.randomUUID());
+        let bundle = clipboardRef.current;
+        if (!bundle || !bundle.nodes || bundle.nodes.length === 0) {
+          try {
+            const text = await navigator.clipboard.readText();
+            const parsed = JSON.parse(text);
+            if (parsed.type === 'protopulse-architecture-bundle' || (parsed.nodes && Array.isArray(parsed.nodes))) {
+              bundle = { nodes: parsed.nodes, edges: parsed.edges || [] };
+            }
+          } catch (err) {
+            // Not a valid bundle
+          }
         }
 
-        // Compute paste offset: center of viewport + small jitter
-        const center = reactFlowInstance.screenToFlowPosition({
-          x: window.innerWidth / 2,
-          y: window.innerHeight / 2,
-        });
-        // Bounding box center of copied nodes
-        const minX = Math.min(...copiedNodes.map(n => n.position.x));
-        const minY = Math.min(...copiedNodes.map(n => n.position.y));
-        const maxX = Math.max(...copiedNodes.map(n => n.position.x));
-        const maxY = Math.max(...copiedNodes.map(n => n.position.y));
-        const bboxCenterX = (minX + maxX) / 2;
-        const bboxCenterY = (minY + maxY) / 2;
-        const offsetX = center.x - bboxCenterX + 30;
-        const offsetY = center.y - bboxCenterY + 30;
-
-        const pastedNodes = copiedNodes.map(n => ({
-          ...n,
-          id: idMap.get(n.id)!,
-          position: {
-            x: n.position.x + offsetX,
-            y: n.position.y + offsetY,
-          },
-          selected: true,
-        }));
-
-        const pastedEdges = copiedEdges.map(ed => ({
-          ...ed,
-          id: crypto.randomUUID(),
-          source: idMap.get(ed.source) ?? ed.source,
-          target: idMap.get(ed.target) ?? ed.target,
-        }));
-
-        pushUndoState();
-        markNodeInteracted();
-        if (pastedEdges.length > 0) markEdgeInteracted();
-        // Deselect existing nodes before pasting
-        setLocalNodes(nds => [
-          ...nds.map(n => ({ ...n, selected: false })),
-          ...pastedNodes,
-        ]);
-        if (pastedEdges.length > 0) {
-          setLocalEdges(eds => [...eds, ...pastedEdges]);
+        if (bundle && bundle.nodes && bundle.nodes.length > 0) {
+          e.preventDefault();
+          handlePaste(bundle);
         }
-        addOutputLog(`[ARCH] Pasted ${pastedNodes.length} node(s) and ${pastedEdges.length} edge(s)`);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [undo, redo, localNodes, localEdges, pushUndoState, markNodeInteracted, markEdgeInteracted, setLocalNodes, setLocalEdges, reactFlowInstance, addOutputLog]);
+  }, [undo, redo, localNodes, localEdges, pushUndoState, markNodeInteracted, markEdgeInteracted, setLocalNodes, setLocalEdges, reactFlowInstance, addOutputLog, handlePaste]);
 
   const onNodesDelete = useCallback(
     (deleted: Node[]) => {
@@ -462,37 +512,6 @@ function ArchitectureFlow() {
     copyToClipboard(lines.join('\n'));
     addOutputLog('[ARCH] Copied architecture summary to clipboard');
   }, [nodes, edges, addOutputLog]);
-
-  const handleContextPaste = useCallback(async () => {
-    const center = reactFlowInstance.screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-    try {
-      const text = await navigator.clipboard.readText();
-      const parsed = JSON.parse(text);
-      if (parsed.nodes && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
-        pushUndoState();
-        markNodeInteracted();
-        const pastedNodes = parsed.nodes.map((n: Node, i: number) => ({
-          ...n,
-          id: crypto.randomUUID(),
-          position: { x: center.x + (i * 20), y: center.y + (i * 20) },
-        }));
-        setLocalNodes((nds) => [...nds, ...pastedNodes]);
-        if (parsed.edges && Array.isArray(parsed.edges)) {
-          markEdgeInteracted();
-          const pastedEdges = parsed.edges.map((e: Edge) => ({ ...e, id: crypto.randomUUID() }));
-          setLocalEdges((eds) => [...eds, ...pastedEdges]);
-        }
-        addOutputLog(`[ARCH] Pasted ${pastedNodes.length} node(s) from clipboard`);
-        return;
-      }
-    } catch {
-      // Clipboard empty, unreadable, or not valid architecture JSON — fall through to default
-    }
-    pushUndoState();
-    markNodeInteracted();
-    setLocalNodes((nds) => [...nds, { id: crypto.randomUUID(), type: 'custom' as const, position: center, data: { label: 'New Component', type: 'mcu' } }]);
-    addOutputLog('[ARCH] Added new component (no clipboard data)');
-  }, [reactFlowInstance, pushUndoState, markNodeInteracted, markEdgeInteracted, setLocalNodes, setLocalEdges, addOutputLog]);
 
   const handleContextMenuHint = useCallback(() => {
     if (contextMenuHintShown.current) return;

@@ -21,7 +21,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
-import { navItems } from '@/components/layout/sidebar/sidebar-constants';
+import { navItems, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
 import SidebarHeader from '@/components/layout/sidebar/SidebarHeader';
 import ProjectSettingsPanel from '@/components/layout/sidebar/ProjectSettingsPanel';
 import ProjectExplorer from './sidebar/ProjectExplorer';
@@ -43,6 +43,10 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
   const { history } = useHistory();
   const { addOutputLog } = useOutput();
 
+  const hasDesignContent = (nodes ?? []).length > 0;
+  const visibleNavItems = navItems.filter(item =>
+    alwaysVisibleIds.has(item.view) || hasDesignContent
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [editingName, setEditingName] = useState(false);
@@ -63,6 +67,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
         onClick={onToggleCollapse}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggleCollapse?.(); } }}
       >
+
         {/* UX-015: Back to Projects (collapsed) */}
         <StyledTooltip content="Back to Projects" side="right">
           <Link
@@ -74,17 +79,16 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
             <ChevronLeft className="w-4 h-4" />
           </Link>
         </StyledTooltip>
-        <div className="h-10 flex items-center justify-center border-b border-sidebar-border w-full">
+        <div className="h-10 flex items-center justify-center border-b border-sidebar-border w-full shrink-0">
           <div className="w-7 h-7 bg-primary/10 flex items-center justify-center border border-primary/20 shadow-[0_0_10px_rgba(6,182,212,0.1)]">
             <Layers className="w-4 h-4 text-primary" />
           </div>
         </div>
-        <div className="flex-1 flex flex-col items-center py-3 gap-1">
-          {navItems.map((item) => (
+        <div className="flex-1 flex flex-col items-center py-3 gap-1 overflow-y-auto no-scrollbar">
+          {visibleNavItems.map((item) => (
             <StyledTooltip key={item.view} content={item.label} side="right">
                 <button
                   data-testid={`sidebar-icon-${item.view}`}
-                  title={item.label}
                   className={cn(
                     "w-8 h-8 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
                     activeView === item.view
@@ -101,13 +105,16 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
             </StyledTooltip>
           ))}
         </div>
-        <div className="pb-3">
+        <div className="pb-3 shrink-0">
           <StyledTooltip content="Open project settings" side="right">
               <button
                 data-testid="sidebar-icon-settings"
                 title="Settings"
                 className="w-8 h-8 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-muted/50 transition-colors"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleCollapse?.();
+                }}
               >
                 <Settings className="w-4 h-4" />
               </button>
@@ -131,6 +138,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
         />
       )}
       <div
+        data-testid="sidebar-nav"
         className={cn(
           "bg-sidebar/60 backdrop-blur-xl border-r border-sidebar-border flex flex-col h-full text-sm select-none shrink-0 overflow-hidden",
           "fixed inset-y-0 left-0 z-50 w-64 transform transition-transform lg:relative lg:w-auto lg:translate-x-0",
@@ -138,6 +146,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
         )}
         style={{ '--sidebar-w': `${width}px` } as React.CSSProperties}
       >
+
         <div className="flex flex-col h-full w-64 lg:w-[var(--sidebar-w)]">
           <SidebarHeader onClose={onClose} />
           <SidebarContent

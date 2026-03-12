@@ -666,5 +666,22 @@ describe('PCBInteractionManager', () => {
       handleMouseUp(panState);
       expect(panState.isPanning).toBe(false);
     });
+
+    it('finalizes marquee selection and calls setSelectedInstanceIds', () => {
+      const selectionState = { isDragging: true, origin: { x: 0, y: 0 } };
+      const selectionRect = { x: 10, y: 10, width: 50, height: 50 };
+      const instances = [
+        { id: 1, pcbX: 20, pcbY: 20 }, // inside
+        { id: 2, pcbX: 100, pcbY: 100 }, // outside
+        { id: 3, pcbX: 5, pcbY: 5 }, // outside
+      ] as any[];
+      let selectedIds: number[] = [];
+      const cbs = makeCallbacks({
+        setSelectedInstanceIds: (ids) => { selectedIds = ids; },
+      });
+      handleMouseUp({ isPanning: false, lastMouse: { x: 0, y: 0 } }, selectionState, selectionRect, instances, cbs);
+      expect(selectedIds).toEqual([1]);
+      expect(selectionState.isDragging).toBe(false);
+    });
   });
 });

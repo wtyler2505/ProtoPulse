@@ -117,6 +117,7 @@ function ProjectCard({ project, onSelect }: ProjectCardProps) {
         }
       }}
     >
+
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-semibold text-foreground group-hover:text-[var(--accent-primary,#00F0FF)] transition-colors">

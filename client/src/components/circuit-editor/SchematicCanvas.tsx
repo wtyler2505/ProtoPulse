@@ -29,6 +29,7 @@ import {
   useDeleteCircuitNet,
 } from '@/lib/circuit-editor/hooks';
 import { useComponentParts } from '@/lib/component-editor/hooks';
+import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import SchematicInstanceNode, { type InstanceNodeData } from './SchematicInstanceNode';
 import SchematicPowerNode, { type PowerNodeData } from './SchematicPowerNode';
 import SchematicNetLabelNode, { type NetLabelNodeData } from './SchematicNetLabelNode';
@@ -46,6 +47,7 @@ import { POWER_SYMBOL_DRAG_TYPE, type PowerSymbolDragData } from './PowerSymbolP
 import { CircuitBoard, Plus, Cable, Zap, ClipboardPaste, CheckSquare, ShieldAlert } from 'lucide-react';
 import ERCOverlay from './ERCOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { useToast } from '@/hooks/use-toast';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -194,81 +196,6 @@ function noConnectToNode(nc: NoConnectMarker): Node<NoConnectNodeData> {
 }
 
 // ---------------------------------------------------------------------------
-// Reference designator generation
-// ---------------------------------------------------------------------------
-
-/** Maps part family to standard IEEE/IEC reference designator prefix. */
-const FAMILY_PREFIX: Record<string, string> = {
-  resistor: 'R',
-  capacitor: 'C',
-  inductor: 'L',
-  diode: 'D',
-  led: 'D',
-  transistor: 'Q',
-  mosfet: 'Q',
-  bjt: 'Q',
-  jfet: 'Q',
-  microcontroller: 'U',
-  ic: 'U',
-  opamp: 'U',
-  regulator: 'U',
-  sensor: 'U',
-  module: 'U',
-  connector: 'J',
-  header: 'J',
-  switch: 'SW',
-  relay: 'K',
-  crystal: 'Y',
-  oscillator: 'Y',
-  fuse: 'F',
-  transformer: 'T',
-  speaker: 'LS',
-  buzzer: 'BZ',
-  battery: 'BT',
-  motor: 'M',
-  potentiometer: 'RV',
-  thermistor: 'RT',
-  varistor: 'RV',
-  ferrite: 'FB',
-};
-
-function getRefDesPrefix(part: ComponentPart | undefined): string {
-  if (!part) return 'X';
-  const meta = (part.meta ?? {}) as Partial<PartMeta>;
-  const family = (meta.family || '').toLowerCase().trim();
-  if (family && FAMILY_PREFIX[family]) return FAMILY_PREFIX[family];
-
-  // Fallback: check tags for a matching family keyword
-  const tags = meta.tags ?? [];
-  for (const tag of tags) {
-    const prefix = FAMILY_PREFIX[tag.toLowerCase().trim()];
-    if (prefix) return prefix;
-  }
-
-  return 'X';
-}
-
-function generateRefDes(
-  existingInstances: CircuitInstanceRow[] | undefined,
-  part: ComponentPart | undefined,
-): string {
-  const prefix = getRefDesPrefix(part);
-  const existing = (existingInstances ?? [])
-    .map((inst) => inst.referenceDesignator)
-    .filter((rd) => rd.startsWith(prefix));
-
-  // Extract numeric suffixes and find the max
-  let maxNum = 0;
-  for (const rd of existing) {
-    const numStr = rd.slice(prefix.length);
-    const num = parseInt(numStr, 10);
-    if (!isNaN(num) && num > maxNum) maxNum = num;
-  }
-
-  return `${prefix}${maxNum + 1}`;
-}
-
-// ---------------------------------------------------------------------------
 // Inner canvas (requires ReactFlowProvider ancestor)
 // ---------------------------------------------------------------------------
 
@@ -296,6 +223,8 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const updateNet = useUpdateCircuitNet();
   const deleteNet = useDeleteCircuitNet();
 
+  const { toast } = useToast();
+
   // Local UI state
   const [activeTool, setActiveTool] = useState<SchematicTool>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
@@ -306,6 +235,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
   // Drag guard — prevents server refetch from resetting node mid-drag
   const isDragging = useRef(false);
+  const clipboardRef = useRef<any>(null);
 
   const reactFlowInstance = useReactFlow();
 
@@ -572,9 +502,155 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     reactFlowInstance.fitView({ padding: 0.2 });
   }, [reactFlowInstance]);
 
+  const handlePaste = useCallback(async (bundle: any) => {
+    if (!bundle || bundle.type !== 'protopulse-schematic-bundle') return;
+
+    const center = reactFlowInstance.screenToFlowPosition({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
+
+    const insts = bundle.instances || [];
+    const pwr = bundle.powerSymbols || [];
+    const lbl = bundle.netLabels || [];
+    const ncm = bundle.noConnectMarkers || [];
+
+    if (insts.length === 0 && pwr.length === 0 && lbl.length === 0 && ncm.length === 0) return;
+
+    const allX = [...insts.map((i: any) => i.schematicX), ...pwr.map((p: any) => p.x)];
+    const allY = [...insts.map((i: any) => i.schematicY), ...pwr.map((p: any) => p.y)];
+    const minX = Math.min(...allX);
+    const maxX = Math.max(...allX);
+    const minY = Math.min(...allY);
+    const maxY = Math.max(...allY);
+    const bboxCenterX = (minX + maxX) / 2;
+    const bboxCenterY = (minY + maxY) / 2;
+
+    const offsetX = center.x - bboxCenterX;
+    const offsetY = center.y - bboxCenterY;
+
+    const idMap = new Map<number, number>();
+    const usedRefDes = new Set((instances ?? []).map(i => i.referenceDesignator));
+
+    try {
+      // 1. Create instances
+      for (const inst of insts) {
+        const part = partsMap.get(inst.partId);
+        const refDes = generateRefDes(instances, part);
+        // Ensure unique refDes in the batch
+        let uniqueRefDes = refDes;
+        let suffix = 1;
+        while (usedRefDes.has(uniqueRefDes)) {
+          const prefix = uniqueRefDes.replace(/\d+$/, '');
+          const match = uniqueRefDes.match(/\d+$/);
+          const num = match ? parseInt(match[0], 10) : 0;
+          uniqueRefDes = `${prefix}${num + suffix}`;
+          suffix++;
+        }
+        usedRefDes.add(uniqueRefDes);
+
+        const newInst = await createInstance.mutateAsync({
+          circuitId,
+          partId: inst.partId,
+          referenceDesignator: uniqueRefDes,
+          schematicX: inst.schematicX + offsetX,
+          schematicY: inst.schematicY + offsetY,
+          schematicRotation: inst.schematicRotation,
+          properties: inst.properties,
+        });
+        idMap.set(inst.oldId, newInst.id);
+      }
+
+      // 2. Create nets
+      for (const net of (bundle.nets || [])) {
+        const newSegments = net.segments.map((seg: any) => ({
+          ...seg,
+          fromInstanceId: idMap.get(seg.fromInstanceId),
+          toInstanceId: idMap.get(seg.toInstanceId),
+        })).filter((s: any) => s.fromInstanceId && s.toInstanceId);
+
+        if (newSegments.length > 0) {
+          await createNet.mutateAsync({
+            circuitId,
+            name: `${net.name}_copy`,
+            netType: net.netType,
+            segments: newSegments,
+            style: net.style,
+          });
+        }
+      }
+
+      // 3. Annotations
+      const newPowerSymbols = pwr.map((ps: any) => ({
+        ...ps,
+        id: crypto.randomUUID(),
+        x: ps.x + offsetX,
+        y: ps.y + offsetY,
+      }));
+
+      const newNetLabels = lbl.map((nl: any) => ({
+        ...nl,
+        id: crypto.randomUUID(),
+        x: nl.x + offsetX,
+        y: nl.y + offsetY,
+      }));
+
+      const newNoConnectMarkers = ncm.map((nc: any) => ({
+        ...nc,
+        id: crypto.randomUUID(),
+        x: nc.x + offsetX,
+        y: nc.y + offsetY,
+      }));
+
+      if (newPowerSymbols.length > 0 || newNetLabels.length > 0 || newNoConnectMarkers.length > 0) {
+        await updateDesign.mutateAsync({
+          projectId,
+          id: circuitId,
+          settings: {
+            ...settings,
+            powerSymbols: [...(settings.powerSymbols ?? []), ...newPowerSymbols],
+            netLabels: [...(settings.netLabels ?? []), ...newNetLabels],
+            noConnectMarkers: [...(settings.noConnectMarkers ?? []), ...newNoConnectMarkers],
+          }
+        });
+      }
+
+      toast({
+        title: 'Pasted successfully',
+        description: `Added ${insts.length} components and ${bundle.nets?.length || 0} nets.`,
+      });
+    } catch (err) {
+      console.error('Paste failed', err);
+      toast({
+        variant: 'destructive',
+        title: 'Paste failed',
+        description: 'An error occurred while pasting schematic elements.',
+      });
+    }
+  }, [circuitId, projectId, instances, partsMap, settings, createInstance, createNet, updateDesign, reactFlowInstance, toast]);
+
   const handleOpenShortcuts = useCallback(() => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
   }, []);
+
+  const triggerPaste = useCallback(async () => {
+    let bundle = clipboardRef.current;
+    if (!bundle) {
+      try {
+        const text = await navigator.clipboard.readText();
+        const parsed = JSON.parse(text);
+        if (parsed.type === 'protopulse-schematic-bundle') {
+          bundle = parsed;
+        }
+      } catch (err) {
+        // Not a valid bundle in clipboard
+      }
+    }
+
+    if (bundle) {
+      void handlePaste(bundle);
+    }
+  }, [handlePaste]);
 
   // Drag-over handler — accept component and power symbol drops
   const onDragOver = useCallback((e: React.DragEvent) => {
@@ -696,7 +772,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
   // Keyboard shortcuts (only for implemented tools)
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (
         target.tagName === 'INPUT' ||
@@ -704,6 +780,110 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         target.isContentEditable
       )
         return;
+
+      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl+C — copy selected instances, nets, and annotations
+      if (modKey && e.key.toLowerCase() === 'c' && !e.shiftKey) {
+        const selectedNodes = localNodes.filter(n => n.selected);
+        if (selectedNodes.length === 0) return;
+
+        e.preventDefault();
+
+        const selectedInstanceIds = new Set(
+          selectedNodes
+            .filter(n => n.type === 'schematic-instance')
+            .map(n => (n.data as InstanceNodeData).instanceId)
+        );
+
+        const bundle = {
+          type: 'protopulse-schematic-bundle',
+          instances: (instances ?? [])
+            .filter(inst => selectedInstanceIds.has(inst.id))
+            .map(inst => ({
+              partId: inst.partId,
+              referenceDesignator: inst.referenceDesignator,
+              schematicX: inst.schematicX,
+              schematicY: inst.schematicY,
+              schematicRotation: inst.schematicRotation,
+              properties: inst.properties,
+              oldId: inst.id
+            })),
+          powerSymbols: selectedNodes
+            .filter(n => n.type === 'schematic-power')
+            .map(n => {
+              const d = n.data as PowerNodeData;
+              return (settings.powerSymbols ?? []).find(ps => ps.id === d.symbolId);
+            })
+            .filter(Boolean),
+          netLabels: selectedNodes
+            .filter(n => n.type === 'schematic-net-label')
+            .map(n => {
+              const d = n.data as NetLabelNodeData;
+              return (settings.netLabels ?? []).find(nl => nl.id === d.labelId);
+            })
+            .filter(Boolean),
+          noConnectMarkers: selectedNodes
+            .filter(n => n.type === 'schematic-no-connect')
+            .map(n => {
+              const d = n.data as NoConnectNodeData;
+              return (settings.noConnectMarkers ?? []).find(nc => nc.id === d.markerId);
+            })
+            .filter(Boolean),
+          nets: (nets ?? [])
+            .filter(net => {
+              const segments = (net.segments as any[] ?? []);
+              return segments.some(seg =>
+                selectedInstanceIds.has(seg.fromInstanceId) &&
+                selectedInstanceIds.has(seg.toInstanceId)
+              );
+            })
+            .map(net => ({
+              name: net.name,
+              netType: net.netType,
+              style: net.style,
+              segments: (net.segments as any[] ?? []).filter((seg: any) =>
+                selectedInstanceIds.has(seg.fromInstanceId) &&
+                selectedInstanceIds.has(seg.toInstanceId)
+              )
+            }))
+        };
+
+        clipboardRef.current = bundle;
+        try {
+          await navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
+          toast({
+            title: 'Copied to clipboard',
+            description: `Copied ${bundle.instances.length} components and ${bundle.nets.length} nets.`,
+          });
+        } catch (err) {
+          console.error('Copy failed', err);
+        }
+        return;
+      }
+
+      // Ctrl+V — paste from internal or system clipboard
+      if (modKey && e.key.toLowerCase() === 'v' && !e.shiftKey) {
+        let bundle = clipboardRef.current;
+        if (!bundle) {
+          try {
+            const text = await navigator.clipboard.readText();
+            const parsed = JSON.parse(text);
+            if (parsed.type === 'protopulse-schematic-bundle') {
+              bundle = parsed;
+            }
+          } catch (err) {
+            // Not a valid bundle in clipboard
+          }
+        }
+
+        if (bundle) {
+          e.preventDefault();
+          void handlePaste(bundle);
+        }
+        return;
+      }
 
       switch (e.key.toLowerCase()) {
         case 'v':
@@ -728,7 +908,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleFitView]);
+  }, [handleFitView, localNodes, instances, nets, settings, toast, handlePaste]);
 
   // Context menu handlers
   const handleCtxAddComponent = useCallback(() => {
@@ -939,7 +1119,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           Add Power Symbol
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem data-testid="ctx-paste" onSelect={() => { /* paste handled by keyboard */ }}>
+        <ContextMenuItem data-testid="ctx-paste" onSelect={triggerPaste}>
           <ClipboardPaste className="w-4 h-4 mr-2" />
           Paste
           <span className="ml-auto text-muted-foreground text-[10px]">Ctrl+V</span>

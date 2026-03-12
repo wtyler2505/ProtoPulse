@@ -18,16 +18,19 @@ test.describe('Project Picker Page', () => {
   });
 
   test('project list or empty state is visible', async ({ page }) => {
-    const pickerPage = page.getByTestId('project-picker-page');
-    await expect(pickerPage).toBeVisible();
+    await expect(page.getByTestId('project-picker-page')).toBeVisible();
 
-    // Either the project grid or the empty state should be present
+    // Wait for either the grid or the empty state to appear (loading finished)
     const grid = page.getByTestId('project-grid');
     const empty = page.getByTestId('empty-state');
-    const hasGrid = await grid.isVisible().catch(() => false);
-    const hasEmpty = await empty.isVisible().catch(() => false);
+
+    await expect(grid.or(empty)).toBeVisible({ timeout: 15_000 });
+
+    const hasGrid = await grid.isVisible();
+    const hasEmpty = await empty.isVisible();
     expect(hasGrid || hasEmpty).toBeTruthy();
   });
+
 
   test('create project button exists', async ({ page }) => {
     // Either the "New Project" button (when projects exist) or the "Create Your First Project" button
@@ -39,11 +42,11 @@ test.describe('Project Picker Page', () => {
   });
 
   test('clicking create opens dialog with name and description fields', async ({ page }) => {
-    // Click whichever create button is visible
+    // Wait for either button to be present
     const createBtn = page.getByTestId('button-create-project');
     const firstProjectBtn = page.getByTestId('button-create-first-project');
 
-    if (await createBtn.isVisible().catch(() => false)) {
+    if (await createBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await createBtn.click();
     } else {
       await firstProjectBtn.click();
@@ -59,7 +62,7 @@ test.describe('Project Picker Page', () => {
     const createBtn = page.getByTestId('button-create-project');
     const firstProjectBtn = page.getByTestId('button-create-first-project');
 
-    if (await createBtn.isVisible().catch(() => false)) {
+    if (await createBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await createBtn.click();
     } else {
       await firstProjectBtn.click();
@@ -74,7 +77,7 @@ test.describe('Project Picker Page', () => {
     const createBtn = page.getByTestId('button-create-project');
     const firstProjectBtn = page.getByTestId('button-create-first-project');
 
-    if (await createBtn.isVisible().catch(() => false)) {
+    if (await createBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
       await createBtn.click();
     } else {
       await firstProjectBtn.click();
@@ -83,4 +86,5 @@ test.describe('Project Picker Page', () => {
     const confirmBtn = page.getByTestId('button-confirm-create');
     await expect(confirmBtn).toBeDisabled();
   });
+
 });

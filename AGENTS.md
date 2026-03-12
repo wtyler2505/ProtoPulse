@@ -44,6 +44,16 @@ React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark them
 - `npm test` should pass — verify no regressions after changes
 - Never dismiss any error as "pre-existing" or "unrelated"
 
+### MANDATORY FRONTEND VERIFICATION
+
+Starting immediately, all frontend/UI/UX modifications MUST be tested and fully verified using **Chrome DevTools** (browser automation) **BEFORE** continuing.
+
+1.  **NO EXCEPTIONS:** No UI change is considered complete until verified in a live browser.
+2.  **EMPIRICAL EVIDENCE:** You must provide proof of verification (e.g., console log checks, DOM element inspection via `get_screen`, or visual verification via `take_screenshot`).
+3.  **AUTO-VERIFY:** Use `chrome-devtools` MCP tools to automate the validation of your changes.
+4.  **REPRODUCE FIRST:** For UI bugs, you must first verify the failure in the browser before applying a fix.
+5.  **POST-FIX VALIDATION:** After every UI edit, refresh the page (or navigate) and verify the fix behaves as expected.
+
 ## Key Files
 
 | File | Purpose |

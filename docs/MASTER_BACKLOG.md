@@ -18,9 +18,9 @@
 |----------|-------|-------------|
 | P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, BL-0005 DONE Wave 60) |
 | P1 | 0 | All resolved (BL-0005 Wave 60, 3 verified-done Wave 59, 4 fixed Wave 58, 4 fixed Wave 57, 20+12 Wave 56, 9+4 Wave 55, 7 Wave 54) |
-| P2 | 113 | Feature gaps, polish, partial implementations (18 done Wave 60, 4 done Wave 61, 5 done Wave 62) |
+| P2 | 110 | Feature gaps, polish, partial implementations (18 done Wave 60, 4 done Wave 61, 5 done Wave 62, 3 done Wave 63) |
 | P3 | 142 | Nice-to-have, long-term vision, moonshots |
-| **Total** | **255** | |
+| **Total** | **252** | |
 
 ---
 
@@ -169,10 +169,10 @@
 | BL-0107 | AI placement optimization assistant | OPEN | MF-065 |
 | BL-0108 | Node inline label editing on canvas — double-click to edit on Architecture (CustomNode), Schematic (InstanceNode, PowerNode) | DONE | Wave 61 |
 | BL-0109 | Node properties inspector panel | DONE (Wave 62) — NodeInspectorPanel.tsx: editable label/type/description, position, edge count, delete w/ undo | app-audit §2 |
-| BL-0110 | Canvas copy/paste support — Architecture has Ctrl+C/V (internal clipboard with ID remapping). Schematic + PCB still need it. | PARTIAL | app-audit §2, Wave 60 verified |
-| BL-0111 | Multi-select rectangle on canvas — ReactFlow selectionOnDrag on Architecture + Schematic, PCB marquee types + renderer defined | PARTIAL | Wave 61 |
+| BL-0110 | Canvas copy/paste support — Architecture, Schematic, and PCB all support Ctrl+C/V and context menu paste with ID remapping and system clipboard sync. | DONE | Wave 63 |
+| BL-0111 | Multi-select rectangle on canvas — ReactFlow selectionOnDrag on Architecture + Schematic, custom SVG marquee with point-in-rect selection on PCB. | DONE | Wave 63 |
 | BL-0112 | Empty state guidance on canvases — all 4 canvases now have empty states (Architecture, Schematic, PCB, Breadboard). | DONE | Wave 60 |
-| BL-0113 | Sidebar collapsed nav mismatch — different views shown depending on sidebar state | OPEN | app-audit §1 |
+| BL-0113 | Sidebar collapsed nav mismatch — unified navItems and alwaysVisibleIds across sidebar and tab bar; added scrolling to collapsed sidebar. | DONE | Wave 63 |
 | BL-0114 | URL deep linking per view tab — `/projects/:id/:viewName` with URL priority over localStorage, wouter route extension | DONE | Wave 61 |
 
 ### Simulation & Analysis
@@ -587,4 +587,4 @@
 
 ---
 
-*Last updated: 2026-03-07 — Wave 51 complete (166/166 product analysis, 88 AI tools, 26 ViewModes, ~8784 tests)*
+*Last updated: 2026-03-08 — Wave 63 complete (166/166 product analysis, 88 AI tools, 26 ViewModes, ~8939 tests)*

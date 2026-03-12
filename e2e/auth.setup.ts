@@ -11,16 +11,19 @@ import { test as setup, expect } from '@playwright/test';
 const AUTH_STATE_PATH = 'e2e/.auth-state.json';
 
 setup('authenticate', async ({ request, page }) => {
-  // 1. Register a test user (ignore conflict if already exists)
+  const randomSuffix = Math.floor(Math.random() * 1000000).toString();
+  const username = `e2e-user-${randomSuffix}`;
+  const password = 'E2eTestPass123!';
+
+  // 1. Register a test user
   const registerRes = await request.post('/api/auth/register', {
-    data: { username: 'e2e-test-user', password: 'E2eTestPass123!' },
+    data: { username, password },
   });
-  // 201 = created, 409 = already exists — both are fine
-  expect([201, 409]).toContain(registerRes.status());
+  expect(registerRes.status()).toBe(201);
 
   // 2. Log in to get a session id
   const loginRes = await request.post('/api/auth/login', {
-    data: { username: 'e2e-test-user', password: 'E2eTestPass123!' },
+    data: { username, password },
   });
   expect(loginRes.ok()).toBeTruthy();
   const loginBody = (await loginRes.json()) as { sessionId: string };
@@ -30,9 +33,11 @@ setup('authenticate', async ({ request, page }) => {
   // 3. Seed the session into the browser so AuthProvider sees it
   await page.goto('/');
   await page.evaluate((sid: string) => {
-    localStorage.setItem('session_id', sid);
+    localStorage.setItem('protopulse-session-id', sid);
   }, sessionId);
+
 
   // 4. Save storage state for other tests to reuse
   await page.context().storageState({ path: AUTH_STATE_PATH });
 });
+

@@ -51,6 +51,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DndProvider } from '@/lib/dnd-context';
 import { TutorialProvider } from '@/lib/tutorial-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { navItems, tabDescriptions, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
 
 /**
  * Prefetch lazy-loaded view chunks during idle time so that first-click
@@ -117,42 +118,9 @@ function startPrefetch() {
   }
 }
 
-const tabDescriptions: Record<string, string> = {
-  dashboard: 'Project overview and summary stats',
-  output: 'Export design files and artifacts',
-  architecture: 'Design system block diagram',
-  component_editor: 'Design individual electronic components',
-  schematic: 'Circuit schematic capture and net editing',
-  breadboard: 'Virtual breadboard wiring and component placement',
-  pcb: 'PCB footprint placement and trace routing',
-  procurement: 'Manage bill of materials and sourcing',
-  validation: 'Run design rule checks',
-  design_history: 'Architecture snapshot history and visual diff',
-  lifecycle: 'Component lifecycle tracking and supply chain risk',
-  comments: 'Design review comments and discussions',
-  calculators: 'Electronics engineering calculators',
-  design_patterns: 'Reusable circuit design patterns with educational explanations',
-  storage: 'Inventory tracking and storage location management',
-  kanban: 'Track design tasks with a kanban board',
-  knowledge: 'Electronics reference articles and learning resources',
-  viewer_3d: '3D PCB board visualization and mechanical fit check',
-  community: 'Browse and share community component library',
-  ordering: 'Order PCBs from fabricators with DFM checks',
-  simulation: 'SPICE simulation, AC/DC analysis, and waveform viewer',
-  serial_monitor: 'Serial monitor for Arduino, ESP32, and other hardware devices',
-  circuit_code: 'Arduino/C++ code editor with hardware-aware generation and upload',
-  generative_design: 'AI-guided generative circuit design with evolutionary optimization',
-  digital_twin: 'Live hardware digital twin with IoT telemetry and sim comparison',
-};
-
 /** All valid ViewMode values — used for URL deep link validation. */
-const VALID_VIEW_MODES: ReadonlySet<string> = new Set<ViewMode>([
-  'dashboard', 'project_explorer', 'output', 'architecture', 'component_editor',
-  'schematic', 'breadboard', 'pcb', 'procurement', 'validation', 'simulation',
-  'design_history', 'lifecycle', 'comments', 'calculators', 'design_patterns',
-  'storage', 'kanban', 'knowledge', 'viewer_3d', 'community', 'ordering',
-  'serial_monitor', 'circuit_code', 'generative_design', 'digital_twin',
-]);
+const VALID_VIEW_MODES: ReadonlySet<string> = new Set<string>(navItems.map(i => i.view).concat(['dashboard', 'project_explorer', 'output', 'design_history', 'lifecycle', 'comments']));
+
 
 function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
   const isDragging = useRef(false);
@@ -468,46 +436,14 @@ function WorkspaceContent() {
     dispatch({ type: 'SET_CHAT_WIDTH', width: Math.max(280, Math.min(600, ws.chatWidth + delta)) });
   }, [ws.chatWidth]);
 
-  /* AS-02: Reorder tabs — Architecture first, Output last (follows hardware design workflow) */
-  const tabs = useMemo<{ id: ViewMode; label: string; icon: React.ComponentType<{ className?: string }> | null }[]>(() => [
-    { id: 'project_explorer', label: 'Project Explorer', icon: null },
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'architecture', label: 'Architecture', icon: LayoutGrid },
-    { id: 'schematic', label: 'Schematic', icon: CircuitBoard },
-    { id: 'breadboard', label: 'Breadboard', icon: Grid3X3 },
-    { id: 'pcb', label: 'PCB', icon: Microchip },
-    { id: 'component_editor', label: 'Component Editor', icon: Cpu },
-    { id: 'procurement', label: 'Procurement', icon: Package },
-    { id: 'validation', label: 'Validation', icon: Activity },
-    { id: 'lifecycle', label: 'Lifecycle', icon: HeartPulse },
-    { id: 'design_history', label: 'History', icon: History },
-    { id: 'comments', label: 'Comments', icon: MessageSquare },
-    { id: 'calculators', label: 'Calculators', icon: Calculator },
-    { id: 'design_patterns', label: 'Patterns', icon: BookOpen },
-    { id: 'storage', label: 'Inventory', icon: Warehouse },
-    { id: 'kanban', label: 'Tasks', icon: KanbanSquare },
-    { id: 'knowledge', label: 'Learn', icon: BookMarked },
-    { id: 'viewer_3d', label: '3D View', icon: Box },
-    { id: 'community', label: 'Community', icon: Globe },
-    { id: 'ordering', label: 'Order PCB', icon: ShoppingBag },
-    { id: 'simulation', label: 'Simulation', icon: Zap },
-    { id: 'serial_monitor', label: 'Serial', icon: Plug },
-    { id: 'circuit_code', label: 'Code', icon: Code2 },
-    { id: 'generative_design', label: 'Generative', icon: Wand2 },
-    { id: 'digital_twin', label: 'Twin', icon: Radio },
-    { id: 'output', label: 'Exports', icon: TerminalSquare },
-  ], []);
-
   /* UI-18: Progressive disclosure — hide advanced tabs until prerequisite content exists.
      Always visible: Dashboard, Architecture, Component Editor (entry points).
      Require architecture nodes: Schematic, Breadboard, PCB, Procurement, Validation, Output. */
   const hasDesignContent = (nodes ?? []).length > 0;
-  const alwaysVisibleIds = new Set<ViewMode>(['dashboard', 'architecture', 'component_editor', 'calculators', 'design_patterns', 'kanban', 'knowledge', 'community', 'ordering', 'simulation', 'serial_monitor', 'circuit_code', 'generative_design', 'digital_twin']);
 
   const visibleTabs = useMemo(
-    () => tabs.filter(t => t.id !== 'project_explorer' && (alwaysVisibleIds.has(t.id) || hasDesignContent)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tabs, hasDesignContent],
+    () => navItems.filter(t => t.view !== 'project_explorer' && (alwaysVisibleIds.has(t.view) || hasDesignContent)),
+    [hasDesignContent]
   );
 
   const validationErrorCount = (issues ?? []).filter(i => i.severity === 'error').length;
@@ -525,8 +461,8 @@ function WorkspaceContent() {
 
   /* RS-02: Mobile bottom nav primary/secondary split */
   const primaryMobileTabIds = useMemo(() => new Set<ViewMode>(['dashboard', 'architecture', 'schematic', 'component_editor', 'procurement']), []);
-  const primaryMobileTabs = useMemo(() => visibleTabs.filter(t => primaryMobileTabIds.has(t.id)), [visibleTabs, primaryMobileTabIds]);
-  const secondaryMobileTabs = useMemo(() => visibleTabs.filter(t => !primaryMobileTabIds.has(t.id)), [visibleTabs, primaryMobileTabIds]);
+  const primaryMobileTabs = useMemo(() => visibleTabs.filter(t => primaryMobileTabIds.has(t.view)), [visibleTabs, primaryMobileTabIds]);
+  const secondaryMobileTabs = useMemo(() => visibleTabs.filter(t => !primaryMobileTabIds.has(t.view)), [visibleTabs, primaryMobileTabIds]);
 
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden font-sans text-foreground">
@@ -576,7 +512,7 @@ function WorkspaceContent() {
 
         {!ws.sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
 
-        <main id="main-content" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-background">
+        <main id="main-content" data-testid="workspace-main" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-background">
           <h2 className="sr-only">Design workspace</h2>
           <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden lg:flex items-center px-1 gap-0 z-10">
             {/* AS-04: Larger toggle buttons with better contrast */}
@@ -602,18 +538,18 @@ function WorkspaceContent() {
             {/* AS-05 + RS-09: Scrollable tab bar with fade indicators */}
             <ScrollableTabBar>
               {visibleTabs.map((tab) => (
-                <StyledTooltip key={tab.id} content={tabDescriptions[tab.id] || tab.label} side="bottom">
+                <StyledTooltip key={tab.view} content={tabDescriptions[tab.view] || tab.label} side="bottom">
                   <button
                     role="tab"
-                    id={`tab-${tab.id}`}
-                    aria-selected={activeView === tab.id}
+                    id={`tab-${tab.view}`}
+                    aria-selected={activeView === tab.view}
                     aria-controls="main-panel"
-                    data-testid={`tab-${tab.id}`}
-                    onClick={() => setActiveView(tab.id)}
+                    data-testid={`tab-${tab.view}`}
+                    onClick={() => setActiveView(tab.view)}
                     className={cn(
                       /* AS-10: text-sm instead of text-xs; AS-12: h-[3px] accent */
                       "h-8 px-4 flex items-center gap-2 text-sm font-medium transition-all relative top-[1px] whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                      activeView === tab.id
+                      activeView === tab.view
                         ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[3px] before:bg-primary before:rounded-b-sm"
                         : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"
                     )}
@@ -622,17 +558,17 @@ function WorkspaceContent() {
                     {tab.icon && <tab.icon className="w-3.5 h-3.5 [stroke-width:1.75]" />}
                     {tab.label}
                     {/* UI-18: Badge counts for Validation and Procurement */}
-                    {tab.id === 'validation' && validationErrorCount > 0 && (
+                    {tab.view === 'validation' && validationErrorCount > 0 && (
                       <span data-testid="tab-validation-badge" className="text-[10px] font-medium bg-destructive/20 text-destructive px-1.5 py-0.5 tabular-nums rounded-sm">
                         {validationErrorCount}
                       </span>
                     )}
-                    {tab.id === 'validation' && validationErrorCount === 0 && validationWarningCount > 0 && (
+                    {tab.view === 'validation' && validationErrorCount === 0 && validationWarningCount > 0 && (
                       <span data-testid="tab-validation-badge" className="text-[10px] font-medium bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 tabular-nums rounded-sm">
                         {validationWarningCount}
                       </span>
                     )}
-                    {tab.id === 'procurement' && bomCount > 0 && (
+                    {tab.view === 'procurement' && bomCount > 0 && (
                       <span data-testid="tab-procurement-badge" className="text-[10px] font-medium bg-muted/50 text-muted-foreground px-1.5 py-0.5 tabular-nums rounded-sm">
                         {bomCount}
                       </span>
@@ -641,6 +577,7 @@ function WorkspaceContent() {
                 </StyledTooltip>
               ))}
             </ScrollableTabBar>
+
 
             <div className="border-b border-border h-full w-2 shrink-0"></div>
             <div className="w-px h-5 bg-border ml-1" />
@@ -981,17 +918,17 @@ function WorkspaceContent() {
       <div data-testid="mobile-bottom-nav" className="h-16 border-t border-border bg-card/60 backdrop-blur-xl flex items-center justify-around lg:hidden px-2">
         {primaryMobileTabs.map((tab) => (
           <button
-            key={tab.id}
-            data-testid={`bottom-nav-${tab.id}`}
-            onClick={() => setActiveView(tab.id)}
+            key={tab.view}
+            data-testid={`bottom-nav-${tab.view}`}
+            onClick={() => setActiveView(tab.view)}
             className={cn(
               "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 transition-colors relative min-w-[44px] min-h-[44px] rounded-md",
-              activeView === tab.id
+              activeView === tab.view
                 ? "text-primary bg-primary/10"
                 : "text-muted-foreground"
             )}
           >
-            {activeView === tab.id && (
+            {activeView === tab.view && (
               <div className="absolute top-0 inset-x-2 h-[2px] bg-primary rounded-b-full" />
             )}
             {tab.icon && <tab.icon className="w-5 h-5" />}
@@ -1004,12 +941,12 @@ function WorkspaceContent() {
               data-testid="bottom-nav-more"
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 px-2 py-1.5 transition-colors relative min-w-[44px] min-h-[44px] rounded-md",
-                secondaryMobileTabs.some(t => t.id === activeView)
+                secondaryMobileTabs.some(t => t.view === activeView)
                   ? "text-primary bg-primary/10"
                   : "text-muted-foreground"
               )}
             >
-              {secondaryMobileTabs.some(t => t.id === activeView) && (
+              {secondaryMobileTabs.some(t => t.view === activeView) && (
                 <div className="absolute top-0 inset-x-2 h-[2px] bg-primary rounded-b-full" />
               )}
               <MoreHorizontal className="w-5 h-5" />
@@ -1019,15 +956,15 @@ function WorkspaceContent() {
           <PopoverContent side="top" align="end" className="w-48 p-1">
             {secondaryMobileTabs.map((tab) => (
               <button
-                key={tab.id}
-                data-testid={`bottom-nav-${tab.id}`}
+                key={tab.view}
+                data-testid={`bottom-nav-${tab.view}`}
                 onClick={() => {
-                  setActiveView(tab.id);
+                  setActiveView(tab.view);
                   dispatch({ type: 'SET_MORE_MENU_OPEN', open: false });
                 }}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-md transition-colors",
-                  activeView === tab.id
+                  activeView === tab.view
                     ? "text-primary bg-primary/10"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 )}
@@ -1039,6 +976,7 @@ function WorkspaceContent() {
           </PopoverContent>
         </Popover>
       </div>
+
     </div>
   );
 }

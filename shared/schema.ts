@@ -604,3 +604,36 @@ export const insertPcbOrderSchema = createInsertSchema(pcbOrders).omit({
 
 export type PcbOrder = typeof pcbOrders.$inferSelect;
 export type InsertPcbOrder = z.infer<typeof insertPcbOrderSchema>;
+
+// ---------------------------------------------------------------------------
+// PCB Zones (BL-0100) — keep-out, keep-in, and copper pour regions
+// ---------------------------------------------------------------------------
+
+export const pcbZones = pgTable('pcb_zones', {
+  id: serial('id').primaryKey(),
+  projectId: integer('project_id').notNull().references(() => projects.id, { onDelete: 'cascade' }),
+  zoneType: varchar('zone_type', { length: 50 }).notNull(), // 'pour', 'keepout', 'keepin'
+  layer: varchar('layer', { length: 50 }).notNull(),
+  points: jsonb('points').notNull().default([]), // Array of {x, y}
+  netId: integer('net_id').references(() => circuitNets.id, { onDelete: 'set null' }),
+  name: text('name'),
+  properties: jsonb('properties').notNull().default({}), // clearance, minWidth, etc.
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => [
+  index('idx_pcb_zones_project').on(table.projectId),
+  index('idx_pcb_zones_layer').on(table.layer),
+]);
+
+export const insertPcbZoneSchema = createInsertSchema(pcbZones).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  zoneType: z.enum(['pour', 'keepout', 'keepin']),
+  points: z.array(z.object({ x: z.number(), y: z.number() })),
+});
+
+export type PcbZone = typeof pcbZones.$inferSelect;
+export type InsertPcbZone = z.infer<typeof insertPcbZoneSchema>;
+

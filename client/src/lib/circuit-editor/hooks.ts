@@ -105,6 +105,13 @@ export function useCreateCircuitInstance() {
       schematicX?: number;
       schematicY?: number;
       schematicRotation?: number;
+      breadboardX?: number | null;
+      breadboardY?: number | null;
+      breadboardRotation?: number | null;
+      pcbX?: number | null;
+      pcbY?: number | null;
+      pcbRotation?: number | null;
+      pcbSide?: 'front' | 'back';
       properties?: Record<string, string>;
     }) => {
       const { circuitId, ...body } = data;

@@ -140,6 +140,9 @@ describe('Sidebar', () => {
   });
 
   it('collapsed nav icon changes active view on click', () => {
+    mockNodes = [
+      { id: 'n1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'MCU', type: 'mcu' } },
+    ];
     renderSidebar({ collapsed: true });
     const procurementBtn = screen.getByTestId('sidebar-icon-procurement');
     fireEvent.click(procurementBtn);

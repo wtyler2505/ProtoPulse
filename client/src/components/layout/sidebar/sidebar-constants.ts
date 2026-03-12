@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+  LayoutDashboard,
   LayoutGrid,
   Cpu,
   Activity,
@@ -19,6 +20,11 @@ import {
   Code2,
   Wand2,
   Radio,
+  Calculator,
+  BookOpen,
+  History,
+  HeartPulse,
+  MessageSquare,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -29,6 +35,7 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
+  { icon: LayoutDashboard, view: 'dashboard', label: 'Dashboard' },
   { icon: LayoutGrid, view: 'architecture', label: 'Architecture' },
   { icon: CircuitBoard, view: 'schematic', label: 'Schematic' },
   { icon: Code2, view: 'circuit_code', label: 'Circuit Code' },
@@ -45,7 +52,63 @@ export const navItems: NavItem[] = [
   { icon: ShoppingBag, view: 'ordering', label: 'Order PCB' },
   { icon: Warehouse, view: 'storage', label: 'Inventory' },
   { icon: Plug, view: 'serial_monitor', label: 'Serial Monitor' },
-  { icon: Wand2, view: 'generative_design', label: 'Generative Design' },
+  { icon: Calculator, view: 'calculators', label: 'Calculators' },
+  { icon: BookOpen, view: 'design_patterns', label: 'Patterns' },
+  { icon: History, view: 'design_history', label: 'History' },
+  { icon: HeartPulse, view: 'lifecycle', label: 'Lifecycle' },
+  { icon: MessageSquare, view: 'comments', label: 'Comments' },
+  { icon: Wand2, view: 'generative_design', label: 'Generative' },
   { icon: Radio, view: 'digital_twin', label: 'Digital Twin' },
-  { icon: TerminalSquare, view: 'output', label: 'Output' },
+  { icon: TerminalSquare, view: 'output', label: 'Exports' },
 ];
+
+
+export const tabDescriptions: Record<string, string> = {
+  dashboard: 'Project overview and summary stats',
+  output: 'Export design files and artifacts',
+  architecture: 'Design system block diagram',
+  component_editor: 'Design individual electronic components',
+  schematic: 'Circuit schematic capture and net editing',
+  breadboard: 'Virtual breadboard wiring and component placement',
+  pcb: 'PCB footprint placement and trace routing',
+  procurement: 'Manage bill of materials and sourcing',
+  validation: 'Run design rule checks',
+  design_history: 'Architecture snapshot history and visual diff',
+  lifecycle: 'Component lifecycle tracking and supply chain risk',
+  comments: 'Design review comments and discussions',
+  calculators: 'Electronics engineering calculators',
+  design_patterns: 'Reusable circuit design patterns with educational explanations',
+  storage: 'Inventory tracking and storage location management',
+  kanban: 'Track design tasks with a kanban board',
+  knowledge: 'Electronics reference articles and learning resources',
+  viewer_3d: '3D PCB board visualization and mechanical fit check',
+  community: 'Browse and share community component library',
+  ordering: 'Order PCBs from fabricators with DFM checks',
+  simulation: 'SPICE simulation, AC/DC analysis, and waveform viewer',
+  serial_monitor: 'Serial monitor for Arduino, ESP32, and other hardware devices',
+  circuit_code: 'Arduino/C++ code editor with hardware-aware generation and upload',
+  generative_design: 'AI-guided generative circuit design with evolutionary optimization',
+  digital_twin: 'Live hardware digital twin with IoT telemetry and sim comparison',
+};
+
+export const alwaysVisibleIds = new Set<ViewMode>([
+  'dashboard',
+  'architecture',
+  'component_editor',
+  'calculators',
+  'design_patterns',
+  'kanban',
+  'knowledge',
+  'community',
+  'ordering',
+  'simulation',
+  'serial_monitor',
+  'circuit_code',
+  'generative_design',
+  'digital_twin',
+  'design_history',
+  'lifecycle',
+  'comments',
+  'output',
+]);
+
