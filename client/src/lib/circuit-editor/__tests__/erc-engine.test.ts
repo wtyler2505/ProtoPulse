@@ -27,6 +27,7 @@ function makeInstance(
     id,
     circuitId: 1,
     partId,
+    subDesignId: null,
     referenceDesignator: `U${id}`,
     schematicX: x,
     schematicY: y,

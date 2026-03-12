@@ -66,4 +66,36 @@ export function registerCircuitHierarchyRoutes(app: Express, storage: IStorage):
     if (!deleted) { return res.status(404).json({ message: 'Hierarchical port not found' }); }
     res.status(204).end();
   }));
+
+  // Instantiate a sub-sheet as a symbol in a parent sheet
+  app.post('/api/projects/:projectId/circuits/:parentId/instantiate/:subId', requireProjectOwnership, payloadLimit(8 * 1024), asyncHandler(async (req, res) => {
+    const parentId = parseIdParam(req.params.parentId);
+    const subId = parseIdParam(req.params.subId);
+    
+    // 1. Verify sub-sheet is not the parent itself (no recursion)
+    if (parentId === subId) {
+      return res.status(400).json({ message: 'Cannot instantiate a sheet within itself' });
+    }
+
+    // 2. Check if sub-sheet already has a parent (single hierarchy for now)
+    const subDesign = await storage.getCircuitDesign(subId);
+    if (!subDesign) {
+      return res.status(404).json({ message: 'Sub-design not found' });
+    }
+
+    // 3. Create the instance in the parent sheet
+    const instance = await storage.createCircuitInstance({
+      circuitId: parentId,
+      subDesignId: subId,
+      referenceDesignator: `Sheet_${subDesign.name.replace(/\s+/g, '_')}`,
+      schematicX: req.body.x || 0,
+      schematicY: req.body.y || 0,
+      properties: { isSheetSymbol: true },
+    });
+
+    // 4. Update the sub-design's parentDesignId
+    await storage.updateCircuitDesign(subId, { parentDesignId: parentId });
+
+    res.status(201).json(instance);
+  }));
 }

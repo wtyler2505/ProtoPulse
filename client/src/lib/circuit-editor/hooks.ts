@@ -130,6 +130,8 @@ export function useUpdateCircuitInstance() {
     mutationFn: async (data: {
       circuitId: number;
       id: number;
+      partId?: number | null;
+      subDesignId?: number | null;
       referenceDesignator?: string;
       schematicX?: number;
       schematicY?: number;
@@ -442,6 +444,20 @@ export function useDeleteHierarchicalPort() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['hierarchical-ports', variables.projectId, variables.designId] });
+    },
+  });
+}
+
+export function useInstantiateSubSheet() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: { projectId: number; parentId: number; subId: number; x?: number; y?: number }) => {
+      const res = await apiRequest('POST', `/api/projects/${data.projectId}/circuits/${data.parentId}/instantiate/${data.subId}`, { x: data.x, y: data.y });
+      return res.json() as Promise<CircuitInstanceRow>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['circuit-instances', variables.parentId] });
+      queryClient.invalidateQueries({ queryKey: ['circuit-designs', variables.projectId] });
     },
   });
 }

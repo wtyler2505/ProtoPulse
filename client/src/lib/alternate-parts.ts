@@ -1023,6 +1023,56 @@ export class AlternatePartsEngine {
     return mapping;
   }
 
+  /**
+   * Live pin compatibility check for schematic replacement (BL-0105).
+   * Compares two parts and returns detailed compatibility info.
+   */
+  checkPinCompatibility(original: PartReference, replacement: PartReference): {
+    compatible: boolean;
+    level: 'exact' | 'partial' | 'incompatible';
+    matches: string[];
+    missing: string[];
+    extra: string[];
+    warnings: string[];
+  } {
+    const origPins = original.pinout || [];
+    const replPins = replacement.pinout || [];
+    
+    if (origPins.length === 0 || replPins.length === 0) {
+      return {
+        compatible: original.pinCount === replacement.pinCount,
+        level: original.pinCount === replacement.pinCount ? 'partial' : 'incompatible',
+        matches: [],
+        missing: [],
+        extra: [],
+        warnings: ['No pinout data available for one or both parts. Matching by pin count only.'],
+      };
+    }
+
+    const origSet = new Set(origPins.map(p => p.toUpperCase()));
+    const replSet = new Set(replPins.map(p => p.toUpperCase()));
+
+    const matches = origPins.filter(p => replSet.has(p.toUpperCase()));
+    const missing = origPins.filter(p => !replSet.has(p.toUpperCase()));
+    const extra = replPins.filter(p => !origSet.has(p.toUpperCase()));
+
+    let level: 'exact' | 'partial' | 'incompatible' = 'incompatible';
+    if (missing.length === 0 && extra.length === 0) {
+      level = 'exact';
+    } else if (matches.length > 0 && matches.length >= origPins.length * 0.7) {
+      level = 'partial';
+    }
+
+    return {
+      compatible: level !== 'incompatible',
+      level,
+      matches,
+      missing,
+      extra,
+      warnings: level === 'partial' ? [`${missing.length} original pins missing in replacement.`] : [],
+    };
+  }
+
   // -------------------------------------------------------------------------
   // Seeding
   // -------------------------------------------------------------------------

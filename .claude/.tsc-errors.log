@@ -890,3 +890,474 @@ client/src/components/circuit-editor/PCBLayoutView.tsx(826,66): error TS2304: Ca
 
 
 12:07:14 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:24:33 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:26:59 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:27:00 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:27:19 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:27:25 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:27:28 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:27:40 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:27:45 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:27:52 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:27:56 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:28:06 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(80,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(81,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:28:09 AM - Found 6 errors. Watching for file changes.
+[2J[3J[H12:28:20 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(80,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(81,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:28:26 AM - Found 6 errors. Watching for file changes.
+[2J[3J[H12:28:31 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(80,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(81,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:28:37 AM - Found 6 errors. Watching for file changes.
+[2J[3J[H12:29:02 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(82,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:29:04 AM - Found 6 errors. Watching for file changes.
+[2J[3J[H12:29:15 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(82,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(256,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:29:17 AM - Found 7 errors. Watching for file changes.
+[2J[3J[H12:40:24 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(82,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(256,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:40:31 AM - Found 7 errors. Watching for file changes.
+[2J[3J[H12:41:33 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(82,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(256,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:41:37 AM - Found 8 errors. Watching for file changes.
+[2J[3J[H12:41:46 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(84,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(257,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:41:50 AM - Found 8 errors. Watching for file changes.
+[2J[3J[H12:42:31 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(84,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(257,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(289,7): error TS2353: Object literal may only specify known properties, and 'instanceId' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:42:34 AM - Found 9 errors. Watching for file changes.
+[2J[3J[H12:44:12 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(84,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(257,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(289,7): error TS2353: Object literal may only specify known properties, and 'instanceId' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:44:15 AM - Found 9 errors. Watching for file changes.
+[2J[3J[H12:45:07 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(84,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(257,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(289,7): error TS2353: Object literal may only specify known properties, and 'instanceId' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:45:11 AM - Found 9 errors. Watching for file changes.
+[2J[3J[H12:45:19 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(84,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(257,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(289,7): error TS2353: Object literal may only specify known properties, and 'instanceId' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:45:22 AM - Found 9 errors. Watching for file changes.
+[2J[3J[H12:45:31 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(83,16): error TS2304: Cannot find name 'CircuitDesignRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(84,31): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(257,41): error TS2304: Cannot find name 'HierarchicalPortRow'.
+client/src/components/circuit-editor/SchematicCanvas.tsx(289,7): error TS2353: Object literal may only specify known properties, and 'instanceId' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:45:35 AM - Found 9 errors. Watching for file changes.
+[2J[3J[H12:47:50 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(289,7): error TS2353: Object literal may only specify known properties, and 'instanceId' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:47:54 AM - Found 6 errors. Watching for file changes.
+[2J[3J[H12:48:01 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx(217,52): error TS7006: Parameter 'p' implicitly has an 'any' type.
+client/src/components/circuit-editor/SchematicCanvas.tsx(290,7): error TS2353: Object literal may only specify known properties, and 'update' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:48:05 AM - Found 6 errors. Watching for file changes.
+[2J[3J[H12:48:18 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(290,7): error TS2353: Object literal may only specify known properties, and 'update' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/spice-exporter.test.ts(14,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:48:20 AM - Found 5 errors. Watching for file changes.
+[2J[3J[H12:48:58 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(290,7): error TS2353: Object literal may only specify known properties, and 'update' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+server/__tests__/export-snapshot.test.ts(282,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:48:59 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:49:18 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(290,7): error TS2353: Object literal may only specify known properties, and 'update' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+server/__tests__/ai-tools-validation.test.ts(136,3): error TS2322: Type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId?: number | null | undefined; referenceDesignator: string; schematicX: number; schematicY: number; ... 8 more ...; properties: unknown; }' is not assignable to type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+  Types of property 'subDesignId' are incompatible.
+    Type 'number | null | undefined' is not assignable to type 'number | null'.
+      Type 'undefined' is not assignable to type 'number | null'.
+
+12:49:19 AM - Found 3 errors. Watching for file changes.
+[2J[3J[H12:49:38 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(290,7): error TS2353: Object literal may only specify known properties, and 'update' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+client/src/lib/circuit-editor/__tests__/erc-engine.test.ts(26,3): error TS2741: Property 'subDesignId' is missing in type '{ id: number; circuitId: number; partId: number; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; breadboardX: null; breadboardY: null; breadboardRotation: null; ... 5 more ...; createdAt: Date; }' but required in type '{ id: number; createdAt: Date; circuitId: number; partId: number | null; subDesignId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; ... 7 more ...; properties: unknown; }'.
+
+12:49:40 AM - Found 2 errors. Watching for file changes.
+[2J[3J[H12:49:58 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(290,7): error TS2353: Object literal may only specify known properties, and 'update' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+
+12:49:59 AM - Found 1 error. Watching for file changes.
+[2J[3J[H12:50:49 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(290,7): error TS2353: Object literal may only specify known properties, and 'partId' does not exist in type '{ circuitId: number; id: number; referenceDesignator?: string | undefined; schematicX?: number | undefined; schematicY?: number | undefined; schematicRotation?: number | undefined; ... 7 more ...; properties?: Record<...> | undefined; }'.
+
+12:50:52 AM - Found 1 error. Watching for file changes.
+[2J[3J[H12:51:58 AM - File change detected. Starting incremental compilation...
+
+client/src/components/circuit-editor/SchematicCanvas.tsx(288,37): error TS2345: Argument of type '{ id: number; partId: number; }' is not assignable to parameter of type '{ circuitId: number; id: number; partId?: number | null | undefined; subDesignId?: number | null | undefined; referenceDesignator?: string | undefined; schematicX?: number | undefined; ... 9 more ...; properties?: Record<...> | undefined; }'.
+  Property 'circuitId' is missing in type '{ id: number; partId: number; }' but required in type '{ circuitId: number; id: number; partId?: number | null | undefined; subDesignId?: number | null | undefined; referenceDesignator?: string | undefined; schematicX?: number | undefined; ... 9 more ...; properties?: Record<...> | undefined; }'.
+
+12:52:16 AM - Found 1 error. Watching for file changes.
+[2J[3J[H12:52:16 AM - File change detected. Starting incremental compilation...
+
+
+12:52:19 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:58:16 AM - File change detected. Starting incremental compilation...
+
+
+12:58:17 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:58:28 AM - File change detected. Starting incremental compilation...
+
+
+12:58:29 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:05:35 AM - File change detected. Starting incremental compilation...
+
+
+1:05:37 AM - Found 0 errors. Watching for file changes.

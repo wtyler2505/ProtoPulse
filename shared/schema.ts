@@ -312,6 +312,7 @@ export const circuitInstances = pgTable("circuit_instances", {
   id: serial("id").primaryKey(),
   circuitId: integer("circuit_id").notNull().references(() => circuitDesigns.id, { onDelete: "cascade" }),
   partId: integer("part_id").references(() => componentParts.id, { onDelete: 'set null' }),
+  subDesignId: integer("sub_design_id").references(() => circuitDesigns.id, { onDelete: 'set null' }), // For hierarchical sheets
   referenceDesignator: text("reference_designator").notNull(),
   schematicX: real("schematic_x").notNull().default(0),
   schematicY: real("schematic_y").notNull().default(0),

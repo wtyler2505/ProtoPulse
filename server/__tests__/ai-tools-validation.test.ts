@@ -137,6 +137,7 @@ function makeCircuitInstance(overrides: Partial<CircuitInstanceRow> = {}): Circu
     id: 1,
     circuitId: 1,
     partId: null,
+    subDesignId: null,
     referenceDesignator: 'U1',
     schematicX: 100,
     schematicY: 100,

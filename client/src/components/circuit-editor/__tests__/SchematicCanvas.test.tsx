@@ -10,7 +10,7 @@ import SchematicCanvas from '../SchematicCanvas';
 
 const mockCreateInstance = { mutateAsync: vi.fn() };
 const mockUpdateDesign = { mutateAsync: vi.fn() };
-const mockUpdateInstance = { mutate: vi.fn() };
+const mockUpdateInstance = { mutate: vi.fn(), mutateAsync: vi.fn() };
 const mockDeleteInstance = { mutate: vi.fn() };
 const mockCreateNet = { mutateAsync: vi.fn() };
 const mockUpdateNet = { mutate: vi.fn() };
@@ -32,6 +32,8 @@ vi.mock('@/lib/circuit-editor/hooks', () => ({
   useCircuitInstances: () => mockUseCircuitInstances(),
   useCircuitNets: () => mockUseCircuitNets(),
   useCircuitWires: () => mockUseCircuitWires(),
+  useChildDesigns: () => ({ data: [] }),
+  useHierarchicalPorts: () => ({ data: [] }),
   useCreateCircuitInstance: () => mockCreateInstance,
   useUpdateCircuitDesign: () => mockUpdateDesign,
   useUpdateCircuitInstance: () => mockUpdateInstance,
@@ -67,6 +69,7 @@ vi.mock('@xyflow/react', () => ({
   useReactFlow: () => ({
     fitView: mockFitView,
     screenToFlowPosition: mockScreenToFlowPosition,
+    getNodes: vi.fn(() => []),
   }),
   useNodesState: (initial: any) => mockUseNodesState(initial),
   useEdgesState: (initial: any) => mockUseEdgesState(initial),

@@ -283,6 +283,7 @@ function makeSpiceInstance(overrides: Partial<CircuitInstanceRow> = {}): Circuit
     id: 1,
     circuitId: 1,
     partId: 100,
+    subDesignId: null,
     referenceDesignator: 'R1',
     schematicX: 0,
     schematicY: 0,

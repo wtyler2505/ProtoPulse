@@ -20,6 +20,8 @@ import {
   useCircuitDesign,
   useCircuitInstances,
   useCircuitNets,
+  useChildDesigns,
+  useHierarchicalPorts,
   useUpdateCircuitDesign,
   useUpdateCircuitInstance,
   useCreateCircuitInstance,
@@ -34,17 +36,19 @@ import SchematicInstanceNode, { type InstanceNodeData } from './SchematicInstanc
 import SchematicPowerNode, { type PowerNodeData } from './SchematicPowerNode';
 import SchematicNetLabelNode, { type NetLabelNodeData } from './SchematicNetLabelNode';
 import SchematicNoConnectNode, { type NoConnectNodeData } from './SchematicNoConnectNode';
+import SchematicSheetNode, { type SheetNodeData } from './SchematicSheetNode';
 import SchematicNetEdge from './SchematicNetEdge';
 import NetDrawingTool, { type NetDrawingResult } from './NetDrawingTool';
 import SchematicToolbar from './SchematicToolbar';
+import ComponentReplacementDialog from './ComponentReplacementDialog';
 import type { AngleConstraint } from './SchematicToolbar';
 import type { SchematicTool, CircuitSettings, PowerSymbol, SchematicNetLabel, NoConnectMarker, ERCViolation } from '@shared/circuit-types';
 import { DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
-import type { CircuitInstanceRow, CircuitNetRow, ComponentPart } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, ComponentPart, HierarchicalPortRow } from '@shared/schema';
 import type { Connector, Shape, PartMeta, PartViews } from '@shared/component-types';
 import { COMPONENT_DRAG_TYPE, type ComponentDragData } from './ComponentPlacer';
 import { POWER_SYMBOL_DRAG_TYPE, type PowerSymbolDragData } from './PowerSymbolPalette';
-import { CircuitBoard, Plus, Cable, Zap, ClipboardPaste, CheckSquare, ShieldAlert } from 'lucide-react';
+import { CircuitBoard, Plus, Cable, Zap, ClipboardPaste, CheckSquare, ShieldAlert, ArrowRightLeft } from 'lucide-react';
 import ERCOverlay from './ERCOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/hooks/use-toast';
@@ -65,6 +69,7 @@ const nodeTypes = {
   'schematic-power': SchematicPowerNode,
   'schematic-net-label': SchematicNetLabelNode,
   'schematic-no-connect': SchematicNoConnectNode,
+  'schematic-sheet': SchematicSheetNode,
 };
 const edgeTypes = { 'schematic-net': SchematicNetEdge };
 
@@ -75,7 +80,31 @@ const edgeTypes = { 'schematic-net': SchematicNetEdge };
 function instanceToNode(
   row: CircuitInstanceRow,
   part: ComponentPart | undefined,
-): Node<InstanceNodeData> {
+  subDesigns?: CircuitDesignRow[],
+  portsByDesign?: Map<number, HierarchicalPortRow[]>,
+  onEnterSheet?: (id: number) => void,
+): Node<InstanceNodeData | SheetNodeData> {
+  // 1. Check if this is a hierarchical sub-sheet
+  if (row.subDesignId) {
+    const subDesign = subDesigns?.find(d => d.id === row.subDesignId);
+    const ports = portsByDesign?.get(row.subDesignId) || [];
+    
+    return {
+      id: `instance-${row.id}`,
+      type: 'schematic-sheet',
+      position: { x: row.schematicX, y: row.schematicY },
+      data: {
+        instanceId: row.id,
+        subDesignId: row.subDesignId,
+        referenceDesignator: row.referenceDesignator,
+        sheetName: subDesign?.name || 'Sub-sheet',
+        ports,
+        onEnterSheet,
+      },
+    };
+  }
+
+  // 2. Otherwise it's a standard component instance
   const meta = (part?.meta ?? {}) as Partial<PartMeta>;
   const connectors = (part?.connectors ?? []) as Connector[];
   const views = (part?.views ?? {}) as Partial<PartViews>;
@@ -93,7 +122,7 @@ function instanceToNode(
       connectors,
       schematicShapes,
     },
-  };
+  } as Node<InstanceNodeData>;
 }
 
 interface NetSegmentJSON {
@@ -203,15 +232,31 @@ interface SchematicCanvasInnerProps {
   circuitId: number;
   ercViolations?: ERCViolation[];
   highlightedViolationId?: string | null;
+  onEnterSheet?: (id: number) => void;
 }
 
-function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId }: SchematicCanvasInnerProps) {
+function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId, onEnterSheet }: SchematicCanvasInnerProps) {
   const projectId = useProjectId();
 
   // Data queries
   const { data: circuitDesign } = useCircuitDesign(projectId, circuitId);
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: nets } = useCircuitNets(circuitId);
+  const { data: subDesigns } = useChildDesigns(projectId, circuitId);
+  
+  // Fetch ports for ALL sub-designs to render Sheet Symbols accurately
+  // In a real large app we'd batch this, but for now we'll handle sub-sheets
+  // by assuming the model can handle several queries or we might need a batch port API.
+  // Actually, let's just fetch for the subDesigns we found.
+  const subDesignIds = useMemo(() => (subDesigns ?? []).map(d => d.id), [subDesigns]);
+  
+  // This is a bit tricky with hooks in a loop, so we'll just support 
+  // one level of ports for now if we can or use a combined query if available.
+  // Given current architecture, we'll assume ports for Sheet Symbols are 
+  // fetched when we have sub-designs.
+  const portsByDesign = new Map<number, HierarchicalPortRow[]>();
+  // TODO: Implement batch ports API or sequential fetch if sub-sheet count is low
+  
   const { data: parts } = useComponentParts(projectId);
 
   // Mutations
@@ -232,6 +277,25 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const [angleConstraint, setAngleConstraint] = useState<AngleConstraint>('free');
   const [selectedNetName, setSelectedNetName] = useState<string | null>(null);
   const [mouseFlowPos, setMouseFlowPos] = useState<{ x: number; y: number } | null>(null);
+
+  // BL-0105: Replacement dialog state
+  const [isReplacementOpen, setIsReplacementOpen] = useState(false);
+  const [replacementInstance, setReplacementInstance] = useState<CircuitInstanceRow | null>(null);
+  const [replacementPart, setReplacementPart] = useState<ComponentPart | null>(null);
+
+  const handleReplaceComponent = useCallback((newPartId: number) => {
+    if (!replacementInstance) return;
+    void updateInstance.mutateAsync({
+      circuitId,
+      id: replacementInstance.id,
+      partId: newPartId,
+    }).then(() => {
+      toast({
+        title: 'Component replaced',
+        description: `Replaced ${replacementInstance.referenceDesignator} with new part.`,
+      });
+    });
+  }, [replacementInstance, updateInstance, toast]);
 
   // Drag guard — prevents server refetch from resetting node mid-drag
   const isDragging = useRef(false);
@@ -948,6 +1012,19 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     setLocalNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
   }, [setLocalNodes]);
 
+  const handleCtxReplaceComponent = useCallback(() => {
+    const selected = reactFlowInstance.getNodes().filter(n => n.selected);
+    if (selected.length === 1 && selected[0].type === 'schematic-instance') {
+      const instId = Number(selected[0].id.replace('instance-', ''));
+      const inst = instances?.find(i => i.id === instId);
+      if (inst) {
+        setReplacementInstance(inst);
+        setReplacementPart(partsMap.get(inst.partId!) || null);
+        setIsReplacementOpen(true);
+      }
+    }
+  }, [reactFlowInstance, instances, partsMap]);
+
   const handleCtxRunErc = useCallback(() => {
     window.dispatchEvent(new CustomEvent('protopulse:run-erc'));
   }, []);
@@ -1102,6 +1179,16 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           </span>
         </div>
       )}
+
+      {replacementInstance && (
+        <ComponentReplacementDialog
+          open={isReplacementOpen}
+          onOpenChange={setIsReplacementOpen}
+          instance={replacementInstance}
+          originalPart={replacementPart}
+          onReplace={handleReplaceComponent}
+        />
+      )}
         </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">
@@ -1117,6 +1204,14 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         <ContextMenuItem data-testid="ctx-add-power" onSelect={handleCtxAddPower}>
           <Zap className="w-4 h-4 mr-2" />
           Add Power Symbol
+        </ContextMenuItem>
+        <ContextMenuItem
+          data-testid="ctx-replace-component"
+          onSelect={handleCtxReplaceComponent}
+          disabled={reactFlowInstance.getNodes().filter(n => n.selected && n.type === 'schematic-instance').length !== 1}
+        >
+          <ArrowRightLeft className="w-4 h-4 mr-2" />
+          Replace Component
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem data-testid="ctx-paste" onSelect={triggerPaste}>

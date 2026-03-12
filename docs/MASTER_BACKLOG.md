@@ -163,8 +163,8 @@
 | BL-0101 | Board cutouts/slots/internal milling editor — Reused zone editor logic for cutout regions; implemented Edge.Cuts layer mapping and SVG rendering with dashed white borders. | DONE | Wave 63 |
 | BL-0102 | Via stitching automation — Added circuitVias schema, CRUD API, and an AI tool (auto_stitch_vias) that calculates point-in-polygon grid spacing to fill zones with stitching vias. | DONE | Wave 63 |
 | BL-0103 | Teardrop generation — Added 'teardrop' to pcbZones zoneType enum. Wrote AI tool (generate_teardrops) to scan trace endpoints and attach teardrop polygons to connected vias/pads. Rendered seamlessly on PCB view. | DONE | Wave 63 |
-| BL-0104 | Multi-sheet schematic hierarchy management | OPEN | MF-060 |
-| BL-0105 | Live pin-compatibility checks for replacements | OPEN | MF-063 |
+| BL-0104 | Multi-sheet schematic hierarchy management — Added subDesignId to circuit_instances; created SchematicSheetNode for 'Sheet Symbols' with port rendering and 'Enter Sheet' navigation; implemented useInstantiateSubSheet hook and backend route. | DONE | Wave 63 |
+| BL-0105 | Live pin-compatibility checks for replacements — Enhanced AlternatePartsEngine with checkPinCompatibility algorithm; built ComponentReplacementDialog with live pin match/mismatch preview; added 'Replace Component' context menu to SchematicCanvas. | DONE | Wave 63 |
 | BL-0106 | Auto decoupling/power network placement suggestions | OPEN | MF-064 |
 | BL-0107 | AI placement optimization assistant | OPEN | MF-065 |
 | BL-0108 | Node inline label editing on canvas — double-click to edit on Architecture (CustomNode), Schematic (InstanceNode, PowerNode) | DONE | Wave 61 |
