@@ -17,6 +17,8 @@ const defaultProps = {
   setCustomSystemPrompt: vi.fn(),
   routingStrategy: 'user' as const,
   setRoutingStrategy: vi.fn(),
+  previewAiChanges: true,
+  setPreviewAiChanges: vi.fn(),
   apiKeyValid: () => true,
   onClearApiKey: vi.fn(),
   onClose: vi.fn(),

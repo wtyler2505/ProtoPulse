@@ -10,6 +10,7 @@ interface ChatSettings {
   aiTemperature: number;
   customSystemPrompt: string;
   routingStrategy: RoutingStrategy;
+  previewAiChanges: boolean;
 }
 
 const DEFAULTS: ChatSettings = {
@@ -18,6 +19,7 @@ const DEFAULTS: ChatSettings = {
   aiTemperature: 0.7,
   customSystemPrompt: '',
   routingStrategy: 'user' as RoutingStrategy,
+  previewAiChanges: true,
 };
 
 /** Read chat settings from localStorage with validation and fallback defaults. */
@@ -31,12 +33,16 @@ function readLocalStorage(): ChatSettings {
     const temperature = raw !== null ? parseFloat(raw) : DEFAULTS.aiTemperature;
     const customSystemPrompt = localStorage.getItem(STORAGE_KEYS.AI_SYSTEM_PROMPT) || '';
     const routingStrategy = (localStorage.getItem(STORAGE_KEYS.ROUTING_STRATEGY) as RoutingStrategy) || DEFAULTS.routingStrategy;
+    const previewRaw = localStorage.getItem(STORAGE_KEYS.AI_PREVIEW_CHANGES);
+    const previewAiChanges = previewRaw !== null ? previewRaw === 'true' : DEFAULTS.previewAiChanges;
+    
     return {
       aiProvider: provider,
       aiModel: model,
       aiTemperature: Number.isFinite(temperature) ? temperature : DEFAULTS.aiTemperature,
       customSystemPrompt,
       routingStrategy,
+      previewAiChanges,
     };
   } catch {
     return DEFAULTS;
@@ -51,6 +57,7 @@ function writeLocalStorage(patch: Partial<ChatSettings>) {
     if (patch.aiTemperature !== undefined) localStorage.setItem(STORAGE_KEYS.AI_TEMPERATURE, String(patch.aiTemperature));
     if (patch.customSystemPrompt !== undefined) localStorage.setItem(STORAGE_KEYS.AI_SYSTEM_PROMPT, patch.customSystemPrompt);
     if (patch.routingStrategy !== undefined) localStorage.setItem(STORAGE_KEYS.ROUTING_STRATEGY, patch.routingStrategy);
+    if (patch.previewAiChanges !== undefined) localStorage.setItem(STORAGE_KEYS.AI_PREVIEW_CHANGES, String(patch.previewAiChanges));
   } catch {
     // Quota exceeded — silently ignore, server is the durable store
   }
@@ -180,6 +187,14 @@ export function useChatSettings() {
     });
   }, [scheduleSave]);
 
+  const setPreviewAiChanges = useCallback((v: boolean) => {
+    setSettings(prev => {
+      writeLocalStorage({ previewAiChanges: v });
+      scheduleSave({ previewAiChanges: v });
+      return { ...prev, previewAiChanges: v };
+    });
+  }, [scheduleSave]);
+
   return {
     aiProvider: settings.aiProvider,
     setAiProvider,
@@ -191,6 +206,8 @@ export function useChatSettings() {
     setCustomSystemPrompt,
     routingStrategy: settings.routingStrategy,
     setRoutingStrategy,
+    previewAiChanges: settings.previewAiChanges,
+    setPreviewAiChanges,
     isLoaded: settingsQuery.isFetched,
   };
 }

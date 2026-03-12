@@ -2,10 +2,11 @@ import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
-import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle, GitBranch, Settings2 } from 'lucide-react';
+import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle, GitBranch, Settings2, Play, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import ConfidenceBadge from '@/components/ui/ConfidenceBadge';
+import ActionPreviewList from './ActionPreviewList';
 import type { ConfidenceScore } from '@/components/ui/ConfidenceBadge';
 import { ACTION_LABELS, DESTRUCTIVE_ACTIONS } from './constants';
 import type { ChatMessage, ToolCallInfo } from '@/lib/project-context';
@@ -202,27 +203,46 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
         )}
 
         {pendingActions && (
-          <div className="border border-amber-500/30 bg-amber-500/5 p-2.5 space-y-2">
-            <div className="flex items-center gap-1.5 text-[11px] text-amber-400 font-bold">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              Confirm destructive actions
+          <div className={cn(
+            "border p-3 space-y-3 rounded-md shadow-sm",
+            pendingActions.actions.some(a => DESTRUCTIVE_ACTIONS.includes(a.type))
+              ? "border-amber-500/40 bg-amber-500/5"
+              : "border-primary/30 bg-primary/5"
+          )}>
+            <div className="flex items-center gap-2">
+              {pendingActions.actions.some(a => DESTRUCTIVE_ACTIONS.includes(a.type)) 
+                ? <AlertTriangle className="w-4 h-4 text-amber-500" />
+                : <Bot className="w-4 h-4 text-primary" />
+              }
+              <span className={cn(
+                "text-[11px] font-bold uppercase tracking-tight",
+                pendingActions.actions.some(a => DESTRUCTIVE_ACTIONS.includes(a.type)) ? "text-amber-500" : "text-primary"
+              )}>
+                {pendingActions.actions.some(a => DESTRUCTIVE_ACTIONS.includes(a.type)) 
+                  ? "Confirm Destructive Actions" 
+                  : "Review Proposed Changes"
+                }
+              </span>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {pendingActions.actions.map((action, idx) => (
-                <span key={action.type + idx} className={cn(
-                  "inline-flex items-center gap-1 px-2 py-0.5 text-[10px] border",
-                  DESTRUCTIVE_ACTIONS.includes(action.type) ? "border-amber-500/30 bg-amber-500/10 text-amber-400" : "border-primary/20 bg-primary/10 text-primary"
-                )}>
-                  {ACTION_LABELS[action.type] || action.type}
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button onClick={onAcceptActions} data-testid="accept-actions" aria-label="Accept" className="flex-1 py-1.5 bg-primary text-primary-foreground text-xs font-bold hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                Apply Changes
+
+            <ActionPreviewList actions={pendingActions.actions} />
+
+            <div className="flex gap-2 pt-1">
+              <button 
+                onClick={onRejectActions} 
+                data-testid="reject-actions"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-muted border border-border text-[11px] font-bold text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+              >
+                <X className="w-3 h-3" />
+                Discard
               </button>
-              <button onClick={onRejectActions} data-testid="reject-actions" aria-label="Reject" className="flex-1 py-1.5 bg-muted border border-border text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                Cancel
+              <button 
+                onClick={onAcceptActions} 
+                data-testid="accept-actions"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-primary text-primary-foreground text-[11px] font-bold hover:bg-primary/90 transition-all shadow-[0_0_10px_rgba(0,240,255,0.2)]"
+              >
+                <Play className="w-3 h-3 fill-current" />
+                Confirm & Apply
               </button>
             </div>
           </div>

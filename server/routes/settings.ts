@@ -121,6 +121,7 @@ export function registerSettingsRoutes(app: Express): void {
         aiTemperature: 0.7,
         customSystemPrompt: '',
         routingStrategy: 'user',
+        previewAiChanges: true,
       };
 
       if (!req.userId) {
@@ -138,6 +139,7 @@ export function registerSettingsRoutes(app: Express): void {
         aiTemperature: settings.aiTemperature,
         customSystemPrompt: settings.customSystemPrompt,
         routingStrategy: settings.routingStrategy,
+        previewAiChanges: settings.previewAiChanges,
       });
     }),
   );
@@ -155,6 +157,7 @@ export function registerSettingsRoutes(app: Express): void {
         aiTemperature: z.number().min(0).max(2).optional(),
         customSystemPrompt: z.string().max(10000).optional(),
         routingStrategy: z.enum(['user', 'auto', 'quality', 'speed', 'cost']).optional(),
+        previewAiChanges: z.boolean().optional(),
       });
       const parsed = chatSettingsSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -168,6 +171,7 @@ export function registerSettingsRoutes(app: Express): void {
         aiTemperature: updated.aiTemperature,
         customSystemPrompt: updated.customSystemPrompt,
         routingStrategy: updated.routingStrategy,
+        previewAiChanges: updated.previewAiChanges,
       });
     }),
   );

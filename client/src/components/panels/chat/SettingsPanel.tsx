@@ -2,6 +2,7 @@ import { memo, useCallback } from 'react';
 import { Settings2, Eye, EyeOff, ChevronDown, Trash2, Loader2, CheckCircle2, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 import { AI_MODELS, type RoutingStrategy } from './constants';
 import type { KeyStatus } from '@/hooks/useApiKeyStatus';
 
@@ -25,6 +26,8 @@ interface SettingsPanelProps {
   setCustomSystemPrompt: (prompt: string) => void;
   routingStrategy: RoutingStrategy;
   setRoutingStrategy: (strategy: RoutingStrategy) => void;
+  previewAiChanges: boolean;
+  setPreviewAiChanges: (v: boolean) => void;
   apiKeyValid: () => boolean;
   onClearApiKey: () => void;
   onClose: () => void;
@@ -40,6 +43,7 @@ function SettingsPanel({
   aiProvider, setAiProvider, aiModel, setAiModel, aiApiKey, setAiApiKey,
   showApiKey, setShowApiKey, aiTemperature, setAiTemperature,
   customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy,
+  previewAiChanges, setPreviewAiChanges,
   apiKeyValid, onClearApiKey, onClose, keyStatus, keyErrorMessage, onValidateKey, isValidating,
   settingsLoadError, onRetrySettingsLoad,
 }: SettingsPanelProps) {
@@ -256,6 +260,21 @@ function SettingsPanel({
           <span>Balanced</span>
           <span>Creative</span>
         </div>
+      </div>
+
+      <div>
+        <div className="flex items-center justify-between gap-4 mb-1.5">
+          <label htmlFor="preview-changes-toggle" className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold cursor-pointer">Preview AI Changes</label>
+          <Switch
+            id="preview-changes-toggle"
+            data-testid="preview-changes-toggle"
+            checked={previewAiChanges}
+            onCheckedChange={setPreviewAiChanges}
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground/60">
+          Ask for confirmation before the AI modifies your design. Highly recommended for complex changes.
+        </p>
       </div>
 
       <div>

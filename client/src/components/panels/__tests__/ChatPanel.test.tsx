@@ -357,8 +357,8 @@ describe('ChatPanel', () => {
     renderChatPanel();
     expect(screen.getByTestId('chat-header')).toBeDefined();
     expect(screen.getByTestId('message-input')).toBeDefined();
-    // Empty state should show suggestion buttons
-    expect(screen.getByText(/Ask ProtoPulse AI/)).toBeDefined();
+    // Empty state should show suggestion text
+    expect(screen.getByText(/Describe what you want to build, or choose a template below to get started./)).toBeDefined();
   });
 
   it('shows mobile backdrop when open and calls onClose on click', () => {
@@ -422,7 +422,7 @@ describe('ChatPanel', () => {
 
   it('empty state suggestion buttons trigger handleSend', () => {
     renderChatPanel();
-    const genBtn = screen.getByTestId('empty-suggestion-generate-architecture');
+    const genBtn = screen.getByText('Generate new architecture');
     fireEvent.click(genBtn);
     expect(mockAddMessage).toHaveBeenCalled();
     expect(mockSetIsGenerating).toHaveBeenCalledWith(true);

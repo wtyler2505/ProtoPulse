@@ -10,10 +10,13 @@ import { useHistory } from '@/lib/contexts/history-context';
 import { useOutput } from '@/lib/contexts/output-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { type ChatMessage, type ViewMode } from '@/lib/project-context';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 import { copyToClipboard } from '@/lib/clipboard';
 import { AI_MODELS, DESTRUCTIVE_ACTIONS, COPY_FEEDBACK_DURATION, LOCAL_COMMAND_DELAY } from './chat/constants';
+
+const NAVIGATIONAL_ACTIONS = new Set(['switch_view', 'switch_schematic_sheet', 'undo', 'redo', 'project_summary', 'show_help', 'start_tutorial']);
 import MessageBubble from './chat/MessageBubble';
 import SettingsPanel from './chat/SettingsPanel';
 import ChatHeader from './chat/ChatHeader';
@@ -132,20 +135,47 @@ const MessageList = memo(function MessageList({
     <>
       <div className="flex-1 overflow-y-auto p-4 relative" ref={scrollRef}>
         {filteredMessages.length === 0 && !chatSearch && (
-          <div className="flex flex-col items-center justify-center h-full text-center p-6 opacity-50">
-            <Bot className="w-12 h-12 mb-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground mb-4">Ask ProtoPulse AI to generate a schematic, optimize costs, or validate your design.</p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {['Generate Architecture', 'Project Summary', 'Show Help'].map(cmd => (
-                <button
-                  key={cmd}
-                  onClick={() => handleSendSuggestion(cmd)}
-                  data-testid={`empty-suggestion-${cmd.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="px-3 py-1.5 bg-muted/40 border border-border text-xs text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors"
-                >
-                  {cmd}
-                </button>
-              ))}
+          <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            <Bot className="w-10 h-10 mb-4 text-primary/50" />
+            <p className="text-sm font-medium mb-1">ProtoPulse AI Assistant</p>
+            <p className="text-xs text-muted-foreground mb-6 max-w-[250px]">
+              Describe what you want to build, or choose a template below to get started.
+            </p>
+            
+            <div className="grid grid-cols-1 gap-2 w-full max-w-[280px]">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mb-1 text-left">Design & Architecture</div>
+              <button
+                onClick={() => handleSendSuggestion('Generate a complete architecture for a new IoT sensor node.')}
+                className="px-3 py-2 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                Generate new architecture
+              </button>
+              
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-3 mb-1 text-left">Review & Optimization</div>
+              <button
+                onClick={() => handleSendSuggestion('Analyze my current BOM and suggest cost cuts without sacrificing quality.')}
+                className="px-3 py-2 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                Find BOM cost cuts
+              </button>
+              <button
+                onClick={() => handleSendSuggestion('Review my schematic for missing decoupling capacitors or floating pins.')}
+                className="px-3 py-2 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                Review schematic errors
+              </button>
+
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold mt-3 mb-1 text-left">Testing & Validation</div>
+              <button
+                onClick={() => handleSendSuggestion('Generate a comprehensive test plan for this board.')}
+                className="px-3 py-2 bg-muted/20 border border-border/50 text-xs text-left text-muted-foreground hover:text-primary hover:border-primary/50 transition-colors flex items-center gap-2"
+              >
+                <div className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                Generate test plan
+              </button>
             </div>
           </div>
         )}
@@ -231,6 +261,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const { activeView, setActiveView, activeSheetId, setActiveSheetId, projectName, setProjectName, projectDescription, setProjectDescription } = useProjectMeta();
   const { addToHistory } = useHistory();
   const { addOutputLog } = useOutput();
+  const { toast } = useToast();
   // BL-0026: Consolidated UI visibility state (8 booleans → 1 useReducer)
   const {
     showSettings, showApiKey, showSetupDialog, showSearch,
@@ -261,7 +292,14 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const projectId = useProjectId();
-  const { aiProvider, setAiProvider, aiModel, setAiModel, aiTemperature, setAiTemperature, customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy } = useChatSettings();
+  const {
+    aiProvider, setAiProvider,
+    aiModel, setAiModel,
+    aiTemperature, setAiTemperature,
+    customSystemPrompt, setCustomSystemPrompt,
+    routingStrategy, setRoutingStrategy,
+    previewAiChanges, setPreviewAiChanges,
+  } = useChatSettings();
   const { status: keyStatus, errorMessage: keyErrorMessage, validate: validateKey, reset: resetKeyStatus } = useApiKeyStatus();
   // BL-0005: API keys managed by useApiKeys — server-side when authenticated, localStorage fallback
   const { apiKey: aiApiKey, setApiKey: setApiKeyForProvider, clearApiKey: clearApiKeyForProvider } = useApiKeys(aiProvider);
@@ -652,12 +690,15 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       }
 
       const hasDestructive = finalActions.some((a) => DESTRUCTIVE_ACTIONS.includes(a.type));
+      const hasNonNavigational = finalActions.some((a) => !NAVIGATIONAL_ACTIONS.has(a.type));
+      const needsConfirmation = (hasDestructive || (previewAiChanges && hasNonNavigational)) && finalActions.length > 0;
+      
       const msgId = crypto.randomUUID();
 
       // Re-read ref for latest callbacks (state may have changed during streaming)
       const latest = sendStateRef.current;
 
-      if (hasDestructive && finalActions.length > 0) {
+      if (needsConfirmation) {
         setPendingActions({ actions: finalActions, messageId: msgId });
         latest.addMessage({
           id: msgId,
@@ -667,6 +708,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           actions: finalActions,
           toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
         });
+        if (previewAiChanges && hasNonNavigational && !hasDestructive) {
+          toast({
+            title: 'Review required',
+            description: 'The AI has proposed changes to your design. Please review and confirm.',
+          });
+        }
       } else {
         if (finalActions.length > 0) {
           latest.executeAIActions(finalActions);
@@ -796,18 +843,26 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     if (pendingActions) {
       executeAIActions(pendingActions.actions);
       setPendingActions(null);
+      // Notify AI that actions were accepted (so it knows the state updated)
+      addMessage("[System: User accepted proposed actions]");
+      toast({
+        title: 'Actions applied',
+        description: `Successfully executed ${pendingActions.actions.length} action(s).`,
+      });
     }
-  }, [pendingActions, executeAIActions]);
+  }, [pendingActions, executeAIActions, addMessage, toast]);
 
   const rejectPendingActions = useCallback(() => {
-    setPendingActions(null);
-    addMessage({
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      content: 'Actions cancelled. No changes were made to your design.',
-      timestamp: Date.now(),
-    });
-  }, [addMessage]);
+    if (pendingActions) {
+      setPendingActions(null);
+      // Notify AI that actions were rejected
+      addMessage("[System: User discarded proposed actions]");
+      toast({
+        title: 'Actions discarded',
+        description: 'No changes were made to your design.',
+      });
+    }
+  }, [pendingActions, addMessage, toast]);
 
   const apiKeyValid = useCallback(() => {
     if (!aiApiKey) return true;
@@ -959,6 +1014,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   setCustomSystemPrompt={setCustomSystemPrompt}
                   routingStrategy={routingStrategy}
                   setRoutingStrategy={setRoutingStrategy}
+                  previewAiChanges={previewAiChanges}
+                  setPreviewAiChanges={setPreviewAiChanges}
                   apiKeyValid={apiKeyValid}
                   onClearApiKey={clearSavedApiKey}
                   onClose={() => setShowSettings(false)}

@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   AI_TEMPERATURE: 'protopulse_ai_temp',
   AI_SYSTEM_PROMPT: 'protopulse_ai_sysprompt',
   ROUTING_STRATEGY: 'protopulse_routing_strategy',
+  AI_PREVIEW_CHANGES: 'protopulse_ai_preview_changes',
 
   // Procurement settings (ProcurementView)
   OPTIMIZATION_GOAL: 'protopulse_optimization_goal',

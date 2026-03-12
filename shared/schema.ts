@@ -202,6 +202,7 @@ export const userChatSettings = pgTable("user_chat_settings", {
   aiTemperature: real("ai_temperature").notNull().default(0.7),
   customSystemPrompt: text("custom_system_prompt").default(""),
   routingStrategy: text("routing_strategy").notNull().default("user"),
+  previewAiChanges: boolean("preview_ai_changes").notNull().default(true),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("uq_user_chat_settings_user").on(table.userId),
