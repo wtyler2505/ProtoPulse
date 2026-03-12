@@ -105,6 +105,7 @@ import {
   TraceInProgress,
   ViaOverlay,
   LayerStackPanel,
+  TRACE_COLORS,
 } from '@/components/views/pcb-layout';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState } from '@/components/views/pcb-layout';
@@ -820,43 +821,50 @@ function PCBCanvas({ circuitId, projectId }: { circuitId: number; projectId: num
                 <ComponentFootprints instances={instances ?? []} selectedInstanceId={selectedInstanceId} activeLayer={activeLayer} onInstanceClick={handleInstanceClick} />
                 <FrontLayerTraces wires={pcbWires} activeLayer={activeLayer} fallbackWidth={traceWidth} onWireClick={handleWireClick} />
 
-                {/* Render Zones (BL-0100) */}
-                {(zones ?? []).map((zone) => (
-                  <polygon
-                    key={zone.id}
-                    points={(zone.points as any[]).map((p: any) => `${p.x},${p.y}`).join(' ')}
-                    fill={
-                      zone.zoneType === 'pour' ? 'rgba(0, 255, 0, 0.2)' :
-                      zone.zoneType === 'keepout' ? 'rgba(255, 0, 0, 0.2)' :
-                      zone.zoneType === 'cutout' ? 'rgba(0, 0, 0, 0.6)' :
-                      'rgba(0, 0, 255, 0.2)'
-                    }
-                    stroke={
-                      selectedZoneId === zone.id ? '#00F0FF' :
-                      zone.zoneType === 'pour' ? '#00FF00' :
-                      zone.zoneType === 'keepout' ? '#FF0000' :
-                      zone.zoneType === 'cutout' ? '#FFFFFF' :
-                      '#0000FF'
-                    }
-                    strokeWidth={selectedZoneId === zone.id ? 2 / zoom : 1 / zoom}
-                    strokeDasharray={(zone.zoneType === 'keepout' || zone.zoneType === 'cutout') ? `${2/zoom},${2/zoom}` : undefined}
-                    className={cn(
-                      "cursor-pointer transition-opacity duration-200",
-                      (activeLayer !== zone.layer && zone.zoneType !== 'cutout') && "opacity-20 pointer-events-none"
-                    )}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (tool === 'delete') {
-                        void deleteZoneMutation.mutateAsync({ projectId, zoneId: zone.id });
-                      } else {
-                        setSelectedZoneId(zone.id);
-                        setSelectedInstanceId(null);
-                        setSelectedWireId(null);
-                        setSelectedCommentId(null);
+                {/* Render Zones (BL-0100) and Teardrops (BL-0103) */}
+                {(zones ?? []).map((zone) => {
+                  const isTeardrop = zone.zoneType === 'teardrop';
+                  const layerColor = TRACE_COLORS[zone.layer] || TRACE_COLORS.front;
+
+                  return (
+                    <polygon
+                      key={zone.id}
+                      points={(zone.points as any[]).map((p: any) => `${p.x},${p.y}`).join(' ')}
+                      fill={
+                        isTeardrop ? layerColor :
+                        zone.zoneType === 'pour' ? 'rgba(0, 255, 0, 0.2)' :
+                        zone.zoneType === 'keepout' ? 'rgba(255, 0, 0, 0.2)' :
+                        zone.zoneType === 'cutout' ? 'rgba(0, 0, 0, 0.6)' :
+                        'rgba(0, 0, 255, 0.2)'
                       }
-                    }}
-                  />
-                ))}
+                      stroke={
+                        selectedZoneId === zone.id ? '#00F0FF' :
+                        isTeardrop ? layerColor :
+                        zone.zoneType === 'pour' ? '#00FF00' :
+                        zone.zoneType === 'keepout' ? '#FF0000' :
+                        zone.zoneType === 'cutout' ? '#FFFFFF' :
+                        '#0000FF'
+                      }
+                      strokeWidth={selectedZoneId === zone.id ? 2 / zoom : isTeardrop ? 0 : 1 / zoom}
+                      strokeDasharray={(zone.zoneType === 'keepout' || zone.zoneType === 'cutout') ? `${2/zoom},${2/zoom}` : undefined}
+                      className={cn(
+                        "cursor-pointer transition-opacity duration-200",
+                        (activeLayer !== zone.layer && zone.zoneType !== 'cutout') && "opacity-20 pointer-events-none"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (tool === 'delete') {
+                          void deleteZoneMutation.mutateAsync({ projectId, zoneId: zone.id });
+                        } else {
+                          setSelectedZoneId(zone.id);
+                          setSelectedInstanceId(null);
+                          setSelectedWireId(null);
+                          setSelectedCommentId(null);
+                        }
+                      }}
+                    />
+                  );
+                })}
 
                 {/* Render Spatial Comments (BL-0180) */}
                 {comments.map((comment) => {

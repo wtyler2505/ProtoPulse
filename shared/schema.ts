@@ -657,7 +657,7 @@ export const insertPcbZoneSchema = createInsertSchema(pcbZones).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  zoneType: z.enum(['pour', 'keepout', 'keepin', 'cutout']),
+  zoneType: z.enum(['pour', 'keepout', 'keepin', 'cutout', 'teardrop']),
   points: z.array(z.object({ x: z.number(), y: z.number() })),
 });
 
