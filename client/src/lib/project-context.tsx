@@ -76,11 +76,30 @@ export interface ChatAction {
   [key: string]: unknown;
 }
 
+export interface ToolSource {
+  type: 'bom_item' | 'node' | 'edge' | 'net' | 'sheet' | 'validation_issue' | 'project' | 'knowledge_base';
+  label: string;
+  id?: string | number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ConfidenceScore {
+  score: number;
+  explanation: string;
+  factors: string[];
+}
+
 export interface ToolCallInfo {
   id: string;
   name: string;
   input: Record<string, unknown>;
-  result: { success: boolean; message: string; data?: unknown };
+  result: {
+    success: boolean;
+    message: string;
+    data?: unknown;
+    sources?: ToolSource[];
+    confidence?: ConfidenceScore;
+  };
 }
 
 export interface ChatMessage {
@@ -92,6 +111,8 @@ export interface ChatMessage {
   mode?: 'chat' | 'image' | 'video';
   actions?: ChatAction[];
   toolCalls?: ToolCallInfo[];
+  sources?: ToolSource[];
+  confidence?: ConfidenceScore;
   isError?: boolean;
   isKeyError?: boolean;
   isStreaming?: boolean;

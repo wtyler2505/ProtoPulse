@@ -66,6 +66,60 @@ import { clientAction } from './registry';
  */
 export function registerArchitectureTools(registry: ToolRegistry): void {
   /**
+   * query_nodes — Fetch the list of architecture nodes.
+   *
+   * Executes server-side: returns all component nodes for the project.
+   * Provides explicit sources for the AI answer source panel (BL-0160).
+   */
+  registry.register({
+    name: 'query_nodes',
+    description: 'Fetch all component nodes in the architecture diagram to analyze system structure.',
+    category: 'architecture',
+    parameters: z.object({}),
+    requiresConfirmation: false,
+    execute: async (_params, ctx) => {
+      const nodes = await ctx.storage.getNodes(ctx.projectId);
+      return {
+        success: true,
+        message: `Found ${nodes.length} component nodes`,
+        data: nodes,
+        sources: nodes.map(n => ({
+          type: 'node',
+          label: n.label,
+          id: n.id,
+        })),
+      };
+    },
+  });
+
+  /**
+   * query_edges — Fetch the list of architecture connections.
+   *
+   * Executes server-side: returns all edges for the project.
+   * Provides explicit sources for the AI answer source panel (BL-0160).
+   */
+  registry.register({
+    name: 'query_edges',
+    description: 'Fetch all connections between components in the architecture diagram.',
+    category: 'architecture',
+    parameters: z.object({}),
+    requiresConfirmation: false,
+    execute: async (_params, ctx) => {
+      const edges = await ctx.storage.getEdges(ctx.projectId);
+      return {
+        success: true,
+        message: `Found ${edges.length} connections`,
+        data: edges,
+        sources: edges.map(e => ({
+          type: 'edge',
+          label: e.label || 'Connection',
+          id: e.id,
+        })),
+      };
+    },
+  });
+
+  /**
    * add_node — Create a new component node on the architecture diagram.
    *
    * Executes server-side: generates a UUID, writes to the database via

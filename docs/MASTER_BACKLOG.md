@@ -227,7 +227,7 @@
 | BL-0166 | AI hardware debug assistant | OPEN | MF-152, IFX-010 |
 | BL-0167 | AI explain mode in simple language | OPEN | MF-153, IFX-003 |
 | BL-0168 | Tool allowlists per endpoint/task | PARTIAL | MF-142 |
-| BL-0169 | AI answer source panel (what data it used) | OPEN | UX-028 |
+| BL-0160 | AI answer source panel (what data it used) — Full ڈیزائن source tracking from AI tool calls; implemented AnswerSourcePanel UI with Design Sources and AI Confidence scores. | DONE | Wave 63 |
 | BL-0170 | AI task templates ("Find BOM cost cuts", etc.) | OPEN | UX-029, IFX-071 |
 | BL-0171 | Preview change before applying AI actions | OPEN | UX-023, UX-030 |
 | BL-0172 | Napkin-to-schematic (photo/sketch → circuit draft) | OPEN | IFX-001 |

@@ -46,6 +46,33 @@ import type { ToolResult } from './types';
  */
 export function registerBomTools(registry: ToolRegistry): void {
   /**
+   * query_bom_items — Fetch list of items in the Bill of Materials.
+   *
+   * Executes server-side: returns all BOM items for the project.
+   * Provides explicit sources for the AI answer source panel (BL-0160).
+   */
+  registry.register({
+    name: 'query_bom_items',
+    description: 'Fetch all items in the Bill of Materials to analyze costs, availability, or specifications.',
+    category: 'bom',
+    parameters: z.object({}),
+    requiresConfirmation: false,
+    execute: async (_params, ctx): Promise<ToolResult> => {
+      const items = await ctx.storage.getBomItems(ctx.projectId);
+      return {
+        success: true,
+        message: `Found ${items.length} items in BOM`,
+        data: items,
+        sources: items.map(item => ({
+          type: 'bom_item',
+          label: `${item.partNumber} (${item.manufacturer})`,
+          id: item.id,
+        })),
+      };
+    },
+  });
+
+  /**
    * add_bom_item — Add a component to the Bill of Materials.
    *
    * Executes server-side: creates a new BOM item via `storage.createBomItem()`
@@ -289,6 +316,11 @@ export function registerBomTools(registry: ToolRegistry): void {
           manufacturerUrl: item.manufacturerUrl,
           searchQuery,
         },
+        sources: [{
+          type: 'bom_item',
+          label: `${item.partNumber} (${item.manufacturer})`,
+          id: item.id,
+        }],
       };
     },
   });
@@ -386,6 +418,10 @@ export function registerBomTools(registry: ToolRegistry): void {
           architectureNodes: nodes.map((n) => ({ label: n.label, type: n.nodeType })),
           totalBomItems: bomItems.length,
         },
+        sources: [
+          ...filteredBom.map(b => ({ type: 'bom_item' as const, label: b.partNumber, id: b.id })),
+          ...nodes.map(n => ({ type: 'node' as const, label: n.label, id: n.id })),
+        ],
       };
     },
   });

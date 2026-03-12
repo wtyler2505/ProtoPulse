@@ -292,6 +292,11 @@ export function registerValidationTools(registry: ToolRegistry): void {
           })),
           circuits: circuitSummaries,
         },
+        sources: [
+          ...nodes.map(n => ({ type: 'node' as const, label: n.label, id: n.id })),
+          ...bomItems.map(b => ({ type: 'bom_item' as const, label: b.partNumber, id: b.id })),
+          ...issues.map(i => ({ type: 'validation_issue' as const, label: i.message, id: i.id })),
+        ],
       };
     },
   });
@@ -608,6 +613,11 @@ export function registerValidationTools(registry: ToolRegistry): void {
             duplicateBomGroupCount: duplicateBomEntries.length,
           },
         },
+        sources: [
+          ...nodesSummary.map(n => ({ type: 'node' as const, label: n.label, id: n.nodeId })),
+          ...bomItemsList.map(b => ({ type: 'bom_item' as const, label: b.partNumber, id: b.id })),
+          ...issues.map(i => ({ type: 'validation_issue' as const, label: i.message, id: i.id })),
+        ],
       };
     },
   });

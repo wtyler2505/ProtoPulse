@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import ConfidenceBadge from '@/components/ui/ConfidenceBadge';
 import ActionPreviewList from './ActionPreviewList';
+import AnswerSourcePanel from './AnswerSourcePanel';
 import type { ConfidenceScore } from '@/components/ui/ConfidenceBadge';
 import { ACTION_LABELS, DESTRUCTIVE_ACTIONS } from './constants';
 import type { ChatMessage, ToolCallInfo } from '@/lib/project-context';
@@ -179,16 +180,15 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
                 <span className="text-muted-foreground truncate">— {tc.result.message}</span>
               </div>
             ))}
-            {(() => {
-              const confidence = extractConfidence(msg.toolCalls);
-              return confidence ? (
-                <div className="flex items-center gap-1.5 px-1 pt-0.5">
-                  <span className="text-[10px] text-muted-foreground">AI Confidence:</span>
-                  <ConfidenceBadge confidence={confidence} />
-                </div>
-              ) : null;
-            })()}
           </div>
+        )}
+
+        {msg.role === 'assistant' && (msg.sources?.length || msg.confidence) && (
+          <AnswerSourcePanel 
+            sources={msg.sources || []} 
+            confidence={msg.confidence} 
+            className="px-1" 
+          />
         )}
 
         {msg.actions && msg.actions.length > 0 && !pendingActions && !msg.toolCalls?.length && (

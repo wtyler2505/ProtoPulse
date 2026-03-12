@@ -89,6 +89,7 @@ describe('BOM tools — registration', () => {
   const registry = createRegistry();
 
   const expectedTools = [
+    'query_bom_items',
     'add_bom_item',
     'remove_bom_item',
     'update_bom_item',

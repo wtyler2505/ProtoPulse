@@ -50,6 +50,8 @@ describe('Architecture tools — registration', () => {
   const registry = createRegistry();
 
   const expectedTools = [
+    'query_nodes',
+    'query_edges',
     'add_node',
     'remove_node',
     'update_node',

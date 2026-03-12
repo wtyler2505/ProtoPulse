@@ -609,3 +609,144 @@ client/src/components/panels/chat/__tests__/SettingsPanel.test.tsx(87,13): error
 
 
 10:11:55 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:26:47 PM - File change detected. Starting incremental compilation...
+
+
+10:28:42 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:28:43 PM - File change detected. Starting incremental compilation...
+
+
+10:28:47 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:28:58 PM - File change detected. Starting incremental compilation...
+
+
+10:29:00 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:29:25 PM - File change detected. Starting incremental compilation...
+
+
+10:29:27 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:29:52 PM - File change detected. Starting incremental compilation...
+
+
+10:29:54 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:30:17 PM - File change detected. Starting incremental compilation...
+
+
+10:30:19 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:31:34 PM - File change detected. Starting incremental compilation...
+
+
+10:32:00 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:32:00 PM - File change detected. Starting incremental compilation...
+
+
+10:32:22 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:32:33 PM - File change detected. Starting incremental compilation...
+
+client/src/components/panels/ChatPanel.tsx(661,17): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(661,71): error TS2339: Property 'sources' does not exist on type '{ success: boolean; message: string; data?: unknown; }'.
+client/src/components/panels/ChatPanel.tsx(664,17): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(664,32): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(664,52): error TS7006: Parameter 's' implicitly has an 'any' type.
+client/src/components/panels/ChatPanel.tsx(672,91): error TS2339: Property 'confidence' does not exist on type '{ success: boolean; message: string; data?: unknown; }'.
+client/src/components/panels/ChatPanel.tsx(672,111): error TS2339: Property 'confidence' does not exist on type '{ success: boolean; message: string; data?: unknown; }'.
+client/src/components/panels/ChatPanel.tsx(674,19): error TS2304: Cannot find name 'finalConfidence'.
+
+10:32:35 PM - Found 8 errors. Watching for file changes.
+[2J[3J[H10:32:49 PM - File change detected. Starting incremental compilation...
+
+client/src/components/panels/ChatPanel.tsx(661,17): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(661,71): error TS2339: Property 'sources' does not exist on type '{ success: boolean; message: string; data?: unknown; }'.
+client/src/components/panels/ChatPanel.tsx(664,17): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(664,32): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(664,52): error TS7006: Parameter 's' implicitly has an 'any' type.
+client/src/components/panels/ChatPanel.tsx(672,91): error TS2339: Property 'confidence' does not exist on type '{ success: boolean; message: string; data?: unknown; }'.
+client/src/components/panels/ChatPanel.tsx(672,111): error TS2339: Property 'confidence' does not exist on type '{ success: boolean; message: string; data?: unknown; }'.
+client/src/components/panels/ChatPanel.tsx(674,19): error TS2304: Cannot find name 'finalConfidence'.
+client/src/components/panels/ChatPanel.tsx(728,20): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(728,46): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(729,23): error TS2304: Cannot find name 'finalConfidence'.
+client/src/components/panels/ChatPanel.tsx(748,20): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(748,46): error TS2304: Cannot find name 'finalSources'.
+client/src/components/panels/ChatPanel.tsx(749,23): error TS2304: Cannot find name 'finalConfidence'.
+
+10:32:51 PM - Found 14 errors. Watching for file changes.
+[2J[3J[H10:33:51 PM - File change detected. Starting incremental compilation...
+
+client/src/components/panels/ChatPanel.tsx(619,27): error TS2304: Cannot find name 'ToolCallInfo'.
+client/src/components/panels/ChatPanel.tsx(620,25): error TS2304: Cannot find name 'ToolSource'.
+client/src/components/panels/ChatPanel.tsx(621,28): error TS2304: Cannot find name 'ConfidenceScore'.
+
+10:33:56 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H10:34:35 PM - File change detected. Starting incremental compilation...
+
+client/src/components/panels/ChatPanel.tsx(619,27): error TS2304: Cannot find name 'ToolCallInfo'.
+client/src/components/panels/ChatPanel.tsx(620,25): error TS2304: Cannot find name 'ToolSource'.
+client/src/components/panels/ChatPanel.tsx(621,28): error TS2304: Cannot find name 'ConfidenceScore'.
+client/src/components/panels/chat/AnswerSourcePanel.tsx(62,30): error TS2322: Type '{ score: number; size: string; showLabel: true; }' is not assignable to type 'IntrinsicAttributes & ConfidenceBadgeProps'.
+  Property 'score' does not exist on type 'IntrinsicAttributes & ConfidenceBadgeProps'.
+
+10:34:38 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H10:35:02 PM - File change detected. Starting incremental compilation...
+
+client/src/components/panels/ChatPanel.tsx(619,27): error TS2304: Cannot find name 'ToolCallInfo'.
+client/src/components/panels/ChatPanel.tsx(620,25): error TS2304: Cannot find name 'ToolSource'.
+client/src/components/panels/ChatPanel.tsx(621,28): error TS2304: Cannot find name 'ConfidenceScore'.
+client/src/components/panels/chat/AnswerSourcePanel.tsx(62,30): error TS2322: Type '{ score: number; size: string; showLabel: true; }' is not assignable to type 'IntrinsicAttributes & ConfidenceBadgeProps'.
+  Property 'score' does not exist on type 'IntrinsicAttributes & ConfidenceBadgeProps'.
+
+10:35:06 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H10:35:53 PM - File change detected. Starting incremental compilation...
+
+client/src/components/panels/chat/MessageBubble.tsx(106,6): error TS17008: JSX element 'div' has no corresponding closing tag.
+client/src/components/panels/chat/MessageBubble.tsx(180,15): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+client/src/components/panels/chat/MessageBubble.tsx(182,10): error TS1005: ',' expected.
+client/src/components/panels/chat/MessageBubble.tsx(293,5): error TS1005: ')' expected.
+client/src/components/panels/chat/MessageBubble.tsx(295,1): error TS1381: Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+client/src/components/panels/chat/MessageBubble.tsx(298,1): error TS1005: '</' expected.
+
+10:35:53 PM - Found 6 errors. Watching for file changes.
+[2J[3J[H10:37:11 PM - File change detected. Starting incremental compilation...
+
+client/src/components/panels/ChatPanel.tsx(619,27): error TS2304: Cannot find name 'ToolCallInfo'.
+client/src/components/panels/ChatPanel.tsx(620,25): error TS2304: Cannot find name 'ToolSource'.
+client/src/components/panels/ChatPanel.tsx(621,28): error TS2304: Cannot find name 'ConfidenceScore'.
+client/src/components/panels/chat/AnswerSourcePanel.tsx(62,30): error TS2322: Type '{ score: number; size: string; showLabel: true; }' is not assignable to type 'IntrinsicAttributes & ConfidenceBadgeProps'.
+  Property 'score' does not exist on type 'IntrinsicAttributes & ConfidenceBadgeProps'.
+
+10:37:14 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H10:38:32 PM - File change detected. Starting incremental compilation...
+
+client/src/components/panels/ChatPanel.tsx(619,27): error TS2304: Cannot find name 'ToolCallInfo'.
+client/src/components/panels/ChatPanel.tsx(620,25): error TS2304: Cannot find name 'ToolSource'.
+client/src/components/panels/ChatPanel.tsx(621,28): error TS2304: Cannot find name 'ConfidenceScore'.
+
+10:38:34 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H10:38:46 PM - File change detected. Starting incremental compilation...
+
+
+10:38:49 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:45:08 PM - File change detected. Starting incremental compilation...
+
+
+10:45:10 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:46:05 PM - File change detected. Starting incremental compilation...
+
+
+10:46:06 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:46:30 PM - File change detected. Starting incremental compilation...
+
+
+10:46:31 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:46:45 PM - File change detected. Starting incremental compilation...
+
+
+10:46:47 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:51:59 PM - File change detected. Starting incremental compilation...
+
+
+10:52:00 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:54:50 PM - File change detected. Starting incremental compilation...
+
+
+10:54:52 PM - Found 0 errors. Watching for file changes.

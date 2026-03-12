@@ -9,7 +9,7 @@ import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useHistory } from '@/lib/contexts/history-context';
 import { useOutput } from '@/lib/contexts/output-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
-import { type ChatMessage, type ViewMode } from '@/lib/project-context';
+import { type ChatMessage, type ViewMode, type ToolCallInfo, type ToolSource, type ConfidenceScore } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
@@ -616,9 +616,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const decoder = new TextDecoder();
       let fullText = '';
       let finalActions: AIAction[] = [];
-      let finalToolCalls: Array<{ id: string; name: string; input: Record<string, unknown>; result: { success: boolean; message: string; data?: unknown } }> = [];
-      let hasServerToolCalls = false;
-      let sseErrorCount = 0;
+      let finalToolCalls: ToolCallInfo[] = [];
+      let finalSources: ToolSource[] = [];
+      let finalConfidence: ConfidenceScore | undefined;
+      let hasServerToolCalls = false;      let sseErrorCount = 0;
 
       if (reader) {
         let buffer = '';
@@ -656,6 +657,24 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                 if (finalToolCalls.length > 0) {
                   hasServerToolCalls = true;
                 }
+                
+                // Collect sources and confidence (BL-0160)
+                finalSources = finalToolCalls.flatMap(tc => tc.result.sources || []);
+                // Deduplicate sources by label+id
+                const seenSources = new Set<string>();
+                finalSources = finalSources.filter(s => {
+                  const key = `${s.type}-${s.id || s.label}`;
+                  if (seenSources.has(key)) return false;
+                  seenSources.add(key);
+                  return true;
+                });
+                
+                // Use the last confidence score if multiple tools returned one
+                const lastConfidence = [...finalToolCalls].reverse().find(tc => tc.result.confidence)?.result.confidence;
+                if (lastConfidence) {
+                  finalConfidence = lastConfidence;
+                }
+
                 const inputTokens = Math.ceil(msgText.length / 4);
                 const outputTokens = Math.ceil(fullText.length / 4);
                 const cost = s.aiProvider === 'anthropic'
@@ -707,6 +726,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           timestamp: Date.now(),
           actions: finalActions,
           toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
+          sources: finalSources.length > 0 ? finalSources : undefined,
+          confidence: finalConfidence,
         });
         if (previewAiChanges && hasNonNavigational && !hasDestructive) {
           toast({
@@ -725,6 +746,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           timestamp: Date.now(),
           actions: finalActions,
           toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
+          sources: finalSources.length > 0 ? finalSources : undefined,
+          confidence: finalConfidence,
         });
       }
     } catch (error: unknown) {

@@ -30,17 +30,32 @@ export type ToolCategory =
   | 'navigation';
 
 /**
+ * Reference to a design element used as a source for an AI answer.
+ * Enables the \"Source Panel\" UX (BL-0160).
+ */
+export interface ToolSource {
+  type: 'bom_item' | 'node' | 'edge' | 'net' | 'sheet' | 'validation_issue' | 'project' | 'knowledge_base';
+  label: string;
+  id?: string | number;
+  metadata?: Record<string, unknown>;
+}
+
+/**
  * Standardized result returned by every tool executor.
  *
- * @property success - Whether the tool operation completed without error.
- * @property message - Human-readable summary of what happened, streamed to the user.
- * @property data    - Optional structured payload (e.g., file download data, comparison tables,
- *                     or client-side action descriptors dispatched via {@link clientAction}).
+ * @property success    - Whether the tool operation completed without error.
+ * @property message    - Human-readable summary of what happened, streamed to the user.
+ * @property data       - Optional structured payload (e.g., file download data, comparison tables,
+ *                        or client-side action descriptors dispatched via {@link clientAction}).
+ * @property sources    - Optional list of design elements analyzed to produce this result (BL-0160).
+ * @property confidence - Optional AI confidence score for analytical tools.
  */
 export interface ToolResult {
   success: boolean;
   message: string;
   data?: unknown;
+  sources?: ToolSource[];
+  confidence?: ConfidenceScore;
 }
 
 /**
