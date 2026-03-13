@@ -17,3 +17,5 @@ How ProtoPulse is structured and why — from monolithic context to barrel files
 - [[browser-based-eda-hits-a-platform-boundary-at-firmware-execution]] — firmware forces hybrid architecture
 - [[the-hybrid-runtime-architecture-for-firmware-is-the-only-viable-path-because-browser-only-wasm-and-pure-local-approaches-each-sacrifice-a-core-value-proposition]] — hybrid browser+local is the only viable path
 - [[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — integration forces data ownership decisions
+- [[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — automated CI enforcement for IDOR prevention
+- [[localstorage-features-follow-an-identical-five-step-migration-to-server-scoped-storage]] — 5-step migration pattern for localStorage-to-server
