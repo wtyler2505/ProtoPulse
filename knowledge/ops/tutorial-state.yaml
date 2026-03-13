@@ -1,5 +1,5 @@
 track: manager
-current_step: 2
-completed_steps: [1]
+current_step: 3
+completed_steps: [1, 2]
 started: 2026-03-13T19:30:00Z
-last_activity: 2026-03-13T19:32:00Z
+last_activity: 2026-03-13T19:34:00Z

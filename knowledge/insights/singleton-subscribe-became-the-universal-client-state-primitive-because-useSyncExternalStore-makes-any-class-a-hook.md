@@ -1,6 +1,8 @@
 ---
 summary: The singleton+subscribe pattern emerged organically across 30+ managers and became ProtoPulse's standard for client-side state outside React Query
 areas: ["[[index]]"]
+related insights:
+  - "[[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]]": "ProjectProvider is the counter-example — the monolithic Context that proves why singleton+subscribe is better"
 created: 2026-03-13
 ---
 
