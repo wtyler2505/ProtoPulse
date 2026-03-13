@@ -320,24 +320,30 @@ describe('ThermalOverlayManager — getHeatmapCells', () => {
 
   it('cells near component are hotter than distant cells', () => {
     const mgr = ThermalOverlayManager.create();
+    // Place a hot component at (3,3) on a 40x40mm board with 2mm cell size.
+    // Cell at col=1,row=1 center=(3,3) is inside the bbox → full temp.
+    // Cell at col=9,row=9 center=(19,19) is far away → near ambient.
     mgr.updateThermalData(makeData({
-      boardWidth: 20,
-      boardHeight: 4,
+      boardWidth: 40,
+      boardHeight: 40,
       ambientTemp: 25,
       components: [
         makeComponent({
           id: 'U1',
           temperature: 100,
-          position: { x: 1, y: 1 },
+          position: { x: 3, y: 3 },
           powerDissipation: 5,
-          boundingBox: { width: 1, height: 1 },
+          boundingBox: { width: 2, height: 2 },
         }),
       ],
     }));
     const cells = mgr.getHeatmapCells();
-    // Find cell at position closest to component vs furthest
-    const near = cells.find((c) => c.col === 0 && c.row === 0);
-    const far = cells.find((c) => c.col === cells.reduce((max, cc) => Math.max(max, cc.col), 0) && c.row === 1);
+    // col=1,row=1 → center (3,3) — inside component bbox
+    const near = cells.find((c) => c.col === 1 && c.row === 1);
+    // col=19,row=19 → center (39,39) — far from component
+    const maxCol = cells.reduce((m, c) => Math.max(m, c.col), 0);
+    const maxRow = cells.reduce((m, c) => Math.max(m, c.row), 0);
+    const far = cells.find((c) => c.col === maxCol && c.row === maxRow);
     expect(near).toBeDefined();
     expect(far).toBeDefined();
     if (near && far) {
