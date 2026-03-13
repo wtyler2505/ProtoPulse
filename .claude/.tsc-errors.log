@@ -278,3 +278,12 @@ client/src/lib/simulation/audio-output.ts(276,28): error TS2802: Type 'Set<Liste
 client/src/lib/pcb/__tests__/diff-pair-length-match.test.ts(504,3): error TS2304: Cannot find name 'afterEach'.
 
 10:50:05 AM - Found 1 error. Watching for file changes.
+[2J[3J[H10:51:05 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/pcb/__tests__/diff-pair-length-match.test.ts(504,3): error TS2304: Cannot find name 'afterEach'.
+
+10:51:14 AM - Found 1 error. Watching for file changes.
+[2J[3J[H10:51:21 AM - File change detected. Starting incremental compilation...
+
+
+10:51:24 AM - Found 0 errors. Watching for file changes.
