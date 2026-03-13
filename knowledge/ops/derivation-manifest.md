@@ -100,7 +100,9 @@ vocabulary:
 
 platform_hints:
   context: fork
-  semantic_search_tool: null
+  semantic_search_tool: qmd
+  semantic_search_collection: protopulse-vault
+  semantic_search_cmd: "qmd search \"{query}\" --collection protopulse-vault --limit {limit}"
 
 personality:
   warmth: warm
