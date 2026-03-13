@@ -110,6 +110,25 @@
             "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/read-tsc-errors.sh"
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/validate-note.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/auto-commit-vault.sh",
+            "async": true
+          }
+        ]
       }
     ],
     "Stop": [
@@ -141,6 +160,14 @@
             "command": "claudekit-hooks run create-checkpoint"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/session-capture.sh"
+          }
+        ]
       }
     ],
     "SubagentStop": [],
@@ -155,6 +182,14 @@
           {
             "type": "command",
             "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/start-tsc-watch.sh"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/session-orient.sh"
           }
         ]
       }
