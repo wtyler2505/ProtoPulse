@@ -68,6 +68,8 @@ import {
   Pentagon,
   MessageSquarePlus,
   Scissors,
+  Box,
+  Cable,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -111,8 +113,73 @@ import {
 } from '@/components/views/pcb-layout';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState } from '@/components/views/pcb-layout';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { calculateRoutingStatus } from '@/lib/pcb/routing-status';
 import type { Via, ViaType } from '@/lib/pcb/via-model';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
+
+// ---------------------------------------------------------------------------
+// View3DButton — jumps to viewer_3d ViewMode
+// ---------------------------------------------------------------------------
+
+function View3DButton() {
+  const { setActiveView } = useProjectMeta();
+  return (
+    <button
+      data-testid="pcb-view-3d"
+      onClick={() => { setActiveView('viewer_3d'); }}
+      title="View in 3D"
+      aria-label="View in 3D"
+      className={cn(
+        'h-6 px-2 flex items-center gap-1 rounded text-[10px] font-medium transition-colors cursor-pointer',
+        'border border-border text-muted-foreground hover:text-foreground hover:bg-muted/60',
+      )}
+    >
+      <Box className="w-3.5 h-3.5" />
+      3D
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// RoutingStatusBadge — shows routed/total nets
+// ---------------------------------------------------------------------------
+
+function RoutingStatusBadge({ nets, wires }: { nets: CircuitNetRow[]; wires: CircuitWireRow[] }) {
+  const status = useMemo(() => calculateRoutingStatus(nets, wires), [nets, wires]);
+
+  if (status.total === 0) {
+    return null;
+  }
+
+  const isComplete = status.routed === status.total;
+
+  return (
+    <StyledTooltip
+      content={
+        <div className="text-xs">
+          <div className="font-medium mb-1">Routing Progress</div>
+          <div>{status.routed}/{status.total} nets routed ({status.percentComplete}%)</div>
+          {status.unrouted > 0 && (
+            <div className="text-yellow-400 mt-0.5">{status.unrouted} unrouted</div>
+          )}
+        </div>
+      }
+    >
+      <span
+        data-testid="pcb-routing-status"
+        className={cn(
+          'inline-flex items-center gap-1 h-5 px-1.5 rounded text-[10px] font-medium tabular-nums',
+          isComplete
+            ? 'bg-green-500/15 text-green-400 border border-green-500/30'
+            : 'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30',
+        )}
+      >
+        {status.routed}/{status.total}
+      </span>
+    </StyledTooltip>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Clipboard bundle type for PCB copy/paste
@@ -808,6 +875,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings }: { circuitId: numbe
         <ToolButton icon={ShieldAlert} label="Keepout (K)" active={tool === 'keepout'} onClick={() => setTool('keepout')} testId="pcb-tool-keepout" />
         <ToolButton icon={ShieldCheck} label="Keepin" active={tool === 'keepin'} onClick={() => setTool('keepin')} testId="pcb-tool-keepin" />
         <ToolButton icon={Scissors} label="Cutout (X)" active={tool === 'cutout'} onClick={() => setTool('cutout')} testId="pcb-tool-cutout" />
+        <ToolButton icon={Cable} label="Diff Pair (D)" active={tool === 'diff-pair'} onClick={() => setTool('diff-pair')} testId="pcb-tool-diff-pair" />
         <ToolButton icon={MessageSquarePlus} label="Comment (C)" active={tool === 'comment'} onClick={() => setTool('comment')} testId="pcb-tool-comment" />
         <div className="w-px h-4 bg-border mx-1" />
         <button
@@ -888,6 +956,10 @@ function PCBCanvas({ circuitId, projectId, circuitSettings }: { circuitId: numbe
           title="Board height (mm)"
         />
         <span className="text-[9px] text-muted-foreground">mm</span>
+        <div className="w-px h-4 bg-border mx-1" />
+        <RoutingStatusBadge nets={nets ?? []} wires={wires ?? []} />
+        <div className="w-px h-4 bg-border mx-1" />
+        <View3DButton />
         <div className="flex-1" />
         <span className="text-[10px] text-muted-foreground tabular-nums">{zoom.toFixed(1)}x</span>
         {tracePoints.length > 0 && (

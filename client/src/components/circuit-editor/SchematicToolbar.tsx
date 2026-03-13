@@ -11,6 +11,7 @@ import {
   Keyboard,
   Magnet,
   Eye,
+  Type,
 } from 'lucide-react';
 import type { SchematicTool } from '@shared/circuit-types';
 import { cn } from '@/lib/utils';
@@ -47,6 +48,7 @@ const tools: {
   { id: 'draw-net', icon: Cable, label: 'Draw Net (W) — drag between pins', enabled: true },
   { id: 'place-component', icon: Component, label: 'Place Component — drag from Parts panel', enabled: false },
   { id: 'place-power', icon: Zap, label: 'Place Power — drag from Power panel', enabled: false },
+  { id: 'place-annotation', icon: Type, label: 'Place Annotation (T) — click to add text note', enabled: true },
 ];
 
 export default function SchematicToolbar({

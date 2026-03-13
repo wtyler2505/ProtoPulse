@@ -38,12 +38,13 @@ import SchematicPowerNode, { type PowerNodeData } from './SchematicPowerNode';
 import SchematicNetLabelNode, { type NetLabelNodeData } from './SchematicNetLabelNode';
 import SchematicNoConnectNode, { type NoConnectNodeData } from './SchematicNoConnectNode';
 import SchematicSheetNode, { type SheetNodeData } from './SchematicSheetNode';
+import SchematicAnnotationNode, { type AnnotationNodeData } from './SchematicAnnotationNode';
 import SchematicNetEdge from './SchematicNetEdge';
 import NetDrawingTool, { type NetDrawingResult } from './NetDrawingTool';
 import SchematicToolbar from './SchematicToolbar';
 import ComponentReplacementDialog from './ComponentReplacementDialog';
 import type { AngleConstraint } from './SchematicToolbar';
-import type { SchematicTool, CircuitSettings, PowerSymbol, SchematicNetLabel, NoConnectMarker, ERCViolation } from '@shared/circuit-types';
+import type { SchematicTool, CircuitSettings, PowerSymbol, SchematicNetLabel, SchematicAnnotation, NoConnectMarker, ERCViolation } from '@shared/circuit-types';
 import { DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, ComponentPart, HierarchicalPortRow } from '@shared/schema';
 import type { Connector, Shape, PartMeta, PartViews } from '@shared/component-types';
@@ -112,6 +113,7 @@ const nodeTypes = {
   'schematic-net-label': SchematicNetLabelNode,
   'schematic-no-connect': SchematicNoConnectNode,
   'schematic-sheet': SchematicSheetNode,
+  'schematic-annotation': SchematicAnnotationNode,
 };
 const edgeTypes = { 'schematic-net': SchematicNetEdge };
 
@@ -272,6 +274,28 @@ function noConnectToNode(nc: NoConnectMarker): Node<NoConnectNodeData> {
   };
 }
 
+function annotationToNode(
+  ann: SchematicAnnotation,
+  onTextChange?: (id: string, text: string) => void,
+  onFontSizeChange?: (id: string, fontSize: number) => void,
+  onColorChange?: (id: string, color: string) => void,
+): Node<AnnotationNodeData> {
+  return {
+    id: `annotation-${ann.id}`,
+    type: 'schematic-annotation',
+    position: { x: ann.x, y: ann.y },
+    data: {
+      annotationId: ann.id,
+      text: ann.text,
+      fontSize: ann.fontSize,
+      color: ann.color,
+      onTextChange,
+      onFontSizeChange,
+      onColorChange,
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Inner canvas (requires ReactFlowProvider ancestor)
 // ---------------------------------------------------------------------------
@@ -372,6 +396,37 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     [circuitId, projectId, updateDesign, settings],
   );
 
+  // BL-0492: Annotation inline editing callbacks
+  const handleAnnotationTextChange = useCallback(
+    (annotationId: string, text: string) => {
+      const updated = (settings.annotations ?? []).map((a) =>
+        a.id === annotationId ? { ...a, text } : a,
+      );
+      updateDesign.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
+    },
+    [circuitId, projectId, updateDesign, settings],
+  );
+
+  const handleAnnotationFontSizeChange = useCallback(
+    (annotationId: string, fontSize: number) => {
+      const updated = (settings.annotations ?? []).map((a) =>
+        a.id === annotationId ? { ...a, fontSize } : a,
+      );
+      updateDesign.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
+    },
+    [circuitId, projectId, updateDesign, settings],
+  );
+
+  const handleAnnotationColorChange = useCallback(
+    (annotationId: string, color: string) => {
+      const updated = (settings.annotations ?? []).map((a) =>
+        a.id === annotationId ? { ...a, color } : a,
+      );
+      updateDesign.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
+    },
+    [circuitId, projectId, updateDesign, settings],
+  );
+
   // BL-0489: Instance refdes inline editing — persist rename to server
   const handleRefdesChange = useCallback(
     (instanceId: number, newRefdes: string) => {
@@ -402,8 +457,11 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     const powerNodes = (settings.powerSymbols ?? []).map(powerSymbolToNode);
     const labelNodes = (settings.netLabels ?? []).map((label) => netLabelToNode(label, handleNetNameChange));
     const ncNodes = (settings.noConnectMarkers ?? []).map(noConnectToNode);
-    return [...instanceNodes, ...powerNodes, ...labelNodes, ...ncNodes] as Node[];
-  }, [instances, partsMap, settings.powerSymbols, settings.netLabels, settings.noConnectMarkers, handleRefdesChange, handleNetNameChange]);
+    const annotationNodes = (settings.annotations ?? []).map((ann) =>
+      annotationToNode(ann, handleAnnotationTextChange, handleAnnotationFontSizeChange, handleAnnotationColorChange),
+    );
+    return [...instanceNodes, ...powerNodes, ...labelNodes, ...ncNodes, ...annotationNodes] as Node[];
+  }, [instances, partsMap, settings.powerSymbols, settings.netLabels, settings.noConnectMarkers, settings.annotations, handleRefdesChange, handleNetNameChange, handleAnnotationTextChange, handleAnnotationFontSizeChange, handleAnnotationColorChange]);
 
   // Build connector lookup by instance ID for pin resolution (BL-0014)
   const connectorsByInstance = useMemo(() => {
@@ -480,6 +538,13 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           nc.id === markerId ? { ...nc, x, y } : nc,
         );
         updateDesign.mutate({ projectId, id: circuitId, settings: { ...settings, noConnectMarkers: updated } });
+      } else if (node.id.startsWith('annotation-')) {
+        const annotationId = (node.data as AnnotationNodeData)?.annotationId;
+        if (!annotationId) return;
+        const updated = (settings.annotations ?? []).map((a) =>
+          a.id === annotationId ? { ...a, x, y } : a,
+        );
+        updateDesign.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
       } else {
         const instanceId = (node.data as InstanceNodeData)?.instanceId;
         if (typeof instanceId !== 'number') return;
@@ -495,17 +560,21 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       const deletedPowerIds: string[] = [];
       const deletedLabelIds: string[] = [];
       const deletedNcIds: string[] = [];
+      const deletedAnnotationIds: string[] = [];
 
       for (const node of deleted) {
         if (node.id.startsWith('power-')) {
           const symbolId = (node.data as PowerNodeData)?.symbolId;
-          if (symbolId) deletedPowerIds.push(symbolId);
+          if (symbolId) { deletedPowerIds.push(symbolId); }
         } else if (node.id.startsWith('netlabel-')) {
           const labelId = (node.data as NetLabelNodeData)?.labelId;
-          if (labelId) deletedLabelIds.push(labelId);
+          if (labelId) { deletedLabelIds.push(labelId); }
         } else if (node.id.startsWith('noconnect-')) {
           const markerId = (node.data as NoConnectNodeData)?.markerId;
-          if (markerId) deletedNcIds.push(markerId);
+          if (markerId) { deletedNcIds.push(markerId); }
+        } else if (node.id.startsWith('annotation-')) {
+          const annotationId = (node.data as AnnotationNodeData)?.annotationId;
+          if (annotationId) { deletedAnnotationIds.push(annotationId); }
         } else {
           const instanceId = (node.data as InstanceNodeData)?.instanceId;
           if (typeof instanceId === 'number') {
@@ -514,14 +583,15 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         }
       }
 
-      // Batch-update settings if any annotation nodes were deleted
+      // Batch-update settings if any settings-stored nodes were deleted
       const needsUpdate =
-        deletedPowerIds.length > 0 || deletedLabelIds.length > 0 || deletedNcIds.length > 0;
+        deletedPowerIds.length > 0 || deletedLabelIds.length > 0 || deletedNcIds.length > 0 || deletedAnnotationIds.length > 0;
 
       if (needsUpdate) {
         const powerSet = new Set(deletedPowerIds);
         const labelSet = new Set(deletedLabelIds);
         const ncSet = new Set(deletedNcIds);
+        const annotationSet = new Set(deletedAnnotationIds);
         updateDesign.mutate({
           projectId,
           id: circuitId,
@@ -530,6 +600,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
             powerSymbols: (settings.powerSymbols ?? []).filter((ps) => !powerSet.has(ps.id)),
             netLabels: (settings.netLabels ?? []).filter((nl) => !labelSet.has(nl.id)),
             noConnectMarkers: (settings.noConnectMarkers ?? []).filter((nc) => !ncSet.has(nc.id)),
+            annotations: (settings.annotations ?? []).filter((a) => !annotationSet.has(a.id)),
           },
         });
       }
@@ -926,9 +997,70 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           id: circuitId,
           settings: { ...settings, powerSymbols: [...currentSymbols, newSymbol] },
         });
+
+        // BL-0493: Auto-connect — find compatible pins within snap distance
+        const SNAP_DISTANCE = gridSize * 2;
+        const isGround = /gnd|ground|vss|v\-/i.test(dragData.netName);
+        const isPower = /vcc|vdd|vpp|v\+|power/i.test(dragData.netName);
+
+        if ((isGround || isPower) && instances) {
+          const compatiblePins: Array<{ instanceId: number; pinId: string; refDes: string }> = [];
+
+          for (const inst of instances) {
+            const part = inst.partId != null ? partsMap.get(inst.partId) : undefined;
+            if (!part) { continue; }
+            const connectors = (part.connectors ?? []) as Connector[];
+            const instX = inst.schematicX;
+            const instY = inst.schematicY;
+
+            for (const conn of connectors) {
+              const pinNameMatch = isGround
+                ? /gnd|ground|vss|v\-/i.test(conn.name)
+                : /vcc|vdd|vpp|v\+|power/i.test(conn.name);
+              if (!pinNameMatch) { continue; }
+
+              // Approximate pin world position (instance position + offset)
+              const dx = Math.abs(position.x - instX);
+              const dy = Math.abs(position.y - instY);
+              const dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist <= SNAP_DISTANCE) {
+                compatiblePins.push({ instanceId: inst.id, pinId: conn.id, refDes: inst.referenceDesignator });
+              }
+            }
+          }
+
+          // Create nets connecting pairs of compatible pins to the power net
+          if (compatiblePins.length >= 2) {
+            for (let i = 1; i < compatiblePins.length; i++) {
+              const from = compatiblePins[i - 1];
+              const to = compatiblePins[i];
+              createNet.mutate({
+                circuitId,
+                name: dragData.netName,
+                netType: isGround ? 'ground' : 'power',
+                segments: [{
+                  fromInstanceId: from.instanceId,
+                  fromPin: from.pinId,
+                  toInstanceId: to.instanceId,
+                  toPin: to.pinId,
+                }],
+              });
+            }
+            toast({
+              title: 'Auto-connected power pins',
+              description: `Connected ${String(compatiblePins.length)} pins to ${dragData.netName}.`,
+            });
+          } else if (compatiblePins.length === 1) {
+            toast({
+              title: 'Power pin detected',
+              description: `${compatiblePins[0].refDes} has a compatible ${dragData.netName} pin nearby.`,
+            });
+          }
+        }
       }
     },
-    [circuitId, projectId, createInstance, updateDesign, instances, partsMap, settings, reactFlowInstance, snapEnabled, gridSize],
+    [circuitId, projectId, createInstance, createNet, updateDesign, instances, partsMap, settings, reactFlowInstance, snapEnabled, gridSize, toast],
   );
 
   // Net drawing tool callback — creates a net with waypoints
@@ -1089,6 +1221,9 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         case 'w':
           setActiveTool('draw-net');
           break;
+        case 't':
+          setActiveTool('place-annotation');
+          break;
         case 'g':
           setSnapEnabled((s) => !s);
           break;
@@ -1244,6 +1379,38 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     window.dispatchEvent(new CustomEvent('protopulse:run-erc'));
   }, []);
 
+  // BL-0492: Handle pane click — place annotation when annotation tool active, else clear net selection
+  const handlePaneClick = useCallback(
+    (event: React.MouseEvent) => {
+      if (activeTool === 'place-annotation') {
+        const pos = reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        if (snapEnabled) {
+          pos.x = Math.round(pos.x / gridSize) * gridSize;
+          pos.y = Math.round(pos.y / gridSize) * gridSize;
+        }
+        const newAnnotation: SchematicAnnotation = {
+          id: crypto.randomUUID(),
+          text: 'Note',
+          x: pos.x,
+          y: pos.y,
+          fontSize: 14,
+          color: '#ffffff',
+        };
+        const currentAnnotations = settings.annotations ?? [];
+        updateDesign.mutate({
+          projectId,
+          id: circuitId,
+          settings: { ...settings, annotations: [...currentAnnotations, newAnnotation] },
+        });
+        // Switch back to select tool after placing
+        setActiveTool('select');
+        return;
+      }
+      setSelectedNetName(null);
+    },
+    [activeTool, reactFlowInstance, snapEnabled, gridSize, settings, updateDesign, projectId, circuitId],
+  );
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -1284,7 +1451,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
             setSelectedNetName((prev) => (prev === netName ? null : netName));
           }
         }}
-        onPaneClick={() => setSelectedNetName(null)}
+        onPaneClick={handlePaneClick}
         isValidConnection={isValidConnection}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
@@ -1294,7 +1461,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         snapToGrid={snapEnabled}
         snapGrid={[gridSize, gridSize]}
         panOnDrag={activeTool === 'pan'}
-        selectionOnDrag={activeTool !== 'pan'}
+        selectionOnDrag={activeTool !== 'pan' && activeTool !== 'place-annotation'}
         selectionMode={SelectionMode.Partial}
         connectionMode={ConnectionMode.Loose}
         deleteKeyCode={['Backspace', 'Delete']}

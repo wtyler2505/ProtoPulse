@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import { cn } from '@/lib/utils';
+import { ResistorSvg, CapacitorSvg, LedSvg, IcSvg, DiodeSvg, TransistorSvg } from './breadboard-components';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -61,8 +62,9 @@ function formatSI(value: number, unit: string): string {
 
 const RESISTOR_VALUES = buildResistorValues();
 
-/** Detect component family from type string */
+/** Detect component family from type string — extended for photorealistic rendering */
 export type ComponentFamily = 'resistor' | 'capacitor' | 'inductor' | 'led' | null;
+export type ExtendedComponentType = ComponentFamily | 'ic' | 'diode' | 'transistor';
 
 export function detectFamily(type: string | undefined | null): ComponentFamily {
   if (!type) return null;
@@ -71,6 +73,20 @@ export function detectFamily(type: string | undefined | null): ComponentFamily {
   if (lower === 'capacitor' || lower === 'cap' || lower === 'c') return 'capacitor';
   if (lower === 'inductor' || lower === 'ind' || lower === 'l') return 'inductor';
   if (lower === 'led') return 'led';
+  return null;
+}
+
+/** Extended type detection for photorealistic SVG dispatch */
+export function detectExtendedType(type: string | undefined | null): ExtendedComponentType {
+  if (!type) return null;
+  const lower = type.toLowerCase();
+  if (lower === 'resistor' || lower === 'res' || lower === 'r') return 'resistor';
+  if (lower === 'capacitor' || lower === 'cap' || lower === 'c') return 'capacitor';
+  if (lower === 'inductor' || lower === 'ind' || lower === 'l') return 'inductor';
+  if (lower === 'led') return 'led';
+  if (lower === 'ic' || lower === 'mcu' || lower === 'microcontroller') return 'ic';
+  if (lower === 'diode' || lower === 'd') return 'diode';
+  if (lower === 'transistor' || lower === 'bjt' || lower === 'mosfet' || lower === 'q') return 'transistor';
   return null;
 }
 
@@ -97,7 +113,7 @@ export function getCurrentValueLabel(instance: CircuitInstanceRow, family: Compo
 }
 
 // ---------------------------------------------------------------------------
-// Component rendering
+// Component rendering — photorealistic SVGs (BL-0590)
 // ---------------------------------------------------------------------------
 
 interface BreadboardComponentProps {
@@ -120,92 +136,62 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
 
   const type = (part?.meta as Record<string, unknown>)?.type as string | undefined;
   const typeLower = type?.toLowerCase() || 'generic';
-  const color = (instance.properties as Record<string, unknown>)?.color as string || '#ff0000';
+  const props = instance.properties as Record<string, unknown> | null;
+  const color = (props?.color as string) || '#ff0000';
   const family = detectFamily(typeLower);
+  const extType = detectExtendedType(typeLower);
   const valueLabel = family ? getCurrentValueLabel(instance, family) : null;
 
-  // Component-specific rendering logic
+  // Component-specific photorealistic rendering
   const renderShape = () => {
-    switch (typeLower) {
+    switch (extType) {
       case 'led': {
-        const isActive = isLive && (liveState?.isActive || (liveState?.brightness ?? 0) > 0.1);
+        const brightness = isLive
+          ? (liveState?.isActive ? 1 : (liveState?.brightness ?? 0))
+          : 0;
         return (
           <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
-            {/* LED Glow */}
-            {isActive && (
-              <circle
-                cx={pos.x}
-                cy={pos.y}
-                r={12}
-                fill={color}
-                opacity={0.3 * (liveState?.brightness || 1)}
-                className="animate-pulse"
-              />
-            )}
-            {/* LED Body */}
-            <circle
-              cx={pos.x}
-              cy={pos.y}
-              r={4.5}
-              fill={color}
-              stroke="rgba(255,255,255,0.2)"
-              strokeWidth={0.5}
-              opacity={isActive ? 1 : 0.7}
-            />
-            {/* Highlight */}
-            <circle cx={pos.x - 1.5} cy={pos.y - 1.5} r={1.2} fill="white" opacity={0.4} />
+            <LedSvg cx={pos.x} cy={pos.y} color={color} brightness={brightness} />
           </g>
         );
       }
       case 'resistor': {
+        const ohms = props?.value ? Number(props.value) : 10_000;
         return (
           <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
-            <rect
-              x={pos.x - 10}
-              y={pos.y - 3}
-              width={20}
-              height={6}
-              rx={1.5}
-              fill="#d4a373"
-              stroke="#8b5e34"
-              strokeWidth={0.5}
-            />
-            {/* Color bands (placeholders) */}
-            <rect x={pos.x - 6} y={pos.y - 3} width={2} height={6} fill="#8b5e34" />
-            <rect x={pos.x - 2} y={pos.y - 3} width={2} height={6} fill="#ff0000" />
-            <rect x={pos.x + 4} y={pos.y - 3} width={2} height={6} fill="#facc15" />
+            <ResistorSvg cx={pos.x} cy={pos.y} ohms={ohms} />
           </g>
         );
       }
-      case 'ic':
-      case 'mcu': {
-        const pinCount = (part?.connectors as unknown[])?.length || 8;
-        const rows = Math.ceil(pinCount / 2);
-        const height = rows * 10;
+      case 'capacitor': {
+        const farads = props?.value ? Number(props.value) : 100e-9;
         return (
           <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
-            <rect
-              x={pos.x - 12}
-              y={pos.y - 5}
-              width={24}
-              height={height}
-              rx={2}
-              fill="#1a1a1a"
-              stroke="#333"
-              strokeWidth={1}
-            />
-            <circle cx={pos.x} cy={pos.y - 2} r={2} fill="#333" /> {/* Notch */}
-            <text
-              x={pos.x}
-              y={pos.y + height / 2}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize={5}
-              fill="#666"
-              className="font-mono select-none"
-            >
-              {instance.referenceDesignator}
-            </text>
+            <CapacitorSvg cx={pos.x} cy={pos.y} farads={farads} />
+          </g>
+        );
+      }
+      case 'ic': {
+        const pinCount = (part?.connectors as unknown[])?.length || 8;
+        const partNumber = instance.referenceDesignator;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <IcSvg cx={pos.x} cy={pos.y} pinCount={pinCount} partNumber={partNumber} />
+          </g>
+        );
+      }
+      case 'diode': {
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <DiodeSvg cx={pos.x} cy={pos.y} />
+          </g>
+        );
+      }
+      case 'transistor': {
+        const partNumber = (props?.partNumber as string) || instance.referenceDesignator;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <TransistorSvg cx={pos.x} cy={pos.y} partNumber={partNumber} />
           </g>
         );
       }
@@ -235,7 +221,7 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
       {selected && valueLabel && (
         <text
           x={pos.x}
-          y={pos.y + 10}
+          y={pos.y + 14}
           textAnchor="middle"
           dominantBaseline="hanging"
           fontSize={4}

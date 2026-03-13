@@ -4,7 +4,8 @@
  * Used in both breadboard and PCB views.
  */
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useSyncExternalStore } from 'react';
+import { netColorManager } from '@/lib/circuit-editor/net-colors';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,6 +93,14 @@ function computeMST(pins: RatsnestPin[]): [number, number][] {
 // ---------------------------------------------------------------------------
 
 function RatsnestOverlayInner({ nets, opacity = 0.6, showLabels = false }: RatsnestOverlayProps) {
+  // BL-0490: Subscribe to net color manager for per-net custom color overrides.
+  // Version counter is a stable primitive that changes on every mutation —
+  // this ensures React re-renders when any color assignment changes.
+  useSyncExternalStore(
+    (cb) => netColorManager.subscribe(cb),
+    () => netColorManager.version,
+  );
+
   const lines = useMemo(() => {
     const result: Array<{
       key: string;
@@ -109,6 +118,9 @@ function RatsnestOverlayInner({ nets, opacity = 0.6, showLabels = false }: Ratsn
       // Compute MST to get minimal connection set
       const mstEdges = computeMST(net.pins);
 
+      // BL-0490: Use custom net color if assigned, otherwise fall back to prop color
+      const effectiveColor = netColorManager.getNetColor(net.netId) ?? net.color;
+
       for (const [fromIdx, toIdx] of mstEdges) {
         const from = net.pins[fromIdx];
         const to = net.pins[toIdx];
@@ -123,7 +135,7 @@ function RatsnestOverlayInner({ nets, opacity = 0.6, showLabels = false }: Ratsn
           y1: from.y,
           x2: to.x,
           y2: to.y,
-          color: net.color,
+          color: effectiveColor,
           netName: net.name,
         });
       }

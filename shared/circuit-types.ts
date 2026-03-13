@@ -6,6 +6,16 @@
 // Circuit Design (top-level container)
 // ---------------------------------------------------------------------------
 
+/** A freetext annotation placed on the schematic canvas (BL-0492). */
+export interface SchematicAnnotation {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  color: string;
+}
+
 export interface CircuitSettings {
   gridSize: number;
   netColors: Record<string, string>;
@@ -15,6 +25,7 @@ export interface CircuitSettings {
   powerSymbols: PowerSymbol[];
   noConnectMarkers: NoConnectMarker[];
   netLabels: SchematicNetLabel[];
+  annotations: SchematicAnnotation[];
 }
 
 export const DEFAULT_CIRCUIT_SETTINGS: CircuitSettings = {
@@ -26,6 +37,7 @@ export const DEFAULT_CIRCUIT_SETTINGS: CircuitSettings = {
   powerSymbols: [],
   noConnectMarkers: [],
   netLabels: [],
+  annotations: [],
 };
 
 export interface CircuitDesign {
@@ -238,6 +250,7 @@ export type SchematicTool =
   | 'place-power'
   | 'place-no-connect'
   | 'place-label'
+  | 'place-annotation'
   | 'pan';
 
 export interface SchematicEditorState {

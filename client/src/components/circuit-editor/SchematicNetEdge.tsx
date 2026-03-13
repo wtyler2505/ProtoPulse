@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useSyncExternalStore } from 'react';
 import {
   getSmoothStepPath,
   EdgeLabelRenderer,
@@ -8,6 +8,7 @@ import {
 import type { NetType } from '@shared/circuit-types';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import { formatSIValue } from '@/lib/simulation/visual-state';
+import { netColorManager } from '@/lib/circuit-editor/net-colors';
 import './simulation-overlays.css';
 
 export interface NetEdgeData {
@@ -40,6 +41,12 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
 
   const { isLive, wireVisualStates } = useSimulation();
 
+  // BL-0490: Subscribe to net color manager for per-net custom colors
+  const netColorSnapshot = useSyncExternalStore(
+    (cb) => netColorManager.subscribe(cb),
+    () => (netId != null ? netColorManager.getNetColor(netId) : undefined),
+  );
+
   // Look up wire visual state from simulation context
   const wireState = isLive && netId != null
     ? wireVisualStates.get(String(netId))
@@ -55,7 +62,9 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
     borderRadius: 0,
   });
 
+  // BL-0490: Priority: custom net color > edge-level color > type-based default
   const baseStrokeColor =
+    netColorSnapshot ??
     color ??
     (netType === 'power'
       ? '#ef4444'
