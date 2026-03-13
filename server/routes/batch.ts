@@ -10,6 +10,8 @@ import type { Express } from 'express';
 import { z } from 'zod';
 import { asyncHandler, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
+import { validateSession } from '../auth';
+import { storage } from '../storage';
 import {
   submitBatchAnalysis,
   getBatchStatus,
@@ -51,6 +53,23 @@ export function registerBatchRoutes(app: Express): void {
     }
 
     const body = submitSchema.parse(req.body);
+
+    // Verify project ownership
+    const sessionId = req.headers['x-session-id'] as string | undefined;
+    if (!sessionId) {
+      throw new HttpError('Authentication required', 401);
+    }
+    const session = await validateSession(sessionId);
+    if (!session) {
+      throw new HttpError('Invalid or expired session', 401);
+    }
+    const project = await storage.getProject(body.projectId);
+    if (!project) {
+      throw new HttpError('Project not found', 404);
+    }
+    if (project.ownerId !== null && project.ownerId !== session.userId) {
+      throw new HttpError('Project not found', 404);
+    }
 
     // Validate all analysis kinds
     const invalidKinds = body.analyses.filter(k => !VALID_KINDS.has(k as AnalysisKind));

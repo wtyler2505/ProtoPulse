@@ -4,7 +4,7 @@ import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertChatMessageSchema } from '@shared/schema';
 import { processAIMessage, streamAIMessage, categorizeError, routeToModel } from '../ai';
-import { getApiKey } from '../auth';
+import { getApiKey, validateSession } from '../auth';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { buildSimulationContext } from '../lib/simulation-context';
@@ -391,6 +391,18 @@ export function registerChatRoutes(app: Express): void {
       const parsed = aiRequestSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
+      }
+
+      // BL-0636: Ownership check — verify session owns the project
+      const sessionId = req.headers['x-session-id'] as string | undefined;
+      if (sessionId) {
+        const session = await validateSession(sessionId);
+        if (session) {
+          const project = await storage.getProject(parsed.data.projectId);
+          if (project && project.ownerId !== null && project.ownerId !== session.userId) {
+            return res.status(404).json({ message: 'Project not found' });
+          }
+        }
       }
 
       const { message, provider, model, apiKey: clientApiKey, temperature, maxTokens } = parsed.data;

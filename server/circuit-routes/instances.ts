@@ -5,6 +5,7 @@ import type { PartMeta } from '@shared/component-types';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
+import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { getRefDesPrefix, nextRefdes } from '@shared/ref-des';
 
 const createInstanceSchema = z.object({
@@ -39,7 +40,7 @@ const updateInstanceSchema = z.object({
 });
 
 export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): void {
-  app.get('/api/circuits/:circuitId/instances', asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/instances', requireCircuitOwnership, asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const pagination = circuitPaginationSchema.safeParse(req.query);
     if (!pagination.success) {
@@ -52,14 +53,14 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
     res.json({ data, total: all.length });
   }));
 
-  app.get('/api/circuits/:circuitId/instances/:id', asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/instances/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const instance = await storage.getCircuitInstance(id);
     if (!instance) { return res.status(404).json({ message: 'Circuit instance not found' }); }
     res.json(instance);
   }));
 
-  app.post('/api/circuits/:circuitId/instances', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/instances', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = createInstanceSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -105,7 +106,7 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
     res.status(201).json(instance);
   }));
 
-  app.patch('/api/circuits/:circuitId/instances/:id', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.patch('/api/circuits/:circuitId/instances/:id', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const parsed = updateInstanceSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -116,7 +117,7 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
     res.json(updated);
   }));
 
-  app.delete('/api/circuits/:circuitId/instances/:id', asyncHandler(async (req, res) => {
+  app.delete('/api/circuits/:circuitId/instances/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const deleted = await storage.deleteCircuitInstance(id);
     if (!deleted) { return res.status(404).json({ message: 'Circuit instance not found' }); }
@@ -127,7 +128,7 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
   // Push to PCB — forward annotation from schematic to PCB layout
   // ---------------------------------------------------------------------------
 
-  app.post('/api/circuits/:circuitId/push-to-pcb', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/push-to-pcb', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const instances = await storage.getCircuitInstances(circuitId);
 

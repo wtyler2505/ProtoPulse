@@ -3,6 +3,7 @@ import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
+import { requireCircuitOwnership } from '../routes/auth-middleware';
 
 const createNetSchema = z.object({
   name: z.string().min(1),
@@ -25,7 +26,7 @@ const updateNetSchema = z.object({
 });
 
 export function registerCircuitNetRoutes(app: Express, storage: IStorage): void {
-  app.get('/api/circuits/:circuitId/nets', asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/nets', requireCircuitOwnership, asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const pagination = circuitPaginationSchema.safeParse(req.query);
     if (!pagination.success) {
@@ -38,14 +39,14 @@ export function registerCircuitNetRoutes(app: Express, storage: IStorage): void 
     res.json({ data, total: all.length });
   }));
 
-  app.get('/api/circuits/:circuitId/nets/:id', asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const net = await storage.getCircuitNet(id);
     if (!net) { return res.status(404).json({ message: 'Circuit net not found' }); }
     res.json(net);
   }));
 
-  app.post('/api/circuits/:circuitId/nets', payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/nets', requireCircuitOwnership, payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = createNetSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -62,7 +63,7 @@ export function registerCircuitNetRoutes(app: Express, storage: IStorage): void 
     res.status(201).json(net);
   }));
 
-  app.patch('/api/circuits/:circuitId/nets/:id', payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+  app.patch('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const parsed = updateNetSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -73,7 +74,7 @@ export function registerCircuitNetRoutes(app: Express, storage: IStorage): void 
     res.json(updated);
   }));
 
-  app.delete('/api/circuits/:circuitId/nets/:id', asyncHandler(async (req, res) => {
+  app.delete('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const deleted = await storage.deleteCircuitNet(id);
     if (!deleted) { return res.status(404).json({ message: 'Circuit net not found' }); }
