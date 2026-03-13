@@ -78,14 +78,31 @@ export function registerSettingsRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const schema = z.object({
         provider: z.enum(['anthropic', 'gemini']),
-        apiKey: z.string().min(1).max(500),
+        apiKey: z.string().max(500).optional(),
+        useStored: z.boolean().optional(),
       });
       const parsed = schema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ valid: false, error: fromZodError(parsed.error).toString() });
       }
 
-      const { provider, apiKey } = parsed.data;
+      let apiKey: string;
+
+      if (parsed.data.useStored || !parsed.data.apiKey) {
+        // Use the server-stored key for the authenticated user
+        if (!req.userId) {
+          return res.status(401).json({ valid: false, error: 'Authentication required to validate stored key' });
+        }
+        const storedKey = await getApiKey(req.userId, parsed.data.provider);
+        if (!storedKey) {
+          return res.json({ valid: false, error: 'No stored API key found for this provider' });
+        }
+        apiKey = storedKey;
+      } else {
+        apiKey = parsed.data.apiKey;
+      }
+
+      const { provider } = parsed.data;
 
       try {
         if (provider === 'anthropic') {

@@ -208,12 +208,27 @@ function getConnectorByName(
   return undefined;
 }
 
+/**
+ * Normalize a component value string to SPICE-compatible engineering notation.
+ * Strips unit suffixes (Ohm, F, H) and ensures consistent formatting.
+ * e.g. "10kOhm" → "10.00K", "100nF" → "100.0N", "4.7uH" → "4.700U"
+ */
+function normalizeSpiceComponentValue(rawValue: string): string {
+  const parsed = parseSpiceValue(rawValue);
+  if (parsed === 0 && !/^0/.test(rawValue.trim())) {
+    // Could not parse — return raw value and let SPICE try
+    return rawValue;
+  }
+  return formatSpiceValue(parsed);
+}
+
 function generateResistor(
   comp: CircuitComponent,
   nets: CircuitNetInfo[],
   nodeMap: Record<string, number>,
 ): SpiceLine {
-  const value = comp.properties.value || comp.properties.resistance || '1k';
+  const rawValue = comp.properties.value || comp.properties.resistance || '1k';
+  const value = normalizeSpiceComponentValue(rawValue);
   const pin1 = comp.connectors[0];
   const pin2 = comp.connectors[1];
 
@@ -228,7 +243,8 @@ function generateCapacitor(
   nets: CircuitNetInfo[],
   nodeMap: Record<string, number>,
 ): SpiceLine {
-  const value = comp.properties.value || comp.properties.capacitance || '100n';
+  const rawValue = comp.properties.value || comp.properties.capacitance || '100n';
+  const value = normalizeSpiceComponentValue(rawValue);
   const pin1 = comp.connectors[0];
   const pin2 = comp.connectors[1];
 
@@ -243,7 +259,8 @@ function generateInductor(
   nets: CircuitNetInfo[],
   nodeMap: Record<string, number>,
 ): SpiceLine {
-  const value = comp.properties.value || comp.properties.inductance || '10u';
+  const rawValue = comp.properties.value || comp.properties.inductance || '10u';
+  const value = normalizeSpiceComponentValue(rawValue);
   const pin1 = comp.connectors[0];
   const pin2 = comp.connectors[1];
 

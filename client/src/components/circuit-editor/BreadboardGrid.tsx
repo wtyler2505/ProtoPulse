@@ -47,7 +47,7 @@ const C = {
   channelFill: '#1f1f15',
   holeFill: '#454535',
   holeStroke: '#333328',
-  holeHighlight: '#facc15',
+  holeHighlight: '#00F0FF',
   holeOccupied: '#2a2a22',
   holeOccupiedStroke: '#3a3a2e',
   holeHover: '#a3e635',
@@ -420,6 +420,32 @@ function BreadboardGridInner({
 
       {/* Terminal strip holes */}
       {terminalHoles}
+
+      {/* BL-0592: Connected-row highlight overlay */}
+      {highlightedPoints && highlightedPoints.size > 0 && (
+        <g data-testid="breadboard-highlight-overlay" pointerEvents="none">
+          {[...TERMINAL_POINTS, ...RAIL_POINTS]
+            .filter((pt) => highlightedPoints.has(coordKey(pt)))
+            .map((pt) => {
+              const key = coordKey(pt);
+              const px = coordToPixel(pt);
+              const r = pt.type === 'terminal' ? HOLE_RADIUS + 2 : HOLE_RADIUS_RAIL + 2;
+              return (
+                <rect
+                  key={`hl-${key}`}
+                  x={px.x - r}
+                  y={px.y - r}
+                  width={r * 2}
+                  height={r * 2}
+                  rx={2}
+                  fill="rgba(0, 240, 255, 0.15)"
+                  stroke="rgba(0, 240, 255, 0.4)"
+                  strokeWidth={0.5}
+                />
+              );
+            })}
+        </g>
+      )}
 
       {/* Empty state guidance */}
       {showEmptyGuidance && (

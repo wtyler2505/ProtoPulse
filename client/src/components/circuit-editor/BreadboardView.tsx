@@ -50,6 +50,8 @@ import {
   getOccupiedPoints,
   getConnectedPoints,
   checkCollision,
+  getDefaultColorForNet,
+  WIRE_COLOR_PRESETS as MODEL_WIRE_COLOR_PRESETS,
   type ComponentPlacement,
 } from '@/lib/circuit-editor/breadboard-model';
 import type { CircuitDesignRow, CircuitWireRow, ComponentPart } from '@shared/schema';
@@ -79,33 +81,8 @@ const WIRE_COLORS = [
   '#1abc9c', '#e67e22', '#34495e', '#e91e63', '#00bcd4',
 ];
 
-// ---------------------------------------------------------------------------
-// Wire color presets for context menu (BL-0591)
-// ---------------------------------------------------------------------------
-
-const WIRE_COLOR_PRESETS: Array<{ name: string; hex: string }> = [
-  { name: 'Red', hex: '#e74c3c' },
-  { name: 'Black', hex: '#1a1a2e' },
-  { name: 'Yellow', hex: '#f1c40f' },
-  { name: 'Orange', hex: '#e67e22' },
-  { name: 'Green', hex: '#2ecc71' },
-  { name: 'Blue', hex: '#3498db' },
-  { name: 'White', hex: '#ecf0f1' },
-  { name: 'Gray', hex: '#95a5a6' },
-];
-
-/** Default wire color based on net name convention */
-function defaultWireColor(netName: string | null | undefined): string {
-  if (!netName) return '#2ecc71';
-  const upper = netName.toUpperCase();
-  if (upper === 'VCC' || upper === 'VDD' || upper === '5V' || upper === '3V3' || upper === '3.3V') {
-    return '#e74c3c'; // red
-  }
-  if (upper === 'GND' || upper === 'VSS') {
-    return '#1a1a2e'; // black
-  }
-  return '#2ecc71'; // green
-}
+// Wire color presets — sourced from breadboard-model (BL-0591)
+const WIRE_COLOR_PRESETS = MODEL_WIRE_COLOR_PRESETS;
 
 // ---------------------------------------------------------------------------
 // Component
@@ -416,7 +393,7 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
           netId: firstNet.id,
           points: [pixel],
           coordPath: [coord],
-          color: defaultWireColor(firstNet.name),
+          color: getDefaultColorForNet(firstNet.name),
         });
       } else {
         // Add waypoint or complete wire

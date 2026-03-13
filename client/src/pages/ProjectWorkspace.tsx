@@ -21,6 +21,7 @@ const LifecycleDashboard = lazy(() => import('@/components/views/LifecycleDashbo
 const WorkflowBreadcrumb = lazy(() => import('@/components/layout/WorkflowBreadcrumb'));
 const KeyboardShortcutsModal = lazy(() => import('@/components/ui/keyboard-shortcuts-modal'));
 const CommandPalette = lazy(() => import('@/components/ui/command-palette'));
+const GlobalSearchDialog = lazy(() => import('@/components/ui/GlobalSearchDialog'));
 const TutorialOverlay = lazy(() => import('@/components/ui/TutorialOverlay'));
 const TutorialMenu = lazy(() => import('@/components/ui/TutorialMenu'));
 const CommentsPanel = lazy(() => import('@/components/panels/CommentsPanel').then(m => ({ default: m.CommentsPanel })));
@@ -969,6 +970,10 @@ function WorkspaceContent() {
           sidebarCollapsed={ws.sidebarCollapsed}
           chatCollapsed={ws.chatCollapsed}
         />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <GlobalSearchDialog onNavigate={setActiveView} />
       </Suspense>
 
       {/* RS-02 + RS-08: Mobile bottom nav with primary tabs + More menu + active indicators */}

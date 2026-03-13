@@ -207,6 +207,7 @@ function resolvePinId(
 function netToEdges(
   net: CircuitNetRow,
   connectorsByInstance: Map<number, Connector[]>,
+  onNetNameChange?: (netId: number, newName: string) => void,
 ): Edge[] {
   const segments = (net.segments ?? []) as NetSegmentJSON[];
   const style = (net.style ?? {}) as { color?: string };
@@ -227,6 +228,8 @@ function netToEdges(
         netType: net.netType,
         color: style.color,
         busWidth: net.busWidth ?? undefined,
+        netId: net.id,
+        onNetNameChange,
       },
     };
   });
@@ -460,6 +463,14 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     [circuitId],
   );
 
+  // BL-0489: Net edge label inline editing — rename the net via updateNet mutation
+  const handleEdgeNetNameChange = useCallback(
+    (netId: number, newName: string) => {
+      updateNetRef.current.mutate({ circuitId, id: netId, name: newName });
+    },
+    [circuitId],
+  );
+
   // Build parts lookup map
   const partsMap = useMemo(() => {
     const map = new Map<number, ComponentPart>();
@@ -502,7 +513,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
   // Convert DB data → React Flow edges, marking selected net
   const rfEdges = useMemo(() => {
-    const edges = (nets ?? []).flatMap((net) => netToEdges(net, connectorsByInstance));
+    const edges = (nets ?? []).flatMap((net) => netToEdges(net, connectorsByInstance, handleEdgeNetNameChange));
     if (selectedNetName) {
       return edges.map((e) => ({
         ...e,
@@ -514,7 +525,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       }));
     }
     return edges;
-  }, [nets, selectedNetName, connectorsByInstance]);
+  }, [nets, selectedNetName, connectorsByInstance, handleEdgeNetNameChange]);
 
   // Local React Flow state
   const [localNodes, setLocalNodes, onNodesChange] = useNodesState(rfNodes);

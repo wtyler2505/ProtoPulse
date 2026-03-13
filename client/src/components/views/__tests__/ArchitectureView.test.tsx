@@ -85,6 +85,16 @@ vi.mock('@/lib/clipboard', () => ({
   copyToClipboard: vi.fn(),
 }));
 
+vi.mock('@/lib/contexts/project-id-context', () => ({
+  useProjectId: () => 1,
+}));
+
+vi.mock('@/lib/circuit-editor/hooks', () => ({
+  useCircuitDesigns: () => ({ data: [], isLoading: false }),
+  useCreateCircuitDesign: () => ({ mutateAsync: vi.fn().mockResolvedValue({ id: 1, name: 'Main Schematic' }) }),
+  useCreateCircuitInstance: () => ({ mutateAsync: vi.fn().mockResolvedValue({ id: 1 }) }),
+}));
+
 vi.mock('@/hooks/useSyncedFlowState', () => ({
   useSyncedFlowState: () => ({
     nodeInteracted: { current: false },

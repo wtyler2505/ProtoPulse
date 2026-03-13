@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { apiRequest } from '@/lib/queryClient';
+import { STORED_KEY_SENTINEL } from '@/hooks/useApiKeys';
 
 export type KeyStatus = 'unchecked' | 'validating' | 'valid' | 'invalid' | 'error';
 
@@ -18,7 +19,13 @@ export function useApiKeyStatus(): ApiKeyStatusResult {
     setStatus('validating');
     setErrorMessage(null);
     try {
-      const res = await apiRequest('POST', '/api/settings/api-keys/validate', { provider, apiKey });
+      // If the key is the server-stored sentinel, tell the server to use its stored copy
+      const isSentinel = apiKey === STORED_KEY_SENTINEL;
+      const body = isSentinel
+        ? { provider, useStored: true }
+        : { provider, apiKey };
+
+      const res = await apiRequest('POST', '/api/settings/api-keys/validate', body);
       const data = await res.json() as { valid: boolean; error?: string };
       if (data.valid) {
         setStatus('valid');

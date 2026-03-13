@@ -7,6 +7,7 @@ import { processAIMessage, streamAIMessage, categorizeError, routeToModel } from
 import { getApiKey } from '../auth';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
+import { buildSimulationContext } from '../lib/simulation-context';
 
 const MAX_CHAT_HISTORY = 10;
 
@@ -213,11 +214,12 @@ async function buildAppStateFromProject(
     storage.getDesignPreferences(projectId),
   ]);
 
-  // Fetch instance/net counts for all circuits in parallel (avoids sequential N+1)
+  // Fetch instance/net counts and simulation results for all circuits in parallel (avoids sequential N+1)
   const circuitIds = circuits.map((c) => c.id);
-  const [allInstances, allNets] = await Promise.all([
+  const [allInstances, allNets, allSimResults] = await Promise.all([
     Promise.all(circuitIds.map((id) => storage.getCircuitInstances(id))),
     Promise.all(circuitIds.map((id) => storage.getCircuitNets(id))),
+    Promise.all(circuitIds.map((id) => storage.getSimulationResults(id))),
   ]);
   const circuitDesigns = circuits.map((c, i) => ({
     id: c.id,
@@ -312,6 +314,17 @@ async function buildAppStateFromProject(
       source: p.source,
       confidence: p.confidence,
     })),
+    // BL-0576: Simulation results context
+    simulationSummary: (() => {
+      const summaries: string[] = [];
+      for (let i = 0; i < circuits.length; i++) {
+        const simCtx = buildSimulationContext(allSimResults[i], circuits[i].name);
+        if (simCtx) {
+          summaries.push(simCtx);
+        }
+      }
+      return summaries.length > 0 ? summaries.join('\n') : undefined;
+    })(),
   };
 }
 

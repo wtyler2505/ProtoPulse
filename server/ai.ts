@@ -17,7 +17,7 @@ export type AIAction =
   | { type: "generate_architecture"; components: Array<{ label: string; nodeType: string; description: string; positionX: number; positionY: number }>; connections: Array<{ sourceLabel: string; targetLabel: string; label: string; busType?: string }> }
   | { type: "add_bom_item"; partNumber: string; manufacturer: string; description: string; quantity?: number; unitPrice?: number; supplier?: string; status?: string }
   | { type: "remove_bom_item"; partNumber: string }
-  | { type: "update_bom_item"; partNumber: string; updates: Record<string, any> }
+  | { type: "update_bom_item"; partNumber: string; updates: Record<string, unknown> }
   | { type: "run_validation" }
   | { type: "clear_validation" }
   | { type: "add_validation_issue"; severity: string; message: string; componentId?: string; suggestion?: string }
@@ -64,8 +64,8 @@ export type AIAction =
   | { type: "export_eagle" }
   | { type: "export_fritzing_project"; circuitId?: number }
   | { type: "export_tinkercad_project"; circuitId?: number }
-  | { type: "vision_analysis"; message: string; data: any }
-  | { type: "circuit_extraction"; message: string; data: any }
+  | { type: "vision_analysis"; message: string; data: Record<string, unknown> }
+  | { type: "circuit_extraction"; message: string; data: Record<string, unknown> }
   | { type: "suggest_net_names"; circuitId: number }
   | { type: "suggest_trace_path"; circuitId: number; netId: number; layer?: string }
   | { type: "hardware_debug_analysis"; circuitId?: number }
@@ -96,6 +96,8 @@ interface AppState {
   historyItems: Array<{ action: string; user: string; timestamp: string }>;
   bomMetadata: { totalCost: number; itemCount: number; outOfStockCount: number; lowStockCount: number };
   designPreferences: Array<{ category: string; key: string; value: string; source: string; confidence: number }>;
+  // BL-0576: Simulation results context
+  simulationSummary?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -786,6 +788,9 @@ ${bomSummaryDescription}
 ${appState.designPreferences.length > 0
     ? appState.designPreferences.map(p => `  - [${p.category}] ${p.key}: ${p.value} (source: ${p.source}, confidence: ${(p.confidence * 100).toFixed(0)}%)`).join("\n")
     : "  (none — learn preferences from the user's design choices and stated requirements)"}
+
+### Simulation Results:
+${appState.simulationSummary || "  (no simulation results yet)"}
 
 ## Tools
 

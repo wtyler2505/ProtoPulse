@@ -1,4 +1,4 @@
-import { memo, useCallback, useSyncExternalStore } from 'react';
+import { memo, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import {
   getSmoothStepPath,
   EdgeLabelRenderer,
@@ -22,6 +22,8 @@ export interface NetEdgeData {
   highlighted?: boolean;
   /** Net ID for wire visual state lookup (set during simulation) */
   netId?: number;
+  /** BL-0489: Callback to rename the net via inline editing */
+  onNetNameChange?: (netId: number, newName: string) => void;
   [key: string]: unknown; // Required by @xyflow/react — all edge data types must be indexable
 }
 
@@ -38,9 +40,34 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
   markerEnd,
   selected,
 }: EdgeProps<Edge<NetEdgeData>>) {
-  const { netName, netType, color, busWidth, highlighted, netId } = data ?? {};
+  const { netName, netType, color, busWidth, highlighted, netId, onNetNameChange } = data ?? {};
   const isBus = netType === 'bus';
   const isHighlighted = highlighted || selected;
+
+  // BL-0489: Inline editing state for net label
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(netName ?? '');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditing]);
+
+  const commitEdit = useCallback(() => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== netName && netId != null && onNetNameChange) {
+      onNetNameChange(netId, trimmed);
+    }
+    setIsEditing(false);
+  }, [editValue, netName, netId, onNetNameChange]);
+
+  const cancelEdit = useCallback(() => {
+    setIsEditing(false);
+    setEditValue(netName ?? '');
+  }, [netName]);
 
   const { isLive, wireVisualStates } = useSimulation();
 
@@ -138,15 +165,47 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
 
       {/* Net name + optional bus width label + simulation voltage */}
       <EdgeLabelRenderer>
-        {netName && (
+        {netName && !isEditing && (
           <div
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
             }}
-            className="absolute text-[9px] text-muted-foreground bg-background/80 px-1 rounded pointer-events-none nodrag nopan"
+            className="absolute text-[9px] text-muted-foreground bg-background/80 px-1 rounded nodrag nopan cursor-pointer"
+            data-testid={`net-edge-label-${id}`}
+            onDoubleClick={() => {
+              if (onNetNameChange && netId != null) {
+                setEditValue(netName);
+                setIsEditing(true);
+              }
+            }}
           >
             {netName}
             {isBus && busWidth ? ` [${busWidth}]` : ''}
+          </div>
+        )}
+
+        {/* BL-0489: Inline editing input for net name */}
+        {isEditing && (
+          <div
+            style={{
+              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+            }}
+            className="absolute nodrag nopan"
+          >
+            <input
+              ref={inputRef}
+              data-testid={`net-edge-label-input-${id}`}
+              className="text-[9px] font-mono text-cyan-400 bg-background border border-cyan-400 rounded px-1 py-0 outline-none w-24"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { commitEdit(); }
+                if (e.key === 'Escape') { cancelEdit(); }
+                e.stopPropagation();
+              }}
+              onBlur={commitEdit}
+              onMouseDown={(e) => e.stopPropagation()}
+            />
           </div>
         )}
 

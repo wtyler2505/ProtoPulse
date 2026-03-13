@@ -11,7 +11,7 @@ import { useDndState, type ComponentDragData } from '@/lib/dnd-context';
 import CustomNode from './CustomNode';
 import AssetManager from '@/components/panels/AssetManager';
 import { cn } from '@/lib/utils';
-import { MousePointer2, Grid, Move, Maximize, Cpu, Component, Pencil, Brain, X, RefreshCw, Zap, AlertTriangle, Info, ChevronDown, ChevronUp, Plus, ClipboardPaste, CheckSquare, ShieldCheck, FileJson, FileText } from 'lucide-react';
+import { MousePointer2, Grid, Move, Maximize, Cpu, Component, Pencil, Brain, X, RefreshCw, Zap, AlertTriangle, Info, ChevronDown, ChevronUp, Plus, ClipboardPaste, CheckSquare, ShieldCheck, FileJson, FileText, CircuitBoard } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubTrigger, ContextMenuSubContent } from '@/components/ui/context-menu';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,9 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { ArchitectureAnalyzer } from '@/lib/architecture-analyzer';
 import type { DesignAnalysisReport, SubsystemCategory, ComplexityLevel } from '@/lib/architecture-analyzer';
 import { NodeInspectorPanel } from './architecture/NodeInspectorPanel';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useCircuitDesigns, useCreateCircuitDesign, useCreateCircuitInstance } from '@/lib/circuit-editor/hooks';
+import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -64,6 +67,10 @@ function ArchitectureFlow() {
   const { setActiveView } = useProjectMeta();
   const { bom } = useBom();
   const { toast } = useToast();
+  const projectId = useProjectId();
+  const { data: circuits } = useCircuitDesigns(projectId);
+  const createDesignMutation = useCreateCircuitDesign();
+  const createInstanceMutation = useCreateCircuitInstance();
   const { activeDrag } = useDndState();
   const contextMenuHintShown = useRef(false);
   const clipboardRef = useRef<{ nodes: Node[]; edges: Edge[] } | null>(null);
@@ -199,8 +206,8 @@ function ArchitectureFlow() {
   const markNodeInteracted = useCallback(() => { nodeInteracted.current = true; }, []);
   const markEdgeInteracted = useCallback(() => { edgeInteracted.current = true; }, []);
 
-  const handlePaste = useCallback((bundle: any) => {
-    if (!bundle || !bundle.nodes || bundle.nodes.length === 0) return;
+  const handlePaste = useCallback((bundle: { nodes?: Node[]; edges?: Edge[] } | null) => {
+    if (!bundle || !bundle.nodes || bundle.nodes.length === 0) { return; }
 
     const { nodes: copiedNodes, edges: copiedEdges } = bundle;
 
@@ -235,7 +242,7 @@ function ArchitectureFlow() {
       selected: true,
     }));
 
-    const pastedEdges = copiedEdges.map((ed: Edge) => ({
+    const pastedEdges = (copiedEdges ?? []).map((ed: Edge) => ({
       ...ed,
       id: crypto.randomUUID(),
       source: idMap.get(ed.source) ?? ed.source,
@@ -548,6 +555,78 @@ function ArchitectureFlow() {
     addOutputLog('[ARCH] Navigating to Validation view');
     setActiveView('validation');
   }, [addOutputLog, setActiveView]);
+
+  const handleCreateSchematicInstance = useCallback(async () => {
+    if (!selectedNodeId) { return; }
+    const node = localNodes.find(n => n.id === selectedNodeId);
+    if (!node) { return; }
+
+    const nodeLabel = String(node.data?.label ?? '').toLowerCase();
+    const nodeType = String(node.data?.type ?? '').toLowerCase();
+    const searchTerms = [nodeLabel, nodeType].filter(Boolean);
+
+    // Find matching standard library component via simple substring/keyword match
+    const match = STANDARD_LIBRARY_COMPONENTS.find((comp) => {
+      const title = comp.title.toLowerCase();
+      const tags = comp.tags.map(t => t.toLowerCase());
+      const category = comp.category.toLowerCase();
+      return searchTerms.some(term =>
+        title.includes(term) ||
+        term.includes(title.split(' ')[0]) ||
+        tags.some(tag => tag.includes(term) || term.includes(tag)) ||
+        category.includes(term)
+      );
+    });
+
+    if (!match) {
+      toast({ title: 'No matching component found in library', description: `Could not find a standard library component matching "${node.data?.label ?? ''}"` });
+      return;
+    }
+
+    try {
+      // Ensure we have a circuit design to place the instance on
+      let circuitId: number;
+      if (circuits && circuits.length > 0) {
+        circuitId = circuits[0].id;
+      } else {
+        const newCircuit = await createDesignMutation.mutateAsync({ projectId, name: 'Main Schematic' });
+        circuitId = newCircuit.id;
+      }
+
+      // Generate a reference designator from the component title
+      const prefix = match.category === 'Passives' ? 'R' :
+        match.category === 'Microcontrollers' ? 'U' :
+        match.category === 'LEDs' ? 'D' :
+        match.category === 'Diodes' ? 'D' :
+        match.category === 'Transistors' ? 'Q' :
+        match.category === 'Op-Amps' ? 'U' :
+        match.category === 'Connectors' ? 'J' :
+        match.category === 'Power' ? 'U' :
+        match.category === 'Sensors' ? 'U' :
+        match.category === 'Communication' ? 'U' :
+        'U';
+
+      const refDes = `${prefix}?`;
+
+      await createInstanceMutation.mutateAsync({
+        circuitId,
+        partId: null,
+        referenceDesignator: refDes,
+        schematicX: 200,
+        schematicY: 200,
+        properties: {
+          componentTitle: match.title,
+          sourceArchNode: String(node.data?.label ?? ''),
+        },
+      });
+
+      setActiveView('schematic');
+      toast({ title: `Created ${match.title} on schematic`, description: `Placed from architecture node "${node.data?.label ?? ''}"` });
+      addOutputLog(`[ARCH] Created schematic instance: ${match.title} from node ${selectedNodeId}`);
+    } catch (err) {
+      toast({ title: 'Failed to create schematic instance', description: err instanceof Error ? err.message : 'Unknown error' });
+    }
+  }, [selectedNodeId, localNodes, circuits, projectId, createDesignMutation, createInstanceMutation, setActiveView, toast, addOutputLog]);
 
   return (
     <ContextMenu onOpenChange={(open) => { if (open) handleContextMenuHint(); }}>
@@ -1025,6 +1104,14 @@ function ArchitectureFlow() {
         >
           <Pencil className="w-3.5 h-3.5 mr-2" />
           Edit Component
+        </ContextMenuItem>
+        <ContextMenuItem
+          data-testid="context-menu-create-schematic-instance"
+          disabled={!selectedNodeId}
+          onSelect={() => { void handleCreateSchematicInstance(); }}
+        >
+          <CircuitBoard className="w-3.5 h-3.5 mr-2" />
+          Create Schematic Instance
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

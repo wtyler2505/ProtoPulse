@@ -551,14 +551,14 @@ describe('generateSpiceNetlist', () => {
     expect(vLine).toContain('DC');
   });
 
-  // --- Resistor value is preserved ---
+  // --- Resistor value is normalized to SPICE engineering notation ---
 
-  it('resistor line preserves the value string', () => {
+  it('resistor line contains normalized SPICE value', () => {
     const { netlist } = generateSpiceNetlist(makeSimpleVRCircuit());
-    // R1 is "1k" → line should contain "1k"
+    // R1 is "1k" → normalized to "1.000K" (SPICE engineering notation)
     const rLine = netlist.split('\n').find(l => /^R1\s/.test(l));
     expect(rLine).toBeDefined();
-    expect(rLine).toContain('1k');
+    expect(rLine).toContain('1.000K');
   });
 
   // --- 'oct' sweep type ---
@@ -624,5 +624,209 @@ describe('generateDCOpNetlist', () => {
     expect(netlist).toContain('.CONTROL');
     expect(netlist).toContain('print all');
     expect(netlist).toContain('.ENDC');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BL-0567: Value auto-population from schematic component properties
+// ---------------------------------------------------------------------------
+
+describe('BL-0567: SPICE value auto-population', () => {
+  function makeCapacitor(
+    instanceId: number,
+    ref: string,
+    value: string,
+    net1Id: number | null,
+    net2Id: number | null,
+  ): CircuitComponent {
+    return {
+      instanceId,
+      referenceDesignator: ref,
+      family: 'Capacitor',
+      properties: { value },
+      connectors: [
+        { id: 'pin1', name: 'pin1', netId: net1Id },
+        { id: 'pin2', name: 'pin2', netId: net2Id },
+      ],
+    };
+  }
+
+  function makeInductor(
+    instanceId: number,
+    ref: string,
+    value: string,
+    net1Id: number | null,
+    net2Id: number | null,
+  ): CircuitComponent {
+    return {
+      instanceId,
+      referenceDesignator: ref,
+      family: 'Inductor',
+      properties: { value },
+      connectors: [
+        { id: 'pin1', name: 'pin1', netId: net1Id },
+        { id: 'pin2', name: 'pin2', netId: net2Id },
+      ],
+    };
+  }
+
+  it('resistor with "10k" value produces normalized SPICE notation', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components = [makeResistor(1, 'R1', '10k', 2, 1)];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const rLine = netlist.split('\n').find(l => /^R1\s/.test(l));
+    expect(rLine).toBeDefined();
+    expect(rLine).toContain('10.00K');
+  });
+
+  it('resistor with "4.7kOhm" strips unit suffix and normalizes', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components = [makeResistor(1, 'R1', '4.7kOhm', 2, 1)];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const rLine = netlist.split('\n').find(l => /^R1\s/.test(l));
+    expect(rLine).toBeDefined();
+    expect(rLine).toContain('4.700K');
+  });
+
+  it('capacitor with "100nF" produces normalized SPICE value', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components = [makeCapacitor(1, 'C1', '100nF', 2, 1)];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const cLine = netlist.split('\n').find(l => /^C1\s/.test(l));
+    expect(cLine).toBeDefined();
+    expect(cLine).toContain('100.0N');
+  });
+
+  it('capacitor with "4.7uF" produces normalized SPICE value', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components = [makeCapacitor(1, 'C1', '4.7uF', 2, 1)];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const cLine = netlist.split('\n').find(l => /^C1\s/.test(l));
+    expect(cLine).toBeDefined();
+    expect(cLine).toContain('4.700U');
+  });
+
+  it('inductor with "10uH" produces normalized SPICE value', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components = [makeInductor(1, 'L1', '10uH', 2, 1)];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const lLine = netlist.split('\n').find(l => /^L1\s/.test(l));
+    expect(lLine).toBeDefined();
+    expect(lLine).toContain('10.00U');
+  });
+
+  it('inductor with "2.2mH" produces normalized SPICE value', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components = [makeInductor(1, 'L1', '2.2mH', 2, 1)];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const lLine = netlist.split('\n').find(l => /^L1\s/.test(l));
+    expect(lLine).toBeDefined();
+    expect(lLine).toContain('2.200M');
+  });
+
+  it('resistor uses "resistance" property as fallback', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components: CircuitComponent[] = [{
+      instanceId: 1,
+      referenceDesignator: 'R1',
+      family: 'Resistor',
+      properties: { resistance: '47k' },
+      connectors: [
+        { id: 'pin1', name: 'pin1', netId: 2 },
+        { id: 'pin2', name: 'pin2', netId: 1 },
+      ],
+    }];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const rLine = netlist.split('\n').find(l => /^R1\s/.test(l));
+    expect(rLine).toBeDefined();
+    expect(rLine).toContain('47.00K');
+  });
+
+  it('capacitor uses "capacitance" property as fallback', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components: CircuitComponent[] = [{
+      instanceId: 1,
+      referenceDesignator: 'C1',
+      family: 'Capacitor',
+      properties: { capacitance: '22pF' },
+      connectors: [
+        { id: 'pin1', name: 'pin1', netId: 2 },
+        { id: 'pin2', name: 'pin2', netId: 1 },
+      ],
+    }];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const cLine = netlist.split('\n').find(l => /^C1\s/.test(l));
+    expect(cLine).toBeDefined();
+    expect(cLine).toContain('22.00P');
+  });
+
+  it('uses default when no value or type-specific property is set', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components: CircuitComponent[] = [{
+      instanceId: 1,
+      referenceDesignator: 'R1',
+      family: 'Resistor',
+      properties: {},
+      connectors: [
+        { id: 'pin1', name: 'pin1', netId: 2 },
+        { id: 'pin2', name: 'pin2', netId: 1 },
+      ],
+    }];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const rLine = netlist.split('\n').find(l => /^R1\s/.test(l));
+    expect(rLine).toBeDefined();
+    // Default "1k" → normalized to "1.000K"
+    expect(rLine).toContain('1.000K');
+  });
+
+  it('handles "1Meg" resistor value (mega prefix)', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components = [makeResistor(1, 'R1', '1Meg', 2, 1)];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const rLine = netlist.split('\n').find(l => /^R1\s/.test(l));
+    expect(rLine).toBeDefined();
+    expect(rLine).toContain('1.000MEG');
+  });
+
+  it('handles plain numeric values ("47" → "47.00")', () => {
+    const nets = [makeGndNet(1), makeNet(2, 'VCC')];
+    const components = [makeResistor(1, 'R1', '47', 2, 1)];
+    const input: SpiceGeneratorInput = {
+      title: 'Test', components, nets, config: { analysis: 'op' },
+    };
+    const { netlist } = generateSpiceNetlist(input);
+    const rLine = netlist.split('\n').find(l => /^R1\s/.test(l));
+    expect(rLine).toBeDefined();
+    expect(rLine).toContain('47.00');
   });
 });

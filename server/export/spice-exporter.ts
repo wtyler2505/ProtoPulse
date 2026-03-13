@@ -500,7 +500,16 @@ export function generateSpiceNetlist(
     const part = inst.partId != null ? partMap.get(inst.partId) : undefined;
     const meta = part?.meta ?? {};
     const prefix = spicePrefix(inst.referenceDesignator);
-    const value = metaStr(meta, 'value', '1');
+    // BL-0567: Prefer instance properties (schematic component values) over part meta defaults
+    const instProps = (inst.properties ?? {}) as Record<string, unknown>;
+    const instValue = typeof instProps.value === 'string' ? instProps.value : '';
+    const instResistance = typeof instProps.resistance === 'string' ? instProps.resistance : '';
+    const instCapacitance = typeof instProps.capacitance === 'string' ? instProps.capacitance : '';
+    const instInductance = typeof instProps.inductance === 'string' ? instProps.inductance : '';
+    const instVoltage = typeof instProps.voltage === 'string' ? instProps.voltage : '';
+    const instCurrent = typeof instProps.current === 'string' ? instProps.current : '';
+    const value = instValue || instResistance || instCapacitance || instInductance
+      || instVoltage || instCurrent || metaStr(meta, 'value', '1');
     const connectedNets = instanceNets.get(inst.id) ?? [];
 
     // Pad net list to at least 2 nodes (most components need at least 2 terminals)

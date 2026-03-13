@@ -226,6 +226,164 @@ export function areConnected(a: BreadboardCoord, b: BreadboardCoord): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Wire color coding (BL-0591)
+// ---------------------------------------------------------------------------
+
+/** Standard wire color presets for breadboard wiring */
+export const WIRE_COLOR_PRESETS: ReadonlyArray<{ name: string; hex: string }> = [
+  { name: 'Red', hex: '#e74c3c' },
+  { name: 'Black', hex: '#1a1a2e' },
+  { name: 'Yellow', hex: '#f1c40f' },
+  { name: 'Orange', hex: '#e67e22' },
+  { name: 'Green', hex: '#2ecc71' },
+  { name: 'Blue', hex: '#3498db' },
+  { name: 'White', hex: '#ecf0f1' },
+  { name: 'Purple', hex: '#9b59b6' },
+] as const;
+
+const DEFAULT_WIRE_COLOR = '#2ecc71'; // green
+
+/**
+ * Return a sensible default wire color based on a net name convention.
+ * Red for power, black for ground, blue for I2C/SPI, green for everything else.
+ */
+export function getDefaultColorForNet(netName: string | null | undefined): string {
+  if (!netName) return DEFAULT_WIRE_COLOR;
+  const upper = netName.toUpperCase();
+  if (upper === 'VCC' || upper === 'VDD' || upper === '5V' || upper === '3V3' || upper === '3.3V') {
+    return '#e74c3c'; // red
+  }
+  if (upper === 'GND' || upper === 'VSS') {
+    return '#1a1a2e'; // black
+  }
+  if (upper === 'SDA' || upper === 'SCL' || upper === 'MOSI' || upper === 'MISO' || upper === 'SCK' || upper === 'SS') {
+    return '#3498db'; // blue
+  }
+  return DEFAULT_WIRE_COLOR;
+}
+
+/** Serialized form of wire color data for persistence */
+export interface WireColorData {
+  wireColors: Record<string, string>;
+}
+
+/**
+ * Wire color storage: maps wire IDs → hex color strings.
+ * Provides get/set/serialize/deserialize for breadboard wire colors.
+ */
+export class WireColorManager {
+  private colors = new Map<string, string>();
+  private listeners: Array<() => void> = [];
+
+  /** Set the color for a specific wire. Notifies listeners. */
+  setWireColor(wireId: string, color: string): void {
+    this.colors.set(wireId, color);
+    this.notify();
+  }
+
+  /** Get the color for a wire, or the default green if not set. */
+  getWireColor(wireId: string): string {
+    return this.colors.get(wireId) ?? DEFAULT_WIRE_COLOR;
+  }
+
+  /** Remove the color entry for a wire. */
+  removeWireColor(wireId: string): void {
+    this.colors.delete(wireId);
+    this.notify();
+  }
+
+  /** Return all stored wire colors as a plain object. */
+  serialize(): WireColorData {
+    const wireColors: Record<string, string> = {};
+    for (const [k, v] of Array.from(this.colors.entries())) {
+      wireColors[k] = v;
+    }
+    return { wireColors };
+  }
+
+  /** Restore wire colors from a serialized object. */
+  deserialize(data: WireColorData): void {
+    this.colors.clear();
+    if (data.wireColors) {
+      for (const [k, v] of Object.entries(data.wireColors)) {
+        this.colors.set(k, v);
+      }
+    }
+    this.notify();
+  }
+
+  /** Subscribe to changes. Returns an unsubscribe function. */
+  subscribe(listener: () => void): () => void {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter((l) => l !== listener);
+    };
+  }
+
+  private notify(): void {
+    for (const l of this.listeners) {
+      l();
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Connected holes helper (BL-0592)
+// ---------------------------------------------------------------------------
+
+/** Simple row/column pair for breadboard hole positions */
+export interface HolePosition {
+  row: number;
+  col: string;
+  type: 'terminal' | 'rail';
+  /** For rail holes, identifies which rail */
+  rail?: RailId;
+}
+
+/**
+ * Return all holes electrically connected to the given position.
+ *
+ * For terminal strips: same row, same half (a-e or f-j) — 5 holes.
+ * For power rails: entire rail strip — all BB.ROWS holes.
+ *
+ * This is a convenience wrapper around `getConnectedPoints` that returns
+ * a simpler `HolePosition` format suitable for UI highlight rendering.
+ */
+export function getConnectedHoles(row: number, col: string): HolePosition[] {
+  // Determine if this is a rail or terminal position
+  const railMapping: Record<string, RailId> = {
+    '+t': 'top_pos',
+    '-t': 'top_neg',
+    '+b': 'bottom_pos',
+    '-b': 'bottom_neg',
+  };
+
+  // Check if col is a rail identifier
+  const railId = railMapping[col];
+  if (railId) {
+    // Power rail: return entire rail
+    return Array.from({ length: BB.ROWS }, (_, i): HolePosition => ({
+      row: i + 1,
+      col,
+      type: 'rail',
+      rail: railId,
+    }));
+  }
+
+  // Terminal strip: determine which side (left a-e, right f-j)
+  const colLetter = col as ColumnLetter;
+  const ci = colIndex[colLetter];
+  if (ci == null) return [];
+
+  const group = ci < 5 ? BB.LEFT_COLS : BB.RIGHT_COLS;
+  return group.map((c): HolePosition => ({
+    row,
+    col: c,
+    type: 'terminal',
+  }));
+}
+
+// ---------------------------------------------------------------------------
 // Board dimensions (for SVG sizing)
 // ---------------------------------------------------------------------------
 

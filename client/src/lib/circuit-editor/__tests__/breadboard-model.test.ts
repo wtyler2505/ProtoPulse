@@ -6,7 +6,7 @@
  * Runs in client project config (happy-dom environment).
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   BB,
   areConnected,
@@ -17,6 +17,10 @@ import {
   getOccupiedPoints,
   checkCollision,
   getBoardDimensions,
+  getDefaultColorForNet,
+  getConnectedHoles,
+  WireColorManager,
+  WIRE_COLOR_PRESETS,
 } from '../breadboard-model';
 import type {
   BreadboardCoord,
@@ -481,5 +485,287 @@ describe('getBoardDimensions', () => {
     const bottomY = coordToPixel(terminal('a', BB.ROWS)).y;
     const dims = getBoardDimensions();
     expect(dims.height).toBeGreaterThanOrEqual(bottomY);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getDefaultColorForNet (BL-0591)
+// ---------------------------------------------------------------------------
+
+describe('getDefaultColorForNet', () => {
+  it('returns red for VCC', () => {
+    expect(getDefaultColorForNet('VCC')).toBe('#e74c3c');
+  });
+
+  it('returns red for VDD', () => {
+    expect(getDefaultColorForNet('VDD')).toBe('#e74c3c');
+  });
+
+  it('returns red for 5V', () => {
+    expect(getDefaultColorForNet('5V')).toBe('#e74c3c');
+  });
+
+  it('returns red for 3V3', () => {
+    expect(getDefaultColorForNet('3V3')).toBe('#e74c3c');
+  });
+
+  it('returns red for 3.3V', () => {
+    expect(getDefaultColorForNet('3.3V')).toBe('#e74c3c');
+  });
+
+  it('returns black for GND', () => {
+    expect(getDefaultColorForNet('GND')).toBe('#1a1a2e');
+  });
+
+  it('returns black for VSS', () => {
+    expect(getDefaultColorForNet('VSS')).toBe('#1a1a2e');
+  });
+
+  it('returns blue for SDA (I2C)', () => {
+    expect(getDefaultColorForNet('SDA')).toBe('#3498db');
+  });
+
+  it('returns blue for SCL (I2C)', () => {
+    expect(getDefaultColorForNet('SCL')).toBe('#3498db');
+  });
+
+  it('returns blue for MOSI (SPI)', () => {
+    expect(getDefaultColorForNet('MOSI')).toBe('#3498db');
+  });
+
+  it('returns blue for MISO (SPI)', () => {
+    expect(getDefaultColorForNet('MISO')).toBe('#3498db');
+  });
+
+  it('returns blue for SCK (SPI clock)', () => {
+    expect(getDefaultColorForNet('SCK')).toBe('#3498db');
+  });
+
+  it('returns blue for SS (SPI select)', () => {
+    expect(getDefaultColorForNet('SS')).toBe('#3498db');
+  });
+
+  it('returns green (default) for generic signal names', () => {
+    expect(getDefaultColorForNet('D7')).toBe('#2ecc71');
+    expect(getDefaultColorForNet('LED1')).toBe('#2ecc71');
+    expect(getDefaultColorForNet('PWM_OUT')).toBe('#2ecc71');
+  });
+
+  it('returns green for null', () => {
+    expect(getDefaultColorForNet(null)).toBe('#2ecc71');
+  });
+
+  it('returns green for undefined', () => {
+    expect(getDefaultColorForNet(undefined)).toBe('#2ecc71');
+  });
+
+  it('is case-insensitive', () => {
+    expect(getDefaultColorForNet('vcc')).toBe('#e74c3c');
+    expect(getDefaultColorForNet('gnd')).toBe('#1a1a2e');
+    expect(getDefaultColorForNet('sda')).toBe('#3498db');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WireColorManager (BL-0591)
+// ---------------------------------------------------------------------------
+
+describe('WireColorManager', () => {
+  it('returns default color for unknown wire IDs', () => {
+    const mgr = new WireColorManager();
+    expect(mgr.getWireColor('wire-999')).toBe('#2ecc71');
+  });
+
+  it('sets and retrieves a wire color', () => {
+    const mgr = new WireColorManager();
+    mgr.setWireColor('w1', '#e74c3c');
+    expect(mgr.getWireColor('w1')).toBe('#e74c3c');
+  });
+
+  it('overrides a previously set color', () => {
+    const mgr = new WireColorManager();
+    mgr.setWireColor('w1', '#e74c3c');
+    mgr.setWireColor('w1', '#3498db');
+    expect(mgr.getWireColor('w1')).toBe('#3498db');
+  });
+
+  it('removes a wire color', () => {
+    const mgr = new WireColorManager();
+    mgr.setWireColor('w1', '#e74c3c');
+    mgr.removeWireColor('w1');
+    expect(mgr.getWireColor('w1')).toBe('#2ecc71'); // reverts to default
+  });
+
+  it('serializes to a plain object', () => {
+    const mgr = new WireColorManager();
+    mgr.setWireColor('w1', '#e74c3c');
+    mgr.setWireColor('w2', '#3498db');
+    const data = mgr.serialize();
+    expect(data.wireColors).toEqual({ w1: '#e74c3c', w2: '#3498db' });
+  });
+
+  it('deserializes from a plain object', () => {
+    const mgr = new WireColorManager();
+    mgr.deserialize({ wireColors: { w1: '#f1c40f', w2: '#9b59b6' } });
+    expect(mgr.getWireColor('w1')).toBe('#f1c40f');
+    expect(mgr.getWireColor('w2')).toBe('#9b59b6');
+  });
+
+  it('deserialize clears previous state', () => {
+    const mgr = new WireColorManager();
+    mgr.setWireColor('old', '#111111');
+    mgr.deserialize({ wireColors: { new: '#222222' } });
+    expect(mgr.getWireColor('old')).toBe('#2ecc71'); // cleared
+    expect(mgr.getWireColor('new')).toBe('#222222');
+  });
+
+  it('round-trips through serialize/deserialize', () => {
+    const mgr1 = new WireColorManager();
+    mgr1.setWireColor('a', '#aaa');
+    mgr1.setWireColor('b', '#bbb');
+    const data = mgr1.serialize();
+
+    const mgr2 = new WireColorManager();
+    mgr2.deserialize(data);
+    expect(mgr2.getWireColor('a')).toBe('#aaa');
+    expect(mgr2.getWireColor('b')).toBe('#bbb');
+  });
+
+  it('notifies listeners on setWireColor', () => {
+    const mgr = new WireColorManager();
+    const listener = vi.fn();
+    mgr.subscribe(listener);
+    mgr.setWireColor('w1', '#e74c3c');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('notifies listeners on removeWireColor', () => {
+    const mgr = new WireColorManager();
+    mgr.setWireColor('w1', '#e74c3c');
+    const listener = vi.fn();
+    mgr.subscribe(listener);
+    mgr.removeWireColor('w1');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('notifies listeners on deserialize', () => {
+    const mgr = new WireColorManager();
+    const listener = vi.fn();
+    mgr.subscribe(listener);
+    mgr.deserialize({ wireColors: { w1: '#e74c3c' } });
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('unsubscribe stops notifications', () => {
+    const mgr = new WireColorManager();
+    const listener = vi.fn();
+    const unsub = mgr.subscribe(listener);
+    unsub();
+    mgr.setWireColor('w1', '#e74c3c');
+    expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WIRE_COLOR_PRESETS (BL-0591)
+// ---------------------------------------------------------------------------
+
+describe('WIRE_COLOR_PRESETS', () => {
+  it('has at least 8 presets', () => {
+    expect(WIRE_COLOR_PRESETS.length).toBeGreaterThanOrEqual(8);
+  });
+
+  it('each preset has a name and hex string', () => {
+    for (const preset of WIRE_COLOR_PRESETS) {
+      expect(typeof preset.name).toBe('string');
+      expect(preset.name.length).toBeGreaterThan(0);
+      expect(typeof preset.hex).toBe('string');
+      expect(preset.hex).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+  });
+
+  it('has no duplicate hex values', () => {
+    const hexes = WIRE_COLOR_PRESETS.map(p => p.hex);
+    expect(new Set(hexes).size).toBe(hexes.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getConnectedHoles (BL-0592)
+// ---------------------------------------------------------------------------
+
+describe('getConnectedHoles', () => {
+  it('returns 5 left-group holes for col a, row 10', () => {
+    const holes = getConnectedHoles(10, 'a');
+    expect(holes).toHaveLength(5);
+    const cols = holes.map(h => h.col).sort();
+    expect(cols).toEqual(['a', 'b', 'c', 'd', 'e']);
+    holes.forEach(h => {
+      expect(h.row).toBe(10);
+      expect(h.type).toBe('terminal');
+    });
+  });
+
+  it('returns 5 right-group holes for col g, row 5', () => {
+    const holes = getConnectedHoles(5, 'g');
+    expect(holes).toHaveLength(5);
+    const cols = holes.map(h => h.col).sort();
+    expect(cols).toEqual(['f', 'g', 'h', 'i', 'j']);
+    holes.forEach(h => {
+      expect(h.row).toBe(5);
+      expect(h.type).toBe('terminal');
+    });
+  });
+
+  it('returns 5 left-group holes for col e (boundary of left group)', () => {
+    const holes = getConnectedHoles(1, 'e');
+    expect(holes).toHaveLength(5);
+    const cols = holes.map(h => h.col).sort();
+    expect(cols).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  it('returns 5 right-group holes for col f (boundary of right group)', () => {
+    const holes = getConnectedHoles(1, 'f');
+    expect(holes).toHaveLength(5);
+    const cols = holes.map(h => h.col).sort();
+    expect(cols).toEqual(['f', 'g', 'h', 'i', 'j']);
+  });
+
+  it('returns entire rail for top positive rail', () => {
+    const holes = getConnectedHoles(1, '+t');
+    expect(holes).toHaveLength(BB.ROWS);
+    holes.forEach(h => {
+      expect(h.type).toBe('rail');
+      expect(h.rail).toBe('top_pos');
+    });
+  });
+
+  it('returns entire rail for top negative rail', () => {
+    const holes = getConnectedHoles(1, '-t');
+    expect(holes).toHaveLength(BB.ROWS);
+    holes.forEach(h => {
+      expect(h.rail).toBe('top_neg');
+    });
+  });
+
+  it('returns entire rail for bottom positive rail', () => {
+    const holes = getConnectedHoles(1, '+b');
+    expect(holes).toHaveLength(BB.ROWS);
+    holes.forEach(h => {
+      expect(h.rail).toBe('bottom_pos');
+    });
+  });
+
+  it('returns entire rail for bottom negative rail', () => {
+    const holes = getConnectedHoles(1, '-b');
+    expect(holes).toHaveLength(BB.ROWS);
+    holes.forEach(h => {
+      expect(h.rail).toBe('bottom_neg');
+    });
+  });
+
+  it('returns empty array for invalid column letter', () => {
+    const holes = getConnectedHoles(1, 'z');
+    expect(holes).toEqual([]);
   });
 });

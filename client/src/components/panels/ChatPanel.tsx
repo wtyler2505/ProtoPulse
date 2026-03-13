@@ -889,6 +889,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
   const apiKeyValid = useCallback(() => {
     if (!aiApiKey) return true;
+    // Sentinel '••••••••' means server has the real key — always valid
+    if (aiApiKey === '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022') return true;
     if (aiProvider === 'anthropic') return aiApiKey.startsWith('sk-ant-');
     if (aiProvider === 'gemini') return aiApiKey.length >= 20;
     return true;

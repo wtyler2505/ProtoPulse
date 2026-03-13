@@ -841,4 +841,167 @@ export function registerExportTools(registry: ToolRegistry): void {
       }));
     },
   });
+
+  // ---------------------------------------------------------------------------
+  // BL-0575: Conversational export tools
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Available export formats and their corresponding API routes.
+   * Used by both `trigger_export` and `get_export_status`.
+   */
+  const EXPORT_FORMATS: Record<string, { label: string; route: string; requiresCircuit: boolean }> = {
+    'bom-csv': { label: 'BOM CSV', route: '/export/bom', requiresCircuit: false },
+    'kicad': { label: 'KiCad Project', route: '/export/kicad', requiresCircuit: true },
+    'eagle': { label: 'Eagle Project', route: '/export/eagle', requiresCircuit: true },
+    'gerber': { label: 'Gerber (RS-274X)', route: '/export/gerber', requiresCircuit: true },
+    'netlist-spice': { label: 'SPICE Netlist', route: '/export/netlist', requiresCircuit: true },
+    'netlist-kicad': { label: 'KiCad Netlist', route: '/export/netlist', requiresCircuit: true },
+    'netlist-csv': { label: 'CSV Netlist', route: '/export/netlist', requiresCircuit: true },
+    'pick-place': { label: 'Pick & Place CSV', route: '/export/pick-place', requiresCircuit: true },
+    'odb-plus-plus': { label: 'ODB++', route: '/export/odb-plus-plus', requiresCircuit: true },
+    'ipc2581': { label: 'IPC-2581', route: '/export/ipc2581', requiresCircuit: true },
+    'fzz': { label: 'Fritzing Project (FZZ)', route: '/export/fzz', requiresCircuit: true },
+    'firmware': { label: 'Firmware Scaffold', route: '/export/firmware', requiresCircuit: false },
+    'report-pdf': { label: 'Design Report PDF', route: '/export/report-pdf', requiresCircuit: false },
+    'fmea': { label: 'FMEA Report', route: '/export/fmea', requiresCircuit: false },
+    'pdf': { label: 'PDF/SVG View', route: '/export/pdf', requiresCircuit: false },
+  };
+
+  /**
+   * get_export_status — List available export formats and readiness for the current project.
+   *
+   * Checks whether the project has circuit data and BOM items, then returns a
+   * list of available formats with readiness indicators so the AI can guide the
+   * user toward the right export.
+   */
+  registry.register({
+    name: 'get_export_status',
+    description:
+      'List all available export formats for the current project design and indicate which ones are ready to use (have the required data: BOM items, circuit designs, etc.).',
+    category: 'export',
+    parameters: z.object({}),
+    requiresConfirmation: false,
+    execute: async (_params, ctx) => {
+      const [bomItems, circuits, nodes] = await Promise.all([
+        ctx.storage.getBomItems(ctx.projectId),
+        ctx.storage.getCircuitDesigns(ctx.projectId),
+        ctx.storage.getNodes(ctx.projectId),
+      ]);
+
+      const hasBom = bomItems.length > 0;
+      const hasCircuit = circuits.length > 0;
+      const hasArchitecture = nodes.length > 0;
+
+      const formats = Object.entries(EXPORT_FORMATS).map(([key, fmt]) => {
+        let ready = true;
+        const reasons: string[] = [];
+
+        if (fmt.requiresCircuit && !hasCircuit) {
+          ready = false;
+          reasons.push('no circuit design found');
+        }
+        if (key === 'bom-csv' && !hasBom) {
+          ready = false;
+          reasons.push('no BOM items');
+        }
+        if ((key === 'fmea' || key === 'firmware') && !hasArchitecture) {
+          ready = false;
+          reasons.push('no architecture nodes');
+        }
+
+        return {
+          format: key,
+          label: fmt.label,
+          ready,
+          reason: reasons.length > 0 ? reasons.join(', ') : undefined,
+        };
+      });
+
+      const readyCount = formats.filter((f) => f.ready).length;
+
+      return {
+        success: true,
+        message: `${readyCount} of ${formats.length} export formats are ready. ${hasCircuit ? `Circuit: "${circuits[0].name}"` : 'No circuit design yet.'} ${hasBom ? `BOM: ${bomItems.length} items.` : 'No BOM items yet.'}`,
+        data: { type: 'export_status', formats },
+      };
+    },
+  });
+
+  /**
+   * trigger_export — Trigger an export in a specific format and return the download URL.
+   *
+   * The AI uses this to direct the user to the correct export API endpoint.
+   * Returns a POST URL that the client can call to download the export file.
+   */
+  registry.register({
+    name: 'trigger_export',
+    description:
+      'Trigger an export in the specified format and return the download URL. The client will POST to this URL to generate and download the file. Supported formats: bom-csv, kicad, eagle, gerber, netlist-spice, netlist-kicad, netlist-csv, pick-place, odb-plus-plus, ipc2581, fzz, firmware, report-pdf, fmea, pdf.',
+    category: 'export',
+    parameters: z.object({
+      format: z
+        .string()
+        .describe(
+          'Export format key: bom-csv, kicad, eagle, gerber, netlist-spice, netlist-kicad, netlist-csv, pick-place, odb-plus-plus, ipc2581, fzz, firmware, report-pdf, fmea, pdf',
+        ),
+    }),
+    requiresConfirmation: false,
+    execute: async (params, ctx) => {
+      const fmt = EXPORT_FORMATS[params.format];
+      if (!fmt) {
+        const validFormats = Object.keys(EXPORT_FORMATS).join(', ');
+        return {
+          success: false,
+          message: `Unknown export format "${params.format}". Valid formats: ${validFormats}`,
+        };
+      }
+
+      // Pre-flight check: does the project have the required data?
+      if (fmt.requiresCircuit) {
+        const circuits = await ctx.storage.getCircuitDesigns(ctx.projectId);
+        if (circuits.length === 0) {
+          return {
+            success: false,
+            message: `Cannot export ${fmt.label}: no circuit designs found. Create a circuit design first.`,
+          };
+        }
+      }
+
+      if (params.format === 'bom-csv') {
+        const bomItems = await ctx.storage.getBomItems(ctx.projectId);
+        if (bomItems.length === 0) {
+          return {
+            success: false,
+            message: 'Cannot export BOM CSV: no BOM items found. Add components to the BOM first.',
+          };
+        }
+      }
+
+      // Build the body hints for netlist sub-formats
+      let bodyHint: Record<string, unknown> = {};
+      if (params.format === 'netlist-spice') {
+        bodyHint = { netlistFormat: 'spice' };
+      } else if (params.format === 'netlist-kicad') {
+        bodyHint = { netlistFormat: 'kicad' };
+      } else if (params.format === 'netlist-csv') {
+        bodyHint = { netlistFormat: 'csv' };
+      }
+
+      const downloadUrl = `/api/projects/${ctx.projectId}${fmt.route}`;
+
+      return {
+        success: true,
+        message: `Ready to export **${fmt.label}**. Use the download link below to generate and save the file.`,
+        data: {
+          type: 'export_download',
+          format: params.format,
+          label: fmt.label,
+          downloadUrl,
+          method: 'POST',
+          body: bodyHint,
+        },
+      };
+    },
+  });
 }

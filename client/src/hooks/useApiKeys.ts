@@ -5,6 +5,13 @@ import { useAuth } from '@/lib/auth-context';
 
 export type ApiKeyProvider = 'anthropic' | 'gemini';
 
+/**
+ * Sentinel value returned when the real API key is stored server-side.
+ * The actual key never leaves the server — this placeholder tells the UI "a key exists".
+ * Must be ASCII-safe (no Unicode >255) to avoid ByteString errors in HTTP headers.
+ */
+export const STORED_KEY_SENTINEL = '********';
+
 /** localStorage keys used before server-side migration. */
 const LOCAL_STORAGE_KEYS: Record<ApiKeyProvider, string> = {
   anthropic: 'protopulse-ai-api-key-anthropic',
@@ -103,7 +110,9 @@ export function useApiKeys(activeProvider: ApiKeyProvider): UseApiKeysResult {
     mutationFn: async ({ provider, apiKey }: { provider: ApiKeyProvider; apiKey: string }) => {
       await apiRequest('POST', '/api/settings/api-keys', { provider, apiKey });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // Clear local editing state — server now has the key, revert to sentinel display
+      setLocalKeys((prev) => ({ ...prev, [variables.provider]: '' }));
       void queryClient.invalidateQueries({ queryKey: ['/api/settings/api-keys'] });
     },
     // Suppress global error toast — localStorage is the fallback
@@ -148,6 +157,9 @@ export function useApiKeys(activeProvider: ApiKeyProvider): UseApiKeysResult {
 
   const setApiKey = useCallback(
     (provider: ApiKeyProvider, key: string) => {
+      // Always update local state immediately for responsive controlled input
+      setLocalKeys((prev) => ({ ...prev, [provider]: key }));
+
       if (isAuthenticated) {
         if (key) {
           storeOnServer({ provider, apiKey: key });
@@ -156,7 +168,6 @@ export function useApiKeys(activeProvider: ApiKeyProvider): UseApiKeysResult {
         }
       } else {
         writeLocalKey(provider, key);
-        setLocalKeys((prev) => ({ ...prev, [provider]: key }));
       }
     },
     [isAuthenticated, storeOnServer, deleteOnServer],
@@ -181,10 +192,17 @@ export function useApiKeys(activeProvider: ApiKeyProvider): UseApiKeysResult {
   // - Unauthenticated: return the localStorage value.
   let apiKey: string;
   if (isAuthenticated) {
-    const serverHasKey = (providersQuery.data ?? []).includes(activeProvider);
-    // Return a non-empty sentinel so the "no key" guard in handleSend doesn't trigger.
-    // The actual key is never sent to the client — the server reads it from encrypted storage.
-    apiKey = serverHasKey ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : '';
+    // While the user is actively editing (localKeys non-empty), show their typed value
+    // so the controlled input stays responsive. After server save succeeds, localKeys
+    // is cleared and we revert to the sentinel placeholder.
+    if (localKeys[activeProvider]) {
+      apiKey = localKeys[activeProvider];
+    } else {
+      const serverHasKey = (providersQuery.data ?? []).includes(activeProvider);
+      // Return a non-empty sentinel so the "no key" guard in handleSend doesn't trigger.
+      // The actual key is never sent to the client — the server reads it from encrypted storage.
+      apiKey = serverHasKey ? STORED_KEY_SENTINEL : '';
+    }
   } else {
     apiKey = localKeys[activeProvider];
   }

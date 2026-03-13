@@ -101,7 +101,12 @@ export function ArduinoProvider({ children, projectId }: { children: ReactNode; 
       return json.data as ArduinoJob[];
     },
     enabled: projectId > 0,
-    refetchInterval: 2000, // Poll for in-progress job status
+    // Only poll when there's an active (pending/running) job — avoids 429 rate limit storms
+    refetchInterval: (query) => {
+      const data = query.state.data as ArduinoJob[] | undefined;
+      const hasActiveJob = data?.some((j) => j.status === 'pending' || j.status === 'running');
+      return hasActiveJob ? 2000 : false;
+    },
   });
 
   const filesQuery = useQuery({
