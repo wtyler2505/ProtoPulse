@@ -291,3 +291,7 @@ client/src/lib/pcb/__tests__/diff-pair-length-match.test.ts(504,3): error TS2304
 
 
 10:52:35 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:53:59 AM - File change detected. Starting incremental compilation...
+
+
+10:54:10 AM - Found 0 errors. Watching for file changes.
