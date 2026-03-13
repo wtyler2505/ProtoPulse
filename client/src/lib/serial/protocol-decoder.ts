@@ -592,8 +592,9 @@ export class ProtocolDecoderManager {
   };
 
   private notify(): void {
-    for (const listener of this._listeners) {
-      listener();
+    const listeners = Array.from(this._listeners);
+    for (let i = 0; i < listeners.length; i++) {
+      listeners[i]();
     }
   }
 

@@ -380,3 +380,18 @@ client/src/lib/pcb/__tests__/diff-pair-length-match.test.ts(504,3): error TS2304
 client/src/lib/serial/protocol-decoder.ts(595,28): error TS2802: Type 'Set<() => void>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 
 11:32:48 AM - Found 1 error. Watching for file changes.
+[2J[3J[H11:32:59 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/serial/protocol-decoder.ts(595,28): error TS2802: Type 'Set<() => void>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/serial/serial-plotter.ts(539,26): error TS2802: Type 'MapIterator<RingBuffer>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+11:33:01 AM - Found 2 errors. Watching for file changes.
+[2J[3J[H11:33:34 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/serial/serial-plotter.ts(539,26): error TS2802: Type 'MapIterator<RingBuffer>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+11:33:36 AM - Found 1 error. Watching for file changes.
+[2J[3J[H11:33:46 AM - File change detected. Starting incremental compilation...
+
+
+11:33:47 AM - Found 0 errors. Watching for file changes.

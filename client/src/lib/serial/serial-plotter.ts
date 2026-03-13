@@ -536,7 +536,7 @@ export class SerialPlotterManager {
 
   getTotalPointCount(): number {
     let total = 0;
-    for (const buffer of this.channels.values()) {
+    for (const buffer of Array.from(this.channels.values())) {
       total += buffer.size();
     }
     return total;
