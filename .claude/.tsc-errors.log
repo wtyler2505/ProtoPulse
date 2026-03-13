@@ -76,3 +76,7 @@ client/src/lib/pcb/pcb-drc-checker.ts(127,3): error TS2741: Property 'maxViaAspe
 
 
 9:22:14 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:22:24 AM - File change detected. Starting incremental compilation...
+
+
+9:22:32 AM - Found 0 errors. Watching for file changes.
