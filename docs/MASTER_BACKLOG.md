@@ -13,6 +13,7 @@
 - [Change Log](#change-log)
 - [Recently Completed](#recently-completed)
 - [Next Up](#next-up-proposed-top-10-actionable-items)
+- [Complexity Radar](#complexity-radar-highest-complexity-open-items)
 - [Active Waves](#active-waves-current-planning-snapshot)
 - [Wave Candidates](#wave-candidates-proposed-bundles)
 - [Complex Work / Epics](#complex-work--epics)
@@ -23,6 +24,7 @@
 - [Architecture / ADR Required](#architecture--adr-required)
 - [Definition of Ready](#definition-of-ready)
 - [Definition of Done](#definition-of-done)
+- [Complexity Scale](#complexity-scale)
 - [Planning Fields](#planning-fields-for-new-and-updated-items)
 - [Test / Verification Notes](#test--verification-notes)
 - [How to Add a New Item](#how-to-add-a-new-item)
@@ -57,6 +59,7 @@
 - [Backlog Health](#backlog-health)
 - [Recently Completed](#recently-completed)
 - [Next Up (Proposed Top 10 Actionable Items)](#next-up-proposed-top-10-actionable-items)
+- [Complexity Radar (Highest-Complexity Open Items)](#complexity-radar-highest-complexity-open-items)
 - [Active Waves (Current Planning Snapshot)](#active-waves-current-planning-snapshot)
 - [Wave Candidates (Proposed Bundles)](#wave-candidates-proposed-bundles)
 - [Complex Work / Epics](#complex-work--epics)
@@ -67,6 +70,7 @@
 - [Architecture / ADR Required](#architecture--adr-required)
 - [Definition of Ready](#definition-of-ready)
 - [Definition of Done](#definition-of-done)
+- [Complexity Scale](#complexity-scale)
 - [Planning Fields for New and Updated Items](#planning-fields-for-new-and-updated-items)
 - [Test / Verification Notes](#test--verification-notes)
 - [How to Add a New Item](#how-to-add-a-new-item)
@@ -79,7 +83,8 @@
 | Duplicate risk | Medium-High | Consolidated from multiple source docs and competitive audits; cross-tool items likely overlap unless regularly merged. |
 | Explicitly blocked items | 0 | Nothing is formally marked `BLOCKED` today, which likely means hidden blockers are living inside `OPEN` rows. |
 | Epic decomposition need | High | Several initiatives are too large to execute safely as single rows and need parent/child planning. |
-| Acceptance/verification metadata | Medium-High gap | Many older `OPEN` items still lack explicit acceptance criteria, effort, confidence, or verification notes. |
+| Acceptance/verification metadata | Medium-High gap | Many older `OPEN` items still lack explicit acceptance criteria, effort, complexity, confidence, or verification notes. |
+| Complexity scoring coverage | Low | The rubric now exists, but most detailed rows are not scored yet; start with epics, `Next Up`, and new items first. |
 | Stats freshness risk | Medium | Snapshot is aligned now, but totals are still manual and should eventually be generated. |
 
 ## Change Log
@@ -111,6 +116,18 @@
 | 8 | `BL-0600` | Error line linking materially shortens the edit→compile→fix loop. | M | High |
 | 9 | `BL-0515` | Board settings dialog unlocks non-default and advanced board workflows already implied by the Workbench. | M | Medium |
 | 10 | `BL-0516` | Structured CLI error parsing is the foundation for better diagnostics, hints, and line linking. | M | High |
+
+## Complexity Radar (Highest-Complexity Open Items)
+
+Use this section to call out the largest open work by architectural scope and dependency load, not just calendar effort. This is the "if we start this, we are really starting a program of work" list.
+
+| Rank | ID | Complexity | Why It Is Hard |
+|------|----|------------|----------------|
+| 1 | `BL-0635` | `C5` | In-browser Arduino compile + execute + MCU simulation + serial + pin-state visualization + sensor input plumbing is effectively a new platform inside ProtoPulse. |
+| 2 | `BL-0632` | `C5` | Full hardware debugger support crosses browser limits, local-agent/security design, probe support, GDB workflows, and serious embedded UX expectations. |
+| 3 | `BL-0631` | `C5` | Simulator-based firmware execution introduces a new runtime layer and is also a prerequisite decision for several downstream simulation features. |
+| 4 | `BL-0381` | `C5` | RBAC + org/team tenancy is system-wide infrastructure touching auth, ownership, collaboration, auditability, and future team-facing features. |
+| 5 | `BL-0555` | `C4` | SI + PDN deep integration couples advanced analysis engines, shared geometry/state, and correctness-sensitive expert workflows. |
 
 ## Active Waves (Current Planning Snapshot)
 
@@ -275,6 +292,7 @@ No rows are explicitly marked `BLOCKED` right now. That is useful to know, but i
 - The item has a stable `BL-XXXX` ID and a clear source/cross-reference.
 - The problem statement is user-visible or system-visible, not just a vague idea title.
 - Dependencies or prerequisite decisions are named explicitly.
+- Complexity is estimated if the item is larger than a trivial bugfix or copy change.
 - Scope is small enough to fit in a wave, or the item is elevated into an epic with child IDs.
 - Acceptance signal is obvious enough that another engineer could verify completion without guessing.
 - High-risk items have at least one note about performance, security, or UX failure modes.
@@ -288,10 +306,20 @@ No rows are explicitly marked `BLOCKED` right now. That is useful to know, but i
 - User-facing trust details are honest: no fake status, no hidden mock limitations, no silent failure path.
 - Related backlog items were updated if scope changed, split, or made another row obsolete/duplicate.
 
+## Complexity Scale
+
+- **`C1` — Localized:** One component, one route, or one utility; little coordination risk.
+- **`C2` — Multi-file / single surface:** Affects a contained workflow within one domain such as one editor, panel, or route family.
+- **`C3` — Cross-surface:** Touches multiple layers such as UI + API + storage, or connects two existing domains.
+- **`C4` — Systemic:** Cross-domain integration, new shared data contracts, or high verification burden across several workflows.
+- **`C5` — Platform / architecture-defining:** New subsystem, runtime, tenancy model, execution environment, or a decision that many downstream items depend on.
+- **Rule of thumb:** Effort asks "how much work is this right now?" Complexity asks "how many systems, decisions, and failure modes are tied up in this?"
+
 ## Planning Fields for New and Updated Items
 
 - **User Impact:** `High`, `Medium`, or `Low`.
-- **Effort / Complexity:** `S`, `M`, `L`, or `XL`.
+- **Effort:** `S`, `M`, `L`, or `XL` for expected implementation size.
+- **Complexity:** `C1` to `C5` using the complexity scale below.
 - **Confidence:** `High`, `Medium`, or `Low` based on how well-understood the work is.
 - **Dependencies:** IDs, systems, or decisions that must land first.
 - **Tags:** Use concise tags such as `security`, `simulation`, `arduino`, `collaboration`, `manufacturing`, `integration`, `frontend`, `backend`, `schema`, `tests`, `docs`, `ux`, `learning`, `performance`, `accessibility`, `ai`.
@@ -312,7 +340,7 @@ No rows are explicitly marked `BLOCKED` right now. That is useful to know, but i
 - Include the stable `BL-XXXX` ID, source reference, and initial status.
 - For anything bigger than a single wave, also add or update an epic summary in the planning layer above.
 - If the item is not truly ready to build, put it in `Discovery / Spikes`, `Blocked / Waiting On`, or `Decision Needed` as well.
-- Add planning fields whenever possible: user impact, effort, confidence, dependencies, tags, and verification note.
+- Add planning fields whenever possible: user impact, effort, complexity, confidence, dependencies, tags, and verification note.
 - If the item changes scope or splits into sub-work, update the parent epic or nearby rows so nothing silently disappears.
 
 ### Complex Item Template
@@ -335,11 +363,11 @@ No rows are explicitly marked `BLOCKED` right now. That is useful to know, but i
 |----------|------|------|-------------|
 | P0 | 0 | 14 | All resolved (Waves 52-60) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 177 | 95 | Breadboard/PCB/simulation/UI — Waves 61-76 ongoing |
+| P2 | 172 | 100 | Breadboard/PCB/simulation/UI — Waves 61-77 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **310** | **182** | **492 total items tracked** |
+| **Total** | **305** | **187** | **492 total items tracked** |
 
-*Snapshot updated: Wave 76 (2026-03-13)*
+*Snapshot updated: Wave 77 (2026-03-13)*
 
 ---
 
@@ -579,7 +607,7 @@ No rows are explicitly marked `BLOCKED` right now. That is useful to know, but i
 | BL-0125 | Simulation compare mode (before/after changes) | DONE (Wave 74) | MF-077, IFX-014 |
 | BL-0126 | Shared unit/scale contract across sim + DRC engines | PARTIAL | MF-078 |
 | BL-0127 | Simulation resource guardrails (time, memory, output) | DONE (Wave 62) — sim-limits.ts: SimulationLimits interface + checkSimLimits() wired into circuit-solver, transient, monte-carlo, frequency-analysis | MF-079 |
-| BL-0128 | Live current/voltage animation overlay (EveryCircuit-style) | OPEN | MF-080, IFX-011 |
+| BL-0128 | Live current/voltage animation overlay (EveryCircuit-style) | DONE (Wave 77) | MF-080, IFX-011 |
 | BL-0129 | Failure injection mode (open/short/noisy sensor) | DONE (Wave 75) | IFX-013 |
 | BL-0130 | What-if slider for instant value sweeps | DONE (Wave 62) — what-if-engine.ts + WhatIfSliderPanel.tsx: parameter extraction, SI prefix formatting, per-param sliders with reset | IFX-012 |
 
@@ -604,15 +632,15 @@ No rows are explicitly marked `BLOCKED` right now. That is useful to know, but i
 |----|-------------|--------|--------|
 | BL-0511 | **SPICE K element (mutual inductance / transformer)** — Add `K` mutual inductance coupling between `L` elements in the SPICE generator and parser. Required for simulating transformers, coupled inductors, and RF circuits. | DONE (Wave 76) | Wave 64 audit |
 | BL-0512 | **SPICE S/W voltage-controlled switch** — Add `S` (voltage-controlled) and `W` (current-controlled) switch elements. Common in power electronics (H-bridge, buck/boost) and digital-analog interface circuits. | DONE (Wave 76) | Wave 64 audit |
-| BL-0513 | **SPICE T element (ideal transmission line)** — Add `T` two-port transmission line element with characteristic impedance and delay. Enables SI simulation without the full crosstalk-solver overhead for simple point-to-point lines. | OPEN | Wave 64 audit |
-| BL-0514 | **Simulation size / complexity warning** — Before running a large circuit (>50 nodes, >20 nonlinear devices, or transient span > 10ms at fine timestep), show an estimated runtime warning and offer to reduce parameters. Prevents silent browser hangs on large netlists. | OPEN | Wave 64 audit |
+| BL-0513 | **SPICE T element (ideal transmission line)** — Add `T` two-port transmission line element with characteristic impedance and delay. Enables SI simulation without the full crosstalk-solver overhead for simple point-to-point lines. | DONE (Wave 77) | Wave 64 audit |
+| BL-0514 | **Simulation size / complexity warning** — Before running a large circuit (>50 nodes, >20 nonlinear devices, or transient span > 10ms at fine timestep), show an estimated runtime warning and offer to reduce parameters. Prevents silent browser hangs on large netlists. | DONE (Wave 77) | Wave 64 audit |
 
 ### Hardware & Firmware
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
 | BL-0140 | Firmware compile/upload loop from ProtoPulse | OPEN | MF-084, ARDX-006/007 |
-| BL-0141 | Protocol decoders (I2C/SPI/UART monitor) | OPEN | MF-086, ARDX-041/042/043 |
+| BL-0141 | Protocol decoders (I2C/SPI/UART monitor) | DONE (Wave 77) | MF-086, ARDX-041/042/043 |
 | BL-0142 | Pin conflict checker (schematic vs firmware mapping) | OPEN | MF-087, ARDX-013 |
 | BL-0143 | Firmware scaffold tied to actual netlist/pins | PARTIAL | MF-088 |
 | BL-0144 | Hardware session recorder (logs + actions + replay) | OPEN | MF-089 |
@@ -624,7 +652,7 @@ No rows are explicitly marked `BLOCKED` right now. That is useful to know, but i
 | BL-0150 | Inventory tracking tied to BOM consumption | PARTIAL | MF-101 |
 | BL-0151 | Compile error translator (plain English) | OPEN | ARDX-008 |
 | BL-0152 | Auto-generate pin constants from schematic labels | OPEN | ARDX-019 |
-| BL-0153 | Serial plotter for live sensor curves | OPEN | ARDX-032 |
+| BL-0153 | Serial plotter for live sensor curves | DONE (Wave 77) | ARDX-032 |
 | BL-0154 | Multi-channel telemetry dashboard | OPEN | ARDX-033 |
 | BL-0155 | Crash doctor for watchdog resets/brownouts | OPEN | ARDX-036 |
 | BL-0156 | Baud mismatch auto-detection | OPEN | ARDX-037 |
