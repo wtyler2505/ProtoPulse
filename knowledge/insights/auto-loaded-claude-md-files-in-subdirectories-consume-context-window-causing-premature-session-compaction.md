@@ -1,6 +1,9 @@
 ---
 summary: CLAUDE.md files placed in subdirectories (like knowledge/) are auto-loaded into every Claude Code session, consuming context window and causing premature compaction
 areas: ["[[index]]"]
+related insights:
+  - "[[agent-team-teammates-die-on-context-compaction-so-parallel-work-requires-liveness-checks-after-session-continuation]] — the downstream consequence: premature compaction kills teammates"
+  - "[[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously]] — another resource consumption issue during agent team work"
 created: 2026-03-13
 ---
 

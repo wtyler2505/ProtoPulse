@@ -1,6 +1,10 @@
 ---
 summary: Server-side in-memory Maps (RAG docs, batch tracking, job queues) share a single namespace across all users and projects, enabling cross-tenant data access
 areas: ["[[index]]"]
+related insights:
+  - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — database-layer IDOR; this is the ephemeral-state parallel"
+  - "[[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls]] — another non-database authorization bypass vector"
+  - "[[soft-deletes-create-a-persistent-querying-tax-where-forgetting-isNull-causes-data-ghosts]] — both are patterns where forgetting a filter clause causes silent data leakage"
 created: 2026-03-13
 ---
 

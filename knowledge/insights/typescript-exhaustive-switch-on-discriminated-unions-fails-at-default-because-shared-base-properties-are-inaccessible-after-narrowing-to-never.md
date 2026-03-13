@@ -1,6 +1,8 @@
 ---
 summary: TypeScript exhaustive switch on discriminated unions narrows the default case to never, making shared base properties inaccessible — extract base properties before the switch
 areas: ["[[index]]"]
+related insights:
+  - "[[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — the ShapeCanvas decomposition that exposed this bug"
 created: 2026-03-13
 ---
 

@@ -1,6 +1,10 @@
 ---
 summary: AI architecture-to-schematic expansion uses each part's first pin as a placeholder connection, producing visually wrong schematics that train users to distrust the feature
 areas: ["[[index]]"]
+related insights:
+  - "[[manufacturing-trust-requires-real-data-because-fake-confidence-is-worse-than-no-confidence]] — the same trust erosion pattern: authoritative-looking output that is actually wrong"
+  - "[[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — beginners cannot detect wrong pin assignments, making this actively harmful for the primary audience"
+  - "[[five-architecture-decisions-block-over-30-downstream-features-each]] — proper pin-mapping depends on the component pinout system architecture decision"
 created: 2026-03-13
 ---
 

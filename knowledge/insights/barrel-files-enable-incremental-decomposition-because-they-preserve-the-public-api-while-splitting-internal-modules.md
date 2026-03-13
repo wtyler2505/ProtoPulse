@@ -1,6 +1,9 @@
 ---
 summary: Barrel files (re-export index modules) enable incremental decomposition by preserving the public import path while splitting internal modules
 areas: ["[[index]]"]
+related insights:
+  - "[[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — barrel files are the mechanism that makes the thin-orchestrator decomposition pattern safe"
+  - "[[the-gap-between-feature-exists-and-feature-is-wired-is-the-dominant-source-of-broken-workflows]] — stable import paths from barrels prevent decomposition from creating new wiring gaps"
 created: 2026-03-13
 ---
 

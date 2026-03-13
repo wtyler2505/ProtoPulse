@@ -20,6 +20,9 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[ai-system]] — AI tools, prompts, streaming, multi-model routing
 - [[export-system]] — KiCad, Eagle, Gerber, SPICE, PDF, FMEA exporters
 - [[agent-workflows]] — Claude Code agent teams, parallel execution, session management
+- [[security]] — Authorization patterns, IDOR prevention, access control design
+- [[collaboration]] — Real-time editing, membership, branching, access control
+- [[backlog-methodology]] — Planning views, health monitoring, complexity ratings
 
 ## Recent Insights
 
@@ -55,6 +58,19 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[auto-loaded-claude-md-files-in-subdirectories-consume-context-window-causing-premature-session-compaction]] — subdirectory CLAUDE.md files are a permanent context tax
 - [[backlog-summary-statistics-must-be-updated-atomically-with-individual-item-status-changes-or-the-single-source-of-truth-becomes-untrustworthy]] — stale Quick Stats erode backlog trust
 - [[web-serial-api-mocking-requires-double-cast-through-unknown-because-file-scoped-classes-cannot-be-imported-for-test-type-narrowing]] — Web Serial mocks need double-cast through unknown
+
+### Extracted 2026-03-13 (Codex sessions)
+
+- [[backlog-planning-layers-must-be-additive-scaffolding-over-canonical-item-inventory-not-replacements]] — planning views are lenses over data, not transformations of it
+- [[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario]] — localStorage-only features create false "done" signals
+- [[gap-audits-that-compare-code-surfaces-against-backlog-produce-higher-signal-findings-than-code-only-audits]] — code-vs-backlog comparison catches both directions of drift
+- [[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects]] — shared in-memory Maps enable cross-tenant data access
+- [[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls]] — default editor role without invite table is an access control gap
+- [[the-hybrid-runtime-architecture-for-firmware-is-the-only-viable-path-because-browser-only-wasm-and-pure-local-approaches-each-sacrifice-a-core-value-proposition]] — hybrid browser+local is the only viable firmware path
+- [[circuits-zero-defaulting-in-export-and-ordering-is-a-latent-multi-project-regression-because-it-silently-picks-the-wrong-circuit]] — circuits[0] default will break multi-circuit designs
+- [[phased-collaboration-delivery-must-sequence-session-hardening-before-membership-before-branching-because-each-layer-depends-on-the-one-below]] — collaboration layers have strict dependency ordering
+- [[ai-chat-endpoints-accepting-projectid-in-the-request-body-instead-of-the-url-path-bypass-ownership-middleware-by-construction]] — body-param projectId structurally bypasses ownership middleware
+- [[architecture-expansion-using-placeholder-first-pin-mapping-produces-semantically-wrong-schematics-that-erode-trust-in-ai-generated-designs]] — placeholder pin mapping produces authoritative-looking but wrong schematics
 
 ## About This System
 

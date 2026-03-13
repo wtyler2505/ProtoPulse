@@ -1,6 +1,9 @@
 ---
 summary: TinkerCAD's simulation is less powerful than ProtoPulse's but feels 10x more powerful because results are visible on the circuit
 areas: ["[[index]]"]
+related insights:
+  - "[[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — the perception gap matters most for beginners on the maker end of the spectrum"
+  - "[[manufacturing-trust-requires-real-data-because-fake-confidence-is-worse-than-no-confidence]] — both are about the gap between actual capability and perceived capability"
 created: 2026-03-13
 ---
 

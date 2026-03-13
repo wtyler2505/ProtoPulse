@@ -1,6 +1,11 @@
 ---
 summary: Collaboration delivery has a strict dependency chain — session stability → membership tables → review/approval → branching/merge → org/team tenancy — skipping layers causes rework
 areas: ["[[index]]"]
+related insights:
+  - "[[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls]] — the membership table gap that this delivery sequence addresses in Layer 2"
+  - "[[five-architecture-decisions-block-over-30-downstream-features-each]] — collaboration data model is one of the five blocking architecture decisions"
+  - "[[the-hybrid-runtime-architecture-for-firmware-is-the-only-viable-path-because-browser-only-wasm-and-pure-local-approaches-each-sacrifice-a-core-value-proposition]] — both follow the same principle: build layers in dependency order"
+  - "[[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario]] — localStorage features must migrate to server storage before collaboration can include them"
 created: 2026-03-13
 ---
 

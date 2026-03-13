@@ -1,6 +1,9 @@
 ---
 summary: Four tables use deletedAt soft-delete pattern, and every query must remember isNull(deletedAt) or deleted records appear as ghost data
 areas: ["[[index]]"]
+related insights:
+  - "[[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects]] — both are patterns where a missing filter clause causes silent data leakage"
+  - "[[circuits-zero-defaulting-in-export-and-ordering-is-a-latent-multi-project-regression-because-it-silently-picks-the-wrong-circuit]] — both are silent-failure patterns: wrong defaults, no errors"
 created: 2026-03-13
 ---
 

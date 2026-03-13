@@ -1,6 +1,10 @@
 ---
 summary: Backlog Quick Stats must be updated in the same commit as individual item status changes — stale summary numbers erode trust in the single source of truth
 areas: ["[[index]]"]
+related insights:
+  - "[[backlog-planning-layers-must-be-additive-scaffolding-over-canonical-item-inventory-not-replacements]] — Quick Stats are an additive layer that must stay synchronized with the inventory"
+  - "[[definition-of-done-must-include-cross-tool-link-verification]] — both enforce atomic completeness: partial updates erode trust in the system"
+  - "[[the-backlog-health-dashboard-surfaces-systemic-risks-before-they-become-technical-debt]] — the health dashboard should detect Quick Stats staleness automatically"
 created: 2026-03-13
 ---
 

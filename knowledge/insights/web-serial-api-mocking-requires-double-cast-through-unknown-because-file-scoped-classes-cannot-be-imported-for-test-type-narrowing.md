@@ -1,6 +1,9 @@
 ---
 summary: Web Serial API mocking in tests requires double-cast (as unknown as MockSerialPort) because the SerialPort class is file-scoped and not importable
 areas: ["[[index]]"]
+related insights:
+  - "[[proxy-based-mock-chains-intercept-then-causing-await-to-hang-so-drizzle-query-mocks-need-explicit-select-chain-stubs]] — another mock pattern requiring type workarounds"
+  - "[[vitest-4-changed-vi-fn-generic-signature-from-two-type-params-to-one-function-type-param-breaking-typed-mock-factories]] — all three form a cluster of TypeScript test typing workarounds"
 created: 2026-03-13
 ---
 

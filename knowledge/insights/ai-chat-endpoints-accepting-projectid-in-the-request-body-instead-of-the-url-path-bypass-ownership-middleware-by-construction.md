@@ -1,6 +1,10 @@
 ---
 summary: Routes that accept projectId as a body parameter cannot use URL-based ownership middleware — the architectural anti-pattern must be fixed by restructuring routes, not adding more middleware
 areas: ["[[index]]"]
+related insights:
+  - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — the broader IDOR pattern this body-param variant belongs to"
+  - "[[security-vulnerabilities-recur-because-new-routes-are-added-without-systematic-ownership-audit]] — explains why body-param routes keep being added without detection"
+  - "[[express-5-req-params-returns-string-or-string-array-so-every-route-param-access-needs-string-wrapping]] — another Express routing gotcha where URL parameter handling creates subtle bugs"
 created: 2026-03-13
 ---
 

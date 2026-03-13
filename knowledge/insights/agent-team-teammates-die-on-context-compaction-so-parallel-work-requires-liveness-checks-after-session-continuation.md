@@ -1,6 +1,9 @@
 ---
 summary: Claude Code agent team teammates are killed when the session context compacts, requiring explicit liveness checks before resuming parallel work
 areas: ["[[index]]"]
+related insights:
+  - "[[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously]] — another agent team operational gotcha where parallel execution creates failure modes"
+  - "[[auto-loaded-claude-md-files-in-subdirectories-consume-context-window-causing-premature-session-compaction]] — auto-loaded files accelerate context consumption, causing earlier compaction and teammate death"
 created: 2026-03-13
 ---
 

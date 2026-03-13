@@ -1,6 +1,11 @@
 ---
 summary: Simplifying for beginners risks hiding capabilities from experts — ProtoPulse must serve both someone learning electronics and someone generating Gerbers
 areas: ["[[index]]"]
+related insights:
+  - "[[the-perception-gap-between-simulation-capability-and-usability-is-the-biggest-competitive-threat]] — the perception gap is worst for beginners who cannot tell the difference"
+  - "[[manufacturing-trust-requires-real-data-because-fake-confidence-is-worse-than-no-confidence]] — beginners are especially harmed by fake data because they cannot distinguish real from mock"
+  - "[[architecture-expansion-using-placeholder-first-pin-mapping-produces-semantically-wrong-schematics-that-erode-trust-in-ai-generated-designs]] — wrong pin mapping is actively harmful to learners who trust the output"
+  - "[[browser-based-eda-hits-a-platform-boundary-at-firmware-execution]] — zero-install accessibility serves beginners; hardware access serves pros"
 created: 2026-03-13
 ---
 

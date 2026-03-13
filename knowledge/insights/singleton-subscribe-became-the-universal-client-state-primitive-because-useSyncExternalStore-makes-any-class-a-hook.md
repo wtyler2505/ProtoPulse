@@ -2,8 +2,9 @@
 summary: The singleton+subscribe pattern emerged organically across 30+ managers and became ProtoPulse's standard for client-side state outside React Query
 areas: ["[[index]]"]
 related insights:
-  - "[[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]]": "ProjectProvider is the counter-example — the monolithic Context that proves why singleton+subscribe is better"
-  - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]]": "Both patterns needed retroactive standardization across the codebase"
+  - "[[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]] — the counter-example: monolithic Context that proves why singleton+subscribe is better"
+  - "[[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — decomposition enables singleton+subscribe by giving each domain module its own state"
+  - "[[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario]] — many singleton managers back state with localStorage, creating the persistence gap"
 created: 2026-03-13
 ---
 

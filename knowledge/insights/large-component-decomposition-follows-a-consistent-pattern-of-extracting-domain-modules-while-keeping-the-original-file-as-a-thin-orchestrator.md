@@ -1,6 +1,10 @@
 ---
 summary: Large file decomposition in ProtoPulse consistently extracts domain modules into subdirectories while keeping the original file as a thin orchestrator
 areas: ["[[index]]"]
+related insights:
+  - "[[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — barrel files are the mechanism that makes this pattern safe for callers"
+  - "[[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — decomposed domain modules naturally adopt singleton+subscribe for their state"
+  - "[[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]] — ProjectProvider is the monolith that most needs this decomposition pattern"
 created: 2026-03-13
 ---
 

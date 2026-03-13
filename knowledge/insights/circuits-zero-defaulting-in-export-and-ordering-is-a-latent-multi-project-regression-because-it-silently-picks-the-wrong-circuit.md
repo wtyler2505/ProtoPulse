@@ -1,6 +1,10 @@
 ---
 summary: Export and ordering paths that default to circuits[0] without user selection will silently export the wrong circuit as multi-circuit designs become common
 areas: ["[[index]]"]
+related insights:
+  - "[[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — a concrete example of a deferred cross-tool data ownership question"
+  - "[[soft-deletes-create-a-persistent-querying-tax-where-forgetting-isNull-causes-data-ghosts]] — both are silent-failure patterns where wrong defaults produce incorrect results without errors"
+  - "[[manufacturing-trust-requires-real-data-because-fake-confidence-is-worse-than-no-confidence]] — exporting the wrong circuit without warning is another form of false confidence"
 created: 2026-03-13
 ---
 
