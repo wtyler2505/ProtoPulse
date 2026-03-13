@@ -502,3 +502,8 @@ client/src/lib/validation/violation-navigator.ts(436,22): error TS2802: Type 'Se
 client/src/lib/validation/violation-navigator.ts(436,22): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 
 12:36:29 PM - Found 1 error. Watching for file changes.
+[2J[3J[H12:36:34 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/validation/violation-navigator.ts(436,22): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+12:36:38 PM - Found 1 error. Watching for file changes.
