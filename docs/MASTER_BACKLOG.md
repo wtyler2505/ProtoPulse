@@ -11,6 +11,7 @@
 - [Planning Index](#planning-index)
 - [Backlog Health](#backlog-health)
 - [Change Log](#change-log)
+- [C5 Preplanning Artifacts](#c5-preplanning-artifacts)
 - [Recently Completed](#recently-completed)
 - [Next Up](#next-up-proposed-top-10-actionable-items)
 - [Complexity Radar](#complexity-radar-highest-complexity-open-items)
@@ -57,6 +58,7 @@
 ## Planning Index
 
 - [Backlog Health](#backlog-health)
+- [C5 Preplanning Artifacts](#c5-preplanning-artifacts)
 - [Recently Completed](#recently-completed)
 - [Next Up (Proposed Top 10 Actionable Items)](#next-up-proposed-top-10-actionable-items)
 - [Complexity Radar (Highest-Complexity Open Items)](#complexity-radar-highest-complexity-open-items)
@@ -89,9 +91,17 @@
 
 ## Change Log
 
+- **2026-03-13:** Added durable preplanning artifacts for the two biggest near-term C5 programs: firmware runtime/debugger and collaboration foundation/RBAC/branching.
 - **2026-03-13:** Backfilled `C1`-`C5` complexity across all 493 tracked backlog rows, expanded the complexity radar to the top 25 open items, scored epics and wave candidates, and corrected manual snapshot drift at the top of the file.
 - **2026-03-13:** Added a planning layer at the top of the backlog: health, recent wins, next-up queue, wave candidates, epics, discovery spikes, blocker tracking, decision points, planning fields, and item templates.
 - **2026-03-13:** Clarified preservation rules, status semantics, and snapshot maintenance guidance; aligned the top snapshot and footer note with the Wave 76 state.
+
+## C5 Preplanning Artifacts
+
+| Cluster | Related IDs | Artifact | Purpose |
+|---------|-------------|----------|---------|
+| Firmware runtime, simulation, and debugger | `BL-0631`, `BL-0632`, `BL-0635`, `BL-0461` | `docs/plans/2026-03-13-c5-firmware-runtime-program.md` | Locks the hybrid-helper recommendation, phase order, helper/runtime contracts, and ADR list before this turns into implementation waves. |
+| Collaboration foundation, RBAC, branching, and merge | `BL-0381`, `BL-0184`, `BL-0185` | `docs/plans/2026-03-13-c5-collaboration-foundation-program.md` | Sequences session hardening, project membership, review/approval, branching, merge, and later org/team tenancy so nothing gets built on the current owner-only shortcut. |
 
 ## Recently Completed
 
@@ -189,7 +199,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 - **Open questions:** Should “Start Simulation” auto-detect mode always, or offer a fallback chooser when confidence is low? Does firmware execution require a local helper?
 - **Exit criteria:** One obvious start flow, visual overlays on-canvas, component state rendering, and at least one supported firmware-aware simulation path.
 - **Verification plan:** Run end-to-end sample circuits, compare numeric outputs against known fixtures, and verify visual state changes on canvas.
-- **Related docs:** `docs/product-analysis-report.md`, `docs/product-analysis-checklist.md`.
+- **Related docs:** `docs/product-analysis-report.md`, `docs/product-analysis-checklist.md`, `docs/plans/2026-03-13-c5-firmware-runtime-program.md`.
 
 ### Epic B — Arduino Workbench / IDE Parity
 
@@ -203,7 +213,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 - **Open questions:** How far do we go on Arduino IDE parity before broadening into PlatformIO-class workflows? What belongs in-browser vs in a local helper?
 - **Exit criteria:** A beginner can select a board, compile, understand failures, upload, open serial, and recover from common mistakes without leaving ProtoPulse.
 - **Verification plan:** Run scripted compile/upload flows for at least AVR + ESP32, validate parsed diagnostics, and regression-test serial/session handoff.
-- **Related docs:** `docs/arduino-ide-integration-spec.md`, `docs/arduino-ide-api-contracts.md`.
+- **Related docs:** `docs/arduino-ide-integration-spec.md`, `docs/arduino-ide-api-contracts.md`, `docs/plans/2026-03-13-c5-firmware-runtime-program.md`.
 
 ### Epic C — Cross-Tool Integration / “One Tool, Zero Context Switching”
 
@@ -231,7 +241,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 - **Open questions:** Should design branching be Git-like, snapshot-based, or review-first? What is the minimum viable ECO flow that still feels safe?
 - **Exit criteria:** A team can branch, review, approve, restore, and audit meaningful design changes with clear ownership and history.
 - **Verification plan:** Role-based integration tests, reconnect/auth tests, branch/merge scenario coverage, and audit-log traceability checks.
-- **Related docs:** `docs/DEVELOPER.md`, `docs/backend-audit-checklist.md`.
+- **Related docs:** `docs/DEVELOPER.md`, `docs/backend-audit-checklist.md`, `docs/plans/2026-03-13-c5-collaboration-foundation-program.md`.
 
 ### Epic E — Manufacturing, BOM Intelligence, and Fab Readiness
 

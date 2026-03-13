@@ -92,3 +92,51 @@ git diff -- docs/MASTER_BACKLOG.md | sed -n '1,260p'
 
 ## Handoff Notes
 This was a docs-only refactor. No backlog items were removed; the pass was additive/restructuring plus metadata backfill. I did not run app tests because no runtime code changed.
+
+---
+
+# Codex Completion Report
+
+**Task:** Preplan the highest-leverage C5 backlog programs while Wave 78 is in flight, with durable docs so the research does not get lost.
+**Status:** done
+
+## Changes Made
+- `docs/plans/2026-03-13-c5-firmware-runtime-program.md` - Added a program-level plan for `BL-0631`, `BL-0632`, `BL-0635`, and `BL-0461`, including the recommended hybrid runtime direction, phased delivery plan, ADR list, repo-readiness notes, and external technical research references.
+- `docs/plans/2026-03-13-c5-collaboration-foundation-program.md` - Added a program-level plan for `BL-0381`, `BL-0184`, and `BL-0185`, including sequencing for session hardening, project membership, review/approval, branching, merge, and later org/team tenancy.
+- `docs/MASTER_BACKLOG.md` - Added a `C5 Preplanning Artifacts` section near the top, logged the new planning work in `Change Log`, and linked the new plan docs from the relevant major epics so the artifacts stay discoverable from the backlog itself.
+
+## Commands Run
+```bash
+sed -n '1,220p' ~/.codex/skills/using-skills/SKILL.md
+sed -n '1,220p' ~/.codex/skills/research/SKILL.md
+sed -n '1,240p' ~/.codex/skills/writing-plans/SKILL.md
+sed -n '1,220p' ~/.codex/skills/architecture/SKILL.md
+git status --short
+rg -n "\\| BL-.*\\| .*\\| (OPEN|PARTIAL|BLOCKED) \\| C5 \\|" docs/MASTER_BACKLOG.md
+sed -n '1,420p' docs/MASTER_BACKLOG.md
+sed -n '1,240p' docs/arduino-ide-integration-spec.md
+sed -n '1,240p' docs/arduino-ide-api-contracts.md
+sed -n '1,260p' server/arduino-service.ts
+sed -n '1,260p' server/routes/arduino.ts
+sed -n '1,260p' server/storage/arduino.ts
+sed -n '1,260p' client/src/lib/contexts/arduino-context.tsx
+sed -n '1,260p' server/auth.ts
+sed -n '1,260p' server/collaboration.ts
+sed -n '1,260p' server/routes/design-history.ts
+sed -n '1,260p' shared/collaboration.ts
+sed -n '1,260p' server/routes/auth-middleware.ts
+sed -n '1,260p' server/storage/projects.ts
+sed -n '1,260p' client/src/lib/collaboration-client.ts
+web research on Web Serial, WebUSB, PlatformIO debug options, simavr, and QEMU official docs
+```
+
+## Next Steps
+- Turn the firmware-runtime program into execution-ready milestone docs or waves once Wave 78 wraps.
+- Decide whether `project membership` should be implemented as a standalone step before any org/team tenancy work starts.
+- Draft the proposed ADRs referenced by the new plan docs when Tyler is ready to lock architecture direction.
+
+## Blockers (if any)
+- No blockers.
+
+## Handoff Notes
+Docs-only planning pass. I intentionally avoided changing runtime code while Claude is actively delivering Wave 78 work.
