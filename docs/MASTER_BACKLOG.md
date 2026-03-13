@@ -107,6 +107,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 78 | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | Wire drag-rerouting, PCB copy/paste, validation→PCB navigation, AI action error tracking, baud rate selector — editor trust + workflow gaps closed. |
 | 77 | `BL-0513`, `BL-0514`, `BL-0128`, `BL-0141`, `BL-0153` | SPICE transmission line, simulation complexity guardrails, EveryCircuit-style current animation, protocol decoders, serial plotter — simulation usability + hardware feedback loop. |
 | 76 | `BL-0491`, `BL-0122`, `BL-0123`, `BL-0511`, `BL-0512` | Closed bus-mapping, simulation-analysis, and SPICE-model gaps that unlock more advanced design work. |
 | 75 | `BL-0505`, `BL-0509`, `BL-0510`, `BL-0120`, `BL-0129` | Strengthened PCB routing intelligence and simulation scenario depth. |
@@ -118,16 +119,16 @@
 
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0494` | Core schematic editing gap: users still cannot drag-reroute existing wire segments. | M | `C3` | High |
-| 2 | `BL-0503` | PCB trace/zone copy-paste is a direct parity win and builds on existing copy/paste patterns. | M | `C3` | High |
-| 3 | `BL-0521` | AI action failures currently disappear silently, which erodes trust fast. | S | `C2` | High |
-| 4 | `BL-0566` | Validation-to-PCB navigation closes a broken workflow loop that forces manual hunting. | M | `C3` | High |
-| 5 | `BL-0598` | Serial Monitor is still too easy to misconfigure; baud selection is low risk and immediately useful. | S | `C2` | High |
-| 6 | `BL-0599` | Memory usage feedback is one of the most common embedded maker needs after compile. | M | `C2` | High |
-| 7 | `BL-0600` | Error line linking materially shortens the edit→compile→fix loop. | M | `C2` | High |
-| 8 | `BL-0515` | Board settings dialog unlocks non-default and advanced board workflows already implied by the Workbench. | M | `C2` | Medium |
-| 9 | `BL-0516` | Structured CLI error parsing is the foundation for better diagnostics, hints, and line linking. | M | `C2` | High |
-| 10 | `BL-0560` | Simulation results as schematic annotations (voltage/current labels on-canvas). | M | `C3` | High |
+| 1 | `BL-0515` | Board settings dialog unlocks non-default and advanced board workflows already implied by the Workbench. | M | `C2` | Medium |
+| 2 | `BL-0516` | Structured CLI error parsing is the foundation for better diagnostics, hints, and line linking. | M | `C2` | High |
+| 3 | `BL-0599` | Memory usage feedback is one of the most common embedded maker needs after compile. | M | `C2` | High |
+| 4 | `BL-0600` | Error line linking materially shortens the edit→compile→fix loop. | M | `C2` | High |
+| 5 | `BL-0560` | Simulation results as schematic annotations (voltage/current labels on-canvas). | M | `C3` | High |
+| 6 | `BL-0619` | Component state rendering (LED glow, relay toggle) makes simulation visually immediate. | M | `C3` | High |
+| 7 | `BL-0620` | One-click "Start Simulation" button removes the biggest barrier to running a sim. | S | `C2` | High |
+| 8 | `BL-0622` | Sensor input sliders let users interact with simulations without editing values manually. | M | `C3` | High |
+| 9 | `BL-0563` | Schematic↔architecture component linkage closes a data coherence gap. | M | `C3` | Medium |
+| 10 | `BL-0564` | BOM↔schematic sync ensures component data stays in one place. | M | `C3` | Medium |
 
 ## Complexity Radar (Highest-Complexity Open Items)
 
@@ -163,11 +164,11 @@ Use this section to call out the largest open work by architectural scope and de
 
 ## Active Waves (Current Planning Snapshot)
 
-This document currently reflects completed work through **Wave 77**. Wave 78 is in progress.
+This document currently reflects completed work through **Wave 78**.
 
 | Lane | Intent | Candidate IDs | Status |
 |------|--------|---------------|--------|
-| **Wave 78 — Editor + trust** | Close highest-friction editor gaps + quick UX trust wins. | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | **IN PROGRESS** |
+| **Wave 78 — Editor + trust** | Close highest-friction editor gaps + quick UX trust wins. | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | **DONE** |
 | Arduino workbench trust | Tighten the compile/upload/serial feedback loop for makers. | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600` | Next up |
 | Simulation visibility | Sim results on-canvas + component state rendering. | `BL-0560`, `BL-0619`, `BL-0620`, `BL-0622` | Planned (BL-0514, BL-0128 done in Wave 77) |
 | Integration-first cleanup | Reduce “same data lives in two places” pain across views. | `BL-0563`, `BL-0564`, `BL-0565`, `BL-0580` | Planned |
@@ -177,7 +178,7 @@ This document currently reflects completed work through **Wave 77**. Wave 78 is 
 | Wave | Theme | IDs | Status | Notes |
 |------|-------|-----|--------|-------|
 | Wave 77 (actual) | SPICE elements + sim UX + hardware tools | `BL-0513`, `BL-0514`, `BL-0128`, `BL-0141`, `BL-0153` | **DONE** | Transmission line, complexity warning, current animation, protocol decoders, serial plotter. |
-| Wave 78 (active) | Editor loop closing + trust wins | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | **IN PROGRESS** | Wire reroute, PCB copy/paste, validation→PCB nav, AI error tracking, baud selector. |
+| Wave 78 (done) | Editor loop closing + trust wins | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | **DONE** | Wire reroute, PCB copy/paste, validation→PCB nav, AI error tracking, baud selector. |
 | Wave 79 (proposed) | Arduino compile/upload feedback | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600` | Planned | Board settings, CLI error parsing, memory display, error line linking. |
 | Wave 80 (proposed) | Simulation on-canvas layer | `BL-0560`, `BL-0619`, `BL-0620`, `BL-0622` | Planned | Results as annotations, component state rendering, start button, sensor sliders. |
 | Wave 81 (proposed) | Manufacturing + BOM coherence | `BL-0564`, `BL-0565`, `BL-0580`, `BL-0586`, `BL-0530`, `BL-0531` | Planned | Use actual project data to drive fab-readiness. |
@@ -403,11 +404,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 14 | All resolved (Waves 52-60) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 173 | 100 | Breadboard/PCB/simulation/UI — Waves 61-77 ongoing |
+| P2 | 168 | 105 | Breadboard/PCB/simulation/UI — Waves 61-78 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **306** | **187** | **493 total items tracked** |
+| **Total** | **301** | **192** | **493 total items tracked** |
 
-*Snapshot updated: Wave 77 (2026-03-13)*
+*Snapshot updated: Wave 78 (2026-03-13)*
 
 ---
 
@@ -612,7 +613,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0491 | **Bus pin mapping UI** — Provide a visual dialog for assigning individual signals to bus pins (e.g. "D0–D7 → data bus"). Currently bus routing is partially implemented in `NetDrawingTool` but there is no UI to name or assign bus members. | DONE (Wave 76) | C3 | Wave 64 audit |
 | BL-0492 | **Text annotation tool on schematic** — Add a freetext/note placement tool for schematic comments, block labels, and callouts. Annotation text should be stored per-circuit-design (not as components) and rendered as SVG `<text>` elements. | DONE | C2 | Wave 69 |
 | BL-0493 | **Power symbol auto-connect** — When a VCC or GND power symbol is placed adjacent to a compatible pin, the net connection should form automatically without requiring a manual wire segment. Standard behavior in KiCad and Eagle. | DONE | C2 | Wave 69 |
-| BL-0494 | **Wire segment drag-rerouting** — Allow existing wire segments to be grabbed and repositioned (mid-segment drag). Currently wires can only be fully deleted and redrawn. Mid-segment rerouting is standard EDA UX. | OPEN | C3 | Wave 64 audit |
+| BL-0494 | **Wire segment drag-rerouting** — Allow existing wire segments to be grabbed and repositioned (mid-segment drag). Currently wires can only be fully deleted and redrawn. Mid-segment rerouting is standard EDA UX. | DONE (Wave 78) | C3 | Wave 64 audit |
 | BL-0495 | **Incremental ERC** — ERC currently re-runs the full circuit on every trigger. Add dirty-tracking so only changed nets/instances trigger re-validation. Prevents UI stutter on large schematics. | DONE (Wave 72) | C3 | Wave 64 audit |
 | BL-0496 | **Net browser panel** — Sidebar/drawer listing all nets in the design with pin count, connected instances, and a click-to-highlight action. Equivalent to KiCad's "Net Inspector". Useful for navigating large schematics. | DONE | C2 | Wave 69 |
 | BL-0497 | **Refdes auto-increment on component placement** — When placing a second R, it should be named R2 (not another R1). Currently every placed component gets R1/U1/etc. and requires manual renaming. Auto-increment on placement is table-stakes EDA UX. | DONE | C2 | Wave 71 |
@@ -626,7 +627,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0500 | **Diff pair routing toolbar mode** — Add a dedicated diff-pair route button to the PCB toolbar. Currently `diff-pair-router.ts` exists but there is no UI entry point to activate it; users have no way to initiate differential pair routing without AI. | DONE | C3 | Wave 69 |
 | BL-0501 | **SI overlay toggle in PCB toolbar** — Add a button to show/hide signal integrity annotations (stub lengths, impedance warnings) computed by `si-advisor.ts` directly on the PCB canvas. | DONE (Wave 74) | C3 | Wave 64 audit |
 | BL-0502 | **Thermal heatmap overlay** — Add an overlay mode to PCBLayoutView that color-codes pads/zones by thermal resistance values from `thermal-analysis.ts`. Power designers need this to spot heat accumulation before ordering. | DONE (Wave 74) | C3 | Wave 64 audit |
-| BL-0503 | **PCB copy/paste traces and zones** — Ctrl+C on selected traces/zones followed by Ctrl+V should duplicate them (with new IDs and optional offset). Currently copy/paste only works at the architecture/schematic level. | OPEN | C3 | Wave 64 audit |
+| BL-0503 | **PCB copy/paste traces and zones** — Ctrl+C on selected traces/zones followed by Ctrl+V should duplicate them (with new IDs and optional offset). Currently copy/paste only works at the architecture/schematic level. | DONE (Wave 78) | C3 | Wave 64 audit |
 | BL-0504 | **Ratsnest filter by net** — Allow users to show/hide the unrouted ratsnest lines for specific nets. Essential for routing complex boards where power net ratsnest obscures signal net ratsnest. | DONE (Wave 72) | C3 | Wave 64 audit |
 | BL-0505 | **Push-shove visual feedback** — `push-shove-engine.ts` computes pushed geometries but the result is not visualized during routing. Show the "pushed" trace outlines in a highlight color before the user commits the route. | DONE (Wave 75) | C3 | Wave 64 audit |
 | BL-0506 | **Unrouted net completion status** — Show a count of unrouted connections (total vs routed) in the PCB toolbar, and a per-net completion indicator in the net browser. Standard autorouter UX feedback. | DONE | C3 | Wave 69 |
@@ -711,7 +712,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0598 | **Baud rate selector UI in Serial Monitor** — The `baudRate` field exists in the Arduino session schema but the Serial Monitor panel has no dropdown to set it. Users must match their `Serial.begin(9600)` call rate manually; mismatches produce garbage output with no diagnostic. Add a baud rate selector (300 / 1200 / 2400 / 9600 / 19200 / 38400 / 57600 / 115200 / 230400 / 250000 / 500000 / 1000000 / 2000000). | OPEN | C2 | Wave 66 / Arduino IDE |
+| BL-0598 | **Baud rate selector UI in Serial Monitor** — The `baudRate` field exists in the Arduino session schema but the Serial Monitor panel has no dropdown to set it. Users must match their `Serial.begin(9600)` call rate manually; mismatches produce garbage output with no diagnostic. Add a baud rate selector (300 / 1200 / 2400 / 9600 / 19200 / 38400 / 57600 / 115200 / 230400 / 250000 / 500000 / 1000000 / 2000000). | DONE (Wave 78) | C2 | Wave 66 / Arduino IDE |
 | BL-0599 | **Compile/upload memory usage display** — After every compile, Arduino IDE shows "Sketch uses X bytes (Y% of program storage). Global variables use Z bytes (W% of dynamic memory)." This is the #1 thing embedded developers check — hitting memory limits is the most common beginner blocker. Surface RAM/Flash usage prominently in the Workbench output panel after every build. | OPEN | C2 | Wave 66 / Arduino IDE + PlatformIO |
 | BL-0600 | **Error line linking in compile output** — Clicking a compile error in the Workbench console should jump to the exact file and line number in the code editor. Requires parsing `avr-g++` / `xtensa-g++` error output format (`filename:line:col: error: message`). Currently users manually scan error text and scroll to find the problem. | OPEN | C2 | Wave 66 / Arduino IDE |
 | BL-0601 | **Auto-format sketch code (Ctrl+T)** — One-keystroke code formatting using clang-format or a compatible formatter. Arduino IDE 1.x has had Ctrl+T since 2005. ProtoPulse CodeMirror has no formatter wired. Required muscle-memory feature for every Arduino user. | OPEN | C2 | Wave 66 / Arduino IDE |
@@ -771,7 +772,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0519 | **Simulation control AI tools** — Add AI tools to start, stop, configure, and retrieve results from simulations (`run_dc_analysis`, `run_transient`, `get_sim_results`, `set_sim_parameters`). Currently AI can discuss simulation but cannot invoke it directly via tool call. | OPEN | C3 | Wave 64 audit |
 | BL-0520 | **Circuit instances in AI system prompt** — The AI system prompt includes architecture nodes, BOM, and validation issues but does NOT include circuit schematic instances and nets. AI answers about circuit connectivity are based on inference, not actual data. Add a `buildCircuitContext()` function to include instances/nets/wires in every prompt. | OPEN | C4 | Wave 64 audit |
-| BL-0521 | **Action executor error tracking** — `useActionExecutor` silently drops failed tool-call actions (no toast, no console log, no retry). Add per-action error state tracking so users see which AI-suggested actions failed and why. | OPEN | C2 | Wave 64 audit |
+| BL-0521 | **Action executor error tracking** — `useActionExecutor` silently drops failed tool-call actions (no toast, no console log, no retry). Add per-action error state tracking so users see which AI-suggested actions failed and why. | DONE (Wave 78) | C2 | Wave 64 audit |
 | BL-0522 | **"Explain this net" AI tool** — Add an `explain_net` tool that takes a net name and returns a plain-English description of what it carries (power, signal, data bus, control), what drives it, and what loads it — useful for newcomers trying to understand a schematic. | OPEN | C2 | Wave 64 audit |
 | BL-0523 | **DFM/manufacturing AI assistant** — Add AI tools for `run_dfm_check`, `explain_dfm_violation`, and `suggest_dfm_fix` that wrap the existing `DfmChecker` and `StandardsCompliance` engines and surface their output conversationally. | OPEN | C3 | Wave 64 audit |
 
@@ -967,7 +968,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0563 | **BOM back-annotation to schematic** — When a BOM item's MPN or value is changed (e.g. component substitution in the Procurement view), the corresponding schematic instance's properties (value, manufacturer, MPN) should update to match. Currently BOM and schematic instances are entirely decoupled after initial entry. | OPEN | C4 | Wave 65 audit |
 | BL-0564 | **Assembly cost estimator reads actual BOM** — `AssemblyCostEstimator` uses a manually entered part list. It should read from the current project's `bom_items` table as its input, so users don't re-enter data they've already captured in the BOM. | OPEN | C3 | Wave 65 audit |
 | BL-0565 | **Inline supplier stock/price in BOM view** — The BOM table shows manufacturer and MPN but not real-time stock or pricing. Supplier data (from `supplier-apis.ts`, once real — see BL-0485) should be surfaced inline in the BOM row (stock badge, best price, lead time) without requiring a trip to the Procurement view. | OPEN | C4 | Wave 65 audit |
-| BL-0566 | **DRC/PCB violation click → navigate to PCB canvas** — Clicking a PCB DRC violation in the ValidationView navigates to the Schematic (because the existing `validation-focus-pulse` logic was built for architecture/schematic). PCB DRC violations should switch the active view to PCB, center the viewport on the offending trace/pad, and pulse it. | OPEN | C3 | Wave 65 audit |
+| BL-0566 | **DRC/PCB violation click → navigate to PCB canvas** — Clicking a PCB DRC violation in the ValidationView navigates to the Schematic (because the existing `validation-focus-pulse` logic was built for architecture/schematic). PCB DRC violations should switch the active view to PCB, center the viewport on the offending trace/pad, and pulse it. | DONE (Wave 78) | C3 | Wave 65 audit |
 | BL-0567 | **Schematic component values → SPICE model auto-population** — When a resistor with `value: "10k"` is placed in the schematic, generating SPICE for simulation should auto-use that value rather than requiring the user to re-enter it in the SPICE editor. Currently the SPICE generator and the circuit instance schema are not linked — SPICE element values must be specified separately. | DONE | C3 | Wave 70 |
 | BL-0568 | **Design snapshot restore cascade** — Restoring a design snapshot currently restores architecture nodes/edges only. It does not offer to also restore the schematic, BOM, and simulation results that existed at snapshot time. A true "time travel" restore should let users choose which domains to roll back together or independently. | OPEN | C4 | Wave 65 audit |
 | BL-0569 | **Global cross-domain search** — There is no single search box that queries across schematic instances + BOM items + architecture nodes + community library + standard library + design history simultaneously. Finding "where is my LM7805?" requires checking five different panels manually. A unified search (like VS Code's Ctrl+P but for design objects) would dramatically improve navigation on complex projects. | DONE | C4 | Wave 70 |

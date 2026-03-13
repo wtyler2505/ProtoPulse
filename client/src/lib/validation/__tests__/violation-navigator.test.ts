@@ -241,7 +241,7 @@ describe('resolveLocation', () => {
   it('handles empty shapeIds gracefully', () => {
     const loc = resolveLocation(makeViolation({ shapeIds: [] }));
     expect(loc.entityId).toBe('');
-    expect(loc.entityType).toBe('trace'); // inferred from min-clearance
+    expect(loc.entityType).toBe('shape'); // no entity to infer from
   });
 });
 
