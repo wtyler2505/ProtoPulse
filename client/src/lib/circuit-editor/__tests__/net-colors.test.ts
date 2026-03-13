@@ -121,6 +121,39 @@ describe('NetColorManager', () => {
     });
   });
 
+  describe('version counter', () => {
+    it('starts at a number', () => {
+      expect(typeof netColorManager.version).toBe('number');
+    });
+
+    it('increments on setNetColor', () => {
+      const before = netColorManager.version;
+      netColorManager.setNetColor(42, '#aabbcc');
+      expect(netColorManager.version).toBe(before + 1);
+    });
+
+    it('increments on clearNetColor', () => {
+      netColorManager.setNetColor(42, '#aabbcc');
+      const before = netColorManager.version;
+      netColorManager.clearNetColor(42);
+      expect(netColorManager.version).toBe(before + 1);
+    });
+
+    it('increments on clearAll', () => {
+      netColorManager.setNetColor(1, '#ff0000');
+      const before = netColorManager.version;
+      netColorManager.clearAll();
+      expect(netColorManager.version).toBe(before + 1);
+    });
+
+    it('increments on overwrite (detects value changes, not just add/remove)', () => {
+      netColorManager.setNetColor(1, '#ff0000');
+      const before = netColorManager.version;
+      netColorManager.setNetColor(1, '#00ff00');
+      expect(netColorManager.version).toBe(before + 1);
+    });
+  });
+
   describe('localStorage persistence', () => {
     it('persists colors to localStorage', () => {
       netColorManager.setNetColor(1, '#ff0000');

@@ -109,7 +109,7 @@ function SchematicAnnotationNodeInner({
     <div
       data-testid={`schematic-annotation-${annotationId}`}
       className={cn(
-        'relative group cursor-grab nodrag',
+        'relative group cursor-grab',
         selected && 'ring-1 ring-primary/50 rounded-sm',
       )}
       onDoubleClick={handleDoubleClick}

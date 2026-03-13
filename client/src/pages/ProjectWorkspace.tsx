@@ -52,6 +52,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DndProvider } from '@/lib/dnd-context';
 import { TutorialProvider } from '@/lib/tutorial-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { UndoRedoProvider } from '@/lib/undo-redo-context';
 import { navItems, tabDescriptions, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
 
 /**
@@ -339,7 +340,7 @@ function WorkspaceContent() {
   // Initialize prediction engine
   const executeActions = useActionExecutor();
   const { predictions, dismiss, accept, clearAll, isAnalyzing } = usePredictions(
-    nodes.map(n => ({ id: n.id, type: n.type ?? 'generic', label: (n.data as any)?.label || n.id })),
+    nodes.map(n => ({ id: n.id, type: n.type ?? 'generic', label: (n.data != null && typeof n.data === 'object' && 'label' in n.data ? String((n.data as Record<string, unknown>).label) : n.id) })),
     edges.map(e => ({ id: e.id, source: e.source, target: e.target, label: e.label as string })),
     bom.map(b => ({ id: String(b.id), partNumber: b.partNumber, description: b.description, quantity: b.quantity }))
   );
@@ -784,7 +785,9 @@ function WorkspaceContent() {
               {activeView === 'pcb' && (
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
-                    <PCBLayoutView />
+                    <UndoRedoProvider>
+                      <PCBLayoutView />
+                    </UndoRedoProvider>
                   </Suspense>
                 </ErrorBoundary>
               )}

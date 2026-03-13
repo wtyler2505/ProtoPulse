@@ -1,4 +1,4 @@
-import { memo, useSyncExternalStore } from 'react';
+import { memo, useCallback, useSyncExternalStore } from 'react';
 import {
   getSmoothStepPath,
   EdgeLabelRenderer,
@@ -10,6 +10,9 @@ import { useSimulation } from '@/lib/contexts/simulation-context';
 import { formatSIValue } from '@/lib/simulation/visual-state';
 import { netColorManager } from '@/lib/circuit-editor/net-colors';
 import './simulation-overlays.css';
+
+// Stable subscribe function — defined at module level to avoid re-subscriptions every render
+const subscribeNetColors = (cb: () => void) => netColorManager.subscribe(cb);
 
 export interface NetEdgeData {
   netName: string;
@@ -42,10 +45,11 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
   const { isLive, wireVisualStates } = useSimulation();
 
   // BL-0490: Subscribe to net color manager for per-net custom colors
-  const netColorSnapshot = useSyncExternalStore(
-    (cb) => netColorManager.subscribe(cb),
+  const getNetColorSnapshot = useCallback(
     () => (netId != null ? netColorManager.getNetColor(netId) : undefined),
+    [netId],
   );
+  const netColorSnapshot = useSyncExternalStore(subscribeNetColors, getNetColorSnapshot);
 
   // Look up wire visual state from simulation context
   const wireState = isLive && netId != null

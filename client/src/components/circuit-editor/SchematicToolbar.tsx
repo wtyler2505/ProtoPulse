@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   MousePointer2,
   Move,
@@ -51,7 +52,7 @@ const tools: {
   { id: 'place-annotation', icon: Type, label: 'Place Annotation (T) — click to add text note', enabled: true },
 ];
 
-export default function SchematicToolbar({
+const SchematicToolbar = memo(function SchematicToolbar({
   activeTool,
   onToolChange,
   snapEnabled,
@@ -216,4 +217,6 @@ export default function SchematicToolbar({
       </StyledTooltip>
     </div>
   );
-}
+});
+
+export default SchematicToolbar;

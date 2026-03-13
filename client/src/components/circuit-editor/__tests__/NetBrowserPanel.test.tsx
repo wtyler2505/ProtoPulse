@@ -11,6 +11,7 @@ vi.mock('@/lib/circuit-editor/net-colors', () => ({
     getDefaultColor: vi.fn().mockReturnValue('#06b6d4'),
     subscribe: vi.fn().mockReturnValue(() => {}),
     getAllColors: vi.fn().mockReturnValue([]),
+    version: 0,
   },
 }));
 
