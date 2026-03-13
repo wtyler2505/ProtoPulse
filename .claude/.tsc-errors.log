@@ -592,3 +592,7 @@ client/src/lib/validation/violation-navigator.ts(436,22): error TS2802: Type 'Se
 
 
 1:09:24 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:11:04 PM - File change detected. Starting incremental compilation...
+
+
+1:11:07 PM - Found 0 errors. Watching for file changes.
