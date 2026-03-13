@@ -54,3 +54,25 @@ client/src/lib/circuit-editor/__tests__/erc-incremental.test.ts(497,27): error T
 9:21:16 AM - Found 0 errors. Watching for file changes.
 [2J[3J[H9:21:20 AM - File change detected. Starting incremental compilation...
 
+
+9:21:37 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:21:37 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/pcb/pcb-drc-checker.ts(106,3): error TS2741: Property 'maxViaAspectRatio' is missing in type '{ name: string; minSolderMaskExpansion: number; minPasteApertureRatio: number; maxPasteApertureRatio: number; minCourtyardClearance: number; }' but required in type 'FabRulePreset'.
+client/src/lib/pcb/pcb-drc-checker.ts(113,3): error TS2741: Property 'maxViaAspectRatio' is missing in type '{ name: string; minSolderMaskExpansion: number; minPasteApertureRatio: number; maxPasteApertureRatio: number; minCourtyardClearance: number; }' but required in type 'FabRulePreset'.
+client/src/lib/pcb/pcb-drc-checker.ts(120,3): error TS2741: Property 'maxViaAspectRatio' is missing in type '{ name: string; minSolderMaskExpansion: number; minPasteApertureRatio: number; maxPasteApertureRatio: number; minCourtyardClearance: number; }' but required in type 'FabRulePreset'.
+client/src/lib/pcb/pcb-drc-checker.ts(127,3): error TS2741: Property 'maxViaAspectRatio' is missing in type '{ name: string; minSolderMaskExpansion: number; minPasteApertureRatio: number; maxPasteApertureRatio: number; minCourtyardClearance: number; }' but required in type 'FabRulePreset'.
+
+9:21:52 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H9:21:53 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/pcb/pcb-drc-checker.ts(106,3): error TS2741: Property 'maxViaAspectRatio' is missing in type '{ name: string; minSolderMaskExpansion: number; minPasteApertureRatio: number; maxPasteApertureRatio: number; minCourtyardClearance: number; }' but required in type 'FabRulePreset'.
+client/src/lib/pcb/pcb-drc-checker.ts(113,3): error TS2741: Property 'maxViaAspectRatio' is missing in type '{ name: string; minSolderMaskExpansion: number; minPasteApertureRatio: number; maxPasteApertureRatio: number; minCourtyardClearance: number; }' but required in type 'FabRulePreset'.
+client/src/lib/pcb/pcb-drc-checker.ts(120,3): error TS2741: Property 'maxViaAspectRatio' is missing in type '{ name: string; minSolderMaskExpansion: number; minPasteApertureRatio: number; maxPasteApertureRatio: number; minCourtyardClearance: number; }' but required in type 'FabRulePreset'.
+client/src/lib/pcb/pcb-drc-checker.ts(127,3): error TS2741: Property 'maxViaAspectRatio' is missing in type '{ name: string; minSolderMaskExpansion: number; minPasteApertureRatio: number; maxPasteApertureRatio: number; minCourtyardClearance: number; }' but required in type 'FabRulePreset'.
+
+9:22:04 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H9:22:04 AM - File change detected. Starting incremental compilation...
+
+
+9:22:14 AM - Found 0 errors. Watching for file changes.

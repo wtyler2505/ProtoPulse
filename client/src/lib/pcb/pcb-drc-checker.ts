@@ -98,6 +98,8 @@ export interface FabRulePreset {
   maxPasteApertureRatio: number;
   /** Minimum courtyard-to-courtyard clearance in mm. */
   minCourtyardClearance: number;
+  /** Maximum via aspect ratio (board_thickness / drill_diameter). */
+  maxViaAspectRatio: number;
 }
 
 export const FAB_RULE_PRESETS: Record<string, FabRulePreset> = {
@@ -107,6 +109,7 @@ export const FAB_RULE_PRESETS: Record<string, FabRulePreset> = {
     minPasteApertureRatio: 0.5,
     maxPasteApertureRatio: 1.0,
     minCourtyardClearance: 0.25,
+    maxViaAspectRatio: 6,
   },
   PCBWay: {
     name: 'PCBWay',
@@ -114,6 +117,7 @@ export const FAB_RULE_PRESETS: Record<string, FabRulePreset> = {
     minPasteApertureRatio: 0.5,
     maxPasteApertureRatio: 0.95,
     minCourtyardClearance: 0.2,
+    maxViaAspectRatio: 8,
   },
   OSHPark: {
     name: 'OSHPark',
@@ -121,6 +125,7 @@ export const FAB_RULE_PRESETS: Record<string, FabRulePreset> = {
     minPasteApertureRatio: 0.55,
     maxPasteApertureRatio: 0.9,
     minCourtyardClearance: 0.25,
+    maxViaAspectRatio: 6,
   },
   Generic: {
     name: 'Generic',
@@ -128,6 +133,7 @@ export const FAB_RULE_PRESETS: Record<string, FabRulePreset> = {
     minPasteApertureRatio: 0.6,
     maxPasteApertureRatio: 1.0,
     minCourtyardClearance: 0.5,
+    maxViaAspectRatio: 6,
   },
 };
 
