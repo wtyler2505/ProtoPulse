@@ -108,6 +108,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 79 | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600`, `BL-0560` | Board settings dialog, CLI error parsing (35 hints), memory usage display, error line linking, simulation results overlay — Arduino compile feedback loop + simulation visibility. |
 | 78 | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | Wire drag-rerouting, PCB copy/paste, validation→PCB navigation, AI action error tracking, baud rate selector — editor trust + workflow gaps closed. |
 | 77 | `BL-0513`, `BL-0514`, `BL-0128`, `BL-0141`, `BL-0153` | SPICE transmission line, simulation complexity guardrails, EveryCircuit-style current animation, protocol decoders, serial plotter — simulation usability + hardware feedback loop. |
 | 76 | `BL-0491`, `BL-0122`, `BL-0123`, `BL-0511`, `BL-0512` | Closed bus-mapping, simulation-analysis, and SPICE-model gaps that unlock more advanced design work. |
@@ -120,16 +121,16 @@
 
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0515` | Board settings dialog unlocks non-default and advanced board workflows already implied by the Workbench. | M | `C2` | Medium |
-| 2 | `BL-0516` | Structured CLI error parsing is the foundation for better diagnostics, hints, and line linking. | M | `C2` | High |
-| 3 | `BL-0599` | Memory usage feedback is one of the most common embedded maker needs after compile. | M | `C2` | High |
-| 4 | `BL-0600` | Error line linking materially shortens the edit→compile→fix loop. | M | `C2` | High |
-| 5 | `BL-0560` | Simulation results as schematic annotations (voltage/current labels on-canvas). | M | `C3` | High |
-| 6 | `BL-0619` | Component state rendering (LED glow, relay toggle) makes simulation visually immediate. | M | `C3` | High |
-| 7 | `BL-0620` | One-click "Start Simulation" button removes the biggest barrier to running a sim. | S | `C2` | High |
-| 8 | `BL-0622` | Sensor input sliders let users interact with simulations without editing values manually. | M | `C3` | High |
-| 9 | `BL-0563` | Schematic↔architecture component linkage closes a data coherence gap. | M | `C3` | Medium |
-| 10 | `BL-0564` | BOM↔schematic sync ensures component data stays in one place. | M | `C3` | Medium |
+| 1 | `BL-0619` | Component state rendering (LED glow, relay toggle) makes simulation visually immediate. | M | `C3` | High |
+| 2 | `BL-0620` | One-click "Start Simulation" button removes the biggest barrier to running a sim. | S | `C2` | High |
+| 3 | `BL-0622` | Sensor input sliders let users interact with simulations without editing values manually. | M | `C3` | High |
+| 4 | `BL-0563` | Schematic↔architecture component linkage closes a data coherence gap. | M | `C3` | Medium |
+| 5 | `BL-0564` | BOM↔schematic sync ensures component data stays in one place. | M | `C3` | Medium |
+| 6 | `BL-0565` | DFM checker reads actual BOM data instead of manual entry. | M | `C3` | Medium |
+| 7 | `BL-0580` | Export validation pre-flight catches missing data before generating files. | M | `C3` | High |
+| 8 | `BL-0604` | Job cancellation — no way to cancel a running compile/upload. | S | `C2` | High |
+| 9 | `BL-0605` | Export compiled binary (.hex/.bin) for OTA or external tools. | S | `C2` | Medium |
+| 10 | `BL-0606` | Built-in examples browser — standard beginner entry point. | M | `C2` | High |
 
 ## Complexity Radar (Highest-Complexity Open Items)
 
@@ -165,13 +166,13 @@ Use this section to call out the largest open work by architectural scope and de
 
 ## Active Waves (Current Planning Snapshot)
 
-This document currently reflects completed work through **Wave 78**.
+This document currently reflects completed work through **Wave 79**.
 
 | Lane | Intent | Candidate IDs | Status |
 |------|--------|---------------|--------|
+| **Wave 79 — Arduino feedback + sim overlay** | Board settings, CLI parsing, memory display, error linking, sim results overlay. | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600`, `BL-0560` | **DONE** |
 | **Wave 78 — Editor + trust** | Close highest-friction editor gaps + quick UX trust wins. | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | **DONE** |
-| Arduino workbench trust | Tighten the compile/upload/serial feedback loop for makers. | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600` | Next up |
-| Simulation visibility | Sim results on-canvas + component state rendering. | `BL-0560`, `BL-0619`, `BL-0620`, `BL-0622` | Planned (BL-0514, BL-0128 done in Wave 77) |
+| Simulation visibility (remaining) | Component state rendering + sim start button + sensor sliders. | `BL-0619`, `BL-0620`, `BL-0622` | Next up (BL-0560 done in Wave 79) |
 | Integration-first cleanup | Reduce “same data lives in two places” pain across views. | `BL-0563`, `BL-0564`, `BL-0565`, `BL-0580` | Planned |
 
 ## Wave Candidates (Proposed Bundles)
@@ -180,8 +181,8 @@ This document currently reflects completed work through **Wave 78**.
 |------|-------|-----|--------|-------|
 | Wave 77 (actual) | SPICE elements + sim UX + hardware tools | `BL-0513`, `BL-0514`, `BL-0128`, `BL-0141`, `BL-0153` | **DONE** | Transmission line, complexity warning, current animation, protocol decoders, serial plotter. |
 | Wave 78 (done) | Editor loop closing + trust wins | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | **DONE** | Wire reroute, PCB copy/paste, validation→PCB nav, AI error tracking, baud selector. |
-| Wave 79 (proposed) | Arduino compile/upload feedback | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600` | Planned | Board settings, CLI error parsing, memory display, error line linking. |
-| Wave 80 (proposed) | Simulation on-canvas layer | `BL-0560`, `BL-0619`, `BL-0620`, `BL-0622` | Planned | Results as annotations, component state rendering, start button, sensor sliders. |
+| Wave 79 (done) | Arduino compile feedback + sim overlay | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600`, `BL-0560` | **DONE** | Board settings, CLI error parsing, memory display, error line linking, sim results overlay. |
+| Wave 80 (proposed) | Simulation visibility (remaining) + integration | `BL-0619`, `BL-0620`, `BL-0622`, `BL-0563`, `BL-0564` | Planned | Component state rendering, start button, sensor sliders, cross-tool linkage. |
 | Wave 81 (proposed) | Manufacturing + BOM coherence | `BL-0564`, `BL-0565`, `BL-0580`, `BL-0586`, `BL-0530`, `BL-0531` | Planned | Use actual project data to drive fab-readiness. |
 | Wave 80 | Manufacturing + BOM coherence | `BL-0564`, `BL-0565`, `BL-0580`, `BL-0586`, `BL-0530`, `BL-0531` | `C4` | Shared goal: use actual project data to drive fab-readiness instead of duplicate manual entry. |
 
@@ -405,11 +406,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 14 | All resolved (Waves 52-60) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 183 | 105 | Breadboard/PCB/simulation/UI — Waves 61-78 ongoing |
+| P2 | 178 | 110 | Breadboard/PCB/simulation/UI — Waves 61-79 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **316** | **192** | **508 total items tracked** |
+| **Total** | **311** | **197** | **508 total items tracked** |
 
-*Snapshot updated: Wave 78 (2026-03-13)*
+*Snapshot updated: Wave 79 (2026-03-13)*
 
 ---
 
@@ -719,8 +720,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0598 | **Baud rate selector UI in Serial Monitor** — The `baudRate` field exists in the Arduino session schema but the Serial Monitor panel has no dropdown to set it. Users must match their `Serial.begin(9600)` call rate manually; mismatches produce garbage output with no diagnostic. Add a baud rate selector (300 / 1200 / 2400 / 9600 / 19200 / 38400 / 57600 / 115200 / 230400 / 250000 / 500000 / 1000000 / 2000000). | DONE (Wave 78) | C2 | Wave 66 / Arduino IDE |
-| BL-0599 | **Compile/upload memory usage display** — After every compile, Arduino IDE shows "Sketch uses X bytes (Y% of program storage). Global variables use Z bytes (W% of dynamic memory)." This is the #1 thing embedded developers check — hitting memory limits is the most common beginner blocker. Surface RAM/Flash usage prominently in the Workbench output panel after every build. | OPEN | C2 | Wave 66 / Arduino IDE + PlatformIO |
-| BL-0600 | **Error line linking in compile output** — Clicking a compile error in the Workbench console should jump to the exact file and line number in the code editor. Requires parsing `avr-g++` / `xtensa-g++` error output format (`filename:line:col: error: message`). Currently users manually scan error text and scroll to find the problem. | OPEN | C2 | Wave 66 / Arduino IDE |
+| BL-0599 | **Compile/upload memory usage display** — After every compile, Arduino IDE shows "Sketch uses X bytes (Y% of program storage). Global variables use Z bytes (W% of dynamic memory)." This is the #1 thing embedded developers check — hitting memory limits is the most common beginner blocker. Surface RAM/Flash usage prominently in the Workbench output panel after every build. | DONE (Wave 79) | C2 | Wave 66 / Arduino IDE + PlatformIO |
+| BL-0600 | **Error line linking in compile output** — Clicking a compile error in the Workbench console should jump to the exact file and line number in the code editor. Requires parsing `avr-g++` / `xtensa-g++` error output format (`filename:line:col: error: message`). Currently users manually scan error text and scroll to find the problem. | DONE (Wave 79) | C2 | Wave 66 / Arduino IDE |
 | BL-0601 | **Auto-format sketch code (Ctrl+T)** — One-keystroke code formatting using clang-format or a compatible formatter. Arduino IDE 1.x has had Ctrl+T since 2005. ProtoPulse CodeMirror has no formatter wired. Required muscle-memory feature for every Arduino user. | OPEN | C2 | Wave 66 / Arduino IDE |
 | BL-0602 | **Live error highlighting in code editor** — Squiggly red underlines on syntax/type errors before the user hits compile. Requires either a WASM-based C/C++ parser or a background compile-check endpoint. Eliminates the edit→compile→read-error loop for basic mistakes. Arduino IDE 2.x has this via LSP. | OPEN | C4 | Wave 66 / Arduino IDE 2.x |
 | BL-0603 | **Arduino-aware IntelliSense / autocomplete** — C/C++/Arduino-aware code completion: function signatures, parameter hints, `#define` expansions, `Serial.`, `digitalWrite(`, pin constants. Currently CodeMirror shows generic completions. Requires either a backend compile_commands.json approach or a WASM clangd. Arduino IDE 2.x uses LSP. | OPEN | C5 | Wave 66 / Arduino IDE 2.x + PlatformIO |
@@ -749,8 +750,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0515 | **Arduino board settings dialog** — Expose FQBN, programmer, upload speed, and extra flags as an editable dialog in the Workbench. Currently these values are hardcoded or derived only from board selection. Required for non-standard boards and bootloader-burning workflows. | OPEN | C2 | Wave 64 audit |
-| BL-0516 | **Arduino CLI error message parsing** — Parse `arduino-cli compile` stderr output and display structured diagnostics (file, line, column, message) in the Workbench console instead of raw text. Map common errors ("library not found", "no such file") to plain-English hints. | OPEN | C2 | Wave 64 audit |
+| BL-0515 | **Arduino board settings dialog** — Expose FQBN, programmer, upload speed, and extra flags as an editable dialog in the Workbench. Currently these values are hardcoded or derived only from board selection. Required for non-standard boards and bootloader-burning workflows. | DONE (Wave 79) | C2 | Wave 64 audit |
+| BL-0516 | **Arduino CLI error message parsing** — Parse `arduino-cli compile` stderr output and display structured diagnostics (file, line, column, message) in the Workbench console instead of raw text. Map common errors ("library not found", "no such file") to plain-English hints. | DONE (Wave 79) | C2 | Wave 64 audit |
 | BL-0517 | **Arduino job history console** — Show a persistent log of all past compile/upload jobs (timestamp, board, status, duration) in the Workbench. Currently only the most recent job output is visible; older runs are lost on refresh. | OPEN | C2 | Wave 64 audit |
 | BL-0518 | **Sketch → Serial Monitor → Digital Twin flow** — After a successful upload, automatically offer to open the Serial Monitor connected to the same port, and route parsed telemetry to the Digital Twin's device shadow. Currently these three features are entirely disconnected. | OPEN | C4 | Wave 64 audit |
 
@@ -972,7 +973,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0559 | **PCB → Schematic back annotation** — Renaming a reference designator in the PCB layout (e.g. R3 → R_BYPASS) is not reflected in the corresponding schematic instance. Back-annotation is the return path of the forward annotation flow (BL-0558). Without it, schematic and PCB can silently diverge. | OPEN | C4 | Wave 65 audit |
-| BL-0560 | **Simulation results overlay on schematic canvas** — After running a DC operating point or transient simulation, node voltages and branch currents should optionally render as colored annotations directly on the schematic (probe labels at nodes, current arrows on wires). Currently simulation results exist only in the SimulationPanel — there is zero visual connection between simulation output and the schematic that produced it. | OPEN | C4 | Wave 65 audit |
+| BL-0560 | **Simulation results overlay on schematic canvas** — After running a DC operating point or transient simulation, node voltages and branch currents should optionally render as colored annotations directly on the schematic (probe labels at nodes, current arrows on wires). Currently simulation results exist only in the SimulationPanel — there is zero visual connection between simulation output and the schematic that produced it. | DONE (Wave 79) | C4 | Wave 65 audit |
 | BL-0561 | **PDN/SI analysis reads actual routed PCB geometry** — `pdn-analysis.ts` and `si-advisor.ts` accept parametric inputs (trace width, length, layer stackup) entered manually. They do not read actual routed wire geometry from `circuit_wires`. A fully integrated flow would extract per-net trace statistics from the routed board and feed them directly into the PDN/SI solvers without user data entry. | OPEN | C4 | Wave 65 audit |
 | BL-0562 | **Thermal analysis reads actual component placement** — `thermal-analysis.ts` uses a parametric component list for heat sources. It should read actual placed instances from the PCB layout (with their package thermal resistance from `FootprintLibrary`) and use their XY positions to compute spatial heat diffusion. Currently there is no connection between PCB placement and thermal simulation. | OPEN | C4 | Wave 65 audit |
 | BL-0563 | **BOM back-annotation to schematic** — When a BOM item's MPN or value is changed (e.g. component substitution in the Procurement view), the corresponding schematic instance's properties (value, manufacturer, MPN) should update to match. Currently BOM and schematic instances are entirely decoupled after initial entry. | OPEN | C4 | Wave 65 audit |

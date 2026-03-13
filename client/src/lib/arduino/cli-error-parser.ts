@@ -99,6 +99,10 @@ const HINT_RULES: HintRule[] = [
     hint: 'Syntax error — check for typos or missing operators',
   },
   {
+    pattern: /expected unqualified-id/i,
+    hint: 'Syntax error — possibly a misplaced keyword or extra semicolon',
+  },
+  {
     pattern: /control reaches end of non-void function/i,
     hint: 'Function needs a return statement in all code paths',
   },
@@ -133,6 +137,10 @@ const HINT_RULES: HintRule[] = [
   {
     pattern: /incompatible types/i,
     hint: 'Mismatched types — check assignment or return type',
+  },
+  {
+    pattern: /ISO C\+\+ forbids/i,
+    hint: 'Non-standard C++ usage — check language compatibility',
   },
   {
     pattern: /variable[- ]length array/i,
@@ -185,14 +193,6 @@ const HINT_RULES: HintRule[] = [
   {
     pattern: /#error/i,
     hint: 'A #error directive was triggered — check preprocessor conditions',
-  },
-  {
-    pattern: /expected unqualified-id/i,
-    hint: 'Syntax error — possibly a misplaced keyword or extra semicolon',
-  },
-  {
-    pattern: /ISO C\+\+ forbids/i,
-    hint: 'Non-standard C++ usage — check language compatibility',
   },
   {
     pattern: /overflows/i,

@@ -283,9 +283,10 @@ describe('SimResultsOverlayManager — getVoltageColor', () => {
   it('returns cyan-ish for low positive voltage in magnitude mode', () => {
     const mgr = SimResultsOverlayManager.create();
     mgr.setColorMode('magnitude');
-    const color = mgr.getVoltageColor(0.001);
+    // Use a very small voltage — logarithmic scale means 1e-9 is truly "low"
+    const color = mgr.getVoltageColor(1e-9);
     expect(color).toMatch(/^hsl\(\d+/);
-    // Should be in the cyan range (120-180)
+    // Should be in the cyan range (120-180) for very small voltages
     const hue = parseInt(color.match(/hsl\((\d+)/)?.[1] ?? '0', 10);
     expect(hue).toBeGreaterThanOrEqual(60);
     expect(hue).toBeLessThanOrEqual(180);
