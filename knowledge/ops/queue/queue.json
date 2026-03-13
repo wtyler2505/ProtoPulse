@@ -1,0 +1,13 @@
+{
+  "schema_version": 3,
+  "tasks": [],
+  "maintenance_conditions": {
+    "orphan_threshold": 5,
+    "dangling_link_threshold": 3,
+    "stale_days": 30,
+    "inbox_overflow": 20,
+    "observation_review": 10,
+    "tension_review": 5
+  },
+  "last_evaluated": null
+}
