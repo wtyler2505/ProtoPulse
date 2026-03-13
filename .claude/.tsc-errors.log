@@ -52,3 +52,5 @@ client/src/lib/circuit-editor/__tests__/erc-incremental.test.ts(497,27): error T
 
 
 9:21:16 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:21:20 AM - File change detected. Starting incremental compilation...
+
