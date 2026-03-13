@@ -395,3 +395,7 @@ client/src/lib/serial/serial-plotter.ts(539,26): error TS2802: Type 'MapIterator
 
 
 11:33:47 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:34:23 AM - File change detected. Starting incremental compilation...
+
+
+11:34:25 AM - Found 0 errors. Watching for file changes.
