@@ -262,13 +262,13 @@ function BreadboardGridInner({
     );
   }, []);
 
-  /** Power rail lane backgrounds and labels */
+  /** Power rail lane backgrounds and labels — vertical stripes along left/right edges */
   const railLanes = useMemo(() => {
     const elements: React.ReactElement[] = [];
     const rails: RailId[] = ['top_pos', 'top_neg', 'bottom_pos', 'bottom_neg'];
-    const firstX = coordToPixel({ type: 'rail', rail: 'top_pos', index: 0 }).x;
-    const lastX = coordToPixel({ type: 'rail', rail: 'top_pos', index: BB.ROWS - 1 }).x;
-    const laneWidth = lastX - firstX + BB.PITCH;
+    const firstY = coordToPixel({ type: 'rail', rail: 'top_pos', index: 0 }).y;
+    const lastY = coordToPixel({ type: 'rail', rail: 'top_pos', index: BB.ROWS - 1 }).y;
+    const laneHeight = lastY - firstY + BB.PITCH;
 
     for (const rail of rails) {
       const isPos = rail.endsWith('pos');
@@ -276,14 +276,14 @@ function BreadboardGridInner({
       const laneFill = isPos ? C.railPosLane : C.railNegLane;
       const laneStroke = isPos ? C.railPos : C.railNeg;
 
-      // Lane background stripe
+      // Vertical lane background stripe
       elements.push(
         <rect
           key={`lane-${rail}`}
-          x={firstX - HOLE_RADIUS_RAIL - 2}
-          y={px.y - RAIL_LANE_HEIGHT - 1}
-          width={laneWidth + 2 * (HOLE_RADIUS_RAIL + 2) - BB.PITCH}
-          height={2 * RAIL_LANE_HEIGHT + 2}
+          x={px.x - RAIL_LANE_HEIGHT - 1}
+          y={firstY - HOLE_RADIUS_RAIL - 2}
+          width={2 * RAIL_LANE_HEIGHT + 2}
+          height={laneHeight + 2 * (HOLE_RADIUS_RAIL + 2) - BB.PITCH}
           fill={laneFill}
           stroke={laneStroke}
           strokeWidth={0.4}
@@ -293,39 +293,39 @@ function BreadboardGridInner({
         />,
       );
 
-      // Label at the left end
+      // Label at the top end
       const labelSymbol = isPos ? '+' : '\u2212';
       const labelColor = isPos ? C.railLabelPos : C.railLabelNeg;
       elements.push(
         <text
-          key={`rail-label-left-${rail}`}
-          x={firstX - HOLE_RADIUS_RAIL - 10}
-          y={px.y}
-          textAnchor="end"
-          dominantBaseline="central"
+          key={`rail-label-top-${rail}`}
+          x={px.x}
+          y={firstY - HOLE_RADIUS_RAIL - 10}
+          textAnchor="middle"
+          dominantBaseline="auto"
           fontSize={LABEL_FONT_SIZE + 1}
           fontWeight="bold"
           fill={labelColor}
           fontFamily="monospace"
-          data-testid={`rail-label-${rail}-left`}
+          data-testid={`rail-label-${rail}-top`}
         >
           {labelSymbol}
         </text>,
       );
 
-      // Label at the right end
+      // Label at the bottom end
       elements.push(
         <text
-          key={`rail-label-right-${rail}`}
-          x={lastX + HOLE_RADIUS_RAIL + 10}
-          y={px.y}
-          textAnchor="start"
-          dominantBaseline="central"
+          key={`rail-label-bottom-${rail}`}
+          x={px.x}
+          y={lastY + HOLE_RADIUS_RAIL + 12}
+          textAnchor="middle"
+          dominantBaseline="auto"
           fontSize={LABEL_FONT_SIZE + 1}
           fontWeight="bold"
           fill={labelColor}
           fontFamily="monospace"
-          data-testid={`rail-label-${rail}-right`}
+          data-testid={`rail-label-${rail}-bottom`}
         >
           {labelSymbol}
         </text>,

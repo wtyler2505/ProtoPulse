@@ -166,13 +166,16 @@ describe('POST /api/circuits/:circuitId/instances', () => {
     expect(body.id).toBe(10);
   });
 
-  it('returns 400 for missing required fields', async () => {
+  it('auto-generates referenceDesignator when omitted (BL-0497)', async () => {
     const res = await fetch(`${baseUrl}/api/circuits/1/instances`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ partId: 1 }),
     });
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(201);
+    const body = await res.json() as { referenceDesignator: string };
+    // Auto-generated refdes should be non-empty
+    expect(body.referenceDesignator).toBeTruthy();
   });
 });
 

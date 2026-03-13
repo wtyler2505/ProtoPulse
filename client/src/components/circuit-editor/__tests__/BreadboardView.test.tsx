@@ -77,6 +77,7 @@ const mockCreateWire = { mutate: vi.fn() };
 const mockCreateInstance = { mutate: vi.fn() };
 const mockDeleteWire = { mutate: vi.fn() };
 const mockUpdateInstance = { mutate: vi.fn() };
+const mockUpdateWire = { mutate: vi.fn() };
 
 vi.mock('@/lib/contexts/project-id-context', () => ({
   useProjectId: () => 1,
@@ -105,6 +106,7 @@ vi.mock('@/lib/circuit-editor/hooks', () => ({
   useCreateCircuitInstance: () => mockCreateInstance,
   useDeleteCircuitWire: () => mockDeleteWire,
   useUpdateCircuitInstance: () => mockUpdateInstance,
+  useUpdateCircuitWire: () => mockUpdateWire,
 }));
 
 vi.mock('../BreadboardGrid', () => ({

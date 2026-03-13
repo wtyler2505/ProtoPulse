@@ -13,6 +13,10 @@ import {
   runParsedNetlist,
 } from '@/lib/simulation/spice-netlist-parser';
 import type { SimulationResult as SpiceSimResult } from '@/lib/simulation/spice-netlist-parser';
+import { autoDetectAnalysisType } from '@/lib/simulation/auto-detect';
+import type { CircuitInstanceForDetection } from '@/lib/simulation/auto-detect';
+import { checkCircuitComplexity } from '@/lib/simulation/complexity-check';
+import type { CircuitInstanceForComplexity } from '@/lib/simulation/complexity-check';
 import {
   Play,
   Square,
@@ -31,6 +35,7 @@ import {
   RotateCcw,
   FileText,
   AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -721,13 +726,35 @@ export default function SimulationPanel() {
 
   // AbortController for cancelling in-flight simulation requests
   const abortRef = useRef<AbortController | null>(null);
-  const { isLive } = useSimulation();
+  const { isLive, setIsSimRunning, setActiveAnalysisType } = useSimulation();
+
+  // Complexity warning dialog state
+  const [showComplexityWarning, setShowComplexityWarning] = useState(false);
+  const [complexityWarnings, setComplexityWarnings] = useState<string[]>([]);
+  const [complexityEstimate, setComplexityEstimate] = useState('');
+  const pendingRunRef = useRef(false);
 
   // Populate DC sweep source list from actual circuit instances
   const { data: circuits } = useCircuitDesigns(projectId);
   const firstCircuitId = circuits?.[0]?.id ?? 0;
   const { data: circuitInstances } = useCircuitInstances(firstCircuitId);
   const { updateComponentState } = useSimulation();
+
+  // Auto-detect analysis type from circuit topology
+  const autoDetected = useMemo(() => {
+    if (!circuitInstances || circuitInstances.length === 0) {
+      return null;
+    }
+    const forDetection: CircuitInstanceForDetection[] = circuitInstances.map((inst) => {
+      const props = (inst.properties && typeof inst.properties === 'object' ? inst.properties : {}) as Record<string, unknown>;
+      return {
+        referenceDesignator: inst.referenceDesignator,
+        componentType: String(props.componentType ?? ''),
+        properties: inst.properties as Record<string, unknown> | null,
+      };
+    });
+    return autoDetectAnalysisType(forDetection);
+  }, [circuitInstances]);
 
   const circuitSources = useMemo<string[]>(() => {
     if (!circuitInstances || circuitInstances.length === 0) { return []; }
@@ -802,6 +829,8 @@ export default function SimulationPanel() {
     abortRef.current = controller;
 
     setIsRunning(true);
+    setIsSimRunning(true);
+    setActiveAnalysisType(analysisType);
     setIsStopping(false);
     setError(null);
     setResults(null);
@@ -889,10 +918,12 @@ export default function SimulationPanel() {
       }
     } finally {
       setIsRunning(false);
+      setIsSimRunning(false);
+      setActiveAnalysisType(null);
       setIsStopping(false);
       abortRef.current = null;
     }
-  }, [validate, projectId, analysisType, currentParams, probes, toast, cornerAnalysis, cornerIterations, circuitInstances, updateComponentState]);
+  }, [validate, projectId, analysisType, currentParams, probes, toast, cornerAnalysis, cornerIterations, circuitInstances, updateComponentState, setIsSimRunning, setActiveAnalysisType]);
 
   // BL-0150: Live simulation loop
   useEffect(() => {
@@ -918,6 +949,82 @@ export default function SimulationPanel() {
       abortRef.current.abort();
     }
   }, []);
+
+  // ---------------------------
+  // BL-0514: Complexity check before running
+  // ---------------------------
+  const handleRunWithComplexityCheck = useCallback(() => {
+    if (isRunning) {
+      return;
+    }
+
+    // Build complexity instances from circuit data
+    if (circuitInstances && circuitInstances.length > 0) {
+      const forComplexity: CircuitInstanceForComplexity[] = circuitInstances.map((inst) => {
+        const props = (inst.properties && typeof inst.properties === 'object' ? inst.properties : {}) as Record<string, unknown>;
+        return {
+          referenceDesignator: inst.referenceDesignator,
+          componentType: String(props.componentType ?? ''),
+          properties: inst.properties as Record<string, unknown> | null,
+        };
+      });
+
+      // For transient, compute estimated time steps
+      let transientComplexityParams = null;
+      if (analysisType === 'transient') {
+        const startT = parseValueWithUnit(transientParams.startTime) || 0;
+        const stopT = parseValueWithUnit(transientParams.stopTime);
+        const stepT = transientParams.timeStep ? parseValueWithUnit(transientParams.timeStep) : 0;
+        if (!Number.isNaN(stopT) && stopT > startT) {
+          transientComplexityParams = {
+            spanSeconds: stopT - startT,
+            timeStepSeconds: Number.isNaN(stepT) ? 0 : stepT,
+          };
+        }
+      }
+
+      const result = checkCircuitComplexity(forComplexity, transientComplexityParams);
+
+      if (result.shouldWarn) {
+        setComplexityWarnings(result.warnings);
+        setComplexityEstimate(result.metrics.estimatedRuntime);
+        setShowComplexityWarning(true);
+        pendingRunRef.current = true;
+        return;
+      }
+    }
+
+    void handleRun();
+  }, [isRunning, circuitInstances, analysisType, transientParams, handleRun]);
+
+  // Confirm run after complexity warning
+  const handleConfirmComplexityRun = useCallback(() => {
+    setShowComplexityWarning(false);
+    pendingRunRef.current = false;
+    void handleRun();
+  }, [handleRun]);
+
+  const handleCancelComplexityRun = useCallback(() => {
+    setShowComplexityWarning(false);
+    pendingRunRef.current = false;
+  }, []);
+
+  // ---------------------------
+  // BL-0620: Unified play/stop handler (auto-detect + toggle)
+  // ---------------------------
+  const handleUnifiedPlayStop = useCallback(() => {
+    if (isRunning) {
+      handleStop();
+      return;
+    }
+
+    // Auto-detect and set analysis type if user hasn't explicitly chosen
+    if (autoDetected) {
+      setAnalysisType(autoDetected.recommended);
+    }
+
+    handleRunWithComplexityCheck();
+  }, [isRunning, handleStop, autoDetected, handleRunWithComplexityCheck]);
 
   // ---------------------------
   // Export SPICE netlist
@@ -1021,6 +1128,49 @@ export default function SimulationPanel() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* BL-0620: Unified Play/Stop button in header */}
+          <button
+            type="button"
+            data-testid="unified-sim-play-stop"
+            onClick={handleUnifiedPlayStop}
+            disabled={isStopping}
+            className={cn(
+              'h-9 px-4 flex items-center gap-2 text-sm font-medium transition-all',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              isRunning
+                ? 'bg-red-600 text-white hover:bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.25)]'
+                : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)]',
+            )}
+          >
+            {isRunning ? (
+              isStopping ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Stopping...
+                </>
+              ) : (
+                <>
+                  <Square className="w-4 h-4 fill-current" />
+                  Stop
+                </>
+              )
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-current" />
+                {autoDetected ? `Run ${ANALYSIS_TYPES.find((a) => a.id === autoDetected.recommended)?.label ?? 'Simulation'}` : 'Run Simulation'}
+              </>
+            )}
+          </button>
+          {/* Auto-detect indicator */}
+          {autoDetected && !isRunning && (
+            <span
+              className="text-[10px] text-muted-foreground max-w-[160px] truncate"
+              title={autoDetected.reason}
+              data-testid="auto-detect-hint"
+            >
+              {autoDetected.reason.split(' — ')[0]}
+            </span>
+          )}
           <button
             type="button"
             data-testid="export-spice"
@@ -1236,13 +1386,13 @@ export default function SimulationPanel() {
             ) : (
               <button
                 type="button"
-                onClick={() => handleRun()}
+                onClick={handleRunWithComplexityCheck}
                 disabled={isRunning}
                 className={runButtonClasses}
                 data-testid="button-run-simulation"
               >
                 <Play className="w-4 h-4" />
-                Run Simulation
+                Run {ANALYSIS_TYPES.find((a) => a.id === analysisType)?.label}
               </button>
             )}
             {isRunning && (
@@ -1355,6 +1505,62 @@ export default function SimulationPanel() {
           </CollapsibleSection>
         </div>
       </div>
+
+      {/* BL-0514: Complexity Warning Dialog */}
+      {showComplexityWarning && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          data-testid="complexity-warning-overlay"
+        >
+          <div
+            className="w-full max-w-md mx-4 bg-card border border-border shadow-2xl"
+            role="alertdialog"
+            aria-labelledby="complexity-warning-title"
+            aria-describedby="complexity-warning-desc"
+            data-testid="complexity-warning-dialog"
+          >
+            <div className="flex items-start gap-3 px-6 pt-6 pb-2">
+              <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <h3 id="complexity-warning-title" className="text-base font-semibold text-foreground">
+                  Large Circuit Warning
+                </h3>
+                <p id="complexity-warning-desc" className="text-xs text-muted-foreground mt-1">
+                  This simulation may take a while. Estimated runtime: <strong className="text-foreground">{complexityEstimate}</strong>
+                </p>
+              </div>
+            </div>
+            <div className="px-6 py-3">
+              <ul className="space-y-1.5">
+                {complexityWarnings.map((w, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-amber-400/90">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                    <span>{w}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="flex items-center justify-end gap-2 px-6 pb-6 pt-2">
+              <button
+                type="button"
+                onClick={handleCancelComplexityRun}
+                className="h-8 px-4 text-xs font-medium border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                data-testid="complexity-warning-cancel"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmComplexityRun}
+                className="h-8 px-4 text-xs font-medium bg-amber-600 text-white hover:bg-amber-500 transition-colors"
+                data-testid="complexity-warning-confirm"
+              >
+                Run Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

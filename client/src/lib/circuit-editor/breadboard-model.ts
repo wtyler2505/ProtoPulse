@@ -41,13 +41,9 @@ export const BB = {
   /** Gap height (in px) for the center channel between e and f columns */
   CHANNEL_GAP: 20,
 
-  /** Power-rail vertical offsets from board top/bottom */
-  RAIL_OFFSET_TOP: 10,
-  RAIL_OFFSET_BOTTOM: 10,
-
-  /** Power rail position relative to terminal-strip rows */
-  RAIL_TOP_Y: 20,
-  RAIL_BOTTOM_Y_OFFSET: 30,
+  /** Power-rail horizontal offsets from terminal strips (for vertical rails) */
+  RAIL_MARGIN_LEFT: 20,
+  RAIL_MARGIN_RIGHT: 20,
 
   /** Total tie-points: 2 groups × 5 cols × 63 rows + 4 rails × 63 points */
   TOTAL_TIE_POINTS: 2 * 5 * 63 + 4 * 63,  // 630 + 252 = 882 (real-world ≈ 830)
@@ -110,18 +106,30 @@ export function coordToPixel(coord: BreadboardCoord): PixelPos {
     };
   }
 
-  // Rail points
-  const rowY = (coord.index) * BB.PITCH;
-  const isTop = coord.rail.startsWith('top');
+  // Rail points — rails run vertically along left/right edges
+  // "top" rails → left side, "bottom" rails → right side
+  const isLeft = coord.rail.startsWith('top');
   const isPos = coord.rail.endsWith('pos');
 
-  const baseY = isTop
-    ? BB.RAIL_TOP_Y
-    : BB.ORIGIN_Y + (BB.ROWS - 1) * BB.PITCH + BB.RAIL_BOTTOM_Y_OFFSET;
+  // Right-side terminal strip edge (column 'j')
+  const rightEdgeX = BB.ORIGIN_X + 9 * BB.PITCH + BB.CHANNEL_GAP;
+
+  let railX: number;
+  if (isLeft) {
+    // Left rails: pos is outer (leftmost), neg is inner (closer to terminals)
+    railX = isPos
+      ? BB.ORIGIN_X - BB.RAIL_MARGIN_LEFT
+      : BB.ORIGIN_X - BB.RAIL_MARGIN_LEFT + BB.PITCH;
+  } else {
+    // Right rails: neg is inner (closer to terminals), pos is outer (rightmost)
+    railX = isPos
+      ? rightEdgeX + BB.RAIL_MARGIN_RIGHT + BB.PITCH
+      : rightEdgeX + BB.RAIL_MARGIN_RIGHT;
+  }
 
   return {
-    x: BB.ORIGIN_X + coord.index * BB.PITCH,
-    y: baseY + (isPos ? 0 : BB.PITCH),
+    x: railX,
+    y: BB.ORIGIN_Y + coord.index * BB.PITCH,
   };
 }
 
@@ -222,11 +230,12 @@ export function areConnected(a: BreadboardCoord, b: BreadboardCoord): boolean {
 // ---------------------------------------------------------------------------
 
 export function getBoardDimensions(): { width: number; height: number } {
-  const lastCol = coordToPixel({ type: 'terminal', col: 'j', row: BB.ROWS });
-  const railBottom = coordToPixel({ type: 'rail', rail: 'bottom_neg', index: BB.ROWS - 1 });
+  // Right-side outer rail is the widest element
+  const rightOuterRail = coordToPixel({ type: 'rail', rail: 'bottom_pos', index: 0 });
+  const lastTerminalY = coordToPixel({ type: 'terminal', col: 'a', row: BB.ROWS });
   return {
-    width: lastCol.x + BB.ORIGIN_X,
-    height: Math.max(lastCol.y, railBottom.y) + BB.ORIGIN_Y,
+    width: rightOuterRail.x + BB.RAIL_MARGIN_RIGHT,
+    height: lastTerminalY.y + BB.ORIGIN_Y,
   };
 }
 

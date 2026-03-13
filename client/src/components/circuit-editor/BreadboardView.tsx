@@ -14,11 +14,12 @@ import {
   useCreateCircuitInstance,
   useDeleteCircuitWire,
   useUpdateCircuitInstance,
+  useUpdateCircuitWire,
 } from '@/lib/circuit-editor/hooks';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import BreadboardGrid from './BreadboardGrid';
-import { BreadboardComponentOverlay } from './BreadboardComponentRenderer';
+import { BreadboardComponentOverlay, detectFamily, getFamilyValues, getCurrentValueLabel } from './BreadboardComponentRenderer';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import ToolButton from './ToolButton';
 import { Button } from '@/components/ui/button';
@@ -47,10 +48,14 @@ import {
   pixelToCoord,
   getBoardDimensions,
   getOccupiedPoints,
+  getConnectedPoints,
   checkCollision,
   type ComponentPlacement,
 } from '@/lib/circuit-editor/breadboard-model';
 import type { CircuitDesignRow, CircuitWireRow, ComponentPart } from '@shared/schema';
+import { formatSIValue } from '@/lib/simulation/visual-state';
+import type { WireVisualState } from '@/lib/simulation/visual-state';
+import './simulation-overlays.css';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,13 +71,41 @@ interface WireInProgress {
 }
 
 // ---------------------------------------------------------------------------
-// Wire color palette
+// Wire color palette (general purpose)
 // ---------------------------------------------------------------------------
 
 const WIRE_COLORS = [
   '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
   '#1abc9c', '#e67e22', '#34495e', '#e91e63', '#00bcd4',
 ];
+
+// ---------------------------------------------------------------------------
+// Wire color presets for context menu (BL-0591)
+// ---------------------------------------------------------------------------
+
+const WIRE_COLOR_PRESETS: Array<{ name: string; hex: string }> = [
+  { name: 'Red', hex: '#e74c3c' },
+  { name: 'Black', hex: '#1a1a2e' },
+  { name: 'Yellow', hex: '#f1c40f' },
+  { name: 'Orange', hex: '#e67e22' },
+  { name: 'Green', hex: '#2ecc71' },
+  { name: 'Blue', hex: '#3498db' },
+  { name: 'White', hex: '#ecf0f1' },
+  { name: 'Gray', hex: '#95a5a6' },
+];
+
+/** Default wire color based on net name convention */
+function defaultWireColor(netName: string | null | undefined): string {
+  if (!netName) return '#2ecc71';
+  const upper = netName.toUpperCase();
+  if (upper === 'VCC' || upper === 'VDD' || upper === '5V' || upper === '3V3' || upper === '3.3V') {
+    return '#e74c3c'; // red
+  }
+  if (upper === 'GND' || upper === 'VSS') {
+    return '#1a1a2e'; // black
+  }
+  return '#2ecc71'; // green
+}
 
 // ---------------------------------------------------------------------------
 // Component
@@ -195,12 +228,13 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const { data: nets } = useCircuitNets(circuitId);
   const { data: wires } = useCircuitWires(circuitId);
   const { data: parts } = useComponentParts(projectId);
-  const { isLive } = useSimulation();
+  const { isLive, wireVisualStates, componentVisualStates } = useSimulation();
   
   const createWireMutation = useCreateCircuitWire();
   const createInstanceMutation = useCreateCircuitInstance();
   const deleteWireMutation = useDeleteCircuitWire();
   const updateInstanceMutation = useUpdateCircuitInstance();
+  const updateWireMutation = useUpdateCircuitWire();
 
   const [tool, setTool] = useState<Tool>('select');
   const [zoom, setZoom] = useState(3);
@@ -211,6 +245,8 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const [selectedWireId, setSelectedWireId] = useState<number | null>(null);
   const [selectedInstanceId, setSelectedInstanceId] = useState<number | null>(null);
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
+  const [contextMenuWireId, setContextMenuWireId] = useState<number | null>(null);
+  const [wireColorMenuPos, setWireColorMenuPos] = useState<{ x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
@@ -281,6 +317,44 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
     return set;
   }, [instancePlacements]);
 
+  // BL-0594: Selected instance family detection for value swapping
+  const selectedInstanceInfo = useMemo(() => {
+    if (selectedInstanceId == null || !instances) return null;
+    const inst = instances.find(i => i.id === selectedInstanceId);
+    if (!inst) return null;
+    const partsMap = new Map((parts ?? []).map((p: ComponentPart) => [p.id, p]));
+    const part = inst.partId ? partsMap.get(inst.partId) : undefined;
+    const type = (part?.meta as Record<string, unknown>)?.type as string | undefined
+      ?? (inst.properties as Record<string, unknown>)?.type as string | undefined;
+    const family = detectFamily(type);
+    if (!family) return null;
+    const values = getFamilyValues(family);
+    const currentLabel = getCurrentValueLabel(inst, family);
+    return { instance: inst, family, values, currentLabel };
+  }, [selectedInstanceId, instances, parts]);
+
+  // BL-0594: Value change handler
+  const handleValueChange = useCallback((value: number | string) => {
+    if (!selectedInstanceInfo) return;
+    const inst = selectedInstanceInfo.instance;
+    const family = selectedInstanceInfo.family;
+    const existingProps = (inst.properties as Record<string, unknown>) ?? {};
+    const newProps: Record<string, string> = {};
+    for (const [k, v] of Object.entries(existingProps)) {
+      newProps[k] = String(v);
+    }
+    if (family === 'led') {
+      newProps.color = String(value);
+    } else {
+      newProps.value = String(value);
+    }
+    updateInstanceMutation.mutate({
+      circuitId,
+      id: inst.id,
+      properties: newProps,
+    });
+  }, [selectedInstanceInfo, updateInstanceMutation, circuitId]);
+
   // Build ratsnest nets
   const ratsnestNets = useMemo((): RatsnestNet[] => {
     if (!nets || !instances) return [];
@@ -342,7 +416,7 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
           netId: firstNet.id,
           points: [pixel],
           coordPath: [coord],
-          color: WIRE_COLORS[0],
+          color: defaultWireColor(firstNet.name),
         });
       } else {
         // Add waypoint or complete wire
@@ -359,9 +433,10 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const handleTiePointHover = useCallback((coord: BreadboardCoord | null) => {
     setHoveredCoord(coord);
     if (coord) {
-      // Highlight connected points
-      const key = coordKey(coord);
-      setHighlightedPoints(new Set([key]));
+      // BL-0592: Highlight all electrically connected holes in the same row/rail
+      const connected = getConnectedPoints(coord);
+      const keys = new Set(connected.map(coordKey));
+      setHighlightedPoints(keys);
     } else {
       setHighlightedPoints(new Set());
     }
@@ -393,6 +468,28 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
       setSelectedWireId(null);
     }
   }, [selectedWireId, deleteWireMutation, circuitId]);
+
+  // BL-0591: Wire right-click opens color picker
+  const handleWireContextMenu = useCallback((e: React.MouseEvent, wireId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    setContextMenuWireId(wireId);
+    setWireColorMenuPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, []);
+
+  const handleWireColorChange = useCallback((wireId: number, color: string) => {
+    updateWireMutation.mutate({ circuitId, id: wireId, color });
+    setContextMenuWireId(null);
+    setWireColorMenuPos(null);
+  }, [updateWireMutation, circuitId]);
+
+  const closeWireColorMenu = useCallback(() => {
+    setContextMenuWireId(null);
+    setWireColorMenuPos(null);
+  }, []);
 
   // Pan handling
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -599,25 +696,81 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
               const pts = (wire.points as Array<{ x: number; y: number }>) ?? [];
               if (pts.length < 2) return null;
               const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+              // Look up simulation wire visual state
+              const wireState: WireVisualState | undefined = isLive
+                ? wireVisualStates.get(String(wire.netId))
+                : undefined;
+              const isAnimated = wireState != null && wireState.animationSpeed > 0;
+              const animDuration = isAnimated ? Math.max(0.05, 16 / wireState.animationSpeed) : 0;
+              const animDirection = wireState?.currentDirection === -1 ? 'reverse' : 'forward';
+
               return (
-                <path
-                  key={wire.id}
-                  d={pathD}
-                  stroke={wire.color ?? '#3498db'}
-                  strokeWidth={wire.width ?? 1.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                  className={cn(
-                    'transition-opacity cursor-pointer',
-                    selectedWireId === wire.id ? 'opacity-100' : 'opacity-80 hover:opacity-100',
+                <g key={wire.id}>
+                  {/* Simulation current flow glow */}
+                  {isAnimated && (
+                    <path
+                      d={pathD}
+                      stroke="#00F0FF"
+                      strokeWidth={(wire.width ?? 1.5) + 1.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                      opacity={0.2}
+                      style={{ filter: 'blur(1.5px)' }}
+                      pointerEvents="none"
+                    />
                   )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedWireId(wire.id);
-                  }}
-                  data-testid={`wire-${wire.id}`}
-                />
+                  <path
+                    d={pathD}
+                    stroke={isAnimated ? '#00F0FF' : (wire.color ?? '#3498db')}
+                    strokeWidth={wire.width ?? 1.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                    className={cn(
+                      isAnimated ? 'sim-wire-animated' : 'transition-opacity cursor-pointer',
+                      !isAnimated && (selectedWireId === wire.id ? 'opacity-100' : 'opacity-80 hover:opacity-100'),
+                    )}
+                    style={isAnimated ? { animationDuration: `${animDuration}s` } : undefined}
+                    data-direction={isAnimated ? animDirection : undefined}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedWireId(wire.id);
+                    }}
+                    onContextMenu={(e) => handleWireContextMenu(e, wire.id)}
+                    data-testid={isAnimated ? `wire-animated-${wire.id}` : `wire-${wire.id}`}
+                  />
+                  {/* Simulation current label at wire midpoint */}
+                  {isAnimated && pts.length >= 2 && (() => {
+                    const midIdx = Math.floor(pts.length / 2);
+                    const midPt = pts[midIdx];
+                    return (
+                      <g pointerEvents="none">
+                        <rect
+                          x={midPt.x + 2}
+                          y={midPt.y - 6}
+                          width={30}
+                          height={10}
+                          rx={2}
+                          fill="rgba(0,0,0,0.7)"
+                          stroke="rgba(0,240,255,0.2)"
+                          strokeWidth={0.5}
+                        />
+                        <text
+                          x={midPt.x + 4}
+                          y={midPt.y + 1}
+                          fill="#00F0FF"
+                          fontSize={6}
+                          fontFamily="monospace"
+                          data-testid={`wire-sim-label-${wire.id}`}
+                        >
+                          {formatSIValue(wireState.currentMagnitude, 'A')}
+                        </text>
+                      </g>
+                    );
+                  })()}
+                </g>
               );
             })}
 
@@ -695,6 +848,64 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
               opacity={0.5}
               showLabels
             />
+
+            {/* BL-0619 / BL-0128: Simulation component visual overlays */}
+            {isLive && componentVisualStates.size > 0 && (instances ?? []).map((inst) => {
+              if (inst.breadboardX == null || inst.breadboardY == null) { return null; }
+              const state = componentVisualStates.get(inst.referenceDesignator);
+              if (!state) { return null; }
+
+              const x = inst.breadboardX;
+              const y = inst.breadboardY;
+
+              if (state.type === 'led' && state.glowing) {
+                const color = state.color === 'red' ? '#ef4444'
+                  : state.color === 'green' ? '#22c55e'
+                  : state.color === 'blue' ? '#3b82f6'
+                  : state.color === 'yellow' ? '#facc15'
+                  : state.color === 'white' ? '#f5f5f5'
+                  : '#22c55e';
+                return (
+                  <g key={`sim-led-${inst.id}`} pointerEvents="none" data-testid={`sim-bb-led-${inst.referenceDesignator}`}>
+                    <circle cx={x} cy={y} r={8} fill={color} opacity={state.brightness * 0.3} style={{ filter: 'blur(4px)' }} />
+                    <circle cx={x} cy={y} r={4} fill={color} opacity={state.brightness * 0.6} />
+                  </g>
+                );
+              }
+
+              if (state.type === 'resistor' || (state.type === 'generic' && Math.abs(state.current) > 0.0001)) {
+                return (
+                  <g key={`sim-val-${inst.id}`} pointerEvents="none" data-testid={`sim-bb-value-${inst.referenceDesignator}`}>
+                    <rect x={x + 8} y={y - 8} width={32} height={14} rx={2} fill="rgba(0,0,0,0.7)" stroke="rgba(0,240,255,0.2)" strokeWidth={0.5} />
+                    <text x={x + 10} y={y - 1} fill="#00F0FF" fontSize={5} fontFamily="monospace">
+                      {formatSIValue(state.voltageDrop, 'V')}
+                    </text>
+                    <text x={x + 10} y={y + 4} fill="#00F0FF" fontSize={5} fontFamily="monospace" opacity={0.7}>
+                      {formatSIValue(state.current, 'A')}
+                    </text>
+                  </g>
+                );
+              }
+
+              if (state.type === 'switch') {
+                return (
+                  <g key={`sim-sw-${inst.id}`} pointerEvents="none" data-testid={`sim-bb-switch-${inst.referenceDesignator}`}>
+                    <text
+                      x={x + 8}
+                      y={y + 2}
+                      fill={state.closed ? '#22c55e' : '#ef4444'}
+                      fontSize={6}
+                      fontFamily="sans-serif"
+                      fontWeight="bold"
+                    >
+                      {state.closed ? 'ON' : 'OFF'}
+                    </text>
+                  </g>
+                );
+              }
+
+              return null;
+            })}
           </g>
         </svg>
 
@@ -707,6 +918,82 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
             <span className="text-[11px] font-mono tabular-nums text-[#00F0FF]">
               X: {mouseBoardPos.x} &nbsp; Y: {mouseBoardPos.y}
             </span>
+          </div>
+        )}
+
+        {/* BL-0591: Wire color picker context menu */}
+        {contextMenuWireId != null && wireColorMenuPos && (
+          <div
+            className="absolute z-20 bg-card border border-border rounded-md shadow-lg p-1.5"
+            style={{ left: wireColorMenuPos.x, top: wireColorMenuPos.y }}
+            data-testid="wire-color-menu"
+            onMouseLeave={closeWireColorMenu}
+          >
+            <div className="text-[10px] text-muted-foreground px-1.5 py-0.5 mb-1 font-medium">Wire Color</div>
+            <div className="grid grid-cols-4 gap-1">
+              {WIRE_COLOR_PRESETS.map((preset) => (
+                <button
+                  key={preset.hex}
+                  className="w-6 h-6 rounded-sm border border-border hover:border-primary transition-colors cursor-pointer"
+                  style={{ backgroundColor: preset.hex }}
+                  title={preset.name}
+                  onClick={() => handleWireColorChange(contextMenuWireId, preset.hex)}
+                  data-testid={`wire-color-${preset.name.toLowerCase()}`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* BL-0594: Part family value selector */}
+        {selectedInstanceInfo && (
+          <div
+            className="absolute top-2 right-2 z-20 bg-card/90 backdrop-blur-sm border border-border rounded-md shadow-lg p-2 w-44"
+            data-testid="value-selector-panel"
+          >
+            <div className="text-[10px] text-muted-foreground mb-1 font-medium">
+              {selectedInstanceInfo.instance.referenceDesignator} — {selectedInstanceInfo.family}
+            </div>
+            <div className="text-[11px] text-[#00F0FF] font-mono mb-1.5" data-testid="value-selector-current">
+              {selectedInstanceInfo.currentLabel}
+            </div>
+            <div className="max-h-36 overflow-y-auto space-y-0.5 scrollbar-thin">
+              {selectedInstanceInfo.family === 'led' ? (
+                <div className="grid grid-cols-3 gap-1">
+                  {selectedInstanceInfo.values.map((v) => (
+                    <button
+                      key={String(v.value)}
+                      className={cn(
+                        'h-6 rounded-sm border text-[9px] font-medium cursor-pointer transition-colors',
+                        selectedInstanceInfo.currentLabel === v.value
+                          ? 'border-primary bg-primary/20'
+                          : 'border-border hover:border-primary/50',
+                      )}
+                      style={{ backgroundColor: (v as { hex?: string }).hex ?? '#888' }}
+                      title={v.label}
+                      onClick={() => handleValueChange(v.value)}
+                      data-testid={`value-option-${v.value}`}
+                    />
+                  ))}
+                </div>
+              ) : (
+                selectedInstanceInfo.values.map((v) => (
+                  <button
+                    key={String(v.value)}
+                    className={cn(
+                      'w-full text-left px-1.5 py-0.5 text-[10px] font-mono rounded-sm cursor-pointer transition-colors',
+                      selectedInstanceInfo.currentLabel === v.label
+                        ? 'bg-primary/20 text-[#00F0FF]'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                    onClick={() => handleValueChange(v.value)}
+                    data-testid={`value-option-${v.label}`}
+                  >
+                    {v.label}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         )}
 

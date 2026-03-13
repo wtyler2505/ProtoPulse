@@ -1,8 +1,104 @@
 import { memo, useMemo } from 'react';
-import { coordToPixel } from '@/lib/circuit-editor/breadboard-model';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import { cn } from '@/lib/utils';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
+
+// ---------------------------------------------------------------------------
+// Part family value constants (BL-0594)
+// ---------------------------------------------------------------------------
+
+/** E12 resistor decade values */
+const E12_BASE = [1, 1.2, 1.5, 1.8, 2.2, 2.7, 3.3, 3.9, 4.7, 5.6, 6.8, 8.2];
+const RESISTOR_DECADES = [1, 10, 100, 1e3, 10e3, 100e3, 1e6];
+
+/** Generate full E12 resistor value list with SI suffix */
+function buildResistorValues(): Array<{ value: number; label: string }> {
+  const result: Array<{ value: number; label: string }> = [];
+  for (const decade of RESISTOR_DECADES) {
+    for (const base of E12_BASE) {
+      const val = base * decade;
+      result.push({ value: val, label: formatSI(val, '\u03A9') });
+    }
+  }
+  return result;
+}
+
+/** Standard capacitor values */
+const CAPACITOR_VALUES: Array<{ value: number; label: string }> = [
+  10e-12, 22e-12, 47e-12, 100e-12, 220e-12, 470e-12,
+  1e-9, 2.2e-9, 4.7e-9, 10e-9, 22e-9, 47e-9, 100e-9,
+  220e-9, 470e-9, 1e-6, 2.2e-6, 4.7e-6, 10e-6, 22e-6,
+  47e-6, 100e-6, 220e-6, 470e-6, 1000e-6,
+].map(v => ({ value: v, label: formatSI(v, 'F') }));
+
+/** Standard inductor values */
+const INDUCTOR_VALUES: Array<{ value: number; label: string }> = [
+  1e-6, 2.2e-6, 4.7e-6, 10e-6, 22e-6, 47e-6, 100e-6,
+  220e-6, 470e-6, 1e-3, 2.2e-3, 4.7e-3, 10e-3,
+].map(v => ({ value: v, label: formatSI(v, 'H') }));
+
+/** LED color options */
+const LED_COLORS: Array<{ value: string; label: string; hex: string }> = [
+  { value: 'red', label: 'Red', hex: '#ef4444' },
+  { value: 'green', label: 'Green', hex: '#22c55e' },
+  { value: 'blue', label: 'Blue', hex: '#3b82f6' },
+  { value: 'yellow', label: 'Yellow', hex: '#eab308' },
+  { value: 'white', label: 'White', hex: '#f5f5f5' },
+  { value: 'orange', label: 'Orange', hex: '#f97316' },
+];
+
+/** Format a number with SI prefix */
+function formatSI(value: number, unit: string): string {
+  if (value >= 1e6) return `${+(value / 1e6).toPrecision(3)}M${unit}`;
+  if (value >= 1e3) return `${+(value / 1e3).toPrecision(3)}k${unit}`;
+  if (value >= 1) return `${+value.toPrecision(3)}${unit}`;
+  if (value >= 1e-3) return `${+(value * 1e3).toPrecision(3)}m${unit}`;
+  if (value >= 1e-6) return `${+(value * 1e6).toPrecision(3)}\u00B5${unit}`;
+  if (value >= 1e-9) return `${+(value * 1e9).toPrecision(3)}n${unit}`;
+  if (value >= 1e-12) return `${+(value * 1e12).toPrecision(3)}p${unit}`;
+  return `${value}${unit}`;
+}
+
+const RESISTOR_VALUES = buildResistorValues();
+
+/** Detect component family from type string */
+export type ComponentFamily = 'resistor' | 'capacitor' | 'inductor' | 'led' | null;
+
+export function detectFamily(type: string | undefined | null): ComponentFamily {
+  if (!type) return null;
+  const lower = type.toLowerCase();
+  if (lower === 'resistor' || lower === 'res' || lower === 'r') return 'resistor';
+  if (lower === 'capacitor' || lower === 'cap' || lower === 'c') return 'capacitor';
+  if (lower === 'inductor' || lower === 'ind' || lower === 'l') return 'inductor';
+  if (lower === 'led') return 'led';
+  return null;
+}
+
+/** Get available values for a family */
+export function getFamilyValues(family: ComponentFamily): Array<{ value: number | string; label: string; hex?: string }> {
+  switch (family) {
+    case 'resistor': return RESISTOR_VALUES;
+    case 'capacitor': return CAPACITOR_VALUES;
+    case 'inductor': return INDUCTOR_VALUES;
+    case 'led': return LED_COLORS;
+    default: return [];
+  }
+}
+
+/** Get the current value label for display */
+export function getCurrentValueLabel(instance: CircuitInstanceRow, family: ComponentFamily): string {
+  const props = instance.properties as Record<string, unknown> | null;
+  if (!props) return '';
+  if (family === 'led') return (props.color as string) ?? 'red';
+  if (family === 'resistor') return props.value ? formatSI(Number(props.value), '\u03A9') : '10k\u03A9';
+  if (family === 'capacitor') return props.value ? formatSI(Number(props.value), 'F') : '100nF';
+  if (family === 'inductor') return props.value ? formatSI(Number(props.value), 'H') : '10\u00B5H';
+  return '';
+}
+
+// ---------------------------------------------------------------------------
+// Component rendering
+// ---------------------------------------------------------------------------
 
 interface BreadboardComponentProps {
   instance: CircuitInstanceRow;
@@ -22,12 +118,15 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
 
   if (!pos) return null;
 
-  const type = (part?.meta as any)?.type?.toLowerCase() || 'generic';
-  const color = (instance.properties as any)?.color || '#ff0000';
+  const type = (part?.meta as Record<string, unknown>)?.type as string | undefined;
+  const typeLower = type?.toLowerCase() || 'generic';
+  const color = (instance.properties as Record<string, unknown>)?.color as string || '#ff0000';
+  const family = detectFamily(typeLower);
+  const valueLabel = family ? getCurrentValueLabel(instance, family) : null;
 
   // Component-specific rendering logic
   const renderShape = () => {
-    switch (type) {
+    switch (typeLower) {
       case 'led': {
         const isActive = isLive && (liveState?.isActive || (liveState?.brightness ?? 0) > 0.1);
         return (
@@ -80,7 +179,7 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
       }
       case 'ic':
       case 'mcu': {
-        const pinCount = (part?.connectors as any[])?.length || 8;
+        const pinCount = (part?.connectors as unknown[])?.length || 8;
         const rows = Math.ceil(pinCount / 2);
         const height = rows * 10;
         return (
@@ -127,22 +226,37 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
   };
 
   return (
-    <g 
+    <g
       data-testid={`bb-instance-${instance.id}`}
       className={cn(selected && "filter drop-shadow-[0_0_2px_#00F0FF]")}
     >
       {renderShape()}
+      {/* Value label shown below selected components with a family */}
+      {selected && valueLabel && (
+        <text
+          x={pos.x}
+          y={pos.y + 10}
+          textAnchor="middle"
+          dominantBaseline="hanging"
+          fontSize={4}
+          fill="#00F0FF"
+          className="font-mono select-none pointer-events-none"
+          data-testid={`bb-value-label-${instance.id}`}
+        >
+          {valueLabel}
+        </text>
+      )}
     </g>
   );
 });
 
-export const BreadboardComponentOverlay = memo(({ 
-  instances, 
-  parts, 
-  selectedId, 
-  onInstanceClick 
-}: { 
-  instances: CircuitInstanceRow[], 
+export const BreadboardComponentOverlay = memo(({
+  instances,
+  parts,
+  selectedId,
+  onInstanceClick
+}: {
+  instances: CircuitInstanceRow[],
   parts: ComponentPart[],
   selectedId: number | null,
   onInstanceClick: (id: number) => void

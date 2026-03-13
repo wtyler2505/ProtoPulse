@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -51,8 +51,11 @@ import { COMPONENT_DRAG_TYPE, type ComponentDragData } from './ComponentPlacer';
 import { POWER_SYMBOL_DRAG_TYPE, type PowerSymbolDragData } from './PowerSymbolPalette';
 import { CircuitBoard, Plus, Cable, Zap, ClipboardPaste, CheckSquare, ShieldAlert, ArrowRightLeft } from 'lucide-react';
 import ERCOverlay from './ERCOverlay';
+import SimulationVisualOverlay from './SimulationVisualOverlay';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
+import { useBom } from '@/lib/contexts/bom-context';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -60,6 +63,44 @@ import {
   ContextMenuItem,
   ContextMenuSeparator,
 } from '@/components/ui/context-menu';
+
+// ---------------------------------------------------------------------------
+// Clipboard bundle types (used by copy/paste)
+// ---------------------------------------------------------------------------
+
+interface ClipboardInstance {
+  partId: number | null;
+  referenceDesignator: string;
+  schematicX: number;
+  schematicY: number;
+  schematicRotation: number;
+  properties: unknown;
+  oldId: number;
+}
+
+interface ClipboardNetSegment {
+  fromInstanceId: number;
+  fromPin: string;
+  toInstanceId: number;
+  toPin: string;
+  waypoints?: Array<{ x: number; y: number }>;
+}
+
+interface ClipboardNet {
+  name: string;
+  netType: string;
+  style: unknown;
+  segments: ClipboardNetSegment[];
+}
+
+interface SchematicClipboardBundle {
+  type: 'protopulse-schematic-bundle';
+  instances: ClipboardInstance[];
+  powerSymbols: PowerSymbol[];
+  netLabels: SchematicNetLabel[];
+  noConnectMarkers: NoConnectMarker[];
+  nets: ClipboardNet[];
+}
 
 // ---------------------------------------------------------------------------
 // React Flow type registrations
@@ -84,6 +125,7 @@ function instanceToNode(
   subDesigns?: CircuitDesignRow[],
   portsByDesign?: Map<number, HierarchicalPortRow[]>,
   onEnterSheet?: (id: number) => void,
+  onRefdesChange?: (newRefdes: string) => void,
 ): Node<InstanceNodeData | SheetNodeData> {
   // 1. Check if this is a hierarchical sub-sheet
   if (row.subDesignId) {
@@ -122,6 +164,7 @@ function instanceToNode(
       partTitle: meta.title || 'Untitled',
       connectors,
       schematicShapes,
+      onRefdesChange,
     },
   } as Node<InstanceNodeData>;
 }
@@ -199,7 +242,10 @@ function powerSymbolToNode(ps: PowerSymbol): Node<PowerNodeData> {
   };
 }
 
-function netLabelToNode(label: SchematicNetLabel): Node<NetLabelNodeData> {
+function netLabelToNode(
+  label: SchematicNetLabel,
+  onNetNameChange?: (labelId: string, newName: string) => void,
+): Node<NetLabelNodeData> {
   return {
     id: `netlabel-${label.id}`,
     type: 'schematic-net-label',
@@ -208,6 +254,7 @@ function netLabelToNode(label: SchematicNetLabel): Node<NetLabelNodeData> {
       labelId: label.id,
       netName: label.netName,
       rotation: label.rotation,
+      onNetNameChange,
     },
   };
 }
@@ -271,6 +318,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const deleteNet = useDeleteCircuitNet();
 
   const { toast } = useToast();
+  const { bom, addBomItem, updateBomItem } = useBom();
 
   // Local UI state
   const [activeTool, setActiveTool] = useState<SchematicTool>('select');
@@ -301,7 +349,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
   // Drag guard — prevents server refetch from resetting node mid-drag
   const isDragging = useRef(false);
-  const clipboardRef = useRef<any>(null);
+  const clipboardRef = useRef<SchematicClipboardBundle | null>(null);
 
   const reactFlowInstance = useReactFlow();
 
@@ -313,6 +361,25 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
   const gridSize = settings.gridSize;
 
+  // BL-0489: Net label inline editing — rename a label and persist to design settings
+  const handleNetNameChange = useCallback(
+    (labelId: string, newName: string) => {
+      const updated = (settings.netLabels ?? []).map((nl) =>
+        nl.id === labelId ? { ...nl, netName: newName } : nl,
+      );
+      updateDesign.mutate({ projectId, id: circuitId, settings: { ...settings, netLabels: updated } });
+    },
+    [circuitId, projectId, updateDesign, settings],
+  );
+
+  // BL-0489: Instance refdes inline editing — persist rename to server
+  const handleRefdesChange = useCallback(
+    (instanceId: number, newRefdes: string) => {
+      updateInstance.mutate({ circuitId, id: instanceId, referenceDesignator: newRefdes });
+    },
+    [circuitId, updateInstance],
+  );
+
   // Build parts lookup map
   const partsMap = useMemo(() => {
     const map = new Map<number, ComponentPart>();
@@ -323,13 +390,20 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // Convert DB data → React Flow nodes (instances + power symbols + net labels + no-connects)
   const rfNodes = useMemo(() => {
     const instanceNodes = (instances ?? []).map((inst) =>
-      instanceToNode(inst, inst.partId != null ? partsMap.get(inst.partId) : undefined),
+      instanceToNode(
+        inst,
+        inst.partId != null ? partsMap.get(inst.partId) : undefined,
+        undefined,
+        undefined,
+        undefined,
+        (newRefdes: string) => handleRefdesChange(inst.id, newRefdes),
+      ),
     );
     const powerNodes = (settings.powerSymbols ?? []).map(powerSymbolToNode);
-    const labelNodes = (settings.netLabels ?? []).map(netLabelToNode);
+    const labelNodes = (settings.netLabels ?? []).map((label) => netLabelToNode(label, handleNetNameChange));
     const ncNodes = (settings.noConnectMarkers ?? []).map(noConnectToNode);
     return [...instanceNodes, ...powerNodes, ...labelNodes, ...ncNodes] as Node[];
-  }, [instances, partsMap, settings.powerSymbols, settings.netLabels, settings.noConnectMarkers]);
+  }, [instances, partsMap, settings.powerSymbols, settings.netLabels, settings.noConnectMarkers, handleRefdesChange, handleNetNameChange]);
 
   // Build connector lookup by instance ID for pin resolution (BL-0014)
   const connectorsByInstance = useMemo(() => {
@@ -568,7 +642,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     reactFlowInstance.fitView({ padding: 0.2 });
   }, [reactFlowInstance]);
 
-  const handlePaste = useCallback(async (bundle: any) => {
+  const handlePaste = useCallback(async (bundle: SchematicClipboardBundle) => {
     if (!bundle || bundle.type !== 'protopulse-schematic-bundle') return;
 
     const center = reactFlowInstance.screenToFlowPosition({
@@ -583,8 +657,8 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
     if (insts.length === 0 && pwr.length === 0 && lbl.length === 0 && ncm.length === 0) return;
 
-    const allX = [...insts.map((i: any) => i.schematicX), ...pwr.map((p: any) => p.x)];
-    const allY = [...insts.map((i: any) => i.schematicY), ...pwr.map((p: any) => p.y)];
+    const allX = [...insts.map((i) => i.schematicX), ...pwr.map((p) => p.x)];
+    const allY = [...insts.map((i) => i.schematicY), ...pwr.map((p) => p.y)];
     const minX = Math.min(...allX);
     const maxX = Math.max(...allX);
     const minY = Math.min(...allY);
@@ -601,7 +675,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     try {
       // 1. Create instances
       for (const inst of insts) {
-        const part = partsMap.get(inst.partId);
+        const part = inst.partId != null ? partsMap.get(inst.partId) : undefined;
         const refDes = generateRefDes(instances, part);
         // Ensure unique refDes in the batch
         let uniqueRefDes = refDes;
@@ -622,24 +696,24 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           schematicX: inst.schematicX + offsetX,
           schematicY: inst.schematicY + offsetY,
           schematicRotation: inst.schematicRotation,
-          properties: inst.properties,
+          properties: inst.properties as Record<string, string> | undefined,
         });
         idMap.set(inst.oldId, newInst.id);
       }
 
       // 2. Create nets
       for (const net of (bundle.nets || [])) {
-        const newSegments = net.segments.map((seg: any) => ({
+        const newSegments = net.segments.map((seg: ClipboardNetSegment) => ({
           ...seg,
           fromInstanceId: idMap.get(seg.fromInstanceId),
           toInstanceId: idMap.get(seg.toInstanceId),
-        })).filter((s: any) => s.fromInstanceId && s.toInstanceId);
+        })).filter((s) => s.fromInstanceId && s.toInstanceId);
 
         if (newSegments.length > 0) {
           await createNet.mutateAsync({
             circuitId,
             name: `${net.name}_copy`,
-            netType: net.netType,
+            netType: net.netType as 'signal' | 'power' | 'ground' | 'bus' | undefined,
             segments: newSegments,
             style: net.style,
           });
@@ -647,21 +721,21 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       }
 
       // 3. Annotations
-      const newPowerSymbols = pwr.map((ps: any) => ({
+      const newPowerSymbols = pwr.map((ps) => ({
         ...ps,
         id: crypto.randomUUID(),
         x: ps.x + offsetX,
         y: ps.y + offsetY,
       }));
 
-      const newNetLabels = lbl.map((nl: any) => ({
+      const newNetLabels = lbl.map((nl) => ({
         ...nl,
         id: crypto.randomUUID(),
         x: nl.x + offsetX,
         y: nl.y + offsetY,
       }));
 
-      const newNoConnectMarkers = ncm.map((nc: any) => ({
+      const newNoConnectMarkers = ncm.map((nc) => ({
         ...nc,
         id: crypto.randomUUID(),
         x: nc.x + offsetX,
@@ -759,6 +833,11 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         const part = partsMap.get(dragData.partId);
         const position = getDropPosition();
         const refDes = generateRefDes(instances, part);
+        const partMeta = (part?.meta ?? {}) as Partial<PartMeta>;
+        const partTitle = partMeta.title || 'Component';
+        const partValueProp = partMeta.properties?.find((p) => p.key === 'value');
+        const partValue = partValueProp?.value ?? '';
+        const partMpn = partMeta.mpn ?? '';
 
         createInstance.mutate({
           circuitId,
@@ -767,6 +846,55 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           schematicX: position.x,
           schematicY: position.y,
         });
+
+        // BL-0498: Offer to add to BOM after placement
+        const bomLabel = partValue ? `${refDes} (${partValue})` : refDes;
+        const existingBomItem = bom.find(
+          (item) => item.description === partTitle && item.partNumber === partMpn,
+        );
+        if (existingBomItem) {
+          toast({
+            title: `Add ${bomLabel} to BOM?`,
+            description: `"${partTitle}" already in BOM (qty ${String(existingBomItem.quantity)}). Increment?`,
+            action: (
+              <ToastAction
+                altText="Increment quantity"
+                data-testid="bom-increment-action"
+                onClick={() => {
+                  updateBomItem(existingBomItem.id, { quantity: existingBomItem.quantity + 1 });
+                }}
+              >
+                Increment
+              </ToastAction>
+            ),
+          });
+        } else {
+          toast({
+            title: `Add ${bomLabel} to BOM?`,
+            description: `Place "${partTitle}" in your bill of materials.`,
+            action: (
+              <ToastAction
+                altText="Add to BOM"
+                data-testid="bom-add-action"
+                onClick={() => {
+                  addBomItem({
+                    partNumber: partMpn,
+                    manufacturer: partMeta.manufacturer || '',
+                    description: partTitle,
+                    quantity: 1,
+                    unitPrice: 0,
+                    totalPrice: 0,
+                    supplier: 'Unknown',
+                    stock: 0,
+                    status: 'In Stock',
+                  });
+                }}
+              >
+                Add to BOM
+              </ToastAction>
+            ),
+          });
+        }
         return;
       }
 
@@ -863,7 +991,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
             .map(n => (n.data as InstanceNodeData).instanceId)
         );
 
-        const bundle = {
+        const bundle: SchematicClipboardBundle = {
           type: 'protopulse-schematic-bundle',
           instances: (instances ?? [])
             .filter(inst => selectedInstanceIds.has(inst.id))
@@ -882,24 +1010,24 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
               const d = n.data as PowerNodeData;
               return (settings.powerSymbols ?? []).find(ps => ps.id === d.symbolId);
             })
-            .filter(Boolean),
+            .filter((ps): ps is PowerSymbol => ps != null),
           netLabels: selectedNodes
             .filter(n => n.type === 'schematic-net-label')
             .map(n => {
               const d = n.data as NetLabelNodeData;
               return (settings.netLabels ?? []).find(nl => nl.id === d.labelId);
             })
-            .filter(Boolean),
+            .filter((nl): nl is SchematicNetLabel => nl != null),
           noConnectMarkers: selectedNodes
             .filter(n => n.type === 'schematic-no-connect')
             .map(n => {
               const d = n.data as NoConnectNodeData;
               return (settings.noConnectMarkers ?? []).find(nc => nc.id === d.markerId);
             })
-            .filter(Boolean),
+            .filter((nc): nc is NoConnectMarker => nc != null),
           nets: (nets ?? [])
             .filter(net => {
-              const segments = (net.segments as any[] ?? []);
+              const segments = (net.segments ?? []) as NetSegmentJSON[];
               return segments.some(seg =>
                 selectedInstanceIds.has(seg.fromInstanceId) &&
                 selectedInstanceIds.has(seg.toInstanceId)
@@ -909,7 +1037,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
               name: net.name,
               netType: net.netType,
               style: net.style,
-              segments: (net.segments as any[] ?? []).filter((seg: any) =>
+              segments: ((net.segments ?? []) as NetSegmentJSON[]).filter((seg) =>
                 selectedInstanceIds.has(seg.fromInstanceId) &&
                 selectedInstanceIds.has(seg.toInstanceId)
               )
@@ -1196,6 +1324,9 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           highlightedId={highlightedViolationId}
         />
       )}
+
+      {/* BL-0619: Simulation visual state overlay (LED glow, resistor labels, switch states) */}
+      <SimulationVisualOverlay />
 
       {(!instances || instances.length === 0) && (
         <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">

@@ -1,13 +1,15 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import type { CircuitInstanceRow } from '@shared/schema';
+import type { PartMeta } from '@shared/component-types';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
+import { getRefDesPrefix, nextRefdes } from '@shared/ref-des';
 
 const createInstanceSchema = z.object({
   partId: z.number().int().positive(),
-  referenceDesignator: z.string().min(1),
+  referenceDesignator: z.string().min(1).optional(),
   schematicX: z.number().optional(),
   schematicY: z.number().optional(),
   schematicRotation: z.number().optional(),
@@ -63,7 +65,30 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
     }
-    const data = { ...parsed.data, circuitId, properties: parsed.data.properties ?? {} };
+
+    // Auto-generate reference designator if not provided
+    let refDes = parsed.data.referenceDesignator;
+    if (!refDes) {
+      const existing = await storage.getCircuitInstances(circuitId);
+      const existingRefdes = existing.map((inst) => inst.referenceDesignator);
+      // Derive prefix from the part's family metadata
+      let prefix = 'X';
+      try {
+        const design = await storage.getCircuitDesign(circuitId);
+        if (design) {
+          const part = await storage.getComponentPart(parsed.data.partId, design.projectId);
+          if (part) {
+            const meta = (part.meta ?? {}) as Partial<PartMeta>;
+            prefix = getRefDesPrefix({ family: meta.family, tags: meta.tags });
+          }
+        }
+      } catch {
+        // If part lookup fails, fall back to 'X' prefix
+      }
+      refDes = nextRefdes(prefix, existingRefdes);
+    }
+
+    const data = { ...parsed.data, circuitId, referenceDesignator: refDes, properties: parsed.data.properties ?? {} };
     const instance = await storage.createCircuitInstance(data);
     res.status(201).json(instance);
   }));

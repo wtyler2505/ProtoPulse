@@ -1,0 +1,103 @@
+/**
+ * Simulation visual overlays — CSS animations for live circuit rendering.
+ * BL-0619: Component visual state rendering
+ * BL-0128: Wire current/voltage animation
+ */
+
+/* ---------------------------------------------------------------------------
+ * Wire current flow animation — EveryCircuit-style animated dashes
+ * The dash offset is animated to create a flowing effect.
+ * Speed and direction are controlled via CSS custom properties:
+ *   --sim-wire-speed: animation duration in seconds (lower = faster)
+ *   --sim-wire-direction: 1 (forward) or -1 (reverse)
+ * --------------------------------------------------------------------------- */
+
+@keyframes sim-wire-flow {
+  from {
+    stroke-dashoffset: 16;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes sim-wire-flow-reverse {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: 16;
+  }
+}
+
+.sim-wire-animated {
+  stroke-dasharray: 8, 8;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: forwards;
+}
+
+.sim-wire-animated[data-direction="forward"] {
+  animation-name: sim-wire-flow;
+}
+
+.sim-wire-animated[data-direction="reverse"] {
+  animation-name: sim-wire-flow-reverse;
+}
+
+/* ---------------------------------------------------------------------------
+ * LED glow effect
+ * Uses CSS filter + box-shadow for a radiating glow.
+ * Color and brightness controlled via custom properties:
+ *   --led-color: the LED CSS color
+ *   --led-brightness: 0-1 opacity/intensity
+ * --------------------------------------------------------------------------- */
+
+@keyframes sim-led-pulse {
+  0%, 100% {
+    opacity: var(--led-brightness, 0.8);
+  }
+  50% {
+    opacity: calc(var(--led-brightness, 0.8) * 0.85);
+  }
+}
+
+.sim-led-glow {
+  filter: drop-shadow(0 0 calc(4px * var(--led-brightness, 0.5)) var(--led-color, #ef4444))
+          drop-shadow(0 0 calc(8px * var(--led-brightness, 0.5)) var(--led-color, #ef4444));
+  animation: sim-led-pulse 2s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------------
+ * Simulation value label — small annotation near components/junctions
+ * --------------------------------------------------------------------------- */
+
+.sim-value-label {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  fill: #00F0FF;
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 0 4px rgba(0, 240, 255, 0.3);
+}
+
+.sim-value-label-bg {
+  fill: rgba(0, 0, 0, 0.7);
+  rx: 2;
+  ry: 2;
+}
+
+/* ---------------------------------------------------------------------------
+ * Switch visual state
+ * --------------------------------------------------------------------------- */
+
+.sim-switch-closed {
+  stroke: #22c55e;
+  stroke-width: 2;
+}
+
+.sim-switch-open {
+  stroke: #ef4444;
+  stroke-width: 2;
+  stroke-dasharray: 4, 4;
+}

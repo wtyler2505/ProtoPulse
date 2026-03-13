@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
+import type { ReactNode } from 'react';
+import type { Node, Edge } from '@xyflow/react';
 import SchematicCanvas from '../SchematicCanvas';
 
 // -------------------------------------------------------------------
@@ -62,23 +64,23 @@ vi.mock('@/hooks/use-toast', () => ({
 // Mock React Flow
 const mockFitView = vi.fn();
 const mockScreenToFlowPosition = vi.fn().mockReturnValue({ x: 100, y: 100 });
-const mockUseNodesState = vi.fn().mockImplementation((initial: any) => [initial, vi.fn(), vi.fn()]);
-const mockUseEdgesState = vi.fn().mockImplementation((initial: any) => [initial, vi.fn(), vi.fn()]);
+const mockUseNodesState = vi.fn().mockImplementation((initial: Node[]) => [initial, vi.fn(), vi.fn()]);
+const mockUseEdgesState = vi.fn().mockImplementation((initial: Edge[]) => [initial, vi.fn(), vi.fn()]);
 
 vi.mock('@xyflow/react', () => ({
-  ReactFlow: ({ children, nodes, edges }: any) => (
+  ReactFlow: ({ children, nodes, edges }: { children?: ReactNode; nodes?: Node[]; edges?: Edge[] }) => (
     <div data-testid="react-flow" data-node-count={nodes?.length || 0} data-edge-count={edges?.length || 0}>
       {children}
     </div>
   ),
-  ReactFlowProvider: ({ children }: any) => <>{children}</>,
+  ReactFlowProvider: ({ children }: { children?: ReactNode }) => <>{children}</>,
   useReactFlow: () => ({
     fitView: mockFitView,
     screenToFlowPosition: mockScreenToFlowPosition,
     getNodes: vi.fn(() => []),
   }),
-  useNodesState: (initial: any) => mockUseNodesState(initial),
-  useEdgesState: (initial: any) => mockUseEdgesState(initial),
+  useNodesState: (initial: Node[]) => mockUseNodesState(initial),
+  useEdgesState: (initial: Edge[]) => mockUseEdgesState(initial),
   Background: () => <div data-testid="rf-background" />,
   Controls: () => <div data-testid="rf-controls" />,
   MiniMap: () => <div data-testid="rf-minimap" />,
@@ -88,16 +90,50 @@ vi.mock('@xyflow/react', () => ({
 
 // Mock Tooltip and ContextMenu
 vi.mock('@/components/ui/styled-tooltip', () => ({
-  StyledTooltip: ({ children }: any) => <>{children}</>,
+  StyledTooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@/components/ui/context-menu', () => ({
-  ContextMenu: ({ children }: any) => <>{children}</>,
-  ContextMenuTrigger: ({ children }: any) => <>{children}</>,
-  ContextMenuContent: ({ children }: any) => <div data-testid="context-menu">{children}</div>,
-  ContextMenuItem: ({ children, onSelect }: any) => <button onClick={onSelect}>{children}</button>,
+  ContextMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  ContextMenuTrigger: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  ContextMenuContent: ({ children }: { children?: ReactNode }) => <div data-testid="context-menu">{children}</div>,
+  ContextMenuItem: ({ children, onSelect }: { children?: ReactNode; onSelect?: () => void }) => <button onClick={onSelect}>{children}</button>,
   ContextMenuSeparator: () => <hr />,
 }));
+
+// Mock BOM context (used by SchematicCanvasInner for component sync)
+vi.mock('@/lib/contexts/bom-context', () => ({
+  useBom: () => ({
+    bom: [],
+    bomSettings: { maxCost: 50, batchSize: 1000, inStockOnly: true, manufacturingDate: new Date() },
+    setBomSettings: vi.fn(),
+    addBomItem: vi.fn(),
+    deleteBomItem: vi.fn(),
+    updateBomItem: vi.fn(),
+  }),
+}));
+
+// Mock simulation context (used by SchematicNetEdge and SimulationVisualOverlay)
+vi.mock('@/lib/contexts/simulation-context', () => ({
+  useSimulation: () => ({
+    isLive: false,
+    setIsLive: vi.fn(),
+    dcResult: null,
+    setDCResult: vi.fn(),
+    componentVisualStates: new Map(),
+    setComponentVisualStates: vi.fn(),
+    wireVisualStates: new Map(),
+    setWireVisualStates: vi.fn(),
+    isSimRunning: false,
+    setIsSimRunning: vi.fn(),
+    activeAnalysisType: 'dcop',
+    setActiveAnalysisType: vi.fn(),
+    clearStates: vi.fn(),
+  }),
+}));
+
+// Mock SimulationVisualOverlay
+vi.mock('../SimulationVisualOverlay', () => ({ default: () => <div data-testid="sim-visual-overlay" /> }));
 
 // Mock NetDrawingTool and SchematicToolbar
 vi.mock('../NetDrawingTool', () => ({ default: () => <div data-testid="net-drawing-tool" /> }));
@@ -151,20 +187,20 @@ describe('SchematicCanvas', () => {
     const mockInstances = [
       { id: 101, partId: 1, referenceDesignator: 'R1', schematicX: 0, schematicY: 0, schematicRotation: 0, properties: {} }
     ];
-    
+
     mockUseCircuitInstances.mockReturnValue({ data: mockInstances });
-    
+
     // Mock nodes state to have a selected node
     const mockNodes = [
       { id: 'instance-101', type: 'schematic-instance', position: { x: 0, y: 0 }, data: { instanceId: 101 }, selected: true }
     ];
-    
+
     mockUseNodesState.mockReturnValue([mockNodes, vi.fn(), vi.fn()]);
 
     renderCanvas();
-    
+
     fireEvent.keyDown(window, { key: 'c', ctrlKey: true });
-    
+
     await waitFor(() => {
       expect(navigator.clipboard.writeText).toHaveBeenCalled();
       const callArgs = vi.mocked(navigator.clipboard.writeText).mock.calls[0][0];
@@ -173,7 +209,7 @@ describe('SchematicCanvas', () => {
       expect(bundle.instances).toHaveLength(1);
       expect(bundle.instances[0].oldId).toBe(101);
     });
-    
+
     expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Copied to clipboard',
     }));
@@ -187,25 +223,25 @@ describe('SchematicCanvas', () => {
       ],
       nets: []
     };
-    
+
     // Ensure clean state for this test
     mockUseCircuitInstances.mockReturnValue({ data: [] });
     mockUseComponentParts.mockReturnValue({ data: [{ id: 1, meta: { family: 'resistor' } }] });
-    
+
     vi.mocked(navigator.clipboard.readText).mockResolvedValue(JSON.stringify(bundle));
     mockCreateInstance.mutateAsync.mockResolvedValue({ id: 201 });
 
     renderCanvas();
-    
+
     fireEvent.keyDown(window, { key: 'v', ctrlKey: true });
-    
+
     await waitFor(() => {
       expect(mockCreateInstance.mutateAsync).toHaveBeenCalledWith(expect.objectContaining({
         partId: 1,
         referenceDesignator: 'R1',
       }));
     });
-    
+
     expect(mockToast).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Pasted successfully',
     }));
