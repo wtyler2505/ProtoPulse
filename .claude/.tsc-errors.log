@@ -1,450 +1,91 @@
-[2J[3J[H7:44:44 PM - Starting compilation in watch mode...
+[2J[3J[H3:51:35 AM - Starting compilation in watch mode...
 
-client/src/components/circuit-editor/SchematicCanvas.tsx(961,9): error TS2322: Type '{ type: "protopulse-schematic-bundle"; instances: { partId: number | null; referenceDesignator: string; schematicX: number; schematicY: number; schematicRotation: number; properties: unknown; oldId: number; }[]; powerSymbols: (PowerSymbol | undefined)[]; netLabels: (SchematicNetLabel | undefined)[]; noConnectMarkers...' is not assignable to type 'SchematicClipboardBundle'.
-  Types of property 'powerSymbols' are incompatible.
-    Type '(PowerSymbol | undefined)[]' is not assignable to type 'PowerSymbol[]'.
-      Type 'PowerSymbol | undefined' is not assignable to type 'PowerSymbol'.
-        Type 'undefined' is not assignable to type 'PowerSymbol'.
 
-7:46:40 PM - Found 1 error. Watching for file changes.
-[2J[3J[H7:46:40 PM - File change detected. Starting incremental compilation...
+3:53:32 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:47:05 AM - File change detected. Starting incremental compilation...
 
 
-7:46:56 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:47:31 PM - File change detected. Starting incremental compilation...
+4:47:21 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:49:15 AM - File change detected. Starting incremental compilation...
 
 
-7:47:41 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:47:47 PM - File change detected. Starting incremental compilation...
+4:49:37 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:49:40 AM - File change detected. Starting incremental compilation...
 
 
-7:47:52 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:48:51 PM - File change detected. Starting incremental compilation...
+4:49:56 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:50:36 AM - File change detected. Starting incremental compilation...
 
 
-7:48:56 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:49:22 PM - File change detected. Starting incremental compilation...
+4:58:18 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:03:43 AM - File change detected. Starting incremental compilation...
 
 
-7:49:28 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:50:16 PM - File change detected. Starting incremental compilation...
+5:11:45 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:13:10 AM - File change detected. Starting incremental compilation...
 
 
-7:50:27 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:51:08 PM - File change detected. Starting incremental compilation...
+5:13:34 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:15:03 AM - File change detected. Starting incremental compilation...
 
 
-7:51:31 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:51:31 PM - File change detected. Starting incremental compilation...
+5:15:22 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:18:11 AM - File change detected. Starting incremental compilation...
 
-client/src/components/circuit-editor/SchematicCanvas.tsx(805,51): error TS2339: Property 'name' does not exist on type '{ id: number; nodeId: string | null; createdAt: Date; version: number; updatedAt: Date; projectId: number; meta: unknown; connectors: unknown; buses: unknown; views: unknown; constraints: unknown; }'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(806,36): error TS2339: Property 'value' does not exist on type 'Partial<PartMeta>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(819,85): error TS2339: Property 'partNumber' does not exist on type 'Partial<PartMeta>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(825,13): error TS2322: Type 'DetailedReactHTMLElement<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>' is not assignable to type 'ReactElement<ForwardRefExoticComponent<Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>>, string | JSXElementConstructor<...>>'.
-  Types of property 'props' are incompatible.
-    Property '$$typeof' is missing in type 'InputHTMLAttributes<HTMLInputElement>' but required in type 'ForwardRefExoticComponent<Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(825,21): error TS2686: 'React' refers to a UMD global, but the current file is a module. Consider adding an import instead.
-client/src/components/circuit-editor/SchematicCanvas.tsx(827,15): error TS2769: No overload matches this call.
-  The last overload gave the following error.
-    Object literal may only specify known properties, and ''data-testid'' does not exist in type 'Attributes & Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(837,13): error TS2322: Type 'DetailedReactHTMLElement<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>' is not assignable to type 'ReactElement<ForwardRefExoticComponent<Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>>, string | JSXElementConstructor<...>>'.
-  Types of property 'props' are incompatible.
-    Property '$$typeof' is missing in type 'InputHTMLAttributes<HTMLInputElement>' but required in type 'ForwardRefExoticComponent<Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(837,21): error TS2686: 'React' refers to a UMD global, but the current file is a module. Consider adding an import instead.
-client/src/components/circuit-editor/SchematicCanvas.tsx(839,15): error TS2769: No overload matches this call.
-  The last overload gave the following error.
-    Object literal may only specify known properties, and ''data-testid'' does not exist in type 'Attributes & Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(842,40): error TS2339: Property 'partNumber' does not exist on type 'Partial<PartMeta>'.
 
-7:51:43 PM - Found 10 errors. Watching for file changes.
-[2J[3J[H7:53:16 PM - File change detected. Starting incremental compilation...
+5:18:19 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:24:27 AM - File change detected. Starting incremental compilation...
 
-client/src/components/circuit-editor/SchematicCanvas.tsx(805,51): error TS2339: Property 'name' does not exist on type '{ id: number; nodeId: string | null; createdAt: Date; version: number; updatedAt: Date; projectId: number; meta: unknown; connectors: unknown; buses: unknown; views: unknown; constraints: unknown; }'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(806,36): error TS2339: Property 'value' does not exist on type 'Partial<PartMeta>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(819,85): error TS2339: Property 'partNumber' does not exist on type 'Partial<PartMeta>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(825,13): error TS2322: Type 'DetailedReactHTMLElement<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>' is not assignable to type 'ReactElement<ForwardRefExoticComponent<Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>>, string | JSXElementConstructor<...>>'.
-  Types of property 'props' are incompatible.
-    Property '$$typeof' is missing in type 'InputHTMLAttributes<HTMLInputElement>' but required in type 'ForwardRefExoticComponent<Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(825,21): error TS2686: 'React' refers to a UMD global, but the current file is a module. Consider adding an import instead.
-client/src/components/circuit-editor/SchematicCanvas.tsx(827,15): error TS2769: No overload matches this call.
-  The last overload gave the following error.
-    Object literal may only specify known properties, and ''data-testid'' does not exist in type 'Attributes & Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(837,13): error TS2322: Type 'DetailedReactHTMLElement<InputHTMLAttributes<HTMLInputElement>, HTMLInputElement>' is not assignable to type 'ReactElement<ForwardRefExoticComponent<Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>>, string | JSXElementConstructor<...>>'.
-  Types of property 'props' are incompatible.
-    Property '$$typeof' is missing in type 'InputHTMLAttributes<HTMLInputElement>' but required in type 'ForwardRefExoticComponent<Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(837,21): error TS2686: 'React' refers to a UMD global, but the current file is a module. Consider adding an import instead.
-client/src/components/circuit-editor/SchematicCanvas.tsx(839,15): error TS2769: No overload matches this call.
-  The last overload gave the following error.
-    Object literal may only specify known properties, and ''data-testid'' does not exist in type 'Attributes & Omit<ToastActionProps & RefAttributes<HTMLButtonElement>, "ref"> & RefAttributes<HTMLButtonElement>'.
-client/src/components/circuit-editor/SchematicCanvas.tsx(842,40): error TS2339: Property 'partNumber' does not exist on type 'Partial<PartMeta>'.
 
-7:53:24 PM - Found 10 errors. Watching for file changes.
-[2J[3J[H7:53:41 PM - File change detected. Starting incremental compilation...
+5:24:55 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:25:50 AM - File change detected. Starting incremental compilation...
 
 
-7:53:52 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:55:24 PM - File change detected. Starting incremental compilation...
+5:25:53 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:26:48 AM - File change detected. Starting incremental compilation...
 
 
-7:55:42 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:56:20 PM - File change detected. Starting incremental compilation...
+5:26:54 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:38:44 AM - File change detected. Starting incremental compilation...
 
+server/circuit-routes/instances.ts(79,55): error TS2345: Argument of type 'number | null | undefined' is not assignable to parameter of type 'number'.
+  Type 'undefined' is not assignable to type 'number'.
 
-7:56:51 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H7:58:55 PM - File change detected. Starting incremental compilation...
+5:44:05 AM - Found 1 error. Watching for file changes.
+[2J[3J[H5:47:14 AM - File change detected. Starting incremental compilation...
 
-client/src/components/circuit-editor/SchematicCanvas.tsx(375,55): error TS2345: Argument of type '(label: SchematicNetLabel, onNetNameChange?: ((labelId: string, newName: string) => void) | undefined) => Node<NetLabelNodeData>' is not assignable to parameter of type '(value: SchematicNetLabel, index: number, array: SchematicNetLabel[]) => Node<NetLabelNodeData>'.
-  Types of parameters 'onNetNameChange' and 'index' are incompatible.
-    Type 'number' is not assignable to type '(labelId: string, newName: string) => void'.
 
-7:59:13 PM - Found 1 error. Watching for file changes.
-[2J[3J[H7:59:13 PM - File change detected. Starting incremental compilation...
+5:47:23 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:49:02 AM - File change detected. Starting incremental compilation...
 
-client/src/components/circuit-editor/SchematicCanvas.tsx(375,55): error TS2345: Argument of type '(label: SchematicNetLabel, onNetNameChange?: ((labelId: string, newName: string) => void) | undefined) => Node<NetLabelNodeData>' is not assignable to parameter of type '(value: SchematicNetLabel, index: number, array: SchematicNetLabel[]) => Node<NetLabelNodeData>'.
-  Types of parameters 'onNetNameChange' and 'index' are incompatible.
-    Type 'number' is not assignable to type '(labelId: string, newName: string) => void'.
 
-7:59:30 PM - Found 1 error. Watching for file changes.
-[2J[3J[H8:04:05 PM - File change detected. Starting incremental compilation...
+5:49:53 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:50:48 AM - File change detected. Starting incremental compilation...
 
 
-8:04:29 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:04:29 PM - File change detected. Starting incremental compilation...
+5:51:01 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:58:12 AM - File change detected. Starting incremental compilation...
 
-client/src/components/circuit-editor/SchematicCanvas.tsx(356,42): error TS2448: Block-scoped variable 'settings' used before its declaration.
-client/src/components/circuit-editor/SchematicCanvas.tsx(356,42): error TS2454: Variable 'settings' is used before being assigned.
 
-8:04:46 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:05:10 PM - File change detected. Starting incremental compilation...
+5:58:36 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:59:40 AM - File change detected. Starting incremental compilation...
 
-client/src/components/circuit-editor/SchematicCanvas.tsx(356,42): error TS2448: Block-scoped variable 'settings' used before its declaration.
-client/src/components/circuit-editor/SchematicCanvas.tsx(356,42): error TS2454: Variable 'settings' is used before being assigned.
 
-8:05:14 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:05:14 PM - File change detected. Starting incremental compilation...
+5:59:49 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H6:00:49 AM - File change detected. Starting incremental compilation...
 
 
-8:05:33 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:07:13 PM - File change detected. Starting incremental compilation...
+6:01:02 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H6:02:27 AM - File change detected. Starting incremental compilation...
 
+client/src/components/circuit-editor/NetBrowserPanel.tsx(422,15): error TS17002: Expected corresponding JSX closing tag for 'div'.
 
-8:07:23 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:08:35 PM - File change detected. Starting incremental compilation...
+6:02:30 AM - Found 1 error. Watching for file changes.
+[2J[3J[H6:03:58 AM - File change detected. Starting incremental compilation...
 
 
-8:08:44 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:09:00 PM - File change detected. Starting incremental compilation...
+6:04:10 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H6:05:27 AM - File change detected. Starting incremental compilation...
 
 
-8:09:04 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:10:49 PM - File change detected. Starting incremental compilation...
-
-
-8:11:04 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:11:18 PM - File change detected. Starting incremental compilation...
-
-
-8:13:29 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:15:47 PM - File change detected. Starting incremental compilation...
-
-
-8:16:02 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:42:35 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/simulation/interactive-controls.ts(164,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-
-8:42:40 PM - Found 1 error. Watching for file changes.
-[2J[3J[H8:42:50 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/simulation/interactive-controls.ts(164,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-
-8:42:58 PM - Found 1 error. Watching for file changes.
-[2J[3J[H8:43:00 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/circuit-editor/net-colors.ts(102,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-client/src/lib/simulation/interactive-controls.ts(164,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-
-8:43:06 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:43:20 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/circuit-editor/net-colors.ts(102,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-client/src/lib/simulation/interactive-controls.ts(164,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-
-8:43:28 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:43:34 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/circuit-editor/net-colors.ts(102,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-client/src/lib/simulation/interactive-controls.ts(164,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-
-8:43:46 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:43:51 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/circuit-editor/net-colors.ts(102,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-client/src/lib/simulation/interactive-controls.ts(164,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-
-8:44:00 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:44:02 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/circuit-editor/net-colors.ts(102,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-client/src/lib/simulation/interactive-controls.ts(164,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-
-8:44:14 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:44:48 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/circuit-editor/net-colors.ts(102,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
-
-8:44:53 PM - Found 1 error. Watching for file changes.
-[2J[3J[H8:45:08 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/simulation/interactive-controls.ts(204,5): error TS1005: ',' expected.
-client/src/lib/simulation/interactive-controls.ts(204,18): error TS1005: ')' expected.
-
-8:45:13 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:46:04 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/simulation/interactive-controls.ts(204,5): error TS1005: ',' expected.
-client/src/lib/simulation/interactive-controls.ts(204,18): error TS1005: ')' expected.
-
-8:46:10 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:46:21 PM - File change detected. Starting incremental compilation...
-
-client/src/lib/simulation/interactive-controls.ts(204,5): error TS1005: ',' expected.
-client/src/lib/simulation/interactive-controls.ts(204,18): error TS1005: ')' expected.
-
-8:46:25 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H8:46:57 PM - File change detected. Starting incremental compilation...
-
-
-8:47:03 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:47:24 PM - File change detected. Starting incremental compilation...
-
-
-8:47:29 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:47:55 PM - File change detected. Starting incremental compilation...
-
-
-8:48:00 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:48:29 PM - File change detected. Starting incremental compilation...
-
-
-8:49:12 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:49:13 PM - File change detected. Starting incremental compilation...
-
-
-8:49:26 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:49:45 PM - File change detected. Starting incremental compilation...
-
-
-8:49:53 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:50:00 PM - File change detected. Starting incremental compilation...
-
-
-8:50:06 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:50:08 PM - File change detected. Starting incremental compilation...
-
-
-8:50:17 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:52:24 PM - File change detected. Starting incremental compilation...
-
-
-8:52:35 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:53:48 PM - File change detected. Starting incremental compilation...
-
-
-8:54:15 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:54:33 PM - File change detected. Starting incremental compilation...
-
-
-8:54:42 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:54:44 PM - File change detected. Starting incremental compilation...
-
-
-8:54:52 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:55:16 PM - File change detected. Starting incremental compilation...
-
-
-8:56:07 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:56:10 PM - File change detected. Starting incremental compilation...
-
-
-8:56:59 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:57:01 PM - File change detected. Starting incremental compilation...
-
-
-8:57:08 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:59:15 PM - File change detected. Starting incremental compilation...
-
-
-8:59:32 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:59:52 PM - File change detected. Starting incremental compilation...
-
-
-8:59:58 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:02:22 PM - File change detected. Starting incremental compilation...
-
-
-9:03:15 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:03:25 PM - File change detected. Starting incremental compilation...
-
-
-9:03:36 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:05:28 PM - File change detected. Starting incremental compilation...
-
-
-9:05:33 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:05:52 PM - File change detected. Starting incremental compilation...
-
-
-9:06:54 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:06:54 PM - File change detected. Starting incremental compilation...
-
-
-9:07:19 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:18:22 PM - File change detected. Starting incremental compilation...
-
-client/src/components/circuit-editor/PCBLayoutView.tsx(149,54): error TS2552: Cannot find name 'CircuitNetRow'. Did you mean 'CircuitWireRow'?
-
-9:18:49 PM - Found 1 error. Watching for file changes.
-[2J[3J[H9:18:49 PM - File change detected. Starting incremental compilation...
-
-client/src/components/circuit-editor/PCBLayoutView.tsx(149,54): error TS2552: Cannot find name 'CircuitNetRow'. Did you mean 'CircuitWireRow'?
-
-9:18:53 PM - Found 1 error. Watching for file changes.
-[2J[3J[H9:19:03 PM - File change detected. Starting incremental compilation...
-
-client/src/components/circuit-editor/PCBLayoutView.tsx(149,54): error TS2552: Cannot find name 'CircuitNetRow'. Did you mean 'CircuitWireRow'?
-
-9:20:06 PM - Found 1 error. Watching for file changes.
-[2J[3J[H9:20:08 PM - File change detected. Starting incremental compilation...
-
-client/src/components/circuit-editor/PCBLayoutView.tsx(149,54): error TS2552: Cannot find name 'CircuitNetRow'. Did you mean 'CircuitWireRow'?
-client/src/components/circuit-editor/VirtualOscilloscope.tsx(58,16): error TS2503: Cannot find namespace 'JSX'.
-
-9:20:14 PM - Found 2 errors. Watching for file changes.
-[2J[3J[H9:20:30 PM - File change detected. Starting incremental compilation...
-
-client/src/components/circuit-editor/VirtualOscilloscope.tsx(58,16): error TS2503: Cannot find namespace 'JSX'.
-
-9:20:58 PM - Found 1 error. Watching for file changes.
-[2J[3J[H9:22:53 PM - File change detected. Starting incremental compilation...
-
-client/src/components/circuit-editor/VirtualOscilloscope.tsx(58,16): error TS2503: Cannot find namespace 'JSX'.
-
-9:23:01 PM - Found 1 error. Watching for file changes.
-[2J[3J[H9:23:18 PM - File change detected. Starting incremental compilation...
-
-client/src/components/circuit-editor/VirtualOscilloscope.tsx(58,16): error TS2503: Cannot find namespace 'JSX'.
-
-9:24:17 PM - Found 1 error. Watching for file changes.
-[2J[3J[H9:24:17 PM - File change detected. Starting incremental compilation...
-
-
-9:24:23 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:24:37 PM - File change detected. Starting incremental compilation...
-
-
-9:25:05 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:25:57 PM - File change detected. Starting incremental compilation...
-
-
-9:26:06 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:27:35 PM - File change detected. Starting incremental compilation...
-
-
-9:27:43 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:28:54 PM - File change detected. Starting incremental compilation...
-
-
-9:29:01 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:29:58 PM - File change detected. Starting incremental compilation...
-
-
-9:30:10 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:31:11 PM - File change detected. Starting incremental compilation...
-
-
-9:31:29 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:32:44 PM - File change detected. Starting incremental compilation...
-
-
-9:32:57 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:33:21 PM - File change detected. Starting incremental compilation...
-
-
-9:33:30 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:34:12 PM - File change detected. Starting incremental compilation...
-
-
-9:34:20 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:35:13 PM - File change detected. Starting incremental compilation...
-
-
-9:35:21 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:36:23 PM - File change detected. Starting incremental compilation...
-
-
-9:36:33 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:37:26 PM - File change detected. Starting incremental compilation...
-
-
-9:37:43 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:38:34 PM - File change detected. Starting incremental compilation...
-
-
-9:38:50 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:39:43 PM - File change detected. Starting incremental compilation...
-
-
-9:39:53 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:40:58 PM - File change detected. Starting incremental compilation...
-
-
-9:41:15 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:42:42 PM - File change detected. Starting incremental compilation...
-
-
-9:43:01 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:44:25 PM - File change detected. Starting incremental compilation...
-
-
-9:49:39 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:50:02 PM - File change detected. Starting incremental compilation...
-
-
-9:50:05 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:52:49 PM - File change detected. Starting incremental compilation...
-
-
-9:53:14 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:53:56 PM - File change detected. Starting incremental compilation...
-
-
-9:57:10 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:57:14 PM - File change detected. Starting incremental compilation...
-
-
-9:57:18 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H9:59:17 PM - File change detected. Starting incremental compilation...
-
-
-9:59:21 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H10:02:44 PM - File change detected. Starting incremental compilation...
-
-
-10:03:53 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H10:06:53 PM - File change detected. Starting incremental compilation...
-
-
-10:06:56 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H10:08:30 PM - File change detected. Starting incremental compilation...
-
-
-10:08:37 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H10:10:56 PM - File change detected. Starting incremental compilation...
-
-
-10:11:06 PM - Found 0 errors. Watching for file changes.
-[2J[3J[H10:12:00 PM - File change detected. Starting incremental compilation...
-
-
-10:12:16 PM - Found 0 errors. Watching for file changes.
+6:05:31 AM - Found 0 errors. Watching for file changes.
