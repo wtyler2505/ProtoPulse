@@ -1,0 +1,15 @@
+---
+summary: Recurring bugs, root causes, and fix patterns in ProtoPulse
+type: moc
+---
+
+# Bug Patterns
+
+Bugs that recur or have non-obvious root causes — understanding these prevents repeat mistakes.
+
+## Insights
+
+- [[soft-deletes-create-a-persistent-querying-tax-where-forgetting-isNull-causes-data-ghosts]] — forgetting isNull(deletedAt) creates ghost data
+- [[circuits-zero-defaulting-in-export-and-ordering-is-a-latent-multi-project-regression-because-it-silently-picks-the-wrong-circuit]] — circuits[0] default will break multi-circuit designs
+- [[typescript-exhaustive-switch-on-discriminated-unions-fails-at-default-because-shared-base-properties-are-inaccessible-after-narrowing-to-never]] — exhaustive switch hides base properties in default case
+- [[architecture-expansion-using-placeholder-first-pin-mapping-produces-semantically-wrong-schematics-that-erode-trust-in-ai-generated-designs]] — placeholder pins produce wrong schematics
