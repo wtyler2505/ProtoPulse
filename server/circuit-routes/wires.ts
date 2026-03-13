@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { insertCircuitWireSchema } from '@shared/schema';
 import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
+import { requireCircuitOwnership } from '../routes/auth-middleware';
 
 const updateWireSchema = z.object({
   points: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
@@ -14,7 +15,7 @@ const updateWireSchema = z.object({
 });
 
 export function registerCircuitWireRoutes(app: Express, storage: IStorage): void {
-  app.get('/api/circuits/:circuitId/wires', asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/wires', requireCircuitOwnership, asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const pagination = circuitPaginationSchema.safeParse(req.query);
     if (!pagination.success) {
@@ -27,7 +28,7 @@ export function registerCircuitWireRoutes(app: Express, storage: IStorage): void
     res.json({ data, total: all.length });
   }));
 
-  app.post('/api/circuits/:circuitId/wires', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/wires', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = insertCircuitWireSchema.safeParse({ ...req.body, circuitId });
     if (!parsed.success) {
@@ -37,6 +38,7 @@ export function registerCircuitWireRoutes(app: Express, storage: IStorage): void
     res.status(201).json(wire);
   }));
 
+  // TODO: Wire-by-ID ownership check requires wire→circuit→project lookup
   app.patch('/api/wires/:id', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const parsed = updateWireSchema.safeParse(req.body);
@@ -48,6 +50,7 @@ export function registerCircuitWireRoutes(app: Express, storage: IStorage): void
     res.json(updated);
   }));
 
+  // TODO: Wire-by-ID ownership check requires wire→circuit→project lookup
   app.delete('/api/wires/:id', asyncHandler(async (req, res) => {
     const id = parseIdParam(req.params.id);
     const deleted = await storage.deleteCircuitWire(id);

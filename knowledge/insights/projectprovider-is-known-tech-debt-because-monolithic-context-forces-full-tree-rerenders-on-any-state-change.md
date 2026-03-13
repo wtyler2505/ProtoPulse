@@ -12,6 +12,8 @@ This is acknowledged tech debt (TD-01 in the backlog). The [[singleton-subscribe
 
 The pragmatic compromise: new features use singleton+subscribe managers, and ProjectProvider stays as-is until a dedicated refactoring wave.
 
+As of Wave 79, 30+ singleton+subscribe managers have been shipped across simulation, hardware, AI, collaboration, and manufacturing domains. ProjectProvider remains untouched — the pragmatic compromise ("new features use singleton+subscribe, ProjectProvider stays") has become load-bearing architecture rather than temporary tech debt. The migration cost grows with each wave as more components depend on the Context shape.
+
 ## Topics
 
 - [[index]]
