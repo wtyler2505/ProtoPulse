@@ -620,15 +620,17 @@ describe('stampTLineAC', () => {
       loss: 0,
     };
 
+    // For a lossless line Y11 = cos(theta)/(Z0*j*sin(theta)), which is purely
+    // imaginary. Track the imaginary part of Y11 which varies with frequency.
     const results: number[] = [];
     for (const freq of [100e6, 200e6, 300e6, 400e6]) {
       const Gr = zeroMatrix(size);
       const Gi = zeroMatrix(size);
       stampTLineAC(Gr, Gi, freq, tline, nodeMap);
-      results.push(Gr[0][0]);
+      results.push(Gi[0][0]);
     }
 
-    // The real part of Y11 should change with frequency
+    // The imaginary part of Y11 should change with frequency
     const allSame = results.every((v) => Math.abs(v - results[0]) < 1e-10);
     expect(allSame).toBe(false);
   });

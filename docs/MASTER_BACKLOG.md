@@ -8,6 +8,24 @@
 
 - [How to Use This Document](#how-to-use-this-document)
 - [Backlog Conventions](#backlog-conventions)
+- [Planning Index](#planning-index)
+- [Backlog Health](#backlog-health)
+- [Change Log](#change-log)
+- [Recently Completed](#recently-completed)
+- [Next Up](#next-up-proposed-top-10-actionable-items)
+- [Active Waves](#active-waves-current-planning-snapshot)
+- [Wave Candidates](#wave-candidates-proposed-bundles)
+- [Complex Work / Epics](#complex-work--epics)
+- [Discovery / Spikes](#discovery--spikes)
+- [Blocked / Waiting On](#blocked--waiting-on)
+- [Cross-Cutting Work](#cross-cutting-work)
+- [Decision Needed](#decision-needed)
+- [Architecture / ADR Required](#architecture--adr-required)
+- [Definition of Ready](#definition-of-ready)
+- [Definition of Done](#definition-of-done)
+- [Planning Fields](#planning-fields-for-new-and-updated-items)
+- [Test / Verification Notes](#test--verification-notes)
+- [How to Add a New Item](#how-to-add-a-new-item)
 - [Quick Stats](#quick-stats)
 - [P0 — Critical](#p0--critical-security--crashes--data-loss)
 - [P1 — High](#p1--high-broken-workflows--major-ux--test-gaps)
@@ -33,6 +51,283 @@
 - **`DONE (verified Wave N)`** = implemented earlier and explicitly re-checked in that wave.
 - **Preservation rule:** unless Tyler explicitly approves pruning or archival, keep every tracked item in this document and prefer notes/cross-links over deletion.
 - **Update discipline:** when Quick Stats or the latest Wave changes, update both the top snapshot and the footer note in the same edit so they do not drift.
+
+## Planning Index
+
+- [Backlog Health](#backlog-health)
+- [Recently Completed](#recently-completed)
+- [Next Up (Proposed Top 10 Actionable Items)](#next-up-proposed-top-10-actionable-items)
+- [Active Waves (Current Planning Snapshot)](#active-waves-current-planning-snapshot)
+- [Wave Candidates (Proposed Bundles)](#wave-candidates-proposed-bundles)
+- [Complex Work / Epics](#complex-work--epics)
+- [Discovery / Spikes](#discovery--spikes)
+- [Blocked / Waiting On](#blocked--waiting-on)
+- [Cross-Cutting Work](#cross-cutting-work)
+- [Decision Needed](#decision-needed)
+- [Architecture / ADR Required](#architecture--adr-required)
+- [Definition of Ready](#definition-of-ready)
+- [Definition of Done](#definition-of-done)
+- [Planning Fields for New and Updated Items](#planning-fields-for-new-and-updated-items)
+- [Test / Verification Notes](#test--verification-notes)
+- [How to Add a New Item](#how-to-add-a-new-item)
+
+## Backlog Health
+
+| Signal | Current State | Notes |
+|--------|---------------|-------|
+| Tracked scope | High | 492 total items across delivery work, parity gaps, audits, and long-term vision. |
+| Duplicate risk | Medium-High | Consolidated from multiple source docs and competitive audits; cross-tool items likely overlap unless regularly merged. |
+| Explicitly blocked items | 0 | Nothing is formally marked `BLOCKED` today, which likely means hidden blockers are living inside `OPEN` rows. |
+| Epic decomposition need | High | Several initiatives are too large to execute safely as single rows and need parent/child planning. |
+| Acceptance/verification metadata | Medium-High gap | Many older `OPEN` items still lack explicit acceptance criteria, effort, confidence, or verification notes. |
+| Stats freshness risk | Medium | Snapshot is aligned now, but totals are still manual and should eventually be generated. |
+
+## Change Log
+
+- **2026-03-13:** Added a planning layer at the top of the backlog: health, recent wins, next-up queue, wave candidates, epics, discovery spikes, blocker tracking, decision points, planning fields, and item templates.
+- **2026-03-13:** Clarified preservation rules, status semantics, and snapshot maintenance guidance; aligned the top snapshot and footer note with the Wave 76 state.
+
+## Recently Completed
+
+| Wave | Notable Completions | Why It Matters |
+|------|----------------------|----------------|
+| 76 | `BL-0491`, `BL-0122`, `BL-0123`, `BL-0511`, `BL-0512` | Closed bus-mapping, simulation-analysis, and SPICE-model gaps that unlock more advanced design work. |
+| 75 | `BL-0505`, `BL-0509`, `BL-0510`, `BL-0120`, `BL-0129` | Strengthened PCB routing intelligence and simulation scenario depth. |
+| 74 | `BL-0594`, `BL-0498`, `BL-0501`, `BL-0502`, `BL-0125` | Improved breadboard realism, schematic→BOM linkage, and PCB analysis overlays. |
+| 73 | `BL-0595`, `BL-0124`, `BL-0508`, `BL-0623`, `BL-0626` | Added richer simulation tooling and PCB manufacturability checks. |
+| 72 | `BL-0596`, `BL-0495`, `BL-0504`, `BL-0507`, `BL-0625` | Improved editing performance, DRC depth, and the simulation instrument bench. |
+
+## Next Up (Proposed Top 10 Actionable Items)
+
+| Rank | ID | Why Next | Effort | User Impact |
+|------|----|----------|--------|-------------|
+| 1 | `BL-0494` | Core schematic editing gap: users still cannot drag-reroute existing wire segments. | M | High |
+| 2 | `BL-0503` | PCB trace/zone copy-paste is a direct parity win and builds on existing copy/paste patterns. | M | High |
+| 3 | `BL-0514` | Simulation needs a guardrail before more heavy features land; prevents hang-like UX on large circuits. | S-M | High |
+| 4 | `BL-0521` | AI action failures currently disappear silently, which erodes trust fast. | S | High |
+| 5 | `BL-0566` | Validation-to-PCB navigation closes a broken workflow loop that forces manual hunting. | M | High |
+| 6 | `BL-0598` | Serial Monitor is still too easy to misconfigure; baud selection is low risk and immediately useful. | S | High |
+| 7 | `BL-0599` | Memory usage feedback is one of the most common embedded maker needs after compile. | M | High |
+| 8 | `BL-0600` | Error line linking materially shortens the edit→compile→fix loop. | M | High |
+| 9 | `BL-0515` | Board settings dialog unlocks non-default and advanced board workflows already implied by the Workbench. | M | Medium |
+| 10 | `BL-0516` | Structured CLI error parsing is the foundation for better diagnostics, hints, and line linking. | M | High |
+
+## Active Waves (Current Planning Snapshot)
+
+This document currently reflects completed work through **Wave 76**. The lanes below are proposed execution lanes for the next planning pass, not locked commitments yet.
+
+| Lane | Intent | Candidate IDs |
+|------|--------|---------------|
+| Editor loop closing | Finish the highest-friction schematic/PCB editing gaps. | `BL-0494`, `BL-0503`, `BL-0566` |
+| Arduino workbench trust | Tighten the compile/upload/serial feedback loop for makers. | `BL-0515`, `BL-0516`, `BL-0598`, `BL-0599`, `BL-0600` |
+| Simulation guardrails + visibility | Make simulation safer to run and easier to interpret visually. | `BL-0514`, `BL-0128`, `BL-0560` |
+| Integration-first cleanup | Reduce “same data lives in two places” pain across views. | `BL-0563`, `BL-0564`, `BL-0565`, `BL-0580` |
+
+## Wave Candidates (Proposed Bundles)
+
+| Proposed Wave | Theme | Candidate IDs | Why This Bundle Holds Together |
+|---------------|-------|---------------|--------------------------------|
+| Wave 77 | Editor UX and validation navigation | `BL-0494`, `BL-0503`, `BL-0566` | Shared canvas affordances, selection/routing behaviors, and click-to-focus mechanics. |
+| Wave 78 | Arduino compile/upload feedback loop | `BL-0515`, `BL-0516`, `BL-0598`, `BL-0599`, `BL-0600` | All improve the same maker workflow from code edit to serial feedback. |
+| Wave 79 | Simulation usability layer | `BL-0514`, `BL-0128`, `BL-0560`, `BL-0619`, `BL-0620`, `BL-0622` | These collectively make simulation feel immediate instead of buried in panels. |
+| Wave 80 | Manufacturing + BOM coherence | `BL-0564`, `BL-0565`, `BL-0580`, `BL-0586`, `BL-0530`, `BL-0531` | Shared goal: use actual project data to drive fab-readiness instead of duplicate manual entry. |
+
+## Complex Work / Epics
+
+Use these epic summaries when a single backlog row is no longer enough to plan or communicate the work. Parent epics should stay concise and point to the detailed child backlog IDs that carry the implementation load.
+
+### Epic A — Simulation UX & Firmware-Aware Prototyping
+
+- **Goal:** Turn simulation into a first-class, visually immediate workflow that makers can run without expert setup.
+- **Why it matters:** This is one of the clearest paths to matching the “instant gratification” value people get from TinkerCAD and EveryCircuit.
+- **Scope included:** `BL-0121`, `BL-0128`, `BL-0514`, `BL-0560`, `BL-0573`, `BL-0574`, `BL-0619`, `BL-0620`, `BL-0622`, `BL-0461`, `BL-0635`.
+- **Scope excluded for now:** `BL-0554` THD/IMD and other specialist analysis that can land after the core simulation UX is cohesive.
+- **Dependencies:** Stable simulation control surface, result overlay strategy, and a decision on browser-only vs hybrid firmware execution.
+- **Risks:** Solver/runtime cost, confusing UX if too many simulation modes remain visible at once, and keeping firmware/runtime state in sync with circuit state.
+- **Open questions:** Should “Start Simulation” auto-detect mode always, or offer a fallback chooser when confidence is low? Does firmware execution require a local helper?
+- **Exit criteria:** One obvious start flow, visual overlays on-canvas, component state rendering, and at least one supported firmware-aware simulation path.
+- **Verification plan:** Run end-to-end sample circuits, compare numeric outputs against known fixtures, and verify visual state changes on canvas.
+- **Related docs:** `docs/product-analysis-report.md`, `docs/product-analysis-checklist.md`.
+
+### Epic B — Arduino Workbench / IDE Parity
+
+- **Goal:** Make ProtoPulse’s Workbench credible as an everyday Arduino development environment, not just an export sidecar.
+- **Why it matters:** The moment makers hit compile friction, serial confusion, or bad diagnostics, they leave for Arduino IDE or PlatformIO.
+- **Scope included:** `BL-0140`-`BL-0157`, `BL-0515`-`BL-0518`, `BL-0584`, `BL-0598`-`BL-0618`, `BL-0400`-`BL-0426`.
+- **Scope excluded for now:** Deep enterprise platform work that does not directly improve the maker edit→compile→upload→debug loop.
+- **Dependencies:** Board/package model clarity, reliable CLI job orchestration, structured error parsing, and decisions on multi-platform support breadth.
+- **Risks:** Toolchain sprawl, background job complexity, and trying to match full IDE behavior without first nailing the most-used 20%.
+- **Open questions:** How far do we go on Arduino IDE parity before broadening into PlatformIO-class workflows? What belongs in-browser vs in a local helper?
+- **Exit criteria:** A beginner can select a board, compile, understand failures, upload, open serial, and recover from common mistakes without leaving ProtoPulse.
+- **Verification plan:** Run scripted compile/upload flows for at least AVR + ESP32, validate parsed diagnostics, and regression-test serial/session handoff.
+- **Related docs:** `docs/arduino-ide-integration-spec.md`, `docs/arduino-ide-api-contracts.md`.
+
+### Epic C — Cross-Tool Integration / “One Tool, Zero Context Switching”
+
+- **Goal:** Make the architecture, schematic, breadboard, BOM, validation, export, and manufacturing surfaces behave like one coherent system.
+- **Why it matters:** ProtoPulse’s core promise breaks whenever users have to manually re-enter data between views.
+- **Scope included:** `BL-0558`, `BL-0563`-`BL-0566`, `BL-0568`, `BL-0571`-`BL-0586`.
+- **Scope excluded for now:** Brand-new moonshots that do not first improve coherence between existing surfaces.
+- **Dependencies:** Shared identifiers between domains, navigation/focus primitives, and clear source-of-truth rules for BOM/design/manufacturing data.
+- **Risks:** Hidden data ownership conflicts, accidental overwrite behavior, and brittle synchronization if mapping rules stay implicit.
+- **Open questions:** Which domain owns value/MPN truth after initial placement: schematic, BOM, or both? Which cross-tool actions should be automatic vs confirm-first?
+- **Exit criteria:** Users can move across key workflows without retyping the same facts or manually reconciling divergent data.
+- **Verification plan:** Multi-view scenario tests covering schematic→BOM→PCB→validation→export and snapshot restore cascades.
+- **Related docs:** `docs/product-analysis-report.md`, `docs/product-analysis-checklist.md`.
+
+### Epic D — Collaboration, Review, and Branching
+
+- **Goal:** Evolve collaboration from shared presence into a trustworthy review/approval/branching system for real team use.
+- **Why it matters:** Real shared hardware/design work needs approvals, restore points, ECOs, branches, and session trust, not just concurrent cursors.
+- **Scope included:** `BL-0181`-`BL-0190`, `BL-0525`-`BL-0527`, `BL-0380`-`BL-0384`.
+- **Scope excluded for now:** Marketplace/community social layers that do not improve core design collaboration.
+- **Dependencies:** Firm session revalidation, auditability, role enforcement, and an opinionated branching/review model.
+- **Risks:** Access-control mistakes, CRDT/branch semantics getting too clever, and approval flows that become too heavyweight for makers.
+- **Open questions:** Should design branching be Git-like, snapshot-based, or review-first? What is the minimum viable ECO flow that still feels safe?
+- **Exit criteria:** A team can branch, review, approve, restore, and audit meaningful design changes with clear ownership and history.
+- **Verification plan:** Role-based integration tests, reconnect/auth tests, branch/merge scenario coverage, and audit-log traceability checks.
+- **Related docs:** `docs/DEVELOPER.md`, `docs/backend-audit-checklist.md`.
+
+### Epic E — Manufacturing, BOM Intelligence, and Fab Readiness
+
+- **Goal:** Make manufacturing outputs rely on actual project data and surface supply/fab risks before users commit.
+- **Why it matters:** This is where “cool demo” turns into “real tool I trust before spending money.”
+- **Scope included:** `BL-0468`-`BL-0476`, `BL-0528`-`BL-0533`, `BL-0564`, `BL-0565`, `BL-0572`, `BL-0579`, `BL-0580`, `BL-0581`, `BL-0586`.
+- **Scope excluded for now:** Marketplace-scale supply-chain features that do not directly improve project-level manufacturability.
+- **Dependencies:** Real BOM integration, reliable file generation checks, supplier data strategy, and clear validation ownership.
+- **Risks:** Mock supplier data undermining user trust, fab-specific API complexity, and false confidence from partial DFM coverage.
+- **Open questions:** When should real-time supplier data be required vs optional? Should fab package export auto-create a frozen manufacturing snapshot?
+- **Exit criteria:** A user can validate, package, price-check, and hand off a project for fab with materially less manual reconciliation.
+- **Verification plan:** Fixture-based export validation, BOM-to-package integration tests, and DFM navigation/UX regression tests.
+- **Related docs:** `docs/product-analysis-report.md`, `docs/app-audit-checklist.md`.
+
+### Epic F — Learning, Starter Experience, and Guided Success
+
+- **Goal:** Make ProtoPulse usable by someone who is still learning electronics, not just someone already fluent in EDA workflows.
+- **Why it matters:** The target user is explicitly a maker/learner who needs momentum and guardrails, not just raw capability.
+- **Scope included:** `BL-0300`-`BL-0314`, `BL-0627`, `BL-0628`, `BL-0460`.
+- **Scope excluded for now:** Education platform expansion that depends on unresolved classroom or org-tenancy architecture.
+- **Dependencies:** Starter content curation, role/beginner-mode framing, and consistent help/onboarding entry points across views.
+- **Risks:** Overbuilding tutorial surfaces without reducing actual product friction, and guidance that drifts out of sync with real workflows.
+- **Open questions:** Is the right top-level mode “Beginner / Hobbyist / Pro,” guided sample projects, or both? What should first-run success look like?
+- **Exit criteria:** A new user can open a starter project, understand what to do next, and reach a working result without leaving the tool.
+- **Verification plan:** First-run walkthrough tests, starter-project smoke tests, and UX review of progressive disclosure across core views.
+- **Related docs:** `docs/USER_GUIDE.md`, `docs/product-analysis-checklist.md`.
+
+## Discovery / Spikes
+
+| Spike Question | Related IDs | Outcome Needed |
+|----------------|-------------|----------------|
+| What is the right architecture for firmware execution without hardware? | `BL-0631`, `BL-0635`, `BL-0461` | Decide browser-only WASM, local helper, or hybrid; document constraints and success criteria. |
+| How should hardware debugger support work in a browser-centric product? | `BL-0632` | ADR covering WebUSB/OpenOCD vs local proxy vs unsupported-for-now scope. |
+| How broad should embedded platform support become in the next phase? | `BL-0613`, `BL-0614`, `BL-0633` | Choose between Arduino-depth first vs broader STM32/RP2040/nRF/ESP-IDF expansion. |
+| Should the 3D viewer be upgraded incrementally or replaced wholesale? | `BL-0553` | Renderer strategy, migration plan, and performance acceptance criteria. |
+| How should supplier/fab integrations handle auth, caching, and trust disclaimers? | `BL-0529`, `BL-0531`, `BL-0533`, `BL-0565` | Integration contract and rollout path that avoids fake-confidence UX. |
+| Is the SI/PDN unified dashboard feasible with current geometry data? | `BL-0555`, `BL-0561` | Proof-of-concept on one routed design plus data model gaps list. |
+| What is the boundary of a ProtoPulse plugin/automation SDK? | `BL-0371`, `BL-0374`, `BL-0375` | Decide safe extension points before exposing public automation surfaces. |
+
+## Blocked / Waiting On
+
+No rows are explicitly marked `BLOCKED` right now. That is useful to know, but it also means some practical blockers are hidden inside `OPEN` items. Treat the following as blocked-in-practice until their prerequisite decisions land.
+
+| Practical Blocker | Why It Is Not Ready Yet | Related IDs |
+|-------------------|-------------------------|-------------|
+| Firmware simulation architecture | Too many downstream features depend on whether execution is browser-only, helper-based, or hybrid. | `BL-0631`, `BL-0635`, `BL-0461` |
+| Hardware debugger integration path | Requires a platform/security decision before implementation can be scoped honestly. | `BL-0632` |
+| Multi-platform embedded support breadth | Board model, package management, and job orchestration need an agreed support boundary first. | `BL-0613`, `BL-0614`, `BL-0633` |
+| Real supplier/fab data trust model | Several manufacturing features should not ship on mock or loosely cached data. | `BL-0485`, `BL-0529`, `BL-0531`, `BL-0533`, `BL-0565` |
+| Team/org workflow foundation | Branching, approvals, and org-level features depend on tenancy/RBAC and audit direction. | `BL-0184`, `BL-0185`, `BL-0380`, `BL-0381` |
+
+## Cross-Cutting Work
+
+| Initiative | Surfaces Touched | Related IDs |
+|------------|------------------|-------------|
+| Schematic ↔ PCB ↔ Breadboard coherence | Schematic canvas, PCB canvas, breadboard, netlist, placement flow | `BL-0558`, `BL-0571`, `BL-0563`, `BL-0566` |
+| Validation everywhere | ValidationView, PCB canvas, BOM, standards/DFM engines | `BL-0566`, `BL-0572`, `BL-0580`, `BL-0581` |
+| Manufacturing from real project data | BOM, DFM, exports, ordering, supplier APIs | `BL-0564`, `BL-0565`, `BL-0530`, `BL-0531`, `BL-0586` |
+| Design-to-device loop | Schematic, firmware scaffold, compile/upload, serial, digital twin | `BL-0140`, `BL-0142`, `BL-0518`, `BL-0584`, `BL-0423` |
+| Beginner success path | Starter circuits, tutorials, onboarding, examples, AI teaching | `BL-0300`, `BL-0301`, `BL-0308`, `BL-0627`, `BL-0628`, `BL-0161` |
+
+## Decision Needed
+
+| Decision | Why It Matters Now | Related IDs |
+|----------|--------------------|-------------|
+| Firmware simulation architecture | Many high-value simulation and education features depend on this direction. | `BL-0631`, `BL-0635`, `BL-0461` |
+| Hardware debugger integration model | This can become a product-defining differentiator or a major rabbit hole depending on the approach. | `BL-0632` |
+| Multi-platform support scope | Determines whether the next embedded phase goes deeper on Arduino or broader across frameworks/platforms. | `BL-0613`, `BL-0614`, `BL-0633` |
+| 3D viewer path | Needed before any serious 3D/professional visualization roadmap work. | `BL-0553` |
+| Supplier/fab account strategy | Required to decide whether ordering remains export-first or becomes directly integrated. | `BL-0529`, `BL-0533` |
+| Collaboration model | Needed to sequence branching, approvals, ECO workflows, and team/org features coherently. | `BL-0181`-`BL-0189`, `BL-0380`, `BL-0381` |
+
+## Architecture / ADR Required
+
+| Topic | ADR Should Decide | Related IDs |
+|-------|-------------------|-------------|
+| Firmware execution and simulation runtime | Browser-only vs helper vs hybrid, security model, performance floor | `BL-0631`, `BL-0635`, `BL-0461` |
+| Debug probe integration | Supported transports, local agent needs, minimum viable UX | `BL-0632` |
+| Cross-domain source of truth | Which system owns component value/MPN/state when multiple views edit the same concept | `BL-0563`, `BL-0571`, `BL-0580` |
+| Supplier/fab integration | Auth, caching, retry, trust disclaimers, offline behavior | `BL-0529`, `BL-0533`, `BL-0565` |
+| Collaboration / branching model | CRDT + branches + approvals + restore semantics | `BL-0182`, `BL-0183`, `BL-0184`, `BL-0185` |
+| Public automation surface | What becomes SDK/plugin/webhook/API vs what remains internal-only | `BL-0370`, `BL-0371`, `BL-0374`, `BL-0375` |
+
+## Definition of Ready
+
+- The item has a stable `BL-XXXX` ID and a clear source/cross-reference.
+- The problem statement is user-visible or system-visible, not just a vague idea title.
+- Dependencies or prerequisite decisions are named explicitly.
+- Scope is small enough to fit in a wave, or the item is elevated into an epic with child IDs.
+- Acceptance signal is obvious enough that another engineer could verify completion without guessing.
+- High-risk items have at least one note about performance, security, or UX failure modes.
+
+## Definition of Done
+
+- Status is updated to `DONE` with the Wave number and verification detail available.
+- The implemented workflow works end-to-end in the relevant surface, not just at the API or data-model layer.
+- Tests or verification evidence exist at the right layer for the change.
+- Any affected cross-tool links, navigation, or synchronization paths were checked for regressions.
+- User-facing trust details are honest: no fake status, no hidden mock limitations, no silent failure path.
+- Related backlog items were updated if scope changed, split, or made another row obsolete/duplicate.
+
+## Planning Fields for New and Updated Items
+
+- **User Impact:** `High`, `Medium`, or `Low`.
+- **Effort / Complexity:** `S`, `M`, `L`, or `XL`.
+- **Confidence:** `High`, `Medium`, or `Low` based on how well-understood the work is.
+- **Dependencies:** IDs, systems, or decisions that must land first.
+- **Tags:** Use concise tags such as `security`, `simulation`, `arduino`, `collaboration`, `manufacturing`, `integration`, `frontend`, `backend`, `schema`, `tests`, `docs`, `ux`, `learning`, `performance`, `accessibility`, `ai`.
+- **Verification Note:** Short note naming the expected proof, such as browser validation, integration test, export fixture, or hardware smoke test.
+
+## Test / Verification Notes
+
+- **UI / editor changes:** verify in a live browser and add or update regression tests where behavior is scriptable.
+- **API / storage changes:** add route/storage coverage and confirm response-shape compatibility.
+- **Cross-tool integration work:** test the full source→target workflow, not just one side of the bridge.
+- **Simulation / analysis work:** use fixture circuits, numerical sanity checks, and runtime/performance guardrails.
+- **Arduino / toolchain work:** parse real CLI output samples, test common failure cases, and verify serial/compile/upload state transitions.
+- **Manufacturing / export work:** validate generated files, not just the button path that produces them.
+
+## How to Add a New Item
+
+- Add the item to the most relevant detailed backlog section below.
+- Include the stable `BL-XXXX` ID, source reference, and initial status.
+- For anything bigger than a single wave, also add or update an epic summary in the planning layer above.
+- If the item is not truly ready to build, put it in `Discovery / Spikes`, `Blocked / Waiting On`, or `Decision Needed` as well.
+- Add planning fields whenever possible: user impact, effort, confidence, dependencies, tags, and verification note.
+- If the item changes scope or splits into sub-work, update the parent epic or nearby rows so nothing silently disappears.
+
+### Complex Item Template
+
+- **Goal:** What this work is trying to accomplish.
+- **Why it matters:** Why the user or system should care.
+- **Scope included:** What is in.
+- **Scope excluded:** What is explicitly out for now.
+- **Dependencies:** What must land first.
+- **Risks:** What could go wrong.
+- **Open questions:** What still needs answers.
+- **Acceptance criteria:** What “good enough” means.
+- **Verification plan:** How we will prove it works.
+- **Related child items:** The `BL-XXXX` rows carrying the actual work.
+- **Related docs:** Specs, audits, ADRs, or plans worth linking.
 
 ## Quick Stats
 
