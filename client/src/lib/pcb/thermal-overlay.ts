@@ -374,18 +374,26 @@ export class ThermalOverlayManager {
   }
 
   /**
-   * Inverse-distance weighted temperature interpolation.
-   * Components contribute their excess temperature (above ambient)
-   * weighted by 1/d^2, blended additively onto the ambient baseline.
+   * Gaussian-decay temperature interpolation.
+   *
+   * Each component contributes its excess temperature (above ambient)
+   * attenuated by a Gaussian falloff: excess * exp(-d^2 / (2 * sigma^2)).
+   * Sigma scales with power dissipation so higher-power parts spread heat
+   * further. Contributions are additive and clamped to the hottest
+   * component temperature.
    */
   private idwTemperature(x: number, y: number, data: ThermalMapData): number {
-    let totalWeight = 0;
-    let weightedExcess = 0;
+    let excess = 0;
+    let maxTemp = data.ambientTemp;
 
     for (const comp of data.components) {
       const dx = x - comp.position.x;
       const dy = y - comp.position.y;
       const distSq = dx * dx + dy * dy;
+
+      if (comp.temperature > maxTemp) {
+        maxTemp = comp.temperature;
+      }
 
       // Inside component bounding box: full temperature
       const halfW = comp.boundingBox.width / 2;
@@ -394,17 +402,14 @@ export class ThermalOverlayManager {
         return comp.temperature;
       }
 
-      // Weight by power dissipation and inverse-distance squared
-      const weight = comp.powerDissipation / Math.max(distSq, 0.01);
-      totalWeight += weight;
-      weightedExcess += weight * (comp.temperature - data.ambientTemp);
+      // Sigma scales with sqrt of power dissipation (minimum 3mm spread)
+      const sigma = Math.max(3, Math.sqrt(comp.powerDissipation) * 5);
+      const attenuation = Math.exp(-distSq / (2 * sigma * sigma));
+      excess += (comp.temperature - data.ambientTemp) * attenuation;
     }
 
-    if (totalWeight === 0) {
-      return data.ambientTemp;
-    }
-
-    return data.ambientTemp + weightedExcess / totalWeight;
+    // Clamp so we never exceed the hottest component temperature
+    return Math.min(data.ambientTemp + excess, maxTemp);
   }
 
   // -----------------------------------------------------------------------

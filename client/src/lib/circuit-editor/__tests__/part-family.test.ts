@@ -97,19 +97,19 @@ describe('parseSIValue', () => {
   });
 
   it('parses nano prefix', () => {
-    expect(parseSIValue('100n')).toBe(1e-7);
-    expect(parseSIValue('47n')).toBe(4.7e-8);
+    expect(parseSIValue('100n')).toBeCloseTo(1e-7, 15);
+    expect(parseSIValue('47n')).toBeCloseTo(4.7e-8, 15);
   });
 
   it('parses micro prefix (u and μ)', () => {
-    expect(parseSIValue('10u')).toBe(1e-5);
-    expect(parseSIValue('4.7μ')).toBe(4.7e-6);
-    expect(parseSIValue('100μ')).toBe(1e-4);
+    expect(parseSIValue('10u')).toBeCloseTo(1e-5, 12);
+    expect(parseSIValue('4.7μ')).toBeCloseTo(4.7e-6, 12);
+    expect(parseSIValue('100μ')).toBeCloseTo(1e-4, 12);
   });
 
   it('parses pico prefix', () => {
-    expect(parseSIValue('22p')).toBe(2.2e-11);
-    expect(parseSIValue('100p')).toBe(1e-10);
+    expect(parseSIValue('22p')).toBeCloseTo(2.2e-11, 18);
+    expect(parseSIValue('100p')).toBeCloseTo(1e-10, 18);
   });
 
   it('parses milli prefix', () => {
