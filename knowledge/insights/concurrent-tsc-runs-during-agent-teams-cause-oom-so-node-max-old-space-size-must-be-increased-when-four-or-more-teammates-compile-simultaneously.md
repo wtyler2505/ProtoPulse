@@ -1,5 +1,6 @@
 ---
 summary: Running 4+ concurrent tsc processes during agent teams causes Node.js OOM — set NODE_OPTIONS="--max-old-space-size=3072" for parallel TypeScript compilation
+category: gotcha
 areas: ["[[index]]"]
 related insights:
   - "[[agent-team-teammates-die-on-context-compaction-so-parallel-work-requires-liveness-checks-after-session-continuation]] — both are agent team operational gotchas where parallel execution creates failure modes"

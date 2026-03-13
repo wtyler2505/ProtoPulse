@@ -106,8 +106,14 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
     res.status(201).json(instance);
   }));
 
+  // BL-0638: Verify instance belongs to the circuit before mutating
   app.patch('/api/circuits/:circuitId/instances/:id', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
+    const existing = await storage.getCircuitInstance(id);
+    if (!existing || existing.circuitId !== circuitId) {
+      return res.status(404).json({ message: 'Circuit instance not found' });
+    }
     const parsed = updateInstanceSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
@@ -117,8 +123,14 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
     res.json(updated);
   }));
 
+  // BL-0638: Verify instance belongs to the circuit before deleting
   app.delete('/api/circuits/:circuitId/instances/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
+    const existing = await storage.getCircuitInstance(id);
+    if (!existing || existing.circuitId !== circuitId) {
+      return res.status(404).json({ message: 'Circuit instance not found' });
+    }
     const deleted = await storage.deleteCircuitInstance(id);
     if (!deleted) { return res.status(404).json({ message: 'Circuit instance not found' }); }
     res.status(204).end();

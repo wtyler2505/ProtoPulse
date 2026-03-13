@@ -393,16 +393,21 @@ export function registerChatRoutes(app: Express): void {
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
       }
 
-      // BL-0636: Ownership check — verify session owns the project
+      // BL-0636: Require session auth and verify project ownership
       const sessionId = req.headers['x-session-id'] as string | undefined;
-      if (sessionId) {
-        const session = await validateSession(sessionId);
-        if (session) {
-          const project = await storage.getProject(parsed.data.projectId);
-          if (project && project.ownerId !== null && project.ownerId !== session.userId) {
-            return res.status(404).json({ message: 'Project not found' });
-          }
-        }
+      if (!sessionId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      const session = await validateSession(sessionId);
+      if (!session) {
+        return res.status(401).json({ message: 'Invalid or expired session' });
+      }
+      const ownerCheckProject = await storage.getProject(parsed.data.projectId);
+      if (!ownerCheckProject) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      if (ownerCheckProject.ownerId !== null && ownerCheckProject.ownerId !== session.userId) {
+        return res.status(404).json({ message: 'Project not found' });
       }
 
       const { message, provider, model, apiKey: clientApiKey, temperature, maxTokens } = parsed.data;
@@ -475,16 +480,21 @@ export function registerChatRoutes(app: Express): void {
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
       }
 
-      // BL-0636: Ownership check — verify session owns the project
+      // BL-0636: Require session auth and verify project ownership
       const ownerCheckSessionId = req.headers['x-session-id'] as string | undefined;
-      if (ownerCheckSessionId) {
-        const session = await validateSession(ownerCheckSessionId);
-        if (session) {
-          const project = await storage.getProject(parsed.data.projectId);
-          if (project && project.ownerId !== null && project.ownerId !== session.userId) {
-            return res.status(404).json({ message: 'Project not found' });
-          }
-        }
+      if (!ownerCheckSessionId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      const ownerSession = await validateSession(ownerCheckSessionId);
+      if (!ownerSession) {
+        return res.status(401).json({ message: 'Invalid or expired session' });
+      }
+      const ownerCheckProject = await storage.getProject(parsed.data.projectId);
+      if (!ownerCheckProject) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+      if (ownerCheckProject.ownerId !== null && ownerCheckProject.ownerId !== ownerSession.userId) {
+        return res.status(404).json({ message: 'Project not found' });
       }
 
       const { message, provider, model, apiKey: clientApiKey, temperature, maxTokens } = parsed.data;
@@ -677,6 +687,7 @@ export function registerChatRoutes(app: Express): void {
     }),
   );
 
+  // BL-0637: Require session auth and verify ownership proactively
   app.get(
     '/api/ai-actions/by-message/:messageId',
     asyncHandler(async (req, res) => {
@@ -684,20 +695,25 @@ export function registerChatRoutes(app: Express): void {
       if (!messageId) {
         return res.status(400).json({ message: 'messageId is required' });
       }
+
+      // Require authentication
+      const sessionId = req.headers['x-session-id'] as string | undefined;
+      if (!sessionId) {
+        return res.status(401).json({ message: 'Authentication required' });
+      }
+      const session = await validateSession(sessionId);
+      if (!session) {
+        return res.status(401).json({ message: 'Invalid or expired session' });
+      }
+
       const actions = await storage.getAiActionsByMessage(messageId);
 
-      // BL-0637: Ownership check — verify session owns the project these actions belong to
+      // Verify session owns the project these actions belong to
       if (actions.length > 0) {
         const actionProjectId = actions[0].projectId;
-        const sessionId = req.headers['x-session-id'] as string | undefined;
-        if (sessionId) {
-          const session = await validateSession(sessionId);
-          if (session) {
-            const project = await storage.getProject(actionProjectId);
-            if (project && project.ownerId !== null && project.ownerId !== session.userId) {
-              return res.status(404).json({ message: 'Actions not found' });
-            }
-          }
+        const project = await storage.getProject(actionProjectId);
+        if (project && project.ownerId !== null && project.ownerId !== session.userId) {
+          return res.status(404).json({ message: 'Actions not found' });
         }
       }
 

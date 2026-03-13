@@ -1,5 +1,6 @@
 ---
 summary: Claude Code agent team teammates are killed when the session context compacts, requiring explicit liveness checks before resuming parallel work
+category: gotcha
 areas: ["[[index]]"]
 related insights:
   - "[[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously]] — another agent team operational gotcha where parallel execution creates failure modes"

@@ -1,5 +1,6 @@
 ---
 summary: The C1-C5 complexity scale measures how many systems, decisions, and failure modes are entangled — not how many hours the work takes
+category: convention
 areas: ["[[index]]"]
 related insights:
   - "[[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — integration items rate C4-C5 because they have high decision surface area"

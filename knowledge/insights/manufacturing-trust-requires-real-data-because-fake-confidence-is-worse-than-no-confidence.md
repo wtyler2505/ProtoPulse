@@ -1,5 +1,6 @@
 ---
 summary: Demo pricing data with real-looking UI actively undermines user trust — honest DEMO badges first, real integrations later
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[architecture-expansion-using-placeholder-first-pin-mapping-produces-semantically-wrong-schematics-that-erode-trust-in-ai-generated-designs]] — another instance of authoritative-looking output that is actually wrong"

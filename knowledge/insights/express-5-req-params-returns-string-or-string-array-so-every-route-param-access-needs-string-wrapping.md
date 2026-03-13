@@ -1,5 +1,6 @@
 ---
 summary: Express 5 types req.params.id as string | string[], requiring String() wrapping on every route parameter access to satisfy TypeScript strict mode
+category: dependency-knowledge
 areas: ["[[index]]"]
 related insights:
   - "[[ai-chat-endpoints-accepting-projectid-in-the-request-body-instead-of-the-url-path-bypass-ownership-middleware-by-construction]] — another Express routing gotcha where parameter handling creates subtle bugs"

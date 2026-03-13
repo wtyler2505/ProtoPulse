@@ -18,10 +18,43 @@ import {
   getBatchResults,
   cancelBatch,
   listProjectBatches,
+  getBatchProjectId,
   ANALYSIS_CATALOG,
 } from '../batch-analysis';
 import type { AnalysisKind } from '../batch-analysis';
 import { logger } from '../logger';
+
+/**
+ * BL-0642: Verify the caller's session owns the project associated with a batch.
+ * Returns the projectId on success, throws HttpError on failure.
+ */
+async function verifyBatchOwnership(batchId: string, sessionHeader: string | string[] | undefined): Promise<number> {
+  const projectId = getBatchProjectId(batchId);
+  if (projectId === null) {
+    throw new HttpError('Batch not found', 404);
+  }
+
+  const sessionId = Array.isArray(sessionHeader) ? sessionHeader[0] : sessionHeader;
+  if (!sessionId) {
+    throw new HttpError('Authentication required', 401);
+  }
+
+  const session = await validateSession(sessionId);
+  if (!session) {
+    throw new HttpError('Invalid or expired session', 401);
+  }
+
+  const project = await storage.getProject(projectId);
+  if (!project) {
+    throw new HttpError('Batch not found', 404);
+  }
+
+  if (project.ownerId !== null && project.ownerId !== session.userId) {
+    throw new HttpError('Batch not found', 404);
+  }
+
+  return projectId;
+}
 
 const VALID_KINDS = new Set(ANALYSIS_CATALOG.map(a => a.kind));
 
@@ -88,6 +121,7 @@ export function registerBatchRoutes(app: Express): void {
   }));
 
   // ---- Check batch status ----
+  // BL-0642: Verify caller owns the project this batch belongs to
 
   app.get('/api/batch/:batchId/status', asyncHandler(async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-anthropic-key']);
@@ -100,11 +134,13 @@ export function registerBatchRoutes(app: Express): void {
       throw new HttpError('Missing batchId parameter', 400);
     }
 
+    await verifyBatchOwnership(batchId, req.headers['x-session-id']);
     const status = await getBatchStatus(batchId, apiKey);
     res.json(status);
   }));
 
   // ---- Retrieve batch results ----
+  // BL-0642: Verify caller owns the project this batch belongs to
 
   app.get('/api/batch/:batchId/results', asyncHandler(async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-anthropic-key']);
@@ -116,6 +152,8 @@ export function registerBatchRoutes(app: Express): void {
     if (!batchId) {
       throw new HttpError('Missing batchId parameter', 400);
     }
+
+    await verifyBatchOwnership(batchId, req.headers['x-session-id']);
 
     // First check if the batch has ended
     const status = await getBatchStatus(batchId, apiKey);
@@ -139,6 +177,7 @@ export function registerBatchRoutes(app: Express): void {
   }));
 
   // ---- Cancel a batch ----
+  // BL-0642: Verify caller owns the project this batch belongs to
 
   app.post('/api/batch/:batchId/cancel', asyncHandler(async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-anthropic-key']);
@@ -151,6 +190,7 @@ export function registerBatchRoutes(app: Express): void {
       throw new HttpError('Missing batchId parameter', 400);
     }
 
+    await verifyBatchOwnership(batchId, req.headers['x-session-id']);
     const status = await cancelBatch(batchId, apiKey);
     logger.info('batch:route:cancel', { batchId });
     res.json(status);

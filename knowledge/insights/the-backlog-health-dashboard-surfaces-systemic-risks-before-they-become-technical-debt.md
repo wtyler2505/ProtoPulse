@@ -1,5 +1,6 @@
 ---
 summary: A meta-operational table tracking duplicate risk, blocked items, epic decomposition need, and stats freshness catches governance problems early
+category: convention
 areas: ["[[index]]"]
 related insights:
   - "[[backlog-summary-statistics-must-be-updated-atomically-with-individual-item-status-changes-or-the-single-source-of-truth-becomes-untrustworthy]] — stats freshness is one of the health metrics the dashboard should track"

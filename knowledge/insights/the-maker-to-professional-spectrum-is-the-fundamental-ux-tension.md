@@ -1,5 +1,6 @@
 ---
 summary: Simplifying for beginners risks hiding capabilities from experts — ProtoPulse must serve both someone learning electronics and someone generating Gerbers
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[the-perception-gap-between-simulation-capability-and-usability-is-the-biggest-competitive-threat]] — the perception gap is worst for beginners who cannot tell the difference"

@@ -1,5 +1,6 @@
 ---
 summary: CLAUDE.md files placed in subdirectories (like knowledge/) are auto-loaded into every Claude Code session, consuming context window and causing premature compaction
+category: gotcha
 areas: ["[[index]]"]
 related insights:
   - "[[agent-team-teammates-die-on-context-compaction-so-parallel-work-requires-liveness-checks-after-session-continuation]] — the downstream consequence: premature compaction kills teammates"

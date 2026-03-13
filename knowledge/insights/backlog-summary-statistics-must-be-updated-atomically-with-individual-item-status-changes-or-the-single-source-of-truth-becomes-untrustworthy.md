@@ -1,5 +1,6 @@
 ---
 summary: Backlog Quick Stats must be updated in the same commit as individual item status changes — stale summary numbers erode trust in the single source of truth
+category: convention
 areas: ["[[index]]"]
 related insights:
   - "[[backlog-planning-layers-must-be-additive-scaffolding-over-canonical-item-inventory-not-replacements]] — Quick Stats are an additive layer that must stay synchronized with the inventory"

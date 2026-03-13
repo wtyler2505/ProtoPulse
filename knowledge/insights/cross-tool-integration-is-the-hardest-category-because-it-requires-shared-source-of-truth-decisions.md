@@ -1,5 +1,6 @@
 ---
 summary: Integration work consistently rates C4-C5 complexity because it forces deferred data ownership questions about which domain holds truth
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[wave-based-development-enables-rapid-shipping-but-creates-integration-debt]] — vertical slices defer the data ownership questions integration forces"

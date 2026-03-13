@@ -1,5 +1,6 @@
 ---
 summary: Export and ordering paths that default to circuits[0] without user selection will silently export the wrong circuit as multi-circuit designs become common
+category: bug-pattern
 areas: ["[[index]]"]
 related insights:
   - "[[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — a concrete example of a deferred cross-tool data ownership question"

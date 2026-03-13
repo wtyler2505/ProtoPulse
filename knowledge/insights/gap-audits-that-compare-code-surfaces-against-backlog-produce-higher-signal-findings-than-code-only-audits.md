@@ -1,5 +1,6 @@
 ---
 summary: Comparing what code exposes against what the backlog tracks catches both "implemented but untracked" and "tracked but not really done" in a single pass
+category: convention
 areas: ["[[index]]"]
 related insights:
   - "[[security-vulnerabilities-recur-because-new-routes-are-added-without-systematic-ownership-audit]] — gap audits retroactively catch the security gaps that CI gates should prevent"

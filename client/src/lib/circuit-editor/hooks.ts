@@ -307,7 +307,7 @@ export function useUpdateCircuitWire() {
       wireType?: 'wire' | 'jump';
     }) => {
       const { circuitId, id, ...body } = data;
-      const res = await apiRequest('PATCH', `/api/wires/${id}`, body);
+      const res = await apiRequest('PATCH', `/api/circuits/${circuitId}/wires/${id}`, body);
       return res.json() as Promise<CircuitWireRow>;
     },
     onSuccess: (_data, variables) => {
@@ -320,7 +320,7 @@ export function useDeleteCircuitWire() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { circuitId: number; id: number }) => {
-      await apiRequest('DELETE', `/api/wires/${data.id}`);
+      await apiRequest('DELETE', `/api/circuits/${data.circuitId}/wires/${data.id}`);
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['circuit-wires', variables.circuitId] });
@@ -689,7 +689,7 @@ export function useUpdateCircuitVia() {
       tented?: boolean;
     }) => {
       const { circuitId, id, ...body } = data;
-      const res = await apiRequest('PATCH', `/api/vias/${id}`, body);
+      const res = await apiRequest('PATCH', `/api/circuits/${circuitId}/vias/${id}`, body);
       return res.json() as Promise<CircuitViaRow>;
     },
     onSuccess: (_data, variables) => {
@@ -702,7 +702,7 @@ export function useDeleteCircuitVia() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { circuitId: number; id: number }) => {
-      await apiRequest('DELETE', `/api/vias/${data.id}`);
+      await apiRequest('DELETE', `/api/circuits/${data.circuitId}/vias/${data.id}`);
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['circuit-vias', variables.circuitId] });

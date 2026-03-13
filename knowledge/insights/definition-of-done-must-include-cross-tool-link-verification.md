@@ -1,5 +1,6 @@
 ---
 summary: Isolated feature completion is not actual completion — DoD requires checking cross-tool links, navigation, and synchronization paths
+category: convention
 areas: ["[[index]]"]
 related insights:
   - "[[the-gap-between-feature-exists-and-feature-is-wired-is-the-dominant-source-of-broken-workflows]] — the problem this DoD expansion directly addresses"

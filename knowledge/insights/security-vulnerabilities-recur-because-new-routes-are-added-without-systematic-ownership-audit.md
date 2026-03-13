@@ -1,5 +1,6 @@
 ---
 summary: IDOR gaps recurred 3 times (Codex audit, Waves 52-53, Wave 80) because no CI gate checks new Express routes for ownership middleware
+category: bug-pattern
 areas: ["[[index]]"]
 related insights:
   - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — the vulnerability pattern this recurrence mechanism keeps producing"

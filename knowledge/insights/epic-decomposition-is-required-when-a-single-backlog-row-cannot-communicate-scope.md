@@ -1,5 +1,6 @@
 ---
 summary: When a backlog item's scope exceeds what one row can communicate to a different engineer, it must be decomposed into an epic with structured sections
+category: convention
 areas: ["[[index]]"]
 related insights:
   - "[[complexity-ratings-measure-decision-surface-area-not-effort]] — C4-C5 items are the primary candidates for epic decomposition"

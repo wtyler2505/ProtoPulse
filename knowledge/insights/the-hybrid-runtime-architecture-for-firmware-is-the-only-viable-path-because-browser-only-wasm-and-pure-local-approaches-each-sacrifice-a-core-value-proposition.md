@@ -1,5 +1,6 @@
 ---
 summary: Browser-only WASM cannot access USB/serial hardware; pure-local loses zero-install accessibility — hybrid (browser UX + local helper) is the only viable firmware architecture
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[browser-based-eda-hits-a-platform-boundary-at-firmware-execution]] — the platform constraint this architecture resolves"

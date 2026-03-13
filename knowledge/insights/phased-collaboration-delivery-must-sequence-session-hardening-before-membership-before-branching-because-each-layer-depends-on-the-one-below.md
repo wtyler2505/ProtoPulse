@@ -1,5 +1,6 @@
 ---
 summary: Collaboration delivery has a strict dependency chain — session stability → membership tables → review/approval → branching/merge → org/team tenancy — skipping layers causes rework
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls]] — the membership table gap that this delivery sequence addresses in Layer 2"

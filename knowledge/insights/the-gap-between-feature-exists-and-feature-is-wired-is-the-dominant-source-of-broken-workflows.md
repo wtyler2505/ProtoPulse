@@ -1,5 +1,6 @@
 ---
 summary: Features implemented as isolated libraries but never connected to UI or cross-tool flows cause the majority of user-visible broken workflows
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[wave-based-development-enables-rapid-shipping-but-creates-integration-debt]] — the development model that produces this gap systematically"
@@ -7,6 +8,7 @@ related insights:
   - "[[definition-of-done-must-include-cross-tool-link-verification]] — the DoD expansion that would catch unwired features before they're marked done"
   - "[[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — the wiring work is hard because it forces data ownership decisions"
   - "[[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — barrel files make wiring easier by preserving stable import paths"
+  - "[[the-perception-gap-between-simulation-capability-and-usability-is-the-biggest-competitive-threat]] — a concrete example: simulation engine is fully capable but output isn't overlaid on schematics, making real capability invisible"
 created: 2026-03-13
 ---
 

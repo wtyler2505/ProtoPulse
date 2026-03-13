@@ -1,5 +1,6 @@
 ---
 summary: Routes that accept projectId as a body parameter cannot use URL-based ownership middleware — the architectural anti-pattern must be fixed by restructuring routes, not adding more middleware
+category: bug-pattern
 areas: ["[[index]]"]
 related insights:
   - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — the broader IDOR pattern this body-param variant belongs to"

@@ -1,5 +1,6 @@
 ---
 summary: Four tables use deletedAt soft-delete pattern, and every query must remember isNull(deletedAt) or deleted records appear as ghost data
+category: gotcha
 areas: ["[[index]]"]
 related insights:
   - "[[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects]] — both are patterns where a missing filter clause causes silent data leakage"

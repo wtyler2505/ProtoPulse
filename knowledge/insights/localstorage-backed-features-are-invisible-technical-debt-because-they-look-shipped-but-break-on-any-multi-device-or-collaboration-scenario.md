@@ -1,5 +1,6 @@
 ---
 summary: Features backed by localStorage appear complete in the UI but silently break on multi-device, collaboration, backup/restore, and project portability scenarios
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[the-gap-between-feature-exists-and-feature-is-wired-is-the-dominant-source-of-broken-workflows]] — localStorage-only persistence is the third form of this integration debt"

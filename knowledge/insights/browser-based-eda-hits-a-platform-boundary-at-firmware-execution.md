@@ -1,5 +1,6 @@
 ---
 summary: Firmware compilation and upload cannot run in a browser, forcing a hybrid architecture decision between browser-only WASM, local helper agent, or hybrid approach
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[the-hybrid-runtime-architecture-for-firmware-is-the-only-viable-path-because-browser-only-wasm-and-pure-local-approaches-each-sacrifice-a-core-value-proposition]] — the architectural conclusion that resolves this platform boundary"

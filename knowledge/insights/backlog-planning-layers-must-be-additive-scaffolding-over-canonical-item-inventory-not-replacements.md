@@ -1,5 +1,6 @@
 ---
 summary: Improving backlog usability requires adding navigation and planning indexes ON TOP of the raw item list — restructuring the canonical inventory destroys traceability
+category: convention
 areas: ["[[index]]"]
 related insights:
   - "[[backlog-summary-statistics-must-be-updated-atomically-with-individual-item-status-changes-or-the-single-source-of-truth-becomes-untrustworthy]] — summary stats are an additive layer that must stay in sync with the canonical inventory"

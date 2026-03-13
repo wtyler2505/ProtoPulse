@@ -38,21 +38,33 @@ export function registerCircuitWireRoutes(app: Express, storage: IStorage): void
     res.status(201).json(wire);
   }));
 
-  // TODO: Wire-by-ID ownership check requires wire→circuit→project lookup
-  app.patch('/api/wires/:id', payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  // BL-0638: Wire PATCH/DELETE now scoped under circuit with ownership guard
+  app.patch('/api/circuits/:circuitId/wires/:id', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
     const parsed = updateWireSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
+    }
+    // Verify wire belongs to this circuit
+    const existing = await storage.getCircuitWire(id);
+    if (!existing || existing.circuitId !== circuitId) {
+      return res.status(404).json({ message: 'Wire not found' });
     }
     const updated = await storage.updateCircuitWire(id, parsed.data);
     if (!updated) { return res.status(404).json({ message: 'Wire not found' }); }
     res.json(updated);
   }));
 
-  // TODO: Wire-by-ID ownership check requires wire→circuit→project lookup
-  app.delete('/api/wires/:id', asyncHandler(async (req, res) => {
+  // BL-0638: Wire DELETE now scoped under circuit with ownership guard
+  app.delete('/api/circuits/:circuitId/wires/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
+    // Verify wire belongs to this circuit
+    const existing = await storage.getCircuitWire(id);
+    if (!existing || existing.circuitId !== circuitId) {
+      return res.status(404).json({ message: 'Wire not found' });
+    }
     const deleted = await storage.deleteCircuitWire(id);
     if (!deleted) { return res.status(404).json({ message: 'Wire not found' }); }
     res.status(204).end();

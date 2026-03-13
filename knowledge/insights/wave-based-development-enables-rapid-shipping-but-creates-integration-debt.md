@@ -1,5 +1,6 @@
 ---
 summary: Each wave ships 5-7 features vertically but systematically defers horizontal integration, requiring periodic integration-only waves
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[the-gap-between-feature-exists-and-feature-is-wired-is-the-dominant-source-of-broken-workflows]] — the user-visible consequence of deferred integration"

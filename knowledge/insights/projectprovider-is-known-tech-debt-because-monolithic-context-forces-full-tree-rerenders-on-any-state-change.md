@@ -1,5 +1,6 @@
 ---
 summary: ProjectProvider holds 40+ state values in one React Context, causing unnecessary re-renders — the singleton+subscribe pattern is the proven alternative but migration is deferred
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — the architectural answer to ProjectProvider's re-render problem, already proven across 30+ managers"

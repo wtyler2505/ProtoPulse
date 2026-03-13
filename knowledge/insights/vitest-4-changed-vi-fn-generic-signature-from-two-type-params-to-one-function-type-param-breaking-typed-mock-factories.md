@@ -1,5 +1,6 @@
 ---
 summary: Vitest 4 changed vi.fn() from vi.fn<[Args], Return>() to vi.fn<() => Return>(), breaking all typed mock factories — fix with vi.fn() as Mock
+category: dependency-knowledge
 areas: ["[[index]]"]
 related insights:
   - "[[proxy-based-mock-chains-intercept-then-causing-await-to-hang-so-drizzle-query-mocks-need-explicit-select-chain-stubs]] — another testing mock pattern broken by tool internals"

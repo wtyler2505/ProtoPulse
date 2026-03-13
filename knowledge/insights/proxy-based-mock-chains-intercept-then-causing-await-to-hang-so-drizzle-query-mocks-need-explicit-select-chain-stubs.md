@@ -1,5 +1,6 @@
 ---
 summary: JavaScript Proxy-based mock builders intercept .then(), causing await to hang — Drizzle ORM query mocks must use explicit select/from/where chain stubs instead
+category: testing-pattern
 areas: ["[[index]]"]
 related insights:
   - "[[vitest-4-changed-vi-fn-generic-signature-from-two-type-params-to-one-function-type-param-breaking-typed-mock-factories]] — another testing mock pattern that broke during tool upgrades"

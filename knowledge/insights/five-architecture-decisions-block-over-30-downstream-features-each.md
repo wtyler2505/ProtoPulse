@@ -1,5 +1,6 @@
 ---
 summary: Firmware execution model, hardware debugger, multi-platform scope, collaboration model, and supplier trust each block 5+ dependent backlog items
+category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[browser-based-eda-hits-a-platform-boundary-at-firmware-execution]] — the platform constraint behind the firmware execution decision"

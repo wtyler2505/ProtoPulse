@@ -376,6 +376,15 @@ export function listProjectBatches(projectId: number): BatchAnalysisStatus[] {
 }
 
 /**
+ * BL-0642: Look up the project that owns a batch (from in-memory cache).
+ * Returns the projectId or null if batch is unknown.
+ */
+export function getBatchProjectId(batchId: string): number | null {
+  const cached = activeBatches.get(batchId);
+  return cached?.projectId ?? null;
+}
+
+/**
  * Available analysis kinds with human-readable descriptions.
  */
 export const ANALYSIS_CATALOG: Array<{ kind: AnalysisKind; label: string; description: string }> = [

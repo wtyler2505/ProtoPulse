@@ -1,5 +1,6 @@
 ---
 summary: Server-side in-memory Maps (RAG docs, batch tracking, job queues) share a single namespace across all users and projects, enabling cross-tenant data access
+category: bug-pattern
 areas: ["[[index]]"]
 related insights:
   - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — database-layer IDOR; this is the ephemeral-state parallel"

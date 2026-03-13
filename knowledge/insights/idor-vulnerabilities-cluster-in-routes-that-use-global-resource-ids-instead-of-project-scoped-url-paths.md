@@ -1,5 +1,6 @@
 ---
 summary: Routes using global IDs (circuitId, wireId, messageId) without project scoping are systematically vulnerable to IDOR — this pattern recurred across 3 security audit waves
+category: bug-pattern
 areas: ["[[index]]"]
 related insights:
   - "[[security-vulnerabilities-recur-because-new-routes-are-added-without-systematic-ownership-audit]] — the recurrence mechanism that keeps producing new IDOR gaps"

@@ -1,5 +1,6 @@
 ---
 summary: Large file decomposition in ProtoPulse consistently extracts domain modules into subdirectories while keeping the original file as a thin orchestrator
+category: convention
 areas: ["[[index]]"]
 related insights:
   - "[[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — barrel files are the mechanism that makes this pattern safe for callers"

@@ -1,5 +1,6 @@
 ---
 summary: The WebSocket collaboration system assigns non-owners editor role by default with no invite/membership table, letting any authenticated user edit any project they connect to
+category: bug-pattern
 areas: ["[[index]]"]
 related insights:
   - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — the HTTP-layer authorization pattern this WebSocket gap bypasses"

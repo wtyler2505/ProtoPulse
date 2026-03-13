@@ -131,16 +131,26 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // GET /api/projects/:projectId/circuits/:circuitId/simulations/:simId -- get full result
+  // BL-0639: Verify simulation result belongs to the circuit in the URL
   app.get('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', requireProjectOwnership, asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
     const simId = parseIdParam(req.params.simId);
     const result = await storage.getSimulationResult(simId);
-    if (!result) { return res.status(404).json({ message: 'Simulation result not found' }); }
+    if (!result || result.circuitId !== circuitId) {
+      return res.status(404).json({ message: 'Simulation result not found' });
+    }
     res.json(result);
   }));
 
   // DELETE /api/projects/:projectId/circuits/:circuitId/simulations/:simId -- delete result
+  // BL-0639: Verify simulation result belongs to the circuit in the URL
   app.delete('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', requireProjectOwnership, asyncHandler(async (req, res) => {
+    const circuitId = parseIdParam(req.params.circuitId);
     const simId = parseIdParam(req.params.simId);
+    const result = await storage.getSimulationResult(simId);
+    if (!result || result.circuitId !== circuitId) {
+      return res.status(404).json({ message: 'Simulation result not found' });
+    }
     const deleted = await storage.deleteSimulationResult(simId);
     if (!deleted) { return res.status(404).json({ message: 'Simulation result not found' }); }
     res.status(204).end();
@@ -434,8 +444,14 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // PATCH /api/projects/:projectId/scenarios/:scenarioId
+  // BL-0639: Verify scenario belongs to the project in the URL
   app.patch('/api/projects/:projectId/scenarios/:scenarioId', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
     const scenarioId = parseIdParam(req.params.scenarioId);
+    const existing = await storage.getSimulationScenario(scenarioId);
+    if (!existing || existing.projectId !== projectId) {
+      return res.status(404).json({ message: 'Simulation scenario not found' });
+    }
     const updated = await storage.updateSimulationScenario(scenarioId, req.body);
     if (!updated) {
       return res.status(404).json({ message: 'Simulation scenario not found' });
@@ -444,8 +460,14 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
   }));
 
   // DELETE /api/projects/:projectId/scenarios/:scenarioId
+  // BL-0639: Verify scenario belongs to the project in the URL
   app.delete('/api/projects/:projectId/scenarios/:scenarioId', requireProjectOwnership, asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
     const scenarioId = parseIdParam(req.params.scenarioId);
+    const existing = await storage.getSimulationScenario(scenarioId);
+    if (!existing || existing.projectId !== projectId) {
+      return res.status(404).json({ message: 'Simulation scenario not found' });
+    }
     const deleted = await storage.deleteSimulationScenario(scenarioId);
     if (!deleted) {
       return res.status(404).json({ message: 'Simulation scenario not found' });
