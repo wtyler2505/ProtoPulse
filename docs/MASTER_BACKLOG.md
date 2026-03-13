@@ -18,11 +18,11 @@
 |----------|------|------|-------------|
 | P0 | 0 | 14 | All resolved (Waves 52-60) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 183 | 90 | Breadboard/PCB/simulation/UI — Waves 61-75 ongoing |
+| P2 | 177 | 95 | Breadboard/PCB/simulation/UI — Waves 61-76 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **316** | **177** | **493 total items tracked** |
+| **Total** | **310** | **182** | **492 total items tracked** |
 
-*Last updated: Wave 75 (2026-03-13)*
+*Last updated: Wave 76 (2026-03-13)*
 
 ---
 
@@ -224,7 +224,7 @@
 |----|-------------|--------|--------|
 | BL-0489 | **Net label inline editing** — Double-click a net label on the schematic canvas to edit it inline (rename the net). Currently net names can only be changed via the properties panel or API. Refdes labels on components should support the same. | DONE | Wave 69 |
 | BL-0490 | **Per-net color assignment UI** — Allow users to assign a custom color to a net (e.g. power red, ground black, data blue). Color should propagate to all wires on that net and to the ratsnest overlay on PCB. Currently color is automatic only. | DONE | Wave 71 |
-| BL-0491 | **Bus pin mapping UI** — Provide a visual dialog for assigning individual signals to bus pins (e.g. "D0–D7 → data bus"). Currently bus routing is partially implemented in `NetDrawingTool` but there is no UI to name or assign bus members. | OPEN | Wave 64 audit |
+| BL-0491 | **Bus pin mapping UI** — Provide a visual dialog for assigning individual signals to bus pins (e.g. "D0–D7 → data bus"). Currently bus routing is partially implemented in `NetDrawingTool` but there is no UI to name or assign bus members. | DONE (Wave 76) | Wave 64 audit |
 | BL-0492 | **Text annotation tool on schematic** — Add a freetext/note placement tool for schematic comments, block labels, and callouts. Annotation text should be stored per-circuit-design (not as components) and rendered as SVG `<text>` elements. | DONE | Wave 69 |
 | BL-0493 | **Power symbol auto-connect** — When a VCC or GND power symbol is placed adjacent to a compatible pin, the net connection should form automatically without requiring a manual wire segment. Standard behavior in KiCad and Eagle. | DONE | Wave 69 |
 | BL-0494 | **Wire segment drag-rerouting** — Allow existing wire segments to be grabbed and repositioned (mid-segment drag). Currently wires can only be fully deleted and redrawn. Mid-segment rerouting is standard EDA UX. | OPEN | Wave 64 audit |
@@ -256,8 +256,8 @@
 |----|-------------|--------|--------|
 | BL-0120 | Worst-case corner analysis | DONE (Wave 75) | MF-069 |
 | BL-0121 | Mixed-signal simulation (analog + digital logic) | OPEN | MF-070 |
-| BL-0122 | EMI/EMC pre-check workflows | OPEN | MF-073 |
-| BL-0123 | Current density visualization on traces/pours | OPEN | MF-075 |
+| BL-0122 | EMI/EMC pre-check workflows | DONE (Wave 76) | MF-073 |
+| BL-0123 | Current density visualization on traces/pours | DONE (Wave 76) | MF-075 |
 | BL-0124 | Simulation scenario manager with presets | DONE (Wave 73) | MF-076, IFX-018 |
 | BL-0125 | Simulation compare mode (before/after changes) | DONE (Wave 74) | MF-077, IFX-014 |
 | BL-0126 | Shared unit/scale contract across sim + DRC engines | PARTIAL | MF-078 |
@@ -285,8 +285,8 @@
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0511 | **SPICE K element (mutual inductance / transformer)** — Add `K` mutual inductance coupling between `L` elements in the SPICE generator and parser. Required for simulating transformers, coupled inductors, and RF circuits. | OPEN | Wave 64 audit |
-| BL-0512 | **SPICE S/W voltage-controlled switch** — Add `S` (voltage-controlled) and `W` (current-controlled) switch elements. Common in power electronics (H-bridge, buck/boost) and digital-analog interface circuits. | OPEN | Wave 64 audit |
+| BL-0511 | **SPICE K element (mutual inductance / transformer)** — Add `K` mutual inductance coupling between `L` elements in the SPICE generator and parser. Required for simulating transformers, coupled inductors, and RF circuits. | DONE (Wave 76) | Wave 64 audit |
+| BL-0512 | **SPICE S/W voltage-controlled switch** — Add `S` (voltage-controlled) and `W` (current-controlled) switch elements. Common in power electronics (H-bridge, buck/boost) and digital-analog interface circuits. | DONE (Wave 76) | Wave 64 audit |
 | BL-0513 | **SPICE T element (ideal transmission line)** — Add `T` two-port transmission line element with characteristic impedance and delay. Enables SI simulation without the full crosstalk-solver overhead for simple point-to-point lines. | OPEN | Wave 64 audit |
 | BL-0514 | **Simulation size / complexity warning** — Before running a large circuit (>50 nodes, >20 nonlinear devices, or transient span > 10ms at fine timestep), show an estimated runtime warning and offer to reduce parameters. Prevents silent browser hangs on large netlists. | OPEN | Wave 64 audit |
 
