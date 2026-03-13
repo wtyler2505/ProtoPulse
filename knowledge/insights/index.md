@@ -19,6 +19,7 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[pcb-layout]] — Footprints, routing, DRC, copper pour, 3D viewer
 - [[ai-system]] — AI tools, prompts, streaming, multi-model routing
 - [[export-system]] — KiCad, Eagle, Gerber, SPICE, PDF, FMEA exporters
+- [[agent-workflows]] — Claude Code agent teams, parallel execution, session management
 
 ## Recent Insights
 
@@ -39,6 +40,21 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[browser-based-eda-hits-a-platform-boundary-at-firmware-execution]] — firmware compilation forces hybrid architecture decision
 - [[manufacturing-trust-requires-real-data-because-fake-confidence-is-worse-than-no-confidence]] — demo data that looks real undermines trust
 - [[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — accessibility and power are in genuine conflict
+
+### Extracted 2026-03-13
+
+- [[agent-team-teammates-die-on-context-compaction-so-parallel-work-requires-liveness-checks-after-session-continuation]] — teammates are killed on context compaction, requiring liveness checks
+- [[proxy-based-mock-chains-intercept-then-causing-await-to-hang-so-drizzle-query-mocks-need-explicit-select-chain-stubs]] — Proxy .then interception causes await hangs in Drizzle mocks
+- [[vitest-4-changed-vi-fn-generic-signature-from-two-type-params-to-one-function-type-param-breaking-typed-mock-factories]] — Vitest 4 breaking change to vi.fn() generics
+- [[drizzle-orm-0-45-is-blocked-by-zod-v4-dependency-so-the-orm-must-be-pinned-until-full-zod-migration]] — drizzle-orm 0.45+ blocked by Zod v4 requirement
+- [[express-5-req-params-returns-string-or-string-array-so-every-route-param-access-needs-string-wrapping]] — Express 5 params typing requires String() wrapping
+- [[typescript-exhaustive-switch-on-discriminated-unions-fails-at-default-because-shared-base-properties-are-inaccessible-after-narrowing-to-never]] — exhaustive switch narrows default to never, hiding base properties
+- [[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — barrel files preserve public API during decomposition
+- [[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — decomposition pattern: extract modules, keep thin orchestrator
+- [[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously]] — 4+ concurrent tsc runs cause OOM without increased heap
+- [[auto-loaded-claude-md-files-in-subdirectories-consume-context-window-causing-premature-session-compaction]] — subdirectory CLAUDE.md files are a permanent context tax
+- [[backlog-summary-statistics-must-be-updated-atomically-with-individual-item-status-changes-or-the-single-source-of-truth-becomes-untrustworthy]] — stale Quick Stats erode backlog trust
+- [[web-serial-api-mocking-requires-double-cast-through-unknown-because-file-scoped-classes-cannot-be-imported-for-test-type-narrowing]] — Web Serial mocks need double-cast through unknown
 
 ## About This System
 
