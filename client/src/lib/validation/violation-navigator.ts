@@ -342,7 +342,7 @@ export class ViolationNavigator {
     this.setActiveHighlight(request);
 
     // Notify navigation listeners (view switching, viewport centering)
-    for (const cb of this.navigationListeners) {
+    for (const cb of Array.from(this.navigationListeners)) {
       cb(request);
     }
 
