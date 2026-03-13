@@ -239,6 +239,7 @@ export class SimulationAudioOutput {
       this._available = false;
       this.ctx = null;
       this.gainNode = null;
+      this.notify();
     }
   }
 
@@ -273,7 +274,7 @@ export class SimulationAudioOutput {
 
   private notify(): void {
     this.stateSnapshot = this.buildSnapshot();
-    for (const listener of this.listeners) {
+    for (const listener of Array.from(this.listeners)) {
       listener();
     }
   }

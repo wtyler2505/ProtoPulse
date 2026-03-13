@@ -126,3 +126,14 @@ client/src/lib/simulation/audio-output.ts(276,28): error TS2802: Type 'Set<Liste
 9:25:56 AM - Found 1 error. Watching for file changes.
 [2J[3J[H9:27:28 AM - File change detected. Starting incremental compilation...
 
+client/src/lib/simulation/audio-output.ts(276,28): error TS2802: Type 'Set<Listener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+9:27:42 AM - Found 1 error. Watching for file changes.
+[2J[3J[H9:28:36 AM - File change detected. Starting incremental compilation...
+
+
+9:28:42 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:29:02 AM - File change detected. Starting incremental compilation...
+
+
+9:29:07 AM - Found 0 errors. Watching for file changes.
