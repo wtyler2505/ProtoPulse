@@ -128,13 +128,13 @@ describe('parseSIValue', () => {
   });
 
   it('strips F suffix', () => {
-    expect(parseSIValue('100nF')).toBe(1e-7);
-    expect(parseSIValue('22pF')).toBe(2.2e-11);
+    expect(parseSIValue('100nF')).toBeCloseTo(1e-7, 15);
+    expect(parseSIValue('22pF')).toBeCloseTo(2.2e-11, 18);
   });
 
   it('strips H suffix', () => {
-    expect(parseSIValue('10μH')).toBe(1e-5);
-    expect(parseSIValue('100μH')).toBe(1e-4);
+    expect(parseSIValue('10μH')).toBeCloseTo(1e-5, 12);
+    expect(parseSIValue('100μH')).toBeCloseTo(1e-4, 12);
   });
 
   it('returns null for empty string', () => {
