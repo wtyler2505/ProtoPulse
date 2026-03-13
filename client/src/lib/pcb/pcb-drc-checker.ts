@@ -41,7 +41,8 @@ export interface PCBDrcViolation {
     | 'thermal-relief'
     | 'solder_mask_expansion'
     | 'paste_aperture_ratio'
-    | 'courtyard_clearance';
+    | 'courtyard_clearance'
+    | 'via_aspect_ratio';
   message: string;
   position: { x: number; y: number };
   severity: 'error' | 'warning';
