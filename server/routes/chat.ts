@@ -685,6 +685,22 @@ export function registerChatRoutes(app: Express): void {
         return res.status(400).json({ message: 'messageId is required' });
       }
       const actions = await storage.getAiActionsByMessage(messageId);
+
+      // BL-0637: Ownership check — verify session owns the project these actions belong to
+      if (actions.length > 0) {
+        const actionProjectId = actions[0].projectId;
+        const sessionId = req.headers['x-session-id'] as string | undefined;
+        if (sessionId) {
+          const session = await validateSession(sessionId);
+          if (session) {
+            const project = await storage.getProject(actionProjectId);
+            if (project && project.ownerId !== null && project.ownerId !== session.userId) {
+              return res.status(404).json({ message: 'Actions not found' });
+            }
+          }
+        }
+      }
+
       res.json({ data: actions, total: actions.length });
     }),
   );
