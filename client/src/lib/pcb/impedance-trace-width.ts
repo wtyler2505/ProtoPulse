@@ -7,7 +7,7 @@
  * Uses IPC-2141 formulas (microstrip) and standard stripline formulas,
  * consistent with transmission-line.ts and board-stackup.ts.
  *
- * All dimensions in mm. Internally uses a Newton-Raphson search to invert
+ * All dimensions in mm. Internally uses a binary search to invert
  * the impedance-vs-width relationship.
  *
  * Singleton + subscribe pattern (useSyncExternalStore compatible).
@@ -159,6 +159,9 @@ export function calculateImpedance(width: number, stackup: StackupParams): numbe
  * Impedance is monotonically decreasing with increasing width (wider trace =
  * lower impedance). The binary search exploits this monotonicity.
  *
+ * Because very wide traces can push the formula argument below 1 (producing
+ * NaN), we first clamp the upper bound to the edge of the valid region.
+ *
  * @returns TraceWidthResult, or null if the target impedance is unreachable.
  */
 function findWidthForImpedance(targetZ: number, stackup: StackupParams): TraceWidthResult | null {
@@ -166,23 +169,19 @@ function findWidthForImpedance(targetZ: number, stackup: StackupParams): TraceWi
     return null;
   }
 
-  let lo = MIN_WIDTH;
+  const lo = MIN_WIDTH;
   let hi = MAX_WIDTH;
 
-  // Check that the target is within the achievable range
+  // Check the narrowest trace impedance (maximum achievable impedance)
   const zAtMinWidth = calculateImpedance(lo, stackup);
-  const zAtMaxWidth = calculateImpedance(hi, stackup);
 
-  if (Number.isNaN(zAtMinWidth) && Number.isNaN(zAtMaxWidth)) {
+  if (Number.isNaN(zAtMinWidth)) {
+    // Even the narrowest trace produces non-physical results — unusable stackup
     return null;
   }
 
-  // Impedance decreases as width increases
-  // zAtMinWidth is the maximum achievable impedance
-  // zAtMaxWidth is the minimum achievable impedance
-  if (!Number.isNaN(zAtMinWidth) && targetZ > zAtMinWidth) {
-    // Target impedance is higher than what the narrowest trace can achieve
-    // Return the narrowest trace as the best approximation
+  // If target exceeds the maximum achievable impedance, return best approximation
+  if (targetZ > zAtMinWidth) {
     return {
       width: lo,
       actualImpedance: zAtMinWidth,
@@ -191,22 +190,52 @@ function findWidthForImpedance(targetZ: number, stackup: StackupParams): TraceWi
     };
   }
 
-  if (!Number.isNaN(zAtMaxWidth) && targetZ < zAtMaxWidth) {
+  // The widest trace may produce NaN (non-physical). Find the upper bound
+  // of the valid region by binary-searching for the NaN boundary.
+  let zAtHi = calculateImpedance(hi, stackup);
+  if (Number.isNaN(zAtHi)) {
+    let validHi = lo;
+    let invalidLo = hi;
+    for (let i = 0; i < 60; i++) {
+      const probe = (validHi + invalidLo) / 2;
+      const zProbe = calculateImpedance(probe, stackup);
+      if (Number.isNaN(zProbe)) {
+        invalidLo = probe;
+      } else {
+        validHi = probe;
+      }
+    }
+    hi = validHi;
+    zAtHi = calculateImpedance(hi, stackup);
+  }
+
+  if (Number.isNaN(zAtHi)) {
+    return null;
+  }
+
+  // If target is below the minimum achievable impedance (widest valid trace)
+  if (targetZ < zAtHi) {
     return {
-      width: hi,
-      actualImpedance: zAtMaxWidth,
+      width: Math.round(hi * 10000) / 10000,
+      actualImpedance: Math.round(zAtHi * 100) / 100,
       targetImpedance: targetZ,
-      error: Math.abs(zAtMaxWidth - targetZ),
+      error: Math.round(Math.abs(zAtHi - targetZ) * 100) / 100,
     };
   }
 
+  // Main binary search — both lo and hi are now in the valid region,
+  // impedance is monotonically decreasing from lo to hi.
+  let searchLo = lo;
+  let searchHi = hi;
+
   for (let i = 0; i < MAX_ITERATIONS; i++) {
-    const mid = (lo + hi) / 2;
+    const mid = (searchLo + searchHi) / 2;
     const z = calculateImpedance(mid, stackup);
 
     if (Number.isNaN(z)) {
-      // Non-physical region — narrow the trace (move lo up)
-      lo = mid;
+      // Should not happen after boundary clamping, but handle gracefully:
+      // NaN means trace too wide, so narrow it
+      searchHi = mid;
       continue;
     }
 
@@ -223,15 +252,15 @@ function findWidthForImpedance(targetZ: number, stackup: StackupParams): TraceWi
 
     if (diff > 0) {
       // Impedance too high — need wider trace
-      lo = mid;
+      searchLo = mid;
     } else {
       // Impedance too low — need narrower trace
-      hi = mid;
+      searchHi = mid;
     }
   }
 
   // Return best approximation
-  const finalWidth = (lo + hi) / 2;
+  const finalWidth = (searchLo + searchHi) / 2;
   const finalZ = calculateImpedance(finalWidth, stackup);
   const finalZSafe = Number.isNaN(finalZ) ? 0 : finalZ;
 
@@ -396,7 +425,7 @@ export class ImpedanceTraceWidthManager {
    * Check whether a specific net's current trace width is compliant
    * with its impedance target.
    *
-   * @param netId - Net identifier (for context only)
+   * @param _netId - Net identifier (for context only)
    * @param currentWidth - Current trace width (mm)
    * @param targetZ - Target impedance (ohms)
    * @param stackup - Stackup parameters (uses instance defaults if omitted)
