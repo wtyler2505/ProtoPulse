@@ -475,6 +475,18 @@ export function registerChatRoutes(app: Express): void {
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
       }
 
+      // BL-0636: Ownership check — verify session owns the project
+      const ownerCheckSessionId = req.headers['x-session-id'] as string | undefined;
+      if (ownerCheckSessionId) {
+        const session = await validateSession(ownerCheckSessionId);
+        if (session) {
+          const project = await storage.getProject(parsed.data.projectId);
+          if (project && project.ownerId !== null && project.ownerId !== session.userId) {
+            return res.status(404).json({ message: 'Project not found' });
+          }
+        }
+      }
+
       const { message, provider, model, apiKey: clientApiKey, temperature, maxTokens } = parsed.data;
       const pid = parsed.data.projectId;
 
