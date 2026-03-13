@@ -1,16 +1,38 @@
 # ProtoPulse Master Backlog
 
-> **Single source of truth** for all open work: bugs, security fixes, features, tech debt, UX polish, and moonshots.
-> Consolidated 2026-03-07 from 9 source documents (see [Source Map](#source-document-map) at bottom).
-> Items completed in Waves 1-53 have been removed or marked DONE. Only **open/remaining** work is listed.
+> **Single source of truth** for tracked ProtoPulse work: bugs, security fixes, features, tech debt, UX polish, parity gaps, and moonshots.
+> Consolidated 2026-03-07 from source documents listed in the [Source Document Map](#source-document-map).
+> This file intentionally preserves both open and completed items so priority, provenance, and completion history stay searchable in one place.
+
+## Fast Navigation
+
+- [How to Use This Document](#how-to-use-this-document)
+- [Backlog Conventions](#backlog-conventions)
+- [Quick Stats](#quick-stats)
+- [P0 — Critical](#p0--critical-security--crashes--data-loss)
+- [P1 — High](#p1--high-broken-workflows--major-ux--test-gaps)
+- [P2 — Medium](#p2--medium-feature-gaps--polish)
+- [P3 — Low](#p3--low-nice-to-have--long-term-vision)
+- [Completed Work Summary](#completed-work-summary)
+- [Source Document Map](#source-document-map)
 
 ## How to Use This Document
 
 - **Pick from the top.** Items are grouped by priority (P0 → P3) then by domain.
-- **IDs are stable.** Each item has a `BL-XXXX` ID. Reference these in commits and PRs.
-- **Status values:** `OPEN` = not started, `PARTIAL` = some code exists but not complete, `BLOCKED` = waiting on prerequisite.
+- **IDs are stable.** Each item has a `BL-XXXX` ID. Reference these in commits, PRs, wave notes, and follow-up docs.
 - **Cross-refs** show the original ID from the source doc (MF-xxx, UX-xxx, IFX-xxx, ARDX-xxx, etc.) for traceability.
-- **When you finish an item**, change its status to `DONE` and add the Wave/commit reference.
+- **Open and done work both stay here.** Do not remove items just because they are completed; update status instead so historical context remains searchable.
+- **When you finish an item**, change its status to `DONE` and add the Wave plus commit/PR reference when available.
+
+## Backlog Conventions
+
+- **`OPEN`** = not started.
+- **`PARTIAL`** = some implementation exists, but the user-visible workflow or acceptance criteria are not complete.
+- **`BLOCKED`** = waiting on a prerequisite, dependency, or external decision.
+- **`DONE`** = implemented. Add the Wave number and any verification detail available.
+- **`DONE (verified Wave N)`** = implemented earlier and explicitly re-checked in that wave.
+- **Preservation rule:** unless Tyler explicitly approves pruning or archival, keep every tracked item in this document and prefer notes/cross-links over deletion.
+- **Update discipline:** when Quick Stats or the latest Wave changes, update both the top snapshot and the footer note in the same edit so they do not drift.
 
 ## Quick Stats
 
@@ -22,7 +44,7 @@
 | P3 | 133 | 0 | Moonshots + long-term features |
 | **Total** | **310** | **182** | **492 total items tracked** |
 
-*Last updated: Wave 76 (2026-03-13)*
+*Snapshot updated: Wave 76 (2026-03-13)*
 
 ---
 
@@ -852,4 +874,4 @@
 
 ---
 
-*Last updated: 2026-03-13 — Wave 69: BL-0489, BL-0492, BL-0493, BL-0496, BL-0499, BL-0500, BL-0506, BL-0590, BL-0591, BL-0592, BL-0621, BL-0624 done. Wave 70: BL-0567, BL-0569, BL-0570, BL-0575, BL-0576 done. Wave 71: BL-0490, BL-0497 done.*
+*Snapshot updated: 2026-03-13 — document currently reflects work through Wave 76. Historical highlight notes retained here: Wave 69: BL-0489, BL-0492, BL-0493, BL-0496, BL-0499, BL-0500, BL-0506, BL-0590, BL-0591, BL-0592, BL-0621, BL-0624 done. Wave 70: BL-0567, BL-0569, BL-0570, BL-0575, BL-0576 done. Wave 71: BL-0490, BL-0497 done.*
