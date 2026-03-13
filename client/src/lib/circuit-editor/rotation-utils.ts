@@ -35,7 +35,8 @@ export function radiansToDegrees(rad: number): number {
 /** Normalize an angle to the [0, 360) range. */
 export function normalizeAngle(deg: number): number {
   const mod = deg % 360;
-  return mod < 0 ? mod + 360 : mod;
+  // Avoid returning -0 (e.g. -720 % 360 === -0)
+  return mod < 0 ? mod + 360 : mod || 0;
 }
 
 /**

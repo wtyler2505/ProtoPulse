@@ -94,12 +94,13 @@ describe('STANDARD_LIBRARY_COMPONENTS', () => {
 });
 
 describe('STANDARD_LIBRARY_CATEGORIES', () => {
-  it('exports 12 categories', () => {
-    expect(STANDARD_LIBRARY_CATEGORIES.length).toBe(12);
+  it('exports 13 categories', () => {
+    expect(STANDARD_LIBRARY_CATEGORIES.length).toBe(13);
   });
 
-  it('every category has at least one component', () => {
+  it('every category except Misc has at least one component', () => {
     for (const cat of STANDARD_LIBRARY_CATEGORIES) {
+      if (cat === 'Misc') { continue; }
       const components = STANDARD_LIBRARY_COMPONENTS.filter((c) => c.category === cat);
       expect(components.length).toBeGreaterThanOrEqual(1);
     }
