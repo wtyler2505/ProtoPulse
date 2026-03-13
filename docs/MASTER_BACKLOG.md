@@ -211,7 +211,7 @@
 | BL-0591 | **Wire color coding in breadboard** — Right-click any breadboard wire to assign a color (red=power, black=ground, yellow=signal, etc.). Wire colors persist and are exported to diagrams. Standard electronics convention that makes breadboard diagrams readable at a glance. Every Fritzing tutorial uses this. | DONE | Wave 69 |
 | BL-0592 | **Breadboard connected-row highlight on hover** — Hovering over any breadboard hole highlights every other hole electrically connected to it (the full row on the top/bottom half, or the connected power rail). Teaches beginners how breadboards work while also functioning as a visual continuity checker during layout. Very low implementation cost, very high educational value. | DONE | Wave 69 |
 | BL-0593 | **Bendable/rubber-band component legs** — Through-hole components (DIP ICs, resistors, LEDs) have flexible legs that bend and stretch from the component body to their inserted breadboard holes. Legs can be dragged to different holes, stretching to fit. Makes the breadboard diagram look like the real circuit where bent component leads are visible. Fritzing implements this via `legId` in the part SVG format. | OPEN | Wave 66 / Fritzing |
-| BL-0594 | **Part family swapping via Inspector** — Components with the same "family" property (e.g. all resistors) show a value dropdown in the Inspector panel. Swap a 100Ω resistor for a 1kΩ without deleting and re-placing — all wire connections are preserved. Avoids the most common tedious operation in breadboard design. | OPEN | Wave 66 / Fritzing |
+| BL-0594 | **Part family swapping via Inspector** — Components with the same "family" property (e.g. all resistors) show a value dropdown in the Inspector panel. Swap a 100Ω resistor for a 1kΩ without deleting and re-placing — all wire connections are preserved. Avoids the most common tedious operation in breadboard design. | DONE (Wave 74) | Wave 66 / Fritzing |
 | BL-0595 | **Arbitrary angle rotation** — Inspector rotation field should accept any angle (e.g. 30°, 45°, 135°), not just 90° multiples. Required for angled connector placements, off-axis through-hole components, and decorative layouts. | DONE (Wave 73) | Wave 66 / Fritzing |
 | BL-0596 | **Mystery part (generic black-box placeholder)** — A configurable placeholder component with user-set pin count, pin labels, and a blank body. Used when a specific part isn't in the library yet. Allows circuit design to continue without blocking on part creation. Common in breadboard prototyping where custom modules need representation. | DONE (Wave 72) | Wave 66 / Fritzing |
 | BL-0597 | **Wire T-junction forking** — Alt+drag on any wire bend point creates a new branching wire (T-junction). Currently wires must be routed from a component pin; mid-wire branching is not possible. T-junctions are essential for power distribution nets where multiple components share a rail. | OPEN | Wave 66 / Fritzing |
@@ -229,7 +229,7 @@
 | BL-0495 | **Incremental ERC** — ERC currently re-runs the full circuit on every trigger. Add dirty-tracking so only changed nets/instances trigger re-validation. Prevents UI stutter on large schematics. | DONE (Wave 72) | Wave 64 audit |
 | BL-0496 | **Net browser panel** — Sidebar/drawer listing all nets in the design with pin count, connected instances, and a click-to-highlight action. Equivalent to KiCad's "Net Inspector". Useful for navigating large schematics. | DONE | Wave 69 |
 | BL-0497 | **Refdes auto-increment on component placement** — When placing a second R, it should be named R2 (not another R1). Currently every placed component gets R1/U1/etc. and requires manual renaming. Auto-increment on placement is table-stakes EDA UX. | DONE | Wave 71 |
-| BL-0498 | **Schematic → BOM auto-populate** — Placing components on a schematic should offer to add them to the BOM automatically (with confirmation). Currently schematic instances and BOM items are entirely decoupled; linking them is manual. | OPEN | Wave 64 audit |
+| BL-0498 | **Schematic → BOM auto-populate** — Placing components on a schematic should offer to add them to the BOM automatically (with confirmation). Currently schematic instances and BOM items are entirely decoupled; linking them is manual. | DONE (Wave 74) | Wave 64 audit |
 
 ### Core EDA — PCB Editing Gaps (Wave 64 Audit)
 
@@ -237,8 +237,8 @@
 |----|-------------|--------|--------|
 | BL-0499 | **3D viewer shortcut in PCB toolbar** — Add a "View in 3D" button to the PCB toolbar that jumps to the `viewer_3d` ViewMode. Users don't discover this view easily from the PCB canvas. | DONE | Wave 69 |
 | BL-0500 | **Diff pair routing toolbar mode** — Add a dedicated diff-pair route button to the PCB toolbar. Currently `diff-pair-router.ts` exists but there is no UI entry point to activate it; users have no way to initiate differential pair routing without AI. | DONE | Wave 69 |
-| BL-0501 | **SI overlay toggle in PCB toolbar** — Add a button to show/hide signal integrity annotations (stub lengths, impedance warnings) computed by `si-advisor.ts` directly on the PCB canvas. | OPEN | Wave 64 audit |
-| BL-0502 | **Thermal heatmap overlay** — Add an overlay mode to PCBLayoutView that color-codes pads/zones by thermal resistance values from `thermal-analysis.ts`. Power designers need this to spot heat accumulation before ordering. | OPEN | Wave 64 audit |
+| BL-0501 | **SI overlay toggle in PCB toolbar** — Add a button to show/hide signal integrity annotations (stub lengths, impedance warnings) computed by `si-advisor.ts` directly on the PCB canvas. | DONE (Wave 74) | Wave 64 audit |
+| BL-0502 | **Thermal heatmap overlay** — Add an overlay mode to PCBLayoutView that color-codes pads/zones by thermal resistance values from `thermal-analysis.ts`. Power designers need this to spot heat accumulation before ordering. | DONE (Wave 74) | Wave 64 audit |
 | BL-0503 | **PCB copy/paste traces and zones** — Ctrl+C on selected traces/zones followed by Ctrl+V should duplicate them (with new IDs and optional offset). Currently copy/paste only works at the architecture/schematic level. | OPEN | Wave 64 audit |
 | BL-0504 | **Ratsnest filter by net** — Allow users to show/hide the unrouted ratsnest lines for specific nets. Essential for routing complex boards where power net ratsnest obscures signal net ratsnest. | DONE (Wave 72) | Wave 64 audit |
 | BL-0505 | **Push-shove visual feedback** — `push-shove-engine.ts` computes pushed geometries but the result is not visualized during routing. Show the "pushed" trace outlines in a highlight color before the user commits the route. | OPEN | Wave 64 audit |
@@ -257,7 +257,7 @@
 | BL-0122 | EMI/EMC pre-check workflows | OPEN | MF-073 |
 | BL-0123 | Current density visualization on traces/pours | OPEN | MF-075 |
 | BL-0124 | Simulation scenario manager with presets | DONE (Wave 73) | MF-076, IFX-018 |
-| BL-0125 | Simulation compare mode (before/after changes) | OPEN | MF-077, IFX-014 |
+| BL-0125 | Simulation compare mode (before/after changes) | DONE (Wave 74) | MF-077, IFX-014 |
 | BL-0126 | Shared unit/scale contract across sim + DRC engines | PARTIAL | MF-078 |
 | BL-0127 | Simulation resource guardrails (time, memory, output) | DONE (Wave 62) — sim-limits.ts: SimulationLimits interface + checkSimLimits() wired into circuit-solver, transient, monte-carlo, frequency-analysis | MF-079 |
 | BL-0128 | Live current/voltage animation overlay (EveryCircuit-style) | OPEN | MF-080, IFX-011 |

@@ -530,13 +530,22 @@ describe('PartFamilyRegistry', () => {
     });
 
     it('handles parts with category fallback', () => {
-      // Category-only match requires keyword hit, so this should NOT match
+      // Category-based fallback in getFamily — finds the first family
+      // whose category matches the part's category
       const partsWithCategory: PartInfo[] = [
         { id: 101, title: 'Mystery Component', category: 'Passives', pinCount: 2 },
       ];
       partFamilyRegistry.loadParts(partsWithCategory);
-      // No keyword match, so family should be null
-      expect(partFamilyRegistry.getFamily('Mystery Component')).toBeNull();
+      // Falls back to first family with category 'Passives' (Resistors)
+      expect(partFamilyRegistry.getFamily('Mystery Component')).toBe('Resistors');
+    });
+
+    it('returns null for component with no matching category', () => {
+      const partsNoMatch: PartInfo[] = [
+        { id: 102, title: 'Alien Widget', category: 'Misc', pinCount: 2 },
+      ];
+      partFamilyRegistry.loadParts(partsNoMatch);
+      expect(partFamilyRegistry.getFamily('Alien Widget')).toBeNull();
     });
 
     it('single-member family returns empty swap candidates', () => {
