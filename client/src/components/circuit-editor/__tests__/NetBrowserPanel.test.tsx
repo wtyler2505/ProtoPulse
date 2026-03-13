@@ -196,7 +196,8 @@ describe('NetBrowserPanel', () => {
     const instances = [makeInstance({ id: 1 }), makeInstance({ id: 2 })];
 
     render(<NetBrowserPanel nets={nets} instances={instances} {...defaultProps} />);
-    expect(screen.getByTestId('net-color-1')).toBeDefined();
+    // BL-0490: color indicator is now a clickable color picker button
+    expect(screen.getByTestId('net-color-picker-1')).toBeDefined();
   });
 
   it('shows search empty state', async () => {

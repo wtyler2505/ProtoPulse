@@ -101,7 +101,7 @@ export function useCreateCircuitInstance() {
     mutationFn: async (data: {
       circuitId: number;
       partId: number | null;
-      referenceDesignator: string;
+      referenceDesignator?: string;
       schematicX?: number;
       schematicY?: number;
       schematicRotation?: number;

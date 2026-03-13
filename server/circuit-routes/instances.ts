@@ -8,7 +8,7 @@ import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } fro
 import { getRefDesPrefix, nextRefdes } from '@shared/ref-des';
 
 const createInstanceSchema = z.object({
-  partId: z.number().int().positive(),
+  partId: z.number().int().positive().nullable().optional(),
   referenceDesignator: z.string().min(1).optional(),
   schematicX: z.number().optional(),
   schematicY: z.number().optional(),
@@ -66,21 +66,33 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
       return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
     }
 
-    // Auto-generate reference designator if not provided
+    // Auto-generate reference designator if not provided (or strip trailing '?')
     let refDes = parsed.data.referenceDesignator;
+    if (refDes && refDes.endsWith('?')) {
+      // Client sent a placeholder like "R?" — strip the '?' and let auto-increment resolve
+      refDes = undefined;
+    }
     if (!refDes) {
       const existing = await storage.getCircuitInstances(circuitId);
       const existingRefdes = existing.map((inst) => inst.referenceDesignator);
-      // Derive prefix from the part's family metadata
+      // Derive prefix from the part's family metadata or properties
       let prefix = 'X';
       try {
-        const design = await storage.getCircuitDesign(circuitId);
-        if (design) {
-          const part = await storage.getComponentPart(parsed.data.partId, design.projectId);
-          if (part) {
-            const meta = (part.meta ?? {}) as Partial<PartMeta>;
-            prefix = getRefDesPrefix({ family: meta.family, tags: meta.tags });
+        if (parsed.data.partId) {
+          const design = await storage.getCircuitDesign(circuitId);
+          if (design) {
+            const part = await storage.getComponentPart(parsed.data.partId, design.projectId);
+            if (part) {
+              const meta = (part.meta ?? {}) as Partial<PartMeta>;
+              prefix = getRefDesPrefix({ family: meta.family, tags: meta.tags });
+            }
           }
+        } else {
+          // BL-0497: No partId — derive prefix from properties.componentTitle
+          const props = parsed.data.properties ?? {};
+          const title = (props.componentTitle ?? '').toLowerCase();
+          const titlePrefix = getRefDesPrefix({ family: title, tags: title.split(/\s+/) });
+          if (titlePrefix !== 'X') { prefix = titlePrefix; }
         }
       } catch {
         // If part lookup fails, fall back to 'X' prefix

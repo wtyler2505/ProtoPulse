@@ -4,12 +4,13 @@
  * Equivalent to KiCad's Net Inspector. (BL-0496)
  */
 
-import { useMemo, useState, useSyncExternalStore } from 'react';
-import { Search, Network, Zap, Minus, Cable, Hash } from 'lucide-react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
+import { Search, Network, Zap, Minus, Cable, Hash, RotateCcw } from 'lucide-react';
 import type { CircuitNetRow, CircuitInstanceRow } from '@shared/schema';
 import type { NetType } from '@shared/circuit-types';
 import { cn } from '@/lib/utils';
 import { netColorManager } from '@/lib/circuit-editor/net-colors';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -61,6 +62,94 @@ const NET_TYPE_DEFAULT_COLORS: Record<NetType, string> = {
   signal: '#06b6d4',
   bus: '#a855f7',
 };
+
+/** 12-color palette for per-net color assignment (BL-0490). */
+const NET_COLOR_PALETTE = [
+  '#ef4444', '#f97316', '#f59e0b', '#eab308',
+  '#22c55e', '#14b8a6', '#06b6d4', '#3b82f6',
+  '#6366f1', '#8b5cf6', '#a855f7', '#ec4899',
+];
+
+// ---------------------------------------------------------------------------
+// NetColorPicker — popover with preset color swatches + reset
+// ---------------------------------------------------------------------------
+
+interface NetColorPickerProps {
+  netId: number;
+  currentColor: string;
+  defaultColor: string;
+  hasCustomColor: boolean;
+}
+
+function NetColorPicker({ netId, currentColor, defaultColor, hasCustomColor }: NetColorPickerProps) {
+  const [open, setOpen] = useState(false);
+
+  const handleSelectColor = useCallback(
+    (color: string) => {
+      netColorManager.setNetColor(netId, color);
+      setOpen(false);
+    },
+    [netId],
+  );
+
+  const handleReset = useCallback(() => {
+    netColorManager.clearNetColor(netId);
+    setOpen(false);
+  }, [netId]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          data-testid={`net-color-picker-${String(netId)}`}
+          className="flex-shrink-0 mt-0.5 group/color"
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Pick net color"
+          type="button"
+        >
+          <div
+            className="w-2.5 h-2.5 rounded-full border border-border/50 group-hover/color:ring-2 group-hover/color:ring-primary/40 transition-shadow"
+            style={{ backgroundColor: currentColor }}
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="w-auto p-2"
+        side="right"
+        align="start"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="grid grid-cols-4 gap-1.5" data-testid={`net-color-palette-${String(netId)}`}>
+          {NET_COLOR_PALETTE.map((color) => (
+            <button
+              key={color}
+              data-testid={`net-color-swatch-${color.slice(1)}`}
+              className={cn(
+                'w-5 h-5 rounded-full border-2 transition-transform hover:scale-125',
+                currentColor === color ? 'border-white ring-1 ring-primary' : 'border-transparent',
+              )}
+              style={{ backgroundColor: color }}
+              onClick={() => handleSelectColor(color)}
+              aria-label={`Set color ${color}`}
+              type="button"
+            />
+          ))}
+        </div>
+        {hasCustomColor && (
+          <button
+            data-testid={`net-color-reset-${String(netId)}`}
+            className="flex items-center gap-1 mt-2 px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full rounded hover:bg-muted/50"
+            onClick={handleReset}
+            type="button"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Reset to default ({defaultColor})
+          </button>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
 
 function buildNetSummaries(nets: CircuitNetRow[], instances: CircuitInstanceRow[]): NetSummary[] {
   const instMap = new Map<number, CircuitInstanceRow>();
@@ -250,25 +339,32 @@ export default function NetBrowserPanel({
           const isSelected = selectedNetName === net.name;
 
           return (
-            <button
+            <div
               key={net.id}
+              role="button"
+              tabIndex={0}
               data-testid={`net-browser-item-${String(net.id)}`}
               className={cn(
-                'w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors border-b border-border/30',
+                'w-full flex items-start gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors border-b border-border/30 cursor-pointer',
                 isSelected && 'bg-primary/10 border-l-2 border-l-primary',
               )}
               onClick={() => onSelectNet(isSelected ? null : net.name)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelectNet(isSelected ? null : net.name);
+                }
+              }}
               aria-label={`Select net ${net.name}`}
               aria-pressed={isSelected}
             >
-              {/* Color indicator */}
-              <div className="flex-shrink-0 mt-0.5">
-                <div
-                  className="w-2.5 h-2.5 rounded-full border border-border/50"
-                  style={{ backgroundColor: net.color }}
-                  data-testid={`net-color-${String(net.id)}`}
-                />
-              </div>
+              {/* Color indicator — click to open color picker (BL-0490) */}
+              <NetColorPicker
+                netId={net.id}
+                currentColor={net.color}
+                defaultColor={NET_TYPE_DEFAULT_COLORS[net.netType] ?? '#06b6d4'}
+                hasCustomColor={netColorManager.getNetColor(net.id) != null}
+              />
 
               {/* Net info */}
               <div className="flex-1 min-w-0">
@@ -323,7 +419,7 @@ export default function NetBrowserPanel({
               >
                 {net.netType}
               </span>
-            </button>
+            </div>
           );
         })}
       </div>

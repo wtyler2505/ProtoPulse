@@ -593,25 +593,10 @@ function ArchitectureFlow() {
         circuitId = newCircuit.id;
       }
 
-      // Generate a reference designator from the component title
-      const prefix = match.category === 'Passives' ? 'R' :
-        match.category === 'Microcontrollers' ? 'U' :
-        match.category === 'LEDs' ? 'D' :
-        match.category === 'Diodes' ? 'D' :
-        match.category === 'Transistors' ? 'Q' :
-        match.category === 'Op-Amps' ? 'U' :
-        match.category === 'Connectors' ? 'J' :
-        match.category === 'Power' ? 'U' :
-        match.category === 'Sensors' ? 'U' :
-        match.category === 'Communication' ? 'U' :
-        'U';
-
-      const refDes = `${prefix}?`;
-
+      // BL-0497: Let the server auto-generate the refdes from componentTitle
       await createInstanceMutation.mutateAsync({
         circuitId,
         partId: null,
-        referenceDesignator: refDes,
         schematicX: 200,
         schematicY: 200,
         properties: {
