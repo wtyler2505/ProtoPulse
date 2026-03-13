@@ -3,6 +3,7 @@ summary: The singleton+subscribe pattern emerged organically across 30+ managers
 areas: ["[[index]]"]
 related insights:
   - "[[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]]": "ProjectProvider is the counter-example — the monolithic Context that proves why singleton+subscribe is better"
+  - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]]": "Both patterns needed retroactive standardization across the codebase"
 created: 2026-03-13
 ---
 
