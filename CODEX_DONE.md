@@ -140,3 +140,39 @@ web research on Web Serial, WebUSB, PlatformIO debug options, simavr, and QEMU o
 
 ## Handoff Notes
 Docs-only planning pass. I intentionally avoided changing runtime code while Claude is actively delivering Wave 78 work.
+
+---
+
+# Codex Completion Report
+
+**Task:** Add missing backlog items discovered in a repo-wide code-vs-backlog gap audit.
+**Status:** done
+
+## Changes Made
+- `docs/MASTER_BACKLOG.md` - Added `15` new backlog items from a repo-wide audit covering authz/tenant-scoping gaps, RAG durability, collaboration membership, Kanban persistence, supplier realism, explicit circuit selection, Circuit Code materialization, architecture expansion fidelity, generative-design adoption, and async job executor wiring.
+- `docs/MASTER_BACKLOG.md` - Updated `Backlog Health`, `Change Log`, `Quick Stats`, and the footer snapshot note so totals now reflect `508` tracked items and the new audit pass.
+
+## Commands Run
+```bash
+rg -n "\| BL-[0-9]{4} \|" docs/MASTER_BACKLOG.md | tail -n 40
+sed -n '1,130p' docs/MASTER_BACKLOG.md
+sed -n '404,418p' docs/MASTER_BACKLOG.md
+sed -n '740,860p' docs/MASTER_BACKLOG.md
+sed -n '940,1035p' docs/MASTER_BACKLOG.md
+sed -n '1080,1215p' docs/MASTER_BACKLOG.md
+tail -n 5 docs/MASTER_BACKLOG.md
+node - <<'NODE' ... backlog row count / uniqueness check ... NODE
+git diff --stat -- docs/MASTER_BACKLOG.md
+rg -n "BL-0636|BL-0637|BL-0638|BL-0639|BL-0640|BL-0641|BL-0642|BL-0643|BL-0644|BL-0646|BL-0649|BL-0650|BL-0651|BL-0652|BL-0655|508 total|gap audit" docs/MASTER_BACKLOG.md
+```
+
+## Next Steps
+- Decide whether to convert the new security/authz items into a dedicated Wave 79a hardening bundle.
+- Consider reopening or splitting older rows that are partially satisfied in spirit but still under-deliver in the actual codebase (for example global search and ordering).
+- If wanted, I can do a second audit pass focused only on "browser-only state that should be real project data."
+
+## Blockers (if any)
+- No blockers.
+
+## Handoff Notes
+Docs-only backlog maintenance pass. I did not modify application code or run runtime tests because the work was limited to backlog curation and verification.

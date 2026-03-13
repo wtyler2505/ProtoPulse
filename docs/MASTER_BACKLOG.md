@@ -81,16 +81,17 @@
 
 | Signal | Current State | Notes |
 |--------|---------------|-------|
-| Tracked scope | High | 493 total items across delivery work, parity gaps, audits, and long-term vision. |
+| Tracked scope | High | 508 total items across delivery work, parity gaps, audits, and long-term vision. |
 | Duplicate risk | Medium-High | Consolidated from multiple source docs and competitive audits; cross-tool items likely overlap unless regularly merged. |
 | Explicitly blocked items | 1 | `BL-0524` is explicitly blocked; several other items are still effectively blocked by unresolved architecture decisions. |
 | Epic decomposition need | High | Several initiatives are too large to execute safely as single rows and need parent/child planning. |
 | Acceptance/verification metadata | Medium-High gap | Many older `OPEN` items still lack explicit acceptance criteria, effort, confidence, or verification notes. |
-| Complexity scoring coverage | High | All 493 detailed backlog rows plus epics, wave candidates, and `Next Up` now have a first-pass `C1`-`C5` score. |
+| Complexity scoring coverage | High | All 508 detailed backlog rows plus epics, wave candidates, and `Next Up` now have a first-pass `C1`-`C5` score. |
 | Stats freshness risk | Medium | Manual counts were resynced during the complexity pass, but the snapshot is still hand-maintained and should eventually be generated. |
 
 ## Change Log
 
+- **2026-03-13:** Added 15 missing backlog items from a repo-wide gap audit, covering authz/tenant-scoping gaps, RAG durability, async job execution, supplier realism, Kanban persistence, Circuit Code materialization, generative candidate adoption, and other cross-tool integration misses.
 - **2026-03-13:** Added durable preplanning artifacts for the two biggest near-term C5 programs: firmware runtime/debugger and collaboration foundation/RBAC/branching.
 - **2026-03-13:** Backfilled `C1`-`C5` complexity across all 493 tracked backlog rows, expanded the complexity radar to the top 25 open items, scored epics and wave candidates, and corrected manual snapshot drift at the top of the file.
 - **2026-03-13:** Added a planning layer at the top of the backlog: health, recent wins, next-up queue, wave candidates, epics, discovery spikes, blocker tracking, decision points, planning fields, and item templates.
@@ -404,9 +405,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 14 | All resolved (Waves 52-60) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 168 | 105 | Breadboard/PCB/simulation/UI — Waves 61-78 ongoing |
+| P2 | 183 | 105 | Breadboard/PCB/simulation/UI — Waves 61-78 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **301** | **192** | **493 total items tracked** |
+| **Total** | **316** | **192** | **508 total items tracked** |
 
 *Snapshot updated: Wave 78 (2026-03-13)*
 
@@ -430,6 +431,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0070 | **ZIP bomb vulnerability on FZPZ import** — no decompressed size limit. Add 50MB cap + stream-decompress with byte counter. | DONE (Wave 52) | C3 | GA-SEC-13 |
 | BL-0071 | **SVG content parsed without sanitization** — add DOMPurify or equivalent before storing/rendering SVG. | DONE (CAPX-SEC-17) | C2 | GA-SEC-17 |
 | BL-0072 | **Session tokens stored in plaintext** in DB — store hashed tokens, compare hashes, rotate on auth actions. | DONE | C3 | GA-SEC-09 |
+| BL-0636 | **AI chat execution endpoints do not enforce project ownership** — `/api/chat/ai` and `/api/chat/ai/stream` accept `projectId` in the body and build project context without `requireProjectOwnership`. Add ownership enforcement and reject cross-project context access. | OPEN | C4 | Repo gap audit 2026-03-13 |
+| BL-0637 | **AI action lookup by message ID is not project-scoped** — `/api/ai-actions/by-message/:messageId` queries by message ID alone. Scope lookups through project ownership or verify the message belongs to a project the session can access. | OPEN | C3 | Repo gap audit 2026-03-13 |
+| BL-0638 | **Circuit API tenant-scoping gaps / IDOR risk** — Multiple circuit endpoints are only session-protected and operate on global instance/wire/via/net IDs without verifying the caller owns the containing project. Add project-aware authorization checks throughout the circuit route surface. | OPEN | C5 | Repo gap audit 2026-03-13 |
+| BL-0639 | **Project-scoped circuit routes do not always verify project↔resource consistency** — Routes under `/api/projects/:projectId/...` often fetch circuit/simulation/scenario/port resources by ID only. Validate that each resource actually belongs to the requested project before returning or mutating it. | OPEN | C3 | Repo gap audit 2026-03-13 |
+| BL-0642 | **Batch analysis authz + durability gap** — Batch submit/status/results/cancel flows rely on `X-Anthropic-Key` and body `projectId` without full project ownership guards, and the batch tracker is still in-memory. Harden authz and persist batch state/results. | OPEN | C4 | Repo gap audit 2026-03-13 |
 
 ### Crashes & Data Loading
 
@@ -775,6 +781,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0521 | **Action executor error tracking** — `useActionExecutor` silently drops failed tool-call actions (no toast, no console log, no retry). Add per-action error state tracking so users see which AI-suggested actions failed and why. | DONE (Wave 78) | C2 | Wave 64 audit |
 | BL-0522 | **"Explain this net" AI tool** — Add an `explain_net` tool that takes a net name and returns a plain-English description of what it carries (power, signal, data bus, control), what drives it, and what loads it — useful for newcomers trying to understand a schematic. | OPEN | C2 | Wave 64 audit |
 | BL-0523 | **DFM/manufacturing AI assistant** — Add AI tools for `run_dfm_check`, `explain_dfm_violation`, and `suggest_dfm_fix` that wrap the existing `DfmChecker` and `StandardsCompliance` engines and surface their output conversationally. | OPEN | C3 | Wave 64 audit |
+| BL-0641 | **RAG documents should be persistent, tenant-scoped, and wired into AI retrieval** — The codebase currently has a client-side `localStorage` RAG engine and a server-side in-memory RAG route surface. Consolidate into a single project-backed document system that the AI context builder actually uses. | OPEN | C4 | Repo gap audit 2026-03-13 |
 
 ### Collaboration & Teams
 
@@ -800,6 +807,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0525 | **Presence cursors on Schematic and PCB canvases** — Live collaboration cursors (`LiveCursor` from `collaboration-client.ts`) are not rendered on the Schematic or PCB SVG canvases. Only the Architecture ReactFlow canvas has cursor rendering. Extend to all interactive editors. | OPEN | C3 | Wave 64 audit |
 | BL-0526 | **Session re-validation on WebSocket reconnect** — After a WebSocket disconnect/reconnect, the server does not re-verify the session token or project membership before re-admitting the client to the room. An expired session can continue collaborating. | OPEN | C3 | Wave 64 audit |
 | BL-0527 | **Offline queue retry jitter** — The offline sync retry in `offline-sync.ts` uses fixed backoff intervals (1s, 2s, 4s). For a large number of simultaneous offline clients reconnecting together, this causes a retry storm. Add randomized ±20% jitter. | OPEN | C2 | Wave 64 audit |
+| BL-0640 | **Explicit collaboration membership / invite model** — Collaboration currently falls back to implicit `editor` access for non-owners in room admission logic. Add real membership/invite records and explicit per-project ACL decisions so collaboration rights are granted intentionally instead of by shortcut. | OPEN | C4 | Repo gap audit 2026-03-13 |
+| BL-0649 | **Kanban board should persist to project/account, not browser-only localStorage** — The task board is deep enough to be useful, but it does not reliably follow users across devices, exports, or collaborators. Back it with project-scoped persistence and optional team sharing. | OPEN | C3 | Repo gap audit 2026-03-13 |
 
 ### Manufacturing & Supply Chain
 
@@ -825,6 +834,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0531 | **BOM component availability check in DFM** — Integrate BOM stock data (from supplier APIs, once real) into the DFM flow. Flag unavailable or long-lead-time components as DFM risks before the user commits to a fab order. | OPEN | C4 | Wave 64 audit |
 | BL-0532 | **Export file syntax validation** — Before offering a Gerber/drill/IPC-2581/ODB++ download, run a lightweight syntax check on the generated content (e.g. verify RS-274-X headers, check for truncated polygons). Surface any syntax errors with a "Cannot generate valid file" warning. | OPEN | C3 | Wave 64 audit |
 | BL-0533 | **LCSC real-time part data sync** — `lcsc-jlcpcb-mapper.ts` currently uses 154 built-in static mappings. Add an optional API sync to fetch real-time prices, stock levels, and JLCPCB assembly availability from the LCSC open API. | OPEN | C4 | Wave 64 audit |
+| BL-0646 | **Supplier pricing must move from demo data to real server-backed integrations** — Procurement still presents "live pricing" through a mock/demo pipeline. Replace the fake offer generator with real provider fetches behind a server proxy that handles auth, caching, and rate limiting. | OPEN | C4 | Repo gap audit 2026-03-13 |
 
 ### Learning & Content — Competitive Gaps (Wave 66 Audit)
 
@@ -994,6 +1004,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0584 | **Arduino Workbench → Knowledge Hub compile error linking** — When a compile error appears in the Workbench console, pattern-match it against known error signatures ("undefined reference to", "library not found", "no such file") and surface an inline link to the relevant Knowledge Hub article or a one-liner fix hint. Currently the 20-article knowledge hub is completely unreachable from the Workbench. | OPEN | C3 | Wave 65 audit |
 | BL-0585 | **Component Editor → SPICE model / subcircuit attachment** — Custom components defined in the Component Editor have no SPICE model field. When those components are placed in a schematic and a simulation runs, they are silently ignored or cause missing-model errors. Add a SPICE subcircuit (`.subckt`) text field to component definitions so custom ICs and modules can participate in simulation. | OPEN | C3 | Wave 65 audit |
 | BL-0586 | **Export panel → one-click complete fab package** — There is no single action that produces a complete manufacturing package (Gerbers + drill + BOM CSV + CPL CSV + readme.txt) as a single zip download. This bundle is only reachable by going through the full PCB ordering wizard. Add a standalone "Download fab package" button in the Export panel that generates it without requiring an order to be placed. | OPEN | C4 | Wave 65 audit |
+| BL-0644 | **Export / ordering / simulation flows need explicit circuit selection** — Several multi-circuit project flows still default to `circuits[0]` when exporting, ordering, or running analysis. Require an explicit circuit target or stable project-level default before generating user-facing artifacts. | OPEN | C3 | Repo gap audit 2026-03-13 |
+| BL-0650 | **Design Variables should be project-backed design data** — `DesignVariablesPanel` still persists variables in browser storage. Move them into project/export/history/collaboration flows so named parameters survive reloads, devices, and project handoff. | OPEN | C3 | Repo gap audit 2026-03-13 |
+| BL-0651 | **Circuit Code preview must materialize into real schematic/project state** — The DSL pipeline currently stops at read-only preview. Add a safe "Apply to project" flow that creates real design objects, supports undo, and makes Circuit Code a true authoring path instead of a sandbox. | OPEN | C4 | Repo gap audit 2026-03-13 |
+| BL-0652 | **Architecture expansion needs semantic pin mapping and better part matching** — The architecture→schematic expansion route still warns that it uses each part's first pin as a placeholder. Replace placeholder wiring with semantic connector mapping and higher-fidelity part resolution. | OPEN | C3 | Repo gap audit 2026-03-13 |
+| BL-0655 | **Generative design candidates need apply/export/adopt workflows** — The generative design surface can evolve and score candidates, but winning options remain dead ends. Add actions to compare against the current design and promote a candidate into real project state. | OPEN | C3 | Repo gap audit 2026-03-13 |
 
 ### Tech Debt — Wave 64 Audit Additions
 
@@ -1002,6 +1017,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0550 | **GPU Monte Carlo: implement actual GPU pipeline** — `gpu-monte-carlo.ts` has a CPU fallback but the WebGPU path never actually parallelizes the Monte Carlo batches; it falls back immediately if GPU init takes > 100ms. Implement proper async pipeline initialization and a retry path. | OPEN | C4 | Wave 64 audit |
 | BL-0551 | **TelemetryLogger → DeviceShadow live overlay wiring** — `telemetry-logger.ts` persists frames to IndexedDB and `device-shadow.ts` tracks reported/desired state, but the Digital Twin overlay in `DigitalTwinView` reads only the shadow snapshot, not the live telemetry ring buffer. Wire `TelemetryLogger.subscribe()` to update the overlay in real time. | OPEN | C3 | Wave 64 audit |
 | BL-0552 | **API type generation CI gate** — `shared/api-types.generated.ts` exists but is generated manually and not enforced in CI. Add a `npm run check:api-types` script that regenerates and compares against committed types, failing if they drift. | OPEN | C3 | Wave 64 audit |
+| BL-0643 | **Async jobs need real executor registration in production** — The job queue framework is solid, but many submitted job types still fail immediately when no executor is registered. Wire actual runtime executors for the supported async workflows and add startup validation so broken job types are obvious. | OPEN | C3 | Repo gap audit 2026-03-13 |
 
 ---
 
@@ -1238,4 +1254,4 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 ---
 
-*Snapshot updated: 2026-03-13 — document currently reflects work through Wave 76. Historical highlight notes retained here: Wave 69: BL-0489, BL-0492, BL-0493, BL-0496, BL-0499, BL-0500, BL-0506, BL-0590, BL-0591, BL-0592, BL-0621, BL-0624 done. Wave 70: BL-0567, BL-0569, BL-0570, BL-0575, BL-0576 done. Wave 71: BL-0490, BL-0497 done.*
+*Snapshot updated: 2026-03-13 — document currently reflects work through Wave 78 plus the repo-wide backlog gap audit additions recorded today. Historical highlight notes retained here: Wave 69: BL-0489, BL-0492, BL-0493, BL-0496, BL-0499, BL-0500, BL-0506, BL-0590, BL-0591, BL-0592, BL-0621, BL-0624 done. Wave 70: BL-0567, BL-0569, BL-0570, BL-0575, BL-0576 done. Wave 71: BL-0490, BL-0497 done.*
