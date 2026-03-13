@@ -485,7 +485,7 @@ export class ERCResultCache {
 
   getAllCachedResults(): ERCViolation[] {
     const all: ERCViolation[] = [];
-    for (const violations of this.cache.values()) {
+    for (const violations of Array.from(this.cache.values())) {
       for (const v of violations) {
         all.push(v);
       }
@@ -546,10 +546,10 @@ export function runIncrementalERC(
   }
 
   // Invalidate cache entries for dirty entities
-  for (const netId of tracker.getDirtyNets()) {
+  for (const netId of Array.from(tracker.getDirtyNets())) {
     cache.invalidate(`net:${netId}`);
   }
-  for (const instId of tracker.getDirtyInstances()) {
+  for (const instId of Array.from(tracker.getDirtyInstances())) {
     cache.invalidate(`inst:${instId}`);
   }
 
@@ -573,17 +573,17 @@ export function runIncrementalERC(
   }
 
   // Update cache with fresh results for dirty entities
-  for (const netId of tracker.getDirtyNets()) {
+  for (const netId of Array.from(tracker.getDirtyNets())) {
     const key = `net:${netId}`;
     cache.setResults(key, freshByEntity.get(key) ?? []);
   }
-  for (const instId of tracker.getDirtyInstances()) {
+  for (const instId of Array.from(tracker.getDirtyInstances())) {
     const key = `inst:${instId}`;
     cache.setResults(key, freshByEntity.get(key) ?? []);
   }
 
   // Also update cache for any entities not yet cached (covers new entities)
-  for (const [key, violations] of freshByEntity) {
+  for (const [key, violations] of Array.from(freshByEntity.entries())) {
     if (!cache.has(key)) {
       cache.setResults(key, violations);
     }

@@ -494,7 +494,7 @@ describe('runIncrementalERC', () => {
 
     const results = runIncrementalERC(input, tracker, cache);
     const ids = results.map((v) => v.id);
-    const uniqueIds = [...new Set(ids)];
+    const uniqueIds = Array.from(new Set(ids));
 
     expect(ids.length).toBe(uniqueIds.length);
   });

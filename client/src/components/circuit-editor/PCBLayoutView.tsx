@@ -11,7 +11,7 @@
  *   - TraceRenderer        (trace SVG rendering)
  */
 
-import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
   useCircuitDesigns,

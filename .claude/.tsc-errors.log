@@ -1,13 +1,6 @@
-[2J[3J[H7:47:04 AM - Starting compilation in watch mode...
+[2J[3J[H8:39:29 AM - Starting compilation in watch mode...
 
-
-7:47:52 AM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:16:30 AM - File change detected. Starting incremental compilation...
-
-
-8:16:43 AM - Found 0 errors. Watching for file changes.
-[2J[3J[H8:17:50 AM - File change detected. Starting incremental compilation...
-
+client/src/lib/circuit-editor/__tests__/erc-incremental.test.ts(497,27): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 client/src/lib/circuit-editor/erc-engine.ts(488,30): error TS2802: Type 'MapIterator<ERCViolation[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 client/src/lib/circuit-editor/erc-engine.ts(549,23): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 client/src/lib/circuit-editor/erc-engine.ts(552,24): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
@@ -15,6 +8,31 @@ client/src/lib/circuit-editor/erc-engine.ts(576,23): error TS2802: Type 'Readonl
 client/src/lib/circuit-editor/erc-engine.ts(580,24): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 client/src/lib/circuit-editor/erc-engine.ts(586,35): error TS2802: Type 'Map<string, ERCViolation[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 
-8:18:45 AM - Found 6 errors. Watching for file changes.
-[2J[3J[H8:18:45 AM - File change detected. Starting incremental compilation...
+8:45:08 AM - Found 7 errors. Watching for file changes.
+[2J[3J[H8:49:11 AM - File change detected. Starting incremental compilation...
 
+client/src/lib/circuit-editor/__tests__/erc-incremental.test.ts(497,27): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/circuit-editor/erc-engine.ts(549,23): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/circuit-editor/erc-engine.ts(552,24): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/circuit-editor/erc-engine.ts(576,23): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/circuit-editor/erc-engine.ts(580,24): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/circuit-editor/erc-engine.ts(586,35): error TS2802: Type 'Map<string, ERCViolation[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+8:50:11 AM - Found 6 errors. Watching for file changes.
+[2J[3J[H8:51:40 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/circuit-editor/__tests__/erc-incremental.test.ts(497,27): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/circuit-editor/erc-engine.ts(576,23): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/circuit-editor/erc-engine.ts(580,24): error TS2802: Type 'ReadonlySet<number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/circuit-editor/erc-engine.ts(586,35): error TS2802: Type 'Map<string, ERCViolation[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+8:51:56 AM - Found 4 errors. Watching for file changes.
+[2J[3J[H8:52:30 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/circuit-editor/__tests__/erc-incremental.test.ts(497,27): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+8:52:41 AM - Found 1 error. Watching for file changes.
+[2J[3J[H8:53:25 AM - File change detected. Starting incremental compilation...
+
+
+8:53:42 AM - Found 0 errors. Watching for file changes.
