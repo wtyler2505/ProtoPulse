@@ -261,3 +261,7 @@ client/src/lib/simulation/audio-output.ts(276,28): error TS2802: Type 'Set<Liste
 
 
 10:49:03 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:49:13 AM - File change detected. Starting incremental compilation...
+
+
+10:49:16 AM - Found 0 errors. Watching for file changes.
