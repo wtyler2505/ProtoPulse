@@ -14,13 +14,15 @@
 
 ## Quick Stats
 
-| Priority | Count | Description |
-|----------|-------|-------------|
-| P0 | 0 | Security holes, crashes, data loss — all resolved (11 in Wave 52, 2 in Wave 53, BL-0005 DONE Wave 60) |
-| P1 | 0 | All 16 P1 items resolved in Wave 67: breadboard collision+drag, PCB undo/redo+dims+Gerber, Schematic→PCB annotation, NR convergence, supplier disclaimer, CRDT/locks/RBAC, Arduino serial/library/boards |
-| P2 | 240 | +39 from Wave 66 competitive audit: breadboard UX (Fritzing), Arduino IDE parity, PlatformIO features, simulation UX (TinkerCAD), learning/content |
-| P3 | 153 | +6 moonshots: block programming, unit testing, static analysis, ESP-IDF, hardware debug, QEMU sim |
-| **Total** | **393** | |
+| Priority | Open | Done | Description |
+|----------|------|------|-------------|
+| P0 | 0 | 14 | All resolved (Waves 52-60) |
+| P1 | 0 | 52 | All resolved (Waves 54-67) |
+| P2 | 188 | 93 | Breadboard/PCB/simulation/UI — Waves 61-74 ongoing |
+| P3 | 133 | 13 | Moonshots + long-term features |
+| **Total** | **321** | **172** | **493 total items tracked** |
+
+*Last updated: Wave 74 (2026-03-13)*
 
 ---
 
