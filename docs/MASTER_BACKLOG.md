@@ -17,12 +17,12 @@
 | Priority | Open | Done | Description |
 |----------|------|------|-------------|
 | P0 | 0 | 14 | All resolved (Waves 52-60) |
-| P1 | 0 | 52 | All resolved (Waves 54-67) |
-| P2 | 188 | 93 | Breadboard/PCB/simulation/UI — Waves 61-74 ongoing |
-| P3 | 133 | 13 | Moonshots + long-term features |
-| **Total** | **321** | **172** | **493 total items tracked** |
+| P1 | 0 | 73 | All resolved (Waves 54-67) |
+| P2 | 183 | 90 | Breadboard/PCB/simulation/UI — Waves 61-75 ongoing |
+| P3 | 133 | 0 | Moonshots + long-term features |
+| **Total** | **316** | **177** | **493 total items tracked** |
 
-*Last updated: Wave 74 (2026-03-13)*
+*Last updated: Wave 75 (2026-03-13)*
 
 ---
 
@@ -243,18 +243,18 @@
 | BL-0502 | **Thermal heatmap overlay** — Add an overlay mode to PCBLayoutView that color-codes pads/zones by thermal resistance values from `thermal-analysis.ts`. Power designers need this to spot heat accumulation before ordering. | DONE (Wave 74) | Wave 64 audit |
 | BL-0503 | **PCB copy/paste traces and zones** — Ctrl+C on selected traces/zones followed by Ctrl+V should duplicate them (with new IDs and optional offset). Currently copy/paste only works at the architecture/schematic level. | OPEN | Wave 64 audit |
 | BL-0504 | **Ratsnest filter by net** — Allow users to show/hide the unrouted ratsnest lines for specific nets. Essential for routing complex boards where power net ratsnest obscures signal net ratsnest. | DONE (Wave 72) | Wave 64 audit |
-| BL-0505 | **Push-shove visual feedback** — `push-shove-engine.ts` computes pushed geometries but the result is not visualized during routing. Show the "pushed" trace outlines in a highlight color before the user commits the route. | OPEN | Wave 64 audit |
+| BL-0505 | **Push-shove visual feedback** — `push-shove-engine.ts` computes pushed geometries but the result is not visualized during routing. Show the "pushed" trace outlines in a highlight color before the user commits the route. | DONE (Wave 75) | Wave 64 audit |
 | BL-0506 | **Unrouted net completion status** — Show a count of unrouted connections (total vs routed) in the PCB toolbar, and a per-net completion indicator in the net browser. Standard autorouter UX feedback. | DONE | Wave 69 |
 | BL-0507 | **DRC solder mask / paste / assembly rules** — The PCB DRC checker covers clearance/annular/trace rules but has no rules for solder mask expansion, paste aperture, or assembly courtyard clearances. Add at least 3 rule types for these. | DONE (Wave 72) | Wave 64 audit |
 | BL-0508 | **Via aspect ratio DRC rule** — Validate that hole diameter / board thickness ratio meets the fab constraint (typically 1:6 max). Currently via DRC only checks annular ring; aspect ratio is a common reason Gerbers get rejected. | DONE (Wave 73) | Wave 64 audit |
-| BL-0509 | **Impedance-aware trace width enforcement** — When a net has an impedance target set (via net class), auto-suggest or enforce the trace width required to hit that impedance given the stackup. Currently impedance is computed but not fed back into routing. | OPEN | Wave 64 audit |
-| BL-0510 | **Diff pair length matching automation** — `diff-pair-meander.ts` can generate serpentine segments but there is no UI or automation to trigger length-matching to a target delta. Users must manually invoke via AI. Add a "Match lengths" button in the diff pair toolbar. | OPEN | Wave 64 audit |
+| BL-0509 | **Impedance-aware trace width enforcement** — When a net has an impedance target set (via net class), auto-suggest or enforce the trace width required to hit that impedance given the stackup. Currently impedance is computed but not fed back into routing. | DONE (Wave 75) | Wave 64 audit |
+| BL-0510 | **Diff pair length matching automation** — `diff-pair-meander.ts` can generate serpentine segments but there is no UI or automation to trigger length-matching to a target delta. Users must manually invoke via AI. Add a "Match lengths" button in the diff pair toolbar. | DONE (Wave 75) | Wave 64 audit |
 
 ### Simulation & Analysis
 
 | ID | Description | Status | Source |
 |----|-------------|--------|--------|
-| BL-0120 | Worst-case corner analysis | OPEN | MF-069 |
+| BL-0120 | Worst-case corner analysis | DONE (Wave 75) | MF-069 |
 | BL-0121 | Mixed-signal simulation (analog + digital logic) | OPEN | MF-070 |
 | BL-0122 | EMI/EMC pre-check workflows | OPEN | MF-073 |
 | BL-0123 | Current density visualization on traces/pours | OPEN | MF-075 |
@@ -263,7 +263,7 @@
 | BL-0126 | Shared unit/scale contract across sim + DRC engines | PARTIAL | MF-078 |
 | BL-0127 | Simulation resource guardrails (time, memory, output) | DONE (Wave 62) — sim-limits.ts: SimulationLimits interface + checkSimLimits() wired into circuit-solver, transient, monte-carlo, frequency-analysis | MF-079 |
 | BL-0128 | Live current/voltage animation overlay (EveryCircuit-style) | OPEN | MF-080, IFX-011 |
-| BL-0129 | Failure injection mode (open/short/noisy sensor) | OPEN | IFX-013 |
+| BL-0129 | Failure injection mode (open/short/noisy sensor) | DONE (Wave 75) | IFX-013 |
 | BL-0130 | What-if slider for instant value sweeps | DONE (Wave 62) — what-if-engine.ts + WhatIfSliderPanel.tsx: parameter extraction, SI prefix formatting, per-param sliders with reset | IFX-012 |
 
 ### Simulation UX — TinkerCAD Parity (Wave 66 Competitive Audit)
