@@ -9,9 +9,9 @@ created: 2026-03-13
 
 ProtoPulse's client-side architecture converged on a single pattern for all non-server state: class-based singletons that expose a `subscribe(listener)` method and a `getSnapshot()` method. React's `useSyncExternalStore` turns any class following this contract into a first-class hook with zero boilerplate.
 
-This pattern now powers 30+ managers — from `WebSerialManager` to `FavoritesManager` to `KanbanManager` to `GenerativeEngine`. The consistency means any new feature manager is immediately hookable without introducing new context providers or state libraries.
+This pattern now powers 30+ managers — from early adopters like `WebSerialManager` and `FavoritesManager` through Waves 32-51 additions like `KanbanManager`, `DesignGateway`, `AIReviewQueue`, `GenerativeEngine`, `DeviceShadow`, `DiffPairManager`, `FlexZoneManager`, and `NetClassManager`. The consistency means any new feature manager is immediately hookable without introducing new context providers or state libraries.
 
-The alternative was React Context (which ProtoPulse uses for `ProjectProvider`) — but Context forces re-renders on all consumers when any value changes, while singleton+subscribe gives surgical updates only to subscribers of the specific snapshot that changed.
+The alternative was React Context (which ProtoPulse uses for `ProjectProvider`) — but Context forces re-renders on all consumers when any value changes, while singleton+subscribe gives surgical updates only to subscribers of the specific snapshot that changed. The 30+ singleton count versus the single problematic ProjectProvider is empirical proof of which pattern scales.
 
 ## Topics
 
