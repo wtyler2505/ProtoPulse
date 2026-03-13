@@ -4,14 +4,17 @@ import {
   getSimulationAudioOutput,
   resetSimulationAudioOutput,
 } from '../audio-output';
-import type { AudioOutputState } from '../audio-output';
 
 // ---------------------------------------------------------------------------
 // Web Audio API mocks
 // ---------------------------------------------------------------------------
 
+class MockGainParam {
+  setValueAtTime = vi.fn();
+}
+
 class MockGainNode {
-  gain = { setValueAtTime: vi.fn() };
+  gain = new MockGainParam();
   connect = vi.fn();
   disconnect = vi.fn();
 }
@@ -25,23 +28,24 @@ class MockOscillatorNode {
   stop = vi.fn();
 }
 
-interface MockAudioContext {
+/** Tracked mock context for assertions. */
+let latestMockCtx: {
   state: AudioContextState;
   currentTime: number;
-  createOscillator: ReturnType<typeof vi.fn>;
-  createGain: ReturnType<typeof vi.fn>;
+  oscillators: MockOscillatorNode[];
+  gains: MockGainNode[];
   destination: object;
   resume: ReturnType<typeof vi.fn>;
   suspend: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
-}
+};
 
-function createMockAudioContext(): MockAudioContext {
-  return {
-    state: 'running' as AudioContextState,
+function resetMockCtx(): void {
+  latestMockCtx = {
+    state: 'running',
     currentTime: 0,
-    createOscillator: vi.fn(() => new MockOscillatorNode()),
-    createGain: vi.fn(() => new MockGainNode()),
+    oscillators: [],
+    gains: [],
     destination: {},
     resume: vi.fn().mockResolvedValue(undefined),
     suspend: vi.fn().mockResolvedValue(undefined),
@@ -49,18 +53,82 @@ function createMockAudioContext(): MockAudioContext {
   };
 }
 
-let mockCtx: MockAudioContext;
+/**
+ * Mock AudioContext class — Vitest 4 requires a real class for `new` calls.
+ */
+class MockAudioContext {
+  state: AudioContextState;
+  currentTime: number;
+  destination: object;
+  resume: ReturnType<typeof vi.fn>;
+  suspend: ReturnType<typeof vi.fn>;
+  close: ReturnType<typeof vi.fn>;
+
+  constructor() {
+    this.state = latestMockCtx.state;
+    this.currentTime = latestMockCtx.currentTime;
+    this.destination = latestMockCtx.destination;
+    this.resume = latestMockCtx.resume;
+    this.suspend = latestMockCtx.suspend;
+    this.close = latestMockCtx.close;
+  }
+
+  createOscillator(): MockOscillatorNode {
+    const osc = new MockOscillatorNode();
+    latestMockCtx.oscillators.push(osc);
+    return osc;
+  }
+
+  createGain(): MockGainNode {
+    const gain = new MockGainNode();
+    latestMockCtx.gains.push(gain);
+    return gain;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Setup / teardown
+// ---------------------------------------------------------------------------
 
 beforeEach(() => {
-  mockCtx = createMockAudioContext();
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  (globalThis as Record<string, unknown>).AudioContext = vi.fn(() => mockCtx) as unknown as typeof AudioContext;
+  resetMockCtx();
+  (globalThis as Record<string, unknown>).AudioContext = MockAudioContext;
 });
 
 afterEach(() => {
   resetSimulationAudioOutput();
   delete (globalThis as Record<string, unknown>).AudioContext;
 });
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function lastOsc(): MockOscillatorNode {
+  const osc = latestMockCtx.oscillators[latestMockCtx.oscillators.length - 1];
+  if (!osc) {
+    throw new Error('No oscillator created');
+  }
+  return osc;
+}
+
+function firstGain(): MockGainNode {
+  const gain = latestMockCtx.gains[0];
+  if (!gain) {
+    throw new Error('No gain node created');
+  }
+  return gain;
+}
+
+function lastGainCall(): [number, number] {
+  const gain = firstGain();
+  const calls = gain.gain.setValueAtTime.mock.calls as Array<[number, number]>;
+  const last = calls[calls.length - 1];
+  if (!last) {
+    throw new Error('No gain setValueAtTime calls');
+  }
+  return last;
+}
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -104,9 +172,9 @@ describe('SimulationAudioOutput', () => {
 
       expect(audio.isPlaying).toBe(true);
       expect(audio.currentFrequency).toBe(880);
-      expect(mockCtx.createOscillator).toHaveBeenCalledTimes(1);
+      expect(latestMockCtx.oscillators).toHaveLength(1);
 
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
+      const osc = lastOsc();
       expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(880, 0);
       expect(osc.start).toHaveBeenCalledTimes(1);
     });
@@ -115,16 +183,14 @@ describe('SimulationAudioOutput', () => {
       const audio = new SimulationAudioOutput();
       audio.playTone(440, 'square');
 
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
-      expect(osc.type).toBe('square');
+      expect(lastOsc().type).toBe('square');
     });
 
     it('defaults to sine waveform', () => {
       const audio = new SimulationAudioOutput();
       audio.playTone(440);
 
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
-      expect(osc.type).toBe('sine');
+      expect(lastOsc().type).toBe('sine');
     });
 
     it('updates frequency in-place when already playing', () => {
@@ -133,11 +199,10 @@ describe('SimulationAudioOutput', () => {
       audio.playTone(880);
 
       // Should reuse the same oscillator — only 1 created
-      expect(mockCtx.createOscillator).toHaveBeenCalledTimes(1);
+      expect(latestMockCtx.oscillators).toHaveLength(1);
       expect(audio.currentFrequency).toBe(880);
 
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
-      // setValueAtTime called once at start, then again for in-place update
+      const osc = lastOsc();
       expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(880, 0);
     });
 
@@ -146,26 +211,25 @@ describe('SimulationAudioOutput', () => {
       audio.playTone(440, 'sine');
       audio.playTone(440, 'sawtooth');
 
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
-      expect(osc.type).toBe('sawtooth');
+      expect(lastOsc().type).toBe('sawtooth');
     });
 
     it('resumes suspended AudioContext', () => {
-      mockCtx.state = 'suspended';
+      latestMockCtx.state = 'suspended';
       const audio = new SimulationAudioOutput();
       audio.playTone(440);
 
-      expect(mockCtx.resume).toHaveBeenCalled();
+      expect(latestMockCtx.resume).toHaveBeenCalled();
     });
 
     it('connects oscillator → gain → destination', () => {
       const audio = new SimulationAudioOutput();
       audio.playTone(440);
 
-      const gain = mockCtx.createGain.mock.results[0]?.value as MockGainNode;
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
+      const gain = firstGain();
+      const osc = lastOsc();
 
-      expect(gain.connect).toHaveBeenCalledWith(mockCtx.destination);
+      expect(gain.connect).toHaveBeenCalledWith(latestMockCtx.destination);
       expect(osc.connect).toHaveBeenCalledWith(gain);
     });
 
@@ -191,7 +255,7 @@ describe('SimulationAudioOutput', () => {
 
       expect(audio.isPlaying).toBe(false);
 
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
+      const osc = lastOsc();
       expect(osc.stop).toHaveBeenCalledTimes(1);
       expect(osc.disconnect).toHaveBeenCalledTimes(1);
     });
@@ -201,7 +265,7 @@ describe('SimulationAudioOutput', () => {
       audio.playTone(440);
       audio.stopTone();
 
-      expect(mockCtx.suspend).toHaveBeenCalled();
+      expect(latestMockCtx.suspend).toHaveBeenCalled();
     });
 
     it('is a no-op when not playing', () => {
@@ -209,20 +273,17 @@ describe('SimulationAudioOutput', () => {
       audio.stopTone();
 
       expect(audio.isPlaying).toBe(false);
-      // No oscillator was ever created
-      expect(mockCtx.createOscillator).not.toHaveBeenCalled();
+      expect(latestMockCtx.oscillators).toHaveLength(0);
     });
 
     it('handles oscillator.stop() throwing gracefully', () => {
       const audio = new SimulationAudioOutput();
       audio.playTone(440);
 
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
-      osc.stop.mockImplementation(() => {
+      lastOsc().stop.mockImplementation(() => {
         throw new DOMException('InvalidStateError');
       });
 
-      // Should not throw
       expect(() => { audio.stopTone(); }).not.toThrow();
       expect(audio.isPlaying).toBe(false);
     });
@@ -248,9 +309,7 @@ describe('SimulationAudioOutput', () => {
       audio.setFrequency(1000);
 
       expect(audio.currentFrequency).toBe(1000);
-
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
-      expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(1000, 0);
+      expect(lastOsc().frequency.setValueAtTime).toHaveBeenCalledWith(1000, 0);
     });
 
     it('updates stored frequency even when not playing', () => {
@@ -286,9 +345,7 @@ describe('SimulationAudioOutput', () => {
       audio.setVolume(0.8);
 
       expect(audio.getState().volume).toBe(0.8);
-
-      const gain = mockCtx.createGain.mock.results[0]?.value as MockGainNode;
-      expect(gain.gain.setValueAtTime).toHaveBeenCalledWith(0.8, 0);
+      expect(lastGainCall()[0]).toBe(0.8);
     });
 
     it('clamps volume to 0.0–1.0 range', () => {
@@ -305,16 +362,10 @@ describe('SimulationAudioOutput', () => {
       const audio = new SimulationAudioOutput();
       audio.playTone(440);
       audio.mute();
-
-      const gain = mockCtx.createGain.mock.results[0]?.value as MockGainNode;
-      const callsBeforeSetVolume = gain.gain.setValueAtTime.mock.calls.length;
-
       audio.setVolume(0.9);
 
-      // The call after setVolume should still be 0 because we're muted
-      const lastCall = gain.gain.setValueAtTime.mock.calls[gain.gain.setValueAtTime.mock.calls.length - 1] as [number, number];
-      expect(lastCall[0]).toBe(0);
-      expect(callsBeforeSetVolume).toBeGreaterThan(0);
+      // Last gain call should be 0 because we're muted
+      expect(lastGainCall()[0]).toBe(0);
     });
   });
 
@@ -330,10 +381,7 @@ describe('SimulationAudioOutput', () => {
 
       expect(audio.isMuted).toBe(true);
       expect(audio.getState().muted).toBe(true);
-
-      const gain = mockCtx.createGain.mock.results[0]?.value as MockGainNode;
-      const lastCall = gain.gain.setValueAtTime.mock.calls[gain.gain.setValueAtTime.mock.calls.length - 1] as [number, number];
-      expect(lastCall[0]).toBe(0);
+      expect(lastGainCall()[0]).toBe(0);
     });
 
     it('unmute restores gain to volume level', () => {
@@ -344,10 +392,7 @@ describe('SimulationAudioOutput', () => {
       audio.unmute();
 
       expect(audio.isMuted).toBe(false);
-
-      const gain = mockCtx.createGain.mock.results[0]?.value as MockGainNode;
-      const lastCall = gain.gain.setValueAtTime.mock.calls[gain.gain.setValueAtTime.mock.calls.length - 1] as [number, number];
-      expect(lastCall[0]).toBe(0.7);
+      expect(lastGainCall()[0]).toBe(0.7);
     });
 
     it('mute is idempotent', () => {
@@ -420,7 +465,7 @@ describe('SimulationAudioOutput', () => {
       expect(audio.currentFrequency).toBe(880);
 
       // Second play creates a new oscillator
-      expect(mockCtx.createOscillator).toHaveBeenCalledTimes(2);
+      expect(latestMockCtx.oscillators).toHaveLength(2);
     });
 
     it('preserves mute state across play/stop cycles', () => {
@@ -509,12 +554,12 @@ describe('SimulationAudioOutput', () => {
       const a = getSimulationAudioOutput();
       a.playTone(440);
 
+      const oscBeforeReset = lastOsc();
+
       resetSimulationAudioOutput();
 
-      // The old oscillator should have been stopped
-      const osc = mockCtx.createOscillator.mock.results[0]?.value as MockOscillatorNode;
-      expect(osc.stop).toHaveBeenCalled();
-      expect(mockCtx.close).toHaveBeenCalled();
+      expect(oscBeforeReset.stop).toHaveBeenCalled();
+      expect(latestMockCtx.close).toHaveBeenCalled();
     });
   });
 
@@ -543,9 +588,11 @@ describe('SimulationAudioOutput', () => {
     });
 
     it('handles AudioContext constructor throwing', () => {
-      (globalThis as Record<string, unknown>).AudioContext = vi.fn(() => {
-        throw new Error('Not supported');
-      });
+      (globalThis as Record<string, unknown>).AudioContext = class {
+        constructor() {
+          throw new Error('Not supported');
+        }
+      };
 
       const audio = new SimulationAudioOutput();
       audio.playTone(440);
@@ -567,9 +614,9 @@ describe('SimulationAudioOutput', () => {
 
       expect(audio.isPlaying).toBe(false);
 
-      const gain = mockCtx.createGain.mock.results[0]?.value as MockGainNode;
+      const gain = firstGain();
       expect(gain.disconnect).toHaveBeenCalled();
-      expect(mockCtx.close).toHaveBeenCalled();
+      expect(latestMockCtx.close).toHaveBeenCalled();
     });
 
     it('is safe to call multiple times', () => {
