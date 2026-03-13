@@ -38,7 +38,10 @@ export interface PCBDrcViolation {
     | 'pour-min-width'
     | 'pour-island'
     | 'pour-conflict'
-    | 'thermal-relief';
+    | 'thermal-relief'
+    | 'solder_mask_expansion'
+    | 'paste_aperture_ratio'
+    | 'courtyard_clearance';
   message: string;
   position: { x: number; y: number };
   severity: 'error' | 'warning';
@@ -46,6 +49,86 @@ export interface PCBDrcViolation {
   clearanceRequired: number; // mm
   clearanceActual: number; // mm
 }
+
+// ---------------------------------------------------------------------------
+// Fabrication / Assembly DRC Types
+// ---------------------------------------------------------------------------
+
+/** Pad information for solder mask / paste DRC checks. */
+export interface PCBPadFabInfo {
+  id: string;
+  /** Pad center position in mm. */
+  position: { x: number; y: number };
+  /** Pad width in mm. */
+  width: number;
+  /** Pad height in mm. */
+  height: number;
+  /** 'smd' or 'tht'. */
+  type: 'smd' | 'tht';
+  /** Actual solder mask expansion from pad edge in mm. */
+  solderMaskExpansion: number;
+  /** Solder paste aperture width in mm (defaults to pad width if absent). */
+  pasteApertureWidth?: number;
+  /** Solder paste aperture height in mm (defaults to pad height if absent). */
+  pasteApertureHeight?: number;
+  /** Component ID this pad belongs to. */
+  componentId: string;
+}
+
+/** Component courtyard for assembly clearance checks. */
+export interface PCBComponentCourtyard {
+  id: string;
+  /** Component center / reference position in mm. */
+  position: { x: number; y: number };
+  /** Courtyard bounding box (origin-relative, added to position). */
+  courtyard: { x: number; y: number; width: number; height: number };
+  /** Layer this component is on. */
+  layer: string;
+}
+
+/** Manufacturer fab rule presets for the 3 fab/assembly rule types. */
+export interface FabRulePreset {
+  name: string;
+  /** Minimum solder mask expansion from pad edge in mm. */
+  minSolderMaskExpansion: number;
+  /** Minimum solder paste aperture ratio (paste area / pad area). */
+  minPasteApertureRatio: number;
+  /** Maximum solder paste aperture ratio (paste area / pad area). */
+  maxPasteApertureRatio: number;
+  /** Minimum courtyard-to-courtyard clearance in mm. */
+  minCourtyardClearance: number;
+}
+
+export const FAB_RULE_PRESETS: Record<string, FabRulePreset> = {
+  JLCPCB: {
+    name: 'JLCPCB',
+    minSolderMaskExpansion: 0.05,
+    minPasteApertureRatio: 0.5,
+    maxPasteApertureRatio: 1.0,
+    minCourtyardClearance: 0.25,
+  },
+  PCBWay: {
+    name: 'PCBWay',
+    minSolderMaskExpansion: 0.051,
+    minPasteApertureRatio: 0.5,
+    maxPasteApertureRatio: 0.95,
+    minCourtyardClearance: 0.2,
+  },
+  OSHPark: {
+    name: 'OSHPark',
+    minSolderMaskExpansion: 0.05,
+    minPasteApertureRatio: 0.55,
+    maxPasteApertureRatio: 0.9,
+    minCourtyardClearance: 0.25,
+  },
+  Generic: {
+    name: 'Generic',
+    minSolderMaskExpansion: 0.05,
+    minPasteApertureRatio: 0.6,
+    maxPasteApertureRatio: 1.0,
+    minCourtyardClearance: 0.5,
+  },
+};
 
 // ---------------------------------------------------------------------------
 // AABB helper

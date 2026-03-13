@@ -18,6 +18,7 @@ export const COMPONENT_CATEGORIES = [
   'Displays & UI',
   'Sensors',
   'Communication',
+  'Misc',
 ] as const;
 
 export type ComponentCategory = (typeof COMPONENT_CATEGORIES)[number];

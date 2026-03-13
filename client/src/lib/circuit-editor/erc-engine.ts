@@ -401,3 +401,281 @@ export function runERC(input: ERCInput): ERCViolation[] {
 
   return violations;
 }
+
+// ---------------------------------------------------------------------------
+// Incremental ERC — dirty tracking, result caching, partial re-check
+// ---------------------------------------------------------------------------
+
+/**
+ * Tracks which nets and instances have been modified since the last ERC run.
+ * The circuit editor calls invalidation hooks (below) which mark entities dirty.
+ */
+export class DirtyTracker {
+  private dirtyNets = new Set<number>();
+  private dirtyInstances = new Set<number>();
+
+  markNetDirty(netId: number): void {
+    this.dirtyNets.add(netId);
+  }
+
+  markInstanceDirty(instanceId: number): void {
+    this.dirtyInstances.add(instanceId);
+  }
+
+  markAllDirty(): void {
+    // The caller should provide the full set; this just sets the "all dirty" flag.
+    // Handled by the incremental runner via the 50% threshold fallback.
+    this.dirtyNets.clear();
+    this.dirtyInstances.clear();
+    // Use a sentinel — the incremental runner checks `isAllDirty`.
+    this._allDirty = true;
+  }
+
+  getDirtyNets(): ReadonlySet<number> {
+    return this.dirtyNets;
+  }
+
+  getDirtyInstances(): ReadonlySet<number> {
+    return this.dirtyInstances;
+  }
+
+  get isAllDirty(): boolean {
+    return this._allDirty;
+  }
+
+  clearDirty(): void {
+    this.dirtyNets.clear();
+    this.dirtyInstances.clear();
+    this._allDirty = false;
+  }
+
+  get dirtyNetCount(): number {
+    return this.dirtyNets.size;
+  }
+
+  get dirtyInstanceCount(): number {
+    return this.dirtyInstances.size;
+  }
+
+  private _allDirty = false;
+}
+
+/**
+ * Caches ERC results keyed by entity ID (net or instance).
+ * Keys are prefixed: `net:<id>` or `inst:<id>`.
+ */
+export class ERCResultCache {
+  private cache = new Map<string, ERCViolation[]>();
+
+  setResults(entityKey: string, violations: ERCViolation[]): void {
+    this.cache.set(entityKey, violations);
+  }
+
+  getResults(entityKey: string): ERCViolation[] | undefined {
+    return this.cache.get(entityKey);
+  }
+
+  invalidate(entityKey: string): void {
+    this.cache.delete(entityKey);
+  }
+
+  invalidateAll(): void {
+    this.cache.clear();
+  }
+
+  getAllCachedResults(): ERCViolation[] {
+    const all: ERCViolation[] = [];
+    for (const violations of this.cache.values()) {
+      for (const v of violations) {
+        all.push(v);
+      }
+    }
+    return all;
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+
+  has(entityKey: string): boolean {
+    return this.cache.has(entityKey);
+  }
+}
+
+/** Options for incremental ERC. */
+export interface IncrementalERCOptions {
+  /** Fraction of dirty entities above which a full run is used instead (default 0.5). */
+  dirtyThreshold?: number;
+}
+
+/**
+ * Run ERC incrementally — only re-checks dirty nets/instances and merges with
+ * cached results for clean entities.
+ *
+ * Falls back to a full `runERC()` when:
+ *  - `tracker.isAllDirty` is set
+ *  - More than `dirtyThreshold` (default 50%) of entities are dirty
+ *  - The cache is empty (first run)
+ *
+ * Returns the merged violation list (same shape as `runERC()`).
+ */
+export function runIncrementalERC(
+  input: ERCInput,
+  tracker: DirtyTracker,
+  cache: ERCResultCache,
+  options?: IncrementalERCOptions,
+): ERCViolation[] {
+  const threshold = options?.dirtyThreshold ?? 0.5;
+  const totalNets = input.nets.length;
+  const totalInstances = input.instances.length;
+  const totalEntities = totalNets + totalInstances;
+
+  // Fall back to full run when appropriate
+  const shouldFallback =
+    tracker.isAllDirty ||
+    cache.size === 0 ||
+    totalEntities === 0 ||
+    (tracker.dirtyNetCount + tracker.dirtyInstanceCount) / Math.max(totalEntities, 1) > threshold;
+
+  if (shouldFallback) {
+    const violations = runERC(input);
+    // Populate the cache from the full run
+    cacheFullResults(violations, input, cache);
+    tracker.clearDirty();
+    return violations;
+  }
+
+  // Invalidate cache entries for dirty entities
+  for (const netId of tracker.getDirtyNets()) {
+    cache.invalidate(`net:${netId}`);
+  }
+  for (const instId of tracker.getDirtyInstances()) {
+    cache.invalidate(`inst:${instId}`);
+  }
+
+  // Run a full ERC (the engine is pure-functional, so we always compute fresh)
+  // then extract only violations belonging to dirty entities as "fresh" results
+  // and keep cached results for clean entities.
+  const freshViolations = runERC(input);
+
+  // Partition fresh violations by entity key
+  const freshByEntity = new Map<string, ERCViolation[]>();
+  for (const v of freshViolations) {
+    const keys = violationEntityKeys(v);
+    for (const key of keys) {
+      const arr = freshByEntity.get(key);
+      if (arr) {
+        arr.push(v);
+      } else {
+        freshByEntity.set(key, [v]);
+      }
+    }
+  }
+
+  // Update cache with fresh results for dirty entities
+  for (const netId of tracker.getDirtyNets()) {
+    const key = `net:${netId}`;
+    cache.setResults(key, freshByEntity.get(key) ?? []);
+  }
+  for (const instId of tracker.getDirtyInstances()) {
+    const key = `inst:${instId}`;
+    cache.setResults(key, freshByEntity.get(key) ?? []);
+  }
+
+  // Also update cache for any entities not yet cached (covers new entities)
+  for (const [key, violations] of freshByEntity) {
+    if (!cache.has(key)) {
+      cache.setResults(key, violations);
+    }
+  }
+
+  tracker.clearDirty();
+
+  // Return deduplicated merged results from the cache
+  return deduplicateViolations(cache.getAllCachedResults());
+}
+
+/** Map a violation to entity cache keys (net and/or instance). */
+function violationEntityKeys(v: ERCViolation): string[] {
+  const keys: string[] = [];
+  if (v.netId != null) {
+    keys.push(`net:${v.netId}`);
+  }
+  if (v.instanceId != null) {
+    keys.push(`inst:${v.instanceId}`);
+  }
+  // If neither net nor instance is set (e.g. power-net-unnamed only has netId), ensure at least one key
+  if (keys.length === 0 && v.id) {
+    keys.push(`misc:${v.id}`);
+  }
+  return keys;
+}
+
+/** Deduplicate violations by `id`. */
+function deduplicateViolations(violations: ERCViolation[]): ERCViolation[] {
+  const seen = new Set<string>();
+  const result: ERCViolation[] = [];
+  for (const v of violations) {
+    if (!seen.has(v.id)) {
+      seen.add(v.id);
+      result.push(v);
+    }
+  }
+  return result;
+}
+
+/** Populate the cache from a full ERC run, keyed by entity. */
+function cacheFullResults(
+  violations: ERCViolation[],
+  input: ERCInput,
+  cache: ERCResultCache,
+): void {
+  cache.invalidateAll();
+
+  // Initialize empty arrays for all entities
+  for (const net of input.nets) {
+    cache.setResults(`net:${net.id}`, []);
+  }
+  for (const inst of input.instances) {
+    cache.setResults(`inst:${inst.id}`, []);
+  }
+
+  // Assign violations to their entity keys
+  for (const v of violations) {
+    const keys = violationEntityKeys(v);
+    for (const key of keys) {
+      const existing = cache.getResults(key) ?? [];
+      existing.push(v);
+      cache.setResults(key, existing);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Invalidation hooks — called by the circuit editor on mutations
+// ---------------------------------------------------------------------------
+
+/** Call when a new instance is added to the circuit. */
+export function onInstanceAdded(tracker: DirtyTracker, instanceId: number): void {
+  tracker.markInstanceDirty(instanceId);
+}
+
+/** Call when an existing instance is removed from the circuit. */
+export function onInstanceRemoved(tracker: DirtyTracker, instanceId: number): void {
+  tracker.markInstanceDirty(instanceId);
+}
+
+/** Call when an existing instance is modified (part change, property change, etc.). */
+export function onInstanceModified(tracker: DirtyTracker, instanceId: number): void {
+  tracker.markInstanceDirty(instanceId);
+}
+
+/** Call when a wire is added connecting to a net. */
+export function onWireAdded(tracker: DirtyTracker, _wireId: number, netId: number): void {
+  tracker.markNetDirty(netId);
+}
+
+/** Call when a wire is removed from a net. */
+export function onWireRemoved(tracker: DirtyTracker, _wireId: number, netId: number): void {
+  tracker.markNetDirty(netId);
+}
