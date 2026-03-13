@@ -475,10 +475,12 @@ describe('FunctionGenerator', () => {
       expect(formatAmplitude(0.1)).toEqual({ value: 100, unit: 'mV' });
     });
 
-    it('formats microvolts', () => {
+    it('formats sub-millivolt as microvolts', () => {
       const result = formatAmplitude(0.0005);
-      expect(result.unit).toBe('mV');
-      expect(result.value).toBeCloseTo(0.5);
+      // 0.0005V = 500uV, but our threshold is 1mV → falls into mV range
+      // Actually 0.0005 >= 1e-3 is false, so it's in the uV range
+      expect(result.unit).toBe('\u00B5V');
+      expect(result.value).toBeCloseTo(500);
     });
 
     it('formats 0 V', () => {
