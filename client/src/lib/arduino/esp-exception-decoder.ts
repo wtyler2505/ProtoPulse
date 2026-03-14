@@ -173,9 +173,6 @@ function parseBacktrace(output: string): StackFrame[] {
  */
 function parseRegisters(output: string): Record<string, string> | undefined {
   const regs: Record<string, string> = {};
-  // Match lines that look like register dumps: "REG : 0xVALUE"
-  const regPattern = /\b([A-Z][A-Z0-9_]{0,7})\s*:\s*(0x[0-9a-fA-F]+)\b/g;
-  let match: RegExpExecArray | null;
 
   // Only look in lines that have at least 2 register-like pairs (to avoid false positives)
   const lines = output.split('\n');
@@ -192,10 +189,6 @@ function parseRegisters(output: string): Record<string, string> | undefined {
       }
     }
   }
-
-  // Suppress unused variable — the loop above uses linePattern instead
-  void match;
-  void regPattern;
 
   return Object.keys(regs).length > 0 ? regs : undefined;
 }

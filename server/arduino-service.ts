@@ -58,6 +58,8 @@ export class ArduinoService {
   private config: ArduinoCLIConfig;
   /** Tracks spawned child processes by job ID for cancellation. */
   private runningProcesses = new Map<number, ReturnType<typeof spawn>>();
+  /** Tracks active SSE streams by job ID. */
+  private jobStreams = new Map<number, JobStream>();
 
   constructor(private storage: IStorage) {
     this.config = {
@@ -330,6 +332,25 @@ export class ArduinoService {
   }
 
   /**
+   * Get or create a JobStream for SSE streaming.
+   * If the job is already completed/failed/cancelled, returns null
+   * (callers should send stored log lines directly instead).
+   */
+  getJobStream(jobId: number): JobStream | null {
+    const existing = this.jobStreams.get(jobId);
+    if (existing) { return existing; }
+
+    // Only create a stream for jobs that have a running process
+    if (!this.runningProcesses.has(jobId)) {
+      return null;
+    }
+
+    const stream = new JobStream();
+    this.jobStreams.set(jobId, stream);
+    return stream;
+  }
+
+  /**
    * Cancel a running job by killing its child process.
    * Returns true if the job was running and was cancelled.
    */
@@ -345,6 +366,13 @@ export class ArduinoService {
           finishedAt: new Date(),
           summary: 'Cancelled before execution started',
         });
+        const stream = this.jobStreams.get(jobId);
+        if (stream) {
+          stream.push({ type: 'status', content: 'cancelled', timestamp: Date.now() });
+          stream.push({ type: 'done', content: 'Cancelled before execution started', timestamp: Date.now() });
+          stream.finish();
+          this.jobStreams.delete(jobId);
+        }
         return true;
       }
       return false;
@@ -414,7 +442,7 @@ export class ArduinoService {
 
   /**
    * Execute an Arduino CLI command as a job.
-   * Streams logs to the database record.
+   * Streams logs to the database record and emits SSE events via JobStream.
    */
   async runJob(jobId: number, _command: string, args: string[]) {
     const job = await this.storage.getArduinoJob(jobId);
@@ -426,6 +454,11 @@ export class ArduinoService {
 
     await this.storage.updateArduinoJob(jobId, { status: 'running', startedAt: new Date() });
 
+    // Create a stream for SSE listeners
+    const stream = new JobStream();
+    this.jobStreams.set(jobId, stream);
+    stream.push({ type: 'status', content: 'running', timestamp: Date.now() });
+
     const fullArgs = [...args, '--format', 'text'];
     const proc = spawn(this.config.cliPath, fullArgs);
     this.runningProcesses.set(jobId, proc);
@@ -435,15 +468,29 @@ export class ArduinoService {
     proc.stdout.on('data', (data: Buffer) => {
       const chunk = data.toString();
       logBuffer += chunk;
-      // Periodically flush logs to DB (for real streaming we'd use SSE/WS)
+      // Emit each line to SSE stream
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.length > 0) {
+          stream.push({ type: 'log', content: line, timestamp: Date.now() });
+        }
+      }
+      // Periodically flush logs to DB (fallback for history panel)
       if (logBuffer.length > 1024) {
         this.storage.updateArduinoJob(jobId, { log: logBuffer }).catch(() => {});
       }
     });
 
     proc.stderr.on('data', (data: Buffer) => {
-      logBuffer += `ERROR: ${data.toString()}`;
+      const chunk = data.toString();
+      logBuffer += `ERROR: ${chunk}`;
+      stream.push({ type: 'error', content: chunk.trimEnd(), timestamp: Date.now() });
     });
+
+    const cleanupStream = () => {
+      stream.finish();
+      this.jobStreams.delete(jobId);
+    };
 
     return new Promise<{ exitCode: number }>((promiseResolve, promiseReject) => {
       proc.on('close', async (code, signal) => {
@@ -458,6 +505,9 @@ export class ArduinoService {
             log: logBuffer + '\n--- Job cancelled by user ---',
             summary: 'Cancelled by user',
           });
+          stream.push({ type: 'status', content: 'cancelled', timestamp: Date.now() });
+          stream.push({ type: 'done', content: 'Cancelled by user', timestamp: Date.now() });
+          cleanupStream();
           promiseResolve({ exitCode: code ?? -1 });
           return;
         }
@@ -470,6 +520,9 @@ export class ArduinoService {
           log: logBuffer,
           summary: code === 0 ? 'Operation successful' : 'Operation failed',
         });
+        stream.push({ type: 'status', content: status, timestamp: Date.now() });
+        stream.push({ type: 'done', content: code === 0 ? 'Operation successful' : 'Operation failed', timestamp: Date.now() });
+        cleanupStream();
         promiseResolve({ exitCode: code || 0 });
       });
 
@@ -482,6 +535,10 @@ export class ArduinoService {
           summary: err.message,
           log: logBuffer + `\nCRITICAL ERROR: ${err.message}`,
         });
+        stream.push({ type: 'error', content: err.message, timestamp: Date.now() });
+        stream.push({ type: 'status', content: 'failed', timestamp: Date.now() });
+        stream.push({ type: 'done', content: err.message, timestamp: Date.now() });
+        cleanupStream();
         promiseReject(err);
       });
     });

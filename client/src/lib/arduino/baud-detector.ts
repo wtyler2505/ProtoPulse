@@ -86,7 +86,7 @@ export function shannonEntropy(data: string): number {
   }
   let entropy = 0;
   const len = data.length;
-  for (const count of freq.values()) {
+  for (const count of Array.from(freq.values())) {
     const p = count / len;
     if (p > 0) {
       entropy -= p * Math.log2(p);

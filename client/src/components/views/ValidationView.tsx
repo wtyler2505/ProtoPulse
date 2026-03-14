@@ -50,6 +50,8 @@ import type { DrcScript } from '@/lib/drc-scripting';
 import type { ScriptDesignData } from '@/lib/drc-scripting';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
+import { validateBomCompleteness } from '@/lib/bom-validation';
+import type { BomCompletionIssue } from '@/lib/bom-validation';
 
 /** Brief explanations for validation rule categories (UX-043: "why this rule matters" tooltips).
  *  DRC_EXPLANATIONS (from shared/drc-engine) provides detailed beginner-friendly text for every
@@ -236,6 +238,22 @@ function ValidationViewContent() {
       quantity: b.quantity,
     })),
   }), [nodes, edges, bom]);
+
+  // BOM Completeness Validation
+  const bomCompletionIssues = useMemo((): BomCompletionIssue[] => {
+    if (bom.length === 0) { return []; }
+    return validateBomCompleteness(bom.map((b) => ({
+      id: b.id,
+      partNumber: b.partNumber,
+      manufacturer: b.manufacturer,
+      description: b.description,
+      quantity: b.quantity,
+      unitPrice: b.unitPrice,
+    })));
+  }, [bom]);
+
+  const bomWarningCount = bomCompletionIssues.filter((i) => i.severity === 'warning').length;
+  const bomInfoCount = bomCompletionIssues.filter((i) => i.severity === 'info').length;
 
   // Design Gateway
   const { violations: gatewayViolations, validate: runGateway, enableRule: enableGatewayRule, disableRule: disableGatewayRule, rules: gatewayRules } = useDesignGateway();
@@ -743,6 +761,49 @@ function ValidationViewContent() {
           </div>
         </div>
       )}
+
+      {/* BOM Completeness section (BL-0580) */}
+      <div data-testid="bom-completeness-section" className="w-full max-w-5xl mt-4 bg-card/40 border border-border backdrop-blur-xl shadow-xl p-4">
+        <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+          <ShieldCheck className="w-4 h-4 text-primary" />
+          BOM Completeness
+          {bomCompletionIssues.length > 0 && (
+            <span className="text-[10px] text-muted-foreground font-normal ml-auto">
+              {bomWarningCount > 0 && <>{bomWarningCount} warning{bomWarningCount !== 1 ? 's' : ''}</>}
+              {bomWarningCount > 0 && bomInfoCount > 0 && ', '}
+              {bomInfoCount > 0 && <>{bomInfoCount} info item{bomInfoCount !== 1 ? 's' : ''}</>}
+            </span>
+          )}
+        </h3>
+        {bom.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No BOM data available. Add components to your BOM to see completeness checks.</p>
+        ) : bomCompletionIssues.length === 0 ? (
+          <div className="flex items-center gap-2 text-xs text-green-500">
+            <CheckCircle2 className="w-4 h-4" />
+            All BOM items are complete — no issues found.
+          </div>
+        ) : (
+          <div className="space-y-1.5 max-h-60 overflow-auto">
+            {bomCompletionIssues.map((issue) => (
+              <div
+                key={issue.id}
+                data-testid={`bom-issue-${issue.id}`}
+                className="flex items-start gap-2 text-xs py-1 px-2 border border-border/30 rounded hover:bg-muted/10"
+              >
+                {issue.severity === 'warning' ? (
+                  <AlertTriangle className="w-3.5 h-3.5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
+                )}
+                <span className="flex-1 text-muted-foreground">{issue.message}</span>
+                {issue.partNumber && (
+                  <Badge variant="outline" className="text-[10px] flex-shrink-0">{issue.partNumber}</Badge>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Dismiss confirmation dialog */}
       <AlertDialog open={pendingDismissId !== null} onOpenChange={(open) => { if (!open) { setPendingDismissId(null); } }}>

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type {
@@ -403,4 +403,115 @@ export function useArduino() {
   const context = useContext(ArduinoContext);
   if (!context) throw new Error('useArduino must be used within ArduinoProvider');
   return context;
+}
+
+// ---------------------------------------------------------------------------
+// SSE Job Stream Hook
+// ---------------------------------------------------------------------------
+
+interface JobStreamEvent {
+  type: 'log' | 'status' | 'error' | 'done';
+  content: string;
+  timestamp: number;
+}
+
+interface UseJobStreamResult {
+  lines: string[];
+  status: string;
+  isStreaming: boolean;
+}
+
+const MAX_RECONNECT_RETRIES = 3;
+const RECONNECT_DELAY_MS = 2000;
+
+/**
+ * Hook that connects to the SSE endpoint for a specific Arduino job.
+ * Returns real-time log lines, job status, and whether the stream is active.
+ * Auto-reconnects on connection loss (up to MAX_RECONNECT_RETRIES).
+ * Pass jobId = null to disable the stream.
+ */
+export function useJobStream(projectId: number, jobId: number | null): UseJobStreamResult {
+  const [lines, setLines] = useState<string[]>([]);
+  const [status, setStatus] = useState<string>('pending');
+  const [isStreaming, setIsStreaming] = useState(false);
+  const retriesRef = useRef(0);
+  const eventSourceRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    if (jobId === null || projectId <= 0) {
+      return;
+    }
+
+    let cancelled = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const connect = () => {
+      if (cancelled) { return; }
+
+      const url = `/api/projects/${projectId}/arduino/jobs/${jobId}/stream`;
+      const es = new EventSource(url);
+      eventSourceRef.current = es;
+      setIsStreaming(true);
+
+      es.onmessage = (event: MessageEvent) => {
+        if (cancelled) { return; }
+        try {
+          const data = JSON.parse(event.data as string) as JobStreamEvent;
+          switch (data.type) {
+            case 'log':
+              setLines((prev) => [...prev, data.content]);
+              break;
+            case 'error':
+              setLines((prev) => [...prev, `ERROR: ${data.content}`]);
+              break;
+            case 'status':
+              setStatus(data.content);
+              break;
+            case 'done':
+              setIsStreaming(false);
+              es.close();
+              eventSourceRef.current = null;
+              break;
+          }
+          // Reset retry count on successful message
+          retriesRef.current = 0;
+        } catch {
+          // Ignore parse errors (e.g. heartbeat comments)
+        }
+      };
+
+      es.onerror = () => {
+        if (cancelled) { return; }
+        es.close();
+        eventSourceRef.current = null;
+
+        if (retriesRef.current < MAX_RECONNECT_RETRIES) {
+          retriesRef.current += 1;
+          reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
+        } else {
+          setIsStreaming(false);
+        }
+      };
+    };
+
+    // Reset state on new job
+    setLines([]);
+    setStatus('pending');
+    retriesRef.current = 0;
+    connect();
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimer !== undefined) {
+        clearTimeout(reconnectTimer);
+      }
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+      setIsStreaming(false);
+    };
+  }, [projectId, jobId]);
+
+  return { lines, status, isStreaming };
 }

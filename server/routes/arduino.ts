@@ -13,6 +13,7 @@ import {
 import { asyncHandler, parseIdParam, payloadLimit } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { ArduinoService } from '../arduino-service';
+import type { JobStreamEvent } from '../arduino-service';
 import { logger } from '../logger';
 
 let arduinoService: ArduinoService | null = null;
@@ -276,6 +277,104 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
       return res.status(409).json({ message: 'Job is not in a cancellable state' });
     }
     res.json({ success: true, message: 'Job cancelled' });
+  }));
+
+  // --- Job SSE Stream ---
+  app.get(`${arduinoPrefix}/jobs/:jobId/stream`, requireProjectOwnership, asyncHandler(async (req, res) => {
+    const jobId = parseIdParam(req.params.jobId);
+    const job = await storage.getArduinoJob(jobId);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+
+    // SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    const sendEvent = (event: JobStreamEvent) => {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    // If job already finished, send stored log lines + done event, then close
+    const terminalStatuses = ['completed', 'failed', 'cancelled'];
+    if (terminalStatuses.includes(job.status)) {
+      if (job.log) {
+        const lines = job.log.split('\n');
+        for (const line of lines) {
+          if (line.length > 0) {
+            sendEvent({ type: 'log', content: line, timestamp: Date.now() });
+          }
+        }
+      }
+      sendEvent({ type: 'status', content: job.status, timestamp: Date.now() });
+      sendEvent({ type: 'done', content: job.summary ?? job.status, timestamp: Date.now() });
+      res.end();
+      return;
+    }
+
+    // For pending jobs, send current status
+    if (job.status === 'pending') {
+      sendEvent({ type: 'status', content: 'pending', timestamp: Date.now() });
+    }
+
+    // Try to attach to the live stream
+    const jobStream = service.getJobStream(jobId);
+    if (!jobStream) {
+      // No live stream (job may be pending and not yet spawned) — re-fetch to get latest state
+      const freshJob = await storage.getArduinoJob(jobId);
+      if (freshJob && terminalStatuses.includes(freshJob.status)) {
+        if (freshJob.log) {
+          const lines = freshJob.log.split('\n');
+          for (const line of lines) {
+            if (line.length > 0) {
+              sendEvent({ type: 'log', content: line, timestamp: Date.now() });
+            }
+          }
+        }
+        sendEvent({ type: 'status', content: freshJob.status, timestamp: Date.now() });
+        sendEvent({ type: 'done', content: freshJob.summary ?? freshJob.status, timestamp: Date.now() });
+      } else {
+        sendEvent({ type: 'status', content: freshJob?.status ?? 'pending', timestamp: Date.now() });
+      }
+      res.end();
+      return;
+    }
+
+    // Send buffered events (late-join replay)
+    for (const buffered of jobStream.getBuffer()) {
+      sendEvent(buffered);
+    }
+
+    // Heartbeat to keep connection alive
+    const heartbeat = setInterval(() => {
+      res.write(':heartbeat\n\n');
+    }, 15_000);
+
+    // Listen for new events
+    const onEvent = (event: JobStreamEvent) => {
+      sendEvent(event);
+      if (event.type === 'done') {
+        cleanup();
+      }
+    };
+
+    const cleanup = () => {
+      clearInterval(heartbeat);
+      jobStream.removeListener('event', onEvent);
+      if (!res.writableEnded) {
+        res.end();
+      }
+    };
+
+    jobStream.on('event', onEvent);
+
+    // Clean up if client disconnects
+    req.on('close', cleanup);
+
+    // If the stream already finished between getBuffer() and .on(), close now
+    if (jobStream.finished && !res.writableEnded) {
+      cleanup();
+    }
   }));
 
   // --- Artifact Download ---
