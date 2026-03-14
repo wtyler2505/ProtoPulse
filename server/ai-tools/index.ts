@@ -50,6 +50,7 @@ function createRegistry(): ToolRegistry {
   registerArduinoTools(registry);
   registerSimulationTools(registry);
   registerManufacturingTools(registry);
+  registerTestbenchTools(registry);
   return registry;
 }
 
