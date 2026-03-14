@@ -17,7 +17,6 @@ import {
   Drill,
   LayoutGrid,
   Box,
-  Info,
 } from 'lucide-react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';

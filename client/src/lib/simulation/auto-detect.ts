@@ -270,6 +270,14 @@ export function detectSimulationType(
         reason: 'Transient sources present alongside DC — transient analysis recommended but mixed signals detected',
       };
     }
+    // DC source + time-varying components (switch/relay/timer) → transient dominates
+    if (!baseResult.hasACSources && !baseResult.hasTransientSources && timeVaryCount > 0) {
+      return {
+        type: 'transient',
+        confidence: 0.7,
+        reason: 'Time-varying components (switches/timers) detected with DC sources — transient analysis recommended',
+      };
+    }
 
     return {
       type: 'mixed',
