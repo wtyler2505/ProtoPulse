@@ -1039,3 +1039,42 @@ client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(776,54):
 
 
 12:57:08 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:57:24 PM - File change detected. Starting incremental compilation...
+
+server/firmware-runtime/__tests__/simavr-runner.test.ts(76,28): error TS2802: Type 'Map<number, MockProcessManager>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+12:57:37 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:00:11 PM - File change detected. Starting incremental compilation...
+
+server/firmware-runtime/__tests__/simavr-runner.test.ts(76,28): error TS2802: Type 'Map<number, MockProcessManager>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+1:00:17 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:02:20 PM - File change detected. Starting incremental compilation...
+
+
+1:02:23 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:02:37 PM - File change detected. Starting incremental compilation...
+
+
+1:02:45 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:04:22 PM - File change detected. Starting incremental compilation...
+
+
+1:04:26 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:05:04 PM - File change detected. Starting incremental compilation...
+
+
+1:05:41 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:06:52 PM - File change detected. Starting incremental compilation...
+
+
+1:07:38 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:09:17 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/ArduinoWorkbenchView.tsx(1343,59): error TS2339: Property 'artifactPath' does not exist on type '{ id: number; createdAt: Date; projectId: number; profileId: number | null; jobType: string; status: string; command: string; args: unknown; startedAt: Date | null; finishedAt: Date | null; exitCode: number | null; summary: string | null; errorCode: string | null; log: string | null; }'.
+
+1:09:36 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:10:41 PM - File change detected. Starting incremental compilation...
+
+
+1:11:10 PM - Found 0 errors. Watching for file changes.

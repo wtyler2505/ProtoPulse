@@ -62,8 +62,9 @@ import type { FlashProgress, FlashDiagnostic } from '@/lib/arduino/flash-diagnos
 const FlashProgressBar = lazy(() => import('@/components/arduino/FlashProgressBar'));
 const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
 const PinConstantPanel = lazy(() => import('@/components/arduino/PinConstantPanel'));
+const SimulationControlPanel = lazy(() => import('@/components/arduino/SimulationControlPanel'));
 
-type BottomTab = 'console' | 'serial' | 'libraries' | 'boards' | 'pins';
+type BottomTab = 'console' | 'serial' | 'libraries' | 'boards' | 'pins' | 'simulate';
 
 export default function ArduinoWorkbenchView() {
   const _projectId = useProjectId();
@@ -895,6 +896,7 @@ export default function ArduinoWorkbenchView() {
                 { id: 'libraries' as const, label: 'Libraries', icon: <Library className="w-3 h-3" /> },
                 { id: 'boards' as const, label: 'Boards', icon: <Package className="w-3 h-3" /> },
                 { id: 'pins' as const, label: 'Pin Constants', icon: <Hash className="w-3 h-3" /> },
+                { id: 'simulate' as const, label: 'Simulate', icon: <Cpu className="w-3 h-3" /> },
               ]).map(tab => (
                 <button
                   key={tab.id}
@@ -1327,6 +1329,18 @@ export default function ArduinoWorkbenchView() {
                         setCode((prev) => pinCode + '\n' + prev);
                         setIsDirty(true);
                       }}
+                    />
+                  </div>
+                </Suspense>
+              )}
+
+              {/* Simulate Tab */}
+              {bottomTab === 'simulate' && (
+                <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
+                  <div className="h-full overflow-auto p-2" data-testid="arduino-simulate-tab">
+                    <SimulationControlPanel
+                      projectId={_projectId}
+                      firmwarePath={activeFilePath ?? undefined}
                     />
                   </div>
                 </Suspense>

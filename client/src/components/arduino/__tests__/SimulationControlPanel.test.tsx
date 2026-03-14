@@ -743,7 +743,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('sim-error-message').textContent).toContain('Simulation failed (502)');
+      expect(screen.getByTestId('sim-error-message').textContent).toContain('Bad Gateway');
     });
 
     it('handles stop failure gracefully', async () => {

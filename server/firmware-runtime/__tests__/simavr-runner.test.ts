@@ -73,7 +73,7 @@ vi.mock('../process-manager', () => {
         }
       },
       destroyAll: async () => {
-        for (const [id] of instances) {
+        for (const id of Array.from(instances.keys())) {
           const inst = instances.get(id);
           if (inst) {
             await inst.stop();

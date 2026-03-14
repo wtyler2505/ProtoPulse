@@ -267,6 +267,7 @@ describe('SimulatorProcessManager', () => {
 
     it('should transition to error on spawn error event', async () => {
       const mgr = SimulatorProcessManager.getOrCreate(1);
+      mgr.on('error', () => {}); // Prevent unhandled error throw
       await mgr.spawn('/fw.hex', 'atmega328p', 16000000);
 
       mockChild.simulateError(new Error('crash'));
@@ -424,6 +425,7 @@ describe('SimulatorProcessManager', () => {
 
     it('should handle spawn error event and set error status', async () => {
       const mgr = SimulatorProcessManager.getOrCreate(1);
+      mgr.on('error', () => {}); // Prevent unhandled error throw
       await mgr.spawn('/fw.hex', 'atmega328p', 16000000);
 
       mockChild.simulateError(new Error('EACCES'));
@@ -433,6 +435,7 @@ describe('SimulatorProcessManager', () => {
 
     it('should allow re-spawn after error', async () => {
       const mgr = SimulatorProcessManager.getOrCreate(1);
+      mgr.on('error', () => {}); // Prevent unhandled error throw
       await mgr.spawn('/fw.hex', 'atmega328p', 16000000);
 
       mockChild.simulateError(new Error('crash'));
