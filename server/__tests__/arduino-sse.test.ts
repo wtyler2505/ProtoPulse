@@ -120,6 +120,9 @@ import { ArduinoService, JobStream } from '../arduino-service';
 import type { JobStreamEvent } from '../arduino-service';
 import type { IStorage } from '../storage';
 
+/** Wait for pending microtasks to flush (lets async runJob reach spawn). */
+const flushMicrotasks = () => new Promise<void>((r) => setTimeout(r, 10));
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
