@@ -1509,3 +1509,17 @@ client/src/lib/__tests__/export-profiles.test.ts(192,23): error TS2802: Type 'Se
 
 
 5:33:10 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:33:19 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/supplier-comparison.test.ts(272,3): error TS2304: Cannot find name 'beforeEach'.
+
+5:33:25 PM - Found 1 error. Watching for file changes.
+[2J[3J[H5:34:42 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/supplier-comparison.test.ts(272,3): error TS2304: Cannot find name 'beforeEach'.
+
+5:34:58 PM - Found 1 error. Watching for file changes.
+[2J[3J[H5:35:17 PM - File change detected. Starting incremental compilation...
+
+
+5:35:20 PM - Found 0 errors. Watching for file changes.
