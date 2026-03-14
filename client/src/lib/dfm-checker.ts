@@ -170,13 +170,7 @@ export function inferPackageType(description: string, partNumber?: string): stri
 
 /** Estimate pin count from a package type string. */
 function estimatePinCountFromPackage(packageType: string): number {
-  // Extract trailing number from package like "SOIC-8", "QFP-48", "DIP-16"
-  const match = packageType.match(/-(\d+)$/);
-  if (match) {
-    return parseInt(match[1], 10);
-  }
-
-  // Fixed pin counts for known packages
+  // Fixed pin counts for known packages (check before generic regex)
   const fixedPins: Record<string, number> = {
     'SOT-23': 3,
     'SOT-89': 3,
@@ -192,6 +186,12 @@ function estimatePinCountFromPackage(packageType: string): number {
   // Chip passives (0201, 0402, etc.) have 2 pads
   if (/^\d{4}$/.test(packageType)) {
     return 2;
+  }
+
+  // Extract trailing number from package like "SOIC-8", "QFP-48", "DIP-16"
+  const match = packageType.match(/-(\d+)$/);
+  if (match) {
+    return parseInt(match[1], 10);
   }
 
   return 2; // Default: 2-pin component
