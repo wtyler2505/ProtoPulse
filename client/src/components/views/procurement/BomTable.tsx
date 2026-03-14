@@ -258,6 +258,7 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
                       </span>
                     </StyledTooltip>
                   )}
+                  <LifecycleBadge partNumber={item.partNumber} manufacturer={item.manufacturer} />
                 </span>
               </td>
               <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>

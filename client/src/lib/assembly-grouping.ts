@@ -6,7 +6,7 @@
 // statistics (cost, item count, complexity score).
 // ---------------------------------------------------------------------------
 
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@/lib/project-context';
 
 // ---------------------------------------------------------------------------
 // Types
