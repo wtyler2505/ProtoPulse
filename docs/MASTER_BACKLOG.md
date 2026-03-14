@@ -408,11 +408,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 171 | 117 | Breadboard/PCB/simulation/UI — Waves 61-83 ongoing |
+| P2 | 166 | 122 | Breadboard/PCB/simulation/UI — Waves 61-84 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **299** | **209** | **508 total items tracked** |
+| **Total** | **294** | **214** | **508 total items tracked** |
 
-*Snapshot updated: Wave 83 (2026-03-14)*
+*Snapshot updated: Wave 84 (2026-03-14)*
 
 ---
 
@@ -700,7 +700,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0148 | Web Serial integration tests | OPEN | C3 | MF-095 |
 | BL-0149 | Multi-angle photo follow-up for component ID | OPEN | C3 | MF-097 |
 | BL-0150 | Inventory tracking tied to BOM consumption | PARTIAL | C4 | MF-101 |
-| BL-0151 | Compile error translator (plain English) | OPEN | C2 | ARDX-008 |
+| BL-0151 | Compile error translator (plain English) | DONE (Wave 84) | C2 | ARDX-008 |
 | BL-0152 | Auto-generate pin constants from schematic labels | OPEN | C3 | ARDX-019 |
 | BL-0153 | Serial plotter for live sensor curves | DONE (Wave 77) | C3 | ARDX-032 |
 | BL-0154 | Multi-channel telemetry dashboard | OPEN | C3 | ARDX-033 |
@@ -724,7 +724,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0598 | **Baud rate selector UI in Serial Monitor** — The `baudRate` field exists in the Arduino session schema but the Serial Monitor panel has no dropdown to set it. Users must match their `Serial.begin(9600)` call rate manually; mismatches produce garbage output with no diagnostic. Add a baud rate selector (300 / 1200 / 2400 / 9600 / 19200 / 38400 / 57600 / 115200 / 230400 / 250000 / 500000 / 1000000 / 2000000). | DONE (Wave 78) | C2 | Wave 66 / Arduino IDE |
 | BL-0599 | **Compile/upload memory usage display** — After every compile, Arduino IDE shows "Sketch uses X bytes (Y% of program storage). Global variables use Z bytes (W% of dynamic memory)." This is the #1 thing embedded developers check — hitting memory limits is the most common beginner blocker. Surface RAM/Flash usage prominently in the Workbench output panel after every build. | DONE (Wave 79) | C2 | Wave 66 / Arduino IDE + PlatformIO |
 | BL-0600 | **Error line linking in compile output** — Clicking a compile error in the Workbench console should jump to the exact file and line number in the code editor. Requires parsing `avr-g++` / `xtensa-g++` error output format (`filename:line:col: error: message`). Currently users manually scan error text and scroll to find the problem. | DONE (Wave 79) | C2 | Wave 66 / Arduino IDE |
-| BL-0601 | **Auto-format sketch code (Ctrl+T)** — One-keystroke code formatting using clang-format or a compatible formatter. Arduino IDE 1.x has had Ctrl+T since 2005. ProtoPulse CodeMirror has no formatter wired. Required muscle-memory feature for every Arduino user. | OPEN | C2 | Wave 66 / Arduino IDE |
+| BL-0601 | **Auto-format sketch code (Ctrl+T)** — One-keystroke code formatting using clang-format or a compatible formatter. Arduino IDE 1.x has had Ctrl+T since 2005. ProtoPulse CodeMirror has no formatter wired. Required muscle-memory feature for every Arduino user. | DONE (Wave 84) | C2 | Wave 66 / Arduino IDE |
 | BL-0602 | **Live error highlighting in code editor** — Squiggly red underlines on syntax/type errors before the user hits compile. Requires either a WASM-based C/C++ parser or a background compile-check endpoint. Eliminates the edit→compile→read-error loop for basic mistakes. Arduino IDE 2.x has this via LSP. | OPEN | C4 | Wave 66 / Arduino IDE 2.x |
 | BL-0603 | **Arduino-aware IntelliSense / autocomplete** — C/C++/Arduino-aware code completion: function signatures, parameter hints, `#define` expansions, `Serial.`, `digitalWrite(`, pin constants. Currently CodeMirror shows generic completions. Requires either a backend compile_commands.json approach or a WASM clangd. Arduino IDE 2.x uses LSP. | OPEN | C5 | Wave 66 / Arduino IDE 2.x + PlatformIO |
 | BL-0604 | **Job cancellation** — ESP32 first compile takes 2-4 minutes. There is no way to cancel a running compile or upload job. Users are stuck waiting with no escape. Add a "Cancel" button that kills the arduino-cli process for the active job. | DONE (Wave 82) | C2 | Wave 66 / Arduino IDE |
@@ -740,7 +740,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0609 | **ESP exception decoder** — When an ESP32/ESP8266 crashes with a `Guru Meditation Error` or stack trace, the output is raw hex addresses. PlatformIO's serial monitor filter passes these through `addr2line` / `xtensa-addr2line` to translate them to `filename:line`. Every ESP32 user hits this within hours of their first project. Add an "Decode ESP exception" button in the serial monitor that auto-detects and decodes crash output. | OPEN | C3 | Wave 66 / PlatformIO |
 | BL-0610 | **SPIFFS/LittleFS filesystem upload** — Upload a directory of files (HTML, CSS, JSON, images) to the ESP32/ESP8266 flash filesystem. Massive use case: ESP web servers, config files, OTA landing pages. PlatformIO has a first-class `uploadfs` target. Requires generating a filesystem image from a `/data` directory and flashing it via esptool. | OPEN | C4 | Wave 66 / PlatformIO |
 | BL-0611 | **OTA (Over-The-Air) firmware update** — After the first USB flash, push firmware updates wirelessly to ESP devices via IP or mDNS. Eliminates the USB cable for iterative development. PlatformIO's `upload_protocol = espota` handles this. Add an OTA upload mode to the Workbench that discovers ESP devices on the network and pushes the compiled binary. | OPEN | C4 | Wave 66 / PlatformIO |
-| BL-0612 | **Serial output log-to-file** — Auto-save serial monitor output to a timestamped file. Essential for long-running data collection (sensor logging, overnight tests). PlatformIO's `log2file` filter does this transparently. Add a "Record to file" toggle in the serial monitor with download button. | OPEN | C2 | Wave 66 / PlatformIO |
+| BL-0612 | **Serial output log-to-file** — Auto-save serial monitor output to a timestamped file. Essential for long-running data collection (sensor logging, overnight tests). PlatformIO's `log2file` filter does this transparently. Add a "Record to file" toggle in the serial monitor with download button. | DONE (Wave 84) | C2 | Wave 66 / PlatformIO |
 | BL-0613 | **Multi-platform board support (STM32, nRF52, RP2040, ESP-IDF)** — ProtoPulse's Workbench is Arduino-framework only. Makers increasingly use STM32 Blue Pill (cheap, powerful), nRF52840 (BLE), RP2040 Pico (dual-core, PIO), and ESP-IDF for serious ESP32 work. PlatformIO supports 35 platforms and 1300+ boards. Expand the board registry and build system to support at minimum STM32 (Arduino + STM32CubeIDE), RP2040, and nRF52. | OPEN | C5 | Wave 66 / PlatformIO |
 | BL-0614 | **Custom board definitions** — Users designing custom PCBs (the core ProtoPulse use case!) need to define their own board with custom clock speed, memory layout, pin aliases, and bootloader. PlatformIO uses a simple JSON board file. Add a "New custom board" workflow that generates a board definition from the PCB's component list and lets users edit clock/memory/pin settings. | OPEN | C5 | Wave 66 / PlatformIO |
 | BL-0615 | **Multi-environment build targets** — Build the same project for multiple boards/configurations from a single project (e.g. `[env:uno]`, `[env:esp32]`, `[env:release]`). Useful for libraries targeting multiple platforms and for projects with debug vs release configs. Add a build profile selector with multiple targets per project. | OPEN | C4 | Wave 66 / PlatformIO |
@@ -754,7 +754,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0515 | **Arduino board settings dialog** — Expose FQBN, programmer, upload speed, and extra flags as an editable dialog in the Workbench. Currently these values are hardcoded or derived only from board selection. Required for non-standard boards and bootloader-burning workflows. | DONE (Wave 79) | C2 | Wave 64 audit |
 | BL-0516 | **Arduino CLI error message parsing** — Parse `arduino-cli compile` stderr output and display structured diagnostics (file, line, column, message) in the Workbench console instead of raw text. Map common errors ("library not found", "no such file") to plain-English hints. | DONE (Wave 79) | C2 | Wave 64 audit |
-| BL-0517 | **Arduino job history console** — Show a persistent log of all past compile/upload jobs (timestamp, board, status, duration) in the Workbench. Currently only the most recent job output is visible; older runs are lost on refresh. | OPEN | C2 | Wave 64 audit |
+| BL-0517 | **Arduino job history console** — Show a persistent log of all past compile/upload jobs (timestamp, board, status, duration) in the Workbench. Currently only the most recent job output is visible; older runs are lost on refresh. | DONE (Wave 84) | C2 | Wave 64 audit |
 | BL-0518 | **Sketch → Serial Monitor → Digital Twin flow** — After a successful upload, automatically offer to open the Serial Monitor connected to the same port, and route parsed telemetry to the Digital Twin's device shadow. Currently these three features are entirely disconnected. | OPEN | C4 | Wave 64 audit |
 
 ### AI Capabilities
@@ -782,7 +782,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0519 | **Simulation control AI tools** — Add AI tools to start, stop, configure, and retrieve results from simulations (`run_dc_analysis`, `run_transient`, `get_sim_results`, `set_sim_parameters`). Currently AI can discuss simulation but cannot invoke it directly via tool call. | OPEN | C3 | Wave 64 audit |
 | BL-0520 | **Circuit instances in AI system prompt** — The AI system prompt includes architecture nodes, BOM, and validation issues but does NOT include circuit schematic instances and nets. AI answers about circuit connectivity are based on inference, not actual data. Add a `buildCircuitContext()` function to include instances/nets/wires in every prompt. | OPEN | C4 | Wave 64 audit |
 | BL-0521 | **Action executor error tracking** — `useActionExecutor` silently drops failed tool-call actions (no toast, no console log, no retry). Add per-action error state tracking so users see which AI-suggested actions failed and why. | DONE (Wave 78) | C2 | Wave 64 audit |
-| BL-0522 | **"Explain this net" AI tool** — Add an `explain_net` tool that takes a net name and returns a plain-English description of what it carries (power, signal, data bus, control), what drives it, and what loads it — useful for newcomers trying to understand a schematic. | OPEN | C2 | Wave 64 audit |
+| BL-0522 | **"Explain this net" AI tool** — Add an `explain_net` tool that takes a net name and returns a plain-English description of what it carries (power, signal, data bus, control), what drives it, and what loads it — useful for newcomers trying to understand a schematic. | DONE (Wave 84) | C2 | Wave 64 audit |
 | BL-0523 | **DFM/manufacturing AI assistant** — Add AI tools for `run_dfm_check`, `explain_dfm_violation`, and `suggest_dfm_fix` that wrap the existing `DfmChecker` and `StandardsCompliance` engines and surface their output conversationally. | OPEN | C3 | Wave 64 audit |
 | BL-0641 | **RAG documents should be persistent, tenant-scoped, and wired into AI retrieval** — The codebase currently has a client-side `localStorage` RAG engine and a server-side in-memory RAG route surface. Consolidate into a single project-backed document system that the AI context builder actually uses. | OPEN | C4 | Repo gap audit 2026-03-13 |
 
