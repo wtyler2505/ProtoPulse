@@ -295,3 +295,5 @@ client/src/components/simulation/__tests__/SimPlayButton.test.tsx(232,56): error
 
 
 9:57:00 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:42:38 PM - File change detected. Starting incremental compilation...
+

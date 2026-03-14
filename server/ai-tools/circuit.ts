@@ -636,12 +636,13 @@ function generateExplanation(code: string): string {
 }
 
 /**
- * Register Circuit DSL code generation and explanation tools.
+ * Register Circuit DSL code generation, explanation, and analysis tools.
  *
- * Tools registered (2 total):
+ * Tools registered (3 + existing):
  *
  * - `generate_circuit_code` — Generate Circuit DSL code from a natural language description.
  * - `explain_circuit_code`  — Explain what circuit DSL code does in plain language.
+ * - `explain_net`           — Explain what a net carries, its protocol, drivers, and loads.
  *
  * @param registry - The {@link ToolRegistry} instance to register tools into.
  */
