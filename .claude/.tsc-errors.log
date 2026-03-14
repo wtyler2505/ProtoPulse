@@ -1177,3 +1177,8 @@ client/src/lib/ai-safety-mode.ts(511,5): error TS18004: No value exists in scope
 client/src/lib/ai-safety-mode.ts(511,5): error TS18004: No value exists in scope for the shorthand property 'enabled'. Either declare one or provide an initializer.
 
 3:59:57 PM - Found 1 error. Watching for file changes.
+[2J[3J[H4:00:42 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/ai-safety-mode.ts(511,5): error TS18004: No value exists in scope for the shorthand property 'enabled'. Either declare one or provide an initializer.
+
+4:00:53 PM - Found 1 error. Watching for file changes.
