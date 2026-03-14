@@ -27,6 +27,7 @@ import {
   Square,
   BookOpen,
   Ban,
+  Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +51,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import CodeEditor from '@/components/views/circuit-code/CodeEditor';
 import ExamplesBrowser from '@/components/views/arduino/ExamplesBrowser';
+import { formatArduinoCode } from '@/lib/arduino/code-formatter';
+import { translateCompileOutput } from '@/lib/arduino/error-translator';
+import type { ErrorTranslation } from '@/lib/arduino/error-translator';
 
 const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
 
@@ -299,6 +303,47 @@ export default function ArduinoWorkbenchView() {
 
   const handleClearConsole = useCallback(() => setConsoleLogs([]), []);
 
+  const handleFormat = useCallback(() => {
+    if (!activeFilePath || !code) {
+      return;
+    }
+    const before = code.split('\n').length;
+    const formatted = formatArduinoCode(code);
+    if (formatted === code) {
+      toast({ title: 'Already formatted' });
+      return;
+    }
+    setCode(formatted);
+    setIsDirty(true);
+    const after = formatted.split('\n').length;
+    const delta = after - before;
+    const desc = delta === 0 ? 'Reformatted' : delta > 0 ? `+${delta} lines` : `${delta} lines`;
+    toast({ title: 'Code formatted', description: desc });
+  }, [activeFilePath, code, toast]);
+
+  // Ctrl+T keyboard shortcut for format
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+        e.preventDefault();
+        handleFormat();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => {
+      window.removeEventListener('keydown', handler);
+    };
+  }, [handleFormat]);
+
+  // Translate compile errors from job logs
+  const translatedErrors: ErrorTranslation[] = useMemo(() => {
+    const failedJob = jobs.find(j => j.status === 'failed' && j.log);
+    if (!failedJob?.log) {
+      return [];
+    }
+    return translateCompileOutput(failedJob.log);
+  }, [jobs]);
+
   // Library Manager handlers
   const handleLibSearch = useCallback(async () => {
     const q = libSearchQuery.trim();
@@ -468,6 +513,18 @@ export default function ArduinoWorkbenchView() {
             data-testid="button-arduino-save"
           >
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-2 text-muted-foreground hover:text-foreground border-border/50"
+            onClick={handleFormat}
+            disabled={!activeFilePath || !code}
+            title="Format Code (Ctrl+T)"
+            data-testid="button-arduino-format"
+          >
+            <Wand2 className="w-3.5 h-3.5" />
           </Button>
 
           <Button
@@ -803,6 +860,49 @@ export default function ArduinoWorkbenchView() {
                         )}
                       </div>
                     ))}
+                    {/* Translated errors — shown when a compile job failed */}
+                    {translatedErrors.length > 0 && (
+                      <div className="border-l-2 border-destructive/50 pl-2 py-1.5 mb-2 bg-destructive/5 rounded-r-sm" data-testid="translated-errors-panel">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <AlertCircle className="w-3 h-3 text-destructive" />
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-destructive">
+                            {translatedErrors.length} Issue{translatedErrors.length !== 1 ? 's' : ''} Explained
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {translatedErrors.map((t, i) => (
+                            <div
+                              key={i}
+                              className="bg-white/5 rounded px-2 py-1.5 text-[10px]"
+                              data-testid={`translated-error-${i}`}
+                            >
+                              <div className="flex items-start gap-1.5">
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    'h-3.5 px-1 text-[7px] shrink-0 mt-0.5',
+                                    t.severity === 'error' && 'border-destructive/30 text-destructive bg-destructive/10',
+                                    t.severity === 'warning' && 'border-amber-500/30 text-amber-500 bg-amber-500/10',
+                                    t.severity === 'note' && 'border-blue-500/30 text-blue-500 bg-blue-500/10',
+                                  )}
+                                >
+                                  {t.severity}
+                                </Badge>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-foreground/90">{t.translated}</p>
+                                  <p className="text-primary/80 mt-0.5">{t.suggestion}</p>
+                                  {t.file && t.lineNumber && (
+                                    <span className="text-[8px] text-muted-foreground mt-0.5 block font-mono">
+                                      {t.file}:{t.lineNumber}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {jobs.length === 0 && consoleLogs.length === 0 && (
                       <p className="opacity-30 italic">No output yet. Run Verify or Upload to see logs.</p>
                     )}

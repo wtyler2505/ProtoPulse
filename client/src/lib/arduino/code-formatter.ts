@@ -231,21 +231,22 @@ export function formatArduinoCode(code: string, options?: FormatOptions): string
   let inBlockComment = false;
 
   for (let lineIdx = 0; lineIdx < spacedLines.length; lineIdx++) {
-    const segments = spacedLines[lineIdx];
-    let line = segmentsToString(segments).trim();
-
-    // Track block comment state across lines
+    // When inside a multi-line block comment, use the RAW line (not the
+    // tokenized/operator-normalized version) so comment content is preserved
+    // exactly as written.
     if (inBlockComment) {
-      // Inside a multi-line block comment — preserve as-is with current indent
+      const rawLine = rawLines[lineIdx].trim();
       const commentIndent = indent.repeat(Math.max(0, depth));
-      // Check if the block comment ends on this line
-      if (line.includes('*/')) {
+      if (rawLine.includes('*/')) {
         inBlockComment = false;
       }
-      formattedLines.push(commentIndent + ' ' + line);
+      formattedLines.push(commentIndent + ' ' + rawLine);
       consecutiveBlankLines = 0;
       continue;
     }
+
+    const segments = spacedLines[lineIdx];
+    let line = segmentsToString(segments).trim();
 
     // Check if a block comment starts and doesn't end on this line
     const codeStr = codeOnly(segments);
@@ -300,9 +301,10 @@ export function formatArduinoCode(code: string, options?: FormatOptions): string
       }
 
       formattedLines.push(currentIndent + line);
-      // If line also has opening braces (like "} else {"), increase depth after
-      if (openBraces > closeBraces) {
-        depth += openBraces - closeBraces;
+      // If line also has opening braces (like "} else {"), increase depth after.
+      // We already subtracted closeBraces above, so just add back openBraces.
+      if (openBraces > 0) {
+        depth += openBraces;
       }
     } else {
       // Line does NOT start with }

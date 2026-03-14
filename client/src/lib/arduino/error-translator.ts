@@ -98,7 +98,7 @@ const TRANSLATION_RULES: TranslationRule[] = [
       'Look for stray semicolons, misplaced keywords, or a missing opening brace.',
   },
   {
-    pattern: /expected [''""](.+?)[''""] before [''""](.+?)[''""]$/i,
+    pattern: /expected [''""](.+?)[''""] before [''""](.+?)[''""].*/i,
     translate: (m) =>
       `Missing ${m[1]} before ${m[2]}. The compiler expected to see '${m[1]}' at this point.`,
     suggestion: (m) =>

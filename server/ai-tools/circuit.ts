@@ -865,8 +865,9 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
           if (!conn.offsetX && conn.offsetX !== 0) continue;
           // Simple rotation math for pad positions
           const angle = ((inst.pcbRotation || 0) * Math.PI) / 180;
-          const rx = conn.offsetX * Math.cos(angle) - conn.offsetY * Math.sin(angle);
-          const ry = conn.offsetX * Math.sin(angle) + conn.offsetY * Math.cos(angle);
+          const oy = conn.offsetY ?? 0;
+          const rx = conn.offsetX * Math.cos(angle) - oy * Math.sin(angle);
+          const ry = conn.offsetX * Math.sin(angle) + oy * Math.cos(angle);
           
           const px = (inst.pcbX || 0) + rx;
           const py = (inst.pcbY || 0) + ry;

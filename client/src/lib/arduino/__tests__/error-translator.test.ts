@@ -509,7 +509,7 @@ describe('error-translator', () => {
 
     it('translates "ISO C++ forbids"', () => {
       expectTranslation(
-        'sketch.ino:15:5: warning: ISO C++ forbids variable length array',
+        'sketch.ino:15:5: warning: ISO C++ forbids converting a string constant to char*',
         {
           severity: 'warning',
           translatedContains: 'not part of standard',
