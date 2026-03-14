@@ -56,6 +56,7 @@ export const navItems: NavItem[] = [
   { icon: Plug, view: 'serial_monitor', label: 'Serial Monitor' },
   { icon: Calculator, view: 'calculators', label: 'Calculators' },
   { icon: BookOpen, view: 'design_patterns', label: 'Patterns' },
+  { icon: Zap, view: 'starter_circuits', label: 'Starter Circuits' },
   { icon: History, view: 'design_history', label: 'History' },
   { icon: HeartPulse, view: 'lifecycle', label: 'Lifecycle' },
   { icon: MessageSquare, view: 'comments', label: 'Comments' },

@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { CONFIG, IPC_CHANNELS, BUILDER_CONFIG, buildMenuTemplate } from '../main';
-import { PRELOAD_API_KEYS, PRELOAD_IPC_INVOKE_CHANNELS, PRELOAD_IPC_ON_CHANNELS } from '../preload';
+import {
+  CONFIG,
+  IPC_CHANNELS,
+  BUILDER_CONFIG,
+  PRELOAD_API_KEYS,
+  PRELOAD_IPC_INVOKE_CHANNELS,
+  PRELOAD_IPC_ON_CHANNELS,
+  buildMenuTemplate,
+} from '../config';
+import type { MenuItemConfig } from '../config';
 
 // ── Window configuration ─────────────────────────────────────────────────────
 
@@ -21,6 +29,11 @@ describe('Electron window configuration', () => {
 
   it('points dev server at http://localhost:5000', () => {
     expect(CONFIG.DEV_SERVER_URL).toBe('http://localhost:5000');
+  });
+
+  it('minimum dimensions are smaller than default dimensions', () => {
+    expect(CONFIG.MIN_WIDTH).toBeLessThan(CONFIG.WINDOW_WIDTH);
+    expect(CONFIG.MIN_HEIGHT).toBeLessThan(CONFIG.WINDOW_HEIGHT);
   });
 });
 
@@ -55,6 +68,11 @@ describe('IPC channel registry', () => {
     const channels = Object.values(IPC_CHANNELS);
     const uniqueChannels = new Set(channels);
     expect(uniqueChannels.size).toBe(channels.length);
+  });
+
+  it('has exactly 11 registered channels', () => {
+    const channels = Object.values(IPC_CHANNELS);
+    expect(channels).toHaveLength(11);
   });
 });
 
@@ -99,7 +117,6 @@ describe('Preload API surface', () => {
   });
 
   it('has matching IPC invoke channels between main and preload', () => {
-    // Every invoke channel used in preload must be registered in main IPC_CHANNELS
     const mainChannels = new Set(Object.values(IPC_CHANNELS));
     for (const channel of PRELOAD_IPC_INVOKE_CHANNELS) {
       expect(mainChannels.has(channel)).toBe(true);
@@ -111,6 +128,11 @@ describe('Preload API surface', () => {
     for (const channel of PRELOAD_IPC_ON_CHANNELS) {
       expect(mainChannels.has(channel)).toBe(true);
     }
+  });
+
+  it('invoke channels have no duplicates', () => {
+    const unique = new Set(PRELOAD_IPC_INVOKE_CHANNELS);
+    expect(unique.size).toBe(PRELOAD_IPC_INVOKE_CHANNELS.length);
   });
 });
 
@@ -127,7 +149,7 @@ describe('electron-builder configuration', () => {
 
   it('includes dist and electron files', () => {
     expect(BUILDER_CONFIG.files).toContain('dist/**/*');
-    expect(BUILDER_CONFIG.files.some((f) => f.startsWith('electron/'))).toBe(true);
+    expect(BUILDER_CONFIG.files.some((f: string) => f.startsWith('electron/'))).toBe(true);
   });
 
   it('targets AppImage and deb for Linux', () => {
@@ -155,8 +177,8 @@ describe('electron-builder configuration', () => {
 // ── Menu template ────────────────────────────────────────────────────────────
 
 describe('Menu template', () => {
-  it('includes File, Edit, View, and Help menus', () => {
-    const template = buildMenuTemplate();
+  it('includes File, Edit, View, and Help menus on non-macOS', () => {
+    const template = buildMenuTemplate('linux');
     const labels = template.map((item) => item.label).filter(Boolean);
     expect(labels).toContain('File');
     expect(labels).toContain('Edit');
@@ -164,35 +186,87 @@ describe('Menu template', () => {
     expect(labels).toContain('Help');
   });
 
+  it('adds an app menu on macOS', () => {
+    const template = buildMenuTemplate('darwin');
+    expect(template[0].label).toBe('ProtoPulse');
+    expect(template).toHaveLength(5); // App + File + Edit + View + Help
+  });
+
+  it('has 4 menus on non-macOS platforms', () => {
+    const template = buildMenuTemplate('linux');
+    expect(template).toHaveLength(4); // File + Edit + View + Help
+  });
+
   it('File menu contains New Project, Open Project, Save', () => {
-    const template = buildMenuTemplate();
+    const template = buildMenuTemplate('linux');
     const fileMenu = template.find((item) => item.label === 'File');
     expect(fileMenu).toBeDefined();
-    const submenu = fileMenu!.submenu as MenuItemConstructorOptions[];
+    const submenu = fileMenu!.submenu as MenuItemConfig[];
     const labels = submenu.map((item) => item.label).filter(Boolean);
     expect(labels).toContain('New Project');
-    expect(labels).toContain('Open Project…');
+    expect(labels).toContain('Open Project\u2026');
     expect(labels).toContain('Save');
   });
 
   it('Help menu contains About ProtoPulse', () => {
-    const template = buildMenuTemplate();
+    const template = buildMenuTemplate('linux');
     const helpMenu = template.find((item) => item.label === 'Help');
     expect(helpMenu).toBeDefined();
-    const submenu = helpMenu!.submenu as MenuItemConstructorOptions[];
+    const submenu = helpMenu!.submenu as MenuItemConfig[];
     const labels = submenu.map((item) => item.label).filter(Boolean);
     expect(labels).toContain('About ProtoPulse');
   });
 
   it('File menu items have keyboard accelerators', () => {
-    const template = buildMenuTemplate();
+    const template = buildMenuTemplate('linux');
     const fileMenu = template.find((item) => item.label === 'File');
-    const submenu = fileMenu!.submenu as MenuItemConstructorOptions[];
+    const submenu = fileMenu!.submenu as MenuItemConfig[];
     const newProject = submenu.find((item) => item.label === 'New Project');
-    const openProject = submenu.find((item) => item.label === 'Open Project…');
+    const openProject = submenu.find((item) => item.label === 'Open Project\u2026');
     const save = submenu.find((item) => item.label === 'Save');
     expect(newProject?.accelerator).toBe('CmdOrCtrl+N');
     expect(openProject?.accelerator).toBe('CmdOrCtrl+O');
     expect(save?.accelerator).toBe('CmdOrCtrl+S');
+  });
+
+  it('File menu ends with quit on Linux', () => {
+    const template = buildMenuTemplate('linux');
+    const fileMenu = template.find((item) => item.label === 'File');
+    const submenu = fileMenu!.submenu as MenuItemConfig[];
+    const lastItem = submenu[submenu.length - 1];
+    expect(lastItem.role).toBe('quit');
+  });
+
+  it('File menu ends with close on macOS', () => {
+    const template = buildMenuTemplate('darwin');
+    const fileMenu = template.find((item) => item.label === 'File');
+    const submenu = fileMenu!.submenu as MenuItemConfig[];
+    const lastItem = submenu[submenu.length - 1];
+    expect(lastItem.role).toBe('close');
+  });
+
+  it('Edit menu has standard editing roles', () => {
+    const template = buildMenuTemplate('linux');
+    const editMenu = template.find((item) => item.label === 'Edit');
+    const submenu = editMenu!.submenu as MenuItemConfig[];
+    const roles = submenu.map((item) => item.role).filter(Boolean);
+    expect(roles).toContain('undo');
+    expect(roles).toContain('redo');
+    expect(roles).toContain('cut');
+    expect(roles).toContain('copy');
+    expect(roles).toContain('paste');
+    expect(roles).toContain('selectAll');
+  });
+
+  it('View menu has dev tools and zoom controls', () => {
+    const template = buildMenuTemplate('linux');
+    const viewMenu = template.find((item) => item.label === 'View');
+    const submenu = viewMenu!.submenu as MenuItemConfig[];
+    const roles = submenu.map((item) => item.role).filter(Boolean);
+    expect(roles).toContain('toggleDevTools');
+    expect(roles).toContain('zoomIn');
+    expect(roles).toContain('zoomOut');
+    expect(roles).toContain('resetZoom');
+    expect(roles).toContain('togglefullscreen');
   });
 });
