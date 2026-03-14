@@ -730,3 +730,5 @@ server/firmware-runtime/simavr-runner.ts(189,29): error TS2339: Property 'queryB
 
 
 12:46:33 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:47:17 PM - File change detected. Starting incremental compilation...
+
