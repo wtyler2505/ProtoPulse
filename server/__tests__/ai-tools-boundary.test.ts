@@ -117,8 +117,8 @@ describe('Registry completeness', () => {
     }
   });
 
-  it('registers exactly 101 tools total', () => {
-    expect(allTools).toHaveLength(101);
+  it('registers exactly 102 tools total', () => {
+    expect(allTools).toHaveLength(102);
   });
 
   it('every registered tool has a unique name', () => {
@@ -147,8 +147,8 @@ describe('Registry completeness', () => {
     expect(registry.getByCategory('architecture')).toHaveLength(22);
   });
 
-  it('circuit category registers 23 tools', () => {
-    expect(registry.getByCategory('circuit')).toHaveLength(23);
+  it('circuit category registers 24 tools', () => {
+    expect(registry.getByCategory('circuit')).toHaveLength(24);
   });
 
   it('bom category registers 12 tools', () => {
@@ -741,7 +741,7 @@ describe('toAnthropicTools() format converter', () => {
   const anthropicTools = registry.toAnthropicTools();
 
   it('returns an array matching total tool count', () => {
-    expect(anthropicTools).toHaveLength(101);
+    expect(anthropicTools).toHaveLength(102);
   });
 
   it('every entry has name, description, and input_schema', () => {
@@ -789,7 +789,7 @@ describe('toGeminiFunctionDeclarations() format converter', () => {
   const geminiTools = registry.toGeminiFunctionDeclarations();
 
   it('returns an array matching total tool count', () => {
-    expect(geminiTools).toHaveLength(101);
+    expect(geminiTools).toHaveLength(102);
   });
 
   it('every entry has name, description, and parameters', () => {

@@ -123,13 +123,16 @@ describe('shared/starter-circuits', () => {
 // ---------------------------------------------------------------------------
 
 describe('StarterCircuitsPanel', () => {
+  const mockWriteText = vi.fn().mockResolvedValue(undefined);
+
   beforeEach(() => {
-    // Mock clipboard API
-    Object.assign(navigator, {
-      clipboard: {
-        writeText: vi.fn().mockResolvedValue(undefined),
-      },
+    // Mock clipboard API — navigator.clipboard is getter-only in happy-dom
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: mockWriteText },
+      writable: true,
+      configurable: true,
     });
+    mockWriteText.mockClear();
   });
 
   it('renders the panel with all circuits', () => {
@@ -311,7 +314,7 @@ describe('StarterCircuitsPanel', () => {
     const copyBtn = screen.getByTestId(`starter-copy-${firstCircuit.id}`);
     fireEvent.click(copyBtn);
 
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
+    expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
   });
 
   it('open circuit button logs to console', () => {

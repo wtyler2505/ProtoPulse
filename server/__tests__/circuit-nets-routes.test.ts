@@ -41,11 +41,32 @@ const mockStorage: Record<string, ReturnType<typeof vi.fn>> = {
   deleteCircuitNet: vi.fn(),
 };
 
+vi.mock('../auth', () => ({
+  validateSession: vi.fn().mockResolvedValue({ userId: 1, sessionId: 'test-session' }),
+}));
+
+vi.mock('../routes/auth-middleware', () => ({
+  requireProjectOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireCircuitOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 vi.mock('../db', () => ({ db: {}, pool: {}, checkConnection: vi.fn() }));
 
 vi.mock('../logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function authFetch(url: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('X-Session-Id')) {
+    headers.set('X-Session-Id', 'test-session');
+  }
+  return fetch(url, { ...init, headers });
+}
 
 // ---------------------------------------------------------------------------
 // Server setup
@@ -93,7 +114,7 @@ describe('GET /api/circuits/:circuitId/nets', () => {
   it('returns nets for a circuit', async () => {
     mockStorage.getCircuitNets.mockResolvedValue([makeNet(), makeNet({ id: 2, name: 'GND', netType: 'ground' })]);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets`);
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets`);
     expect(res.status).toBe(200);
     const body = await res.json() as { data: unknown[]; total: number };
     expect(body.data).toHaveLength(2);
@@ -109,7 +130,7 @@ describe('GET /api/circuits/:circuitId/nets/:id', () => {
   it('returns a specific net', async () => {
     mockStorage.getCircuitNet.mockResolvedValue(makeNet());
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets/1`);
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets/1`);
     expect(res.status).toBe(200);
     const body = await res.json() as { name: string };
     expect(body.name).toBe('VCC');
@@ -118,7 +139,7 @@ describe('GET /api/circuits/:circuitId/nets/:id', () => {
   it('returns 404 for non-existent net', async () => {
     mockStorage.getCircuitNet.mockResolvedValue(null);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets/999`);
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets/999`);
     expect(res.status).toBe(404);
   });
 });
@@ -131,7 +152,7 @@ describe('POST /api/circuits/:circuitId/nets', () => {
   it('creates a circuit net', async () => {
     mockStorage.createCircuitNet.mockResolvedValue(makeNet({ id: 10 }));
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'SDA' }),
@@ -142,7 +163,7 @@ describe('POST /api/circuits/:circuitId/nets', () => {
   });
 
   it('returns 400 for missing name', async () => {
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -151,7 +172,7 @@ describe('POST /api/circuits/:circuitId/nets', () => {
   });
 
   it('returns 400 for invalid netType', async () => {
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'TEST', netType: 'invalid' }),
@@ -166,9 +187,10 @@ describe('POST /api/circuits/:circuitId/nets', () => {
 
 describe('PATCH /api/circuits/:circuitId/nets/:id', () => {
   it('updates a net', async () => {
+    mockStorage.getCircuitNet.mockResolvedValue(makeNet());
     mockStorage.updateCircuitNet.mockResolvedValue(makeNet({ name: 'MOSI' }));
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets/1`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets/1`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'MOSI' }),
@@ -179,7 +201,7 @@ describe('PATCH /api/circuits/:circuitId/nets/:id', () => {
   it('returns 404 for non-existent net', async () => {
     mockStorage.updateCircuitNet.mockResolvedValue(null);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets/999`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets/999`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'X' }),
@@ -194,16 +216,17 @@ describe('PATCH /api/circuits/:circuitId/nets/:id', () => {
 
 describe('DELETE /api/circuits/:circuitId/nets/:id', () => {
   it('deletes a net', async () => {
+    mockStorage.getCircuitNet.mockResolvedValue(makeNet());
     mockStorage.deleteCircuitNet.mockResolvedValue(true);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets/1`, { method: 'DELETE' });
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets/1`, { method: 'DELETE' });
     expect(res.status).toBe(204);
   });
 
   it('returns 404 for non-existent net', async () => {
     mockStorage.deleteCircuitNet.mockResolvedValue(false);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/nets/999`, { method: 'DELETE' });
+    const res = await authFetch(`${baseUrl}/api/circuits/1/nets/999`, { method: 'DELETE' });
     expect(res.status).toBe(404);
   });
 });

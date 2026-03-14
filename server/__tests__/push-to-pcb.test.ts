@@ -50,11 +50,32 @@ const mockStorage: Record<string, ReturnType<typeof vi.fn>> = {
   getComponentPart: vi.fn(),
 };
 
+vi.mock('../auth', () => ({
+  validateSession: vi.fn().mockResolvedValue({ userId: 1, sessionId: 'test-session' }),
+}));
+
+vi.mock('../routes/auth-middleware', () => ({
+  requireProjectOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireCircuitOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 vi.mock('../db', () => ({ db: {}, pool: {}, checkConnection: vi.fn() }));
 
 vi.mock('../logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function authFetch(url: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('X-Session-Id')) {
+    headers.set('X-Session-Id', 'test-session');
+  }
+  return fetch(url, { ...init, headers });
+}
 
 // ---------------------------------------------------------------------------
 // Server setup
@@ -108,7 +129,7 @@ describe('POST /api/circuits/:circuitId/push-to-pcb', () => {
       return { ...makeInstance({ id }), ...data };
     });
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -147,7 +168,7 @@ describe('POST /api/circuits/:circuitId/push-to-pcb', () => {
       return { ...makeInstance({ id }), ...data };
     });
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -169,7 +190,7 @@ describe('POST /api/circuits/:circuitId/push-to-pcb', () => {
 
     mockStorage.getCircuitInstances.mockResolvedValue([placed]);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -185,7 +206,7 @@ describe('POST /api/circuits/:circuitId/push-to-pcb', () => {
   it('returns 400 when circuit has no instances', async () => {
     mockStorage.getCircuitInstances.mockResolvedValue([]);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -204,7 +225,7 @@ describe('POST /api/circuits/:circuitId/push-to-pcb', () => {
       return { ...makeInstance({ id, referenceDesignator: 'C1' }), ...data };
     });
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/push-to-pcb`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),

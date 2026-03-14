@@ -85,8 +85,6 @@ export const BUILDER_CONFIG = {
   },
   files: [
     'dist/**/*',
-    'electron/**/*.js',
-    'electron/**/*.cjs',
   ],
   linux: {
     target: ['AppImage', 'deb'],

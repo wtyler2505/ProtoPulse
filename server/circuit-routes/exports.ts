@@ -760,4 +760,39 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
       files: result.files,
     });
   }));
+
+  // Etchable PCB export (DIY toner transfer)
+  app.post('/api/projects/:projectId/export/etchable-pcb', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
+    const { mirror = true, scale = 1.0, borderMm = 5, drillMarks = true, silkscreen = false, copperLayer = 'front' } = req.body as {
+      mirror?: boolean;
+      scale?: number;
+      borderMm?: number;
+      drillMarks?: boolean;
+      silkscreen?: boolean;
+      copperLayer?: 'front' | 'back' | 'both';
+    };
+
+    const circuits = await storage.getCircuitDesigns(projectId);
+    if (circuits.length === 0) {
+      return res.status(404).json({ message: 'No circuit designs found' });
+    }
+    const data = await gatherCircuitData(storage, circuits[0].id);
+    if (!data) { return res.status(404).json({ message: 'Circuit not found' }); }
+
+    const project = await storage.getProject(projectId);
+    const { generateEtchablePcbSvg } = await import('../export/etchable-pcb-generator');
+
+    const svg = generateEtchablePcbSvg(
+      data.instances as Parameters<typeof generateEtchablePcbSvg>[0],
+      data.wires as Parameters<typeof generateEtchablePcbSvg>[1],
+      data.parts as Parameters<typeof generateEtchablePcbSvg>[2],
+      project?.name ?? 'ProtoPulse Project',
+      { mirror, scale, borderMm, drillMarks, silkscreen, copperLayer },
+    );
+
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Content-Disposition', `attachment; filename="etchable-pcb-${String(projectId)}.svg"`);
+    res.send(svg);
+  }));
 }

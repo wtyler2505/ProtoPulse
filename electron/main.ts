@@ -52,7 +52,7 @@ function stopExpressServer(): void {
 // ── Window creation ──────────────────────────────────────────────────────────
 
 function createMainWindow(): BrowserWindow {
-  const preloadPath = path.join(__dirname, 'preload.js');
+  const preloadPath = path.join(__dirname, 'preload.cjs');
 
   const win = new BrowserWindow({
     width: CONFIG.WINDOW_WIDTH,

@@ -35,16 +35,38 @@ function makeWire(overrides: Record<string, unknown> = {}) {
 
 const mockStorage: Record<string, ReturnType<typeof vi.fn>> = {
   getCircuitWires: vi.fn(),
+  getCircuitWire: vi.fn(),
   createCircuitWire: vi.fn(),
   updateCircuitWire: vi.fn(),
   deleteCircuitWire: vi.fn(),
 };
+
+vi.mock('../auth', () => ({
+  validateSession: vi.fn().mockResolvedValue({ userId: 1, sessionId: 'test-session' }),
+}));
+
+vi.mock('../routes/auth-middleware', () => ({
+  requireProjectOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireCircuitOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
 
 vi.mock('../db', () => ({ db: {}, pool: {}, checkConnection: vi.fn() }));
 
 vi.mock('../logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function authFetch(url: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('X-Session-Id')) {
+    headers.set('X-Session-Id', 'test-session');
+  }
+  return fetch(url, { ...init, headers });
+}
 
 // ---------------------------------------------------------------------------
 // Server setup
@@ -92,7 +114,7 @@ describe('GET /api/circuits/:circuitId/wires', () => {
   it('returns wires for a circuit', async () => {
     mockStorage.getCircuitWires.mockResolvedValue([makeWire(), makeWire({ id: 2 })]);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/wires`);
+    const res = await authFetch(`${baseUrl}/api/circuits/1/wires`);
     expect(res.status).toBe(200);
     const body = await res.json() as { data: unknown[]; total: number };
     expect(body.data).toHaveLength(2);
@@ -108,7 +130,7 @@ describe('POST /api/circuits/:circuitId/wires', () => {
   it('creates a wire', async () => {
     mockStorage.createCircuitWire.mockResolvedValue(makeWire({ id: 10 }));
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/wires`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/wires`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -123,7 +145,7 @@ describe('POST /api/circuits/:circuitId/wires', () => {
   });
 
   it('returns 400 for missing required fields', async () => {
-    const res = await fetch(`${baseUrl}/api/circuits/1/wires`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/wires`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -133,14 +155,15 @@ describe('POST /api/circuits/:circuitId/wires', () => {
 });
 
 // ===========================================================================
-// PATCH /api/wires/:id
+// PATCH /api/circuits/:circuitId/wires/:id
 // ===========================================================================
 
-describe('PATCH /api/wires/:id', () => {
+describe('PATCH /api/circuits/:circuitId/wires/:id', () => {
   it('updates a wire', async () => {
+    mockStorage.getCircuitWire.mockResolvedValue(makeWire());
     mockStorage.updateCircuitWire.mockResolvedValue(makeWire({ width: 2.0 }));
 
-    const res = await fetch(`${baseUrl}/api/wires/1`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/wires/1`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ width: 2.0 }),
@@ -151,7 +174,7 @@ describe('PATCH /api/wires/:id', () => {
   it('returns 404 for non-existent wire', async () => {
     mockStorage.updateCircuitWire.mockResolvedValue(null);
 
-    const res = await fetch(`${baseUrl}/api/wires/999`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/wires/999`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ width: 1.0 }),
@@ -160,7 +183,9 @@ describe('PATCH /api/wires/:id', () => {
   });
 
   it('returns 400 for invalid width (not positive)', async () => {
-    const res = await fetch(`${baseUrl}/api/wires/1`, {
+    mockStorage.getCircuitWire.mockResolvedValue(makeWire());
+
+    const res = await authFetch(`${baseUrl}/api/circuits/1/wires/1`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ width: -1 }),
@@ -170,21 +195,22 @@ describe('PATCH /api/wires/:id', () => {
 });
 
 // ===========================================================================
-// DELETE /api/wires/:id
+// DELETE /api/circuits/:circuitId/wires/:id
 // ===========================================================================
 
-describe('DELETE /api/wires/:id', () => {
+describe('DELETE /api/circuits/:circuitId/wires/:id', () => {
   it('deletes a wire', async () => {
+    mockStorage.getCircuitWire.mockResolvedValue(makeWire());
     mockStorage.deleteCircuitWire.mockResolvedValue(true);
 
-    const res = await fetch(`${baseUrl}/api/wires/1`, { method: 'DELETE' });
+    const res = await authFetch(`${baseUrl}/api/circuits/1/wires/1`, { method: 'DELETE' });
     expect(res.status).toBe(204);
   });
 
   it('returns 404 for non-existent wire', async () => {
     mockStorage.deleteCircuitWire.mockResolvedValue(false);
 
-    const res = await fetch(`${baseUrl}/api/wires/999`, { method: 'DELETE' });
+    const res = await authFetch(`${baseUrl}/api/circuits/1/wires/999`, { method: 'DELETE' });
     expect(res.status).toBe(404);
   });
 });

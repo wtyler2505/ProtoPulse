@@ -156,6 +156,15 @@ const EXPORT_CATEGORIES: ExportCategory[] = [
         endpoint: '/export/ipc2581',
         method: 'POST',
       },
+      {
+        id: 'etchable-pcb',
+        label: 'Etchable PCB (DIY)',
+        extension: '.svg',
+        description: 'High-contrast mirrored SVG for toner transfer or photoresist etching',
+        icon: Drill,
+        endpoint: '/export/etchable-pcb',
+        method: 'POST',
+      },
     ],
   },
   {

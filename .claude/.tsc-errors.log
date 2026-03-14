@@ -103,3 +103,179 @@ server/ai-tools/manufacturing.ts(800,40): error TS2538: Type 'undefined' cannot 
 7:52:14 AM - Found 0 errors. Watching for file changes.
 [2J[3J[H7:52:32 AM - File change detected. Starting incremental compilation...
 
+
+7:59:32 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:59:41 AM - File change detected. Starting incremental compilation...
+
+
+7:59:56 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:06:00 AM - File change detected. Starting incremental compilation...
+
+
+8:06:15 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:06:28 AM - File change detected. Starting incremental compilation...
+
+
+8:06:36 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:08:21 AM - File change detected. Starting incremental compilation...
+
+
+8:08:32 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:39:24 AM - File change detected. Starting incremental compilation...
+
+
+8:39:48 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:40:08 AM - File change detected. Starting incremental compilation...
+
+
+8:40:13 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:41:48 AM - File change detected. Starting incremental compilation...
+
+
+8:41:54 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:50:37 AM - File change detected. Starting incremental compilation...
+
+
+8:50:43 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:13:48 AM - File change detected. Starting incremental compilation...
+
+
+9:14:01 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:15:22 AM - File change detected. Starting incremental compilation...
+
+
+9:15:25 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:16:50 AM - File change detected. Starting incremental compilation...
+
+
+9:16:55 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:18:03 AM - File change detected. Starting incremental compilation...
+
+
+9:18:08 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:19:43 AM - File change detected. Starting incremental compilation...
+
+
+9:19:48 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:21:03 AM - File change detected. Starting incremental compilation...
+
+
+9:21:06 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:21:56 AM - File change detected. Starting incremental compilation...
+
+
+9:21:59 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:23:10 AM - File change detected. Starting incremental compilation...
+
+
+9:23:14 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:24:01 AM - File change detected. Starting incremental compilation...
+
+
+9:24:05 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:27:45 AM - File change detected. Starting incremental compilation...
+
+
+9:27:48 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:28:33 AM - File change detected. Starting incremental compilation...
+
+
+9:28:37 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:29:32 AM - File change detected. Starting incremental compilation...
+
+
+9:29:35 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:30:24 AM - File change detected. Starting incremental compilation...
+
+
+9:30:28 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:36:42 AM - File change detected. Starting incremental compilation...
+
+
+9:36:45 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:43:05 AM - File change detected. Starting incremental compilation...
+
+
+9:43:07 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:44:41 AM - File change detected. Starting incremental compilation...
+
+
+9:44:43 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:46:25 AM - File change detected. Starting incremental compilation...
+
+
+9:46:27 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:48:03 AM - File change detected. Starting incremental compilation...
+
+
+9:48:06 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:50:34 AM - File change detected. Starting incremental compilation...
+
+
+9:50:36 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:51:31 AM - File change detected. Starting incremental compilation...
+
+
+9:51:32 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:52:31 AM - File change detected. Starting incremental compilation...
+
+
+9:52:34 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:53:26 AM - File change detected. Starting incremental compilation...
+
+
+9:53:28 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:00:57 AM - File change detected. Starting incremental compilation...
+
+server/circuit-routes/exports.ts(776,49): error TS2345: Argument of type 'number' is not assignable to parameter of type 'IStorage'.
+server/circuit-routes/exports.ts(779,17): error TS2554: Expected 4-5 arguments, but got 2.
+
+10:09:38 AM - Found 2 errors. Watching for file changes.
+[2J[3J[H10:13:19 AM - File change detected. Starting incremental compilation...
+
+
+10:13:26 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:20:01 AM - File change detected. Starting incremental compilation...
+
+
+10:24:27 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:27:31 AM - File change detected. Starting incremental compilation...
+
+
+10:27:38 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:27:43 AM - File change detected. Starting incremental compilation...
+
+
+10:27:49 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:27:51 AM - File change detected. Starting incremental compilation...
+
+
+10:27:56 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:27:58 AM - File change detected. Starting incremental compilation...
+
+
+10:28:03 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:28:22 AM - File change detected. Starting incremental compilation...
+
+
+10:28:28 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:28:32 AM - File change detected. Starting incremental compilation...
+
+
+10:28:37 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:31:05 AM - File change detected. Starting incremental compilation...
+
+
+10:31:08 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:31:24 AM - File change detected. Starting incremental compilation...
+
+
+10:31:27 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:40:10 AM - File change detected. Starting incremental compilation...
+
+
+10:40:12 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:40:23 AM - File change detected. Starting incremental compilation...
+
+
+10:40:25 AM - Found 0 errors. Watching for file changes.

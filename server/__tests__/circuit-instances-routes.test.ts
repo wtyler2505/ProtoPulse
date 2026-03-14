@@ -47,11 +47,32 @@ const mockStorage: Record<string, ReturnType<typeof vi.fn>> = {
   deleteCircuitInstance: vi.fn(),
 };
 
+vi.mock('../auth', () => ({
+  validateSession: vi.fn().mockResolvedValue({ userId: 1, sessionId: 'test-session' }),
+}));
+
+vi.mock('../routes/auth-middleware', () => ({
+  requireProjectOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireCircuitOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 vi.mock('../db', () => ({ db: {}, pool: {}, checkConnection: vi.fn() }));
 
 vi.mock('../logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function authFetch(url: string, init?: RequestInit): Promise<Response> {
+  const headers = new Headers(init?.headers);
+  if (!headers.has('X-Session-Id')) {
+    headers.set('X-Session-Id', 'test-session');
+  }
+  return fetch(url, { ...init, headers });
+}
 
 // ---------------------------------------------------------------------------
 // Server setup
@@ -99,7 +120,7 @@ describe('GET /api/circuits/:circuitId/instances', () => {
   it('returns instances for a circuit', async () => {
     mockStorage.getCircuitInstances.mockResolvedValue([makeInstance(), makeInstance({ id: 2, referenceDesignator: 'R1' })]);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances`);
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances`);
     expect(res.status).toBe(200);
     const body = await res.json() as { data: unknown[]; total: number };
     expect(body.data).toHaveLength(2);
@@ -113,7 +134,7 @@ describe('GET /api/circuits/:circuitId/instances', () => {
       makeInstance({ id: 3 }),
     ]);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances?limit=2&offset=0`);
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances?limit=2&offset=0`);
     expect(res.status).toBe(200);
     const body = await res.json() as { data: unknown[]; total: number };
     expect(body.data).toHaveLength(2);
@@ -129,7 +150,7 @@ describe('GET /api/circuits/:circuitId/instances/:id', () => {
   it('returns a specific instance', async () => {
     mockStorage.getCircuitInstance.mockResolvedValue(makeInstance());
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances/1`);
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances/1`);
     expect(res.status).toBe(200);
     const body = await res.json() as { referenceDesignator: string };
     expect(body.referenceDesignator).toBe('U1');
@@ -138,7 +159,7 @@ describe('GET /api/circuits/:circuitId/instances/:id', () => {
   it('returns 404 for non-existent instance', async () => {
     mockStorage.getCircuitInstance.mockResolvedValue(null);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances/999`);
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances/999`);
     expect(res.status).toBe(404);
   });
 });
@@ -151,7 +172,7 @@ describe('POST /api/circuits/:circuitId/instances', () => {
   it('creates a circuit instance', async () => {
     mockStorage.createCircuitInstance.mockResolvedValue(makeInstance({ id: 10 }));
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -167,7 +188,7 @@ describe('POST /api/circuits/:circuitId/instances', () => {
   });
 
   it('auto-generates referenceDesignator when omitted (BL-0497)', async () => {
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ partId: 1 }),
@@ -185,9 +206,10 @@ describe('POST /api/circuits/:circuitId/instances', () => {
 
 describe('PATCH /api/circuits/:circuitId/instances/:id', () => {
   it('updates an instance', async () => {
+    mockStorage.getCircuitInstance.mockResolvedValue(makeInstance());
     mockStorage.updateCircuitInstance.mockResolvedValue(makeInstance({ schematicX: 300 }));
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances/1`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances/1`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ schematicX: 300 }),
@@ -198,7 +220,7 @@ describe('PATCH /api/circuits/:circuitId/instances/:id', () => {
   it('returns 404 for non-existent instance', async () => {
     mockStorage.updateCircuitInstance.mockResolvedValue(null);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances/999`, {
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances/999`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ schematicX: 0 }),
@@ -213,16 +235,17 @@ describe('PATCH /api/circuits/:circuitId/instances/:id', () => {
 
 describe('DELETE /api/circuits/:circuitId/instances/:id', () => {
   it('deletes an instance', async () => {
+    mockStorage.getCircuitInstance.mockResolvedValue(makeInstance());
     mockStorage.deleteCircuitInstance.mockResolvedValue(true);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances/1`, { method: 'DELETE' });
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances/1`, { method: 'DELETE' });
     expect(res.status).toBe(204);
   });
 
   it('returns 404 for non-existent instance', async () => {
     mockStorage.deleteCircuitInstance.mockResolvedValue(false);
 
-    const res = await fetch(`${baseUrl}/api/circuits/1/instances/999`, { method: 'DELETE' });
+    const res = await authFetch(`${baseUrl}/api/circuits/1/instances/999`, { method: 'DELETE' });
     expect(res.status).toBe(404);
   });
 });

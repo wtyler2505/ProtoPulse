@@ -561,10 +561,11 @@ function runServerDfmCheck(
     maxY = Math.max(maxY, y);
   }
 
-  // Board dimensions check (rough estimate from instance positions, in mil)
+  // Board dimensions check (rough estimate from instance positions)
+  // Convert coordinates from mm to mil (1mm = 39.37 mil)
   if (instances.length > 0) {
-    const boardWidthMil = Math.max(maxX + 100, 500);
-    const boardHeightMil = Math.max(maxY + 100, 500);
+    const boardWidthMil = Math.max((maxX + 2.54) * 39.37, 500);
+    const boardHeightMil = Math.max((maxY + 2.54) * 39.37, 500);
 
     totalChecks++;
     if (boardWidthMil < fab.minBoardWidth) {

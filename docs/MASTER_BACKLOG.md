@@ -123,16 +123,16 @@
 
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0580` | BOM completeness warnings in ValidationView — catches missing MPN, blank manufacturer before export. | M | `C4` | High |
-| 2 | `BL-0607` | Real-time SSE log streaming for compile/upload — foundation for firmware runtime Phase 1. | M | `C3` | High |
-| 3 | `BL-0151` | Compile error translator — plain English explanations for cryptic gcc/avr errors. | S | `C2` | High |
-| 4 | `BL-0601` | Auto-format sketch code (Ctrl+T) — muscle memory feature every Arduino user expects. | S | `C2` | High |
-| 5 | `BL-0519` | Simulation control AI tools — let AI start/stop/configure simulations via tool calls. | M | `C3` | High |
-| 6 | `BL-0522` | "Explain this net" AI tool — plain English net descriptions for learners. | S | `C2` | High |
-| 7 | `BL-0563` | BOM back-annotation to schematic — BOM changes sync to schematic instance properties. | M | `C4` | Medium |
-| 8 | `BL-0609` | ESP exception decoder — translate Guru Meditation hex addresses to filename:line. | M | `C3` | High |
-| 9 | `BL-0517` | Arduino job history console — persistent log of past compile/upload jobs. | S | `C2` | Medium |
-| 10 | `BL-0612` | Serial output log-to-file — auto-save serial monitor output for data collection. | S | `C2` | Medium |
+| 1 | `BL-0563` | BOM back-annotation to schematic — BOM changes sync to schematic instance properties. | M | `C4` | Medium |
+| 2 | `BL-0593` | Bendable/rubber-band component legs — through-hole legs bend from body to breadboard holes. Fritzing feature. | M | `C3` | High |
+| 3 | `BL-0628` | Bundled circuit+code example library — Arduino IDE "File > Examples" style browsable panel. | M | `C3` | High |
+| 4 | `BL-0147` | Flashing progress/error diagnostics — real-time upload progress bar + error recovery hints. | S | `C3` | High |
+| 5 | `BL-0161` | AI safety mode for beginners — extra confirms + teaching explanations before destructive actions. | S | `C3` | Medium |
+| 6 | `BL-0163` | AI testbench suggestions — AI recommends simulation parameters based on circuit topology. | S | `C3` | Medium |
+| 7 | `BL-0164` | AI BOM optimization assistant — suggest cheaper alternates, consolidate packages, reduce unique parts. | S | `C3` | Medium |
+| 8 | `BL-0214` | Import preview summary before apply — show what will change before committing an import. | S | `C2` | Medium |
+| 9 | `BL-0216` | Export pre-check screen — validate export readiness before generating files. | S | `C2` | Medium |
+| 10 | `BL-0231` | Smart contextual radial menu on right-click — context-aware actions for selected elements. | S | `C2` | Medium |
 
 ## Complexity Radar (Highest-Complexity Open Items)
 
@@ -408,11 +408,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 161 | 127 | Breadboard/PCB/simulation/UI — Waves 61-85 ongoing |
+| P2 | 157 | 131 | Breadboard/PCB/simulation/UI — Waves 61-86 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **289** | **219** | **508 total items tracked** |
+| **Total** | **285** | **223** | **508 total items tracked** |
 
-*Snapshot updated: Wave 85 (2026-03-14)*
+*Snapshot updated: Wave 86 (2026-03-14)*
 
 ---
 
@@ -701,7 +701,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0149 | Multi-angle photo follow-up for component ID | OPEN | C3 | MF-097 |
 | BL-0150 | Inventory tracking tied to BOM consumption | PARTIAL | C4 | MF-101 |
 | BL-0151 | Compile error translator (plain English) | DONE (Wave 84) | C2 | ARDX-008 |
-| BL-0152 | Auto-generate pin constants from schematic labels | OPEN | C3 | ARDX-019 |
+| BL-0152 | Auto-generate pin constants from schematic labels | DONE (Wave 86) | C3 | ARDX-019 |
 | BL-0153 | Serial plotter for live sensor curves | DONE (Wave 77) | C3 | ARDX-032 |
 | BL-0154 | Multi-channel telemetry dashboard | OPEN | C3 | ARDX-033 |
 | BL-0155 | Crash doctor for watchdog resets/brownouts | OPEN | C4 | ARDX-036 |
@@ -783,7 +783,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0520 | **Circuit instances in AI system prompt** — The AI system prompt includes architecture nodes, BOM, and validation issues but does NOT include circuit schematic instances and nets. AI answers about circuit connectivity are based on inference, not actual data. Add a `buildCircuitContext()` function to include instances/nets/wires in every prompt. | OPEN | C4 | Wave 64 audit |
 | BL-0521 | **Action executor error tracking** — `useActionExecutor` silently drops failed tool-call actions (no toast, no console log, no retry). Add per-action error state tracking so users see which AI-suggested actions failed and why. | DONE (Wave 78) | C2 | Wave 64 audit |
 | BL-0522 | **"Explain this net" AI tool** — Add an `explain_net` tool that takes a net name and returns a plain-English description of what it carries (power, signal, data bus, control), what drives it, and what loads it — useful for newcomers trying to understand a schematic. | DONE (Wave 84) | C2 | Wave 64 audit |
-| BL-0523 | **DFM/manufacturing AI assistant** — Add AI tools for `run_dfm_check`, `explain_dfm_violation`, and `suggest_dfm_fix` that wrap the existing `DfmChecker` and `StandardsCompliance` engines and surface their output conversationally. | OPEN | C3 | Wave 64 audit |
+| BL-0523 | **DFM/manufacturing AI assistant** — 3 AI tools (`run_dfm_check`, `explain_dfm_violation`, `suggest_dfm_fix`) wrapping DfmChecker + StandardsCompliance engines. | DONE (Wave 86) | C3 | Wave 64 audit |
 | BL-0641 | **RAG documents should be persistent, tenant-scoped, and wired into AI retrieval** — The codebase currently has a client-side `localStorage` RAG engine and a server-side in-memory RAG route surface. Consolidate into a single project-backed document system that the AI context builder actually uses. | OPEN | C4 | Repo gap audit 2026-03-13 |
 
 ### Collaboration & Teams
@@ -843,9 +843,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0627 | **Pre-built starter circuits with pre-loaded Arduino code** — Beginner users face a cold-start problem: blank canvas, no idea where to begin. TinkerCAD and Fritzing both ship complete working examples (LED blink, servo control, temperature sensor, LCD display) where the circuit is already wired AND the code is already written. Dragging one open gives instant gratification. Add a "Starter projects" gallery with 10–20 complete circuit+code combos. | OPEN | C3 | Wave 66 / TinkerCAD + Fritzing |
+| BL-0627 | **Pre-built starter circuits with pre-loaded Arduino code** — 15 complete circuit+code combos across 5 categories with StarterCircuitsPanel gallery. | DONE (Wave 86) | C3 | Wave 66 / TinkerCAD + Fritzing |
 | BL-0628 | **Bundled circuit + code example library** — The Arduino IDE "File → Examples" menu is how every beginner learns: expand a category, click an example, the code opens ready to upload. ProtoPulse has `generate_arduino_sketch` AI but no browsable static library. Add an Examples panel with curated circuit+code pairs organized by category (Basics, Sensors, Displays, Motors, Communication, IoT) with descriptions and learning objectives. | OPEN | C3 | Wave 66 / Arduino IDE + Fritzing |
-| BL-0629 | **Etchable PCB export (DIY toner transfer)** — Export PCB copper layers as high-contrast mirrored SVG/PDF optimized for DIY toner-transfer etching at home. Single copper layer, black fill on white background, mirrored for transfer. Fritzing has this. Very popular with the maker/hobbyist audience who can't afford fab but want real PCBs. | OPEN | C2 | Wave 66 / Fritzing |
+| BL-0629 | **Etchable PCB export (DIY toner transfer)** — Mirrored SVG at 1:1 scale for toner transfer etching. Route handler + ExportPanel UI. | DONE (Wave 86) | C2 | Wave 66 / Fritzing |
 
 ### Import/Export
 
