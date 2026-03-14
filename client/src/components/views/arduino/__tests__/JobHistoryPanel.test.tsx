@@ -89,7 +89,6 @@ function createQueryClient() {
 function renderPanel(fetchResponse?: { data: typeof mockJobs; total: number }) {
   const qc = createQueryClient();
 
-  // Mock fetch
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
     json: () => Promise.resolve(fetchResponse ?? { data: mockJobs, total: mockJobs.length }),
@@ -109,11 +108,10 @@ function renderPanel(fetchResponse?: { data: typeof mockJobs; total: number }) {
 describe('JobHistoryPanel', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    // Stub localStorage
     vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('test-session');
   });
 
-  it('renders loading state initially', () => {
+  it('renders the panel container', () => {
     const qc = createQueryClient();
     globalThis.fetch = vi.fn().mockReturnValue(new Promise(() => {})); // never resolves
 
@@ -123,90 +121,89 @@ describe('JobHistoryPanel', () => {
       </QueryClientProvider>,
     );
 
-    expect(screen.getByTestId('job-history-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('job-history-panel')).toBeDefined();
   });
 
   it('renders empty state when no jobs', async () => {
     renderPanel({ data: [], total: 0 });
 
     await waitFor(() => {
-      expect(screen.getByText('No jobs yet')).toBeInTheDocument();
+      expect(screen.getByText('No jobs yet')).toBeDefined();
     });
 
-    expect(screen.getByTestId('job-history-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('job-history-panel')).toBeDefined();
   });
 
-  it('renders job list with correct statuses', async () => {
+  it('renders job list with correct testids', async () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-item-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-item-1')).toBeDefined();
     });
 
-    expect(screen.getByTestId('job-history-item-2')).toBeInTheDocument();
-    expect(screen.getByTestId('job-history-item-3')).toBeInTheDocument();
-    expect(screen.getByTestId('job-history-item-4')).toBeInTheDocument();
+    expect(screen.getByTestId('job-history-item-2')).toBeDefined();
+    expect(screen.getByTestId('job-history-item-3')).toBeDefined();
+    expect(screen.getByTestId('job-history-item-4')).toBeDefined();
   });
 
   it('displays status badges with correct labels', async () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-item-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-item-1')).toBeDefined();
     });
 
-    expect(screen.getByText('Success')).toBeInTheDocument();
-    expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(screen.getByText('Cancelled')).toBeInTheDocument();
-    expect(screen.getByText('Pending')).toBeInTheDocument();
+    expect(screen.getByText('Success')).toBeDefined();
+    expect(screen.getByText('Failed')).toBeDefined();
+    expect(screen.getByText('Cancelled')).toBeDefined();
+    expect(screen.getByText('Pending')).toBeDefined();
   });
 
   it('expands job to show log on click', async () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-item-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-item-1')).toBeDefined();
     });
 
-    // Click to expand
     fireEvent.click(screen.getByTestId('job-history-toggle-1'));
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-log-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-log-1')).toBeDefined();
     });
 
-    expect(screen.getByText('Sketch uses 1234 bytes (3%) of program storage space.')).toBeInTheDocument();
+    expect(screen.getByText('Sketch uses 1234 bytes (3%) of program storage space.')).toBeDefined();
   });
 
   it('collapses expanded job on second click', async () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-item-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-item-1')).toBeDefined();
     });
 
     // Expand
     fireEvent.click(screen.getByTestId('job-history-toggle-1'));
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-log-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-log-1')).toBeDefined();
     });
 
     // Collapse
     fireEvent.click(screen.getByTestId('job-history-toggle-1'));
-    expect(screen.queryByTestId('job-history-log-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('job-history-log-1')).toBeNull();
   });
 
   it('shows "No output log available." when log is null', async () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-item-3')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-item-3')).toBeDefined();
     });
 
     fireEvent.click(screen.getByTestId('job-history-toggle-3'));
 
     await waitFor(() => {
-      expect(screen.getByText('No output log available.')).toBeInTheDocument();
+      expect(screen.getByText('No output log available.')).toBeDefined();
     });
   });
 
@@ -214,19 +211,19 @@ describe('JobHistoryPanel', () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-item-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-item-1')).toBeDefined();
     });
 
     // fqbn "arduino:avr:uno" → last segment "uno"
-    expect(screen.getByText('uno')).toBeInTheDocument();
-    expect(screen.getByText('mega')).toBeInTheDocument();
+    expect(screen.getByText('uno')).toBeDefined();
+    expect(screen.getByText('mega')).toBeDefined();
   });
 
   it('displays job count in header', async () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByText('4 jobs')).toBeInTheDocument();
+      expect(screen.getByText('4 jobs')).toBeDefined();
     });
   });
 
@@ -245,7 +242,7 @@ describe('JobHistoryPanel', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch job history/)).toBeInTheDocument();
+      expect(screen.getByText(/Failed to fetch job history/)).toBeDefined();
     });
   });
 
@@ -253,32 +250,32 @@ describe('JobHistoryPanel', () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-item-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-item-1')).toBeDefined();
     });
 
     const compileLabels = screen.getAllByText('compile');
     expect(compileLabels.length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('upload')).toBeInTheDocument();
+    expect(screen.getByText('upload')).toBeDefined();
   });
 
   it('only expands one job at a time', async () => {
     renderPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-item-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-item-1')).toBeDefined();
     });
 
     // Expand job 1
     fireEvent.click(screen.getByTestId('job-history-toggle-1'));
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-log-1')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-log-1')).toBeDefined();
     });
 
     // Expand job 2 — job 1 should collapse
     fireEvent.click(screen.getByTestId('job-history-toggle-2'));
     await waitFor(() => {
-      expect(screen.getByTestId('job-history-log-2')).toBeInTheDocument();
+      expect(screen.getByTestId('job-history-log-2')).toBeDefined();
     });
-    expect(screen.queryByTestId('job-history-log-1')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('job-history-log-1')).toBeNull();
   });
 });

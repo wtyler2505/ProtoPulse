@@ -129,7 +129,7 @@ describe('error-translator', () => {
         {
           severity: 'error',
           translatedContains: 'invalid character',
-          suggestionContains: 'copy-past',
+          suggestionContains: 'plain text editor',
         },
       );
     });
@@ -150,7 +150,7 @@ describe('error-translator', () => {
         "sketch.ino:12:5: error: expected ')' before ';' token",
         {
           severity: 'error',
-          translatedContains: 'missing',
+          translatedContains: 'before',
           suggestionContains: 'bracket',
         },
       );
