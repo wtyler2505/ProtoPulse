@@ -9,6 +9,10 @@ import type {
   SerialMonitorLine,
 } from '@/lib/web-serial';
 import { SerialLogger } from '@/lib/arduino/serial-logger';
+import { detectEspException, parseEspException } from '@/lib/arduino/esp-exception-decoder';
+import { detectBaudMismatch } from '@/lib/arduino/baud-detector';
+import type { EspExceptionResult } from '@/lib/arduino/esp-exception-decoder';
+import type { BaudMismatchResult } from '@/lib/arduino/baud-detector';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +40,10 @@ import {
   X,
   Circle,
   Download,
+  Bug,
+  ChevronDown,
+  ChevronRight,
+  ArrowRightLeft,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -167,6 +175,16 @@ export default function SerialMonitorPanel() {
   const [presetName, setPresetName] = useState('');
   const [showPresetSave, setShowPresetSave] = useState(false);
 
+  // ESP Exception Decoder
+  const [espException, setEspException] = useState<EspExceptionResult | null>(null);
+  const [showEspDecode, setShowEspDecode] = useState(false);
+  const [espExpanded, setEspExpanded] = useState(false);
+
+  // Baud mismatch detection
+  const [baudMismatch, setBaudMismatch] = useState<BaudMismatchResult | null>(null);
+  const [baudWarningDismissed, setBaudWarningDismissed] = useState(false);
+  const baudCheckDoneRef = useRef(false);
+
   // Serial recording
   const serialLoggerRef = useRef(SerialLogger.getInstance());
   const loggerSnap = useSyncExternalStore(
@@ -190,6 +208,60 @@ export default function SerialMonitorPanel() {
       }
     }
   }, [state.monitor.length, state.monitor]);
+
+  // ESP exception auto-detection — scan new RX lines for crash patterns
+  useEffect(() => {
+    if (state.monitor.length === 0) {
+      return;
+    }
+    // Combine last 50 lines of RX for detection (crash output spans multiple lines)
+    const recentRx = state.monitor
+      .slice(-50)
+      .filter((l) => l.direction === 'rx')
+      .map((l) => l.data)
+      .join('\n');
+
+    if (detectEspException(recentRx)) {
+      setShowEspDecode(true);
+    } else {
+      setShowEspDecode(false);
+      setEspException(null);
+      setEspExpanded(false);
+    }
+  }, [state.monitor.length, state.monitor]);
+
+  // Baud mismatch detection — run once after ~100 bytes received
+  useEffect(() => {
+    if (baudCheckDoneRef.current || baudWarningDismissed) {
+      return;
+    }
+    if (state.bytesReceived < 100) {
+      return;
+    }
+    baudCheckDoneRef.current = true;
+
+    // Collect recent RX data for analysis
+    const rxData = state.monitor
+      .filter((l) => l.direction === 'rx')
+      .map((l) => l.data)
+      .join('');
+
+    if (rxData.length < 32) {
+      return;
+    }
+
+    const result = detectBaudMismatch(rxData, state.baudRate);
+    if (result.detected) {
+      setBaudMismatch(result);
+    }
+  }, [state.bytesReceived, state.monitor, state.baudRate, baudWarningDismissed]);
+
+  // Reset baud check when disconnecting or changing baud rate
+  useEffect(() => {
+    baudCheckDoneRef.current = false;
+    setBaudMismatch(null);
+    setBaudWarningDismissed(false);
+  }, [state.baudRate, state.connectionState]);
 
   // Recording duration ticker
   const [, setTick] = useState(0);
@@ -321,6 +393,33 @@ export default function SerialMonitorPanel() {
     },
     [presets],
   );
+
+  // ESP exception decode handler
+  const handleDecodeException = useCallback(() => {
+    const recentRx = state.monitor
+      .slice(-50)
+      .filter((l) => l.direction === 'rx')
+      .map((l) => l.data)
+      .join('\n');
+    const result = parseEspException(recentRx);
+    setEspException(result);
+    setEspExpanded(true);
+  }, [state.monitor]);
+
+  // Baud switch handler
+  const handleBaudSwitch = useCallback(
+    (newBaud: number) => {
+      setBaudRate(newBaud);
+      setBaudMismatch(null);
+      setBaudWarningDismissed(true);
+    },
+    [setBaudRate],
+  );
+
+  const handleDismissBaudWarning = useCallback(() => {
+    setBaudMismatch(null);
+    setBaudWarningDismissed(true);
+  }, []);
 
   // Unsupported browser
   if (!isSupported) {
@@ -611,6 +710,125 @@ export default function SerialMonitorPanel() {
           <div data-testid="serial-error" className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-2 py-1.5">
             <AlertTriangle className="w-3 h-3 shrink-0" />
             <span className="truncate">{state.error}</span>
+          </div>
+        )}
+
+        {/* Baud Mismatch Warning */}
+        {baudMismatch?.detected && !baudWarningDismissed && (
+          <div
+            data-testid="baud-mismatch-warning"
+            className="flex items-center gap-2 text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-500/20 rounded px-2 py-1.5"
+          >
+            <ArrowRightLeft className="w-3 h-3 shrink-0" />
+            <span className="flex-1">
+              Baud rate mismatch detected ({Math.round(baudMismatch.confidence * 100)}% confidence). Try {baudMismatch.likelyBaud.toLocaleString()}.
+            </span>
+            <Button
+              data-testid="baud-switch-button"
+              variant="outline"
+              size="sm"
+              className="h-5 text-[10px] px-2 border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/20"
+              onClick={() => handleBaudSwitch(baudMismatch.likelyBaud)}
+            >
+              Switch to {baudMismatch.likelyBaud.toLocaleString()}
+            </Button>
+            <button
+              data-testid="baud-mismatch-dismiss"
+              className="p-0.5 text-yellow-400/60 hover:text-yellow-300 transition-colors"
+              onClick={handleDismissBaudWarning}
+              aria-label="Dismiss baud mismatch warning"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+
+        {/* ESP Exception Detection */}
+        {showEspDecode && (
+          <div data-testid="esp-exception-banner" className="space-y-1">
+            <div className="flex items-center gap-2 text-xs text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded px-2 py-1.5">
+              <Bug className="w-3 h-3 shrink-0" />
+              <span className="flex-1">ESP crash detected in serial output</span>
+              <Button
+                data-testid="esp-decode-button"
+                variant="outline"
+                size="sm"
+                className="h-5 text-[10px] px-2 border-orange-500/30 text-orange-300 hover:bg-orange-500/20"
+                onClick={handleDecodeException}
+              >
+                {espException ? 'Re-decode' : 'Decode Exception'}
+              </Button>
+            </div>
+
+            {/* Decoded exception result */}
+            {espException?.decoded && (
+              <div
+                data-testid="esp-decoded-result"
+                className="text-xs bg-card/80 border border-border rounded overflow-hidden"
+              >
+                <button
+                  data-testid="esp-decoded-toggle"
+                  className="w-full flex items-center gap-2 px-2 py-1.5 hover:bg-muted/30 transition-colors text-left"
+                  onClick={() => setEspExpanded(!espExpanded)}
+                  aria-label={espExpanded ? 'Collapse decoded exception' : 'Expand decoded exception'}
+                >
+                  {espExpanded ? (
+                    <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3 text-muted-foreground shrink-0" />
+                  )}
+                  <span className="font-semibold text-orange-300">{espException.crashType}</span>
+                  <span className="text-muted-foreground">&mdash;</span>
+                  <span className="text-foreground/80 truncate">{espException.description}</span>
+                </button>
+
+                {espExpanded && (
+                  <div className="px-2 pb-2 space-y-2 border-t border-border/50">
+                    {/* Stack frames */}
+                    {espException.stackFrames.length > 0 && (
+                      <div className="mt-1.5">
+                        <span className="text-muted-foreground text-[10px] uppercase tracking-wider">Backtrace</span>
+                        <div className="mt-0.5 font-mono space-y-0.5">
+                          {espException.stackFrames.map((frame, i) => (
+                            <div
+                              key={`frame-${String(i)}`}
+                              className="flex items-center gap-2 text-[11px] px-1 py-0.5 rounded hover:bg-muted/20"
+                            >
+                              <span className="text-muted-foreground w-4 text-right select-none">#{String(i)}</span>
+                              <span className="text-[#00F0FF]">{frame.address}</span>
+                              {frame.function && <span className="text-foreground">{frame.function}</span>}
+                              {frame.file && (
+                                <span className="text-muted-foreground">
+                                  {frame.file}{frame.line !== undefined ? `:${String(frame.line)}` : ''}
+                                </span>
+                              )}
+                              {!frame.function && !frame.file && (
+                                <span className="text-muted-foreground/50 italic">addr2line available with native desktop</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Register dump */}
+                    {espException.registers && (
+                      <div>
+                        <span className="text-muted-foreground text-[10px] uppercase tracking-wider">Registers</span>
+                        <div className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px]">
+                          {Object.entries(espException.registers).map(([name, value]) => (
+                            <span key={name}>
+                              <span className="text-muted-foreground">{name}:</span>{' '}
+                              <span className="text-foreground/80">{value}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -214,6 +214,7 @@ describe('ArduinoService SSE streaming', () => {
 
       // Start the job (spawns a process)
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       // Now getJobStream should return the stream created by runJob
       const stream = service.getJobStream(1);
@@ -231,6 +232,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream1 = service.getJobStream(1);
       const stream2 = service.getJobStream(1);
@@ -248,6 +250,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       expect(stream).not.toBeNull();
@@ -266,6 +269,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       const events: JobStreamEvent[] = [];
@@ -288,6 +292,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       const events: JobStreamEvent[] = [];
@@ -309,6 +314,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       const events: JobStreamEvent[] = [];
@@ -331,6 +337,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       const events: JobStreamEvent[] = [];
@@ -353,6 +360,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       const events: JobStreamEvent[] = [];
@@ -374,6 +382,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       const events: JobStreamEvent[] = [];
@@ -395,6 +404,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       expect(stream).not.toBeNull();
@@ -414,6 +424,7 @@ describe('ArduinoService SSE streaming', () => {
       storage._jobs.set(1, job);
 
       const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+      await flushMicrotasks();
 
       const stream = service.getJobStream(1)!;
       const events: JobStreamEvent[] = [];
@@ -534,6 +545,7 @@ describe('Late-join buffer replay', () => {
     storage._jobs.set(1, job);
 
     const runPromise = service.runJob(1, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+    await flushMicrotasks();
 
     // Emit some output before any SSE client connects
     const child = spawnInstances[0]!;

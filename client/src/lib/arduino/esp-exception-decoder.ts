@@ -70,6 +70,7 @@ const DETECTION_PATTERNS = [
   /Stack smashing protect failure/i,
   /abort\(\) was called/i,
   STACK_OVERFLOW_PATTERN,
+  WDT_RESET_PATTERN,
 ];
 
 /**
