@@ -1144,3 +1144,8 @@ client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-op
 
 
 3:57:20 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H3:57:56 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/import-preview.ts(99,23): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+3:58:01 PM - Found 1 error. Watching for file changes.
