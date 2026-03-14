@@ -238,16 +238,13 @@ function checkSilkscreenPadOverlap(layers: readonly GerberLayerInput[]): Manufac
 
 /** G-05  Solder mask coverage — every copper layer should have a matching soldermask layer. */
 function checkSolderMaskCoverage(layers: readonly GerberLayerInput[]): ManufacturingCheck {
-  const copperSides = new Set(layers.filter((l) => l.type === 'copper').map((l) => l.side));
+  const copperSidesArr = Array.from(new Set(layers.filter((l) => l.type === 'copper').map((l) => l.side)));
   const maskSides = new Set(layers.filter((l) => l.type === 'soldermask').map((l) => l.side));
 
-  const missingMask: string[] = [];
-  for (const side of copperSides) {
-    // Only check front/back — inner copper layers don't have solder mask
-    if ((side === 'front' || side === 'back') && !maskSides.has(side)) {
-      missingMask.push(side);
-    }
-  }
+  // Only check front/back — inner copper layers don't have solder mask
+  const missingMask = copperSidesArr.filter(
+    (side) => (side === 'front' || side === 'back') && !maskSides.has(side),
+  );
 
   if (missingMask.length > 0) {
     return makeCheck('G-05', 'Solder mask coverage', 'gerber', 'warn', `Missing soldermask for copper side(s): ${missingMask.join(', ')}.`);
@@ -395,8 +392,10 @@ function checkBomPlacementRefDesMatch(
   const bomRefs = refDesSet(bom);
   const placementRefs = refDesSet(placements);
 
-  const inBomNotPlacement = Array.from(bomRefs).filter((r) => !placementRefs.has(r));
-  const inPlacementNotBom = Array.from(placementRefs).filter((r) => !bomRefs.has(r));
+  const bomRefArr = Array.from(bomRefs);
+  const placementRefArr = Array.from(placementRefs);
+  const inBomNotPlacement = bomRefArr.filter((r) => !placementRefs.has(r));
+  const inPlacementNotBom = placementRefArr.filter((r) => !bomRefs.has(r));
 
   if (inBomNotPlacement.length === 0 && inPlacementNotBom.length === 0) {
     return makeCheck('C-01', 'BOM↔placement ref-des match', 'consistency', 'pass', 'All reference designators match between BOM and placement.');

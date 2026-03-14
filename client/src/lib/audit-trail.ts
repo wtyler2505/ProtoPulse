@@ -85,7 +85,8 @@ export function formatAuditDiff(
   const afterKeys = after ? Object.keys(after) : [];
   const allKeys = Array.from(new Set([...beforeKeys, ...afterKeys]));
 
-  for (const key of allKeys) {
+  for (let i = 0; i < allKeys.length; i++) {
+    const key = allKeys[i];
     const inBefore = before !== undefined && key in before;
     const inAfter = after !== undefined && key in after;
 
