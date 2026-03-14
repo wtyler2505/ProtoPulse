@@ -32,6 +32,18 @@ disableHooks: ['typecheck-project', 'lint-project', 'test-project', 'self-review
 
 5. **Category tagging (`category:`)** — Agents are categorized (tools, general) for organizational purposes.
 
-**The constraint insight:** By combining tool restrictions with hook suppression, agent specs create capability profiles that are both safe and efficient. A read-only agent that cannot edit files does not need typecheck hooks. An implementation agent that modifies code needs full hook coverage. The YAML frontmatter makes these constraints declarative and auditable rather than buried in code.
+**The constraint insight:** By combining tool restrictions with hook suppression, agent specs create capability profiles that are both safe and efficient. A read-only agent that cannot edit files does not need typecheck hooks. An implementation agent that modifies code needs full [[hook-architecture-uses-layered-gates-where-pretooluse-prevents-damage-posttooluse-catches-regressions-and-stop-enforces-quality-before-handoff|hook coverage across all three layers]]. The YAML frontmatter makes these constraints declarative and auditable rather than buried in code.
+
+The `disableHooks` field is particularly important for agent team performance. Without suppression, a read-only research agent would trigger the [[tsc-watch-in-tmux-provides-near-instant-type-feedback-by-decoupling-the-compiler-lifecycle-from-individual-tool-invocations|tsc watch]] output read and the full typecheck/lint/test Stop hooks — wasting minutes on checks that can never find issues (the agent cannot edit files). When 4+ agents run in parallel with full hooks enabled, the [[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously|OOM risk from concurrent tsc runs]] becomes real. The [[sessionstart-dependency-verification-creates-a-self-healing-bootstrap-that-surfaces-missing-tools-before-they-cause-cryptic-hook-failures|SessionStart dependency check]] verifies the tools these hooks need, but agent profiles determine which hooks fire at all.
+
+---
+
+Related:
+- [[hook-architecture-uses-layered-gates-where-pretooluse-prevents-damage-posttooluse-catches-regressions-and-stop-enforces-quality-before-handoff]] — the three-layer hook system that `disableHooks` selectively suppresses
+- [[tsc-watch-in-tmux-provides-near-instant-type-feedback-by-decoupling-the-compiler-lifecycle-from-individual-tool-invocations]] — read-only agents skip consuming watch output via hook suppression
+- [[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously]] — hook suppression on read-only agents reduces the OOM risk from parallel tsc
+- [[sessionstart-dependency-verification-creates-a-self-healing-bootstrap-that-surfaces-missing-tools-before-they-cause-cryptic-hook-failures]] — verifies tools that hooks depend on; profiles control which hooks fire
+- [[arscontexta-vault-marker-file-acts-as-a-feature-flag-that-conditionally-activates-knowledge-system-hooks-without-code-changes]] — another hook gating mechanism (per-repository vs per-agent)
+- [[arscontexta-skills-implement-a-knowledge-processing-pipeline-where-each-phase-runs-in-isolated-context-with-structured-handoff-blocks-for-state-transfer]] — skills use `context: fork` for isolation; agent profiles use tool/hook constraints
 
 Areas: [[agent-workflows]]

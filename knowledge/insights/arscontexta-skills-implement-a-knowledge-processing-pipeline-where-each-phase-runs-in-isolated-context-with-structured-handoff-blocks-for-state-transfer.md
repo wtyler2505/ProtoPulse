@@ -34,8 +34,18 @@ Queue Updates: [phase advancement]
 
 This block is parseable by the `/ralph` orchestrator, which reads the handoff output, updates the queue, and spawns the next phase's skill in fresh context. The learnings section captures meta-process improvements — friction points, surprises, methodology observations — which feed back into the system's self-improvement.
 
-**Context isolation is intentional.** Each phase gets a fresh context window to avoid contamination between extraction (broad reading) and connection finding (semantic judgment). The queue file is the only shared state, making the pipeline stateless orchestration over stateful queue entries.
+**Context isolation is intentional.** Each phase gets a fresh context window to avoid contamination between extraction (broad reading) and connection finding (semantic judgment). The queue file is the only shared state, making the pipeline stateless orchestration over stateful queue entries. This parallels how [[agent-specifications-use-yaml-frontmatter-to-control-model-selection-tool-access-and-hook-suppression-creating-a-capability-profile-per-agent|agent YAML profiles]] constrain agents to specific capability profiles — both use declarative configuration to create isolated execution contexts with well-defined interfaces.
 
 **Vocabulary abstraction via derivation manifest.** Skills reference `{vocabulary.notes}`, `{vocabulary.topic_map}`, etc. rather than hardcoded terms. The `ops/derivation-manifest.md` maps these to domain-specific vocabulary (e.g., "insights" instead of "notes", "topic maps" instead of "MOCs"). This makes the skill system reusable across knowledge domains without code changes — only the vocabulary mapping changes.
+
+The pipeline skills are activated conditionally by the [[arscontexta-vault-marker-file-acts-as-a-feature-flag-that-conditionally-activates-knowledge-system-hooks-without-code-changes|vault marker file]], which gates the hooks that manage the vault content these skills process. The [[sessionstart-dependency-verification-creates-a-self-healing-bootstrap-that-surfaces-missing-tools-before-they-cause-cryptic-hook-failures|SessionStart dependency check]] ensures the tools these skills depend on (node, jq) are available before the pipeline can run.
+
+---
+
+Related:
+- [[arscontexta-vault-marker-file-acts-as-a-feature-flag-that-conditionally-activates-knowledge-system-hooks-without-code-changes]] — the vault marker activates hooks that manage content this pipeline processes
+- [[agent-specifications-use-yaml-frontmatter-to-control-model-selection-tool-access-and-hook-suppression-creating-a-capability-profile-per-agent]] — agent profiles and skills both use YAML frontmatter for declarative capability constraints
+- [[hook-architecture-uses-layered-gates-where-pretooluse-prevents-damage-posttooluse-catches-regressions-and-stop-enforces-quality-before-handoff]] — hooks and skills are complementary: hooks enforce quality gates, skills process knowledge
+- [[sessionstart-dependency-verification-creates-a-self-healing-bootstrap-that-surfaces-missing-tools-before-they-cause-cryptic-hook-failures]] — verifies tool dependencies the pipeline skills need
 
 Areas: [[agent-workflows]]

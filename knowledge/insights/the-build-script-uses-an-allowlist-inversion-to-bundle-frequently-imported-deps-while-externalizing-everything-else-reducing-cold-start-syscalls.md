@@ -30,4 +30,16 @@ The explicit comment explains the motivation: "server deps to bundle to reduce o
 
 The output is CJS format (`format: "cjs"`, `outfile: "dist/index.cjs"`) with production minification and `NODE_ENV` defined at build time. The Vite client build runs first, then esbuild handles the server — two different bundlers for two different targets.
 
+The allowlist includes the [[drizzle-orm-0-45-is-blocked-by-zod-v4-dependency-so-the-orm-must-be-pinned-until-full-zod-migration|pinned drizzle-orm]] and `zod` — both are high-import-count deps that benefit most from bundling. If drizzle-orm is eventually upgraded (requiring Zod v4 migration), the bundled output would need to be re-validated since bundling behavior can differ between major versions.
+
+The [[graceful-shutdown-drains-resources-in-dependency-order-with-a-30-second-forced-exit-backstop|shutdown module]] and [[storage-error-maps-postgresql-error-codes-to-http-status-giving-routes-structured-error-semantics-without-db-coupling|StorageError]] are bundled inline (not external), which means they are always available even if `node_modules` is partially corrupted — important for reliability of the cleanup path.
+
+---
+
+Related:
+- [[drizzle-orm-0-45-is-blocked-by-zod-v4-dependency-so-the-orm-must-be-pinned-until-full-zod-migration]] — pinned drizzle-orm is in the bundle allowlist; version changes affect bundled output
+- [[ci-pipeline-gates-build-behind-typecheck-but-runs-lint-and-tests-independently-optimizing-for-fast-failure-on-the-cheapest-check]] — CI build job runs after typecheck; the allowlist inversion determines what's in the build artifact
+- [[graceful-shutdown-drains-resources-in-dependency-order-with-a-30-second-forced-exit-backstop]] — shutdown code is bundled inline, ensuring cleanup runs even with partial node_modules
+- [[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — barrel files affect tree-shaking in the bundled output; esbuild traces through barrels to find actual usage
+
 Areas: [[conventions]], [[dependencies]]

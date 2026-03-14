@@ -7,6 +7,7 @@ related insights:
   - "[[complexity-ratings-measure-decision-surface-area-not-effort]] — integration items rate C4-C5 because they have high decision surface area, not high effort"
   - "[[circuits-zero-defaulting-in-export-and-ordering-is-a-latent-multi-project-regression-because-it-silently-picks-the-wrong-circuit]] — a concrete example of a deferred cross-tool data ownership question"
   - "[[five-architecture-decisions-block-over-30-downstream-features-each]] — unresolved architecture decisions are the root cause of deferred integration"
+  - "[[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — DRC explanations live in shared/ precisely to avoid cross-tool ownership problems between server and client"
 created: 2026-03-13
 ---
 

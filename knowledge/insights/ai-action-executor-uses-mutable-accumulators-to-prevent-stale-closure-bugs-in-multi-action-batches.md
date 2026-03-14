@@ -26,8 +26,12 @@ The accumulator pattern is the standard fix: copy → mutate locally → commit 
 ---
 
 Related:
-- [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — the alternative state pattern that doesn't have this problem
+- [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — the alternative state pattern that doesn't have this problem (singleton getSnapshot() always returns current state, no closures)
 - [[the-gap-between-feature-exists-and-feature-is-wired-is-the-dominant-source-of-broken-workflows]] — action handlers are where AI features get "wired"
+- [[view-aware-prompt-tiering-sends-full-data-for-the-active-view-and-summaries-for-everything-else-to-reduce-token-cost]] — tiered prompts nudge the AI to use tools for details, producing multi-action batches that the accumulator pattern must handle correctly
+- [[query-keys-are-url-strings-used-as-both-cache-identifiers-and-fetch-targets-eliminating-key-endpoint-drift]] — React Query invalidation after optimistic update is what triggers the stale closure; the URL-as-key convention ensures correct invalidation targets, but the timing still causes the stale-read problem this accumulator solves
+- [[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — the executor reads state through the flat useProject() shape; migrating to domain hooks would change which closures capture which state, potentially altering stale-closure surface area
+- [[context-decomposition-uses-a-bridge-component-to-solve-cross-provider-dependency-ordering]] — provider nesting order determines which state the executor's closures capture; the bridge makes this ordering explicit
 
 Areas:
 - [[architecture]]

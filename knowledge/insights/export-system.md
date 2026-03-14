@@ -11,3 +11,9 @@ Insights related to ProtoPulse's multi-format export system and its integration 
 
 - [[circuits-zero-defaulting-in-export-and-ordering-is-a-latent-multi-project-regression-because-it-silently-picks-the-wrong-circuit]] — circuits[0] default in exports will break multi-circuit designs
 - [[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — export requires shared source of truth across tools
+- [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles]] — export_generation jobs get 10min watchdog (2x AI analysis) because Gerber/PDF/design reports involve heavy computation and I/O
+
+## Connection Clusters
+
+### Export Reliability Chain
+Export reliability depends on multiple layers: the [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles|job queue]] manages long-running export jobs with 10-minute watchdogs, but [[circuits-zero-defaulting-in-export-and-ordering-is-a-latent-multi-project-regression-because-it-silently-picks-the-wrong-circuit|wrong circuit selection]] means the entire compute budget produces incorrect output. [[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions|Cross-tool data ownership]] decisions determine which circuit/design data the exporter actually receives.

@@ -25,4 +25,9 @@ The AI system in `server/ai.ts` implements a multi-signal model routing strategy
 
 **Why this matters:** The matrix approach can reduce AI costs significantly by routing 60-70% of requests to fast/cheap models while preserving quality for complex generation tasks. The fallback chain (phase-aware -> message-length -> user-selected) means the system degrades gracefully rather than failing.
 
-**Related:** Circuit breaker pattern (`server/circuit-breaker.ts`) wraps both providers, so a tripped breaker on one provider triggers the fallback provider path.
+**Related:**
+
+- [[circuit-breaker-pattern-isolates-ai-provider-failures-preventing-cascading-outages-across-anthropic-and-gemini]] — a tripped breaker on the selected provider triggers fallback to the alternate provider, bypassing the matrix selection entirely
+- [[view-aware-prompt-tiering-sends-full-data-for-the-active-view-and-summaries-for-everything-else-to-reduce-token-cost]] — the matrix and the prompt tiering are two sides of the same cost optimization: the matrix selects the cheapest model tier, prompt tiering minimizes the tokens sent to it
+- [[ai-request-deduplication-uses-an-in-flight-promise-map-keyed-by-provider-project-and-message-prefix]] — deduplication prevents redundant API calls after the matrix has already selected a model tier, making the two optimizations complementary
+- [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles]] — the job queue's per-type timeouts (5min AI vs 10min export) reflect the same domain-aware differentiation the matrix applies to model selection

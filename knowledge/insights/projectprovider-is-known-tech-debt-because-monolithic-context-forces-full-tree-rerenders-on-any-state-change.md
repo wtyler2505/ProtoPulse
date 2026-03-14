@@ -5,6 +5,8 @@ areas: ["[[index]]"]
 related insights:
   - "[[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — the architectural answer to ProjectProvider's re-render problem, already proven across 30+ managers"
   - "[[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — ProjectProvider is the monolith most in need of this decomposition pattern"
+  - "[[context-decomposition-uses-a-bridge-component-to-solve-cross-provider-dependency-ordering]] — the bridge pattern that emerged when ProjectProvider was decomposed into 10 domain contexts"
+  - "[[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — the backward-compatible facade that enables incremental consumer migration"
 created: 2026-03-13
 ---
 

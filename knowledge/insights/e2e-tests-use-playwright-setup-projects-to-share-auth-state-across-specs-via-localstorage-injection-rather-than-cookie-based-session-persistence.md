@@ -18,7 +18,7 @@ The Playwright E2E test suite (`e2e/`) uses a two-phase auth pattern that mirror
 **Phase 2 — Spec files:**
 Every spec file declares `test.use({ storageState: 'e2e/.auth-state.json' })`, which pre-loads the saved localStorage into each test browser context.
 
-**Why this matters:** ProtoPulse uses `X-Session-Id` header auth (not cookies). The React `AuthProvider` reads the session ID from localStorage and sends it as a header. Cookie-based Playwright auth patterns (the typical `storageState` approach) would not work because the auth credential lives in localStorage, not in HTTP cookies. The setup project bridges this gap by injecting the session ID where the React app expects to find it.
+**Why this matters:** ProtoPulse uses `X-Session-Id` header auth (not cookies). The React `AuthProvider` reads the session ID from localStorage and sends it as a header. Cookie-based Playwright auth patterns (the typical `storageState` approach) would not work because the auth credential lives in localStorage, not in HTTP cookies. The setup project bridges this gap by injecting the session ID where the React app expects to find it. This is a case where [[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario|localStorage-backed state]] creates testing complexity — the auth pattern that would be simpler with cookies requires custom injection machinery.
 
 **The Playwright config enforces ordering:** The `setup` project is listed as a `dependency` of the `chromium` project, ensuring auth runs once before any specs execute. The config also uses `reuseExistingServer: true` with a `webServer` block that starts `npm run dev` — this means specs run against the real dev server, not a mock.
 
@@ -29,5 +29,15 @@ Every spec file declares `test.use({ storageState: 'e2e/.auth-state.json' })`, w
 - Project picker (CRUD flow, dialog interactions, empty state)
 - Workspace layout (default view, chat panel, nav switching)
 - Accessibility (heading structure, aria labels, keyboard access, alt text)
+
+The [[ci-pipeline-gates-build-behind-typecheck-but-runs-lint-and-tests-independently-optimizing-for-fast-failure-on-the-cheapest-check|CI pipeline]] deliberately excludes these E2E tests — they require a running server with database, while CI runs only unit/integration tests via Vitest.
+
+---
+
+Related:
+- [[ci-pipeline-gates-build-behind-typecheck-but-runs-lint-and-tests-independently-optimizing-for-fast-failure-on-the-cheapest-check]] — CI deliberately excludes E2E; only unit/integration tests run
+- [[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario]] — localStorage auth pattern forces custom injection in E2E setup
+- [[session-token-rotation-on-refresh-prevents-session-fixation-by-invalidating-the-old-hash-atomically-with-new-hash-creation]] — the auth system these E2E tests exercise
+- [[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls]] — test isolation (shared user across specs) mirrors the collaboration access control gap
 
 Areas: [[testing-patterns]]

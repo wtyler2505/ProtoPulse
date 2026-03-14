@@ -16,8 +16,19 @@ The hook system uses a two-part pattern for TypeScript checking that avoids the 
 
 **Why this matters:** The watch compiler maintains an in-memory program graph and only re-checks changed files, providing sub-second feedback. Without this pattern, the PostToolUse `typecheck-changed` hook (claudekit) would need to invoke a cold tsc on every edit — at 33-44 seconds per invocation on this codebase, that would make the agent unusable. The claudekit `typecheck-changed` hook still runs as a fallback, but the watch output arrives faster.
 
-**The tmux dependency is load-bearing.** The `check-hook-deps.sh` SessionStart hook explicitly verifies tmux is installed, warning that "tsc-watch hook and TUI skills will not work" without it. The claudekit config (`.claudekit/config.json`) extends the timeout for typecheck hooks to 120 seconds (up from 30s default) as a safety net for when the watch session isn't available.
+**The tmux dependency is load-bearing.** The [[sessionstart-dependency-verification-creates-a-self-healing-bootstrap-that-surfaces-missing-tools-before-they-cause-cryptic-hook-failures|`check-hook-deps.sh` SessionStart hook]] explicitly verifies tmux is installed, warning that "tsc-watch hook and TUI skills will not work" without it. The claudekit config (`.claudekit/config.json`) extends the timeout for typecheck hooks to 120 seconds (up from 30s default) as a safety net for when the watch session isn't available.
 
-This is an instance of the broader pattern where long-running background processes (managed via tmux) complement per-invocation hooks to provide responsive feedback loops.
+This is an instance of the broader pattern where long-running background processes (managed via tmux) complement per-invocation hooks to provide responsive feedback loops. The watch output is consumed by the [[hook-architecture-uses-layered-gates-where-pretooluse-prevents-damage-posttooluse-catches-regressions-and-stop-enforces-quality-before-handoff|PostToolUse `read-tsc-errors.sh` hook]], making this a cross-layer collaboration within the hook system.
+
+When multiple [[agent-specifications-use-yaml-frontmatter-to-control-model-selection-tool-access-and-hook-suppression-creating-a-capability-profile-per-agent|agent teammates]] run simultaneously, their PostToolUse hooks all trigger tsc re-checks. A single shared watch session avoids the [[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously|OOM issue from 4+ cold tsc invocations]] — the watch session amortizes the cost. The [[ci-pipeline-gates-build-behind-typecheck-but-runs-lint-and-tests-independently-optimizing-for-fast-failure-on-the-cheapest-check|CI pipeline]] runs a cold tsc (no watch) because CI jobs are ephemeral — the watch optimization only applies to long-lived dev sessions.
+
+---
+
+Related:
+- [[hook-architecture-uses-layered-gates-where-pretooluse-prevents-damage-posttooluse-catches-regressions-and-stop-enforces-quality-before-handoff]] — the three-layer hook system whose PostToolUse layer reads this watch output
+- [[sessionstart-dependency-verification-creates-a-self-healing-bootstrap-that-surfaces-missing-tools-before-they-cause-cryptic-hook-failures]] — verifies tmux exists at session start; without tmux, this watch pattern cannot function
+- [[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously]] — the shared watch session mitigates OOM from parallel cold starts
+- [[ci-pipeline-gates-build-behind-typecheck-but-runs-lint-and-tests-independently-optimizing-for-fast-failure-on-the-cheapest-check]] — CI uses cold tsc; this watch pattern is the dev session optimization
+- [[agent-specifications-use-yaml-frontmatter-to-control-model-selection-tool-access-and-hook-suppression-creating-a-capability-profile-per-agent]] — read-only agents disable typecheck hooks, bypassing watch consumption
 
 Areas: [[agent-workflows]], [[conventions]]

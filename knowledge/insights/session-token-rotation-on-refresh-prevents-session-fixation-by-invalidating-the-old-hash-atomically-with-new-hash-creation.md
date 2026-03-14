@@ -25,3 +25,9 @@ type: insight
 **Password hashing:** Uses `scrypt` with `N=16384, r=8, p=1` and `maxmem=64MB`. The salt is stored inline with the hash as `salt:derivedKey`. Password verification uses `crypto.timingSafeEqual()` to prevent timing attacks.
 
 **API key encryption:** AES-256-GCM with per-key random 12-byte IVs. The auth tag is stored alongside the ciphertext as `encrypted:authTag`. The encryption key itself is validated as a 64-char hex string at startup, with a dev-only ephemeral fallback that explicitly warns about non-persistence.
+
+**Related:**
+
+- [[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — session token rotation is authentication hardening; IDOR is authorization hardening; both are defense-in-depth layers that protect different attack surfaces
+- [[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls]] — a properly rotated session token authenticates the user, but the collaboration system grants `editor` role without checking project membership; authentication without authorization
+- [[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects]] — session tokens are correctly scoped per-user, but in-memory Maps share a global namespace; the auth boundary is solid, the data boundary is not

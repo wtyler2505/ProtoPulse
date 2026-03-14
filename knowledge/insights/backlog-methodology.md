@@ -16,3 +16,4 @@ How ProtoPulse manages its 500+ item backlog — tools, processes, and hard-won 
 - [[epic-decomposition-is-required-when-a-single-backlog-row-cannot-communicate-scope]] — decompose when one row can't convey scope
 - [[gap-audits-that-compare-code-surfaces-against-backlog-produce-higher-signal-findings-than-code-only-audits]] — code-vs-backlog comparison catches both directions of drift
 - [[wave-based-development-enables-rapid-shipping-but-creates-integration-debt]] — wave model ships fast but defers integration
+- [[ci-pipeline-gates-build-behind-typecheck-but-runs-lint-and-tests-independently-optimizing-for-fast-failure-on-the-cheapest-check]] — CI enforcement prevents quality drift that would otherwise become backlog items

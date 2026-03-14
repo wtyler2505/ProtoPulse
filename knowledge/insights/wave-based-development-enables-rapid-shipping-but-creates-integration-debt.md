@@ -17,6 +17,8 @@ Three forms of integration debt have been identified: (1) **Unwired libraries** 
 
 The pattern suggests integration waves should be scheduled proactively and should audit all three debt categories, not just missing UI wiring.
 
+- [[three-diff-engines-share-identical-algorithm-shape-but-are-not-abstracted-creating-a-subtle-maintenance-trap]] — a concrete example: each diff engine was a separate backlog item, producing three independent implementations rather than one shared utility
+
 ## Topics
 
 - [[index]]

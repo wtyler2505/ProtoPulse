@@ -34,6 +34,11 @@ The file shrank from 1500+ lines to 291 lines. The remaining code is: type expor
 Related:
 - [[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]] — the original problem
 - [[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — same principle applied to module structure
+- [[context-decomposition-uses-a-bridge-component-to-solve-cross-provider-dependency-ordering]] — the facade and the bridge are complementary migration tools: facade preserves the consumer API, bridge preserves provider nesting order
+- [[ai-action-executor-uses-mutable-accumulators-to-prevent-stale-closure-bugs-in-multi-action-batches]] — the executor reads state through the flat useProject() shape; migrating to domain hooks changes stale-closure surface area
+- [[query-keys-are-url-strings-used-as-both-cache-identifiers-and-fetch-targets-eliminating-key-endpoint-drift]] — domain hooks behind the facade each own URL-based query keys; the facade aggregates results from all of them
+- [[tiered-idle-time-prefetch-prevents-first-click-navigation-jank-across-27-lazy-loaded-views]] — prefetched views load the facade hook; migrating to domain hooks narrows render dependencies
+- [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — singleton+subscribe is the destination pattern: once all consumers migrate off the facade to domain hooks, and then off domain hooks to singletons, the facade becomes deletable
 
 Areas:
 - [[architecture]]

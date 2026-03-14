@@ -41,3 +41,10 @@ Export/report generation gets 2x the timeout because these jobs produce files (G
 **Graceful shutdown integration:**
 - `shutdownGraceful(graceMs)` cancels all pending jobs and waits up to `graceMs` for running jobs to complete
 - Called by `server/shutdown.ts` with a 10-second grace period
+
+**Related:**
+
+- [[circuit-breaker-pattern-isolates-ai-provider-failures-preventing-cascading-outages-across-anthropic-and-gemini]] — the circuit breaker's 4xx exclusion and cooldown period complement the job queue's exponential backoff: the breaker rejects fast during OPEN state, backoff spaces retries during recovery
+- [[graceful-shutdown-drains-resources-in-dependency-order-with-a-30-second-forced-exit-backstop]] — job queue drain is step 2 of shutdown (before HTTP close, before DB close); the 10s grace period means long-running export jobs (10min watchdog) will be cancelled during shutdown
+- [[ai-model-routing-uses-a-phase-complexity-matrix-not-message-length-to-select-the-cheapest-sufficient-model]] — the job queue's per-type timeouts encode the same domain awareness as the routing matrix: AI analysis and export generation are fundamentally different workloads
+- [[circuits-zero-defaulting-in-export-and-ordering-is-a-latent-multi-project-regression-because-it-silently-picks-the-wrong-circuit]] — export_generation jobs (10min timeout) are the runtime cost of the export system; wrong circuit selection means that entire 10-minute job produces incorrect output

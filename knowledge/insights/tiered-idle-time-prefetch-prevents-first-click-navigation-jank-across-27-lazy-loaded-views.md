@@ -27,6 +27,9 @@ This pattern is specific to apps with many views behind a single layout (like an
 
 Related:
 - [[wave-based-development-enables-rapid-shipping-but-creates-integration-debt]] — rapid view addition (27 views from 51 waves) makes this optimization necessary
+- [[progressive-disclosure-hides-downstream-views-until-architecture-nodes-exist-preventing-empty-state-errors]] — prefetch tiers align with disclosure tiers: Tier 1 = always-visible views, Tier 2 = require-content views; the two systems reinforce each other
+- [[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — prefetched views load the facade hook; migrating to domain hooks would narrow each view's render dependency, potentially improving prefetch value by reducing post-load re-renders
+- [[errorboundary-suppresses-resizeobserver-loop-errors-because-they-are-benign-browser-noise-that-would-crash-every-canvas-view]] — prefetch failure is swallowed silently (.catch(() => {})) while render failure is caught by ErrorBoundary; two different error strategies for the same lazy-loaded views
 
 Areas:
 - [[architecture]]

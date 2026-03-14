@@ -27,3 +27,9 @@ type: insight
 - The threshold values (10 nodes, 5 BOM items, etc.) are tuned so that small projects always get full context — the tiering only kicks in for larger designs where the AI wouldn't meaningfully use all the data anyway.
 
 **Prompt caching:** `hashAppState()` creates a cache key from entity counts, view, and selection state. If the state hasn't changed between chat turns, the cached prompt is reused (via an LRU cache of size 20, keyed by userId to prevent cross-user prompt sharing).
+
+**Related:**
+
+- [[ai-model-routing-uses-a-phase-complexity-matrix-not-message-length-to-select-the-cheapest-sufficient-model]] — prompt tiering and model routing are complementary cost optimizations: tiering minimizes tokens, routing selects the cheapest sufficient model for those tokens
+- [[ai-request-deduplication-uses-an-in-flight-promise-map-keyed-by-provider-project-and-message-prefix]] — prompt caching (`hashAppState()`) avoids rebuilding the prompt, dedup avoids sending it twice — both prevent redundant work at different stages of the AI pipeline
+- [[ai-action-executor-uses-mutable-accumulators-to-prevent-stale-closure-bugs-in-multi-action-batches]] — tiered prompts with summaries nudge the AI to use tools for details rather than hallucinating; the action executor is what processes the resulting tool-use actions

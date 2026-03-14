@@ -19,3 +19,10 @@ The mechanism:
 **Subtle bug risk:** The key includes `projectId` (falling back to `appState.projectName`), which correctly scopes deduplication to a single project. Without this, users on different projects sending "show me the architecture" would incorrectly share results.
 
 **Why this is non-obvious:** This pattern is easy to miss during code review because it's a performance optimization that doesn't affect correctness for single-client usage. It only matters under concurrent load — double-clicks, SSE reconnection retries, or multiple browser tabs.
+
+**Related:**
+
+- [[circuit-breaker-pattern-isolates-ai-provider-failures-preventing-cascading-outages-across-anthropic-and-gemini]] — dedup and circuit breaking are complementary resilience layers: dedup prevents duplicate calls to a healthy provider, the breaker prevents any calls to a failing one
+- [[ai-model-routing-uses-a-phase-complexity-matrix-not-message-length-to-select-the-cheapest-sufficient-model]] — dedup happens after model routing: the dedup key includes the provider (selected by routing), so switching providers creates a new dedup slot
+- [[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects]] — the `activeRequests` Map is another in-memory Map with a composite key; unlike the Maps flagged for namespace isolation, this one correctly includes `projectId` in the key
+- [[view-aware-prompt-tiering-sends-full-data-for-the-active-view-and-summaries-for-everything-else-to-reduce-token-cost]] — prompt caching (via `hashAppState()`) and request dedup are complementary: caching avoids rebuilding the prompt, dedup avoids sending it twice

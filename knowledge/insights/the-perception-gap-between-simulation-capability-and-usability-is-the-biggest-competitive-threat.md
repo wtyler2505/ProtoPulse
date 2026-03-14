@@ -8,6 +8,8 @@ related insights:
   - "[[the-gap-between-feature-exists-and-feature-is-wired-is-the-dominant-source-of-broken-workflows]] — overlaying sim results on the schematic is literally the wiring gap: the engine exists, the visualization does not"
   - "[[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — sim-to-schematic overlay is a cross-tool integration problem that forces decisions about which domain owns annotation state"
   - "[[architecture-expansion-using-placeholder-first-pin-mapping-produces-semantically-wrong-schematics-that-erode-trust-in-ai-generated-designs]] — a parallel trust erosion: placeholder pins make AI output look wrong, invisible sim results make real capability look absent"
+  - "[[errorboundary-suppresses-resizeobserver-loop-errors-because-they-are-benign-browser-noise-that-would-crash-every-canvas-view]] — false crash screens would devastate perceived reliability even more than invisible sim results"
+  - "[[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — DRC explanations close the same type of perception gap for validation: making capability visible and accessible"
 created: 2026-03-13
 ---
 

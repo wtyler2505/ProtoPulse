@@ -29,6 +29,9 @@ The tradeoff: query keys are less semantic. You can't easily query "all node-rel
 
 Related:
 - [[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario]] — queryClient is the server-state authority that localStorage features bypass
+- [[ai-action-executor-uses-mutable-accumulators-to-prevent-stale-closure-bugs-in-multi-action-batches]] — React Query invalidation (using these URL keys) after optimistic update creates the stale-closure timing that the accumulator pattern must handle
+- [[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — domain hooks behind the facade each own their own URL-based query keys; the facade aggregates results from all of them
+- [[context-decomposition-uses-a-bridge-component-to-solve-cross-provider-dependency-ordering]] — each decomposed provider owns its query keys (e.g., ArchitectureProvider owns `/api/projects/:id/nodes`); the bridge passes cross-provider values without introducing query key coupling
 
 Areas:
 - [[architecture]]

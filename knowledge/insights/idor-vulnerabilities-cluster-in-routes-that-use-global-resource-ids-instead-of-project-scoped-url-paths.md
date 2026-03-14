@@ -19,6 +19,8 @@ A deeper root cause emerged from the gap audit: routes that accept `projectId` i
 
 The fix pattern is always the same: create middleware that maps `resourceId → parentResource → projectId → verify ownership`. The recurring nature — documented in [[security-vulnerabilities-recur-because-new-routes-are-added-without-systematic-ownership-audit]] — suggests the codebase needs a CI gate that flags new Express route registrations without ownership middleware. The [[ai-chat-endpoints-accepting-projectid-in-the-request-body-instead-of-the-url-path-bypass-ownership-middleware-by-construction|body-param bypass pattern]] reveals that some routes cannot be fixed with middleware at all and require structural URL changes.
 
+- [[the-schema-uses-dual-id-systems-serial-for-db-references-and-text-for-client-generated-uuids-creating-a-two-key-boundary]] — global serial IDs in URL paths are the IDOR attack surface; text IDs are not directly exposed in routes
+
 ## Topics
 
 - [[index]]

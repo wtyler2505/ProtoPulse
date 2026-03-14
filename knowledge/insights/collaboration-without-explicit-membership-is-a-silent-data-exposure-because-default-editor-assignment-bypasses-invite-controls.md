@@ -12,6 +12,10 @@ created: 2026-03-13
 
 ProtoPulse's WebSocket collaboration system has an access control design gap at the collaboration layer. When a non-owner connects to a project room, they are assigned `editor` role by default. There is no persistent invite or membership table that would gate access. Any authenticated user who knows (or guesses) a project room ID can connect and receive full editing privileges. This is distinct from IDOR vulnerabilities — the HTTP API may correctly check project ownership, but the WebSocket collaboration layer bypasses those checks entirely. The fix requires a `project_members` table with explicit invite/accept workflow, where the collaboration server checks membership before granting any role.
 
+- [[crdt-merge-uses-intent-preserving-rules-where-insert-always-beats-concurrent-delete-a-deliberate-philosophical-choice]] — the CRDT merge rules this collaboration system uses; unauthorized editors can exploit "insert beats delete" to persist unwanted changes
+- [[the-arduino-workbench-schema-is-the-only-domain-that-bridges-database-records-to-the-host-filesystem-via-rootPath]] — filesystem paths are machine-local, creating a hard collaboration limit for Arduino workspaces
+- [[e2e-tests-use-playwright-setup-projects-to-share-auth-state-across-specs-via-localstorage-injection-rather-than-cookie-based-session-persistence]] — shared E2E user state mirrors the access control gap (all specs share one user)
+
 ## Topics
 
 - [[index]]

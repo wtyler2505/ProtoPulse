@@ -10,6 +10,8 @@ created: 2026-03-13
 
 Express 5's type definitions changed `req.params` from `Record<string, string>` to `Record<string, string | string[]>`. This means every `req.params.id` access in a route handler now returns `string | string[]`, which fails TypeScript strict checks when passed to functions expecting `string`. The fix is wrapping with `String(req.params.id)` — a one-line change per param, but across 100+ routes it's a substantial migration. ProtoPulse hit this during the Express 4→5 upgrade and resolved it globally.
 
+- [[storage-error-maps-postgresql-error-codes-to-http-status-giving-routes-structured-error-semantics-without-db-coupling]] — routes must handle both Express 5 param typing and StorageError; both are per-route concerns centralized to avoid inconsistency
+
 ## Topics
 
 - [[index]]

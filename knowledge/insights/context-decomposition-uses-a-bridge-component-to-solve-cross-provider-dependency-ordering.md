@@ -23,6 +23,9 @@ The full nesting order in `SeededProviders` is: OutputProvider > ChatProvider > 
 Related:
 - [[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]] — the problem this decomposition solves
 - [[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — same thin-orchestrator principle
+- [[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — the facade hook and the bridge component are complementary migration tools: the facade preserves the consumer API, the bridge preserves the provider nesting order
+- [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — singleton+subscribe avoids provider ordering problems entirely because there is no nesting tree; this bridge pattern only exists because React Context forces a tree
+- [[errorboundary-suppresses-resizeobserver-loop-errors-because-they-are-benign-browser-noise-that-would-crash-every-canvas-view]] — ErrorBoundary wraps each view produced by this provider tree; a bridge ordering bug would surface as a crash inside the boundary
 
 Areas:
 - [[architecture]]

@@ -6,6 +6,9 @@ related insights:
   - "[[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]] — the counter-example: monolithic Context that proves why singleton+subscribe is better"
   - "[[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — decomposition enables singleton+subscribe by giving each domain module its own state"
   - "[[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario]] — many singleton managers back state with localStorage, creating the persistence gap"
+  - "[[context-decomposition-uses-a-bridge-component-to-solve-cross-provider-dependency-ordering]] — singleton+subscribe avoids provider ordering problems entirely; the bridge pattern only exists because React Context forces a nesting tree"
+  - "[[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — once all consumers migrate off the facade to singletons, the facade and its provider tree become deletable"
+  - "[[ai-action-executor-uses-mutable-accumulators-to-prevent-stale-closure-bugs-in-multi-action-batches]] — singleton getSnapshot() always returns current state, avoiding the stale-closure bug that afflicts Context-based hook patterns"
 created: 2026-03-13
 ---
 

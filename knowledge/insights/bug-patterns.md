@@ -14,3 +14,6 @@ Bugs that recur or have non-obvious root causes — understanding these prevents
 - [[typescript-exhaustive-switch-on-discriminated-unions-fails-at-default-because-shared-base-properties-are-inaccessible-after-narrowing-to-never]] — exhaustive switch hides base properties in default case
 - [[architecture-expansion-using-placeholder-first-pin-mapping-produces-semantically-wrong-schematics-that-erode-trust-in-ai-generated-designs]] — placeholder pins produce wrong schematics
 - [[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — IDOR recurrence caused by missing ownership middleware on new routes
+- [[ai-action-executor-uses-mutable-accumulators-to-prevent-stale-closure-bugs-in-multi-action-batches]] — stale closures silently drop mutations in multi-action batches; accumulator pattern (copy → mutate → commit once) is the fix
+- [[errorboundary-suppresses-resizeobserver-loop-errors-because-they-are-benign-browser-noise-that-would-crash-every-canvas-view]] — ResizeObserver loop errors are NOT bugs but look like crashes; the ErrorBoundary filter prevents false positives
+- [[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — using useProject() instead of domain hooks causes unnecessary re-renders across all domain state changes — a performance bug pattern

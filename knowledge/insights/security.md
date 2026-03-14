@@ -17,3 +17,8 @@ ProtoPulse's security landscape — where vulnerabilities cluster, why they recu
 - [[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls]] — default editor role without invite table is an access control gap
 - [[gap-audits-that-compare-code-surfaces-against-backlog-produce-higher-signal-findings-than-code-only-audits]] — code-vs-backlog comparison is the best audit methodology
 - [[session-token-rotation-on-refresh-prevents-session-fixation-by-invalidating-the-old-hash-atomically-with-new-hash-creation]] — session rotation with SHA-256 hashing and refresh window
+
+## Connection Clusters
+
+### Authentication vs Authorization Gap
+The security surface has a well-hardened authentication layer ([[session-token-rotation-on-refresh-prevents-session-fixation-by-invalidating-the-old-hash-atomically-with-new-hash-creation|session rotation]], scrypt passwords, AES-256-GCM API key encryption) but weaker authorization enforcement. [[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls|WebSocket collaboration grants editor role without membership checks]], and [[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects|in-memory Maps share a global namespace]]. Notably, some Maps ARE correctly scoped — the [[ai-request-deduplication-uses-an-in-flight-promise-map-keyed-by-provider-project-and-message-prefix|AI dedup Map]] includes projectId in its key.

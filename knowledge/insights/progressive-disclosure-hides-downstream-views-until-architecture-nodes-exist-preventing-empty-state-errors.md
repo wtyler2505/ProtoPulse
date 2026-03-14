@@ -25,6 +25,10 @@ The `alwaysVisibleIds` set is maintained in `sidebar-constants.ts` as a single s
 Related:
 - [[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — progressive disclosure addresses the onboarding side of this tension
 - [[the-gap-between-feature-exists-and-feature-is-wired-is-the-dominant-source-of-broken-workflows]] — views without prerequisite data are a form of unwired feature
+- [[tiered-idle-time-prefetch-prevents-first-click-navigation-jank-across-27-lazy-loaded-views]] — prefetch tiers align with disclosure tiers: always-visible views are Tier 1 prefetch, require-content views are Tier 2; the two systems reinforce each other
+- [[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — progressive disclosure and pedagogical DRC share the same design principle: show complexity only when the user is ready for it
+- [[every-component-must-define-geometry-three-times-because-the-triple-view-architecture-couples-identity-to-representation]] — components with empty breadboard/PCB view data are an invisible form of non-disclosure: the view is unlocked but the content is blank
+- [[errorboundary-suppresses-resizeobserver-loop-errors-because-they-are-benign-browser-noise-that-would-crash-every-canvas-view]] — ErrorBoundary is the fallback when progressive disclosure fails and a canvas view renders without expected data
 
 Areas:
 - [[architecture]]

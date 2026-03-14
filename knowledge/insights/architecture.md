@@ -23,3 +23,10 @@ How ProtoPulse is structured and why — from monolithic context to barrel files
 - [[storage-error-maps-postgresql-error-codes-to-http-status-giving-routes-structured-error-semantics-without-db-coupling]] — PG error codes → HTTP status translation
 - [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles]] — per-type watchdog timeouts
 - [[graceful-shutdown-drains-resources-in-dependency-order-with-a-30-second-forced-exit-backstop]] — dependency-ordered shutdown orchestration
+- [[the-schema-uses-dual-id-systems-serial-for-db-references-and-text-for-client-generated-uuids-creating-a-two-key-boundary]] — serial PK for DB, text UUID for canvas/AI — two-key identity pattern
+- [[the-schema-insert-pattern-uses-omit-plus-extend-to-create-a-strict-write-contract-while-the-select-type-remains-permissive]] — omit server fields + extend with Zod enums creates write-strict/read-permissive asymmetry
+- [[jsonb-columns-are-a-schema-escape-hatch-that-trades-db-level-validation-for-flexibility-creating-a-zod-bridged-type-boundary]] — 15+ JSONB columns with no DB validation, Zod as the only type boundary
+- [[every-component-must-define-geometry-three-times-because-the-triple-view-architecture-couples-identity-to-representation]] — breadboard + schematic + PCB views force 3x geometry authoring per component
+- [[three-diff-engines-share-identical-algorithm-shape-but-are-not-abstracted-creating-a-subtle-maintenance-trap]] — bom-diff/arch-diff/netlist-diff share algorithm but are copy-pasted
+- [[crdt-merge-uses-intent-preserving-rules-where-insert-always-beats-concurrent-delete-a-deliberate-philosophical-choice]] — insert beats delete in collaboration merge — domain-aware CRDT
+- [[the-build-script-uses-an-allowlist-inversion-to-bundle-frequently-imported-deps-while-externalizing-everything-else-reducing-cold-start-syscalls]] — bundle allowlist inversion reduces cold start syscalls

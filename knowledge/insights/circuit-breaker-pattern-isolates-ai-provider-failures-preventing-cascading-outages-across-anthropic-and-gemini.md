@@ -27,3 +27,10 @@ CLOSED (normal) --[N failures]--> OPEN (reject all) --[cooldown]--> HALF_OPEN (p
 **Integration with fallback routing:** When the primary provider's breaker is OPEN, `isRetryableError()` returns `true` for `CircuitBreakerOpenError`, triggering the fallback provider path. This means if Anthropic is down, requests automatically route to Gemini (and vice versa) — but only if the user has configured API keys for both providers.
 
 **Why the 4xx exclusion matters:** `isRetryableError()` explicitly excludes 4xx status codes from retry. This prevents the fallback from masking client errors — if a user's API key is invalid (401) or they hit rate limits (429), retrying with the other provider would either fail the same way or burn the user's alternate quota.
+
+**Related:**
+
+- [[ai-model-routing-uses-a-phase-complexity-matrix-not-message-length-to-select-the-cheapest-sufficient-model]] — the routing matrix selects the provider/tier, but a tripped breaker overrides that selection by forcing fallback to the alternate provider
+- [[ai-request-deduplication-uses-an-in-flight-promise-map-keyed-by-provider-project-and-message-prefix]] — dedup and circuit breaking are layered resilience: dedup prevents duplicate calls to a healthy provider, the breaker prevents all calls to a failing one
+- [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles]] — the job queue's exponential backoff (4x factor for rate limits) complements the breaker's cooldown period; the breaker prevents calls entirely while open, backoff spaces out retries during recovery
+- [[graceful-shutdown-drains-resources-in-dependency-order-with-a-30-second-forced-exit-backstop]] — breaker status is exposed via `/api/admin/health`; during graceful shutdown, an OPEN breaker means in-flight AI jobs will fail fast rather than hang

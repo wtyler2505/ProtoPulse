@@ -24,6 +24,11 @@ Every view in ProjectWorkspace is wrapped in its own `<ErrorBoundary>` (28 insta
 
 Related:
 - [[the-perception-gap-between-simulation-capability-and-usability-is-the-biggest-competitive-threat]] — false crash screens would devastate perceived reliability
+- [[progressive-disclosure-hides-downstream-views-until-architecture-nodes-exist-preventing-empty-state-errors]] — progressive disclosure is the first line of defense (prevent empty canvas render); ErrorBoundary is the second (catch unexpected render failures)
+- [[tiered-idle-time-prefetch-prevents-first-click-navigation-jank-across-27-lazy-loaded-views]] — prefetch failure is swallowed silently; render failure (including ResizeObserver) is caught by ErrorBoundary — two complementary error strategies for lazy views
+- [[context-decomposition-uses-a-bridge-component-to-solve-cross-provider-dependency-ordering]] — a provider ordering bug would surface as a crash inside this ErrorBoundary
+- [[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — both are about making the system beginner-resilient: DRC teaches through errors, ErrorBoundary hides spurious ones
+- [[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — beginners would interpret a ResizeObserver crash screen as "this tool is broken"; pros would recognize it as benign — this filter exists for the maker end of the spectrum
 
 Areas:
 - [[gotchas]]
