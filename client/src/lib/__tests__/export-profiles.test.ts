@@ -189,7 +189,7 @@ describe('getProfileFormatIds', () => {
   it('full-package set has every format', () => {
     const ids = getProfileFormatIds('full-package');
     expect(ids.size).toBe(ALL_FORMAT_IDS.size);
-    for (const fid of ALL_FORMAT_IDS) {
+    for (const fid of Array.from(ALL_FORMAT_IDS)) {
       expect(ids.has(fid)).toBe(true);
     }
   });
