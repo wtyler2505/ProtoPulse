@@ -18,9 +18,11 @@ This folder records what the system knows about its own operation — why it was
 ## Maintenance
 
 - [[backlog-should-be-generated-from-structured-data]] — Backlog stats should be computed from structured data, not manually maintained
+- [[wave-completion-requires-a-checklist-not-a-behavioral-rule]] — Post-wave steps must be an explicit checklist, not a behavioral expectation
 
 ## Evolution History
 
+- 2026-03-13: Second /rethink run. Pattern detected: manual overhead scales linearly with wave velocity. Created methodology note for wave-completion checklist. Config self_evolution thresholds fixed.
 - 2026-03-13: First /rethink run. Triaged 5 observations + 8 tensions. Promoted 2 insights, created 1 methodology note, archived 1 observation, dissolved 1 tension, merged 1 duplicate tension.
 
 ## How to Use This Folder

@@ -6,7 +6,7 @@ This file provides guidance to AI coding assistants working in this repository.
 
 ## ProtoPulse
 
-Browser-based AI-assisted EDA (Electronic Design Automation) platform — the all-in-one suite for makers, learners, hobbyists, and anyone working with microcontrollers, electronics, robotics, or embedded systems. The vision is TinkerCad Circuits + Fritzing + KiCad + Wokwi + Arduino IDE unified into a single AI-powered experience where you never have to leave the tool. Not tied to any specific project — ProtoPulse is meant to be the tool you reach for regardless of what you're building.
+Native desktop AI-assisted EDA (Electronic Design Automation) platform — the all-in-one suite for makers, learners, hobbyists, and anyone working with microcontrollers, electronics, robotics, or embedded systems. Originally browser-based, ProtoPulse has pivoted to a pure-local native desktop application to enable uncompromised hardware access (USB/serial, native toolchains, local filesystems). The vision is TinkerCad Circuits + Fritzing + KiCad + Wokwi + Arduino IDE unified into a single AI-powered experience where you never have to leave the tool. Not tied to any specific project — ProtoPulse is meant to be the tool you reach for regardless of what you're building.
 
 **Origin story:** Born from the OmniTrek Nexus rover project (Arduino Mega, NodeMCU ESP32, RioRand motor controllers, salvaged hoverboard wheels) where no single tool covered the full journey from "I don't know electronics" to "here are my Gerbers." That frustration became the mission: build one tool that does everything for any electronics/robotics/embedded project.
 
@@ -14,9 +14,19 @@ Browser-based AI-assisted EDA (Electronic Design Automation) platform — the al
 
 **Where it's heading:** See `docs/MASTER_BACKLOG.md` for the single source of truth on all future work, tech debt, and feature ideas.
 
+### CRITICAL PLATFORM CONTEXT: NATIVE DESKTOP APPLICATION
+
+ProtoPulse has officially pivoted from a browser-based/hybrid platform to a Pure-Local Native Desktop Application.
+
+- **Do NOT** constrain your solutions to browser-only web APIs.
+- **DO** assume full, unhindered access to the Node.js environment, the local file system, native compilation toolchains (like the Arduino CLI), and physical hardware (USB/serial ports).
+- When implementing firmware compilation, hardware debugging, or project saving features, utilize native desktop capabilities rather than attempting to build web-to-local communication bridges.
+
+**Operational Note:** Do not create local CLAUDE.md files to reiterate these rules in subdirectories, as it will accelerate context compaction and kill parallel agent teammates.
+
 ## Stack
 
-React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark theme) + @xyflow/react | Express 5 + PostgreSQL + Drizzle ORM + TanStack React Query | AI: Anthropic Claude + Google Gemini via SSE streaming | Testing: Vitest 4 + happy-dom + @testing-library/react
+React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark theme) + @xyflow/react | Express 5 + PostgreSQL + Drizzle ORM + TanStack React Query | AI: Anthropic Claude + Google Gemini via SSE streaming | Testing: Vitest 4 + happy-dom + @testing-library/react + Electron/Tauri (planned)
 
 ## Build & Commands
 
