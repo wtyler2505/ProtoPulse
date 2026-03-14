@@ -133,7 +133,7 @@ describe('Full Package profile', () => {
 
   it('includes every known format ID', () => {
     const profileSet = new Set(profile.formatIds);
-    for (const fid of ALL_FORMAT_IDS) {
+    for (const fid of Array.from(ALL_FORMAT_IDS)) {
       expect(profileSet.has(fid)).toBe(true);
     }
   });
