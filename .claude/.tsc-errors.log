@@ -340,3 +340,4 @@ server/ai-tools/circuit.ts(869,55): error TS18048: 'conn.offsetY' is possibly 'u
 10:54:45 PM - Found 2 errors. Watching for file changes.
 [2J[3J[H10:55:49 PM - File change detected. Starting incremental compilation...
 
+Terminated

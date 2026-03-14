@@ -1364,9 +1364,11 @@ export function classifyInstanceRole(
     return 'load';
   }
 
-  // Transistors / MOSFETs can be either
+  // Transistors / MOSFETs can be either — but check if the name reveals a load role
   if (['Q', 'M'].includes(prefix)) {
-    return /driver|buffer/i.test(nameLower) ? 'driver' : 'unknown';
+    if (/driver|buffer/i.test(nameLower)) { return 'driver'; }
+    if (/motor|relay|speaker|buzzer|actuator|solenoid/i.test(nameLower)) { return 'load'; }
+    return 'unknown';
   }
 
   // Connectors — role depends on direction of the board interface
