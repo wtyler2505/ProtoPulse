@@ -1017,3 +1017,25 @@ client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(776,54):
 12:49:16 PM - Found 53 errors. Watching for file changes.
 [2J[3J[H12:50:29 PM - File change detected. Starting incremental compilation...
 
+
+12:50:32 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:50:39 PM - File change detected. Starting incremental compilation...
+
+
+12:51:10 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:52:00 PM - File change detected. Starting incremental compilation...
+
+
+12:52:25 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:52:32 PM - File change detected. Starting incremental compilation...
+
+
+12:52:46 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:52:56 PM - File change detected. Starting incremental compilation...
+
+
+12:53:25 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:53:25 PM - File change detected. Starting incremental compilation...
+
+
+12:57:08 PM - Found 0 errors. Watching for file changes.
