@@ -1447,3 +1447,7 @@ client/src/pages/ProjectWorkspace.tsx(1052,10): error TS2304: Cannot find name '
 
 
 5:19:06 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:28:38 PM - File change detected. Starting incremental compilation...
+
+
+5:28:49 PM - Found 0 errors. Watching for file changes.
