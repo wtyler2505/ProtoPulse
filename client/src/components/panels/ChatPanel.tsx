@@ -39,6 +39,9 @@ import { mapErrorToUserMessage, mapStreamErrorToUserMessage } from '@/lib/error-
 import { useMultimodalInput } from '@/lib/multimodal-input';
 import type { InputType } from '@/lib/multimodal-input';
 import DesignAgentPanel from './chat/DesignAgentPanel';
+import { AISafetyModeManager } from '@/lib/ai-safety-mode';
+import { ACTION_LABELS } from './chat/constants';
+import SafetyConfirmDialog from './SafetyConfirmDialog';
 
 /** Maximum number of SSE reconnection attempts on network failure. */
 const SSE_MAX_RETRIES = 3;
@@ -305,6 +308,19 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const { apiKey: aiApiKey, setApiKey: setApiKeyForProvider, clearApiKey: clearApiKeyForProvider } = useApiKeys(aiProvider);
   const setAiApiKey = useCallback((key: string) => { setApiKeyForProvider(aiProvider, key); }, [setApiKeyForProvider, aiProvider]);
   const [isListening, setIsListening] = useState(false);
+
+  // BL-0161: AI safety mode — intercepts caution/destructive actions for beginner confirmation
+  const safetyManager = useMemo(() => AISafetyModeManager.getInstance(), []);
+  const [safetyPending, setSafetyPending] = useState<{
+    action: AIAction;
+    remainingActions: AIAction[];
+    allActions: AIAction[];
+    msgId: string;
+    fullText: string;
+    toolCalls: ToolCallInfo[];
+    sources: ToolSource[];
+    confidence: ConfidenceScore | undefined;
+  } | null>(null);
 
   // Multimodal input integration
   const multimodal = useMultimodalInput();
@@ -736,19 +752,48 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           });
         }
       } else {
-        if (finalActions.length > 0) {
-          latest.executeAIActions(finalActions);
+        // BL-0161: AI safety mode — check if any actions need safety confirmation
+        const safetyMgr = AISafetyModeManager.getInstance();
+        const firstUnsafe = finalActions.find((a) => safetyMgr.needsConfirmation(a.type));
+
+        if (firstUnsafe && finalActions.length > 0) {
+          // Queue the first unsafe action for safety confirmation
+          const remaining = finalActions.filter((a) => a !== firstUnsafe);
+          setSafetyPending({
+            action: firstUnsafe,
+            remainingActions: remaining,
+            allActions: finalActions,
+            msgId,
+            fullText,
+            toolCalls: finalToolCalls,
+            sources: finalSources,
+            confidence: finalConfidence,
+          });
+          latest.addMessage({
+            id: msgId,
+            role: 'assistant',
+            content: fullText,
+            timestamp: Date.now(),
+            actions: finalActions,
+            toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
+            sources: finalSources.length > 0 ? finalSources : undefined,
+            confidence: finalConfidence,
+          });
+        } else {
+          if (finalActions.length > 0) {
+            latest.executeAIActions(finalActions);
+          }
+          latest.addMessage({
+            id: msgId,
+            role: 'assistant',
+            content: fullText,
+            timestamp: Date.now(),
+            actions: finalActions,
+            toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
+            sources: finalSources.length > 0 ? finalSources : undefined,
+            confidence: finalConfidence,
+          });
         }
-        latest.addMessage({
-          id: msgId,
-          role: 'assistant',
-          content: fullText,
-          timestamp: Date.now(),
-          actions: finalActions,
-          toolCalls: finalToolCalls.length > 0 ? finalToolCalls : undefined,
-          sources: finalSources.length > 0 ? finalSources : undefined,
-          confidence: finalConfidence,
-        });
       }
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -886,6 +931,35 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       });
     }
   }, [pendingActions, addMessage, toast]);
+
+  // BL-0161: AI safety mode confirmation handlers
+  const handleSafetyConfirm = useCallback((dismiss: boolean) => {
+    if (!safetyPending) {
+      return;
+    }
+    if (dismiss) {
+      safetyManager.dismissAction(safetyPending.action.type);
+    }
+    // Execute all actions (the confirmed one + remaining)
+    executeAIActions(safetyPending.allActions);
+    setSafetyPending(null);
+    toast({
+      title: 'Actions applied',
+      description: `Successfully executed ${safetyPending.allActions.length} action(s).`,
+    });
+  }, [safetyPending, safetyManager, executeAIActions, toast]);
+
+  const handleSafetyCancel = useCallback(() => {
+    if (!safetyPending) {
+      return;
+    }
+    setSafetyPending(null);
+    addMessage('[System: User cancelled action via safety mode]');
+    toast({
+      title: 'Action cancelled',
+      description: 'No changes were made to your design.',
+    });
+  }, [safetyPending, addMessage, toast]);
 
   const apiKeyValid = useCallback(() => {
     if (!aiApiKey) return true;
@@ -1106,6 +1180,24 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         aiProvider={aiProvider}
         onApiKeySet={(key) => { setAiApiKey(key); setShowSetupDialog(false); }}
       />
+
+      {/* BL-0161: AI safety mode confirmation dialog */}
+      {safetyPending && (() => {
+        const info = safetyManager.getSafetyInfo(safetyPending.action.type);
+        const label = ACTION_LABELS[safetyPending.action.type] ?? safetyPending.action.type.replace(/_/g, ' ');
+        return (
+          <SafetyConfirmDialog
+            open={true}
+            actionType={safetyPending.action.type}
+            actionLabel={label}
+            classification={info.classification}
+            explanation={info.explanation}
+            consequences={info.consequences}
+            onConfirm={handleSafetyConfirm}
+            onCancel={handleSafetyCancel}
+          />
+        );
+      })()}
     </>
   );
 }

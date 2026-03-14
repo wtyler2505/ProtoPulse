@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, memo } from 'react';
+import { useState, useCallback, useMemo, useRef, memo } from 'react';
 import {
   Download,
   FileText,
@@ -17,6 +17,7 @@ import {
   Drill,
   LayoutGrid,
   Box,
+  Upload,
 } from 'lucide-react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
@@ -29,7 +30,11 @@ import { Badge } from '@/components/ui/badge';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { downloadBlob } from '@/lib/csv';
 import { validateExportPreflight } from '@/lib/export-validation';
+import { generateImportPreview } from '@/lib/import-preview';
+import ImportPreviewDialog from '@/components/panels/ImportPreviewDialog';
 import type { ProjectExportData } from '@/lib/export-validation';
+import type { ImportPreview } from '@/lib/import-preview';
+import type { ImportedDesign } from '@/lib/design-import';
 
 const SESSION_KEY = 'protopulse-session-id';
 
@@ -274,6 +279,13 @@ function ExportPanel() {
 
   const [downloadStates, setDownloadStates] = useState<Record<string, DownloadState>>({});
 
+  // -- Import preview state --
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importFileName, setImportFileName] = useState('');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const pendingImportDesignRef = useRef<ImportedDesign | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   // Build export validation data from available context
   const exportData: ProjectExportData = useMemo(() => ({
     projectName,
@@ -400,6 +412,90 @@ function ExportPanel() {
     }
   }, [projectId, addOutputLog, toast]);
 
+  // -- Import handlers --
+
+  const handleImportFileSelect = useCallback(() => {
+    const input = fileInputRef.current ?? document.createElement('input');
+    input.type = 'file';
+    input.accept = '.kicad_sch,.kicad_pcb,.sch,.brd,.SchDoc,.PcbDoc,.asc,.dsn,.net,.json';
+    fileInputRef.current = input;
+
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      file.text().then((content) => {
+        import('@/lib/design-import').then(({ DesignImporter }) => {
+          const importer = DesignImporter.getInstance();
+          const result = importer.importFile(content, file.name);
+
+          if (result.status === 'complete' && result.design) {
+            const projectData = {
+              nodes: nodes.map((n) => ({
+                id: n.id,
+                data: { label: (n.data as Record<string, unknown>)?.label as string | undefined },
+              })),
+              edges: [],
+              bomItems: bom.map((b) => ({
+                partNumber: b.partNumber,
+                description: b.description,
+              })),
+            };
+            const preview = generateImportPreview(result.design, projectData);
+            pendingImportDesignRef.current = result.design;
+            setImportFileName(file.name);
+            setImportPreview(preview);
+            setImportDialogOpen(true);
+          } else if (result.status === 'error') {
+            toast({
+              variant: 'destructive',
+              title: 'Import failed',
+              description: `${String(result.errorCount)} error(s) in "${file.name}". The file could not be parsed.`,
+            });
+          }
+        }).catch(() => {
+          toast({ variant: 'destructive', title: 'Import failed', description: 'Could not load the design import module.' });
+        });
+      }).catch(() => {
+        toast({ variant: 'destructive', title: 'Import failed', description: 'Could not read the file.' });
+      });
+
+      // Reset so the same file can be re-selected
+      input.value = '';
+    };
+
+    input.click();
+  }, [nodes, bom, toast]);
+
+  const handleImportApply = useCallback(() => {
+    const design = pendingImportDesignRef.current;
+    if (!design) {
+      return;
+    }
+
+    import('@/lib/design-import').then(({ DesignImporter }) => {
+      const importer = DesignImporter.getInstance();
+      const proto = importer.convertToProtoPulse(design);
+      addOutputLog(`[IMPORT] Applied import: ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, ${String(proto.bomItems.length)} BOM items from "${importFileName}".`);
+      toast({
+        title: 'Design imported',
+        description: `Added ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, and ${String(proto.bomItems.length)} BOM items.`,
+      });
+    }).catch(() => {
+      toast({ variant: 'destructive', title: 'Import failed', description: 'Could not apply the import.' });
+    });
+
+    setImportDialogOpen(false);
+    pendingImportDesignRef.current = null;
+  }, [importFileName, addOutputLog, toast]);
+
+  const handleImportCancel = useCallback(() => {
+    setImportDialogOpen(false);
+    pendingImportDesignRef.current = null;
+  }, []);
+
   return (
     <div className="h-full w-full bg-background/80 backdrop-blur p-4 overflow-auto flex flex-col gap-4" data-testid="export-panel">
       {/* Header */}
@@ -519,6 +615,37 @@ function ExportPanel() {
           </div>
         );
       })}
+
+      {/* Import section */}
+      <div className="border border-border/50 bg-card/30 backdrop-blur" data-testid="import-section">
+        <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground">
+          <Upload className="w-3.5 h-3.5 shrink-0 text-primary/70" />
+          <span className="flex-1 text-left">Import Design</span>
+        </div>
+        <div className="border-t border-border/30 px-3 py-2.5">
+          <p className="text-[10px] text-muted-foreground/70 leading-tight mb-2">
+            Import a design file (KiCad, EAGLE, Altium, gEDA, LTspice, Proteus, OrCAD) with a preview of changes before applying.
+          </p>
+          <button
+            data-testid="import-design-file-button"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-foreground bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-sm transition-colors focus-ring"
+            onClick={handleImportFileSelect}
+          >
+            <Upload className="w-3.5 h-3.5" />
+            Choose File to Import
+          </button>
+        </div>
+      </div>
+
+      {/* Import preview dialog */}
+      <ImportPreviewDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        preview={importPreview}
+        fileName={importFileName}
+        onApply={handleImportApply}
+        onCancel={handleImportCancel}
+      />
 
       {/* Footer hint */}
       <p className="text-[10px] text-muted-foreground/50 text-center mt-auto pt-2">
