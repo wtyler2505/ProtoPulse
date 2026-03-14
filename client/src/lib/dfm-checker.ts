@@ -98,6 +98,222 @@ export interface DesignData {
 }
 
 // ---------------------------------------------------------------------------
+// BOM → DFM Input Types & Conversion
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal shape required to convert a BOM item into DFM design data.
+ * Both the schema BomItem and the client-side BomItem satisfy this interface.
+ */
+export interface BomItemLike {
+  partNumber: string;
+  description: string;
+  manufacturer?: string;
+  quantity: number;
+  properties?: Record<string, unknown> | null;
+}
+
+/**
+ * Infer a package type string from a BOM item's description and part number.
+ * Checks common package names (SOT-23, QFP-48, DIP-8, 0603, SOIC-8, etc.)
+ * Returns 'unknown' if no package pattern is recognized.
+ */
+export function inferPackageType(description: string, partNumber?: string): string {
+  const combined = (description + ' ' + (partNumber ?? '')).toLowerCase();
+
+  // Ordered from most-specific to least-specific.
+  // Multi-letter prefixed packages (TSSOP, TQFP, LQFP, SOIC) must come before
+  // shorter suffixed matches (SOP, QFP, SO) to avoid partial matching.
+  const patterns: Array<{ regex: RegExp; label: string }> = [
+    { regex: /bga[- ]?(\d+)/, label: 'BGA' },
+    { regex: /tqfp[- ]?(\d+)/, label: 'TQFP' },
+    { regex: /lqfp[- ]?(\d+)/, label: 'LQFP' },
+    { regex: /qfp[- ]?(\d+)/, label: 'QFP' },
+    { regex: /qfn[- ]?(\d+)/, label: 'QFN' },
+    { regex: /soic[- ]?(\d+)/, label: 'SOIC' },
+    { regex: /tssop[- ]?(\d+)/, label: 'TSSOP' },
+    { regex: /msop[- ]?(\d+)/, label: 'MSOP' },
+    { regex: /sop[- ]?(\d+)/, label: 'SOP' },
+    { regex: /so[- ]?(\d+)/, label: 'SO' },
+    { regex: /dfn[- ]?(\d+)/, label: 'DFN' },
+    { regex: /lga[- ]?(\d+)/, label: 'LGA' },
+    { regex: /sot[- ]?223/, label: 'SOT-223' },
+    { regex: /sot[- ]?89/, label: 'SOT-89' },
+    { regex: /sot[- ]?23/, label: 'SOT-23' },
+    { regex: /to[- ]?220/, label: 'TO-220' },
+    { regex: /to[- ]?92/, label: 'TO-92' },
+    { regex: /to[- ]?252/, label: 'TO-252' },
+    { regex: /dip[- ]?(\d+)/, label: 'DIP' },
+    { regex: /sip[- ]?(\d+)/, label: 'SIP' },
+    // Chip packages: use (?<!\d) lookbehind so part numbers like "RC0805JR" still match.
+    { regex: /(?<!\d)2512(?!\d)/, label: '2512' },
+    { regex: /(?<!\d)1210(?!\d)/, label: '1210' },
+    { regex: /(?<!\d)1206(?!\d)/, label: '1206' },
+    { regex: /(?<!\d)0805(?!\d)/, label: '0805' },
+    { regex: /(?<!\d)0603(?!\d)/, label: '0603' },
+    { regex: /(?<!\d)0402(?!\d)/, label: '0402' },
+    { regex: /(?<!\d)0201(?!\d)/, label: '0201' },
+  ];
+
+  for (const { regex, label } of patterns) {
+    const match = combined.match(regex);
+    if (match) {
+      if (match[1]) {
+        return `${label}-${match[1]}`;
+      }
+      return label;
+    }
+  }
+
+  return 'unknown';
+}
+
+/** Estimate pin count from a package type string. */
+function estimatePinCountFromPackage(packageType: string): number {
+  // Extract trailing number from package like "SOIC-8", "QFP-48", "DIP-16"
+  const match = packageType.match(/-(\d+)$/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+
+  // Fixed pin counts for known packages
+  const fixedPins: Record<string, number> = {
+    'SOT-23': 3,
+    'SOT-89': 3,
+    'SOT-223': 4,
+    'TO-220': 3,
+    'TO-92': 3,
+    'TO-252': 3,
+  };
+  if (fixedPins[packageType] !== undefined) {
+    return fixedPins[packageType];
+  }
+
+  // Chip passives (0201, 0402, etc.) have 2 pads
+  if (/^\d{4}$/.test(packageType)) {
+    return 2;
+  }
+
+  return 2; // Default: 2-pin component
+}
+
+/** Default pad dimensions in mils for common package types. */
+function getDefaultPadSize(packageType: string): { width: number; height: number } {
+  const lower = packageType.toLowerCase();
+  if (lower.startsWith('bga')) {
+    return { width: 12, height: 12 };
+  }
+  if (lower.startsWith('qfn') || lower.startsWith('dfn') || lower.startsWith('lga')) {
+    return { width: 14, height: 24 };
+  }
+  if (
+    lower.startsWith('soic') ||
+    lower.startsWith('sop') ||
+    lower.startsWith('tssop') ||
+    lower.startsWith('msop') ||
+    lower.startsWith('so')
+  ) {
+    return { width: 20, height: 50 };
+  }
+  if (lower.startsWith('qfp') || lower.startsWith('tqfp') || lower.startsWith('lqfp')) {
+    return { width: 16, height: 60 };
+  }
+  if (lower.startsWith('sot')) {
+    return { width: 30, height: 40 };
+  }
+  if (lower.startsWith('to-')) {
+    return { width: 60, height: 60 };
+  }
+  if (lower.startsWith('dip') || lower.startsWith('sip')) {
+    return { width: 60, height: 60 };
+  }
+  // Chip passives
+  if (/^\d{4}$/.test(packageType)) {
+    return { width: 24, height: 30 };
+  }
+  return { width: 30, height: 40 };
+}
+
+/** Default through-hole drill diameter in mils for THT packages. */
+function getDrillDiameter(packageType: string): number | null {
+  const lower = packageType.toLowerCase();
+  if (lower.startsWith('dip') || lower.startsWith('sip')) {
+    return 35; // ~0.9mm standard
+  }
+  if (lower.startsWith('to-220') || lower.startsWith('to-252')) {
+    return 43; // ~1.1mm
+  }
+  if (lower.startsWith('to-92')) {
+    return 30; // ~0.76mm
+  }
+  return null; // SMD — no drill
+}
+
+/**
+ * Convert BOM items to DesignData suitable for DFM checking.
+ * Places components on a grid layout and generates pads/drills based on package type.
+ * Produces a representative design that lets the DFM checker validate pad sizes,
+ * drill dimensions, and spacing against fab capabilities.
+ */
+export function bomToDfmInput(items: BomItemLike[]): DesignData {
+  const pads: DesignData['pads'] = [];
+  const drills: DesignData['drills'] = [];
+  let padIndex = 0;
+
+  // Grid layout: place components in rows
+  const GRID_SPACING = 400; // mils between component centers
+  const COLS = 10;
+
+  for (const item of items) {
+    const packageType = inferPackageType(item.description, item.partNumber);
+    const pinCount = estimatePinCountFromPackage(packageType);
+    const padSize = getDefaultPadSize(packageType);
+    const drillDia = getDrillDiameter(packageType);
+
+    // Place each unit of the component
+    for (let q = 0; q < item.quantity; q++) {
+      const col = padIndex % COLS;
+      const row = Math.floor(padIndex / COLS);
+      const baseX = 100 + col * GRID_SPACING;
+      const baseY = 100 + row * GRID_SPACING;
+
+      // Generate pads for this component instance
+      for (let pin = 0; pin < pinCount; pin++) {
+        const pinX = baseX + (pin % 2) * padSize.width * 2;
+        const pinY = baseY + Math.floor(pin / 2) * padSize.height;
+        const padId = `pad-${padIndex}-${pin}`;
+        pads.push({ id: padId, width: padSize.width, height: padSize.height, x: pinX, y: pinY });
+
+        // THT components also get drills
+        if (drillDia !== null) {
+          drills.push({ id: `drill-${padIndex}-${pin}`, diameter: drillDia, x: pinX, y: pinY, type: 'through' });
+        }
+      }
+
+      padIndex++;
+    }
+  }
+
+  // Compute board size to fit all components with margin
+  const maxRow = Math.floor(Math.max(0, padIndex - 1) / COLS);
+  const maxCol = Math.min(padIndex - 1, COLS - 1);
+  const boardWidth = Math.max(1000, (maxCol + 1) * GRID_SPACING + 200);
+  const boardHeight = Math.max(1000, (maxRow + 1) * GRID_SPACING + 200);
+
+  return {
+    traces: [],
+    drills,
+    vias: [],
+    pads,
+    board: { width: boardWidth, height: boardHeight, thickness: 63, layerCount: 2 },
+    silkscreen: [],
+    solderMask: [],
+    copperWeight: '1oz',
+    surfaceFinish: 'HASL',
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
