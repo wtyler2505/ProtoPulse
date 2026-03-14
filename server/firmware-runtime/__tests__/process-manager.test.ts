@@ -45,6 +45,7 @@ vi.mock('child_process', () => ({
 describe('SimulatorProcessManager', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    mockSpawn.mockClear();
     mockChild = new MockChildProcess();
     mockSpawn.mockReturnValue(mockChild);
     // Clear singleton map between tests

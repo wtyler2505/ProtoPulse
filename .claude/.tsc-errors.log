@@ -732,3 +732,172 @@ server/firmware-runtime/simavr-runner.ts(189,29): error TS2339: Property 'queryB
 12:46:33 PM - Found 0 errors. Watching for file changes.
 [2J[3J[H12:47:17 PM - File change detected. Starting incremental compilation...
 
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(110,62): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(115,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(116,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(117,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(123,21): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(129,23): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(134,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(135,48): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(140,55): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(147,27): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(148,26): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(154,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(161,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(167,50): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(172,59): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(187,58): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(192,53): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(197,54): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(208,54): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(219,57): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(230,58): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(263,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(288,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(289,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(290,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(301,58): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(318,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(335,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(348,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(389,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(454,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(455,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(456,48): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(457,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(476,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(493,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(494,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(495,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(510,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(541,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(542,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(559,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(597,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(612,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(627,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(636,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(647,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(665,22): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(725,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(726,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(742,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(759,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(776,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+
+12:47:22 PM - Found 53 errors. Watching for file changes.
+[2J[3J[H12:47:23 PM - File change detected. Starting incremental compilation...
+
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(110,62): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(115,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(116,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(117,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(123,21): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(129,23): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(134,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(135,48): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(140,55): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(147,27): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(148,26): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(154,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(161,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(167,50): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(172,59): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(187,58): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(192,53): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(197,54): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(208,54): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(219,57): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(230,58): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(263,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(288,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(289,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(290,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(301,58): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(318,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(335,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(348,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(389,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(454,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(455,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(456,48): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(457,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(476,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(493,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(494,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(495,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(510,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(541,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(542,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(559,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(597,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(612,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(627,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(636,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(647,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(665,22): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(725,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(726,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(742,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(759,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(776,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+
+12:47:27 PM - Found 53 errors. Watching for file changes.
+[2J[3J[H12:49:00 PM - File change detected. Starting incremental compilation...
+
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(110,62): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(115,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(116,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(117,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(123,21): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(129,23): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(134,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(135,48): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(140,55): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(147,27): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(148,26): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(154,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(161,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(167,50): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(172,59): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(187,58): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(192,53): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(197,54): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(208,54): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(219,57): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(230,58): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(263,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(288,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(289,53): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(290,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(301,58): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(318,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(335,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(348,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(389,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(454,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(455,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(456,48): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(457,61): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(476,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(493,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(494,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(495,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(510,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(541,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(542,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(559,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(597,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(612,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(627,53): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(636,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(647,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(665,22): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(725,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(726,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(742,55): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(759,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/SimulationControlPanel.test.tsx(776,54): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+
+12:49:01 PM - Found 53 errors. Watching for file changes.
