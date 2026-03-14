@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, memo } from 'react';
+import { useState, useCallback, useMemo, useRef, lazy, Suspense, memo } from 'react';
 import {
   Download,
   FileText,
@@ -44,6 +44,9 @@ import type { ProjectExportData } from '@/lib/export-validation';
 import type { ImportPreview } from '@/lib/import-preview';
 import type { ImportHistoryEntry } from '@/lib/import-history';
 import type { ImportedDesign } from '@/lib/design-import';
+import type { PlacementEntry } from '@/lib/pick-place-preview';
+
+const PickPlacePreview = lazy(() => import('@/components/panels/PickPlacePreview'));
 
 const SESSION_KEY = 'protopulse-session-id';
 
