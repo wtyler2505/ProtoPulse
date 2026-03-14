@@ -1639,3 +1639,11 @@ client/src/lib/audit-trail.ts(88,21): error TS2802: Type 'Set<string>' can only 
 6:07:56 PM - Found 1 error. Watching for file changes.
 [2J[3J[H6:08:08 PM - File change detected. Starting incremental compilation...
 
+client/src/lib/audit-trail.ts(88,21): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+6:08:15 PM - Found 1 error. Watching for file changes.
+[2J[3J[H6:08:17 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/audit-trail.ts(88,21): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+6:08:22 PM - Found 1 error. Watching for file changes.
