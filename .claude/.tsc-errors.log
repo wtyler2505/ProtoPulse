@@ -48,3 +48,11 @@ client/src/lib/arduino/pin-constant-generator.ts(471,30): error TS7053: Element 
 
 
 7:42:36 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:43:05 AM - File change detected. Starting incremental compilation...
+
+
+7:43:08 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:43:28 AM - File change detected. Starting incremental compilation...
+
+
+7:43:34 AM - Found 0 errors. Watching for file changes.

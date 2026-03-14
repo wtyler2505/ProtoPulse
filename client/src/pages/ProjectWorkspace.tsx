@@ -926,6 +926,13 @@ function WorkspaceContent() {
                   </Suspense>
                 </ErrorBoundary>
               )}
+              {activeView === 'starter_circuits' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <StarterCircuitsPanel />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
           </div>
 
           <div className="absolute bottom-4 right-4 z-40 w-80 shadow-2xl">
