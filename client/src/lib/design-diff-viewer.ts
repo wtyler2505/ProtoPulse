@@ -261,13 +261,13 @@ function extractFields<T>(
 ): Record<string, string | number | null> {
   const result: Record<string, string | number | null> = {};
   for (const { key, label } of trackedFields) {
-    const val = item[key];
+    const val = (item as Record<string, unknown>)[key];
     result[label] = val === undefined || val === null ? null : (val as string | number);
   }
   return result;
 }
 
-function compareFields<T extends Record<string, unknown>>(
+function compareFields<T>(
   baseline: T,
   current: T,
   trackedFields: TrackedField<T>[],
