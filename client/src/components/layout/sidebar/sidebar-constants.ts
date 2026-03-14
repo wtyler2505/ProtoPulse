@@ -93,6 +93,7 @@ export const tabDescriptions: Record<string, string> = {
   arduino: 'Embedded firmware workbench with board/library management and CLI integration',
   generative_design: 'AI-guided generative circuit design with evolutionary optimization',
   digital_twin: 'Live hardware digital twin with IoT telemetry and sim comparison',
+  starter_circuits: 'Pre-built circuits with complete Arduino code for instant beginner gratification',
 };
 
 export const alwaysVisibleIds = new Set<ViewMode>([
@@ -115,5 +116,6 @@ export const alwaysVisibleIds = new Set<ViewMode>([
   'lifecycle',
   'comments',
   'output',
+  'starter_circuits',
 ]);
 

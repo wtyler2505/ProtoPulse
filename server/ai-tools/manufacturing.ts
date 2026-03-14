@@ -797,7 +797,7 @@ export function registerManufacturingTools(registry: ToolRegistry): void {
       if (/^DFM-\d{3}$/.test(params.violationType)) {
         ruleId = params.violationType;
         // Find the rule name from the IPC standards map
-        const standard = IPC_STANDARDS[ruleId];
+        const standard = IPC_STANDARDS[ruleId as string];
         if (standard) {
           // Try to find the matching explanation key
           for (const key of Object.keys(VIOLATION_EXPLANATIONS)) {

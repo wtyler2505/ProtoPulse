@@ -28,6 +28,7 @@ import {
   BookOpen,
   Ban,
   Wand2,
+  Hash,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,8 +57,9 @@ import { translateCompileOutput } from '@/lib/arduino/error-translator';
 import type { ErrorTranslation } from '@/lib/arduino/error-translator';
 
 const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
+const PinConstantPanel = lazy(() => import('@/components/arduino/PinConstantPanel'));
 
-type BottomTab = 'console' | 'serial' | 'libraries' | 'boards';
+type BottomTab = 'console' | 'serial' | 'libraries' | 'boards' | 'pins';
 
 export default function ArduinoWorkbenchView() {
   const _projectId = useProjectId();

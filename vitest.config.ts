@@ -44,6 +44,14 @@ export default defineConfig({
           include: ['shared/**/*.test.ts'],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'electron',
+          environment: 'node',
+          include: ['electron/**/*.test.ts'],
+        },
+      },
     ],
     coverage: {
       provider: 'v8',
