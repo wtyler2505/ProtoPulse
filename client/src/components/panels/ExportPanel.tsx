@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import {
   Download,
   FileText,
@@ -10,20 +10,27 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Layers,
   FileCode,
   FileSpreadsheet,
   Drill,
   LayoutGrid,
   Box,
+  Info,
 } from 'lucide-react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { downloadBlob } from '@/lib/csv';
+import { validateExportPreflight } from '@/lib/export-validation';
+import type { ProjectExportData } from '@/lib/export-validation';
 
 const SESSION_KEY = 'protopulse-session-id';
 
@@ -243,6 +250,9 @@ type DownloadState = 'idle' | 'loading' | 'success' | 'error';
 
 function ExportPanel() {
   const projectId = useProjectId();
+  const { projectName } = useProjectMeta();
+  const { nodes } = useArchitecture();
+  const { bom } = useBom();
   const { addOutputLog } = useOutput();
   const { toast } = useToast();
 
@@ -255,6 +265,32 @@ function ExportPanel() {
   });
 
   const [downloadStates, setDownloadStates] = useState<Record<string, DownloadState>>({});
+
+  // Build export validation data from available context
+  const exportData: ProjectExportData = useMemo(() => ({
+    projectName,
+    hasSession: !!localStorage.getItem(SESSION_KEY),
+    architectureNodeCount: nodes.length,
+    hasCircuitInstances: false, // Conservative — no circuit context here
+    hasPcbLayout: false,
+    bomItemCount: bom.length,
+    bomItemsWithPartNumber: bom.filter((item) => item.partNumber.trim().length > 0).length,
+    hasCircuitSource: false,
+    hasCircuitComponent: false,
+    hasBoardProfile: false,
+    bomItemsWithFailureData: 0,
+  }), [projectName, nodes.length, bom]);
+
+  // Pre-compute validation results for all formats
+  const validationResults = useMemo(() => {
+    const results: Record<string, ReturnType<typeof validateExportPreflight>> = {};
+    for (const cat of EXPORT_CATEGORIES) {
+      for (const fmt of cat.formats) {
+        results[fmt.id] = validateExportPreflight(fmt.id, exportData);
+      }
+    }
+    return results;
+  }, [exportData]);
 
   const toggleCategory = useCallback((catId: string) => {
     setExpandedCategories((prev) => ({ ...prev, [catId]: !prev[catId] }));
@@ -398,35 +434,68 @@ function ExportPanel() {
                 {category.formats.map((format) => {
                   const state = downloadStates[format.id] ?? 'idle';
                   const FormatIcon = format.icon;
+                  const validation = validationResults[format.id];
+                  const hasErrors = validation && !validation.canExport;
+                  const hasWarnings = validation && validation.warnings.length > 0 && validation.canExport;
+                  const tooltipLines: string[] = [];
+                  if (hasErrors && validation) {
+                    tooltipLines.push(...validation.errors);
+                    tooltipLines.push(...validation.suggestions);
+                  } else if (state === 'loading') {
+                    tooltipLines.push('Exporting...');
+                  } else {
+                    if (hasWarnings && validation) {
+                      tooltipLines.push(...validation.warnings);
+                    }
+                    tooltipLines.push(`Download ${format.label}`);
+                  }
 
                   return (
                     <div
                       key={format.id}
                       data-testid={`export-format-${format.id}`}
-                      className="flex items-center gap-3 px-3 py-2.5 hover:bg-muted/20 transition-colors group"
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 transition-colors group',
+                        hasErrors ? 'opacity-60' : 'hover:bg-muted/20',
+                      )}
                     >
                       <FormatIcon className="w-4 h-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-medium text-foreground">{format.label}</span>
                           <span className="text-[10px] font-mono text-muted-foreground/60">{format.extension}</span>
+                          {hasErrors && (
+                            <StyledTooltip content={validation.errors.join(' | ')} side="top">
+                              <span data-testid={`export-validation-${format.id}-error`}>
+                                <AlertCircle className="w-3 h-3 text-destructive" />
+                              </span>
+                            </StyledTooltip>
+                          )}
+                          {hasWarnings && validation && (
+                            <StyledTooltip content={validation.warnings.join(' | ')} side="top">
+                              <span data-testid={`export-validation-${format.id}-warning`}>
+                                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                              </span>
+                            </StyledTooltip>
+                          )}
                         </div>
                         <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5 line-clamp-1">{format.description}</p>
                       </div>
 
-                      <StyledTooltip content={state === 'loading' ? 'Exporting...' : `Download ${format.label}`} side="left">
+                      <StyledTooltip content={tooltipLines.join('\n')} side="left">
                         <button
                           data-testid={`export-download-${format.id}`}
                           className={cn(
                             'p-1.5 transition-colors shrink-0 focus-ring',
-                            state === 'idle' && 'text-muted-foreground hover:text-primary hover:bg-primary/10',
+                            hasErrors && 'text-destructive/50 cursor-not-allowed ring-1 ring-destructive/30 rounded',
+                            !hasErrors && state === 'idle' && 'text-muted-foreground hover:text-primary hover:bg-primary/10',
                             state === 'loading' && 'text-primary animate-pulse cursor-wait',
                             state === 'success' && 'text-green-400',
                             state === 'error' && 'text-destructive',
                           )}
                           onClick={() => handleExport(format)}
-                          disabled={state === 'loading'}
-                          aria-label={`Download ${format.label}`}
+                          disabled={state === 'loading' || !!hasErrors}
+                          aria-label={hasErrors ? `Cannot export ${format.label}: ${validation.errors[0] ?? 'missing data'}` : `Download ${format.label}`}
                         >
                           {state === 'idle' && <Download className="w-4 h-4" />}
                           {state === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}

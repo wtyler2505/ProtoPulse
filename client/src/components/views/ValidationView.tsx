@@ -46,7 +46,6 @@ import type { DesignState } from '@/lib/design-gateway';
 import { useDfmChecker, bomToDfmInput } from '@/lib/dfm-checker';
 import { useDrcScripts, BUILTIN_TEMPLATES } from '@/lib/drc-scripting';
 import type { DfmCheckResult } from '@/lib/dfm-checker';
-import type { BomItemLike } from '@/lib/dfm-checker';
 import type { DrcScript } from '@/lib/drc-scripting';
 import type { ScriptDesignData } from '@/lib/drc-scripting';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
@@ -280,6 +279,27 @@ function ValidationViewContent() {
     setDfmResult(result);
     toast({ title: 'DFM Check Complete', description: result.passed ? 'All checks passed!' : `Found ${result.violations.length} violation(s).` });
   }, [selectedFab, runCheckAgainstFab, toast]);
+
+  const handleRunDfmFromBom = useCallback(() => {
+    if (!selectedFab) {
+      toast({ title: 'Select a Fab', description: 'Choose a fab house before running DFM check.', variant: 'destructive' });
+      return;
+    }
+    if (!bom || bom.length === 0) {
+      toast({ title: 'No BOM Data', description: 'Add components to your BOM before running a DFM check from BOM.', variant: 'destructive' });
+      return;
+    }
+    const bomItems = bom.map((item) => ({
+      partNumber: item.partNumber,
+      description: item.description,
+      manufacturer: item.manufacturer,
+      quantity: item.quantity,
+    }));
+    const designData = bomToDfmInput(bomItems);
+    const result = runCheckAgainstFab(designData, selectedFab);
+    setDfmResult(result);
+    toast({ title: 'DFM Check from BOM', description: result.passed ? 'All checks passed!' : `Found ${result.violations.length} violation(s).` });
+  }, [selectedFab, bom, runCheckAgainstFab, toast]);
 
   const handleAddScript = useCallback(() => {
     if (!scriptName.trim()) {
@@ -621,10 +641,16 @@ function ValidationViewContent() {
               <Factory className="w-4 h-4 text-primary" />
               DFM Check
             </h3>
-            <Button data-testid="run-dfm-check" variant="outline" size="sm" className="h-7 text-xs" onClick={handleRunDfm}>
-              <Play className="w-3 h-3 mr-1" />
-              Run
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button data-testid="run-dfm-from-bom" variant="outline" size="sm" className="h-7 text-xs" onClick={handleRunDfmFromBom}>
+                <Factory className="w-3 h-3 mr-1" />
+                Check from BOM
+              </Button>
+              <Button data-testid="run-dfm-check" variant="outline" size="sm" className="h-7 text-xs" onClick={handleRunDfm}>
+                <Play className="w-3 h-3 mr-1" />
+                Run
+              </Button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

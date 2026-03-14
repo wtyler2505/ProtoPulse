@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { DesignData, FabCapabilities, DfmCheckResult } from '../dfm-checker';
+import type { DesignData, FabCapabilities, DfmCheckResult, BomItemLike } from '../dfm-checker';
 
 vi.stubGlobal('crypto', { randomUUID: vi.fn<() => string>(() => `uuid-${Math.random().toString(36).slice(2, 10)}`) });
 
@@ -21,7 +21,7 @@ vi.stubGlobal('localStorage', {
 
 // Must import after mocks
 // eslint-disable-next-line import-x/first
-import { DfmChecker } from '../dfm-checker';
+import { DfmChecker, inferPackageType, bomToDfmInput } from '../dfm-checker';
 
 // ---------------------------------------------------------------------------
 // Helpers

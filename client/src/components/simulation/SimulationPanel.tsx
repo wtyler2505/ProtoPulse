@@ -14,10 +14,11 @@ import {
   runParsedNetlist,
 } from '@/lib/simulation/spice-netlist-parser';
 import type { SimulationResult as SpiceSimResult } from '@/lib/simulation/spice-netlist-parser';
-import { autoDetectAnalysisType } from '@/lib/simulation/auto-detect';
-import type { CircuitInstanceForDetection } from '@/lib/simulation/auto-detect';
+import { autoDetectAnalysisType, detectSimulationType } from '@/lib/simulation/auto-detect';
+import type { AnalysisType as AutoDetectAnalysisType, CircuitInstanceForDetection } from '@/lib/simulation/auto-detect';
 import { checkCircuitComplexity } from '@/lib/simulation/complexity-check';
 import type { CircuitInstanceForComplexity } from '@/lib/simulation/complexity-check';
+import SimPlayButton from '@/components/simulation/SimPlayButton';
 import {
   Play,
   Square,
@@ -757,6 +758,22 @@ export default function SimulationPanel() {
     return autoDetectAnalysisType(forDetection);
   }, [circuitInstances]);
 
+  // BL-0620: Enriched simulation type detection with confidence scoring
+  const simTypeDetection = useMemo(() => {
+    if (!circuitInstances || circuitInstances.length === 0) {
+      return null;
+    }
+    const forDetection: CircuitInstanceForDetection[] = circuitInstances.map((inst) => {
+      const props = (inst.properties && typeof inst.properties === 'object' ? inst.properties : {}) as Record<string, unknown>;
+      return {
+        referenceDesignator: inst.referenceDesignator,
+        componentType: String(props.componentType ?? ''),
+        properties: inst.properties as Record<string, unknown> | null,
+      };
+    });
+    return detectSimulationType(forDetection);
+  }, [circuitInstances]);
+
   const circuitSources = useMemo<string[]>(() => {
     if (!circuitInstances || circuitInstances.length === 0) { return []; }
     // Voltage and current sources use SPICE convention: refDes starts with V or I
@@ -1028,6 +1045,17 @@ export default function SimulationPanel() {
   }, [isRunning, handleStop, autoDetected, handleRunWithComplexityCheck]);
 
   // ---------------------------
+  // BL-0620: SimPlayButton start handler — sets type then runs
+  // ---------------------------
+  const handleSimPlayStart = useCallback((type: AutoDetectAnalysisType) => {
+    setAnalysisType(type);
+    // Use setTimeout(0) to ensure state is flushed before running
+    setTimeout(() => {
+      handleRunWithComplexityCheck();
+    }, 0);
+  }, [handleRunWithComplexityCheck]);
+
+  // ---------------------------
   // Export SPICE netlist
   // ---------------------------
   const handleExportSpice = useCallback(async () => {
@@ -1129,49 +1157,14 @@ export default function SimulationPanel() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* BL-0620: Unified Play/Stop button in header */}
-          <button
-            type="button"
-            data-testid="unified-sim-play-stop"
-            onClick={handleUnifiedPlayStop}
-            disabled={isStopping}
-            className={cn(
-              'h-9 px-4 flex items-center gap-2 text-sm font-medium transition-all',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              isRunning
-                ? 'bg-red-600 text-white hover:bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.25)]'
-                : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.25)] hover:shadow-[0_0_25px_rgba(16,185,129,0.4)]',
-            )}
-          >
-            {isRunning ? (
-              isStopping ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Stopping...
-                </>
-              ) : (
-                <>
-                  <Square className="w-4 h-4 fill-current" />
-                  Stop
-                </>
-              )
-            ) : (
-              <>
-                <Play className="w-4 h-4 fill-current" />
-                {autoDetected ? `Run ${ANALYSIS_TYPES.find((a) => a.id === autoDetected.recommended)?.label ?? 'Simulation'}` : 'Run Simulation'}
-              </>
-            )}
-          </button>
-          {/* Auto-detect indicator */}
-          {autoDetected && !isRunning && (
-            <span
-              className="text-[10px] text-muted-foreground max-w-[160px] truncate"
-              title={autoDetected.reason}
-              data-testid="auto-detect-hint"
-            >
-              {autoDetected.reason.split(' — ')[0]}
-            </span>
-          )}
+          {/* BL-0620: SimPlayButton — hero CTA with auto-detection */}
+          <SimPlayButton
+            isRunning={isRunning}
+            isStopping={isStopping}
+            detection={simTypeDetection}
+            onStart={handleSimPlayStart}
+            onStop={handleStop}
+          />
           <button
             type="button"
             data-testid="export-spice"

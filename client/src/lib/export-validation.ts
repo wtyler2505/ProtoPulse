@@ -11,7 +11,7 @@
 
 export interface ExportPreflightResult {
   readonly format: string;
-  readonly canExport: boolean;
+  canExport: boolean;
   readonly warnings: string[];
   readonly errors: string[];
   readonly suggestions: string[];
