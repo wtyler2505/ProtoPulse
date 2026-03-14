@@ -138,7 +138,7 @@ describe('Registry completeness', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('covers all 8 ToolCategory values', () => {
+  it('covers all 10 ToolCategory values', () => {
     const categories = new Set(allTools.map((t) => t.category));
     const expected: ToolCategory[] = [
       'architecture',
@@ -149,6 +149,8 @@ describe('Registry completeness', () => {
       'export',
       'project',
       'navigation',
+      'arduino',
+      'simulation',
     ];
     for (const cat of expected) {
       expect(categories.has(cat)).toBe(true);
@@ -167,8 +169,8 @@ describe('Registry completeness', () => {
     expect(registry.getByCategory('bom')).toHaveLength(12);
   });
 
-  it('validation category registers 11 tools', () => {
-    expect(registry.getByCategory('validation')).toHaveLength(11);
+  it('validation category registers 14 tools', () => {
+    expect(registry.getByCategory('validation')).toHaveLength(14);
   });
 
   it('export category registers 14 tools', () => {
@@ -185,6 +187,14 @@ describe('Registry completeness', () => {
 
   it('component category registers 7 tools (6 component + 1 vision)', () => {
     expect(registry.getByCategory('component')).toHaveLength(7);
+  });
+
+  it('arduino category registers 5 tools', () => {
+    expect(registry.getByCategory('arduino')).toHaveLength(5);
+  });
+
+  it('simulation category registers 8 tools (5 simulation + 3 testbench)', () => {
+    expect(registry.getByCategory('simulation')).toHaveLength(8);
   });
 });
 
@@ -697,6 +707,8 @@ describe('Category isolation', () => {
       'export',
       'project',
       'navigation',
+      'arduino',
+      'simulation',
     ];
 
     for (const cat of categories) {
@@ -718,6 +730,8 @@ describe('Category isolation', () => {
       'export',
       'project',
       'navigation',
+      'arduino',
+      'simulation',
     ];
 
     let sum = 0;
@@ -753,7 +767,7 @@ describe('toAnthropicTools() format converter', () => {
   const anthropicTools = registry.toAnthropicTools();
 
   it('returns an array matching total tool count', () => {
-    expect(anthropicTools).toHaveLength(102);
+    expect(anthropicTools).toHaveLength(118);
   });
 
   it('every entry has name, description, and input_schema', () => {
@@ -801,7 +815,7 @@ describe('toGeminiFunctionDeclarations() format converter', () => {
   const geminiTools = registry.toGeminiFunctionDeclarations();
 
   it('returns an array matching total tool count', () => {
-    expect(geminiTools).toHaveLength(102);
+    expect(geminiTools).toHaveLength(118);
   });
 
   it('every entry has name, description, and parameters', () => {

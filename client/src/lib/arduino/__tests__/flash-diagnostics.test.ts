@@ -5,7 +5,7 @@ import {
   getStageLabel,
   createInitialProgress,
 } from '../flash-diagnostics';
-import type { FlashProgress, FlashDiagnostic, FlashStage } from '../flash-diagnostics';
+import type { FlashProgress, FlashStage } from '../flash-diagnostics';
 
 // ---------------------------------------------------------------------------
 // Helpers

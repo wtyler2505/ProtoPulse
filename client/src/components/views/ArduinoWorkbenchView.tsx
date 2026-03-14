@@ -52,6 +52,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import CodeEditor from '@/components/views/circuit-code/CodeEditor';
 import ExamplesBrowser from '@/components/views/arduino/ExamplesBrowser';
+import ExampleLibraryPanel from '@/components/arduino/ExampleLibraryPanel';
 import { formatArduinoCode } from '@/lib/arduino/code-formatter';
 import { translateCompileOutput } from '@/lib/arduino/error-translator';
 import type { ErrorTranslation } from '@/lib/arduino/error-translator';
@@ -110,6 +111,7 @@ export default function ArduinoWorkbenchView() {
 
   // Examples browser state
   const [showExamples, setShowExamples] = useState(false);
+  const [showExampleLibrary, setShowExampleLibrary] = useState(false);
 
   // Console state
   const [autoScroll, setAutoScroll] = useState(true);
@@ -297,6 +299,7 @@ export default function ArduinoWorkbenchView() {
       await createFile(filename, exCode);
       setActiveFilePath(filename);
       setShowExamples(false);
+      setShowExampleLibrary(false);
       toast({ title: 'Example loaded', description: filename });
     } catch (e: unknown) {
       toast({ variant: 'destructive', title: 'Failed to load example', description: e instanceof Error ? e.message : String(e) });
@@ -582,9 +585,26 @@ export default function ArduinoWorkbenchView() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar: File Explorer or Examples Browser */}
+        {/* Sidebar: File Explorer, Examples Browser, or Example Library */}
         <div className="w-64 border-r border-border flex flex-col bg-card/30 shrink-0">
-          {showExamples ? (
+          {showExampleLibrary ? (
+            <>
+              <div className="p-2 border-b border-border flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Example Library</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowExampleLibrary(false)}
+                  data-testid="button-arduino-close-example-library"
+                >
+                  <XCircle className="w-3 h-3" />
+                  Close
+                </Button>
+              </div>
+              <ExampleLibraryPanel onLoadExample={handleLoadExample} className="flex-1" />
+            </>
+          ) : showExamples ? (
             <>
               <div className="p-2 border-b border-border flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Examples</span>
@@ -675,6 +695,17 @@ export default function ArduinoWorkbenchView() {
                   <div className="flex items-center gap-2">
                     <BookOpen className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
                     <span className="text-xs font-medium">Examples</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+                <button
+                  className="w-full flex items-center justify-between p-3 border-t border-border hover:bg-muted/50 transition-colors group"
+                  onClick={() => setShowExampleLibrary(true)}
+                  data-testid="button-arduino-example-library"
+                >
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
+                    <span className="text-xs font-medium">Example Library</span>
                   </div>
                   <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
                 </button>

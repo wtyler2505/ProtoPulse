@@ -20,6 +20,7 @@ import { useComponentParts } from '@/lib/component-editor/hooks';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import BreadboardGrid from './BreadboardGrid';
 import { BreadboardComponentOverlay, detectFamily, getFamilyValues, getCurrentValueLabel } from './BreadboardComponentRenderer';
+import BendableLegRenderer from './BendableLegRenderer';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import ToolButton from './ToolButton';
 import { Button } from '@/components/ui/button';
@@ -658,6 +659,12 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
               highlightedPoints={highlightedPoints}
               occupiedPoints={occupiedPoints}
               hoveredCoord={hoveredCoord}
+            />
+
+            {/* Bendable component legs (BL-0593) — rendered behind component bodies */}
+            <BendableLegRenderer
+              instances={instances ?? []}
+              parts={parts ?? []}
             />
 
             {/* Components Overlay (BL-0151) */}

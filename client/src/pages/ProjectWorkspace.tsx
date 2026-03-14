@@ -327,6 +327,10 @@ const initialWorkspaceState: WorkspaceState = {
 import { useActionExecutor } from '@/components/panels/chat/hooks/useActionExecutor';
 import PredictionPanel from '@/components/ui/PredictionPanel';
 import { usePredictions } from '@/hooks/usePredictions';
+import RadialMenu from '@/components/ui/RadialMenu';
+import { getActionsForContext } from '@/lib/radial-menu-actions';
+import type { RadialMenuPosition } from '@/components/ui/RadialMenu';
+import type { MenuContext, MenuContextType, TargetKind } from '@/lib/radial-menu-actions';
 
 function WorkspaceContent() {
   const projectId = useProjectId();
@@ -375,6 +379,75 @@ function WorkspaceContent() {
   }, []);
 
   const [ws, dispatch] = useReducer(workspaceReducer, initialWorkspaceState);
+
+  // BL-0231: Radial context menu state
+  const [radialMenu, setRadialMenu] = useState<{
+    position: RadialMenuPosition;
+    context: MenuContext;
+  } | null>(null);
+
+  const closeRadialMenu = useCallback(() => setRadialMenu(null), []);
+
+  /** Map activeView to the radial-menu context type (only views that support it). */
+  const viewToContextType = useCallback((view: string): MenuContextType | null => {
+    switch (view) {
+      case 'architecture': return 'architecture';
+      case 'schematic': return 'schematic';
+      case 'pcb': return 'pcb';
+      case 'breadboard': return 'breadboard';
+      case 'procurement': return 'bom';
+      default: return null;
+    }
+  }, []);
+
+  /** Detect what was right-clicked based on DOM data attributes. */
+  const detectTarget = useCallback((e: MouseEvent): { target: TargetKind; targetId?: string } => {
+    let el = e.target as HTMLElement | null;
+    while (el && el !== document.body) {
+      const nodeId = el.getAttribute('data-id') ?? el.getAttribute('data-nodeid');
+      if (nodeId) {
+        return { target: 'node', targetId: nodeId };
+      }
+      const bomRow = el.getAttribute('data-bom-id');
+      if (bomRow) {
+        return { target: 'bom_row', targetId: bomRow };
+      }
+      el = el.parentElement;
+    }
+    return { target: 'canvas' };
+  }, []);
+
+  // BL-0231: Right-click handler for radial menu
+  useEffect(() => {
+    const mainEl = mainRef.current;
+    if (!mainEl) { return; }
+
+    const handleContextMenu = (e: MouseEvent) => {
+      const contextType = viewToContextType(activeView);
+      if (!contextType) { return; }
+
+      const { target, targetId } = detectTarget(e);
+      const ctx: MenuContext = { view: contextType, target, targetId };
+      const actions = getActionsForContext(ctx);
+      if (actions.length === 0) { return; }
+
+      e.preventDefault();
+      setRadialMenu({ position: { x: e.clientX, y: e.clientY }, context: ctx });
+    };
+
+    mainEl.addEventListener('contextmenu', handleContextMenu);
+    return () => mainEl.removeEventListener('contextmenu', handleContextMenu);
+  }, [activeView, viewToContextType, detectTarget]);
+
+  const handleRadialSelect = useCallback((itemId: string) => {
+    // Actions are dispatched as toast notifications for now — individual views
+    // can listen for these events and implement the actual behavior.
+    toast({
+      title: `Action: ${itemId}`,
+      description: `"${itemId}" triggered on ${radialMenu?.context.view ?? 'unknown'} view${radialMenu?.context.targetId ? ` (target: ${radialMenu.context.targetId})` : ''}.`,
+    });
+    setRadialMenu(null);
+  }, [radialMenu, toast]);
 
   // BL-0114 + BL-0234: Restore activeView from URL (priority) or localStorage (fallback) on mount
   useEffect(() => {
