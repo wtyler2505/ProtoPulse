@@ -109,6 +109,8 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 87 | `BL-0593`, `BL-0628`, `BL-0147`, `BL-0163`, `BL-0231` | Bendable breadboard legs, Arduino example library, flash diagnostics, AI testbench tools, radial menu — maker UX + firmware feedback loop. |
+| 86 | `BL-0627`, `BL-0629`, `BL-0523`, `BL-0152`, Electron shell | Starter circuits, etchable PCB export, DFM AI tools, pin constants, native desktop app foundation. |
 | 80 | `BL-0636`, `BL-0637`, `BL-0638`, `BL-0639`, `BL-0642` | 5 P0 IDOR/auth vulnerabilities fixed — AI chat ownership, AI action scoping, circuit API tenant-scoping, project↔resource consistency, batch analysis authz. All P0 items now resolved. |
 | 79 | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600`, `BL-0560` | Board settings dialog, CLI error parsing (35 hints), memory usage display, error line linking, simulation results overlay — Arduino compile feedback loop + simulation visibility. |
 | 78 | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | Wire drag-rerouting, PCB copy/paste, validation→PCB navigation, AI action error tracking, baud rate selector — editor trust + workflow gaps closed. |
@@ -168,7 +170,7 @@ Use this section to call out the largest open work by architectural scope and de
 
 ## Active Waves (Current Planning Snapshot)
 
-This document currently reflects completed work through **Wave 79**.
+This document currently reflects completed work through **Wave 87**.
 
 | Lane | Intent | Candidate IDs | Status |
 |------|--------|---------------|--------|
@@ -408,11 +410,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 157 | 131 | Breadboard/PCB/simulation/UI — Waves 61-86 ongoing |
+| P2 | 152 | 136 | Breadboard/PCB/simulation/UI — Waves 61-87 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **285** | **223** | **508 total items tracked** |
+| **Total** | **280** | **228** | **508 total items tracked** |
 
-*Snapshot updated: Wave 86 (2026-03-14)*
+*Snapshot updated: Wave 87 (2026-03-14)*
 
 ---
 
@@ -607,7 +609,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0590 | **Photorealistic breadboard component SVGs** — Fritzing renders components as photorealistic images: resistors with real color bands, ICs with part number markings, LEDs with colored lens shapes, capacitors with correct proportions. ProtoPulse uses schematic-style abstractions on the breadboard. "Looks like my real circuit" is the primary reason beginners love Fritzing — it makes the diagram instantly recognizable against the physical hardware. | DONE | C3 | Wave 69 |
 | BL-0591 | **Wire color coding in breadboard** — Right-click any breadboard wire to assign a color (red=power, black=ground, yellow=signal, etc.). Wire colors persist and are exported to diagrams. Standard electronics convention that makes breadboard diagrams readable at a glance. Every Fritzing tutorial uses this. | DONE | C3 | Wave 69 |
 | BL-0592 | **Breadboard connected-row highlight on hover** — Hovering over any breadboard hole highlights every other hole electrically connected to it (the full row on the top/bottom half, or the connected power rail). Teaches beginners how breadboards work while also functioning as a visual continuity checker during layout. Very low implementation cost, very high educational value. | DONE | C3 | Wave 69 |
-| BL-0593 | **Bendable/rubber-band component legs** — Through-hole components (DIP ICs, resistors, LEDs) have flexible legs that bend and stretch from the component body to their inserted breadboard holes. Legs can be dragged to different holes, stretching to fit. Makes the breadboard diagram look like the real circuit where bent component leads are visible. Fritzing implements this via `legId` in the part SVG format. | OPEN | C3 | Wave 66 / Fritzing |
+| BL-0593 | **Bendable/rubber-band component legs** — Bezier leg paths from component body to breadboard holes, 7 component types, metallic gradients, BendableLegRenderer SVG. | DONE (Wave 87) | C3 | Wave 66 / Fritzing |
 | BL-0594 | **Part family swapping via Inspector** — Components with the same "family" property (e.g. all resistors) show a value dropdown in the Inspector panel. Swap a 100Ω resistor for a 1kΩ without deleting and re-placing — all wire connections are preserved. Avoids the most common tedious operation in breadboard design. | DONE (Wave 74) | C3 | Wave 66 / Fritzing |
 | BL-0595 | **Arbitrary angle rotation** — Inspector rotation field should accept any angle (e.g. 30°, 45°, 135°), not just 90° multiples. Required for angled connector placements, off-axis through-hole components, and decorative layouts. | DONE (Wave 73) | C2 | Wave 66 / Fritzing |
 | BL-0596 | **Mystery part (generic black-box placeholder)** — A configurable placeholder component with user-set pin count, pin labels, and a blank body. Used when a specific part isn't in the library yet. Allows circuit design to continue without blocking on part creation. Common in breadboard prototyping where custom modules need representation. | DONE (Wave 72) | C2 | Wave 66 / Fritzing |
@@ -696,7 +698,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0144 | Hardware session recorder (logs + actions + replay) | OPEN | C4 | MF-089 |
 | BL-0145 | Safe command sandbox for device interaction | OPEN | C4 | MF-092 |
 | BL-0146 | Board package/library manager integration | OPEN | C4 | MF-093 |
-| BL-0147 | Flashing progress/error diagnostics | OPEN | C3 | MF-094, ARDX-063 |
+| BL-0147 | Flashing progress/error diagnostics — avrdude+esptool output parsing, 25+ error patterns, FlashProgressBar with stage icons. | DONE (Wave 87) | C3 | MF-094, ARDX-063 |
 | BL-0148 | Web Serial integration tests | OPEN | C3 | MF-095 |
 | BL-0149 | Multi-angle photo follow-up for component ID | OPEN | C3 | MF-097 |
 | BL-0150 | Inventory tracking tied to BOM consumption | PARTIAL | C4 | MF-101 |
@@ -764,7 +766,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0160 | AI answer source panel (what data it used) — Full ڈیزائن source tracking from AI tool calls; implemented AnswerSourcePanel UI with Design Sources and AI Confidence scores. | DONE | C3 | Wave 63 |
 | BL-0161 | AI safety mode for beginners (extra confirms + teaching) | OPEN | C3 | MF-145 |
 | BL-0162 | Datasheet RAG for grounded suggestions | OPEN | C4 | MF-147 |
-| BL-0163 | AI testbench suggestions for simulation | OPEN | C3 | MF-148, IFX-015 |
+| BL-0163 | AI testbench suggestions — suggest_testbench, explain_test_point, generate_test_sequence tools. | DONE (Wave 87) | C3 | MF-148, IFX-015 |
 | BL-0164 | AI BOM optimization assistant | OPEN | C3 | MF-149, IFX-035 |
 | BL-0165 | AI routing copilot with explainable reasoning — Added suggest_trace_path tool and client-side trace_path_suggestion handler to provide AI-driven PCB routing guidance. | DONE | C3 | Wave 63 |
 | BL-0166 | AI hardware debug assistant — Added hardware_debug_analysis tool and client-side hardware_debug_guide handler to provide structured troubleshooting strategies for prototypes. | DONE | C3 | Wave 63 |
@@ -844,7 +846,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0627 | **Pre-built starter circuits with pre-loaded Arduino code** — 15 complete circuit+code combos across 5 categories with StarterCircuitsPanel gallery. | DONE (Wave 86) | C3 | Wave 66 / TinkerCAD + Fritzing |
-| BL-0628 | **Bundled circuit + code example library** — The Arduino IDE "File → Examples" menu is how every beginner learns: expand a category, click an example, the code opens ready to upload. ProtoPulse has `generate_arduino_sketch` AI but no browsable static library. Add an Examples panel with curated circuit+code pairs organized by category (Basics, Sensors, Displays, Motors, Communication, IoT) with descriptions and learning objectives. | OPEN | C3 | Wave 66 / Arduino IDE + Fritzing |
+| BL-0628 | **Bundled circuit+code example library** — 22 examples across 8 categories, tree view, search/filter, ExampleLibraryPanel in ArduinoWorkbench. | DONE (Wave 87) | C3 | Wave 66 / Arduino IDE + Fritzing |
 | BL-0629 | **Etchable PCB export (DIY toner transfer)** — Mirrored SVG at 1:1 scale for toner transfer etching. Route handler + ExportPanel UI. | DONE (Wave 86) | C2 | Wave 66 / Fritzing |
 
 ### Import/Export
@@ -869,7 +871,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0230 | Mini-map for large schematic/PCB canvases | DONE (Wave 62) — PCBMiniMap in PCBLayoutView.tsx + SchematicCanvas MiniMap enhanced with pan/zoom/neon cyan styling | C2 | UX-038 |
-| BL-0231 | Smart contextual radial menu on right-click | OPEN | C2 | UX-040 |
+| BL-0231 | Smart contextual radial menu — SVG pie segments, 5 view contexts, keyboard nav, RadialMenu component. | DONE (Wave 87) | C2 | UX-040 |
 | BL-0232 | Click validation issue → focus camera + flash component — ReactFlow fitView + CSS validation-focus-pulse animation | DONE | C2 | Wave 60 |
 | BL-0233 | "Why this rule matters" plain-language explanation | DONE (Wave 62) — DRC_EXPLANATIONS (28 rules) in drc-engine.ts, wired into ERCPanel + ValidationView with expandable toggles | C2 | UX-043 |
 | BL-0234 | Persist panel sizes/collapsed state (localStorage) — debounced writes, ViewMode validation on restore | DONE | C2 | Wave 60 |

@@ -103,14 +103,14 @@ function classifyInstance(inst: {
   const refDes = inst.referenceDesignator ?? '';
   let role: InstanceClassification['role'] = 'unknown';
 
-  if (/^[VIJ]/i.test(refDes)) {
+  if (/^[JPXW]/i.test(refDes)) {
+    role = 'connector';
+  } else if (/^[VI]/i.test(refDes)) {
     role = 'source';
   } else if (/^[RCL]/i.test(refDes)) {
     role = 'passive';
   } else if (/^[UQDT]/i.test(refDes)) {
     role = 'active';
-  } else if (/^[JPXW]/i.test(refDes)) {
-    role = 'connector';
   }
 
   return {

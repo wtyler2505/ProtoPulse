@@ -56,7 +56,10 @@ import ExampleLibraryPanel from '@/components/arduino/ExampleLibraryPanel';
 import { formatArduinoCode } from '@/lib/arduino/code-formatter';
 import { translateCompileOutput } from '@/lib/arduino/error-translator';
 import type { ErrorTranslation } from '@/lib/arduino/error-translator';
+import { parseFlashOutput, diagnoseFlashError, createInitialProgress } from '@/lib/arduino/flash-diagnostics';
+import type { FlashProgress, FlashDiagnostic } from '@/lib/arduino/flash-diagnostics';
 
+const FlashProgressBar = lazy(() => import('@/components/arduino/FlashProgressBar'));
 const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
 const PinConstantPanel = lazy(() => import('@/components/arduino/PinConstantPanel'));
 
@@ -132,6 +135,11 @@ export default function ArduinoWorkbenchView() {
   const [coreSearchResults, setCoreSearchResults] = useState<unknown[]>([]);
   const [coreSearching, setCoreSearching] = useState(false);
   const [coreInstalling, setCoreInstalling] = useState<string | null>(null);
+
+  // Flash progress state
+  const [flashProgress, setFlashProgress] = useState<FlashProgress | null>(null);
+  const [flashDiagnostic, setFlashDiagnostic] = useState<FlashDiagnostic | null>(null);
+  const flashProgressRef = useRef<FlashProgress | null>(null);
 
   // Selected profile id (local UI state — not necessarily the isDefault flag)
   const defaultProfile = useMemo(() => profiles.find(p => p.isDefault) ?? profiles[0], [profiles]);
@@ -348,6 +356,83 @@ export default function ArduinoWorkbenchView() {
     }
     return translateCompileOutput(failedJob.log);
   }, [jobs]);
+
+  // Track flash progress from active upload job log
+  useEffect(() => {
+    const uploadJob_ = jobs.find(
+      (j) => j.jobType === 'upload' && (j.status === 'running' || j.status === 'pending'),
+    );
+
+    if (!uploadJob_) {
+      // Check if a completed/failed upload just finished
+      const finishedUpload = jobs.find(
+        (j) => j.jobType === 'upload' && (j.status === 'completed' || j.status === 'failed'),
+      );
+      if (finishedUpload && flashProgress) {
+        if (finishedUpload.status === 'completed') {
+          const doneProgress: FlashProgress = {
+            stage: 'done',
+            percent: 100,
+            bytesWritten: flashProgressRef.current?.totalBytes ?? 0,
+            totalBytes: flashProgressRef.current?.totalBytes ?? 0,
+            stageLabel: 'Upload complete!',
+          };
+          setFlashProgress(doneProgress);
+          flashProgressRef.current = doneProgress;
+          setFlashDiagnostic(null);
+        } else if (finishedUpload.status === 'failed') {
+          const errorProgress: FlashProgress = {
+            stage: 'error',
+            percent: flashProgressRef.current?.percent ?? 0,
+            bytesWritten: flashProgressRef.current?.bytesWritten ?? 0,
+            totalBytes: flashProgressRef.current?.totalBytes ?? 0,
+            stageLabel: 'Upload failed',
+          };
+          setFlashProgress(errorProgress);
+          flashProgressRef.current = errorProgress;
+          setFlashDiagnostic(diagnoseFlashError(finishedUpload.log ?? ''));
+        }
+      }
+      return;
+    }
+
+    // Initialize flash progress on new upload
+    if (!flashProgress || flashProgress.stage === 'done' || flashProgress.stage === 'error') {
+      const initial = createInitialProgress();
+      setFlashProgress(initial);
+      flashProgressRef.current = initial;
+      setFlashDiagnostic(null);
+    }
+
+    // Parse log lines for progress
+    if (uploadJob_.log) {
+      const lines = uploadJob_.log.split('\n');
+      let current = flashProgressRef.current ?? createInitialProgress();
+      for (const line of lines) {
+        const parsed = parseFlashOutput(line, current);
+        if (parsed) {
+          current = parsed;
+        }
+      }
+      if (current !== flashProgressRef.current) {
+        setFlashProgress(current);
+        flashProgressRef.current = current;
+      }
+    }
+  }, [jobs, flashProgress]);
+
+  const handleFlashRetry = useCallback(() => {
+    setFlashProgress(null);
+    setFlashDiagnostic(null);
+    flashProgressRef.current = null;
+    void handleUpload();
+  }, [handleUpload]);
+
+  const handleFlashDismiss = useCallback(() => {
+    setFlashProgress(null);
+    setFlashDiagnostic(null);
+    flashProgressRef.current = null;
+  }, []);
 
   // Library Manager handlers
   const handleLibSearch = useCallback(async () => {
@@ -583,6 +668,19 @@ export default function ArduinoWorkbenchView() {
           )}
         </div>
       </div>
+
+      {/* Flash progress bar — visible during/after upload */}
+      {flashProgress && (
+        <Suspense fallback={null}>
+          <FlashProgressBar
+            progress={flashProgress}
+            diagnostic={flashDiagnostic ?? undefined}
+            onRetry={handleFlashRetry}
+            onDismiss={handleFlashDismiss}
+            className="mx-3 mb-1"
+          />
+        </Suspense>
+      )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar: File Explorer, Examples Browser, or Example Library */}

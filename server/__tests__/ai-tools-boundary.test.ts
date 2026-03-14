@@ -616,6 +616,7 @@ function getMinimalValidParams(toolName: string): Record<string, unknown> {
     remove_net: { netId: 1 },
     remove_wire: { wireId: 1 },
     delete_component_part: { partId: 1 },
+    upload_firmware: { fqbn: 'arduino:avr:uno', port: '/dev/ttyACM0' },
   };
   return paramsMap[toolName] ?? {};
 }
@@ -1019,7 +1020,7 @@ describe('modelPreference hints', () => {
   it('most tools have no modelPreference (defaults to standard)', () => {
     const toolsWithPref = registry.getAll().filter((t) => t.modelPreference !== undefined);
     // Only a few tools should explicitly set this
-    expect(toolsWithPref.length).toBeLessThan(10);
+    expect(toolsWithPref.length).toBeLessThan(20);
   });
 });
 

@@ -273,27 +273,27 @@ export function parseFlashOutput(
     };
   }
 
+  // --- esptool erase ---
+  if (ESPTOOL_ERASE_RE.test(trimmed)) {
+    return {
+      stage: 'erasing',
+      percent: Math.max(15, prev.percent),
+      bytesWritten: 0,
+      totalBytes: prev.totalBytes,
+      stageLabel: STAGE_LABELS.erasing,
+      rawLine: trimmed,
+    };
+  }
+
   // --- esptool compressed (captures total bytes) ---
   const compressedMatch = ESPTOOL_COMPRESSED_RE.exec(trimmed);
   if (compressedMatch) {
     return {
       stage: 'writing',
-      percent: 18,
+      percent: Math.max(18, prev.percent),
       bytesWritten: 0,
       totalBytes: parseInt(compressedMatch[1], 10),
       stageLabel: STAGE_LABELS.writing,
-      rawLine: trimmed,
-    };
-  }
-
-  // --- esptool erase ---
-  if (ESPTOOL_ERASE_RE.test(trimmed)) {
-    return {
-      stage: 'erasing',
-      percent: 15,
-      bytesWritten: 0,
-      totalBytes: prev.totalBytes,
-      stageLabel: STAGE_LABELS.erasing,
       rawLine: trimmed,
     };
   }
@@ -389,7 +389,7 @@ interface FlashErrorPattern {
 const FLASH_ERROR_PATTERNS: FlashErrorPattern[] = [
   // --- Port / connection errors ---
   {
-    pattern: /(?:serial\s*port|port)\s*(?:is\s*)?(?:busy|in use|locked)/i,
+    pattern: /(?:serial\s*port|port)\s*(?:\S+\s+)?(?:is\s+)?(?:busy|in use|locked)/i,
     errorCode: 'PORT_BUSY',
     message: 'The serial port is busy. Another program is using the connection to your board.',
     suggestions: [
@@ -515,6 +515,19 @@ const FLASH_ERROR_PATTERNS: FlashErrorPattern[] = [
     isRetryable: true,
   },
 
+  // --- Fuse / lock bit errors (must come before VERIFICATION_FAILED) ---
+  {
+    pattern: /(?:fuse|lock\s*bit)\s*(?:error|mismatch|verification)/i,
+    errorCode: 'FUSE_ERROR',
+    message: 'Error reading or writing the microcontroller\'s fuse or lock bits.',
+    suggestions: [
+      'This is an advanced operation — fuse settings control clock, bootloader, and security.',
+      'Do not change fuse bits unless you know exactly what you are doing.',
+      'Use an ISP programmer to reset fuses if the chip is bricked.',
+    ],
+    isRetryable: false,
+  },
+
   // --- Verification errors ---
   {
     pattern: /(?:verification\s*(?:failed|error|mismatch))|(?:content\s*mismatch)|(?:verify\s*error)/i,
@@ -607,7 +620,7 @@ const FLASH_ERROR_PATTERNS: FlashErrorPattern[] = [
     isRetryable: true,
   },
   {
-    pattern: /avrdude.*?(?:device\s*signature\s*=\s*0x[0-9a-f]+)/i,
+    pattern: /(?:avrdude.*?device\s*signature\s*=\s*0x[0-9a-f]+)|(?:(?:expected|wrong)\s*device\s*signature)/i,
     errorCode: 'WRONG_DEVICE_SIGNATURE',
     message: 'The chip on the board has a different signature than expected. The board type in your profile may be wrong.',
     suggestions: [
@@ -657,19 +670,6 @@ const FLASH_ERROR_PATTERNS: FlashErrorPattern[] = [
       'Try a powered USB hub if your computer\'s USB ports cannot supply enough current.',
     ],
     isRetryable: true,
-  },
-
-  // --- Fuse / lock bit errors ---
-  {
-    pattern: /(?:fuse|lock\s*bit)\s*(?:error|mismatch|verification)/i,
-    errorCode: 'FUSE_ERROR',
-    message: 'Error reading or writing the microcontroller\'s fuse or lock bits.',
-    suggestions: [
-      'This is an advanced operation — fuse settings control clock, bootloader, and security.',
-      'Do not change fuse bits unless you know exactly what you are doing.',
-      'Use an ISP programmer to reset fuses if the chip is bricked.',
-    ],
-    isRetryable: false,
   },
 
   // --- Generic errors (catch-all, order matters — put these last) ---
