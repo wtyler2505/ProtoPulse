@@ -7,6 +7,7 @@ related insights:
   - "[[ai-chat-endpoints-accepting-projectid-in-the-request-body-instead-of-the-url-path-bypass-ownership-middleware-by-construction]] — a structural variant that middleware alone cannot catch"
   - "[[gap-audits-that-compare-code-surfaces-against-backlog-produce-higher-signal-findings-than-code-only-audits]] — the audit methodology that finally catches these gaps systematically"
   - "[[wave-based-development-enables-rapid-shipping-but-creates-integration-debt]] — the wave model that creates the conditions for recurrence by shipping routes without cross-cutting audits"
+  - "[[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — the proposed automated enforcement that would break this recurrence pattern"
 created: 2026-03-13
 ---
 

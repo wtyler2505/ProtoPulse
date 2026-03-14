@@ -59,6 +59,9 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[backlog-summary-statistics-must-be-updated-atomically-with-individual-item-status-changes-or-the-single-source-of-truth-becomes-untrustworthy]] — stale Quick Stats erode backlog trust
 - [[web-serial-api-mocking-requires-double-cast-through-unknown-because-file-scoped-classes-cannot-be-imported-for-test-type-narrowing]] — Web Serial mocks need double-cast through unknown
 
+- [[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — automated CI enforcement that breaks the IDOR recurrence cycle
+- [[localstorage-features-follow-an-identical-five-step-migration-to-server-scoped-storage]] — reusable 5-step playbook for localStorage-to-server migration
+
 ### Extracted 2026-03-13 (Codex sessions)
 
 - [[backlog-planning-layers-must-be-additive-scaffolding-over-canonical-item-inventory-not-replacements]] — planning views are lenses over data, not transformations of it

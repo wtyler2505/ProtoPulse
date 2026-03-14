@@ -6,6 +6,7 @@ related insights:
   - "[[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — the HTTP-layer authorization pattern this WebSocket gap bypasses"
   - "[[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects]] — another non-database authorization bypass through shared runtime state"
   - "[[phased-collaboration-delivery-must-sequence-session-hardening-before-membership-before-branching-because-each-layer-depends-on-the-one-below]] — the membership table this gap requires is Layer 2 in the collaboration delivery sequence"
+  - "[[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — explicitly identifies this WebSocket gap as a bypass channel outside the CI gate's scope"
 created: 2026-03-13
 ---
 

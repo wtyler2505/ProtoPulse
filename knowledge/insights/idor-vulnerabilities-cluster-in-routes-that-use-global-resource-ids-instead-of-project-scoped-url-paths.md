@@ -7,6 +7,7 @@ related insights:
   - "[[ai-chat-endpoints-accepting-projectid-in-the-request-body-instead-of-the-url-path-bypass-ownership-middleware-by-construction]] — the body-vs-URL anti-pattern that explains why middleware alone cannot fix certain routes"
   - "[[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects]] — a parallel authorization bypass through ephemeral state rather than database IDs"
   - "[[collaboration-without-explicit-membership-is-a-silent-data-exposure-because-default-editor-assignment-bypasses-invite-controls]] — authorization bypass at the WebSocket layer rather than HTTP routes"
+  - "[[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — automated CI enforcement that would catch new routes missing ownership middleware"
 created: 2026-03-13
 ---
 

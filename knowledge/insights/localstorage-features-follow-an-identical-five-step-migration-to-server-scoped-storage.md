@@ -30,6 +30,7 @@ This playbook is structurally identical across all 6+ features. The only variabl
 
 Related:
 - [[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — the storage barrel pattern these migrations extend
+- [[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — the CI gate would automatically enforce step 3 (ownership middleware on new routes) of this migration playbook
 
 Areas:
 - [[architecture]]

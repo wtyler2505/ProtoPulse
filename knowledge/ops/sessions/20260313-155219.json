@@ -2,7 +2,6 @@
   "session_id": "20260313-155219",
   "timestamp": "2026-03-13T15:52:20-05:00",
   "insights_touched": 3,
-  "captures_touched": 0
-0,
-  "mined": false
+  "captures_touched": 00,
+  "mined": true
 }

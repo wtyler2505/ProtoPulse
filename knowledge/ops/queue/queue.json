@@ -1,6 +1,40 @@
 {
   "schema_version": 3,
-  "tasks": [],
+  "tasks": [
+    {
+      "id": "maint-001",
+      "type": "maintenance",
+      "priority": "session",
+      "status": "pending",
+      "condition_key": "unprocessed_sessions",
+      "target": "64 session files without mined: true",
+      "action": "/remember --mine-sessions",
+      "auto_generated": true,
+      "created": "2026-03-13T23:54:32Z"
+    },
+    {
+      "id": "maint-002",
+      "type": "maintenance",
+      "priority": "session",
+      "status": "pending",
+      "condition_key": "tension_accumulation",
+      "target": "6 tensions with status: open",
+      "action": "/rethink",
+      "auto_generated": true,
+      "created": "2026-03-13T23:54:32Z"
+    },
+    {
+      "id": "maint-003",
+      "type": "maintenance",
+      "priority": "session",
+      "status": "pending",
+      "condition_key": "dangling_links",
+      "target": "3 dangling links: goals, identity, methodology",
+      "action": "/health",
+      "auto_generated": true,
+      "created": "2026-03-13T23:54:32Z"
+    }
+  ],
   "maintenance_conditions": {
     "orphan_threshold": 5,
     "dangling_link_threshold": 3,
@@ -9,5 +43,5 @@
     "observation_review": 10,
     "tension_review": 5
   },
-  "last_evaluated": null
+  "last_evaluated": "2026-03-13T23:54:32Z"
 }
