@@ -2,8 +2,10 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
-import { 
-  insertArduinoWorkspaceSchema, 
+import { createReadStream } from 'fs';
+import { basename } from 'path';
+import {
+  insertArduinoWorkspaceSchema,
   insertArduinoBuildProfileSchema,
   insertArduinoJobSchema,
   insertArduinoSerialSessionSchema
@@ -37,10 +39,10 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
   app.get(`${arduinoPrefix}/workspace`, requireProjectOwnership, asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const workspace = await service.ensureWorkspace(projectId);
-    
+
     // Auto-scan on access to keep metadata fresh
     await service.scanWorkspace(workspace.id).catch(e => logger.warn(`[arduino:scan] ${e.message}`));
-    
+
     res.json(workspace);
   }));
 
@@ -56,7 +58,7 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
     const workspace = await service.ensureWorkspace(projectId);
     const path = req.query.path as string;
     if (!path) return res.status(400).json({ message: 'Missing file path' });
-    
+
     const content = await service.readFile(workspace.id, path);
     res.json({ content });
   }));
@@ -66,7 +68,7 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
     const workspace = await service.ensureWorkspace(projectId);
     const { path, content } = req.body;
     if (!path) return res.status(400).json({ message: 'Missing file path' });
-    
+
     await service.writeFile(workspace.id, path, content || '');
     res.json({ success: true });
   }));
@@ -76,7 +78,7 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
     const workspace = await service.ensureWorkspace(projectId);
     const { path, content } = req.body;
     if (!path) return res.status(400).json({ message: 'Missing file path' });
-    
+
     await service.createFile(workspace.id, path, content || '');
     res.status(201).json({ success: true });
   }));
@@ -99,7 +101,7 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
     const projectId = parseIdParam(req.params.id);
     const { intent } = req.body;
     if (!intent) return res.status(400).json({ message: 'Missing generation intent' });
-    
+
     const sketch = await service.generateSketch(projectId, intent);
     res.json({ sketch });
   }));
@@ -261,6 +263,39 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
     ]).catch(e => logger.error(`[arduino:upload] Job ${job.id} background failed: ${e.message}`));
 
     res.status(202).json(job);
+  }));
+
+  // --- Job Cancellation ---
+  app.post(`${arduinoPrefix}/jobs/:jobId/cancel`, requireProjectOwnership, asyncHandler(async (req, res) => {
+    const jobId = parseIdParam(req.params.jobId);
+    const job = await storage.getArduinoJob(jobId);
+    if (!job) return res.status(404).json({ message: 'Job not found' });
+
+    const cancelled = await service.cancelJob(jobId);
+    if (!cancelled) {
+      return res.status(409).json({ message: 'Job is not in a cancellable state' });
+    }
+    res.json({ success: true, message: 'Job cancelled' });
+  }));
+
+  // --- Artifact Download ---
+  app.get(`${arduinoPrefix}/jobs/:jobId/artifact`, requireProjectOwnership, asyncHandler(async (req, res) => {
+    const jobId = parseIdParam(req.params.jobId);
+    const artifactPath = await service.getArtifactPath(jobId);
+    if (!artifactPath) {
+      return res.status(404).json({ message: 'No compiled artifact found for this job' });
+    }
+
+    const filename = basename(artifactPath);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    const stream = createReadStream(artifactPath);
+    stream.pipe(res);
+    stream.on('error', () => {
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Failed to read artifact file' });
+      }
+    });
   }));
 
   // --- Serial Monitor ---
