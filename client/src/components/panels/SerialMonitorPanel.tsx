@@ -190,6 +190,11 @@ export default function SerialMonitorPanel() {
   const [baudWarningDismissed, setBaudWarningDismissed] = useState(false);
   const baudCheckDoneRef = useRef(false);
 
+  // Troubleshoot wizard
+  const [showTroubleshootHint, setShowTroubleshootHint] = useState(false);
+  const [showTroubleshootWizard, setShowTroubleshootWizard] = useState(false);
+  const troubleshootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Serial recording
   const serialLoggerRef = useRef(SerialLogger.getInstance());
   const loggerSnap = useSyncExternalStore(

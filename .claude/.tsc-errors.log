@@ -1371,3 +1371,31 @@ client/src/lib/arduino/telemetry-parser.ts(267,33): error TS2802: Type 'Map<stri
 4:50:09 PM - Found 0 errors. Watching for file changes.
 [2J[3J[H4:50:11 PM - File change detected. Starting incremental compilation...
 
+client/src/pages/ProjectWorkspace.tsx(1052,10): error TS2304: Cannot find name 'KeyboardShortcutsModal'.
+
+4:50:35 PM - Found 1 error. Watching for file changes.
+[2J[3J[H4:50:40 PM - File change detected. Starting incremental compilation...
+
+client/src/pages/ProjectWorkspace.tsx(1052,10): error TS2304: Cannot find name 'KeyboardShortcutsModal'.
+
+4:50:47 PM - Found 1 error. Watching for file changes.
+[2J[3J[H4:52:43 PM - File change detected. Starting incremental compilation...
+
+
+4:53:14 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:54:20 PM - File change detected. Starting incremental compilation...
+
+
+4:54:42 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:55:08 PM - File change detected. Starting incremental compilation...
+
+
+4:55:26 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:57:15 PM - File change detected. Starting incremental compilation...
+
+
+4:57:30 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:57:30 PM - File change detected. Starting incremental compilation...
+
+
+4:57:57 PM - Found 0 errors. Watching for file changes.

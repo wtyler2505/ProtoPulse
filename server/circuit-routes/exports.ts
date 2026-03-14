@@ -165,6 +165,29 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
       })),
     });
 
+    // Syntax validation — catch generator regressions before they reach a fab house
+    const { validateGerberSyntax, validateDrillSyntax } = await import('../export/syntax-validator');
+
+    const gerberErrors: Array<{ layer: string; errors: Array<{ line: number | null; message: string }> }> = [];
+    for (const layer of gerberOutput.layers) {
+      const layerResult = validateGerberSyntax(layer.content);
+      if (!layerResult.valid) {
+        gerberErrors.push({ layer: layer.name, errors: layerResult.errors });
+      }
+    }
+
+    const drillResult = validateDrillSyntax(gerberOutput.drillFile);
+    if (!drillResult.valid) {
+      gerberErrors.push({ layer: 'drill', errors: drillResult.errors });
+    }
+
+    if (gerberErrors.length > 0) {
+      return res.status(422).json({
+        message: 'Generated output failed syntax validation',
+        validationErrors: gerberErrors,
+      });
+    }
+
     // Package as JSON with all layer files
     res.json({
       message: `Generated ${gerberOutput.layers.length} Gerber layers + drill file`,
@@ -630,6 +653,21 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
       boardHeight,
     });
 
+    // Syntax validation — verify ODB++ archive structure
+    const { validateOdbSyntax } = await import('../export/syntax-validator');
+    const JSZip = (await import('jszip')).default;
+    const odbZip = await JSZip.loadAsync(result.buffer);
+    const odbFilePaths = Object.keys(odbZip.files).filter(p => !odbZip.files[p].dir);
+    const matrixFile = odbZip.file('matrix/matrix');
+    const matrixContent = matrixFile ? await matrixFile.async('string') : undefined;
+    const odbValidation = validateOdbSyntax(odbFilePaths, matrixContent);
+    if (!odbValidation.valid) {
+      return res.status(422).json({
+        message: 'Generated ODB++ archive failed syntax validation',
+        validationErrors: odbValidation.errors,
+      });
+    }
+
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${project.name}.odb++.zip"`);
     res.send(result.buffer);
@@ -712,6 +750,16 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
       boardWidth,
       boardHeight,
     });
+
+    // Syntax validation — verify IPC-2581 XML structure
+    const { validateIpc2581Syntax } = await import('../export/syntax-validator');
+    const ipcValidation = validateIpc2581Syntax(result.xml);
+    if (!ipcValidation.valid) {
+      return res.status(422).json({
+        message: 'Generated IPC-2581 XML failed syntax validation',
+        validationErrors: ipcValidation.errors,
+      });
+    }
 
     res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Content-Disposition', `attachment; filename="${project.name}.ipc2581.xml"`);

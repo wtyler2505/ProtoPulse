@@ -1049,7 +1049,7 @@ function WorkspaceContent() {
       </DndProvider>
 
       <Suspense fallback={null}>
-        <KeyboardShortcutsModal open={ws.shortcutsOpen} onOpenChange={(open: boolean) => dispatch({ type: 'SET_SHORTCUTS_OPEN', open })} />
+        <ShortcutsOverlay open={ws.shortcutsOpen} onClose={() => dispatch({ type: 'SET_SHORTCUTS_OPEN', open: false })} activeView={activeView} />
       </Suspense>
 
       <Suspense fallback={null}>
