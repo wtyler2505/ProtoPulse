@@ -1,9 +1,52 @@
 import { spawn, execFileSync, execSync } from 'child_process';
 import { join, resolve, sep } from 'path';
+import { EventEmitter } from 'events';
 import fs from 'fs/promises';
 import { logger } from './logger';
 import type { IStorage } from './storage';
 import type { ArduinoJob, ArduinoWorkspace } from '@shared/schema';
+
+// ---------------------------------------------------------------------------
+// SSE job stream types
+// ---------------------------------------------------------------------------
+
+export interface JobStreamEvent {
+  type: 'log' | 'status' | 'error' | 'done';
+  content: string;
+  timestamp: number;
+}
+
+/**
+ * Per-job event emitter for SSE streaming.
+ * Emits 'event' with JobStreamEvent payloads.
+ * Also buffers all events so late-joining clients get the full history.
+ */
+export class JobStream extends EventEmitter {
+  private buffer: JobStreamEvent[] = [];
+  private _finished = false;
+
+  get finished(): boolean {
+    return this._finished;
+  }
+
+  /** Get all buffered events (for late joiners). */
+  getBuffer(): readonly JobStreamEvent[] {
+    return this.buffer;
+  }
+
+  /** Push a new event — buffers it and emits to listeners. */
+  push(event: JobStreamEvent): void {
+    if (this._finished) { return; }
+    this.buffer.push(event);
+    this.emit('event', event);
+  }
+
+  /** Mark the stream as finished. No more events will be accepted. */
+  finish(): void {
+    this._finished = true;
+    this.removeAllListeners();
+  }
+}
 
 export interface ArduinoCLIConfig {
   cliPath: string;
