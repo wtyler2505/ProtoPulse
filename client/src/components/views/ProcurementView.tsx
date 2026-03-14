@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck } from 'lucide-react';
+import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';
@@ -37,6 +37,9 @@ import {
   detectAssemblyCategory,
 } from './procurement';
 import { SupplierDrawer } from './procurement/SupplierDrawer';
+import { ManufacturingValidatorPanel } from './procurement/ManufacturingValidatorPanel';
+import type { ManufacturingPackageInput } from '@/lib/manufacturing-validator';
+import { AssemblyRiskHeatmap } from './procurement/AssemblyRiskHeatmap';
 import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, CostBreakdown } from './procurement';
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
@@ -196,6 +199,20 @@ function ProcurementView() {
     return { statusCategories, avgUnitCost, totalBomCost, topItems, maxItemCost };
   }, [bom]);
 
+  // ── Manufacturing validator input (built from BOM) ──
+  const mfgPackageInput = useMemo((): ManufacturingPackageInput => ({
+    gerberLayers: [],
+    drillFile: null,
+    bomEntries: bom.map((item) => ({
+      refDes: item.partNumber,
+      partNumber: item.partNumber,
+      quantity: item.quantity,
+      description: item.description,
+    })),
+    placements: [],
+    board: null,
+  }), [bom]);
+
   // ── Callbacks ──
   const saveSortOrder = useCallback((order: number[]) => {
     setSortOrder(order);
@@ -311,6 +328,8 @@ function ProcurementView() {
           <TabsTrigger value="alternates" data-testid="tab-alternates"><RefreshCw className="h-4 w-4 mr-1.5" />Alternates</TabsTrigger>
           <TabsTrigger value="pricing" data-testid="tab-live-pricing"><Store className="h-4 w-4 mr-1.5" />Live Pricing</TabsTrigger>
           <TabsTrigger value="assembly-cost" data-testid="tab-assembly-cost"><Calculator className="h-4 w-4 mr-1.5" />Assembly Cost</TabsTrigger>
+          <TabsTrigger value="mfg-validator" data-testid="tab-mfg-validator"><ClipboardCheck className="h-4 w-4 mr-1.5" />Mfg Validator</TabsTrigger>
+          <TabsTrigger value="assembly-risk" data-testid="tab-assembly-risk"><Flame className="h-4 w-4 mr-1.5" />Assembly Risk</TabsTrigger>
         </TabsList>
         <Button
           variant="outline"
@@ -358,6 +377,14 @@ function ProcurementView() {
 
       <TabsContent value="assembly-cost" className="flex-1 overflow-auto mt-0 p-4">
         <AssemblyCostPanel bom={bom} />
+      </TabsContent>
+
+      <TabsContent value="assembly-risk" className="flex-1 overflow-auto mt-0">
+        <AssemblyRiskHeatmap bom={bom} />
+      </TabsContent>
+
+      <TabsContent value="mfg-validator" className="flex-1 overflow-auto mt-0 p-4">
+        <ManufacturingValidatorPanel packageInput={mfgPackageInput} />
       </TabsContent>
 
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />
