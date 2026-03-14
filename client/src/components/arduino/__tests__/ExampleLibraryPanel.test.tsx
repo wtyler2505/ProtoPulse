@@ -217,9 +217,9 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
 
   it('renders the panel with title and example count', () => {
     render(<ExampleLibraryPanel onLoadExample={mockOnLoad} />);
-    expect(screen.getByTestId('example-library-panel')).toBeInTheDocument();
-    expect(screen.getByText('Example Library')).toBeInTheDocument();
-    expect(screen.getByText(String(EXAMPLE_CIRCUITS.length))).toBeInTheDocument();
+    expect(screen.getByTestId('example-library-panel')).toBeTruthy();
+    expect(screen.getByText('Example Library')).toBeTruthy();
+    expect(screen.getByText(String(EXAMPLE_CIRCUITS.length))).toBeTruthy();
   });
 
   it('renders search input', () => {

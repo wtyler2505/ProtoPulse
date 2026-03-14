@@ -106,6 +106,10 @@ const ALL_REGISTRATION_FUNCTIONS = [
   { name: 'export', fn: registerExportTools },
   { name: 'vision', fn: registerVisionTools },
   { name: 'generative', fn: registerGenerativeTools },
+  { name: 'arduino', fn: registerArduinoTools },
+  { name: 'simulation', fn: registerSimulationTools },
+  { name: 'manufacturing', fn: registerManufacturingTools },
+  { name: 'testbench', fn: registerTestbenchTools },
 ] as const;
 
 // ---------------------------------------------------------------------------
