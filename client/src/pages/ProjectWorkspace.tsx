@@ -1017,6 +1017,16 @@ function WorkspaceContent() {
               isAnalyzing={isAnalyzing}
             />
           </div>
+
+          {/* BL-0231: Radial context menu */}
+          {radialMenu && (
+            <RadialMenu
+              items={getActionsForContext(radialMenu.context)}
+              position={radialMenu.position}
+              onClose={closeRadialMenu}
+              onSelect={handleRadialSelect}
+            />
+          )}
         </main>
 
         {!ws.chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}
