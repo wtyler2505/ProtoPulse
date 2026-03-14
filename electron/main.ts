@@ -4,13 +4,9 @@ import * as fs from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import type { MenuItemConstructorOptions } from 'electron';
-
-// ── Constants ────────────────────────────────────────────────────────────────
-
-const WINDOW_WIDTH = 1400;
-const WINDOW_HEIGHT = 900;
-const BACKGROUND_COLOR = '#0a0a0f';
-const DEV_SERVER_URL = 'http://localhost:5000';
+import { CONFIG, IPC_CHANNELS } from './config';
+import type { MenuItemConfig } from './config';
+import { buildMenuTemplate as buildMenuTemplateConfig } from './config';
 
 // ── State ────────────────────────────────────────────────────────────────────
 
@@ -59,11 +55,11 @@ function createMainWindow(): BrowserWindow {
   const preloadPath = path.join(__dirname, 'preload.js');
 
   const win = new BrowserWindow({
-    width: WINDOW_WIDTH,
-    height: WINDOW_HEIGHT,
-    minWidth: 800,
-    minHeight: 600,
-    backgroundColor: BACKGROUND_COLOR,
+    width: CONFIG.WINDOW_WIDTH,
+    height: CONFIG.WINDOW_HEIGHT,
+    minWidth: CONFIG.MIN_WIDTH,
+    minHeight: CONFIG.MIN_HEIGHT,
+    backgroundColor: CONFIG.BACKGROUND_COLOR,
     title: 'ProtoPulse',
     show: false,
     webPreferences: {
@@ -88,7 +84,7 @@ function createMainWindow(): BrowserWindow {
   if (app.isPackaged) {
     void win.loadFile(path.join(__dirname, '..', 'dist', 'public', 'index.html'));
   } else {
-    void win.loadURL(DEV_SERVER_URL);
+    void win.loadURL(CONFIG.DEV_SERVER_URL);
   }
 
   return win;
@@ -96,144 +92,92 @@ function createMainWindow(): BrowserWindow {
 
 // ── Menu ─────────────────────────────────────────────────────────────────────
 
-export function buildMenuTemplate(): MenuItemConstructorOptions[] {
-  const isMac = process.platform === 'darwin';
+/**
+ * Converts the platform-agnostic menu config into Electron MenuItemConstructorOptions,
+ * wiring up click handlers for custom menu items.
+ */
+function toElectronMenuItems(items: MenuItemConfig[]): MenuItemConstructorOptions[] {
+  return items.map((item) => {
+    const electronItem: MenuItemConstructorOptions = {};
 
-  const fileMenu: MenuItemConstructorOptions = {
-    label: 'File',
-    submenu: [
-      {
-        label: 'New Project',
-        accelerator: 'CmdOrCtrl+N',
-        click: () => {
-          mainWindow?.webContents.send('menu:new-project');
-        },
-      },
-      {
-        label: 'Open Project…',
-        accelerator: 'CmdOrCtrl+O',
-        click: () => {
-          mainWindow?.webContents.send('menu:open-project');
-        },
-      },
-      {
-        label: 'Save',
-        accelerator: 'CmdOrCtrl+S',
-        click: () => {
-          mainWindow?.webContents.send('menu:save');
-        },
-      },
-      { type: 'separator' },
-      isMac ? { role: 'close' } : { role: 'quit' },
-    ],
-  };
+    if (item.label) {
+      electronItem.label = item.label;
+    }
+    if (item.role) {
+      electronItem.role = item.role as MenuItemConstructorOptions['role'];
+    }
+    if (item.accelerator) {
+      electronItem.accelerator = item.accelerator;
+    }
+    if (item.type) {
+      electronItem.type = item.type;
+    }
+    if (item.submenu) {
+      electronItem.submenu = toElectronMenuItems(item.submenu);
+    }
 
-  const editMenu: MenuItemConstructorOptions = {
-    label: 'Edit',
-    submenu: [
-      { role: 'undo' },
-      { role: 'redo' },
-      { type: 'separator' },
-      { role: 'cut' },
-      { role: 'copy' },
-      { role: 'paste' },
-      { role: 'selectAll' },
-    ],
-  };
+    // Wire up click handlers for custom actions
+    if (item.label === 'New Project') {
+      electronItem.click = () => {
+        mainWindow?.webContents.send(IPC_CHANNELS.MENU_NEW_PROJECT);
+      };
+    } else if (item.label === 'Open Project\u2026') {
+      electronItem.click = () => {
+        mainWindow?.webContents.send(IPC_CHANNELS.MENU_OPEN_PROJECT);
+      };
+    } else if (item.label === 'Save') {
+      electronItem.click = () => {
+        mainWindow?.webContents.send(IPC_CHANNELS.MENU_SAVE);
+      };
+    } else if (item.label === 'About ProtoPulse') {
+      electronItem.click = () => {
+        void dialog.showMessageBox({
+          type: 'info',
+          title: 'About ProtoPulse',
+          message: 'ProtoPulse',
+          detail: `Version ${app.getVersion()}\nAI-assisted EDA platform for makers, hobbyists, and embedded engineers.`,
+        });
+      };
+    } else if (item.label === 'Learn More') {
+      electronItem.click = () => {
+        void shell.openExternal('https://github.com/protopulse');
+      };
+    }
 
-  const viewMenu: MenuItemConstructorOptions = {
-    label: 'View',
-    submenu: [
-      { role: 'reload' },
-      { role: 'forceReload' },
-      { role: 'toggleDevTools' },
-      { type: 'separator' },
-      { role: 'resetZoom' },
-      { role: 'zoomIn' },
-      { role: 'zoomOut' },
-      { type: 'separator' },
-      { role: 'togglefullscreen' },
-    ],
-  };
-
-  const helpMenu: MenuItemConstructorOptions = {
-    label: 'Help',
-    submenu: [
-      {
-        label: 'About ProtoPulse',
-        click: () => {
-          void dialog.showMessageBox({
-            type: 'info',
-            title: 'About ProtoPulse',
-            message: 'ProtoPulse',
-            detail: `Version ${app.getVersion()}\nAI-assisted EDA platform for makers, hobbyists, and embedded engineers.`,
-          });
-        },
-      },
-      { type: 'separator' },
-      {
-        label: 'Learn More',
-        click: () => {
-          void shell.openExternal('https://github.com/protopulse');
-        },
-      },
-    ],
-  };
-
-  const template: MenuItemConstructorOptions[] = [];
-
-  if (isMac) {
-    template.push({
-      label: app.name,
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        { role: 'services' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' },
-      ],
-    });
-  }
-
-  template.push(fileMenu, editMenu, viewMenu, helpMenu);
-
-  return template;
+    return electronItem;
+  });
 }
 
 // ── IPC Handlers ─────────────────────────────────────────────────────────────
 
 function registerIpcHandlers(): void {
-  ipcMain.handle('dialog:showSave', async (_event, options: Electron.SaveDialogOptions) => {
+  ipcMain.handle(IPC_CHANNELS.DIALOG_SHOW_SAVE, async (_event, options: Electron.SaveDialogOptions) => {
     if (!mainWindow) {
       return { canceled: true, filePath: undefined };
     }
     return dialog.showSaveDialog(mainWindow, options);
   });
 
-  ipcMain.handle('dialog:showOpen', async (_event, options: Electron.OpenDialogOptions) => {
+  ipcMain.handle(IPC_CHANNELS.DIALOG_SHOW_OPEN, async (_event, options: Electron.OpenDialogOptions) => {
     if (!mainWindow) {
       return { canceled: true, filePaths: [] };
     }
     return dialog.showOpenDialog(mainWindow, options);
   });
 
-  ipcMain.handle('fs:readFile', async (_event, filePath: string) => {
+  ipcMain.handle(IPC_CHANNELS.FS_READ_FILE, async (_event, filePath: string) => {
     return fs.readFile(filePath, 'utf-8');
   });
 
-  ipcMain.handle('fs:writeFile', async (_event, filePath: string, data: string) => {
+  ipcMain.handle(IPC_CHANNELS.FS_WRITE_FILE, async (_event, filePath: string, data: string) => {
     await fs.writeFile(filePath, data, 'utf-8');
   });
 
-  ipcMain.handle('shell:openExternal', async (_event, url: string) => {
+  ipcMain.handle(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, async (_event, url: string) => {
     await shell.openExternal(url);
   });
 
-  ipcMain.handle('process:spawn', (_event, command: string, args: string[]) => {
+  ipcMain.handle(IPC_CHANNELS.PROCESS_SPAWN, (_event, command: string, args: string[]) => {
     return new Promise<{ stdout: string; stderr: string; exitCode: number | null }>((resolve, reject) => {
       const child = spawn(command, args);
       let stdout = '';
@@ -257,11 +201,11 @@ function registerIpcHandlers(): void {
     });
   });
 
-  ipcMain.handle('app:getVersion', () => {
+  ipcMain.handle(IPC_CHANNELS.APP_GET_VERSION, () => {
     return app.getVersion();
   });
 
-  ipcMain.handle('app:getPlatform', () => {
+  ipcMain.handle(IPC_CHANNELS.APP_GET_PLATFORM, () => {
     return process.platform;
   });
 }
@@ -272,8 +216,8 @@ app.on('ready', () => {
   serverProcess = startExpressServer();
   registerIpcHandlers();
 
-  const menuTemplate = buildMenuTemplate();
-  const menu = Menu.buildFromTemplate(menuTemplate);
+  const menuConfig = buildMenuTemplateConfig();
+  const menu = Menu.buildFromTemplate(toElectronMenuItems(menuConfig));
   Menu.setApplicationMenu(menu);
 
   mainWindow = createMainWindow();
@@ -295,54 +239,3 @@ app.on('activate', () => {
 app.on('before-quit', () => {
   stopExpressServer();
 });
-
-// ── Exported constants for testing ───────────────────────────────────────────
-
-export const CONFIG = {
-  WINDOW_WIDTH,
-  WINDOW_HEIGHT,
-  BACKGROUND_COLOR,
-  DEV_SERVER_URL,
-  MIN_WIDTH: 800,
-  MIN_HEIGHT: 600,
-} as const;
-
-export const IPC_CHANNELS = {
-  DIALOG_SHOW_SAVE: 'dialog:showSave',
-  DIALOG_SHOW_OPEN: 'dialog:showOpen',
-  FS_READ_FILE: 'fs:readFile',
-  FS_WRITE_FILE: 'fs:writeFile',
-  SHELL_OPEN_EXTERNAL: 'shell:openExternal',
-  PROCESS_SPAWN: 'process:spawn',
-  APP_GET_VERSION: 'app:getVersion',
-  APP_GET_PLATFORM: 'app:getPlatform',
-  MENU_NEW_PROJECT: 'menu:new-project',
-  MENU_OPEN_PROJECT: 'menu:open-project',
-  MENU_SAVE: 'menu:save',
-} as const;
-
-export const BUILDER_CONFIG = {
-  appId: 'com.protopulse.app',
-  productName: 'ProtoPulse',
-  directories: {
-    output: 'release',
-  },
-  files: [
-    'dist/**/*',
-    'electron/**/*.js',
-    'electron/**/*.cjs',
-  ],
-  linux: {
-    target: ['AppImage', 'deb'],
-    category: 'Development',
-    icon: 'client/public/icon.png',
-  },
-  mac: {
-    target: ['dmg'],
-    icon: 'client/public/icon.icns',
-  },
-  win: {
-    target: ['nsis'],
-    icon: 'client/public/icon.ico',
-  },
-} as const;
