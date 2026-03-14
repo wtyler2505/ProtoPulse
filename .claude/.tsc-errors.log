@@ -4,3 +4,9 @@
 7:24:38 AM - Found 0 errors. Watching for file changes.
 [2J[3J[H7:35:40 AM - File change detected. Starting incremental compilation...
 
+client/src/lib/arduino/pin-constant-generator.ts(464,37): error TS2802: Type 'Map<PinCategory, PinConstant[]>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/arduino/pin-constant-generator.ts(471,30): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PinCategory, string>'.
+
+7:35:44 AM - Found 2 errors. Watching for file changes.
+[2J[3J[H7:35:46 AM - File change detected. Starting incremental compilation...
+
