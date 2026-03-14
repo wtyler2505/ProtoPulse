@@ -40,6 +40,8 @@ interface ArduinoContextType {
   deleteProfile: (id: number) => Promise<void>;
   compileJob: (args: CompileArgs) => Promise<ArduinoJob>;
   uploadJob: (args: UploadArgs) => Promise<ArduinoJob>;
+  cancelJob: (jobId: number) => Promise<void>;
+  downloadArtifact: (jobId: number) => Promise<void>;
   generateSketch: (intent: string) => Promise<string>;
   searchLibraries: (query: string) => Promise<unknown>;
   installLibrary: (name: string) => Promise<{ success: boolean; output: string }>;
@@ -181,6 +183,36 @@ export function ArduinoProvider({ children, projectId }: { children: ReactNode; 
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['arduino-jobs', projectId] }),
   });
 
+  const { mutateAsync: cancelJobAsync } = useMutation({
+    mutationFn: async (jobId: number) => {
+      await apiRequest('POST', `${prefix}/jobs/${jobId}/cancel`);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['arduino-jobs', projectId] }),
+  });
+
+  const { mutateAsync: downloadArtifactAsync } = useMutation({
+    mutationFn: async (jobId: number) => {
+      const res = await fetch(`${prefix}/jobs/${jobId}/artifact`, { credentials: 'include' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'Download failed' }));
+        throw new Error((err as Record<string, string>).message || 'Download failed');
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get('Content-Disposition') || '';
+      const filenameMatch = disposition.match(/filename="(.+?)"/);
+      const filename = filenameMatch?.[1] || `firmware-${jobId}.hex`;
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+  });
+
   const { mutateAsync: generateSketchAsync } = useMutation({
     mutationFn: async (intent: string) => {
       const res = await apiRequest('POST', `${prefix}/generate-sketch`, { intent });
@@ -288,6 +320,8 @@ export function ArduinoProvider({ children, projectId }: { children: ReactNode; 
   const deleteProfile = useCallback((id: number) => deleteProfileAsync(id), [deleteProfileAsync]);
   const compileJob = useCallback((args: CompileArgs) => compileJobAsync(args), [compileJobAsync]);
   const uploadJob = useCallback((args: UploadArgs) => uploadJobAsync(args), [uploadJobAsync]);
+  const cancelJob = useCallback((jobId: number) => cancelJobAsync(jobId), [cancelJobAsync]);
+  const downloadArtifact = useCallback((jobId: number) => downloadArtifactAsync(jobId), [downloadArtifactAsync]);
   const generateSketch = useCallback((intent: string) => generateSketchAsync(intent), [generateSketchAsync]);
   const searchLibraries = useCallback((query: string) => searchLibrariesAsync(query), [searchLibrariesAsync]);
   const installLibrary = useCallback((name: string) => installLibraryAsync(name), [installLibraryAsync]);
@@ -336,6 +370,8 @@ export function ArduinoProvider({ children, projectId }: { children: ReactNode; 
       deleteProfile,
       compileJob,
       uploadJob,
+      cancelJob,
+      downloadArtifact,
       generateSketch,
       searchLibraries,
       installLibrary,

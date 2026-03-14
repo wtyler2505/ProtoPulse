@@ -380,7 +380,9 @@ export function estimatePinCount(description: string): number {
 export function inferPackageType(description: string, partNumber?: string): string {
   const combined = (description + ' ' + (partNumber ?? '')).toLowerCase();
 
-  // Ordered from most-specific to least-specific
+  // Ordered from most-specific to least-specific.
+  // Multi-letter prefixed packages (TSSOP, TQFP, LQFP, SOIC) must come before
+  // shorter suffixed matches (SOP, QFP, SO) to avoid partial matching.
   const patterns: Array<{ regex: RegExp; label: string }> = [
     { regex: /bga[- ]?(\d+)/, label: 'BGA' },
     { regex: /tqfp[- ]?(\d+)/, label: 'TQFP' },
@@ -388,10 +390,10 @@ export function inferPackageType(description: string, partNumber?: string): stri
     { regex: /qfp[- ]?(\d+)/, label: 'QFP' },
     { regex: /qfn[- ]?(\d+)/, label: 'QFN' },
     { regex: /soic[- ]?(\d+)/, label: 'SOIC' },
-    { regex: /so[- ]?(\d+)/, label: 'SO' },
-    { regex: /sop[- ]?(\d+)/, label: 'SOP' },
     { regex: /tssop[- ]?(\d+)/, label: 'TSSOP' },
     { regex: /msop[- ]?(\d+)/, label: 'MSOP' },
+    { regex: /sop[- ]?(\d+)/, label: 'SOP' },
+    { regex: /so[- ]?(\d+)/, label: 'SO' },
     { regex: /dfn[- ]?(\d+)/, label: 'DFN' },
     { regex: /lga[- ]?(\d+)/, label: 'LGA' },
     { regex: /sot[- ]?223/, label: 'SOT-223' },
@@ -402,13 +404,15 @@ export function inferPackageType(description: string, partNumber?: string): stri
     { regex: /to[- ]?252/, label: 'TO-252' },
     { regex: /dip[- ]?(\d+)/, label: 'DIP' },
     { regex: /sip[- ]?(\d+)/, label: 'SIP' },
-    { regex: /\b2512\b/, label: '2512' },
-    { regex: /\b1210\b/, label: '1210' },
-    { regex: /\b1206\b/, label: '1206' },
-    { regex: /\b0805\b/, label: '0805' },
-    { regex: /\b0603\b/, label: '0603' },
-    { regex: /\b0402\b/, label: '0402' },
-    { regex: /\b0201\b/, label: '0201' },
+    // Chip packages: use (?<!\d) lookbehind instead of \b so that
+    // part numbers like "RC0805JR" still match (letter before digits).
+    { regex: /(?<!\d)2512(?!\d)/, label: '2512' },
+    { regex: /(?<!\d)1210(?!\d)/, label: '1210' },
+    { regex: /(?<!\d)1206(?!\d)/, label: '1206' },
+    { regex: /(?<!\d)0805(?!\d)/, label: '0805' },
+    { regex: /(?<!\d)0603(?!\d)/, label: '0603' },
+    { regex: /(?<!\d)0402(?!\d)/, label: '0402' },
+    { regex: /(?<!\d)0201(?!\d)/, label: '0201' },
   ];
 
   for (const { regex, label } of patterns) {
