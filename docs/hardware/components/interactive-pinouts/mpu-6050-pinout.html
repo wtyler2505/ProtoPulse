@@ -1,0 +1,1260 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MPU-6050 - Interactive Pinout</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        font-weight: 300;
+      }
+
+      .header p {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .main-content {
+        display: flex;
+        gap: 30px;
+        padding: 30px;
+      }
+
+      .pinout-container {
+        flex: 1;
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 20px;
+        position: relative;
+      }
+
+      .sensor-board {
+        background: #2c3e50;
+        border-radius: 15px;
+        padding: 40px;
+        color: white;
+        font-family: 'Courier New', monospace;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        position: relative;
+      }
+
+      .board-label {
+        text-align: center;
+        font-size: 1.8em;
+        font-weight: bold;
+        margin-bottom: 30px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .sensor-visual {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 40px;
+      }
+
+      .sensor-chip {
+        width: 200px;
+        height: 200px;
+        background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+        border: 3px solid #7f8c8d;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2em;
+        font-weight: bold;
+        position: relative;
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .sensor-chip::before {
+        content: 'MPU-6050';
+        position: absolute;
+        top: 10px;
+        font-size: 0.8em;
+        color: #bdc3c7;
+      }
+
+      .sensor-chip::after {
+        content: '6-AXIS';
+        position: absolute;
+        bottom: 10px;
+        font-size: 0.7em;
+        color: #95a5a6;
+      }
+
+      .pins-container {
+        display: flex;
+        justify-content: space-around;
+        gap: 40px;
+      }
+
+      .pin-group {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .pin {
+        background: #34495e;
+        border: 2px solid #4a5f7a;
+        border-radius: 8px;
+        padding: 12px 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        min-width: 150px;
+        text-align: left;
+        font-size: 0.9em;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+      }
+
+      .pin:hover {
+        background: #9b59b6;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(155, 89, 182, 0.3);
+      }
+
+      .pin.power {
+        background: #e74c3c;
+        border-color: #c0392b;
+      }
+
+      .pin.ground {
+        background: #1a252f;
+        border-color: #0c1418;
+      }
+
+      .pin.communication {
+        background: #3498db;
+        border-color: #2980b9;
+      }
+
+      .pin.interrupt {
+        background: #f39c12;
+        border-color: #e67e22;
+      }
+
+      .pin.configuration {
+        background: #27ae60;
+        border-color: #229954;
+      }
+
+      .pin.selected {
+        background: #e67e22;
+        border-color: #d35400;
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .pin-number {
+        background: #2c3e50;
+        color: #ecf0f1;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.8em;
+      }
+
+      .pin-info {
+        flex: 1;
+      }
+
+      .pin-name {
+        font-weight: bold;
+        color: #ecf0f1;
+        margin-bottom: 2px;
+      }
+
+      .pin-function {
+        font-size: 0.7em;
+        color: #bdc3c7;
+      }
+
+      .info-panel {
+        flex: 0 0 400px;
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .info-panel h2 {
+        color: #2c3e50;
+        margin-bottom: 20px;
+        font-size: 1.5em;
+        border-bottom: 3px solid #9b59b6;
+        padding-bottom: 10px;
+      }
+
+      .pin-details {
+        display: none;
+      }
+
+      .pin-details.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #ecf0f1;
+      }
+
+      .detail-label {
+        font-weight: 600;
+        color: #34495e;
+      }
+
+      .detail-value {
+        color: #2c3e50;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+      }
+
+      .usage-examples {
+        margin-top: 20px;
+        padding: 15px;
+        background: #ecf0f1;
+        border-radius: 10px;
+      }
+
+      .usage-examples h3 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+      }
+
+      .code-example {
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85em;
+        overflow-x: auto;
+        margin-top: 10px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 2px solid #333;
+      }
+
+      .controls {
+        padding: 20px;
+        background: #ecf0f1;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+
+      .controls h3 {
+        margin-bottom: 15px;
+        color: #2c3e50;
+      }
+
+      .control-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .control-btn {
+        padding: 10px 20px;
+        background: #9b59b6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9em;
+      }
+
+      .control-btn:hover {
+        background: #8e44ad;
+        transform: translateY(-2px);
+      }
+
+      .control-btn.active {
+        background: #e67e22;
+      }
+
+      .tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        pointer-events: none;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .tooltip.visible {
+        opacity: 1;
+      }
+
+      .sensor-specs {
+        background: #ecf0f1;
+        border-radius: 10px;
+        padding: 15px;
+        margin-top: 20px;
+      }
+
+      .sensor-specs h3 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+      }
+
+      .specs-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .spec-item {
+        font-size: 0.85em;
+      }
+
+      .spec-label {
+        font-weight: 600;
+        color: #34495e;
+      }
+
+      .spec-value {
+        color: #2c3e50;
+      }
+
+      @media (max-width: 1200px) {
+        .main-content {
+          flex-direction: column;
+        }
+
+        .info-panel {
+          flex: 1;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .pins-container {
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .pin-group {
+          width: 100%;
+          max-width: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>MPU-6050</h1>
+        <p>Interactive Pinout Diagram - 6-Axis Motion Tracking Sensor</p>
+      </div>
+
+      <div class="main-content">
+        <div class="pinout-container">
+          <div class="sensor-board">
+            <div class="board-label">MPU-6050 MOTION SENSOR</div>
+
+            <div class="sensor-visual">
+              <div class="sensor-chip">
+                <div>
+                  3-AXIS<br />
+                  ACCEL<br />
+                  +<br />
+                  3-AXIS<br />
+                  GYRO
+                </div>
+              </div>
+            </div>
+
+            <div class="pins-container">
+              <div class="pin-group">
+                <div class="pin power" data-pin="VCC">
+                  <div class="pin-number">1</div>
+                  <div class="pin-info">
+                    <div class="pin-name">VCC</div>
+                    <div class="pin-function">Power Supply</div>
+                  </div>
+                </div>
+                <div class="pin ground" data-pin="GND">
+                  <div class="pin-number">2</div>
+                  <div class="pin-info">
+                    <div class="pin-name">GND</div>
+                    <div class="pin-function">Ground</div>
+                  </div>
+                </div>
+                <div class="pin configuration" data-pin="SCL">
+                  <div class="pin-number">3</div>
+                  <div class="pin-info">
+                    <div class="pin-name">SCL</div>
+                    <div class="pin-function">I2C Clock</div>
+                  </div>
+                </div>
+                <div class="pin configuration" data-pin="SDA">
+                  <div class="pin-number">4</div>
+                  <div class="pin-info">
+                    <div class="pin-name">SDA</div>
+                    <div class="pin-function">I2C Data</div>
+                  </div>
+                </div>
+                <div class="pin interrupt" data-pin="XDA">
+                  <div class="pin-number">5</div>
+                  <div class="pin-info">
+                    <div class="pin-name">XDA</div>
+                    <div class="pin-function">Aux I2C Data</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pin-group">
+                <div class="pin interrupt" data-pin="XCL">
+                  <div class="pin-number">6</div>
+                  <div class="pin-info">
+                    <div class="pin-name">XCL</div>
+                    <div class="pin-function">Aux I2C Clock</div>
+                  </div>
+                </div>
+                <div class="pin interrupt" data-pin="ADO">
+                  <div class="pin-number">7</div>
+                  <div class="pin-info">
+                    <div class="pin-name">ADO</div>
+                    <div class="pin-function">I2C Address</div>
+                  </div>
+                </div>
+                <div class="pin interrupt" data-pin="INT">
+                  <div class="pin-number">8</div>
+                  <div class="pin-info">
+                    <div class="pin-name">INT</div>
+                    <div class="pin-function">Interrupt</div>
+                  </div>
+                </div>
+                <div class="pin communication" data-pin="FSYNC">
+                  <div class="pin-number">9</div>
+                  <div class="pin-info">
+                    <div class="pin-name">FSYNC</div>
+                    <div class="pin-function">Frame Sync</div>
+                  </div>
+                </div>
+                <div class="pin configuration" data-pin="REG">
+                  <div class="pin-number">10</div>
+                  <div class="pin-info">
+                    <div class="pin-name">REG</div>
+                    <div class="pin-function">Register Select</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sensor-specs">
+            <h3>Key Specifications</h3>
+            <div class="specs-grid">
+              <div class="spec-item">
+                <span class="spec-label">Accelerometer:</span>
+                <span class="spec-value">±2/4/8/16 g</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Gyroscope:</span>
+                <span class="spec-value">±250/500/1000/2000 °/s</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Resolution:</span>
+                <span class="spec-value">16-bit ADC</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Interface:</span>
+                <span class="spec-value">I2C (400kHz)</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Voltage:</span>
+                <span class="spec-value">3.3V-5V</span>
+              </div>
+              <div class="spec-item">
+                <span class="spec-label">Current:</span>
+                <span class="spec-value">3.6mA (typical)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-color" style="background: #e74c3c"></div>
+              <span>Power Pins</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #1a252f"></div>
+              <span>Ground Pins</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #3498db"></div>
+              <span>Communication</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #f39c12"></div>
+              <span>Interrupt</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #27ae60"></div>
+              <span>Configuration</span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <h3>Quick Filters</h3>
+            <div class="control-buttons">
+              <button class="control-btn" onclick="filterPins('all')">
+                All Pins
+              </button>
+              <button class="control-btn" onclick="filterPins('power')">
+                Power
+              </button>
+              <button class="control-btn" onclick="filterPins('communication')">
+                Communication
+              </button>
+              <button class="control-btn" onclick="filterPins('interrupt')">
+                Interrupt
+              </button>
+              <button class="control-btn" onclick="filterPins('configuration')">
+                Configuration
+              </button>
+              <button class="control-btn" onclick="highlightUsed()">
+                Used in OmniTrek
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-panel">
+          <h2>Pin Information</h2>
+
+          <div id="default-info">
+            <p style="color: #7f8c8d; text-align: center; padding: 40px 0">
+              Click on any pin to see detailed information about its
+              functionality, specifications, and usage examples for motion
+              sensing in the OmniTrek rover.
+            </p>
+          </div>
+
+          <div id="pin-details" class="pin-details">
+            <div class="detail-row">
+              <span class="detail-label">Pin Name:</span>
+              <span class="detail-value" id="pin-number">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Type:</span>
+              <span class="detail-value" id="pin-type">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Voltage:</span>
+              <span class="detail-value" id="pin-voltage">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Current:</span>
+              <span class="detail-value" id="pin-current">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Special Functions:</span>
+              <span class="detail-value" id="pin-functions">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">OmniTrek Usage:</span>
+              <span class="detail-value" id="pin-usage">-</span>
+            </div>
+          </div>
+
+          <div id="usage-examples" class="usage-examples" style="display: none">
+            <h3>Usage Examples</h3>
+            <div id="code-example" class="code-example"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+      // MPU-6050 Pin database with detailed information
+      const pinDatabase = {
+        VCC: {
+          type: 'Power Supply',
+          voltage: '3.3V-5V DC',
+          current: '3.6mA typical',
+          functions: 'Main power input for sensor',
+          usage: 'Connected to Arduino 5V or 3.3V rail',
+          code: `// Power management for MPU-6050
+#include <Wire.h>
+
+const int MPU_POWER_PIN = 8; // Digital pin for power control
+
+void setupMPUPower() {
+  pinMode(MPU_POWER_PIN, OUTPUT);
+  digitalWrite(MPU_POWER_PIN, HIGH); // Power on MPU-6050
+  delay(100); // Wait for sensor to stabilize
+}
+
+void powerDownMPU() {
+  digitalWrite(MPU_POWER_PIN, LOW); // Power off for energy saving
+}
+
+bool isMPUPowered() {
+  return digitalRead(MPU_POWER_PIN) == HIGH;
+}
+
+// Power consumption monitoring
+float measureMPUPower() {
+  // Measure current draw if current sensor available
+  float current = readCurrentSensor();
+  return current * 5.0; // Power = Voltage × Current
+}`,
+        },
+        GND: {
+          type: 'Ground',
+          voltage: '0V reference',
+          current: 'Common ground',
+          functions: 'Circuit ground reference',
+          usage: 'Connected to Arduino ground for common reference',
+          code: `// Ground integrity check
+bool checkGroundConnection() {
+  // Verify ground connection integrity
+  // Could use voltage divider to check for ground loops
+  int groundCheck = analogRead(GROUND_CHECK_PIN);
+  return (groundCheck < 10); // Should be near 0V
+}
+
+// Noise reduction on ground
+void improveGroundQuality() {
+  // Add decoupling capacitors
+  // Use star grounding configuration
+  // Keep ground paths short and direct
+}`,
+        },
+        SCL: {
+          type: 'I2C Clock Line',
+          voltage: '3.3V logic',
+          current: '3mA max',
+          functions: 'I2C serial clock (100kHz/400kHz)',
+          usage: 'I2C clock communication with Arduino Mega (A5)',
+          code: `// I2C communication setup
+#include <Wire.h>
+
+const int MPU_ADDR = 0x68; // MPU-6050 I2C address
+
+void setupI2C() {
+  Wire.begin();        // Initialize I2C as master
+  // SCL = A5, SDA = A4 on Arduino Mega
+  Wire.setClock(400000); // Fast mode 400kHz
+}
+
+// Initialize MPU-6050
+void initMPU6050() {
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x6B); // PWR_MGMT_1 register
+  Wire.write(0);    // Wake up MPU-6050
+  Wire.endTransmission();
+  
+  // Configure accelerometer
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x1C); // ACCEL_CONFIG register
+  Wire.write(0x10); // ±8g full scale
+  Wire.endTransmission();
+  
+  // Configure gyroscope
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x1B); // GYRO_CONFIG register
+  Wire.write(0x08); // 500°/s full scale
+  Wire.endTransmission();
+}
+
+// Check I2C connection
+bool isMPUConnected() {
+  Wire.beginTransmission(MPU_ADDR);
+  return Wire.endTransmission() == 0;
+}`,
+        },
+        SDA: {
+          type: 'I2C Data Line',
+          voltage: '3.3V logic',
+          current: '3mA max',
+          functions: 'I2C serial data (bidirectional)',
+          usage: 'I2C data communication with Arduino Mega (A4)',
+          code: `// I2C data transmission
+void readMPUData() {
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(0x3B); // Starting register for accel data
+  Wire.endTransmission(false);
+  
+  // Request 14 bytes of data
+  Wire.requestFrom(MPU_ADDR, 14, true);
+  
+  // Read accelerometer data
+  accelX = Wire.read() << 8 | Wire.read();
+  accelY = Wire.read() << 8 | Wire.read();
+  accelZ = Wire.read() << 8 | Wire.read();
+  
+  // Read temperature data
+  temperature = Wire.read() << 8 | Wire.read();
+  
+  // Read gyroscope data
+  gyroX = Wire.read() << 8 | Wire.read();
+  gyroY = Wire.read() << 8 | Wire.read();
+  gyroZ = Wire.read() << 8 | Wire.read();
+}
+
+// Write to MPU registers
+void writeMPURegister(uint8_t reg, uint8_t value) {
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(reg);
+  Wire.write(value);
+  Wire.endTransmission();
+}
+
+// Read from MPU registers
+uint8_t readMPURegister(uint8_t reg) {
+  Wire.beginTransmission(MPU_ADDR);
+  Wire.write(reg);
+  Wire.endTransmission();
+  
+  Wire.requestFrom(MPU_ADDR, 1);
+  return Wire.read();
+}`,
+        },
+        XDA: {
+          type: 'Auxiliary I2C Data',
+          voltage: '3.3V logic',
+          current: '3mA max',
+          functions: 'Auxiliary I2C master data line',
+          usage: 'Connect external sensors (magnetometer, pressure sensor)',
+          code: `// Auxiliary I2C configuration
+void setupAuxiliaryI2C() {
+  // Enable auxiliary I2C master mode
+  writeMPURegister(0x24, 0x0D); // USER_CTRL register
+  writeMPURegister(0x25, 0x82); // I2C_MST_CTRL register
+  
+  // Configure auxiliary I2C clock
+  writeMPURegister(0x63, 0x00); // I2C_SLV0_ADDR (magnetometer)
+  writeMPURegister(0x64, 0x03); // I2C_SLV0_REG (starting register)
+  writeMPURegister(0x65, 0x06); // I2C_SLV0_CTRL (6 bytes)
+}
+
+// Read magnetometer through auxiliary I2C
+void readMagnetometer() {
+  // Magnetometer data appears in MPU registers 0x49-0x4E
+  magX = readMPURegister(0x49) << 8 | readMPURegister(0x4A);
+  magY = readMPURegister(0x4B) << 8 | readMPURegister(0x4C);
+  magZ = readMPURegister(0x4D) << 8 | readMPURegister(0x4E);
+}
+
+// Enable auxiliary sensor reading
+void enableAuxiliarySensors() {
+  writeMPURegister(0x37, 0x02); // INT_PIN_CFG
+  writeMPURegister(0x38, 0x01); // INT_ENABLE
+}`,
+        },
+        XCL: {
+          type: 'Auxiliary I2C Clock',
+          voltage: '3.3V logic',
+          current: '3mA max',
+          functions: 'Auxiliary I2C master clock line',
+          usage: 'Clock for external sensors connected to MPU-6050',
+          code: `// Auxiliary I2C clock management
+void configureAuxiliaryClock() {
+  // Set auxiliary I2C clock speed
+  writeMPURegister(0x24, 0x0D); // Enable I2C master mode
+  writeMPURegister(0x25, 0x81); // 400kHz clock
+  
+  // Configure slave devices
+  setupMagnetometer();
+  setupPressureSensor();
+}
+
+void setupMagnetometer() {
+  // Configure magnetometer (HMC5883L)
+  writeMPURegister(0x25, 0x0D); // I2C_MST_CTRL
+  writeMPURegister(0x36, 0x12); // I2C_MST_DELAY_CTRL
+}
+
+void setupPressureSensor() {
+  // Configure pressure sensor (BMP180)
+  writeMPURegister(0x38, 0x01); // Enable interrupts
+  writeMPURegister(0x39, 0x01); // Interrupt configuration
+}`,
+        },
+        ADO: {
+          type: 'I2C Address Select',
+          voltage: '3.3V logic',
+          current: 'Input only',
+          functions: 'I2C address selection (0x68/0x69)',
+          usage: 'Select I2C address when using multiple MPU-6050 sensors',
+          code: `// I2C address management
+const int MPU_ADDR_1 = 0x68; // ADO = LOW
+const int MPU_ADDR_2 = 0x69; // ADO = HIGH
+
+const int ADO_PIN_1 = LOW;   // First MPU-6050
+const int ADO_PIN_2 = HIGH;  // Second MPU-6050
+
+void setupMultipleMPUs() {
+  // Configure first MPU-6050
+  digitalWrite(ADO_PIN_1, LOW);
+  initMPU6050(MPU_ADDR_1);
+  
+  // Configure second MPU-6050
+  digitalWrite(ADO_PIN_2, HIGH);
+  initMPU6050(MPU_ADDR_2);
+}
+
+void readAllMPUData() {
+  // Read from first sensor
+  readMPUData(MPU_ADDR_1, &accel1X, &accel1Y, &accel1Z);
+  
+  // Read from second sensor
+  readMPUData(MPU_ADDR_2, &accel2X, &accel2Y, &accel2Z);
+}
+
+// Address detection
+void detectMPUAddresses() {
+  Serial.println("Scanning for MPU-6050 devices...");
+  
+  for(int addr = 0x68; addr <= 0x69; addr++) {
+    Wire.beginTransmission(addr);
+    if(Wire.endTransmission() == 0) {
+      Serial.printf("MPU-6050 found at address 0x%02X\\n", addr);
+    }
+  }
+}`,
+        },
+        INT: {
+          type: 'Interrupt Output',
+          voltage: '3.3V logic',
+          current: '1mA max',
+          functions: 'Programmable interrupt output',
+          usage: 'Data ready interrupt for Arduino Mega (Pin 2)',
+          code: `// Interrupt configuration
+volatile bool dataReady = false;
+const int MPU_INT_PIN = 2; // Arduino Mega interrupt pin
+
+void setupMPUInterrupt() {
+  pinMode(MPU_INT_PIN, INPUT);
+  
+  // Configure MPU-6050 interrupts
+  writeMPURegister(0x38, 0x01); // INT_ENABLE - DATA_RDY_EN
+  
+  // Configure interrupt behavior
+  writeMPURegister(0x37, 0x00); // INT_PIN_CFG - active high, push-pull
+  
+  // Attach Arduino interrupt
+  attachInterrupt(digitalPinToInterrupt(MPU_INT_PIN), dataReadyISR, RISING);
+}
+
+void dataReadyISR() {
+  dataReady = true;
+}
+
+void loop() {
+  if(dataReady) {
+    readMPUData();
+    processSensorData();
+    dataReady = false;
+  }
+  
+  // Other tasks...
+}
+
+// Advanced interrupt configuration
+void setupAdvancedInterrupts() {
+  // Motion detection interrupt
+  writeMPURegister(0x1F, 0x18); // MOT_THR
+  writeMPURegister(0x20, 0x01); // MOT_DUR
+  writeMPURegister(0x38, 0x40); // INT_ENABLE - MOT_EN
+  
+  // Zero motion detection
+  writeMPURegister(0x1F, 0x00); // ZRMOT_THR
+  writeMPURegister(0x20, 0x00); // ZRMOT_DUR
+  writeMPURegister(0x38, 0x80); // INT_ENABLE - ZMOT_EN
+}
+
+void motionDetectedISR() {
+  Serial.println("Motion detected!");
+  // Handle motion detection
+}
+
+void zeroMotionDetectedISR() {
+  Serial.println("Zero motion detected!");
+  // Handle zero motion detection
+}`,
+        },
+        FSYNC: {
+          type: 'Frame Sync Input',
+          voltage: '3.3V logic',
+          current: 'Input only',
+          functions: 'Frame synchronization for video/strobe',
+          usage: 'Synchronize sensor data with camera or other systems',
+          code: `// Frame sync configuration
+const int FSYNC_PIN = 3; // Frame sync input pin
+
+void setupFrameSync() {
+  pinMode(FSYNC_PIN, INPUT);
+  
+  // Configure FSYNC functionality
+  writeMPURegister(0x36, 0x20); // I2C_MST_DELAY_CTRL - FSYNC_INT_EN
+  
+  // Set FSYNC to delay temperature measurement
+  writeMPURegister(0x64, 0x01); // TEMP_OFFSET_H
+  writeMPURegister(0x65, 0x00); // TEMP_OFFSET_L
+}
+
+// Synchronize with camera
+void syncWithCamera() {
+  if(digitalRead(FSYNC_PIN) == HIGH) {
+    // Camera frame captured, read sensor data
+    readMPUData();
+    timestampSensorData();
+  }
+}
+
+// Video stabilization sync
+void videoStabilizationSync() {
+  // Wait for frame sync
+  while(digitalRead(FSYNC_PIN) == LOW) {
+    // Wait for camera frame
+  }
+  
+  // Read sensor data immediately after frame sync
+  readMPUData();
+  calculateStabilization();
+  sendStabilizationData();
+}
+
+// External trigger synchronization
+void setupExternalTrigger() {
+  // Configure FSYNC as external trigger
+  writeMPURegister(0x37, 0x10); // INT_PIN_CFG - FSYNC_INT_EN
+  
+  // Set up interrupt for FSYNC
+  attachInterrupt(digitalPinToInterrupt(FSYNC_PIN), frameSyncISR, RISING);
+}
+
+void frameSyncISR() {
+  frameSyncReceived = true;
+}`,
+        },
+        REG: {
+          type: 'Register Select',
+          voltage: '3.3V logic',
+          current: 'Input only',
+          functions: 'SPI mode register select (not commonly used)',
+          usage: 'Alternative interface mode (SPI instead of I2C)',
+          code: `// SPI mode configuration (alternative to I2C)
+void setupSPIMode() {
+  // Configure MPU-6050 for SPI mode
+  pinMode(REG_PIN, OUTPUT);
+  pinMode(CS_PIN, OUTPUT);
+  
+  // Enable SPI mode
+  digitalWrite(REG_PIN, HIGH);
+  digitalWrite(CS_PIN, HIGH);
+  
+  // Initialize SPI
+  SPI.begin();
+  SPI.setClockDivider(SPI_CLOCK_DIV4);
+  SPI.setDataMode(SPI_MODE0);
+}
+
+// SPI register access
+uint8_t readSPIRegister(uint8_t reg) {
+  digitalWrite(CS_PIN, LOW);
+  digitalWrite(REG_PIN, HIGH);
+  
+  SPI.transfer(0x80 | reg); // Read command
+  uint8_t value = SPI.transfer(0x00);
+  
+  digitalWrite(CS_PIN, HIGH);
+  return value;
+}
+
+void writeSPIRegister(uint8_t reg, uint8_t value) {
+  digitalWrite(CS_PIN, LOW);
+  digitalWrite(REG_PIN, HIGH);
+  
+  SPI.transfer(reg & 0x7F); // Write command
+  SPI.transfer(value);
+  
+  digitalWrite(CS_PIN, HIGH);
+}
+
+// Compare I2C vs SPI performance
+void benchmarkInterfaces() {
+  unsigned long start, end;
+  
+  // I2C benchmark
+  start = micros();
+  for(int i = 0; i < 100; i++) {
+    readMPURegister(0x3B);
+  }
+  end = micros();
+  Serial.printf("I2C 100 reads: %lu microseconds\\n", end - start);
+  
+  // SPI benchmark
+  start = micros();
+  for(int i = 0; i < 100; i++) {
+    readSPIRegister(0x3B);
+  }
+  end = micros();
+  Serial.printf("SPI 100 reads: %lu microseconds\\n", end - start);
+}`,
+        },
+      };
+
+      // Initialize the interactive pinout
+      document.addEventListener('DOMContentLoaded', function () {
+        initializePins();
+        setupEventListeners();
+      });
+
+      function initializePins() {
+        const pins = document.querySelectorAll('.pin');
+        pins.forEach(pin => {
+          pin.addEventListener('click', handlePinClick);
+          pin.addEventListener('mouseenter', handlePinHover);
+          pin.addEventListener('mouseleave', hideTooltip);
+        });
+      }
+
+      function handlePinClick(event) {
+        const pin = event.target.closest('.pin');
+        const pinName = pin.getAttribute('data-pin');
+
+        // Remove previous selection
+        document.querySelectorAll('.pin.selected').forEach(p => {
+          p.classList.remove('selected');
+        });
+
+        // Add selection to clicked pin
+        pin.classList.add('selected');
+
+        // Show pin details
+        showPinDetails(pinName);
+      }
+
+      function handlePinHover(event) {
+        const pin = event.target.closest('.pin');
+        const pinName = pin.getAttribute('data-pin');
+        showTooltip(event, pinName);
+      }
+
+      function showTooltip(event, pinName) {
+        const tooltip = document.getElementById('tooltip');
+        const pin = pinDatabase[pinName];
+
+        if (pin) {
+          tooltip.innerHTML = `<strong>${pinName}</strong><br>${pin.type}`;
+          tooltip.style.left = event.pageX + 10 + 'px';
+          tooltip.style.top = event.pageY - 30 + 'px';
+          tooltip.classList.add('visible');
+        }
+      }
+
+      function hideTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.classList.remove('visible');
+      }
+
+      function showPinDetails(pinName) {
+        const pin = pinDatabase[pinName];
+
+        if (!pin) {
+          document.getElementById('default-info').style.display = 'block';
+          document.getElementById('pin-details').classList.remove('active');
+          document.getElementById('usage-examples').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('default-info').style.display = 'none';
+        document.getElementById('pin-details').classList.add('active');
+        document.getElementById('usage-examples').style.display = 'block';
+
+        document.getElementById('pin-number').textContent = pinName;
+        document.getElementById('pin-type').textContent = pin.type;
+        document.getElementById('pin-voltage').textContent = pin.voltage;
+        document.getElementById('pin-current').textContent = pin.current;
+        document.getElementById('pin-functions').textContent = pin.functions;
+        document.getElementById('pin-usage').textContent = pin.usage;
+        document.getElementById('code-example').textContent = pin.code;
+      }
+
+      function filterPins(type) {
+        const pins = document.querySelectorAll('.pin');
+
+        pins.forEach(pin => {
+          pin.style.display = 'block';
+          pin.style.opacity = '1';
+
+          if (type !== 'all') {
+            if (!pin.classList.contains(type)) {
+              pin.style.opacity = '0.3';
+            }
+          }
+        });
+
+        // Update button states
+        document.querySelectorAll('.control-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+      }
+
+      function highlightUsed() {
+        const usedPins = ['VCC', 'GND', 'SCL', 'SDA', 'INT'];
+        const pins = document.querySelectorAll('.pin');
+
+        pins.forEach(pin => {
+          const pinName = pin.getAttribute('data-pin');
+          if (usedPins.includes(pinName)) {
+            pin.style.opacity = '1';
+            pin.style.border = '3px solid #e67e22';
+          } else {
+            pin.style.opacity = '0.2';
+            pin.style.border = '2px solid #4a5f7a';
+          }
+        });
+
+        // Update button state
+        document.querySelectorAll('.control-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+      }
+
+      function setupEventListeners() {
+        // Add keyboard navigation
+        document.addEventListener('keydown', function (event) {
+          const pins = Array.from(document.querySelectorAll('.pin'));
+          const selectedPin = document.querySelector('.pin.selected');
+
+          if (selectedPin) {
+            const currentIndex = pins.indexOf(selectedPin);
+            let newIndex = currentIndex;
+
+            switch (event.key) {
+              case 'ArrowUp':
+                newIndex = Math.max(0, currentIndex - 1);
+                break;
+              case 'ArrowDown':
+                newIndex = Math.min(pins.length - 1, currentIndex + 1);
+                break;
+              case 'ArrowLeft':
+                newIndex = Math.max(0, currentIndex - 5);
+                break;
+              case 'ArrowRight':
+                newIndex = Math.min(pins.length - 1, currentIndex + 5);
+                break;
+              case 'Escape':
+                document.querySelectorAll('.pin.selected').forEach(p => {
+                  p.classList.remove('selected');
+                });
+                document.getElementById('default-info').style.display = 'block';
+                document
+                  .getElementById('pin-details')
+                  .classList.remove('active');
+                document.getElementById('usage-examples').style.display =
+                  'none';
+                return;
+            }
+
+            if (newIndex !== currentIndex) {
+              pins[newIndex].click();
+            }
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

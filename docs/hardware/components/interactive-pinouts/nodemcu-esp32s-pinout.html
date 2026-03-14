@@ -1,0 +1,1319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NodeMCU ESP-32S - Interactive Pinout</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5em;
+        margin-bottom: 10px;
+        font-weight: 300;
+      }
+
+      .header p {
+        font-size: 1.1em;
+        opacity: 0.9;
+      }
+
+      .main-content {
+        display: flex;
+        gap: 30px;
+        padding: 30px;
+      }
+
+      .pinout-container {
+        flex: 1;
+        background: #f8f9fa;
+        border-radius: 15px;
+        padding: 20px;
+        position: relative;
+      }
+
+      .esp32-board {
+        background: #2c3e50;
+        border-radius: 15px;
+        padding: 40px;
+        color: white;
+        font-family: 'Courier New', monospace;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        position: relative;
+      }
+
+      .board-label {
+        text-align: center;
+        font-size: 1.8em;
+        font-weight: bold;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+
+      .board-layout {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+      }
+
+      .pin-column {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .pin {
+        background: #34495e;
+        border: 2px solid #4a5f7a;
+        border-radius: 8px;
+        padding: 10px 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        min-width: 120px;
+        text-align: left;
+        font-size: 0.85em;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .pin:hover {
+        background: #e74c3c;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
+      }
+
+      .pin.power {
+        background: #c0392b;
+        border-color: #a93226;
+      }
+
+      .pin.ground {
+        background: #1a252f;
+        border-color: #0c1418;
+      }
+
+      .pin.gpio {
+        background: #3498db;
+        border-color: #2980b9;
+      }
+
+      .pin.analog {
+        background: #9b59b6;
+        border-color: #8e44ad;
+      }
+
+      .pin.touch {
+        background: #e67e22;
+        border-color: #d35400;
+      }
+
+      .pin.communication {
+        background: #16a085;
+        border-color: #138d75;
+      }
+
+      .pin.selected {
+        background: #27ae60;
+        border-color: #229954;
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      .pin-number {
+        font-weight: bold;
+        color: #ecf0f1;
+        margin-right: 10px;
+      }
+
+      .pin-name {
+        flex: 1;
+        color: #bdc3c7;
+      }
+
+      .pin-functions {
+        font-size: 0.7em;
+        color: #95a5a6;
+        text-align: right;
+      }
+
+      .info-panel {
+        flex: 0 0 400px;
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+      }
+
+      .info-panel h2 {
+        color: #2c3e50;
+        margin-bottom: 20px;
+        font-size: 1.5em;
+        border-bottom: 3px solid #e74c3c;
+        padding-bottom: 10px;
+      }
+
+      .pin-details {
+        display: none;
+      }
+
+      .pin-details.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #ecf0f1;
+      }
+
+      .detail-label {
+        font-weight: 600;
+        color: #34495e;
+      }
+
+      .detail-value {
+        color: #2c3e50;
+        font-family: 'Courier New', monospace;
+        font-size: 0.9em;
+      }
+
+      .usage-examples {
+        margin-top: 20px;
+        padding: 15px;
+        background: #ecf0f1;
+        border-radius: 10px;
+      }
+
+      .usage-examples h3 {
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-size: 1.1em;
+      }
+
+      .code-example {
+        background: #2c3e50;
+        color: #ecf0f1;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85em;
+        overflow-x: auto;
+        margin-top: 10px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-top: 20px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        border: 2px solid #333;
+      }
+
+      .controls {
+        padding: 20px;
+        background: #ecf0f1;
+        border-radius: 10px;
+        margin-top: 20px;
+      }
+
+      .controls h3 {
+        margin-bottom: 15px;
+        color: #2c3e50;
+      }
+
+      .control-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .control-btn {
+        padding: 10px 20px;
+        background: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9em;
+      }
+
+      .control-btn:hover {
+        background: #c0392b;
+        transform: translateY(-2px);
+      }
+
+      .control-btn.active {
+        background: #27ae60;
+      }
+
+      .tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        pointer-events: none;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .tooltip.visible {
+        opacity: 1;
+      }
+
+      .wifi-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 30px;
+        height: 30px;
+        background: #3498db;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+      }
+
+      .usb-port {
+        position: absolute;
+        top: 50%;
+        left: -20px;
+        transform: translateY(-50%);
+        width: 40px;
+        height: 60px;
+        background: #7f8c8d;
+        border-radius: 5px;
+        border: 2px solid #34495e;
+      }
+
+      @media (max-width: 1200px) {
+        .main-content {
+          flex-direction: column;
+        }
+
+        .info-panel {
+          flex: 1;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .board-layout {
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .pin-column {
+          width: 100%;
+          max-width: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>NodeMCU ESP-32S</h1>
+        <p>Interactive Pinout Diagram - WiFi & Bluetooth Development Board</p>
+      </div>
+
+      <div class="main-content">
+        <div class="pinout-container">
+          <div class="esp32-board">
+            <div class="wifi-indicator">📶</div>
+            <div class="usb-port"></div>
+            <div class="board-label">NODEMCU ESP-32S</div>
+
+            <div class="board-layout">
+              <div class="pin-column">
+                <div class="pin power" data-pin="3V3">
+                  <span class="pin-number">1</span>
+                  <span class="pin-name">3V3</span>
+                  <span class="pin-functions">Power</span>
+                </div>
+                <div class="pin ground" data-pin="GND">
+                  <span class="pin-number">2</span>
+                  <span class="pin-name">GND</span>
+                  <span class="pin-functions">Ground</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO2">
+                  <span class="pin-number">3</span>
+                  <span class="pin-name">GPIO2</span>
+                  <span class="pin-functions">LED, ADC</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO4">
+                  <span class="pin-number">4</span>
+                  <span class="pin-name">GPIO4</span>
+                  <span class="pin-functions">ADC</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO16">
+                  <span class="pin-number">5</span>
+                  <span class="pin-name">GPIO16</span>
+                  <span class="pin-functions">UART2 RX</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO17">
+                  <span class="pin-number">6</span>
+                  <span class="pin-name">GPIO17</span>
+                  <span class="pin-functions">UART2 TX</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO5">
+                  <span class="pin-number">7</span>
+                  <span class="pin-name">GPIO5</span>
+                  <span class="pin-functions">SPI CS</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO18">
+                  <span class="pin-number">8</span>
+                  <span class="pin-name">GPIO18</span>
+                  <span class="pin-functions">SPI CLK</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO19">
+                  <span class="pin-number">9</span>
+                  <span class="pin-name">GPIO19</span>
+                  <span class="pin-functions">SPI MISO</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO21">
+                  <span class="pin-number">10</span>
+                  <span class="pin-name">GPIO21</span>
+                  <span class="pin-functions">I2C SDA</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO22">
+                  <span class="pin-number">11</span>
+                  <span class="pin-name">GPIO22</span>
+                  <span class="pin-functions">I2C SCL</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO23">
+                  <span class="pin-number">12</span>
+                  <span class="pin-name">GPIO23</span>
+                  <span class="pin-functions">SPI MOSI</span>
+                </div>
+                <div class="pin ground" data-pin="GND">
+                  <span class="pin-number">13</span>
+                  <span class="pin-name">GND</span>
+                  <span class="pin-functions">Ground</span>
+                </div>
+                <div class="pin gpio" data-pin="VIN">
+                  <span class="pin-number">14</span>
+                  <span class="pin-name">VIN</span>
+                  <span class="pin-functions">Power In</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO13">
+                  <span class="pin-number">15</span>
+                  <span class="pin-name">GPIO13</span>
+                  <span class="pin-functions">ADC2</span>
+                </div>
+              </div>
+
+              <div class="pin-column">
+                <div class="pin gpio" data-pin="GPIO12">
+                  <span class="pin-number">16</span>
+                  <span class="pin-name">GPIO12</span>
+                  <span class="pin-functions">ADC2, Touch</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO14">
+                  <span class="pin-number">17</span>
+                  <span class="pin-name">GPIO14</span>
+                  <span class="pin-functions">ADC2, Touch</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO27">
+                  <span class="pin-number">18</span>
+                  <span class="pin-name">GPIO27</span>
+                  <span class="pin-functions">ADC2</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO26">
+                  <span class="pin-number">19</span>
+                  <span class="pin-name">GPIO26</span>
+                  <span class="pin-functions">ADC2</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO25">
+                  <span class="pin-number">20</span>
+                  <span class="pin-name">GPIO25</span>
+                  <span class="pin-functions">ADC2, DAC</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO33">
+                  <span class="pin-number">21</span>
+                  <span class="pin-name">GPIO33</span>
+                  <span class="pin-functions">ADC1, Touch</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO32">
+                  <span class="pin-number">22</span>
+                  <span class="pin-name">GPIO32</span>
+                  <span class="pin-functions">ADC1, Touch</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO35">
+                  <span class="pin-number">23</span>
+                  <span class="pin-name">GPIO35</span>
+                  <span class="pin-functions">ADC1</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO34">
+                  <span class="pin-number">24</span>
+                  <span class="pin-name">GPIO34</span>
+                  <span class="pin-functions">ADC1</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO39">
+                  <span class="pin-number">25</span>
+                  <span class="pin-name">GPIO39</span>
+                  <span class="pin-functions">ADC1</span>
+                </div>
+                <div class="pin gpio" data-pin="GPIO36">
+                  <span class="pin-number">26</span>
+                  <span class="pin-name">GPIO36</span>
+                  <span class="pin-functions">ADC1</span>
+                </div>
+                <div class="pin communication" data-pin="RX0">
+                  <span class="pin-number">27</span>
+                  <span class="pin-name">RX0</span>
+                  <span class="pin-functions">UART RX</span>
+                </div>
+                <div class="pin communication" data-pin="TX0">
+                  <span class="pin-number">28</span>
+                  <span class="pin-name">TX0</span>
+                  <span class="pin-functions">UART TX</span>
+                </div>
+                <div class="pin gpio" data-pin="EN">
+                  <span class="pin-number">29</span>
+                  <span class="pin-name">EN</span>
+                  <span class="pin-functions">Enable</span>
+                </div>
+                <div class="pin power" data-pin="5V">
+                  <span class="pin-number">30</span>
+                  <span class="pin-name">5V</span>
+                  <span class="pin-functions">Power</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="legend">
+            <div class="legend-item">
+              <div class="legend-color" style="background: #c0392b"></div>
+              <span>Power Pins</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #1a252f"></div>
+              <span>Ground Pins</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #3498db"></div>
+              <span>GPIO Pins</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #9b59b6"></div>
+              <span>Analog Input</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #e67e22"></div>
+              <span>Touch Sensor</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #16a085"></div>
+              <span>Communication</span>
+            </div>
+          </div>
+
+          <div class="controls">
+            <h3>Quick Filters</h3>
+            <div class="control-buttons">
+              <button class="control-btn" onclick="filterPins('all')">
+                All Pins
+              </button>
+              <button class="control-btn" onclick="filterPins('power')">
+                Power
+              </button>
+              <button class="control-btn" onclick="filterPins('gpio')">
+                GPIO
+              </button>
+              <button class="control-btn" onclick="filterPins('analog')">
+                Analog
+              </button>
+              <button class="control-btn" onclick="filterPins('touch')">
+                Touch
+              </button>
+              <button class="control-btn" onclick="filterPins('communication')">
+                Communication
+              </button>
+              <button class="control-btn" onclick="highlightUsed()">
+                Used in OmniTrek
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-panel">
+          <h2>Pin Information</h2>
+
+          <div id="default-info">
+            <p style="color: #7f8c8d; text-align: center; padding: 40px 0">
+              Click on any pin to see detailed information about its
+              functionality, specifications, and usage examples in the OmniTrek
+              rover.
+            </p>
+          </div>
+
+          <div id="pin-details" class="pin-details">
+            <div class="detail-row">
+              <span class="detail-label">Pin Name:</span>
+              <span class="detail-value" id="pin-number">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Type:</span>
+              <span class="detail-value" id="pin-type">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Voltage:</span>
+              <span class="detail-value" id="pin-voltage">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Current:</span>
+              <span class="detail-value" id="pin-current">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Special Functions:</span>
+              <span class="detail-value" id="pin-functions">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">OmniTrek Usage:</span>
+              <span class="detail-value" id="pin-usage">-</span>
+            </div>
+          </div>
+
+          <div id="usage-examples" class="usage-examples" style="display: none">
+            <h3>Usage Examples</h3>
+            <div id="code-example" class="code-example"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+      // ESP-32S Pin database with detailed information
+      const pinDatabase = {
+        '3V3': {
+          type: 'Power Output',
+          voltage: '3.3V regulated',
+          current: 'Up to 600mA',
+          functions: 'Low voltage power supply',
+          usage: 'ESP-32S internal power, can power external modules',
+          code: `// 3.3V power monitoring
+bool check3V3Rail() {
+  // Monitor internal 3.3V rail stability
+  return digitalRead(POWER_GOOD_PIN) == HIGH;
+}
+
+// Power consumption measurement
+float measurePowerUsage() {
+  float voltage = 3.3;
+  float current = readCurrentSensor();
+  return voltage * current; // Watts
+}`,
+        },
+        '5V': {
+          type: 'Power Input/Output',
+          voltage: '5V from USB or VIN',
+          current: 'Up to 2A from USB',
+          functions: 'Main power input or 5V output',
+          usage: 'USB power input, can supply 5V to external devices',
+          code: `// Power source detection
+bool isUSBPowered() {
+  // Check if 5V is from USB or external source
+  return digitalRead(USB_DETECT_PIN) == HIGH;
+}
+
+// 5V power management
+void enable5VOutput() {
+  pinMode(5V_ENABLE_PIN, OUTPUT);
+  digitalWrite(5V_ENABLE_PIN, HIGH);
+}`,
+        },
+        VIN: {
+          type: 'Power Input',
+          voltage: '7-12V DC',
+          current: 'Up to 1A',
+          functions: 'External power input',
+          usage: 'Alternative power source when USB not available',
+          code: `// External power monitoring
+bool checkExternalPower() {
+  int rawValue = analogRead(VIN_SENSE_PIN);
+  float voltage = rawValue * (15.0 / 1023.0); // Voltage divider
+  return (voltage > 6.5 && voltage < 12.5);
+}`,
+        },
+        GND: {
+          type: 'Ground',
+          voltage: '0V reference',
+          current: 'Common ground',
+          functions: 'Circuit ground reference',
+          usage: 'Common ground for all circuits and external devices',
+          code: `// Ground fault detection
+bool checkGroundIntegrity() {
+  // Measure resistance between ground points
+  // Implementation depends on hardware design
+  return true; // Simplified for example
+}`,
+        },
+        EN: {
+          type: 'Enable Pin',
+          voltage: '3.3V logic',
+          current: 'Input only',
+          functions: 'Chip enable/reset control',
+          usage: 'ESP-32S enable pin, can be used for external reset control',
+          code: `// Software reset control
+void resetESP32() {
+  digitalWrite(EN_PIN, LOW);
+  delay(100);
+  digitalWrite(EN_PIN, HIGH);
+  delay(1000);
+}
+
+// External reset handler
+void setupExternalReset() {
+  pinMode(EN_PIN, OUTPUT);
+  digitalWrite(EN_PIN, HIGH); // Enable ESP-32
+}`,
+        },
+        TX0: {
+          type: 'UART Transmitter',
+          voltage: '3.3V logic',
+          current: 'Output only',
+          functions: 'UART0 TX, Serial debugging',
+          usage: 'Serial communication with Arduino Mega and USB debugging',
+          code: `// Serial communication setup
+void setup() {
+  Serial.begin(115200);  // USB debugging
+  Serial1.begin(115200); // Communication with Arduino
+}
+
+// Send data to Arduino
+void sendToArduino(String data) {
+  Serial1.println("ESP32:" + data);
+}
+
+// Send debugging info
+void debugPrint(String message) {
+  Serial.println("[DEBUG] " + message);
+}`,
+        },
+        RX0: {
+          type: 'UART Receiver',
+          voltage: '3.3V logic',
+          current: 'Input only',
+          functions: 'UART0 RX, Serial input',
+          usage: 'Receive commands from Arduino Mega',
+          code: `// Receive data from Arduino
+void receiveFromArduino() {
+  if(Serial1.available()) {
+    String command = Serial1.readString();
+    command.trim();
+    
+    if(command.startsWith("CMD:")) {
+      processArduinoCommand(command.substring(4));
+    }
+  }
+}
+
+void processArduinoCommand(String cmd) {
+  if(cmd == "GET_STATUS") {
+    sendStatusToArduino();
+  } else if(cmd == "WIFI_CONNECT") {
+    connectToWiFi();
+  }
+}`,
+        },
+        GPIO2: {
+          type: 'GPIO / ADC',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, ADC2_CH0, Built-in LED',
+          usage: 'Built-in status LED, general purpose I/O',
+          code: `// Built-in LED control
+void setup() {
+  pinMode(2, OUTPUT);
+  digitalWrite(2, LOW); // LED on (active low)
+}
+
+void blinkStatusLED(int times) {
+  for(int i = 0; i < times; i++) {
+    digitalWrite(2, LOW);
+    delay(200);
+    digitalWrite(2, HIGH);
+    delay(200);
+  }
+}
+
+// WiFi status indication
+void indicateWiFiStatus() {
+  if(WiFi.status() == WL_CONNECTED) {
+    digitalWrite(2, HIGH); // LED off when connected
+  } else {
+    digitalWrite(2, LOW);  // LED on when disconnected
+  }
+}`,
+        },
+        GPIO4: {
+          type: 'GPIO / ADC',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, ADC2_CH1',
+          usage: 'Analog sensor input or digital I/O',
+          code: `// Analog sensor reading
+float readAnalogSensor() {
+  int rawValue = analogRead(4); // ADC2_CH1
+  float voltage = rawValue * (3.3 / 4095.0);
+  
+  // Convert voltage to sensor value
+  float sensorValue = voltageToSensorValue(voltage);
+  return sensorValue;
+}
+
+// Digital input mode
+void setupDigitalInput() {
+  pinMode(4, INPUT_PULLUP);
+  bool buttonState = digitalRead(4);
+}`,
+        },
+        GPIO21: {
+          type: 'GPIO / I2C',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, I2C SDA',
+          usage: 'I2C communication for expansion modules',
+          code: `// I2C Master setup
+#include <Wire.h>
+
+void setupI2C() {
+  Wire.begin(21, 22); // SDA=21, SCL=22
+  Wire.setClock(100000); // 100kHz
+}
+
+// Read from I2C sensor
+bool readI2CSensor(int address, uint8_t reg, int &value) {
+  Wire.beginTransmission(address);
+  Wire.write(reg);
+  Wire.endTransmission();
+  
+  Wire.requestFrom(address, 2);
+  if(Wire.available() >= 2) {
+    value = Wire.read() << 8 | Wire.read();
+    return true;
+  }
+  return false;
+}`,
+        },
+        GPIO22: {
+          type: 'GPIO / I2C',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, I2C SCL',
+          usage: 'I2C clock line for expansion modules',
+          code: `// I2C clock configuration
+void configureI2C() {
+  // SCL = GPIO22, used with SDA = GPIO21
+  Wire.begin(21, 22);
+  
+  // Set I2C clock speed
+  Wire.setClock(400000); // Fast mode 400kHz
+}
+
+// I2C device scanning
+void scanI2CDevices() {
+  Serial.println("Scanning I2C devices...");
+  for(int addr = 1; addr < 127; addr++) {
+    Wire.beginTransmission(addr);
+    if(Wire.endTransmission() == 0) {
+      Serial.printf("I2C device found at address 0x%02X\\n", addr);
+    }
+  }
+}`,
+        },
+        GPIO23: {
+          type: 'GPIO / SPI',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, SPI MOSI',
+          usage: 'SPI data output for display or module communication',
+          code: `// SPI Master setup
+#include <SPI.h>
+
+void setupSPI() {
+  SPI.begin(18, 19, 23, 5); // SCK, MISO, MOSI, SS
+  SPI.setFrequency(1000000); // 1MHz
+  SPI.setDataMode(SPI_MODE0);
+}
+
+// Send data via SPI
+void spiTransfer(uint8_t data) {
+  digitalWrite(SS_PIN, LOW);
+  SPI.transfer(data);
+  digitalWrite(SS_PIN, HIGH);
+}
+
+// Send buffer to SPI device
+void sendBufferToSPI(uint8_t *buffer, size_t length) {
+  digitalWrite(SS_PIN, LOW);
+  for(size_t i = 0; i < length; i++) {
+    SPI.transfer(buffer[i]);
+  }
+  digitalWrite(SS_PIN, HIGH);
+}`,
+        },
+        GPIO18: {
+          type: 'GPIO / SPI',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, SPI SCK',
+          usage: 'SPI clock for display or module communication',
+          code: `// SPI clock configuration
+void setupSPIClock() {
+  // SCK = GPIO18
+  SPI.begin(18, 19, 23, 5); // SCK, MISO, MOSI, SS
+  
+  // Configure SPI clock frequency
+  SPI.setFrequency(2000000); // 2MHz for high-speed devices
+}
+
+// Variable SPI clock control
+void setSPIClockFrequency(uint32_t frequency) {
+  SPI.end();
+  SPI.begin(18, 19, 23, 5);
+  SPI.setFrequency(frequency);
+}`,
+        },
+        GPIO19: {
+          type: 'GPIO / SPI',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, SPI MISO',
+          usage: 'SPI data input from display or modules',
+          code: `// SPI data input
+uint8_t readFromSPI() {
+  digitalWrite(SS_PIN, LOW);
+  uint8_t data = SPI.transfer(0x00); // Send dummy byte to receive
+  digitalWrite(SS_PIN, HIGH);
+  return data;
+}
+
+// Read multiple bytes from SPI
+void readFromSPIBuffer(uint8_t *buffer, size_t length) {
+  digitalWrite(SS_PIN, LOW);
+  for(size_t i = 0; i < length; i++) {
+    buffer[i] = SPI.transfer(0x00);
+  }
+  digitalWrite(SS_PIN, HIGH);
+}`,
+        },
+        GPIO5: {
+          type: 'GPIO / SPI',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, SPI SS (Chip Select)',
+          usage: 'SPI chip select for display or module communication',
+          code: `// SPI Chip Select control
+void selectSPIDevice(int device) {
+  // Deselect all devices
+  digitalWrite(SS_DEVICE_1, HIGH);
+  digitalWrite(SS_DEVICE_2, HIGH);
+  digitalWrite(SS_DEVICE_3, HIGH);
+  
+  // Select specific device
+  switch(device) {
+    case 1: digitalWrite(SS_DEVICE_1, LOW); break;
+    case 2: digitalWrite(SS_DEVICE_2, LOW); break;
+    case 3: digitalWrite(SS_DEVICE_3, LOW); break;
+  }
+}
+
+// Initialize multiple SPI devices
+void setupSPIDevices() {
+  pinMode(SS_DEVICE_1, OUTPUT);
+  pinMode(SS_DEVICE_2, OUTPUT);
+  pinMode(SS_DEVICE_3, OUTPUT);
+  
+  // Deselect all initially
+  digitalWrite(SS_DEVICE_1, HIGH);
+  digitalWrite(SS_DEVICE_2, HIGH);
+  digitalWrite(SS_DEVICE_3, HIGH);
+}`,
+        },
+        GPIO32: {
+          type: 'GPIO / ADC / Touch',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, ADC1_CH4, Touch Pad T9',
+          usage: 'Analog sensor input or touch sensor',
+          code: `// Touch sensor reading
+uint16_t readTouchSensor() {
+  return touchRead(T9); // GPIO32 = Touch Pad T9
+}
+
+void setupTouchSensor() {
+  // Set touch threshold
+  touchSetCycles(TOUCH_CYCLE_COUNT_10, TOUCH_MEASURE_CYCLE_10);
+  
+  // Calibrate touch threshold
+  uint16_t baseline = touchRead(T9);
+  touchThreshold = baseline * 0.8; // 80% of baseline
+}
+
+bool isTouchDetected() {
+  uint16_t touchValue = touchRead(T9);
+  return touchValue < touchThreshold;
+}
+
+// Analog reading alternative
+float readAnalogInput() {
+  int rawValue = analogRead(ADC1_CH4); // GPIO32
+  float voltage = rawValue * (3.3 / 4095.0);
+  return voltage;
+}`,
+        },
+        GPIO33: {
+          type: 'GPIO / ADC / Touch',
+          voltage: '3.3V logic',
+          current: '40mA max',
+          functions: 'GPIO, ADC1_CH5, Touch Pad T8',
+          usage: 'Analog sensor input or touch sensor',
+          code: `// Multiple touch sensors
+void setupTouchInterface() {
+  // GPIO32 = T9, GPIO33 = T8
+  touchAttachInterrupt(T9, touchHandler1, touchThreshold1);
+  touchAttachInterrupt(T8, touchHandler2, touchThreshold2);
+}
+
+void IRAM_ATTR touchHandler1() {
+  touchDetected1 = true;
+}
+
+void IRAM_ATTR touchHandler2() {
+  touchDetected2 = true;
+}
+
+// Process touch events
+void handleTouchEvents() {
+  if(touchDetected1) {
+    Serial.println("Touch 1 detected");
+    touchDetected1 = false;
+  }
+  
+  if(touchDetected2) {
+    Serial.println("Touch 2 detected");
+    touchDetected2 = false;
+  }
+}`,
+        },
+        GPIO34: {
+          type: 'ADC Input Only',
+          voltage: '0-3.3V',
+          current: 'Input only',
+          functions: 'ADC1_CH6',
+          usage: 'High-precision analog sensor input',
+          code: `// High-precision analog reading
+float readPrecisionAnalog() {
+  // Set ADC resolution and attenuation
+  analogReadResolution(12); // 12-bit resolution
+  analogSetAttenuation(ADC_11db); // 0-3.3V range
+  
+  int rawValue = analogRead(34); // ADC1_CH6
+  float voltage = rawValue * (3.3 / 4095.0);
+  
+  return voltage;
+}
+
+// Battery voltage monitoring
+float readBatteryVoltage() {
+  // Assuming voltage divider for battery monitoring
+  int rawValue = analogRead(34);
+  float adcVoltage = rawValue * (3.3 / 4095.0);
+  
+  // Voltage divider ratio (adjust based on hardware)
+  float batteryVoltage = adcVoltage * 4.0; // Example: 4:1 divider
+  
+  return batteryVoltage;
+}`,
+        },
+        GPIO35: {
+          type: 'ADC Input Only',
+          voltage: '0-3.3V',
+          current: 'Input only',
+          functions: 'ADC1_CH7',
+          usage: 'Analog sensor input, temperature monitoring',
+          code: `// Temperature sensor reading
+float readTemperatureSensor() {
+  int rawValue = analogRead(35); // ADC1_CH7
+  float voltage = rawValue * (3.3 / 4095.0);
+  
+  // Convert voltage to temperature (LM35 example)
+  float temperature = voltage * 100.0; // 10mV/°C
+  return temperature;
+}
+
+// Light sensor reading
+float readLightSensor() {
+  int rawValue = analogRead(35);
+  float voltage = rawValue * (3.3 / 4095.0);
+  
+  // Convert to light intensity (LDR example)
+  float resistance = (3.3 - voltage) * 10000.0 / voltage;
+  float lightLevel = log10(resistance);
+  
+  return lightLevel;
+}`,
+        },
+      };
+
+      // Initialize the interactive pinout
+      document.addEventListener('DOMContentLoaded', function () {
+        initializePins();
+        setupEventListeners();
+      });
+
+      function initializePins() {
+        const pins = document.querySelectorAll('.pin');
+        pins.forEach(pin => {
+          pin.addEventListener('click', handlePinClick);
+          pin.addEventListener('mouseenter', handlePinHover);
+          pin.addEventListener('mouseleave', hideTooltip);
+        });
+      }
+
+      function handlePinClick(event) {
+        const pin = event.target.closest('.pin');
+        const pinName = pin.getAttribute('data-pin');
+
+        // Remove previous selection
+        document.querySelectorAll('.pin.selected').forEach(p => {
+          p.classList.remove('selected');
+        });
+
+        // Add selection to clicked pin
+        pin.classList.add('selected');
+
+        // Show pin details
+        showPinDetails(pinName);
+      }
+
+      function handlePinHover(event) {
+        const pin = event.target.closest('.pin');
+        const pinName = pin.getAttribute('data-pin');
+        showTooltip(event, pinName);
+      }
+
+      function showTooltip(event, pinName) {
+        const tooltip = document.getElementById('tooltip');
+        const pin = pinDatabase[pinName];
+
+        if (pin) {
+          tooltip.innerHTML = `<strong>${pinName}</strong><br>${pin.type}`;
+          tooltip.style.left = event.pageX + 10 + 'px';
+          tooltip.style.top = event.pageY - 30 + 'px';
+          tooltip.classList.add('visible');
+        }
+      }
+
+      function hideTooltip() {
+        const tooltip = document.getElementById('tooltip');
+        tooltip.classList.remove('visible');
+      }
+
+      function showPinDetails(pinName) {
+        const pin = pinDatabase[pinName];
+
+        if (!pin) {
+          document.getElementById('default-info').style.display = 'block';
+          document.getElementById('pin-details').classList.remove('active');
+          document.getElementById('usage-examples').style.display = 'none';
+          return;
+        }
+
+        document.getElementById('default-info').style.display = 'none';
+        document.getElementById('pin-details').classList.add('active');
+        document.getElementById('usage-examples').style.display = 'block';
+
+        document.getElementById('pin-number').textContent = pinName;
+        document.getElementById('pin-type').textContent = pin.type;
+        document.getElementById('pin-voltage').textContent = pin.voltage;
+        document.getElementById('pin-current').textContent = pin.current;
+        document.getElementById('pin-functions').textContent = pin.functions;
+        document.getElementById('pin-usage').textContent = pin.usage;
+        document.getElementById('code-example').textContent = pin.code;
+      }
+
+      function filterPins(type) {
+        const pins = document.querySelectorAll('.pin');
+
+        pins.forEach(pin => {
+          pin.style.display = 'block';
+          pin.style.opacity = '1';
+
+          if (type !== 'all') {
+            if (!pin.classList.contains(type)) {
+              pin.style.opacity = '0.3';
+            }
+          }
+        });
+
+        // Update button states
+        document.querySelectorAll('.control-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+      }
+
+      function highlightUsed() {
+        const usedPins = [
+          '3V3',
+          '5V',
+          'GND',
+          'EN',
+          'TX0',
+          'RX0',
+          'GPIO2',
+          'GPIO21',
+          'GPIO22',
+          'GPIO23',
+          'GPIO18',
+          'GPIO19',
+          'GPIO5',
+          'GPIO32',
+          'GPIO33',
+          'GPIO34',
+          'GPIO35',
+        ];
+        const pins = document.querySelectorAll('.pin');
+
+        pins.forEach(pin => {
+          const pinName = pin.getAttribute('data-pin');
+          if (usedPins.includes(pinName)) {
+            pin.style.opacity = '1';
+            pin.style.border = '3px solid #27ae60';
+          } else {
+            pin.style.opacity = '0.2';
+            pin.style.border = '2px solid #4a5f7a';
+          }
+        });
+
+        // Update button state
+        document.querySelectorAll('.control-btn').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+      }
+
+      function setupEventListeners() {
+        // Add keyboard navigation
+        document.addEventListener('keydown', function (event) {
+          const pins = Array.from(document.querySelectorAll('.pin'));
+          const selectedPin = document.querySelector('.pin.selected');
+
+          if (selectedPin) {
+            const currentIndex = pins.indexOf(selectedPin);
+            let newIndex = currentIndex;
+
+            switch (event.key) {
+              case 'ArrowUp':
+                newIndex = Math.max(0, currentIndex - 1);
+                break;
+              case 'ArrowDown':
+                newIndex = Math.min(pins.length - 1, currentIndex + 1);
+                break;
+              case 'ArrowLeft':
+                newIndex = Math.max(0, currentIndex - 15);
+                break;
+              case 'ArrowRight':
+                newIndex = Math.min(pins.length - 1, currentIndex + 15);
+                break;
+              case 'Escape':
+                document.querySelectorAll('.pin.selected').forEach(p => {
+                  p.classList.remove('selected');
+                });
+                document.getElementById('default-info').style.display = 'block';
+                document
+                  .getElementById('pin-details')
+                  .classList.remove('active');
+                document.getElementById('usage-examples').style.display =
+                  'none';
+                return;
+            }
+
+            if (newIndex !== currentIndex) {
+              pins[newIndex].click();
+            }
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

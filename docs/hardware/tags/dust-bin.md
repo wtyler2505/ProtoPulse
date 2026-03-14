@@ -1,0 +1,3 @@
+# Tag: dust-bin
+
+- [Dust Bin Assembly Rev 3 (290-0018) (INV-DUST-BIN-MGN43XBL)](../items/INV-DUST-BIN-MGN43XBL_dust-bin-assembly-rev-3-290-0018.md)

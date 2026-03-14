@@ -1,0 +1,3 @@
+# Tag: family: encoder-rotary
+
+- [KY-040 Rotary Encoder Module (INV-KY-040-R-MGN1IJVS)](../items/INV-KY-040-R-MGN1IJVS_ky-040-rotary-encoder-module.md)

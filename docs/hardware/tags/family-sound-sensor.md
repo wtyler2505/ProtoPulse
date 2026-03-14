@@ -1,0 +1,3 @@
+# Tag: family: sound-sensor
+
+- [Sound Sensor Module (LM393) (INV-SOUND-SE-MGN2FX56)](../items/INV-SOUND-SE-MGN2FX56_sound-sensor-module-lm393.md)

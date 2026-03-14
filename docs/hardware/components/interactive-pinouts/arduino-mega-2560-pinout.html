@@ -1,0 +1,1493 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arduino Mega 2560 - Interactive Pinout</title>
+    <style>
+            :root {
+              --primary-color: #29ffc6;
+              --primary-glow: rgba(41, 255, 198, 0.3);
+              --accent-color: #ff00ff;
+              --background-color: #04080a;
+              --surface-color: #080f13;
+              --border-color: #20343c;
+              --content-color: #cdd7e0;
+              --content2-color: #829ca9;
+              --danger-color: #d90429;
+              --warning-color: #fbbf24;
+            }
+
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+
+            body {
+              font-family: 'Envy Code R', monospace;
+              background-color: var(--background-color);
+              color: var(--content-color);
+              min-height: 100vh;
+              padding: 20px;
+              overflow-x: hidden;
+            }
+
+            .container {
+              max-width: 1400px;
+              margin: 0 auto;
+              background: var(--surface-color);
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+              box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+              overflow: hidden;
+            }
+
+            .header {
+              background: linear-gradient(
+                135deg,
+                var(--surface-color) 0%,
+                var(--border-color) 100%
+              );
+              color: var(--content-color);
+              padding: 30px;
+              text-align: center;
+              border-bottom: 1px solid var(--border-color);
+            }
+
+            .header h1 {
+              font-size: 2.5em;
+              margin-bottom: 10px;
+              font-weight: 700;
+              color: var(--primary-color);
+              text-transform: uppercase;
+              letter-spacing: 0.1em;
+            }
+
+            .header p {
+              font-size: 1.1em;
+              opacity: 0.9;
+              color: var(--content2-color);
+            }
+
+            .main-content {
+              display: flex;
+              gap: 20px;
+              padding: 20px;
+              background: var(--background-color);
+            }
+
+            .pinout-container {
+              flex: 1;
+              background: var(--surface-color);
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+              padding: 20px;
+              position: relative;
+            }
+
+            .arduino-board {
+              background: linear-gradient(135deg, #0a1419 0%, #0f1f26 100%);
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+              padding: 30px;
+              color: var(--content-color);
+              font-family: 'Envy Code R', monospace;
+              box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+              position: relative;
+              min-height: 600px;
+            }
+
+            .board-label {
+              text-align: center;
+              font-size: 1.8em;
+              font-weight: 700;
+              margin-bottom: 30px;
+              color: var(--primary-color);
+              text-transform: uppercase;
+              letter-spacing: 0.1em;
+              text-shadow: 0 0 10px var(--primary-glow);
+            }
+
+            .pins-grid {
+              display: flex;
+              justify-content: space-between;
+              gap: 40px;
+              position: relative;
+            }
+
+            .pin-column {
+              display: flex;
+              flex-direction: column;
+              gap: 8px;
+            }
+
+            .pin-column:first-child {
+              align-items: flex-end;
+            }
+
+            .pin-column:last-child {
+              align-items: flex-start;
+            }
+
+            .pin {
+              background: var(--surface-color);
+              border: 1px solid var(--border-color);
+              border-radius: 6px;
+              padding: 8px 12px;
+              cursor: pointer;
+              transition: all 0.2s ease-in-out;
+              position: relative;
+              min-width: 80px;
+              text-align: center;
+              font-size: 0.9em;
+              font-family: 'Envy Code R', monospace;
+              color: var(--content-color);
+            }
+
+            .pin:hover {
+              background-color: var(--primary-glow);
+              color: white;
+              transform: translateY(-1px);
+              box-shadow: 0 0 10px var(--primary-glow);
+              border-color: var(--primary-color);
+            }
+
+            .pin.power {
+              background: linear-gradient(135deg, var(--danger-color) 0%, #8b0000 100%);
+              border-color: var(--danger-color);
+              color: white;
+            }
+
+            .pin.ground {
+              background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+              border-color: var(--border-color);
+              color: var(--content2-color);
+            }
+
+            .pin.digital {
+              background: linear-gradient(135deg, var(--border-color) 0%, #2a3f47 100%);
+              border-color: var(--border-color);
+              color: var(--content-color);
+            }
+
+            .pin.analog {
+              background: linear-gradient(135deg, var(--accent-color) 0%, #8b008b 100%);
+              border-color: var(--accent-color);
+              color: white;
+            }
+
+            .pin.pwm {
+              background: linear-gradient(135deg, var(--warning-color) 0%, #d97706 100%);
+              border-color: var(--warning-color);
+              color: black;
+            }
+
+            .pin.communication {
+              background: linear-gradient(135deg, var(--primary-color) 0%, #20d4aa 100%);
+              border-color: var(--primary-color);
+              color: black;
+            }
+
+            .pin.selected {
+              background: var(--primary-color);
+              border-color: var(--primary-color);
+              color: black;
+              font-weight: 700;
+              animation: pulse 1s infinite;
+              box-shadow: 0 0 15px var(--primary-glow);
+            }
+
+            @keyframes pulse {
+              0% {
+                transform: scale(1);
+              }
+              50% {
+                transform: scale(1.05);
+              }
+              100% {
+
+      .info-panel {
+      flex: 0 0 400px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 25px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      }
+
+      .info-panel h2 {
+      color: var(--primary-color);
+      margin-bottom: 20px;
+      font-size: 1.5em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-bottom: 2px solid var(--primary-color);
+      padding-bottom: 10px;
+      }
+
+      .pin-details {
+      display: none;
+      }
+
+      .pin-details.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+      }
+
+      .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border-color);
+      }
+
+      .detail-label {
+      font-weight: 600;
+      color: var(--content2-color);
+      font-family: 'Envy Code R', monospace;
+      }
+
+      .detail-value {
+      color: var(--content-color);
+      font-family: 'Envy Code R Mono', monospace;
+      }
+
+      .usage-examples {
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      }
+
+      .usage-examples h3 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+      font-size: 1.1em;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      }
+
+      .code-example {
+      background: rgba(0,0,0,0.5);
+      color: var(--content-color);
+      padding: 15px;
+      border-radius: 6px;
+      font-family: 'Envy Code R Mono', monospace;
+      font-size: 0.9em;
+      overflow-x: auto;
+      margin-top: 10px;
+      border: 1px solid var(--border-color);
+      }
+
+      .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 20px;
+      padding: 20px;
+      background: var(--surface-color);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      }
+
+              .legend-item {
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+              }
+
+              .legend-color {
+                  width: 20px;
+                  height: 20px;
+                  border-radius: 4px;
+                  border: 2px solid var(--border-color);
+              }
+
+              .controls {
+                  padding: 20px;
+                  background: var(--surface-color);
+                  border: 1px solid var(--border-color);
+                  border-radius: 8px;
+                  margin-top: 20px;
+              }
+
+              .controls h3 {
+                  margin-bottom: 15px;
+                  color: var(--primary-color);
+                  font-weight: 700;
+                  text-transform: uppercase;
+                  letter-spacing: 0.1em;
+              }
+
+              .control-buttons {
+                  display: flex;
+                  gap: 10px;
+                  flex-wrap: wrap;
+              }
+
+              .control-btn {
+                  padding: 10px 20px;
+                  background: var(--surface-color);
+                  color: var(--content-color);
+                  border: 1px solid var(--border-color);
+                  border-radius: 6px;
+                  cursor: pointer;
+                  transition: all 0.2s ease-in-out;
+                  font-size: 0.9em;
+                  font-family: 'Envy Code R', monospace;
+                  font-weight: 600;
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+              }
+
+              .control-btn:hover {
+                  background-color: var(--primary-glow);
+                  color: white;
+                  border-color: var(--primary-color);
+                  transform: translateY(-1px);
+                  box-shadow: 0 0 10px var(--primary-glow);
+              }
+
+              .control-btn.active {
+                  background: var(--primary-color);
+                  color: black;
+                  border-color: var(--primary-color);
+                  font-weight: 700;
+              }
+
+              .tooltip {
+                  position: absolute;
+                  background: var(--surface-color);
+                  color: var(--content-color);
+                  padding: 8px 12px;
+                  border: 1px solid var(--border-color);
+                  border-radius: 6px;
+                  font-size: 0.8em;
+                  font-family: 'Envy Code R', monospace;
+                  pointer-events: none;
+                  z-index: 1000;
+                  opacity: 0;
+                  transition: opacity 0.2s ease-in-out;
+                  box-shadow: 0 0 10px rgba(0,0,0,0.5);
+              }
+
+              /* Enhanced Search and Controls */
+              .search-container {
+                  margin-bottom: 20px;
+                  padding: 15px;
+                  background: rgba(0,0,0,0.3);
+                  border: 1px solid var(--border-color);
+                  border-radius: 8px;
+              }
+
+              .search-input {
+                  width: 100%;
+                  padding: 10px 15px;
+                  background: var(--surface-color);
+                  border: 1px solid var(--border-color);
+                  border-radius: 6px;
+                  color: var(--content-color);
+                  font-family: 'Envy Code R', monospace;
+                  font-size: 0.9em;
+                  transition: all 0.2s ease-in-out;
+              }
+
+              .search-input:focus {
+                  outline: none;
+                  border-color: var(--primary-color);
+                  box-shadow: 0 0 10px var(--primary-glow);
+              }
+
+              .search-input::placeholder {
+                  color: var(--content2-color);
+              }
+
+            .tooltip.visible {
+                  opacity: 1;
+              }
+
+              /* Enhanced Legend */
+              .legend-item span {
+                  font-family: 'Envy Code R', monospace;
+                  font-size: 0.9em;
+                  color: var(--content-color);
+              }
+
+              /* Enhanced Pin States */
+              .pin.filtered {
+                  opacity: 0.3;
+                  filter: grayscale(0.8);
+              }
+
+              .pin.highlighted {
+                  border: 2px solid var(--primary-color);
+                  box-shadow: 0 0 15px var(--primary-glow);
+                  transform: scale(1.05);
+              }
+
+              /* Enhanced Code Syntax */
+              .code-example .keyword {
+                  color: var(--accent-color);
+                  font-weight: 600;
+              }
+
+              .code-example .function {
+                  color: var(--primary-color);
+              }
+
+              .code-example .comment {
+                  color: var(--content2-color);
+                  font-style: italic;
+              }
+
+              .code-example .number {
+                  color: var(--warning-color);
+              }
+
+              /* Enhanced Mobile Responsiveness */
+              @media (max-width: 1200px) {
+                  .main-content {
+                      flex-direction: column;
+                  }
+
+                  .info-panel {
+                      flex: 1;
+                      max-width: 100%;
+                  }
+              }
+
+              @media (max-width: 768px) {
+                  .container {
+                      margin: 10px;
+                      padding: 10px;
+                  }
+
+                  .header {
+                      padding: 20px;
+                  }
+
+                  .header h1 {
+                      font-size: 1.8em;
+                  }
+
+                  .pins-grid {
+                      flex-direction: column;
+                      align-items: center;
+                      gap: 20px;
+                  }
+
+                  .pin-column {
+                      width: 100%;
+                      max-width: 300px;
+                      align-items: center !important;
+                  }
+
+                  .pin {
+                      min-width: 70px;
+                      font-size: 0.8em;
+                      padding: 6px 10px;
+                  }
+
+                  .arduino-board {
+                      padding: 20px;
+                  }
+              }
+
+            /* Enhanced Search and Controls */
+            .search-container {
+              margin-bottom: 20px;
+              padding: 15px;
+              background: rgba(0,0,0,0.3);
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+            }
+
+            .search-input {
+              width: 100%;
+              padding: 10px 15px;
+              background: var(--surface-color);
+              border: 1px solid var(--border-color);
+              border-radius: 6px;
+              color: var(--content-color);
+              font-family: 'Envy Code R', monospace;
+              font-size: 0.9em;
+              transition: all 0.2s ease-in-out;
+            }
+
+            .search-input:focus {
+              outline: none;
+              border-color: var(--primary-color);
+              box-shadow: 0 0 10px var(--primary-glow);
+            }
+
+            .search-input::placeholder {
+              color: var(--content2-color);
+            }
+
+            .control-buttons {
+              display: flex;
+              gap: 10px;
+              flex-wrap: wrap;
+            }
+
+            .control-btn {
+              padding: 10px 20px;
+              background: #3498db;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              transition: all 0.3s ease;
+              font-size: 0.9em;
+            }
+
+            .control-btn:hover {
+              background: #2980b9;
+              transform: translateY(-2px);
+            }
+
+            .control-btn.active {
+              background: #e74c3c;
+            }
+
+            .tooltip {
+              position: absolute;
+              background: rgba(0, 0, 0, 0.9);
+              color: white;
+              padding: 8px 12px;
+              border-radius: 6px;
+              font-size: 0.8em;
+              pointer-events: none;
+              z-index: 1000;
+              opacity: 0;
+              transition: opacity 0.3s ease;
+            }
+
+            .tooltip.visible {
+              opacity: 1;
+            }
+
+            /* Search Container Styles */
+            .search-container {
+              background: rgba(0,0,0,0.3);
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+              margin-bottom: 20px;
+              padding: 15px;
+            }
+
+            .search-input {
+              width: 100%;
+              padding: 10px 15px;
+              background: var(--surface-color);
+              border: 1px solid var(--border-color);
+              border-radius: 6px;
+              color: var(--content-color);
+              font-family: 'Envy Code R', monospace;
+              font-size: 0.9em;
+              transition: all 0.2s ease-in-out;
+            }
+
+            .search-input:focus {
+              outline: none;
+              border-color: var(--primary-color);
+              box-shadow: 0 0 10px var(--primary-glow);
+            }
+
+            .search-input::placeholder {
+              color: var(--content2-color);
+            }
+
+            /* Enhanced Legend */
+            .legend-item span {
+              font-family: 'Envy Code R', monospace;
+              font-size: 0.9em;
+              color: var(--content-color);
+            }
+
+            /* Enhanced Pin States */
+            .pin.filtered {
+              opacity: 0.3;
+              filter: grayscale(0.8);
+            }
+
+            .pin.highlighted {
+              border: 2px solid var(--primary-color);
+              box-shadow: 0 0 15px var(--primary-glow);
+              transform: scale(1.05);
+            }
+
+            /* Connection Lines Visual */
+            .connection-hint {
+              position: absolute;
+              background: var(--primary-glow);
+              border: 1px dashed var(--primary-color);
+              border-radius: 4px;
+              pointer-events: none;
+              z-index: 5;
+              opacity: 0;
+              transition: opacity 0.2s ease-in-out;
+            }
+
+            .connection-hint.visible {
+              opacity: 0.7;
+            }
+
+            /* Enhanced Code Syntax */
+            .code-example .keyword {
+              color: var(--accent-color);
+              font-weight: 600;
+            }
+
+            .code-example .function {
+              color: var(--primary-color);
+            }
+
+            .code-example .comment {
+              color: var(--content2-color);
+              font-style: italic;
+            }
+
+            .code-example .number {
+              color: var(--warning-color);
+            }
+
+            /* Status Indicators */
+            .status-indicator {
+              display: inline-block;
+              width: 8px;
+              height: 8px;
+              border-radius: 50%;
+              margin-right: 8px;
+            }
+
+            .status-used {
+              background: var(--primary-color);
+              box-shadow: 0 0 5px var(--primary-glow);
+            }
+
+            .status-available {
+              background: var(--content2-color);
+            }
+
+            .status-conflict {
+              background: var(--danger-color);
+              animation: pulse-critical 1s ease-in-out infinite;
+            }
+
+            /* Enhanced Mobile Responsiveness */
+            @media (max-width: 1200px) {
+              .main-content {
+                flex-direction: column;
+              }
+
+              .info-panel {
+                flex: 1;
+                max-width: 100%;
+              }
+            }
+
+            @media (max-width: 768px) {
+              .container {
+                margin: 10px;
+                padding: 10px;
+              }
+
+              .header {
+                padding: 20px;
+              }
+
+              .header h1 {
+                font-size: 1.8em;
+              }
+
+              .pins-grid {
+                flex-direction: column;
+                align-items: center;
+              }
+
+              .pin-column {
+                width: 100%;
+                max-width: 300px;
+              }
+
+              .pin {
+                min-width: 70px;
+                font-size: 0.8em;
+                padding: 6px 10px;
+              }
+
+              .arduino-board {
+                padding: 20px;
+              }
+            }
+
+            /* Loading States */
+            .loading {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              padding: 40px;
+              color: var(--content2-color);
+              font-family: 'Envy Code R', monospace;
+            }
+
+            .loading::after {
+              content: '';
+              width: 20px;
+              height: 20px;
+              border: 2px solid var(--border-color);
+              border-top: 2px solid var(--primary-color);
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+              margin-left: 10px;
+            }
+
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+
+            @media (max-width: 1200px) {
+              .main-content {
+                flex-direction: column;
+              }
+
+              .info-panel {
+                flex: 1;
+              }
+            }
+
+            @media (max-width: 768px) {
+              .pins-grid {
+                flex-direction: column;
+                align-items: center;
+              }
+
+              .pin-column {
+                width: 100%;
+                max-width: 300px;
+              }
+            }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Arduino Mega 2560</h1>
+        <p>
+          Interactive Pinout Diagram - Click any pin for detailed information
+        </p>
+      </div>
+
+      <div class="main-content">
+        <div class="pinout-container">
+          <div class="arduino-board">
+            <div class="board-label">ARDUINO MEGA 2560</div>
+
+            <div class="pins-grid">
+              <div class="pin-column">
+                <div class="pin power" data-pin="VIN">VIN</div>
+                <div class="pin ground" data-pin="GND1">GND</div>
+                <div class="pin ground" data-pin="GND2">GND</div>
+                <div class="pin power" data-pin="5V">5V</div>
+                <div class="pin power" data-pin="3V3">3.3V</div>
+                <div class="pin power" data-pin="RESET">RESET</div>
+                <div class="pin" data-pin="0">0 (RX0)</div>
+                <div class="pin" data-pin="1">1 (TX0)</div>
+                <div class="pin" data-pin="2">2 (RX1)</div>
+                <div class="pin" data-pin="3">3 (TX1)</div>
+                <div class="pin" data-pin="4">4 (RX2)</div>
+                <div class="pin" data-pin="5">5 (TX2)</div>
+                <div class="pin" data-pin="6">6 (RX3)</div>
+                <div class="pin" data-pin="7">7 (TX3)</div>
+                <div class="pin" data-pin="8">8</div>
+                <div class="pin" data-pin="9">9 (PWM)</div>
+                <div class="pin" data-pin="10">10 (PWM)</div>
+                <div class="pin" data-pin="11">11 (PWM)</div>
+                <div class="pin" data-pin="12">12 (PWM)</div>
+                <div class="pin" data-pin="13">13 (PWM)</div>
+                <div class="pin ground" data-pin="GND3">GND</div>
+                <div class="pin" data-pin="14">14 (TX3)</div>
+                <div class="pin" data-pin="15">15 (RX3)</div>
+                <div class="pin" data-pin="16">16 (TX2)</div>
+                <div class="pin" data-pin="17">17 (RX2)</div>
+                <div class="pin" data-pin="18">18 (TX1)</div>
+                <div class="pin" data-pin="19">19 (RX1)</div>
+                <div class="pin" data-pin="20">SDA</div>
+                <div class="pin" data-pin="21">SCL</div>
+              </div>
+
+              <div class="pin-column">
+                <div class="pin power" data-pin="AREF">AREF</div>
+                <div class="pin ground" data-pin="GND4">GND</div>
+                <div class="pin analog" data-pin="A0">A0</div>
+                <div class="pin analog" data-pin="A1">A1</div>
+                <div class="pin analog" data-pin="A2">A2</div>
+                <div class="pin analog" data-pin="A3">A3</div>
+                <div class="pin analog" data-pin="A4">A4 (SDA)</div>
+                <div class="pin analog" data-pin="A5">A5 (SCL)</div>
+                <div class="pin analog" data-pin="A6">A6</div>
+                <div class="pin analog" data-pin="A7">A7</div>
+                <div class="pin analog" data-pin="A8">A8</div>
+                <div class="pin analog" data-pin="A9">A9</div>
+                <div class="pin analog" data-pin="A10">A10</div>
+                <div class="pin analog" data-pin="A11">A11</div>
+                <div class="pin analog" data-pin="A12">A12</div>
+                <div class="pin analog" data-pin="A13">A13</div>
+                <div class="pin analog" data-pin="A14">A14</div>
+                <div class="pin analog" data-pin="A15">A15</div>
+                <div class="pin digital" data-pin="22">22</div>
+                <div class="pin digital" data-pin="23">23</div>
+                <div class="pin digital" data-pin="24">24</div>
+                <div class="pin digital" data-pin="25">25</div>
+                <div class="pin digital" data-pin="26">26</div>
+                <div class="pin digital" data-pin="27">27</div>
+                <div class="pin digital" data-pin="28">28</div>
+                <div class="pin digital" data-pin="29">29</div>
+                <div class="pin digital" data-pin="30">30</div>
+                <div class="pin digital" data-pin="31">31</div>
+                <div class="pin digital" data-pin="32">32</div>
+                <div class="pin digital" data-pin="33">33</div>
+                <div class="pin digital" data-pin="34">34</div>
+                <div class="pin digital" data-pin="35">35</div>
+                <div class="pin digital" data-pin="36">36</div>
+                <div class="pin digital" data-pin="37">37</div>
+                <div class="pin digital" data-pin="38">38</div>
+                <div class="pin digital" data-pin="39">39</div>
+                <div class="pin digital" data-pin="40">40</div>
+                <div class="pin digital" data-pin="41">41</div>
+                <div class="pin digital" data-pin="42">42</div>
+                <div class="pin digital" data-pin="43">43</div>
+                <div class="pin digital" data-pin="44">44</div>
+                <div class="pin digital" data-pin="45">45</div>
+                <div class="pin digital" data-pin="46">46</div>
+                <div class="pin digital" data-pin="47">47</div>
+                <div class="pin digital" data-pin="48">48</div>
+                <div class="pin digital" data-pin="49">49</div>
+                <div class="pin digital" data-pin="50">50 (MISO)</div>
+                <div class="pin digital" data-pin="51">51 (MOSI)</div>
+                <div class="pin digital" data-pin="52">52 (SCK)</div>
+                <div class="pin digital" data-pin="53">53 (SS)</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="legend">
+            <div class="legend-item">
+              <div
+                class="legend-color"
+                style="background: var(--danger-color)"
+              ></div>
+              <span>Power Pins</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-color" style="background: #1a1a1a"></div>
+              <span>Ground Pins</span>
+            </div>
+            <div class="legend-item">
+              <div
+                class="legend-color"
+                style="background: var(--border-color)"
+              ></div>
+              <span>Digital I/O</span>
+            </div>
+            <div class="legend-item">
+              <div
+                class="legend-color"
+                style="background: var(--accent-color)"
+              ></div>
+              <span>Analog Input</span>
+            </div>
+            <div class="legend-item">
+              <div
+                class="legend-color"
+                style="background: var(--warning-color)"
+              ></div>
+              <span>PWM Output</span>
+            </div>
+            <div class="legend-item">
+              <div
+                class="legend-color"
+                style="background: var(--primary-color)"
+              ></div>
+              <span>Communication</span>
+            </div>
+          </div>
+
+          <div class="search-container">
+            <input
+              type="text"
+              class="search-input"
+              id="searchInput"
+              placeholder="Search pins by number, function, or usage..."
+              onkeyup="searchPins()"
+            />
+          </div>
+
+          <div class="controls">
+            <h3>Quick Filters</h3>
+            <div class="control-buttons">
+              <button class="control-btn" onclick="filterPins('all')">
+                All Pins
+              </button>
+              <button class="control-btn" onclick="filterPins('power')">
+                Power
+              </button>
+              <button class="control-btn" onclick="filterPins('digital')">
+                Digital
+              </button>
+              <button class="control-btn" onclick="filterPins('analog')">
+                Analog
+              </button>
+              <button class="control-btn" onclick="filterPins('pwm')">
+                PWM
+              </button>
+              <button class="control-btn" onclick="filterPins('communication')">
+                Communication
+              </button>
+              <button class="control-btn" onclick="highlightUsed()">
+                Used in OmniTrek
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-panel">
+          <h2>Pin Information</h2>
+
+          <div id="default-info">
+            <p style="color: #7f8c8d; text-align: center; padding: 40px 0">
+              Click on any pin to see detailed information about its
+              functionality, specifications, and usage examples.
+            </p>
+          </div>
+
+          <div id="pin-details" class="pin-details">
+            <div class="detail-row">
+              <span class="detail-label">Pin Number:</span>
+              <span class="detail-value" id="pin-number">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Type:</span>
+              <span class="detail-value" id="pin-type">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Voltage:</span>
+              <span class="detail-value" id="pin-voltage">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Current:</span>
+              <span class="detail-value" id="pin-current">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Special Functions:</span>
+              <span class="detail-value" id="pin-functions">-</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">OmniTrek Usage:</span>
+              <span class="detail-value" id="pin-usage">-</span>
+            </div>
+          </div>
+
+          <div id="usage-examples" class="usage-examples" style="display: none">
+            <h3>Usage Examples</h3>
+            <div id="code-example" class="code-example"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+            // Pin database with detailed information
+            const pinDatabase = {
+              VIN: {
+                type: 'Power Input',
+                voltage: '7-12V recommended',
+                current: 'Up to 1A',
+                functions: 'Main power input',
+                usage: 'Connected to main battery pack',
+                code: `// Power monitoring
+      int readVinVoltage() {
+        int rawValue = analogRead(A0);  // Voltage divider
+        float voltage = rawValue * (25.0 / 1023.0);
+        return voltage;
+      }`,
+              },
+              '5V': {
+                type: 'Power Output',
+                voltage: '5V regulated',
+                current: 'Up to 800mA total',
+                functions: 'Power supply for sensors and modules',
+                usage: 'Powers HC-SR04, MPU-6050, and communication modules',
+                code: `// Power check
+      bool check5VRail() {
+        float voltage = readVinVoltage();
+        return (voltage > 6.5 && voltage < 12.0);
+      }`,
+              },
+              '3V3': {
+                type: 'Power Output',
+                voltage: '3.3V regulated',
+                current: 'Up to 150mA',
+                functions: 'Low voltage power supply',
+                usage: 'ESP32/ESP8266 communication modules',
+                code: `// 3.3V system check
+      bool check3V3Rail() {
+        // Monitor 3.3V rail stability
+        return digitalRead(POWER_GOOD_PIN) == HIGH;
+      }`,
+              },
+              0: {
+                type: 'Digital I/O / Serial',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'RX0 - Hardware Serial 0',
+                usage: 'Serial communication with ESP32',
+                code: `// Serial communication with ESP32
+      void setup() {
+        Serial.begin(9600);    // USB debugging
+        Serial1.begin(115200); // ESP32 communication
+      }
+
+      void sendToESP32(String command) {
+        Serial1.println(command);
+      }`,
+              },
+              1: {
+                type: 'Digital I/O / Serial',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'TX0 - Hardware Serial 0',
+                usage: 'Serial communication with ESP32',
+                code: `// Receive data from ESP32
+      void receiveFromESP32() {
+        if(Serial1.available()) {
+          String data = Serial1.readString();
+          processESP32Data(data);
+        }
+      }`,
+              },
+              2: {
+                type: 'Digital I/O / External Interrupt',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'RX1, INT0',
+                usage: 'Hall sensor input (Front Left motor)',
+                code: `// Hall sensor interrupt
+      void hallSensorInterrupt() {
+        hallCount++;
+        calculateRPM();
+      }
+
+      void setup() {
+        attachInterrupt(digitalPinToInterrupt(2), hallSensorInterrupt, RISING);
+      }`,
+              },
+              3: {
+                type: 'Digital I/O / PWM / Interrupt',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'TX1, PWM, INT1',
+                usage: 'Hall sensor input (Front Right motor)',
+                code: `// PWM output for motor speed
+      void setMotorSpeed(int speed) {
+        analogWrite(3, speed);  // 0-255 PWM
+      }`,
+              },
+              9: {
+                type: 'Digital I/O / PWM',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'PWM output',
+                usage: 'ZS-X11H motor controller PWM (Front Left)',
+                code: `// Motor control PWM
+      void controlFrontLeftMotor(int speed) {
+        analogWrite(9, speed);  // PWM for speed control
+      }`,
+              },
+              10: {
+                type: 'Digital I/O / PWM / SPI',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'PWM, SS',
+                usage: 'ZS-X11H motor controller PWM (Front Right)',
+                code: `// PWM motor control
+      void controlFrontRightMotor(int speed) {
+        analogWrite(10, speed);
+      }`,
+              },
+              A0: {
+                type: 'Analog Input',
+                voltage: '0-5V',
+                current: 'Input only',
+                functions: '10-bit ADC',
+                usage: 'Battery voltage monitoring',
+                code: `// Battery voltage monitoring
+      float readBatteryVoltage() {
+        int rawValue = analogRead(A0);
+        // Voltage divider: 25V max -> 5V ADC
+        float voltage = rawValue * (25.0 / 1023.0);
+        return voltage;
+      }`,
+              },
+              A1: {
+                type: 'Analog Input',
+                voltage: '0-5V',
+                current: 'Input only',
+                functions: '10-bit ADC',
+                usage: 'Current sensor monitoring',
+                code: `// Current sensor reading
+      float readMotorCurrent() {
+        int rawValue = analogRead(A1);
+        // ACS712 current sensor: 185mV/A
+        float current = (rawValue - 512) * 0.0264;
+        return current;
+      }`,
+              },
+              A4: {
+                type: 'Analog Input / I2C',
+                voltage: '0-5V analog, 3.3V I2C',
+                current: 'Input only',
+                functions: 'ADC, SDA (I2C)',
+                usage: 'I2C communication with MPU-6050',
+                code: `// I2C communication
+      #include <Wire.h>
+
+      void setup() {
+        Wire.begin();        // Join I2C bus as master
+        // SDA = A4, SCL = A5
+      }
+
+      void readMPU6050() {
+        Wire.beginTransmission(0x68);  // MPU-6050 address
+        Wire.write(0x3B);              // Starting register
+        Wire.endTransmission(false);
+        Wire.requestFrom(0x68, 14, true);
+        // Read sensor data...
+      }`,
+              },
+              A5: {
+                type: 'Analog Input / I2C',
+                voltage: '0-5V analog, 3.3V I2C',
+                current: 'Input only',
+                functions: 'ADC, SCL (I2C)',
+                usage: 'I2C communication with MPU-6050',
+                code: `// I2C clock line
+      // Used with A4 (SDA) for I2C communication
+      // Clock speed: 100kHz (default) or 400kHz (fast mode)
+      }`,
+              },
+              20: {
+                type: 'Digital I/O / I2C',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'SDA (I2C)',
+                usage: 'Secondary I2C bus for expansion modules',
+                code: `// Secondary I2C bus
+      void setupSecondaryI2C() {
+        // SDA = 20, SCL = 21
+        Wire1.begin();  // Use second I2C interface
+      }`,
+              },
+              21: {
+                type: 'Digital I/O / I2C',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'SCL (I2C)',
+                usage: 'Secondary I2C bus for expansion modules',
+                code: `// I2C clock for secondary bus
+      // Used with pin 20 (SDA1)
+      }`,
+              },
+              22: {
+                type: 'Digital I/O',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'Digital I/O',
+                usage: 'ZS-X11H motor controller direction (Front Left)',
+                code: `// Motor direction control
+      void setMotorDirection(bool forward) {
+        digitalWrite(22, forward ? HIGH : LOW);
+      }`,
+              },
+              23: {
+                type: 'Digital I/O',
+                voltage: '5V logic',
+                current: '40mA max',
+                functions: 'Digital I/O',
+                usage: 'ZS-X11H motor controller direction (Front Right)',
+                code: `// Direction control
+      void setFrontRightDirection(bool forward) {
+        digitalWrite(23, forward ? HIGH : LOW);
+      }`,
+              },
+            };
+
+            // Initialize the interactive pinout
+            document.addEventListener('DOMContentLoaded', function () {
+              initializePins();
+              setupEventListeners();
+            });
+
+            function initializePins() {
+              const pins = document.querySelectorAll('.pin');
+              pins.forEach(pin => {
+                pin.addEventListener('click', handlePinClick);
+                pin.addEventListener('mouseenter', handlePinHover);
+                pin.addEventListener('mouseleave', hideTooltip);
+              });
+            }
+
+            function handlePinClick(event) {
+              const pin = event.target;
+              const pinName = pin.getAttribute('data-pin');
+
+              // Remove previous selection
+              document.querySelectorAll('.pin.selected').forEach(p => {
+                p.classList.remove('selected');
+              });
+
+              // Add selection to clicked pin
+              pin.classList.add('selected');
+
+              // Show pin details
+              showPinDetails(pinName);
+            }
+
+            function handlePinHover(event) {
+              const pin = event.target;
+              const pinName = pin.getAttribute('data-pin');
+              showTooltip(event, pinName);
+            }
+
+            function showTooltip(event, pinName) {
+              const tooltip = document.getElementById('tooltip');
+              const pin = pinDatabase[pinName];
+
+              if (pin) {
+                tooltip.innerHTML = `<strong>${pinName}</strong><br>${pin.type}`;
+                tooltip.style.left = event.pageX + 10 + 'px';
+                tooltip.style.top = event.pageY - 30 + 'px';
+                tooltip.classList.add('visible');
+              }
+            }
+
+            function hideTooltip() {
+              const tooltip = document.getElementById('tooltip');
+              tooltip.classList.remove('visible');
+            }
+
+            // Enhanced search functionality
+            function searchPins() {
+              const searchTerm = document
+                .getElementById('searchInput')
+                .value.toLowerCase();
+              const pins = document.querySelectorAll('.pin');
+
+              pins.forEach(pin => {
+                const pinName = pin.getAttribute('data-pin').toLowerCase();
+                const pinData = pinDatabase[pin.getAttribute('data-pin')];
+
+                let matchesSearch = false;
+
+                // Search by pin name
+                if (pinName.includes(searchTerm)) {
+                  matchesSearch = true;
+                }
+
+                // Search by pin type, functions, or usage
+                if (pinData) {
+                  const searchableText = [
+                    pinData.type,
+                    pinData.functions,
+                    pinData.usage,
+                    pinData.code,
+                  ]
+                    .join(' ')
+                    .toLowerCase();
+
+                  if (searchableText.includes(searchTerm)) {
+                    matchesSearch = true;
+                  }
+                }
+
+                // Apply visual states
+                if (searchTerm === '') {
+                  pin.classList.remove('filtered', 'highlighted');
+                  pin.style.opacity = '1';
+                } else if (matchesSearch) {
+                  pin.classList.remove('filtered');
+                  pin.classList.add('highlighted');
+                  pin.style.opacity = '1';
+                } else {
+                  pin.classList.add('filtered');
+                  pin.classList.remove('highlighted');
+                  pin.style.opacity = '0.3';
+                }
+              });
+            }
+
+            // Enhanced filter function
+            function filterPins(type, event) {
+              const pins = document.querySelectorAll('.pin');
+
+              pins.forEach(pin => {
+                pin.classList.remove('filtered', 'highlighted');
+                pin.style.opacity = '1';
+                pin.style.border = '1px solid var(--border-color)';
+
+                if (type !== 'all') {
+                  if (!pin.classList.contains(type)) {
+                    pin.classList.add('filtered');
+                    pin.style.opacity = '0.3';
+                  }
+                }
+              });
+
+              // Update button states
+              document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+              });
+              event.target.classList.add('active');
+
+              // Clear search when filtering
+              document.getElementById('searchInput').value = '';
+            }
+
+            function highlightUsed(event) {
+              const usedPins = [
+                '0',
+                '1',
+                '2',
+                '3',
+                '9',
+                '10',
+                'A0',
+                'A1',
+                'A4',
+                'A5',
+                '20',
+                '21',
+                '22',
+                '23',
+              ];
+              const pins = document.querySelectorAll('.pin');
+
+              pins.forEach(pin => {
+                const pinName = pin.getAttribute('data-pin');
+                pin.classList.remove('filtered', 'highlighted');
+
+                if (usedPins.includes(pinName)) {
+                  pin.style.opacity = '1';
+                  pin.style.border = '2px solid var(--primary-color)';
+                  pin.classList.add('highlighted');
+                } else {
+                  pin.style.opacity = '0.2';
+                  pin.style.border = '1px solid var(--border-color)';
+                  pin.classList.add('filtered');
+                }
+              });
+
+              // Update button state
+              document.querySelectorAll('.control-btn').forEach(btn => {
+                btn.classList.remove('active');
+              });
+              event.target.classList.add('active');
+
+              // Clear search when highlighting
+              document.getElementById('searchInput').value = '';
+            }
+
+            // Enhanced code syntax highlighting
+            function highlightCode(code) {
+              return code
+                .replace(
+                  /\b(void|int|float|bool|const|static|return|if|else|for|while|do|switch|case|break|continue|include|define)\b/g,
+                  '<span class="keyword">$1</span>'
+                )
+                .replace(
+                  /\b(setup|loop|digitalRead|digitalWrite|analogRead|analogWrite|Serial|begin|println|readString|available|attachInterrupt|digitalPinToInterrupt|Wire|beginTransmission|write|endTransmission|requestFrom)\b/g,
+                  '<span class="function">$1</span>'
+                )
+                .replace(/(\/\/.*$)/gm, '<span class="comment">$1</span>')
+                .replace(/\b(\d+)\b/g, '<span class="number">$1</span>');
+            }
+
+            function showPinDetails(pinName) {
+              const pin = pinDatabase[pinName];
+
+              if (!pin) {
+                document.getElementById('default-info').style.display = 'block';
+                document.getElementById('pin-details').classList.remove('active');
+                document.getElementById('usage-examples').style.display = 'none';
+                return;
+              }
+
+              document.getElementById('default-info').style.display = 'none';
+              document.getElementById('pin-details').classList.add('active');
+              document.getElementById('usage-examples').style.display = 'block';
+
+              document.getElementById('pin-number').textContent = pinName;
+              document.getElementById('pin-type').textContent = pin.type;
+              document.getElementById('pin-voltage').textContent = pin.voltage;
+              document.getElementById('pin-current').textContent = pin.current;
+              document.getElementById('pin-functions').textContent = pin.functions;
+              document.getElementById('pin-usage').textContent = pin.usage;
+
+              // Apply syntax highlighting to code example
+              const highlightedCode = highlightCode(pin.code);
+              document.getElementById('code-example').innerHTML = highlightedCode;
+            }
+
+            function setupEventListeners() {
+              // Add keyboard navigation
+              document.addEventListener('keydown', function (event) {
+                const pins = Array.from(document.querySelectorAll('.pin'));
+                const selectedPin = document.querySelector('.pin.selected');
+
+                if (selectedPin) {
+                  const currentIndex = pins.indexOf(selectedPin);
+                  let newIndex = currentIndex;
+
+                  switch (event.key) {
+                    case 'ArrowUp':
+                      newIndex = Math.max(0, currentIndex - 1);
+                      break;
+                    case 'ArrowDown':
+                      newIndex = Math.min(pins.length - 1, currentIndex + 1);
+                      break;
+                    case 'Escape':
+                      document.querySelectorAll('.pin.selected').forEach(p => {
+                        p.classList.remove('selected');
+                      });
+                      document.getElementById('default-info').style.display = 'block';
+                      document
+                        .getElementById('pin-details')
+                        .classList.remove('active');
+                      document.getElementById('usage-examples').style.display =
+                        'none';
+                      return;
+                  }
+                  }
+
+                  if (newIndex !== currentIndex) {
+                    pins[newIndex].click();
+                  }
+                }
+              });
+            }
+    </script>
+  </body>
+</html>

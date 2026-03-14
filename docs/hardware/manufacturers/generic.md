@@ -1,0 +1,26 @@
+# Manufacturer: Generic
+
+- [1-Digit 7-Segment Display 5161AS (INV-1-DIGIT--MGN1IR89)](../items/INV-1-DIGIT--MGN1IR89_1-digit-7-segment-display-5161as.md) — 5161AS
+- [2.8" TFT LCD Touch Shield (ILI9341?) (INV-2-8-TFT--MGMY8J5T)](../items/INV-2-8-TFT--MGMY8J5T_2-8-tft-lcd-touch-shield-ili9341.md) — 2.8 TFT Shield
+- [28BYJ-48 Stepper Motor (5V) (INV-28BYJ-48-MGN1IEYN)](../items/INV-28BYJ-48-MGN1IEYN_28byj-48-stepper-motor-5v.md) — 28BYJ-48
+- [4-Digit 7-Segment Display HS420561K-32 (INV-4-DIGIT--MGN1IOS4)](../items/INV-4-DIGIT--MGN1IOS4_4-digit-7-segment-display-hs420561k-32.md) — HS420561K-32
+- [Analog Joystick Module (XY + Button) (INV-ANALOG-J-MGN1XA66)](../items/INV-ANALOG-J-MGN1XA66_analog-joystick-module-xy-button.md) — Analog Joystick
+- [F130S-2080-37 Small DC Motor (INV-F130S-20-MGN1ITOR)](../items/INV-F130S-20-MGN1ITOR_f130s-2080-37-small-dc-motor.md) — F130S-2080-37
+- [GY-521 MPU6050 6DOF IMU (INV-GY-521-M-MGN2G8NR)](../items/INV-GY-521-M-MGN2G8NR_gy-521-mpu6050-6dof-imu.md) — GY-521
+- [HC-SR04 Ultrasonic Distance Sensor (INV-HC-SR04--MGMY8LWY)](../items/INV-HC-SR04--MGMY8LWY_hc-sr04-ultrasonic-distance-sensor.md) — HC-SR04
+- [HC-SR501 PIR Motion Sensor (INV-HC-SR501-MGN1IHFT)](../items/INV-HC-SR501-MGN1IHFT_hc-sr501-pir-motion-sensor.md) — HC-SR501
+- [Infrared Remote Control (TV-style, 38kHz) (INV-INFRARED-MGN1X7OT)](../items/INV-INFRARED-MGN1X7OT_infrared-remote-control-tv-style-38khz.md) — IR Remote
+- [IR Receiver Module (38kHz) (INV-IR-RECEI-MGN2G590)](../items/INV-IR-RECEI-MGN2G590_ir-receiver-module-38khz.md) — IR Receiver
+- [IR-01 Infrared Receiver Module (3-pin: G, V+, S) (INV-IR-01-IN-MGN2GBNS)](../items/INV-IR-01-IN-MGN2GBNS_ir-01-infrared-receiver-module-3-pin-g-v-s.md) — IR-01
+- [KY-040 Rotary Encoder Module (INV-KY-040-R-MGN1IJVS)](../items/INV-KY-040-R-MGN1IJVS_ky-040-rotary-encoder-module.md) — KY-040
+- [L293D Dual H-Bridge Motor Driver IC (INV-L293D-DU-MGN1I9ZH)](../items/INV-L293D-DU-MGN1I9ZH_l293d-dual-h-bridge-motor-driver-ic.md) — L293D
+- [LCD1602 (16x2) Character Display Module (HD44780) (INV-LCD1602--MGN1X0QP)](../items/INV-LCD1602--MGN1X0QP_lcd1602-16x2-character-display-module-hd44780.md) — LCD1602
+- [MAX7219 LED Driver Module (INV-MAX7219--MGN1IMA4)](../items/INV-MAX7219--MGN1IMA4_max7219-led-driver-module.md) — MAX7219 Module
+- [Membrane Switch Module (INV-MEMBRANE-MGN1X31Q)](../items/INV-MEMBRANE-MGN1X31Q_membrane-switch-module.md) — Membrane Switch
+- [Potentiometer 10K (Rotary) (INV-POTENTIO-MGN1WW1G)](../items/INV-POTENTIO-MGN1WW1G_potentiometer-10k-rotary.md) — 10K Potentiometer
+- [RC522 13.56MHz RFID Module (MFRC522) (INV-RC522-13-MGN1X5CV)](../items/INV-RC522-13-MGN1X5CV_rc522-13-56mhz-rfid-module-mfrc522.md) — RC522
+- [Solderless Breadboard (Full-size) (INV-SOLDERLE-MGN44YZ9)](../items/INV-SOLDERLE-MGN44YZ9_solderless-breadboard-full-size.md) — MB-102?
+- [Sound Sensor Module (LM393) (INV-SOUND-SE-MGN2FX56)](../items/INV-SOUND-SE-MGN2FX56_sound-sensor-module-lm393.md) — LM393 Sound Sensor
+- [ULN2003APG Stepper Driver Board (INV-ULN2003A-MGN1ICGG)](../items/INV-ULN2003A-MGN1ICGG_uln2003apg-stepper-driver-board.md) — ULN2003APG Driver Board
+- [Water Level Detection Sensor Module (Resistive) (INV-WATER-LE-MGN2G1K1)](../items/INV-WATER-LE-MGN2G1K1_water-level-detection-sensor-module-resistive.md) — Water Level Module
+- [ZS-042 DS3231 RTC Module (aka ZS-O42) (INV-ZS-042-D-MGN0R5OP)](../items/INV-ZS-042-D-MGN0R5OP_zs-042-ds3231-rtc-module-aka-zs-o42.md) — ZS-042

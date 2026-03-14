@@ -1,0 +1,3 @@
+# Manufacturer: Songle
+
+- [Songle SRD-05VDC-SL-C Relay (5V) (INV-SONGLE-S-MGMZKTZD)](../items/INV-SONGLE-S-MGMZKTZD_songle-srd-05vdc-sl-c-relay-5v.md) — SRD-05VDC-SL-C

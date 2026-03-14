@@ -1,0 +1,616 @@
+{
+  "metadata": {
+    "version": "1.0.0",
+    "lastUpdated": "2025-11-03",
+    "description": "Unified component database for OmniTrek Rover Project",
+    "totalComponents": 10,
+    "categories": [
+      "microcontrollers",
+      "motor-drivers",
+      "sensors",
+      "communication",
+      "power",
+      "displays",
+      "input",
+      "prototyping"
+    ]
+  },
+  "components": [
+    {
+      "id": "arduino-mega-2560",
+      "name": "Arduino Mega 2560",
+      "category": "microcontrollers",
+      "subcategory": "development-board",
+      "quantity": 1,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Designated as main controller in hardware stack - verified operational"
+      },
+      "specifications": {
+        "microcontroller": "ATmega2560",
+        "clockSpeed": "16 MHz",
+        "memory": {
+          "flash": "256 KB",
+          "sram": "8 KB",
+          "eeprom": "4 KB"
+        },
+        "io": {
+          "digital": 54,
+          "pwm": 15,
+          "analog": 16
+        },
+        "voltage": {
+          "operating": "5V",
+          "input": "7-12V recommended"
+        },
+        "dimensions": "101.52 x 53.3 mm",
+        "weight": "37 g",
+        "thermal": {
+          "operatingTemp": "-40 to 85°C",
+          "storageTemp": "-55 to 125°C",
+          "thermalDissipation": "Passive cooling sufficient",
+          "maxJunctionTemp": "150°C"
+        },
+        "environmental": {
+          "humidity": "10% to 90% RH (non-condensing)",
+          "altitude": "Sea level to 2000m",
+          "vibration": "10-2000Hz, 2.5g",
+          "shock": "50g, 11ms"
+        },
+        "power": {
+          "consumption": {
+            "idle": "0.2W",
+            "active": "0.5W",
+            "max": "1W at full load"
+          },
+          "efficiency": "85% typical",
+          "powerSupply": "7-12V DC or 5V USB"
+        }
+      },
+      "compatibility": {
+        "platforms": ["Arduino", "PlatformIO"],
+        "shields": ["Arduino Mega shields"],
+        "programming": ["Arduino IDE", "PlatformIO", "AVR-GCC"]
+      },
+      "project": {
+        "role": "Primary controller for sensor integration and motor control",
+        "criticality": "Critical - Single point of failure",
+        "backupRequired": true
+      },
+      "documentation": {
+        "datasheet": "https://www.arduino.cc/en/uploads/Main/arduino-mega2560-schematic.pdf",
+        "pinout": "https://www.arduino.cc/en/Hacking/PinMapping2560",
+        "examples": ["basic-io", "sensor-integration", "motor-control"]
+      },
+      "procurement": {
+        "manufacturer": "Arduino",
+        "partNumber": "A000067",
+        "supplier": ["Arduino Store", "Digi-Key", "Mouser"],
+        "estimatedCost": "$35-45",
+        "availability": "Common"
+      }
+    },
+    {
+      "id": "osepp-uno-r3-plus",
+      "name": "OSEPP Uno R3 Plus",
+      "category": "microcontrollers",
+      "subcategory": "development-board",
+      "quantity": 1,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Tested working with basic sketches - verified operational"
+      },
+      "specifications": {
+        "microcontroller": "ATmega328P",
+        "clockSpeed": "16 MHz",
+        "memory": {
+          "flash": "32 KB",
+          "sram": "2 KB",
+          "eeprom": "1 KB"
+        },
+        "io": {
+          "digital": 14,
+          "pwm": 6,
+          "analog": 6
+        },
+        "voltage": {
+          "operating": "5V",
+          "input": "7-12V recommended"
+        },
+        "dimensions": "68.6 x 53.4 mm",
+        "weight": "25 g",
+        "thermal": {
+          "operatingTemp": "-40 to 85°C",
+          "storageTemp": "-55 to 125°C",
+          "thermalDissipation": "Passive cooling sufficient",
+          "maxJunctionTemp": "150°C"
+        },
+        "environmental": {
+          "humidity": "10% to 90% RH (non-condensing)",
+          "altitude": "Sea level to 2000m",
+          "vibration": "10-2000Hz, 2.5g",
+          "shock": "50g, 11ms"
+        },
+        "power": {
+          "consumption": {
+            "idle": "0.1W",
+            "active": "0.3W",
+            "max": "0.8W at full load"
+          },
+          "efficiency": "85% typical",
+          "powerSupply": "7-12V DC or 5V USB"
+        }
+      },
+      "compatibility": {
+        "platforms": ["Arduino", "PlatformIO"],
+        "shields": ["Arduino Uno shields"],
+        "programming": ["Arduino IDE", "PlatformIO", "AVR-GCC"]
+      },
+      "project": {
+        "role": "Secondary controller for specific tasks",
+        "criticality": "Medium",
+        "backupRequired": false
+      },
+      "documentation": {
+        "datasheet": "https://osepp.com/products/boards/osepp-uno-r3-plus/",
+        "pinout": "Standard Arduino Uno pinout",
+        "examples": ["basic-io", "sensor-projects"]
+      },
+      "procurement": {
+        "manufacturer": "OSEPP",
+        "partNumber": "OSEPP-UNO-R3",
+        "supplier": ["OSEPP", "Amazon"],
+        "estimatedCost": "$25-35",
+        "availability": "Moderate"
+      }
+    },
+    {
+      "id": "arduino-uno-r3",
+      "name": "Arduino Uno R3",
+      "category": "microcontrollers",
+      "subcategory": "development-board",
+      "quantity": 2,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Recently verified - both boards functional"
+      },
+      "specifications": {
+        "microcontroller": "ATmega328P",
+        "clockSpeed": "16 MHz",
+        "memory": {
+          "flash": "32 KB",
+          "sram": "2 KB",
+          "eeprom": "1 KB"
+        },
+        "io": {
+          "digital": 14,
+          "pwm": 6,
+          "analog": 6
+        },
+        "voltage": {
+          "operating": "5V",
+          "input": "7-12V recommended"
+        },
+        "dimensions": "68.6 x 53.4 mm",
+        "weight": "25 g"
+      },
+      "compatibility": {
+        "platforms": ["Arduino", "PlatformIO"],
+        "shields": ["Arduino Uno shields"],
+        "programming": ["Arduino IDE", "PlatformIO", "AVR-GCC"]
+      },
+      "project": {
+        "role": "Backup/secondary controllers",
+        "criticality": "Medium",
+        "backupRequired": false
+      },
+      "documentation": {
+        "datasheet": "https://www.arduino.cc/en/uploads/Main/arduino-uno-schematic.pdf",
+        "pinout": "https://www.arduino.cc/en/Hacking/PinMapping",
+        "examples": ["basic-io", "prototyping"]
+      },
+      "procurement": {
+        "manufacturer": "Arduino",
+        "partNumber": "A000066",
+        "supplier": ["Arduino Store", "Digi-Key", "Mouser", "Amazon"],
+        "estimatedCost": "$22-30",
+        "availability": "Very Common"
+      }
+    },
+    {
+      "id": "nodemcu-esp32s-v1.1",
+      "name": "NodeMCU ESP-32S V1.1",
+      "category": "microcontrollers",
+      "subcategory": "development-board",
+      "quantity": 1,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Stable operation verified - WiFi and Bluetooth functional"
+      },
+      "specifications": {
+        "microcontroller": "ESP32-S2",
+        "clockSpeed": "240 MHz (dual-core)",
+        "memory": {
+          "flash": "4 MB",
+          "sram": "520 KB"
+        },
+        "io": {
+          "digital": 48,
+          "pwm": 16,
+          "analog": 18,
+          "dac": 2
+        },
+        "voltage": {
+          "operating": "3.3V",
+          "input": "5V via USB"
+        },
+        "connectivity": {
+          "wifi": "802.11 b/g/n",
+          "bluetooth": "5.0 + BLE"
+        },
+        "dimensions": "48.26 x 25.5 mm",
+        "weight": "10 g"
+      },
+      "compatibility": {
+        "platforms": ["Arduino IDE", "ESP-IDF", "PlatformIO"],
+        "shields": ["Custom only"],
+        "programming": ["Arduino Core", "ESP-IDF", "MicroPython"]
+      },
+      "project": {
+        "role": "WiFi communication and IoT connectivity",
+        "criticality": "High",
+        "backupRequired": true
+      },
+      "documentation": {
+        "datasheet": "https://www.espressif.com/sites/default/files/documentation/esp32-s2_datasheet_en.pdf",
+        "pinout": "https://docs.espressif.com/projects/esp-idf/en/latest/esp32s2/hw-reference/esp32s2/user-guide.html",
+        "examples": ["wifi-server", "bluetooth-client", "sensor-web-interface"]
+      },
+      "procurement": {
+        "manufacturer": "Espressif",
+        "partNumber": "ESP32-S2",
+        "supplier": ["Amazon", "AliExpress", "Digi-Key"],
+        "estimatedCost": "$15-25",
+        "availability": "Common"
+      }
+    },
+    {
+      "id": "nodemcu-amica-esp8266",
+      "name": "NodeMCU Amica (ESP8266)",
+      "category": "microcontrollers",
+      "subcategory": "development-board",
+      "quantity": 2,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Both boards verified operational - WiFi connectivity confirmed"
+      },
+      "specifications": {
+        "microcontroller": "ESP8266",
+        "clockSpeed": "80/160 MHz",
+        "memory": {
+          "flash": "4 MB",
+          "sram": "160 KB"
+        },
+        "io": {
+          "digital": 16,
+          "pwm": 16,
+          "analog": 1
+        },
+        "voltage": {
+          "operating": "3.3V",
+          "input": "5V via USB"
+        },
+        "connectivity": {
+          "wifi": "802.11 b/g/n"
+        },
+        "dimensions": "48.26 x 25.5 mm",
+        "weight": "8 g"
+      },
+      "compatibility": {
+        "platforms": ["Arduino IDE", "ESP-IDF", "PlatformIO", "MicroPython"],
+        "shields": ["Custom only"],
+        "programming": ["Arduino Core", "MicroPython", "NodeMCU"]
+      },
+      "project": {
+        "role": "WiFi communication modules",
+        "criticality": "Medium",
+        "backupRequired": false
+      },
+      "documentation": {
+        "datasheet": "https://www.espressif.com/sites/default/files/documentation/0a-esp8266ex_datasheet_en.pdf",
+        "pinout": "https://nodemcu.readthedocs.io/en/dev/en/modules/",
+        "examples": ["wifi-client", "web-server", "mqtt-publish"]
+      },
+      "procurement": {
+        "manufacturer": "Espressif",
+        "partNumber": "ESP-12E",
+        "supplier": ["Amazon", "AliExpress", "Banggood"],
+        "estimatedCost": "$8-15",
+        "availability": "Very Common"
+      }
+    },
+    {
+      "id": "rpi-3-model-b-plus",
+      "name": "Raspberry Pi 3 Model B+",
+      "category": "microcontrollers",
+      "subcategory": "single-board-computer",
+      "quantity": 1,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Fully operational with heatsink - web server tested"
+      },
+      "specifications": {
+        "soc": "Broadcom BCM2837B0",
+        "cpu": "1.4GHz quad-core Cortex-A53 (64-bit)",
+        "gpu": "Broadcom VideoCore IV",
+        "memory": "1GB LPDDR2",
+        "io": {
+          "gpio": 40,
+          "usb": 4,
+          "ethernet": 1
+        },
+        "voltage": {
+          "operating": "5V",
+          "current": "2.5A recommended"
+        },
+        "connectivity": {
+          "wifi": "802.11 b/g/n/ac (2.4/5GHz)",
+          "bluetooth": "4.2 + BLE",
+          "ethernet": "Gigabit (USB-shared)"
+        },
+        "dimensions": "85 x 56 mm",
+        "weight": "45 g"
+      },
+      "compatibility": {
+        "platforms": ["Raspberry Pi OS", "Ubuntu", "Windows IoT"],
+        "programming": ["Python", "C++", "Node.js", "Java"],
+        "hats": ["Standard Raspberry Pi HATs"]
+      },
+      "project": {
+        "role": "High-level processing and web interface hosting",
+        "criticality": "High",
+        "backupRequired": true
+      },
+      "documentation": {
+        "datasheet": "https://www.raspberrypi.org/documentation/hardware/raspberrypi/bcm2837/README.md",
+        "pinout": "https://www.raspberrypi.org/documentation/usage/gpio/",
+        "examples": ["web-server", "computer-vision", "data-logging"]
+      },
+      "procurement": {
+        "manufacturer": "Raspberry Pi Foundation",
+        "partNumber": "RPI3-MODBP-1GB",
+        "supplier": ["Raspberry Pi Store", "Adafruit", "Digi-Key"],
+        "estimatedCost": "$35-45",
+        "availability": "Common"
+      }
+    },
+    {
+      "id": "riorand-zsx11h",
+      "name": "RioRand ZS-X11H Motor Controller",
+      "category": "motor-drivers",
+      "subcategory": "bldc-controller",
+      "quantity": 4,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Primary motor controller verified - all 4 units operational"
+      },
+      "specifications": {
+        "motorType": "3-phase BLDC with Hall sensors",
+        "voltage": {
+          "input": "6-60V DC",
+          "recommended": "36V"
+        },
+        "power": {
+          "rated": "350W",
+          "peak": "500W",
+          "current": "16A rated, 30A peak"
+        },
+        "control": {
+          "interface": "Hall sensor feedback required",
+          "pwm": "5V logic level",
+          "direction": "Digital control"
+        },
+        "dimensions": "110 x 80 x 35 mm",
+        "weight": "200 g"
+      },
+      "compatibility": {
+        "motors": ["Brushless hub motors with Hall sensors"],
+        "controllers": ["Arduino", "ESP32", "Raspberry Pi"],
+        "programming": ["Arduino library available"]
+      },
+      "project": {
+        "role": "Primary drive motor control (4x for rover wheels)",
+        "criticality": "Critical - Mobility depends on these",
+        "backupRequired": false,
+        "redundancy": "4 units provide full redundancy"
+      },
+      "documentation": {
+        "datasheet": "Custom controller - limited documentation",
+        "pinout": "See wiring documentation",
+        "examples": ["hub-motor-control", "rover-locomotion"]
+      },
+      "procurement": {
+        "manufacturer": "RioRand",
+        "partNumber": "ZS-X11H",
+        "supplier": ["Amazon", "AliExpress"],
+        "estimatedCost": "$25-40",
+        "availability": "Moderate"
+      }
+    },
+    {
+      "id": "l298n-dual-h-bridge",
+      "name": "L298N Dual H-Bridge DC Motor Driver",
+      "category": "motor-drivers",
+      "subcategory": "dc-motor-driver",
+      "quantity": 2,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Verified with motor control testing - both units functional"
+      },
+      "specifications": {
+        "driverIC": "L298N",
+        "motorType": "DC motors or stepper motors",
+        "voltage": {
+          "motor": "5V-35V",
+          "logic": "5V"
+        },
+        "current": {
+          "continuous": "2A per channel",
+          "peak": "3A per channel"
+        },
+        "control": {
+          "interface": "PWM speed control, digital direction",
+          "channels": 2
+        },
+        "dimensions": "43 x 43 x 26 mm",
+        "weight": "30 g"
+      },
+      "compatibility": {
+        "motors": ["DC motors", "1x stepper motor"],
+        "controllers": ["Arduino", "ESP32", "Raspberry Pi"],
+        "programming": ["Standard motor driver libraries"]
+      },
+      "project": {
+        "role": "Auxiliary motor control (arms, grippers, etc.)",
+        "criticality": "Medium",
+        "backupRequired": false
+      },
+      "documentation": {
+        "datasheet": "https://www.st.com/resource/en/datasheet/l298.pdf",
+        "pinout": "Standard L298N pinout",
+        "examples": ["dc-motor-control", "stepper-control"]
+      },
+      "procurement": {
+        "manufacturer": "STMicroelectronics",
+        "partNumber": "L298N",
+        "supplier": ["Amazon", "Adafruit", "Digi-Key"],
+        "estimatedCost": "$5-10",
+        "availability": "Very Common"
+      }
+    },
+    {
+      "id": "mpu-6050",
+      "name": "MPU-6050 Gyro/Accel Module",
+      "category": "sensors",
+      "subcategory": "motion-sensor",
+      "quantity": 1,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "6-axis motion tracking verified - I2C communication stable"
+      },
+      "specifications": {
+        "sensors": ["3-axis accelerometer", "3-axis gyroscope"],
+        "accelerometer": {
+          "range": "±2, ±4, ±8, ±16 g",
+          "resolution": "16-bit"
+        },
+        "gyroscope": {
+          "range": "±250, ±500, ±1000, ±2000 °/s",
+          "resolution": "16-bit"
+        },
+        "interface": "I2C",
+        "voltage": "3.3V-5V",
+        "dimensions": "20 x 15 mm",
+        "weight": "2 g"
+      },
+      "compatibility": {
+        "controllers": ["Arduino", "ESP32", "Raspberry Pi"],
+        "libraries": ["Adafruit MPU6050", "I2Cdev"],
+        "protocols": ["I2C"]
+      },
+      "project": {
+        "role": "Orientation and motion sensing for rover stability",
+        "criticality": "High",
+        "backupRequired": true
+      },
+      "documentation": {
+        "datasheet": "https://www.invensense.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf",
+        "pinout": "VCC, GND, SCL, SDA, XCL, XDA, AD0, INT",
+        "examples": ["orientation-detection", "motion-tracking", "balance-control"]
+      },
+      "procurement": {
+        "manufacturer": "InvenSense",
+        "partNumber": "MPU-6050",
+        "supplier": ["Amazon", "Adafruit", "SparkFun"],
+        "estimatedCost": "$3-8",
+        "availability": "Very Common"
+      }
+    },
+    {
+      "id": "hc-sr04",
+      "name": "HC-SR04 Ultrasonic Sensor",
+      "category": "sensors",
+      "subcategory": "distance-sensor",
+      "quantity": 1,
+      "status": {
+        "operational": true,
+        "lastTested": "2025-11-03",
+        "testResults": "Pass",
+        "notes": "Distance measurement verified - range 2cm-400cm confirmed"
+      },
+      "specifications": {
+        "type": "Ultrasonic time-of-flight",
+        "range": "2cm - 400cm",
+        "resolution": "0.3cm",
+        "frequency": "40 kHz",
+        "interface": "2-wire (Trigger, Echo)",
+        "voltage": "5V",
+        "dimensions": "45 x 20 x 15 mm",
+        "weight": "8 g"
+      },
+      "compatibility": {
+        "controllers": ["Arduino", "ESP32", "Raspberry Pi"],
+        "libraries": ["NewPing", "Ultrasonic"],
+        "protocols": ["Digital GPIO"]
+      },
+      "project": {
+        "role": "Short-range obstacle detection and distance measurement",
+        "criticality": "Medium",
+        "backupRequired": false
+      },
+      "documentation": {
+        "datasheet": "https://cdn.sparkfun.com/datasheets/Sensors/Proximity/HCSR04.pdf",
+        "pinout": "VCC, Trig, Echo, GND",
+        "examples": ["obstacle-avoidance", "distance-measurement", "parking-assist"]
+      },
+      "procurement": {
+        "manufacturer": "Various",
+        "partNumber": "HC-SR04",
+        "supplier": ["Amazon", "Adafruit", "SparkFun", "AliExpress"],
+        "estimatedCost": "$2-5",
+        "availability": "Very Common"
+      }
+    }
+  ],
+  "statistics": {
+    "totalComponents": 10,
+    "operational": 10,
+    "needsTesting": 0,
+    "critical": 5,
+    "categories": {
+      "microcontrollers": 6,
+      "motor-drivers": 2,
+      "sensors": 2
+    },
+    "totalValue": "$200-350",
+    "lastInventoryUpdate": "2025-11-03"
+  }
+}
