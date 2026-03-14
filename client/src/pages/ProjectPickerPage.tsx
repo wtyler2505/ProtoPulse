@@ -17,6 +17,8 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
+import { RecentProjectsManager } from '@/lib/recent-projects';
+import { RecentProjectsList } from '@/components/layout/RecentProjectsList';
 import type { Project } from '@shared/schema';
 
 const LAST_PROJECT_KEY = 'protopulse-last-project';

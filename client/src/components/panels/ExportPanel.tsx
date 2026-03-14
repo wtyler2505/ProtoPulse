@@ -294,6 +294,10 @@ function ExportPanel() {
   const pendingImportDesignRef = useRef<ImportedDesign | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // -- Import warnings state --
+  const [importWarnings, setImportWarnings] = useState<ImportWarning[]>([]);
+  const [importWarningsFileName, setImportWarningsFileName] = useState('');
+
   // Build export validation data from available context
   const exportData: ProjectExportData = useMemo(() => ({
     projectName,
