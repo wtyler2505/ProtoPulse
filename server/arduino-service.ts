@@ -79,7 +79,7 @@ export class ArduinoService {
       for (const entry of entries) {
         const relPath = join(relative, entry.name);
         const fullPath = join(dir, entry.name);
-        
+
         if (entry.isDirectory()) {
           await scan(fullPath, relPath);
         } else {
@@ -261,7 +261,7 @@ export class ArduinoService {
    * Analyzes project circuit data to build hardware-accurate boilerplate.
    */
   async generateSketch(projectId: number, intent: string): Promise<string> {
-    const [nodes, edges, bom, parts] = await Promise.all([
+    const [nodes, _edges, _bom, _parts] = await Promise.all([
       this.storage.getNodes(projectId),
       this.storage.getEdges(projectId),
       this.storage.getBomItems(projectId),
@@ -271,18 +271,18 @@ export class ArduinoService {
     // Simple template logic
     const mcuNode = nodes.find(n => n.nodeType === 'mcu');
     const boardLabel = mcuNode?.label || 'Arduino Uno';
-    
+
     let code = `/**\n * ProtoPulse Generated Sketch\n * Project ID: ${projectId}\n * Intent: ${intent}\n * Target: ${boardLabel}\n */\n\n`;
-    
+
     code += `void setup() {\n  Serial.begin(115200);\n  while(!Serial); // Wait for terminal\n  Serial.println("System Initialized");\n`;
-    
+
     // Add pin assignments from edges/nets if possible
     nodes.filter(n => n.nodeType !== 'mcu').forEach(node => {
       code += `  // Setup for ${node.label} (${node.nodeType})\n`;
     });
 
     code += `}\n\nvoid loop() {\n  // Implement logic for: ${intent}\n  delay(1000);\n}\n`;
-    
+
     return code;
   }
 
@@ -330,9 +330,9 @@ export class ArduinoService {
 
     // Arduino CLI puts build artifacts in a temp directory or alongside the sketch.
     // The args JSONB contains the compile request body (fqbn, sketchPath, etc.)
-    const args = job.args as Record<string, unknown> | null;
-    const sketchPath = (args?.sketchPath ?? '.') as string;
-    const fqbn = (args?.fqbn ?? '') as string;
+    const jobArgs = job.args as Record<string, unknown> | null;
+    const sketchPath = (jobArgs?.sketchPath ?? '.') as string;
+    const fqbn = (jobArgs?.fqbn ?? '') as string;
 
     // Arduino CLI default build output: {sketchDir}/build/{fqbn-with-dots-replaced}/
     const fqbnDir = fqbn.replace(/:/g, '.');
@@ -373,7 +373,7 @@ export class ArduinoService {
    * Execute an Arduino CLI command as a job.
    * Streams logs to the database record.
    */
-  async runJob(jobId: number, command: string, args: string[]) {
+  async runJob(jobId: number, _command: string, args: string[]) {
     const job = await this.storage.getArduinoJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found`);
 
@@ -389,7 +389,7 @@ export class ArduinoService {
 
     let logBuffer = '';
 
-    proc.stdout.on('data', (data) => {
+    proc.stdout.on('data', (data: Buffer) => {
       const chunk = data.toString();
       logBuffer += chunk;
       // Periodically flush logs to DB (for real streaming we'd use SSE/WS)
@@ -398,11 +398,11 @@ export class ArduinoService {
       }
     });
 
-    proc.stderr.on('data', (data) => {
+    proc.stderr.on('data', (data: Buffer) => {
       logBuffer += `ERROR: ${data.toString()}`;
     });
 
-    return new Promise<{ exitCode: number }>((resolve, reject) => {
+    return new Promise<{ exitCode: number }>((promiseResolve, promiseReject) => {
       proc.on('close', async (code, signal) => {
         this.runningProcesses.delete(jobId);
 
@@ -415,7 +415,7 @@ export class ArduinoService {
             log: logBuffer + '\n--- Job cancelled by user ---',
             summary: 'Cancelled by user',
           });
-          resolve({ exitCode: code ?? -1 });
+          promiseResolve({ exitCode: code ?? -1 });
           return;
         }
 
@@ -427,7 +427,7 @@ export class ArduinoService {
           log: logBuffer,
           summary: code === 0 ? 'Operation successful' : 'Operation failed',
         });
-        resolve({ exitCode: code || 0 });
+        promiseResolve({ exitCode: code || 0 });
       });
 
       proc.on('error', async (err) => {
@@ -439,7 +439,7 @@ export class ArduinoService {
           summary: err.message,
           log: logBuffer + `\nCRITICAL ERROR: ${err.message}`,
         });
-        reject(err);
+        promiseReject(err);
       });
     });
   }

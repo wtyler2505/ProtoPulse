@@ -6,6 +6,7 @@ import { useCircuitDesigns, useCircuitInstances } from '@/lib/circuit-editor/hoo
 import { cn } from '@/lib/utils';
 import type { CircuitDesignRow } from '@shared/schema';
 import SimulationScenarioPanel from '@/components/circuit-editor/SimulationScenarioPanel';
+import SensorSliderPanel from '@/components/simulation/SensorSliderPanel';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import type { WaveformTrace, PlotType } from './WaveformViewer';
 import {
@@ -1503,6 +1504,16 @@ export default function SimulationPanel() {
               onLoadConfig={handleLoadPreset}
             />
           </CollapsibleSection>
+
+          {/* ------- Sensor Environmental Inputs (BL-0622) ------- */}
+          {circuitInstances && circuitInstances.length > 0 && isLive && (
+            <SensorSliderPanel
+              instances={circuitInstances.map((inst) => ({
+                referenceDesignator: inst.referenceDesignator,
+                properties: inst.properties as Record<string, unknown> | null,
+              }))}
+            />
+          )}
         </div>
       </div>
 
