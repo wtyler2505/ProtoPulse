@@ -255,7 +255,7 @@ function diffSection<T>(
 // Field helpers
 // ---------------------------------------------------------------------------
 
-function extractFields<T extends Record<string, unknown>>(
+function extractFields<T>(
   item: T,
   trackedFields: TrackedField<T>[],
 ): Record<string, string | number | null> {
