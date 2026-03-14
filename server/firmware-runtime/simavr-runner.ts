@@ -9,7 +9,6 @@ import {
   parseVcdTimestamp,
   parseVcdValueChange,
 } from './runtime-events';
-import type { VcdSignalMap } from './runtime-events';
 import type { IStorage } from '../storage';
 import { logger } from '../logger';
 
@@ -37,6 +36,10 @@ interface ActiveSession {
   options: SimRunOptions;
   startedAt: number;
   cycleCount: number;
+  vcdSignalMap: VcdSignalMap;
+  vcdTimestampNs: number;
+  vcdHeaderLines: string[];
+  vcdHeaderParsed: boolean;
 }
 
 /**
@@ -60,7 +63,21 @@ export class SimavrRunner {
   ): Promise<string> {
     const sessionId = crypto.randomUUID();
     const manager = SimulatorProcessManager.getOrCreate(projectId);
-    const events = createRuntimeEventBuffer();
+    const events = new RuntimeEventBuffer();
+
+    const session: ActiveSession = {
+      manager,
+      events,
+      projectId,
+      firmwarePath,
+      options,
+      startedAt: Date.now(),
+      cycleCount: 0,
+      vcdSignalMap: new Map(),
+      vcdTimestampNs: 0,
+      vcdHeaderLines: [],
+      vcdHeaderParsed: false,
+    };
 
     // Wire stdout lines into the event parser
     const handleStdout = (data: string): void => {
@@ -70,18 +87,15 @@ export class SimavrRunner {
         if (!trimmed) {
           continue;
         }
-        const event = options.vcdOutput
-          ? parseVcdLine(trimmed) ?? parseSimavrLine(trimmed)
-          : parseSimavrLine(trimmed);
-        if (event) {
-          // Track cycle count from cycle_count events
-          if (event.type === 'cycle_count') {
-            const session = this.sessions.get(sessionId);
-            if (session) {
-              session.cycleCount = event.value;
-            }
+
+        if (options.vcdOutput) {
+          this.handleVcdLine(session, trimmed);
+        } else {
+          // Non-VCD mode: try UART parsing on stdout too
+          const uartEvent = parseUartLine(trimmed, Date.now() * 1_000_000);
+          if (uartEvent) {
+            events.push(uartEvent);
           }
-          events.push(event);
         }
       }
     };
@@ -94,9 +108,9 @@ export class SimavrRunner {
         if (!trimmed) {
           continue;
         }
-        const event = parseSimavrLine(trimmed);
-        if (event) {
-          events.push(event);
+        const uartEvent = parseUartLine(trimmed, Date.now() * 1_000_000);
+        if (uartEvent) {
+          events.push(uartEvent);
         }
       }
     };
@@ -112,7 +126,7 @@ export class SimavrRunner {
       events.push({
         type: 'error',
         message: err.message,
-        timestamp: Date.now(),
+        timestampNs: Date.now() * 1_000_000,
       });
     };
 
@@ -121,15 +135,7 @@ export class SimavrRunner {
     manager.on('exit', handleExit);
     manager.on('error', handleError);
 
-    this.sessions.set(sessionId, {
-      manager,
-      events,
-      projectId,
-      firmwarePath,
-      options,
-      startedAt: Date.now(),
-      cycleCount: 0,
-    });
+    this.sessions.set(sessionId, session);
 
     try {
       await manager.spawn(firmwarePath, options.mcu, options.freq, {
@@ -172,12 +178,16 @@ export class SimavrRunner {
     session.events.clear();
     session.cycleCount = 0;
     session.startedAt = Date.now();
+    session.vcdSignalMap = new Map();
+    session.vcdTimestampNs = 0;
+    session.vcdHeaderLines = [];
+    session.vcdHeaderParsed = false;
 
     await session.manager.restart();
   }
 
   /**
-   * Get events from a session, optionally filtered to events after a timestamp.
+   * Get events from a session, optionally filtered to events after a timestampNs.
    */
   getEvents(sessionId: string, since?: number): RuntimeEvent[] {
     const session = this.sessions.get(sessionId);
@@ -186,7 +196,7 @@ export class SimavrRunner {
     }
 
     if (since !== undefined) {
-      return session.events.queryByTimeRange(since, Date.now());
+      return session.events.getSince(since);
     }
 
     return session.events.getAll();
@@ -244,5 +254,36 @@ export class SimavrRunner {
     const sessionIds = Array.from(this.sessions.keys());
     await Promise.all(sessionIds.map((id) => this.stopSimulation(id).catch(() => {})));
     this.sessions.clear();
+  }
+
+  // -- Private helpers --
+
+  /**
+   * Process a single VCD line through header/timestamp/value-change parsing.
+   * Accumulates header lines until $enddefinitions, then parses value changes.
+   */
+  private handleVcdLine(session: ActiveSession, line: string): void {
+    // Still collecting header lines
+    if (!session.vcdHeaderParsed) {
+      session.vcdHeaderLines.push(line);
+      if (line.startsWith('$enddefinitions')) {
+        session.vcdSignalMap = parseVcdHeader(session.vcdHeaderLines);
+        session.vcdHeaderParsed = true;
+      }
+      return;
+    }
+
+    // Check for timestamp update
+    const ts = parseVcdTimestamp(line);
+    if (ts !== null) {
+      session.vcdTimestampNs = ts;
+      return;
+    }
+
+    // Try to parse as a value change
+    const pinEvent = parseVcdValueChange(line, session.vcdSignalMap, session.vcdTimestampNs);
+    if (pinEvent) {
+      session.events.push(pinEvent);
+    }
   }
 }
