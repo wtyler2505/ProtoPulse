@@ -3,14 +3,14 @@ summary: error-messages.ts implements a cascading classification pipeline (abort
 category: implementation-detail
 areas: ["[[index]]"]
 related insights:
-  - "[[drc-explanations-embed-pedagogical-content-because-protopulse-targets-users-who-are-learning-electronics]] — the error messages similarly embed actionable guidance, not just error codes"
+  - "[[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — the error messages similarly embed actionable guidance, not just error codes"
   - "[[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — beginner-friendly error messages are essential for the maker audience"
 type: insight
 source: extraction
 created: 2026-03-14
 status: active
 evidence:
-  - drc-explanations-embed-pedagogical-content-because-protopulse-targets-users-who-are-learning-electronics.md
+  - drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker.md
   - the-maker-to-professional-spectrum-is-the-fundamental-ux-tension.md
 ---
 
@@ -33,6 +33,15 @@ The non-obvious design decisions:
 - **Request ID propagation**: The `X-Request-Id` header is extracted and appended to error descriptions as `(Request ID: xxx)`, giving users a reference for bug reports. The ID flows through both the global React Query error handler and per-component error handlers.
 
 - **Global error handler**: The QueryClient's cache-level `onError` is set via `queryClient.getQueryCache().config.onError`, a non-obvious API that catches errors from all queries regardless of whether individual queries have their own `onError` handlers. This ensures no query failure is silently swallowed.
+
+---
+
+Related:
+- [[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — error messages embed the same actionable-guidance pattern as DRC explanations
+- [[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — beginner-friendly error messages are essential for the maker audience
+- [[storage-error-maps-postgresql-error-codes-to-http-status-giving-routes-structured-error-semantics-without-db-coupling]] — StorageError translates DB→HTTP on the server; error-messages.ts translates HTTP→user on the client — two stages of the same error refinement pipeline
+- [[api-key-management-uses-sentinel-values-and-dual-persistence-to-keep-real-keys-invisible-to-the-client]] — "invalid API key" is one of the 6 AI-specific error patterns the mapper handles
+- [[circuit-breaker-pattern-isolates-ai-provider-failures-preventing-cascading-outages-across-anthropic-and-gemini]] — circuit breaker produces the 503 errors that the mapper translates into "AI service temporarily unavailable"
 
 ## Topics
 

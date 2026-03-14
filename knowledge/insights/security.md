@@ -18,6 +18,10 @@ ProtoPulse's security landscape — where vulnerabilities cluster, why they recu
 - [[gap-audits-that-compare-code-surfaces-against-backlog-produce-higher-signal-findings-than-code-only-audits]] — code-vs-backlog comparison is the best audit methodology
 - [[session-token-rotation-on-refresh-prevents-session-fixation-by-invalidating-the-old-hash-atomically-with-new-hash-creation]] — session rotation with SHA-256 hashing and refresh window
 
+- [[design-agent-hardcodes-confirmed-true-bypassing-destructive-tool-confirmation-enforcement]] — agent loop sets confirmed=true, giving AI unconfirmed access to all 88 tools including destructive ones
+- [[batch-analysis-tracking-lives-in-an-in-memory-map-that-does-not-survive-server-restarts]] — in-memory batch tracking is an authorization bypass: restart loses ownership mapping
+- [[api-key-management-uses-sentinel-values-and-dual-persistence-to-keep-real-keys-invisible-to-the-client]] — STORED_KEY_SENTINEL + AES-256-GCM encryption keeps real API keys invisible to client
+
 ## Connection Clusters
 
 ### Authentication vs Authorization Gap

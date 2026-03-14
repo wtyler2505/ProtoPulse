@@ -42,4 +42,6 @@ This makes it testable in isolation and usable from any context (AI tools, expor
 ---
 
 Related:
-- [[circuits-zero-defaulting-in-export-and-ordering]] — export modules default missing PCB coordinates to 0, which the DRC gate would catch as out-of-bounds
+- [[circuits-zero-defaulting-in-export-and-ordering-is-a-latent-multi-project-regression-because-it-silently-picks-the-wrong-circuit]] — export modules default missing PCB coordinates to 0, which the DRC gate would catch as out-of-bounds
+- [[export-modules-use-a-shared-data-adapter-layer-decoupled-from-drizzle-row-types]] — the DRC gate uses its own DrcGateInput adapter, paralleling the export module pattern but independent of it
+- [[drc-engine-exports-two-completely-separate-rule-systems-from-one-file-creating-a-hidden-api-surface-split]] — the DRC gate is a third DRC system (export-specific rules) alongside the component and PCB engines in shared/drc-engine.ts

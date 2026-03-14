@@ -40,4 +40,6 @@ getProject = this._projects.getProject.bind(this._projects);
 
 Related:
 - [[storage-error-maps-postgresql-error-codes-to-http-status-giving-routes-structured-error-semantics-without-db-coupling]] — StorageError is shared across all 10 domain classes via the common errors.ts module
-- [[soft-deletes-create-a-persistent-querying-tax]] — the soft-delete filter appears in multiple domain classes independently, not centralized
+- [[soft-deletes-create-a-persistent-querying-tax-where-forgetting-isNull-causes-data-ghosts]] — the soft-delete filter appears in multiple domain classes independently, not centralized
+- [[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — server/storage/index.ts barrel re-exports domain classes; DatabaseStorage in storage.ts is the composition root
+- [[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — storage.ts (162 lines) is the thin orchestrator over 10 extracted domain modules — the exact decomposition pattern

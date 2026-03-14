@@ -36,5 +36,7 @@ The `server/circuit-ai/` module has three AI-powered endpoints (generate, analyz
 ---
 
 Related:
-- [[ai-model-routing-uses-a-phase-complexity-matrix]] — model routing in the main chat is based on view/phase; circuit-ai thinking is based on operation type
-- [[circuit-breaker-pattern-isolates-ai-provider-failures]] — all three circuit-ai operations use anthropicBreaker.execute()
+- [[ai-model-routing-uses-a-phase-complexity-matrix-not-message-length-to-select-the-cheapest-sufficient-model]] — model routing in the main chat is based on view/phase; circuit-ai thinking is based on operation type. Both encode domain-specific cost/quality trade-offs.
+- [[circuit-breaker-pattern-isolates-ai-provider-failures-preventing-cascading-outages-across-anthropic-and-gemini]] — all three circuit-ai operations use anthropicBreaker.execute()
+- [[view-aware-prompt-tiering-sends-full-data-for-the-active-view-and-summaries-for-everything-else-to-reduce-token-cost]] — prompt tiering reduces input tokens, extended thinking controls output reasoning tokens — different cost levers for the same AI pipeline
+- [[design-agent-hardcodes-confirmed-true-bypassing-destructive-tool-confirmation-enforcement]] — the agent loop does NOT use extended thinking; multi-turn tool use replaces single-turn deep reasoning

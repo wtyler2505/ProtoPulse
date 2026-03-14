@@ -9,7 +9,7 @@ How ProtoPulse is structured and why — from monolithic context to barrel files
 
 ## Insights
 
-- [[five-architecture-decisions-block-over-30-downstream-features-each]] — 5 unresolved decisions each block 30+ features
+- [[five-architecture-decisions-block-over-30-downstream-features-each]] — 5 architecture blockers: 4 resolved (desktop pivot, collaboration, supplier APIs), 1 remaining (hardware debug interface)
 - [[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — barrel files preserve public API during decomposition
 - [[large-component-decomposition-follows-a-consistent-pattern-of-extracting-domain-modules-while-keeping-the-original-file-as-a-thin-orchestrator]] — extract modules, keep thin orchestrator
 - [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — 30+ managers use singleton+subscribe
@@ -30,3 +30,11 @@ How ProtoPulse is structured and why — from monolithic context to barrel files
 - [[three-diff-engines-share-identical-algorithm-shape-but-are-not-abstracted-creating-a-subtle-maintenance-trap]] — bom-diff/arch-diff/netlist-diff share algorithm but are copy-pasted
 - [[crdt-merge-uses-intent-preserving-rules-where-insert-always-beats-concurrent-delete-a-deliberate-philosophical-choice]] — insert beats delete in collaboration merge — domain-aware CRDT
 - [[the-build-script-uses-an-allowlist-inversion-to-bundle-frequently-imported-deps-while-externalizing-everything-else-reducing-cold-start-syscalls]] — bundle allowlist inversion reduces cold start syscalls
+- [[storage-uses-bind-delegation-composition-not-inheritance-creating-a-flat-facade-from-10-domain-classes]] — ~90 explicit .bind() delegations compose 10 domain classes into one IStorage facade
+- [[export-modules-use-a-shared-data-adapter-layer-decoupled-from-drizzle-row-types]] — 17 export modules consume simplified interfaces from types.ts, decoupled from Drizzle row types
+- [[drc-gate-is-a-pure-function-pipeline-stage-that-blocks-manufacturing-export-without-touching-the-database]] — pure function pre-export validation gate with no IO dependencies
+- [[architecture-context-has-two-parallel-undo-systems-that-do-not-interact]] — global Command pattern vs architecture-local snapshots, creating duplicate undo stacks
+- [[useSyncedFlowState-implements-bidirectional-sync-with-interaction-gating-to-prevent-context-overwrite-of-user-drags]] — mutable ref gating solves the ReactFlow vs external store incompatibility
+- [[view-sync-engine-uses-canonical-connection-signatures-to-reconcile-schematic-and-breadboard-representations]] — sorted-pair signatures enable direction-independent cross-view reconciliation
+- [[circuit-dsl-worker-splits-transpilation-from-evaluation-because-sucrase-is-safe-on-main-thread-but-eval-is-not]] — Sucrase on main thread, eval in sandboxed Worker — security-aware split
+- [[drc-engine-exports-two-completely-separate-rule-systems-from-one-file-creating-a-hidden-api-surface-split]] — component DRC and PCB DRC share a file but have different types, rules, and naming conventions

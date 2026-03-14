@@ -28,3 +28,4 @@ This happens because:
 Related:
 - [[e2e-tests-use-playwright-setup-projects-to-share-auth-state-across-specs-via-localstorage-injection-rather-than-cookie-based-session-persistence]] — auth setup works correctly but data setup lacks corresponding teardown
 - [[soft-deletes-create-a-persistent-querying-tax-where-forgetting-isNull-causes-data-ghosts]] — soft delete infrastructure exists but test cleanup doesn't use it
+- [[shared-test-suites-use-domain-specific-factory-helpers-that-reconstruct-full-object-graphs-rather-than-partial-mocks-enforcing-integration-fidelity]] — shared tests use clean factory helpers; E2E tests create persistent real data, a fundamentally different lifecycle

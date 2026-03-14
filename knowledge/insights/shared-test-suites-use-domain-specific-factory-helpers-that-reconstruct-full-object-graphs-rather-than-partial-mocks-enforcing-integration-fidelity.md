@@ -29,3 +29,5 @@ Related:
 - [[proxy-based-mock-chains-intercept-then-causing-await-to-hang-so-drizzle-query-mocks-need-explicit-select-chain-stubs]] — server tests use `Partial<T>` mocks, creating the pattern that shared tests avoid
 - [[the-schema-insert-pattern-uses-omit-plus-extend-to-create-a-strict-write-contract-while-the-select-type-remains-permissive]] — schema.test.ts validates this contract at runtime
 - [[every-component-must-define-geometry-three-times-because-the-triple-view-architecture-couples-identity-to-representation]] — makePartState() must construct all 3 views, demonstrating the per-test cost of the triple-view architecture
+- [[design-variables-test-suite-validates-a-complete-expression-language-with-si-prefix-parsing-and-dependency-graph-resolution]] — design-variables.test.ts takes the factory-helper pattern to its extreme: no mocks at all, just real API calls with real values
+- [[drc-engine-exports-two-completely-separate-rule-systems-from-one-file-creating-a-hidden-api-surface-split]] — the test files for the two DRC engines use completely different factory helpers, revealing the API surface split

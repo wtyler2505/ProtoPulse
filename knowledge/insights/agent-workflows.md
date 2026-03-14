@@ -26,3 +26,10 @@ Patterns and pitfalls for using Claude Code's agent team system for parallel dev
 - [[agent-team-teammates-die-on-context-compaction-so-parallel-work-requires-liveness-checks-after-session-continuation]] — teammates die on context compaction
 - [[concurrent-tsc-runs-during-agent-teams-cause-oom-so-node-max-old-space-size-must-be-increased-when-four-or-more-teammates-compile-simultaneously]] — 4+ concurrent tsc runs cause OOM
 - [[auto-loaded-claude-md-files-in-subdirectories-consume-context-window-causing-premature-session-compaction]] — subdirectory CLAUDE.md files are a permanent context tax
+
+### Knowledge System Skills (Ars Contexta)
+- [[the-derivation-manifest-creates-a-vocabulary-abstraction-layer-that-decouples-knowledge-engine-mechanics-from-domain-native-terminology]] — vocabulary mapping enables the same skill engine to operate across domains with different terminology
+- [[the-rethink-skill-implements-a-scientific-method-feedback-loop-that-triages-accumulated-friction-into-five-dispositions-preventing-knowledge-system-ossification]] — /rethink prevents system calcification via evidence-proportional change proposals
+- [[the-next-skill-uses-consequence-speed-classification-to-prioritize-recommendations-where-session-urgency-beats-multi-session-which-beats-slow-decay]] — /next prioritizes by consequence speed: session urgency > multi-session > slow decay
+- [[session-capture-hooks-create-a-mining-backlog-with-mined-false-flags-enabling-retroactive-insight-extraction-from-work-sessions]] — session-capture.sh creates deferred extraction backlog at Stop event
+- [[ops-queries-implement-a-graph-health-observatory-where-shell-scripts-serve-as-reusable-diagnostic-lenses-over-the-knowledge-vault]] — 5 shell scripts extract graph metrics from flat markdown using Unix tools

@@ -28,6 +28,14 @@ The non-obvious consequence is that when a user presses Ctrl+Z, only the global 
 
 Both stacks are capped at 50 entries (`DEFAULT_MAX_SIZE` in undo-redo.ts, `MAX_UNDO_STACK_DEPTH` in architecture-context.tsx), suggesting the cap was copied during decomposition. Consolidating into a single system is implicit tech debt.
 
+---
+
+Related:
+- [[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]] — the architecture context was decomposed from ProjectProvider but carried its own undo system
+- [[context-decomposition-uses-a-bridge-component-to-solve-cross-provider-dependency-ordering]] — decomposition created the opportunity for duplicate systems
+- [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — the global UndoRedoStack uses useSyncExternalStore while the architecture undo uses useState — the two patterns coexist awkwardly
+- [[useSyncedFlowState-implements-bidirectional-sync-with-interaction-gating-to-prevent-context-overwrite-of-user-drags]] — another case where ReactFlow's state model creates friction with the rest of the state architecture
+
 ## Topics
 
 - [[index]]

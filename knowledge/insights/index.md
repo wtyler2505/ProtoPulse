@@ -35,7 +35,7 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — integration forces deferred data ownership questions
 - [[complexity-ratings-measure-decision-surface-area-not-effort]] — C1-C5 measures entangled systems, not hours
 - [[the-perception-gap-between-simulation-capability-and-usability-is-the-biggest-competitive-threat]] — TinkerCAD feels more powerful because results are visible on the circuit
-- [[five-architecture-decisions-block-over-30-downstream-features-each]] — firmware, debugger, platform, collaboration, supplier trust block 5+ items each
+- [[five-architecture-decisions-block-over-30-downstream-features-each]] — 5 architecture blockers: 4 resolved (desktop pivot, collaboration, supplier APIs), hardware debug remains
 - [[soft-deletes-create-a-persistent-querying-tax-where-forgetting-isNull-causes-data-ghosts]] — forgetting isNull(deletedAt) causes silent ghost data
 - [[wave-based-development-enables-rapid-shipping-but-creates-integration-debt]] — vertical slices ship fast but defer horizontal integration
 - [[definition-of-done-must-include-cross-tool-link-verification]] — features aren't done until cross-tool links are checked
@@ -114,6 +114,37 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[shared-test-suites-use-domain-specific-factory-helpers-that-reconstruct-full-object-graphs-rather-than-partial-mocks-enforcing-integration-fidelity]] — shared tests use complete factory helpers instead of Partial<T> mocks, catching structural regressions
 - [[e2e-test-projects-accumulate-without-cleanup-because-playwright-setup-creates-but-never-deletes-test-data]] — E2E tests create "E2E Test Project" entries that accumulate without cleanup
 - [[design-variables-test-suite-validates-a-complete-expression-language-with-si-prefix-parsing-and-dependency-graph-resolution]] — VariableStore is a full expression language with SI prefixes, DAG resolution, and typed error hierarchy
+
+### Extracted 2026-03-14 (client deep pass)
+
+- [[useSyncedFlowState-implements-bidirectional-sync-with-interaction-gating-to-prevent-context-overwrite-of-user-drags]] — mutable ref gating prevents server state from overwriting in-progress ReactFlow drags
+- [[local-intent-parsing-produces-aiactions-not-direct-mutations-to-unify-offline-and-online-execution-paths]] — offline commands flow through the same AIAction executor as AI-generated actions
+- [[circuit-dsl-worker-splits-transpilation-from-evaluation-because-sucrase-is-safe-on-main-thread-but-eval-is-not]] — Sucrase on main thread, eval in sandboxed Worker with 12 dangerous globals deleted
+- [[view-sync-engine-uses-canonical-connection-signatures-to-reconcile-schematic-and-breadboard-representations]] — sorted-pair signatures enable direction-independent schematic↔breadboard comparison
+- [[api-key-management-uses-sentinel-values-and-dual-persistence-to-keep-real-keys-invisible-to-the-client]] — STORED_KEY_SENTINEL placeholder + one-time localStorage→server migration
+- [[breadboard-wire-router-models-the-center-channel-gap-as-a-graph-discontinuity-not-a-physical-obstacle]] — A* with turn penalty, center channel as adjacency restriction not obstacle cell
+- [[architecture-context-has-two-parallel-undo-systems-that-do-not-interact]] — global UndoRedoStack vs architecture-local useState snapshots, Ctrl+Z only triggers global
+- [[error-message-mapping-uses-cascading-pattern-matchers-to-translate-raw-api-errors-into-actionable-guidance]] — 7-stage cascade with retryable flags and request ID propagation
+- [[design-gateway-rules-use-string-matching-heuristics-instead-of-schematic-netlist-analysis-because-architecture-nodes-lack-electrical-types]] — 12 heuristic rules using substring matching because nodes have no pin models
+
+### Extracted 2026-03-14 (server deep pass)
+
+- [[ai-tool-registry-uses-client-side-dispatch-stubs-for-tools-that-cannot-execute-server-side]] — clientAction() validates server-side but dispatches to client, server never sees execution failures
+- [[design-agent-hardcodes-confirmed-true-bypassing-destructive-tool-confirmation-enforcement]] — agentic AI loop sets confirmed=true, all 88 tools execute without confirmation
+- [[batch-analysis-tracking-lives-in-an-in-memory-map-that-does-not-survive-server-restarts]] — Anthropic Message Batches tracking in module-scoped Map, restart orphans in-flight batches
+- [[arduino-job-streams-buffer-all-events-for-late-join-replay-creating-an-sse-catch-up-mechanism]] — JobStream buffers all events for late-joining SSE clients, unique to Arduino
+- [[drc-gate-is-a-pure-function-pipeline-stage-that-blocks-manufacturing-export-without-touching-the-database]] — pure function (no IO) running 6 ordered rules as pre-export validation
+- [[storage-uses-bind-delegation-composition-not-inheritance-creating-a-flat-facade-from-10-domain-classes]] — ~90 explicit .bind() delegations compose 10 domain classes into one facade
+- [[circuit-ai-selectively-enables-extended-thinking-based-on-operation-type-not-model-or-prompt-size]] — extended thinking for generate/analyze but not review or multi-turn agent
+- [[export-modules-use-a-shared-data-adapter-layer-decoupled-from-drizzle-row-types]] — 17 export modules consume simplified interfaces from types.ts, not Drizzle row types
+
+### Extracted 2026-03-14 (meta/operational deep pass)
+
+- [[the-rethink-skill-implements-a-scientific-method-feedback-loop-that-triages-accumulated-friction-into-five-dispositions-preventing-knowledge-system-ossification]] — 6-phase protocol with 5 dispositions acts as knowledge system immune system
+- [[ops-queries-implement-a-graph-health-observatory-where-shell-scripts-serve-as-reusable-diagnostic-lenses-over-the-knowledge-vault]] — 5 shell scripts extract graph metrics from flat markdown using Unix tools
+- [[the-next-skill-uses-consequence-speed-classification-to-prioritize-recommendations-where-session-urgency-beats-multi-session-which-beats-slow-decay]] — consequence speed classification with priority cascade and deduplication
+- [[session-capture-hooks-create-a-mining-backlog-with-mined-false-flags-enabling-retroactive-insight-extraction-from-work-sessions]] — session-capture.sh writes mined:false JSON creating deferred extraction backlog
+- [[the-derivation-manifest-creates-a-vocabulary-abstraction-layer-that-decouples-knowledge-engine-mechanics-from-domain-native-terminology]] — derivation.md maps universal terms to domain terms, read by every skill at Step 0
 
 ### Extracted 2026-03-13 (Codex sessions)
 

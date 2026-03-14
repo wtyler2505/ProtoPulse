@@ -42,4 +42,6 @@ All 17 export modules in `server/export/` consume data through a shared set of s
 
 Related:
 - [[drc-gate-is-a-pure-function-pipeline-stage-that-blocks-manufacturing-export-without-touching-the-database]] — DRC gate uses DrcGateInput (its own adapter types), not the export types
-- [[barrel-files-enable-incremental-decomposition]] — server/export-generators.ts is the barrel for all 17 export modules
+- [[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — server/export-generators.ts is the barrel for all 17 export modules
+- [[the-schema-insert-pattern-uses-omit-plus-extend-to-create-a-strict-write-contract-while-the-select-type-remains-permissive]] — the export adapter mirrors the schema's asymmetric read/write pattern: Drizzle types are the "wide" read, export types are the "narrow" consumption contract
+- [[storage-uses-bind-delegation-composition-not-inheritance-creating-a-flat-facade-from-10-domain-classes]] — storage facade provides the Drizzle data that callers must adapt before passing to export modules

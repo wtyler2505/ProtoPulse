@@ -3,14 +3,14 @@ summary: Design Gateway validation rules use substring-matching heuristics on no
 category: architectural-decision
 areas: ["[[index]]"]
 related insights:
-  - "[[drc-explanations-embed-pedagogical-content-because-protopulse-targets-users-who-are-learning-electronics]] — the gateway suggestions include specific component values and guidance for beginners"
+  - "[[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — the gateway suggestions include specific component values and guidance for beginners"
   - "[[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — heuristic rules are appropriate for the architecture level where beginners work; formal ERC belongs to the schematic level"
 type: insight
 source: extraction
 created: 2026-03-14
 status: active
 evidence:
-  - drc-explanations-embed-pedagogical-content-because-protopulse-targets-users-who-are-learning-electronics.md
+  - drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker.md
   - the-maker-to-professional-spectrum-is-the-fundamental-ux-tension.md
 ---
 
@@ -26,6 +26,14 @@ The adjacency graph is reconstructed per-rule from flat edge arrays via `buildAd
 The architecture choice to run heuristic validation at the block-diagram level (before the user has even started schematic capture) is pedagogically motivated: it teaches beginners about decoupling caps, pull-up resistors, crystal load caps, and reverse polarity protection at the moment they're designing their system topology, not after they've already committed to a schematic. The trade-off is false positives (a cap connected for signal coupling will satisfy the "has decoupling cap" check) and false negatives (the rule can't catch a decoupling cap that's placed but wired to the wrong power rail).
 
 Rules include specific, actionable suggestions (e.g., "Add a 100 nF ceramic capacitor between VCC and GND as close to the IC as possible") that embed electronics domain knowledge — making the gateway simultaneously a validation tool and a teaching tool.
+
+---
+
+Related:
+- [[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — the gateway suggestions embed the same pedagogical pattern as DRC explanations
+- [[the-maker-to-professional-spectrum-is-the-fundamental-ux-tension]] — heuristic rules are appropriate for the architecture level where beginners work; formal ERC belongs to the schematic level
+- [[drc-engine-exports-two-completely-separate-rule-systems-from-one-file-creating-a-hidden-api-surface-split]] — the gateway is effectively a third DRC system (heuristic, not geometric) that operates at the architecture abstraction level
+- [[progressive-disclosure-hides-downstream-views-until-architecture-nodes-exist-preventing-empty-state-errors]] — the gateway validates AT the architecture level, before the user even reaches schematic/PCB where formal DRC applies
 
 ## Topics
 

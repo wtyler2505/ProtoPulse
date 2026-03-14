@@ -37,4 +37,6 @@ Arduino compilation/upload jobs are the only long-running background processes w
 
 Related:
 - [[the-arduino-workbench-schema-is-the-only-domain-that-bridges-database-records-to-the-host-filesystem-via-rootPath]] — the workspace filesystem bridge is what makes job output large enough to need buffered streaming
-- [[job-queue-uses-per-type-watchdog-timeouts]] — job queue and arduino jobs both handle long-running async work but with different streaming architectures
+- [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles]] — job queue and arduino jobs both handle long-running async work but with different streaming architectures
+- [[batch-analysis-tracking-lives-in-an-in-memory-map-that-does-not-survive-server-restarts]] — both Arduino job streams and batch analysis use in-memory state that doesn't survive restarts, but Arduino has the two-tier DB fallback while batch analysis does not
+- [[ai-tool-registry-uses-client-side-dispatch-stubs-for-tools-that-cannot-execute-server-side]] — Arduino AI tools (compile_sketch, upload_firmware) dispatch to client-side, which then triggers the job stream pipeline

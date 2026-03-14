@@ -30,5 +30,6 @@ The `server/batch-analysis.ts` module tracks submitted Anthropic batch jobs in `
 ---
 
 Related:
-- [[in-memory-server-state-is-an-authorization-bypass]] — this is the same pattern: in-memory state that gates authorization decisions is lost on restart
+- [[in-memory-server-state-is-an-authorization-bypass-because-it-shares-a-single-namespace-across-all-users-and-projects]] — this is the same pattern: in-memory state that gates authorization decisions is lost on restart
 - [[graceful-shutdown-drains-resources-in-dependency-order-with-a-30-second-forced-exit-backstop]] — graceful shutdown doesn't persist activeBatches
+- [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles]] — the job queue is also in-memory but handles shorter-lived tasks; batch analysis trades durability for the 50% Anthropic batch discount

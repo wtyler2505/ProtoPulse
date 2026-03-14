@@ -4,14 +4,14 @@ category: architectural-decision
 areas: ["[[index]]"]
 related insights:
   - "[[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — the worker result feeds into a useSyncExternalStore-compatible hook (useCircuitEvaluator)"
-  - "[[every-component-must-define-geometry-three-times-schematic-breadboard-pcb-because-eda-tools-traditionally-decouple-logical-from-physical-representations]] — the IR output from the DSL must generate geometry for all three views"
+  - "[[every-component-must-define-geometry-three-times-because-the-triple-view-architecture-couples-identity-to-representation]] — the IR output from the DSL must generate geometry for all three views"
 type: insight
 source: extraction
 created: 2026-03-14
 status: active
 evidence:
   - singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook.md
-  - every-component-must-define-geometry-three-times-schematic-breadboard-pcb-because-eda-tools-traditionally-decouple-logical-from-physical-representations.md
+  - every-component-must-define-geometry-three-times-because-the-triple-view-architecture-couples-identity-to-representation.md
 ---
 
 The Circuit DSL evaluator (`client/src/lib/circuit-dsl/circuit-dsl-worker.ts`) has a surprising architecture split: Sucrase TypeScript transpilation happens on the **main thread**, while the transpiled JavaScript is evaluated in a **Web Worker** via `new Function()`. This is counterintuitive — you might expect both steps in the worker to avoid blocking the main thread.
@@ -29,6 +29,14 @@ The reasoning:
 5. **EvalId correlation**: Each evaluation is tagged with a `crypto.randomUUID()`. The worker response handler ignores messages whose `evalId` doesn't match the current request, preventing out-of-order results from stale evaluations.
 
 This architecture means user-authored circuit code can never access the network, read secrets from localStorage, or hang the UI — even if the code is malicious.
+
+---
+
+Related:
+- [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — the worker result feeds into a useSyncExternalStore-compatible hook (useCircuitEvaluator)
+- [[every-component-must-define-geometry-three-times-because-the-triple-view-architecture-couples-identity-to-representation]] — the IR output from the DSL must generate geometry for all three views
+- [[design-variables-test-suite-validates-a-complete-expression-language-with-si-prefix-parsing-and-dependency-graph-resolution]] — the DSL worker evaluates user code while VariableStore evaluates parametric expressions — both are sandboxed computation engines with different trust models
+- [[local-intent-parsing-produces-aiactions-not-direct-mutations-to-unify-offline-and-online-execution-paths]] — the DSL worker and local intent parser both execute user input offline, but the DSL runs arbitrary JS while intent parsing uses pattern matching
 
 ## Topics
 

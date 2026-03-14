@@ -31,6 +31,13 @@ The server still validates params against the Zod schema (catching AI hallucinat
 
 ---
 
+**Counter-intuitive consequence:** The `requiresConfirmation` flag on tools like `upload_firmware` is enforced server-side in `ToolRegistry.execute()`, but since Arduino tools use `clientAction()`, the confirmation check happens *before* the stub returns — meaning the server blocks a no-op, and the real confirmation happens on the client separately. The flag is effectively checked twice in different systems. This creates a dangerous exception path: the [[design-agent-hardcodes-confirmed-true-bypassing-destructive-tool-confirmation-enforcement|design agent bypasses confirmation entirely]] by setting `confirmed: true`, meaning client-dispatch stubs from the agent execute with no safety net on either side.
+
+Since [[local-intent-parsing-produces-aiactions-not-direct-mutations-to-unify-offline-and-online-execution-paths|offline local intent parsing also produces AIActions]], the client-side dispatch is actually the convergence point for three different action sources: AI streaming, agent loop, and offline commands.
+
+---
+
 Related:
-- [[circuit-breaker-pattern-isolates-ai-provider-failures]] — circuit breaker protects the real AI calls, not the clientAction stubs
-- [[barrel-files-enable-incremental-decomposition]] — ai-tools/index.ts composes all 14 registration functions into the singleton registry
+- [[circuit-breaker-pattern-isolates-ai-provider-failures-preventing-cascading-outages-across-anthropic-and-gemini]] — circuit breaker protects the real AI calls, not the clientAction stubs
+- [[barrel-files-enable-incremental-decomposition-because-they-preserve-the-public-api-while-splitting-internal-modules]] — ai-tools/index.ts composes all 14 registration functions into the singleton registry
+- [[ai-model-routing-uses-a-phase-complexity-matrix-not-message-length-to-select-the-cheapest-sufficient-model]] — model routing determines WHICH model calls the tool; clientAction determines WHERE the tool executes

@@ -34,4 +34,5 @@ This means every tool the AI agent calls — including destructive operations li
 
 Related:
 - [[ai-tool-registry-uses-client-side-dispatch-stubs-for-tools-that-cannot-execute-server-side]] — chat tools use client-side dispatch; agent tools execute server-side with full confirmation bypass
-- [[idor-vulnerabilities-cluster-in-routes]] — agent.ts uses requireProjectOwnership but the tool calls operate on projectId without per-tool ownership re-validation
+- [[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — agent.ts uses requireProjectOwnership but the tool calls operate on projectId without per-tool ownership re-validation
+- [[circuit-ai-selectively-enables-extended-thinking-based-on-operation-type-not-model-or-prompt-size]] — the agent loop does NOT use extended thinking (multi-turn reasoning replaces single-turn deep thinking), but it does bypass confirmation

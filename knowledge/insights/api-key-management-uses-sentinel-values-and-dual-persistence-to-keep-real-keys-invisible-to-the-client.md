@@ -4,14 +4,14 @@ category: implementation-detail
 areas: ["[[index]]"]
 related insights:
   - "[[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario]] — the localStorage fallback in useApiKeys is itself localStorage-backed tech debt that the server-side path is meant to supersede"
-  - "[[localstorage-features-follow-an-identical-five-step-migration-path-to-server-storage]] — useApiKeys implements this exact migration: detect server availability, push local keys, clear local copies"
+  - "[[localstorage-features-follow-an-identical-five-step-migration-to-server-scoped-storage]] — useApiKeys implements this exact migration: detect server availability, push local keys, clear local copies"
 type: insight
 source: extraction
 created: 2026-03-14
 status: active
 evidence:
   - localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario.md
-  - localstorage-features-follow-an-identical-five-step-migration-path-to-server-storage.md
+  - localstorage-features-follow-an-identical-five-step-migration-to-server-scoped-storage.md
 ---
 
 The `useApiKeys` hook (`client/src/hooks/useApiKeys.ts`) implements a dual-persistence strategy for API keys that keeps real key values invisible to the client after authentication:
@@ -27,6 +27,14 @@ The `useApiKeys` hook (`client/src/hooks/useApiKeys.ts`) implements a dual-persi
 5. **Legacy migration**: A `LEGACY_KEY` constant (`'protopulse-ai-api-key'`) handles migration from the original single-provider localStorage key to per-provider keys. This migration happens transparently in `readLocalKey()`.
 
 The sentinel must be ASCII-safe (the comment explicitly warns about Unicode >255 causing ByteString errors in HTTP headers) because even though the sentinel shouldn't be sent to the server, defensive coding prevents header encoding crashes if it somehow is.
+
+---
+
+Related:
+- [[localstorage-backed-features-are-invisible-technical-debt-because-they-look-shipped-but-break-on-any-multi-device-or-collaboration-scenario]] — the localStorage fallback in useApiKeys is itself localStorage-backed tech debt that the server-side path is meant to supersede
+- [[localstorage-features-follow-an-identical-five-step-migration-to-server-scoped-storage]] — useApiKeys implements this exact 5-step migration: detect server availability, push local keys, clear local copies
+- [[session-token-rotation-on-refresh-prevents-session-fixation-by-invalidating-the-old-hash-atomically-with-new-hash-creation]] — API key encryption (AES-256-GCM) and session token hashing (SHA-256) are the two complementary server-side secret protection mechanisms
+- [[error-message-mapping-uses-cascading-pattern-matchers-to-translate-raw-api-errors-into-actionable-guidance]] — invalid API key is one of the 6 AI-specific error patterns the cascading mapper handles
 
 ## Topics
 

@@ -25,6 +25,14 @@ The non-obvious aspect is that the interaction flag is consumed on every context
 
 This pattern exists specifically because ReactFlow's internal state model is incompatible with external stores — you cannot use `useSyncExternalStore` for ReactFlow nodes. Every other state domain in ProtoPulse uses singleton+subscribe precisely to avoid this complexity.
 
+---
+
+Related:
+- [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — singleton+subscribe avoids this problem entirely; useSyncedFlowState only exists because ReactFlow nodes/edges must live in React state
+- [[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]] — the context state that useSyncedFlowState syncs against is the problematic monolithic provider
+- [[architecture-context-has-two-parallel-undo-systems-that-do-not-interact]] — another consequence of ReactFlow's state model conflicting with the rest of the architecture
+- [[view-sync-engine-uses-canonical-connection-signatures-to-reconcile-schematic-and-breadboard-representations]] — view-sync reconciles across views while useSyncedFlowState reconciles between server and local state within a single view
+
 ## Topics
 
 - [[index]]

@@ -20,3 +20,5 @@ Patterns that have become standard practice — follow these when adding new cod
 - [[the-schema-uses-dual-id-systems-serial-for-db-references-and-text-for-client-generated-uuids-creating-a-two-key-boundary]] — serial PK for DB, text UUID for canvas — always be explicit about which ID
 - [[storage-error-maps-postgresql-error-codes-to-http-status-giving-routes-structured-error-semantics-without-db-coupling]] — centralized PG → HTTP error translation for all routes
 - [[the-build-script-uses-an-allowlist-inversion-to-bundle-frequently-imported-deps-while-externalizing-everything-else-reducing-cold-start-syscalls]] — bundle allowlist inversion: new deps auto-externalize, only allowlisted deps bundle
+- [[storage-uses-bind-delegation-composition-not-inheritance-creating-a-flat-facade-from-10-domain-classes]] — bind-delegation composition: explicit, auditable, compile-safe alternative to mixins/Proxy
+- [[export-modules-use-a-shared-data-adapter-layer-decoupled-from-drizzle-row-types]] — data adapter boundary: export modules never import Drizzle row types directly
