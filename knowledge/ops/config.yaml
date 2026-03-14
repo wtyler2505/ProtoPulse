@@ -46,6 +46,10 @@ provenance: full
 personality:
   enabled: true
 
+self_evolution:
+  observation_threshold: 10
+  tension_threshold: 5
+
 research:
   primary: web-search
   fallback: web-search

@@ -1,7 +1,8 @@
 ---
 summary: config.yaml has no self_evolution section despite self-evolution being an active block in the derivation manifest
 category: drift
-status: pending
+status: implemented
+implemented_in: ops/config.yaml
 observed: 2026-03-13
 related_notes: ["[[derivation-rationale]]", "[[methodology]]"]
 ---
