@@ -107,6 +107,14 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[the-schema-insert-pattern-uses-omit-plus-extend-to-create-a-strict-write-contract-while-the-select-type-remains-permissive]] — createInsertSchema().omit().extend() creates asymmetric read/write type contracts
 - [[the-arduino-workbench-schema-is-the-only-domain-that-bridges-database-records-to-the-host-filesystem-via-rootPath]] — only schema domain that stores filesystem paths, encoding the native desktop assumption
 
+### Extracted 2026-03-14 (shared/tests/ops/migrations sweep)
+
+- [[drc-engine-exports-two-completely-separate-rule-systems-from-one-file-creating-a-hidden-api-surface-split]] — shared/drc-engine.ts is actually two DRC engines (component + PCB) with different input types, rule schemas, and naming conventions
+- [[migration-0002-must-drop-and-recreate-check-constraints-because-drizzle-kit-cannot-model-them-creating-a-manual-maintenance-trap]] — Drizzle Kit drops CHECK constraints on every migration, requiring manual re-addition
+- [[shared-test-suites-use-domain-specific-factory-helpers-that-reconstruct-full-object-graphs-rather-than-partial-mocks-enforcing-integration-fidelity]] — shared tests use complete factory helpers instead of Partial<T> mocks, catching structural regressions
+- [[e2e-test-projects-accumulate-without-cleanup-because-playwright-setup-creates-but-never-deletes-test-data]] — E2E tests create "E2E Test Project" entries that accumulate without cleanup
+- [[design-variables-test-suite-validates-a-complete-expression-language-with-si-prefix-parsing-and-dependency-graph-resolution]] — VariableStore is a full expression language with SI prefixes, DAG resolution, and typed error hierarchy
+
 ### Extracted 2026-03-13 (Codex sessions)
 
 - [[backlog-planning-layers-must-be-additive-scaffolding-over-canonical-item-inventory-not-replacements]] — planning views are lenses over data, not transformations of it
