@@ -96,7 +96,7 @@ export function generateImportPreview(
   }
 
   let removedNodes = 0;
-  for (const label of existingNodeLabels) {
+  for (const label of Array.from(existingNodeLabels)) {
     if (!importedLabelSet.has(label)) {
       removedNodes++;
     }
