@@ -26,7 +26,7 @@ ProtoPulse has officially pivoted from a browser-based/hybrid platform to a Pure
 
 ## Stack
 
-React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark theme) + @xyflow/react | Express 5 + PostgreSQL + Drizzle ORM + TanStack React Query | AI: Anthropic Claude + Google Gemini via SSE streaming | Testing: Vitest 4 + happy-dom + @testing-library/react + Electron/Tauri (planned)
+React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark theme) + @xyflow/react | Express 5 + PostgreSQL + Drizzle ORM + TanStack React Query | AI: Anthropic Claude + Google Gemini via SSE streaming | Testing: Vitest 4 + happy-dom + @testing-library/react + Tauri v2 (native desktop)
 
 ## Build & Commands
 

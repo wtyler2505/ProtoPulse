@@ -13,3 +13,5 @@ e2e-results/
 e2e/.auth-state.json
 # qmd semantic search index (regenerated via: qmd update protopulse-vault)
 .qmd.db
+src-tauri/target/
+src-tauri/Cargo.lock
