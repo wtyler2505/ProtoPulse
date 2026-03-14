@@ -461,7 +461,9 @@ export function formatAsDefines(
     }
 
     let first = true;
-    for (const [category, group] of groups) {
+    const groupEntries = Array.from(groups.entries());
+    for (let gi = 0; gi < groupEntries.length; gi++) {
+      const [category, group] = groupEntries[gi];
       if (!first) {
         lines.push('');
       }
@@ -471,8 +473,8 @@ export function formatAsDefines(
         lines.push(`// === ${CATEGORY_LABELS[category]} ===`);
       }
 
-      for (const c of group) {
-        lines.push(formatDefine(c, maxNameLen, options.includeComments));
+      for (let ci = 0; ci < group.length; ci++) {
+        lines.push(formatDefine(group[ci], maxNameLen, options.includeComments));
       }
     }
   } else {

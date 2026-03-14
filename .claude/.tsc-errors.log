@@ -20,3 +20,11 @@ client/src/lib/arduino/pin-constant-generator.ts(464,37): error TS2802: Type 'Ma
 client/src/lib/arduino/pin-constant-generator.ts(471,30): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<PinCategory, string>'.
 
 7:36:14 AM - Found 2 errors. Watching for file changes.
+[2J[3J[H7:37:09 AM - File change detected. Starting incremental compilation...
+
+
+7:37:12 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:37:12 AM - File change detected. Starting incremental compilation...
+
+
+7:37:23 AM - Found 0 errors. Watching for file changes.
