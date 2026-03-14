@@ -264,7 +264,8 @@ export class TelemetryStore {
 
     const now = Date.now();
 
-    for (const [name, value] of parsed.values) {
+    const entries = Array.from(parsed.values.entries());
+    for (const [name, value] of entries) {
       let channel = this._channels.get(name);
       if (!channel) {
         channel = { data: [], nextIndex: 0 };
