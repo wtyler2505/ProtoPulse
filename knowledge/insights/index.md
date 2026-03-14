@@ -63,6 +63,16 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — automated CI enforcement that breaks the IDOR recurrence cycle
 - [[localstorage-features-follow-an-identical-five-step-migration-to-server-scoped-storage]] — reusable 5-step playbook for localStorage-to-server migration
 
+### Extracted 2026-03-14 (frontend sweep)
+
+- [[context-decomposition-uses-a-bridge-component-to-solve-cross-provider-dependency-ordering]] — ArchitectureBridge exists because ArchitectureProvider needs setActiveView from ProjectMetaProvider
+- [[ai-action-executor-uses-mutable-accumulators-to-prevent-stale-closure-bugs-in-multi-action-batches]] — local mutable copies + single commit prevents multi-action sequences from dropping earlier mutations
+- [[progressive-disclosure-hides-downstream-views-until-architecture-nodes-exist-preventing-empty-state-errors]] — Schematic/PCB/Procurement tabs hidden until nodes.length > 0
+- [[tiered-idle-time-prefetch-prevents-first-click-navigation-jank-across-27-lazy-loaded-views]] — requestIdleCallback chain prefetches chunks by traffic priority
+- [[query-keys-are-url-strings-used-as-both-cache-identifiers-and-fetch-targets-eliminating-key-endpoint-drift]] — queryKey[0] is the fetch URL, so cache keys and endpoints can never diverge
+- [[errorboundary-suppresses-resizeobserver-loop-errors-because-they-are-benign-browser-noise-that-would-crash-every-canvas-view]] — ResizeObserver loop errors filtered to prevent false crash screens on canvas views
+- [[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — useProject() composes all domain hooks into the original flat shape for backward compat
+
 ### Extracted 2026-03-13 (Codex sessions)
 
 - [[backlog-planning-layers-must-be-additive-scaffolding-over-canonical-item-inventory-not-replacements]] — planning views are lenses over data, not transformations of it
