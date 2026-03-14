@@ -7,6 +7,7 @@ export { BomTable } from './BomTable';
 export { AlternatePartsPanel } from './AlternatePartsPanel';
 export { SupplierPricingPanel } from './SupplierPricingPanel';
 export { DamageAssessmentPanel } from './DamageAssessmentPanel';
+export { AssemblyCostPanel } from './AssemblyCostPanel';
 export { AddItemDialog } from './AddItemDialog';
 export { ComponentReference } from './ComponentReference';
 export { BomEmptyState } from './BomEmptyState';

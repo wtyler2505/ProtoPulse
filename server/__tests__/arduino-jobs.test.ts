@@ -4,23 +4,33 @@ import type { ArduinoJob } from '@shared/schema';
 // ---------------------------------------------------------------------------
 // Mock ArduinoService internals (child_process, fs)
 // ---------------------------------------------------------------------------
-vi.mock('child_process', () => {
+const spawnInstances: Array<ReturnType<typeof createMockChild>> = [];
+
+function createMockChild() {
   const EventEmitter = require('events');
-  class MockChild extends EventEmitter {
-    stdout = new EventEmitter();
-    stderr = new EventEmitter();
-    killed = false;
-    kill(signal?: string) {
-      this.killed = true;
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  child.killed = false;
+  child.kill = function (signal?: string) {
+    this.killed = true;
+    // Emit close asynchronously to match real process behavior
+    process.nextTick(() => {
       this.emit('close', null, signal ?? 'SIGTERM');
-    }
-  }
-  return {
-    spawn: vi.fn(() => new MockChild()),
-    execSync: vi.fn(() => Buffer.from('{"VersionString":"1.0.0"}')),
-    execFileSync: vi.fn(() => Buffer.from('[]')),
+    });
   };
-});
+  return child;
+}
+
+vi.mock('child_process', () => ({
+  spawn: vi.fn(() => {
+    const child = createMockChild();
+    spawnInstances.push(child);
+    return child;
+  }),
+  execSync: vi.fn(() => Buffer.from('{"VersionString":"1.0.0"}')),
+  execFileSync: vi.fn(() => Buffer.from('[]')),
+}));
 
 vi.mock('fs/promises', () => ({
   default: {
@@ -114,6 +124,7 @@ describe('ArduinoService — Job Cancellation (BL-0604)', () => {
   let storage: ReturnType<typeof makeStorage>;
 
   beforeEach(async () => {
+    spawnInstances.length = 0;
     storage = makeStorage();
     const { ArduinoService } = await import('../arduino-service');
     service = new ArduinoService(storage as never);
@@ -158,7 +169,12 @@ describe('ArduinoService — Job Cancellation (BL-0604)', () => {
 
     const runPromise = service.runJob(20, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
 
-    // The spawn mock emits close with SIGTERM when kill() is called
+    // Wait for spawn to be set up (runJob does two async getArduinoJob calls first)
+    await vi.waitFor(() => {
+      expect(spawnInstances.length).toBeGreaterThanOrEqual(1);
+    }, { timeout: 2000 });
+
+    // Now cancel — the process is tracked in runningProcesses
     const cancelled = await service.cancelJob(20);
     expect(cancelled).toBe(true);
 
@@ -177,6 +193,49 @@ describe('ArduinoService — Job Cancellation (BL-0604)', () => {
     const result = await service.runJob(30, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
     expect(result.exitCode).toBe(-1);
   });
+
+  it('runJob completes normally when process exits with code 0', async () => {
+    const job = makeJob({ id: 50, status: 'pending' });
+    storage._jobs.set(50, job);
+
+    const runPromise = service.runJob(50, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+
+    await vi.waitFor(() => {
+      expect(spawnInstances.length).toBeGreaterThanOrEqual(1);
+    }, { timeout: 2000 });
+
+    // Simulate successful completion
+    const child = spawnInstances[spawnInstances.length - 1];
+    child.emit('close', 0, null);
+
+    const result = await runPromise;
+    expect(result.exitCode).toBe(0);
+    expect(storage.updateArduinoJob).toHaveBeenCalledWith(50, expect.objectContaining({
+      status: 'completed',
+      summary: 'Operation successful',
+    }));
+  });
+
+  it('runJob marks failed when process exits with non-zero code', async () => {
+    const job = makeJob({ id: 51, status: 'pending' });
+    storage._jobs.set(51, job);
+
+    const runPromise = service.runJob(51, 'compile', ['compile', '--fqbn', 'arduino:avr:uno', '.']);
+
+    await vi.waitFor(() => {
+      expect(spawnInstances.length).toBeGreaterThanOrEqual(1);
+    }, { timeout: 2000 });
+
+    const child = spawnInstances[spawnInstances.length - 1];
+    child.emit('close', 1, null);
+
+    const result = await runPromise;
+    expect(result.exitCode).toBe(1);
+    expect(storage.updateArduinoJob).toHaveBeenCalledWith(51, expect.objectContaining({
+      status: 'failed',
+      summary: 'Operation failed',
+    }));
+  });
 });
 
 describe('ArduinoService — Artifact Path (BL-0605)', () => {
@@ -184,6 +243,7 @@ describe('ArduinoService — Artifact Path (BL-0605)', () => {
   let storage: ReturnType<typeof makeStorage>;
 
   beforeEach(async () => {
+    spawnInstances.length = 0;
     storage = makeStorage();
     const { ArduinoService } = await import('../arduino-service');
     service = new ArduinoService(storage as never);
@@ -250,7 +310,6 @@ describe('ArduinoService — Artifact Path (BL-0605)', () => {
 
   it('getArtifactPath falls back to workspace build directory', async () => {
     const fsPromises = await import('fs/promises');
-    // First readdir fails (no build dir at sketch path)
     (fsPromises.default.readdir as ReturnType<typeof vi.fn>)
       .mockRejectedValueOnce(new Error('ENOENT'))
       .mockResolvedValueOnce(['firmware.hex']);
