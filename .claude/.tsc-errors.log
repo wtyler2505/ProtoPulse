@@ -1321,3 +1321,8 @@ client/src/lib/arduino/telemetry-parser.ts(267,33): error TS2802: Type 'Map<stri
 client/src/lib/arduino/telemetry-parser.ts(267,33): error TS2802: Type 'Map<string, number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 
 4:44:39 PM - Found 1 error. Watching for file changes.
+[2J[3J[H4:45:02 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/arduino/telemetry-parser.ts(267,33): error TS2802: Type 'Map<string, number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+4:45:08 PM - Found 1 error. Watching for file changes.
