@@ -148,7 +148,7 @@ type RecognizedType =
 const TYPE_ALIASES: Record<string, RecognizedType> = {
   led: 'led',
   diode_led: 'led',
-  'light-emitting-diode': 'led',
+  light_emitting_diode: 'led',
 
   resistor: 'resistor',
   r: 'resistor',
