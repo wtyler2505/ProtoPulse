@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { IPC_CHANNELS, PRELOAD_IPC_ON_CHANNELS } from './config';
 
 /**
  * Preload script — runs in an isolated context with access to Node.js and
@@ -35,24 +36,24 @@ export interface ElectronAPI {
 const electronAPI: ElectronAPI = {
   platform: process.platform,
 
-  openExternal: (url: string) => ipcRenderer.invoke('shell:openExternal', url),
+  openExternal: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.SHELL_OPEN_EXTERNAL, url),
 
-  showSaveDialog: (options) => ipcRenderer.invoke('dialog:showSave', options),
+  showSaveDialog: (options) => ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_SAVE, options),
 
-  showOpenDialog: (options) => ipcRenderer.invoke('dialog:showOpen', options),
+  showOpenDialog: (options) => ipcRenderer.invoke(IPC_CHANNELS.DIALOG_SHOW_OPEN, options),
 
-  readFile: (filePath: string) => ipcRenderer.invoke('fs:readFile', filePath),
+  readFile: (filePath: string) => ipcRenderer.invoke(IPC_CHANNELS.FS_READ_FILE, filePath),
 
-  writeFile: (filePath: string, data: string) => ipcRenderer.invoke('fs:writeFile', filePath, data),
+  writeFile: (filePath: string, data: string) => ipcRenderer.invoke(IPC_CHANNELS.FS_WRITE_FILE, filePath, data),
 
-  spawnProcess: (command: string, args: string[]) => ipcRenderer.invoke('process:spawn', command, args),
+  spawnProcess: (command: string, args: string[]) => ipcRenderer.invoke(IPC_CHANNELS.PROCESS_SPAWN, command, args),
 
-  getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  getVersion: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION),
 
-  getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
+  getPlatform: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_PLATFORM),
 
   onMenuAction: (callback: (action: string) => void) => {
-    const channels = ['menu:new-project', 'menu:open-project', 'menu:save'];
+    const channels = [...PRELOAD_IPC_ON_CHANNELS];
     const listeners = channels.map((channel) => {
       const listener = () => {
         callback(channel);
@@ -71,35 +72,3 @@ const electronAPI: ElectronAPI = {
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
-
-// ── Exported constants for testing ───────────────────────────────────────────
-
-export const PRELOAD_API_KEYS: readonly string[] = [
-  'platform',
-  'openExternal',
-  'showSaveDialog',
-  'showOpenDialog',
-  'readFile',
-  'writeFile',
-  'spawnProcess',
-  'getVersion',
-  'getPlatform',
-  'onMenuAction',
-] as const;
-
-export const PRELOAD_IPC_INVOKE_CHANNELS: readonly string[] = [
-  'shell:openExternal',
-  'dialog:showSave',
-  'dialog:showOpen',
-  'fs:readFile',
-  'fs:writeFile',
-  'process:spawn',
-  'app:getVersion',
-  'app:getPlatform',
-] as const;
-
-export const PRELOAD_IPC_ON_CHANNELS: readonly string[] = [
-  'menu:new-project',
-  'menu:open-project',
-  'menu:save',
-] as const;

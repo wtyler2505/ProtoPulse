@@ -38,6 +38,7 @@ const CircuitCodeView = lazy(() => import('@/components/views/CircuitCodeView'))
 const GenerativeDesignView = lazy(() => import('@/components/views/GenerativeDesignView'));
 const DigitalTwinView = lazy(() => import('@/components/views/DigitalTwinView'));
 const ArduinoWorkbenchView = lazy(() => import('@/components/views/ArduinoWorkbenchView'));
+const StarterCircuitsPanel = lazy(() => import('@/components/views/StarterCircuitsPanel'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap, Plug, Code2, Wand2, Radio } from 'lucide-react';
