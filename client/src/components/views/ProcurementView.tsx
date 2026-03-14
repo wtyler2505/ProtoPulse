@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale } from 'lucide-react';
+import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';

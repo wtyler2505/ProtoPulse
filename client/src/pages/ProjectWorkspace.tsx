@@ -39,6 +39,8 @@ const GenerativeDesignView = lazy(() => import('@/components/views/GenerativeDes
 const DigitalTwinView = lazy(() => import('@/components/views/DigitalTwinView'));
 const ArduinoWorkbenchView = lazy(() => import('@/components/views/ArduinoWorkbenchView'));
 const StarterCircuitsPanel = lazy(() => import('@/components/views/StarterCircuitsPanel'));
+const ActivityFeedPanel = lazy(() => import('@/components/panels/ActivityFeedPanel'));
+const AuditTrailView = lazy(() => import('@/components/views/AuditTrailView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap, Plug, Code2, Wand2, Radio } from 'lucide-react';
@@ -253,6 +255,7 @@ interface WorkspaceState {
   chatWidth: number;
   shortcutsOpen: boolean;
   moreMenuOpen: boolean;
+  activityFeedOpen: boolean;
 }
 
 type WorkspaceAction =
@@ -264,7 +267,8 @@ type WorkspaceAction =
   | { type: 'SET_CHAT_WIDTH'; width: number }
   | { type: 'SET_SHORTCUTS_OPEN'; open: boolean }
   | { type: 'SET_MORE_MENU_OPEN'; open: boolean }
-  | { type: 'TOGGLE_SHORTCUTS' };
+  | { type: 'TOGGLE_SHORTCUTS' }
+  | { type: 'SET_ACTIVITY_FEED_OPEN'; open: boolean };
 
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -286,6 +290,8 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return { ...state, moreMenuOpen: action.open };
     case 'TOGGLE_SHORTCUTS':
       return { ...state, shortcutsOpen: !state.shortcutsOpen };
+    case 'SET_ACTIVITY_FEED_OPEN':
+      return { ...state, activityFeedOpen: action.open };
   }
 }
 
@@ -322,6 +328,7 @@ const initialWorkspaceState: WorkspaceState = {
   chatWidth: persisted.chatWidth ?? 350,
   shortcutsOpen: false,
   moreMenuOpen: false,
+  activityFeedOpen: false,
 };
 
 import { useActionExecutor } from '@/components/panels/chat/hooks/useActionExecutor';
@@ -806,6 +813,20 @@ function WorkspaceContent() {
                   </Suspense>
                 </PopoverContent>
               </Popover>
+              <StyledTooltip content="Activity feed" side="bottom">
+                <button
+                  data-testid="toggle-activity-feed"
+                  onClick={() => dispatch({ type: 'SET_ACTIVITY_FEED_OPEN', open: !ws.activityFeedOpen })}
+                  className={cn(
+                    'p-2 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    ws.activityFeedOpen
+                      ? 'text-primary bg-primary/10'
+                      : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <Activity className="w-4 h-4" />
+                </button>
+              </StyledTooltip>
               <ThemeToggle />
             </div>
           </header>
@@ -1006,6 +1027,13 @@ function WorkspaceContent() {
                   </Suspense>
                 </ErrorBoundary>
               )}
+              {activeView === 'audit_trail' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <AuditTrailView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
           </div>
 
           <div className="absolute bottom-4 right-4 z-40 w-80 shadow-2xl">
@@ -1017,6 +1045,20 @@ function WorkspaceContent() {
               isAnalyzing={isAnalyzing}
             />
           </div>
+
+          {/* BL-0186: Activity feed slide-over */}
+          {ws.activityFeedOpen && (
+            <div
+              data-testid="activity-feed-overlay"
+              className="absolute top-0 right-0 z-30 w-80 h-full bg-card/95 backdrop-blur-xl border-l border-border shadow-2xl"
+            >
+              <ErrorBoundary>
+                <Suspense fallback={<ViewLoadingFallback />}>
+                  <ActivityFeedPanel />
+                </Suspense>
+              </ErrorBoundary>
+            </div>
+          )}
 
           {/* BL-0231: Radial context menu */}
           {radialMenu && (

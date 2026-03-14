@@ -308,6 +308,9 @@ function ExportPanel() {
   // -- Import history state --
   const [importHistoryExpanded, setImportHistoryExpanded] = useState(false);
 
+  // -- Pick-and-place preview state --
+  const [pickPlaceEntries, setPickPlaceEntries] = useState<PlacementEntry[] | null>(null);
+
   // Build export validation data from available context
   const exportData: ProjectExportData = useMemo(() => ({
     projectName,
@@ -455,6 +458,36 @@ function ExportPanel() {
       setPrecheckFormatId(format.id);
     }
   }, [exportData, handleExport]);
+
+  // -- Pick-and-place preview handler --
+  const handlePickPlacePreview = useCallback(async () => {
+    try {
+      const url = `/api/projects/${projectId}/export/pick-place`;
+      const sessionId = localStorage.getItem(SESSION_KEY) ?? '';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': sessionId,
+        },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const errorBody = await res.text();
+        throw new Error(errorBody || `HTTP ${res.status}`);
+      }
+      const csvText = await res.text();
+      const { parsePlacementCsv } = await import('@/lib/pick-place-preview');
+      setPickPlaceEntries(parsePlacementCsv(csvText));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast({ title: 'Preview failed', description: message, variant: 'destructive' });
+    }
+  }, [projectId, toast]);
+
+  const handlePickPlacePreviewClose = useCallback(() => {
+    setPickPlaceEntries(null);
+  }, []);
 
   const handlePrecheckExportAnyway = useCallback(() => {
     if (precheckFormatId) {
@@ -689,6 +722,18 @@ function ExportPanel() {
                           <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5 line-clamp-1">{format.description}</p>
                         </div>
 
+                        {format.id === 'pick-place' && (
+                          <StyledTooltip content="Preview placement data before exporting" side="left">
+                            <button
+                              data-testid="pick-place-preview-button"
+                              className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors shrink-0 focus-ring"
+                              onClick={() => void handlePickPlacePreview()}
+                              aria-label="Preview pick-and-place data"
+                            >
+                              <LayoutGrid className="w-4 h-4" />
+                            </button>
+                          </StyledTooltip>
+                        )}
                         <StyledTooltip content={tooltipLines.join('\n')} side="left">
                           <button
                             data-testid={`export-download-${format.id}`}
@@ -720,6 +765,16 @@ function ExportPanel() {
                             onExportAnyway={handlePrecheckExportAnyway}
                             onClose={handlePrecheckClose}
                           />
+                        </div>
+                      )}
+                      {format.id === 'pick-place' && pickPlaceEntries !== null && (
+                        <div className="px-3 pb-2.5">
+                          <Suspense fallback={<div className="text-[10px] text-muted-foreground p-2">Loading preview...</div>}>
+                            <PickPlacePreview
+                              entries={pickPlaceEntries}
+                              onClose={handlePickPlacePreviewClose}
+                            />
+                          </Suspense>
                         </div>
                       )}
                     </div>
