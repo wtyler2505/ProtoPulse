@@ -1089,3 +1089,5 @@ client/src/lib/tauri-api.ts(160,18): error TS7006: Parameter 'unlisten' implicit
 client/src/lib/tauri-api.ts(214,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
 
 1:32:58 PM - Found 7 errors. Watching for file changes.
+[2J[3J[H1:36:02 PM - File change detected. Starting incremental compilation...
+

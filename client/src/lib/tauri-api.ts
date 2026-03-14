@@ -157,7 +157,7 @@ function buildTauriAPI(): DesktopAPI {
       for (const channel of MENU_CHANNELS) {
         const p = listen<void>(channel, () => {
           callback(channel);
-        }).then((unlisten) => {
+        }).then((unlisten: UnlistenFn) => {
           unlisteners.push(unlisten);
         });
         setupPromises.push(p);
