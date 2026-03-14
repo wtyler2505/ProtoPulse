@@ -1231,3 +1231,7 @@ client/src/lib/ai-safety-mode.ts(511,5): error TS18004: No value exists in scope
 
 
 4:12:05 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:17:53 PM - File change detected. Starting incremental compilation...
+
+
+4:17:59 PM - Found 0 errors. Watching for file changes.
