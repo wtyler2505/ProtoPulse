@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useMemo } from 'react';
 import { Command } from 'cmdk';
 import {
   LayoutGrid,
@@ -26,6 +26,12 @@ import {
   Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  categorizeCommands,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+} from '@/lib/command-categories';
+import type { CommandCategory } from '@/lib/command-categories';
 import type { ViewMode } from '@/lib/project-context';
 
 interface CommandPaletteProps {
@@ -46,6 +52,15 @@ interface CommandItemDef {
   keywords?: string[];
 }
 
+const GROUP_HEADING_CLASSES = '[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground';
+
+const ITEM_CLASSES = cn(
+  'flex items-center gap-3 rounded-md px-2 py-2 text-sm cursor-pointer',
+  'text-foreground/80',
+  'aria-selected:bg-primary/10 aria-selected:text-primary',
+  'hover:bg-muted/50',
+);
+
 export default function CommandPalette({
   onNavigate,
   onToggleSidebar,
@@ -55,6 +70,7 @@ export default function CommandPalette({
   chatCollapsed,
 }: CommandPaletteProps) {
   const [open, setOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<CommandCategory | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -67,12 +83,20 @@ export default function CommandPalette({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Reset filter when palette closes
+  useEffect(() => {
+    if (!open) {
+      setActiveFilter(null);
+    }
+  }, [open]);
+
   const handleSelect = useCallback((action: () => void) => {
     action();
     setOpen(false);
   }, []);
 
-  const navigateItems: CommandItemDef[] = [
+  const allItems: CommandItemDef[] = useMemo(() => [
+    // Navigate items
     { id: 'nav-architecture', label: 'Architecture', icon: LayoutGrid, shortcut: '1', action: () => onNavigate('architecture'), keywords: ['block', 'diagram'] },
     { id: 'nav-schematic', label: 'Schematic', icon: CircuitBoard, shortcut: '2', action: () => onNavigate('schematic'), keywords: ['circuit', 'net', 'wire'] },
     { id: 'nav-pcb', label: 'PCB Layout', icon: Microchip, shortcut: '3', action: () => onNavigate('pcb'), keywords: ['board', 'trace', 'footprint'] },
@@ -91,9 +115,7 @@ export default function CommandPalette({
     { id: 'nav-circuit-code', label: 'Circuit Code', icon: Code2, action: () => onNavigate('circuit_code'), keywords: ['code', 'arduino', 'firmware', 'program', 'cpp', 'upload'] },
     { id: 'nav-generative-design', label: 'Generative Design', icon: Wand2, action: () => onNavigate('generative_design'), keywords: ['generative', 'evolve', 'optimize', 'candidate', 'fitness', 'ai'] },
     { id: 'nav-digital-twin', label: 'Digital Twin', icon: Radio, action: () => onNavigate('digital_twin'), keywords: ['twin', 'iot', 'telemetry', 'serial', 'live', 'hardware', 'sensor'] },
-  ];
-
-  const panelItems: CommandItemDef[] = [
+    // Panel items
     {
       id: 'panel-sidebar',
       label: sidebarCollapsed ? 'Show Sidebar' : 'Hide Sidebar',
@@ -108,12 +130,19 @@ export default function CommandPalette({
       shortcut: 'Ctrl+J',
       action: onToggleChat,
     },
-  ];
-
-  const actionItems: CommandItemDef[] = [
+    // Action items
     { id: 'action-run-drc', label: 'Run Design Rule Check', icon: ShieldCheck, action: onRunDrc, keywords: ['validate', 'check', 'drc', 'erc'] },
     { id: 'action-export', label: 'Export Project', icon: FileOutput, action: () => onNavigate('output'), keywords: ['export', 'download', 'gerber'] },
-  ];
+  ], [onNavigate, onToggleSidebar, onToggleChat, onRunDrc, sidebarCollapsed, chatCollapsed]);
+
+  const categorized = useMemo(() => categorizeCommands(allItems), [allItems]);
+
+  const filteredCategories = useMemo(() => {
+    if (activeFilter === null) {
+      return categorized;
+    }
+    return categorized.filter((g) => g.category === activeFilter);
+  }, [categorized, activeFilter]);
 
   if (!open) {
     return null;
@@ -148,91 +177,98 @@ export default function CommandPalette({
           autoFocus
           className="w-full border-b border-border bg-transparent px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
+
+        {/* Category filter tabs */}
+        <div
+          data-testid="command-palette-category-filters"
+          className="flex items-center gap-1 px-3 py-2 border-b border-border overflow-x-auto no-scrollbar"
+          role="tablist"
+          aria-label="Filter by category"
+        >
+          <button
+            data-testid="command-palette-filter-all"
+            role="tab"
+            aria-selected={activeFilter === null}
+            className={cn(
+              'px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors shrink-0',
+              activeFilter === null
+                ? 'bg-primary/15 text-primary'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+            )}
+            onClick={() => setActiveFilter(null)}
+          >
+            All
+          </button>
+          {CATEGORY_ORDER.map((cat) => {
+            const meta = CATEGORY_LABELS[cat];
+            const Icon = meta.icon;
+            return (
+              <button
+                key={cat}
+                data-testid={`command-palette-filter-${cat}`}
+                role="tab"
+                aria-selected={activeFilter === cat}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors shrink-0',
+                  activeFilter === cat
+                    ? 'bg-primary/15 text-primary'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                )}
+                onClick={() => setActiveFilter(activeFilter === cat ? null : cat)}
+              >
+                <Icon className="h-3 w-3" />
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+
         <Command.List className="max-h-[300px] overflow-y-auto p-2">
           <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
             No results found.
           </Command.Empty>
 
-          <Command.Group heading="Navigate" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground">
-            {navigateItems.map((item) => (
-              <Command.Item
-                key={item.id}
-                data-testid={`command-item-${item.id}`}
-                value={item.label}
-                keywords={item.keywords}
-                onSelect={() => handleSelect(item.action)}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-2 py-2 text-sm cursor-pointer',
-                  'text-foreground/80',
-                  'aria-selected:bg-primary/10 aria-selected:text-primary',
-                  'hover:bg-muted/50',
+          {filteredCategories.map((group, groupIdx) => {
+            const meta = CATEGORY_LABELS[group.category];
+            const Icon = meta.icon;
+            return (
+              <div key={group.category}>
+                {groupIdx > 0 && (
+                  <Command.Separator className="my-1 h-px bg-border" />
                 )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-                {item.shortcut && (
-                  <kbd className="ml-auto text-[10px] font-mono text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5">
-                    {item.shortcut}
-                  </kbd>
-                )}
-              </Command.Item>
-            ))}
-          </Command.Group>
-
-          <Command.Separator className="my-1 h-px bg-border" />
-
-          <Command.Group heading="Panels" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground">
-            {panelItems.map((item) => (
-              <Command.Item
-                key={item.id}
-                data-testid={`command-item-${item.id}`}
-                value={item.label}
-                onSelect={() => handleSelect(item.action)}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-2 py-2 text-sm cursor-pointer',
-                  'text-foreground/80',
-                  'aria-selected:bg-primary/10 aria-selected:text-primary',
-                  'hover:bg-muted/50',
-                )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-                {item.shortcut && (
-                  <kbd className="ml-auto text-[10px] font-mono text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5">
-                    {item.shortcut}
-                  </kbd>
-                )}
-              </Command.Item>
-            ))}
-          </Command.Group>
-
-          <Command.Separator className="my-1 h-px bg-border" />
-
-          <Command.Group heading="Actions" className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wider [&_[cmdk-group-heading]]:text-muted-foreground">
-            {actionItems.map((item) => (
-              <Command.Item
-                key={item.id}
-                data-testid={`command-item-${item.id}`}
-                value={item.label}
-                keywords={item.keywords}
-                onSelect={() => handleSelect(item.action)}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-2 py-2 text-sm cursor-pointer',
-                  'text-foreground/80',
-                  'aria-selected:bg-primary/10 aria-selected:text-primary',
-                  'hover:bg-muted/50',
-                )}
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                <span>{item.label}</span>
-                {item.shortcut && (
-                  <kbd className="ml-auto text-[10px] font-mono text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5">
-                    {item.shortcut}
-                  </kbd>
-                )}
-              </Command.Item>
-            ))}
-          </Command.Group>
+                <Command.Group
+                  heading={meta.label}
+                  className={GROUP_HEADING_CLASSES}
+                >
+                  <div
+                    data-testid={`command-palette-category-${group.category}`}
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] text-muted-foreground/60"
+                  >
+                    <Icon className="h-3 w-3" />
+                    <span>{meta.label}</span>
+                  </div>
+                  {group.commands.map((item) => (
+                    <Command.Item
+                      key={item.id}
+                      data-testid={`command-item-${item.id}`}
+                      value={item.label}
+                      keywords={item.keywords}
+                      onSelect={() => handleSelect(item.action)}
+                      className={ITEM_CLASSES}
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                      {item.shortcut && (
+                        <kbd className="ml-auto text-[10px] font-mono text-muted-foreground bg-muted border border-border rounded px-1.5 py-0.5">
+                          {item.shortcut}
+                        </kbd>
+                      )}
+                    </Command.Item>
+                  ))}
+                </Command.Group>
+              </div>
+            );
+          })}
         </Command.List>
 
         <div className="border-t border-border px-3 py-2 flex items-center justify-between text-[10px] text-muted-foreground">
