@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-14T17:40:40.822Z",
+  "persistedAt": "2026-03-14T17:42:40.822Z",
   "routes": {
     "POST /api/auth/login": {
       "count": 1,
