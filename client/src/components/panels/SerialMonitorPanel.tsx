@@ -643,12 +643,59 @@ export default function SerialMonitorPanel() {
         </div>
       </ScrollArea>
 
-      {/* Stats Bar */}
+      {/* Stats Bar + Recording Controls */}
       {isConnected && (
         <div data-testid="serial-stats-bar" className="border-t border-b border-border bg-card/40 px-3 py-1 flex items-center gap-4 text-[10px] text-muted-foreground">
           <span>RX: {state.bytesReceived.toLocaleString()} B</span>
           <span>TX: {state.bytesSent.toLocaleString()} B</span>
           <span>{state.monitor.length} lines</span>
+
+          <div className="h-3 w-px bg-border" />
+
+          <Button
+            data-testid="serial-record-btn"
+            variant="ghost"
+            size="sm"
+            className={cn(
+              'h-5 text-[10px] gap-1 px-1.5',
+              loggerSnap.recording && 'text-red-400 hover:text-red-300',
+            )}
+            onClick={handleToggleRecording}
+            title={loggerSnap.recording ? 'Stop recording' : 'Start recording serial output'}
+          >
+            <Circle
+              className={cn(
+                'w-2.5 h-2.5',
+                loggerSnap.recording ? 'fill-red-500 text-red-500 animate-pulse' : 'text-muted-foreground',
+              )}
+            />
+            {loggerSnap.recording ? 'Stop' : 'Record'}
+          </Button>
+
+          {loggerSnap.recording && (
+            <>
+              <span data-testid="serial-record-duration" className="text-red-400 tabular-nums">
+                {formatRecordingDuration(serialLoggerRef.current.getRecordingDuration())}
+              </span>
+              <span data-testid="serial-record-size" className="text-red-400 tabular-nums">
+                {formatRecordingSize(loggerSnap.size)}
+              </span>
+            </>
+          )}
+
+          {!loggerSnap.recording && loggerSnap.hasData && (
+            <Button
+              data-testid="serial-download-recording-btn"
+              variant="ghost"
+              size="sm"
+              className="h-5 text-[10px] gap-1 px-1.5 text-[#00F0FF] hover:text-[#00F0FF]/80"
+              onClick={handleDownloadRecording}
+              title="Download recorded serial output"
+            >
+              <Download className="w-2.5 h-2.5" />
+              Download
+            </Button>
+          )}
         </div>
       )}
 
