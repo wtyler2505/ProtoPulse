@@ -73,6 +73,40 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 - [[errorboundary-suppresses-resizeobserver-loop-errors-because-they-are-benign-browser-noise-that-would-crash-every-canvas-view]] — ResizeObserver loop errors filtered to prevent false crash screens on canvas views
 - [[deprecated-useproject-facade-enables-incremental-migration-from-monolithic-to-decomposed-contexts]] — useProject() composes all domain hooks into the original flat shape for backward compat
 
+### Extracted 2026-03-14 (backend sweep)
+
+- [[ai-model-routing-uses-a-phase-complexity-matrix-not-message-length-to-select-the-cheapest-sufficient-model]] — design phase + task complexity matrix selects fast/standard/premium model tier
+- [[ai-request-deduplication-uses-an-in-flight-promise-map-keyed-by-provider-project-and-message-prefix]] — concurrent identical AI requests share a single API call via promise map
+- [[circuit-breaker-pattern-isolates-ai-provider-failures-preventing-cascading-outages-across-anthropic-and-gemini]] — per-provider circuit breakers with CLOSED/OPEN/HALF_OPEN state machine
+- [[storage-error-maps-postgresql-error-codes-to-http-status-giving-routes-structured-error-semantics-without-db-coupling]] — PG error codes translated to HTTP status in one place
+- [[view-aware-prompt-tiering-sends-full-data-for-the-active-view-and-summaries-for-everything-else-to-reduce-token-cost]] — full data for active view, summaries for others
+- [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles]] — per-type watchdog timeouts and 4x exponential backoff
+- [[session-token-rotation-on-refresh-prevents-session-fixation-by-invalidating-the-old-hash-atomically-with-new-hash-creation]] — SHA-256 hashed tokens, rotation within 24h refresh window
+- [[graceful-shutdown-drains-resources-in-dependency-order-with-a-30-second-forced-exit-backstop]] — job queue -> WebSocket -> metrics -> HTTP -> DB pool, with 30s forced exit
+
+### Extracted 2026-03-14 (infrastructure sweep)
+
+- [[hook-architecture-uses-layered-gates-where-pretooluse-prevents-damage-posttooluse-catches-regressions-and-stop-enforces-quality-before-handoff]] — three-layer defense-in-depth: prevent, catch, gate
+- [[tsc-watch-in-tmux-provides-near-instant-type-feedback-by-decoupling-the-compiler-lifecycle-from-individual-tool-invocations]] — persistent tsc --watch avoids 33-44s cold start per edit
+- [[arscontexta-vault-marker-file-acts-as-a-feature-flag-that-conditionally-activates-knowledge-system-hooks-without-code-changes]] — .arscontexta marker gates 4 hooks without code changes
+- [[agent-specifications-use-yaml-frontmatter-to-control-model-selection-tool-access-and-hook-suppression-creating-a-capability-profile-per-agent]] — YAML frontmatter creates constrained capability profiles per agent
+- [[the-build-script-uses-an-allowlist-inversion-to-bundle-frequently-imported-deps-while-externalizing-everything-else-reducing-cold-start-syscalls]] — allowlist inversion bundles 34 deps to reduce openat syscalls
+- [[ci-pipeline-gates-build-behind-typecheck-but-runs-lint-and-tests-independently-optimizing-for-fast-failure-on-the-cheapest-check]] — CI dependency graph optimizes for fast feedback on cheap checks
+- [[e2e-tests-use-playwright-setup-projects-to-share-auth-state-across-specs-via-localstorage-injection-rather-than-cookie-based-session-persistence]] — localStorage injection mirrors X-Session-Id auth pattern in E2E
+- [[arscontexta-skills-implement-a-knowledge-processing-pipeline-where-each-phase-runs-in-isolated-context-with-structured-handoff-blocks-for-state-transfer]] — RALPH HANDOFF protocol enables cross-context state transfer in knowledge pipeline
+- [[sessionstart-dependency-verification-creates-a-self-healing-bootstrap-that-surfaces-missing-tools-before-they-cause-cryptic-hook-failures]] — preflight dependency check prevents silent hook degradation
+
+### Extracted 2026-03-14 (shared/ref/scribe sweep)
+
+- [[three-diff-engines-share-identical-algorithm-shape-but-are-not-abstracted-creating-a-subtle-maintenance-trap]] — bom-diff, arch-diff, netlist-diff share the same Map-iterate-sort algorithm but are copy-pasted
+- [[the-schema-uses-dual-id-systems-serial-for-db-references-and-text-for-client-generated-uuids-creating-a-two-key-boundary]] — serial PKs for DB foreign keys, text UUIDs for canvas/AI/diff logic
+- [[jsonb-columns-are-a-schema-escape-hatch-that-trades-db-level-validation-for-flexibility-creating-a-zod-bridged-type-boundary]] — 15+ JSONB columns validated by Zod on write but unvalidated casts on read
+- [[crdt-merge-uses-intent-preserving-rules-where-insert-always-beats-concurrent-delete-a-deliberate-philosophical-choice]] — creation intent beats destruction intent in collaboration merge
+- [[every-component-must-define-geometry-three-times-because-the-triple-view-architecture-couples-identity-to-representation]] — breadboard/schematic/pcb ViewData required per component, only schematic populated
+- [[drc-explanations-embed-pedagogical-content-directly-in-the-engine-making-the-validation-system-a-teaching-tool-not-just-a-checker]] — 28 beginner-friendly rule explanations in drc-engine.ts
+- [[the-schema-insert-pattern-uses-omit-plus-extend-to-create-a-strict-write-contract-while-the-select-type-remains-permissive]] — createInsertSchema().omit().extend() creates asymmetric read/write type contracts
+- [[the-arduino-workbench-schema-is-the-only-domain-that-bridges-database-records-to-the-host-filesystem-via-rootPath]] — only schema domain that stores filesystem paths, encoding the native desktop assumption
+
 ### Extracted 2026-03-13 (Codex sessions)
 
 - [[backlog-planning-layers-must-be-additive-scaffolding-over-canonical-item-inventory-not-replacements]] — planning views are lenses over data, not transformations of it

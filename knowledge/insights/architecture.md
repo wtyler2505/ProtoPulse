@@ -20,3 +20,6 @@ How ProtoPulse is structured and why — from monolithic context to barrel files
 - [[cross-tool-integration-is-the-hardest-category-because-it-requires-shared-source-of-truth-decisions]] — integration forces data ownership decisions
 - [[a-ci-gate-for-route-ownership-middleware-would-break-the-idor-recurrence-cycle]] — automated CI enforcement for IDOR prevention
 - [[localstorage-features-follow-an-identical-five-step-migration-to-server-scoped-storage]] — 5-step migration pattern for localStorage-to-server
+- [[storage-error-maps-postgresql-error-codes-to-http-status-giving-routes-structured-error-semantics-without-db-coupling]] — PG error codes → HTTP status translation
+- [[job-queue-uses-per-type-watchdog-timeouts-and-exponential-backoff-because-ai-analysis-and-export-generation-have-different-runtime-profiles]] — per-type watchdog timeouts
+- [[graceful-shutdown-drains-resources-in-dependency-order-with-a-30-second-forced-exit-backstop]] — dependency-ordered shutdown orchestration
