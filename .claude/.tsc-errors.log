@@ -1482,3 +1482,11 @@ client/src/lib/__tests__/export-profiles.test.ts(192,23): error TS2802: Type 'Se
 5:31:08 PM - Found 1 error. Watching for file changes.
 [2J[3J[H5:31:20 PM - File change detected. Starting incremental compilation...
 
+client/src/lib/__tests__/export-profiles.test.ts(192,23): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+5:31:30 PM - Found 1 error. Watching for file changes.
+[2J[3J[H5:31:36 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/export-profiles.test.ts(192,23): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+5:31:42 PM - Found 1 error. Watching for file changes.
