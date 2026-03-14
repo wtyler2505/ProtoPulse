@@ -1172,3 +1172,8 @@ client/src/lib/import-preview.ts(99,23): error TS2802: Type 'Set<string>' can on
 client/src/lib/ai-safety-mode.ts(511,5): error TS18004: No value exists in scope for the shorthand property 'enabled'. Either declare one or provide an initializer.
 
 3:59:34 PM - Found 1 error. Watching for file changes.
+[2J[3J[H3:59:48 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/ai-safety-mode.ts(511,5): error TS18004: No value exists in scope for the shorthand property 'enabled'. Either declare one or provide an initializer.
+
+3:59:57 PM - Found 1 error. Watching for file changes.
