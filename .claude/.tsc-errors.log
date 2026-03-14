@@ -1647,3 +1647,14 @@ client/src/lib/audit-trail.ts(88,21): error TS2802: Type 'Set<string>' can only 
 client/src/lib/audit-trail.ts(88,21): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 
 6:08:22 PM - Found 1 error. Watching for file changes.
+[2J[3J[H6:08:53 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/audit-trail.ts(88,21): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+client/src/lib/manufacturing-validator.ts(245,22): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+6:09:03 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H6:09:54 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/manufacturing-validator.ts(245,22): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+6:10:00 PM - Found 1 error. Watching for file changes.
