@@ -61,3 +61,6 @@ export { generateOdbPlusPlus } from './export/odb-plus-plus-generator';
 
 // IPC-2581 generator
 export { generateIpc2581 } from './export/ipc2581-generator';
+
+// Etchable PCB generator (DIY toner transfer)
+export { generateEtchablePcbSvg, generateEtchablePcbPdf } from './export/etchable-pcb-generator';

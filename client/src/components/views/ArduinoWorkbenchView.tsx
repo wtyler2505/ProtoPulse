@@ -765,6 +765,7 @@ export default function ArduinoWorkbenchView() {
                 { id: 'serial' as const, label: 'Serial Monitor', icon: <Terminal className="w-3 h-3" /> },
                 { id: 'libraries' as const, label: 'Libraries', icon: <Library className="w-3 h-3" /> },
                 { id: 'boards' as const, label: 'Boards', icon: <Package className="w-3 h-3" /> },
+                { id: 'pins' as const, label: 'Pin Constants', icon: <Hash className="w-3 h-3" /> },
               ]).map(tab => (
                 <button
                   key={tab.id}
@@ -1184,6 +1185,22 @@ export default function ArduinoWorkbenchView() {
                     </div>
                   </ScrollArea>
                 </div>
+              )}
+
+              {/* Pin Constants Tab */}
+              {bottomTab === 'pins' && (
+                <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
+                  <div className="h-full overflow-auto p-2" data-testid="arduino-pin-constants-tab">
+                    <PinConstantPanel
+                      nets={[]}
+                      instances={[]}
+                      onInsertIntoSketch={(pinCode) => {
+                        setCode((prev) => pinCode + '\n' + prev);
+                        setIsDirty(true);
+                      }}
+                    />
+                  </div>
+                </Suspense>
               )}
             </div>
           </div>

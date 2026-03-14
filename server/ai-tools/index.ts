@@ -30,6 +30,7 @@ import { registerVisionTools } from './vision';
 import { registerGenerativeTools } from './generative';
 import { registerArduinoTools } from './arduino';
 import { registerSimulationTools } from './simulation';
+import { registerManufacturingTools } from './manufacturing';
 
 function createRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
@@ -47,6 +48,7 @@ function createRegistry(): ToolRegistry {
   registerGenerativeTools(registry);
   registerArduinoTools(registry);
   registerSimulationTools(registry);
+  registerManufacturingTools(registry);
   return registry;
 }
 
