@@ -483,7 +483,7 @@ export function bomItemToInput(item: BomItemLike): BomItemInput {
  * Items with quantity <= 0 are skipped. Missing or blank descriptions default
  * gracefully (SMD, 2-pin, package 'unknown').
  */
-export function bomToAssemblyParts(bomItems: BomItem[]): BomItemInput[] {
+export function bomToAssemblyParts(bomItems: BomItemLike[]): BomItemInput[] {
   return bomItems
     .filter((item) => item.quantity > 0)
     .map((item) => bomItemToInput(item));

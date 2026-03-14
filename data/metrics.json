@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-14T01:39:32.667Z",
+  "persistedAt": "2026-03-14T01:42:32.668Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 2,
@@ -191,15 +191,19 @@
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 4,
-      "totalDuration": 208,
-      "errors": 2,
-      "min": 30,
+      "count": 8,
+      "totalDuration": 325,
+      "errors": 6,
+      "min": 10,
       "max": 111,
       "samples": [
+        10,
         30,
+        31,
+        32,
         33,
         34,
+        44,
         111
       ]
     },
@@ -239,34 +243,37 @@
       ]
     },
     "GET /api/settings/api-keys": {
-      "count": 2,
-      "totalDuration": 30,
+      "count": 3,
+      "totalDuration": 39,
       "errors": 0,
-      "min": 15,
+      "min": 9,
       "max": 15,
       "samples": [
+        9,
         15,
         15
       ]
     },
     "GET /api/component-library": {
-      "count": 1,
-      "totalDuration": 131,
+      "count": 2,
+      "totalDuration": 253,
       "errors": 0,
-      "min": 131,
+      "min": 122,
       "max": 131,
       "samples": [
+        122,
         131
       ]
     },
     "GET /api/projects/:id/component-parts": {
-      "count": 1,
-      "totalDuration": 42,
+      "count": 2,
+      "totalDuration": 97,
       "errors": 0,
       "min": 42,
-      "max": 42,
+      "max": 55,
       "samples": [
-        42
+        42,
+        55
       ]
     },
     "GET /api/projects/:id/circuits/:circuitId": {
@@ -369,6 +376,16 @@
       "max": 41,
       "samples": [
         41
+      ]
+    },
+    "POST /api/settings/api-keys": {
+      "count": 1,
+      "totalDuration": 35,
+      "errors": 0,
+      "min": 35,
+      "max": 35,
+      "samples": [
+        35
       ]
     }
   }
