@@ -1361,3 +1361,13 @@ client/src/lib/arduino/telemetry-parser.ts(267,33): error TS2802: Type 'Map<stri
 
 
 4:49:18 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:49:45 PM - File change detected. Starting incremental compilation...
+
+
+4:49:57 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:49:57 PM - File change detected. Starting incremental compilation...
+
+
+4:50:09 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:50:11 PM - File change detected. Starting incremental compilation...
+

@@ -19,7 +19,7 @@ const SimulationView = lazy(() => import('@/components/simulation/SimulationPane
 const DesignHistoryView = lazy(() => import('@/components/views/DesignHistoryView'));
 const LifecycleDashboard = lazy(() => import('@/components/views/LifecycleDashboard'));
 const WorkflowBreadcrumb = lazy(() => import('@/components/layout/WorkflowBreadcrumb'));
-const KeyboardShortcutsModal = lazy(() => import('@/components/ui/keyboard-shortcuts-modal'));
+const ShortcutsOverlay = lazy(() => import('@/components/ui/ShortcutsOverlay'));
 const CommandPalette = lazy(() => import('@/components/ui/command-palette'));
 const GlobalSearchDialog = lazy(() => import('@/components/ui/GlobalSearchDialog'));
 const TutorialOverlay = lazy(() => import('@/components/ui/TutorialOverlay'));

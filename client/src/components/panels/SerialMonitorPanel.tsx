@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore, lazy, Suspense } from 'react';
 import {
   useWebSerial,
   COMMON_BAUD_RATES,
@@ -11,8 +11,10 @@ import type {
 import { SerialLogger } from '@/lib/arduino/serial-logger';
 import { detectEspException, parseEspException } from '@/lib/arduino/esp-exception-decoder';
 import { detectBaudMismatch } from '@/lib/arduino/baud-detector';
+import { nonPrintableRatio } from '@/lib/arduino/baud-detector';
 import type { EspExceptionResult } from '@/lib/arduino/esp-exception-decoder';
 import type { BaudMismatchResult } from '@/lib/arduino/baud-detector';
+import type { SerialContext } from '@/lib/arduino/serial-troubleshooter';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,7 +46,10 @@ import {
   ChevronDown,
   ChevronRight,
   ArrowRightLeft,
+  HelpCircle,
 } from 'lucide-react';
+
+const TroubleshootWizard = lazy(() => import('@/components/arduino/TroubleshootWizard'));
 
 // ---------------------------------------------------------------------------
 // Constants
