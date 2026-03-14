@@ -1078,3 +1078,14 @@ client/src/components/views/ArduinoWorkbenchView.tsx(1343,59): error TS2339: Pro
 
 
 1:11:10 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:32:50 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/tauri-api.ts(14,24): error TS2307: Cannot find module '@tauri-apps/api/core' or its corresponding type declarations.
+client/src/lib/tauri-api.ts(15,24): error TS2307: Cannot find module '@tauri-apps/api/event' or its corresponding type declarations.
+client/src/lib/tauri-api.ts(16,33): error TS2307: Cannot find module '@tauri-apps/api/event' or its corresponding type declarations.
+client/src/lib/tauri-api.ts(17,33): error TS2307: Cannot find module '@tauri-apps/plugin-opener' or its corresponding type declarations.
+client/src/lib/tauri-api.ts(18,56): error TS2307: Cannot find module '@tauri-apps/plugin-dialog' or its corresponding type declarations.
+client/src/lib/tauri-api.ts(160,18): error TS7006: Parameter 'unlisten' implicitly has an 'any' type.
+client/src/lib/tauri-api.ts(214,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+
+1:32:58 PM - Found 7 errors. Watching for file changes.
