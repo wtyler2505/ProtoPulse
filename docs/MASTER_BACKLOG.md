@@ -408,11 +408,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 173 | 115 | Breadboard/PCB/simulation/UI — Waves 61-82 ongoing |
+| P2 | 171 | 117 | Breadboard/PCB/simulation/UI — Waves 61-83 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **301** | **207** | **508 total items tracked** |
+| **Total** | **299** | **209** | **508 total items tracked** |
 
-*Snapshot updated: Wave 82 (2026-03-14)*
+*Snapshot updated: Wave 83 (2026-03-14)*
 
 ---
 
@@ -667,8 +667,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0619 | **Component visual state rendering during simulation** — During simulation, components should show their physical state visually on the canvas: LED brightness proportional to current (CSS glow effect), motor/servo SVG animated at simulated RPM/angle, 7-segment displays show lit segments, LCDs render text strings from simulated output, NeoPixels show per-pixel colors. This is distinct from BL-0128 (current flow animation overlay) — that's wires; this is the components themselves. TinkerCAD's killer feature. | OPEN | C4 | Wave 66 / TinkerCAD |
-| BL-0620 | **Unified "Start Simulation" play button with auto-detection** — TinkerCAD has a single green "Start Simulation" button. ProtoPulse requires choosing DC/AC/transient, configuring parameters, then reading separate result panels. Add a top-level play button that auto-detects the appropriate simulation type from the circuit topology and shows results visually on the canvas. Advanced users can still access full parameter control. | OPEN | C4 | Wave 66 / TinkerCAD |
+| BL-0619 | **Component visual state rendering during simulation** — During simulation, components should show their physical state visually on the canvas: LED brightness proportional to current (CSS glow effect), motor/servo SVG animated at simulated RPM/angle, 7-segment displays show lit segments, LCDs render text strings from simulated output, NeoPixels show per-pixel colors. This is distinct from BL-0128 (current flow animation overlay) — that's wires; this is the components themselves. TinkerCAD's killer feature. | DONE (Wave 83) | C4 | Wave 66 / TinkerCAD |
+| BL-0620 | **Unified "Start Simulation" play button with auto-detection** — TinkerCAD has a single green "Start Simulation" button. ProtoPulse requires choosing DC/AC/transient, configuring parameters, then reading separate result panels. Add a top-level play button that auto-detects the appropriate simulation type from the circuit topology and shows results visually on the canvas. Advanced users can still access full parameter control. | DONE (Wave 83) | C4 | Wave 66 / TinkerCAD |
 | BL-0621 | **Interactive component controls during simulation** — During a running simulation, components should be interactable: click a button/switch to toggle it, drag a potentiometer knob to change resistance, click an LED to see its current node voltage. Changes feed into the live simulation in real time. This is what makes TinkerCAD feel like a living circuit. Requires pausing the sim, applying the state change, and resuming. | DONE | C3 | Wave 69 |
 | BL-0622 | **Sensor environmental sliders during simulation** — When simulating circuits with temperature sensors (NTC, LM35), light sensors (LDR, photodiode), or distance sensors (HC-SR04), show a slider in the simulation panel that lets the user set the environmental input (0–100°C, 0–100k lux, 0–400cm). The slider drives `analogRead()` / sensor output voltage in the simulation. | DONE (Wave 82) | C3 | Wave 66 / TinkerCAD |
 | BL-0623 | **Audio output from buzzer/speaker during simulation** — When the simulated circuit drives a buzzer or speaker, produce actual audio through the browser's Web Audio API at the simulated frequency and duty cycle. `tone(pin, 440)` produces an A4 note. Makes the simulation feel alive and is directly useful for debugging audio projects. | DONE (Wave 73) | C2 | Wave 66 / TinkerCAD |
