@@ -1,4 +1,5 @@
 import { spawn, execFileSync, execSync } from 'child_process';
+import type { ChildProcess } from 'child_process';
 import { join, resolve, sep } from 'path';
 import fs from 'fs/promises';
 import { logger } from './logger';
@@ -13,6 +14,8 @@ export interface ArduinoCLIConfig {
 
 export class ArduinoService {
   private config: ArduinoCLIConfig;
+  /** Tracks spawned child processes by job ID for cancellation. */
+  private runningProcesses = new Map<number, ChildProcess>();
 
   constructor(private storage: IStorage) {
     this.config = {
@@ -288,14 +291,106 @@ export class ArduinoService {
    * Execute an Arduino CLI command as a job.
    * Streams logs to the database record.
    */
+  /**
+   * Cancel a running job by killing its child process.
+   * Returns true if the job was running and was cancelled.
+   */
+  async cancelJob(jobId: number): Promise<boolean> {
+    const proc = this.runningProcesses.get(jobId);
+    if (!proc) {
+      // Process not tracked — check if the job is still in a cancellable state in DB
+      const job = await this.storage.getArduinoJob(jobId);
+      if (!job) return false;
+      if (job.status === 'pending') {
+        await this.storage.updateArduinoJob(jobId, {
+          status: 'cancelled',
+          finishedAt: new Date(),
+          summary: 'Cancelled before execution started',
+        });
+        return true;
+      }
+      return false;
+    }
+
+    proc.kill('SIGTERM');
+    // Give it 2s to terminate gracefully, then force-kill
+    setTimeout(() => {
+      if (!proc.killed) {
+        proc.kill('SIGKILL');
+      }
+    }, 2000);
+
+    return true;
+  }
+
+  /**
+   * Resolve the path to the compiled artifact (.hex/.bin/.elf) for a completed compile job.
+   * Returns null if no artifact is found.
+   */
+  async getArtifactPath(jobId: number): Promise<string | null> {
+    const job = await this.storage.getArduinoJob(jobId);
+    if (!job || job.status !== 'completed' || job.jobType !== 'compile') {
+      return null;
+    }
+
+    // Arduino CLI puts build artifacts in a temp directory or alongside the sketch.
+    // The args JSONB contains the compile request body (fqbn, sketchPath, etc.)
+    const args = job.args as Record<string, unknown> | null;
+    const sketchPath = (args?.sketchPath ?? '.') as string;
+    const fqbn = (args?.fqbn ?? '') as string;
+
+    // Arduino CLI default build output: {sketchDir}/build/{fqbn-with-dots-replaced}/
+    const fqbnDir = fqbn.replace(/:/g, '.');
+    const buildDir = resolve(join(sketchPath, 'build', fqbnDir));
+
+    try {
+      const entries = await fs.readdir(buildDir);
+      // Prefer .hex > .bin > .elf
+      for (const ext of ['.hex', '.bin', '.elf']) {
+        const match = entries.find(e => e.endsWith(ext));
+        if (match) {
+          return join(buildDir, match);
+        }
+      }
+    } catch {
+      // Build dir doesn't exist — try the workspace build directory
+      const workspace = await this.storage.getArduinoWorkspace(job.projectId);
+      if (workspace) {
+        const wsBuildDir = resolve(join(workspace.rootPath, 'build', fqbnDir));
+        try {
+          const entries = await fs.readdir(wsBuildDir);
+          for (const ext of ['.hex', '.bin', '.elf']) {
+            const match = entries.find(e => e.endsWith(ext));
+            if (match) {
+              return join(wsBuildDir, match);
+            }
+          }
+        } catch {
+          // No build artifacts found
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Execute an Arduino CLI command as a job.
+   * Streams logs to the database record.
+   */
   async runJob(jobId: number, command: string, args: string[]) {
     const job = await this.storage.getArduinoJob(jobId);
     if (!job) throw new Error(`Job ${jobId} not found`);
+
+    // Check if job was cancelled before it started running
+    const freshJob = await this.storage.getArduinoJob(jobId);
+    if (freshJob?.status === 'cancelled') return { exitCode: -1 };
 
     await this.storage.updateArduinoJob(jobId, { status: 'running', startedAt: new Date() });
 
     const fullArgs = [...args, '--format', 'text'];
     const proc = spawn(this.config.cliPath, fullArgs);
+    this.runningProcesses.set(jobId, proc);
 
     let logBuffer = '';
 
@@ -313,7 +408,22 @@ export class ArduinoService {
     });
 
     return new Promise<{ exitCode: number }>((resolve, reject) => {
-      proc.on('close', async (code) => {
+      proc.on('close', async (code, signal) => {
+        this.runningProcesses.delete(jobId);
+
+        // If killed by signal (cancellation), mark as cancelled
+        if (signal === 'SIGTERM' || signal === 'SIGKILL') {
+          await this.storage.updateArduinoJob(jobId, {
+            status: 'cancelled',
+            finishedAt: new Date(),
+            exitCode: code ?? -1,
+            log: logBuffer + '\n--- Job cancelled by user ---',
+            summary: 'Cancelled by user',
+          });
+          resolve({ exitCode: code ?? -1 });
+          return;
+        }
+
         const status = code === 0 ? 'completed' : 'failed';
         await this.storage.updateArduinoJob(jobId, {
           status,
@@ -326,6 +436,7 @@ export class ArduinoService {
       });
 
       proc.on('error', async (err) => {
+        this.runningProcesses.delete(jobId);
         await this.storage.updateArduinoJob(jobId, {
           status: 'failed',
           finishedAt: new Date(),
