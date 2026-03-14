@@ -676,3 +676,11 @@ server/firmware-runtime/simavr-runner.ts(5,53): error TS2724: '"./runtime-events
 server/firmware-runtime/simavr-runner.ts(182,29): error TS2339: Property 'queryByTimeRange' does not exist on type 'RuntimeEventBuffer'.
 
 12:43:31 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:43:53 PM - File change detected. Starting incremental compilation...
+
+server/firmware-runtime/simavr-runner.ts(5,10): error TS2724: '"./runtime-events"' has no exported member named 'createRuntimeEventBuffer'. Did you mean 'RuntimeEventBuffer'?
+server/firmware-runtime/simavr-runner.ts(5,36): error TS2724: '"./runtime-events"' has no exported member named 'parseSimavrLine'. Did you mean 'parseUartLine'?
+server/firmware-runtime/simavr-runner.ts(5,53): error TS2724: '"./runtime-events"' has no exported member named 'parseVcdLine'. Did you mean 'parseVcd'?
+server/firmware-runtime/simavr-runner.ts(182,29): error TS2339: Property 'queryByTimeRange' does not exist on type 'RuntimeEventBuffer'.
+
+12:43:58 PM - Found 4 errors. Watching for file changes.
