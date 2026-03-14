@@ -24,6 +24,9 @@ import {
   Download,
   Trash2,
   Package,
+  Square,
+  BookOpen,
+  Ban,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +49,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import CodeEditor from '@/components/views/circuit-code/CodeEditor';
+import ExamplesBrowser from '@/components/views/arduino/ExamplesBrowser';
 
 const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
 
@@ -70,6 +74,8 @@ export default function ArduinoWorkbenchView() {
     createFile,
     compileJob,
     uploadJob,
+    cancelJob,
+    downloadArtifact,
     updateProfile,
     searchLibraries,
     installLibrary,
@@ -95,6 +101,9 @@ export default function ArduinoWorkbenchView() {
   // New-file dialog state (replaces forbidden prompt())
   const [newFileDialogOpen, setNewFileDialogOpen] = useState(false);
   const [newFileName, setNewFileName] = useState('');
+
+  // Examples browser state
+  const [showExamples, setShowExamples] = useState(false);
 
   // Console state
   const [autoScroll, setAutoScroll] = useState(true);
@@ -137,6 +146,11 @@ export default function ArduinoWorkbenchView() {
 
   const activeJob = useMemo(
     () => jobs.find(j => j.status === 'running' || j.status === 'pending'),
+    [jobs],
+  );
+
+  const lastCompletedCompile = useMemo(
+    () => jobs.find(j => j.status === 'completed' && j.jobType === 'compile'),
     [jobs],
   );
 
@@ -220,6 +234,25 @@ export default function ArduinoWorkbenchView() {
     }
   }, [workspace, selectedProfile, isDirty, handleSave, uploadJob, toast]);
 
+  const handleCancelJob = useCallback(async () => {
+    if (!activeJob) return;
+    try {
+      await cancelJob(activeJob.id);
+      toast({ title: 'Job cancelled' });
+    } catch (e: unknown) {
+      toast({ variant: 'destructive', title: 'Cancel failed', description: e instanceof Error ? e.message : String(e) });
+    }
+  }, [activeJob, cancelJob, toast]);
+
+  const handleDownloadArtifact = useCallback(async (jobId: number) => {
+    try {
+      await downloadArtifact(jobId);
+      toast({ title: 'Download started' });
+    } catch (e: unknown) {
+      toast({ variant: 'destructive', title: 'Download failed', description: e instanceof Error ? e.message : String(e) });
+    }
+  }, [downloadArtifact, toast]);
+
   const handleProfileChange = useCallback(async (id: string) => {
     setSelectedProfileId(id);
     // Persist isDefault so the next session remembers the selection
@@ -251,6 +284,18 @@ export default function ArduinoWorkbenchView() {
       toast({ variant: 'destructive', title: 'Creation failed', description: e instanceof Error ? e.message : String(e) });
     }
   }, [newFileName, createFile, toast]);
+
+  const handleLoadExample = useCallback(async (exCode: string, title: string) => {
+    const filename = `${title.replace(/\s+/g, '_')}.ino`;
+    try {
+      await createFile(filename, exCode);
+      setActiveFilePath(filename);
+      setShowExamples(false);
+      toast({ title: 'Example loaded', description: filename });
+    } catch (e: unknown) {
+      toast({ variant: 'destructive', title: 'Failed to load example', description: e instanceof Error ? e.message : String(e) });
+    }
+  }, [createFile, toast]);
 
   const handleClearConsole = useCallback(() => setConsoleLogs([]), []);
 
@@ -446,110 +491,170 @@ export default function ArduinoWorkbenchView() {
             {activeJob?.jobType === 'upload' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             <span>Upload</span>
           </Button>
+
+          {/* Cancel button — visible when a job is running */}
+          {activeJob && (
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={handleCancelJob}
+              data-testid="button-arduino-cancel-job"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
+              <span>Cancel</span>
+            </Button>
+          )}
+
+          {/* Download artifact — visible when last compile succeeded */}
+          {lastCompletedCompile && !activeJob && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 border-border/50 text-muted-foreground hover:text-foreground"
+              onClick={() => void handleDownloadArtifact(lastCompletedCompile.id)}
+              data-testid="button-arduino-download-binary"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Binary</span>
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar: File Explorer */}
+        {/* Sidebar: File Explorer or Examples Browser */}
         <div className="w-64 border-r border-border flex flex-col bg-card/30 shrink-0">
-          <div className="p-3 border-b border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sketch Files</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
-                onClick={handleOpenNewFileDialog}
-                title="New file"
-                data-testid="button-arduino-new-file"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
-              <Input
-                placeholder="Search files..."
-                className="pl-7 h-8 text-[11px] bg-background/50 border-border/50"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                data-testid="input-arduino-file-search"
-              />
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1">
-            <div className="p-2 space-y-0.5">
-              {isFilesLoading ? (
-                <div className="flex flex-col items-center justify-center p-8 opacity-40">
-                  <Loader2 className="w-4 h-4 animate-spin mb-2" />
-                  <span className="text-[10px]">Loading files...</span>
-                </div>
-              ) : filteredFiles.length === 0 ? (
-                <div className="p-4 text-center text-[10px] text-muted-foreground">
-                  {searchQuery ? 'No matching files' : 'No files yet — click + to create one'}
-                </div>
-              ) : (
-                filteredFiles.map((file) => (
-                  <button
-                    key={file.id}
-                    onClick={() => setActiveFilePath(file.relativePath)}
-                    data-testid={`file-item-${file.id}`}
-                    className={cn(
-                      'w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors',
-                      activeFilePath === file.relativePath
-                        ? 'bg-primary/10 text-primary font-medium'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                    )}
+          {showExamples ? (
+            <>
+              <div className="p-2 border-b border-border flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Examples</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] gap-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowExamples(false)}
+                  data-testid="button-arduino-close-examples"
+                >
+                  <XCircle className="w-3 h-3" />
+                  Close
+                </Button>
+              </div>
+              <ExamplesBrowser onLoadExample={handleLoadExample} className="flex-1" />
+            </>
+          ) : (
+            <>
+              <div className="p-3 border-b border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sketch Files</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 hover:bg-primary/10 hover:text-primary"
+                    onClick={handleOpenNewFileDialog}
+                    title="New file"
+                    data-testid="button-arduino-new-file"
                   >
-                    {file.language === 'ino'
-                      ? <FileCode className="w-3.5 h-3.5 opacity-70 text-emerald-500 shrink-0" />
-                      : <FileText className="w-3.5 h-3.5 opacity-70 shrink-0" />}
-                    <span className="truncate">{file.relativePath}</span>
-                    {activeFilePath === file.relativePath && isDirty && (
-                      <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" title="Unsaved changes" />
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          </ScrollArea>
+                    <Plus className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-3 w-3 text-muted-foreground" />
+                  <Input
+                    placeholder="Search files..."
+                    className="pl-7 h-8 text-[11px] bg-background/50 border-border/50"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    data-testid="input-arduino-file-search"
+                  />
+                </div>
+              </div>
 
-          <div className="mt-auto border-t border-border bg-card/50">
-            <button
-              className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors group"
-              onClick={() => setBottomTab('libraries')}
-              data-testid="button-arduino-library-manager"
-            >
-              <div className="flex items-center gap-2">
-                <Library className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
-                <span className="text-xs font-medium">Library Manager</span>
+              <ScrollArea className="flex-1">
+                <div className="p-2 space-y-0.5">
+                  {isFilesLoading ? (
+                    <div className="flex flex-col items-center justify-center p-8 opacity-40">
+                      <Loader2 className="w-4 h-4 animate-spin mb-2" />
+                      <span className="text-[10px]">Loading files...</span>
+                    </div>
+                  ) : filteredFiles.length === 0 ? (
+                    <div className="p-4 text-center text-[10px] text-muted-foreground">
+                      {searchQuery ? 'No matching files' : 'No files yet — click + to create one'}
+                    </div>
+                  ) : (
+                    filteredFiles.map((file) => (
+                      <button
+                        key={file.id}
+                        onClick={() => setActiveFilePath(file.relativePath)}
+                        data-testid={`file-item-${file.id}`}
+                        className={cn(
+                          'w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors',
+                          activeFilePath === file.relativePath
+                            ? 'bg-primary/10 text-primary font-medium'
+                            : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )}
+                      >
+                        {file.language === 'ino'
+                          ? <FileCode className="w-3.5 h-3.5 opacity-70 text-emerald-500 shrink-0" />
+                          : <FileText className="w-3.5 h-3.5 opacity-70 shrink-0" />}
+                        <span className="truncate">{file.relativePath}</span>
+                        {activeFilePath === file.relativePath && isDirty && (
+                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-primary shrink-0" title="Unsaved changes" />
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+
+              <div className="mt-auto border-t border-border bg-card/50">
+                <button
+                  className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors group"
+                  onClick={() => setShowExamples(true)}
+                  data-testid="button-arduino-examples"
+                >
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
+                    <span className="text-xs font-medium">Examples</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+                <button
+                  className="w-full flex items-center justify-between p-3 border-t border-border hover:bg-muted/50 transition-colors group"
+                  onClick={() => setBottomTab('libraries')}
+                  data-testid="button-arduino-library-manager"
+                >
+                  <div className="flex items-center gap-2">
+                    <Library className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
+                    <span className="text-xs font-medium">Library Manager</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+                <button
+                  className="w-full flex items-center justify-between p-3 border-t border-border hover:bg-muted/50 transition-colors group"
+                  onClick={() => setBottomTab('boards')}
+                  data-testid="button-arduino-board-manager"
+                >
+                  <div className="flex items-center gap-2">
+                    <Package className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
+                    <span className="text-xs font-medium">Board Manager</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+                <button
+                  className="w-full flex items-center justify-between p-3 border-t border-border hover:bg-muted/50 transition-colors group"
+                  onClick={() => setBottomTab('serial')}
+                  data-testid="button-arduino-serial-monitor"
+                >
+                  <div className="flex items-center gap-2">
+                    <Terminal className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
+                    <span className="text-xs font-medium">Serial Monitor</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
               </div>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-            <button
-              className="w-full flex items-center justify-between p-3 border-t border-border hover:bg-muted/50 transition-colors group"
-              onClick={() => setBottomTab('boards')}
-              data-testid="button-arduino-board-manager"
-            >
-              <div className="flex items-center gap-2">
-                <Package className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
-                <span className="text-xs font-medium">Board Manager</span>
-              </div>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-            <button
-              className="w-full flex items-center justify-between p-3 border-t border-border hover:bg-muted/50 transition-colors group"
-              onClick={() => setBottomTab('serial')}
-              data-testid="button-arduino-serial-monitor"
-            >
-              <div className="flex items-center gap-2">
-                <Terminal className="w-4 h-4 text-primary opacity-70 group-hover:opacity-100" />
-                <span className="text-xs font-medium">Serial Monitor</span>
-              </div>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-            </button>
-          </div>
+            </>
+          )}
         </div>
 
         {/* Main Editor Area */}
@@ -660,11 +765,34 @@ export default function ArduinoWorkbenchView() {
                           <div className="flex-1" />
                           {job.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-emerald-500" />}
                           {job.status === 'failed' && <XCircle className="w-3 h-3 text-destructive" />}
+                          {job.status === 'cancelled' && <Ban className="w-3 h-3 text-amber-500" />}
                           {(job.status === 'running' || job.status === 'pending') && <Loader2 className="w-3 h-3 animate-spin text-primary" />}
+
+                          {/* Per-job action buttons */}
+                          {(job.status === 'running' || job.status === 'pending') && (
+                            <button
+                              className="text-[9px] text-destructive hover:text-destructive/80 px-1"
+                              onClick={() => void cancelJob(job.id)}
+                              data-testid={`button-cancel-job-${job.id}`}
+                              title="Cancel this job"
+                            >
+                              <Square className="w-2.5 h-2.5 fill-current" />
+                            </button>
+                          )}
+                          {job.status === 'completed' && job.jobType === 'compile' && (
+                            <button
+                              className="text-[9px] text-primary hover:text-primary/80 px-1"
+                              onClick={() => void handleDownloadArtifact(job.id)}
+                              data-testid={`button-download-artifact-${job.id}`}
+                              title="Download compiled binary"
+                            >
+                              <Download className="w-2.5 h-2.5" />
+                            </button>
+                          )}
                         </div>
                         <p className={cn(
                           'text-[10px]',
-                          job.status === 'failed' ? 'text-destructive' : job.status === 'completed' ? 'text-emerald-400' : 'text-primary',
+                          job.status === 'failed' ? 'text-destructive' : job.status === 'completed' ? 'text-emerald-400' : job.status === 'cancelled' ? 'text-amber-400' : 'text-primary',
                         )}>
                           {job.summary}
                         </p>

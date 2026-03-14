@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-14T01:36:32.667Z",
+  "persistedAt": "2026-03-14T01:39:32.667Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 2,
@@ -191,14 +191,15 @@
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 3,
-      "totalDuration": 174,
-      "errors": 1,
+      "count": 4,
+      "totalDuration": 208,
+      "errors": 2,
       "min": 30,
       "max": 111,
       "samples": [
         30,
         33,
+        34,
         111
       ]
     },

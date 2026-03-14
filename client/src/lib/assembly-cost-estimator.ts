@@ -429,8 +429,21 @@ export function inferPackageType(description: string, partNumber?: string): stri
   return 'unknown';
 }
 
-/** Convert a BomItem from the schema to our internal input format. */
-export function bomItemToInput(item: BomItem): BomItemInput {
+/**
+ * Minimal shape required to convert a BOM item into an assembly cost input.
+ * Both the schema BomItem and the client-side BomItem satisfy this interface.
+ */
+export interface BomItemLike {
+  partNumber: string;
+  manufacturer: string;
+  description: string;
+  quantity: number;
+  unitPrice: string | number;
+  assemblyCategory?: string | null;
+}
+
+/** Convert a BomItem (schema or client-side) to our internal input format. */
+export function bomItemToInput(item: BomItemLike): BomItemInput {
   // Try description first; fall back to partNumber for additional hints only
   // when the description alone is insufficient.
   let mountType = classifyMountType(item.description, item.assemblyCategory);
