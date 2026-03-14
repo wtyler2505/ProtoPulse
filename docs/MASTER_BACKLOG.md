@@ -408,11 +408,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 166 | 122 | Breadboard/PCB/simulation/UI — Waves 61-84 ongoing |
+| P2 | 161 | 127 | Breadboard/PCB/simulation/UI — Waves 61-85 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **294** | **214** | **508 total items tracked** |
+| **Total** | **289** | **219** | **508 total items tracked** |
 
-*Snapshot updated: Wave 84 (2026-03-14)*
+*Snapshot updated: Wave 85 (2026-03-14)*
 
 ---
 
@@ -705,7 +705,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0153 | Serial plotter for live sensor curves | DONE (Wave 77) | C3 | ARDX-032 |
 | BL-0154 | Multi-channel telemetry dashboard | OPEN | C3 | ARDX-033 |
 | BL-0155 | Crash doctor for watchdog resets/brownouts | OPEN | C4 | ARDX-036 |
-| BL-0156 | Baud mismatch auto-detection | OPEN | C2 | ARDX-037 |
+| BL-0156 | Baud mismatch auto-detection | DONE (Wave 85) | C2 | ARDX-037 |
 | BL-0157 | "No data" troubleshooting wizard | OPEN | C3 | ARDX-040 |
 
 ### Arduino & Maker Integration (Wave 63)
@@ -730,14 +730,14 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0604 | **Job cancellation** — ESP32 first compile takes 2-4 minutes. There is no way to cancel a running compile or upload job. Users are stuck waiting with no escape. Add a "Cancel" button that kills the arduino-cli process for the active job. | DONE (Wave 82) | C2 | Wave 66 / Arduino IDE |
 | BL-0605 | **Export compiled binary (.hex/.bin/.elf)** — Allow users to download the compiled firmware binary for OTA flashing, production programming, sharing, or external debugging. `arduino-cli compile --output-dir` already supports this; just needs a UI button and download endpoint. | DONE (Wave 82) | C2 | Wave 66 / Arduino IDE |
 | BL-0606 | **Built-in examples browser** — "File → Examples → Basics → Blink" is how every Arduino beginner starts. ProtoPulse has `generate_arduino_sketch` AI tool but no browsable library of built-in examples. Add a panel listing examples by category (Basics, Digital, Analog, Communication, Control, Sensors, Starter Kit, etc.) with one-click "Open in Editor." | DONE (Wave 82) | C2 | Wave 66 / Arduino IDE |
-| BL-0607 | **Real-time SSE log streaming for compile/upload** — Compile and upload logs are currently polled from the DB rather than streamed. Add Server-Sent Events (SSE) streaming for job output so the console updates character-by-character as arduino-cli produces output, not in chunks after polling intervals. | OPEN | C3 | Wave 66 / Arduino IDE |
+| BL-0607 | **Real-time SSE log streaming for compile/upload** — Compile and upload logs are currently polled from the DB rather than streamed. Add Server-Sent Events (SSE) streaming for job output so the console updates character-by-character as arduino-cli produces output, not in chunks after polling intervals. | DONE (Wave 85) | C3 | Wave 66 / Arduino IDE |
 | BL-0608 | **Go to definition / find references in code editor** — Jump to the definition of a function, variable, or `#define` from any usage. Standard IDE navigation (F12 / Ctrl+Click). Essential as sketches grow beyond trivial size. Requires LSP or ctags-style indexing. | OPEN | C4 | Wave 66 / Arduino IDE 2.x |
 
 ### Arduino — PlatformIO Parity Gaps (Wave 66 Competitive Audit)
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0609 | **ESP exception decoder** — When an ESP32/ESP8266 crashes with a `Guru Meditation Error` or stack trace, the output is raw hex addresses. PlatformIO's serial monitor filter passes these through `addr2line` / `xtensa-addr2line` to translate them to `filename:line`. Every ESP32 user hits this within hours of their first project. Add an "Decode ESP exception" button in the serial monitor that auto-detects and decodes crash output. | OPEN | C3 | Wave 66 / PlatformIO |
+| BL-0609 | **ESP exception decoder** — When an ESP32/ESP8266 crashes with a `Guru Meditation Error` or stack trace, the output is raw hex addresses. PlatformIO's serial monitor filter passes these through `addr2line` / `xtensa-addr2line` to translate them to `filename:line`. Every ESP32 user hits this within hours of their first project. Add an "Decode ESP exception" button in the serial monitor that auto-detects and decodes crash output. | DONE (Wave 85) | C3 | Wave 66 / PlatformIO |
 | BL-0610 | **SPIFFS/LittleFS filesystem upload** — Upload a directory of files (HTML, CSS, JSON, images) to the ESP32/ESP8266 flash filesystem. Massive use case: ESP web servers, config files, OTA landing pages. PlatformIO has a first-class `uploadfs` target. Requires generating a filesystem image from a `/data` directory and flashing it via esptool. | OPEN | C4 | Wave 66 / PlatformIO |
 | BL-0611 | **OTA (Over-The-Air) firmware update** — After the first USB flash, push firmware updates wirelessly to ESP devices via IP or mDNS. Eliminates the USB cable for iterative development. PlatformIO's `upload_protocol = espota` handles this. Add an OTA upload mode to the Workbench that discovers ESP devices on the network and pushes the compiled binary. | OPEN | C4 | Wave 66 / PlatformIO |
 | BL-0612 | **Serial output log-to-file** — Auto-save serial monitor output to a timestamped file. Essential for long-running data collection (sensor logging, overnight tests). PlatformIO's `log2file` filter does this transparently. Add a "Record to file" toggle in the serial monitor with download button. | DONE (Wave 84) | C2 | Wave 66 / PlatformIO |
@@ -779,7 +779,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0519 | **Simulation control AI tools** — Add AI tools to start, stop, configure, and retrieve results from simulations (`run_dc_analysis`, `run_transient`, `get_sim_results`, `set_sim_parameters`). Currently AI can discuss simulation but cannot invoke it directly via tool call. | OPEN | C3 | Wave 64 audit |
+| BL-0519 | **Simulation control AI tools** — Add AI tools to start, stop, configure, and retrieve results from simulations (`run_dc_analysis`, `run_transient`, `get_sim_results`, `set_sim_parameters`). Currently AI can discuss simulation but cannot invoke it directly via tool call. | DONE (Wave 85) | C3 | Wave 64 audit |
 | BL-0520 | **Circuit instances in AI system prompt** — The AI system prompt includes architecture nodes, BOM, and validation issues but does NOT include circuit schematic instances and nets. AI answers about circuit connectivity are based on inference, not actual data. Add a `buildCircuitContext()` function to include instances/nets/wires in every prompt. | OPEN | C4 | Wave 64 audit |
 | BL-0521 | **Action executor error tracking** — `useActionExecutor` silently drops failed tool-call actions (no toast, no console log, no retry). Add per-action error state tracking so users see which AI-suggested actions failed and why. | DONE (Wave 78) | C2 | Wave 64 audit |
 | BL-0522 | **"Explain this net" AI tool** — Add an `explain_net` tool that takes a net name and returns a plain-English description of what it carries (power, signal, data bus, control), what drives it, and what loads it — useful for newcomers trying to understand a schematic. | DONE (Wave 84) | C2 | Wave 64 audit |
@@ -1000,7 +1000,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0577 | **Digital Twin → out-of-spec telemetry creates validation issues** — When a connected device sends telemetry that exceeds a component's operating bounds (e.g. VCC = 4.1V, temperature = 87°C), the Digital Twin should automatically create a `validation_issue` record (type: "hardware-telemetry", severity: "warning") so it shows up in the ValidationView. Currently the Digital Twin and the validation system have zero connection. | OPEN | C4 | Wave 65 audit |
 | BL-0578 | **Engineering Calculators → apply result to design** — After computing a result in any calculator (Ohm's Law: R = 330Ω; RC filter: C = 100nF), there should be an "Add to BOM" and "Apply to component" button that uses the result as the value for a selected BOM item or schematic instance. Currently results must be manually transcribed — the calculators are completely isolated from the rest of the design. | OPEN | C3 | Wave 65 audit |
 | BL-0579 | **Export → auto-create design snapshot** — When a user exports Gerbers for fabrication (the most critical export), the system should offer (or automatically) create a timestamped design snapshot ("Sent to fab — 2026-03-12"). This ties design history to manufacturing milestones. Currently export and design history have zero connection. | OPEN | C3 | Wave 65 audit |
-| BL-0580 | **Validation ↔ BOM completeness warnings** — BOM items with missing MPN, blank manufacturer, or unverified specs should generate validation issues (severity: "info" or "warning") in the ValidationView, e.g. "R3 has no MPN — cannot verify for manufacturing." Currently BOM and validation are entirely decoupled; you can submit a BOM full of blank fields and the validator never notices. | OPEN | C4 | Wave 65 audit |
+| BL-0580 | **Validation ↔ BOM completeness warnings** — BOM items with missing MPN, blank manufacturer, or unverified specs should generate validation issues (severity: "info" or "warning") in the ValidationView, e.g. "R3 has no MPN — cannot verify for manufacturing." Currently BOM and validation are entirely decoupled; you can submit a BOM full of blank fields and the validator never notices. | DONE (Wave 85) | C4 | Wave 65 audit |
 | BL-0581 | **Standards Compliance → unified ValidationView** — `StandardsCompliance` checker (IPC-2221, IPC-7711, RoHS, etc.) produces a separate panel/report. Its results should appear as first-class items in the `ValidationView` alongside DRC and ERC violations, with the same severity badges, group-by, filter, and click-to-navigate UX. Currently standards compliance is a completely separate surface. | OPEN | C4 | Wave 65 audit |
 | BL-0582 | **Unified component search across Standard Library + Community Library + BOM** — Users must search Standard Library and Community Library in separate panels, and there is no way to search BOM items from either. A single "Find component" search (Ctrl+K equivalent) that queries all three simultaneously and surfaces the best match — with an "Add to BOM" or "Place on schematic" action — would eliminate most of the cross-panel navigation overhead. | OPEN | C4 | Wave 65 audit |
 | BL-0583 | **Design Patterns → place schematic instances (not just arch nodes)** — `SnippetLibrary` design pattern snippets place `architecture_nodes` when applied. They should also be able to place `circuit_instances` + `circuit_nets` on the schematic canvas when invoked from SchematicView. A "5V regulator with decoupling" pattern should produce a wired schematic subcircuit, not just an architecture block. | OPEN | C4 | Wave 65 audit |
