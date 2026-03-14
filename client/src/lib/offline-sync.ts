@@ -208,10 +208,11 @@ export class OfflineSyncManager {
           continue;
         }
 
-        const backoff = Math.min(
+        const rawBackoff = Math.min(
           INITIAL_BACKOFF_MS * Math.pow(BACKOFF_MULTIPLIER, change.retryCount),
           MAX_BACKOFF_MS,
         );
+        const backoff = addJitter(rawBackoff);
 
         if (change.retryCount > 0) {
           await this.delay(backoff);
