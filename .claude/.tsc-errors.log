@@ -1140,3 +1140,7 @@ client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-op
 
 
 3:56:53 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H3:57:00 PM - File change detected. Starting incremental compilation...
+
+
+3:57:20 PM - Found 0 errors. Watching for file changes.
