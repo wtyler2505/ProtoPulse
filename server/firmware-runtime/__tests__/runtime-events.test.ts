@@ -324,7 +324,7 @@ describe('parseVcd', () => {
 
     const events = parseVcd(vcd);
 
-    expect(events).toHaveLength(5);
+    expect(events).toHaveLength(6);
 
     // t=0: both pins low
     expect(events[0]).toEqual({ type: 'pin_change', pin: 'portb0', value: 0, timestampNs: 0 });
@@ -336,6 +336,9 @@ describe('parseVcd', () => {
     // t=2000: portb0 low, portb1 high
     expect(events[3]).toEqual({ type: 'pin_change', pin: 'portb0', value: 0, timestampNs: 2000 });
     expect(events[4]).toEqual({ type: 'pin_change', pin: 'portb1', value: 1, timestampNs: 2000 });
+
+    // t=3000: portb1 low
+    expect(events[5]).toEqual({ type: 'pin_change', pin: 'portb1', value: 0, timestampNs: 3000 });
   });
 
   it('returns empty array for header-only VCD', () => {

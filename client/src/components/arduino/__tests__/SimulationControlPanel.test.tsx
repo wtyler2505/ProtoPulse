@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import SimulationControlPanel from '../SimulationControlPanel';
 
 // ---------------------------------------------------------------------------
@@ -107,69 +107,67 @@ describe('SimulationControlPanel', () => {
   describe('rendering', () => {
     it('renders the panel container', () => {
       renderPanel();
-      expect(screen.getByTestId('simulation-control-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('simulation-control-panel')).toBeTruthy();
     });
 
     it('renders start, stop, and reset buttons', () => {
       renderPanel();
-      expect(screen.getByTestId('button-sim-start')).toBeInTheDocument();
-      expect(screen.getByTestId('button-sim-stop')).toBeInTheDocument();
-      expect(screen.getByTestId('button-sim-reset')).toBeInTheDocument();
+      expect(screen.getByTestId('button-sim-start')).toBeTruthy();
+      expect(screen.getByTestId('button-sim-stop')).toBeTruthy();
+      expect(screen.getByTestId('button-sim-reset')).toBeTruthy();
     });
 
     it('renders status badge with idle state initially', () => {
       renderPanel();
       const badge = screen.getByTestId('sim-status-badge');
-      expect(badge).toHaveTextContent('Idle');
+      expect(badge.textContent).toContain('Idle');
     });
 
     it('renders MCU info section', () => {
       renderPanel();
       const mcuInfo = screen.getByTestId('sim-mcu-info');
-      expect(mcuInfo).toHaveTextContent('ATmega328P @ 16 MHz');
+      expect(mcuInfo.textContent).toContain('ATmega328P @ 16 MHz');
     });
 
     it('renders metrics section with initial values', () => {
       renderPanel();
-      expect(screen.getByTestId('sim-cycle-count')).toHaveTextContent('0');
-      expect(screen.getByTestId('sim-uptime')).toHaveTextContent('00:00');
+      expect(screen.getByTestId('sim-cycle-count').textContent).toContain('0');
+      expect(screen.getByTestId('sim-uptime').textContent).toContain('00:00');
     });
 
     it('renders serial output section', () => {
       renderPanel();
-      expect(screen.getByTestId('sim-serial-output')).toBeInTheDocument();
+      expect(screen.getByTestId('sim-serial-output')).toBeTruthy();
     });
 
     it('renders pin monitor with digital and analog pins', () => {
       renderPanel();
-      const digitalPins = screen.getByTestId('sim-digital-pins');
-      const analogPins = screen.getByTestId('sim-analog-pins');
-      expect(digitalPins).toBeInTheDocument();
-      expect(analogPins).toBeInTheDocument();
+      expect(screen.getByTestId('sim-digital-pins')).toBeTruthy();
+      expect(screen.getByTestId('sim-analog-pins')).toBeTruthy();
     });
 
     it('renders all 14 digital pin indicators', () => {
       renderPanel();
       for (let i = 0; i < 14; i++) {
-        expect(screen.getByTestId(`sim-pin-D${i}`)).toBeInTheDocument();
+        expect(screen.getByTestId(`sim-pin-D${i}`)).toBeTruthy();
       }
     });
 
     it('renders all 6 analog pin indicators', () => {
       renderPanel();
       for (let i = 0; i < 6; i++) {
-        expect(screen.getByTestId(`sim-pin-A${i}`)).toBeInTheDocument();
+        expect(screen.getByTestId(`sim-pin-A${i}`)).toBeTruthy();
       }
     });
 
     it('displays firmware path when provided', () => {
       renderPanel({ firmwarePath: '/projects/1/build/sketch.hex' });
-      expect(screen.getByTestId('sim-mcu-info')).toHaveTextContent('sketch.hex');
+      expect(screen.getByTestId('sim-mcu-info').textContent).toContain('sketch.hex');
     });
 
     it('does not show error panel when idle', () => {
       renderPanel();
-      expect(screen.queryByTestId('sim-error-panel')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sim-error-panel')).toBeNull();
     });
 
     it('applies custom className', () => {
@@ -184,17 +182,20 @@ describe('SimulationControlPanel', () => {
   describe('button states', () => {
     it('start button is enabled when idle', () => {
       renderPanel();
-      expect(screen.getByTestId('button-sim-start')).not.toBeDisabled();
+      const btn = screen.getByTestId('button-sim-start') as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
     });
 
     it('stop button is disabled when idle', () => {
       renderPanel();
-      expect(screen.getByTestId('button-sim-stop')).toBeDisabled();
+      const btn = screen.getByTestId('button-sim-stop') as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
     });
 
     it('reset button is disabled when idle', () => {
       renderPanel();
-      expect(screen.getByTestId('button-sim-reset')).toBeDisabled();
+      const btn = screen.getByTestId('button-sim-reset') as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
     });
 
     it('start button is disabled while running', async () => {
@@ -205,7 +206,8 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('button-sim-start')).toBeDisabled();
+      const btn = screen.getByTestId('button-sim-start') as HTMLButtonElement;
+      expect(btn.disabled).toBe(true);
     });
 
     it('stop button is enabled while running', async () => {
@@ -216,7 +218,8 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('button-sim-stop')).not.toBeDisabled();
+      const btn = screen.getByTestId('button-sim-stop') as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
     });
 
     it('reset button is enabled while running', async () => {
@@ -227,7 +230,8 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('button-sim-reset')).not.toBeDisabled();
+      const btn = screen.getByTestId('button-sim-reset') as HTMLButtonElement;
+      expect(btn.disabled).toBe(false);
     });
   });
 
@@ -260,7 +264,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Running');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Running');
     });
 
     it('opens an EventSource for events', async () => {
@@ -285,9 +289,9 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Error');
-      expect(screen.getByTestId('sim-error-panel')).toBeInTheDocument();
-      expect(screen.getByTestId('sim-error-message')).toHaveTextContent('No firmware binary found');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Error');
+      expect(screen.getByTestId('sim-error-panel')).toBeTruthy();
+      expect(screen.getByTestId('sim-error-message').textContent).toContain('No firmware binary found');
     });
 
     it('shows Try Again button in error state', async () => {
@@ -298,7 +302,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('button-sim-try-again')).toBeInTheDocument();
+      expect(screen.getByTestId('button-sim-try-again')).toBeTruthy();
     });
 
     it('Try Again button retries starting simulation', async () => {
@@ -315,7 +319,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-try-again'));
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Running');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Running');
     });
 
     it('clears previous events on new start', async () => {
@@ -332,7 +336,7 @@ describe('SimulationControlPanel', () => {
         MockEventSource.lastInstance?.emit('uart', 'Hello World');
       });
 
-      expect(screen.getByTestId('sim-serial-line-0')).toHaveTextContent('Hello World');
+      expect(screen.getByTestId('sim-serial-line-0').textContent).toContain('Hello World');
 
       // Stop and restart
       mockStopResponse();
@@ -345,7 +349,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.queryByTestId('sim-serial-line-0')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('sim-serial-line-0')).toBeNull();
     });
   });
 
@@ -386,7 +390,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-stop'));
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Idle');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Idle');
     });
 
     it('closes the EventSource on stop', async () => {
@@ -451,10 +455,10 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-reset'));
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Idle');
-      expect(screen.getByTestId('sim-cycle-count')).toHaveTextContent('0');
-      expect(screen.getByTestId('sim-uptime')).toHaveTextContent('00:00');
-      expect(screen.queryByTestId('sim-serial-line-0')).not.toBeInTheDocument();
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Idle');
+      expect(screen.getByTestId('sim-cycle-count').textContent).toContain('0');
+      expect(screen.getByTestId('sim-uptime').textContent).toContain('00:00');
+      expect(screen.queryByTestId('sim-serial-line-0')).toBeNull();
     });
   });
 
@@ -473,7 +477,7 @@ describe('SimulationControlPanel', () => {
         MockEventSource.lastInstance?.emit('uart', 'Hello from Arduino');
       });
 
-      expect(screen.getByTestId('sim-serial-line-0')).toHaveTextContent('Hello from Arduino');
+      expect(screen.getByTestId('sim-serial-line-0').textContent).toContain('Hello from Arduino');
     });
 
     it('accumulates multiple uart events', async () => {
@@ -490,9 +494,9 @@ describe('SimulationControlPanel', () => {
         MockEventSource.lastInstance?.emit('uart', 'Line 3');
       });
 
-      expect(screen.getByTestId('sim-serial-line-0')).toHaveTextContent('Line 1');
-      expect(screen.getByTestId('sim-serial-line-1')).toHaveTextContent('Line 2');
-      expect(screen.getByTestId('sim-serial-line-2')).toHaveTextContent('Line 3');
+      expect(screen.getByTestId('sim-serial-line-0').textContent).toContain('Line 1');
+      expect(screen.getByTestId('sim-serial-line-1').textContent).toContain('Line 2');
+      expect(screen.getByTestId('sim-serial-line-2').textContent).toContain('Line 3');
     });
 
     it('updates cycle count from cycle events', async () => {
@@ -507,7 +511,7 @@ describe('SimulationControlPanel', () => {
         MockEventSource.lastInstance?.emit('cycle', '42000');
       });
 
-      expect(screen.getByTestId('sim-cycle-count')).toHaveTextContent('42.0K');
+      expect(screen.getByTestId('sim-cycle-count').textContent).toContain('42.0K');
     });
 
     it('updates pin state from pin events', async () => {
@@ -538,8 +542,8 @@ describe('SimulationControlPanel', () => {
         MockEventSource.lastInstance?.emit('error', 'Segfault in firmware');
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Error');
-      expect(screen.getByTestId('sim-error-message')).toHaveTextContent('Segfault in firmware');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Error');
+      expect(screen.getByTestId('sim-error-message').textContent).toContain('Segfault in firmware');
     });
 
     it('handles stopped event from SSE', async () => {
@@ -556,7 +560,7 @@ describe('SimulationControlPanel', () => {
         es?.emit('stopped');
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Idle');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Idle');
       expect(es?.close).toHaveBeenCalled();
     });
 
@@ -594,7 +598,7 @@ describe('SimulationControlPanel', () => {
         MockEventSource.lastInstance?.emit('cycle', '2500000');
       });
 
-      expect(screen.getByTestId('sim-cycle-count')).toHaveTextContent('2.50M');
+      expect(screen.getByTestId('sim-cycle-count').textContent).toContain('2.50M');
     });
 
     it('formats cycle count in thousands', async () => {
@@ -609,7 +613,7 @@ describe('SimulationControlPanel', () => {
         MockEventSource.lastInstance?.emit('cycle', '1500');
       });
 
-      expect(screen.getByTestId('sim-cycle-count')).toHaveTextContent('1.5K');
+      expect(screen.getByTestId('sim-cycle-count').textContent).toContain('1.5K');
     });
 
     it('formats small cycle counts as plain numbers', async () => {
@@ -624,7 +628,7 @@ describe('SimulationControlPanel', () => {
         MockEventSource.lastInstance?.emit('cycle', '42');
       });
 
-      expect(screen.getByTestId('sim-cycle-count')).toHaveTextContent('42');
+      expect(screen.getByTestId('sim-cycle-count').textContent).toContain('42');
     });
   });
 
@@ -633,7 +637,7 @@ describe('SimulationControlPanel', () => {
   describe('serial output display', () => {
     it('shows placeholder when idle', () => {
       renderPanel();
-      expect(screen.getByTestId('sim-serial-output')).toHaveTextContent('No serial output yet');
+      expect(screen.getByTestId('sim-serial-output').textContent).toContain('No serial output yet');
     });
 
     it('shows waiting message while running with no output', async () => {
@@ -644,7 +648,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('sim-serial-output')).toHaveTextContent('Waiting for serial data');
+      expect(screen.getByTestId('sim-serial-output').textContent).toContain('Waiting for serial data');
     });
 
     it('shows event count badge', async () => {
@@ -662,7 +666,7 @@ describe('SimulationControlPanel', () => {
 
       // Badge shows count of serial events
       const output = screen.getByTestId('sim-serial-output');
-      expect(output).toHaveTextContent('2');
+      expect(output.textContent).toContain('2');
     });
   });
 
@@ -722,8 +726,8 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Error');
-      expect(screen.getByTestId('sim-error-message')).toHaveTextContent('Network error');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Error');
+      expect(screen.getByTestId('sim-error-message').textContent).toContain('Network error');
     });
 
     it('handles non-JSON error response', async () => {
@@ -739,7 +743,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-start'));
       });
 
-      expect(screen.getByTestId('sim-error-message')).toHaveTextContent('Simulation failed (502)');
+      expect(screen.getByTestId('sim-error-message').textContent).toContain('Simulation failed (502)');
     });
 
     it('handles stop failure gracefully', async () => {
@@ -756,7 +760,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-stop'));
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Error');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Error');
     });
 
     it('handles reset failure gracefully', async () => {
@@ -773,7 +777,7 @@ describe('SimulationControlPanel', () => {
         fireEvent.click(screen.getByTestId('button-sim-reset'));
       });
 
-      expect(screen.getByTestId('sim-status-badge')).toHaveTextContent('Error');
+      expect(screen.getByTestId('sim-status-badge').textContent).toContain('Error');
     });
 
     it('does not start again if already running', async () => {
