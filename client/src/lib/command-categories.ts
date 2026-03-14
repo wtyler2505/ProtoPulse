@@ -115,15 +115,17 @@ export function getCommandCategory(command: CommandItem): CommandCategory {
     return directMatch;
   }
 
-  // Keyword fallback: check label + keywords against keyword map
+  // Keyword fallback: check label + keywords against keyword map.
+  // Split label into individual words so substring matching doesn't produce
+  // false positives (e.g. "dashboard" should not match the "board" keyword).
   const searchTokens = [
-    command.label.toLowerCase(),
+    ...command.label.toLowerCase().split(/\s+/),
     ...(command.keywords ?? []).map((k) => k.toLowerCase()),
   ];
 
   for (const { keywords, category } of KEYWORD_CATEGORY_MAP) {
     for (const token of searchTokens) {
-      if (keywords.some((kw) => token.includes(kw))) {
+      if (keywords.some((kw) => token === kw)) {
         return category;
       }
     }

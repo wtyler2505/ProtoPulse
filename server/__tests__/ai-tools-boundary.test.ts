@@ -21,6 +21,7 @@ import { registerArduinoTools } from '../ai-tools/arduino';
 import { registerSimulationTools } from '../ai-tools/simulation';
 import { registerManufacturingTools } from '../ai-tools/manufacturing';
 import { registerTestbenchTools } from '../ai-tools/testbench';
+import { registerBomOptimizationTools } from '../ai-tools/bom-optimization';
 import type { ToolContext, ToolCategory, ToolDefinition } from '../ai-tools/types';
 import type { IStorage } from '../storage';
 
@@ -47,6 +48,7 @@ function createFullRegistry(): ToolRegistry {
   registerSimulationTools(registry);
   registerManufacturingTools(registry);
   registerTestbenchTools(registry);
+  registerBomOptimizationTools(registry);
   return registry;
 }
 
@@ -110,6 +112,7 @@ const ALL_REGISTRATION_FUNCTIONS = [
   { name: 'simulation', fn: registerSimulationTools },
   { name: 'manufacturing', fn: registerManufacturingTools },
   { name: 'testbench', fn: registerTestbenchTools },
+  { name: 'bom-optimization', fn: registerBomOptimizationTools },
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -120,7 +123,7 @@ describe('Registry completeness', () => {
   const registry = createFullRegistry();
   const allTools = registry.getAll();
 
-  it('registers all 16 tool modules', () => {
+  it('registers all 17 tool modules', () => {
     // Each registration function should add at least 1 tool
     for (const { name, fn } of ALL_REGISTRATION_FUNCTIONS) {
       const r = new ToolRegistry();
@@ -129,8 +132,8 @@ describe('Registry completeness', () => {
     }
   });
 
-  it('registers exactly 118 tools total', () => {
-    expect(allTools).toHaveLength(118);
+  it('registers exactly 121 tools total', () => {
+    expect(allTools).toHaveLength(121);
   });
 
   it('every registered tool has a unique name', () => {
@@ -165,8 +168,8 @@ describe('Registry completeness', () => {
     expect(registry.getByCategory('circuit')).toHaveLength(24);
   });
 
-  it('bom category registers 12 tools', () => {
-    expect(registry.getByCategory('bom')).toHaveLength(12);
+  it('bom category registers 15 tools', () => {
+    expect(registry.getByCategory('bom')).toHaveLength(15);
   });
 
   it('validation category registers 14 tools', () => {
@@ -768,7 +771,7 @@ describe('toAnthropicTools() format converter', () => {
   const anthropicTools = registry.toAnthropicTools();
 
   it('returns an array matching total tool count', () => {
-    expect(anthropicTools).toHaveLength(118);
+    expect(anthropicTools).toHaveLength(121);
   });
 
   it('every entry has name, description, and input_schema', () => {
@@ -816,7 +819,7 @@ describe('toGeminiFunctionDeclarations() format converter', () => {
   const geminiTools = registry.toGeminiFunctionDeclarations();
 
   it('returns an array matching total tool count', () => {
-    expect(geminiTools).toHaveLength(118);
+    expect(geminiTools).toHaveLength(121);
   });
 
   it('every entry has name, description, and parameters', () => {

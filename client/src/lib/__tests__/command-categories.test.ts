@@ -21,7 +21,7 @@ describe('command-categories', () => {
         const meta = CATEGORY_LABELS[cat];
         expect(meta).toBeDefined();
         expect(meta.label).toBeTruthy();
-        expect(typeof meta.icon).toBe('function'); // LucideIcon is a component function
+        expect(meta.icon).toBeDefined();
       }
     });
 

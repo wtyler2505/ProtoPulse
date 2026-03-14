@@ -48,6 +48,29 @@ const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30_000;
 const BACKOFF_MULTIPLIER = 2;
 const MAX_RETRY_COUNT = 10;
+const DEFAULT_JITTER_PERCENT = 0.2;
+
+// ---------------------------------------------------------------------------
+// Jitter
+// ---------------------------------------------------------------------------
+
+/**
+ * Add randomised jitter to a base delay.
+ *
+ * Returns a value in the range `[base * (1 - pct), base * (1 + pct)]` where
+ * `pct` is clamped to `[0, 1]`. A base of zero always returns zero.
+ *
+ * Exported for direct use and testing.
+ */
+export function addJitter(baseMs: number, jitterPercent: number = DEFAULT_JITTER_PERCENT): number {
+  if (baseMs === 0) {
+    return 0;
+  }
+  const pct = Math.max(0, Math.min(1, jitterPercent));
+  // Random value in [-pct, +pct]
+  const factor = 1 + (Math.random() * 2 - 1) * pct;
+  return Math.round(baseMs * factor);
+}
 
 // ---------------------------------------------------------------------------
 // OfflineSyncManager

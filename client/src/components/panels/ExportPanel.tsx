@@ -30,8 +30,10 @@ import { Badge } from '@/components/ui/badge';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { downloadBlob } from '@/lib/csv';
 import { validateExportPreflight } from '@/lib/export-validation';
+import { runExportPrecheck } from '@/lib/export-precheck';
 import { generateImportPreview } from '@/lib/import-preview';
 import ImportPreviewDialog from '@/components/panels/ImportPreviewDialog';
+import ExportPrecheckPanel from '@/components/panels/ExportPrecheckPanel';
 import type { ProjectExportData } from '@/lib/export-validation';
 import type { ImportPreview } from '@/lib/import-preview';
 import type { ImportedDesign } from '@/lib/design-import';
@@ -279,6 +281,9 @@ function ExportPanel() {
 
   const [downloadStates, setDownloadStates] = useState<Record<string, DownloadState>>({});
 
+  // -- Pre-check state --
+  const [precheckFormatId, setPrecheckFormatId] = useState<string | null>(null);
+
   // -- Import preview state --
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importFileName, setImportFileName] = useState('');
@@ -411,6 +416,42 @@ function ExportPanel() {
       }, 5000);
     }
   }, [projectId, addOutputLog, toast]);
+
+  // -- Pre-check aware export handler --
+  // Flat lookup for format objects by id
+  const formatById = useMemo(() => {
+    const map: Record<string, ExportFormat> = {};
+    for (const cat of EXPORT_CATEGORIES) {
+      for (const fmt of cat.formats) {
+        map[fmt.id] = fmt;
+      }
+    }
+    return map;
+  }, []);
+
+  const handleExportClick = useCallback((format: ExportFormat) => {
+    // Run precheck — if all pass, export immediately; otherwise show panel
+    const precheck = runExportPrecheck(format.id, exportData);
+    if (precheck.passed && precheck.warnings.length === 0) {
+      void handleExport(format);
+    } else {
+      setPrecheckFormatId(format.id);
+    }
+  }, [exportData, handleExport]);
+
+  const handlePrecheckExportAnyway = useCallback(() => {
+    if (precheckFormatId) {
+      const format = formatById[precheckFormatId];
+      if (format) {
+        void handleExport(format);
+      }
+    }
+    setPrecheckFormatId(null);
+  }, [precheckFormatId, formatById, handleExport]);
+
+  const handlePrecheckClose = useCallback(() => {
+    setPrecheckFormatId(null);
+  }, []);
 
   // -- Import handlers --
 
@@ -554,59 +595,73 @@ function ExportPanel() {
                     tooltipLines.push(`Download ${format.label}`);
                   }
 
-                  return (
-                    <div
-                      key={format.id}
-                      data-testid={`export-format-${format.id}`}
-                      className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 transition-colors group',
-                        hasErrors ? 'opacity-60' : 'hover:bg-muted/20',
-                      )}
-                    >
-                      <FormatIcon className="w-4 h-4 text-muted-foreground shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-foreground">{format.label}</span>
-                          <span className="text-[10px] font-mono text-muted-foreground/60">{format.extension}</span>
-                          {hasErrors && (
-                            <StyledTooltip content={validation.errors.join(' | ')} side="top">
-                              <span data-testid={`export-validation-${format.id}-error`}>
-                                <AlertCircle className="w-3 h-3 text-destructive" />
-                              </span>
-                            </StyledTooltip>
-                          )}
-                          {hasWarnings && validation && (
-                            <StyledTooltip content={validation.warnings.join(' | ')} side="top">
-                              <span data-testid={`export-validation-${format.id}-warning`}>
-                                <AlertTriangle className="w-3 h-3 text-amber-400" />
-                              </span>
-                            </StyledTooltip>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5 line-clamp-1">{format.description}</p>
-                      </div>
+                  const showPrecheck = precheckFormatId === format.id;
 
-                      <StyledTooltip content={tooltipLines.join('\n')} side="left">
-                        <button
-                          data-testid={`export-download-${format.id}`}
-                          className={cn(
-                            'p-1.5 transition-colors shrink-0 focus-ring',
-                            hasErrors && 'text-destructive/50 cursor-not-allowed ring-1 ring-destructive/30 rounded',
-                            !hasErrors && state === 'idle' && 'text-muted-foreground hover:text-primary hover:bg-primary/10',
-                            state === 'loading' && 'text-primary animate-pulse cursor-wait',
-                            state === 'success' && 'text-green-400',
-                            state === 'error' && 'text-destructive',
-                          )}
-                          onClick={() => handleExport(format)}
-                          disabled={state === 'loading' || !!hasErrors}
-                          aria-label={hasErrors ? `Cannot export ${format.label}: ${validation.errors[0] ?? 'missing data'}` : `Download ${format.label}`}
-                        >
-                          {state === 'idle' && <Download className="w-4 h-4" />}
-                          {state === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
-                          {state === 'success' && <CheckCircle2 className="w-4 h-4" />}
-                          {state === 'error' && <AlertCircle className="w-4 h-4" />}
-                        </button>
-                      </StyledTooltip>
+                  return (
+                    <div key={format.id}>
+                      <div
+                        data-testid={`export-format-${format.id}`}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2.5 transition-colors group',
+                          hasErrors ? 'opacity-60' : 'hover:bg-muted/20',
+                        )}
+                      >
+                        <FormatIcon className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-foreground">{format.label}</span>
+                            <span className="text-[10px] font-mono text-muted-foreground/60">{format.extension}</span>
+                            {hasErrors && (
+                              <StyledTooltip content={validation.errors.join(' | ')} side="top">
+                                <span data-testid={`export-validation-${format.id}-error`}>
+                                  <AlertCircle className="w-3 h-3 text-destructive" />
+                                </span>
+                              </StyledTooltip>
+                            )}
+                            {hasWarnings && validation && (
+                              <StyledTooltip content={validation.warnings.join(' | ')} side="top">
+                                <span data-testid={`export-validation-${format.id}-warning`}>
+                                  <AlertTriangle className="w-3 h-3 text-amber-400" />
+                                </span>
+                              </StyledTooltip>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5 line-clamp-1">{format.description}</p>
+                        </div>
+
+                        <StyledTooltip content={tooltipLines.join('\n')} side="left">
+                          <button
+                            data-testid={`export-download-${format.id}`}
+                            className={cn(
+                              'p-1.5 transition-colors shrink-0 focus-ring',
+                              hasErrors && 'text-destructive/50 cursor-not-allowed ring-1 ring-destructive/30 rounded',
+                              !hasErrors && state === 'idle' && 'text-muted-foreground hover:text-primary hover:bg-primary/10',
+                              state === 'loading' && 'text-primary animate-pulse cursor-wait',
+                              state === 'success' && 'text-green-400',
+                              state === 'error' && 'text-destructive',
+                            )}
+                            onClick={() => handleExportClick(format)}
+                            disabled={state === 'loading'}
+                            aria-label={hasErrors ? `Pre-check ${format.label}: ${validation.errors[0] ?? 'missing data'}` : `Download ${format.label}`}
+                          >
+                            {state === 'idle' && <Download className="w-4 h-4" />}
+                            {state === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {state === 'success' && <CheckCircle2 className="w-4 h-4" />}
+                            {state === 'error' && <AlertCircle className="w-4 h-4" />}
+                          </button>
+                        </StyledTooltip>
+                      </div>
+                      {showPrecheck && (
+                        <div className="px-3 pb-2.5">
+                          <ExportPrecheckPanel
+                            format={format.id}
+                            formatLabel={format.label}
+                            projectData={exportData}
+                            onExportAnyway={handlePrecheckExportAnyway}
+                            onClose={handlePrecheckClose}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
