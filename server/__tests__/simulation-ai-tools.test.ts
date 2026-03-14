@@ -100,7 +100,7 @@ interface MockStorageData {
 
 function createMockStorage(data: MockStorageData = {}): IStorage {
   return {
-    getCircuitDesign: vi.fn().mockResolvedValue(data.design ?? makeCircuitDesign()),
+    getCircuitDesign: vi.fn().mockResolvedValue('design' in data ? data.design : makeCircuitDesign()),
     getCircuitInstances: vi.fn().mockResolvedValue(data.instances ?? [makeCircuitInstance()]),
     getSimulationResults: vi.fn().mockResolvedValue(data.simResults ?? []),
     createSimulationScenario: vi.fn().mockResolvedValue(data.scenario ?? makeSimulationScenario()),
