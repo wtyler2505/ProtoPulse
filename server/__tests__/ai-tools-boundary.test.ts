@@ -17,6 +17,10 @@ import { registerComponentTools } from '../ai-tools/component';
 import { registerExportTools } from '../ai-tools/export';
 import { registerVisionTools } from '../ai-tools/vision';
 import { registerGenerativeTools } from '../ai-tools/generative';
+import { registerArduinoTools } from '../ai-tools/arduino';
+import { registerSimulationTools } from '../ai-tools/simulation';
+import { registerManufacturingTools } from '../ai-tools/manufacturing';
+import { registerTestbenchTools } from '../ai-tools/testbench';
 import type { ToolContext, ToolCategory, ToolDefinition } from '../ai-tools/types';
 import type { IStorage } from '../storage';
 

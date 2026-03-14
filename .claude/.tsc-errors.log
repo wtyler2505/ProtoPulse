@@ -315,3 +315,11 @@ server/circuit-routes/exports.ts(779,17): error TS2554: Expected 4-5 arguments, 
 
 
 11:17:27 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:18:16 AM - File change detected. Starting incremental compilation...
+
+
+11:18:23 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:18:49 AM - File change detected. Starting incremental compilation...
+
+
+11:19:11 AM - Found 0 errors. Watching for file changes.
