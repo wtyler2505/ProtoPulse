@@ -1,0 +1,43 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicoptere/tauri/dev/crates/tauri-config-schema/schema.json",
+  "productName": "ProtoPulse",
+  "version": "1.0.0",
+  "identifier": "com.protopulse.app",
+  "build": {
+    "devUrl": "http://localhost:5000",
+    "frontendDist": "../dist/public"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "ProtoPulse",
+        "width": 1400,
+        "height": 900,
+        "minWidth": 800,
+        "minHeight": 600,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' http://localhost:5000 ws://localhost:5000; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval'; font-src 'self' data:; worker-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "DeveloperTool",
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    }
+  }
+}
