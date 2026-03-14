@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Package, RefreshCw, Store, GitCompareArrows, Calculator } from 'lucide-react';
+import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';
@@ -18,6 +18,7 @@ import { useDamageAssessment } from '@/lib/damage-assessment';
 import type { AlternatePart } from '@/lib/alternate-parts';
 import type { BomQuote } from '@/lib/supplier-api';
 import type { DamageReport, DamageObservation, ComponentType } from '@/lib/damage-assessment';
+import { Button } from '@/components/ui/button';
 import {
   BomToolbar,
   BomSettings,
@@ -35,6 +36,7 @@ import {
   detectEsdSensitivity,
   detectAssemblyCategory,
 } from './procurement';
+import { SupplierDrawer } from './procurement/SupplierDrawer';
 import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, CostBreakdown } from './procurement';
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
@@ -69,6 +71,7 @@ function ProcurementView() {
   const [showAssemblyGroups, setShowAssemblyGroups] = useState(false);
   const [showAddItemDialog, setShowAddItemDialog] = useState(false);
   const [showSupplierEdit, setShowSupplierEdit] = useState(false);
+  const [showSupplierDrawer, setShowSupplierDrawer] = useState(false);
 
   // ── Alternate parts ──
   const { findAlternates } = useAlternateParts();
@@ -301,7 +304,7 @@ function ProcurementView() {
   // ── Render ──
   return (
     <Tabs defaultValue="management" className="h-full flex flex-col bg-background/50" data-testid="procurement-view">
-      <div className="px-4 pt-3 pb-0 border-b border-border bg-card/30 backdrop-blur">
+      <div className="px-4 pt-3 pb-0 border-b border-border bg-card/30 backdrop-blur flex items-end gap-2">
         <TabsList className="mb-3" data-testid="procurement-tabs">
           <TabsTrigger value="management" data-testid="tab-bom-management"><Package className="h-4 w-4 mr-1.5" />BOM Management</TabsTrigger>
           <TabsTrigger value="comparison" data-testid="tab-bom-comparison"><GitCompareArrows className="h-4 w-4 mr-1.5" />BOM Comparison</TabsTrigger>
@@ -309,6 +312,16 @@ function ProcurementView() {
           <TabsTrigger value="pricing" data-testid="tab-live-pricing"><Store className="h-4 w-4 mr-1.5" />Live Pricing</TabsTrigger>
           <TabsTrigger value="assembly-cost" data-testid="tab-assembly-cost"><Calculator className="h-4 w-4 mr-1.5" />Assembly Cost</TabsTrigger>
         </TabsList>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto mb-3"
+          onClick={() => setShowSupplierDrawer(true)}
+          data-testid="button-compare-suppliers"
+        >
+          <Scale className="h-4 w-4 mr-1.5" />
+          Compare Suppliers
+        </Button>
       </div>
 
       <TabsContent value="management" className="flex-1 flex flex-col overflow-hidden mt-0">
@@ -348,6 +361,7 @@ function ProcurementView() {
       </TabsContent>
 
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />
+      <SupplierDrawer open={showSupplierDrawer} onOpenChange={setShowSupplierDrawer} />
     </Tabs>
   );
 }

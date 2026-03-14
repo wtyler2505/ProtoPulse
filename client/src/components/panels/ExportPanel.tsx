@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   Box,
   Upload,
+  History,
 } from 'lucide-react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
@@ -36,6 +37,7 @@ import ImportPreviewDialog from '@/components/panels/ImportPreviewDialog';
 import ExportPrecheckPanel from '@/components/panels/ExportPrecheckPanel';
 import ImportWarningsPanel from '@/components/panels/ImportWarningsPanel';
 import ImportHistoryPanel from '@/components/panels/ImportHistoryPanel';
+import ExportProfileSelector from '@/components/panels/ExportProfileSelector';
 import { generateImportWarnings } from '@/lib/import-warnings';
 import type { ImportWarning } from '@/lib/import-warnings';
 import type { ProjectExportData } from '@/lib/export-validation';
@@ -300,6 +302,9 @@ function ExportPanel() {
   const [importWarnings, setImportWarnings] = useState<ImportWarning[]>([]);
   const [importWarningsFileName, setImportWarningsFileName] = useState('');
 
+  // -- Import history state --
+  const [importHistoryExpanded, setImportHistoryExpanded] = useState(false);
+
   // Build export validation data from available context
   const exportData: ProjectExportData = useMemo(() => ({
     projectName,
@@ -462,6 +467,30 @@ function ExportPanel() {
     setPrecheckFormatId(null);
   }, []);
 
+  // -- Profile export handler --
+
+  const handleProfileExport = useCallback(
+    (formatIds: readonly string[]) => {
+      for (const fid of formatIds) {
+        const format = formatById[fid];
+        if (format) {
+          void handleExport(format);
+        }
+      }
+    },
+    [formatById, handleExport],
+  );
+
+  const exportingFormats = useMemo(() => {
+    const s = new Set<string>();
+    for (const [id, state] of Object.entries(downloadStates)) {
+      if (state === 'loading') {
+        s.add(id);
+      }
+    }
+    return s;
+  }, [downloadStates]);
+
   // -- Import handlers --
 
   const handleImportFileSelect = useCallback(() => {
@@ -551,6 +580,14 @@ function ExportPanel() {
     pendingImportDesignRef.current = null;
   }, []);
 
+  const handleImportHistoryRestore = useCallback((entry: ImportHistoryEntry) => {
+    addOutputLog(`[IMPORT] Restoring import from history: "${entry.fileName}" (${entry.sourceFormat})`);
+    toast({
+      title: 'Import restored',
+      description: `Restored "${entry.fileName}" from import history.`,
+    });
+  }, [addOutputLog, toast]);
+
   return (
     <div className="h-full w-full bg-background/80 backdrop-blur p-4 overflow-auto flex flex-col gap-4" data-testid="export-panel">
       {/* Header */}
@@ -563,6 +600,12 @@ function ExportPanel() {
           {EXPORT_CATEGORIES.reduce((sum, cat) => sum + cat.formats.length, 0)} formats
         </Badge>
       </div>
+
+      {/* Quick export profiles */}
+      <ExportProfileSelector
+        onExportProfile={handleProfileExport}
+        exportingFormats={exportingFormats}
+      />
 
       {/* Categories */}
       {EXPORT_CATEGORIES.map((category) => {
@@ -704,6 +747,35 @@ function ExportPanel() {
             Choose File to Import
           </button>
         </div>
+      </div>
+
+      {/* Import warnings (shown after import completes) */}
+      {importWarnings.length > 0 && (
+        <ImportWarningsPanel
+          warnings={importWarnings}
+          fileName={importWarningsFileName}
+          onDismiss={() => setImportWarnings([])}
+        />
+      )}
+
+      {/* Import history (collapsible) */}
+      <div className="border border-border/50 bg-card/30 backdrop-blur" data-testid="import-history-section">
+        <button
+          data-testid="import-history-toggle"
+          className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors focus-ring"
+          onClick={() => setImportHistoryExpanded((prev) => !prev)}
+          aria-expanded={importHistoryExpanded}
+          aria-label={`${importHistoryExpanded ? 'Collapse' : 'Expand'} import history`}
+        >
+          {importHistoryExpanded ? <ChevronDown className="w-3.5 h-3.5 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 shrink-0" />}
+          <History className="w-3.5 h-3.5 shrink-0 text-primary/70" />
+          <span className="flex-1 text-left">Import History</span>
+        </button>
+        {importHistoryExpanded && (
+          <div className="border-t border-border/30">
+            <ImportHistoryPanel onRestore={handleImportHistoryRestore} />
+          </div>
+        )}
       </div>
 
       {/* Import preview dialog */}

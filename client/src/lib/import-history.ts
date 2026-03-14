@@ -128,13 +128,9 @@ export class ImportHistoryManager {
 
     this.entries.unshift(entry);
 
-    // Enforce max limit — evict oldest
+    // Enforce max limit — evict oldest (last in the array since we prepend)
     if (this.entries.length > MAX_ENTRIES) {
-      const sorted = [...this.entries].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-      );
-      const oldest = sorted[0];
-      this.entries = this.entries.filter((e) => e.id !== oldest.id);
+      this.entries = this.entries.slice(0, MAX_ENTRIES);
     }
 
     this.save();

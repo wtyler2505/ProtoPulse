@@ -290,6 +290,11 @@ export default function ProjectPickerPage() {
       setNewProjectName('');
       setNewProjectDescription('');
       setLastProjectId(project.id);
+      RecentProjectsManager.getInstance().recordAccess({
+        id: project.id,
+        name: project.name,
+        description: project.description,
+      });
       navigate(`/projects/${String(project.id)}`);
     },
   });
@@ -408,6 +413,17 @@ export default function ProjectPickerPage() {
                 data-testid="input-search-projects"
               />
             </div>
+
+            {/* Recent projects with pinning and sort */}
+            <RecentProjectsList
+              searchQuery={searchQuery}
+              onSelectProject={handleSelectProjectById}
+            />
+
+            {/* All projects heading */}
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-3" data-testid="all-projects-heading">
+              All Projects
+            </h3>
 
             {/* Project grid */}
             {filteredProjects.length === 0 ? (

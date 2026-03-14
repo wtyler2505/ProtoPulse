@@ -284,8 +284,8 @@ describe('RecentProjectsManager - Search', () => {
 
   it('matches partial strings', () => {
     const results = mgr.search('con');
-    // 'LED Strip Controller' and 'Power Supply (Buck converter)'
-    expect(results).toHaveLength(2);
+    // 'Motor controller' (description), 'LED Strip Controller', 'Buck converter' (description)
+    expect(results).toHaveLength(3);
   });
 
   it('returns empty array for no matches', () => {
