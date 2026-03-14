@@ -35,10 +35,12 @@ import { generateImportPreview } from '@/lib/import-preview';
 import ImportPreviewDialog from '@/components/panels/ImportPreviewDialog';
 import ExportPrecheckPanel from '@/components/panels/ExportPrecheckPanel';
 import ImportWarningsPanel from '@/components/panels/ImportWarningsPanel';
+import ImportHistoryPanel from '@/components/panels/ImportHistoryPanel';
 import { generateImportWarnings } from '@/lib/import-warnings';
 import type { ImportWarning } from '@/lib/import-warnings';
 import type { ProjectExportData } from '@/lib/export-validation';
 import type { ImportPreview } from '@/lib/import-preview';
+import type { ImportHistoryEntry } from '@/lib/import-history';
 import type { ImportedDesign } from '@/lib/design-import';
 
 const SESSION_KEY = 'protopulse-session-id';
@@ -531,6 +533,11 @@ function ExportPanel() {
         title: 'Design imported',
         description: `Added ${String(proto.nodes.length)} nodes, ${String(proto.edges.length)} edges, and ${String(proto.bomItems.length)} BOM items.`,
       });
+
+      // Generate and display import warnings.
+      const warnings = generateImportWarnings(design, design.format);
+      setImportWarnings(warnings);
+      setImportWarningsFileName(importFileName);
     }).catch(() => {
       toast({ variant: 'destructive', title: 'Import failed', description: 'Could not apply the import.' });
     });

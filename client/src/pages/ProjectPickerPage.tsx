@@ -249,13 +249,33 @@ export default function ProjectPickerPage() {
     }
   }, [shouldAutoRedirect, lastProjectId, navigate]);
 
-  // Navigate to project
+  // Navigate to project (also records in recent projects)
   const handleSelectProject = useCallback(
     (project: Project) => {
       setLastProjectId(project.id);
+      RecentProjectsManager.getInstance().recordAccess({
+        id: project.id,
+        name: project.name,
+        description: project.description,
+      });
       navigate(`/projects/${String(project.id)}`);
     },
     [navigate],
+  );
+
+  // Navigate to project by ID (from recent projects list)
+  const handleSelectProjectById = useCallback(
+    (projectId: number) => {
+      const project = projects.find((p) => p.id === projectId);
+      if (project) {
+        handleSelectProject(project);
+      } else {
+        // Project not in current list — navigate anyway, record will use cached name
+        setLastProjectId(projectId);
+        navigate(`/projects/${String(projectId)}`);
+      }
+    },
+    [projects, handleSelectProject, navigate],
   );
 
   // Create project mutation

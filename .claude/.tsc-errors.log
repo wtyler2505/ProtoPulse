@@ -1535,3 +1535,19 @@ client/src/lib/__tests__/supplier-comparison.test.ts(272,3): error TS2304: Canno
 
 
 5:36:55 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:37:41 PM - File change detected. Starting incremental compilation...
+
+
+5:37:48 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:37:50 PM - File change detected. Starting incremental compilation...
+
+
+5:38:03 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:38:03 PM - File change detected. Starting incremental compilation...
+
+
+5:38:14 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:38:26 PM - File change detected. Starting incremental compilation...
+
+
+5:38:39 PM - Found 0 errors. Watching for file changes.
