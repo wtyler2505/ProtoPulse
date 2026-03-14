@@ -1,6 +1,8 @@
 ---
 summary: Browser-only WASM cannot access USB/serial hardware; pure-local loses zero-install accessibility — hybrid (browser UX + local helper) is the only viable firmware architecture
 category: architectural-decision
+status: superseded
+superseded_by: "[[pure-local-desktop-app-chosen-over-hybrid-because-installation-friction-is-better-than-compromised-hardware-access]]"
 areas: ["[[index]]"]
 related insights:
   - "[[browser-based-eda-hits-a-platform-boundary-at-firmware-execution]] — the platform constraint this architecture resolves"
@@ -8,6 +10,8 @@ related insights:
   - "[[phased-collaboration-delivery-must-sequence-session-hardening-before-membership-before-branching-because-each-layer-depends-on-the-one-below]] — shares the same principle: layers must be built in dependency order"
 created: 2026-03-13
 ---
+
+> **Superseded:** This insight has been superseded by [[pure-local-desktop-app-chosen-over-hybrid-because-installation-friction-is-better-than-compromised-hardware-access]]. The pure-local desktop app approach was chosen, accepting installation friction as a better trade-off than compromised hardware access.
 
 ProtoPulse's C5 preplanning evaluated three firmware runtime architectures and concluded that the hybrid model is the only viable path. Browser-only via WASM can compile code but cannot access USB or serial hardware for upload — a fundamental platform boundary that no amount of engineering can overcome. Pure-local (desktop app) provides full hardware access but sacrifices the zero-install, works-anywhere accessibility that defines ProtoPulse's value proposition. The hybrid model — browser owns the UX while a local helper agent handles native toolchain operations (compilation, upload, serial communication) — preserves both properties but introduces installation friction as a managed cost. The recommended delivery sequence: browser-owned code editor and project management first, local helper as an optional enhancement that unlocks hardware features.
 

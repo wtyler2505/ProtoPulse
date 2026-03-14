@@ -15,6 +15,10 @@ The C5 preplanning evaluated three architectures and reached a concrete recommen
 
 The recommended delivery sequence: session/auth hardening first, then browser-owned code editor and project management, then local helper as an optional enhancement that unlocks hardware features (compilation, upload, serial monitoring). Program plan documented in `docs/plans/2026-03-13-c5-firmware-runtime-program.md`.
 
+## Resolution
+
+This platform boundary has been resolved by pivoting ProtoPulse to a native desktop application. See [[pure-local-desktop-app-chosen-over-hybrid-because-installation-friction-is-better-than-compromised-hardware-access]].
+
 ## Topics
 
 - [[index]]

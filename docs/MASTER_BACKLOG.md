@@ -404,13 +404,13 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | Priority | Open | Done | Description |
 |----------|------|------|-------------|
-| P0 | 0 | 14 | All resolved (Waves 52-60) |
+| P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
 | P2 | 178 | 110 | Breadboard/PCB/simulation/UI — Waves 61-79 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **311** | **197** | **508 total items tracked** |
+| **Total** | **311** | **202** | **513 total items tracked** |
 
-*Snapshot updated: Wave 79 (2026-03-13)*
+*Snapshot updated: Wave 80 (2026-03-13)*
 
 ---
 
@@ -432,11 +432,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0070 | **ZIP bomb vulnerability on FZPZ import** — no decompressed size limit. Add 50MB cap + stream-decompress with byte counter. | DONE (Wave 52) | C3 | GA-SEC-13 |
 | BL-0071 | **SVG content parsed without sanitization** — add DOMPurify or equivalent before storing/rendering SVG. | DONE (CAPX-SEC-17) | C2 | GA-SEC-17 |
 | BL-0072 | **Session tokens stored in plaintext** in DB — store hashed tokens, compare hashes, rotate on auth actions. | DONE | C3 | GA-SEC-09 |
-| BL-0636 | **AI chat execution endpoints do not enforce project ownership** — `/api/chat/ai` and `/api/chat/ai/stream` accept `projectId` in the body and build project context without `requireProjectOwnership`. Add ownership enforcement and reject cross-project context access. | OPEN | C4 | Repo gap audit 2026-03-13 |
-| BL-0637 | **AI action lookup by message ID is not project-scoped** — `/api/ai-actions/by-message/:messageId` queries by message ID alone. Scope lookups through project ownership or verify the message belongs to a project the session can access. | OPEN | C3 | Repo gap audit 2026-03-13 |
-| BL-0638 | **Circuit API tenant-scoping gaps / IDOR risk** — Multiple circuit endpoints are only session-protected and operate on global instance/wire/via/net IDs without verifying the caller owns the containing project. Add project-aware authorization checks throughout the circuit route surface. | OPEN | C5 | Repo gap audit 2026-03-13 |
-| BL-0639 | **Project-scoped circuit routes do not always verify project↔resource consistency** — Routes under `/api/projects/:projectId/...` often fetch circuit/simulation/scenario/port resources by ID only. Validate that each resource actually belongs to the requested project before returning or mutating it. | OPEN | C3 | Repo gap audit 2026-03-13 |
-| BL-0642 | **Batch analysis authz + durability gap** — Batch submit/status/results/cancel flows rely on `X-Anthropic-Key` and body `projectId` without full project ownership guards, and the batch tracker is still in-memory. Harden authz and persist batch state/results. | OPEN | C4 | Repo gap audit 2026-03-13 |
+| BL-0636 | **AI chat execution endpoints do not enforce project ownership** — `/api/chat/ai` and `/api/chat/ai/stream` accept `projectId` in the body and build project context without `requireProjectOwnership`. Add ownership enforcement and reject cross-project context access. | DONE (Wave 80) | C4 | Repo gap audit 2026-03-13 |
+| BL-0637 | **AI action lookup by message ID is not project-scoped** — `/api/ai-actions/by-message/:messageId` queries by message ID alone. Scope lookups through project ownership or verify the message belongs to a project the session can access. | DONE (Wave 80) | C3 | Repo gap audit 2026-03-13 |
+| BL-0638 | **Circuit API tenant-scoping gaps / IDOR risk** — Multiple circuit endpoints are only session-protected and operate on global instance/wire/via/net IDs without verifying the caller owns the containing project. Add project-aware authorization checks throughout the circuit route surface. | DONE (Wave 80) | C5 | Repo gap audit 2026-03-13 |
+| BL-0639 | **Project-scoped circuit routes do not always verify project↔resource consistency** — Routes under `/api/projects/:projectId/...` often fetch circuit/simulation/scenario/port resources by ID only. Validate that each resource actually belongs to the requested project before returning or mutating it. | DONE (Wave 80) | C3 | Repo gap audit 2026-03-13 |
+| BL-0642 | **Batch analysis authz + durability gap** — Batch submit/status/results/cancel flows rely on `X-Anthropic-Key` and body `projectId` without full project ownership guards, and the batch tracker is still in-memory. Harden authz and persist batch state/results. | DONE (Wave 80) | C4 | Repo gap audit 2026-03-13 |
 
 ### Crashes & Data Loading
 
