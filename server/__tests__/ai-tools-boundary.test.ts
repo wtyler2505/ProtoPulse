@@ -120,7 +120,7 @@ describe('Registry completeness', () => {
   const registry = createFullRegistry();
   const allTools = registry.getAll();
 
-  it('registers all 12 tool modules', () => {
+  it('registers all 16 tool modules', () => {
     // Each registration function should add at least 1 tool
     for (const { name, fn } of ALL_REGISTRATION_FUNCTIONS) {
       const r = new ToolRegistry();
@@ -129,8 +129,8 @@ describe('Registry completeness', () => {
     }
   });
 
-  it('registers exactly 102 tools total', () => {
-    expect(allTools).toHaveLength(102);
+  it('registers exactly 118 tools total', () => {
+    expect(allTools).toHaveLength(118);
   });
 
   it('every registered tool has a unique name', () => {

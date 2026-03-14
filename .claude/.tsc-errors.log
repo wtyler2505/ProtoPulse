@@ -448,3 +448,105 @@ client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(407,83): er
 client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(422,67): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
 
 11:29:29 AM - Found 29 errors. Watching for file changes.
+[2J[3J[H11:30:22 AM - File change detected. Starting incremental compilation...
+
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(227,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(232,63): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(234,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(240,65): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(241,70): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(242,74): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(243,70): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(252,85): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(263,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(267,29): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(282,23): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(284,27): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(295,72): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(303,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(304,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(314,77): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(315,79): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(316,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(317,75): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(327,77): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(331,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(356,76): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(362,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(375,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(379,76): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(389,86): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(398,74): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(407,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(422,67): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+
+11:30:27 AM - Found 29 errors. Watching for file changes.
+[2J[3J[H11:30:35 AM - File change detected. Starting incremental compilation...
+
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(227,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(232,63): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(234,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(240,65): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(241,70): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(242,74): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(243,70): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(252,85): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(263,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(267,29): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(282,23): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(284,27): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(295,72): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(303,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(304,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(314,77): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(315,79): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(316,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(317,75): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(327,77): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(331,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(356,76): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(362,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(375,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(379,76): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(389,86): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(398,74): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(407,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(422,67): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+
+11:30:48 AM - Found 29 errors. Watching for file changes.
+[2J[3J[H11:30:48 AM - File change detected. Starting incremental compilation...
+
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(1,23): error TS2688: Cannot find type definition file for '@testing-library/jest-dom'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(228,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(233,63): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(235,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(241,65): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(242,70): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(243,74): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(244,70): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(253,85): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(264,64): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(268,29): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(283,23): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(285,27): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(296,72): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(304,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(305,54): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(315,77): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(316,79): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(317,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(318,75): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(328,77): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(332,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(357,76): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(363,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(376,82): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(380,76): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(390,86): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(399,74): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(408,83): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(423,67): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+
+11:30:54 AM - Found 30 errors. Watching for file changes.
+[2J[3J[H11:32:29 AM - File change detected. Starting incremental compilation...
+

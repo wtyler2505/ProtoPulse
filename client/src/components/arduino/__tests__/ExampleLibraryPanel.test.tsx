@@ -11,7 +11,6 @@ import {
   getExampleCircuitCategoryCounts,
 } from '@shared/arduino-example-circuits';
 import type {
-  ExampleCircuit,
   ExampleCircuitCategory,
 } from '@shared/arduino-example-circuits';
 
@@ -118,9 +117,7 @@ describe('Arduino Example Circuits Data (BL-0628)', () => {
   });
 
   it('no duplicate ids between example-circuits and arduino-examples', () => {
-    // Ensure we don't collide with the existing ARDUINO_EXAMPLES ids
     const circuitIds = new Set(EXAMPLE_CIRCUITS.map((e) => e.id));
-    // If ARDUINO_EXAMPLES were imported, check no overlap. Use a hardcoded known set.
     const knownArduinoExampleIds = [
       'blink', 'bare-minimum', 'fade', 'digital-read-serial', 'button',
       'debounce', 'analog-read-serial', 'analog-in-out-serial', 'smoothing',
@@ -153,7 +150,6 @@ describe('Arduino Example Circuits API functions', () => {
   });
 
   it('getExampleCircuitsByCategory returns empty for non-matching', () => {
-    // All categories should return something; test that filter works
     const motors = getExampleCircuitsByCategory('Motors');
     for (const ex of motors) {
       expect(ex.category).toBe('Motors');
@@ -203,7 +199,6 @@ describe('Arduino Example Circuits API functions', () => {
       expect(typeof counts[cat]).toBe('number');
       expect(counts[cat]).toBeGreaterThanOrEqual(0);
     }
-    // Total should equal all examples
     const total = Object.values(counts).reduce((a, b) => a + b, 0);
     expect(total).toBe(EXAMPLE_CIRCUITS.length);
   });
@@ -224,32 +219,31 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
 
   it('renders search input', () => {
     render(<ExampleLibraryPanel onLoadExample={mockOnLoad} />);
-    expect(screen.getByTestId('input-example-library-search')).toBeInTheDocument();
+    expect(screen.getByTestId('input-example-library-search')).toBeTruthy();
   });
 
   it('renders category filter buttons', () => {
     render(<ExampleLibraryPanel onLoadExample={mockOnLoad} />);
-    expect(screen.getByTestId('filter-example-category-all')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-example-category-all')).toBeTruthy();
     for (const cat of EXAMPLE_CIRCUIT_CATEGORIES) {
-      expect(screen.getByTestId(`filter-example-category-${cat.toLowerCase()}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`filter-example-category-${cat.toLowerCase()}`)).toBeTruthy();
     }
   });
 
   it('renders difficulty filter buttons', () => {
     render(<ExampleLibraryPanel onLoadExample={mockOnLoad} />);
-    expect(screen.getByTestId('filter-example-difficulty-all')).toBeInTheDocument();
-    expect(screen.getByTestId('filter-example-difficulty-beginner')).toBeInTheDocument();
-    expect(screen.getByTestId('filter-example-difficulty-intermediate')).toBeInTheDocument();
-    expect(screen.getByTestId('filter-example-difficulty-advanced')).toBeInTheDocument();
+    expect(screen.getByTestId('filter-example-difficulty-all')).toBeTruthy();
+    expect(screen.getByTestId('filter-example-difficulty-beginner')).toBeTruthy();
+    expect(screen.getByTestId('filter-example-difficulty-intermediate')).toBeTruthy();
+    expect(screen.getByTestId('filter-example-difficulty-advanced')).toBeTruthy();
   });
 
   it('renders category groups', () => {
     render(<ExampleLibraryPanel onLoadExample={mockOnLoad} />);
-    // At least some categories should be visible
     for (const cat of EXAMPLE_CIRCUIT_CATEGORIES) {
       const catExamples = EXAMPLE_CIRCUITS.filter((e) => e.category === cat);
       if (catExamples.length > 0) {
-        expect(screen.getByTestId(`example-library-category-${cat.toLowerCase()}`)).toBeInTheDocument();
+        expect(screen.getByTestId(`example-library-category-${cat.toLowerCase()}`)).toBeTruthy();
       }
     }
   });
@@ -259,12 +253,10 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     const iotBtn = screen.getByTestId('filter-example-category-iot');
     fireEvent.click(iotBtn);
 
-    // IoT examples should be visible, others should not have their category group
-    expect(screen.getByTestId('example-library-category-iot')).toBeInTheDocument();
+    expect(screen.getByTestId('example-library-category-iot')).toBeTruthy();
 
-    // Non-IoT categories should be gone
     const basicsGroup = screen.queryByTestId('example-library-category-basics');
-    expect(basicsGroup).not.toBeInTheDocument();
+    expect(basicsGroup).toBeNull();
   });
 
   it('filters examples by difficulty', () => {
@@ -272,16 +264,15 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     const advancedBtn = screen.getByTestId('filter-example-difficulty-advanced');
     fireEvent.click(advancedBtn);
 
-    // Only advanced examples should remain
     const advancedExamples = EXAMPLE_CIRCUITS.filter((e) => e.difficulty === 'advanced');
     const advancedCategories = new Set(advancedExamples.map((e) => e.category));
 
     for (const cat of EXAMPLE_CIRCUIT_CATEGORIES) {
       const group = screen.queryByTestId(`example-library-category-${cat.toLowerCase()}`);
       if (advancedCategories.has(cat)) {
-        expect(group).toBeInTheDocument();
+        expect(group).toBeTruthy();
       } else {
-        expect(group).not.toBeInTheDocument();
+        expect(group).toBeNull();
       }
     }
   });
@@ -291,8 +282,7 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     const searchInput = screen.getByTestId('input-example-library-search');
     fireEvent.change(searchInput, { target: { value: 'relay' } });
 
-    // The relay example should be in the tree
-    expect(screen.getByTestId('example-library-item-ec-toggle-relay')).toBeInTheDocument();
+    expect(screen.getByTestId('example-library-item-ec-toggle-relay')).toBeTruthy();
   });
 
   it('shows empty state when no results match', () => {
@@ -300,8 +290,8 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     const searchInput = screen.getByTestId('input-example-library-search');
     fireEvent.change(searchInput, { target: { value: 'xyznonexistent123' } });
 
-    expect(screen.getByTestId('example-library-empty')).toBeInTheDocument();
-    expect(screen.getByText('No matching examples')).toBeInTheDocument();
+    expect(screen.getByTestId('example-library-empty')).toBeTruthy();
+    expect(screen.getByText('No matching examples')).toBeTruthy();
   });
 
   it('expands an example on click to show details', () => {
@@ -310,11 +300,10 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     const toggleBtn = screen.getByTestId(`example-library-toggle-item-${firstExample.id}`);
     fireEvent.click(toggleBtn);
 
-    // Should now show wiring, behavior, and load button
-    expect(screen.getByTestId(`example-library-wiring-${firstExample.id}`)).toBeInTheDocument();
-    expect(screen.getByTestId(`example-library-behavior-${firstExample.id}`)).toBeInTheDocument();
-    expect(screen.getByTestId(`example-library-code-preview-${firstExample.id}`)).toBeInTheDocument();
-    expect(screen.getByTestId(`example-library-load-${firstExample.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`example-library-wiring-${firstExample.id}`)).toBeTruthy();
+    expect(screen.getByTestId(`example-library-behavior-${firstExample.id}`)).toBeTruthy();
+    expect(screen.getByTestId(`example-library-code-preview-${firstExample.id}`)).toBeTruthy();
+    expect(screen.getByTestId(`example-library-load-${firstExample.id}`)).toBeTruthy();
   });
 
   it('collapses an expanded example on second click', () => {
@@ -322,13 +311,11 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     const firstExample = EXAMPLE_CIRCUITS[0];
     const toggleBtn = screen.getByTestId(`example-library-toggle-item-${firstExample.id}`);
 
-    // Expand
     fireEvent.click(toggleBtn);
-    expect(screen.getByTestId(`example-library-wiring-${firstExample.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`example-library-wiring-${firstExample.id}`)).toBeTruthy();
 
-    // Collapse
     fireEvent.click(toggleBtn);
-    expect(screen.queryByTestId(`example-library-wiring-${firstExample.id}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`example-library-wiring-${firstExample.id}`)).toBeNull();
   });
 
   it('calls onLoadExample when "Load into Editor" is clicked', () => {
@@ -336,10 +323,7 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     render(<ExampleLibraryPanel onLoadExample={mockOnLoad} />);
     const firstExample = EXAMPLE_CIRCUITS[0];
 
-    // Expand
     fireEvent.click(screen.getByTestId(`example-library-toggle-item-${firstExample.id}`));
-
-    // Click load
     fireEvent.click(screen.getByTestId(`example-library-load-${firstExample.id}`));
 
     expect(mockOnLoad).toHaveBeenCalledTimes(1);
@@ -352,14 +336,11 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     const firstExInCat = EXAMPLE_CIRCUITS.find((e) => e.category === firstCat);
     expect(firstExInCat).toBeDefined();
 
-    // Item should be visible initially
-    expect(screen.getByTestId(`example-library-item-${firstExInCat!.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`example-library-item-${firstExInCat!.id}`)).toBeTruthy();
 
-    // Collapse the category
     fireEvent.click(screen.getByTestId(`example-library-toggle-${firstCat.toLowerCase()}`));
 
-    // Item should now be hidden
-    expect(screen.queryByTestId(`example-library-item-${firstExInCat!.id}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`example-library-item-${firstExInCat!.id}`)).toBeNull();
   });
 
   it('re-expands a collapsed category group', () => {
@@ -370,23 +351,20 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
 
     const toggleBtn = screen.getByTestId(`example-library-toggle-${firstCat.toLowerCase()}`);
 
-    // Collapse
     fireEvent.click(toggleBtn);
-    expect(screen.queryByTestId(`example-library-item-${firstExInCat!.id}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`example-library-item-${firstExInCat!.id}`)).toBeNull();
 
-    // Re-expand
     fireEvent.click(toggleBtn);
-    expect(screen.getByTestId(`example-library-item-${firstExInCat!.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`example-library-item-${firstExInCat!.id}`)).toBeTruthy();
   });
 
   it('shows components list in expanded view', () => {
     render(<ExampleLibraryPanel onLoadExample={mockOnLoad} />);
-    // Find an example with components
     const exWithComponents = EXAMPLE_CIRCUITS.find((e) => e.components.length > 0);
     expect(exWithComponents).toBeDefined();
 
     fireEvent.click(screen.getByTestId(`example-library-toggle-item-${exWithComponents!.id}`));
-    expect(screen.getByTestId(`example-library-components-${exWithComponents!.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`example-library-components-${exWithComponents!.id}`)).toBeTruthy();
   });
 
   it('shows required libraries in expanded view when present', () => {
@@ -395,7 +373,7 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     expect(exWithLibs).toBeDefined();
 
     fireEvent.click(screen.getByTestId(`example-library-toggle-item-${exWithLibs!.id}`));
-    expect(screen.getByTestId(`example-library-libs-${exWithLibs!.id}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`example-library-libs-${exWithLibs!.id}`)).toBeTruthy();
   });
 
   it('does not show required libraries section when none exist', () => {
@@ -404,22 +382,20 @@ describe('ExampleLibraryPanel Component (BL-0628)', () => {
     expect(exWithoutLibs).toBeDefined();
 
     fireEvent.click(screen.getByTestId(`example-library-toggle-item-${exWithoutLibs!.id}`));
-    expect(screen.queryByTestId(`example-library-libs-${exWithoutLibs!.id}`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`example-library-libs-${exWithoutLibs!.id}`)).toBeNull();
   });
 
   it('combined category + difficulty + search filters stack correctly', () => {
     render(<ExampleLibraryPanel onLoadExample={mockOnLoad} />);
 
-    // Filter to Sensors + beginner
     fireEvent.click(screen.getByTestId('filter-example-category-sensors'));
     fireEvent.click(screen.getByTestId('filter-example-difficulty-beginner'));
 
     const expected = EXAMPLE_CIRCUITS.filter(
       (e) => e.category === 'Sensors' && e.difficulty === 'beginner',
     );
-    // Each should be visible
     for (const ex of expected) {
-      expect(screen.getByTestId(`example-library-item-${ex.id}`)).toBeInTheDocument();
+      expect(screen.getByTestId(`example-library-item-${ex.id}`)).toBeTruthy();
     }
   });
 
