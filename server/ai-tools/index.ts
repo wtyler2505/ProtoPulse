@@ -32,6 +32,7 @@ import { registerArduinoTools } from './arduino';
 import { registerSimulationTools } from './simulation';
 import { registerManufacturingTools } from './manufacturing';
 import { registerTestbenchTools } from './testbench';
+import { registerBomOptimizationTools } from './bom-optimization';
 
 function createRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
