@@ -1632,3 +1632,8 @@ client/src/lib/__tests__/supplier-comparison.test.ts(272,3): error TS2304: Canno
 client/src/lib/audit-trail.ts(88,21): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 
 6:07:50 PM - Found 1 error. Watching for file changes.
+[2J[3J[H6:07:52 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/audit-trail.ts(88,21): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+6:07:56 PM - Found 1 error. Watching for file changes.
