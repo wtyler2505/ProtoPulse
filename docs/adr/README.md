@@ -12,6 +12,8 @@ This directory contains Architecture Decision Records (ADRs) documenting key tec
 | [0004](0004-drizzle-orm.md) | Drizzle ORM with Zod Schema Integration | Accepted |
 | [0005](0005-shadcn-ui-dark-theme.md) | shadcn/ui with Dark Neon Cyan Theme | Accepted |
 | [006](006-delete-policy.md) | Soft-Delete vs Hard-Delete Policy | Accepted |
+| [0007](0007-firmware-runtime-architecture.md) | Firmware Runtime Architecture — Pure-Local Native Execution | Accepted |
+| [0008](0008-multi-platform-scope.md) | Multi-Platform Embedded Scope — Beyond Arduino | Accepted |
 
 ## Template
 

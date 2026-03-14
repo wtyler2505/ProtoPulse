@@ -83,7 +83,7 @@
 |--------|---------------|-------|
 | Tracked scope | High | 508 total items across delivery work, parity gaps, audits, and long-term vision. |
 | Duplicate risk | Medium-High | Consolidated from multiple source docs and competitive audits; cross-tool items likely overlap unless regularly merged. |
-| Explicitly blocked items | 1 | `BL-0524` is explicitly blocked; several other items are still effectively blocked by unresolved architecture decisions. |
+| Explicitly blocked items | 1 | `BL-0524` is explicitly blocked; firmware/debugger/platform blockers resolved by Pure-Local Desktop App pivot (ADR 0007/0008). |
 | Epic decomposition need | High | Several initiatives are too large to execute safely as single rows and need parent/child planning. |
 | Acceptance/verification metadata | Medium-High gap | Many older `OPEN` items still lack explicit acceptance criteria, effort, confidence, or verification notes. |
 | Complexity scoring coverage | High | All 508 detailed backlog rows plus epics, wave candidates, and `Next Up` now have a first-pass `C1`-`C5` score. |
@@ -91,6 +91,7 @@
 
 ## Change Log
 
+- **2026-03-13:** Wave 80 — marked 5 P0 security items DONE (BL-0636/0637/0638/0639/0642). Updated blockers, decisions, ADR requirements, and discovery spikes as resolved by Pure-Local Desktop App pivot (ADR 0007/0008). Firmware/debugger/platform items now unblocked.
 - **2026-03-13:** Added 15 missing backlog items from a repo-wide gap audit, covering authz/tenant-scoping gaps, RAG durability, async job execution, supplier realism, Kanban persistence, Circuit Code materialization, generative candidate adoption, and other cross-tool integration misses.
 - **2026-03-13:** Added durable preplanning artifacts for the two biggest near-term C5 programs: firmware runtime/debugger and collaboration foundation/RBAC/branching.
 - **2026-03-13:** Backfilled `C1`-`C5` complexity across all 493 tracked backlog rows, expanded the complexity radar to the top 25 open items, scored epics and wave candidates, and corrected manual snapshot drift at the top of the file.
@@ -101,13 +102,14 @@
 
 | Cluster | Related IDs | Artifact | Purpose |
 |---------|-------------|----------|---------|
-| Firmware runtime, simulation, and debugger | `BL-0631`, `BL-0632`, `BL-0635`, `BL-0461` | `docs/plans/2026-03-13-c5-firmware-runtime-program.md` | Locks the hybrid-helper recommendation, phase order, helper/runtime contracts, and ADR list before this turns into implementation waves. |
+| Firmware runtime, simulation, and debugger | `BL-0631`, `BL-0632`, `BL-0635`, `BL-0461` | `docs/plans/2026-03-13-c5-firmware-runtime-program.md` | Rewritten for pure-local native desktop app architecture (ADR 0007). Native process spawning replaces browser-sandbox workarounds. Firmware items now unblocked. |
 | Collaboration foundation, RBAC, branching, and merge | `BL-0381`, `BL-0184`, `BL-0185` | `docs/plans/2026-03-13-c5-collaboration-foundation-program.md` | Sequences session hardening, project membership, review/approval, branching, merge, and later org/team tenancy so nothing gets built on the current owner-only shortcut. |
 
 ## Recently Completed
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 80 | `BL-0636`, `BL-0637`, `BL-0638`, `BL-0639`, `BL-0642` | 5 P0 IDOR/auth vulnerabilities fixed — AI chat ownership, AI action scoping, circuit API tenant-scoping, project↔resource consistency, batch analysis authz. All P0 items now resolved. |
 | 79 | `BL-0515`, `BL-0516`, `BL-0599`, `BL-0600`, `BL-0560` | Board settings dialog, CLI error parsing (35 hints), memory usage display, error line linking, simulation results overlay — Arduino compile feedback loop + simulation visibility. |
 | 78 | `BL-0494`, `BL-0503`, `BL-0566`, `BL-0521`, `BL-0598` | Wire drag-rerouting, PCB copy/paste, validation→PCB navigation, AI action error tracking, baud rate selector — editor trust + workflow gaps closed. |
 | 77 | `BL-0513`, `BL-0514`, `BL-0128`, `BL-0141`, `BL-0153` | SPICE transmission line, simulation complexity guardrails, EveryCircuit-style current animation, protocol decoders, serial plotter — simulation usability + hardware feedback loop. |
@@ -278,9 +280,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | Spike Question | Related IDs | Outcome Needed |
 |----------------|-------------|----------------|
-| What is the right architecture for firmware execution without hardware? | `BL-0631`, `BL-0635`, `BL-0461` | Decide browser-only WASM, local helper, or hybrid; document constraints and success criteria. |
-| How should hardware debugger support work in a browser-centric product? | `BL-0632` | ADR covering WebUSB/OpenOCD vs local proxy vs unsupported-for-now scope. |
-| How broad should embedded platform support become in the next phase? | `BL-0613`, `BL-0614`, `BL-0633` | Choose between Arduino-depth first vs broader STM32/RP2040/nRF/ESP-IDF expansion. |
+| ~~What is the right architecture for firmware execution without hardware?~~ | `BL-0631`, `BL-0635`, `BL-0461` | ~~RESOLVED — ADR 0007: Pure-Local Desktop App with native process spawning.~~ |
+| ~~How should hardware debugger support work in a browser-centric product?~~ | `BL-0632` | ~~RESOLVED — ADR 0007: Direct USB/debug probe access via native desktop runtime.~~ |
+| ~~How broad should embedded platform support become in the next phase?~~ | `BL-0613`, `BL-0614`, `BL-0633` | ~~RESOLVED — ADR 0008: Broad multi-platform support enabled by native toolchain access.~~ |
 | Should the 3D viewer be upgraded incrementally or replaced wholesale? | `BL-0553` | Renderer strategy, migration plan, and performance acceptance criteria. |
 | How should supplier/fab integrations handle auth, caching, and trust disclaimers? | `BL-0529`, `BL-0531`, `BL-0533`, `BL-0565` | Integration contract and rollout path that avoids fake-confidence UX. |
 | Is the SI/PDN unified dashboard feasible with current geometry data? | `BL-0555`, `BL-0561` | Proof-of-concept on one routed design plus data model gaps list. |
@@ -292,9 +294,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | Practical Blocker | Why It Is Not Ready Yet | Related IDs |
 |-------------------|-------------------------|-------------|
-| Firmware simulation architecture | Too many downstream features depend on whether execution is browser-only, helper-based, or hybrid. | `BL-0631`, `BL-0635`, `BL-0461` |
-| Hardware debugger integration path | Requires a platform/security decision before implementation can be scoped honestly. | `BL-0632` |
-| Multi-platform embedded support breadth | Board model, package management, and job orchestration need an agreed support boundary first. | `BL-0613`, `BL-0614`, `BL-0633` |
+| ~~Firmware simulation architecture~~ | ~~RESOLVED — Pure-Local Desktop App (ADR 0007). Native process spawning removes browser sandbox limitations.~~ | `BL-0631`, `BL-0635`, `BL-0461` |
+| ~~Hardware debugger integration path~~ | ~~RESOLVED — Pure-Local Desktop App (ADR 0007). Direct USB/serial access eliminates WebUSB constraints.~~ | `BL-0632` |
+| ~~Multi-platform embedded support breadth~~ | ~~RESOLVED — Pure-Local Desktop App (ADR 0008). Native filesystem + local toolchains enable broad platform support.~~ | `BL-0613`, `BL-0614`, `BL-0633` |
 | Real supplier/fab data trust model | Several manufacturing features should not ship on mock or loosely cached data. | `BL-0485`, `BL-0529`, `BL-0531`, `BL-0533`, `BL-0565` |
 | Team/org workflow foundation | Branching, approvals, and org-level features depend on tenancy/RBAC and audit direction. | `BL-0184`, `BL-0185`, `BL-0380`, `BL-0381` |
 
@@ -312,9 +314,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | Decision | Why It Matters Now | Related IDs |
 |----------|--------------------|-------------|
-| Firmware simulation architecture | Many high-value simulation and education features depend on this direction. | `BL-0631`, `BL-0635`, `BL-0461` |
-| Hardware debugger integration model | This can become a product-defining differentiator or a major rabbit hole depending on the approach. | `BL-0632` |
-| Multi-platform support scope | Determines whether the next embedded phase goes deeper on Arduino or broader across frameworks/platforms. | `BL-0613`, `BL-0614`, `BL-0633` |
+| ~~Firmware simulation architecture~~ | ~~RESOLVED — Pure-Local Desktop App pivot (ADR 0007). Native process spawning chosen over browser-only/hybrid.~~ | `BL-0631`, `BL-0635`, `BL-0461` |
+| ~~Hardware debugger integration model~~ | ~~RESOLVED — Pure-Local Desktop App pivot (ADR 0007). Direct USB/debug probe access via native runtime.~~ | `BL-0632` |
+| ~~Multi-platform support scope~~ | ~~RESOLVED — Pure-Local Desktop App pivot (ADR 0008). Broad platform support enabled by native toolchain access.~~ | `BL-0613`, `BL-0614`, `BL-0633` |
 | 3D viewer path | Needed before any serious 3D/professional visualization roadmap work. | `BL-0553` |
 | Supplier/fab account strategy | Required to decide whether ordering remains export-first or becomes directly integrated. | `BL-0529`, `BL-0533` |
 | Collaboration model | Needed to sequence branching, approvals, ECO workflows, and team/org features coherently. | `BL-0181`-`BL-0189`, `BL-0380`, `BL-0381` |
@@ -323,8 +325,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | Topic | ADR Should Decide | Related IDs |
 |-------|-------------------|-------------|
-| Firmware execution and simulation runtime | Browser-only vs helper vs hybrid, security model, performance floor | `BL-0631`, `BL-0635`, `BL-0461` |
-| Debug probe integration | Supported transports, local agent needs, minimum viable UX | `BL-0632` |
+| ~~Firmware execution and simulation runtime~~ | ~~RESOLVED — ADR 0007: Pure-Local Desktop App. Native process spawning for firmware compile/upload/simulate.~~ | `BL-0631`, `BL-0635`, `BL-0461` |
+| ~~Debug probe integration~~ | ~~RESOLVED — ADR 0007: Pure-Local Desktop App. Direct USB/JTAG/SWD access via native runtime.~~ | `BL-0632` |
 | Cross-domain source of truth | Which system owns component value/MPN/state when multiple views edit the same concept | `BL-0563`, `BL-0571`, `BL-0580` |
 | Supplier/fab integration | Auth, caching, retry, trust disclaimers, offline behavior | `BL-0529`, `BL-0533`, `BL-0565` |
 | Collaboration / branching model | CRDT + branches + approvals + restore semantics | `BL-0182`, `BL-0183`, `BL-0184`, `BL-0185` |
@@ -408,7 +410,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
 | P2 | 178 | 110 | Breadboard/PCB/simulation/UI — Waves 61-79 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **311** | **202** | **513 total items tracked** |
+| **Total** | **306** | **202** | **508 total items tracked** |
 
 *Snapshot updated: Wave 80 (2026-03-13)*
 
@@ -1255,4 +1257,4 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 ---
 
-*Snapshot updated: 2026-03-13 — document currently reflects work through Wave 79 plus the repo-wide backlog gap audit additions. Historical highlight notes retained here: Wave 69: BL-0489, BL-0492, BL-0493, BL-0496, BL-0499, BL-0500, BL-0506, BL-0590, BL-0591, BL-0592, BL-0621, BL-0624 done. Wave 70: BL-0567, BL-0569, BL-0570, BL-0575, BL-0576 done. Wave 71: BL-0490, BL-0497 done.*
+*Snapshot updated: 2026-03-13 — document currently reflects work through Wave 80 (5 P0 IDOR/auth fixes) plus Pure-Local Desktop App pivot resolving firmware/debugger/platform blockers. Historical highlight notes retained here: Wave 69: BL-0489, BL-0492, BL-0493, BL-0496, BL-0499, BL-0500, BL-0506, BL-0590, BL-0591, BL-0592, BL-0621, BL-0624 done. Wave 70: BL-0567, BL-0569, BL-0570, BL-0575, BL-0576 done. Wave 71: BL-0490, BL-0497 done.*

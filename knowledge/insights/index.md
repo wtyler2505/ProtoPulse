@@ -26,6 +26,7 @@ Welcome to the ProtoPulse knowledge system. Every architectural decision, bug pa
 
 ## Recent Insights
 
+- [[pure-local-desktop-app-chosen-over-hybrid-because-installation-friction-is-better-than-compromised-hardware-access]] — pure-local desktop app chosen over hybrid: installation friction is one-time, compromised hardware access is permanent
 - [[singleton-subscribe-became-the-universal-client-state-primitive-because-useSyncExternalStore-makes-any-class-a-hook]] — emerged across 30+ managers as the standard client state pattern
 - [[projectprovider-is-known-tech-debt-because-monolithic-context-forces-full-tree-rerenders-on-any-state-change]] — monolithic Context that proves why singleton+subscribe is better
 - [[idor-vulnerabilities-cluster-in-routes-that-use-global-resource-ids-instead-of-project-scoped-url-paths]] — recurring security pattern across 3 audit waves
