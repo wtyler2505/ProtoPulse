@@ -372,9 +372,63 @@ export function estimatePinCount(description: string): number {
   return 2;
 }
 
+/**
+ * Infer a package type string from a BOM item's description and part number.
+ * Checks common package names (SOT-23, QFP-48, DIP-8, 0603, SOIC-8, etc.)
+ * Returns 'unknown' if no package pattern is recognized.
+ */
+export function inferPackageType(description: string, partNumber?: string): string {
+  const combined = (description + ' ' + (partNumber ?? '')).toLowerCase();
+
+  // Ordered from most-specific to least-specific
+  const patterns: Array<{ regex: RegExp; label: string }> = [
+    { regex: /bga[- ]?(\d+)/, label: 'BGA' },
+    { regex: /tqfp[- ]?(\d+)/, label: 'TQFP' },
+    { regex: /lqfp[- ]?(\d+)/, label: 'LQFP' },
+    { regex: /qfp[- ]?(\d+)/, label: 'QFP' },
+    { regex: /qfn[- ]?(\d+)/, label: 'QFN' },
+    { regex: /soic[- ]?(\d+)/, label: 'SOIC' },
+    { regex: /so[- ]?(\d+)/, label: 'SO' },
+    { regex: /sop[- ]?(\d+)/, label: 'SOP' },
+    { regex: /tssop[- ]?(\d+)/, label: 'TSSOP' },
+    { regex: /msop[- ]?(\d+)/, label: 'MSOP' },
+    { regex: /dfn[- ]?(\d+)/, label: 'DFN' },
+    { regex: /lga[- ]?(\d+)/, label: 'LGA' },
+    { regex: /sot[- ]?223/, label: 'SOT-223' },
+    { regex: /sot[- ]?89/, label: 'SOT-89' },
+    { regex: /sot[- ]?23/, label: 'SOT-23' },
+    { regex: /to[- ]?220/, label: 'TO-220' },
+    { regex: /to[- ]?92/, label: 'TO-92' },
+    { regex: /to[- ]?252/, label: 'TO-252' },
+    { regex: /dip[- ]?(\d+)/, label: 'DIP' },
+    { regex: /sip[- ]?(\d+)/, label: 'SIP' },
+    { regex: /\b2512\b/, label: '2512' },
+    { regex: /\b1210\b/, label: '1210' },
+    { regex: /\b1206\b/, label: '1206' },
+    { regex: /\b0805\b/, label: '0805' },
+    { regex: /\b0603\b/, label: '0603' },
+    { regex: /\b0402\b/, label: '0402' },
+    { regex: /\b0201\b/, label: '0201' },
+  ];
+
+  for (const { regex, label } of patterns) {
+    const match = combined.match(regex);
+    if (match) {
+      // For numbered packages, include the pin/size number
+      if (match[1]) {
+        return `${label}-${match[1]}`;
+      }
+      return label;
+    }
+  }
+
+  return 'unknown';
+}
+
 /** Convert a BomItem from the schema to our internal input format. */
 export function bomItemToInput(item: BomItem): BomItemInput {
-  const mountType = classifyMountType(item.description, item.assemblyCategory);
+  const combined = item.description + ' ' + item.partNumber;
+  const mountType = classifyMountType(combined, item.assemblyCategory);
   return {
     partNumber: item.partNumber,
     manufacturer: item.manufacturer,
@@ -382,9 +436,26 @@ export function bomItemToInput(item: BomItem): BomItemInput {
     quantity: item.quantity,
     unitPrice: typeof item.unitPrice === 'string' ? parseFloat(item.unitPrice) : Number(item.unitPrice),
     mountType,
-    pinCount: estimatePinCount(item.description),
+    pinCount: estimatePinCount(combined),
     assemblyCategory: item.assemblyCategory,
   };
+}
+
+/**
+ * Convert an array of BomItems from the project BOM to BomItemInput[] suitable
+ * for the assembly cost estimator.
+ *
+ * This is the primary bridge between the project's BOM data and the cost
+ * calculator. It uses description + partNumber for package, mount type, and
+ * pin count inference.
+ *
+ * Items with quantity <= 0 are skipped. Missing or blank descriptions default
+ * gracefully (SMD, 2-pin, package 'unknown').
+ */
+export function bomToAssemblyParts(bomItems: BomItem[]): BomItemInput[] {
+  return bomItems
+    .filter((item) => item.quantity > 0)
+    .map((item) => bomItemToInput(item));
 }
 
 /** Convert an amount from one currency to another. */
