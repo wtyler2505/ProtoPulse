@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore } from 'react';
 import {
   useWebSerial,
   COMMON_BAUD_RATES,
@@ -8,6 +8,7 @@ import type {
   LineEnding,
   SerialMonitorLine,
 } from '@/lib/web-serial';
+import { SerialLogger } from '@/lib/arduino/serial-logger';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +34,8 @@ import {
   Save,
   FolderOpen,
   X,
+  Circle,
+  Download,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -146,6 +149,53 @@ export default function SerialMonitorPanel() {
   const [presets, setPresets] = useState<SavedPreset[]>(() => loadPresets());
   const [presetName, setPresetName] = useState('');
   const [showPresetSave, setShowPresetSave] = useState(false);
+
+  // Serial recording
+  const serialLoggerRef = useRef(SerialLogger.getInstance());
+  const loggerSnap = useSyncExternalStore(
+    serialLoggerRef.current.subscribe,
+    serialLoggerRef.current.getSnapshot,
+  );
+  const prevMonitorLenRef = useRef(state.monitor.length);
+
+  // Feed incoming serial data to logger
+  useEffect(() => {
+    const prevLen = prevMonitorLenRef.current;
+    const curLen = state.monitor.length;
+    prevMonitorLenRef.current = curLen;
+
+    if (curLen > prevLen && serialLoggerRef.current.isRecording()) {
+      for (let i = prevLen; i < curLen; i++) {
+        const line = state.monitor[i];
+        if (line) {
+          serialLoggerRef.current.appendData(line.data + '\n');
+        }
+      }
+    }
+  }, [state.monitor.length, state.monitor]);
+
+  // Recording duration ticker
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!loggerSnap.recording) {
+      return;
+    }
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [loggerSnap.recording]);
+
+  const handleToggleRecording = useCallback(() => {
+    const logger = serialLoggerRef.current;
+    if (logger.isRecording()) {
+      logger.stopRecording();
+    } else {
+      logger.startRecording();
+    }
+  }, []);
+
+  const handleDownloadRecording = useCallback(() => {
+    serialLoggerRef.current.downloadAsFile();
+  }, []);
 
   // Auto-load last-used preset on mount
   useEffect(() => {
