@@ -18,6 +18,29 @@ import { z } from 'zod';
 import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
 
+// ---------------------------------------------------------------------------
+// Local interfaces for JSONB shapes used in teardrop / net analysis tools
+// ---------------------------------------------------------------------------
+
+/** Shape of a connector entry stored in component_parts.connectors JSONB. */
+interface ConnectorRecord {
+  id?: string | number;
+  name?: string;
+  offsetX?: number;
+  offsetY?: number;
+  padWidth?: number;
+  padHeight?: number;
+  padType?: string;
+}
+
+/** Shape of a net segment stored in circuit_nets.segments JSONB. */
+interface NetSegmentRecord {
+  fromInstanceId?: number;
+  toInstanceId?: number;
+  fromPin?: string;
+  toPin?: string;
+}
+
 /**
  * Register all circuit schematic tools with the given registry.
  *
@@ -834,8 +857,8 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
       // Extract pads from instances
       for (const inst of instances) {
         if (!inst.properties || !inst.pcbSide) continue;
-        const props = inst.properties as Record<string, any>;
-        const connectors = Array.isArray(props.connectors) ? props.connectors : [];
+        const props = inst.properties as Record<string, unknown>;
+        const connectors: ConnectorRecord[] = Array.isArray(props.connectors) ? props.connectors as ConnectorRecord[] : [];
         const layer = inst.pcbSide === 'front' ? 'front' : 'back';
         
         for (const conn of connectors) {
@@ -853,11 +876,7 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
           const h = conn.padHeight || 1.0;
           const r = Math.min(w, h) / 2; // Conservative radius for teardrop attachment
           
-          // Get the net connected to this pad
-          let padNetId: number | undefined;
-          // We don't have direct pad netId mapping here easily without traversing edges or net connections
-          // Wait, instance pads are connected via edges. Let's just allow attachment if within distance
-          // and trace netId matches. Since we lack deep pad-net maps in this context, we will rely on distance + trace's netId.
+          // We don't have direct pad-net mapping here — rely on distance + trace's netId for matching.
           
           targets.push({ x: px, y: py, r, layer: conn.padType === 'tht' ? 'all' : layer });
         }
@@ -978,16 +997,16 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
         if (!net.name.startsWith('NET_') && !net.name.startsWith('wire_')) continue;
 
         const connectedPins: string[] = [];
-        const segments = (net.segments as any[]) || [];
+        const segments = (net.segments as NetSegmentRecord[]) || [];
         
         for (const seg of segments) {
           const inst = instances.find(i => i.id === seg.fromInstanceId || i.id === seg.toInstanceId);
           if (inst) {
             const part = partMap.get(inst.partId!);
             const pinId = seg.fromInstanceId === inst.id ? seg.fromPin : seg.toPin;
-            const connectors = (part?.connectors as any[]) || [];
+            const connectors = (part?.connectors as ConnectorRecord[]) || [];
             const connector = connectors.find(c => String(c.id) === String(pinId) || c.name === pinId);
-            if (connector) connectedPins.push(connector.name);
+            if (connector?.name) connectedPins.push(connector.name);
           }
         }
 
@@ -1071,4 +1090,363 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
       };
     },
   });
+
+  // ---------------------------------------------------------------------------
+  // Net explanation tool (BL-0522)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * explain_net — Explain what a net carries, its protocol, drivers, and loads.
+   *
+   * Looks up a net by name, finds connected instances/wires, classifies the
+   * net type (power, I2C, SPI, UART, analog, clock, reset, generic signal),
+   * identifies drivers vs loads, and returns a plain-English explanation.
+   */
+  registry.register({
+    name: 'explain_net',
+    description:
+      'Explain what a circuit net carries in plain English — its type, protocol (if applicable), what drives it, and what loads it.',
+    category: 'circuit',
+    parameters: z.object({
+      netName: z.string().min(1).describe('The name of the net to explain (e.g., VCC, SDA, MOSI)'),
+      circuitDesignId: z.number().int().positive().optional().describe('Optional circuit design ID. If omitted, searches all designs in the project.'),
+    }),
+    requiresConfirmation: false,
+    modelPreference: 'standard',
+    execute: async (params, ctx) => {
+      // 1. Find the target circuit design(s) and locate the net by name
+      const designs = await ctx.storage.getCircuitDesigns(ctx.projectId);
+      if (designs.length === 0) {
+        return { success: false, message: 'No circuit designs found in this project.' };
+      }
+
+      const targetDesigns = params.circuitDesignId
+        ? designs.filter((d) => d.id === params.circuitDesignId)
+        : designs;
+
+      if (targetDesigns.length === 0) {
+        return { success: false, message: `Circuit design ${String(params.circuitDesignId)} not found.` };
+      }
+
+      // Search for the net across target designs
+      let foundNet: { id: number; circuitId: number; name: string; netType: string; voltage: string | null; segments: unknown } | undefined;
+      let allNets: Array<{ id: number; circuitId: number; name: string; netType: string; voltage: string | null; segments: unknown }> = [];
+
+      for (const design of targetDesigns) {
+        const nets = await ctx.storage.getCircuitNets(design.id);
+        allNets = allNets.concat(nets);
+        const match = nets.find((n) => n.name.toLowerCase() === params.netName.toLowerCase());
+        if (match) {
+          foundNet = match;
+          break;
+        }
+      }
+
+      if (!foundNet) {
+        const availableNames = allNets
+          .map((n) => n.name)
+          .filter((name, idx, arr) => arr.indexOf(name) === idx)
+          .slice(0, 20);
+        return {
+          success: false,
+          message: `Net "${params.netName}" not found. Available nets: ${availableNames.length > 0 ? availableNames.join(', ') : '(none)'}`,
+        };
+      }
+
+      // 2. Fetch connected instances and wires for this net's circuit
+      const [instances, wires, parts] = await Promise.all([
+        ctx.storage.getCircuitInstances(foundNet.circuitId),
+        ctx.storage.getCircuitWires(foundNet.circuitId),
+        ctx.storage.getComponentParts(ctx.projectId),
+      ]);
+
+      const partMap = new Map(parts.map((p) => [p.id, p]));
+
+      // 3. Classify the net
+      const classification = classifyNet(foundNet.name, foundNet.netType, foundNet.voltage);
+
+      // 4. Find connected instances via segments
+      const segments = (foundNet.segments as NetSegmentRecord[]) || [];
+      const connectedInstanceIds = new Set<number>();
+      for (const seg of segments) {
+        if (seg.fromInstanceId) { connectedInstanceIds.add(seg.fromInstanceId); }
+        if (seg.toInstanceId) { connectedInstanceIds.add(seg.toInstanceId); }
+      }
+
+      // Also find instances connected via wires on this net
+      const netWires = wires.filter((w) => w.netId === foundNet!.id);
+
+      const connectedInstances = instances.filter((inst) => connectedInstanceIds.has(inst.id));
+
+      // 5. Identify drivers and loads
+      const drivers: string[] = [];
+      const loads: string[] = [];
+      const unknownRole: string[] = [];
+
+      for (const inst of connectedInstances) {
+        const part = inst.partId ? partMap.get(inst.partId) : undefined;
+        const partMeta = part?.meta as Record<string, unknown> | undefined;
+        const partName = (partMeta?.name as string) ?? inst.referenceDesignator;
+        const role = classifyInstanceRole(inst.referenceDesignator, partName, classification);
+        if (role === 'driver') {
+          drivers.push(`${inst.referenceDesignator} (${partName})`);
+        } else if (role === 'load') {
+          loads.push(`${inst.referenceDesignator} (${partName})`);
+        } else {
+          unknownRole.push(`${inst.referenceDesignator} (${partName})`);
+        }
+      }
+
+      // 6. Build plain-English explanation
+      const explanation = buildNetExplanation({
+        netName: foundNet.name,
+        classification,
+        voltage: foundNet.voltage,
+        drivers,
+        loads,
+        unknownRole,
+        wireCount: netWires.length,
+        instanceCount: connectedInstances.length,
+      });
+
+      return {
+        success: true,
+        message: explanation,
+        data: {
+          type: 'net_explanation' as const,
+          netId: foundNet.id,
+          netName: foundNet.name,
+          classification: classification.type,
+          protocol: classification.protocol,
+          drivers,
+          loads,
+          connectedInstances: connectedInstances.map((i) => i.referenceDesignator),
+          wireCount: netWires.length,
+        },
+        sources: [
+          { type: 'net' as const, label: foundNet.name, id: foundNet.id },
+          ...connectedInstances.map((i) => ({ type: 'node' as const, label: i.referenceDesignator, id: i.id })),
+        ],
+        confidence: {
+          score: connectedInstances.length > 0 ? 85 : 50,
+          explanation: connectedInstances.length > 0
+            ? `Classification based on net name pattern and ${connectedInstances.length} connected component(s).`
+            : 'Classification based on net name pattern only — no connected components found.',
+          factors: [
+            `Net name "${foundNet.name}" matches ${classification.type} pattern`,
+            ...(connectedInstances.length > 0 ? [`${connectedInstances.length} connected instance(s) analyzed`] : []),
+            ...(classification.protocol ? [`Protocol detected: ${classification.protocol}`] : []),
+          ],
+        },
+      };
+    },
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Net classification helpers (exported for testing)
+// ---------------------------------------------------------------------------
+
+/** Classification result for a net. */
+export interface NetClassification {
+  /** High-level type: power, ground, signal, bus, clock, reset, analog. */
+  type: 'power' | 'ground' | 'signal' | 'bus' | 'clock' | 'reset' | 'analog';
+  /** Detected protocol, if any (I2C, SPI, UART, JTAG, etc.). */
+  protocol: string | null;
+  /** Human-readable description of what this net carries. */
+  description: string;
+}
+
+/** Well-known net name patterns and their classifications. */
+const NET_PATTERNS: Array<{ pattern: RegExp; type: NetClassification['type']; protocol: string | null; description: string }> = [
+  // Power rails
+  { pattern: /^(VCC|VDD|VBUS|VMAIN|V_IN|VIN|VBAT|VSYS)$/i, type: 'power', protocol: null, description: 'positive power rail' },
+  { pattern: /^(\d+V?\d*|3\.?3V?|5V?|12V?|24V?|1\.?8V?|2\.?5V?)$/i, type: 'power', protocol: null, description: 'voltage power rail' },
+  { pattern: /^V(\d+[._]?\d*)$/i, type: 'power', protocol: null, description: 'voltage power rail' },
+  // Ground
+  { pattern: /^(GND|VSS|AGND|DGND|PGND|SGND|EARTH|GROUND)$/i, type: 'ground', protocol: null, description: 'ground reference' },
+  // I2C
+  { pattern: /^(SDA\d*|I2C[_.]?SDA)$/i, type: 'signal', protocol: 'I2C', description: 'I2C data line' },
+  { pattern: /^(SCL\d*|I2C[_.]?SCL)$/i, type: 'signal', protocol: 'I2C', description: 'I2C clock line' },
+  // SPI
+  { pattern: /^(MOSI|SDO|COPI|SPI[_.]?MOSI)$/i, type: 'signal', protocol: 'SPI', description: 'SPI data out (controller to peripheral)' },
+  { pattern: /^(MISO|SDI|CIPO|SPI[_.]?MISO)$/i, type: 'signal', protocol: 'SPI', description: 'SPI data in (peripheral to controller)' },
+  { pattern: /^(SCK|SCLK|SPI[_.]?CLK)$/i, type: 'clock', protocol: 'SPI', description: 'SPI clock line' },
+  { pattern: /^(CS\d*|SS\d*|NSS|SPI[_.]?CS|CHIP[_.]?SELECT)$/i, type: 'signal', protocol: 'SPI', description: 'SPI chip select (active low)' },
+  // UART
+  { pattern: /^(TX\d*|TXD\d*|UART[_.]?TX)$/i, type: 'signal', protocol: 'UART', description: 'UART transmit line' },
+  { pattern: /^(RX\d*|RXD\d*|UART[_.]?RX)$/i, type: 'signal', protocol: 'UART', description: 'UART receive line' },
+  { pattern: /^(CTS|RTS|DTR|DSR)$/i, type: 'signal', protocol: 'UART', description: 'UART flow control line' },
+  // JTAG / SWD
+  { pattern: /^(TCK|TMS|TDI|TDO|TRST|SWDIO|SWCLK)$/i, type: 'signal', protocol: 'JTAG/SWD', description: 'debug interface signal' },
+  // Clock / Reset
+  { pattern: /^(CLK\d*|CLOCK|XTAL|OSC|HCLK|PCLK|FCLK)$/i, type: 'clock', protocol: null, description: 'clock signal' },
+  { pattern: /^(RST|RESET|NRST|NRESET|RST_N)$/i, type: 'reset', protocol: null, description: 'reset signal (typically active low)' },
+  // Analog
+  { pattern: /^(AIN\d*|ADC\d*|AOUT\d*|DAC\d*|VREF|AREF|AN\d+)$/i, type: 'analog', protocol: null, description: 'analog signal' },
+  // PWM
+  { pattern: /^(PWM\d*|EN\d*|ENABLE)$/i, type: 'signal', protocol: null, description: 'PWM or enable signal' },
+  // USB
+  { pattern: /^(D\+|D-|USB[_.]?D[PM]|USB[_.]?VBUS)$/i, type: 'signal', protocol: 'USB', description: 'USB data line' },
+  // CAN
+  { pattern: /^(CAN[_.]?H|CAN[_.]?L|CANH|CANL)$/i, type: 'signal', protocol: 'CAN', description: 'CAN bus differential signal' },
+];
+
+/**
+ * Classify a net by its name, stored type, and voltage.
+ */
+export function classifyNet(name: string, storedType: string, voltage: string | null): NetClassification {
+  // First, check explicit stored type
+  if (storedType === 'power') {
+    return { type: 'power', protocol: null, description: `power rail${voltage ? ` (${voltage})` : ''}` };
+  }
+  if (storedType === 'ground') {
+    return { type: 'ground', protocol: null, description: 'ground reference' };
+  }
+  if (storedType === 'bus') {
+    return { type: 'bus', protocol: null, description: 'multi-bit bus' };
+  }
+
+  // Pattern match on the net name
+  for (const entry of NET_PATTERNS) {
+    if (entry.pattern.test(name)) {
+      const desc = voltage && entry.type === 'power' ? `${entry.description} (${voltage})` : entry.description;
+      return { type: entry.type, protocol: entry.protocol, description: desc };
+    }
+  }
+
+  // Default: generic signal
+  return { type: 'signal', protocol: null, description: 'general-purpose signal' };
+}
+
+/**
+ * Classify an instance's role on a net as driver, load, or unknown.
+ *
+ * Uses the reference designator prefix and part name as heuristics:
+ * - U (ICs), MCU, CPU, FPGA → driver (they typically source signals)
+ * - R (resistors), C (capacitors), L (inductors) → load (passive)
+ * - LED, D (diodes) → load
+ * - Connectors (J, P) → unknown (could be either)
+ * - Power-type nets: voltage regulators are drivers, everything else is a load
+ */
+export function classifyInstanceRole(
+  refDes: string,
+  partName: string,
+  netClass: NetClassification,
+): 'driver' | 'load' | 'unknown' {
+  const prefix = refDes.replace(/\d+$/, '').toUpperCase();
+  const nameLower = partName.toLowerCase();
+
+  // On power/ground nets: regulators and power sources drive, everything else loads
+  if (netClass.type === 'power' || netClass.type === 'ground') {
+    if (/regulator|vreg|ldo|buck|boost|smps|power.?supply|battery/i.test(nameLower)) {
+      return 'driver';
+    }
+    return 'load';
+  }
+
+  // IC-like prefixes are typically drivers
+  if (['U', 'IC'].includes(prefix)) {
+    if (/mcu|cpu|fpga|soc|controller|driver|transmitter|codec/i.test(nameLower)) {
+      return 'driver';
+    }
+    // ICs can be either — default to driver for signal nets
+    return 'driver';
+  }
+
+  // Passives are loads
+  if (['R', 'C', 'L', 'FB'].includes(prefix)) {
+    return 'load';
+  }
+
+  // LEDs and diodes are loads
+  if (['D', 'LED'].includes(prefix)) {
+    return 'load';
+  }
+
+  // Transistors / MOSFETs can be either
+  if (['Q', 'M'].includes(prefix)) {
+    return /driver|buffer/i.test(nameLower) ? 'driver' : 'unknown';
+  }
+
+  // Connectors — role depends on direction of the board interface
+  if (['J', 'P', 'X'].includes(prefix)) {
+    return 'unknown';
+  }
+
+  // Sensors are typically drivers (they output data)
+  if (/sensor|accel|gyro|temp|adc|encoder/i.test(nameLower)) {
+    return 'driver';
+  }
+
+  // Motors, relays, speakers are loads
+  if (/motor|relay|speaker|buzzer|actuator|solenoid/i.test(nameLower)) {
+    return 'load';
+  }
+
+  return 'unknown';
+}
+
+/** Parameters for building a net explanation string. */
+interface NetExplanationParams {
+  netName: string;
+  classification: NetClassification;
+  voltage: string | null;
+  drivers: string[];
+  loads: string[];
+  unknownRole: string[];
+  wireCount: number;
+  instanceCount: number;
+}
+
+/**
+ * Build a plain-English explanation of a net.
+ */
+export function buildNetExplanation(params: NetExplanationParams): string {
+  const { netName, classification, voltage, drivers, loads, unknownRole, wireCount, instanceCount } = params;
+  const lines: string[] = [];
+
+  // Header
+  lines.push(`Net "${netName}" — ${classification.description}`);
+  lines.push('');
+
+  // What it carries
+  if (classification.protocol) {
+    lines.push(`Protocol: ${classification.protocol}`);
+  }
+  if (classification.type === 'power' && voltage) {
+    lines.push(`Voltage: ${voltage}`);
+  }
+  if (classification.type === 'ground') {
+    lines.push('This net serves as the ground reference (0V) for the circuit.');
+  }
+  if (classification.type === 'clock') {
+    lines.push('This net carries a clock signal used for synchronization.');
+  }
+  if (classification.type === 'reset') {
+    lines.push('This net carries a reset signal, typically active low. When asserted, connected components return to their initial state.');
+  }
+
+  // Drivers and loads
+  if (drivers.length > 0) {
+    lines.push('');
+    lines.push(`Driven by: ${drivers.join(', ')}`);
+  }
+  if (loads.length > 0) {
+    lines.push(`Loads: ${loads.join(', ')}`);
+  }
+  if (unknownRole.length > 0) {
+    lines.push(`Also connected: ${unknownRole.join(', ')}`);
+  }
+
+  // Statistics
+  if (instanceCount === 0 && wireCount === 0) {
+    lines.push('');
+    lines.push('No components or wires are currently connected to this net.');
+  } else {
+    lines.push('');
+    lines.push(`Connectivity: ${instanceCount} component(s), ${wireCount} wire(s)`);
+  }
+
+  return lines.join('\n');
 }

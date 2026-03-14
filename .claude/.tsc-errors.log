@@ -297,3 +297,46 @@ client/src/components/simulation/__tests__/SimPlayButton.test.tsx(232,56): error
 9:57:00 PM - Found 0 errors. Watching for file changes.
 [2J[3J[H10:42:38 PM - File change detected. Starting incremental compilation...
 
+
+10:51:39 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:51:39 PM - File change detected. Starting incremental compilation...
+
+server/ai-tools/circuit.ts(990,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+
+10:52:14 PM - Found 1 error. Watching for file changes.
+[2J[3J[H10:52:15 PM - File change detected. Starting incremental compilation...
+
+server/ai-tools/circuit.ts(868,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+server/ai-tools/circuit.ts(869,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+server/ai-tools/circuit.ts(1013,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+
+10:52:45 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H10:52:46 PM - File change detected. Starting incremental compilation...
+
+server/ai-tools/circuit.ts(868,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+server/ai-tools/circuit.ts(869,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+server/ai-tools/circuit.ts(1013,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+
+10:53:22 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H10:53:22 PM - File change detected. Starting incremental compilation...
+
+server/ai-tools/circuit.ts(868,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+server/ai-tools/circuit.ts(869,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+server/ai-tools/circuit.ts(1013,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+
+10:53:44 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H10:53:44 PM - File change detected. Starting incremental compilation...
+
+server/ai-tools/circuit.ts(868,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+server/ai-tools/circuit.ts(869,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+
+10:54:06 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H10:54:08 PM - File change detected. Starting incremental compilation...
+
+server/ai-tools/circuit.ts(868,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+server/ai-tools/circuit.ts(869,55): error TS18048: 'conn.offsetY' is possibly 'undefined'.
+
+10:54:45 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H10:55:49 PM - File change detected. Starting incremental compilation...
+
