@@ -1311,3 +1311,8 @@ client/src/lib/ai-safety-mode.ts(511,5): error TS18004: No value exists in scope
 
 
 4:43:54 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H4:44:21 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/arduino/telemetry-parser.ts(267,33): error TS2802: Type 'Map<string, number>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+4:44:28 PM - Found 1 error. Watching for file changes.
