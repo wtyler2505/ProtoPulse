@@ -508,7 +508,7 @@ export function useAISafetyMode(): {
   }, [manager]);
 
   return {
-    enabled,
+    enabled: manager.enabled,
     toggle,
     setEnabled,
     classifyAction,

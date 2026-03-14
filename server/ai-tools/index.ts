@@ -52,6 +52,7 @@ function createRegistry(): ToolRegistry {
   registerSimulationTools(registry);
   registerManufacturingTools(registry);
   registerTestbenchTools(registry);
+  registerBomOptimizationTools(registry);
   return registry;
 }
 
