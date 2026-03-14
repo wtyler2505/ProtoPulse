@@ -173,7 +173,7 @@ export class ReviewResolutionManager {
   /** Get count of entries by status. */
   getCountByStatus(): Record<ResolutionStatus, number> {
     const counts: Record<ResolutionStatus, number> = { open: 0, resolved: 0, blocked: 0, wontfix: 0 };
-    for (const entry of this.entries.values()) {
+    for (const [, entry] of Array.from(this.entries)) {
       counts[entry.status]++;
     }
     return counts;

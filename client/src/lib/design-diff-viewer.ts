@@ -148,7 +148,7 @@ const CIRCUIT_FIELDS: TrackedField<DiffCircuitInstance>[] = [
 // Generic section differ
 // ---------------------------------------------------------------------------
 
-function diffSection<T extends Record<string, unknown>>(
+function diffSection<T>(
   id: string,
   label: string,
   baseline: T[],
