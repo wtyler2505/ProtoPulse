@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-14T22:01:23.172Z",
+  "persistedAt": "2026-03-14T22:28:24.149Z",
   "routes": {
     "POST /api/auth/login": {
       "count": 2,
@@ -25,11 +25,11 @@
       ]
     },
     "GET /api/projects": {
-      "count": 9,
-      "totalDuration": 253,
+      "count": 11,
+      "totalDuration": 387,
       "errors": 0,
       "min": 14,
-      "max": 48,
+      "max": 91,
       "samples": [
         14,
         14,
@@ -38,16 +38,18 @@
         24,
         35,
         36,
+        43,
         44,
-        48
+        48,
+        91
       ]
     },
     "GET /api/auth/me": {
-      "count": 12,
-      "totalDuration": 1601,
+      "count": 14,
+      "totalDuration": 2464,
       "errors": 0,
       "min": 13,
-      "max": 406,
+      "max": 653,
       "samples": [
         13,
         60,
@@ -59,8 +61,10 @@
         121,
         149,
         168,
+        210,
         314,
-        406
+        406,
+        653
       ]
     },
     "POST /api/projects": {
@@ -74,8 +78,8 @@
       ]
     },
     "POST /api/seed": {
-      "count": 13,
-      "totalDuration": 1056,
+      "count": 15,
+      "totalDuration": 1228,
       "errors": 0,
       "min": 6,
       "max": 589,
@@ -90,15 +94,17 @@
         31,
         36,
         53,
+        76,
+        96,
         98,
         112,
         589
       ]
     },
     "GET /api/projects/:id/nodes": {
-      "count": 20,
-      "totalDuration": 4259,
-      "errors": 9,
+      "count": 24,
+      "totalDuration": 5040,
+      "errors": 13,
       "min": 11,
       "max": 1346,
       "samples": [
@@ -115,9 +121,13 @@
         44,
         55,
         56,
+        63,
+        64,
         65,
         130,
         140,
+        237,
+        417,
         484,
         745,
         967,
@@ -125,14 +135,16 @@
       ]
     },
     "GET /api/projects/:id/arduino/profiles": {
-      "count": 17,
-      "totalDuration": 3485,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 3810,
+      "errors": 13,
       "min": 11,
       "max": 1893,
       "samples": [
         11,
+        12,
         18,
+        22,
         22,
         25,
         28,
@@ -144,16 +156,18 @@
         54,
         75,
         83,
+        96,
         158,
+        195,
         388,
         564,
         1893
       ]
     },
     "GET /api/projects/:id/arduino/libraries/installed": {
-      "count": 17,
-      "totalDuration": 58100,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 58913,
+      "errors": 13,
       "min": 9,
       "max": 15660,
       "samples": [
@@ -165,7 +179,11 @@
         32,
         41,
         45,
+        45,
+        56,
         94,
+        298,
+        414,
         1696,
         3280,
         3828,
@@ -177,9 +195,9 @@
       ]
     },
     "GET /api/projects/:id/arduino/health": {
-      "count": 17,
-      "totalDuration": 3870,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 4312,
+      "errors": 13,
       "min": 12,
       "max": 1688,
       "samples": [
@@ -191,11 +209,15 @@
         37,
         38,
         50,
+        54,
+        67,
         96,
         117,
+        130,
         148,
         150,
         155,
+        191,
         246,
         256,
         800,
@@ -203,9 +225,9 @@
       ]
     },
     "GET /api/projects/:id/edges": {
-      "count": 17,
-      "totalDuration": 1840,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 2264,
+      "errors": 13,
       "min": 8,
       "max": 894,
       "samples": [
@@ -221,16 +243,20 @@
         43,
         44,
         55,
+        56,
         74,
+        79,
         112,
+        143,
+        146,
         177,
         221,
         894
       ]
     },
     "GET /api/projects/:id": {
-      "count": 13,
-      "totalDuration": 129,
+      "count": 15,
+      "totalDuration": 168,
       "errors": 0,
       "min": 1,
       "max": 41,
@@ -246,14 +272,16 @@
         11,
         13,
         16,
+        18,
+        21,
         27,
         41
       ]
     },
     "GET /api/projects/:id/arduino/cores/list": {
-      "count": 17,
-      "totalDuration": 66989,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 67564,
+      "errors": 13,
       "min": 8,
       "max": 23242,
       "samples": [
@@ -264,8 +292,12 @@
         28,
         31,
         32,
+        52,
         59,
+        94,
         138,
+        168,
+        261,
         1893,
         2014,
         3925,
@@ -277,12 +309,13 @@
       ]
     },
     "GET /api/projects/:id/arduino/jobs": {
-      "count": 17,
-      "totalDuration": 10443,
-      "errors": 9,
-      "min": 15,
+      "count": 21,
+      "totalDuration": 10924,
+      "errors": 13,
+      "min": 11,
       "max": 4273,
       "samples": [
+        11,
         15,
         16,
         18,
@@ -293,9 +326,12 @@
         37,
         40,
         55,
+        62,
+        93,
         95,
         143,
         261,
+        315,
         358,
         1903,
         3109,
@@ -303,11 +339,11 @@
       ]
     },
     "GET /api/projects/:id/validation": {
-      "count": 17,
-      "totalDuration": 1026,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 1543,
+      "errors": 13,
       "min": 14,
-      "max": 231,
+      "max": 329,
       "samples": [
         14,
         15,
@@ -317,21 +353,25 @@
         23,
         26,
         30,
+        33,
         34,
         34,
         36,
         39,
+        54,
         68,
         75,
+        101,
         161,
         181,
-        231
+        231,
+        329
       ]
     },
     "GET /api/projects/:id/arduino/files": {
-      "count": 17,
-      "totalDuration": 7712,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 8092,
+      "errors": 13,
       "min": 10,
       "max": 4313,
       "samples": [
@@ -345,8 +385,12 @@
         41,
         49,
         66,
+        68,
+        69,
         71,
         91,
+        100,
+        143,
         157,
         299,
         470,
@@ -355,9 +399,9 @@
       ]
     },
     "GET /api/projects/:id/arduino/workspace": {
-      "count": 17,
-      "totalDuration": 8527,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 9636,
+      "errors": 13,
       "min": 12,
       "max": 4094,
       "samples": [
@@ -371,22 +415,27 @@
         51,
         55,
         86,
+        97,
+        115,
         127,
         164,
         169,
+        178,
         189,
+        719,
         1112,
         2266,
         4094
       ]
     },
     "GET /api/projects/:id/bom": {
-      "count": 17,
-      "totalDuration": 1157,
-      "errors": 9,
-      "min": 9,
+      "count": 21,
+      "totalDuration": 1521,
+      "errors": 13,
+      "min": 8,
       "max": 240,
       "samples": [
+        8,
         9,
         16,
         20,
@@ -394,6 +443,7 @@
         26,
         35,
         40,
+        43,
         47,
         55,
         57,
@@ -401,15 +451,17 @@
         77,
         82,
         95,
+        96,
         129,
         133,
+        217,
         240
       ]
     },
     "GET /api/projects/:id/history": {
-      "count": 17,
-      "totalDuration": 1070,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 1486,
+      "errors": 13,
       "min": 13,
       "max": 267,
       "samples": [
@@ -424,18 +476,22 @@
         36,
         36,
         39,
+        56,
         61,
+        63,
         76,
         99,
+        110,
         122,
         177,
+        187,
         267
       ]
     },
     "GET /api/projects/:id/chat": {
-      "count": 17,
-      "totalDuration": 29690,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 30235,
+      "errors": 13,
       "min": 14,
       "max": 28863,
       "samples": [
@@ -444,6 +500,8 @@
         20,
         23,
         24,
+        32,
+        34,
         35,
         37,
         38,
@@ -453,40 +511,46 @@
         55,
         69,
         80,
+        122,
         137,
         147,
+        357,
         28863
       ]
     },
     "GET /api/projects/:id/chat/branches": {
-      "count": 17,
-      "totalDuration": 1107,
-      "errors": 9,
+      "count": 21,
+      "totalDuration": 1577,
+      "errors": 13,
       "min": 9,
-      "max": 237,
+      "max": 334,
       "samples": [
         9,
         13,
         15,
         16,
         16,
+        32,
         36,
         37,
         38,
         42,
+        47,
         51,
         55,
+        57,
         65,
         67,
         91,
         134,
         185,
-        237
+        237,
+        334
       ]
     },
     "GET /api/settings/chat": {
-      "count": 13,
-      "totalDuration": 107,
+      "count": 15,
+      "totalDuration": 137,
       "errors": 0,
       "min": 1,
       "max": 28,
@@ -499,16 +563,18 @@
         4,
         5,
         6,
+        8,
         9,
         9,
         10,
+        22,
         22,
         28
       ]
     },
     "GET /api/settings/api-keys": {
-      "count": 14,
-      "totalDuration": 567,
+      "count": 16,
+      "totalDuration": 666,
       "errors": 0,
       "min": 5,
       "max": 393,
@@ -525,16 +591,18 @@
         12,
         17,
         31,
+        37,
         46,
+        62,
         393
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 18,
-      "totalDuration": 995,
-      "errors": 9,
+      "count": 22,
+      "totalDuration": 5405,
+      "errors": 13,
       "min": 4,
-      "max": 492,
+      "max": 4205,
       "samples": [
         4,
         7,
@@ -549,11 +617,15 @@
         17,
         20,
         24,
+        28,
         30,
         35,
+        49,
         72,
+        128,
         196,
-        492
+        492,
+        4205
       ]
     },
     "PUT /api/projects/:id/nodes": {

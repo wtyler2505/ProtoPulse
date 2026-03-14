@@ -410,11 +410,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 152 | 136 | Breadboard/PCB/simulation/UI — Waves 61-87 ongoing |
+| P2 | 142 | 146 | Breadboard/PCB/simulation/UI — Waves 61-89 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **280** | **228** | **508 total items tracked** |
+| **Total** | **270** | **238** | **508 total items tracked** |
 
-*Snapshot updated: Wave 87 (2026-03-14)*
+*Snapshot updated: Wave 89 (2026-03-14)*
 
 ---
 
@@ -705,10 +705,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0151 | Compile error translator (plain English) | DONE (Wave 84) | C2 | ARDX-008 |
 | BL-0152 | Auto-generate pin constants from schematic labels | DONE (Wave 86) | C3 | ARDX-019 |
 | BL-0153 | Serial plotter for live sensor curves | DONE (Wave 77) | C3 | ARDX-032 |
-| BL-0154 | Multi-channel telemetry dashboard | OPEN | C3 | ARDX-033 |
+| BL-0154 | Multi-channel telemetry dashboard — 5 parse formats, sparkline SVG, TelemetryDashboard in serial monitor. | DONE (Wave 89) | C3 | ARDX-033 |
 | BL-0155 | Crash doctor for watchdog resets/brownouts | OPEN | C4 | ARDX-036 |
 | BL-0156 | Baud mismatch auto-detection | DONE (Wave 85) | C2 | ARDX-037 |
-| BL-0157 | "No data" troubleshooting wizard | OPEN | C3 | ARDX-040 |
+| BL-0157 | "No data" troubleshooting wizard — 13 diagnostic steps, context-aware filtering, TroubleshootWizard. | DONE (Wave 89) | C3 | ARDX-040 |
 
 ### Arduino & Maker Integration (Wave 63)
 
@@ -764,10 +764,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0160 | AI answer source panel (what data it used) — Full ڈیزائن source tracking from AI tool calls; implemented AnswerSourcePanel UI with Design Sources and AI Confidence scores. | DONE | C3 | Wave 63 |
-| BL-0161 | AI safety mode for beginners (extra confirms + teaching) | OPEN | C3 | MF-145 |
+| BL-0161 | AI safety mode for beginners — SafetyConfirmDialog with classification badges + teaching explanations. | DONE (Wave 88) | C3 | MF-145 |
 | BL-0162 | Datasheet RAG for grounded suggestions | OPEN | C4 | MF-147 |
 | BL-0163 | AI testbench suggestions — suggest_testbench, explain_test_point, generate_test_sequence tools. | DONE (Wave 87) | C3 | MF-148, IFX-015 |
-| BL-0164 | AI BOM optimization assistant | OPEN | C3 | MF-149, IFX-035 |
+| BL-0164 | AI BOM optimization assistant — 3 tools (analyze, suggest alternate, consolidate packages). | DONE (Wave 88) | C3 | MF-149, IFX-035 |
 | BL-0165 | AI routing copilot with explainable reasoning — Added suggest_trace_path tool and client-side trace_path_suggestion handler to provide AI-driven PCB routing guidance. | DONE | C3 | Wave 63 |
 | BL-0166 | AI hardware debug assistant — Added hardware_debug_analysis tool and client-side hardware_debug_guide handler to provide structured troubleshooting strategies for prototypes. | DONE | C3 | Wave 63 |
 | BL-0167 | AI explain mode in simple language — Added set_explain_mode tool and client-side handler to toggle educational language and analogies for engineering concepts. | DONE | C3 | Wave 63 |
@@ -811,7 +811,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0524 | **Conflict resolution UI** — When a CRDT merge produces a conflict (once BL-0486 is fixed), surface a diff dialog showing "your version" vs "their version" with accept/reject/merge controls. Without UI, silent last-write-wins is confusing. | BLOCKED on BL-0486 | C4 | Wave 64 audit |
 | BL-0525 | **Presence cursors on Schematic and PCB canvases** — Live collaboration cursors (`LiveCursor` from `collaboration-client.ts`) are not rendered on the Schematic or PCB SVG canvases. Only the Architecture ReactFlow canvas has cursor rendering. Extend to all interactive editors. | OPEN | C3 | Wave 64 audit |
 | BL-0526 | **Session re-validation on WebSocket reconnect** — After a WebSocket disconnect/reconnect, the server does not re-verify the session token or project membership before re-admitting the client to the room. An expired session can continue collaborating. | OPEN | C3 | Wave 64 audit |
-| BL-0527 | **Offline queue retry jitter** — The offline sync retry in `offline-sync.ts` uses fixed backoff intervals (1s, 2s, 4s). For a large number of simultaneous offline clients reconnecting together, this causes a retry storm. Add randomized ±20% jitter. | OPEN | C2 | Wave 64 audit |
+| BL-0527 | **Offline queue retry jitter** — addJitter() with ±20% randomized backoff in offline-sync.ts. | DONE (Wave 89) | C2 | Wave 64 audit |
 | BL-0640 | **Explicit collaboration membership / invite model** — Collaboration currently falls back to implicit `editor` access for non-owners in room admission logic. Add real membership/invite records and explicit per-project ACL decisions so collaboration rights are granted intentionally instead of by shortcut. | OPEN | C4 | Repo gap audit 2026-03-13 |
 | BL-0649 | **Kanban board should persist to project/account, not browser-only localStorage** — The task board is deep enough to be useful, but it does not reliably follow users across devices, exports, or collaborators. Back it with project-scoped persistence and optional team sharing. | OPEN | C3 | Repo gap audit 2026-03-13 |
 
@@ -837,7 +837,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0529 | **Fab account linking** — Allow users to save JLCPCB / PCBWay / OSHPark API keys in the settings so orders can be submitted directly without leaving the app. Currently the ordering flow generates a package but requires manual upload to fab websites. | OPEN | C4 | Wave 64 audit |
 | BL-0530 | **DFM validates actual trace widths and clearances** — `DfmChecker` currently only validates component footprints and courtyard clearances. It does not read actual routed traces from `circuit_wires`. Add trace width and clearance checks against the selected fab preset. | OPEN | C4 | Wave 64 audit |
 | BL-0531 | **BOM component availability check in DFM** — Integrate BOM stock data (from supplier APIs, once real) into the DFM flow. Flag unavailable or long-lead-time components as DFM risks before the user commits to a fab order. | OPEN | C4 | Wave 64 audit |
-| BL-0532 | **Export file syntax validation** — Before offering a Gerber/drill/IPC-2581/ODB++ download, run a lightweight syntax check on the generated content (e.g. verify RS-274-X headers, check for truncated polygons). Surface any syntax errors with a "Cannot generate valid file" warning. | OPEN | C3 | Wave 64 audit |
+| BL-0532 | **Export file syntax validation** — 4 format validators (Gerber/Drill/IPC-2581/ODB++), wired to export routes with 422 on errors. | DONE (Wave 89) | C3 | Wave 64 audit |
 | BL-0533 | **LCSC real-time part data sync** — `lcsc-jlcpcb-mapper.ts` currently uses 154 built-in static mappings. Add an optional API sync to fetch real-time prices, stock levels, and JLCPCB assembly availability from the LCSC open API. | OPEN | C4 | Wave 64 audit |
 | BL-0646 | **Supplier pricing must move from demo data to real server-backed integrations** — Procurement still presents "live pricing" through a mock/demo pipeline. Replace the fake offer generator with real provider fetches behind a server proxy that handles auth, caching, and rate limiting. | OPEN | C4 | Repo gap audit 2026-03-13 |
 
@@ -857,9 +857,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0211 | Cross-tool mapping validator (net/layer/footprint parity) | OPEN | C4 | MF-161 |
 | BL-0212 | Import repair assistant for broken files | OPEN | C3 | MF-162 |
 | BL-0213 | Shareable simulation links with frozen settings | OPEN | C3 | MF-163 |
-| BL-0214 | Import preview summary before apply | OPEN | C2 | UX-051 |
+| BL-0214 | Import preview summary — diff dialog with add/modify/remove counts + warnings + conflicts. | DONE (Wave 88) | C2 | UX-051 |
 | BL-0215 | Import mapping warnings (what got dropped) | OPEN | C2 | UX-052 |
-| BL-0216 | Export pre-check screen | OPEN | C2 | UX-053, IFX-032 |
+| BL-0216 | Export pre-check screen — 17 format-specific validators, inline checklist UI. | DONE (Wave 88) | C2 | UX-053, IFX-032 |
 | BL-0217 | Show exported files list and size after export | OPEN | C1 | UX-054 |
 | BL-0218 | Export profiles ("Fab ready", "Sim bundle", "Docs") | OPEN | C2 | UX-056 |
 | BL-0219 | Import history with one-click restore | OPEN | C2 | UX-057 |
@@ -875,8 +875,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0232 | Click validation issue → focus camera + flash component — ReactFlow fitView + CSS validation-focus-pulse animation | DONE | C2 | Wave 60 |
 | BL-0233 | "Why this rule matters" plain-language explanation | DONE (Wave 62) — DRC_EXPLANATIONS (28 rules) in drc-engine.ts, wired into ERCPanel + ValidationView with expandable toggles | C2 | UX-043 |
 | BL-0234 | Persist panel sizes/collapsed state (localStorage) — debounced writes, ViewMode validation on restore | DONE | C2 | Wave 60 |
-| BL-0235 | Command palette categories by workflow stage | OPEN | C2 | UX-016 |
-| BL-0236 | Context-aware shortcuts panel (`?` overlay) | OPEN | C2 | UX-017 |
+| BL-0235 | Command palette categories — 6 workflow-stage groups with filter tabs. | DONE (Wave 88) | C2 | UX-016 |
+| BL-0236 | Context-aware shortcuts panel — ? overlay with 7 view contexts, keyboard key badges. | DONE (Wave 89) | C2 | UX-017 |
 | BL-0237 | Recent projects with filters and pinning | OPEN | C2 | UX-019 |
 | BL-0238 | Supplier comparison drawer (price, lead time, MOQ) | OPEN | C3 | UX-065 |
 | BL-0239 | Auto-grouping for SMT/THT/manual assembly | OPEN | C3 | UX-066 |

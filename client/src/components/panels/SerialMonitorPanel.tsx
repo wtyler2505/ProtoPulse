@@ -9,9 +9,9 @@ import type {
   SerialMonitorLine,
 } from '@/lib/web-serial';
 import { SerialLogger } from '@/lib/arduino/serial-logger';
+import { TelemetryStore } from '@/lib/arduino/telemetry-parser';
 import { detectEspException, parseEspException } from '@/lib/arduino/esp-exception-decoder';
-import { detectBaudMismatch } from '@/lib/arduino/baud-detector';
-import { nonPrintableRatio } from '@/lib/arduino/baud-detector';
+import { detectBaudMismatch, nonPrintableRatio } from '@/lib/arduino/baud-detector';
 import type { EspExceptionResult } from '@/lib/arduino/esp-exception-decoder';
 import type { BaudMismatchResult } from '@/lib/arduino/baud-detector';
 import type { SerialContext } from '@/lib/arduino/serial-troubleshooter';
@@ -47,9 +47,11 @@ import {
   ChevronRight,
   ArrowRightLeft,
   HelpCircle,
+  Activity,
 } from 'lucide-react';
 
 const TroubleshootWizard = lazy(() => import('@/components/arduino/TroubleshootWizard'));
+const TelemetryDashboard = lazy(() => import('@/components/arduino/TelemetryDashboard'));
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -195,6 +197,12 @@ export default function SerialMonitorPanel() {
   const [showTroubleshootWizard, setShowTroubleshootWizard] = useState(false);
   const troubleshootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Tab: 'monitor' | 'dashboard'
+  const [activeTab, setActiveTab] = useState<'monitor' | 'dashboard'>('monitor');
+
+  // Telemetry store
+  const telemetryStoreRef = useRef(TelemetryStore.getInstance());
+
   // Serial recording
   const serialLoggerRef = useRef(SerialLogger.getInstance());
   const loggerSnap = useSyncExternalStore(
@@ -203,17 +211,24 @@ export default function SerialMonitorPanel() {
   );
   const prevMonitorLenRef = useRef(state.monitor.length);
 
-  // Feed incoming serial data to logger
+  // Feed incoming serial data to logger + telemetry store
   useEffect(() => {
     const prevLen = prevMonitorLenRef.current;
     const curLen = state.monitor.length;
     prevMonitorLenRef.current = curLen;
 
-    if (curLen > prevLen && serialLoggerRef.current.isRecording()) {
+    if (curLen > prevLen) {
       for (let i = prevLen; i < curLen; i++) {
         const line = state.monitor[i];
         if (line) {
-          serialLoggerRef.current.appendData(line.data + '\n');
+          // Feed logger (only when recording)
+          if (serialLoggerRef.current.isRecording()) {
+            serialLoggerRef.current.appendData(line.data + '\n');
+          }
+          // Feed telemetry store (always, for RX lines)
+          if (line.direction === 'rx') {
+            telemetryStoreRef.current.ingest(line.data);
+          }
         }
       }
     }
@@ -272,6 +287,31 @@ export default function SerialMonitorPanel() {
     setBaudMismatch(null);
     setBaudWarningDismissed(false);
   }, [state.baudRate, state.connectionState]);
+
+  // Troubleshoot hint — show after 10s of being connected with no RX data
+  useEffect(() => {
+    if (troubleshootTimerRef.current) {
+      clearTimeout(troubleshootTimerRef.current);
+      troubleshootTimerRef.current = null;
+    }
+
+    // Only start timer when connected and no data yet
+    if (state.connectionState === 'connected' && state.bytesReceived === 0) {
+      troubleshootTimerRef.current = setTimeout(() => {
+        setShowTroubleshootHint(true);
+      }, 10_000);
+    } else {
+      setShowTroubleshootHint(false);
+      setShowTroubleshootWizard(false);
+    }
+
+    return () => {
+      if (troubleshootTimerRef.current) {
+        clearTimeout(troubleshootTimerRef.current);
+        troubleshootTimerRef.current = null;
+      }
+    };
+  }, [state.connectionState, state.bytesReceived]);
 
   // Recording duration ticker
   const [, setTick] = useState(0);
@@ -506,6 +546,36 @@ export default function SerialMonitorPanel() {
               </Button>
             )}
           </div>
+        </div>
+
+        {/* Monitor / Dashboard tab switcher */}
+        <div data-testid="serial-tab-switcher" className="flex items-center gap-1">
+          <button
+            data-testid="serial-tab-monitor"
+            className={cn(
+              'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors',
+              activeTab === 'monitor'
+                ? 'bg-[#00F0FF]/15 text-[#00F0FF]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/30',
+            )}
+            onClick={() => setActiveTab('monitor')}
+          >
+            <Zap className="w-3 h-3" />
+            Monitor
+          </button>
+          <button
+            data-testid="serial-tab-dashboard"
+            className={cn(
+              'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors',
+              activeTab === 'dashboard'
+                ? 'bg-[#00F0FF]/15 text-[#00F0FF]'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/30',
+            )}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <Activity className="w-3 h-3" />
+            Dashboard
+          </button>
         </div>
 
         {/* Configuration Row */}
@@ -841,52 +911,115 @@ export default function SerialMonitorPanel() {
             )}
           </div>
         )}
+
+        {/* Troubleshoot Hint — appears after 10s of no data */}
+        {showTroubleshootHint && !showTroubleshootWizard && (
+          <div
+            data-testid="troubleshoot-hint-banner"
+            className="flex items-center gap-2 text-xs text-[#00F0FF] bg-[#00F0FF]/5 border border-[#00F0FF]/20 rounded px-2 py-1.5"
+          >
+            <HelpCircle className="w-3 h-3 shrink-0" />
+            <span className="flex-1">No data received for 10 seconds.</span>
+            <Button
+              data-testid="troubleshoot-open-btn"
+              variant="outline"
+              size="sm"
+              className="h-5 text-[10px] px-2 border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/10"
+              onClick={() => setShowTroubleshootWizard(true)}
+            >
+              Troubleshoot
+            </Button>
+            <button
+              data-testid="troubleshoot-hint-dismiss"
+              className="p-0.5 text-[#00F0FF]/50 hover:text-[#00F0FF] transition-colors"
+              onClick={() => setShowTroubleshootHint(false)}
+              aria-label="Dismiss troubleshoot hint"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+
+        {/* Troubleshoot Wizard */}
+        {showTroubleshootWizard && (
+          <Suspense fallback={<div className="p-3 text-xs text-muted-foreground">Loading troubleshooter...</div>}>
+            <TroubleshootWizard
+              context={{
+                isConnected: isConnected,
+                baudRate: state.baudRate,
+                baudMismatchDismissed: baudWarningDismissed,
+                bytesReceived: state.bytesReceived,
+                hasGarbledData: state.bytesReceived > 0 && state.monitor.length > 0
+                  && nonPrintableRatio(
+                    state.monitor
+                      .filter((l) => l.direction === 'rx')
+                      .map((l) => l.data)
+                      .join(''),
+                  ) > 0.3,
+                selectedBoard: selectedBoardProfile || undefined,
+              } satisfies SerialContext}
+              onClose={() => {
+                setShowTroubleshootWizard(false);
+                setShowTroubleshootHint(false);
+              }}
+            />
+          </Suspense>
+        )}
       </div>
 
-      {/* Monitor Output */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div
-          data-testid="serial-monitor-output"
-          className="p-2 font-mono text-xs leading-relaxed"
-        >
-          {state.monitor.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-              {isConnected ? (
-                <ZapOff className="w-8 h-8 opacity-50" />
-              ) : (
-                <Zap className="w-8 h-8 opacity-50" />
-              )}
-              <span className="text-sm">
-                {isConnected
-                  ? 'Waiting for data...'
-                  : 'Connect to a device to start monitoring'}
-              </span>
-            </div>
-          ) : (
-            state.monitor.map((line: SerialMonitorLine, i: number) => (
-              <div
-                key={`${String(line.timestamp)}-${String(i)}`}
-                className={cn(
-                  'flex gap-2 py-0.5 hover:bg-muted/30 rounded-sm px-1',
-                  line.direction === 'tx' && 'text-[#00F0FF]',
-                  line.direction === 'rx' && 'text-emerald-300',
+      {/* Monitor Output (visible when monitor tab active) */}
+      {activeTab === 'monitor' && (
+        <ScrollArea className="flex-1 min-h-0">
+          <div
+            data-testid="serial-monitor-output"
+            className="p-2 font-mono text-xs leading-relaxed"
+          >
+            {state.monitor.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
+                {isConnected ? (
+                  <ZapOff className="w-8 h-8 opacity-50" />
+                ) : (
+                  <Zap className="w-8 h-8 opacity-50" />
                 )}
-              >
-                {showTimestamps && (
-                  <span className="text-muted-foreground shrink-0 tabular-nums select-none">
-                    [{formatTimestamp(line.timestamp)}]
-                  </span>
-                )}
-                <span className="text-muted-foreground shrink-0 select-none w-4 text-center">
-                  {line.direction === 'tx' ? '>' : '<'}
+                <span className="text-sm">
+                  {isConnected
+                    ? 'Waiting for data...'
+                    : 'Connect to a device to start monitoring'}
                 </span>
-                <span className="break-all whitespace-pre-wrap">{line.data}</span>
               </div>
-            ))
-          )}
-          <div ref={monitorEndRef} />
-        </div>
-      </ScrollArea>
+            ) : (
+              state.monitor.map((line: SerialMonitorLine, i: number) => (
+                <div
+                  key={`${String(line.timestamp)}-${String(i)}`}
+                  className={cn(
+                    'flex gap-2 py-0.5 hover:bg-muted/30 rounded-sm px-1',
+                    line.direction === 'tx' && 'text-[#00F0FF]',
+                    line.direction === 'rx' && 'text-emerald-300',
+                  )}
+                >
+                  {showTimestamps && (
+                    <span className="text-muted-foreground shrink-0 tabular-nums select-none">
+                      [{formatTimestamp(line.timestamp)}]
+                    </span>
+                  )}
+                  <span className="text-muted-foreground shrink-0 select-none w-4 text-center">
+                    {line.direction === 'tx' ? '>' : '<'}
+                  </span>
+                  <span className="break-all whitespace-pre-wrap">{line.data}</span>
+                </div>
+              ))
+            )}
+            <div ref={monitorEndRef} />
+          </div>
+        </ScrollArea>
+      )}
+
+      {/* Telemetry Dashboard (visible when dashboard tab active) */}
+      {activeTab === 'dashboard' && (
+        <Suspense fallback={<div className="flex-1 flex items-center justify-center text-xs text-muted-foreground">Loading dashboard...</div>}>
+          <TelemetryDashboard />
+        </Suspense>
+      )}
 
       {/* Stats Bar + Recording Controls */}
       {isConnected && (

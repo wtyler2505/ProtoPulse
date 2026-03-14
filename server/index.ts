@@ -82,6 +82,7 @@ app.use(helmet({
         ? ["'self'", "ws://localhost:*", "ws://127.0.0.1:*", "http://localhost:*"]
         : ["'self'"],
       frameSrc: ["'none'"],
+      workerSrc: ["'self'", "blob:"],
       frameAncestors: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],

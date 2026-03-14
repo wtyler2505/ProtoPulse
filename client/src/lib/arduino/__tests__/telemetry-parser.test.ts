@@ -130,10 +130,12 @@ describe('parseLine — tab-separated', () => {
     expect(result!.values.get('ch2')).toBe(7.89);
   });
 
-  it('handles single tab-separated value', () => {
+  it('handles trailing tab — falls through to CSV single value', () => {
     const result = parseLine('42.0\t');
-    // trailing tab produces empty second part which is not numeric
-    expect(result).toBeNull();
+    // trailing tab produces empty second part; tab parse fails, but "42.0" is
+    // still numeric so CSV parse succeeds with one channel
+    expect(result).not.toBeNull();
+    expect(result!.values.get('ch0')).toBe(42);
   });
 });
 
