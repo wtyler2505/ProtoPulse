@@ -1684,3 +1684,9 @@ client/src/lib/manufacturing-validator.ts(245,22): error TS2802: Type 'Set<strin
 
 
 6:14:28 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H6:14:54 PM - File change detected. Starting incremental compilation...
+
+
+6:15:02 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H6:15:46 PM - File change detected. Starting incremental compilation...
+
