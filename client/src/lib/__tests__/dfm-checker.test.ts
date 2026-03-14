@@ -965,3 +965,308 @@ describe('DfmChecker', () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// inferPackageType
+// ---------------------------------------------------------------------------
+
+describe('inferPackageType', () => {
+  it('detects SOIC package from description', () => {
+    expect(inferPackageType('IC SOIC-8 Package')).toBe('SOIC-8');
+  });
+
+  it('detects QFP package from description', () => {
+    expect(inferPackageType('MCU TQFP-48')).toBe('TQFP-48');
+  });
+
+  it('detects QFN package', () => {
+    expect(inferPackageType('LDO Regulator QFN-16')).toBe('QFN-16');
+  });
+
+  it('detects BGA package', () => {
+    expect(inferPackageType('FPGA BGA-256')).toBe('BGA-256');
+  });
+
+  it('detects SOT-23 package', () => {
+    expect(inferPackageType('Transistor SOT-23')).toBe('SOT-23');
+  });
+
+  it('detects SOT-223 package', () => {
+    expect(inferPackageType('Regulator SOT-223')).toBe('SOT-223');
+  });
+
+  it('detects TO-220 package', () => {
+    expect(inferPackageType('MOSFET TO-220')).toBe('TO-220');
+  });
+
+  it('detects TO-92 package', () => {
+    expect(inferPackageType('Transistor TO-92')).toBe('TO-92');
+  });
+
+  it('detects DIP package', () => {
+    expect(inferPackageType('IC DIP-16')).toBe('DIP-16');
+  });
+
+  it('detects chip package 0805', () => {
+    expect(inferPackageType('Resistor 10K 0805')).toBe('0805');
+  });
+
+  it('detects chip package 0603', () => {
+    expect(inferPackageType('Capacitor 100nF 0603')).toBe('0603');
+  });
+
+  it('detects chip package 0402', () => {
+    expect(inferPackageType('Cap 0402')).toBe('0402');
+  });
+
+  it('detects chip package 0201', () => {
+    expect(inferPackageType('Resistor 0201 1%')).toBe('0201');
+  });
+
+  it('detects chip package 1206', () => {
+    expect(inferPackageType('Inductor 1206')).toBe('1206');
+  });
+
+  it('detects chip package 2512', () => {
+    expect(inferPackageType('Power Resistor 2512')).toBe('2512');
+  });
+
+  it('detects chip package 1210', () => {
+    expect(inferPackageType('Cap 1210 X7R')).toBe('1210');
+  });
+
+  it('detects TSSOP package', () => {
+    expect(inferPackageType('ADC TSSOP-20')).toBe('TSSOP-20');
+  });
+
+  it('detects LQFP package', () => {
+    expect(inferPackageType('STM32 LQFP-64')).toBe('LQFP-64');
+  });
+
+  it('detects MSOP package', () => {
+    expect(inferPackageType('Op-amp MSOP-8')).toBe('MSOP-8');
+  });
+
+  it('detects package from partNumber when description has none', () => {
+    expect(inferPackageType('Generic IC', 'ATMEGA328P-AU-QFP-32')).toBe('QFP-32');
+  });
+
+  it('detects 0805 from part number like RC0805JR', () => {
+    expect(inferPackageType('Resistor', 'RC0805JR-0710KL')).toBe('0805');
+  });
+
+  it('returns unknown for unrecognized description', () => {
+    expect(inferPackageType('Some random component')).toBe('unknown');
+  });
+
+  it('returns unknown for empty string', () => {
+    expect(inferPackageType('')).toBe('unknown');
+  });
+
+  it('case insensitive matching', () => {
+    expect(inferPackageType('soic-8 package')).toBe('SOIC-8');
+    expect(inferPackageType('SOIC-8 Package')).toBe('SOIC-8');
+  });
+
+  it('detects SOP package', () => {
+    expect(inferPackageType('IC SOP-16')).toBe('SOP-16');
+  });
+
+  it('detects DFN package', () => {
+    expect(inferPackageType('Sensor DFN-8')).toBe('DFN-8');
+  });
+
+  it('detects LGA package', () => {
+    expect(inferPackageType('Accelerometer LGA-12')).toBe('LGA-12');
+  });
+
+  it('detects SIP package', () => {
+    expect(inferPackageType('Resistor network SIP-8')).toBe('SIP-8');
+  });
+
+  it('detects TO-252 package', () => {
+    expect(inferPackageType('Regulator TO-252')).toBe('TO-252');
+  });
+
+  it('detects SOT-89 package', () => {
+    expect(inferPackageType('Voltage regulator SOT-89')).toBe('SOT-89');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bomToDfmInput
+// ---------------------------------------------------------------------------
+
+describe('bomToDfmInput', () => {
+  function makeBomItem(overrides: Partial<BomItemLike> = {}): BomItemLike {
+    return {
+      partNumber: 'PART-001',
+      description: 'Test component SOIC-8',
+      manufacturer: 'TestCo',
+      quantity: 1,
+      ...overrides,
+    };
+  }
+
+  it('returns valid DesignData with empty BOM', () => {
+    const result = bomToDfmInput([]);
+    expect(result.traces).toEqual([]);
+    expect(result.vias).toEqual([]);
+    expect(result.pads).toEqual([]);
+    expect(result.drills).toEqual([]);
+    expect(result.board.width).toBeGreaterThanOrEqual(1000);
+    expect(result.board.height).toBeGreaterThanOrEqual(1000);
+    expect(result.copperWeight).toBe('1oz');
+    expect(result.surfaceFinish).toBe('HASL');
+  });
+
+  it('generates pads for SMD component (SOIC-8)', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'IC SOIC-8', quantity: 1 })]);
+    // SOIC-8 has 8 pins => 8 pads
+    expect(result.pads.length).toBe(8);
+    // No drills for SMD
+    expect(result.drills.length).toBe(0);
+  });
+
+  it('generates pads and drills for THT component (DIP-16)', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'IC DIP-16', quantity: 1 })]);
+    // DIP-16 has 16 pins => 16 pads + 16 drills
+    expect(result.pads.length).toBe(16);
+    expect(result.drills.length).toBe(16);
+    expect(result.drills[0].type).toBe('through');
+    expect(result.drills[0].diameter).toBe(35);
+  });
+
+  it('generates drills for TO-220 component', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'MOSFET TO-220', quantity: 1 })]);
+    // TO-220 has 3 pins => 3 pads + 3 drills
+    expect(result.pads.length).toBe(3);
+    expect(result.drills.length).toBe(3);
+    expect(result.drills[0].diameter).toBe(43);
+  });
+
+  it('generates drills for TO-92 component', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'Transistor TO-92', quantity: 1 })]);
+    expect(result.pads.length).toBe(3);
+    expect(result.drills.length).toBe(3);
+    expect(result.drills[0].diameter).toBe(30);
+  });
+
+  it('multiplies pads by quantity', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'Cap 0805', quantity: 3 })]);
+    // 0805 has 2 pins, quantity 3 => 6 pads
+    expect(result.pads.length).toBe(6);
+  });
+
+  it('handles multiple BOM items', () => {
+    const items: BomItemLike[] = [
+      makeBomItem({ description: 'Resistor 0603', quantity: 2 }),
+      makeBomItem({ description: 'IC DIP-8', quantity: 1 }),
+    ];
+    const result = bomToDfmInput(items);
+    // 0603: 2 pins * 2 qty = 4 pads, DIP-8: 8 pins * 1 qty = 8 pads
+    expect(result.pads.length).toBe(12);
+    // DIP-8 generates drills: 8 drills
+    expect(result.drills.length).toBe(8);
+  });
+
+  it('handles unknown package type with default 2 pins', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'Mystery component', quantity: 1 })]);
+    expect(result.pads.length).toBe(2);
+    expect(result.drills.length).toBe(0);
+  });
+
+  it('handles missing description gracefully', () => {
+    const result = bomToDfmInput([makeBomItem({ description: '', quantity: 1 })]);
+    expect(result.pads.length).toBe(2); // Default 2 pads for unknown
+    expect(result.drills.length).toBe(0);
+  });
+
+  it('pads have unique IDs', () => {
+    const result = bomToDfmInput([
+      makeBomItem({ description: 'IC SOIC-8', quantity: 2 }),
+    ]);
+    const ids = result.pads.map((p) => p.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(ids.length);
+  });
+
+  it('drills have unique IDs', () => {
+    const result = bomToDfmInput([
+      makeBomItem({ description: 'IC DIP-16', quantity: 2 }),
+    ]);
+    const ids = result.drills.map((d) => d.id);
+    const uniqueIds = new Set(ids);
+    expect(uniqueIds.size).toBe(ids.length);
+  });
+
+  it('board dimensions grow to fit components', () => {
+    const smallResult = bomToDfmInput([makeBomItem({ description: 'Cap 0805', quantity: 1 })]);
+    const largeResult = bomToDfmInput([makeBomItem({ description: 'Cap 0805', quantity: 50 })]);
+    // More components should result in a larger board
+    expect(largeResult.board.width).toBeGreaterThanOrEqual(smallResult.board.width);
+    expect(largeResult.board.height).toBeGreaterThan(smallResult.board.height);
+  });
+
+  it('all pads have positive dimensions', () => {
+    const result = bomToDfmInput([
+      makeBomItem({ description: 'IC QFN-32', quantity: 1 }),
+      makeBomItem({ description: 'Resistor 0402', quantity: 5 }),
+      makeBomItem({ description: 'Transistor TO-220', quantity: 2 }),
+    ]);
+    for (const pad of result.pads) {
+      expect(pad.width).toBeGreaterThan(0);
+      expect(pad.height).toBeGreaterThan(0);
+    }
+  });
+
+  it('all drills have positive diameter', () => {
+    const result = bomToDfmInput([
+      makeBomItem({ description: 'IC DIP-8', quantity: 2 }),
+    ]);
+    for (const drill of result.drills) {
+      expect(drill.diameter).toBeGreaterThan(0);
+    }
+  });
+
+  it('infers package from partNumber when description lacks package info', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'Resistor 10K', partNumber: 'RC0805JR-0710KL', quantity: 1 })]);
+    // Should detect 0805 from part number => 2 pads
+    expect(result.pads.length).toBe(2);
+  });
+
+  it('generates correct pad sizes for BGA', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'FPGA BGA-256', quantity: 1 })]);
+    expect(result.pads.length).toBe(256);
+    // BGA pads are small squares
+    expect(result.pads[0].width).toBe(12);
+    expect(result.pads[0].height).toBe(12);
+  });
+
+  it('generates SOT-23 with 3 pads', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'Transistor SOT-23', quantity: 1 })]);
+    expect(result.pads.length).toBe(3);
+    expect(result.drills.length).toBe(0); // SMD
+  });
+
+  it('generates SOT-223 with 4 pads', () => {
+    const result = bomToDfmInput([makeBomItem({ description: 'Regulator SOT-223', quantity: 1 })]);
+    expect(result.pads.length).toBe(4);
+    expect(result.drills.length).toBe(0); // SMD
+  });
+
+  it('result can be used directly with DfmChecker', () => {
+    const items = [
+      makeBomItem({ description: 'IC DIP-8', quantity: 1 }),
+      makeBomItem({ description: 'Cap 0805', quantity: 5 }),
+    ];
+    const designData = bomToDfmInput(items);
+    DfmChecker.resetForTesting();
+    const checker = DfmChecker.getInstance();
+    const result = checker.runCheckAgainstFab(designData, 'JLCPCB');
+    expect(result).toBeDefined();
+    expect(result.fabName).toBe('JLCPCB');
+    expect(typeof result.passed).toBe('boolean');
+    expect(result.summary.totalChecks).toBeGreaterThan(0);
+  });
+});

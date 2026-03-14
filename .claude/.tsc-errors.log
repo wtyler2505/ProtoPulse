@@ -209,3 +209,11 @@ client/src/components/panels/ExportPanel.tsx(278,19): error TS2352: Conversion o
 
 
 9:51:55 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:52:07 PM - File change detected. Starting incremental compilation...
+
+
+9:52:12 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:52:13 PM - File change detected. Starting incremental compilation...
+
+
+9:52:15 PM - Found 0 errors. Watching for file changes.
