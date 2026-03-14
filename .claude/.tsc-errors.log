@@ -1091,3 +1091,44 @@ client/src/lib/tauri-api.ts(214,45): error TS7006: Parameter 'p' implicitly has 
 1:32:58 PM - Found 7 errors. Watching for file changes.
 [2J[3J[H1:36:02 PM - File change detected. Starting incremental compilation...
 
+client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-opener"' has no exported member 'open'.
+
+1:50:06 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:50:17 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-opener"' has no exported member 'open'.
+
+1:50:29 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:50:31 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-opener"' has no exported member 'open'.
+
+1:50:57 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:52:25 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-opener"' has no exported member 'open'.
+
+1:52:36 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:52:42 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-opener"' has no exported member 'open'.
+
+1:52:53 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:52:53 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-opener"' has no exported member 'open'.
+
+1:53:00 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:53:03 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/tauri-api.ts(17,10): error TS2305: Module '"@tauri-apps/plugin-opener"' has no exported member 'open'.
+
+1:53:10 PM - Found 1 error. Watching for file changes.
+[2J[3J[H1:56:52 PM - File change detected. Starting incremental compilation...
+
+
+1:57:00 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H2:01:57 PM - File change detected. Starting incremental compilation...
+
+
+2:02:12 PM - Found 0 errors. Watching for file changes.

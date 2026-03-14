@@ -125,16 +125,16 @@
 
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0563` | BOM back-annotation to schematic — BOM changes sync to schematic instance properties. | M | `C4` | Medium |
-| 2 | `BL-0593` | Bendable/rubber-band component legs — through-hole legs bend from body to breadboard holes. Fritzing feature. | M | `C3` | High |
-| 3 | `BL-0628` | Bundled circuit+code example library — Arduino IDE "File > Examples" style browsable panel. | M | `C3` | High |
-| 4 | `BL-0147` | Flashing progress/error diagnostics — real-time upload progress bar + error recovery hints. | S | `C3` | High |
-| 5 | `BL-0161` | AI safety mode for beginners — extra confirms + teaching explanations before destructive actions. | S | `C3` | Medium |
-| 6 | `BL-0163` | AI testbench suggestions — AI recommends simulation parameters based on circuit topology. | S | `C3` | Medium |
-| 7 | `BL-0164` | AI BOM optimization assistant — suggest cheaper alternates, consolidate packages, reduce unique parts. | S | `C3` | Medium |
-| 8 | `BL-0214` | Import preview summary before apply — show what will change before committing an import. | S | `C2` | Medium |
-| 9 | `BL-0216` | Export pre-check screen — validate export readiness before generating files. | S | `C2` | Medium |
-| 10 | `BL-0231` | Smart contextual radial menu on right-click — context-aware actions for selected elements. | S | `C2` | Medium |
+| 1 | `BL-0161` | AI safety mode for beginners — extra confirms + teaching before destructive AI actions. | S | `C3` | High |
+| 2 | `BL-0164` | AI BOM optimization assistant — suggest cheaper alternates, consolidate packages. | S | `C3` | Medium |
+| 3 | `BL-0214` | Import preview summary — show what will change before committing an import. | S | `C2` | Medium |
+| 4 | `BL-0216` | Export pre-check screen — validate export readiness before generating files. | S | `C2` | Medium |
+| 5 | `BL-0218` | Export profiles ("Fab ready", "Sim bundle", "Docs") — one-click export presets. | S | `C2` | Medium |
+| 6 | `BL-0235` | Command palette categories — organize by workflow stage. | S | `C2` | Medium |
+| 7 | `BL-0236` | Context-aware shortcuts panel — `?` overlay showing relevant shortcuts. | S | `C2` | Medium |
+| 8 | `BL-0154` | Multi-channel telemetry dashboard — real-time sensor data visualization. | M | `C3` | High |
+| 9 | `BL-0532` | Export file syntax validation — check generated Gerber/IPC/ODB++ before download. | S | `C3` | Medium |
+| 10 | `BL-0157` | "No data" troubleshooting wizard — guided diagnosis when serial monitor shows nothing. | S | `C3` | High |
 
 ## Complexity Radar (Highest-Complexity Open Items)
 

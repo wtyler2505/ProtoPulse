@@ -325,7 +325,7 @@ fn setup_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn handle_menu_events(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent) {
+fn handle_menu_events(app: &tauri::AppHandle, event: tauri::menu::MenuEvent) {
     match event.id().0.as_str() {
         "new-project" => {
             let _ = app.emit("menu:new-project", ());
@@ -348,7 +348,8 @@ fn handle_menu_events(app: &tauri::AppHandle, event: &tauri::menu::MenuEvent) {
                 .blocking_show();
         }
         "learn-more" => {
-            let _ = tauri_plugin_opener::open_url("https://github.com/protopulse", None::<&str>);
+            use tauri_plugin_opener::OpenerExt;
+            let _ = app.opener().open_url("https://github.com/protopulse", None::<&str>);
         }
         "toggle-devtools" => {
             if let Some(window) = app.get_webview_window("main") {
@@ -386,19 +387,10 @@ pub fn run() {
             // Start Express server in production builds
             start_express_server(app.handle());
 
-            // Show the main window once the webview is ready
-            let window = app.get_webview_window("main")
-                .expect("Main window not found");
-            let w = window.clone();
-            window.on_window_event(move |event| {
-                if let tauri::WindowEvent::ThemeChanged(_) = event {
-                    // Window is ready — show it
-                }
-                // We use the Moved event as a proxy for "ready" since
-                // Tauri v2 doesn't have a direct ready-to-show event.
-                // Instead, we show immediately and rely on the background color.
-            });
-            w.show().unwrap_or_default();
+            // Show the main window (configured as visible: false in tauri.conf.json)
+            if let Some(window) = app.get_webview_window("main") {
+                window.show().unwrap_or_default();
+            }
 
             Ok(())
         })
