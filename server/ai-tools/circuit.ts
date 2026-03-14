@@ -864,7 +864,7 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
       }
 
       // 4. Generate teardrops for each wire endpoint
-      const newTeardrops: any[] = [];
+      const newTeardrops: Array<{ projectId: number; zoneType: 'teardrop'; layer: string; points: Array<{ x: number; y: number }>; netId: number | null }> = [];
       let generatedCount = 0;
 
       // Distance threshold to consider a wire endpoint "connected" to a target center
