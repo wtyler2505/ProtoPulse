@@ -43,6 +43,10 @@ function createFullRegistry(): ToolRegistry {
   registerExportTools(registry);
   registerVisionTools(registry);
   registerGenerativeTools(registry);
+  registerArduinoTools(registry);
+  registerSimulationTools(registry);
+  registerManufacturingTools(registry);
+  registerTestbenchTools(registry);
   return registry;
 }
 
