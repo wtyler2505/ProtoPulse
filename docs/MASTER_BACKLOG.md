@@ -123,16 +123,16 @@
 
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0619` | Component state rendering (LED glow, relay toggle) makes simulation visually immediate. | M | `C3` | High |
-| 2 | `BL-0620` | One-click "Start Simulation" button removes the biggest barrier to running a sim. | S | `C2` | High |
-| 3 | `BL-0622` | Sensor input sliders let users interact with simulations without editing values manually. | M | `C3` | High |
-| 4 | `BL-0563` | Schematic↔architecture component linkage closes a data coherence gap. | M | `C3` | Medium |
-| 5 | `BL-0564` | BOM↔schematic sync ensures component data stays in one place. | M | `C3` | Medium |
-| 6 | `BL-0565` | DFM checker reads actual BOM data instead of manual entry. | M | `C3` | Medium |
-| 7 | `BL-0580` | Export validation pre-flight catches missing data before generating files. | M | `C3` | High |
-| 8 | `BL-0604` | Job cancellation — no way to cancel a running compile/upload. | S | `C2` | High |
-| 9 | `BL-0605` | Export compiled binary (.hex/.bin) for OTA or external tools. | S | `C2` | Medium |
-| 10 | `BL-0606` | Built-in examples browser — standard beginner entry point. | M | `C2` | High |
+| 1 | `BL-0580` | BOM completeness warnings in ValidationView — catches missing MPN, blank manufacturer before export. | M | `C4` | High |
+| 2 | `BL-0607` | Real-time SSE log streaming for compile/upload — foundation for firmware runtime Phase 1. | M | `C3` | High |
+| 3 | `BL-0151` | Compile error translator — plain English explanations for cryptic gcc/avr errors. | S | `C2` | High |
+| 4 | `BL-0601` | Auto-format sketch code (Ctrl+T) — muscle memory feature every Arduino user expects. | S | `C2` | High |
+| 5 | `BL-0519` | Simulation control AI tools — let AI start/stop/configure simulations via tool calls. | M | `C3` | High |
+| 6 | `BL-0522` | "Explain this net" AI tool — plain English net descriptions for learners. | S | `C2` | High |
+| 7 | `BL-0563` | BOM back-annotation to schematic — BOM changes sync to schematic instance properties. | M | `C4` | Medium |
+| 8 | `BL-0609` | ESP exception decoder — translate Guru Meditation hex addresses to filename:line. | M | `C3` | High |
+| 9 | `BL-0517` | Arduino job history console — persistent log of past compile/upload jobs. | S | `C2` | Medium |
+| 10 | `BL-0612` | Serial output log-to-file — auto-save serial monitor output for data collection. | S | `C2` | Medium |
 
 ## Complexity Radar (Highest-Complexity Open Items)
 
