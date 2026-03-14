@@ -32,19 +32,18 @@ describe('SimPlayButton', () => {
 
   it('renders play button when not running', () => {
     renderButton();
-    expect(screen.getByTestId('sim-play-button')).toBeInTheDocument();
+    expect(screen.getByTestId('sim-play-button')).toBeTruthy();
   });
 
   it('renders play button text', () => {
     renderButton();
-    expect(screen.getByTestId('sim-play-button')).toHaveTextContent(/Start Simulation/i);
+    expect(screen.getByTestId('sim-play-button').textContent).toContain('Start Simulation');
   });
 
-  it('shows dropdown trigger (chevron) when no detection', () => {
+  it('shows dropdown trigger when no detection', () => {
     renderButton({ detection: null });
-    // The button itself is the dropdown trigger — has chevron icon
     const btn = screen.getByTestId('sim-play-button');
-    expect(btn).toBeInTheDocument();
+    expect(btn).toBeTruthy();
   });
 
   // ---------------------------------------------------------------------------
@@ -53,8 +52,9 @@ describe('SimPlayButton', () => {
 
   it('renders stop button when running', () => {
     renderButton({ isRunning: true });
-    expect(screen.getByTestId('sim-stop-button')).toBeInTheDocument();
-    expect(screen.getByTestId('sim-stop-button')).toHaveTextContent(/Stop/i);
+    const btn = screen.getByTestId('sim-stop-button');
+    expect(btn).toBeTruthy();
+    expect(btn.textContent).toContain('Stop');
   });
 
   it('calls onStop when stop button is clicked', () => {
@@ -66,9 +66,9 @@ describe('SimPlayButton', () => {
 
   it('shows stopping state with disabled button', () => {
     renderButton({ isRunning: true, isStopping: true });
-    const btn = screen.getByTestId('sim-stop-button');
-    expect(btn).toBeDisabled();
-    expect(btn).toHaveTextContent(/Stopping/i);
+    const btn = screen.getByTestId('sim-stop-button') as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+    expect(btn.textContent).toContain('Stopping');
   });
 
   // ---------------------------------------------------------------------------
@@ -126,8 +126,8 @@ describe('SimPlayButton', () => {
     };
     renderButton({ detection });
     const badge = screen.getByTestId('sim-type-badge');
-    expect(badge).toBeInTheDocument();
-    expect(badge).toHaveTextContent('AC');
+    expect(badge).toBeTruthy();
+    expect(badge.textContent).toBe('AC');
   });
 
   it('shows DC badge label for dc type', () => {
@@ -137,7 +137,7 @@ describe('SimPlayButton', () => {
       reason: 'DC sources only',
     };
     renderButton({ detection });
-    expect(screen.getByTestId('sim-type-badge')).toHaveTextContent('DC');
+    expect(screen.getByTestId('sim-type-badge').textContent).toBe('DC');
   });
 
   it('shows Transient badge label for transient type', () => {
@@ -147,7 +147,7 @@ describe('SimPlayButton', () => {
       reason: 'Pulse sources detected',
     };
     renderButton({ detection });
-    expect(screen.getByTestId('sim-type-badge')).toHaveTextContent('Transient');
+    expect(screen.getByTestId('sim-type-badge').textContent).toBe('Transient');
   });
 
   it('badge has title with reason for tooltip', () => {
@@ -157,7 +157,7 @@ describe('SimPlayButton', () => {
       reason: 'AC sources detected — frequency-domain analysis recommended',
     };
     renderButton({ detection });
-    expect(screen.getByTestId('sim-type-badge')).toHaveAttribute('title', detection.reason);
+    expect(screen.getByTestId('sim-type-badge').getAttribute('title')).toBe(detection.reason);
   });
 
   // ---------------------------------------------------------------------------
@@ -171,9 +171,8 @@ describe('SimPlayButton', () => {
       reason: 'Low confidence',
     };
     renderButton({ detection });
-    // Button should be present and be a dropdown trigger (no direct onStart call)
     const btn = screen.getByTestId('sim-play-button');
-    expect(btn).toBeInTheDocument();
+    expect(btn).toBeTruthy();
   });
 
   it('shows dropdown trigger for mixed type regardless of confidence', () => {
@@ -183,9 +182,8 @@ describe('SimPlayButton', () => {
       reason: 'Multiple signal types',
     };
     renderButton({ detection });
-    // Mixed always shows dropdown
     const btn = screen.getByTestId('sim-play-button');
-    expect(btn).toBeInTheDocument();
+    expect(btn).toBeTruthy();
   });
 
   it('does not call onStart directly when confidence < 0.7', () => {
@@ -197,12 +195,11 @@ describe('SimPlayButton', () => {
     };
     renderButton({ detection, onStart });
 
-    // Clicking the dropdown trigger should NOT call onStart directly
     fireEvent.click(screen.getByTestId('sim-play-button'));
     expect(onStart).not.toHaveBeenCalled();
   });
 
-  it('shows Mixed badge for mixed type with amber styling', () => {
+  it('shows Mixed badge for mixed type', () => {
     const detection: SimulationTypeResult = {
       type: 'mixed',
       confidence: 0.4,
@@ -210,7 +207,7 @@ describe('SimPlayButton', () => {
     };
     renderButton({ detection });
     const badge = screen.getByTestId('sim-type-badge');
-    expect(badge).toHaveTextContent('Mixed');
+    expect(badge.textContent).toBe('Mixed');
   });
 
   // ---------------------------------------------------------------------------
@@ -219,20 +216,20 @@ describe('SimPlayButton', () => {
 
   it('does not render stop button when not running', () => {
     renderButton({ isRunning: false });
-    expect(screen.queryByTestId('sim-stop-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sim-stop-button')).toBeNull();
   });
 
   it('does not render play button when running', () => {
     renderButton({ isRunning: true });
-    expect(screen.queryByTestId('sim-play-button')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sim-play-button')).toBeNull();
   });
 
   it('does not show badge when no detection and not running', () => {
     renderButton({ detection: null });
-    expect(screen.queryByTestId('sim-type-badge')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sim-type-badge')).toBeNull();
   });
 
-  it('confidence at exactly 0.7 triggers dropdown (threshold is >=)', () => {
+  it('confidence at exactly 0.7 triggers auto-start', () => {
     const onStart = vi.fn();
     const detection: SimulationTypeResult = {
       type: 'dc',
@@ -241,12 +238,11 @@ describe('SimPlayButton', () => {
     };
     renderButton({ detection, onStart });
 
-    // 0.7 meets the threshold — should auto-start
     fireEvent.click(screen.getByTestId('sim-play-button'));
     expect(onStart).toHaveBeenCalledWith('dcop');
   });
 
-  it('confidence at 0.69 shows dropdown', () => {
+  it('confidence at 0.69 shows dropdown instead of auto-start', () => {
     const onStart = vi.fn();
     const detection: SimulationTypeResult = {
       type: 'dc',
@@ -256,7 +252,6 @@ describe('SimPlayButton', () => {
     renderButton({ detection, onStart });
 
     fireEvent.click(screen.getByTestId('sim-play-button'));
-    // Should NOT auto-start — dropdown trigger only
     expect(onStart).not.toHaveBeenCalled();
   });
 });

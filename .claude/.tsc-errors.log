@@ -261,3 +261,27 @@ client/src/components/simulation/__tests__/SimPlayButton.test.tsx(227,57): error
 client/src/components/simulation/__tests__/SimPlayButton.test.tsx(232,56): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
 
 9:54:01 PM - Found 18 errors. Watching for file changes.
+[2J[3J[H9:54:13 PM - File change detected. Starting incremental compilation...
+
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(35,51): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(40,51): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(47,17): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(56,51): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(57,51): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(70,17): error TS2339: Property 'toBeDisabled' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(71,17): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(129,19): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(130,19): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(140,50): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(150,50): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(160,50): error TS2339: Property 'toHaveAttribute' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(176,17): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(188,17): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(213,19): error TS2339: Property 'toHaveTextContent' does not exist on type 'Assertion<HTMLElement>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(222,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(227,57): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+client/src/components/simulation/__tests__/SimPlayButton.test.tsx(232,56): error TS2339: Property 'toBeInTheDocument' does not exist on type 'Assertion<HTMLElement | null>'.
+
+9:54:18 PM - Found 18 errors. Watching for file changes.
+[2J[3J[H9:55:03 PM - File change detected. Starting incremental compilation...
+
