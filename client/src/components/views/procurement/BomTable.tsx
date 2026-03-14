@@ -5,6 +5,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Pencil, Check, X, ShoppingCart, Trash2, Shield, Zap, CheckCircle2, AlertCircle, XCircle, RefreshCw, Clock } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { LifecycleBadge } from '@/components/ui/LifecycleBadge';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';

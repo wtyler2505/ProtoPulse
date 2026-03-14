@@ -273,9 +273,11 @@ function compareFields<T>(
   trackedFields: TrackedField<T>[],
 ): FieldChange[] {
   const changes: FieldChange[] = [];
+  const baseRec = baseline as Record<string, unknown>;
+  const currRec = current as Record<string, unknown>;
   for (const { key, label } of trackedFields) {
-    const oldVal = baseline[key] ?? null;
-    const newVal = current[key] ?? null;
+    const oldVal = baseRec[key] ?? null;
+    const newVal = currRec[key] ?? null;
     if (String(oldVal) !== String(newVal)) {
       changes.push({
         field: label,
