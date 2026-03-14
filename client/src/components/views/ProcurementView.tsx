@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Package, RefreshCw, Store, GitCompareArrows } from 'lucide-react';
+import { Package, RefreshCw, Store, GitCompareArrows, Calculator } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';
@@ -28,6 +28,7 @@ import {
   AlternatePartsPanel,
   SupplierPricingPanel,
   DamageAssessmentPanel,
+  AssemblyCostPanel,
   AddItemDialog,
   ComponentReference,
   BomEmptyState,
@@ -306,6 +307,7 @@ function ProcurementView() {
           <TabsTrigger value="comparison" data-testid="tab-bom-comparison"><GitCompareArrows className="h-4 w-4 mr-1.5" />BOM Comparison</TabsTrigger>
           <TabsTrigger value="alternates" data-testid="tab-alternates"><RefreshCw className="h-4 w-4 mr-1.5" />Alternates</TabsTrigger>
           <TabsTrigger value="pricing" data-testid="tab-live-pricing"><Store className="h-4 w-4 mr-1.5" />Live Pricing</TabsTrigger>
+          <TabsTrigger value="assembly-cost" data-testid="tab-assembly-cost"><Calculator className="h-4 w-4 mr-1.5" />Assembly Cost</TabsTrigger>
         </TabsList>
       </div>
 
@@ -339,6 +341,10 @@ function ProcurementView() {
 
       <TabsContent value="pricing" className="flex-1 overflow-auto mt-0 p-4 space-y-4">
         <SupplierPricingPanel bom={bom} bomQuote={bomQuote} pricingSearching={pricingSearching} pricingPartMpn={pricingPartMpn} onPricingPartMpnChange={setPricingPartMpn} onQuoteBom={handleQuoteBom} onSearchPartPricing={handleSearchPartPricing} distributors={distributors} currency={currency} />
+      </TabsContent>
+
+      <TabsContent value="assembly-cost" className="flex-1 overflow-auto mt-0 p-4">
+        <AssemblyCostPanel bom={bom} />
       </TabsContent>
 
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />
