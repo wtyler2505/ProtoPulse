@@ -664,3 +664,7 @@ client/src/components/arduino/__tests__/ExampleLibraryPanel.test.tsx(423,67): er
 
 
 12:41:40 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:43:11 PM - File change detected. Starting incremental compilation...
+
+
+12:43:12 PM - Found 0 errors. Watching for file changes.
