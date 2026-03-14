@@ -684,3 +684,33 @@ server/firmware-runtime/simavr-runner.ts(5,53): error TS2724: '"./runtime-events
 server/firmware-runtime/simavr-runner.ts(182,29): error TS2339: Property 'queryByTimeRange' does not exist on type 'RuntimeEventBuffer'.
 
 12:43:58 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:44:03 PM - File change detected. Starting incremental compilation...
+
+server/firmware-runtime/simavr-runner.ts(5,10): error TS2724: '"./runtime-events"' has no exported member named 'createRuntimeEventBuffer'. Did you mean 'RuntimeEventBuffer'?
+server/firmware-runtime/simavr-runner.ts(5,36): error TS2724: '"./runtime-events"' has no exported member named 'parseSimavrLine'. Did you mean 'parseUartLine'?
+server/firmware-runtime/simavr-runner.ts(5,53): error TS2724: '"./runtime-events"' has no exported member named 'parseVcdLine'. Did you mean 'parseVcd'?
+server/firmware-runtime/simavr-runner.ts(182,29): error TS2339: Property 'queryByTimeRange' does not exist on type 'RuntimeEventBuffer'.
+
+12:44:07 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H12:44:48 PM - File change detected. Starting incremental compilation...
+
+server/firmware-runtime/simavr-runner.ts(62,20): error TS2552: Cannot find name 'createRuntimeEventBuffer'. Did you mean 'RuntimeEventBuffer'?
+server/firmware-runtime/simavr-runner.ts(73,13): error TS2304: Cannot find name 'parseVcdLine'.
+server/firmware-runtime/simavr-runner.ts(73,38): error TS2552: Cannot find name 'parseSimavrLine'. Did you mean 'parseUartLine'?
+server/firmware-runtime/simavr-runner.ts(74,13): error TS2552: Cannot find name 'parseSimavrLine'. Did you mean 'parseUartLine'?
+server/firmware-runtime/simavr-runner.ts(96,23): error TS2552: Cannot find name 'parseSimavrLine'. Did you mean 'parseUartLine'?
+server/firmware-runtime/simavr-runner.ts(188,29): error TS2339: Property 'queryByTimeRange' does not exist on type 'RuntimeEventBuffer'.
+
+12:44:51 PM - Found 6 errors. Watching for file changes.
+[2J[3J[H12:45:14 PM - File change detected. Starting incremental compilation...
+
+server/firmware-runtime/simavr-runner.ts(4,29): error TS2300: Duplicate identifier 'VcdSignalMap'.
+server/firmware-runtime/simavr-runner.ts(12,15): error TS2300: Duplicate identifier 'VcdSignalMap'.
+server/firmware-runtime/simavr-runner.ts(63,20): error TS2552: Cannot find name 'createRuntimeEventBuffer'. Did you mean 'RuntimeEventBuffer'?
+server/firmware-runtime/simavr-runner.ts(74,13): error TS2304: Cannot find name 'parseVcdLine'.
+server/firmware-runtime/simavr-runner.ts(74,38): error TS2552: Cannot find name 'parseSimavrLine'. Did you mean 'parseUartLine'?
+server/firmware-runtime/simavr-runner.ts(75,13): error TS2552: Cannot find name 'parseSimavrLine'. Did you mean 'parseUartLine'?
+server/firmware-runtime/simavr-runner.ts(97,23): error TS2552: Cannot find name 'parseSimavrLine'. Did you mean 'parseUartLine'?
+server/firmware-runtime/simavr-runner.ts(189,29): error TS2339: Property 'queryByTimeRange' does not exist on type 'RuntimeEventBuffer'.
+
+12:45:18 PM - Found 8 errors. Watching for file changes.

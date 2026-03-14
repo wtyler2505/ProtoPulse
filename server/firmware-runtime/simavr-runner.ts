@@ -1,8 +1,15 @@
 import crypto from 'crypto';
 import { SimulatorProcessManager } from './process-manager';
 import type { ProcessStatus } from './process-manager';
-import type { RuntimeEvent, RuntimeEventBuffer } from './runtime-events';
-import { createRuntimeEventBuffer, parseSimavrLine, parseVcdLine } from './runtime-events';
+import type { RuntimeEvent, VcdSignalMap } from './runtime-events';
+import {
+  RuntimeEventBuffer,
+  parseUartLine,
+  parseVcdHeader,
+  parseVcdTimestamp,
+  parseVcdValueChange,
+} from './runtime-events';
+import type { VcdSignalMap } from './runtime-events';
 import type { IStorage } from '../storage';
 import { logger } from '../logger';
 
