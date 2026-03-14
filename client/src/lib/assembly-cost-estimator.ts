@@ -427,8 +427,22 @@ export function inferPackageType(description: string, partNumber?: string): stri
 
 /** Convert a BomItem from the schema to our internal input format. */
 export function bomItemToInput(item: BomItem): BomItemInput {
-  const combined = item.description + ' ' + item.partNumber;
-  const mountType = classifyMountType(combined, item.assemblyCategory);
+  // Try description first; fall back to partNumber for additional hints only
+  // when the description alone is insufficient.
+  let mountType = classifyMountType(item.description, item.assemblyCategory);
+  if (mountType === 'unknown') {
+    mountType = classifyMountType(item.partNumber, item.assemblyCategory);
+  }
+
+  let pinCount = estimatePinCount(item.description);
+  if (pinCount === 2) {
+    // 2 is the default — see if partNumber has a better answer
+    const fromPn = estimatePinCount(item.partNumber);
+    if (fromPn !== 2) {
+      pinCount = fromPn;
+    }
+  }
+
   return {
     partNumber: item.partNumber,
     manufacturer: item.manufacturer,
@@ -436,7 +450,7 @@ export function bomItemToInput(item: BomItem): BomItemInput {
     quantity: item.quantity,
     unitPrice: typeof item.unitPrice === 'string' ? parseFloat(item.unitPrice) : Number(item.unitPrice),
     mountType,
-    pinCount: estimatePinCount(combined),
+    pinCount,
     assemblyCategory: item.assemblyCategory,
   };
 }

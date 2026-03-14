@@ -1,5 +1,4 @@
 import { spawn, execFileSync, execSync } from 'child_process';
-import type { ChildProcess } from 'child_process';
 import { join, resolve, sep } from 'path';
 import fs from 'fs/promises';
 import { logger } from './logger';
@@ -15,7 +14,7 @@ export interface ArduinoCLIConfig {
 export class ArduinoService {
   private config: ArduinoCLIConfig;
   /** Tracks spawned child processes by job ID for cancellation. */
-  private runningProcesses = new Map<number, ChildProcess>();
+  private runningProcesses = new Map<number, ReturnType<typeof spawn>>();
 
   constructor(private storage: IStorage) {
     this.config = {
@@ -287,10 +286,6 @@ export class ArduinoService {
     return code;
   }
 
-  /** 
-   * Execute an Arduino CLI command as a job.
-   * Streams logs to the database record.
-   */
   /**
    * Cancel a running job by killing its child process.
    * Returns true if the job was running and was cancelled.

@@ -5,6 +5,8 @@ import {
   classifyMountType,
   estimatePinCount,
   bomItemToInput,
+  bomToAssemblyParts,
+  inferPackageType,
   convertCurrency,
   QUANTITY_TIERS,
 } from '../assembly-cost-estimator';
@@ -182,6 +184,180 @@ describe('bomItemToInput', () => {
   it('classifies mount type from description', () => {
     const thItem = makeBomItem({ description: 'DIP-8 IC through-hole' });
     expect(bomItemToInput(thItem).mountType).toBe('through_hole');
+  });
+
+  it('falls back to partNumber for mount type when description is generic', () => {
+    const item = makeBomItem({ description: 'Resistor 10K', partNumber: 'RC0805JR-0710KL' });
+    const input = bomItemToInput(item);
+    expect(input.mountType).toBe('smt');
+  });
+
+  it('falls back to partNumber for pin count when description has no package info', () => {
+    const item = makeBomItem({ description: 'IC voltage regulator', partNumber: 'LM7805-SOT-223' });
+    const input = bomItemToInput(item);
+    expect(input.pinCount).toBe(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// inferPackageType
+// ---------------------------------------------------------------------------
+
+describe('inferPackageType', () => {
+  it('identifies chip resistor/capacitor packages from description', () => {
+    expect(inferPackageType('10K Resistor 0805')).toBe('0805');
+    expect(inferPackageType('100nF Cap 0603')).toBe('0603');
+    expect(inferPackageType('Resistor 0402')).toBe('0402');
+    expect(inferPackageType('Cap 1206')).toBe('1206');
+    expect(inferPackageType('Resistor 1210')).toBe('1210');
+    expect(inferPackageType('Power Resistor 2512')).toBe('2512');
+    expect(inferPackageType('Tiny 0201 resistor')).toBe('0201');
+  });
+
+  it('identifies SOT packages', () => {
+    expect(inferPackageType('Transistor SOT-23')).toBe('SOT-23');
+    expect(inferPackageType('Regulator SOT-223')).toBe('SOT-223');
+    expect(inferPackageType('Transistor SOT-89')).toBe('SOT-89');
+  });
+
+  it('identifies IC packages with pin counts', () => {
+    expect(inferPackageType('Op-Amp SOIC-8')).toBe('SOIC-8');
+    expect(inferPackageType('MCU TQFP-32')).toBe('TQFP-32');
+    expect(inferPackageType('FPGA QFP-100')).toBe('QFP-100');
+    expect(inferPackageType('Driver TSSOP-16')).toBe('TSSOP-16');
+    expect(inferPackageType('Processor BGA-256')).toBe('BGA-256');
+    expect(inferPackageType('Sensor QFN-20')).toBe('QFN-20');
+    expect(inferPackageType('Logic DIP-14')).toBe('DIP-14');
+    expect(inferPackageType('LQFP-48 MCU')).toBe('LQFP-48');
+    expect(inferPackageType('MSOP-8 IC')).toBe('MSOP-8');
+    expect(inferPackageType('DFN-8 sensor')).toBe('DFN-8');
+    expect(inferPackageType('LGA-12 IMU')).toBe('LGA-12');
+    expect(inferPackageType('SOP-8 EEPROM')).toBe('SOP-8');
+  });
+
+  it('identifies through-hole packages', () => {
+    expect(inferPackageType('Regulator TO-220')).toBe('TO-220');
+    expect(inferPackageType('Transistor TO-92')).toBe('TO-92');
+    expect(inferPackageType('DPAK TO-252')).toBe('TO-252');
+    expect(inferPackageType('IC DIP-8')).toBe('DIP-8');
+    expect(inferPackageType('Connector SIP-4')).toBe('SIP-4');
+  });
+
+  it('uses partNumber as fallback', () => {
+    expect(inferPackageType('Generic resistor', 'RC0805JR-07')).toBe('0805');
+    expect(inferPackageType('Voltage regulator', 'LM7805-SOT-223')).toBe('SOT-223');
+  });
+
+  it('returns unknown for unrecognized packages', () => {
+    expect(inferPackageType('Wire assembly')).toBe('unknown');
+    expect(inferPackageType('Custom module')).toBe('unknown');
+  });
+
+  it('prefers more-specific package over less-specific', () => {
+    // BGA should match before a generic number
+    expect(inferPackageType('BGA-256 processor')).toBe('BGA-256');
+    // TQFP should match before QFP
+    expect(inferPackageType('TQFP-32 MCU')).toBe('TQFP-32');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bomToAssemblyParts
+// ---------------------------------------------------------------------------
+
+describe('bomToAssemblyParts', () => {
+  it('converts an array of BomItems to BomItemInput[]', () => {
+    const items = [
+      makeBomItem({ id: 1, description: '10K Resistor 0805 SMD', quantity: 4, unitPrice: '0.0100' }),
+      makeBomItem({ id: 2, description: 'ATmega328P TQFP-32', quantity: 1, unitPrice: '2.5000' }),
+    ];
+    const parts = bomToAssemblyParts(items);
+    expect(parts).toHaveLength(2);
+    expect(parts[0].mountType).toBe('smt');
+    expect(parts[0].pinCount).toBe(2);
+    expect(parts[0].quantity).toBe(4);
+    expect(parts[0].unitPrice).toBe(0.01);
+    expect(parts[1].mountType).toBe('smt');
+    expect(parts[1].pinCount).toBe(32);
+    expect(parts[1].quantity).toBe(1);
+    expect(parts[1].unitPrice).toBe(2.5);
+  });
+
+  it('filters out items with zero quantity', () => {
+    const items = [
+      makeBomItem({ id: 1, quantity: 4 }),
+      makeBomItem({ id: 2, quantity: 0 }),
+    ];
+    const parts = bomToAssemblyParts(items);
+    expect(parts).toHaveLength(1);
+  });
+
+  it('handles empty BOM array', () => {
+    expect(bomToAssemblyParts([])).toEqual([]);
+  });
+
+  it('infers SMD vs THT correctly for various packages', () => {
+    const items = [
+      makeBomItem({ id: 1, description: 'Resistor 0603 SMD' }),
+      makeBomItem({ id: 2, description: 'QFP-48 MCU' }),
+      makeBomItem({ id: 3, description: 'DIP-8 IC' }),
+      makeBomItem({ id: 4, description: 'TO-220 regulator' }),
+      makeBomItem({ id: 5, description: 'BGA-256 processor' }),
+      makeBomItem({ id: 6, description: 'Axial resistor 1K' }),
+    ];
+    const parts = bomToAssemblyParts(items);
+    expect(parts[0].mountType).toBe('smt');
+    expect(parts[1].mountType).toBe('smt');
+    expect(parts[2].mountType).toBe('through_hole');
+    expect(parts[3].mountType).toBe('through_hole');
+    expect(parts[4].mountType).toBe('smt');
+    expect(parts[5].mountType).toBe('through_hole');
+  });
+
+  it('infers pin count from package type', () => {
+    const items = [
+      makeBomItem({ id: 1, description: 'Op-Amp SOIC-8' }),
+      makeBomItem({ id: 2, description: 'SOT-23 transistor' }),
+      makeBomItem({ id: 3, description: '14-pin DIP logic IC' }),
+      makeBomItem({ id: 4, description: 'TQFP-64 MCU' }),
+      makeBomItem({ id: 5, description: 'BGA-256 FPGA' }),
+    ];
+    const parts = bomToAssemblyParts(items);
+    expect(parts[0].pinCount).toBe(8);
+    expect(parts[1].pinCount).toBe(3);
+    expect(parts[2].pinCount).toBe(14);
+    expect(parts[3].pinCount).toBe(64);
+    expect(parts[4].pinCount).toBe(256);
+  });
+
+  it('handles missing MPN gracefully', () => {
+    const item = makeBomItem({ partNumber: '', description: 'Unknown part' });
+    const parts = bomToAssemblyParts([item]);
+    expect(parts).toHaveLength(1);
+    expect(parts[0].partNumber).toBe('');
+    expect(parts[0].mountType).toBe('unknown');
+    expect(parts[0].pinCount).toBe(2);
+  });
+
+  it('handles blank description gracefully', () => {
+    const item = makeBomItem({ description: '' });
+    const parts = bomToAssemblyParts([item]);
+    expect(parts).toHaveLength(1);
+    // partNumber RC0805JR contains 0805, falls back there for mount type
+    expect(parts[0].mountType).toBe('smt');
+  });
+
+  it('uses actual BOM quantity and unitPrice', () => {
+    const item = makeBomItem({ quantity: 42, unitPrice: '3.1400' });
+    const parts = bomToAssemblyParts([item]);
+    expect(parts[0].quantity).toBe(42);
+    expect(parts[0].unitPrice).toBeCloseTo(3.14);
+  });
+
+  it('preserves assemblyCategory from BOM item', () => {
+    const item = makeBomItem({ assemblyCategory: 'SMT' });
+    const parts = bomToAssemblyParts([item]);
+    expect(parts[0].assemblyCategory).toBe('SMT');
   });
 });
 

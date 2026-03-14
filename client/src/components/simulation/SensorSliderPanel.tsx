@@ -28,6 +28,7 @@ import {
 } from '@/lib/simulation/sensor-inputs';
 import type {
   SensorInput,
+  SensorInputSnapshot,
   SensorFamily,
   DetectableInstance,
 } from '@/lib/simulation/sensor-inputs';
@@ -205,7 +206,7 @@ export default function SensorSliderPanel({ instances }: SensorSliderPanelProps)
   const manager = SensorInputManager.getInstance();
 
   // Subscribe to manager changes via useSyncExternalStore
-  const snapshot = useSyncExternalStore(manager.subscribe, manager.getSnapshot);
+  const snapshot = useSyncExternalStore<SensorInputSnapshot>(manager.subscribe, manager.getSnapshot);
 
   // Detect sensors whenever instances change
   const detectedSensors = useMemo(() => detectSensors(instances), [instances]);
