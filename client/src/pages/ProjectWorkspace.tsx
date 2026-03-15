@@ -50,6 +50,7 @@ const LessonModeOverlay = lazy(() => import('@/components/ui/LessonModeOverlay')
 const ExplainPanelButton = lazy(() => import('@/components/ui/ExplainPanelButton'));
 const PcbTutorialPanel = lazy(() => import('@/components/panels/PcbTutorialPanel'));
 const SmartHintToast = lazy(() => import('@/components/ui/SmartHintToast'));
+const ViewOnboardingHint = lazy(() => import('@/components/ui/ViewOnboardingHint'));
 import { buildValidationContext } from '@/lib/pcb-tutorial';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
