@@ -46,6 +46,7 @@ const ShareProjectButton = lazy(() => import('@/components/ui/ShareProjectButton
 const AuditTrailView = lazy(() => import('@/components/views/AuditTrailView'));
 const FirstRunChecklist = lazy(() => import('@/components/ui/FirstRunChecklist'));
 const LessonModeOverlay = lazy(() => import('@/components/ui/LessonModeOverlay'));
+const ExplainPanelButton = lazy(() => import('@/components/ui/ExplainPanelButton'));
 const PcbTutorialPanel = lazy(() => import('@/components/panels/PcbTutorialPanel'));
 const SmartHintToast = lazy(() => import('@/components/ui/SmartHintToast'));
 import { buildValidationContext } from '@/lib/pcb-tutorial';
@@ -727,6 +728,9 @@ function WorkspaceContent() {
             </StyledTooltip>
 
             <div className="ml-2 flex items-center gap-1">
+              <Suspense fallback={null}>
+                <ExplainPanelButton view={activeView} onNavigate={setActiveView} />
+              </Suspense>
               <StyledTooltip content="Import design file" side="bottom">
                 <button
                   data-testid="import-design-button"
@@ -1128,6 +1132,11 @@ function WorkspaceContent() {
           {/* BL-0307: First-run onboarding checklist */}
           <Suspense fallback={null}>
             <FirstRunChecklist />
+          </Suspense>
+
+          {/* BL-0311: Smart hints triggered by repeated mistakes */}
+          <Suspense fallback={null}>
+            <SmartHintToast />
           </Suspense>
         </main>
 
