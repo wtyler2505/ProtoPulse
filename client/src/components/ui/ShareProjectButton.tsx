@@ -1,29 +1,21 @@
 /**
  * BL-0549: Collaboration share button with avatar stack.
  *
- * Shows active collaborator avatars (with overflow "+N" indicator) and
- * opens the ShareProjectDialog on click. Designed for the workspace header.
+ * Self-contained component that manages its own collaboration connection
+ * via useCollaboration. Shows active collaborator avatars (with overflow
+ * "+N" indicator) and opens the ShareProjectDialog on click.
+ * Designed for the workspace header.
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { Users, Share2 } from 'lucide-react';
+import { Share2 } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ShareProjectDialog } from '@/components/dialogs/ShareProjectDialog';
+import { useCollaboration } from '@/lib/collaboration-client';
+import { useAuth } from '@/lib/auth-context';
 import { getInitials, computeAvatarOverflow } from '@/lib/collaboration-share';
 import { cn } from '@/lib/utils';
 import type { CollabConnectionState } from '@/lib/collaboration-client';
-import type { CollabUser, CollabRole } from '@shared/collaboration';
-
-/* ------------------------------------------------------------------ */
-/*  Props                                                              */
-/* ------------------------------------------------------------------ */
-
-export interface ShareProjectButtonProps {
-  projectId: number;
-  connectionState: CollabConnectionState;
-  activeUsers: CollabUser[];
-  myRole: CollabRole;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Connection dot color mapping                                       */
@@ -38,15 +30,24 @@ const CONNECTION_DOT_COLORS: Record<CollabConnectionState, string> = {
 };
 
 /* ------------------------------------------------------------------ */
+/*  Props                                                              */
+/* ------------------------------------------------------------------ */
+
+export interface ShareProjectButtonProps {
+  projectId: number;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
-export function ShareProjectButton({
-  projectId,
-  connectionState,
-  activeUsers,
-  myRole,
-}: ShareProjectButtonProps) {
+export function ShareProjectButton({ projectId }: ShareProjectButtonProps) {
+  const { sessionId } = useAuth();
+  const { connectionState, activeUsers, myRole } = useCollaboration(
+    projectId,
+    sessionId ?? '',
+  );
+
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const { visible, overflowCount } = useMemo(

@@ -18,6 +18,9 @@ import {
   Sparkles,
   Clock,
 } from 'lucide-react';
+import AddToBomPrompt from '@/components/ui/AddToBomPrompt';
+import { shouldPromptBomAdd, mapCommunityPartToBom } from '@/lib/community-bom-bridge';
+import { useBom } from '@/lib/contexts/bom-context';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -413,11 +416,14 @@ export default function CommunityView() {
     stats,
   } = useCommunityLibrary();
 
+  const { addBomItem } = useBom();
+
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<ComponentType | '__all__'>('__all__');
   const [sortBy, setSortBy] = useState<SortOption>('popular');
   const [selectedComponent, setSelectedComponent] = useState<CommunityComponent | null>(null);
   const [activeTab, setActiveTab] = useState('browse');
+  const [bomPromptPart, setBomPromptPart] = useState<CommunityComponent | null>(null);
 
   const searchResults = useMemo(() => {
     const filters: SearchFilters = {
@@ -434,7 +440,12 @@ export default function CommunityView() {
 
   const handleDownload = useCallback((id: string) => {
     downloadComponent(id);
-  }, [downloadComponent]);
+    const allComponents = [...components, ...featured, ...trending, ...newArrivals];
+    const part = allComponents.find((c) => c.id === id);
+    if (part && shouldPromptBomAdd(part)) {
+      setBomPromptPart(part);
+    }
+  }, [downloadComponent, components, featured, trending, newArrivals]);
 
   const handleRate = useCallback((componentId: string, rating: number) => {
     rateComponent(componentId, 'local-user', rating);
