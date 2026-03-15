@@ -63,3 +63,12 @@ client/src/lib/gpu-performance.ts(233,1): error TS1128: Declaration or statement
 4:22:45 AM - Found 7 errors. Watching for file changes.
 [2J[3J[H4:23:13 AM - File change detected. Starting incremental compilation...
 
+client/src/lib/gpu-performance.ts(229,37): error TS1005: '>' expected.
+client/src/lib/gpu-performance.ts(229,42): error TS1005: ')' expected.
+client/src/lib/gpu-performance.ts(229,44): error TS1136: Property assignment expected.
+client/src/lib/gpu-performance.ts(229,81): error TS1109: Expression expected.
+client/src/lib/gpu-performance.ts(231,6): error TS1161: Unterminated regular expression literal.
+client/src/lib/gpu-performance.ts(232,3): error TS1128: Declaration or statement expected.
+client/src/lib/gpu-performance.ts(233,1): error TS1128: Declaration or statement expected.
+
+4:23:26 AM - Found 7 errors. Watching for file changes.
