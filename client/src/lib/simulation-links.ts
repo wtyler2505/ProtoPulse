@@ -115,7 +115,7 @@ function validateSnapshot(value: unknown): SimulationSnapshot {
 
   // simType
   if (typeof obj.simType !== 'string' || !VALID_SIM_TYPES.has(obj.simType as SimLinkAnalysisType)) {
-    throw new Error(`Invalid simType: expected one of ${[...VALID_SIM_TYPES].join(', ')}`);
+    throw new Error(`Invalid simType: expected one of ${Array.from(VALID_SIM_TYPES).join(', ')}`);
   }
 
   // parameters

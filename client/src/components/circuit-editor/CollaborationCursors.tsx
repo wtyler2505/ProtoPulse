@@ -107,7 +107,7 @@ export function useCollaborationCursors(
         const activeIds = new Set(users.map((u) => u.userId));
         const next = new Map(prev);
         let changed = false;
-        for (const id of next.keys()) {
+        for (const id of Array.from(next.keys())) {
           if (!activeIds.has(id)) {
             next.delete(id);
             changed = true;
