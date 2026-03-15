@@ -23,6 +23,7 @@ import { BreadboardComponentOverlay, detectFamily, getFamilyValues, getCurrentVa
 import BendableLegRenderer from './BendableLegRenderer';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import BreadboardConnectivityOverlay from './BreadboardConnectivityOverlay';
+import BreadboardWireEditor from './BreadboardWireEditor';
 import ToolButton from './ToolButton';
 import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
@@ -447,6 +448,26 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
       setSelectedWireId(null);
     }
   }, [selectedWireId, deleteWireMutation, circuitId]);
+
+  // BL-0543: Delete wire by ID (for the wire editor overlay)
+  const handleDeleteWireById = useCallback((wireId: number) => {
+    deleteWireMutation.mutate({ circuitId, id: wireId });
+    setSelectedWireId(null);
+  }, [deleteWireMutation, circuitId]);
+
+  // BL-0543: Move wire endpoint (for the wire editor overlay)
+  const handleMoveEndpoint = useCallback((wireId: number, endpoint: 'start' | 'end', newPos: PixelPos) => {
+    const wire = breadboardWires.find(w => w.id === wireId);
+    if (!wire) { return; }
+    const pts = (wire.points as Array<{ x: number; y: number }>).map(p => ({ ...p }));
+    if (pts.length === 0) { return; }
+    if (endpoint === 'start') {
+      pts[0] = { x: newPos.x, y: newPos.y };
+    } else {
+      pts[pts.length - 1] = { x: newPos.x, y: newPos.y };
+    }
+    updateWireMutation.mutate({ circuitId, id: wireId, points: pts });
+  }, [breadboardWires, updateWireMutation, circuitId]);
 
   // BL-0591: Wire right-click opens color picker
   const handleWireContextMenu = useCallback((e: React.MouseEvent, wireId: number) => {

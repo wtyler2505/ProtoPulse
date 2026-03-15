@@ -538,6 +538,11 @@ function ValidationViewContent() {
         </div>
       </div>
 
+      {/* DRC Preset Selector (BL-0250) */}
+      <div className="w-full max-w-5xl mb-2 px-4 py-2 bg-card/30 border border-border backdrop-blur-sm" data-testid="drc-preset-bar">
+        <DrcPresetSelector activePreset={activePreset} onApply={handlePresetApply} />
+      </div>
+
       <div className="w-full max-w-5xl flex-1 overflow-hidden bg-card/40 border border-border backdrop-blur-xl shadow-xl flex flex-col">
         {/* Severity filter bar (BL-0058) */}
         <div className="flex items-center gap-2 px-4 py-2 border-b border-border bg-muted/5" data-testid="severity-filter-bar">
