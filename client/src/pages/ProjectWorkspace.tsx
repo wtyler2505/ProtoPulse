@@ -51,7 +51,10 @@ const ExplainPanelButton = lazy(() => import('@/components/ui/ExplainPanelButton
 const PcbTutorialPanel = lazy(() => import('@/components/panels/PcbTutorialPanel'));
 const SmartHintToast = lazy(() => import('@/components/ui/SmartHintToast'));
 const ViewOnboardingHint = lazy(() => import('@/components/ui/ViewOnboardingHint'));
+const MilestonePanel = lazy(() => import('@/components/panels/MilestonePanel'));
 import { buildValidationContext } from '@/lib/pcb-tutorial';
+import { MilestoneTracker } from '@/lib/progress-milestones';
+import type { ProjectState as MilestoneProjectState } from '@/lib/progress-milestones';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, LayoutGrid, Cpu, Package, Activity, TerminalSquare, Menu, MessageCircle, Layers, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, CircuitBoard, Grid3X3, Microchip, MoreHorizontal, ChevronLeft, ChevronRight, History, HeartPulse, MessageSquare, GraduationCap, Calculator, BookOpen, Warehouse, KanbanSquare, BookMarked, Box, Globe, ShoppingBag, Upload, Zap, Plug, Code2, Wand2, Radio } from 'lucide-react';
