@@ -43,6 +43,7 @@ import { AssemblyRiskHeatmap } from './procurement/AssemblyRiskHeatmap';
 import { CostOptimizerPanel } from './procurement/CostOptimizerPanel';
 import { OrderHistoryPanel } from './procurement/OrderHistoryPanel';
 import { PcbOrderTrackerPanel } from './procurement/PcbOrderTrackerPanel';
+import { RiskScorecardPanel } from './procurement/RiskScorecardPanel';
 import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, CostBreakdown } from './procurement';
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));

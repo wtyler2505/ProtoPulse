@@ -27,9 +27,12 @@ vi.mock('../auth', () => ({
   getUserById: (...args: unknown[]) => mockGetUserById(args[0] as number),
 }));
 
+const mockGetProject = vi.fn<(id: number) => Promise<{ id: number; ownerId: number | null } | undefined>>();
+
 vi.mock('../storage', () => ({
   storage: {
     isProjectOwner: (...args: unknown[]) => mockIsProjectOwner(args[0] as number, args[1] as number),
+    getProject: (...args: unknown[]) => mockGetProject(args[0] as number),
   },
 }));
 

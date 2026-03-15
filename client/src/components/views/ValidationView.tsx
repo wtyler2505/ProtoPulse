@@ -7,7 +7,7 @@ import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import type { ViewMode } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Shield, Factory, Code2, Play, Trash2, Plus, ToggleLeft, ToggleRight, HelpCircle } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Shield, ShieldOff, Factory, Code2, Play, Trash2, Plus, ToggleLeft, ToggleRight, HelpCircle } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
