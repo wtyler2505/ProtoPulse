@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers } from 'lucide-react';
+import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';
@@ -40,6 +40,7 @@ import { SupplierDrawer } from './procurement/SupplierDrawer';
 import { ManufacturingValidatorPanel } from './procurement/ManufacturingValidatorPanel';
 import type { ManufacturingPackageInput } from '@/lib/manufacturing-validator';
 import { AssemblyRiskHeatmap } from './procurement/AssemblyRiskHeatmap';
+import { CostOptimizerPanel } from './procurement/CostOptimizerPanel';
 import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, CostBreakdown } from './procurement';
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
@@ -332,6 +333,7 @@ function ProcurementView() {
           <TabsTrigger value="mfg-validator" data-testid="tab-mfg-validator"><ClipboardCheck className="h-4 w-4 mr-1.5" />Mfg Validator</TabsTrigger>
           <TabsTrigger value="assembly-risk" data-testid="tab-assembly-risk"><Flame className="h-4 w-4 mr-1.5" />Assembly Risk</TabsTrigger>
           <TabsTrigger value="assembly-groups" data-testid="tab-assembly-groups"><Layers className="h-4 w-4 mr-1.5" />Assembly Groups</TabsTrigger>
+          <TabsTrigger value="cost-optimizer" data-testid="tab-cost-optimizer"><TrendingDown className="h-4 w-4 mr-1.5" />Cost Optimizer</TabsTrigger>
         </TabsList>
         <Button
           variant="outline"
