@@ -167,6 +167,15 @@ export function useDfmHighlights(): {
 }
 
 // ---------------------------------------------------------------------------
+// Direct state access (for testing and non-React consumers)
+// ---------------------------------------------------------------------------
+
+/** Get the current active DFM highlight. */
+export function getDfmHighlight(): DfmPcbHighlight | null {
+  return activeHighlight;
+}
+
+// ---------------------------------------------------------------------------
 // Testing utilities
 // ---------------------------------------------------------------------------
 

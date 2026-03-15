@@ -47,6 +47,7 @@ import type { DrcPresetId } from '@/lib/drc-presets';
 import { useDesignGateway } from '@/lib/design-gateway';
 import type { DesignState } from '@/lib/design-gateway';
 import { useDfmChecker, bomToDfmInput } from '@/lib/dfm-checker';
+import { mapDfmViolationToHighlight } from '@/lib/dfm-pcb-bridge';
 import { useDrcScripts, BUILTIN_TEMPLATES } from '@/lib/drc-scripting';
 import type { DfmCheckResult } from '@/lib/dfm-checker';
 import type { DrcScript } from '@/lib/drc-scripting';
@@ -775,7 +776,24 @@ function ValidationViewContent() {
               {dfmResult.violations.length > 0 && (
                 <div className="space-y-1 max-h-40 overflow-auto">
                   {dfmResult.violations.map((v) => (
-                    <div key={v.id} data-testid={`dfm-violation-${v.id}`} className="flex items-start gap-2 text-xs py-1">
+                    <div
+                      key={v.id}
+                      data-testid={`dfm-violation-${v.id}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        mapDfmViolationToHighlight(v);
+                        setActiveView('pcb');
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          mapDfmViolationToHighlight(v);
+                          setActiveView('pcb');
+                        }
+                      }}
+                      className="flex items-start gap-2 text-xs py-1 cursor-pointer hover:bg-muted/30 rounded px-1 transition-colors"
+                    >
                       <Badge variant={v.severity === 'error' ? 'destructive' : v.severity === 'warning' ? 'secondary' : 'outline'} className="text-[10px] px-1 py-0 flex-shrink-0">
                         {v.severity}
                       </Badge>
@@ -785,6 +803,7 @@ function ValidationViewContent() {
                           {v.category} | actual: {v.actual}{v.unit} / required: {v.required}{v.unit}
                         </p>
                       </div>
+                      <span className="text-[9px] text-primary/60 flex-shrink-0 self-center">View on PCB</span>
                     </div>
                   ))}
                 </div>

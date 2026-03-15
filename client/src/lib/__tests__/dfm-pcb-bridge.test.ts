@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   mapDfmViolationToHighlight,
   useDfmHighlights,
+  getDfmHighlight,
   resetDfmBridgeForTesting,
 } from '../dfm-pcb-bridge';
 import type { DfmPcbHighlight } from '../dfm-pcb-bridge';
@@ -110,38 +111,34 @@ describe('mapDfmViolationToHighlight', () => {
     expect(cb.mock.calls[0][0].location.viewType).toBe('pcb');
   });
 
-  it('auto-clears highlight after 5 seconds', () => {
+  it('auto-clears bridge highlight after 5 seconds', () => {
     mapDfmViolationToHighlight(makeDfmViolation());
-    const nav = ViolationNavigator.getInstance();
-    expect(nav.getActiveHighlight()).not.toBeNull();
+    expect(getDfmHighlight()).not.toBeNull();
 
     vi.advanceTimersByTime(4999);
-    expect(nav.getActiveHighlight()).not.toBeNull();
+    expect(getDfmHighlight()).not.toBeNull();
 
     vi.advanceTimersByTime(1);
-    expect(nav.getActiveHighlight()).toBeNull();
+    expect(getDfmHighlight()).toBeNull();
   });
 
-  it('does NOT auto-clear at 3 seconds (overrides navigator default)', () => {
+  it('bridge highlight survives navigator 3s auto-clear', () => {
     mapDfmViolationToHighlight(makeDfmViolation());
-    const nav = ViolationNavigator.getInstance();
 
+    // Navigator's own 3s timer fires, but the bridge has its own state
     vi.advanceTimersByTime(3000);
-    // The navigator's own 3s timer fires, but our 5s timer restores clearing
-    // Actually, the navigator's timer will clear at 3s. But our bridge
-    // re-navigates, so let's verify the DFM-specific behavior.
-    // The highlight may or may not be present at 3s depending on
-    // navigator internals, but it should definitely be gone at 5s.
+    expect(getDfmHighlight()).not.toBeNull();
+
+    // Bridge clears at 5s
     vi.advanceTimersByTime(2000);
-    expect(nav.getActiveHighlight()).toBeNull();
+    expect(getDfmHighlight()).toBeNull();
   });
 
   it('new mapping replaces previous highlight', () => {
     mapDfmViolationToHighlight(makeDfmViolation({ id: 'first' }));
     mapDfmViolationToHighlight(makeDfmViolation({ id: 'second' }));
 
-    const nav = ViolationNavigator.getInstance();
-    expect(nav.getActiveHighlight()!.violationId).toBe('second');
+    expect(getDfmHighlight()!.violationId).toBe('second');
   });
 
   it('new mapping resets the 5s timer', () => {
@@ -149,14 +146,15 @@ describe('mapDfmViolationToHighlight', () => {
     vi.advanceTimersByTime(3000);
 
     mapDfmViolationToHighlight(makeDfmViolation({ id: 'b' }));
-    vi.advanceTimersByTime(3000);
 
-    // At 6s from first, 3s from second — should still be active (5s timer restarted)
-    // The navigator's 3s timer will fire but our 5s timer is the DFM-specific one.
-    // Check that the highlight still points to 'b' or is cleared by navigator's internal timer.
-    // The bridge clears via navigator.clearHighlight() which is the final authority.
+    // 3s after second mapping — should still be active (5s timer restarted)
+    vi.advanceTimersByTime(3000);
+    expect(getDfmHighlight()).not.toBeNull();
+    expect(getDfmHighlight()!.violationId).toBe('b');
+
+    // 5s after second mapping — should be cleared
     vi.advanceTimersByTime(2000);
-    expect(ViolationNavigator.getInstance().getActiveHighlight()).toBeNull();
+    expect(getDfmHighlight()).toBeNull();
   });
 
   it('handles violation with no location (defaults to 0,0)', () => {

@@ -10,13 +10,16 @@
  * Uses the useDeviceShadow() hook for state; does NOT import WebSerialManager directly.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useDeviceShadow } from '@/lib/digital-twin/device-shadow';
+import { DeviceShadow } from '@/lib/digital-twin/device-shadow';
 import type { ChannelState, ShadowState } from '@/lib/digital-twin/device-shadow';
 import { compareCircuit, overallHealth, defaultComparisonConfig } from '@/lib/digital-twin/comparison-engine';
 import type { ComparisonResult, ComparisonConfig } from '@/lib/digital-twin/comparison-engine';
 import { generateFirmware, boardPinCount } from '@/lib/digital-twin/firmware-templates';
 import type { FirmwareConfig, BoardType, PinConfig } from '@/lib/digital-twin/firmware-templates';
+import { TelemetryLogger } from '@/lib/digital-twin/telemetry-logger';
+import { TelemetryShadowBridge } from '@/lib/telemetry-shadow-bridge';
 import { WebSerialManager } from '@/lib/web-serial';
 import { cn } from '@/lib/utils';
 
@@ -475,6 +478,26 @@ export default function DigitalTwinView() {
   const [showFirmware, setShowFirmware] = useState(false);
   const [simulationResults] = useState<Map<string, number>>(() => new Map());
   const [comparisonConfig] = useState<ComparisonConfig>(defaultComparisonConfig);
+  const bridgeInitialized = useRef(false);
+
+  // Initialize TelemetryShadowBridge to persist telemetry to IndexedDB
+  useEffect(() => {
+    if (bridgeInitialized.current) {
+      return;
+    }
+    bridgeInitialized.current = true;
+
+    const shadow = DeviceShadow.getInstance();
+    const logger = TelemetryLogger.getInstance();
+    const bridge = TelemetryShadowBridge.getInstance();
+
+    void bridge.connectLogger(shadow, logger);
+
+    return () => {
+      bridge.disconnect();
+      bridgeInitialized.current = false;
+    };
+  }, []);
 
   // Compute comparison results
   const comparisonResults = useMemo(() => {

@@ -23,6 +23,13 @@ import type { DeviceShadow, ShadowState } from './digital-twin/device-shadow';
 import type { TelemetryLogger } from './digital-twin/telemetry-logger';
 
 // ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Match DeviceShadow's staleness threshold (2 seconds) */
+const STALENESS_THRESHOLD_MS = 2000;
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -206,15 +213,21 @@ export class TelemetryShadowBridge {
 
   /**
    * Convert current shadow reported state into a TelemetryFrame.
-   * Returns null if there are no reported channels.
+   * Returns null if there are no reported channels with fresh data.
+   *
+   * Uses timestamp-based staleness detection (> 2s since last update)
+   * rather than the `.stale` property, which depends on DeviceShadow's
+   * internal staleness timer (only active when serial is attached).
    */
   private mapShadowToFrame(state: ShadowState): TelemetryFrame | null {
     const ch: Record<string, number | boolean | string> = {};
     let channelCount = 0;
+    const now = Date.now();
 
     for (const [channelId, channelState] of Array.from(state.reported.entries())) {
-      // Only include non-stale channels with real data
-      if (!channelState.stale) {
+      // Only include channels with recent data (within 2s)
+      const isFresh = channelState.timestamp > 0 && (now - channelState.timestamp) <= STALENESS_THRESHOLD_MS;
+      if (isFresh) {
         ch[channelId] = channelState.value;
         channelCount++;
       }
