@@ -168,9 +168,9 @@ export class LessonMode {
   }
 
   private notify(): void {
-    for (const listener of this.listeners) {
+    Array.from(this.listeners).forEach((listener) => {
       listener();
-    }
+    });
   }
 }
 
