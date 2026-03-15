@@ -345,3 +345,7 @@ client/src/lib/__tests__/calculator-apply.test.ts(114,17): error TS2339: Propert
 
 
 5:13:09 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:13:44 AM - File change detected. Starting incremental compilation...
+
+
+5:13:52 AM - Found 0 errors. Watching for file changes.
