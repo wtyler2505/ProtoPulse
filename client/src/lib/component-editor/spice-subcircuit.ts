@@ -709,7 +709,7 @@ export function countInternalNodes(parsed: ParsedSubcircuit): number {
 
   // Internal nodes are those not in the port list
   let internalCount = 0;
-  for (const node of allNodes) {
+  for (const node of Array.from(allNodes)) {
     if (!portSet.has(node)) {
       internalCount++;
     }

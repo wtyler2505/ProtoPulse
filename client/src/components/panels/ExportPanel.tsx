@@ -42,6 +42,7 @@ import ImportWarningsPanel from '@/components/panels/ImportWarningsPanel';
 import ImportHistoryPanel from '@/components/panels/ImportHistoryPanel';
 import ImportRepairDialog from '@/components/panels/ImportRepairDialog';
 import ExportProfileSelector from '@/components/panels/ExportProfileSelector';
+import CircuitSelectorDropdown from '@/components/panels/CircuitSelectorDropdown';
 import { generateImportWarnings } from '@/lib/import-warnings';
 import { repairImportedDesign } from '@/lib/import-repair';
 import type { ImportWarning } from '@/lib/import-warnings';
@@ -811,6 +812,9 @@ function ExportPanel() {
         </Badge>
       </div>
 
+      {/* Active circuit selector */}
+      <CircuitSelectorDropdown />
+
       {/* Quick export profiles */}
       <ExportProfileSelector
         onExportProfile={handleProfileExport}
@@ -1052,7 +1056,7 @@ function ExportPanel() {
 
       {/* Footer hint */}
       <p className="text-[10px] text-muted-foreground/50 text-center mt-auto pt-2">
-        Exports use the active circuit design. Ensure your schematic has components placed before exporting.
+        Exports use the selected circuit design above. Ensure your schematic has components placed before exporting.
       </p>
     </div>
   );
