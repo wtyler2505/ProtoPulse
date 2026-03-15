@@ -11,6 +11,7 @@ import { logger } from '../logger';
 import { getMetrics } from '../metrics';
 import { asyncHandler } from './utils';
 
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Express } from 'express';
 
 function maskKey(key: string): string {
@@ -124,6 +125,107 @@ export function registerAdminRoutes(app: Express): void {
       await db.delete(projects).where(and(isNotNull(projects.deletedAt), lte(projects.deletedAt, cutoff)));
 
       res.json({ message: 'Purge complete', counts });
+    }),
+  );
+
+  // --- Admin: Data retention policies (list) ---
+
+  app.get(
+    '/api/admin/retention/policies',
+    adminRateLimiter,
+    asyncHandler(async (req, res) => {
+      const adminKey = req.headers['x-admin-key'];
+      const expectedKey = process.env.ADMIN_API_KEY;
+
+      if (!safeCompareAdminKey(String(adminKey), expectedKey ?? '')) {
+        return res.status(403).json({ error: 'Forbidden: valid admin key required' });
+      }
+
+      res.json({ policies: getPolicies() });
+    }),
+  );
+
+  // --- Admin: Data retention preview (dry-run) ---
+
+  app.get(
+    '/api/admin/retention/preview',
+    adminRateLimiter,
+    asyncHandler(async (req, res) => {
+      const adminKey = req.headers['x-admin-key'];
+      const expectedKey = process.env.ADMIN_API_KEY;
+
+      if (!safeCompareAdminKey(String(adminKey), expectedKey ?? '')) {
+        return res.status(403).json({ error: 'Forbidden: valid admin key required' });
+      }
+
+      const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+
+      logger.info('admin:retention:preview', {
+        actor: maskKey(String(adminKey)),
+        ip: req.ip,
+        category: category ?? 'all',
+        timestamp: new Date().toISOString(),
+      });
+
+      if (category) {
+        const result = await runSinglePolicy(
+          db as unknown as NodePgDatabase<Record<string, unknown>>,
+          category,
+          true,
+        );
+        if (!result) {
+          return res.status(400).json({ error: `Unknown retention category: ${category}` });
+        }
+        return res.json({ dryRun: true, results: [result], totalAffected: result.affectedCount });
+      }
+
+      const result = await runRetention(
+        db as unknown as NodePgDatabase<Record<string, unknown>>,
+        true,
+      );
+      res.json(result);
+    }),
+  );
+
+  // --- Admin: Data retention execute ---
+
+  app.post(
+    '/api/admin/retention/execute',
+    adminRateLimiter,
+    asyncHandler(async (req, res) => {
+      const adminKey = req.headers['x-admin-key'];
+      const expectedKey = process.env.ADMIN_API_KEY;
+
+      if (!safeCompareAdminKey(String(adminKey), expectedKey ?? '')) {
+        return res.status(403).json({ error: 'Forbidden: valid admin key required' });
+      }
+
+      const category = typeof req.query.category === 'string' ? req.query.category : undefined;
+
+      logger.info('admin:retention:execute', {
+        actor: maskKey(String(adminKey)),
+        ip: req.ip,
+        category: category ?? 'all',
+        timestamp: new Date().toISOString(),
+      });
+
+      if (category) {
+        const result = await runSinglePolicy(
+          db as unknown as NodePgDatabase<Record<string, unknown>>,
+          category,
+          false,
+        );
+        if (!result) {
+          return res.status(400).json({ error: `Unknown retention category: ${category}` });
+        }
+        return res.json({ dryRun: false, results: [result], totalAffected: result.affectedCount });
+      }
+
+      const result = await runRetention(
+        db as unknown as NodePgDatabase<Record<string, unknown>>,
+        false,
+      );
+      res.json(result);
     }),
   );
 }

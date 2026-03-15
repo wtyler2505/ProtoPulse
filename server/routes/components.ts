@@ -9,6 +9,7 @@ import { exportToFzpz, importFromFzpz } from '../component-export';
 import { parseSvgToShapes } from '../svg-parser';
 import { getApiKey } from '../auth';
 import { asyncHandler, payloadLimit, parseIdParam, HttpError } from './utils';
+import { setCacheHeaders } from '../lib/cache-headers';
 
 async function resolveGeminiApiKey(clientKey: string | undefined, userId: number | undefined): Promise<string> {
   if (clientKey && clientKey.length > 0) {
@@ -28,6 +29,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:projectId/component-parts',
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const parts = await storage.getComponentParts(projectId);
@@ -37,6 +39,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:projectId/component-parts/by-node/:nodeId',
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const nodeId = Array.isArray(req.params.nodeId) ? req.params.nodeId[0] : req.params.nodeId;
@@ -50,6 +53,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:projectId/component-parts/:id',
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
@@ -204,6 +208,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/component-library',
+    setCacheHeaders('component_library'),
     asyncHandler(async (req, res) => {
       const search = typeof req.query.search === 'string' ? req.query.search : undefined;
       const category = typeof req.query.category === 'string' ? req.query.category : undefined;
@@ -216,6 +221,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/component-library/:id',
+    setCacheHeaders('component_library'),
     asyncHandler(async (req, res) => {
       const id = parseIdParam(req.params.id);
       const entry = await storage.getLibraryEntry(id);
