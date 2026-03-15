@@ -449,22 +449,28 @@ describe('runBreadboardDrc — unconnected pins', () => {
   it('flags unconnected pins when component is partially connected', () => {
     resetIds();
     const px = terminalPixel('c', 10);
+    // 4-pin component: connectors span 2 rows (rows 10, 11)
+    const part = makePart({
+      connectors: [{ id: '1' }, { id: '2' }, { id: '3' }, { id: '4' }] as unknown[],
+      meta: { type: 'connector' },
+    });
     const inst = makeInstance({
-      referenceDesignator: 'R1',
+      referenceDesignator: 'J1',
       breadboardX: px.x,
       breadboardY: px.y,
-      properties: { type: 'resistor' },
+      partId: part.id,
+      properties: { type: 'connector' },
     });
     const nets = [makeNet({ id: 1, name: 'SIG1' })];
-    // Wire on row 10 (first pin) but not on row 11 (second pin for 2-pin component)
+    // Wire on row 10 only — row 11 (second pin row) is unconnected
     const wires = [
       makeWire({ netId: 1, view: 'breadboard', points: [terminalPixel('a', 10), terminalPixel('b', 10)] }),
     ];
-    const result = runBreadboardDrc(nets, wires, [inst], []);
+    const result = runBreadboardDrc(nets, wires, [inst], [part]);
     const unconnected = result.violations.filter(v => v.type === 'unconnected_pin');
     expect(unconnected.length).toBeGreaterThanOrEqual(1);
     expect(unconnected[0].severity).toBe('warning');
-    expect(unconnected[0].message).toContain('R1');
+    expect(unconnected[0].message).toContain('J1');
     expect(unconnected[0].instanceId).toBe(inst.id);
   });
 
