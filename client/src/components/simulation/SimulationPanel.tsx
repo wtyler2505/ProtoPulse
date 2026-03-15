@@ -19,6 +19,7 @@ import type { AnalysisType as AutoDetectAnalysisType, CircuitInstanceForDetectio
 import { checkCircuitComplexity } from '@/lib/simulation/complexity-check';
 import type { CircuitInstanceForComplexity } from '@/lib/simulation/complexity-check';
 import SimPlayButton from '@/components/simulation/SimPlayButton';
+import ShareSimulationButton from '@/components/simulation/ShareSimulationButton';
 import {
   Play,
   Square,
@@ -711,6 +712,21 @@ export default function SimulationPanel() {
     dcsweepParams,
     probes,
   }), [analysisType, transientParams, acParams, dcsweepParams, probes]);
+
+  // BL-0213: Flatten current params for simulation sharing link
+  const shareParameters = useMemo((): Record<string, string> => {
+    switch (analysisType) {
+      case 'transient':
+        return { ...transientParams };
+      case 'ac':
+        return { ...acParams };
+      case 'dcsweep':
+        return { ...dcsweepParams };
+      case 'dcop':
+      default:
+        return {};
+    }
+  }, [analysisType, transientParams, acParams, dcsweepParams]);
 
   const handleLoadPreset = useCallback((config: Record<string, unknown>) => {
     if (!config) return;

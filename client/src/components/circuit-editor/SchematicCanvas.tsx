@@ -57,6 +57,8 @@ import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import ERCOverlay from './ERCOverlay';
 import SimulationVisualOverlay from './SimulationVisualOverlay';
+import CollaborationCursors, { useCursorEmitter } from './CollaborationCursors';
+import type { CollaborationClient } from '@/lib/collaboration-client';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';

@@ -59,6 +59,7 @@ import type { BomCompletionIssue } from '@/lib/bom-validation';
 import { useDrcSuppression } from '@/lib/drc-suppression';
 import { DrcSuppressionDialog } from '@/components/views/DrcSuppressionDialog';
 import type { DrcSuppressionTarget } from '@/components/views/DrcSuppressionDialog';
+import { ManufacturerRuleCompare } from '@/components/views/ManufacturerRuleCompare';
 
 /** Brief explanations for validation rule categories (UX-043: "why this rule matters" tooltips).
  *  DRC_EXPLANATIONS (from shared/drc-engine) provides detailed beginner-friendly text for every
@@ -416,6 +417,12 @@ function ValidationViewContent() {
     toast({ title: 'DRC Preset Applied', description: `Switched to "${DRC_PRESETS.find((p) => p.id === presetId)?.name ?? presetId}" rules.` });
   }, [toast]);
 
+  // Manufacturer rule comparison apply (BL-0251)
+  const handleApplyManufacturerRules = useCallback((rules: DRCRule[]) => {
+    setDrcRules(rules);
+    toast({ title: 'Manufacturer Rules Applied', description: 'DRC rules updated to match the selected manufacturer\'s design capabilities.' });
+  }, [toast]);
+
   // DRC violations from component part geometry
   const drcIssues = useMemo(() => {
     if (!componentParts || componentParts.length === 0) return [];
@@ -761,6 +768,11 @@ function ValidationViewContent() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Manufacturer Rule Compare (BL-0251) */}
+      <div className="w-full max-w-5xl mt-4">
+        <ManufacturerRuleCompare currentRules={drcRules} onApplyRules={handleApplyManufacturerRules} />
       </div>
 
       {/* Custom DRC Scripts results (below Design Gateway + DFM) */}
