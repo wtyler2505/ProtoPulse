@@ -129,14 +129,13 @@ export function recoverTruncatedJson(input: string): { recovered: string; wasRep
   let working = trimmed
     // Remove trailing comma possibly followed by whitespace
     .replace(/,\s*$/, '')
-    // Remove incomplete key-value: `"key":` or `"key": ` at end
+    // Remove incomplete key-value: `"key":` or `"key": ` at end (no value started)
     .replace(/,?\s*"[^"]*"\s*:\s*$/, '')
-    // Remove incomplete string value: `"key": "partial` at end
-    .replace(/,?\s*"[^"]*"\s*:\s*"[^"]*$/, '');
+    // Remove incomplete string value: `"key": "partial` (opening quote but no closing quote)
+    .replace(/,?\s*"[^"]*"\s*:\s*"(?:[^"\\]|\\.)*$/, '');
 
-  // Count unclosed braces and brackets
-  let openBraces = 0;
-  let openBrackets = 0;
+  // Use a stack to track nesting order so closers are emitted correctly
+  const stack: string[] = [];
   let inString = false;
 
   for (let i = 0; i < working.length; i++) {
@@ -152,13 +151,17 @@ export function recoverTruncatedJson(input: string): { recovered: string; wasRep
     if (ch === '"') {
       inString = true;
     } else if (ch === '{') {
-      openBraces++;
+      stack.push('}');
     } else if (ch === '}') {
-      openBraces--;
+      if (stack.length > 0 && stack[stack.length - 1] === '}') {
+        stack.pop();
+      }
     } else if (ch === '[') {
-      openBrackets++;
+      stack.push(']');
     } else if (ch === ']') {
-      openBrackets--;
+      if (stack.length > 0 && stack[stack.length - 1] === ']') {
+        stack.pop();
+      }
     }
   }
 
@@ -167,12 +170,9 @@ export function recoverTruncatedJson(input: string): { recovered: string; wasRep
     working += '"';
   }
 
-  // Close unclosed brackets/braces (brackets first since they're usually inner)
-  for (let i = 0; i < openBrackets; i++) {
-    working += ']';
-  }
-  for (let i = 0; i < openBraces; i++) {
-    working += '}';
+  // Close unclosed structures in reverse nesting order
+  while (stack.length > 0) {
+    working += stack.pop();
   }
 
   // Verify the result parses

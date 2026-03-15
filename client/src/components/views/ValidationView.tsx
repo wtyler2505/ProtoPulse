@@ -48,6 +48,7 @@ import { useDrcScripts, BUILTIN_TEMPLATES } from '@/lib/drc-scripting';
 import type { DfmCheckResult } from '@/lib/dfm-checker';
 import type { DrcScript } from '@/lib/drc-scripting';
 import type { ScriptDesignData } from '@/lib/drc-scripting';
+import { ReviewResolutionControls } from '@/components/views/ReviewResolutionControls';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { validateBomCompleteness } from '@/lib/bom-validation';

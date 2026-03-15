@@ -277,7 +277,8 @@ describe('classifyItem', () => {
     });
 
     it('falls back to pattern matching for unknown stored category', () => {
-      const result = classifyItem(makeBomItem({ assemblyCategory: 'something_else', description: '0603 resistor' }));
+      // Use null assemblyCategory + an SMT description to test pattern fallback
+      const result = classifyItem(makeBomItem({ assemblyCategory: null, description: '0603 resistor' }));
       expect(result.group).toBe('smt');
       expect(result.matchedRule).toBe('chip_package');
     });
@@ -313,11 +314,11 @@ describe('groupBomByAssembly', () => {
 
   it('groups a mixed BOM correctly', () => {
     const items = [
-      makeBomItem({ id: 1, description: '10K 0402 resistor', quantity: 10, totalPrice: '1.0000' }),
-      makeBomItem({ id: 2, description: '100nF 0603 capacitor', quantity: 5, totalPrice: '0.5000' }),
-      makeBomItem({ id: 3, description: 'ATmega328P DIP-28', quantity: 1, totalPrice: '3.0000' }),
-      makeBomItem({ id: 4, description: 'JST connector 2-pin', quantity: 2, totalPrice: '0.8000' }),
-      makeBomItem({ id: 5, description: 'Custom widget', quantity: 1, totalPrice: '5.0000' }),
+      makeBomItem({ id: '1', description: '10K 0402 resistor', quantity: 10, totalPrice: 1 }),
+      makeBomItem({ id: '2', description: '100nF 0603 capacitor', quantity: 5, totalPrice: 0.5 }),
+      makeBomItem({ id: '3', description: 'ATmega328P DIP-28', quantity: 1, totalPrice: 3 }),
+      makeBomItem({ id: '4', description: 'JST connector 2-pin', quantity: 2, totalPrice: 0.8 }),
+      makeBomItem({ id: '5', description: 'Custom widget', quantity: 1, totalPrice: 5 }),
     ];
 
     const result = groupBomByAssembly(items);
@@ -341,10 +342,10 @@ describe('groupBomByAssembly', () => {
 
   it('calculates correct classification rate', () => {
     const items = [
-      makeBomItem({ id: 1, description: '0402 resistor' }),
-      makeBomItem({ id: 2, description: 'DIP-8 IC' }),
-      makeBomItem({ id: 3, description: 'Connector header' }),
-      makeBomItem({ id: 4, description: 'Mystery part' }),
+      makeBomItem({ id: '1', description: '0402 resistor' }),
+      makeBomItem({ id: '2', description: 'DIP-8 IC' }),
+      makeBomItem({ id: '3', description: 'Connector header' }),
+      makeBomItem({ id: '4', description: 'Mystery part' }),
     ];
 
     const result = groupBomByAssembly(items);
@@ -353,8 +354,8 @@ describe('groupBomByAssembly', () => {
 
   it('handles all items classified', () => {
     const items = [
-      makeBomItem({ id: 1, description: '0402 resistor' }),
-      makeBomItem({ id: 2, description: 'TO-220 regulator' }),
+      makeBomItem({ id: '1', description: '0402 resistor' }),
+      makeBomItem({ id: '2', description: 'TO-220 regulator' }),
     ];
 
     const result = groupBomByAssembly(items);
@@ -363,9 +364,9 @@ describe('groupBomByAssembly', () => {
 
   it('accumulates totalCost correctly', () => {
     const items = [
-      makeBomItem({ id: 1, description: '0402 cap', totalPrice: '2.5000' }),
-      makeBomItem({ id: 2, description: '0603 res', totalPrice: '1.2500' }),
-      makeBomItem({ id: 3, description: 'DIP IC', totalPrice: '4.0000' }),
+      makeBomItem({ id: '1', description: '0402 cap', totalPrice: 2.5 }),
+      makeBomItem({ id: '2', description: '0603 res', totalPrice: 1.25 }),
+      makeBomItem({ id: '3', description: 'DIP IC', totalPrice: 4 }),
     ];
 
     const result = groupBomByAssembly(items);
@@ -374,14 +375,14 @@ describe('groupBomByAssembly', () => {
 
   it('stores items in the correct group', () => {
     const items = [
-      makeBomItem({ id: 10, description: 'SOIC-8 op-amp' }),
-      makeBomItem({ id: 20, description: 'SOIC-16 driver' }),
+      makeBomItem({ id: '10', description: 'SOIC-8 op-amp' }),
+      makeBomItem({ id: '20', description: 'SOIC-16 driver' }),
     ];
 
     const result = groupBomByAssembly(items);
     expect(result.groups.smt.items).toHaveLength(2);
-    expect(result.groups.smt.items[0].item.id).toBe(10);
-    expect(result.groups.smt.items[1].item.id).toBe(20);
+    expect(result.groups.smt.items[0].item.id).toBe('10');
+    expect(result.groups.smt.items[1].item.id).toBe('20');
   });
 
   it('preserves group labels', () => {
@@ -400,8 +401,8 @@ describe('groupBomByAssembly', () => {
 describe('getOrderedGroups', () => {
   it('returns only non-empty groups', () => {
     const items = [
-      makeBomItem({ id: 1, description: '0402 resistor' }),
-      makeBomItem({ id: 2, description: 'DIP-28 MCU' }),
+      makeBomItem({ id: '1', description: '0402 resistor' }),
+      makeBomItem({ id: '2', description: 'DIP-28 MCU' }),
     ];
 
     const result = groupBomByAssembly(items);
@@ -414,10 +415,10 @@ describe('getOrderedGroups', () => {
 
   it('returns groups in display order: smt, tht, manual, unclassified', () => {
     const items = [
-      makeBomItem({ id: 1, description: 'Mystery part' }),
-      makeBomItem({ id: 2, description: 'JST connector' }),
-      makeBomItem({ id: 3, description: 'DIP-8 chip' }),
-      makeBomItem({ id: 4, description: '0603 cap' }),
+      makeBomItem({ id: '1', description: 'Mystery part' }),
+      makeBomItem({ id: '2', description: 'JST connector' }),
+      makeBomItem({ id: '3', description: 'DIP-8 chip' }),
+      makeBomItem({ id: '4', description: '0603 cap' }),
     ];
 
     const result = groupBomByAssembly(items);
