@@ -4,6 +4,7 @@ import { storage, VersionConflictError } from '../storage';
 import { insertBomItemSchema } from '@shared/schema';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
+import { setCacheHeaders } from '../lib/cache-headers';
 
 /** Parse the If-Match header value into a version number, or undefined if absent/invalid. */
 function parseIfMatch(header: string | undefined): number | undefined {
@@ -16,6 +17,7 @@ export function registerBomRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/bom',
     requireProjectOwnership,
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const opts = paginationSchema.safeParse(req.query);
       const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
