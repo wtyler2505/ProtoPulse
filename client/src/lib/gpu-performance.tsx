@@ -42,13 +42,13 @@ const LOW_TIER_PATTERNS: RegExp[] = [
   /virtualbox/i,
   /vmware/i,
   /virgl/i,
-  /intel (hd|uhd) graphics(?:\s+\d+)?$/i,  // older Intel integrated (no generation suffix like Iris)
-  /intel\(r\) hd graphics$/i,
+  /intel (hd|uhd) graphics\s*$/i,           // bare "Intel HD Graphics" or "Intel UHD Graphics" (no model number)
+  /intel\(r\) hd graphics\s*$/i,
   /intel gma/i,
   /mali-4\d\d/i,       // Mali-400 series
   /mali-t[67]\d\d/i,   // Mali-T600/T700 series
-  /adreno \d{2}0/i,    // Adreno 3xx/2xx range
-  /adreno [23]\d\d/i,
+  /adreno\s*(?:\(TM\)\s*)?[23]\d\d/i,  // Adreno 2xx/3xx range (handles optional "(TM)")
+  /adreno\s*(?:\(TM\)\s*)?\d{2}0/i,    // Adreno x20 series (very old)
   /powervr sgx/i,      // Old PowerVR
   /videocore/i,         // Raspberry Pi
 ];
