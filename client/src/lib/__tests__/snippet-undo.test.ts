@@ -12,27 +12,36 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeCallbacks(): SnippetPlacementCallbacks & {
+interface MockCallbacks extends SnippetPlacementCallbacks {
   nodeState: Node[];
   edgeState: Edge[];
-} {
-  const state = {
-    nodeState: [] as Node[],
-    edgeState: [] as Edge[],
-  };
+}
 
-  return {
-    ...state,
+function makeCallbacks(): MockCallbacks {
+  const obj: MockCallbacks = {
+    nodeState: [],
+    edgeState: [],
     pushUndoState: vi.fn(),
-    setNodes: vi.fn((updater: (nodes: Node[]) => Node[]) => {
-      state.nodeState = updater(state.nodeState);
-    }),
-    setEdges: vi.fn((updater: (edges: Edge[]) => Edge[]) => {
-      state.edgeState = updater(state.edgeState);
-    }),
+    setNodes: vi.fn(),
+    setEdges: vi.fn(),
     markNodeInteracted: vi.fn(),
     markEdgeInteracted: vi.fn(),
   };
+
+  // Wire up setNodes/setEdges to actually mutate the state arrays so tests
+  // can assert on `callbacks.nodeState` / `callbacks.edgeState`.
+  (obj.setNodes as ReturnType<typeof vi.fn>).mockImplementation(
+    (updater: (nodes: Node[]) => Node[]) => {
+      obj.nodeState = updater(obj.nodeState);
+    },
+  );
+  (obj.setEdges as ReturnType<typeof vi.fn>).mockImplementation(
+    (updater: (edges: Edge[]) => Edge[]) => {
+      obj.edgeState = updater(obj.edgeState);
+    },
+  );
+
+  return obj;
 }
 
 function makePlacement(opts?: {

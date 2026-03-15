@@ -216,7 +216,7 @@ export function buildConnectivityMap(
  */
 export function groupHolesByNet(map: ConnectivityMap): Map<number, ConnectedHole[]> {
   const groups = new Map<number, ConnectedHole[]>();
-  for (const hole of map.holes.values()) {
+  for (const hole of Array.from(map.holes.values())) {
     let group = groups.get(hole.netId);
     if (!group) {
       group = [];

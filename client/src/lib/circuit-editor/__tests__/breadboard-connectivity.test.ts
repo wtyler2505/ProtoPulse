@@ -43,11 +43,14 @@ function makeNet(id: number, name: string): CircuitNetRow {
     id,
     circuitId: 1,
     name,
+    netType: 'signal',
+    voltage: null,
+    busWidth: null,
     segments: [],
-    properties: {},
+    labels: [],
     style: {},
     createdAt: new Date(),
-  } as CircuitNetRow;
+  } as unknown as CircuitNetRow;
 }
 
 function makeWire(
@@ -63,10 +66,10 @@ function makeWire(
     points: coords.map((c) => coordToPixel(c)),
     layer: 'front',
     color: null,
-    width: null,
+    width: 1.0,
     wireType: 'wire',
     createdAt: new Date(),
-  } as CircuitWireRow;
+  } as unknown as CircuitWireRow;
 }
 
 function makeInstance(
@@ -79,15 +82,21 @@ function makeInstance(
     id,
     circuitId: 1,
     partId: null,
+    subDesignId: null,
     referenceDesignator: refDes,
+    schematicX: 0,
+    schematicY: 0,
+    schematicRotation: 0,
     breadboardX: px?.x ?? null,
     breadboardY: px?.y ?? null,
-    x: 0,
-    y: 0,
-    rotation: 0,
+    breadboardRotation: 0,
+    pcbX: null,
+    pcbY: null,
+    pcbRotation: 0,
+    pcbSide: 'front',
     properties: {},
     createdAt: new Date(),
-  } as CircuitInstanceRow;
+  } as unknown as CircuitInstanceRow;
 }
 
 // ---------------------------------------------------------------------------

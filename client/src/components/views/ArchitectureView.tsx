@@ -25,6 +25,8 @@ import { NodeInspectorPanel } from './architecture/NodeInspectorPanel';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useCircuitDesigns, useCreateCircuitDesign, useCreateCircuitInstance } from '@/lib/circuit-editor/hooks';
 import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
+import { SnippetLibrary } from '@/lib/design-reuse';
+import { placeSnippetAtomic } from '@/lib/snippet-undo';
 
 const nodeTypes = {
   custom: CustomNode,

@@ -1,7 +1,7 @@
 import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
 import type { StandardComponentDef } from '@shared/standard-library';
 import { createComponentSearch } from './fuzzy-search';
-import type Fuse from 'fuse.js';
+import type { FuseResult, FuseResultMatch } from 'fuse.js';
 
 // ---------------------------------------------------------------------------
 // Types
