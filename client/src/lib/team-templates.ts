@@ -458,7 +458,7 @@ export class TeamTemplateManager {
 // React hook
 // ---------------------------------------------------------------------------
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 
 export function useTeamTemplates() {
   const mgr = TeamTemplateManager.getInstance();

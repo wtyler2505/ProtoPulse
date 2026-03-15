@@ -294,7 +294,7 @@ export class ChecklistManager {
   private save(): void {
     try {
       const obj: PersistedStore = {};
-      Array.from(this.store.entries()).forEach(([pid, data]) => {
+      this.store.forEach((data, pid) => {
         obj[String(pid)] = data;
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
