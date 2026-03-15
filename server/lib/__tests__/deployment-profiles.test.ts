@@ -388,8 +388,8 @@ describe('deployment-profiles', () => {
 
     it('rejects invalid log level', () => {
       const profile = getProfileDefaults('development');
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
-      (profile as any).logLevel = 'verbose';
+      // Force an invalid log level via Object.assign to bypass TS type narrowing
+      Object.assign(profile, { logLevel: 'verbose' });
       const result = validateProfile(profile);
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'logLevel')).toBe(true);
