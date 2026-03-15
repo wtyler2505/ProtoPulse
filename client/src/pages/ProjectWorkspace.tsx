@@ -47,6 +47,7 @@ const AuditTrailView = lazy(() => import('@/components/views/AuditTrailView'));
 const FirstRunChecklist = lazy(() => import('@/components/ui/FirstRunChecklist'));
 const LessonModeOverlay = lazy(() => import('@/components/ui/LessonModeOverlay'));
 const PcbTutorialPanel = lazy(() => import('@/components/panels/PcbTutorialPanel'));
+const SmartHintToast = lazy(() => import('@/components/ui/SmartHintToast'));
 import { buildValidationContext } from '@/lib/pcb-tutorial';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
