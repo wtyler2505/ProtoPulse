@@ -572,6 +572,17 @@ function ExportPanel() {
             setImportPreview(preview);
             setImportDialogOpen(true);
           } else if (result.status === 'error') {
+            // Attempt repair if we got a partial design with errors
+            if (result.design) {
+              const repair = repairImportedDesign(result.design);
+              if (repair.success && repair.design && repair.actions.length > 0) {
+                pendingImportDesignRef.current = repair.design;
+                setRepairResult(repair);
+                setRepairFileName(file.name);
+                setRepairDialogOpen(true);
+                return;
+              }
+            }
             toast({
               variant: 'destructive',
               title: 'Import failed',
@@ -631,6 +642,37 @@ function ExportPanel() {
       description: `Restored "${entry.fileName}" from import history.`,
     });
   }, [addOutputLog, toast]);
+
+  const handleRepairApply = useCallback(() => {
+    const design = pendingImportDesignRef.current;
+    if (!design) {
+      return;
+    }
+
+    const projectData = {
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        data: { label: (n.data as Record<string, unknown>)?.label as string | undefined },
+      })),
+      edges: [],
+      bomItems: bom.map((b) => ({
+        partNumber: b.partNumber,
+        description: b.description,
+      })),
+    };
+    const preview = generateImportPreview(design, projectData);
+    setImportFileName(repairFileName);
+    setImportPreview(preview);
+    setImportDialogOpen(true);
+    setRepairDialogOpen(false);
+    setRepairResult(null);
+  }, [nodes, bom, repairFileName]);
+
+  const handleRepairCancel = useCallback(() => {
+    setRepairDialogOpen(false);
+    setRepairResult(null);
+    pendingImportDesignRef.current = null;
+  }, []);
 
   return (
     <div className="h-full w-full bg-background/80 backdrop-blur p-4 overflow-auto flex flex-col gap-4" data-testid="export-panel">
@@ -852,6 +894,16 @@ function ExportPanel() {
         fileName={importFileName}
         onApply={handleImportApply}
         onCancel={handleImportCancel}
+      />
+
+      {/* Import repair dialog */}
+      <ImportRepairDialog
+        open={repairDialogOpen}
+        onOpenChange={setRepairDialogOpen}
+        repairResult={repairResult}
+        fileName={repairFileName}
+        onApplyRepaired={handleRepairApply}
+        onCancel={handleRepairCancel}
       />
 
       {/* Footer hint */}
