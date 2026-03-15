@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Dispatch, SetStateAction } from 'react';
+import { useState, useRef, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
 import { useIsMutating } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
@@ -8,6 +8,7 @@ import { useValidation } from '@/lib/contexts/validation-context';
 import { useHistory } from '@/lib/contexts/history-context';
 import { useOutput } from '@/lib/contexts/output-context';
 import { BomItem, ValidationIssue, ProjectHistoryItem } from '@/lib/project-context';
+import type { ViewMode } from '@/lib/project-context';
 import type { Node, Edge } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import {
@@ -19,9 +20,17 @@ import {
   Cloud,
   Loader2,
   ChevronLeft,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
-import { navItems, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
+import { alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
+import {
+  SIDEBAR_GROUPS,
+  getNavItemsForGroup,
+  loadCollapsedGroups,
+  saveCollapsedGroups,
+} from '@/lib/sidebar-groups';
 import SidebarHeader from '@/components/layout/sidebar/SidebarHeader';
 import ProjectSettingsPanel from '@/components/layout/sidebar/ProjectSettingsPanel';
 import ProjectExplorer from './sidebar/ProjectExplorer';
@@ -44,15 +53,21 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
   const { addOutputLog } = useOutput();
 
   const hasDesignContent = (nodes ?? []).length > 0;
-  const visibleNavItems = navItems.filter(item =>
-    alwaysVisibleIds.has(item.view) || hasDesignContent
-  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [editingName, setEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState(projectName);
   const [timelineExpanded, setTimelineExpanded] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>(loadCollapsedGroups);
+
+  const toggleGroup = useCallback((groupId: string) => {
+    setCollapsedGroups((prev) => {
+      const next = { ...prev, [groupId]: !prev[groupId] };
+      saveCollapsedGroups(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => { setEditNameValue(projectName); }, [projectName]);
 
@@ -85,25 +100,46 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
           </div>
         </div>
         <div className="flex-1 flex flex-col items-center py-3 gap-1 overflow-y-auto no-scrollbar">
-          {visibleNavItems.map((item) => (
-            <StyledTooltip key={item.view} content={item.label} side="right">
-                <button
-                  data-testid={`sidebar-icon-${item.view}`}
-                  className={cn(
-                    "w-8 h-8 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                    activeView === item.view
-                      ? "text-primary bg-primary/10 shadow-[0_0_8px_rgba(6,182,212,0.2)]"
-                      : "text-muted-foreground hover:text-primary hover:bg-muted/50"
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveView(item.view);
-                  }}
-                >
-                  <item.icon className="w-4 h-4" />
-                </button>
-            </StyledTooltip>
-          ))}
+          {SIDEBAR_GROUPS.map((group) => {
+            const items = getNavItemsForGroup(group).filter(
+              (item) => alwaysVisibleIds.has(item.view) || hasDesignContent,
+            );
+            if (items.length === 0) { return null; }
+            const GroupIcon = group.icon;
+            const isGroupCollapsed = collapsedGroups[group.id] === true;
+            return (
+              <div key={group.id} data-testid={`sidebar-group-collapsed-${group.id}`}>
+                <StyledTooltip content={group.label} side="right">
+                  <button
+                    data-testid={`sidebar-group-toggle-${group.id}`}
+                    className="w-8 h-5 flex items-center justify-center text-muted-foreground/60 hover:text-muted-foreground transition-colors mt-1"
+                    onClick={(e) => { e.stopPropagation(); toggleGroup(group.id); }}
+                  >
+                    <GroupIcon className="w-3 h-3" />
+                  </button>
+                </StyledTooltip>
+                {!isGroupCollapsed && items.map((item) => (
+                  <StyledTooltip key={item.view} content={item.label} side="right">
+                    <button
+                      data-testid={`sidebar-icon-${item.view}`}
+                      className={cn(
+                        "w-8 h-8 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                        activeView === item.view
+                          ? "text-primary bg-primary/10 shadow-[0_0_8px_rgba(6,182,212,0.2)]"
+                          : "text-muted-foreground hover:text-primary hover:bg-muted/50"
+                      )}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveView(item.view);
+                      }}
+                    >
+                      <item.icon className="w-4 h-4" />
+                    </button>
+                  </StyledTooltip>
+                ))}
+              </div>
+            );
+          })}
         </div>
         <div className="pb-3 shrink-0">
           <StyledTooltip content="Open project settings" side="right">
@@ -173,6 +209,11 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
             expandedCategories={expandedCategories}
             setExpandedCategories={setExpandedCategories}
             setNodes={setNodes}
+            activeView={activeView}
+            setActiveView={setActiveView}
+            hasDesignContent={hasDesignContent}
+            collapsedGroups={collapsedGroups}
+            toggleGroup={toggleGroup}
           />
         </div>
       </div>
@@ -204,6 +245,11 @@ interface SidebarContentProps {
   setTimelineExpanded: (v: boolean) => void;
   expandedCategories: Record<string, boolean>;
   setExpandedCategories: Dispatch<SetStateAction<Record<string, boolean>>>;
+  activeView: ViewMode;
+  setActiveView: (view: ViewMode) => void;
+  hasDesignContent: boolean;
+  collapsedGroups: Record<string, boolean>;
+  toggleGroup: (groupId: string) => void;
 }
 
 function SidebarContent({
@@ -216,6 +262,8 @@ function SidebarContent({
   editingName, setEditingName, editNameValue, setEditNameValue,
   timelineExpanded, setTimelineExpanded,
   expandedCategories, setExpandedCategories,
+  activeView, setActiveView,
+  hasDesignContent, collapsedGroups, toggleGroup,
 }: SidebarContentProps) {
   const editNameRef = useRef<HTMLInputElement>(null);
 
@@ -320,6 +368,59 @@ function SidebarContent({
             />
 
           </div>
+        </div>
+
+        {/* Grouped view navigation */}
+        <div className="mb-4">
+          {SIDEBAR_GROUPS.map((group) => {
+            const items = getNavItemsForGroup(group).filter(
+              (item) => alwaysVisibleIds.has(item.view) || hasDesignContent,
+            );
+            if (items.length === 0) { return null; }
+            const GroupIcon = group.icon;
+            const isGroupCollapsed = collapsedGroups[group.id] === true;
+            return (
+              <div key={group.id} data-testid={`sidebar-group-${group.id}`}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  aria-expanded={!isGroupCollapsed}
+                  aria-label={isGroupCollapsed ? `Expand ${group.label}` : `Collapse ${group.label}`}
+                  data-testid={`sidebar-group-header-${group.id}`}
+                  className="px-4 py-1.5 flex items-center gap-2 text-muted-foreground hover:text-foreground cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => toggleGroup(group.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleGroup(group.id); } }}
+                >
+                  {isGroupCollapsed
+                    ? <ChevronRight className="w-3 h-3 shrink-0" />
+                    : <ChevronDown className="w-3 h-3 shrink-0" />
+                  }
+                  <GroupIcon className="w-3 h-3 shrink-0" />
+                  <span className="text-xs font-semibold uppercase tracking-wider">{group.label}</span>
+                </div>
+                {!isGroupCollapsed && (
+                  <div className="space-y-0.5">
+                    {items.map((item) => (
+                      <button
+                        key={item.view}
+                        data-testid={`sidebar-nav-${item.view}`}
+                        className={cn(
+                          "w-full px-4 pl-10 py-1 flex items-center gap-2 text-xs transition-colors",
+                          activeView === item.view
+                            ? "text-primary bg-primary/10"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                        )}
+                        onClick={() => setActiveView(item.view)}
+                      >
+                        <item.icon className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <HistoryList

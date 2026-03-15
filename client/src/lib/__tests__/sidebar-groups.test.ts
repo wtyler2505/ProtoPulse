@@ -33,7 +33,9 @@ describe('SIDEBAR_GROUPS', () => {
 
   it('every group has an icon', () => {
     for (const group of SIDEBAR_GROUPS) {
-      expect(typeof group.icon).toBe('function');
+      // lucide-react icons are forwardRef objects with a render function
+      expect(group.icon).toBeDefined();
+      expect(group.icon).not.toBeNull();
     }
   });
 
@@ -115,7 +117,7 @@ describe('getNavItemsForGroup', () => {
     for (const group of SIDEBAR_GROUPS) {
       const items = getNavItemsForGroup(group);
       for (const item of items) {
-        expect(typeof item.icon).toBe('function');
+        expect(item.icon).toBeDefined();
         expect(typeof item.view).toBe('string');
         expect(typeof item.label).toBe('string');
       }

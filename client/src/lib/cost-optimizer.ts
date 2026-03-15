@@ -147,7 +147,7 @@ function round2(n: number): number {
  */
 function isNonEssential(description: string, partNumber: string): boolean {
   const d = `${description} ${partNumber}`.toLowerCase();
-  return /\b(standoff|spacer|enclosure|label|sticker|led indicator|decorat|bracket|mount(?:ing)? (?:plate|kit))\b/.test(d);
+  return /\b(standoff|spacer|enclosure|label|sticker|led indicator|decorativ|bezel|bracket|mount(?:ing)? (?:plate|kit))\b/.test(d);
 }
 
 /**

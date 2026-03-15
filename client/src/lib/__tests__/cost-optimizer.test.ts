@@ -320,12 +320,15 @@ describe('cost-optimizer', () => {
     });
 
     it('does not produce duplicate suggestion types for the same item in simple cases', () => {
-      // A normal SMD resistor should produce at most one suggestion type
+      // Multiple normal SMD resistors — no single item exceeds 25% of total, low value, qty <=3
       const bom = [
         makeBomItem({ id: '1', partNumber: 'R10K', quantity: 2, unitPrice: 0.02, totalPrice: 0.04, description: '10K 0402 SMD resistor' }),
+        makeBomItem({ id: '2', partNumber: 'R4K7', quantity: 2, unitPrice: 0.02, totalPrice: 0.04, description: '4.7K 0402 SMD resistor' }),
+        makeBomItem({ id: '3', partNumber: 'R1K', quantity: 2, unitPrice: 0.02, totalPrice: 0.04, description: '1K 0402 SMD resistor' }),
+        makeBomItem({ id: '4', partNumber: 'R100', quantity: 2, unitPrice: 0.02, totalPrice: 0.04, description: '100R 0402 SMD resistor' }),
       ];
       const result = analyzeBomCost(bom, { budget: 5 });
-      // Low-value, qty <=3, not through-hole, not non-essential => no suggestions
+      // Low-value, qty <=3, not through-hole, not non-essential, each is 25% (not >25%) => no suggestions
       expect(result.suggestions).toHaveLength(0);
     });
   });
