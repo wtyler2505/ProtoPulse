@@ -263,9 +263,9 @@ export class ChecklistManager {
   }
 
   private notify(): void {
-    for (const cb of this.subscribers) {
+    Array.from(this.subscribers).forEach((cb) => {
       cb();
-    }
+    });
   }
 
   private load(): void {
