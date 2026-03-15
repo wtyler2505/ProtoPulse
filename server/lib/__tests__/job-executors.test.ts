@@ -30,7 +30,7 @@ vi.mock('../../logger', () => ({
   },
 }));
 
-const mockStorage = {
+const mockStorage = vi.hoisted(() => ({
   getProject: vi.fn(),
   getNodes: vi.fn(),
   getEdges: vi.fn(),
@@ -39,7 +39,7 @@ const mockStorage = {
   getComponentParts: vi.fn(),
   bulkCreateValidationIssues: vi.fn(),
   createHistoryItem: vi.fn(),
-};
+}));
 
 vi.mock('../../storage', () => ({
   storage: mockStorage,

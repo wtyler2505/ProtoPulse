@@ -1,7 +1,8 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
-import { asyncHandler, parseIdParam, payloadLimit, nextRefDes, firstPinId } from './utils';
+import { asyncHandler, parseIdParam, payloadLimit, nextRefDes } from './utils';
 import { requireProjectOwnership } from '../routes/auth-middleware';
+import { mapEdgePins, extractConnectors } from '../lib/semantic-pin-mapper';
 
 export function registerCircuitExpansionRoutes(app: Express, storage: IStorage): void {
   app.post('/api/projects/:projectId/circuits/expand-architecture', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
@@ -80,7 +81,24 @@ export function registerCircuitExpansionRoutes(app: Express, storage: IStorage):
       instancePartMap.set(instance.id, matchedPart);
     }
 
-    // 6. Create circuit nets -- one per architecture edge
+    // 6. Pre-extract connectors per instance for semantic pin mapping
+    const instanceConnectors = new Map<number, ReturnType<typeof extractConnectors>>();
+    for (const [instanceId, part] of Array.from(instancePartMap.entries())) {
+      instanceConnectors.set(instanceId, extractConnectors(part));
+    }
+
+    // Track which pins are already claimed per instance
+    const usedPinsPerInstance = new Map<number, Set<string>>();
+    const getUsedPins = (instanceId: number): Set<string> => {
+      let set = usedPinsPerInstance.get(instanceId);
+      if (!set) {
+        set = new Set<string>();
+        usedPinsPerInstance.set(instanceId, set);
+      }
+      return set;
+    };
+
+    // 7. Create circuit nets -- one per architecture edge
     let netCounter = 0;
     for (const edge of archEdges) {
       const sourceInstanceId = archNodeIdToInstanceId.get(edge.source);
@@ -92,6 +110,16 @@ export function registerCircuitExpansionRoutes(app: Express, storage: IStorage):
       const signalType = (edge.signalType || 'signal').toLowerCase();
       const netType = signalType === 'power' ? 'power' : signalType === 'ground' ? 'ground' : signalType === 'bus' ? 'bus' : 'signal';
 
+      const srcConns = instanceConnectors.get(sourceInstanceId) ?? [];
+      const tgtConns = instanceConnectors.get(targetInstanceId) ?? [];
+      const { fromPin, toPin } = mapEdgePins(
+        srcConns,
+        tgtConns,
+        { label: edge.label, signalType: edge.signalType, netName: edge.netName, voltage: edge.voltage },
+        getUsedPins(sourceInstanceId),
+        getUsedPins(targetInstanceId),
+      );
+
       await storage.createCircuitNet({
         circuitId: circuit.id,
         name: netName,
@@ -100,16 +128,16 @@ export function registerCircuitExpansionRoutes(app: Express, storage: IStorage):
         busWidth: edge.busWidth ?? undefined,
         segments: [{
           fromInstanceId: sourceInstanceId,
-          fromPin: firstPinId(instancePartMap, sourceInstanceId),
+          fromPin: fromPin.pinId,
           toInstanceId: targetInstanceId,
-          toPin: firstPinId(instancePartMap, targetInstanceId),
+          toPin: toPin.pinId,
         }],
         labels: [],
         style: {},
       });
     }
 
-    // 7. Return the created circuit with summary
+    // 8. Return the created circuit with summary
     const instances = await storage.getCircuitInstances(circuit.id);
     const nets = await storage.getCircuitNets(circuit.id);
 
@@ -118,7 +146,6 @@ export function registerCircuitExpansionRoutes(app: Express, storage: IStorage):
       instanceCount: instances.length,
       netCount: nets.length,
       unmatchedNodes: archNodes.length - instances.length,
-      warning: "Net segments use each part's first pin as a placeholder. Review pin assignments in the schematic editor.",
     });
   }));
 }

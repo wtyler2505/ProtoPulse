@@ -10,8 +10,11 @@
 
 import { useState, useCallback } from 'react';
 import { useGenerativeDesign } from '@/lib/generative-design/generative-engine';
-import type { DesignSpec } from '@/lib/generative-design/generative-engine';
+import type { DesignSpec, CandidateEntry } from '@/lib/generative-design/generative-engine';
 import { defaultCriteria } from '@/lib/generative-design/fitness-scorer';
+import { compareCandidateWithCurrent, exportCandidate } from '@/lib/generative-design/generative-adopt';
+import type { ComparisonResult } from '@/lib/generative-design/generative-adopt';
+import { AdoptCandidateDialog } from '@/components/dialogs/AdoptCandidateDialog';
 import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
 
 // ---------------------------------------------------------------------------
@@ -47,6 +50,11 @@ export default function GenerativeDesignView() {
   const [populationSize, setPopulationSize] = useState(6);
   const [generations, setGenerations] = useState(5);
 
+  const [adoptDialogOpen, setAdoptDialogOpen] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateEntry | null>(null);
+  const [comparisonResult, setComparisonResult] = useState<ComparisonResult | null>(null);
+  const [showComparison, setShowComparison] = useState<string | null>(null); // candidate id
+
   const isRunning = state === 'generating' || state === 'scoring' || state === 'evolving';
 
   const handleGenerate = useCallback(() => {
@@ -65,6 +73,22 @@ export default function GenerativeDesignView() {
 
     void run(spec, [defaultBaseCircuit()]);
   }, [description, budgetUsd, maxWatts, maxTempC, populationSize, generations, run]);
+
+  const handleCompare = useCallback((candidate: CandidateEntry) => {
+    const currentIR = defaultBaseCircuit();
+    const result = compareCandidateWithCurrent(candidate, currentIR);
+    setComparisonResult(result);
+    setShowComparison((prev) => (prev === candidate.id ? null : candidate.id));
+  }, []);
+
+  const handleAdoptClick = useCallback((candidate: CandidateEntry) => {
+    setSelectedCandidate(candidate);
+    setAdoptDialogOpen(true);
+  }, []);
+
+  const handleExport = useCallback((candidate: CandidateEntry) => {
+    exportCandidate(candidate);
+  }, []);
 
   const latestResult = results.length > 0 ? results[results.length - 1] : null;
 
@@ -263,11 +287,77 @@ export default function GenerativeDesignView() {
                     ))}
                   </div>
                 )}
+
+                {/* Action buttons */}
+                <div className="mt-3 flex gap-1.5">
+                  <button
+                    data-testid={`compare-button-${candidate.id}`}
+                    onClick={() => { handleCompare(candidate); }}
+                    className="flex-1 rounded border border-zinc-600 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:border-cyan-600 transition-colors"
+                  >
+                    Compare
+                  </button>
+                  <button
+                    data-testid={`adopt-button-${candidate.id}`}
+                    onClick={() => { handleAdoptClick(candidate); }}
+                    className="flex-1 rounded bg-cyan-700 px-2 py-1 text-[11px] font-medium text-white hover:bg-cyan-600 transition-colors"
+                  >
+                    Adopt
+                  </button>
+                  <button
+                    data-testid={`export-button-${candidate.id}`}
+                    onClick={() => { handleExport(candidate); }}
+                    className="flex-1 rounded border border-zinc-600 px-2 py-1 text-[11px] text-zinc-300 hover:bg-zinc-800 hover:border-cyan-600 transition-colors"
+                  >
+                    Export
+                  </button>
+                </div>
+
+                {/* Inline comparison */}
+                {showComparison === candidate.id && comparisonResult && (
+                  <div
+                    data-testid={`comparison-panel-${candidate.id}`}
+                    className="mt-2 rounded border border-zinc-700 bg-zinc-800/50 p-2 text-xs space-y-1"
+                  >
+                    <div className="text-zinc-300 font-medium">vs Current</div>
+                    <div className="text-zinc-400">{comparisonResult.summary}</div>
+                    {comparisonResult.componentDiffs
+                      .filter((d) => d.status !== 'unchanged')
+                      .map((d) => (
+                        <div key={d.refdes} className="flex items-center gap-1.5">
+                          <span
+                            className={`text-[10px] uppercase font-medium ${
+                              d.status === 'added'
+                                ? 'text-green-400'
+                                : d.status === 'removed'
+                                  ? 'text-red-400'
+                                  : 'text-yellow-400'
+                            }`}
+                          >
+                            {d.status}
+                          </span>
+                          <span className="text-zinc-300 font-mono">{d.refdes}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Adopt dialog */}
+      <AdoptCandidateDialog
+        open={adoptDialogOpen}
+        onOpenChange={setAdoptDialogOpen}
+        candidate={selectedCandidate}
+        currentIR={defaultBaseCircuit()}
+        onAdopt={() => {
+          // AdoptResult is produced — in the future, this calls the project mutation
+          // to actually create architecture nodes. For now the dialog confirms the action.
+        }}
+      />
     </div>
   );
 }

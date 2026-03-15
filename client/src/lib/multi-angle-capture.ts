@@ -585,14 +585,16 @@ export function mergeMultiAngleResults(
   const suggestedBom =
     sorted.find((r) => r.result.suggestedBom !== null)?.result.suggestedBom ?? null;
 
-  // Compute boosted confidence: base confidence + boost from additional angles
-  // Each additional result adds a diminishing boost
+  // Compute boosted confidence: base confidence + boost from additional angles.
+  // Each additional result adds a diminishing boost. The formula is designed so
+  // that 2-3 medium-confidence results can reach 'high' when merged.
   const baseConfidence = confidenceToNumeric(best.confidence);
   let boost = 0;
   for (let i = 1; i < sorted.length; i++) {
     const additionalConfidence = confidenceToNumeric(sorted[i].result.confidence);
-    // Each additional result contributes a diminishing fraction
-    boost += additionalConfidence * (0.15 / i);
+    // Each additional result contributes a diminishing fraction:
+    // 1st extra: 20% of its confidence, 2nd: 10%, 3rd: ~6.7%, etc.
+    boost += additionalConfidence * (0.2 / i);
   }
   const finalScore = Math.min(0.95, baseConfidence + boost);
 

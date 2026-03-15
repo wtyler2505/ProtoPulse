@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
 import type { CandidateEntry } from '../generative-engine';
 import type { FitnessResult } from '../fitness-scorer';
@@ -424,6 +424,10 @@ describe('exportCandidate', () => {
       return node;
     });
     removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('creates a Blob with JSON content', () => {
