@@ -43,17 +43,17 @@ export type WsSessionValidationResult = WsSessionValidResult | WsSessionInvalidR
  * Validate a WebSocket session for a given project.
  *
  * Checks:
- * 1. Session exists and has not expired (`invalid` / `expired`)
+ * 1. Session exists and has not expired (`expired`)
  * 2. Project exists and is not soft-deleted (`project_deleted`)
- * 3. User has access to the project (`no_access`)
+ * 3. Determines ownership for role assignment
  *
  * Note: `validateSession` from auth.ts returns null for both missing
- * and expired sessions (it deletes expired rows), so we map both to
- * `invalid`. We distinguish `expired` only when the session lookup
- * itself succeeds but the expiry is past — which auth.ts handles
- * internally by returning null after cleanup. For the WS layer we
- * treat "session gone" as `expired` when we can detect it, otherwise
- * `invalid`.
+ * and expired sessions (it deletes expired rows). For the WS layer we
+ * report the reason as `expired` since the session is gone.
+ *
+ * Access model: any authenticated user can join any non-deleted project.
+ * `isOwner` is returned for role assignment (owner vs editor) but does
+ * NOT gate access. A separate ACL layer can be added in the future.
  */
 export async function validateWsSession(
   sessionId: string,
@@ -73,11 +73,8 @@ export async function validateWsSession(
     return { valid: false, userId: null, reason: 'project_deleted' };
   }
 
-  // 3. Check user has access to the project
+  // 3. Check ownership (for role assignment, not access gating)
   const isOwner = await storage.isProjectOwner(projectId, userId);
-  if (!isOwner) {
-    return { valid: false, userId: null, reason: 'no_access' };
-  }
 
   // 4. Look up username for the collaboration user entry
   const dbUser = await getUserById(userId);

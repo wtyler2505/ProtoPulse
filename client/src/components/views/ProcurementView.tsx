@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers, TrendingDown, History, CircuitBoard, Shield } from 'lucide-react';
+import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers, TrendingDown, History, CircuitBoard, Shield, ShieldCheck } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';
@@ -48,6 +48,7 @@ import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, Cost
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
 const AssemblyGroupPanel = lazy(() => import('./procurement/AssemblyGroupPanel').then((m) => ({ default: m.AssemblyGroupPanel })));
+const AvlCompliancePanel = lazy(() => import('./procurement/AvlCompliancePanel'));
 
 function ProcurementView() {
   const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem } = useBom();
@@ -339,6 +340,8 @@ function ProcurementView() {
           <TabsTrigger value="cost-optimizer" data-testid="tab-cost-optimizer"><TrendingDown className="h-4 w-4 mr-1.5" />Cost Optimizer</TabsTrigger>
           <TabsTrigger value="order-history" data-testid="tab-order-history"><History className="h-4 w-4 mr-1.5" />Order History</TabsTrigger>
           <TabsTrigger value="pcb-tracking" data-testid="tab-pcb-tracking"><CircuitBoard className="h-4 w-4 mr-1.5" />PCB Tracking</TabsTrigger>
+          <TabsTrigger value="risk-scorecard" data-testid="tab-risk-scorecard"><Shield className="h-4 w-4 mr-1.5" />Risk Scorecard</TabsTrigger>
+          <TabsTrigger value="avl-compliance" data-testid="tab-avl-compliance"><ShieldCheck className="h-4 w-4 mr-1.5" />AVL Compliance</TabsTrigger>
         </TabsList>
         <Button
           variant="outline"
@@ -412,6 +415,16 @@ function ProcurementView() {
 
       <TabsContent value="pcb-tracking" className="flex-1 overflow-auto mt-0">
         <PcbOrderTrackerPanel />
+      </TabsContent>
+
+      <TabsContent value="risk-scorecard" className="flex-1 overflow-auto mt-0">
+        <RiskScorecardPanel />
+      </TabsContent>
+
+      <TabsContent value="avl-compliance" className="flex-1 overflow-auto mt-0">
+        <Suspense fallback={<div className="flex items-center justify-center h-64 text-muted-foreground">Loading AVL compliance...</div>}>
+          <AvlCompliancePanel bom={bom} />
+        </Suspense>
       </TabsContent>
 
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />

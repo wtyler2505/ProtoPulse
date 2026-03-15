@@ -121,6 +121,7 @@ function setupDefaults(): void {
   mockValidateSession.mockResolvedValue({ userId: 1 });
   mockGetUserById.mockResolvedValue({ username: 'alice' });
   mockIsProjectOwner.mockResolvedValue(true);
+  mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
 }
 
 async function simulateJoin(
@@ -135,6 +136,7 @@ async function simulateJoin(
   mockValidateSession.mockResolvedValueOnce({ userId });
   mockGetUserById.mockResolvedValueOnce({ username });
   mockIsProjectOwner.mockResolvedValueOnce(isOwner);
+  mockGetProject.mockResolvedValueOnce({ id: projectId, ownerId: isOwner ? userId : 999 });
 
   const ws = new MockWebSocket();
   const url = `/ws/collab?projectId=${String(projectId)}&sessionId=${sessionId}`;

@@ -134,9 +134,22 @@ describe('risk-scorecard', () => {
           makeIssue({ severity: 'error' }),
           makeIssue({ severity: 'error' }),
           makeIssue({ severity: 'error' }),
+          makeIssue({ severity: 'warning' }),
+          makeIssue({ severity: 'warning' }),
+          makeIssue({ severity: 'warning' }),
+          makeIssue({ severity: 'warning' }),
+          makeIssue({ severity: 'warning' }),
         ],
-        bomItems: [],
-        nodes: [makeNode({ label: '', description: '' })],
+        bomItems: [
+          makeBomItem({ partNumber: '', manufacturer: 'Unknown', unitPrice: 0, status: 'Out of Stock', assemblyCategory: null }),
+          makeBomItem({ partNumber: '', manufacturer: 'Unknown', unitPrice: 0, status: 'Out of Stock', assemblyCategory: null }),
+        ],
+        nodes: [
+          makeNode({ label: '', description: '' }),
+          makeNode({ label: '', description: '' }),
+          makeNode({ label: '', description: '' }),
+          makeNode({ label: '', description: '' }),
+        ],
         edges: [],
       });
       expect(result.readiness).toBe('red');
@@ -650,14 +663,28 @@ describe('risk-scorecard', () => {
       expect(bom.score).toBe(100);
     });
 
-    it('handles all categories having zero scores', () => {
+    it('handles all categories having low scores', () => {
       const result = calculateScorecard({
         validationIssues: [
           makeIssue({ severity: 'error' }),
           makeIssue({ severity: 'error' }),
+          makeIssue({ severity: 'error' }),
+          makeIssue({ severity: 'warning' }),
+          makeIssue({ severity: 'warning' }),
+          makeIssue({ severity: 'warning' }),
+          makeIssue({ severity: 'warning' }),
+          makeIssue({ severity: 'warning' }),
         ],
-        bomItems: [],
-        nodes: [makeNode({ label: '', description: '' })],
+        bomItems: [
+          makeBomItem({ partNumber: '', manufacturer: 'Unknown', unitPrice: 0, status: 'Out of Stock', assemblyCategory: null }),
+          makeBomItem({ partNumber: '', manufacturer: 'Unknown', unitPrice: 0, status: 'Out of Stock', assemblyCategory: null }),
+        ],
+        nodes: [
+          makeNode({ label: '', description: '' }),
+          makeNode({ label: '', description: '' }),
+          makeNode({ label: '', description: '' }),
+          makeNode({ label: '', description: '' }),
+        ],
         edges: [],
       });
       expect(result.overallScore).toBeGreaterThanOrEqual(0);

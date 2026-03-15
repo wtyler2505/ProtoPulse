@@ -30,9 +30,12 @@ vi.mock('../auth', () => ({
   getUserById: (...args: unknown[]) => mockGetUserById(args[0] as number),
 }));
 
+const mockGetProject = vi.fn<(id: number) => Promise<{ id: number; ownerId: number | null } | undefined>>();
+
 vi.mock('../storage', () => ({
   storage: {
     isProjectOwner: (...args: unknown[]) => mockIsProjectOwner(args[0] as number, args[1] as number),
+    getProject: (...args: unknown[]) => mockGetProject(args[0] as number),
   },
 }));
 
@@ -128,6 +131,7 @@ async function simulateJoin(
   mockValidateSession.mockResolvedValueOnce({ userId });
   mockGetUserById.mockResolvedValueOnce({ username });
   mockIsProjectOwner.mockResolvedValueOnce(isOwner);
+  mockGetProject.mockResolvedValueOnce({ id: projectId, ownerId: isOwner ? userId : 999 });
 
   const ws = new MockWebSocket();
   const url = `/ws/collab?projectId=${String(projectId)}&sessionId=${sessionId}`;
@@ -170,6 +174,7 @@ describe('Collaboration Auth — Handshake', () => {
     mockValidateSession.mockResolvedValue({ userId: 1 });
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
+    mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });
@@ -338,6 +343,7 @@ describe('Collaboration Auth — Role Enforcement', () => {
     mockValidateSession.mockResolvedValue({ userId: 1 });
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
+    mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });
@@ -550,6 +556,7 @@ describe('Collaboration Auth — Lock Enforcement', () => {
     mockValidateSession.mockResolvedValue({ userId: 1 });
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
+    mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });
@@ -682,6 +689,7 @@ describe('Collaboration Auth — Room Isolation', () => {
     mockValidateSession.mockResolvedValue({ userId: 1 });
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
+    mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });
@@ -770,6 +778,7 @@ describe('Collaboration Auth — Reconnection', () => {
     mockValidateSession.mockResolvedValue({ userId: 1 });
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
+    mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });

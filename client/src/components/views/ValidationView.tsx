@@ -56,6 +56,9 @@ import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { validateBomCompleteness } from '@/lib/bom-validation';
 import type { BomCompletionIssue } from '@/lib/bom-validation';
+import { useDrcSuppression } from '@/lib/drc-suppression';
+import { DrcSuppressionDialog } from '@/components/views/DrcSuppressionDialog';
+import type { DrcSuppressionTarget } from '@/components/views/DrcSuppressionDialog';
 
 /** Brief explanations for validation rule categories (UX-043: "why this rule matters" tooltips).
  *  DRC_EXPLANATIONS (from shared/drc-engine) provides detailed beginner-friendly text for every
@@ -184,6 +187,21 @@ function ValidationViewContent() {
   const { toast } = useToast();
   const [pendingDismissId, setPendingDismissId] = useState<number | string | null>(null);
   const projectId = useProjectId();
+
+  // DRC Suppression (BL-0252)
+  const { suppressions, suppress, isSuppressed, activeCount: suppressionCount } = useDrcSuppression(projectId);
+  const [suppressTarget, setSuppressTarget] = useState<DrcSuppressionTarget | null>(null);
+  const [suppressDialogOpen, setSuppressDialogOpen] = useState(false);
+
+  const handleOpenSuppress = useCallback((target: DrcSuppressionTarget) => {
+    setSuppressTarget(target);
+    setSuppressDialogOpen(true);
+  }, []);
+
+  const handleSuppress = useCallback((input: Parameters<typeof suppress>[0]) => {
+    suppress(input);
+    toast({ title: 'Violation Suppressed', description: `"${suppressTarget?.ruleId}" suppressed. It will be hidden from the validation list.` });
+  }, [suppress, toast, suppressTarget]);
   const { data: componentParts } = useComponentParts(projectId);
 
   // Real project data for validation checks
@@ -454,11 +472,11 @@ function ValidationViewContent() {
     setSeverityFilter((prev) => ({ ...prev, [sev]: !prev[sev] }));
   }, []);
 
-  // Filter all issue arrays by severity
-  const filteredIssues = useMemo(() => issues.filter((i) => severityFilter[i.severity] !== false), [issues, severityFilter]);
-  const filteredComponentIssues = useMemo(() => componentIssues.filter((i) => severityFilter[i.severity] !== false), [componentIssues, severityFilter]);
-  const filteredDrcIssues = useMemo(() => drcIssues.filter((i) => severityFilter[i.severity] !== false), [drcIssues, severityFilter]);
-  const filteredErcViolations = useMemo(() => ercViolations.filter((v) => severityFilter[v.severity] !== false), [ercViolations, severityFilter]);
+  // Filter all issue arrays by severity + suppression (BL-0252)
+  const filteredIssues = useMemo(() => issues.filter((i) => severityFilter[i.severity] !== false && !isSuppressed('arch', String(i.id))), [issues, severityFilter, isSuppressed, suppressions]);
+  const filteredComponentIssues = useMemo(() => componentIssues.filter((i) => severityFilter[i.severity] !== false && !isSuppressed('comp', i.id)), [componentIssues, severityFilter, isSuppressed, suppressions]);
+  const filteredDrcIssues = useMemo(() => drcIssues.filter((i) => severityFilter[i.severity] !== false && !isSuppressed(i.ruleType, i.id)), [drcIssues, severityFilter, isSuppressed, suppressions]);
+  const filteredErcViolations = useMemo(() => ercViolations.filter((v) => severityFilter[v.severity] !== false && !isSuppressed(v.ruleType, v.id)), [ercViolations, severityFilter, isSuppressed, suppressions]);
 
   const totalIssues = issues.length + componentIssues.length + drcIssues.length + ercViolations.length;
   const filteredTotal = filteredIssues.length + filteredComponentIssues.length + filteredDrcIssues.length + filteredErcViolations.length;
@@ -609,6 +627,7 @@ function ValidationViewContent() {
           runValidation={runValidation}
           toast={toast}
           onIssueFocus={handleIssueFocus}
+          onSuppress={handleOpenSuppress}
         />
       </div>
 
@@ -978,6 +997,22 @@ function ValidationViewContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* DRC Suppression Dialog (BL-0252) */}
+      <DrcSuppressionDialog
+        open={suppressDialogOpen}
+        onOpenChange={setSuppressDialogOpen}
+        target={suppressTarget}
+        onSuppress={handleSuppress}
+      />
+
+      {/* Suppression count indicator */}
+      {suppressionCount > 0 && (
+        <div data-testid="suppression-count" className="w-full max-w-5xl mt-2 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          <ShieldOff className="w-3.5 h-3.5 text-yellow-500" />
+          <span>{suppressionCount} suppressed violation{suppressionCount !== 1 ? 's' : ''} hidden</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -1032,7 +1067,7 @@ function RuleGroupHeader({ ruleType, count }: { ruleType: string; count: number 
 const VirtualizedIssueList = memo(function VirtualizedIssueList({
   issues, componentIssues, drcIssues, ercIssues, hasComponentParts, getIcon,
   deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
-  onIssueFocus,
+  onIssueFocus, onSuppress,
 }: {
   issues: ArchIssue[];
   componentIssues: CompIssue[];
@@ -1047,6 +1082,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
   runValidation: () => void;
   toast: ReturnType<typeof useToast>['toast'];
   onIssueFocus?: (componentId: string | undefined) => void;
+  onSuppress?: (target: DrcSuppressionTarget) => void;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -1177,6 +1213,12 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                     <ContextMenuItem onSelect={() => { deleteValidationIssue(row.issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${row.issue.message}`); }}>Mark Resolved</ContextMenuItem>
                     <ContextMenuItem onSelect={() => { onIssueFocus ? onIssueFocus(row.issue.componentId) : setActiveView('architecture'); }}>View in Architecture</ContextMenuItem>
                     <ContextMenuItem onSelect={() => copyToClipboard(row.issue.message)}>Copy Issue Details</ContextMenuItem>
+                    {onSuppress && (
+                      <ContextMenuItem onSelect={() => { onSuppress({ ruleId: 'arch', instanceId: String(row.issue.id), message: row.issue.message, severity: row.issue.severity }); }}>
+                        <ShieldOff className="w-3.5 h-3.5 mr-1.5 text-yellow-500" />
+                        Suppress
+                      </ContextMenuItem>
+                    )}
                     <ContextMenuSeparator />
                     <ContextMenuItem className="text-destructive" onSelect={() => setPendingDismissId(row.issue.id)}>Dismiss Issue</ContextMenuItem>
                   </ContextMenuContent>
@@ -1238,7 +1280,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                   <div className="md:w-32 text-xs font-mono text-rose-500 bg-rose-500/10 px-2 py-1 self-start text-center">
                     {row.issue.componentId}
                   </div>
-                  <div className="md:w-32">
+                  <div className="md:w-32 flex flex-col gap-1">
                     <button
                       data-testid={`button-view-drc-${row.issue.id}`}
                       aria-label={`View in editor: ${row.issue.message}`}
@@ -1247,6 +1289,17 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                     >
                       View
                     </button>
+                    {onSuppress && (
+                      <button
+                        data-testid={`button-suppress-drc-${row.issue.id}`}
+                        aria-label={`Suppress: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onSuppress({ ruleId: row.issue.ruleType, instanceId: row.issue.id, message: row.issue.message, severity: row.issue.severity }); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-yellow-500/50 bg-background hover:bg-yellow-600 hover:text-white hover:border-yellow-600 px-3 py-1.5 w-full flex items-center justify-center gap-1"
+                      >
+                        <ShieldOff className="w-3 h-3" />
+                        Suppress
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1272,7 +1325,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                   <div className="md:w-32 text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-1 self-start text-center">
                     ERC
                   </div>
-                  <div className="md:w-32">
+                  <div className="md:w-32 flex flex-col gap-1">
                     <button
                       data-testid={`button-view-erc-${row.issue.id}`}
                       aria-label={`View in schematic: ${row.issue.message}`}
@@ -1281,6 +1334,17 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                     >
                       View
                     </button>
+                    {onSuppress && (
+                      <button
+                        data-testid={`button-suppress-erc-${row.issue.id}`}
+                        aria-label={`Suppress: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onSuppress({ ruleId: row.issue.ruleType, instanceId: row.issue.id, message: row.issue.message, severity: row.issue.severity }); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-yellow-500/50 bg-background hover:bg-yellow-600 hover:text-white hover:border-yellow-600 px-3 py-1.5 w-full flex items-center justify-center gap-1"
+                      >
+                        <ShieldOff className="w-3 h-3" />
+                        Suppress
+                      </button>
+                    )}
                   </div>
                 </div>
               )}

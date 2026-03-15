@@ -23,6 +23,7 @@ import { BreadboardComponentOverlay, detectFamily, getFamilyValues, getCurrentVa
 import BendableLegRenderer from './BendableLegRenderer';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import BreadboardConnectivityOverlay from './BreadboardConnectivityOverlay';
+import BreadboardDrcOverlay from './BreadboardDrcOverlay';
 import BreadboardWireEditor from './BreadboardWireEditor';
 import ToolButton from './ToolButton';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ import {
   Info,
   Activity,
   Square,
+  ShieldAlert,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -217,6 +219,7 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const updateWireMutation = useUpdateCircuitWire();
 
   const [tool, setTool] = useState<Tool>('select');
+  const [showDrc, setShowDrc] = useState(false);
   const [zoom, setZoom] = useState(3);
   const [panOffset, setPanOffset] = useState<PixelPos>({ x: 20, y: 20 });
   const [hoveredCoord, setHoveredCoord] = useState<BreadboardCoord | null>(null);
@@ -634,6 +637,8 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
         <ToolButton icon={ZoomIn} label="Zoom in" onClick={() => setZoom(z => Math.min(8, z + 0.5))} testId="tool-zoom-in" />
         <ToolButton icon={ZoomOut} label="Zoom out" onClick={() => setZoom(z => Math.max(1, z - 0.5))} testId="tool-zoom-out" />
         <ToolButton icon={RotateCcw} label="Reset view" onClick={() => { setZoom(3); setPanOffset({ x: 20, y: 20 }); }} testId="tool-reset-view" />
+        <div className="w-px h-4 bg-border mx-1" />
+        <ToolButton icon={ShieldAlert} label="DRC Check" active={showDrc} onClick={() => setShowDrc(d => !d)} testId="tool-drc-toggle" />
         <div className="flex-1" />
         <span className="text-[10px] text-muted-foreground tabular-nums">
           {zoom.toFixed(1)}x
@@ -849,6 +854,15 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
               nets={ratsnestNets}
               opacity={0.5}
               showLabels
+            />
+
+            {/* BL-0544: DRC overlay — shows violations when DRC toggle is active */}
+            <BreadboardDrcOverlay
+              nets={nets ?? []}
+              wires={breadboardWires}
+              instances={instances ?? []}
+              parts={parts ?? []}
+              visible={showDrc}
             />
 
             {/* BL-0542: Connectivity overlay — shows net coloring when simulation is active */}
