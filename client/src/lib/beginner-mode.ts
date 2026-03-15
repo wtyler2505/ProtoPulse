@@ -53,9 +53,9 @@ export const SIMPLIFIED_LABELS: ReadonlyMap<string, string> = new Map([
 /** Pre-built lowercase→simplified lookup for O(1) case-insensitive matching. */
 const LOWER_LABEL_MAP: ReadonlyMap<string, string> = (() => {
   const m = new Map<string, string>();
-  for (const [key, value] of SIMPLIFIED_LABELS) {
+  Array.from(SIMPLIFIED_LABELS.entries()).forEach(([key, value]) => {
     m.set(key.toLowerCase(), value);
-  }
+  });
   return m;
 })();
 
@@ -168,9 +168,9 @@ export class BeginnerMode {
   }
 
   private notify(): void {
-    for (const cb of this.subscribers) {
+    Array.from(this.subscribers).forEach((cb) => {
       cb();
-    }
+    });
   }
 }
 

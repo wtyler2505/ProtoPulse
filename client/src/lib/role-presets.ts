@@ -319,7 +319,7 @@ export class RolePresetManager {
   }
 
   private notify(): void {
-    for (const cb of this.subscribers) {
+    for (const cb of Array.from(this.subscribers)) {
       cb();
     }
   }
