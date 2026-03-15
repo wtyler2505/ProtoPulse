@@ -41,6 +41,7 @@ const ArduinoWorkbenchView = lazy(() => import('@/components/views/ArduinoWorkbe
 const StarterCircuitsPanel = lazy(() => import('@/components/views/StarterCircuitsPanel'));
 const ActivityFeedPanel = lazy(() => import('@/components/panels/ActivityFeedPanel'));
 const MentionBadge = lazy(() => import('@/components/ui/MentionBadge'));
+const WhatsNewPanel = lazy(() => import('@/components/ui/WhatsNewPanel'));
 const AuditTrailView = lazy(() => import('@/components/views/AuditTrailView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
