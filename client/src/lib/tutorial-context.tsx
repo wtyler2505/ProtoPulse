@@ -1,5 +1,7 @@
-import { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { getTutorialById } from '@/lib/tutorials';
+import { getTutorialTarget, highlightElement } from '@/lib/tutorial-navigation';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import type { Tutorial, TutorialStep } from '@/lib/tutorials';
 
 const STORAGE_KEY = 'protopulse-completed-tutorials';
