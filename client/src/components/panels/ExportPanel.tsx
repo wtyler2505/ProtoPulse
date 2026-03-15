@@ -37,9 +37,12 @@ import ImportPreviewDialog from '@/components/panels/ImportPreviewDialog';
 import ExportPrecheckPanel from '@/components/panels/ExportPrecheckPanel';
 import ImportWarningsPanel from '@/components/panels/ImportWarningsPanel';
 import ImportHistoryPanel from '@/components/panels/ImportHistoryPanel';
+import ImportRepairDialog from '@/components/panels/ImportRepairDialog';
 import ExportProfileSelector from '@/components/panels/ExportProfileSelector';
 import { generateImportWarnings } from '@/lib/import-warnings';
+import { repairImportedDesign } from '@/lib/import-repair';
 import type { ImportWarning } from '@/lib/import-warnings';
+import type { RepairResult } from '@/lib/import-repair';
 import type { ProjectExportData } from '@/lib/export-validation';
 import type { ImportPreview } from '@/lib/import-preview';
 import type { ImportHistoryEntry } from '@/lib/import-history';
@@ -307,6 +310,11 @@ function ExportPanel() {
 
   // -- Import history state --
   const [importHistoryExpanded, setImportHistoryExpanded] = useState(false);
+
+  // -- Import repair state --
+  const [repairResult, setRepairResult] = useState<RepairResult | null>(null);
+  const [repairFileName, setRepairFileName] = useState('');
+  const [repairDialogOpen, setRepairDialogOpen] = useState(false);
 
   // -- Pick-and-place preview state --
   const [pickPlaceEntries, setPickPlaceEntries] = useState<PlacementEntry[] | null>(null);

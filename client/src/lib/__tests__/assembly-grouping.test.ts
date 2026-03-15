@@ -7,8 +7,8 @@ import {
   GROUP_COLORS,
   GROUP_DESCRIPTIONS,
 } from '../assembly-grouping';
-import type { AssemblyGroup, GroupedBomItem, AssemblyGroupingResult } from '../assembly-grouping';
-import type { BomItem } from '@shared/schema';
+import type { AssemblyGroup } from '../assembly-grouping';
+import type { BomItem } from '@/lib/project-context';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -16,28 +16,17 @@ import type { BomItem } from '@shared/schema';
 
 function makeBomItem(overrides: Partial<BomItem> = {}): BomItem {
   return {
-    id: 1,
-    projectId: 1,
+    id: '1',
     partNumber: 'TEST-001',
     manufacturer: 'TestCo',
     description: 'Test component',
     quantity: 1,
-    unitPrice: '1.0000',
-    totalPrice: '1.0000',
+    unitPrice: 1,
+    totalPrice: 1,
     supplier: 'Digi-Key',
     stock: 10,
     status: 'In Stock',
-    leadTime: null,
-    datasheetUrl: null,
-    manufacturerUrl: null,
-    storageLocation: null,
-    quantityOnHand: null,
-    minimumStock: null,
-    esdSensitive: null,
-    assemblyCategory: null,
-    version: 1,
-    updatedAt: new Date(),
-    deletedAt: null,
+    ...overrides,
   } as BomItem;
 }
 
