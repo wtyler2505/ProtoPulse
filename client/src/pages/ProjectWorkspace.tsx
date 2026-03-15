@@ -590,6 +590,38 @@ function WorkspaceContent() {
   const bomCount = (bom ?? []).length;
   const activeTabId = `tab-${activeView}`;
 
+  /* BL-0314: Check milestones when project state changes */
+  useEffect(() => {
+    const safeBom = bom ?? [];
+    const milestoneState: MilestoneProjectState = {
+      architectureNodeCount: (nodes ?? []).length,
+      architectureEdgeCount: (edges ?? []).length,
+      circuitInstanceCount: 0,
+      circuitWireCount: 0,
+      bomItemCount: safeBom.length,
+      bomItemsWithPartNumbers: safeBom.filter((b) => b.partNumber && b.partNumber.trim() !== '').length,
+      bomItemsWithPrices: safeBom.filter((b) => Number(b.unitPrice) > 0).length,
+      hasRunSimulation: false,
+      hasPcbLayout: false,
+      pcbTraceCount: 0,
+      hasExported: false,
+      hasFabOrder: false,
+      drcCleanRunCount: 0,
+      drcTotalRunCount: 0,
+      validationErrorCount,
+    };
+    const tracker = MilestoneTracker.getInstance();
+    const newlyUnlocked = tracker.checkMilestones(milestoneState);
+    if (newlyUnlocked.length > 0) {
+      for (const id of newlyUnlocked) {
+        const milestone = tracker.getMilestone(id);
+        if (milestone) {
+          toast({ title: `Milestone Unlocked: ${milestone.name}`, description: milestone.reward });
+        }
+      }
+    }
+  }, [nodes, edges, bom, validationErrorCount, toast]);
+
   /* UI-18: If current view is hidden by progressive disclosure, redirect to architecture */
   useEffect(() => {
     if (!alwaysVisibleIds.has(activeView) && !hasDesignContent) {
@@ -880,7 +912,11 @@ function WorkspaceContent() {
             <WorkflowBreadcrumb />
           </Suspense>
 
-          <div key={activeView} role="tabpanel" id="main-panel" aria-labelledby={activeTabId} className="view-enter flex-1 relative overflow-hidden bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
+          <div key={activeView} role="tabpanel" id="main-panel" aria-labelledby={activeTabId} className="view-enter flex-1 relative overflow-hidden flex flex-col bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
+              <Suspense fallback={null}>
+                <ViewOnboardingHint viewName={activeView} />
+              </Suspense>
+              <div className="flex-1 relative overflow-hidden">
               {activeView === 'dashboard' && (
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>

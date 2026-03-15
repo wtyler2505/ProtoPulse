@@ -196,27 +196,26 @@ export function meetsWcagAAA(ratio: number): boolean {
  * CSS variable overrides that improve contrast on the default dark theme
  * to meet WCAG AA (4.5:1 minimum for normal text).
  *
- * The primary violations in the default Neon Cyan theme are:
+ * The primary contrast improvements in the default Neon Cyan theme:
  *
  * 1. `--color-muted-foreground` hsl(215 15% 55%) on `--color-background`
- *    hsl(225 20% 3%) → ratio ~4.27:1, FAILS AA.
- *    Fix: bump lightness from 55% → 63% → ratio ~5.74:1 ✓
+ *    hsl(225 20% 3%) → ratio ~5.67:1 (passes AA, but marginal on muted surfaces).
+ *    On `--color-muted` hsl(225 12% 10%) → ratio ~5.00:1 (barely passes).
+ *    Fix: bump lightness from 55% → 63% → bg ratio ~7.42:1, muted ratio ~6.54:1
+ *    This gives comfortable margin and brings other themes (50% lightness) into compliance.
  *
- * 2. `--color-muted-foreground` on `--color-muted` hsl(225 12% 10%) → ~3.49:1
- *    Also fixed by the same lightness bump → ~4.65:1 ✓
+ * 2. `--color-border` hsl(225 12% 14%) is very subtle on dark backgrounds.
+ *    Decorative borders are exempt from WCAG 1.4.11, but improved visibility
+ *    helps usability. Bump from 14% → 20% for better visual separation.
  *
- * 3. `--color-muted-foreground` on `--color-card` hsl(225 18% 5%) → ~4.07:1
- *    Also fixed by lightness bump → ~5.43:1 ✓
- *
- * 4. `--color-border` hsl(225 12% 14%) on `--color-background` → ~1.53:1
- *    Borders need >= 3:1 for UI components per WCAG 1.4.11.
- *    Fix: bump lightness from 14% → 20% → ratio ~3.15:1 ✓
+ * 3. Other themes' muted-foreground at 50% lightness FAILS AA on muted/card
+ *    surfaces. See THEME_MUTED_FIXES for per-theme corrections.
  */
 export const CONTRAST_FIXES: Record<string, string> = {
-  // Muted foreground: 55% → 63% lightness — ensures >= 4.5:1 against all dark surfaces
+  // Muted foreground: 55% → 63% lightness — comfortable AA margin on all dark surfaces
   '--color-muted-foreground': 'hsl(215 15% 63%)',
 
-  // Border: 14% → 20% lightness — ensures >= 3:1 against background for UI components
+  // Border: 14% → 20% lightness — improved visual separation (decorative, not WCAG-required)
   '--color-border': 'hsl(225 12% 20%)',
 
   // Input border: mirrors --color-border

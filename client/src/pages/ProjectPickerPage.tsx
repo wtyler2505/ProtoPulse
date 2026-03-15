@@ -20,7 +20,9 @@ import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { RecentProjectsManager } from '@/lib/recent-projects';
 import { RecentProjectsList } from '@/components/layout/RecentProjectsList';
 import TeamTemplateSelector from '@/components/views/TeamTemplateSelector';
+import SampleProjectGallery from '@/components/views/SampleProjectGallery';
 import type { AppliedTemplate } from '@/lib/team-templates';
+import type { SampleProject } from '@/lib/sample-projects';
 import type { Project } from '@shared/schema';
 
 const LAST_PROJECT_KEY = 'protopulse-last-project';
