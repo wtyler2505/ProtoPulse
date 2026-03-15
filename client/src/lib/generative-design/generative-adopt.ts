@@ -284,7 +284,7 @@ export function adoptCandidate(candidate: CandidateEntry): AdoptResult {
   let edgeIndex = 0;
   for (const [netName, compIds] of Array.from(netToComponents.entries())) {
     // Connect in chain: comp[0]->comp[1], comp[1]->comp[2], etc.
-    const uniqueIds = [...new Set(compIds)];
+    const uniqueIds = Array.from(new Set(compIds));
     for (let i = 0; i < uniqueIds.length - 1; i++) {
       edges.push({
         edgeId: `gen-edge-${edgeIndex++}`,
