@@ -96,7 +96,7 @@ const MIDNIGHT_PURPLE: ThemePreset = {
     '--color-secondary': 'hsl(300 70% 55%)',
     '--color-secondary-foreground': 'hsl(250 15% 98%)',
     '--color-muted': 'hsl(250 18% 10%)',
-    '--color-muted-foreground': 'hsl(250 12% 55%)',
+    '--color-muted-foreground': 'hsl(250 12% 63%)',
     '--color-accent': 'hsl(270 90% 65%)',
     '--color-accent-foreground': 'hsl(250 30% 4%)',
     '--color-editor-accent': '#A855F7',
