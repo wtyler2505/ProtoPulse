@@ -465,6 +465,17 @@ export default function CommunityView() {
           onDownload={handleDownload}
           onRate={handleRate}
         />
+        {bomPromptPart && (
+          <AddToBomPrompt
+            bomPreview={mapCommunityPartToBom(bomPromptPart)}
+            componentName={bomPromptPart.name}
+            onConfirm={(item) => {
+              addBomItem(item);
+              setBomPromptPart(null);
+            }}
+            onDismiss={() => { setBomPromptPart(null); }}
+          />
+        )}
       </div>
     );
   }
@@ -622,6 +633,18 @@ export default function CommunityView() {
           </ScrollArea>
         </TabsContent>
       </Tabs>
+
+      {bomPromptPart && (
+        <AddToBomPrompt
+          bomPreview={mapCommunityPartToBom(bomPromptPart)}
+          componentName={bomPromptPart.name}
+          onConfirm={(item) => {
+            addBomItem(item);
+            setBomPromptPart(null);
+          }}
+          onDismiss={() => { setBomPromptPart(null); }}
+        />
+      )}
     </div>
   );
 }

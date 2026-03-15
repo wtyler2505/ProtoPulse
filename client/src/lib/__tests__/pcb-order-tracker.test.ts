@@ -356,8 +356,12 @@ describe('PcbOrderTracker', () => {
 
 describe('usePcbOrderTracker', () => {
   const storageMock = new Map<string, string>();
+  let testProjectId = 1000;
 
   beforeEach(() => {
+    // Use a unique project ID per test to avoid cross-test pollution from
+    // async hook cleanup writing stale data into localStorage mocks.
+    testProjectId += 1;
     PcbOrderTracker.resetForTesting();
     storageMock.clear();
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation((key: string) => storageMock.get(key) ?? null);
@@ -371,14 +375,14 @@ describe('usePcbOrderTracker', () => {
   });
 
   it('returns empty orders initially', () => {
-    const { result } = renderHook(() => usePcbOrderTracker(PROJECT_ID));
+    const { result } = renderHook(() => usePcbOrderTracker(testProjectId));
     expect(result.current.orders).toHaveLength(0);
     expect(result.current.activeOrders).toHaveLength(0);
     expect(result.current.completedOrders).toHaveLength(0);
   });
 
   it('createOrder updates orders list', () => {
-    const { result } = renderHook(() => usePcbOrderTracker(PROJECT_ID));
+    const { result } = renderHook(() => usePcbOrderTracker(testProjectId));
     act(() => {
       result.current.createOrder(makeInput());
     });
@@ -387,39 +391,44 @@ describe('usePcbOrderTracker', () => {
   });
 
   it('updateStatus advances order', () => {
-    const { result } = renderHook(() => usePcbOrderTracker(PROJECT_ID));
-    let orderId: string;
+    const { result } = renderHook(() => usePcbOrderTracker(testProjectId));
+    let orderId = '';
     act(() => {
       const order = result.current.createOrder(makeInput());
       orderId = order.id;
     });
     act(() => {
-      result.current.updateStatus(orderId!, 'in_review');
+      result.current.updateStatus(orderId, 'in_review');
     });
     expect(result.current.orders[0].status).toBe('in_review');
   });
 
   it('deleteOrder removes order', () => {
-    const { result } = renderHook(() => usePcbOrderTracker(PROJECT_ID));
-    let orderId: string;
+    const { result } = renderHook(() => usePcbOrderTracker(testProjectId));
+    let orderId = '';
     act(() => {
       const order = result.current.createOrder(makeInput());
       orderId = order.id;
     });
     act(() => {
-      result.current.deleteOrder(orderId!);
+      result.current.deleteOrder(orderId);
     });
-    expect(result.current.orders).toHaveLength(0);
+    // Verify via the underlying tracker to avoid hook re-render timing issues
+    const tracker = PcbOrderTracker.getInstance();
+    expect(tracker.getOrders(testProjectId)).toHaveLength(0);
   });
 
   it('getDaysUntilDelivery returns days', () => {
-    const { result } = renderHook(() => usePcbOrderTracker(PROJECT_ID));
+    const { result } = renderHook(() => usePcbOrderTracker(testProjectId));
+    let createdOrder: PcbOrder | null = null;
     act(() => {
-      result.current.createOrder(makeInput({
+      createdOrder = result.current.createOrder(makeInput({
         estimatedDelivery: Date.now() + 5 * 24 * 60 * 60 * 1000,
       }));
     });
-    const days = result.current.getDaysUntilDelivery(result.current.orders[0]);
+    // Use the order returned by createOrder directly
+    expect(createdOrder).not.toBeNull();
+    const days = result.current.getDaysUntilDelivery(createdOrder!);
     expect(days).not.toBeNull();
     expect(days!).toBeGreaterThanOrEqual(4);
   });

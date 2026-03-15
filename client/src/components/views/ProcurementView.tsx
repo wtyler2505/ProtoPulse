@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers, TrendingDown, History } from 'lucide-react';
+import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers, TrendingDown, History, CircuitBoard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';
@@ -42,6 +42,7 @@ import type { ManufacturingPackageInput } from '@/lib/manufacturing-validator';
 import { AssemblyRiskHeatmap } from './procurement/AssemblyRiskHeatmap';
 import { CostOptimizerPanel } from './procurement/CostOptimizerPanel';
 import { OrderHistoryPanel } from './procurement/OrderHistoryPanel';
+import { PcbOrderTrackerPanel } from './procurement/PcbOrderTrackerPanel';
 import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, CostBreakdown } from './procurement';
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
@@ -336,6 +337,7 @@ function ProcurementView() {
           <TabsTrigger value="assembly-groups" data-testid="tab-assembly-groups"><Layers className="h-4 w-4 mr-1.5" />Assembly Groups</TabsTrigger>
           <TabsTrigger value="cost-optimizer" data-testid="tab-cost-optimizer"><TrendingDown className="h-4 w-4 mr-1.5" />Cost Optimizer</TabsTrigger>
           <TabsTrigger value="order-history" data-testid="tab-order-history"><History className="h-4 w-4 mr-1.5" />Order History</TabsTrigger>
+          <TabsTrigger value="pcb-tracking" data-testid="tab-pcb-tracking"><CircuitBoard className="h-4 w-4 mr-1.5" />PCB Tracking</TabsTrigger>
         </TabsList>
         <Button
           variant="outline"
@@ -405,6 +407,10 @@ function ProcurementView() {
 
       <TabsContent value="order-history" className="flex-1 overflow-auto mt-0">
         <OrderHistoryPanel />
+      </TabsContent>
+
+      <TabsContent value="pcb-tracking" className="flex-1 overflow-auto mt-0">
+        <PcbOrderTrackerPanel />
       </TabsContent>
 
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />

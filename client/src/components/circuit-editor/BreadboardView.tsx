@@ -780,26 +780,22 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
               );
             })}
 
-            {/* Wire selection highlight */}
-            {selectedWireId != null && (() => {
-              const wire = breadboardWires.find(w => w.id === selectedWireId);
-              if (!wire) return null;
-              const pts = (wire.points as Array<{ x: number; y: number }>) ?? [];
-              if (pts.length < 2) return null;
-              const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-              return (
-                <path
-                  d={pathD}
-                  stroke="#facc15"
-                  strokeWidth={(wire.width ?? 1.5) + 1}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                  opacity={0.5}
-                  pointerEvents="none"
-                />
-              );
-            })()}
+            {/* BL-0543: Wire editing overlay (select, delete, drag endpoints) */}
+            <BreadboardWireEditor
+              wires={breadboardWires.map((w: CircuitWireRow) => ({
+                id: w.id,
+                points: (w.points as Array<{ x: number; y: number }>) ?? [],
+                width: w.width,
+                color: w.color,
+                view: w.view,
+              }))}
+              selectedWireId={selectedWireId}
+              onSelectWire={setSelectedWireId}
+              onDeleteWire={handleDeleteWireById}
+              onMoveEndpoint={handleMoveEndpoint}
+              zoom={zoom}
+              active={tool === 'select'}
+            />
 
             {/* Wire in progress */}
             {wireInProgress && wireInProgress.points.length >= 1 && (

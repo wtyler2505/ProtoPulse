@@ -199,7 +199,7 @@ export function diffPreset(presetId: DrcPresetId): RuleDiff[] {
 
     // Compare each param
     const allParamKeys = new Set([...Object.keys(def.params), ...Object.keys(app.params)]);
-    for (const key of allParamKeys) {
+    for (const key of Array.from(allParamKeys)) {
       const defVal = def.params[key];
       const appVal = app.params[key];
       if (defVal !== appVal) {
