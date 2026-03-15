@@ -131,6 +131,17 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
+
+  /*
+   * BL-0321: Global focus-visible indicator for all interactive elements.
+   * Uses the neon-cyan theme color (#00F0FF) with 2px solid outline + 2px offset.
+   * Individual components may override via more specific selectors or Tailwind
+   * focus-visible:ring-* / focus-visible:outline-* utilities.
+   */
+  :focus-visible {
+    outline: 2px solid #00F0FF;
+    outline-offset: 2px;
+  }
 }
 
 @layer utilities {
