@@ -47,6 +47,7 @@ interface TutorialContextValue {
 const TutorialContext = createContext<TutorialContextValue | undefined>(undefined);
 
 export function TutorialProvider({ children }: { children: React.ReactNode }) {
+  const { setActiveView } = useProjectMeta();
   const [activeTutorial, setActiveTutorial] = useState<Tutorial | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedTutorials, setCompletedTutorials] = useState<string[]>(loadCompletedTutorials);
@@ -61,6 +62,47 @@ export function TutorialProvider({ children }: { children: React.ReactNode }) {
     }),
     [currentStepIndex, activeTutorial],
   );
+
+  // Navigate to target view and highlight target element when step changes
+  const highlightCleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    // Clean up previous highlight
+    if (highlightCleanupRef.current) {
+      highlightCleanupRef.current();
+      highlightCleanupRef.current = null;
+    }
+
+    if (!currentStep) {
+      return;
+    }
+
+    const target = getTutorialTarget(currentStep);
+    if (!target) {
+      return;
+    }
+
+    // Navigate to the target view
+    setActiveView(target.view);
+
+    // Highlight the target element after a brief delay to allow view to render
+    if (target.elementSelector) {
+      const timer = window.setTimeout(() => {
+        highlightCleanupRef.current = highlightElement(
+          target.elementSelector!,
+          target.highlightDuration,
+        );
+      }, 100);
+
+      return () => {
+        window.clearTimeout(timer);
+        if (highlightCleanupRef.current) {
+          highlightCleanupRef.current();
+          highlightCleanupRef.current = null;
+        }
+      };
+    }
+  }, [currentStep, setActiveView]);
 
   const startTutorial = useCallback((tutorialId: string) => {
     const tutorial = getTutorialById(tutorialId);
