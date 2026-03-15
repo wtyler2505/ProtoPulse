@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
 import type { CandidateEntry } from '../generative-engine';
 import type { FitnessResult } from '../fitness-scorer';
@@ -405,18 +405,19 @@ describe('buildExportPayload', () => {
 // ---------------------------------------------------------------------------
 
 describe('exportCandidate', () => {
-  let createObjectURLMock: (obj: Blob | MediaSource) => string;
-  let revokeObjectURLMock: (url: string) => void;
+  let createObjectURLSpy: Mock;
+  let revokeObjectURLSpy: Mock;
   let appendChildSpy: ReturnType<typeof vi.spyOn>;
   let removeChildSpy: ReturnType<typeof vi.spyOn>;
   let clickedLink: HTMLAnchorElement | null = null;
 
   beforeEach(() => {
     clickedLink = null;
-    createObjectURLMock = vi.fn<(obj: Blob | MediaSource) => string>().mockReturnValue('blob:mock-url');
-    revokeObjectURLMock = vi.fn<(url: string) => void>();
-    globalThis.URL.createObjectURL = createObjectURLMock;
-    globalThis.URL.revokeObjectURL = revokeObjectURLMock;
+    createObjectURLSpy = vi.fn() as Mock;
+    createObjectURLSpy.mockReturnValue('blob:mock-url');
+    revokeObjectURLSpy = vi.fn() as Mock;
+    globalThis.URL.createObjectURL = createObjectURLSpy as unknown as typeof URL.createObjectURL;
+    globalThis.URL.revokeObjectURL = revokeObjectURLSpy as unknown as typeof URL.revokeObjectURL;
 
     appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => {
       clickedLink = node as HTMLAnchorElement;
@@ -429,8 +430,8 @@ describe('exportCandidate', () => {
     const candidate = makeCandidate();
     exportCandidate(candidate);
 
-    expect(createObjectURLMock).toHaveBeenCalledOnce();
-    const blob = createObjectURLMock.mock.calls[0][0] as Blob;
+    expect(createObjectURLSpy).toHaveBeenCalledOnce();
+    const blob = createObjectURLSpy.mock.calls[0][0] as Blob;
     expect(blob).toBeInstanceOf(Blob);
     expect(blob.type).toBe('application/json');
   });
@@ -455,7 +456,7 @@ describe('exportCandidate', () => {
     const candidate = makeCandidate();
     exportCandidate(candidate);
 
-    expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:mock-url');
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock-url');
   });
 
   it('sets noopener noreferrer on the link', () => {

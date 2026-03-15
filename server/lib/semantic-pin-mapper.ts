@@ -76,16 +76,18 @@ const GROUND_PATTERNS = /^(gnd|vss|v\-|ground|agnd|dgnd|pgnd)$/i;
 const POWER_LABEL_PATTERNS = /(?:^|[\s_\-/])(power|vcc|vdd|vin|vbus|vbat|vsys|3\.?3\s*v|5\s*v|12\s*v|supply)(?:$|[\s_\-/])/i;
 const GROUND_LABEL_PATTERNS = /(?:^|[\s_\-/])(ground|gnd|vss)(?:$|[\s_\-/])/i;
 
-const I2C_LABEL_PATTERNS = /\b(i2c|iic|twi)\b/i;
-const SPI_LABEL_PATTERNS = /\b(spi)\b/i;
-const UART_LABEL_PATTERNS = /\b(uart|usart|serial|rs232|rs485)\b/i;
-const ANALOG_LABEL_PATTERNS = /\b(adc|analog|ain|analogue)\b/i;
+// Use underscore-aware boundaries so patterns match in underscore-separated
+// tokens like "i2c_data" or "ain_temp" (regex \b treats _ as a word char).
+const I2C_LABEL_PATTERNS = /(?:^|[\s\-/,.])(i2c|iic|twi)(?:$|[\s\-/,._])/i;
+const SPI_LABEL_PATTERNS = /(?:^|[\s\-/,.])(spi)(?:$|[\s\-/,._])/i;
+const UART_LABEL_PATTERNS = /(?:^|[\s\-/,.])(uart|usart|serial|rs232|rs485)(?:$|[\s\-/,._])/i;
+const ANALOG_LABEL_PATTERNS = /(?:^|[\s\-/,.])(adc|analog|ain|analogue)(?:$|[\s\-/,._])/i;
 
 // Pin name patterns for protocol matching
 const I2C_SDA_PATTERNS = /^(sda|i2c_sda|twi_sda|data)$/i;
 const I2C_SCL_PATTERNS = /^(scl|i2c_scl|twi_scl|clock|clk)$/i;
 
-const SPI_MOSI_PATTERNS = /^(mosi|spi_mosi|sdi|din|si|dout)$/i;
+const SPI_MOSI_PATTERNS = /^(mosi|spi_mosi|sdi|di|din|si|dout)$/i;
 const SPI_MISO_PATTERNS = /^(miso|spi_miso|sdo|do|so)$/i;
 const SPI_SCK_PATTERNS = /^(sck|spi_sck|sclk|spi_clk|clk)$/i;
 const SPI_CS_PATTERNS = /^(cs|ss|nss|spi_cs|spi_ss|ce|csn|ncs)$/i;
@@ -95,7 +97,10 @@ const UART_RX_PATTERNS = /^(rx|rxd|uart_rx|usart_rx|rxi|din|rin)$/i;
 
 const ANALOG_PIN_PATTERNS = /^(a\d+|adc\d*|ain\d*|an\d+|analog\d*)$/i;
 
-const DIGITAL_PIN_PATTERNS = /^(d\d+|gpio\d*|io\d+|p[a-d]\d+|pb\d+|pc\d+|pd\d+|pa\d+|digital\d*)$/i;
+// Preferred digital pins: explicit D-prefix, GPIO, IO naming
+const DIGITAL_PIN_PREFERRED = /^(d\d+|gpio\d*|io\d+|digital\d*)$/i;
+// Fallback digital pins: port-based naming (PB0, PA1, etc.)
+const DIGITAL_PIN_PORT = /^(p[a-d]\d+|pb\d+|pc\d+|pd\d+|pa\d+)$/i;
 
 // ---------------------------------------------------------------------------
 // Core matcher
@@ -234,12 +239,17 @@ export function mapPin(
     }
   }
 
-  // 7. Digital / GPIO
+  // 7. Digital / GPIO — prefer explicit D-prefix/GPIO pins, fall back to port-based
   if (edgeSignal === 'signal' || edgeSignal === '' || edgeSignal === 'bus') {
-    const digitalPins = connectors.filter((c) => DIGITAL_PIN_PATTERNS.test(c.name));
-    const match = pickBest(digitalPins);
-    if (match) {
-      return { pinId: match.id, strategy: 'digital' };
+    const preferredPins = connectors.filter((c) => DIGITAL_PIN_PREFERRED.test(c.name));
+    const preferred = pickBest(preferredPins);
+    if (preferred) {
+      return { pinId: preferred.id, strategy: 'digital' };
+    }
+    const portPins = connectors.filter((c) => DIGITAL_PIN_PORT.test(c.name));
+    const port = pickBest(portPins);
+    if (port) {
+      return { pinId: port.id, strategy: 'digital' };
     }
   }
 

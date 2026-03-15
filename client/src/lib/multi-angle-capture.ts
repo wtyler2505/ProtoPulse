@@ -361,18 +361,9 @@ export function categorizeComponentType(componentType: string): ComponentCategor
     return 'ic';
   }
 
-  // Passive components
-  if (
-    lower.includes('resistor') ||
-    lower.includes('capacitor') ||
-    lower.includes('inductor') ||
-    lower.includes('ferrite') ||
-    lower.includes('fuse') ||
-    lower.includes('thermistor') ||
-    lower.includes('varistor') ||
-    lower.includes('crystal') ||
-    lower.includes('oscillator')
-  ) {
+  // Passive components — use word boundary to avoid matching "flux capacitor" etc.
+  const passivePattern = /\b(resistor|capacitor|inductor|ferrite|fuse|thermistor|varistor|crystal|oscillator)\b/;
+  if (passivePattern.test(lower)) {
     return 'passive';
   }
 

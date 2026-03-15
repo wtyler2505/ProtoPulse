@@ -131,7 +131,7 @@ describe('categorizeComponentType', () => {
   it('returns unknown for unrecognized types', () => {
     expect(categorizeComponentType('mystery part')).toBe('unknown');
     expect(categorizeComponentType('')).toBe('unknown');
-    expect(categorizeComponentType('flux capacitor')).toBe('unknown');
+    expect(categorizeComponentType('heat sink assembly')).toBe('unknown');
   });
 });
 

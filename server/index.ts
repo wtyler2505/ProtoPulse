@@ -305,6 +305,11 @@ app.use((req, res, next) => {
 
   await registerRoutes(app);
 
+  // Register async job executors and validate all types have handlers
+  const { registerAllExecutors, validateExecutorRegistration } = await import('./lib/job-executors');
+  registerAllExecutors();
+  validateExecutorRegistration();
+
   // Auto-seed standard component library on first run
   try {
     const { componentLibrary } = await import('@shared/schema');
