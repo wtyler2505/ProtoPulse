@@ -111,7 +111,6 @@ describe('mapResultToBomItem', () => {
     expect(bom!.description).toContain("Ohm's Law");
     expect(bom!.partNumber).toMatch(/^CALC-RES-/);
     expect(bom!.quantity).toBe(1);
-    expect(bom!.unitPrice).toBe('0.0000');
     expect(bom!.status).toBe('In Stock');
   });
 

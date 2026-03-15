@@ -44,9 +44,7 @@ export interface PartialBomItem {
   description: string;
   partNumber: string;
   manufacturer: string;
-  supplier: string;
   quantity: number;
-  unitPrice: string;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'On Order';
 }
 
@@ -151,9 +149,7 @@ export function mapResultToBomItem(result: CalcResult): PartialBomItem | null {
     description: `${typeDesc} ${formatted} (from ${formatCalculatorDisplayName(result.calculatorName)} calculator)`,
     partNumber: `CALC-${componentType.toUpperCase().slice(0, 3)}-${formatPartNumberValue(result.value, result.unit)}`,
     manufacturer: 'TBD',
-    supplier: 'TBD',
     quantity: 1,
-    unitPrice: '0.0000',
     status: 'In Stock',
   };
 }

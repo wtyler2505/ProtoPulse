@@ -35,23 +35,15 @@ export function CalcApplyButtons({ result }: CalcApplyButtonsProps) {
     }
 
     addBomItem({
-      projectId: 1,
       partNumber: bomItem.partNumber,
       manufacturer: bomItem.manufacturer,
       description: bomItem.description,
       quantity: bomItem.quantity,
-      unitPrice: bomItem.unitPrice,
-      supplier: bomItem.supplier,
+      unitPrice: 0,
+      totalPrice: 0,
+      supplier: 'Unknown',
       stock: 0,
       status: bomItem.status,
-      leadTime: null,
-      datasheetUrl: null,
-      manufacturerUrl: null,
-      storageLocation: null,
-      quantityOnHand: null,
-      minimumStock: null,
-      esdSensitive: null,
-      assemblyCategory: null,
     });
 
     toast({
