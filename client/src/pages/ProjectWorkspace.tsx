@@ -263,6 +263,7 @@ interface WorkspaceState {
   shortcutsOpen: boolean;
   moreMenuOpen: boolean;
   activityFeedOpen: boolean;
+  pcbTutorialOpen: boolean;
 }
 
 type WorkspaceAction =
@@ -275,7 +276,8 @@ type WorkspaceAction =
   | { type: 'SET_SHORTCUTS_OPEN'; open: boolean }
   | { type: 'SET_MORE_MENU_OPEN'; open: boolean }
   | { type: 'TOGGLE_SHORTCUTS' }
-  | { type: 'SET_ACTIVITY_FEED_OPEN'; open: boolean };
+  | { type: 'SET_ACTIVITY_FEED_OPEN'; open: boolean }
+  | { type: 'SET_PCB_TUTORIAL_OPEN'; open: boolean };
 
 function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -299,6 +301,8 @@ function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): Works
       return { ...state, shortcutsOpen: !state.shortcutsOpen };
     case 'SET_ACTIVITY_FEED_OPEN':
       return { ...state, activityFeedOpen: action.open };
+    case 'SET_PCB_TUTORIAL_OPEN':
+      return { ...state, pcbTutorialOpen: action.open };
   }
 }
 
@@ -336,6 +340,7 @@ const initialWorkspaceState: WorkspaceState = {
   shortcutsOpen: false,
   moreMenuOpen: false,
   activityFeedOpen: false,
+  pcbTutorialOpen: false,
 };
 
 import { useActionExecutor } from '@/components/panels/chat/hooks/useActionExecutor';
@@ -820,6 +825,20 @@ function WorkspaceContent() {
                   </Suspense>
                 </PopoverContent>
               </Popover>
+              <StyledTooltip content="PCB Tutorial" side="bottom">
+                <button
+                  data-testid="pcb-tutorial-button"
+                  onClick={() => dispatch({ type: 'SET_PCB_TUTORIAL_OPEN', open: !ws.pcbTutorialOpen })}
+                  className={cn(
+                    'p-2 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    ws.pcbTutorialOpen
+                      ? 'text-primary bg-primary/10'
+                      : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground',
+                  )}
+                >
+                  <CircuitBoard className="w-4 h-4" />
+                </button>
+              </StyledTooltip>
               <Suspense fallback={null}>
                 <WhatsNewPanel />
               </Suspense>
@@ -1076,6 +1095,25 @@ function WorkspaceContent() {
             </div>
           )}
 
+          {/* BL-0301: PCB Tutorial panel */}
+          {ws.pcbTutorialOpen && (
+            <div
+              data-testid="pcb-tutorial-overlay"
+              className="absolute top-0 right-0 z-30 h-full"
+            >
+              <ErrorBoundary>
+                <Suspense fallback={<ViewLoadingFallback />}>
+                  <PcbTutorialPanel
+                    open={ws.pcbTutorialOpen}
+                    onClose={() => dispatch({ type: 'SET_PCB_TUTORIAL_OPEN', open: false })}
+                    onNavigate={(view: string) => setActiveView(view as ViewMode)}
+                    validationContext={buildValidationContext({})}
+                  />
+                </Suspense>
+              </ErrorBoundary>
+            </div>
+          )}
+
           {/* BL-0231: Radial context menu */}
           {radialMenu && (
             <RadialMenu
@@ -1085,6 +1123,11 @@ function WorkspaceContent() {
               onSelect={handleRadialSelect}
             />
           )}
+
+          {/* BL-0307: First-run onboarding checklist */}
+          <Suspense fallback={null}>
+            <FirstRunChecklist />
+          </Suspense>
         </main>
 
         {!ws.chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}

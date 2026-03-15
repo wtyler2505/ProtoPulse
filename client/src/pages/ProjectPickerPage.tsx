@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { RecentProjectsManager } from '@/lib/recent-projects';
 import { RecentProjectsList } from '@/components/layout/RecentProjectsList';
+import TeamTemplateSelector from '@/components/views/TeamTemplateSelector';
+import type { AppliedTemplate } from '@/lib/team-templates';
 import type { Project } from '@shared/schema';
 
 const LAST_PROJECT_KEY = 'protopulse-last-project';
@@ -203,6 +205,7 @@ export default function ProjectPickerPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [createStep, setCreateStep] = useState<'info' | 'template'>('info');
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [autoRedirectDismissed, setAutoRedirectDismissed] = useState(false);
@@ -299,20 +302,36 @@ export default function ProjectPickerPage() {
     },
   });
 
-  const handleCreateProject = useCallback(() => {
+  const handleCreateProject = useCallback((descriptionOverride?: string) => {
     const trimmedName = newProjectName.trim();
     if (!trimmedName) {
       return;
     }
     createProjectMutation.mutate({
       name: trimmedName,
-      description: newProjectDescription.trim(),
+      description: (descriptionOverride ?? newProjectDescription).trim(),
     });
   }, [newProjectName, newProjectDescription, createProjectMutation]);
+
+  const handleProceedToTemplate = useCallback(() => {
+    if (!newProjectName.trim()) {
+      return;
+    }
+    setCreateStep('template');
+  }, [newProjectName]);
+
+  const handleApplyTemplate = useCallback((applied: AppliedTemplate) => {
+    handleCreateProject(applied.projectDescription);
+  }, [handleCreateProject]);
+
+  const handleSkipTemplate = useCallback(() => {
+    handleCreateProject();
+  }, [handleCreateProject]);
 
   const handleOpenCreateDialog = useCallback(() => {
     setNewProjectName('');
     setNewProjectDescription('');
+    setCreateStep('info');
     setShowCreateDialog(true);
   }, []);
 
@@ -452,62 +471,76 @@ export default function ProjectPickerPage() {
 
       {/* Create Project Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-card border-border" data-testid="create-project-dialog">
-          <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
-            <DialogDescription>
-              Start a new electronics design project.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="project-name">Name</Label>
-              <Input
-                id="project-name"
-                value={newProjectName}
-                onChange={(e) => { setNewProjectName(e.target.value); }}
-                placeholder="My Awesome Circuit"
-                data-testid="input-project-name"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleCreateProject();
-                  }
-                }}
+        <DialogContent className={cn('bg-card border-border', createStep === 'template' && 'sm:max-w-2xl')} data-testid="create-project-dialog">
+          {createStep === 'info' ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Create New Project</DialogTitle>
+                <DialogDescription>
+                  Start a new electronics design project.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="project-name">Name</Label>
+                  <Input
+                    id="project-name"
+                    value={newProjectName}
+                    onChange={(e) => { setNewProjectName(e.target.value); }}
+                    placeholder="My Awesome Circuit"
+                    data-testid="input-project-name"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleProceedToTemplate();
+                      }
+                    }}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="project-description">Description (optional)</Label>
+                  <Input
+                    id="project-description"
+                    value={newProjectDescription}
+                    onChange={(e) => { setNewProjectDescription(e.target.value); }}
+                    placeholder="A brief description of your project"
+                    data-testid="input-project-description"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => { setShowCreateDialog(false); }}
+                  data-testid="button-cancel-create"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleProceedToTemplate}
+                  disabled={!newProjectName.trim()}
+                  data-testid="button-confirm-create"
+                  className="bg-[var(--accent-primary,#00F0FF)] text-black hover:bg-[var(--accent-primary,#00F0FF)]/90"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Next: Choose Template
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>Choose a Template</DialogTitle>
+                <DialogDescription>
+                  Select a template to pre-configure DRC rules, BOM requirements, and export presets for &quot;{newProjectName}&quot;.
+                </DialogDescription>
+              </DialogHeader>
+              <TeamTemplateSelector
+                projectName={newProjectName.trim()}
+                onSelect={handleApplyTemplate}
+                onSkip={handleSkipTemplate}
               />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="project-description">Description (optional)</Label>
-              <Input
-                id="project-description"
-                value={newProjectDescription}
-                onChange={(e) => { setNewProjectDescription(e.target.value); }}
-                placeholder="A brief description of your project"
-                data-testid="input-project-description"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => { setShowCreateDialog(false); }}
-              data-testid="button-cancel-create"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateProject}
-              disabled={!newProjectName.trim() || createProjectMutation.isPending}
-              data-testid="button-confirm-create"
-              className="bg-[var(--accent-primary,#00F0FF)] text-black hover:bg-[var(--accent-primary,#00F0FF)]/90"
-            >
-              {createProjectMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4 mr-2" />
-              )}
-              Create Project
-            </Button>
-          </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

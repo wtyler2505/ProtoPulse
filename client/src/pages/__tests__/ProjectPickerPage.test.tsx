@@ -635,6 +635,11 @@ describe('ProjectPickerPage', () => {
       fireEvent.click(screen.getByTestId('button-confirm-create'));
 
       await waitFor(() => {
+        expect(screen.getByTestId('team-template-selector')).toBeDefined();
+      });
+      fireEvent.click(screen.getByTestId('button-skip-template'));
+
+      await waitFor(() => {
         expect(mockApiRequest).toHaveBeenCalledWith('POST', '/api/projects', {
           name: 'Created Project',
           description: 'A description',
@@ -663,6 +668,11 @@ describe('ProjectPickerPage', () => {
       fireEvent.click(screen.getByTestId('button-confirm-create'));
 
       await waitFor(() => {
+        expect(screen.getByTestId('team-template-selector')).toBeDefined();
+      });
+      fireEvent.click(screen.getByTestId('button-skip-template'));
+
+      await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith('/projects/99');
       });
     });
@@ -686,6 +696,11 @@ describe('ProjectPickerPage', () => {
 
       fireEvent.change(screen.getByTestId('input-project-name'), { target: { value: 'Saved' } });
       fireEvent.click(screen.getByTestId('button-confirm-create'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('team-template-selector')).toBeDefined();
+      });
+      fireEvent.click(screen.getByTestId('button-skip-template'));
 
       await waitFor(() => {
         expect(localStorage.getItem(LAST_PROJECT_KEY)).toBe('55');
@@ -756,6 +771,11 @@ describe('ProjectPickerPage', () => {
 
       fireEvent.change(screen.getByTestId('input-project-name'), { target: { value: 'Enter Project' } });
       fireEvent.keyDown(screen.getByTestId('input-project-name'), { key: 'Enter' });
+
+      await waitFor(() => {
+        expect(screen.getByTestId('team-template-selector')).toBeDefined();
+      });
+      fireEvent.click(screen.getByTestId('button-skip-template'));
 
       await waitFor(() => {
         expect(mockApiRequest).toHaveBeenCalledWith('POST', '/api/projects', {
