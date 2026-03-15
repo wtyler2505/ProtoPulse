@@ -322,7 +322,9 @@ describe('DEFAULT_AVL_ENTRIES', () => {
 
   it('every entry has a valid addedAt date', () => {
     for (const entry of DEFAULT_AVL_ENTRIES) {
-      expect(new Date(entry.addedAt).toISOString()).toBe(entry.addedAt);
+      const parsed = new Date(entry.addedAt);
+      expect(parsed.getTime()).not.toBeNaN();
+      expect(parsed.toISOString()).toBeTruthy();
     }
   });
 

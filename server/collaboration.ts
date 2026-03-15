@@ -116,22 +116,24 @@ export class CollaborationServer {
       return;
     }
 
-    const session = await validateSession(sessionId);
-    if (!session) {
-      this.sendError(ws, 0, projectId, 'Invalid or expired session');
-      ws.close(4003, 'Authentication failed');
+    // BL-0526: Validate session + project access in one call
+    const validation = await validateWsSession(sessionId, projectId);
+    if (!validation.valid) {
+      const reasonMessages: Record<string, string> = {
+        expired: 'Session expired or invalid',
+        invalid: 'Invalid session',
+        no_access: 'No access to this project',
+        project_deleted: 'Project has been deleted',
+      };
+      const msg = reasonMessages[validation.reason] ?? 'Authentication failed';
+      this.sendError(ws, 0, projectId, msg);
+      ws.close(4003, validation.reason);
       return;
     }
 
-    const userId = session.userId;
-
-    // Determine role
-    const isOwner = await storage.isProjectOwner(projectId, userId);
-    const role: CollabRole = isOwner ? 'owner' : 'editor';
-
-    // Look up username
-    const dbUser = await getUserById(userId);
-    const username = dbUser?.username ?? `User ${String(userId)}`;
+    const userId = validation.userId;
+    const role: CollabRole = validation.isOwner ? 'owner' : 'editor';
+    const username = validation.username;
 
     // Assign color
     const room = this.getOrCreateRoom(projectId);

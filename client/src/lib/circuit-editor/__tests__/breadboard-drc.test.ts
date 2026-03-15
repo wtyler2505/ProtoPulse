@@ -20,18 +20,24 @@ import type { CircuitNetRow, CircuitWireRow, CircuitInstanceRow, ComponentPart }
 
 let nextId = 1;
 
-function makeNet(overrides: Partial<CircuitNetRow> = {}): CircuitNetRow {
+function makeNet(overrides: Partial<CircuitNetRow> & { id?: number; name?: string } = {}): CircuitNetRow {
   const id = overrides.id ?? nextId++;
   return {
     id,
-    designId: 1,
+    circuitId: 1,
     name: overrides.name ?? `NET_${id}`,
+    netType: 'signal',
+    voltage: null,
+    busWidth: null,
     segments: overrides.segments ?? [],
+    labels: [],
+    style: {},
     createdAt: new Date(),
-  } as CircuitNetRow;
+    ...overrides,
+  } as unknown as CircuitNetRow;
 }
 
-function makeWire(overrides: Partial<CircuitWireRow> = {}): CircuitWireRow {
+function makeWire(overrides: Partial<CircuitWireRow> & { netId?: number; view?: string; points?: unknown[] } = {}): CircuitWireRow {
   const id = overrides.id ?? nextId++;
   return {
     id,
@@ -39,44 +45,64 @@ function makeWire(overrides: Partial<CircuitWireRow> = {}): CircuitWireRow {
     netId: overrides.netId ?? 1,
     view: overrides.view ?? 'breadboard',
     points: overrides.points ?? [],
+    layer: 'front',
     color: overrides.color ?? '#2ecc71',
     width: overrides.width ?? 1.5,
     wireType: overrides.wireType ?? 'wire',
     createdAt: new Date(),
-  } as CircuitWireRow;
+    ...overrides,
+  } as unknown as CircuitWireRow;
 }
 
-function makeInstance(overrides: Partial<CircuitInstanceRow> = {}): CircuitInstanceRow {
+function makeInstance(overrides: Partial<CircuitInstanceRow> & {
+  referenceDesignator?: string;
+  breadboardX?: number | null;
+  breadboardY?: number | null;
+  partId?: number | null;
+  properties?: unknown;
+} = {}): CircuitInstanceRow {
   const id = overrides.id ?? nextId++;
   return {
     id,
     circuitId: 1,
     partId: overrides.partId ?? null,
+    subDesignId: null,
     referenceDesignator: overrides.referenceDesignator ?? `R${id}`,
-    schematicX: null,
-    schematicY: null,
+    schematicX: 0,
+    schematicY: 0,
+    schematicRotation: 0,
     breadboardX: overrides.breadboardX ?? null,
     breadboardY: overrides.breadboardY ?? null,
-    rotation: overrides.rotation ?? 0,
+    breadboardRotation: 0,
+    pcbX: null,
+    pcbY: null,
+    pcbRotation: 0,
+    pcbSide: 'front',
     properties: overrides.properties ?? {},
     createdAt: new Date(),
-  } as CircuitInstanceRow;
+    ...overrides,
+  } as unknown as CircuitInstanceRow;
 }
 
-function makePart(overrides: Partial<ComponentPart> = {}): ComponentPart {
+function makePart(overrides: Partial<ComponentPart> & {
+  connectors?: unknown[];
+  meta?: unknown;
+} = {}): ComponentPart {
   const id = overrides.id ?? nextId++;
   return {
     id,
     projectId: 1,
-    name: overrides.name ?? `Part${id}`,
-    description: null,
-    category: overrides.category ?? 'Passives',
+    nodeId: null,
     connectors: overrides.connectors ?? [{ id: '1' }, { id: '2' }],
-    shapes: [],
+    buses: [],
+    views: {},
+    constraints: [],
     meta: overrides.meta ?? {},
+    version: 1,
     createdAt: new Date(),
     updatedAt: new Date(),
-  } as ComponentPart;
+    ...overrides,
+  } as unknown as ComponentPart;
 }
 
 /**
