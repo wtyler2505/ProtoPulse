@@ -133,7 +133,7 @@ export function useCollaborationCursors(
       setCursors((prev) => {
         let changed = false;
         const next = new Map(prev);
-        for (const [id, cursor] of next) {
+        for (const [id, cursor] of Array.from(next.entries())) {
           if (now - cursor.lastActivity > CURSOR_FADE_MS) {
             next.delete(id);
             changed = true;
