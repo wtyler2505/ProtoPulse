@@ -52,10 +52,18 @@ export default defineConfig({
           include: ['electron/**/*.test.ts'],
         },
       },
+      {
+        extends: true,
+        test: {
+          name: 'scripts',
+          environment: 'node',
+          include: ['scripts/**/*.test.ts'],
+        },
+      },
     ],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      reporter: ['text', 'html', 'json-summary'],
       reportsDirectory: 'coverage',
       include: ['server/**/*.ts', 'client/src/**/*.ts', 'client/src/**/*.tsx', 'shared/**/*.ts'],
       exclude: [
