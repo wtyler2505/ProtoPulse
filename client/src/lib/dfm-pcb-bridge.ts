@@ -4,16 +4,17 @@
  * Connects DFM validation violations to the PCB canvas highlight overlay.
  * When a user clicks a DFM violation in the ValidationView, this bridge:
  *   1. Converts the DfmViolation to a ViolationInput
- *   2. Navigates via ViolationNavigator (triggers view switch + highlight)
- *   3. Provides a React hook for PCBLayoutView to read the active highlight
+ *   2. Navigates via ViolationNavigator (triggers view switch event)
+ *   3. Maintains its own highlight state with 5s auto-clear
+ *   4. Provides a React hook for PCBLayoutView to read the active highlight
  *
- * Auto-clears highlights after 5 seconds (longer than the default 3s
- * to give the user time to orient on the PCB canvas after view switch).
+ * Uses its own highlight state (not the navigator's) because the navigator
+ * has a fixed 3s auto-clear that's too short for a cross-view navigation
+ * where the user needs time to orient on the PCB canvas.
  */
 
 import { useSyncExternalStore, useCallback } from 'react';
 import { ViolationNavigator } from '@/lib/validation/violation-navigator';
-import type { NavigationRequest } from '@/lib/validation/violation-navigator';
 import type { DfmViolation, DfmCategory } from '@/lib/dfm-checker';
 
 // ---------------------------------------------------------------------------
@@ -40,22 +41,37 @@ export interface DfmPcbHighlight {
 }
 
 // ---------------------------------------------------------------------------
-// DFM highlight auto-clear timeout (5 seconds)
+// Singleton state for DFM highlights
 // ---------------------------------------------------------------------------
 
 const DFM_HIGHLIGHT_TIMEOUT_MS = 5_000;
+const DEFAULT_RADIUS = 30;
 
-/** Timer handle for DFM-specific extended timeout. */
-let dfmClearTimer: ReturnType<typeof setTimeout> | null = null;
+/** Current active DFM highlight. */
+let activeHighlight: DfmPcbHighlight | null = null;
 
-/**
- * Clear any pending DFM-specific highlight timer.
- */
-function clearDfmTimer(): void {
-  if (dfmClearTimer !== null) {
-    clearTimeout(dfmClearTimer);
-    dfmClearTimer = null;
+/** Timer handle for auto-clear. */
+let clearTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Subscriber callbacks for useSyncExternalStore. */
+const listeners = new Set<() => void>();
+
+function notify(): void {
+  for (const cb of Array.from(listeners)) {
+    cb();
   }
+}
+
+function clearTimerIfActive(): void {
+  if (clearTimer !== null) {
+    clearTimeout(clearTimer);
+    clearTimer = null;
+  }
+}
+
+function setHighlight(highlight: DfmPcbHighlight | null): void {
+  activeHighlight = highlight;
+  notify();
 }
 
 // ---------------------------------------------------------------------------
@@ -65,125 +81,98 @@ function clearDfmTimer(): void {
 /**
  * Map a DFM violation to a PCB canvas highlight and trigger navigation.
  *
- * Converts the DfmViolation to a ViolationInput, navigates via
- * ViolationNavigator (which emits the view-switch + highlight events),
- * and returns the highlight data for the PCB overlay.
+ * Converts the DfmViolation to a ViolationInput and navigates via
+ * ViolationNavigator (which emits the view-switch event to listeners).
+ * Then sets the bridge's own highlight state with a 5s auto-clear timer.
  *
- * Sets an extended 5s auto-clear timer (overrides the navigator's default 3s).
+ * Returns the highlight data for immediate use.
  */
 export function mapDfmViolationToHighlight(violation: DfmViolation): DfmPcbHighlight {
   const navigator = ViolationNavigator.getInstance();
 
   // Convert DfmViolation → ViolationInput and navigate
+  // This triggers view-switch events via ViolationNavigator.onNavigate listeners
   const input = ViolationNavigator.fromDfmViolation(violation);
   const request = navigator.navigate(input);
 
-  // Override the navigator's 3s auto-clear with our 5s timer
-  clearDfmTimer();
-  dfmClearTimer = setTimeout(() => {
-    dfmClearTimer = null;
-    navigator.clearHighlight();
-  }, DFM_HIGHLIGHT_TIMEOUT_MS);
-
-  return navigationRequestToHighlight(request, violation);
-}
-
-/**
- * Convert a NavigationRequest + original DfmViolation into DfmPcbHighlight data.
- */
-function navigationRequestToHighlight(
-  request: NavigationRequest,
-  violation: DfmViolation,
-): DfmPcbHighlight {
-  return {
+  // Build our own highlight from the original violation data (richer than what
+  // the navigator stores — we keep category, ruleName, etc.)
+  const highlight: DfmPcbHighlight = {
     violationId: request.violationId,
     x: request.location.coordinates.x,
     y: request.location.coordinates.y,
-    radius: request.location.radius,
+    radius: request.location.radius > 0 ? request.location.radius : DEFAULT_RADIUS,
     severity: request.severity,
     category: violation.category,
     ruleName: violation.ruleName,
     elementId: violation.elementId,
   };
+
+  // Set highlight with 5s auto-clear
+  clearTimerIfActive();
+  setHighlight(highlight);
+
+  clearTimer = setTimeout(() => {
+    clearTimer = null;
+    setHighlight(null);
+  }, DFM_HIGHLIGHT_TIMEOUT_MS);
+
+  return highlight;
+}
+
+/**
+ * Manually clear the active DFM highlight.
+ */
+export function clearDfmHighlight(): void {
+  clearTimerIfActive();
+  if (activeHighlight !== null) {
+    setHighlight(null);
+  }
 }
 
 // ---------------------------------------------------------------------------
 // React hook
 // ---------------------------------------------------------------------------
 
+/** useSyncExternalStore subscribe function. */
+function subscribe(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+}
+
+/** useSyncExternalStore getSnapshot function. */
+function getSnapshot(): DfmPcbHighlight | null {
+  return activeHighlight;
+}
+
 /**
- * Subscribe to the ViolationNavigator's active highlight and expose it
- * as a DfmPcbHighlight (or null) for the PCB canvas overlay.
+ * Subscribe to the active DFM highlight for the PCB canvas overlay.
  *
- * Only returns a highlight when the active navigation targets the PCB view.
+ * Returns the current highlight (or null) and a function to clear it.
  * Uses useSyncExternalStore for tear-free reads.
  */
 export function useDfmHighlights(): {
   highlight: DfmPcbHighlight | null;
   clearHighlight: () => void;
 } {
-  const navigator = ViolationNavigator.getInstance();
+  const highlight = useSyncExternalStore(subscribe, getSnapshot);
 
-  const subscribe = useCallback(
-    (cb: () => void) => navigator.subscribe(cb),
-    [navigator],
-  );
+  const clear = useCallback(() => {
+    clearDfmHighlight();
+  }, []);
 
-  const getSnapshot = useCallback((): NavigationRequest | null => {
-    return navigator.getSnapshot();
-  }, [navigator]);
-
-  const request = useSyncExternalStore(subscribe, getSnapshot);
-
-  const clearHighlight = useCallback(() => {
-    clearDfmTimer();
-    navigator.clearHighlight();
-  }, [navigator]);
-
-  // Only show highlights targeting the PCB view
-  if (!request || request.location.viewType !== 'pcb') {
-    return { highlight: null, clearHighlight };
-  }
-
-  const highlight: DfmPcbHighlight = {
-    violationId: request.violationId,
-    x: request.location.coordinates.x,
-    y: request.location.coordinates.y,
-    radius: request.location.radius,
-    severity: request.severity,
-    // The ViolationNavigator doesn't carry the full DFM category/ruleName,
-    // so we derive sensible defaults from the entity type.
-    category: entityTypeToDfmCategory(request.location.entityType),
-    ruleName: request.violationId,
-    elementId: request.location.entityId || undefined,
-  };
-
-  return { highlight, clearHighlight };
-}
-
-/**
- * Map a ViolationEntityType to a DfmCategory for display purposes.
- */
-function entityTypeToDfmCategory(entityType: string): DfmCategory {
-  switch (entityType) {
-    case 'trace':
-      return 'trace';
-    case 'via':
-      return 'via';
-    case 'pad':
-      return 'pad';
-    case 'zone':
-      return 'clearance';
-    default:
-      return 'board';
-  }
+  return { highlight, clearHighlight: clear };
 }
 
 // ---------------------------------------------------------------------------
 // Testing utilities
 // ---------------------------------------------------------------------------
 
-/** Reset the DFM-specific timer. For testing only. */
+/** Reset the DFM bridge state. For testing only. */
 export function resetDfmBridgeForTesting(): void {
-  clearDfmTimer();
+  clearTimerIfActive();
+  activeHighlight = null;
+  listeners.clear();
 }
