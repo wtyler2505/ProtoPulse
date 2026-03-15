@@ -337,6 +337,16 @@ export default function ProjectPickerPage() {
     setShowCreateDialog(true);
   }, []);
 
+  const handleOpenSample = useCallback(
+    (sample: SampleProject) => {
+      createProjectMutation.mutate({
+        name: `${sample.name} (Sample)`,
+        description: sample.description,
+      });
+    },
+    [createProjectMutation],
+  );
+
   const handleDismissAutoRedirect = useCallback(() => {
     setAutoRedirectDismissed(true);
   }, []);
@@ -416,6 +426,9 @@ export default function ProjectPickerPage() {
             </Button>
           ) : null}
         </div>
+
+        {/* Sample projects — always visible */}
+        <SampleProjectGallery onOpenSample={handleOpenSample} />
 
         {/* Empty state */}
         {projects.length === 0 ? (

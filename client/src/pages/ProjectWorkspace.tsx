@@ -1122,6 +1122,7 @@ function WorkspaceContent() {
                   </Suspense>
                 </ErrorBoundary>
               )}
+              </div>
           </div>
 
           <div className="absolute bottom-4 right-4 z-40 w-80 shadow-2xl">
