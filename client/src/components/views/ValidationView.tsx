@@ -1179,6 +1179,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                         <span className="text-emerald-500/80">Suggestion: {row.issue.suggestion}</span>
                       </div>
                     )}
+                    <ReviewResolutionControls issueId={String(row.issue.id)} />
                   </div>
                   <div className="md:w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 self-start text-center">
                     {row.issue.componentId}
@@ -1215,6 +1216,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                     <StyledTooltip content={getRuleExplanation(row.issue.ruleType, 'DRC')} side="bottom">
                       <div className="mt-1 text-[10px] text-muted-foreground font-mono cursor-help inline-block">{row.issue.ruleType} ({row.issue.view})</div>
                     </StyledTooltip>
+                    <ReviewResolutionControls issueId={String(row.issue.id)} />
                   </div>
                   <div className="md:w-32 text-xs font-mono text-rose-500 bg-rose-500/10 px-2 py-1 self-start text-center">
                     {row.issue.componentId}
@@ -1248,6 +1250,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                     <StyledTooltip content={getRuleExplanation(row.issue.ruleType, 'ERC')} side="bottom">
                       <div className="mt-1 text-[10px] text-muted-foreground font-mono cursor-help inline-block">{row.issue.ruleType}</div>
                     </StyledTooltip>
+                    <ReviewResolutionControls issueId={String(row.issue.id)} />
                   </div>
                   <div className="md:w-32 text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-1 self-start text-center">
                     ERC

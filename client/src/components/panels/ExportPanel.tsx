@@ -49,6 +49,7 @@ import type { ImportPreview } from '@/lib/import-preview';
 import type { ImportHistoryEntry } from '@/lib/import-history';
 import type { ImportedDesign } from '@/lib/design-import';
 import type { PlacementEntry } from '@/lib/pick-place-preview';
+import type { DesignDiffResult } from '@/lib/design-diff-viewer';
 
 const PickPlacePreview = lazy(() => import('@/components/panels/PickPlacePreview'));
 const DesignDiffPanel = lazy(() => import('@/components/panels/DesignDiffPanel'));
@@ -320,6 +321,11 @@ function ExportPanel() {
 
   // -- Pick-and-place preview state --
   const [pickPlaceEntries, setPickPlaceEntries] = useState<PlacementEntry[] | null>(null);
+
+  // -- Design diff state --
+  const [diffResult, setDiffResult] = useState<DesignDiffResult | null>(null);
+  const [diffBaselineName, setDiffBaselineName] = useState('');
+  const diffFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Build export validation data from available context
   const exportData: ProjectExportData = useMemo(() => ({
@@ -676,6 +682,105 @@ function ExportPanel() {
     pendingImportDesignRef.current = null;
   }, []);
 
+  // -- Design diff handler --
+  const handleCompareDesign = useCallback(() => {
+    const input = diffFileInputRef.current ?? document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    diffFileInputRef.current = input;
+
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      file.text().then((content) => {
+        try {
+          const imported = JSON.parse(content) as Record<string, unknown>;
+          const baselineNodes = Array.isArray(imported.nodes) ? imported.nodes as Array<Record<string, unknown>> : [];
+          const baselineEdges = Array.isArray(imported.edges) ? imported.edges as Array<Record<string, unknown>> : [];
+          const baselineBom = Array.isArray(imported.bomItems) ? imported.bomItems as Array<Record<string, unknown>> : [];
+          const baselineCircuits = Array.isArray(imported.circuitInstances) ? imported.circuitInstances as Array<Record<string, unknown>> : [];
+
+          import('@/lib/design-diff-viewer').then(({ computeDesignDiff }) => {
+            const baseline = {
+              nodes: baselineNodes.map((n) => ({
+                nodeId: String(n.nodeId ?? n.id ?? ''),
+                label: String(n.label ?? ''),
+                nodeType: String(n.nodeType ?? n.type ?? ''),
+                positionX: Number(n.positionX ?? n.x ?? 0),
+                positionY: Number(n.positionY ?? n.y ?? 0),
+              })),
+              edges: baselineEdges.map((e) => ({
+                edgeId: String(e.edgeId ?? e.id ?? ''),
+                source: String(e.source ?? ''),
+                target: String(e.target ?? ''),
+                label: e.label != null ? String(e.label) : null,
+                signalType: e.signalType != null ? String(e.signalType) : null,
+              })),
+              bomItems: baselineBom.map((b) => ({
+                partNumber: String(b.partNumber ?? ''),
+                manufacturer: String(b.manufacturer ?? ''),
+                description: String(b.description ?? ''),
+                quantity: Number(b.quantity ?? 0),
+                unitPrice: String(b.unitPrice ?? '0'),
+                supplier: String(b.supplier ?? ''),
+                status: String(b.status ?? 'In Stock'),
+              })),
+              circuitInstances: baselineCircuits.map((c) => ({
+                referenceDesignator: String(c.referenceDesignator ?? c.refDes ?? ''),
+                schematicX: Number(c.schematicX ?? c.x ?? 0),
+                schematicY: Number(c.schematicY ?? c.y ?? 0),
+                properties: null,
+              })),
+            };
+
+            const current = {
+              nodes: nodes.map((n) => ({
+                nodeId: n.id,
+                label: String((n.data as Record<string, unknown>)?.label ?? ''),
+                nodeType: String(n.type ?? ''),
+                positionX: n.position?.x ?? 0,
+                positionY: n.position?.y ?? 0,
+              })),
+              edges: [] as Array<{ edgeId: string; source: string; target: string; label: string | null; signalType: string | null }>,
+              bomItems: bom.map((b) => ({
+                partNumber: b.partNumber,
+                manufacturer: b.manufacturer,
+                description: b.description,
+                quantity: b.quantity,
+                unitPrice: String(b.unitPrice),
+                supplier: b.supplier,
+                status: b.status,
+              })),
+              circuitInstances: [] as Array<{ referenceDesignator: string; schematicX: number; schematicY: number; properties: null }>,
+            };
+
+            const result = computeDesignDiff(baseline, current);
+            setDiffResult(result);
+            setDiffBaselineName(file.name);
+            addOutputLog(`[DIFF] Compared "${file.name}" with current design: ${String(result.totalSummary.total)} elements, ${String(result.totalSummary.added)} added, ${String(result.totalSummary.removed)} removed, ${String(result.totalSummary.modified)} modified.`);
+          }).catch(() => {
+            toast({ variant: 'destructive', title: 'Compare failed', description: 'Could not load the diff module.' });
+          });
+        } catch {
+          toast({ variant: 'destructive', title: 'Compare failed', description: 'Invalid JSON file.' });
+        }
+      }).catch(() => {
+        toast({ variant: 'destructive', title: 'Compare failed', description: 'Could not read the file.' });
+      });
+
+      input.value = '';
+    };
+
+    input.click();
+  }, [nodes, bom, addOutputLog, toast]);
+
+  const handleDiffClose = useCallback(() => {
+    setDiffResult(null);
+  }, []);
+
   return (
     <div className="h-full w-full bg-background/80 backdrop-blur p-4 overflow-auto flex flex-col gap-4" data-testid="export-panel">
       {/* Header */}
@@ -856,6 +961,14 @@ function ExportPanel() {
             <Upload className="w-3.5 h-3.5" />
             Choose File to Import
           </button>
+          <button
+            data-testid="compare-design-button"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 mt-1.5 text-xs font-medium text-foreground bg-muted/30 hover:bg-muted/50 border border-border/50 rounded-sm transition-colors focus-ring"
+            onClick={handleCompareDesign}
+          >
+            <GitCompareArrows className="w-3.5 h-3.5" />
+            Compare with File
+          </button>
         </div>
       </div>
 
@@ -907,6 +1020,18 @@ function ExportPanel() {
         onApplyRepaired={handleRepairApply}
         onCancel={handleRepairCancel}
       />
+
+      {/* Design diff panel */}
+      {diffResult && (
+        <Suspense fallback={<div className="text-[10px] text-muted-foreground p-2">Loading diff viewer...</div>}>
+          <DesignDiffPanel
+            result={diffResult}
+            baselineName={diffBaselineName}
+            currentName="Current Design"
+            onClose={handleDiffClose}
+          />
+        </Suspense>
+      )}
 
       {/* Footer hint */}
       <p className="text-[10px] text-muted-foreground/50 text-center mt-auto pt-2">

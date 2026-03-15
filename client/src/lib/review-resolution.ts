@@ -52,9 +52,11 @@ export const ALL_STATUSES: readonly ResolutionStatus[] = ['open', 'resolved', 'b
 export class ReviewResolutionManager {
   private entries = new Map<string, ResolutionEntry>();
   private listeners = new Set<Listener>();
+  private cachedSnapshot: ResolutionSnapshot;
   private static instance: ReviewResolutionManager | null = null;
 
   private constructor() {
+    this.cachedSnapshot = { entries: this.entries };
     this.loadFromStorage();
   }
 
@@ -78,6 +80,7 @@ export class ReviewResolutionManager {
     const inst = Object.create(ReviewResolutionManager.prototype) as ReviewResolutionManager;
     inst.entries = new Map();
     inst.listeners = new Set();
+    inst.cachedSnapshot = { entries: inst.entries };
     return inst;
   }
 
@@ -93,10 +96,11 @@ export class ReviewResolutionManager {
   }
 
   getSnapshot(): ResolutionSnapshot {
-    return { entries: this.entries };
+    return this.cachedSnapshot;
   }
 
   private notify(): void {
+    this.cachedSnapshot = { entries: this.entries };
     for (const listener of Array.from(this.listeners)) {
       listener();
     }

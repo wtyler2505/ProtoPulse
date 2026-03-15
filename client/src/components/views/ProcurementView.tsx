@@ -5,7 +5,7 @@ import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame } from 'lucide-react';
+import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';
@@ -43,6 +43,7 @@ import { AssemblyRiskHeatmap } from './procurement/AssemblyRiskHeatmap';
 import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, CostBreakdown } from './procurement';
 
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
+const AssemblyGroupPanel = lazy(() => import('./procurement/AssemblyGroupPanel').then((m) => ({ default: m.AssemblyGroupPanel })));
 
 function ProcurementView() {
   const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem } = useBom();
@@ -330,6 +331,7 @@ function ProcurementView() {
           <TabsTrigger value="assembly-cost" data-testid="tab-assembly-cost"><Calculator className="h-4 w-4 mr-1.5" />Assembly Cost</TabsTrigger>
           <TabsTrigger value="mfg-validator" data-testid="tab-mfg-validator"><ClipboardCheck className="h-4 w-4 mr-1.5" />Mfg Validator</TabsTrigger>
           <TabsTrigger value="assembly-risk" data-testid="tab-assembly-risk"><Flame className="h-4 w-4 mr-1.5" />Assembly Risk</TabsTrigger>
+          <TabsTrigger value="assembly-groups" data-testid="tab-assembly-groups"><Layers className="h-4 w-4 mr-1.5" />Assembly Groups</TabsTrigger>
         </TabsList>
         <Button
           variant="outline"
@@ -385,6 +387,12 @@ function ProcurementView() {
 
       <TabsContent value="mfg-validator" className="flex-1 overflow-auto mt-0 p-4">
         <ManufacturingValidatorPanel packageInput={mfgPackageInput} />
+      </TabsContent>
+
+      <TabsContent value="assembly-groups" className="flex-1 overflow-auto mt-0">
+        <Suspense fallback={<div className="flex items-center justify-center h-64 text-muted-foreground">Loading assembly groups...</div>}>
+          <AssemblyGroupPanel bom={bom} />
+        </Suspense>
       </TabsContent>
 
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />
