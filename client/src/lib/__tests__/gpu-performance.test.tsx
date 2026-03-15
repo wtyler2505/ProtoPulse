@@ -370,4 +370,59 @@ describe('GpuPerformanceProvider + useGpuPerformance', () => {
     expect(() => render(<TestConsumer />)).toThrow('useGpuPerformance must be used within GpuPerformanceProvider');
     spy.mockRestore();
   });
+
+  it('adds reduce-blur CSS class to documentElement when blur is disabled', async () => {
+    const user = userEvent.setup();
+    document.documentElement.classList.remove('reduce-blur');
+
+    render(
+      <GpuPerformanceProvider>
+        <TestConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    // Initially blur enabled → no reduce-blur class
+    expect(document.documentElement.classList.contains('reduce-blur')).toBe(false);
+
+    await act(async () => {
+      await user.click(screen.getByTestId('disable-blur'));
+    });
+
+    // After disabling → reduce-blur class added
+    expect(document.documentElement.classList.contains('reduce-blur')).toBe(true);
+  });
+
+  it('removes reduce-blur CSS class when blur is re-enabled', async () => {
+    const user = userEvent.setup();
+    document.documentElement.classList.remove('reduce-blur');
+
+    render(
+      <GpuPerformanceProvider>
+        <TestConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    await act(async () => {
+      await user.click(screen.getByTestId('disable-blur'));
+    });
+    expect(document.documentElement.classList.contains('reduce-blur')).toBe(true);
+
+    await act(async () => {
+      await user.click(screen.getByTestId('enable-blur'));
+    });
+    expect(document.documentElement.classList.contains('reduce-blur')).toBe(false);
+  });
+
+  it('applies reduce-blur class eagerly when localStorage override is false', () => {
+    document.documentElement.classList.remove('reduce-blur');
+    localStorage.setItem('protopulse-gpu-blur-override', 'false');
+
+    render(
+      <GpuPerformanceProvider>
+        <TestConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    expect(document.documentElement.classList.contains('reduce-blur')).toBe(true);
+  });
 });

@@ -13,6 +13,9 @@ import {
   parseSpiceNetlist,
   runParsedNetlist,
 } from '@/lib/simulation/spice-netlist-parser';
+import { mergeDesignVarsIntoNetlist } from '@/lib/simulation/design-var-spice-bridge';
+import { VariableStore } from '@shared/design-variables';
+import type { DesignVariable } from '@shared/design-variables';
 import type { SimulationResult as SpiceSimResult } from '@/lib/simulation/spice-netlist-parser';
 import { autoDetectAnalysisType, detectSimulationType } from '@/lib/simulation/auto-detect';
 import type { AnalysisType as AutoDetectAnalysisType, CircuitInstanceForDetection } from '@/lib/simulation/auto-detect';
@@ -473,6 +476,28 @@ function SpiceImportSection() {
   const [spiceRunning, setSpiceRunning] = useState(false);
   const [spiceErrors, setSpiceErrors] = useState<Array<{ line: number; message: string }>>([]);
   const [spiceResult, setSpiceResult] = useState<SpiceSimResult | null>(null);
+  const [useDesignVars, setUseDesignVars] = useState(false);
+
+  /** Load design variables from localStorage (same key as DesignVariablesPanel). */
+  const loadDesignVars = useCallback((): DesignVariable[] => {
+    try {
+      const raw = localStorage.getItem('protopulse:design-variables');
+      if (!raw) { return []; }
+      const vars = JSON.parse(raw) as DesignVariable[];
+      if (!Array.isArray(vars)) { return []; }
+      // Resolve all so .resolved is populated
+      const store = new VariableStore();
+      for (const v of vars) {
+        if (typeof v.name === 'string' && typeof v.value === 'string') {
+          store.addVariable(v);
+        }
+      }
+      store.resolveAll();
+      return store.all();
+    } catch {
+      return [];
+    }
+  }, []);
 
   const handleRunSpice = useCallback(async () => {
     if (!netlistText.trim()) {
@@ -484,7 +509,16 @@ function SpiceImportSection() {
     setSpiceResult(null);
 
     try {
-      const parsed = parseSpiceNetlist(netlistText);
+      // Optionally merge design variables into the netlist
+      let effectiveNetlist = netlistText;
+      if (useDesignVars) {
+        const vars = loadDesignVars();
+        if (vars.length > 0) {
+          effectiveNetlist = mergeDesignVarsIntoNetlist(netlistText, vars);
+        }
+      }
+
+      const parsed = parseSpiceNetlist(effectiveNetlist);
 
       if (parsed.errors.length > 0) {
         setSpiceErrors(parsed.errors);
@@ -506,7 +540,7 @@ function SpiceImportSection() {
     } finally {
       setSpiceRunning(false);
     }
-  }, [netlistText]);
+  }, [netlistText, useDesignVars, loadDesignVars]);
 
   return (
     <CollapsibleSection title="Import SPICE Netlist" defaultOpen={false} testId="section-spice-import">
@@ -526,6 +560,31 @@ function SpiceImportSection() {
             'transition-colors',
           )}
         />
+
+        {/* Use Design Variables toggle */}
+        <label
+          className="flex items-center gap-2 cursor-pointer select-none"
+          data-testid="toggle-use-design-vars"
+        >
+          <input
+            type="checkbox"
+            checked={useDesignVars}
+            onChange={(e) => setUseDesignVars(e.target.checked)}
+            className="accent-primary w-3.5 h-3.5"
+            data-testid="checkbox-use-design-vars"
+          />
+          <span className="text-xs text-muted-foreground">
+            Use Design Variables
+          </span>
+          {useDesignVars && (() => {
+            const count = loadDesignVars().length;
+            return (
+              <span className="text-[10px] text-primary/70">
+                ({String(count)} var{count !== 1 ? 's' : ''} available)
+              </span>
+            );
+          })()}
+        </label>
 
         {/* Parse errors */}
         {spiceErrors.length > 0 && (

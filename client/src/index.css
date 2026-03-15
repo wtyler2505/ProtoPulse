@@ -112,6 +112,18 @@
   outline-offset: 2px !important;
 }
 
+/*
+ * GPU performance: disable backdrop-blur on low-end GPUs.
+ * Activated by toggling .reduce-blur on <html>.
+ * Stored in localStorage key 'protopulse-gpu-blur-override'.
+ * Auto-detected via WebGL renderer string heuristics (see gpu-performance.tsx).
+ * Replaces translucent blur with slightly more opaque solid backgrounds.
+ */
+.reduce-blur [class*="backdrop-blur"] {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 @layer base {
   * {
     @apply border-border;

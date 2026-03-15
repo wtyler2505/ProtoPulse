@@ -48,7 +48,6 @@ const LOW_TIER_PATTERNS: RegExp[] = [
   /mali-4\d\d/i,       // Mali-400 series
   /mali-t[67]\d\d/i,   // Mali-T600/T700 series
   /adreno\s*(?:\(TM\)\s*)?[23]\d\d/i,  // Adreno 2xx/3xx range (handles optional "(TM)")
-  /adreno\s*(?:\(TM\)\s*)?\d{2}0/i,    // Adreno x20 series (very old)
   /powervr sgx/i,      // Old PowerVR
   /videocore/i,         // Raspberry Pi
 ];
@@ -66,8 +65,7 @@ const HIGH_TIER_PATTERNS: RegExp[] = [
   /intel iris xe/i,         // Modern Intel iGPU (good enough)
   /intel iris plus/i,       // 10th-gen Intel Iris Plus
   /mali-g[789]\d/i,         // Mali-G7x+ (modern ARM)
-  /adreno [67]\d\d/i,       // Adreno 6xx/7xx
-  /adreno 7\d\d/i,
+  /adreno\s*(?:\(TM\)\s*)?[67]\d\d/i,  // Adreno 6xx/7xx (handles optional "(TM)")
   /xclipse/i,               // Samsung Xclipse (RDNA2-based)
   /immortalis/i,            // Arm Immortalis
 ];
@@ -199,18 +197,39 @@ interface GpuPerformanceContextValue {
 
 const GpuPerformanceContext = createContext<GpuPerformanceContextValue | undefined>(undefined);
 
+const REDUCE_BLUR_CLASS = 'reduce-blur';
+
+/** Sync the `.reduce-blur` CSS class on `<html>` with the current blur state. */
+function syncReduceBlurClass(useBlur: boolean): void {
+  if (typeof document === 'undefined') { return; }
+  const root = document.documentElement;
+  if (useBlur) {
+    root.classList.remove(REDUCE_BLUR_CLASS);
+  } else {
+    root.classList.add(REDUCE_BLUR_CLASS);
+  }
+}
+
 export function GpuPerformanceProvider({ children }: { children: ReactNode }) {
   const [info, setInfo] = useState<GpuPerformanceInfo>(() => {
     const userOverride = loadUserOverride();
     const { tier, renderer, vendor } = detectGpuTier();
+    const useBlur = shouldUseBackdropBlur(tier, userOverride);
+    // Apply CSS class eagerly during init
+    syncReduceBlurClass(useBlur);
     return {
       tier,
       renderer,
       vendor,
-      useBackdropBlur: shouldUseBackdropBlur(tier, userOverride),
+      useBackdropBlur: useBlur,
       userOverride,
     };
   });
+
+  // Keep CSS class in sync whenever useBackdropBlur changes
+  useEffect(() => {
+    syncReduceBlurClass(info.useBackdropBlur);
+  }, [info.useBackdropBlur]);
 
   const setBlurOverride = useCallback((value: boolean | null) => {
     saveUserOverride(value);

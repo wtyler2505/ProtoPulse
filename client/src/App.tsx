@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ProtoPulseThemeProvider, THEME_PRESETS } from "@/lib/theme-context";
+import { GpuPerformanceProvider, detectGpuTier, classifyGpuTier, shouldUseBackdropBlur } from "@/lib/gpu-performance";
 import { Loader2 } from "lucide-react";
 import { lazy, Suspense } from "react";
 import ProjectWorkspace from "@/pages/ProjectWorkspace";
@@ -20,6 +21,20 @@ const EmbedViewerPage = lazy(() => import("@/pages/EmbedViewerPage"));
 try {
   if (localStorage.getItem('protopulse-high-contrast') === 'true') {
     document.documentElement.classList.add('high-contrast');
+  }
+} catch {
+  // localStorage unavailable — skip
+}
+
+// Apply reduce-blur class eagerly for low-end GPUs to prevent blur jank on first paint.
+// The GpuPerformanceProvider keeps it in sync after React mounts.
+try {
+  const blurOverride = localStorage.getItem('protopulse-gpu-blur-override');
+  // If user explicitly disabled, or auto-detect finds a low-end GPU
+  const blurDisabled = blurOverride === 'false' ||
+    (blurOverride === null && !shouldUseBackdropBlur(detectGpuTier().tier));
+  if (blurDisabled) {
+    document.documentElement.classList.add('reduce-blur');
   }
 } catch {
   // localStorage unavailable — skip
@@ -101,20 +116,22 @@ function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <ProtoPulseThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            {isEmbed ? (
-              <EmbedRouter />
-            ) : (
-              <AuthProvider>
-                <AuthGate>
-                  <Router />
-                </AuthGate>
-              </AuthProvider>
-            )}
-            <Toaster />
-          </TooltipProvider>
-        </QueryClientProvider>
+        <GpuPerformanceProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              {isEmbed ? (
+                <EmbedRouter />
+              ) : (
+                <AuthProvider>
+                  <AuthGate>
+                    <Router />
+                  </AuthGate>
+                </AuthProvider>
+              )}
+              <Toaster />
+            </TooltipProvider>
+          </QueryClientProvider>
+        </GpuPerformanceProvider>
       </ProtoPulseThemeProvider>
     </ThemeProvider>
   );

@@ -119,6 +119,7 @@ import type { Via, ViaType } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
 import CollaborationCursors, { useCursorEmitter } from './CollaborationCursors';
 import type { CollaborationClient } from '@/lib/collaboration-client';
+import { useDfmHighlights } from '@/lib/dfm-pcb-bridge';
 
 // ---------------------------------------------------------------------------
 // View3DButton — jumps to viewer_3d ViewMode
@@ -421,6 +422,9 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const _updateInstanceMutation = useUpdateCircuitInstance();
 
   const { toast } = useToast();
+
+  // --- DFM highlight overlay (BL-0572) ---
+  const { highlight: dfmHighlight } = useDfmHighlights();
 
   // --- Undo/Redo ---
   const { push: pushUndo } = useUndoRedo();
@@ -1153,6 +1157,44 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                     strokeWidth={1 / zoom}
                     strokeDasharray={`${4 / zoom},${2 / zoom}`}
                   />
+                )}
+
+                {/* BL-0572: DFM violation highlight overlay */}
+                {dfmHighlight && (
+                  <g data-testid="dfm-highlight-overlay">
+                    {/* Pulsing ring */}
+                    <circle
+                      cx={dfmHighlight.x}
+                      cy={dfmHighlight.y}
+                      r={dfmHighlight.radius}
+                      fill="none"
+                      stroke={dfmHighlight.severity === 'error' ? '#ef4444' : '#eab308'}
+                      strokeWidth={2.5 / zoom}
+                      opacity={0.9}
+                    >
+                      <animate attributeName="r" values={`${dfmHighlight.radius};${dfmHighlight.radius * 1.4};${dfmHighlight.radius}`} dur="1.2s" repeatCount="indefinite" />
+                      <animate attributeName="opacity" values="0.9;0.3;0.9" dur="1.2s" repeatCount="indefinite" />
+                    </circle>
+                    {/* Inner fill */}
+                    <circle
+                      cx={dfmHighlight.x}
+                      cy={dfmHighlight.y}
+                      r={dfmHighlight.radius * 0.6}
+                      fill={dfmHighlight.severity === 'error' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(234, 179, 8, 0.15)'}
+                      stroke="none"
+                    />
+                    {/* Label */}
+                    <text
+                      x={dfmHighlight.x}
+                      y={dfmHighlight.y - dfmHighlight.radius - 6 / zoom}
+                      textAnchor="middle"
+                      fontSize={10 / zoom}
+                      fill={dfmHighlight.severity === 'error' ? '#ef4444' : '#eab308'}
+                      className="select-none pointer-events-none font-semibold"
+                    >
+                      DFM: {dfmHighlight.ruleName}
+                    </text>
+                  </g>
                 )}
               </g>
             </svg>

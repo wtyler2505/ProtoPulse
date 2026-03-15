@@ -30,6 +30,7 @@ import { solveRcFilter, solveBandpassFilter } from '@/lib/calculators/filter-cut
 import { solvePowerDissipation } from '@/lib/calculators/power-dissipation';
 import { formatEngineering } from '@/lib/calculators/types';
 import type { CalculatorError } from '@/lib/calculators/types';
+import { CalcApplyButtons } from '@/components/ui/CalcApplyButtons';
 
 // ---------------------------------------------------------------------------
 // Shared sub-components
@@ -163,6 +164,14 @@ function OhmsLawCard() {
             <ResultRow label="Current" value={result.result.current.formatted} testId="calc-ohms-current-result" accent />
             <ResultRow label="Resistance" value={result.result.resistance.formatted} testId="calc-ohms-resistance-result" accent />
             <ResultRow label="Power" value={result.result.power.formatted} testId="calc-ohms-power-result" accent />
+            <CalcApplyButtons
+              result={{
+                calculatorName: 'ohms-law',
+                resultName: 'Resistance',
+                value: result.result.resistance.value,
+                unit: result.result.resistance.unit,
+              }}
+            />
           </div>
         )}
       </CardContent>
@@ -270,6 +279,14 @@ function LedResistorCard() {
               label="Resistor Power"
               value={formatEngineering(result.result.resistorPower, 'W')}
               testId="calc-led-power-result"
+            />
+            <CalcApplyButtons
+              result={{
+                calculatorName: 'led-resistor',
+                resultName: 'Nearest E24',
+                value: result.result.resistor.nearestE24,
+                unit: '\u03A9',
+              }}
             />
           </div>
         )}
@@ -395,6 +412,14 @@ function VoltageDividerCard() {
                 <ResultRow label="Ratio" value={`${(forwardResult.result.ratio * 100).toFixed(1)}%`} testId="calc-divider-ratio-result" />
                 <ResultRow label="Current" value={forwardResult.result.current.formatted} testId="calc-divider-current-result" />
                 <ResultRow label="Total Power" value={forwardResult.result.totalPower.formatted} testId="calc-divider-power-result" />
+                <CalcApplyButtons
+                  result={{
+                    calculatorName: 'voltage-divider',
+                    resultName: 'Vout',
+                    value: forwardResult.result.vout.value,
+                    unit: 'V',
+                  }}
+                />
               </div>
             )}
           </TabsContent>
@@ -564,6 +589,14 @@ function RcTimeConstantCard() {
                 />
               ))}
             </div>
+            <CalcApplyButtons
+              result={{
+                calculatorName: 'rc-time-constant',
+                resultName: 'Cutoff Frequency',
+                value: result.result.cutoffFrequency.value,
+                unit: 'Hz',
+              }}
+            />
           </div>
         )}
       </CardContent>
@@ -700,6 +733,14 @@ function FilterCutoffCard() {
                 <ResultRow label="Cutoff Freq" value={rcResult.result.cutoffFrequency.formatted} testId="calc-filter-fc-result" accent />
                 <ResultRow label="Angular" value={rcResult.result.omegaCutoff.formatted} testId="calc-filter-omega-result" />
                 <ResultRow label="Time Constant" value={rcResult.result.timeConstant.formatted} testId="calc-filter-tau-result" />
+                <CalcApplyButtons
+                  result={{
+                    calculatorName: 'filter-cutoff',
+                    resultName: 'Cutoff Frequency',
+                    value: rcResult.result.cutoffFrequency.value,
+                    unit: 'Hz',
+                  }}
+                />
               </div>
             )}
           </TabsContent>
@@ -761,6 +802,14 @@ function FilterCutoffCard() {
                 <ResultRow label="Lower -3dB" value={bpResult.result.lowerCutoff.formatted} testId="calc-filter-bp-lower-result" />
                 <ResultRow label="Upper -3dB" value={bpResult.result.upperCutoff.formatted} testId="calc-filter-bp-upper-result" />
                 <ResultRow label="Q Factor" value={bpResult.result.qualityFactor.toFixed(2)} testId="calc-filter-bp-q-result" />
+                <CalcApplyButtons
+                  result={{
+                    calculatorName: 'filter-cutoff',
+                    resultName: 'Center Frequency',
+                    value: bpResult.result.centerFrequency.value,
+                    unit: 'Hz',
+                  }}
+                />
               </div>
             )}
           </TabsContent>
@@ -873,6 +922,14 @@ function PowerDissipationCard() {
             <ResultRow label="Current" value={result.result.current.formatted} testId="calc-power-current-result" accent />
             <ResultRow label="Voltage" value={result.result.voltage.formatted} testId="calc-power-voltage-result" accent />
             <ResultRow label="Resistance" value={result.result.resistance.formatted} testId="calc-power-resistance-result" accent />
+            <CalcApplyButtons
+              result={{
+                calculatorName: 'power-dissipation',
+                resultName: 'Resistance',
+                value: result.result.resistance.value,
+                unit: result.result.resistance.unit,
+              }}
+            />
           </div>
         )}
       </CardContent>
