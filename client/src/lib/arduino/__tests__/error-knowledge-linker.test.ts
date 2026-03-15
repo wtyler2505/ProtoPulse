@@ -481,7 +481,7 @@ describe('linkErrorsToKnowledge', () => {
     const originalRef = translations[0];
     linkErrorsToKnowledge(translations);
     // Original should not have knowledgeLinks
-    expect((originalRef as Record<string, unknown>).knowledgeLinks).toBeUndefined();
+    expect((originalRef as unknown as Record<string, unknown>).knowledgeLinks).toBeUndefined();
   });
 
   it('handles multiple errors with different link sets', () => {

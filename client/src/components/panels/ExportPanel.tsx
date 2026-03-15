@@ -33,6 +33,8 @@ import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { downloadBlob } from '@/lib/csv';
 import { validateExportPreflight } from '@/lib/export-validation';
 import { runExportPrecheck } from '@/lib/export-precheck';
+import { shouldAutoSnapshot, createExportSnapshot } from '@/lib/export-snapshot';
+import { apiRequest } from '@/lib/queryClient';
 import { generateImportPreview } from '@/lib/import-preview';
 import ImportPreviewDialog from '@/components/panels/ImportPreviewDialog';
 import ExportPrecheckPanel from '@/components/panels/ExportPrecheckPanel';
@@ -436,6 +438,21 @@ function ExportPanel() {
           ? `${format.label}: ${exportedFiles.length} files exported (${exportedFiles.join(', ')})`
           : `${format.label} exported successfully.`,
       });
+
+      // Auto-create a design snapshot for manufacturing exports
+      if (shouldAutoSnapshot(format.id)) {
+        const snap = createExportSnapshot(format.id);
+        apiRequest('POST', `/api/projects/${projectId}/snapshots`, {
+          name: snap.label,
+          description: `Auto-snapshot on ${format.label} export at ${snap.timestamp}`,
+        }).then(() => {
+          addOutputLog(`[EXPORT] Design snapshot saved: "${snap.label}"`);
+          toast({ title: 'Snapshot saved', description: snap.label });
+        }).catch((snapErr: unknown) => {
+          const snapMsg = snapErr instanceof Error ? snapErr.message : 'Unknown error';
+          addOutputLog(`[EXPORT] Failed to save snapshot: ${snapMsg}`);
+        });
+      }
 
       // Reset success state after 3 seconds
       setTimeout(() => {

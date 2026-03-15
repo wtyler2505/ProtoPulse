@@ -7,6 +7,7 @@ import { fromZodError } from 'zod-validation-error';
 import { storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from '../auth';
 import { storage } from '../storage';
 import { asyncHandler, payloadLimit } from './utils';
+import { setCacheHeaders } from '../lib/cache-headers';
 
 const validateKeyLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -21,6 +22,7 @@ export function registerSettingsRoutes(app: Express): void {
 
   app.get(
     '/api/settings/api-keys',
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       if (!req.userId) {
         return res.status(401).json({ message: 'Authentication required' });
@@ -131,6 +133,7 @@ export function registerSettingsRoutes(app: Express): void {
 
   app.get(
     '/api/settings/chat',
+    setCacheHeaders('api_list'),
     asyncHandler(async (req, res) => {
       const defaults = {
         aiProvider: 'anthropic',

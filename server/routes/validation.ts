@@ -5,11 +5,13 @@ import { storage } from '../storage';
 import { insertValidationIssueSchema } from '@shared/schema';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
+import { setCacheHeaders } from '../lib/cache-headers';
 
 export function registerValidationRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/validation',
     requireProjectOwnership,
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const opts = paginationSchema.safeParse(req.query);
       const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };

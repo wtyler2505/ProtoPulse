@@ -55,7 +55,8 @@ import ExamplesBrowser from '@/components/views/arduino/ExamplesBrowser';
 import ExampleLibraryPanel from '@/components/arduino/ExampleLibraryPanel';
 import { formatArduinoCode } from '@/lib/arduino/code-formatter';
 import { translateCompileOutput } from '@/lib/arduino/error-translator';
-import type { ErrorTranslation } from '@/lib/arduino/error-translator';
+import { linkErrorsToKnowledge } from '@/lib/arduino/error-knowledge-linker';
+import type { LinkedError } from '@/lib/arduino/error-knowledge-linker';
 import { parseFlashOutput, diagnoseFlashError, createInitialProgress } from '@/lib/arduino/flash-diagnostics';
 import type { FlashProgress, FlashDiagnostic } from '@/lib/arduino/flash-diagnostics';
 
@@ -349,13 +350,13 @@ export default function ArduinoWorkbenchView() {
     };
   }, [handleFormat]);
 
-  // Translate compile errors from job logs
-  const translatedErrors: ErrorTranslation[] = useMemo(() => {
+  // Translate compile errors from job logs and link to knowledge hub articles
+  const translatedErrors: LinkedError[] = useMemo(() => {
     const failedJob = jobs.find(j => j.status === 'failed' && j.log);
     if (!failedJob?.log) {
       return [];
     }
-    return translateCompileOutput(failedJob.log);
+    return linkErrorsToKnowledge(translateCompileOutput(failedJob.log));
   }, [jobs]);
 
   // Track flash progress from active upload job log
@@ -1029,6 +1030,31 @@ export default function ArduinoWorkbenchView() {
                                     <span className="text-[8px] text-muted-foreground mt-0.5 block font-mono">
                                       {t.file}:{t.lineNumber}
                                     </span>
+                                  )}
+                                  {t.knowledgeLinks.length > 0 && (
+                                    <div className="flex items-center gap-1.5 mt-1 flex-wrap" data-testid={`knowledge-links-${i}`}>
+                                      <BookOpen className="w-2.5 h-2.5 text-cyan-400 shrink-0" />
+                                      {t.knowledgeLinks
+                                        .filter((kl) => kl.relevance === 'primary')
+                                        .slice(0, 3)
+                                        .map((kl) => (
+                                          <button
+                                            key={kl.articleId}
+                                            type="button"
+                                            className="text-[8px] text-cyan-400 hover:text-cyan-300 underline underline-offset-2 decoration-cyan-400/30 hover:decoration-cyan-300/50 transition-colors"
+                                            data-testid={`knowledge-link-${kl.articleId}`}
+                                            onClick={() => {
+                                              window.dispatchEvent(
+                                                new CustomEvent('protopulse:navigate-knowledge', {
+                                                  detail: { articleId: kl.articleId },
+                                                }),
+                                              );
+                                            }}
+                                          >
+                                            Learn: {kl.title}
+                                          </button>
+                                        ))}
+                                    </div>
                                   )}
                                 </div>
                               </div>

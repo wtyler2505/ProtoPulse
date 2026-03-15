@@ -58,7 +58,7 @@ const ERROR_ARTICLE_RULES: ErrorArticleRule[] = [
     secondary: ['i2c', 'spi'],
   },
   {
-    pattern: /(?:Wire|TwoWire).*(?:not declared|does not name|no matching)/i,
+    pattern: /(?:(?:Wire|TwoWire).*(?:not declared|does not name|no matching)|(?:not declared|does not name|no matching).*(?:Wire|TwoWire))/i,
     primary: ['i2c'],
     secondary: ['pull-up-pull-down'],
   },
@@ -167,7 +167,7 @@ const ERROR_ARTICLE_RULES: ErrorArticleRule[] = [
 
   // --- Op-amp / amplifier related ---
   {
-    pattern: /(?:gain|amplif|opamp|op-amp|LM358|MCP6002)/i,
+    pattern: /(?:\bgain\b|amplif|opamp|op-amp|LM358|MCP6002)/i,
     primary: ['op-amps'],
     secondary: ['resistors', 'rc-lc-filters'],
   },

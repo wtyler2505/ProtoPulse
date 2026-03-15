@@ -29,6 +29,7 @@ export function registerBomRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/bom/low-stock',
     requireProjectOwnership,
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const items = await storage.getLowStockItems(projectId);
@@ -39,6 +40,7 @@ export function registerBomRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/bom/storage-locations',
     requireProjectOwnership,
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const locations = await storage.getStorageLocations(projectId);
@@ -49,6 +51,7 @@ export function registerBomRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/bom/:bomId',
     requireProjectOwnership,
+    setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const bomId = parseIdParam(req.params.bomId);
