@@ -1142,6 +1142,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                             <span className="text-emerald-500/80">Suggestion: {row.issue.suggestion}</span>
                           </div>
                         )}
+                        <ReviewResolutionControls issueId={String(row.issue.id)} />
                       </div>
                       <div className="md:w-32 text-xs font-mono text-primary bg-primary/10 px-2 py-1 self-start text-center">
                         {row.issue.componentId || 'GLOBAL'}

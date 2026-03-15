@@ -19,6 +19,7 @@ import {
   Box,
   Upload,
   History,
+  GitCompareArrows,
 } from 'lucide-react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
@@ -50,6 +51,7 @@ import type { ImportedDesign } from '@/lib/design-import';
 import type { PlacementEntry } from '@/lib/pick-place-preview';
 
 const PickPlacePreview = lazy(() => import('@/components/panels/PickPlacePreview'));
+const DesignDiffPanel = lazy(() => import('@/components/panels/DesignDiffPanel'));
 
 const SESSION_KEY = 'protopulse-session-id';
 
