@@ -294,9 +294,9 @@ export class ChecklistManager {
   private save(): void {
     try {
       const obj: PersistedStore = {};
-      for (const [pid, data] of this.store.entries()) {
+      Array.from(this.store.entries()).forEach(([pid, data]) => {
         obj[String(pid)] = data;
-      }
+      });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
     } catch {
       // localStorage full or unavailable — silently ignore
