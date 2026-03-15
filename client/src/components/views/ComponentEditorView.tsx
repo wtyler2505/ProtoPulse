@@ -29,6 +29,7 @@ import { runDRC, getDefaultDRCRules } from '@/lib/component-editor/drc';
 import type { ComponentValidationIssue, DRCViolation, DRCRule } from '@shared/component-types';
 import { createDefaultPartState } from '@shared/component-types';
 import ComponentLibraryBrowser from '@/components/views/component-editor/ComponentLibraryBrowser';
+import SpiceSubcircuitEditor from '@/components/views/component-editor/SpiceSubcircuitEditor';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { ComponentPart } from '@shared/schema';
@@ -39,6 +40,7 @@ const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'pcb', label: 'PCB' },
   { id: 'metadata', label: 'Metadata' },
   { id: 'pin-table', label: 'Pin Table' },
+  { id: 'spice', label: 'SPICE' },
 ];
 
 function MetadataForm() {
@@ -873,6 +875,8 @@ function ComponentEditorContent() {
             )
           ) : activeView === 'pin-table' ? (
             <PinTable />
+          ) : activeView === 'spice' ? (
+            <SpiceSubcircuitEditor />
           ) : activeView === 'breadboard' || activeView === 'schematic' || activeView === 'pcb' ? (
             <ShapeCanvas view={activeView} drcViolations={showDrcOverlays ? drcViolations : []} />
           ) : (

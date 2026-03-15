@@ -183,7 +183,7 @@ export interface ComponentValidationIssue {
   suggestion?: string;
 }
 
-export type EditorViewType = 'breadboard' | 'schematic' | 'pcb' | 'metadata' | 'pin-table';
+export type EditorViewType = 'breadboard' | 'schematic' | 'pcb' | 'metadata' | 'pin-table' | 'spice';
 
 // ---------------------------------------------------------------------------
 // Mystery Part — generic black-box placeholder component
