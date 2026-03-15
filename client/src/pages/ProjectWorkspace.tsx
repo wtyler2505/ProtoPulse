@@ -816,6 +816,9 @@ function WorkspaceContent() {
                 </PopoverContent>
               </Popover>
               <Suspense fallback={null}>
+                <WhatsNewPanel />
+              </Suspense>
+              <Suspense fallback={null}>
                 <MentionBadge />
               </Suspense>
               <StyledTooltip content="Activity feed" side="bottom">
