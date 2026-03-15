@@ -12,7 +12,6 @@ import { getMetrics } from '../metrics';
 import { asyncHandler } from './utils';
 
 import type { Express } from 'express';
-import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 function maskKey(key: string): string {
   if (key.length <= 8) {
