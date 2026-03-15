@@ -965,7 +965,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0270 | `mulberry32` PRNG extracted to `shared/prng.ts` — monte-carlo.ts, gpu-monte-carlo.ts, generative.ts all import from shared | DONE | C3 | Wave 60 |
 | BL-0271 | GPU Monte Carlo evaluator runs on CPU — implement actual GPU batch-solve pipeline | OPEN | C4 | Wave 51 review |
 | BL-0272 | TelemetryLogger not connected to DeviceShadow live overlay | OPEN | C3 | Wave 51 review |
-| BL-0273 | Component Editor auto-save fires every 2s during active drawing (mouse-move driven) | OPEN | C2 | app-audit §15 |
+| BL-0273 | Component Editor auto-save fires every 2s during active drawing (mouse-move driven) — FALSE POSITIVE: debounce works correctly, timer resets on each state change, save fires only 2s after last change | DONE | C2 | Wave 88 |
 | BL-0274 | React.memo on high-frequency components — HistoryList, ProjectExplorer, SortableBomRow, BomCardItem memoized | DONE | C3 | Wave 61 |
 | BL-0275 | `backdrop-blur-xl` GPU jank on low-end devices | OPEN | C2 | app-audit §15 |
 | BL-0276 | No cache headers on API responses — relying entirely on client-side React Query cache | OPEN | C3 | app-audit §16 |
