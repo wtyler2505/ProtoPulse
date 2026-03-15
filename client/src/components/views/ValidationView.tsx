@@ -41,6 +41,9 @@ import { DEFAULT_ERC_RULES, DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-typ
 import type { CircuitSettings } from '@shared/circuit-types';
 import type { ComponentPart } from '@shared/schema';
 import { DRC_EXPLANATIONS } from '@shared/drc-engine';
+import { DrcPresetSelector } from '@/components/views/DrcPresetSelector';
+import { applyPreset } from '@/lib/drc-presets';
+import type { DrcPresetId } from '@/lib/drc-presets';
 import { useDesignGateway } from '@/lib/design-gateway';
 import type { DesignState } from '@/lib/design-gateway';
 import { useDfmChecker, bomToDfmInput } from '@/lib/dfm-checker';
