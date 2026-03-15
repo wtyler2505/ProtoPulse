@@ -31,6 +31,7 @@ import {
 import { validateSession, getUserById } from './auth';
 import { storage } from './storage';
 import { logger } from './logger';
+import { validateWsSession } from './lib/ws-session-validator';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
