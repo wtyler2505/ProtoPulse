@@ -120,7 +120,7 @@ export class CollaborationServer {
     const validation = await validateWsSession(sessionId, projectId);
     if (!validation.valid) {
       const reasonMessages: Record<string, string> = {
-        expired: 'Session expired or invalid',
+        expired: 'Invalid or expired session',
         invalid: 'Invalid session',
         no_access: 'No access to this project',
         project_deleted: 'Project has been deleted',
