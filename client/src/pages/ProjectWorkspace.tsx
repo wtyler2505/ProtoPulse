@@ -814,6 +814,9 @@ function WorkspaceContent() {
                   </Suspense>
                 </PopoverContent>
               </Popover>
+              <Suspense fallback={null}>
+                <MentionBadge />
+              </Suspense>
               <StyledTooltip content="Activity feed" side="bottom">
                 <button
                   data-testid="toggle-activity-feed"
