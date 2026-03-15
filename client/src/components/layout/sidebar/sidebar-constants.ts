@@ -26,6 +26,7 @@ import {
   HeartPulse,
   MessageSquare,
   FileCode,
+  GraduationCap,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -57,6 +58,7 @@ export const navItems: NavItem[] = [
   { icon: Calculator, view: 'calculators', label: 'Calculators' },
   { icon: BookOpen, view: 'design_patterns', label: 'Patterns' },
   { icon: Zap, view: 'starter_circuits', label: 'Starter Circuits' },
+  { icon: GraduationCap, view: 'labs', label: 'Labs' },
   { icon: History, view: 'design_history', label: 'History' },
   { icon: HeartPulse, view: 'lifecycle', label: 'Lifecycle' },
   { icon: MessageSquare, view: 'comments', label: 'Comments' },
@@ -94,6 +96,7 @@ export const tabDescriptions: Record<string, string> = {
   generative_design: 'AI-guided generative circuit design with evolutionary optimization',
   digital_twin: 'Live hardware digital twin with IoT telemetry and sim comparison',
   starter_circuits: 'Pre-built circuits with complete Arduino code for instant beginner gratification',
+  labs: 'Guided lab assignments with objectives, steps, and grading criteria',
 };
 
 export const alwaysVisibleIds = new Set<ViewMode>([
@@ -117,5 +120,6 @@ export const alwaysVisibleIds = new Set<ViewMode>([
   'comments',
   'output',
   'starter_circuits',
+  'labs',
 ]);
 

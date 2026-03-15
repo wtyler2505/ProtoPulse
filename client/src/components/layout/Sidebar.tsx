@@ -31,6 +31,8 @@ import {
   loadCollapsedGroups,
   saveCollapsedGroups,
 } from '@/lib/sidebar-groups';
+import { useBeginnerMode } from '@/lib/beginner-mode';
+import { useRolePreset } from '@/lib/role-presets';
 import SidebarHeader from '@/components/layout/sidebar/SidebarHeader';
 import ProjectSettingsPanel from '@/components/layout/sidebar/ProjectSettingsPanel';
 import ProjectExplorer from './sidebar/ProjectExplorer';
@@ -51,6 +53,8 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
   const { issues } = useValidation();
   const { history } = useHistory();
   const { addOutputLog } = useOutput();
+  const { getLabel } = useBeginnerMode();
+  const { isViewVisible } = useRolePreset();
 
   const hasDesignContent = (nodes ?? []).length > 0;
 
@@ -102,7 +106,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
         <div className="flex-1 flex flex-col items-center py-3 gap-1 overflow-y-auto no-scrollbar">
           {SIDEBAR_GROUPS.map((group) => {
             const items = getNavItemsForGroup(group).filter(
-              (item) => alwaysVisibleIds.has(item.view) || hasDesignContent,
+              (item) => isViewVisible(item.view) && (alwaysVisibleIds.has(item.view) || hasDesignContent),
             );
             if (items.length === 0) { return null; }
             const GroupIcon = group.icon;
@@ -119,7 +123,7 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
                   </button>
                 </StyledTooltip>
                 {!isGroupCollapsed && items.map((item) => (
-                  <StyledTooltip key={item.view} content={item.label} side="right">
+                  <StyledTooltip key={item.view} content={getLabel(item.label)} side="right">
                     <button
                       data-testid={`sidebar-icon-${item.view}`}
                       className={cn(
@@ -214,6 +218,8 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
             hasDesignContent={hasDesignContent}
             collapsedGroups={collapsedGroups}
             toggleGroup={toggleGroup}
+            getLabel={getLabel}
+            isViewVisible={isViewVisible}
           />
         </div>
       </div>
@@ -250,6 +256,8 @@ interface SidebarContentProps {
   hasDesignContent: boolean;
   collapsedGroups: Record<string, boolean>;
   toggleGroup: (groupId: string) => void;
+  getLabel: (term: string) => string;
+  isViewVisible: (view: ViewMode) => boolean;
 }
 
 function SidebarContent({
@@ -264,6 +272,7 @@ function SidebarContent({
   expandedCategories, setExpandedCategories,
   activeView, setActiveView,
   hasDesignContent, collapsedGroups, toggleGroup,
+  getLabel, isViewVisible,
 }: SidebarContentProps) {
   const editNameRef = useRef<HTMLInputElement>(null);
 
@@ -374,7 +383,7 @@ function SidebarContent({
         <div className="mb-4">
           {SIDEBAR_GROUPS.map((group) => {
             const items = getNavItemsForGroup(group).filter(
-              (item) => alwaysVisibleIds.has(item.view) || hasDesignContent,
+              (item) => isViewVisible(item.view) && (alwaysVisibleIds.has(item.view) || hasDesignContent),
             );
             if (items.length === 0) { return null; }
             const GroupIcon = group.icon;
@@ -413,7 +422,7 @@ function SidebarContent({
                         onClick={() => setActiveView(item.view)}
                       >
                         <item.icon className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{item.label}</span>
+                        <span className="truncate">{getLabel(item.label)}</span>
                       </button>
                     ))}
                   </div>

@@ -44,6 +44,7 @@ const MentionBadge = lazy(() => import('@/components/ui/MentionBadge'));
 const WhatsNewPanel = lazy(() => import('@/components/ui/WhatsNewPanel'));
 const ShareProjectButton = lazy(() => import('@/components/ui/ShareProjectButton').then(m => ({ default: m.ShareProjectButton })));
 const AuditTrailView = lazy(() => import('@/components/views/AuditTrailView'));
+const LabTemplatePanel = lazy(() => import('@/components/panels/LabTemplatePanel'));
 const FirstRunChecklist = lazy(() => import('@/components/ui/FirstRunChecklist'));
 const LessonModeOverlay = lazy(() => import('@/components/ui/LessonModeOverlay'));
 const ExplainPanelButton = lazy(() => import('@/components/ui/ExplainPanelButton'));
@@ -1071,6 +1072,13 @@ function WorkspaceContent() {
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
                     <AuditTrailView />
+                  </Suspense>
+                </ErrorBoundary>
+              )}
+              {activeView === 'labs' && (
+                <ErrorBoundary>
+                  <Suspense fallback={<ViewLoadingFallback />}>
+                    <LabTemplatePanel />
                   </Suspense>
                 </ErrorBoundary>
               )}

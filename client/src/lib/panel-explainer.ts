@@ -473,6 +473,21 @@ export const PANEL_EXPLANATIONS: Record<ViewMode, PanelExplanation> = {
       { view: 'comments', label: 'Comments' },
     ],
   },
+
+  labs: {
+    title: 'Lab Assignments',
+    description:
+      'Pre-built lab assignments with objectives, step-by-step instructions, and grading criteria. Designed for educators and students learning electronics.',
+    tips: [
+      'Choose a lab matching your skill level.',
+      'Follow the steps in order — each builds on the previous.',
+      'Check your work against the grading criteria before submitting.',
+    ],
+    relatedViews: [
+      { view: 'starter_circuits', label: 'Starter Circuits' },
+      { view: 'knowledge', label: 'Knowledge Hub' },
+    ],
+  },
 };
 
 /**

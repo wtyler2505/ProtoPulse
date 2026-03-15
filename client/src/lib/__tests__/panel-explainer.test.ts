@@ -41,6 +41,7 @@ const ALL_VIEW_MODES: ViewMode[] = [
   'arduino',
   'starter_circuits',
   'audit_trail',
+  'labs',
 ];
 
 describe('PANEL_EXPLANATIONS', () => {
