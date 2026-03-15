@@ -42,6 +42,7 @@ const StarterCircuitsPanel = lazy(() => import('@/components/views/StarterCircui
 const ActivityFeedPanel = lazy(() => import('@/components/panels/ActivityFeedPanel'));
 const MentionBadge = lazy(() => import('@/components/ui/MentionBadge'));
 const WhatsNewPanel = lazy(() => import('@/components/ui/WhatsNewPanel'));
+const ShareProjectButton = lazy(() => import('@/components/ui/ShareProjectButton').then(m => ({ default: m.ShareProjectButton })));
 const AuditTrailView = lazy(() => import('@/components/views/AuditTrailView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
@@ -835,6 +836,9 @@ function WorkspaceContent() {
                   <Activity className="w-4 h-4" />
                 </button>
               </StyledTooltip>
+              <Suspense fallback={null}>
+                <ShareProjectButton projectId={projectId} />
+              </Suspense>
               <ThemeToggle />
             </div>
           </header>

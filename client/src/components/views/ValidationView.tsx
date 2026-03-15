@@ -388,8 +388,17 @@ function ValidationViewContent() {
     });
   }, [componentParts]);
 
+  // DRC preset state (BL-0250)
+  const [activePreset, setActivePreset] = useState<DrcPresetId>('general');
+  const [drcRules, setDrcRules] = useState(() => applyPreset('general'));
+
+  const handlePresetApply = useCallback((presetId: DrcPresetId, rules: DRCRule[]) => {
+    setActivePreset(presetId);
+    setDrcRules(rules);
+    toast({ title: 'DRC Preset Applied', description: `Switched to "${DRC_PRESETS.find((p) => p.id === presetId)?.name ?? presetId}" rules.` });
+  }, [toast]);
+
   // DRC violations from component part geometry
-  const drcDefaultRules = useMemo(() => getDefaultDRCRules(), []);
   const drcIssues = useMemo(() => {
     if (!componentParts || componentParts.length === 0) return [];
     const views = ['breadboard', 'schematic', 'pcb'] as const;
@@ -398,7 +407,7 @@ function ValidationViewContent() {
       const partName = partState.meta.title || `Part #${part.id}`;
       return views.flatMap((view) => {
         if (!partState.views[view]?.shapes?.length) return [];
-        return runDRC(partState, drcDefaultRules, view).map((v) => ({
+        return runDRC(partState, drcRules, view).map((v) => ({
           id: v.id,
           severity: v.severity,
           message: v.message,
@@ -408,7 +417,7 @@ function ValidationViewContent() {
         }));
       });
     });
-  }, [componentParts, drcDefaultRules]);
+  }, [componentParts, drcRules]);
 
   // ERC violations from circuit schematics
   const { data: circuits } = useCircuitDesigns(projectId);
