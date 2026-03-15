@@ -405,19 +405,17 @@ describe('buildExportPayload', () => {
 // ---------------------------------------------------------------------------
 
 describe('exportCandidate', () => {
-  let createObjectURLMock: ReturnType<typeof vi.fn>;
-  let revokeObjectURLMock: ReturnType<typeof vi.fn>;
+  let createObjectURLMock: (obj: Blob | MediaSource) => string;
+  let revokeObjectURLMock: (url: string) => void;
   let appendChildSpy: ReturnType<typeof vi.spyOn>;
   let removeChildSpy: ReturnType<typeof vi.spyOn>;
   let clickedLink: HTMLAnchorElement | null = null;
 
   beforeEach(() => {
     clickedLink = null;
-    createObjectURLMock = vi.fn().mockReturnValue('blob:mock-url');
-    revokeObjectURLMock = vi.fn();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    createObjectURLMock = vi.fn<(obj: Blob | MediaSource) => string>().mockReturnValue('blob:mock-url');
+    revokeObjectURLMock = vi.fn<(url: string) => void>();
     globalThis.URL.createObjectURL = createObjectURLMock;
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     globalThis.URL.revokeObjectURL = revokeObjectURLMock;
 
     appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => {

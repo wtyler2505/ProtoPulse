@@ -319,8 +319,10 @@ const batchDrcExecutor: JobExecutor = async (payload: unknown, ctx: JobExecution
         const emptyViewData: ViewData = { shapes: [] };
         const partState: PartState = {
           meta: {
-            name: typeof meta.name === 'string' ? meta.name : `part-${part.id}`,
-            category: typeof meta.category === 'string' ? meta.category : 'generic',
+            title: typeof meta.title === 'string' ? meta.title : `part-${part.id}`,
+            tags: Array.isArray(meta.tags) ? meta.tags as string[] : [],
+            mountingType: typeof meta.mountingType === 'string' ? meta.mountingType as PartState['meta']['mountingType'] : '',
+            properties: Array.isArray(meta.properties) ? meta.properties as PartState['meta']['properties'] : [],
           },
           connectors,
           buses: [],

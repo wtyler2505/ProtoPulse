@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 // ---------------------------------------------------------------------------
@@ -59,7 +59,6 @@ export function regenerateTypes(projectRoot: string): string {
   } finally {
     // Restore the original committed content so the working tree is not dirtied
     if (original !== null) {
-      const { writeFileSync } = require('node:fs') as typeof import('node:fs');
       writeFileSync(filePath, original, 'utf-8');
     }
   }

@@ -128,13 +128,18 @@ export function mapPin(
   const edgeNet = norm(edge.netName);
   const combined = [edgeLabel, edgeSignal, edgeNet].join(' ');
 
-  // Helper: pick from candidates, preferring ones not yet used
+  // Helper: pick from candidates, preferring ones not yet used.
+  // Returns undefined if all candidates are already used — this lets
+  // the caller fall through to the next strategy or pin group.
   const pickBest = (candidates: ConnectorInfo[]): ConnectorInfo | undefined => {
+    if (candidates.length === 0) {
+      return undefined;
+    }
     if (!usedPinIds || usedPinIds.size === 0) {
       return candidates[0];
     }
     const unused = candidates.filter((c) => !usedPinIds.has(c.id));
-    return unused[0] ?? candidates[0];
+    return unused[0]; // undefined if all used
   };
 
   // 1. Ground (check before power — GND is more specific)
