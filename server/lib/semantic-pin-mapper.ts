@@ -73,8 +73,8 @@ function tokens(s: string): string[] {
 const POWER_PATTERNS = /^(vcc|vdd|vin|vbus|v\+|3v3|5v|12v|vbat|vsys|vout)$/i;
 const GROUND_PATTERNS = /^(gnd|vss|v\-|ground|agnd|dgnd|pgnd)$/i;
 
-const POWER_LABEL_PATTERNS = /\b(power|vcc|vdd|vin|vbus|vbat|vsys|3\.?3\s*v|5\s*v|12\s*v|supply)\b/i;
-const GROUND_LABEL_PATTERNS = /\b(ground|gnd|vss)\b/i;
+const POWER_LABEL_PATTERNS = /(?:^|[\s_\-/])(power|vcc|vdd|vin|vbus|vbat|vsys|3\.?3\s*v|5\s*v|12\s*v|supply)(?:$|[\s_\-/])/i;
+const GROUND_LABEL_PATTERNS = /(?:^|[\s_\-/])(ground|gnd|vss)(?:$|[\s_\-/])/i;
 
 const I2C_LABEL_PATTERNS = /\b(i2c|iic|twi)\b/i;
 const SPI_LABEL_PATTERNS = /\b(spi)\b/i;

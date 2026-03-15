@@ -15,11 +15,11 @@
 import { z } from 'zod';
 import { logger } from '../logger';
 import { storage } from '../storage';
-import { runDRC } from '@shared/drc-engine';
+import { runDRC, getDefaultDRCRules } from '@shared/drc-engine';
 import { jobQueue } from '../job-queue';
 
 import type { JobExecutionContext, JobExecutor, JobType } from '../job-queue';
-import type { DRCRule } from '@shared/drc-engine';
+import type { DRCRule, PartState, ViewData, Shape, Connector } from '@shared/component-types';
 
 // ---------------------------------------------------------------------------
 // Payload schemas
@@ -44,9 +44,9 @@ const batchDrcPayloadSchema = z.object({
   projectId: z.number().int(),
   rules: z.array(z.object({
     type: z.string(),
-    severity: z.enum(['error', 'warning', 'info']),
+    severity: z.enum(['error', 'warning']),
     enabled: z.boolean(),
-    params: z.record(z.unknown()).optional(),
+    params: z.record(z.number()).optional(),
   })).optional(),
   view: z.enum(['breadboard', 'schematic', 'pcb']).default('schematic'),
 });
@@ -91,17 +91,20 @@ const aiAnalysisExecutor: JobExecutor = async (payload: unknown, ctx: JobExecuti
   if (scope === 'full' || scope === 'architecture') {
     const nodes = await storage.getNodes(projectId);
     const edges = await storage.getEdges(projectId);
+
+    const connectedIds = new Set<string>();
+    for (const e of edges) {
+      connectedIds.add(e.source);
+      connectedIds.add(e.target);
+    }
+
     results.architecture = {
       nodeCount: nodes.length,
       edgeCount: edges.length,
-      nodeTypes: [...new Set(nodes.map((n) => n.nodeType))],
-      disconnectedNodes: nodes.filter((n) => {
-        const connectedIds = new Set([
-          ...edges.map((e) => e.source),
-          ...edges.map((e) => e.target),
-        ]);
-        return !connectedIds.has(n.nodeId);
-      }).map((n) => n.nodeId),
+      nodeTypes: Array.from(new Set(nodes.map((n) => n.nodeType))),
+      disconnectedNodes: nodes
+        .filter((n) => !connectedIds.has(n.nodeId))
+        .map((n) => n.nodeId),
     };
     ctx.reportProgress(25);
     checkAborted(ctx.signal);
@@ -157,11 +160,12 @@ const exportGenerationExecutor: JobExecutor = async (payload: unknown, ctx: JobE
   checkAborted(ctx.signal);
 
   // Fetch project data needed for export
-  const [project, nodes, edges, bomItems] = await Promise.all([
+  const [project, nodes, edges, bomItems, issues] = await Promise.all([
     storage.getProject(projectId),
     storage.getNodes(projectId),
     storage.getEdges(projectId),
     storage.getBomItems(projectId),
+    storage.getValidationIssues(projectId),
   ]);
 
   if (!project) {
@@ -175,96 +179,61 @@ const exportGenerationExecutor: JobExecutor = async (payload: unknown, ctx: JobE
   let result: unknown;
 
   switch (format) {
-    case 'kicad': {
-      const { generateKicadProject } = await import('../export/kicad-exporter');
-      result = generateKicadProject({
-        projectName: project.name,
-        nodes: nodes.map((n) => ({
-          nodeId: n.nodeId,
-          label: n.label,
-          nodeType: n.nodeType,
-          positionX: n.positionX,
-          positionY: n.positionY,
-          data: (n.data ?? {}) as Record<string, unknown>,
-        })),
-        edges: edges.map((e) => ({
-          edgeId: e.edgeId,
-          source: e.source,
-          target: e.target,
-          label: e.label,
-          signalType: e.signalType,
-          voltage: e.voltage,
-          busWidth: e.busWidth,
-          netName: e.netName ?? null,
-        })),
-        bomItems: bomItems.map((b) => ({
-          partNumber: b.partNumber ?? '',
-          manufacturer: b.manufacturer ?? '',
-          description: b.description ?? '',
-          quantity: b.quantity,
-          unitPrice: typeof b.unitPrice === 'string' ? b.unitPrice : String(b.unitPrice ?? '0'),
-          totalPrice: typeof b.totalPrice === 'string' ? b.totalPrice : String(b.totalPrice ?? '0'),
-          supplier: b.supplier ?? '',
-          stock: b.stock ?? 0,
-          status: b.status ?? 'active',
-          leadTime: b.leadTime ?? null,
-        })),
-      });
-      break;
-    }
-
-    case 'eagle': {
-      const { generateEagleProject } = await import('../export/eagle-exporter');
-      result = generateEagleProject({
-        projectName: project.name,
-        nodes: nodes.map((n) => ({
-          nodeId: n.nodeId,
-          label: n.label,
-          nodeType: n.nodeType,
-          positionX: n.positionX,
-          positionY: n.positionY,
-          data: (n.data ?? {}) as Record<string, unknown>,
-        })),
-        edges: edges.map((e) => ({
-          edgeId: e.edgeId,
-          source: e.source,
-          target: e.target,
-          label: e.label,
-          signalType: e.signalType,
-          voltage: e.voltage,
-          busWidth: e.busWidth,
-          netName: e.netName ?? null,
-        })),
-        bomItems: bomItems.map((b) => ({
-          partNumber: b.partNumber ?? '',
-          manufacturer: b.manufacturer ?? '',
-          description: b.description ?? '',
-          quantity: b.quantity,
-          unitPrice: typeof b.unitPrice === 'string' ? b.unitPrice : String(b.unitPrice ?? '0'),
-          totalPrice: typeof b.totalPrice === 'string' ? b.totalPrice : String(b.totalPrice ?? '0'),
-          supplier: b.supplier ?? '',
-          stock: b.stock ?? 0,
-          status: b.status ?? 'active',
-          leadTime: b.leadTime ?? null,
-        })),
-      });
-      break;
-    }
-
     case 'bom-csv': {
-      const { generateBomCsv } = await import('../export/bom-exporter');
-      result = generateBomCsv(bomItems.map((b) => ({
-        partNumber: b.partNumber ?? '',
-        manufacturer: b.manufacturer ?? '',
-        description: b.description ?? '',
-        quantity: b.quantity,
-        unitPrice: typeof b.unitPrice === 'string' ? b.unitPrice : String(b.unitPrice ?? '0'),
-        totalPrice: typeof b.totalPrice === 'string' ? b.totalPrice : String(b.totalPrice ?? '0'),
-        supplier: b.supplier ?? '',
-        stock: b.stock ?? 0,
-        status: b.status ?? 'active',
-        leadTime: b.leadTime ?? null,
-      })));
+      const { exportBom } = await import('../export/bom-exporter');
+      const csvContent = exportBom(bomItems, { format: 'generic' });
+      result = {
+        content: csvContent,
+        encoding: 'utf8',
+        mimeType: 'text/csv',
+        filename: `${project.name}_BOM.csv`,
+      };
+      break;
+    }
+
+    case 'design-report': {
+      const { generateDesignReportMd } = await import('../export/design-report');
+      result = generateDesignReportMd({
+        projectName: project.name,
+        projectDescription: project.description ?? '',
+        nodes: nodes.map((n) => ({
+          nodeId: n.nodeId,
+          label: n.label,
+          nodeType: n.nodeType,
+          positionX: n.positionX,
+          positionY: n.positionY,
+          data: (n.data ?? {}) as Record<string, unknown>,
+        })),
+        edges: edges.map((e) => ({
+          edgeId: e.edgeId,
+          source: e.source,
+          target: e.target,
+          label: e.label,
+          signalType: e.signalType,
+          voltage: e.voltage,
+          busWidth: e.busWidth,
+          netName: e.netName ?? null,
+        })),
+        bom: bomItems.map((b) => ({
+          partNumber: b.partNumber ?? '',
+          manufacturer: b.manufacturer ?? '',
+          description: b.description ?? '',
+          quantity: b.quantity,
+          unitPrice: typeof b.unitPrice === 'string' ? b.unitPrice : String(b.unitPrice ?? '0'),
+          totalPrice: typeof b.totalPrice === 'string' ? b.totalPrice : String(b.totalPrice ?? '0'),
+          supplier: b.supplier ?? '',
+          stock: b.stock ?? 0,
+          status: b.status ?? 'active',
+          leadTime: b.leadTime ?? null,
+        })),
+        issues: issues.map((i) => ({
+          severity: i.severity,
+          message: i.message,
+          componentId: i.componentId,
+          suggestion: i.suggestion,
+        })),
+        circuits: [],
+      });
       break;
     }
 
@@ -310,14 +279,16 @@ const batchDrcExecutor: JobExecutor = async (payload: unknown, ctx: JobExecution
   checkAborted(ctx.signal);
 
   // Build default rules if not provided
-  const rules: DRCRule[] = (parsed.rules ?? [
-    { type: 'min-clearance', severity: 'error', enabled: true, params: { minDistance: 0.2 } },
-    { type: 'min-trace-width', severity: 'warning', enabled: true, params: { minWidth: 0.15 } },
-    { type: 'pad-size', severity: 'warning', enabled: true, params: { minPadSize: 0.5 } },
-    { type: 'pin-spacing', severity: 'info', enabled: true, params: { minSpacing: 2.54 } },
-  ]) as DRCRule[];
+  const rules: DRCRule[] = parsed.rules
+    ? parsed.rules.map((r) => ({
+        type: r.type as DRCRule['type'],
+        severity: r.severity,
+        enabled: r.enabled,
+        params: r.params ?? {},
+      }))
+    : getDefaultDRCRules();
 
-  const allViolations: Array<{ partId: number; violations: unknown[] }> = [];
+  const allViolations: Array<{ partId: number; violations: Array<{ severity?: string; message?: string; ruleType?: string }> }> = [];
   const totalParts = parts.length;
 
   for (let i = 0; i < totalParts; i++) {
@@ -327,31 +298,50 @@ const batchDrcExecutor: JobExecutor = async (payload: unknown, ctx: JobExecution
 
     // Build a PartState from the component part data
     const meta = (part.meta ?? {}) as Record<string, unknown>;
-    const connectors = Array.isArray(part.connectors) ? part.connectors : [];
-    const shapes = Array.isArray((meta.views as Record<string, unknown>)?.[view])
-      ? (meta.views as Record<string, Record<string, unknown>>)[view] as unknown[]
-      : [];
+    const connectors = (Array.isArray(part.connectors) ? part.connectors : []) as Connector[];
+
+    // Extract shapes from the part's view data
+    const viewsObj = (meta.views ?? {}) as Record<string, unknown>;
+    const viewEntry = viewsObj[view];
+    let shapes: Shape[] = [];
+    if (viewEntry && typeof viewEntry === 'object' && !Array.isArray(viewEntry)) {
+      const vd = viewEntry as Record<string, unknown>;
+      if (Array.isArray(vd.shapes)) {
+        shapes = vd.shapes as Shape[];
+      }
+    } else if (Array.isArray(viewEntry)) {
+      shapes = viewEntry as Shape[];
+    }
 
     // Only run DRC if there are shapes to check
     if (shapes.length > 0) {
       try {
-        const partState = {
-          views: {
-            breadboard: { shapes: view === 'breadboard' ? shapes : [] },
-            schematic: { shapes: view === 'schematic' ? shapes : [] },
-            pcb: { shapes: view === 'pcb' ? shapes : [] },
+        const emptyViewData: ViewData = { shapes: [] };
+        const partState: PartState = {
+          meta: {
+            name: typeof meta.name === 'string' ? meta.name : `part-${part.id}`,
+            category: typeof meta.category === 'string' ? meta.category : 'generic',
           },
           connectors,
+          buses: [],
+          views: {
+            breadboard: view === 'breadboard' ? { shapes } : emptyViewData,
+            schematic: view === 'schematic' ? { shapes } : emptyViewData,
+            pcb: view === 'pcb' ? { shapes } : emptyViewData,
+          },
         };
 
-        const violations = runDRC(
-          partState as Parameters<typeof runDRC>[0],
-          rules,
-          view,
-        );
+        const violations = runDRC(partState, rules, view);
 
         if (violations.length > 0) {
-          allViolations.push({ partId: part.id, violations });
+          allViolations.push({
+            partId: part.id,
+            violations: violations.map((v) => ({
+              severity: v.severity,
+              message: v.message,
+              ruleType: v.ruleType,
+            })),
+          });
         }
       } catch {
         // Skip parts with malformed data
@@ -366,17 +356,17 @@ const batchDrcExecutor: JobExecutor = async (payload: unknown, ctx: JobExecution
 
   // Store violations as validation issues
   if (allViolations.length > 0) {
-    const issues = allViolations.flatMap(({ partId, violations }) =>
-      (violations as Array<{ severity?: string; message?: string; ruleType?: string }>).map((v) => ({
+    const issuesToCreate = allViolations.flatMap(({ partId, violations }) =>
+      violations.map((v) => ({
         projectId,
-        severity: v.severity ?? 'warning',
+        severity: (v.severity === 'error' ? 'error' : 'warning') as 'error' | 'warning' | 'info',
         message: v.message ?? `DRC violation on part ${partId}`,
         componentId: String(partId),
         suggestion: `Review ${v.ruleType ?? 'DRC'} rule for part ${partId}`,
       })),
     );
 
-    await storage.bulkCreateValidationIssues(issues);
+    await storage.bulkCreateValidationIssues(issuesToCreate);
   }
 
   ctx.reportProgress(100);
@@ -403,11 +393,10 @@ const reportGenerationExecutor: JobExecutor = async (payload: unknown, ctx: JobE
   checkAborted(ctx.signal);
 
   // Gather all project data for report
-  const [project, nodes, edges, bomItems, issues] = await Promise.all([
+  const [project, nodes, edges, issues] = await Promise.all([
     storage.getProject(projectId),
     storage.getNodes(projectId),
     storage.getEdges(projectId),
-    storage.getBomItems(projectId),
     storage.getValidationIssues(projectId),
   ]);
 
@@ -418,32 +407,45 @@ const reportGenerationExecutor: JobExecutor = async (payload: unknown, ctx: JobE
   ctx.reportProgress(30);
   checkAborted(ctx.signal);
 
+  const mappedNodes = nodes.map((n) => ({
+    nodeId: n.nodeId,
+    label: n.label,
+    nodeType: n.nodeType,
+    positionX: n.positionX,
+    positionY: n.positionY,
+    data: (n.data ?? {}) as Record<string, unknown>,
+  }));
+
+  const mappedEdges = edges.map((e) => ({
+    edgeId: e.edgeId,
+    source: e.source,
+    target: e.target,
+    label: e.label,
+    signalType: e.signalType,
+    voltage: e.voltage,
+    busWidth: e.busWidth,
+    netName: e.netName ?? null,
+  }));
+
+  const mappedIssues = issues.map((i) => ({
+    severity: i.severity,
+    message: i.message,
+    componentId: i.componentId,
+    suggestion: i.suggestion,
+  }));
+
   let result: unknown;
 
   switch (reportType) {
     case 'design': {
+      const bomItems = await storage.getBomItems(projectId);
       const { generateDesignReportMd } = await import('../export/design-report');
       result = generateDesignReportMd({
         projectName: project.name,
-        nodes: nodes.map((n) => ({
-          nodeId: n.nodeId,
-          label: n.label,
-          nodeType: n.nodeType,
-          positionX: n.positionX,
-          positionY: n.positionY,
-          data: (n.data ?? {}) as Record<string, unknown>,
-        })),
-        edges: edges.map((e) => ({
-          edgeId: e.edgeId,
-          source: e.source,
-          target: e.target,
-          label: e.label,
-          signalType: e.signalType,
-          voltage: e.voltage,
-          busWidth: e.busWidth,
-          netName: e.netName ?? null,
-        })),
-        bomItems: bomItems.map((b) => ({
+        projectDescription: project.description ?? '',
+        nodes: mappedNodes,
+        edges: mappedEdges,
+        bom: bomItems.map((b) => ({
           partNumber: b.partNumber ?? '',
           manufacturer: b.manufacturer ?? '',
           description: b.description ?? '',
@@ -455,12 +457,8 @@ const reportGenerationExecutor: JobExecutor = async (payload: unknown, ctx: JobE
           status: b.status ?? 'active',
           leadTime: b.leadTime ?? null,
         })),
-        validationIssues: issues.map((i) => ({
-          severity: i.severity,
-          message: i.message,
-          componentId: i.componentId,
-          suggestion: i.suggestion,
-        })),
+        issues: mappedIssues,
+        circuits: [],
       });
       break;
     }
@@ -469,24 +467,9 @@ const reportGenerationExecutor: JobExecutor = async (payload: unknown, ctx: JobE
       const { generateFmeaReport } = await import('../export/fmea-generator');
       result = generateFmeaReport({
         projectName: project.name,
-        nodes: nodes.map((n) => ({
-          nodeId: n.nodeId,
-          label: n.label,
-          nodeType: n.nodeType,
-          positionX: n.positionX,
-          positionY: n.positionY,
-          data: (n.data ?? {}) as Record<string, unknown>,
-        })),
-        edges: edges.map((e) => ({
-          edgeId: e.edgeId,
-          source: e.source,
-          target: e.target,
-          label: e.label,
-          signalType: e.signalType,
-          voltage: e.voltage,
-          busWidth: e.busWidth,
-          netName: e.netName ?? null,
-        })),
+        nodes: mappedNodes,
+        edges: mappedEdges,
+        issues: mappedIssues,
       });
       break;
     }
@@ -535,8 +518,8 @@ const importProcessingExecutor: JobExecutor = async (payload: unknown, ctx: JobE
   // Record a history item for the import
   await storage.createHistoryItem({
     projectId,
-    action: 'import',
-    details: `Imported ${format} file: ${filename}`,
+    action: `import:${format}:${filename}`,
+    user: 'system',
   });
 
   ctx.reportProgress(50);
@@ -607,8 +590,6 @@ export function validateExecutorRegistration(queue = jobQueue): JobType[] {
   const unregistered: JobType[] = [];
 
   for (const type of ALL_JOB_TYPES) {
-    // Submit a test job and see if it fails with "no executor" — but that's
-    // destructive. Instead, we'll rely on the EXECUTORS map being complete.
     // The queue stores executors in a private Map, so we check our own registry.
     if (!(type in EXECUTORS)) {
       unregistered.push(type);
@@ -620,7 +601,7 @@ export function validateExecutorRegistration(queue = jobQueue): JobType[] {
     logger.info('job-executors:validation-passed', { message: 'All job types have registered executors' });
   } else {
     logger.warn('job-executors:validation-failed', {
-      message: `${unregistered.length} job type(s) missing executors`,
+      message: `${String(unregistered.length)} job type(s) missing executors`,
       unregistered,
     });
   }
