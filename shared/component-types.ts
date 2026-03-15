@@ -95,6 +95,8 @@ export interface PartMeta {
   properties: PartProperty[];
   datasheetUrl?: string;
   version?: string;
+  /** Optional SPICE subcircuit definition attached to this component. */
+  spiceSubcircuit?: string;
 }
 
 export interface ViewData {
