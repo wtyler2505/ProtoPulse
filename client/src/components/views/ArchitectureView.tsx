@@ -27,6 +27,8 @@ import { useCircuitDesigns, useCreateCircuitDesign, useCreateCircuitInstance } f
 import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
 import { SnippetLibrary } from '@/lib/design-reuse';
 import { placeSnippetAtomic } from '@/lib/snippet-undo';
+import { LibrarySuggestPopover } from '@/components/ui/LibrarySuggestPopover';
+import type { LibrarySuggestion } from '@/lib/library-auto-suggest';
 
 const nodeTypes = {
   custom: CustomNode,
@@ -82,6 +84,13 @@ function ArchitectureFlow() {
   const [showAssetManager, setShowAssetManager] = useState(true);
   const [activeTool, setActiveTool] = useState<'select' | 'pan'>('select');
   const [snapEnabled, setSnapEnabled] = useState(true);
+
+  // Library auto-suggest popover state
+  const [suggestState, setSuggestState] = useState<{
+    nodeLabel: string;
+    nodeType: string;
+    anchorPosition: { x: number; y: number };
+  } | null>(null);
 
   // Analysis panel state
   const [showAnalysis, setShowAnalysis] = useState(false);
@@ -170,6 +179,9 @@ function ArchitectureFlow() {
       pushUndoState();
       markNodeInteracted();
       setLocalNodes((nds) => nds.concat(newNode));
+
+      // Trigger library auto-suggest near the drop position
+      setSuggestState({ nodeLabel: data.label, nodeType: data.nodeType, anchorPosition: { x: finalX, y: finalY } });
     },
   });
 
@@ -426,7 +438,11 @@ function ArchitectureFlow() {
     pushUndoState();
     markNodeInteracted();
     setLocalNodes((nds) => nds.concat(newNode));
-  }, [setLocalNodes, markNodeInteracted, pushUndoState]);
+
+    // Trigger library auto-suggest — position at canvas center-ish area
+    const screenPos = reactFlowInstance.flowToScreenPosition(newNode.position);
+    setSuggestState({ nodeLabel: label, nodeType: type, anchorPosition: { x: screenPos.x + 80, y: screenPos.y } });
+  }, [setLocalNodes, markNodeInteracted, pushUndoState, reactFlowInstance]);
 
   const handleAddComponent = useCallback((type: string) => {
     const newNode = {
@@ -438,6 +454,10 @@ function ArchitectureFlow() {
     pushUndoState();
     markNodeInteracted();
     setLocalNodes((nds) => nds.concat(newNode));
+
+    // Trigger library auto-suggest
+    const screenPos = reactFlowInstance.flowToScreenPosition(newNode.position);
+    setSuggestState({ nodeLabel: type, nodeType: type.toLowerCase(), anchorPosition: { x: screenPos.x + 80, y: screenPos.y } });
   }, [setLocalNodes, markNodeInteracted, pushUndoState]);
 
   const handleToggleAssetManager = useCallback(() => {

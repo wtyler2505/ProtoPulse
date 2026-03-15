@@ -44,6 +44,7 @@ import NetDrawingTool, { type NetDrawingResult } from './NetDrawingTool';
 import SchematicToolbar from './SchematicToolbar';
 import NetBrowserPanel from './NetBrowserPanel';
 import ComponentReplacementDialog from './ComponentReplacementDialog';
+import AlternatePartsPopover from './AlternatePartsPopover';
 import type { AngleConstraint } from './SchematicToolbar';
 import type { SchematicTool, CircuitSettings, PowerSymbol, SchematicNetLabel, SchematicAnnotation, NoConnectMarker, ERCViolation } from '@shared/circuit-types';
 import { DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
@@ -60,6 +61,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useBom } from '@/lib/contexts/bom-context';
+import { useSchematicAlternates } from '@/lib/schematic-alternates';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -477,6 +479,9 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     parts?.forEach((p) => map.set(p.id, p));
     return map;
   }, [parts]);
+
+  // BL-0540: Compute alternate parts info for all instances
+  const alternatesMap = useSchematicAlternates(instances, partsMap);
 
   // Convert DB data → React Flow nodes (instances + power symbols + net labels + no-connects)
   const rfNodes = useMemo(() => {
@@ -1566,6 +1571,39 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
       {/* BL-0619: Simulation visual state overlay (LED glow, resistor labels, switch states) */}
       <SimulationVisualOverlay />
+
+      {/* BL-0540: Alternate parts badges on instance nodes */}
+      {alternatesMap.size > 0 && (
+        <div className="absolute inset-0 pointer-events-none z-[5]" data-testid="alt-parts-overlay">
+          {localNodes
+            .filter((n) => n.type === 'schematic-instance')
+            .map((node) => {
+              const instData = node.data as InstanceNodeData;
+              const info = alternatesMap.get(instData.instanceId);
+              if (!info) {
+                return null;
+              }
+              return (
+                <div
+                  key={`alt-${String(instData.instanceId)}`}
+                  className="pointer-events-auto"
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    // Use ReactFlow's CSS transform to position relative to node
+                    // The react-flow__nodes container already handles viewport transform,
+                    // but this overlay is outside it. We use the node position directly
+                    // and let the popover float from there.
+                    transform: `translate(${String(node.position.x)}px, ${String(node.position.y)}px)`,
+                  }}
+                >
+                  <AlternatePartsPopover info={info} />
+                </div>
+              );
+            })}
+        </div>
+      )}
 
       {(!instances || instances.length === 0) && (
         <div className="absolute inset-0 flex items-center justify-center z-0 pointer-events-none">

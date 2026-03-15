@@ -22,6 +22,7 @@ import BreadboardGrid from './BreadboardGrid';
 import { BreadboardComponentOverlay, detectFamily, getFamilyValues, getCurrentValueLabel } from './BreadboardComponentRenderer';
 import BendableLegRenderer from './BendableLegRenderer';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
+import BreadboardConnectivityOverlay from './BreadboardConnectivityOverlay';
 import ToolButton from './ToolButton';
 import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
@@ -831,6 +832,15 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
               nets={ratsnestNets}
               opacity={0.5}
               showLabels
+            />
+
+            {/* BL-0542: Connectivity overlay — shows net coloring when simulation is active */}
+            <BreadboardConnectivityOverlay
+              nets={nets ?? []}
+              wires={breadboardWires}
+              instances={instances ?? []}
+              parts={parts ?? []}
+              visible={isLive}
             />
 
             {/* BL-0619 / BL-0128: Simulation component visual overlays */}
