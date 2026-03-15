@@ -40,6 +40,7 @@ const DigitalTwinView = lazy(() => import('@/components/views/DigitalTwinView'))
 const ArduinoWorkbenchView = lazy(() => import('@/components/views/ArduinoWorkbenchView'));
 const StarterCircuitsPanel = lazy(() => import('@/components/views/StarterCircuitsPanel'));
 const ActivityFeedPanel = lazy(() => import('@/components/panels/ActivityFeedPanel'));
+const MentionBadge = lazy(() => import('@/components/ui/MentionBadge'));
 const AuditTrailView = lazy(() => import('@/components/views/AuditTrailView'));
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
