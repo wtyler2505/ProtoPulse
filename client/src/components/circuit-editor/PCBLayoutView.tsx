@@ -117,6 +117,8 @@ import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { calculateRoutingStatus } from '@/lib/pcb/routing-status';
 import type { Via, ViaType } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';
+import CollaborationCursors, { useCursorEmitter } from './CollaborationCursors';
+import type { CollaborationClient } from '@/lib/collaboration-client';
 
 // ---------------------------------------------------------------------------
 // View3DButton — jumps to viewer_3d ViewMode
@@ -205,7 +207,7 @@ interface PcbClipboardBundle {
 // Top-level view (circuit selector + canvas)
 // ---------------------------------------------------------------------------
 
-export default function PCBLayoutView() {
+export default function PCBLayoutView({ collaborationClient = null }: { collaborationClient?: CollaborationClient | null }) {
   const projectId = useProjectId();
   const { data: circuits, isLoading, isError, error, refetch } = useCircuitDesigns(projectId);
   const [activeCircuitId, setActiveCircuitId] = useState<number | null>(null);
@@ -272,7 +274,7 @@ export default function PCBLayoutView() {
           {activeCircuit ? activeCircuit.name : 'No circuit selected'} — PCB Layout
         </span>
       </div>
-      {activeCircuit && <PCBCanvas circuitId={activeCircuit.id} projectId={projectId} circuitSettings={activeCircuit.settings} />}
+      {activeCircuit && <PCBCanvas circuitId={activeCircuit.id} projectId={projectId} circuitSettings={activeCircuit.settings} collaborationClient={collaborationClient} />}
     </div>
   );
 }
@@ -396,7 +398,7 @@ function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, conta
 // PCB Canvas — wires together all extracted modules
 // ---------------------------------------------------------------------------
 
-function PCBCanvas({ circuitId, projectId, circuitSettings }: { circuitId: number; projectId: number; circuitSettings: unknown }) {
+function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient = null }: { circuitId: number; projectId: number; circuitSettings: unknown; collaborationClient?: CollaborationClient | null }) {
   // --- Data hooks ---
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: nets } = useCircuitNets(circuitId);
@@ -453,6 +455,16 @@ function PCBCanvas({ circuitId, projectId, circuitSettings }: { circuitId: numbe
   });
   const [mouseBoardPos, setMouseBoardPos] = useState<{ x: number; y: number } | null>(null);
   const [selectedViaId, setSelectedViaId] = useState<string | null>(null);
+
+  // BL-0525: Collaboration cursor emitter
+  const emitCursor = useCursorEmitter(collaborationClient, 'pcb');
+
+  // BL-0525: Emit cursor position when mouse moves on PCB canvas
+  useEffect(() => {
+    if (mouseBoardPos) {
+      emitCursor(mouseBoardPos.x, mouseBoardPos.y);
+    }
+  }, [mouseBoardPos, emitCursor]);
 
   // Marquee selection state
   const [selectionRect, setSelectionRect] = useState<SelectionRect | null>(null);
@@ -1159,6 +1171,8 @@ function PCBCanvas({ circuitId, projectId, circuitSettings }: { circuitId: numbe
               containerRef={containerRef}
               onPan={setPanOffset}
             />
+            {/* BL-0525: Collaboration presence cursors */}
+            <CollaborationCursors client={collaborationClient} view="pcb" zoom={zoom} />
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent className="bg-card/90 backdrop-blur-xl border-border min-w-[180px]">

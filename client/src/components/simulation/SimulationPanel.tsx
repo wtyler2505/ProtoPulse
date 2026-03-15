@@ -1190,6 +1190,15 @@ export default function SimulationPanel() {
             <Download className="w-3.5 h-3.5" />
             Export SPICE
           </button>
+          {/* BL-0213: Share simulation link */}
+          <ShareSimulationButton
+            projectId={projectId}
+            circuitId={firstCircuitId}
+            analysisType={analysisType}
+            parameters={shareParameters}
+            probes={probes}
+            disabled={!firstCircuitId}
+          />
         </div>
       </div>
 

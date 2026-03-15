@@ -7,7 +7,7 @@ import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import type { ViewMode } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
-import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Shield, ShieldOff, Factory, Code2, Play, Trash2, Plus, ToggleLeft, ToggleRight, HelpCircle } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, ChevronRight, XCircle, ShieldCheck, Shield, ShieldOff, Factory, Code2, Play, Trash2, Plus, ToggleLeft, ToggleRight, HelpCircle, Wrench } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -59,6 +59,9 @@ import type { BomCompletionIssue } from '@/lib/bom-validation';
 import { useDrcSuppression } from '@/lib/drc-suppression';
 import { DrcSuppressionDialog } from '@/components/views/DrcSuppressionDialog';
 import type { DrcSuppressionTarget } from '@/components/views/DrcSuppressionDialog';
+import { RemediationWizardDialog } from '@/components/views/RemediationWizardDialog';
+import { getRecipe, hasRecipe } from '@/lib/remediation-wizard';
+import type { RemediationRecipe } from '@/lib/remediation-wizard';
 import { ManufacturerRuleCompare } from '@/components/views/ManufacturerRuleCompare';
 
 /** Brief explanations for validation rule categories (UX-043: "why this rule matters" tooltips).
@@ -197,6 +200,26 @@ function ValidationViewContent() {
   const handleOpenSuppress = useCallback((target: DrcSuppressionTarget) => {
     setSuppressTarget(target);
     setSuppressDialogOpen(true);
+  }, []);
+
+  // Remediation Wizard (BL-0253)
+  const [wizardRecipe, setWizardRecipe] = useState<RemediationRecipe | null>(null);
+  const [wizardViolationMessage, setWizardViolationMessage] = useState('');
+  const [wizardViolationId, setWizardViolationId] = useState('');
+
+  const handleOpenWizard = useCallback((ruleType: string, violationMessage: string, violationId: string) => {
+    const recipe = getRecipe(ruleType);
+    if (recipe) {
+      setWizardRecipe(recipe);
+      setWizardViolationMessage(violationMessage);
+      setWizardViolationId(violationId);
+    }
+  }, []);
+
+  const handleCloseWizard = useCallback(() => {
+    setWizardRecipe(null);
+    setWizardViolationMessage('');
+    setWizardViolationId('');
   }, []);
 
   const handleSuppress = useCallback((input: Parameters<typeof suppress>[0]) => {
@@ -635,8 +658,18 @@ function ValidationViewContent() {
           toast={toast}
           onIssueFocus={handleIssueFocus}
           onSuppress={handleOpenSuppress}
+          onFix={handleOpenWizard}
         />
       </div>
+
+      {/* Remediation Wizard Dialog (BL-0253) */}
+      <RemediationWizardDialog
+        recipe={wizardRecipe}
+        violationMessage={wizardViolationMessage}
+        violationId={wizardViolationId}
+        onClose={handleCloseWizard}
+        onNavigate={setActiveView}
+      />
 
       {/* Design Gateway + DFM sections side by side */}
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -1079,7 +1112,7 @@ function RuleGroupHeader({ ruleType, count }: { ruleType: string; count: number 
 const VirtualizedIssueList = memo(function VirtualizedIssueList({
   issues, componentIssues, drcIssues, ercIssues, hasComponentParts, getIcon,
   deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
-  onIssueFocus, onSuppress,
+  onIssueFocus, onSuppress, onFix,
 }: {
   issues: ArchIssue[];
   componentIssues: CompIssue[];
@@ -1095,6 +1128,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
   toast: ReturnType<typeof useToast>['toast'];
   onIssueFocus?: (componentId: string | undefined) => void;
   onSuppress?: (target: DrcSuppressionTarget) => void;
+  onFix?: (ruleType: string, violationMessage: string, violationId: string) => void;
 }) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -1312,6 +1346,17 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                         Suppress
                       </button>
                     )}
+                    {onFix && hasRecipe(row.issue.ruleType) && (
+                      <button
+                        data-testid={`button-fix-drc-${row.issue.id}`}
+                        aria-label={`Fix: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onFix(row.issue.ruleType, row.issue.message, row.issue.id); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-emerald-500/50 bg-background hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-3 py-1.5 w-full flex items-center justify-center gap-1"
+                      >
+                        <Wrench className="w-3 h-3" />
+                        Fix
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1355,6 +1400,17 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                       >
                         <ShieldOff className="w-3 h-3" />
                         Suppress
+                      </button>
+                    )}
+                    {onFix && hasRecipe(row.issue.ruleType) && (
+                      <button
+                        data-testid={`button-fix-erc-${row.issue.id}`}
+                        aria-label={`Fix: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onFix(row.issue.ruleType, row.issue.message, row.issue.id); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-emerald-500/50 bg-background hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-3 py-1.5 w-full flex items-center justify-center gap-1"
+                      >
+                        <Wrench className="w-3 h-3" />
+                        Fix
                       </button>
                     )}
                   </div>

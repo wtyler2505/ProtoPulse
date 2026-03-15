@@ -315,9 +315,11 @@ interface SchematicCanvasInnerProps {
   ercViolations?: ERCViolation[];
   highlightedViolationId?: string | null;
   onEnterSheet?: (id: number) => void;
+  /** Optional collaboration client for presence cursors (BL-0525). */
+  collaborationClient?: CollaborationClient | null;
 }
 
-function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId, onEnterSheet }: SchematicCanvasInnerProps) {
+function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId, onEnterSheet, collaborationClient = null }: SchematicCanvasInnerProps) {
   const projectId = useProjectId();
 
   // Data queries
@@ -382,6 +384,9 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const [angleConstraint, setAngleConstraint] = useState<AngleConstraint>('free');
   const [selectedNetName, setSelectedNetName] = useState<string | null>(null);
   const [mouseFlowPos, setMouseFlowPos] = useState<{ x: number; y: number } | null>(null);
+
+  // BL-0525: Collaboration cursor emitter
+  const emitCursor = useCursorEmitter(collaborationClient, 'schematic');
 
   // BL-0105: Replacement dialog state
   const [isReplacementOpen, setIsReplacementOpen] = useState(false);
@@ -742,9 +747,13 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const handleCanvasMouseMove = useCallback(
     (e: React.MouseEvent) => {
       const pos = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      setMouseFlowPos({ x: Math.round(pos.x), y: Math.round(pos.y) });
+      const rx = Math.round(pos.x);
+      const ry = Math.round(pos.y);
+      setMouseFlowPos({ x: rx, y: ry });
+      // BL-0525: emit cursor position for collaboration
+      emitCursor(rx, ry);
     },
-    [reactFlowInstance],
+    [reactFlowInstance, emitCursor],
   );
 
   const handleCanvasMouseLeave = useCallback(() => {
@@ -1573,6 +1582,9 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
       {/* BL-0619: Simulation visual state overlay (LED glow, resistor labels, switch states) */}
       <SimulationVisualOverlay />
+
+      {/* BL-0525: Collaboration presence cursors */}
+      <CollaborationCursors client={collaborationClient} view="schematic" />
 
       {/* BL-0540: Alternate parts badges on instance nodes */}
       {alternatesMap.size > 0 && (
