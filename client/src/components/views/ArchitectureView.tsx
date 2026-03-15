@@ -69,7 +69,7 @@ function ArchitectureFlow() {
   const { isGenerating, addMessage, setIsGenerating } = useChat();
   const { addOutputLog } = useOutput();
   const { setActiveView } = useProjectMeta();
-  const { bom } = useBom();
+  const { bom, addBomItem } = useBom();
   const { toast } = useToast();
   const projectId = useProjectId();
   const { data: circuits } = useCircuitDesigns(projectId);
@@ -458,7 +458,30 @@ function ArchitectureFlow() {
     // Trigger library auto-suggest
     const screenPos = reactFlowInstance.flowToScreenPosition(newNode.position);
     setSuggestState({ nodeLabel: type, nodeType: type.toLowerCase(), anchorPosition: { x: screenPos.x + 80, y: screenPos.y } });
-  }, [setLocalNodes, markNodeInteracted, pushUndoState]);
+  }, [setLocalNodes, markNodeInteracted, pushUndoState, reactFlowInstance]);
+
+  const handleSuggestAddToBom = useCallback((suggestion: LibrarySuggestion) => {
+    const part = suggestion.libraryPart;
+    const mpn = (part.meta.mpn as string) ?? '';
+    const mfr = (part.meta.manufacturer as string) ?? '';
+    addBomItem({
+      partNumber: mpn || part.title,
+      manufacturer: mfr,
+      description: part.description,
+      quantity: 1,
+      unitPrice: 0,
+      totalPrice: 0,
+      supplier: 'Unknown',
+      stock: 0,
+      status: 'In Stock',
+    });
+    toast({ title: 'Added to BOM', description: `${part.title} added to the Bill of Materials` });
+    addOutputLog(`[SUGGEST] Added "${part.title}" to BOM from library suggestion`);
+  }, [addBomItem, toast, addOutputLog]);
+
+  const handleSuggestDismiss = useCallback(() => {
+    setSuggestState(null);
+  }, []);
 
   const handleToggleAssetManager = useCallback(() => {
     setShowAssetManager(prev => !prev);
@@ -1051,6 +1074,16 @@ function ArchitectureFlow() {
               />
             ) : null;
           })()}
+
+          {suggestState && (
+            <LibrarySuggestPopover
+              nodeLabel={suggestState.nodeLabel}
+              nodeType={suggestState.nodeType}
+              anchorPosition={suggestState.anchorPosition}
+              onAddToBom={handleSuggestAddToBom}
+              onDismiss={handleSuggestDismiss}
+            />
+          )}
 
           {isGenerating && (
             <div className="absolute inset-0 z-50 bg-background/50 backdrop-blur flex items-center justify-center pointer-events-none">

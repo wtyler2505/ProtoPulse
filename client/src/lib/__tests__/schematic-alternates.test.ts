@@ -99,7 +99,7 @@ describe('schematic-alternates', () => {
 
     it('returns zero alternates when part has no MPN', () => {
       const instance = makeInstance({ id: 2, referenceDesignator: 'R1' });
-      const part = makePart({ meta: { title: 'Resistor', manufacturer: 'Generic' } });
+      const part = makePart({ meta: { title: 'Resistor', mpn: '', manufacturer: 'Generic' } });
 
       const info = findAlternatesForInstance(instance, part);
 
