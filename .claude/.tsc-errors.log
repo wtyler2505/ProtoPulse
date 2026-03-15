@@ -28,3 +28,5 @@ client/src/lib/gpu-performance.ts(232,3): error TS1128: Declaration or statement
 client/src/lib/gpu-performance.ts(233,1): error TS1128: Declaration or statement expected.
 
 4:21:30 AM - Found 7 errors. Watching for file changes.
+[2J[3J[H4:21:43 AM - File change detected. Starting incremental compilation...
+
