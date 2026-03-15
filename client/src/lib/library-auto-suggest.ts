@@ -1,7 +1,8 @@
 import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
 import type { StandardComponentDef } from '@shared/standard-library';
 import { createComponentSearch } from './fuzzy-search';
-import type { FuseResult, FuseResultMatch } from 'fuse.js';
+import type Fuse from 'fuse.js';
+import type { FuseResult as FuseResultType, FuseResultMatch } from 'fuse.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -77,10 +78,10 @@ function getFuse(): Fuse<SearchableComponent> {
 // ---------------------------------------------------------------------------
 
 function buildMatchReason(
-  result: Fuse.FuseResult<SearchableComponent>,
+  result: FuseResultType<SearchableComponent>,
   query: string,
 ): string {
-  const matchedKeys = result.matches?.map((m) => m.key).filter(Boolean) ?? [];
+  const matchedKeys = result.matches?.map((m: FuseResultMatch) => m.key).filter(Boolean) ?? [];
   const part = result.item.title;
 
   if (matchedKeys.includes('title')) {

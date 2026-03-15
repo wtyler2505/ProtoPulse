@@ -474,6 +474,29 @@ function ArchitectureFlow() {
     setSelectedNodeId(null);
   }, [setSelectedNodeId]);
 
+  /** Place a design snippet as a single atomic undo unit. */
+  const handlePlaceSnippet = useCallback((snippetId: string, offset?: { x: number; y: number }) => {
+    const library = SnippetLibrary.getInstance();
+    const snippet = library.getSnippet(snippetId);
+    if (!snippet) {
+      return;
+    }
+
+    const placement = library.prepareForPlacement(snippetId, offset ?? { x: 200 + Math.random() * 300, y: 100 + Math.random() * 200 });
+    const action = placeSnippetAtomic(snippetId, snippet.name, placement, {
+      pushUndoState,
+      setNodes: setLocalNodes,
+      setEdges: setLocalEdges,
+      markNodeInteracted,
+      markEdgeInteracted,
+    });
+
+    if (action) {
+      library.incrementUsage(snippetId);
+      addOutputLog(`[ARCH] Placed snippet "${snippet.name}" (${action.addedNodeIds.length} nodes, ${action.addedEdgeIds.length} edges)`);
+    }
+  }, [pushUndoState, setLocalNodes, setLocalEdges, markNodeInteracted, markEdgeInteracted, addOutputLog]);
+
   const handleGenerateArchitecture = useCallback(() => {
     const message = 'Generate a complete architecture for this project. Analyze the project description and create appropriate architecture nodes and connections.';
     addMessage({ id: crypto.randomUUID(), role: 'user', content: message, timestamp: Date.now(), mode: 'chat' });
