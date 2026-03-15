@@ -216,8 +216,12 @@ describe('MentionNotificationManager', () => {
     it('resetInstance creates a fresh instance', () => {
       const a = MentionNotificationManager.getInstance();
       a.addNotification(makeNotification());
+      expect(a.getCount()).toBe(1);
+      // Clear localStorage so the new instance starts empty
+      mockStorage.clear();
       MentionNotificationManager.resetInstance();
       const b = MentionNotificationManager.getInstance();
+      expect(b).not.toBe(a);
       expect(b.getCount()).toBe(0);
     });
   });

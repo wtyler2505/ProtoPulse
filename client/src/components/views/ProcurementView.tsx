@@ -397,6 +397,10 @@ function ProcurementView() {
         </Suspense>
       </TabsContent>
 
+      <TabsContent value="cost-optimizer" className="flex-1 overflow-auto mt-0">
+        <CostOptimizerPanel bom={bom} />
+      </TabsContent>
+
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />
       <SupplierDrawer open={showSupplierDrawer} onOpenChange={setShowSupplierDrawer} />
     </Tabs>

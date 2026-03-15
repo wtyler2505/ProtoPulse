@@ -220,7 +220,7 @@ export function analyzeBomCost(
     const unitPrice = Number(item.unitPrice);
 
     // ── Substitute: high-cost outlier ──
-    if (componentCost > 0 && itemTotal / componentCost >= HIGH_COST_OUTLIER_FRACTION) {
+    if (componentCost > 0 && itemTotal / componentCost > HIGH_COST_OUTLIER_FRACTION) {
       const estimatedSavings = round2(itemTotal * 0.3);
       suggestions.push({
         id: nextSuggestionId(),
