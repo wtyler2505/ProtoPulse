@@ -1204,6 +1204,9 @@ export default function ProjectWorkspace() {
         <Suspense fallback={null}>
           <TutorialOverlay />
         </Suspense>
+        <Suspense fallback={null}>
+          <LessonModeOverlay />
+        </Suspense>
       </TutorialProvider>
     </ProjectProvider>
   );
