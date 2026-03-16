@@ -364,7 +364,7 @@ describe('release-readiness', () => {
       const result = calculateReadiness(input);
       // 30 + 0 + 15 + 4.5 + 6 = 55.5 → 56
       expect(result.overall).toBe(56);
-      expect(result.grade).toBe('C');
+      expect(result.grade).toBe('D'); // 56 < 60 threshold for C
     });
 
     it('identifies blockers for categories below 30', () => {

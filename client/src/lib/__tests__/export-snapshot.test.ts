@@ -203,7 +203,7 @@ describe('export snapshot integration', () => {
 
   it('every manufacturing format produces a valid snapshot', () => {
     const fixedDate = new Date('2026-06-01T12:00:00Z');
-    const mfgFormats = ['gerber', 'odb-plus-plus', 'ipc2581'];
+    const mfgFormats = ['gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb', 'step'];
 
     for (const format of mfgFormats) {
       expect(shouldAutoSnapshot(format)).toBe(true);
@@ -217,7 +217,7 @@ describe('export snapshot integration', () => {
   });
 
   it('non-manufacturing formats are correctly excluded', () => {
-    const nonMfg = ['kicad', 'eagle', 'spice', 'bom-csv', 'pdf', 'firmware', 'step'];
+    const nonMfg = ['kicad', 'eagle', 'spice', 'bom-csv', 'pdf', 'firmware', 'fzz'];
     for (const format of nonMfg) {
       expect(shouldAutoSnapshot(format)).toBe(false);
     }

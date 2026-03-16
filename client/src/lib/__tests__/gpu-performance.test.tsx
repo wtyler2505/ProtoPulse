@@ -11,6 +11,8 @@ import {
   conditionalBlur,
   isBackdropBlurEnabled,
   _resetCache,
+  useOptimizedBlur,
+  BLUR_FALLBACK_CLASS,
 } from '../gpu-performance';
 import type { GpuTier } from '../gpu-performance';
 
@@ -424,5 +426,433 @@ describe('GpuPerformanceProvider + useGpuPerformance', () => {
     );
 
     expect(document.documentElement.classList.contains('reduce-blur')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BLUR_FALLBACK_CLASS constant
+// ---------------------------------------------------------------------------
+
+describe('BLUR_FALLBACK_CLASS', () => {
+  it('is a non-empty string', () => {
+    expect(typeof BLUR_FALLBACK_CLASS).toBe('string');
+    expect(BLUR_FALLBACK_CLASS.length).toBeGreaterThan(0);
+  });
+
+  it('is bg-black/90', () => {
+    expect(BLUR_FALLBACK_CLASS).toBe('bg-black/90');
+  });
+
+  it('does not contain backdrop-blur', () => {
+    expect(BLUR_FALLBACK_CLASS).not.toContain('backdrop-blur');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useOptimizedBlur hook
+// ---------------------------------------------------------------------------
+
+/** Test consumer for useOptimizedBlur with configurable params */
+function BlurConsumer({
+  blurClass,
+  fallbackClass,
+}: {
+  blurClass?: string;
+  fallbackClass?: string;
+}) {
+  const result = useOptimizedBlur(blurClass, fallbackClass);
+  return (
+    <div>
+      <span data-testid="opt-class">{result.className}</span>
+      <span data-testid="opt-enabled">{String(result.isBlurEnabled)}</span>
+      <span data-testid="opt-reason">{result.reason ?? 'none'}</span>
+    </div>
+  );
+}
+
+describe('useOptimizedBlur', () => {
+  let origMatchMedia: typeof window.matchMedia;
+
+  beforeEach(() => {
+    _resetCache();
+    localStorage.removeItem('protopulse-gpu-blur-override');
+    document.documentElement.classList.remove('reduced-motion');
+    document.documentElement.classList.remove('reduce-blur');
+    origMatchMedia = window.matchMedia;
+  });
+
+  afterEach(() => {
+    _resetCache();
+    document.documentElement.classList.remove('reduced-motion');
+    document.documentElement.classList.remove('reduce-blur');
+    window.matchMedia = origMatchMedia;
+  });
+
+  // ---- Within GpuPerformanceProvider (capable GPU) ----
+
+  it('returns blur class when inside provider and GPU is capable', () => {
+    // In happy-dom: WebGL unavailable → unknown tier → blur enabled
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('true');
+    expect(screen.getByTestId('opt-class').textContent).toContain('backdrop-blur-xl');
+    expect(screen.getByTestId('opt-class').textContent).toContain('blur-optimized');
+    expect(screen.getByTestId('opt-reason').textContent).toBe('none');
+  });
+
+  it('includes blur-optimized performance class when blur is enabled', () => {
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    const className = screen.getByTestId('opt-class').textContent ?? '';
+    expect(className).toContain('blur-optimized');
+  });
+
+  it('uses custom blur class when provided', () => {
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer blurClass="backdrop-blur-sm" />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-class').textContent).toContain('backdrop-blur-sm');
+    expect(screen.getByTestId('opt-class').textContent).not.toContain('backdrop-blur-xl');
+  });
+
+  it('returns fallback when user override disables blur', async () => {
+    localStorage.setItem('protopulse-gpu-blur-override', 'false');
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('opt-class').textContent).toBe(BLUR_FALLBACK_CLASS);
+    expect(screen.getByTestId('opt-reason').textContent).toBe('user-override');
+  });
+
+  it('uses custom fallback class when provided', () => {
+    localStorage.setItem('protopulse-gpu-blur-override', 'false');
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer fallbackClass="bg-gray-900/95" />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-class').textContent).toBe('bg-gray-900/95');
+  });
+
+  // ---- Reduced motion ----
+
+  it('returns fallback when prefers-reduced-motion matches', () => {
+    // Mock matchMedia to return true for reduced motion
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(() => true),
+      onchange: null,
+    })) as unknown as typeof window.matchMedia;
+
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('opt-class').textContent).toBe(BLUR_FALLBACK_CLASS);
+    expect(screen.getByTestId('opt-reason').textContent).toBe('reduced-motion');
+  });
+
+  it('returns fallback when .reduced-motion class is on <html>', () => {
+    document.documentElement.classList.add('reduced-motion');
+
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('opt-reason').textContent).toBe('reduced-motion');
+  });
+
+  it('reduced motion takes priority over GPU capability', () => {
+    // Even though GPU is capable (unknown tier = blur enabled),
+    // reduced motion should win
+    document.documentElement.classList.add('reduced-motion');
+
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('opt-reason').textContent).toBe('reduced-motion');
+  });
+
+  it('reduced motion takes priority over user override true', () => {
+    localStorage.setItem('protopulse-gpu-blur-override', 'true');
+    document.documentElement.classList.add('reduced-motion');
+
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('opt-reason').textContent).toBe('reduced-motion');
+  });
+
+  // ---- Outside GpuPerformanceProvider (standalone mode) ----
+
+  it('works outside GpuPerformanceProvider using standalone detection', () => {
+    // No provider → falls back to isBackdropBlurEnabled()
+    // In happy-dom, WebGL unavailable → unknown tier → blur enabled
+    render(<BlurConsumer />);
+
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('true');
+    expect(screen.getByTestId('opt-class').textContent).toContain('backdrop-blur-xl');
+    expect(screen.getByTestId('opt-class').textContent).toContain('blur-optimized');
+    expect(screen.getByTestId('opt-reason').textContent).toBe('none');
+  });
+
+  it('standalone mode returns fallback when localStorage override is false', () => {
+    localStorage.setItem('protopulse-gpu-blur-override', 'false');
+    _resetCache();
+    render(<BlurConsumer />);
+
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('opt-class').textContent).toBe(BLUR_FALLBACK_CLASS);
+    expect(screen.getByTestId('opt-reason').textContent).toBe('low-gpu');
+  });
+
+  it('standalone mode respects reduced motion', () => {
+    document.documentElement.classList.add('reduced-motion');
+    render(<BlurConsumer />);
+
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('opt-reason').textContent).toBe('reduced-motion');
+  });
+
+  // ---- Default parameter values ----
+
+  it('defaults blurClass to backdrop-blur-xl', () => {
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-class').textContent).toContain('backdrop-blur-xl');
+  });
+
+  it('defaults fallbackClass to BLUR_FALLBACK_CLASS', () => {
+    localStorage.setItem('protopulse-gpu-blur-override', 'false');
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-class').textContent).toBe(BLUR_FALLBACK_CLASS);
+  });
+
+  // ---- reason field correctness ----
+
+  it('reason is null when blur is enabled', () => {
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-reason').textContent).toBe('none');
+  });
+
+  it('reason is "user-override" when user disabled blur via override', () => {
+    localStorage.setItem('protopulse-gpu-blur-override', 'false');
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-reason').textContent).toBe('user-override');
+  });
+
+  it('reason is "reduced-motion" when motion is reduced', () => {
+    document.documentElement.classList.add('reduced-motion');
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-reason').textContent).toBe('reduced-motion');
+  });
+
+  // ---- Dynamic state changes ----
+
+  it('responds to user disabling blur via provider', async () => {
+    const user = userEvent.setup();
+
+    function Combined() {
+      const { setBlurOverride } = useGpuPerformance();
+      const { isBlurEnabled, reason } = useOptimizedBlur();
+      return (
+        <div>
+          <span data-testid="dyn-enabled">{String(isBlurEnabled)}</span>
+          <span data-testid="dyn-reason">{reason ?? 'none'}</span>
+          <button data-testid="dyn-disable" onClick={() => setBlurOverride(false)}>Off</button>
+        </div>
+      );
+    }
+
+    render(
+      <GpuPerformanceProvider>
+        <Combined />
+      </GpuPerformanceProvider>,
+    );
+
+    expect(screen.getByTestId('dyn-enabled').textContent).toBe('true');
+
+    await act(async () => {
+      await user.click(screen.getByTestId('dyn-disable'));
+    });
+
+    expect(screen.getByTestId('dyn-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('dyn-reason').textContent).toBe('user-override');
+  });
+
+  it('responds to user re-enabling blur via provider', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('protopulse-gpu-blur-override', 'false');
+
+    function Combined() {
+      const { setBlurOverride } = useGpuPerformance();
+      const { isBlurEnabled } = useOptimizedBlur();
+      return (
+        <div>
+          <span data-testid="dyn2-enabled">{String(isBlurEnabled)}</span>
+          <button data-testid="dyn2-enable" onClick={() => setBlurOverride(true)}>On</button>
+        </div>
+      );
+    }
+
+    render(
+      <GpuPerformanceProvider>
+        <Combined />
+      </GpuPerformanceProvider>,
+    );
+
+    expect(screen.getByTestId('dyn2-enabled').textContent).toBe('false');
+
+    await act(async () => {
+      await user.click(screen.getByTestId('dyn2-enable'));
+    });
+
+    expect(screen.getByTestId('dyn2-enabled').textContent).toBe('true');
+  });
+
+  // ---- Edge cases ----
+
+  it('handles matchMedia not available gracefully', () => {
+    const orig = window.matchMedia;
+    (window as unknown as Record<string, unknown>).matchMedia = undefined;
+
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    // Should still work — fallback to not reduced motion → blur enabled
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('true');
+    window.matchMedia = orig;
+  });
+
+  it('handles both reduced-motion class and matchMedia false gracefully', () => {
+    window.matchMedia = vi.fn((query: string) => ({
+      matches: false,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(() => true),
+      onchange: null,
+    })) as unknown as typeof window.matchMedia;
+
+    document.documentElement.classList.add('reduced-motion');
+
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    // .reduced-motion class should still trigger the fallback
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+    expect(screen.getByTestId('opt-reason').textContent).toBe('reduced-motion');
+  });
+
+  it('fallback class does not include blur-optimized', () => {
+    localStorage.setItem('protopulse-gpu-blur-override', 'false');
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-class').textContent).not.toContain('blur-optimized');
+  });
+
+  it('enabled class includes both blur variant and blur-optimized', () => {
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer blurClass="backdrop-blur-md" />
+      </GpuPerformanceProvider>,
+    );
+    const cls = screen.getByTestId('opt-class').textContent ?? '';
+    expect(cls).toContain('backdrop-blur-md');
+    expect(cls).toContain('blur-optimized');
+  });
+
+  it('isBlurEnabled is boolean true when blur active', () => {
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('true');
+  });
+
+  it('isBlurEnabled is boolean false when blur inactive', () => {
+    document.documentElement.classList.add('reduced-motion');
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('false');
+  });
+
+  it('does not crash when MutationObserver is unavailable', () => {
+    const origMO = globalThis.MutationObserver;
+    (globalThis as unknown as Record<string, unknown>).MutationObserver = undefined;
+
+    render(
+      <GpuPerformanceProvider>
+        <BlurConsumer />
+      </GpuPerformanceProvider>,
+    );
+
+    // Should render without error
+    expect(screen.getByTestId('opt-enabled').textContent).toBe('true');
+    globalThis.MutationObserver = origMO;
   });
 });
