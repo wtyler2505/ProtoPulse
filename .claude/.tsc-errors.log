@@ -57,3 +57,36 @@ client/src/lib/__tests__/release-readiness.test.ts(508,58): error TS7006: Parame
 5:06:50 PM - Found 22 errors. Watching for file changes.
 [2J[3J[H5:07:15 PM - File change detected. Starting incremental compilation...
 
+client/src/lib/__tests__/release-readiness.test.ts(10,8): error TS2307: Cannot find module '../release-readiness' or its corresponding type declarations.
+client/src/lib/__tests__/release-readiness.test.ts(19,8): error TS2307: Cannot find module '../release-readiness' or its corresponding type declarations.
+client/src/lib/__tests__/release-readiness.test.ts(383,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(393,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(498,43): error TS7006: Parameter 'c' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(508,53): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(508,58): error TS7006: Parameter 'c' implicitly has an 'any' type.
+
+5:07:42 PM - Found 7 errors. Watching for file changes.
+[2J[3J[H5:08:02 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/release-readiness.test.ts(10,8): error TS2307: Cannot find module '../release-readiness' or its corresponding type declarations.
+client/src/lib/__tests__/release-readiness.test.ts(19,8): error TS2307: Cannot find module '../release-readiness' or its corresponding type declarations.
+client/src/lib/__tests__/release-readiness.test.ts(383,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(393,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(498,43): error TS7006: Parameter 'c' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(508,53): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(508,58): error TS7006: Parameter 'c' implicitly has an 'any' type.
+
+5:08:14 PM - Found 7 errors. Watching for file changes.
+[2J[3J[H5:08:46 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/release-readiness.test.ts(10,8): error TS2307: Cannot find module '../release-readiness' or its corresponding type declarations.
+client/src/lib/__tests__/release-readiness.test.ts(19,8): error TS2307: Cannot find module '../release-readiness' or its corresponding type declarations.
+client/src/lib/__tests__/release-readiness.test.ts(383,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(393,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(498,43): error TS7006: Parameter 'c' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(508,53): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(508,58): error TS7006: Parameter 'c' implicitly has an 'any' type.
+
+5:08:52 PM - Found 7 errors. Watching for file changes.
+[2J[3J[H5:08:56 PM - File change detected. Starting incremental compilation...
+

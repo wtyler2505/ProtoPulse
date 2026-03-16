@@ -408,3 +408,30 @@
 .reduced-motion .tutorial-highlight {
   animation: none;
 }
+
+/*
+ * BL-0275: Optimized backdrop-blur for capable GPUs.
+ * Applied via useOptimizedBlur() hook alongside backdrop-blur-* classes.
+ * `will-change` hints the compositor to promote the element to its own layer,
+ * and `contain: paint` limits the repaint boundary.
+ */
+.blur-optimized {
+  will-change: backdrop-filter;
+  contain: paint;
+}
+
+/* Strip backdrop-blur entirely when reduced motion is preferred (OS or manual) */
+@media (prefers-reduced-motion: reduce) {
+  .blur-optimized {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(0, 0, 0, 0.95) !important;
+    will-change: auto;
+  }
+}
+.reduced-motion .blur-optimized {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(0, 0, 0, 0.95) !important;
+  will-change: auto;
+}

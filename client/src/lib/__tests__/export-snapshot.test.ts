@@ -47,16 +47,16 @@ describe('shouldAutoSnapshot', () => {
     expect(shouldAutoSnapshot('firmware')).toBe(false);
   });
 
-  it('returns false for pick-place format', () => {
-    expect(shouldAutoSnapshot('pick-place')).toBe(false);
+  it('returns true for pick-place format', () => {
+    expect(shouldAutoSnapshot('pick-place')).toBe(true);
   });
 
-  it('returns false for etchable-pcb format', () => {
-    expect(shouldAutoSnapshot('etchable-pcb')).toBe(false);
+  it('returns true for etchable-pcb format', () => {
+    expect(shouldAutoSnapshot('etchable-pcb')).toBe(true);
   });
 
-  it('returns false for step format', () => {
-    expect(shouldAutoSnapshot('step')).toBe(false);
+  it('returns true for step format', () => {
+    expect(shouldAutoSnapshot('step')).toBe(true);
   });
 
   it('returns false for unknown format', () => {
@@ -198,7 +198,7 @@ describe('export snapshot integration', () => {
       'bom-csv', 'fzz', 'pdf', 'fmea', 'step', 'firmware',
     ];
     const snapshotFormats = allFormats.filter(shouldAutoSnapshot);
-    expect(snapshotFormats).toEqual(['gerber', 'odb-plus-plus', 'ipc2581']);
+    expect(snapshotFormats).toEqual(['gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb', 'step']);
   });
 
   it('every manufacturing format produces a valid snapshot', () => {
