@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { ShoppingCart, Copy, Trash2, CheckCircle2, AlertCircle, XCircle, Zap } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { LifecycleBadge } from '@/components/ui/LifecycleBadge';
 import { cn } from '@/lib/utils';
 import { copyToClipboard } from '@/lib/clipboard';
 import { getSupplierSearchUrl } from '@/lib/constants';
