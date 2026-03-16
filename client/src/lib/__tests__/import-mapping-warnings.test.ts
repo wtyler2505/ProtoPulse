@@ -702,17 +702,20 @@ describe('generateImportWarnings — edge cases', () => {
         makeComponent({
           refDes: 'R1',
           name: 'Res',
-          properties: { ki_3dmodel: 'model.step' }, // KiCad prop on gEDA design — should NOT trigger KiCad warning
+          properties: { ki_3dmodel: 'model.step', geda_custom_field: 'xyz' },
         }),
       ],
     });
 
     const warnings = generateImportWarnings(design, 'geda-schematic');
-    // Should get generic "unknown properties" instead of KiCad-specific "3D model dropped"
+    // KiCad-specific "3D model reference dropped" should NOT fire for a gEDA design
     const kicadSpecific = warnings.filter((w) => w.detail.includes('3D model reference dropped'));
     expect(kicadSpecific.length).toBe(0);
-    // But generic unknown-properties warning should appear
-    expect(warnings.some((w) => w.detail.includes('Unknown properties'))).toBe(true);
+    // ki_3dmodel is in knownKeys so it won't trigger unknown-properties,
+    // but the geda_custom_field is NOT known, so it will trigger generic unknown-properties
+    expect(
+      warnings.some((w) => w.detail.includes('Unknown properties') && w.detail.includes('geda_custom_field')),
+    ).toBe(true);
   });
 
   it('handles multiple components with multiple warnings each', () => {

@@ -35,6 +35,8 @@ import { validateExportPreflight } from '@/lib/export-validation';
 import { runExportPrecheck } from '@/lib/export-precheck';
 import { shouldAutoSnapshot, createExportSnapshot } from '@/lib/export-snapshot';
 import { apiRequest } from '@/lib/queryClient';
+import { ExportResultsManager } from '@/lib/export-results';
+import ExportResultsPanel from '@/components/panels/ExportResultsPanel';
 import { generateImportPreview } from '@/lib/import-preview';
 import ImportPreviewDialog from '@/components/panels/ImportPreviewDialog';
 import ExportPrecheckPanel from '@/components/panels/ExportPrecheckPanel';
@@ -381,11 +383,11 @@ function ExportPanel() {
         throw new Error(errorBody || `HTTP ${res.status}`);
       }
 
-      const exportedFiles: string[] = [];
+      const exportedFiles: { name: string; sizeBytes: number }[] = [];
 
       if (format.jsonResponse) {
         // JSON response with file(s) or layer(s) array
-        const json = await res.json() as Record<string, unknown>;
+        const json = (await res.json()) as Record<string, unknown>;
 
         // Handle `files` array (KiCad, Eagle, Firmware)
         const files = json.files as { filename: string; content: string }[] | undefined;
@@ -393,7 +395,7 @@ function ExportPanel() {
           for (const file of files) {
             const blob = new Blob([file.content], { type: 'application/octet-stream' });
             downloadBlob(blob, file.filename);
-            exportedFiles.push(file.filename);
+            exportedFiles.push({ name: file.filename, sizeBytes: blob.size });
           }
         }
 
@@ -403,7 +405,7 @@ function ExportPanel() {
           for (const layer of layers) {
             const blob = new Blob([layer.content], { type: 'application/octet-stream' });
             downloadBlob(blob, layer.filename);
-            exportedFiles.push(layer.filename);
+            exportedFiles.push({ name: layer.filename, sizeBytes: blob.size });
           }
         }
 
@@ -412,7 +414,7 @@ function ExportPanel() {
         if (drill) {
           const blob = new Blob([drill.content], { type: 'application/octet-stream' });
           downloadBlob(blob, drill.filename);
-          exportedFiles.push(drill.filename);
+          exportedFiles.push({ name: drill.filename, sizeBytes: blob.size });
         }
 
         addOutputLog(`[EXPORT] Downloaded ${exportedFiles.length} file(s) for ${format.label}`);
@@ -428,15 +430,25 @@ function ExportPanel() {
         }
         const blob = await res.blob();
         downloadBlob(blob, filename);
-        exportedFiles.push(filename);
+        exportedFiles.push({ name: filename, sizeBytes: blob.size });
         addOutputLog(`[EXPORT] Downloaded ${format.label}: ${filename}`);
       }
 
+      // Track export result for the results panel
+      ExportResultsManager.getInstance().addResult({
+        formatId: format.id,
+        formatLabel: format.label,
+        files: exportedFiles,
+        timestamp: Date.now(),
+        success: true,
+      });
+
       setDownloadStates((prev) => ({ ...prev, [format.id]: 'success' }));
+      const fileNames = exportedFiles.map((f) => f.name);
       toast({
         title: 'Export complete',
-        description: exportedFiles.length > 1
-          ? `${format.label}: ${exportedFiles.length} files exported (${exportedFiles.join(', ')})`
+        description: fileNames.length > 1
+          ? `${format.label}: ${fileNames.length} files exported (${fileNames.join(', ')})`
           : `${format.label} exported successfully.`,
       });
 

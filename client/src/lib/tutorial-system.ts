@@ -40,6 +40,10 @@ export interface TutorialStep {
   type: StepType;
   targetSelector?: string;
   targetTestId?: string;
+  /** ViewMode to navigate to when this step becomes active. */
+  targetView?: string;
+  /** CSS selector or data-testid ref to highlight/scroll-to when this step becomes active. */
+  targetElement?: string;
   position?: 'top' | 'bottom' | 'left' | 'right' | 'center';
   requiredAction?: string;
   validationFn?: string;

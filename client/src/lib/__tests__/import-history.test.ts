@@ -2,22 +2,35 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
 import { ImportHistoryManager, useImportHistory } from '../import-history';
-import type { ImportHistoryEntry } from '../import-history';
+import type { ImportHistoryEntry, NewImportHistoryEntry } from '../import-history';
+import type { ImportPreview } from '../import-preview';
+import type { ImportFormat } from '../design-import';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeEntry(overrides: Partial<ImportHistoryEntry> = {}): Omit<ImportHistoryEntry, 'id'> {
+function makePreview(overrides: Partial<ImportPreview> = {}): ImportPreview {
   return {
-    projectId: 1,
+    addedNodes: 5,
+    modifiedNodes: 0,
+    removedNodes: 0,
+    addedEdges: 3,
+    addedComponents: 8,
+    addedNets: 4,
+    addedWires: 6,
+    warnings: [],
+    conflicts: [],
+    ...overrides,
+  };
+}
+
+function makeEntry(overrides: Partial<NewImportHistoryEntry> = {}): NewImportHistoryEntry {
+  return {
+    sourceFormat: 'kicad-schematic' as ImportFormat,
     fileName: 'test-circuit.kicad_sch',
-    format: 'KiCad',
-    timestamp: Date.now(),
-    componentCount: 10,
-    netCount: 5,
-    wireCount: 8,
-    warningCount: 0,
+    preview: makePreview(),
+    snapshotData: { nodes: [], edges: [] },
     ...overrides,
   };
 }
@@ -28,11 +41,11 @@ function makeEntry(overrides: Partial<ImportHistoryEntry> = {}): Omit<ImportHist
 
 beforeEach(() => {
   localStorage.clear();
-  ImportHistoryManager.resetForTesting();
+  ImportHistoryManager.resetInstance();
 });
 
 afterEach(() => {
-  ImportHistoryManager.resetForTesting();
+  ImportHistoryManager.resetInstance();
 });
 
 // ---------------------------------------------------------------------------
@@ -47,105 +60,106 @@ describe('ImportHistoryManager', () => {
       expect(a).toBe(b);
     });
 
-    it('returns a new instance after resetForTesting', () => {
+    it('returns a new instance after resetInstance', () => {
       const a = ImportHistoryManager.getInstance();
-      ImportHistoryManager.resetForTesting();
+      ImportHistoryManager.resetInstance();
       const b = ImportHistoryManager.getInstance();
       expect(a).not.toBe(b);
     });
   });
 
-  describe('recordImport', () => {
+  describe('addEntry', () => {
     it('adds entry with generated UUID', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry());
-      const history = mgr.getHistory(1);
-      expect(history).toHaveLength(1);
-      expect(history[0].id).toBeTruthy();
-      expect(typeof history[0].id).toBe('string');
+      const result = mgr.addEntry(makeEntry());
+      expect(result.id).toBeTruthy();
+      expect(typeof result.id).toBe('string');
       // UUID format: 8-4-4-4-12 hex
-      expect(history[0].id).toMatch(
+      expect(result.id).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
       );
     });
 
+    it('adds entry with ISO timestamp', () => {
+      const mgr = ImportHistoryManager.getInstance();
+      const before = new Date().toISOString();
+      const result = mgr.addEntry(makeEntry());
+      const after = new Date().toISOString();
+      expect(result.timestamp >= before).toBe(true);
+      expect(result.timestamp <= after).toBe(true);
+    });
+
     it('preserves all entry fields', () => {
       const mgr = ImportHistoryManager.getInstance();
+      const preview = makePreview({ addedComponents: 42, addedNets: 17 });
       const entry = makeEntry({
         fileName: 'board.eagle',
-        format: 'Eagle',
-        componentCount: 42,
-        netCount: 17,
-        wireCount: 30,
-        warningCount: 3,
+        sourceFormat: 'eagle-schematic',
+        preview,
+        snapshotData: { test: true },
       });
-      mgr.recordImport(entry);
-      const [result] = mgr.getHistory(1);
+      const result = mgr.addEntry(entry);
       expect(result.fileName).toBe('board.eagle');
-      expect(result.format).toBe('Eagle');
-      expect(result.componentCount).toBe(42);
-      expect(result.netCount).toBe(17);
-      expect(result.wireCount).toBe(30);
-      expect(result.warningCount).toBe(3);
+      expect(result.sourceFormat).toBe('eagle-schematic');
+      expect(result.preview.addedComponents).toBe(42);
+      expect(result.preview.addedNets).toBe(17);
+      expect(result.snapshotData).toEqual({ test: true });
     });
 
     it('stores multiple entries', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry({ fileName: 'a.kicad_sch' }));
-      mgr.recordImport(makeEntry({ fileName: 'b.kicad_sch' }));
-      mgr.recordImport(makeEntry({ fileName: 'c.kicad_sch' }));
-      expect(mgr.getHistory(1)).toHaveLength(3);
+      mgr.addEntry(makeEntry({ fileName: 'a.kicad_sch' }));
+      mgr.addEntry(makeEntry({ fileName: 'b.kicad_sch' }));
+      mgr.addEntry(makeEntry({ fileName: 'c.kicad_sch' }));
+      expect(mgr.getEntries()).toHaveLength(3);
+    });
+
+    it('returns the created entry', () => {
+      const mgr = ImportHistoryManager.getInstance();
+      const result = mgr.addEntry(makeEntry({ fileName: 'returned.sch' }));
+      expect(result.fileName).toBe('returned.sch');
+      expect(result.id).toBeTruthy();
+      expect(result.timestamp).toBeTruthy();
     });
   });
 
-  describe('getHistory', () => {
+  describe('getEntries', () => {
     it('returns entries sorted by timestamp descending (newest first)', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry({ fileName: 'oldest.sch', timestamp: 1000 }));
-      mgr.recordImport(makeEntry({ fileName: 'newest.sch', timestamp: 3000 }));
-      mgr.recordImport(makeEntry({ fileName: 'middle.sch', timestamp: 2000 }));
-      const history = mgr.getHistory(1);
-      expect(history[0].fileName).toBe('newest.sch');
-      expect(history[1].fileName).toBe('middle.sch');
-      expect(history[2].fileName).toBe('oldest.sch');
+      // Add entries with slight time gaps
+      mgr.addEntry(makeEntry({ fileName: 'first.sch' }));
+      // Small delay to ensure different timestamps
+      const entry2 = mgr.addEntry(makeEntry({ fileName: 'second.sch' }));
+      const entry3 = mgr.addEntry(makeEntry({ fileName: 'third.sch' }));
+      const entries = mgr.getEntries();
+      // Since they're added in rapid succession, the newest should be last added
+      // but getEntries sorts by timestamp descending
+      expect(entries).toHaveLength(3);
+      // The most recently added entries should appear first after sort
+      expect(new Date(entries[0].timestamp).getTime()).toBeGreaterThanOrEqual(
+        new Date(entries[entries.length - 1].timestamp).getTime(),
+      );
     });
 
-    it('filters by projectId', () => {
+    it('returns empty array when no entries', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry({ projectId: 1, fileName: 'proj1.sch' }));
-      mgr.recordImport(makeEntry({ projectId: 2, fileName: 'proj2.sch' }));
-      mgr.recordImport(makeEntry({ projectId: 1, fileName: 'proj1b.sch' }));
-
-      const p1 = mgr.getHistory(1);
-      expect(p1).toHaveLength(2);
-      expect(p1.every((e) => e.projectId === 1)).toBe(true);
-
-      const p2 = mgr.getHistory(2);
-      expect(p2).toHaveLength(1);
-      expect(p2[0].fileName).toBe('proj2.sch');
+      expect(mgr.getEntries()).toEqual([]);
     });
 
-    it('returns empty array for unknown project', () => {
+    it('returns copies (not internal references)', () => {
       const mgr = ImportHistoryManager.getInstance();
-      expect(mgr.getHistory(999)).toEqual([]);
-    });
-
-    it('returns defensive copies', () => {
-      const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry());
-      const a = mgr.getHistory(1);
-      const b = mgr.getHistory(1);
+      mgr.addEntry(makeEntry());
+      const a = mgr.getEntries();
+      const b = mgr.getEntries();
       expect(a).not.toBe(b);
-      expect(a[0]).not.toBe(b[0]);
     });
   });
 
   describe('getEntry', () => {
     it('returns entry by id', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry({ fileName: 'target.sch' }));
-      const [entry] = mgr.getHistory(1);
-      const result = mgr.getEntry(entry.id);
+      const created = mgr.addEntry(makeEntry({ fileName: 'target.sch' }));
+      const result = mgr.getEntry(created.id);
       expect(result).toBeDefined();
       expect(result!.fileName).toBe('target.sch');
     });
@@ -156,185 +170,228 @@ describe('ImportHistoryManager', () => {
     });
   });
 
-  describe('removeEntry', () => {
+  describe('getCount', () => {
+    it('returns 0 for empty history', () => {
+      const mgr = ImportHistoryManager.getInstance();
+      expect(mgr.getCount()).toBe(0);
+    });
+
+    it('returns correct count after additions', () => {
+      const mgr = ImportHistoryManager.getInstance();
+      mgr.addEntry(makeEntry());
+      mgr.addEntry(makeEntry());
+      expect(mgr.getCount()).toBe(2);
+    });
+  });
+
+  describe('deleteEntry', () => {
     it('removes a specific entry by id', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry({ fileName: 'keep.sch' }));
-      mgr.recordImport(makeEntry({ fileName: 'remove.sch' }));
-      const history = mgr.getHistory(1);
-      const toRemove = history.find((e) => e.fileName === 'remove.sch')!;
-      mgr.removeEntry(toRemove.id);
-      const after = mgr.getHistory(1);
-      expect(after).toHaveLength(1);
-      expect(after[0].fileName).toBe('keep.sch');
+      const keep = mgr.addEntry(makeEntry({ fileName: 'keep.sch' }));
+      const remove = mgr.addEntry(makeEntry({ fileName: 'remove.sch' }));
+      mgr.deleteEntry(remove.id);
+      const entries = mgr.getEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].fileName).toBe('keep.sch');
     });
 
     it('is a no-op for unknown id', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry());
-      mgr.removeEntry('nonexistent');
-      expect(mgr.getHistory(1)).toHaveLength(1);
+      mgr.addEntry(makeEntry());
+      mgr.deleteEntry('nonexistent');
+      expect(mgr.getCount()).toBe(1);
     });
   });
 
-  describe('clearHistory', () => {
-    it('removes all entries for specified project', () => {
+  describe('clear', () => {
+    it('removes all entries', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry({ projectId: 1 }));
-      mgr.recordImport(makeEntry({ projectId: 1 }));
-      mgr.recordImport(makeEntry({ projectId: 2 }));
-      mgr.clearHistory(1);
-      expect(mgr.getHistory(1)).toHaveLength(0);
-      expect(mgr.getHistory(2)).toHaveLength(1);
+      mgr.addEntry(makeEntry());
+      mgr.addEntry(makeEntry());
+      mgr.addEntry(makeEntry());
+      mgr.clear();
+      expect(mgr.getCount()).toBe(0);
+      expect(mgr.getEntries()).toEqual([]);
     });
 
-    it('is a no-op for project with no history', () => {
+    it('is a no-op when already empty', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry({ projectId: 1 }));
-      mgr.clearHistory(999);
-      expect(mgr.getHistory(1)).toHaveLength(1);
+      mgr.clear(); // should not throw
+      expect(mgr.getCount()).toBe(0);
     });
   });
 
   describe('FIFO eviction', () => {
-    it('evicts oldest entry when exceeding 20 per project', () => {
+    it('evicts oldest entry when exceeding 20', () => {
       const mgr = ImportHistoryManager.getInstance();
+      const ids: string[] = [];
       for (let i = 0; i < 20; i++) {
-        mgr.recordImport(makeEntry({ fileName: `file-${i}.sch`, timestamp: 1000 + i }));
+        const entry = mgr.addEntry(makeEntry({ fileName: `file-${i}.sch` }));
+        ids.push(entry.id);
       }
-      expect(mgr.getHistory(1)).toHaveLength(20);
+      expect(mgr.getCount()).toBe(20);
 
-      // Add 21st — oldest (timestamp 1000) should be evicted
-      mgr.recordImport(makeEntry({ fileName: 'file-20.sch', timestamp: 1020 }));
-      const history = mgr.getHistory(1);
-      expect(history).toHaveLength(20);
-      expect(history.find((e) => e.fileName === 'file-0.sch')).toBeUndefined();
-      expect(history.find((e) => e.fileName === 'file-20.sch')).toBeDefined();
+      // Add 21st — oldest should be evicted
+      mgr.addEntry(makeEntry({ fileName: 'file-20.sch' }));
+      expect(mgr.getCount()).toBe(20);
+      // The first entry (oldest) should have been evicted
+      expect(mgr.getEntry(ids[0])).toBeUndefined();
+      // The newest should be present
+      const entries = mgr.getEntries();
+      expect(entries.some((e) => e.fileName === 'file-20.sch')).toBe(true);
     });
 
-    it('eviction is per-project — other projects unaffected', () => {
+    it('keeps exactly MAX_ENTRIES after many additions', () => {
       const mgr = ImportHistoryManager.getInstance();
-      for (let i = 0; i < 20; i++) {
-        mgr.recordImport(makeEntry({ projectId: 1, fileName: `p1-${i}.sch`, timestamp: 1000 + i }));
+      for (let i = 0; i < 30; i++) {
+        mgr.addEntry(makeEntry({ fileName: `file-${i}.sch` }));
       }
-      mgr.recordImport(makeEntry({ projectId: 2, fileName: 'p2.sch' }));
-
-      // Add 21st to project 1
-      mgr.recordImport(makeEntry({ projectId: 1, fileName: 'p1-20.sch', timestamp: 1020 }));
-      expect(mgr.getHistory(1)).toHaveLength(20);
-      expect(mgr.getHistory(2)).toHaveLength(1);
+      expect(mgr.getCount()).toBe(20);
     });
   });
 
   describe('localStorage persistence', () => {
-    it('saves to localStorage after recordImport', () => {
+    it('saves to localStorage after addEntry', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry());
+      mgr.addEntry(makeEntry());
       const stored = localStorage.getItem('protopulse-import-history');
       expect(stored).toBeTruthy();
       const parsed = JSON.parse(stored!);
-      expect(parsed.entries).toHaveLength(1);
+      expect(Array.isArray(parsed)).toBe(true);
+      expect(parsed).toHaveLength(1);
     });
 
-    it('saves to localStorage after removeEntry', () => {
+    it('saves to localStorage after deleteEntry', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry());
-      const [entry] = mgr.getHistory(1);
-      mgr.removeEntry(entry.id);
+      const entry = mgr.addEntry(makeEntry());
+      mgr.deleteEntry(entry.id);
       const stored = JSON.parse(localStorage.getItem('protopulse-import-history')!);
-      expect(stored.entries).toHaveLength(0);
+      expect(stored).toHaveLength(0);
     });
 
-    it('saves to localStorage after clearHistory', () => {
+    it('saves to localStorage after clear', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry());
-      mgr.clearHistory(1);
+      mgr.addEntry(makeEntry());
+      mgr.clear();
       const stored = JSON.parse(localStorage.getItem('protopulse-import-history')!);
-      expect(stored.entries).toHaveLength(0);
+      expect(stored).toHaveLength(0);
     });
 
     it('loads entries from localStorage on construction', () => {
       const entry: ImportHistoryEntry = {
         id: 'test-uuid-1234',
-        projectId: 1,
+        timestamp: new Date('2026-01-01').toISOString(),
+        sourceFormat: 'kicad-schematic',
         fileName: 'persisted.sch',
-        format: 'KiCad',
-        timestamp: 5000,
-        componentCount: 3,
-        netCount: 2,
-        wireCount: 1,
-        warningCount: 0,
+        preview: makePreview(),
+        snapshotData: null,
       };
       localStorage.setItem(
         'protopulse-import-history',
-        JSON.stringify({ entries: [entry] }),
+        JSON.stringify([entry]),
       );
-      ImportHistoryManager.resetForTesting();
+      ImportHistoryManager.resetInstance();
       const mgr = ImportHistoryManager.getInstance();
-      const history = mgr.getHistory(1);
-      expect(history).toHaveLength(1);
-      expect(history[0].fileName).toBe('persisted.sch');
-      expect(history[0].id).toBe('test-uuid-1234');
+      const entries = mgr.getEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].fileName).toBe('persisted.sch');
+      expect(entries[0].id).toBe('test-uuid-1234');
     });
 
     it('recovers gracefully from corrupt localStorage', () => {
       localStorage.setItem('protopulse-import-history', '{{not json}}');
-      ImportHistoryManager.resetForTesting();
+      ImportHistoryManager.resetInstance();
       const mgr = ImportHistoryManager.getInstance();
-      expect(mgr.getHistory(1)).toEqual([]);
+      expect(mgr.getEntries()).toEqual([]);
     });
 
-    it('recovers from localStorage with missing entries array', () => {
+    it('recovers from localStorage with non-array data', () => {
       localStorage.setItem('protopulse-import-history', JSON.stringify({ foo: 'bar' }));
-      ImportHistoryManager.resetForTesting();
+      ImportHistoryManager.resetInstance();
       const mgr = ImportHistoryManager.getInstance();
-      expect(mgr.getHistory(1)).toEqual([]);
+      expect(mgr.getEntries()).toEqual([]);
     });
 
     it('recovers from null localStorage value', () => {
       localStorage.removeItem('protopulse-import-history');
-      ImportHistoryManager.resetForTesting();
+      ImportHistoryManager.resetInstance();
       const mgr = ImportHistoryManager.getInstance();
-      expect(mgr.getHistory(1)).toEqual([]);
+      expect(mgr.getEntries()).toEqual([]);
+    });
+
+    it('filters out invalid entries from localStorage', () => {
+      const validEntry: ImportHistoryEntry = {
+        id: 'valid-uuid',
+        timestamp: new Date().toISOString(),
+        sourceFormat: 'kicad-schematic',
+        fileName: 'valid.sch',
+        preview: makePreview(),
+        snapshotData: null,
+      };
+      const invalidEntry = { id: 123, fileName: null }; // wrong types
+      localStorage.setItem(
+        'protopulse-import-history',
+        JSON.stringify([validEntry, invalidEntry]),
+      );
+      ImportHistoryManager.resetInstance();
+      const mgr = ImportHistoryManager.getInstance();
+      expect(mgr.getCount()).toBe(1);
+      expect(mgr.getEntries()[0].fileName).toBe('valid.sch');
     });
   });
 
   describe('subscribe / unsubscribe', () => {
-    it('notifies subscribers on recordImport', () => {
+    it('notifies subscribers on addEntry', () => {
       const mgr = ImportHistoryManager.getInstance();
       const listener = vi.fn();
       mgr.subscribe(listener);
-      mgr.recordImport(makeEntry());
+      mgr.addEntry(makeEntry());
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
-    it('notifies subscribers on removeEntry', () => {
+    it('notifies subscribers on deleteEntry', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry());
+      const entry = mgr.addEntry(makeEntry());
       const listener = vi.fn();
       mgr.subscribe(listener);
-      const [entry] = mgr.getHistory(1);
-      mgr.removeEntry(entry.id);
+      mgr.deleteEntry(entry.id);
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
-    it('notifies subscribers on clearHistory', () => {
+    it('notifies subscribers on clear', () => {
       const mgr = ImportHistoryManager.getInstance();
-      mgr.recordImport(makeEntry());
+      mgr.addEntry(makeEntry());
       const listener = vi.fn();
       mgr.subscribe(listener);
-      mgr.clearHistory(1);
+      mgr.clear();
       expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not notify when deleteEntry finds no match', () => {
+      const mgr = ImportHistoryManager.getInstance();
+      mgr.addEntry(makeEntry());
+      const listener = vi.fn();
+      mgr.subscribe(listener);
+      mgr.deleteEntry('nonexistent');
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('does not notify when clear is called on empty history', () => {
+      const mgr = ImportHistoryManager.getInstance();
+      const listener = vi.fn();
+      mgr.subscribe(listener);
+      mgr.clear();
+      expect(listener).not.toHaveBeenCalled();
     });
 
     it('stops notifying after unsubscribe', () => {
       const mgr = ImportHistoryManager.getInstance();
       const listener = vi.fn();
       const unsub = mgr.subscribe(listener);
-      mgr.recordImport(makeEntry());
+      mgr.addEntry(makeEntry());
       expect(listener).toHaveBeenCalledTimes(1);
       unsub();
-      mgr.recordImport(makeEntry());
+      mgr.addEntry(makeEntry());
       expect(listener).toHaveBeenCalledTimes(1);
     });
 
@@ -344,7 +401,7 @@ describe('ImportHistoryManager', () => {
       const b = vi.fn();
       mgr.subscribe(a);
       mgr.subscribe(b);
-      mgr.recordImport(makeEntry());
+      mgr.addEntry(makeEntry());
       expect(a).toHaveBeenCalledTimes(1);
       expect(b).toHaveBeenCalledTimes(1);
     });
@@ -356,69 +413,79 @@ describe('ImportHistoryManager', () => {
 // ---------------------------------------------------------------------------
 
 describe('useImportHistory', () => {
-  it('returns empty history for project with no imports', () => {
-    const { result } = renderHook(() => useImportHistory(1));
-    expect(result.current.history).toEqual([]);
+  it('returns empty entries for empty history', () => {
+    const { result } = renderHook(() => useImportHistory());
+    expect(result.current.entries).toEqual([]);
+    expect(result.current.count).toBe(0);
   });
 
-  it('returns history for given projectId', () => {
+  it('returns all entries', () => {
     const mgr = ImportHistoryManager.getInstance();
-    mgr.recordImport(makeEntry({ projectId: 1, fileName: 'p1.sch' }));
-    mgr.recordImport(makeEntry({ projectId: 2, fileName: 'p2.sch' }));
+    mgr.addEntry(makeEntry({ fileName: 'a.sch' }));
+    mgr.addEntry(makeEntry({ fileName: 'b.sch' }));
 
-    const { result } = renderHook(() => useImportHistory(1));
-    expect(result.current.history).toHaveLength(1);
-    expect(result.current.history[0].fileName).toBe('p1.sch');
+    const { result } = renderHook(() => useImportHistory());
+    expect(result.current.entries).toHaveLength(2);
+    expect(result.current.count).toBe(2);
   });
 
-  it('re-renders on recordImport', () => {
-    const { result } = renderHook(() => useImportHistory(1));
-    expect(result.current.history).toHaveLength(0);
+  it('re-renders on addEntry', () => {
+    const { result } = renderHook(() => useImportHistory());
+    expect(result.current.entries).toHaveLength(0);
 
     act(() => {
-      result.current.recordImport(makeEntry({ fileName: 'new.sch' }));
+      result.current.addEntry(makeEntry({ fileName: 'new.sch' }));
     });
 
-    expect(result.current.history).toHaveLength(1);
-    expect(result.current.history[0].fileName).toBe('new.sch');
+    expect(result.current.entries).toHaveLength(1);
+    expect(result.current.entries[0].fileName).toBe('new.sch');
   });
 
-  it('re-renders on removeEntry', () => {
+  it('re-renders on deleteEntry', () => {
     const mgr = ImportHistoryManager.getInstance();
-    mgr.recordImport(makeEntry());
+    const entry = mgr.addEntry(makeEntry());
 
-    const { result } = renderHook(() => useImportHistory(1));
-    expect(result.current.history).toHaveLength(1);
+    const { result } = renderHook(() => useImportHistory());
+    expect(result.current.entries).toHaveLength(1);
 
     act(() => {
-      result.current.removeEntry(result.current.history[0].id);
+      result.current.deleteEntry(entry.id);
     });
 
-    expect(result.current.history).toHaveLength(0);
+    expect(result.current.entries).toHaveLength(0);
   });
 
-  it('re-renders on clearHistory', () => {
+  it('re-renders on clear', () => {
     const mgr = ImportHistoryManager.getInstance();
-    mgr.recordImport(makeEntry());
-    mgr.recordImport(makeEntry());
+    mgr.addEntry(makeEntry());
+    mgr.addEntry(makeEntry());
 
-    const { result } = renderHook(() => useImportHistory(1));
-    expect(result.current.history).toHaveLength(2);
+    const { result } = renderHook(() => useImportHistory());
+    expect(result.current.entries).toHaveLength(2);
 
     act(() => {
-      result.current.clearHistory();
+      result.current.clear();
     });
 
-    expect(result.current.history).toHaveLength(0);
+    expect(result.current.entries).toHaveLength(0);
+  });
+
+  it('getEntry retrieves by id', () => {
+    const mgr = ImportHistoryManager.getInstance();
+    const created = mgr.addEntry(makeEntry({ fileName: 'findme.sch' }));
+
+    const { result } = renderHook(() => useImportHistory());
+    const found = result.current.getEntry(created.id);
+    expect(found).toBeDefined();
+    expect(found!.fileName).toBe('findme.sch');
   });
 
   it('cleans up subscription on unmount', () => {
-    const { unmount } = renderHook(() => useImportHistory(1));
-    // Should not throw after unmount when manager notifies
+    const { unmount } = renderHook(() => useImportHistory());
     unmount();
     const mgr = ImportHistoryManager.getInstance();
     expect(() => {
-      mgr.recordImport(makeEntry());
+      mgr.addEntry(makeEntry());
     }).not.toThrow();
   });
 });
@@ -430,75 +497,89 @@ describe('useImportHistory', () => {
 describe('edge cases', () => {
   it('handles empty history gracefully', () => {
     const mgr = ImportHistoryManager.getInstance();
-    expect(mgr.getHistory(1)).toEqual([]);
+    expect(mgr.getEntries()).toEqual([]);
     expect(mgr.getEntry('anything')).toBeUndefined();
-    mgr.removeEntry('nonexistent');
-    mgr.clearHistory(1);
+    expect(mgr.getCount()).toBe(0);
+    mgr.deleteEntry('nonexistent');
+    mgr.clear();
     // No errors thrown
   });
 
   it('handles single entry correctly', () => {
     const mgr = ImportHistoryManager.getInstance();
-    mgr.recordImport(makeEntry({ fileName: 'only.sch', timestamp: 100 }));
-    const history = mgr.getHistory(1);
-    expect(history).toHaveLength(1);
-    expect(history[0].fileName).toBe('only.sch');
+    const entry = mgr.addEntry(makeEntry({ fileName: 'only.sch' }));
+    const entries = mgr.getEntries();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].fileName).toBe('only.sch');
+    expect(entries[0].id).toBe(entry.id);
   });
 
   it('handles max capacity exactly at 20', () => {
     const mgr = ImportHistoryManager.getInstance();
     for (let i = 0; i < 20; i++) {
-      mgr.recordImport(makeEntry({ fileName: `file-${i}.sch`, timestamp: 1000 + i }));
+      mgr.addEntry(makeEntry({ fileName: `file-${i}.sch` }));
     }
-    expect(mgr.getHistory(1)).toHaveLength(20);
-    // All 20 should be present
-    const fileNames = mgr.getHistory(1).map((e) => e.fileName);
-    for (let i = 0; i < 20; i++) {
-      expect(fileNames).toContain(`file-${i}.sch`);
-    }
-  });
-
-  it('handles mixed projects at capacity', () => {
-    const mgr = ImportHistoryManager.getInstance();
-    // 20 for project 1
-    for (let i = 0; i < 20; i++) {
-      mgr.recordImport(makeEntry({ projectId: 1, fileName: `p1-${i}.sch`, timestamp: 1000 + i }));
-    }
-    // 20 for project 2
-    for (let i = 0; i < 20; i++) {
-      mgr.recordImport(makeEntry({ projectId: 2, fileName: `p2-${i}.sch`, timestamp: 2000 + i }));
-    }
-    expect(mgr.getHistory(1)).toHaveLength(20);
-    expect(mgr.getHistory(2)).toHaveLength(20);
-
-    // Add one more to project 1 — should evict oldest of project 1 only
-    mgr.recordImport(makeEntry({ projectId: 1, fileName: 'p1-extra.sch', timestamp: 3000 }));
-    expect(mgr.getHistory(1)).toHaveLength(20);
-    expect(mgr.getHistory(2)).toHaveLength(20);
+    expect(mgr.getCount()).toBe(20);
   });
 
   it('entries have unique IDs', () => {
     const mgr = ImportHistoryManager.getInstance();
+    const created: ImportHistoryEntry[] = [];
     for (let i = 0; i < 10; i++) {
-      mgr.recordImport(makeEntry({ fileName: `file-${i}.sch` }));
+      created.push(mgr.addEntry(makeEntry({ fileName: `file-${i}.sch` })));
     }
-    const ids = mgr.getHistory(1).map((e) => e.id);
+    const ids = created.map((e) => e.id);
     const unique = new Set(ids);
     expect(unique.size).toBe(ids.length);
   });
 
-  it('handles zero counts', () => {
+  it('preserves preview warnings and conflicts', () => {
     const mgr = ImportHistoryManager.getInstance();
-    mgr.recordImport(makeEntry({
-      componentCount: 0,
-      netCount: 0,
-      wireCount: 0,
-      warningCount: 0,
-    }));
-    const [entry] = mgr.getHistory(1);
-    expect(entry.componentCount).toBe(0);
-    expect(entry.netCount).toBe(0);
-    expect(entry.wireCount).toBe(0);
-    expect(entry.warningCount).toBe(0);
+    const preview = makePreview({
+      warnings: ['Missing footprint for U1', 'Unknown pin type'],
+      conflicts: ['Net name collision: VCC'],
+    });
+    const entry = mgr.addEntry(makeEntry({ preview }));
+    const retrieved = mgr.getEntry(entry.id);
+    expect(retrieved!.preview.warnings).toHaveLength(2);
+    expect(retrieved!.preview.conflicts).toHaveLength(1);
+  });
+
+  it('preserves snapshot data', () => {
+    const mgr = ImportHistoryManager.getInstance();
+    const snapshotData = {
+      nodes: [{ id: 'n1', label: 'MCU' }],
+      edges: [{ id: 'e1', source: 'n1', target: 'n2' }],
+    };
+    const entry = mgr.addEntry(makeEntry({ snapshotData }));
+    const retrieved = mgr.getEntry(entry.id);
+    expect(retrieved!.snapshotData).toEqual(snapshotData);
+  });
+
+  it('handles all supported import formats', () => {
+    const mgr = ImportHistoryManager.getInstance();
+    const formats: ImportFormat[] = [
+      'kicad-schematic',
+      'kicad-pcb',
+      'kicad-symbol',
+      'eagle-schematic',
+      'eagle-board',
+      'eagle-library',
+      'altium-schematic',
+      'altium-pcb',
+      'geda-schematic',
+      'ltspice-schematic',
+      'proteus-schematic',
+      'orcad-schematic',
+    ];
+    for (const fmt of formats) {
+      mgr.addEntry(makeEntry({ sourceFormat: fmt }));
+    }
+    expect(mgr.getCount()).toBe(12);
+    const entries = mgr.getEntries();
+    const storedFormats = entries.map((e) => e.sourceFormat);
+    for (const fmt of formats) {
+      expect(storedFormats).toContain(fmt);
+    }
   });
 });

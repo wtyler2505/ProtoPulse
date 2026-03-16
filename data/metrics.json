@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-16T16:57:30.688Z",
+  "persistedAt": "2026-03-16T17:03:30.722Z",
   "routes": {
     "POST /api/auth/login": {
       "count": 5,
@@ -695,8 +695,8 @@
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 27,
-      "totalDuration": 6136,
+      "count": 28,
+      "totalDuration": 6349,
       "errors": 15,
       "min": 4,
       "max": 4205,
@@ -725,6 +725,7 @@
         123,
         128,
         196,
+        213,
         492,
         508,
         4205
@@ -755,13 +756,14 @@
       ]
     },
     "GET /api/projects/:id/component-parts": {
-      "count": 2,
-      "totalDuration": 343,
+      "count": 3,
+      "totalDuration": 431,
       "errors": 0,
       "min": 6,
       "max": 337,
       "samples": [
         6,
+        88,
         337
       ]
     },
@@ -779,29 +781,31 @@
       ]
     },
     "GET /api/circuits/:circuitId/nets": {
-      "count": 3,
-      "totalDuration": 590,
+      "count": 4,
+      "totalDuration": 923,
       "errors": 0,
       "min": 13,
       "max": 548,
       "samples": [
         13,
         29,
+        333,
         548
       ]
     },
     "GET /api/circuits/:circuitId/instances": {
-      "count": 5,
-      "totalDuration": 334,
+      "count": 6,
+      "totalDuration": 753,
       "errors": 0,
       "min": 11,
-      "max": 231,
+      "max": 419,
       "samples": [
         11,
         11,
         36,
         45,
-        231
+        231,
+        419
       ]
     },
     "GET /api/projects/:id/circuits/:circuitId/children": {
