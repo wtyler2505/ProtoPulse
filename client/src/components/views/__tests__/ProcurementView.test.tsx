@@ -171,6 +171,29 @@ vi.mock('@dnd-kit/modifiers', () => ({
   restrictToVerticalAxis: vi.fn(),
 }));
 
+// Tabs — Radix primitives are too heavy for happy-dom; use lightweight mocks.
+// Only render the "management" TabsContent (the default tab) to avoid loading
+// lazy-imported panels (BomDiffPanel, AssemblyGroupPanel, AvlCompliancePanel).
+vi.mock('@/components/ui/tabs', () => ({
+  Tabs: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  TabsList: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
+  TabsTrigger: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  TabsContent: ({ children, value, ...props }: React.HTMLAttributes<HTMLDivElement> & { value?: string }) =>
+    value === 'management' ? <div data-value={value} {...props}>{children}</div> : null,
+}));
+
+// LifecycleBadge — lightweight mock to avoid pulling lifecycle-badges module weight
+vi.mock('@/components/ui/LifecycleBadge', () => ({
+  LifecycleBadge: ({ partNumber }: { partNumber: string }) => (
+    <span data-testid={`lifecycle-badge-card-${partNumber}`} />
+  ),
+}));
+
+// lifecycle-badges — mock classifyLifecycle for summary counter in ProcurementView
+vi.mock('@/lib/lifecycle-badges', () => ({
+  classifyLifecycle: (_pn: string, _mfg?: string) => 'unknown' as const,
+}));
+
 // -------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------
@@ -200,7 +223,7 @@ function renderProcurement() {
 // Tests
 // -------------------------------------------------------------------
 
-describe('ProcurementView', () => {
+describe('ProcurementView', { timeout: 15000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockBom = [];

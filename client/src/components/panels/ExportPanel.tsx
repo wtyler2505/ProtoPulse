@@ -477,6 +477,15 @@ function ExportPanel() {
       addOutputLog(`[EXPORT] Failed ${format.label}: ${message}`);
       toast({ title: 'Export failed', description: message, variant: 'destructive' });
 
+      // Track failed export in results panel
+      ExportResultsManager.getInstance().addResult({
+        formatId: format.id,
+        formatLabel: format.label,
+        files: [],
+        timestamp: Date.now(),
+        success: false,
+      });
+
       setTimeout(() => {
         setDownloadStates((prev) => ({ ...prev, [format.id]: 'idle' }));
       }, 5000);
@@ -976,6 +985,9 @@ function ExportPanel() {
         );
       })}
 
+      {/* Export results */}
+      <ExportResultsPanel />
+
       {/* Import section */}
       <div className="border border-border/50 bg-card/30 backdrop-blur" data-testid="import-section">
         <div className="flex items-center gap-2 px-3 py-2.5 text-xs font-medium text-muted-foreground">
@@ -1040,6 +1052,7 @@ function ExportPanel() {
         onOpenChange={setImportDialogOpen}
         preview={importPreview}
         fileName={importFileName}
+        importedDesign={pendingImportDesignRef.current ?? undefined}
         onApply={handleImportApply}
         onCancel={handleImportCancel}
       />

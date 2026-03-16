@@ -386,3 +386,25 @@
 .reduced-motion .edge-glow-strong {
   box-shadow: none;
 }
+
+/* BL-0536: Tutorial step highlight — pulsing neon cyan ring */
+.tutorial-highlight {
+  outline: 2px solid #00F0FF;
+  outline-offset: 2px;
+  animation: tutorial-pulse 2s ease-in-out;
+  border-radius: 4px;
+}
+@keyframes tutorial-pulse {
+  0%, 100% { outline-color: transparent; }
+  25%, 75% { outline-color: #00F0FF; }
+}
+
+/* Respect reduced motion for tutorial highlights */
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-highlight {
+    animation: none;
+  }
+}
+.reduced-motion .tutorial-highlight {
+  animation: none;
+}

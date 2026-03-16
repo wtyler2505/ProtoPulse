@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { createElement } from 'react';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import {
   classifyLifecycle,
   getLifecycleColor,
@@ -127,37 +128,42 @@ describe('LifecycleBadge visibility', () => {
     LifecycleBadge = mod.LifecycleBadge;
   });
 
+  function renderWithTooltip(element: React.ReactElement) {
+    return render(createElement(TooltipProvider, null, element));
+  }
+
   it('renders nothing for active parts', () => {
-    const { container } = render(
+    const { container } = renderWithTooltip(
       createElement(LifecycleBadge, { partNumber: 'ATmega328P-PU' }),
     );
-    expect(container.innerHTML).toBe('');
+    // TooltipProvider renders a wrapper, but LifecycleBadge returns null for active
+    expect(container.querySelector('[data-testid]')).toBeNull();
   });
 
   it('renders nothing for unknown parts', () => {
-    const { container } = render(
+    const { container } = renderWithTooltip(
       createElement(LifecycleBadge, { partNumber: 'UNKNOWN-PART-999' }),
     );
-    expect(container.innerHTML).toBe('');
+    expect(container.querySelector('[data-testid]')).toBeNull();
   });
 
   it('renders badge for nrnd parts', () => {
-    render(createElement(LifecycleBadge, { partNumber: 'LM7805CT' }));
+    renderWithTooltip(createElement(LifecycleBadge, { partNumber: 'LM7805CT' }));
     expect(screen.getByTestId('lifecycle-badge-nrnd')).toBeDefined();
   });
 
   it('renders badge for obsolete parts', () => {
-    render(createElement(LifecycleBadge, { partNumber: 'LM317K' }));
+    renderWithTooltip(createElement(LifecycleBadge, { partNumber: 'LM317K' }));
     expect(screen.getByTestId('lifecycle-badge-obsolete')).toBeDefined();
   });
 
   it('renders badge for eol status override', () => {
-    render(createElement(LifecycleBadge, { partNumber: 'anything', status: 'eol' }));
+    renderWithTooltip(createElement(LifecycleBadge, { partNumber: 'anything', status: 'eol' }));
     expect(screen.getByTestId('lifecycle-badge-eol')).toBeDefined();
   });
 
   it('renders badge for preliminary parts', () => {
-    render(createElement(LifecycleBadge, { partNumber: 'RP2350' }));
+    renderWithTooltip(createElement(LifecycleBadge, { partNumber: 'RP2350' }));
     expect(screen.getByTestId('lifecycle-badge-preliminary')).toBeDefined();
   });
 });

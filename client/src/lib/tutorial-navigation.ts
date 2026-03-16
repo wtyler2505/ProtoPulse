@@ -8,6 +8,7 @@
 
 import type { ViewMode } from '@/lib/project-context';
 import type { TutorialStep } from '@/lib/tutorials';
+import type { TutorialStep as SystemTutorialStep } from '@/lib/tutorial-system';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -156,6 +157,74 @@ export function highlightElement(
     };
   }
 
+  return cleanup;
+}
+
+/**
+ * Derives a TutorialTarget from a SystemTutorialStep (tutorial-system.ts).
+ *
+ * Resolution order:
+ * 1. If the step has `targetView`, map it to ViewMode
+ * 2. Return null if no view can be determined
+ *
+ * Element selector resolution:
+ * 1. `targetElement` if present
+ * 2. `targetTestId` wrapped as `[data-testid="..."]`
+ * 3. `targetSelector` as fallback
+ */
+export function getSystemStepTarget(step: SystemTutorialStep): TutorialTarget | null {
+  let view: ViewMode | undefined;
+
+  if (step.targetView) {
+    view = VIEW_REQUIRED_TO_VIEW_MODE[step.targetView];
+  }
+
+  if (!view) {
+    return null;
+  }
+
+  // Resolve element selector with priority: targetElement > targetTestId > targetSelector
+  let elementSelector: string | undefined;
+  if (step.targetElement) {
+    elementSelector = step.targetElement;
+  } else if (step.targetTestId) {
+    elementSelector = `[data-testid="${step.targetTestId}"]`;
+  } else if (step.targetSelector) {
+    elementSelector = step.targetSelector;
+  }
+
+  return {
+    view,
+    elementSelector,
+    highlightDuration: DEFAULT_HIGHLIGHT_DURATION,
+  };
+}
+
+/**
+ * Scrolls the first element matching `selector` into view with smooth behavior.
+ * No-op if no element matches or the selector is invalid.
+ */
+export function scrollToElement(selector: string): void {
+  try {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  } catch {
+    // Invalid selector — silently ignore
+  }
+}
+
+/**
+ * Highlights an element and scrolls it into view. Combines highlightElement
+ * and scrollToElement for convenience. Returns the highlight cleanup function.
+ */
+export function highlightAndScroll(
+  selector: string,
+  duration: number = DEFAULT_HIGHLIGHT_DURATION,
+): () => void {
+  const cleanup = highlightElement(selector, duration);
+  scrollToElement(selector);
   return cleanup;
 }
 

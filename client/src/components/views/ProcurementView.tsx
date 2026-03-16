@@ -10,6 +10,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import type { BomItem } from '@/lib/project-context';
 import { STORAGE_KEYS, DEFAULT_PREFERRED_SUPPLIERS, OPTIMIZATION_GOALS } from '@/lib/constants';
+import { classifyLifecycle } from '@/lib/lifecycle-badges';
+import { cn } from '@/lib/utils';
+import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { buildCSV, downloadBlob } from '@/lib/csv';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useAlternateParts } from '@/lib/alternate-parts';
@@ -185,6 +188,22 @@ function ProcurementView() {
   }, [enrichedBom]);
 
   const esdCount = useMemo(() => enrichedBom.filter(i => i._isEsd).length, [enrichedBom]);
+
+  const lifecycleWarnings = useMemo(() => {
+    let nrnd = 0;
+    let eol = 0;
+    let obsolete = 0;
+    for (const item of bom) {
+      const status = classifyLifecycle(item.partNumber, item.manufacturer);
+      if (status === 'nrnd') { nrnd++; }
+      if (status === 'eol') { eol++; }
+      if (status === 'obsolete') { obsolete++; }
+    }
+    const total = nrnd + eol + obsolete;
+    const hasEolOrObsolete = eol > 0 || obsolete > 0;
+    return { nrnd, eol, obsolete, total, hasEolOrObsolete };
+  }, [bom]);
+
   const totalCost = filteredBom.reduce((acc, item) => acc + Number(item.totalPrice), 0);
 
   const costBreakdown = useMemo((): CostBreakdown => {
@@ -343,6 +362,31 @@ function ProcurementView() {
           <TabsTrigger value="risk-scorecard" data-testid="tab-risk-scorecard"><Shield className="h-4 w-4 mr-1.5" />Risk Scorecard</TabsTrigger>
           <TabsTrigger value="avl-compliance" data-testid="tab-avl-compliance"><ShieldCheck className="h-4 w-4 mr-1.5" />AVL Compliance</TabsTrigger>
         </TabsList>
+        {lifecycleWarnings.total > 0 && (
+          <StyledTooltip
+            content={
+              <div className="space-y-0.5">
+                {lifecycleWarnings.nrnd > 0 && <div>{lifecycleWarnings.nrnd} NRND</div>}
+                {lifecycleWarnings.eol > 0 && <div>{lifecycleWarnings.eol} EOL</div>}
+                {lifecycleWarnings.obsolete > 0 && <div>{lifecycleWarnings.obsolete} Obsolete</div>}
+              </div>
+            }
+            side="bottom"
+          >
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 px-2 py-1 mb-3 text-xs font-medium border',
+                lifecycleWarnings.hasEolOrObsolete
+                  ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                  : 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+              )}
+              data-testid="lifecycle-warning-summary"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {lifecycleWarnings.total} lifecycle warning{lifecycleWarnings.total !== 1 ? 's' : ''}
+            </span>
+          </StyledTooltip>
+        )}
         <Button
           variant="outline"
           size="sm"
