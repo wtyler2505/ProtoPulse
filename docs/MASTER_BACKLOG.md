@@ -411,11 +411,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 121 | 167 | Breadboard/PCB/simulation/UI — Waves 61-106 ongoing |
-| P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **249** | **259** | **508 total items tracked** |
+| P2 | 77 | 201 | 72% complete — Waves 61-106 |
+| P3 | 113 | 18 | Moonshots + long-term features |
+| **Total** | **190** | **311** | **501 items tracked** |
 
-*Snapshot updated: Wave 106 backlog reconciliation (2026-03-16)*
+*Snapshot updated: Wave 106 full reconciliation (2026-03-16) — systematic 4-batch codebase scan*
 
 ---
 
@@ -1044,7 +1044,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0308 | Guided sample projects ("learn by doing") | DONE (verified Wave 106) | C3 | UX-072, IFX-062 |
 | BL-0309 | Beginner mode with simplified UI labels | DONE (verified Wave 106) | C3 | UX-073, IFX-061 |
 | BL-0310 | Role presets (Student/Hobbyist/Pro) tune UI density | DONE (verified Wave 106) | C3 | UX-075, IFX-076 |
-| BL-0311 | Smart hints triggered by repeated user mistakes | OPEN | C3 | UX-076 |
+| BL-0311 | Smart hints triggered by repeated user mistakes | DONE (verified Wave 106) | C3 | UX-076 |
 | BL-0312 | "Explain this panel" button everywhere — ExplainPanelButton.tsx + panel-explainer.ts implemented. | DONE (verified Wave 106) | C2 | UX-077 |
 | BL-0313 | Per-view onboarding hints for first 3 uses | OPEN | C2 | UX-018 |
 | BL-0314 | Progress milestones from beginner to fab-ready | OPEN | C3 | IFX-064 |
@@ -1058,7 +1058,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0322 | Fix off-screen tooltip placement | OPEN | C1 | UX-083 |
 | BL-0323 | Explicit `type` attribute on all form buttons | OPEN | C1 | UX-084 |
 | BL-0324 | Improve color contrast in low-contrast surfaces | OPEN | C2 | UX-085 |
-| BL-0325 | Reduced-motion mode | OPEN | C2 | UX-086 |
+| BL-0325 | Reduced-motion mode | DONE (verified Wave 106) | C2 | UX-086 |
 | BL-0326 | Screen-reader labels for canvas actions | OPEN | C2 | UX-088 |
 | BL-0327 | Full keyboard-first editing mode | OPEN | C4 | UX-090 |
 | BL-0328 | Accessibility audit dashboard with tracked fixes | OPEN | C3 | UX-089 |
@@ -1108,8 +1108,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0373 | Custom keybinding editor | OPEN | C3 | MF-184 |
 | BL-0374 | Scriptable command palette actions | OPEN | C4 | MF-185 |
 | BL-0375 | CLI tooling for headless validation/export | OPEN | C4 | MF-188 |
-| BL-0376 | Git-native design diff/merge | OPEN | C5 | MF-189 |
-| BL-0377 | Public embed API for schematic/PCB views | OPEN | C4 | MF-164 |
+| BL-0376 | Git-native design diff/merge | DONE (verified Wave 106) | C5 | MF-189 |
+| BL-0377 | Public embed API for schematic/PCB views | DONE (verified Wave 106) | C4 | MF-164 |
 | BL-0378 | Versioned API docs synced from live routes | OPEN | C3 | MF-165 |
 
 ### Advanced Collaboration
@@ -1117,7 +1117,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0380 | SSO/OIDC for team/org deployments | OPEN | C4 | MF-176 |
-| BL-0381 | RBAC + org/team tenancy model | OPEN | C5 | MF-177 |
+| BL-0381 | RBAC + org/team tenancy model | DONE (verified Wave 106) | C5 | MF-177 |
 | BL-0382 | Audit log explorer UI | OPEN | C3 | MF-178 |
 | BL-0383 | Customizable workspace presets | OPEN | C2 | UX-020 |
 | BL-0384 | Team command center | OPEN | C3 | IFX-119 |
@@ -1127,7 +1127,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0390 | Interaction history timeline for step-back | OPEN | C3 | UX-039, IFX-078 |
-| BL-0391 | Breadcrumbs for deep editor contexts | OPEN | C2 | UX-014 |
+| BL-0391 | Breadcrumbs for deep editor contexts | DONE (verified Wave 106) | C2 | UX-014 |
 | BL-0392 | Quick jump/search for views and tools | OPEN | C3 | UX-013 |
 
 ### Arduino IDE Integration
@@ -1137,10 +1137,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0400 | One-click "Open in Arduino IDE" from design | OPEN | C3 | ARDX-001 |
 | BL-0401 | Round-trip diff viewer (ProtoPulse vs IDE) | OPEN | C4 | ARDX-003 |
 | BL-0402 | Build/compile status panel | OPEN | C2 | ARDX-006 |
-| BL-0403 | Upload firmware with full log output | OPEN | C3 | ARDX-007 |
+| BL-0403 | Upload firmware with full log output | DONE (verified Wave 106) | C3 | ARDX-007 |
 | BL-0404 | Dependency resolver for Arduino libraries | OPEN | C4 | ARDX-009 |
 | BL-0405 | Board package/version checker | OPEN | C3 | ARDX-010 |
-| BL-0406 | Per-project board profile | OPEN | C2 | ARDX-011 |
+| BL-0406 | Per-project board profile | DONE (verified Wave 106) | C2 | ARDX-011 |
 | BL-0407 | Save last known good firmware build | OPEN | C3 | ARDX-012 |
 | BL-0408 | Pre-upload safety checks | OPEN | C3 | ARDX-015 |
 | BL-0409 | AI sketch starter from schematic | OPEN | C3 | ARDX-016 |
@@ -1154,7 +1154,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0417 | Auto state-machine skeletons for robotics | OPEN | C3 | ARDX-027 |
 | BL-0418 | Live variable watch over serial | OPEN | C4 | ARDX-028 |
 | BL-0419 | Library conflict detector | OPEN | C3 | ARDX-067 |
-| BL-0420 | AI "fix compile errors" action | OPEN | C4 | ARDX-076 |
+| BL-0420 | AI "fix compile errors" action | DONE (verified Wave 106) | C4 | ARDX-076 |
 | BL-0421 | AI "explain this sketch for a beginner" | OPEN | C2 | ARDX-077 |
 | BL-0422 | Smart library install on compile error | OPEN | C3 | ARDX-066 |
 | BL-0423 | Firmware version linked to design snapshot | OPEN | C4 | ARDX-056 |
@@ -1211,7 +1211,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0556 | **BGA fanout and escape routing rule set** — Add specialized DRC rules and a fanout-routing assistant for BGA packages: dog-bone via patterns, escape channel width enforcement, ball-pitch vs via-size constraints, and anti-pad clearances. Required for any design with fine-pitch BGAs. | OPEN | C4 | Wave 64 audit |
 | BL-0557 | **Circuit Code DSL: pin alias and local net naming** — Allow named local nets within a DSL block scope (e.g. `const vref = net('VREF')`) so that complex sub-circuits can be composed without polluting the global net namespace. Enables reusable DSL modules. | OPEN | C3 | Wave 64 audit |
 | BL-0630 | **Scratch-like visual block programming for Arduino** — Drag-and-drop block coding (Scratch/MIT App Inventor style) that generates valid Arduino C/C++. Categories: Output (digitalWrite, analogWrite, tone), Input (digitalRead, analogRead), Control (if/else, loops, delay), Math, Variables, Functions. Side-by-side blocks+text view where editing one updates the other. The primary reason TinkerCAD dominates K-12 education. Enables truly zero-experience users to make circuits work. | OPEN | C5 | Wave 66 / TinkerCAD |
-| BL-0631 | **Simulator-based firmware execution (QEMU / simavr)** — Run compiled Arduino firmware in a software simulator (simavr for AVR, QEMU for ARM/RISC-V) without physical hardware. Debug with breakpoints, inspect registers and memory, fast-forward time. PlatformIO supports this via `test_speed = host`. Enables full development and testing workflow for users without hardware at hand. | OPEN | C5 | Wave 66 / PlatformIO |
+| BL-0631 | **Simulator-based firmware execution (QEMU / simavr)** — Run compiled Arduino firmware in a software simulator (simavr for AVR, QEMU for ARM/RISC-V) without physical hardware. Debug with breakpoints, inspect registers and memory, fast-forward time. PlatformIO supports this via `test_speed = host`. Enables full development and testing workflow for users without hardware at hand. | DONE (verified Wave 106) | C5 | Wave 66 / PlatformIO |
 | BL-0632 | **Hardware debugger integration (ST-LINK, J-Link, CMSIS-DAP)** — Full GDB-based debugging over SWD/JTAG: breakpoints, watchpoints, variable inspection, peripheral register view (SVD), FreeRTOS thread awareness. PlatformIO supports 30+ debug probes out of the box. Browser-based approach requires a local proxy agent or WebUSB + OpenOCD integration. The most powerful feature gap vs PlatformIO for serious embedded developers. | OPEN | C5 | Wave 66 / PlatformIO |
 | BL-0633 | **ESP-IDF framework support** — ESP-IDF (the official Espressif SDK) unlocks WiFi stacks, BLE, FreeRTOS tasks, partitions, NVS, and deep-sleep properly on ESP32 — things the Arduino framework abstracts poorly. PlatformIO supports ESP-IDF alongside Arduino in the same project. Relevant for any serious ESP32 maker project going beyond basic connectivity. | OPEN | C5 | Wave 66 / PlatformIO |
 | BL-0634 | **Static analysis (Cppcheck / Clang-Tidy) for firmware** — Run Cppcheck or Clang-Tidy server-side on uploaded Arduino/C++ code and surface annotations in the editor: null pointer dereferences, buffer overflows, uninitialized variables, integer overflow risks, dead code. PlatformIO integrates 3 analyzers. Particularly valuable for beginner makers who don't know what they don't know. | OPEN | C4 | Wave 66 / PlatformIO |
