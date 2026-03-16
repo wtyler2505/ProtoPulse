@@ -15,7 +15,7 @@ import {
 import type { ChangelogVersion } from '@/lib/changelog-panel';
 
 // Inline the changelog content — Vite handles this via ?raw import
-import changelogRaw from '../../../docs/CHANGELOG.md?raw';
+import changelogRaw from '../../../../docs/CHANGELOG.md?raw';
 
 export default function WhatsNewPanel() {
   const [open, setOpen] = useState(false);

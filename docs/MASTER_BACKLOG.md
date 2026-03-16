@@ -410,11 +410,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 142 | 146 | Breadboard/PCB/simulation/UI — Waves 61-89 ongoing |
+| P2 | 140 | 148 | Breadboard/PCB/simulation/UI — Waves 61-105 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **270** | **238** | **508 total items tracked** |
+| **Total** | **268** | **240** | **508 total items tracked** |
 
-*Snapshot updated: Wave 89 (2026-03-14)*
+*Snapshot updated: Wave 105 (2026-03-16)*
 
 ---
 
@@ -861,7 +861,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0215 | Import mapping warnings (what got dropped) | OPEN | C2 | UX-052 |
 | BL-0216 | Export pre-check screen — 17 format-specific validators, inline checklist UI. | DONE (Wave 88) | C2 | UX-053, IFX-032 |
 | BL-0217 | Show exported files list and size after export | OPEN | C1 | UX-054 |
-| BL-0218 | Export profiles ("Fab ready", "Sim bundle", "Docs") | OPEN | C2 | UX-056 |
+| BL-0218 | Export profiles ("Fab ready", "Sim bundle", "Docs") — 4 built-in profiles + ExportProfileSelector UI. | DONE (verified Wave 105) | C2 | UX-056 |
 | BL-0219 | Import history with one-click restore | OPEN | C2 | UX-057 |
 | BL-0220 | Side-by-side diff: imported vs current design | OPEN | C3 | UX-058 |
 | BL-0221 | Guided migration flow for KiCad/Eagle/EasyEDA | OPEN | C4 | UX-059, IFX-093 |
@@ -877,7 +877,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0234 | Persist panel sizes/collapsed state (localStorage) — debounced writes, ViewMode validation on restore | DONE | C2 | Wave 60 |
 | BL-0235 | Command palette categories — 6 workflow-stage groups with filter tabs. | DONE (Wave 88) | C2 | UX-016 |
 | BL-0236 | Context-aware shortcuts panel — ? overlay with 7 view contexts, keyboard key badges. | DONE (Wave 89) | C2 | UX-017 |
-| BL-0237 | Recent projects with filters and pinning | OPEN | C2 | UX-019 |
+| BL-0237 | Recent projects with filters and pinning — RecentProjectsManager + RecentProjectsList + 3 sort modes + pinning + localStorage persistence. | DONE (verified Wave 105) | C2 | UX-019 |
 | BL-0238 | Supplier comparison drawer (price, lead time, MOQ) | OPEN | C3 | UX-065 |
 | BL-0239 | Auto-grouping for SMT/THT/manual assembly | OPEN | C3 | UX-066 |
 | BL-0240 | Lifecycle warning badges (NRND/EOL) | OPEN | C2 | UX-067 |
