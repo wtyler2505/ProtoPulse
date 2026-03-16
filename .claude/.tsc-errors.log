@@ -31,3 +31,29 @@ client/src/lib/__tests__/pick-place-validator.test.ts(341,38): error TS7006: Par
 5:06:01 PM - Found 15 errors. Watching for file changes.
 [2J[3J[H5:06:26 PM - File change detected. Starting incremental compilation...
 
+client/src/lib/__tests__/pick-place-validator.test.ts(10,8): error TS2307: Cannot find module '../pick-place-validator' or its corresponding type declarations.
+client/src/lib/__tests__/pick-place-validator.test.ts(14,8): error TS2307: Cannot find module '../pick-place-validator' or its corresponding type declarations.
+client/src/lib/__tests__/pick-place-validator.test.ts(143,10): error TS7006: Parameter 'e' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(154,36): error TS7006: Parameter 'e' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(172,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(177,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(182,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(187,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(192,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(262,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(270,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(277,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(284,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(336,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/pick-place-validator.test.ts(341,38): error TS7006: Parameter 'w' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(10,8): error TS2307: Cannot find module '../release-readiness' or its corresponding type declarations.
+client/src/lib/__tests__/release-readiness.test.ts(19,8): error TS2307: Cannot find module '../release-readiness' or its corresponding type declarations.
+client/src/lib/__tests__/release-readiness.test.ts(383,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(393,36): error TS7006: Parameter 'b' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(498,43): error TS7006: Parameter 'c' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(508,53): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+client/src/lib/__tests__/release-readiness.test.ts(508,58): error TS7006: Parameter 'c' implicitly has an 'any' type.
+
+5:06:50 PM - Found 22 errors. Watching for file changes.
+[2J[3J[H5:07:15 PM - File change detected. Starting incremental compilation...
+
