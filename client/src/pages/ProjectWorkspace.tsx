@@ -52,6 +52,7 @@ const PcbTutorialPanel = lazy(() => import('@/components/panels/PcbTutorialPanel
 const SmartHintToast = lazy(() => import('@/components/ui/SmartHintToast'));
 const ViewOnboardingHint = lazy(() => import('@/components/ui/ViewOnboardingHint'));
 const MilestonePanel = lazy(() => import('@/components/panels/MilestonePanel'));
+const DesignTroubleshooterPanel = lazy(() => import('@/components/panels/DesignTroubleshooterPanel'));
 import { buildValidationContext } from '@/lib/pcb-tutorial';
 import { MilestoneTracker } from '@/lib/progress-milestones';
 import type { ProjectState as MilestoneProjectState } from '@/lib/progress-milestones';
@@ -72,6 +73,8 @@ import { TutorialProvider } from '@/lib/tutorial-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { UndoRedoProvider } from '@/lib/undo-redo-context';
 import { navItems, tabDescriptions, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
+import { createResizeKeyHandler, getResizeAriaProps } from '@/lib/keyboard-resize';
+import type { KeyboardResizeConfig } from '@/lib/keyboard-resize';
 
 /**
  * Prefetch lazy-loaded view chunks during idle time so that first-click
@@ -150,7 +153,11 @@ const VALID_VIEW_MODES: ReadonlySet<string> = new Set<string>([
 ]);
 
 
-function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (delta: number) => void }) {
+function ResizeHandle({ side, onResize, keyboardConfig }: {
+  side: 'left' | 'right';
+  onResize: (delta: number) => void;
+  keyboardConfig: KeyboardResizeConfig;
+}) {
   const isDragging = useRef(false);
   const lastX = useRef(0);
 
@@ -180,11 +187,16 @@ function ResizeHandle({ side, onResize }: { side: 'left' | 'right'; onResize: (d
     document.addEventListener('mouseup', handleMouseUp);
   }, [onResize, side]);
 
+  const handleKeyDown = useMemo(() => createResizeKeyHandler(keyboardConfig), [keyboardConfig]);
+  const ariaProps = useMemo(() => getResizeAriaProps(keyboardConfig), [keyboardConfig]);
+
   return (
     <div
       data-testid={`resize-handle-${side}`}
-      className="hidden lg:flex w-1 cursor-col-resize items-center justify-center group hover:bg-primary/20 active:bg-primary/30 transition-colors relative z-30 shrink-0 hover:shadow-[0_0_8px_rgba(6,182,212,0.3)]"
+      className="hidden lg:flex w-1 cursor-col-resize items-center justify-center group hover:bg-primary/20 active:bg-primary/30 transition-colors relative z-30 shrink-0 hover:shadow-[0_0_8px_rgba(6,182,212,0.3)] focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-0"
       onMouseDown={handleMouseDown}
+      onKeyDown={handleKeyDown}
+      {...ariaProps}
     >
       <div className="w-px h-8 bg-border group-hover:bg-primary group-active:bg-primary transition-colors" />
     </div>
@@ -681,7 +693,7 @@ function WorkspaceContent() {
           />
         </Suspense>
 
-        {!ws.sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} />}
+        {!ws.sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} keyboardConfig={{ currentValue: ws.sidebarWidth, min: 180, max: 480, onResize: handleSidebarResize, orientation: 'horizontal', positiveDirection: 'grow' }} />}
 
         <main id="main-content" data-testid="workspace-main" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-background">
           <h2 className="sr-only">Design workspace</h2>
@@ -978,7 +990,16 @@ function WorkspaceContent() {
               {activeView === 'validation' && (
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
-                    <ValidationView />
+                    <div className="flex h-full">
+                      <div className="flex-1 min-w-0 overflow-auto">
+                        <ValidationView />
+                      </div>
+                      <div className="w-80 border-l border-border bg-background/50 shrink-0 overflow-hidden hidden xl:flex flex-col">
+                        <Suspense fallback={<ViewLoadingFallback />}>
+                          <DesignTroubleshooterPanel />
+                        </Suspense>
+                      </div>
+                    </div>
                   </Suspense>
                 </ErrorBoundary>
               )}
@@ -1189,7 +1210,7 @@ function WorkspaceContent() {
           </Suspense>
         </main>
 
-        {!ws.chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} />}
+        {!ws.chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} keyboardConfig={{ currentValue: ws.chatWidth, min: 280, max: 600, onResize: handleChatResize, orientation: 'horizontal', positiveDirection: 'shrink' }} />}
 
         <ErrorBoundary>
           <div id="chat-panel">

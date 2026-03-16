@@ -404,7 +404,7 @@ describe('auditThemeContrast', () => {
       '--color-accent-foreground': 'hsl(225 20% 3%)',
       '--color-accent': 'hsl(190 100% 43%)',
       '--color-destructive-foreground': 'hsl(0 0% 100%)',
-      '--color-destructive': 'hsl(0 85% 55%)',
+      '--color-destructive': 'hsl(0 85% 45%)',
     };
     const failures = auditThemeContrast(compliantDark);
     expect(failures).toHaveLength(0);

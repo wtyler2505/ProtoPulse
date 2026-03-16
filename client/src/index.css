@@ -124,12 +124,27 @@
   backdrop-filter: none !important;
 }
 
+/*
+ * Font scaling — user-adjustable font size, line height, and spacing.
+ * Controlled by FontScaleManager (font-scaling.ts).
+ * Stored in localStorage key 'protopulse-font-scale'.
+ * Scales: compact / default / large / extra-large.
+ * BL-0329
+ */
+:root {
+  --app-font-size: 0.875rem;
+  --app-line-height: 1.5;
+  --app-spacing: 1rem;
+}
+
 @layer base {
   * {
     @apply border-border;
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    font-size: var(--app-font-size);
+    line-height: var(--app-line-height);
   }
 
   /*
@@ -157,6 +172,9 @@
     .view-enter {
       animation: none;
     }
+  }
+  .reduced-motion .view-enter {
+    animation: none;
   }
 
   .chamfer {
@@ -303,4 +321,68 @@
 .react-flow__node.validation-focus-flash {
   animation: validation-focus-pulse 0.6s ease-out;
   border-color: #00F0FF !important;
+}
+
+/*
+ * BL-0325: Reduced-motion mode
+ *
+ * Disables animations, transitions, and scroll-behavior when reduced motion
+ * is requested. Two activation methods:
+ *   1. OS preference: @media (prefers-reduced-motion: reduce)
+ *   2. Manual toggle: .reduced-motion class on <html> (via ReducedMotionManager)
+ *
+ * Both selectors produce identical results so the user experience is consistent
+ * regardless of how reduced motion was activated.
+ */
+
+/* OS-level reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .react-flow__node.validation-focus-flash {
+    animation: none;
+  }
+
+  .led-on,
+  .led-warning,
+  .led-error {
+    box-shadow: none;
+  }
+
+  .edge-glow,
+  .edge-glow-strong {
+    box-shadow: none;
+  }
+}
+
+/* Manual toggle via ReducedMotionManager */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+.reduced-motion .react-flow__node.validation-focus-flash {
+  animation: none;
+}
+
+.reduced-motion .led-on,
+.reduced-motion .led-warning,
+.reduced-motion .led-error {
+  box-shadow: none;
+}
+
+.reduced-motion .edge-glow,
+.reduced-motion .edge-glow-strong {
+  box-shadow: none;
 }

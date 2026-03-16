@@ -64,6 +64,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useSchematicAlternates } from '@/lib/schematic-alternates';
+import { useCanvasAnnouncer } from '@/lib/use-canvas-announcer';
+import { getCanvasAriaLabel, getActionAnnouncement, getToolChangeAnnouncement } from '@/lib/canvas-accessibility';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -376,6 +378,9 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const toastRef = useRef(toast);
   toastRef.current = toast;
   const { bom, addBomItem, updateBomItem } = useBom();
+
+  // BL-0326: Screen-reader announcer for canvas actions
+  const announce = useCanvasAnnouncer();
 
   // Local UI state
   const [activeTool, setActiveTool] = useState<SchematicTool>('select');
@@ -1269,15 +1274,19 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       switch (e.key.toLowerCase()) {
         case 'v':
           setActiveTool('select');
+          announce(getToolChangeAnnouncement('select', 'schematic'));
           break;
         case 'h':
           setActiveTool('pan');
+          announce(getToolChangeAnnouncement('pan', 'schematic'));
           break;
         case 'w':
           setActiveTool('draw-net');
+          announce(getToolChangeAnnouncement('draw-net', 'schematic'));
           break;
         case 't':
           setActiveTool('place-annotation');
+          announce(getToolChangeAnnouncement('place-annotation', 'schematic'));
           break;
         case 'g':
           setSnapEnabled((s) => !s);
@@ -1287,6 +1296,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           break;
         case 'escape':
           setActiveTool('select');
+          announce(getToolChangeAnnouncement('select', 'schematic'));
           break;
       }
     };
@@ -1522,6 +1532,8 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         <div
           className="w-full h-full relative"
           data-testid="schematic-canvas"
+          role="application"
+          aria-label={getCanvasAriaLabel('schematic', circuitDesign?.name)}
           onDragOver={onDragOver}
           onDrop={onDrop}
           onMouseMove={handleCanvasMouseMove}

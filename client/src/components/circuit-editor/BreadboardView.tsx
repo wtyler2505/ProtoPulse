@@ -62,6 +62,8 @@ import {
 import type { CircuitDesignRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 import { formatSIValue } from '@/lib/simulation/visual-state';
 import type { WireVisualState } from '@/lib/simulation/visual-state';
+import { useCanvasAnnouncer } from '@/lib/use-canvas-announcer';
+import { getCanvasAriaLabel, getActionAnnouncement, getToolChangeAnnouncement, getZoomAnnouncement } from '@/lib/canvas-accessibility';
 import './simulation-overlays.css';
 
 // ---------------------------------------------------------------------------
@@ -217,6 +219,9 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const deleteWireMutation = useDeleteCircuitWire();
   const updateInstanceMutation = useUpdateCircuitInstance();
   const updateWireMutation = useUpdateCircuitWire();
+
+  // BL-0326: Screen-reader announcer for canvas actions
+  const announce = useCanvasAnnouncer();
 
   const [tool, setTool] = useState<Tool>('select');
   const [showDrc, setShowDrc] = useState(false);
@@ -537,10 +542,10 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') handleEscape();
     if (e.key === 'Delete' || e.key === 'Backspace') handleDeleteWire();
-    if (e.key === '1') setTool('select');
-    if (e.key === '2') setTool('wire');
-    if (e.key === '3') setTool('delete');
-  }, [handleEscape, handleDeleteWire]);
+    if (e.key === '1') { setTool('select'); announce(getToolChangeAnnouncement('select', 'breadboard')); }
+    if (e.key === '2') { setTool('wire'); announce(getToolChangeAnnouncement('wire', 'breadboard')); }
+    if (e.key === '3') { setTool('delete'); announce(getToolChangeAnnouncement('delete', 'breadboard')); }
+  }, [handleEscape, handleDeleteWire, announce]);
 
   // --- Drag-to-place from component palette ---
 
