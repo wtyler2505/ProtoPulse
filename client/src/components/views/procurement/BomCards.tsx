@@ -32,7 +32,10 @@ const BomCardItem = memo(function BomCardItem({ item, deleteBomItem, toast }: Bo
             </StyledTooltip>
           )}
           <div className="min-w-0">
-            <div className="font-mono font-medium text-foreground text-xs truncate">{item.partNumber}</div>
+            <div className="font-mono font-medium text-foreground text-xs truncate flex items-center gap-1">
+              {item.partNumber}
+              <LifecycleBadge partNumber={item.partNumber} manufacturer={item.manufacturer} />
+            </div>
             <div className="text-muted-foreground text-xs truncate">{item.manufacturer}</div>
           </div>
         </div>

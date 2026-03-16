@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-16T16:54:30.669Z",
+  "persistedAt": "2026-03-16T16:55:30.673Z",
   "routes": {
     "POST /api/auth/login": {
       "count": 5,
@@ -694,8 +694,8 @@
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 26,
-      "totalDuration": 6084,
+      "count": 27,
+      "totalDuration": 6136,
       "errors": 15,
       "min": 4,
       "max": 4205,
@@ -719,6 +719,7 @@
         34,
         35,
         49,
+        52,
         72,
         123,
         128,
@@ -742,68 +743,75 @@
       ]
     },
     "POST /api/projects/:id/circuits/expand-architecture": {
-      "count": 1,
-      "totalDuration": 660,
+      "count": 2,
+      "totalDuration": 1772,
       "errors": 0,
       "min": 660,
-      "max": 660,
+      "max": 1112,
       "samples": [
-        660
+        660,
+        1112
       ]
     },
     "GET /api/projects/:id/component-parts": {
-      "count": 1,
-      "totalDuration": 6,
+      "count": 2,
+      "totalDuration": 343,
       "errors": 0,
       "min": 6,
-      "max": 6,
+      "max": 337,
       "samples": [
-        6
+        6,
+        337
       ]
     },
     "GET /api/projects/:id/circuits/:circuitId": {
-      "count": 2,
-      "totalDuration": 25,
-      "errors": 2,
+      "count": 4,
+      "totalDuration": 187,
+      "errors": 4,
       "min": 6,
-      "max": 19,
+      "max": 114,
       "samples": [
         6,
-        19
+        19,
+        48,
+        114
       ]
     },
     "GET /api/circuits/:circuitId/nets": {
-      "count": 2,
-      "totalDuration": 42,
+      "count": 3,
+      "totalDuration": 590,
       "errors": 0,
       "min": 13,
-      "max": 29,
+      "max": 548,
       "samples": [
         13,
-        29
+        29,
+        548
       ]
     },
     "GET /api/circuits/:circuitId/instances": {
-      "count": 4,
-      "totalDuration": 103,
+      "count": 5,
+      "totalDuration": 334,
       "errors": 0,
       "min": 11,
-      "max": 45,
+      "max": 231,
       "samples": [
         11,
         11,
         36,
-        45
+        45,
+        231
       ]
     },
     "GET /api/projects/:id/circuits/:circuitId/children": {
-      "count": 1,
-      "totalDuration": 22,
+      "count": 2,
+      "totalDuration": 160,
       "errors": 0,
       "min": 22,
-      "max": 22,
+      "max": 138,
       "samples": [
-        22
+        22,
+        138
       ]
     },
     "PATCH /api/circuits/:circuitId/instances/:id": {
