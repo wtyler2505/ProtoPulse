@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 105 | `BL-0217`, `BL-0215`, `BL-0240`, `BL-0536`, `BL-0219` | Export results panel, import mapping warnings, lifecycle badges on BOM cards, tutorial step navigation, import history — export/import UX + procurement trust + onboarding flow. |
 | 87 | `BL-0593`, `BL-0628`, `BL-0147`, `BL-0163`, `BL-0231` | Bendable breadboard legs, Arduino example library, flash diagnostics, AI testbench tools, radial menu — maker UX + firmware feedback loop. |
 | 86 | `BL-0627`, `BL-0629`, `BL-0523`, `BL-0152`, Electron shell | Starter circuits, etchable PCB export, DFM AI tools, pin constants, native desktop app foundation. |
 | 80 | `BL-0636`, `BL-0637`, `BL-0638`, `BL-0639`, `BL-0642` | 5 P0 IDOR/auth vulnerabilities fixed — AI chat ownership, AI action scoping, circuit API tenant-scoping, project↔resource consistency, batch analysis authz. All P0 items now resolved. |
@@ -125,16 +126,16 @@
 
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0161` | AI safety mode for beginners — extra confirms + teaching before destructive AI actions. | S | `C3` | High |
-| 2 | `BL-0164` | AI BOM optimization assistant — suggest cheaper alternates, consolidate packages. | S | `C3` | Medium |
-| 3 | `BL-0214` | Import preview summary — show what will change before committing an import. | S | `C2` | Medium |
-| 4 | `BL-0216` | Export pre-check screen — validate export readiness before generating files. | S | `C2` | Medium |
-| 5 | `BL-0218` | Export profiles ("Fab ready", "Sim bundle", "Docs") — one-click export presets. | S | `C2` | Medium |
-| 6 | `BL-0235` | Command palette categories — organize by workflow stage. | S | `C2` | Medium |
-| 7 | `BL-0236` | Context-aware shortcuts panel — `?` overlay showing relevant shortcuts. | S | `C2` | Medium |
-| 8 | `BL-0154` | Multi-channel telemetry dashboard — real-time sensor data visualization. | M | `C3` | High |
-| 9 | `BL-0532` | Export file syntax validation — check generated Gerber/IPC/ODB++ before download. | S | `C3` | Medium |
-| 10 | `BL-0157` | "No data" troubleshooting wizard — guided diagnosis when serial monitor shows nothing. | S | `C3` | High |
+| 1 | `BL-0541` | In-app "What's new" changelog panel — show new features after updates. | S | `C2` | High |
+| 2 | `BL-0537` | ViewMode section grouping in sidebar — reduce visual noise for 26+ views. | S | `C2` | High |
+| 3 | `BL-0538` | Standard library auto-suggest during architecture design. | S | `C2` | Medium |
+| 4 | `BL-0543` | Breadboard wire editing — select, delete, move individual wires. | S | `C2` | High |
+| 5 | `BL-0540` | Alternate parts shown in Schematic BOM sidebar popover. | S | `C2` | Medium |
+| 6 | `BL-0548` | Circuit Code DSL: seed persistence to localStorage. | XS | `C1` | Low |
+| 7 | `BL-0539` | Snippet placement as atomic undo unit. | S | `C2` | Medium |
+| 8 | `BL-0250` | DRC rule presets by project type (Arduino, power, sensor). | S | `C2` | Medium |
+| 9 | `BL-0275` | `backdrop-blur-xl` GPU jank on low-end devices. | S | `C2` | Medium |
+| 10 | `BL-0312` | "Explain this panel" button everywhere. | S | `C2` | High |
 
 ## Complexity Radar (Highest-Complexity Open Items)
 
@@ -410,9 +411,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 140 | 148 | Breadboard/PCB/simulation/UI — Waves 61-105 ongoing |
+| P2 | 135 | 153 | Breadboard/PCB/simulation/UI — Waves 61-105 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **268** | **240** | **508 total items tracked** |
+| **Total** | **263** | **245** | **508 total items tracked** |
 
 *Snapshot updated: Wave 105 (2026-03-16)*
 
@@ -858,11 +859,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0212 | Import repair assistant for broken files | OPEN | C3 | MF-162 |
 | BL-0213 | Shareable simulation links with frozen settings | OPEN | C3 | MF-163 |
 | BL-0214 | Import preview summary — diff dialog with add/modify/remove counts + warnings + conflicts. | DONE (Wave 88) | C2 | UX-051 |
-| BL-0215 | Import mapping warnings (what got dropped) | OPEN | C2 | UX-052 |
+| BL-0215 | Import mapping warnings (what got dropped) — MappingWarningsSection in ImportPreviewDialog, grouped by type (dropped/unsupported/converted/approximated), error banner, 49 tests. | DONE (Wave 105) | C2 | UX-052 |
 | BL-0216 | Export pre-check screen — 17 format-specific validators, inline checklist UI. | DONE (Wave 88) | C2 | UX-053, IFX-032 |
-| BL-0217 | Show exported files list and size after export | OPEN | C1 | UX-054 |
+| BL-0217 | Show exported files list and size after export — ExportResultsPanel with per-file sizes, auto-collapse, singleton manager, 42 tests. | DONE (Wave 105) | C1 | UX-054 |
 | BL-0218 | Export profiles ("Fab ready", "Sim bundle", "Docs") — 4 built-in profiles + ExportProfileSelector UI. | DONE (verified Wave 105) | C2 | UX-056 |
-| BL-0219 | Import history with one-click restore | OPEN | C2 | UX-057 |
+| BL-0219 | Import history with one-click restore — ImportHistoryManager + ImportHistoryPanel, localStorage persistence, FIFO eviction, 49 tests. | DONE (Wave 105) | C2 | UX-057 |
 | BL-0220 | Side-by-side diff: imported vs current design | OPEN | C3 | UX-058 |
 | BL-0221 | Guided migration flow for KiCad/Eagle/EasyEDA | OPEN | C4 | UX-059, IFX-093 |
 
@@ -880,7 +881,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0237 | Recent projects with filters and pinning — RecentProjectsManager + RecentProjectsList + 3 sort modes + pinning + localStorage persistence. | DONE (verified Wave 105) | C2 | UX-019 |
 | BL-0238 | Supplier comparison drawer (price, lead time, MOQ) | OPEN | C3 | UX-065 |
 | BL-0239 | Auto-grouping for SMT/THT/manual assembly | OPEN | C3 | UX-066 |
-| BL-0240 | Lifecycle warning badges (NRND/EOL) | OPEN | C2 | UX-067 |
+| BL-0240 | Lifecycle warning badges (NRND/EOL) — LifecycleBadge on BOM cards + procurement summary counter with tooltip breakdown, 33 tests. | DONE (Wave 105) | C2 | UX-067 |
 | BL-0241 | Cost optimization mode with goals/tradeoffs | OPEN | C3 | UX-068 |
 
 ### UX Polish — Integration Gaps (Wave 64 Audit)
@@ -889,7 +890,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0534 | **i18n string extraction pipeline** — `i18n-framework.ts` exists with dot-notation key lookup, interpolation, and ~100 en keys, but almost no UI strings are actually extracted. The majority of ProtoPulse UI is hardcoded English. Create a script to audit unextracted strings and a systematic extraction pass. | OPEN | C4 | Wave 64 audit |
 | BL-0535 | **Community library → BOM integration** — When a user adds a component from the Community Library, offer to simultaneously add it to the current BOM (with auto-populated MPN/manufacturer/supplier fields). Currently community library and BOM are disconnected. | OPEN | C3 | Wave 64 audit |
-| BL-0536 | **Tutorial step context wiring** — Tutorial steps reference UI features by name but don't open or highlight the relevant panel/view. Add a `targetView` and `targetElement` field to each tutorial step so clicking "Next" navigates to the correct canvas area and highlights the relevant control. | OPEN | C2 | Wave 64 audit |
+| BL-0536 | **Tutorial step context wiring** — targetView + targetElement on TutorialStep, 26 built-in steps annotated, TutorialNavigator with highlight/scroll, 54 tests. | DONE (Wave 105) | C2 | Wave 64 audit |
 | BL-0537 | **ViewMode section grouping in sidebar** — The sidebar currently lists all 26+ ViewModes as a flat list. Group them into sections ("Design", "Analysis", "Hardware", "Documentation") with collapsible headers. Reduces visual noise and helps new users find features. | OPEN | C2 | Wave 64 audit |
 | BL-0538 | **Standard library auto-suggest during architecture design** — When a user adds an architecture node with a type that matches a standard library component (e.g. "Arduino Mega", "NE555", "LM7805"), auto-suggest the matching standard library part for the BOM. | OPEN | C2 | Wave 64 audit |
 | BL-0539 | **Snippet placement as atomic undo unit** — Placing a design snippet (from `SnippetLibrary`) places multiple components and nets. Currently each insert is a separate undo step. Wrap the full snippet application in a single undo-redo entry. | OPEN | C2 | Wave 64 audit |
