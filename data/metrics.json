@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-16T16:55:30.673Z",
+  "persistedAt": "2026-03-16T16:57:30.688Z",
   "routes": {
     "POST /api/auth/login": {
       "count": 5,
@@ -665,8 +665,8 @@
       ]
     },
     "GET /api/settings/api-keys": {
-      "count": 20,
-      "totalDuration": 712,
+      "count": 21,
+      "totalDuration": 730,
       "errors": 0,
       "min": 5,
       "max": 393,
@@ -686,6 +686,7 @@
         15,
         17,
         17,
+        18,
         31,
         37,
         46,
@@ -877,13 +878,14 @@
       ]
     },
     "GET /api/component-library": {
-      "count": 1,
-      "totalDuration": 160,
+      "count": 2,
+      "totalDuration": 618,
       "errors": 0,
       "min": 160,
-      "max": 160,
+      "max": 458,
       "samples": [
-        160
+        160,
+        458
       ]
     }
   }

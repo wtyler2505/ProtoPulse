@@ -20,3 +20,9 @@ client/src/lib/__tests__/export-results.test.ts(6,35): error TS2307: Cannot find
 11:54:54 AM - Found 2 errors. Watching for file changes.
 [2J[3J[H11:55:05 AM - File change detected. Starting incremental compilation...
 
+client/src/lib/__tests__/export-results.test.ts(5,8): error TS2307: Cannot find module '../export-results' or its corresponding type declarations.
+client/src/lib/__tests__/export-results.test.ts(6,35): error TS2307: Cannot find module '../export-results' or its corresponding type declarations.
+
+11:57:03 AM - Found 2 errors. Watching for file changes.
+[2J[3J[H11:57:04 AM - File change detected. Starting incremental compilation...
+
