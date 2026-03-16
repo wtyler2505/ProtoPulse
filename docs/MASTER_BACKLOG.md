@@ -411,11 +411,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 135 | 153 | Breadboard/PCB/simulation/UI — Waves 61-105 ongoing |
+| P2 | 121 | 167 | Breadboard/PCB/simulation/UI — Waves 61-106 ongoing |
 | P3 | 133 | 0 | Moonshots + long-term features |
-| **Total** | **263** | **245** | **508 total items tracked** |
+| **Total** | **249** | **259** | **508 total items tracked** |
 
-*Snapshot updated: Wave 105 (2026-03-16)*
+*Snapshot updated: Wave 106 backlog reconciliation (2026-03-16)*
 
 ---
 
@@ -799,7 +799,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0183 | ECO workflow (propose/review/approve/apply) | OPEN | C4 | MF-117, IFX-058 |
 | BL-0184 | Design branching model | OPEN | C5 | MF-118, IFX-057 |
 | BL-0185 | Merge tooling for branch diffs | OPEN | C5 | MF-119 |
-| BL-0186 | Activity feed for team actions | OPEN | C2 | MF-120, IFX-054 |
+| BL-0186 | Activity feed for team actions — activity-feed.ts implemented. | DONE (verified Wave 106) | C2 | MF-120, IFX-054 |
 | BL-0187 | Mentions/notifications for comments | OPEN | C2 | MF-121 |
 | BL-0188 | Team templates and standards packs | OPEN | C3 | MF-122, IFX-098 |
 | BL-0189 | Full audit trail UI | OPEN | C3 | MF-124 |
@@ -889,29 +889,29 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0534 | **i18n string extraction pipeline** — `i18n-framework.ts` exists with dot-notation key lookup, interpolation, and ~100 en keys, but almost no UI strings are actually extracted. The majority of ProtoPulse UI is hardcoded English. Create a script to audit unextracted strings and a systematic extraction pass. | OPEN | C4 | Wave 64 audit |
-| BL-0535 | **Community library → BOM integration** — When a user adds a component from the Community Library, offer to simultaneously add it to the current BOM (with auto-populated MPN/manufacturer/supplier fields). Currently community library and BOM are disconnected. | OPEN | C3 | Wave 64 audit |
+| BL-0535 | **Community library → BOM integration** — community-bom-bridge.ts + AddToBomPrompt.tsx + tests. | DONE (verified Wave 106) | C3 | Wave 64 audit |
 | BL-0536 | **Tutorial step context wiring** — targetView + targetElement on TutorialStep, 26 built-in steps annotated, TutorialNavigator with highlight/scroll, 54 tests. | DONE (Wave 105) | C2 | Wave 64 audit |
-| BL-0537 | **ViewMode section grouping in sidebar** — The sidebar currently lists all 26+ ViewModes as a flat list. Group them into sections ("Design", "Analysis", "Hardware", "Documentation") with collapsible headers. Reduces visual noise and helps new users find features. | OPEN | C2 | Wave 64 audit |
-| BL-0538 | **Standard library auto-suggest during architecture design** — When a user adds an architecture node with a type that matches a standard library component (e.g. "Arduino Mega", "NE555", "LM7805"), auto-suggest the matching standard library part for the BOM. | OPEN | C2 | Wave 64 audit |
-| BL-0539 | **Snippet placement as atomic undo unit** — Placing a design snippet (from `SnippetLibrary`) places multiple components and nets. Currently each insert is a separate undo step. Wrap the full snippet application in a single undo-redo entry. | OPEN | C2 | Wave 64 audit |
-| BL-0540 | **Alternate parts shown in Schematic BOM sidebar** — The `AlternatePartsEngine` finds alternates for BOM items but these are only visible in the Procurement view. Surface alternates as a popover on each instance in the schematic (hovering an IC shows "3 alternates available"). | OPEN | C2 | Wave 64 audit |
-| BL-0541 | **In-app "What's new" changelog panel** — Display a `CHANGELOG.md`-driven notification badge + panel to inform users of new features and fixes after updates. Important for a tool that evolves rapidly. Show once per version, dismissable. | OPEN | C2 | Wave 64 audit |
-| BL-0542 | **Breadboard connectivity simulation overlay** — Visually animate which rows and columns are electrically connected on the breadboard when a circuit has a simulation result. Highlights the "live" power rail and signal paths in color (EveryCircuit-style). | OPEN | C3 | Wave 64 audit |
-| BL-0543 | **Breadboard wire editing** — Allow individual wires on the breadboard to be selected and deleted or moved. Currently wires can only be added; deleting requires clearing the whole connection. | OPEN | C2 | Wave 64 audit |
+| BL-0537 | **ViewMode section grouping in sidebar** — 6 collapsible groups (Design/Analysis/Hardware/Manufacturing/AI & Code/Documentation) in sidebar-groups.ts, localStorage persistence, 43 tests. | DONE (verified Wave 106) | C2 | Wave 64 audit |
+| BL-0538 | **Standard library auto-suggest during architecture design** — LibrarySuggestPopover + Fuse.js fuzzy matching + BOM integration on node drop, 175+ tests. | DONE (verified Wave 106) | C2 | Wave 64 audit |
+| BL-0539 | **Snippet placement as atomic undo unit** — snippet-undo.ts batching implemented. | DONE (verified Wave 106) | C2 | Wave 64 audit |
+| BL-0540 | **Alternate parts shown in Schematic BOM sidebar** — AlternatePartsPopover + useSchematicAlternates hook + fixed overlay in SchematicCanvas with per-instance popovers. | DONE (verified Wave 106) | C2 | Wave 64 audit |
+| BL-0541 | **In-app "What's new" changelog panel** — WhatsNewPanel.tsx (Sheet) + changelog-panel.ts parser + localStorage unseen tracking + Gift icon badge, 22 tests. | DONE (verified Wave 106) | C2 | Wave 64 audit |
+| BL-0542 | **Breadboard connectivity simulation overlay** — BreadboardConnectivityOverlay.tsx implemented. | DONE (verified Wave 106) | C3 | Wave 64 audit |
+| BL-0543 | **Breadboard wire editing** — BreadboardWireEditor with selection, keyboard Delete, endpoint drag/move with grid snap, 65 tests. | DONE (verified Wave 106) | C2 | Wave 64 audit |
 | BL-0544 | **Breadboard DRC overlay** — Show DRC violation markers (short circuits, unconnected required pins) overlaid on the breadboard view. Currently DRC runs on schematics only. | OPEN | C3 | Wave 64 audit |
 | BL-0545 | **Circuit Code DSL: expand component library** — `circuit-api.ts` currently supports ~13 component types (resistor, capacitor, LED, BJT, MOSFET, etc.). Expand to 50+ types including op-amps, DACs, ADCs, shift registers, H-bridges, voltage regulators, and common Arduino shields. | OPEN | C4 | Wave 64 audit |
 | BL-0546 | **Circuit Code DSL: complete IC pinout definitions** — The IR-to-schematic mapper uses placeholder pinout data for ICs. Populate a `pinout-db.ts` with real pinouts for the 30 most common ICs (555, LM741, ATmega328P, ESP32, etc.) so generated schematics have correct pin placement. | OPEN | C4 | Wave 64 audit |
 | BL-0547 | **Circuit Code DSL: net type safety** — Add typed net declarations (`power`, `analog`, `digital`, `differential`) to the DSL so the evaluator can flag connections between incompatible net types (e.g. `analog` connected to `digital` without level shift). | OPEN | C4 | Wave 64 audit |
-| BL-0548 | **Circuit Code DSL: run seed persistence** — The generative design seed value is not saved between browser sessions. Persist the last seed to localStorage so users can reproduce a specific generative run. | OPEN | C1 | Wave 64 audit |
+| BL-0548 | **Circuit Code DSL: run seed persistence** — Seed persisted to localStorage. | DONE (verified Wave 106) | C1 | Wave 64 audit |
 | BL-0549 | **Collaboration UX: enable by default** — Collaboration is implemented but must be manually activated via API. Add a "Share for collaboration" button in the project header that generates and copies a collaboration invite link in one click. Surface the collaborator presence in the UI without requiring users to know about WebSocket endpoints. | OPEN | C3 | Wave 64 audit |
 
 ### UX Polish — Validation & DRC
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0250 | Rule presets by project type (Arduino, power, sensor) | OPEN | C2 | UX-046 |
+| BL-0250 | Rule presets by project type (Arduino, power, sensor) — drc-presets.ts implemented. | DONE (verified Wave 106) | C2 | UX-046 |
 | BL-0251 | Compare current vs manufacturer rule set | OPEN | C3 | UX-047 |
-| BL-0252 | Suppression workflow with reason + expiration | OPEN | C2 | UX-048 |
+| BL-0252 | Suppression workflow with reason + expiration — drc-suppression.ts implemented. | DONE (verified Wave 106) | C2 | UX-048 |
 | BL-0253 | Guided remediation wizard (step-by-step fixes) | OPEN | C3 | UX-049 |
 | BL-0254 | Risk score card for release readiness | OPEN | C3 | UX-050, IFX-031 |
 
@@ -1040,12 +1040,12 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0304 | Lab/assignment templates for educators | OPEN | C3 | MF-041 |
 | BL-0305 | Classroom mode (teacher dashboard + student submissions) | OPEN | C5 | MF-042, IFX-067 |
 | BL-0306 | Interactive troubleshooting wizard for common mistakes | OPEN | C3 | MF-043, IFX-063 |
-| BL-0307 | First-run checklist with progress | OPEN | C2 | UX-071 |
+| BL-0307 | First-run checklist with progress — first-run-checklist.ts + FirstRunChecklist.tsx implemented. | DONE (verified Wave 106) | C2 | UX-071 |
 | BL-0308 | Guided sample projects ("learn by doing") | OPEN | C3 | UX-072, IFX-062 |
 | BL-0309 | Beginner mode with simplified UI labels | OPEN | C3 | UX-073, IFX-061 |
 | BL-0310 | Role presets (Student/Hobbyist/Pro) tune UI density | OPEN | C3 | UX-075, IFX-076 |
 | BL-0311 | Smart hints triggered by repeated user mistakes | OPEN | C3 | UX-076 |
-| BL-0312 | "Explain this panel" button everywhere | OPEN | C2 | UX-077 |
+| BL-0312 | "Explain this panel" button everywhere — ExplainPanelButton.tsx + panel-explainer.ts implemented. | DONE (verified Wave 106) | C2 | UX-077 |
 | BL-0313 | Per-view onboarding hints for first 3 uses | OPEN | C2 | UX-018 |
 | BL-0314 | Progress milestones from beginner to fab-ready | OPEN | C3 | IFX-064 |
 
