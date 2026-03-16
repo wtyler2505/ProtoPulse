@@ -52,8 +52,11 @@ export function formatSnapshotLabel(format: string, date?: Date): string {
 
   const formatLabels: Record<string, string> = {
     'gerber': 'Gerber',
+    'pick-place': 'Pick & Place',
     'odb-plus-plus': 'ODB++',
     'ipc2581': 'IPC-2581',
+    'etchable-pcb': 'Etchable PCB',
+    'step': 'STEP 3D',
   };
 
   const formatName = formatLabels[format] ?? format;
