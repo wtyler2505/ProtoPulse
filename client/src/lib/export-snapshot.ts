@@ -9,8 +9,11 @@
  */
 const MANUFACTURING_FORMATS = new Set([
   'gerber',
+  'pick-place',
   'odb-plus-plus',
   'ipc2581',
+  'etchable-pcb',
+  'step',
 ]);
 
 /** Metadata for an auto-created export snapshot. */

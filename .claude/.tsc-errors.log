@@ -1,28 +1,10 @@
-[2J[3J[H11:18:10 AM - Starting compilation in watch mode...
+[2J[3J[H3:42:01 PM - Starting compilation in watch mode...
 
 
-11:18:54 AM - Found 0 errors. Watching for file changes.
-[2J[3J[H11:36:59 AM - File change detected. Starting incremental compilation...
+3:46:55 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:04:11 PM - File change detected. Starting incremental compilation...
 
 
-11:37:31 AM - Found 0 errors. Watching for file changes.
-[2J[3J[H11:54:15 AM - File change detected. Starting incremental compilation...
-
-client/src/lib/__tests__/export-results.test.ts(5,8): error TS2307: Cannot find module '../export-results' or its corresponding type declarations.
-client/src/lib/__tests__/export-results.test.ts(6,35): error TS2307: Cannot find module '../export-results' or its corresponding type declarations.
-
-11:54:42 AM - Found 2 errors. Watching for file changes.
-[2J[3J[H11:54:43 AM - File change detected. Starting incremental compilation...
-
-client/src/lib/__tests__/export-results.test.ts(5,8): error TS2307: Cannot find module '../export-results' or its corresponding type declarations.
-client/src/lib/__tests__/export-results.test.ts(6,35): error TS2307: Cannot find module '../export-results' or its corresponding type declarations.
-
-11:54:54 AM - Found 2 errors. Watching for file changes.
-[2J[3J[H11:55:05 AM - File change detected. Starting incremental compilation...
-
-client/src/lib/__tests__/export-results.test.ts(5,8): error TS2307: Cannot find module '../export-results' or its corresponding type declarations.
-client/src/lib/__tests__/export-results.test.ts(6,35): error TS2307: Cannot find module '../export-results' or its corresponding type declarations.
-
-11:57:03 AM - Found 2 errors. Watching for file changes.
-[2J[3J[H11:57:04 AM - File change detected. Starting incremental compilation...
+5:04:52 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H5:04:52 PM - File change detected. Starting incremental compilation...
 

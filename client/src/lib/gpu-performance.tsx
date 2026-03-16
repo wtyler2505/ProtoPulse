@@ -295,3 +295,153 @@ export function _resetCache(): void {
   cachedTier = null;
   cachedOverride = null;
 }
+
+// ---------------------------------------------------------------------------
+// Blur fallback constant
+// ---------------------------------------------------------------------------
+
+/**
+ * CSS class to use when backdrop-blur is disabled (low-end GPU or reduced motion).
+ * Provides a high-opacity solid background that approximates the blur aesthetic
+ * without the GPU cost.
+ */
+export const BLUR_FALLBACK_CLASS = 'bg-black/90';
+
+// ---------------------------------------------------------------------------
+// useOptimizedBlur hook
+// ---------------------------------------------------------------------------
+
+/**
+ * Detects whether the OS/user prefers reduced motion.
+ * Checks both the `prefers-reduced-motion` media query and the manual
+ * `.reduced-motion` class set by ReducedMotionManager.
+ */
+function detectReducedMotion(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  // Check OS-level media query
+  if (typeof window.matchMedia === 'function') {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return true;
+    }
+  }
+  // Check manual override class on <html>
+  if (typeof document !== 'undefined') {
+    if (document.documentElement.classList.contains('reduced-motion')) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Hook that returns the appropriate blur class based on GPU capability
+ * and motion preferences. Combines GPU tier detection with
+ * `prefers-reduced-motion` awareness.
+ *
+ * @param blurClass - The Tailwind blur class to use when capable (default: 'backdrop-blur-xl')
+ * @param fallbackClass - The fallback class when blur is disabled (default: BLUR_FALLBACK_CLASS)
+ * @returns The class string to apply, plus metadata about why
+ *
+ * Usage:
+ * ```tsx
+ * const { className, isBlurEnabled, reason } = useOptimizedBlur();
+ * <div className={cn('some-base', className)}>...</div>
+ * ```
+ */
+export function useOptimizedBlur(
+  blurClass = 'backdrop-blur-xl',
+  fallbackClass = BLUR_FALLBACK_CLASS,
+): {
+  /** The class string to apply — either the blur class or the fallback */
+  className: string;
+  /** Whether backdrop-blur is being used */
+  isBlurEnabled: boolean;
+  /** Reason blur was disabled, or null if enabled */
+  reason: 'low-gpu' | 'reduced-motion' | 'user-override' | null;
+} {
+  const [reducedMotion, setReducedMotion] = useState(() => detectReducedMotion());
+
+  // Listen for OS-level reduced motion changes
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handler = () => {
+      setReducedMotion(detectReducedMotion());
+    };
+
+    mql.addEventListener('change', handler);
+
+    // Also watch for manual .reduced-motion class changes via MutationObserver
+    let observer: MutationObserver | undefined;
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+      observer = new MutationObserver(() => {
+        setReducedMotion(detectReducedMotion());
+      });
+      observer.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['class'],
+      });
+    }
+
+    return () => {
+      mql.removeEventListener('change', handler);
+      observer?.disconnect();
+    };
+  }, []);
+
+  // Get GPU context (may be undefined if outside provider — graceful fallback)
+  const gpuContext = useContext(GpuPerformanceContext);
+
+  // Determine the effective state
+  if (reducedMotion) {
+    return {
+      className: fallbackClass,
+      isBlurEnabled: false,
+      reason: 'reduced-motion',
+    };
+  }
+
+  if (gpuContext) {
+    // Inside GpuPerformanceProvider — use its state
+    if (gpuContext.info.userOverride === false) {
+      return {
+        className: fallbackClass,
+        isBlurEnabled: false,
+        reason: 'user-override',
+      };
+    }
+    if (!gpuContext.info.useBackdropBlur) {
+      return {
+        className: fallbackClass,
+        isBlurEnabled: false,
+        reason: 'low-gpu',
+      };
+    }
+    return {
+      className: `${blurClass} blur-optimized`,
+      isBlurEnabled: true,
+      reason: null,
+    };
+  }
+
+  // Outside provider — use standalone detection
+  const enabled = isBackdropBlurEnabled();
+  if (!enabled) {
+    return {
+      className: fallbackClass,
+      isBlurEnabled: false,
+      reason: 'low-gpu',
+    };
+  }
+
+  return {
+    className: `${blurClass} blur-optimized`,
+    isBlurEnabled: true,
+    reason: null,
+  };
+}
