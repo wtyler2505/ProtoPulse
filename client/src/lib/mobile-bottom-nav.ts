@@ -67,38 +67,38 @@ export const DEFAULT_BREAKPOINT = 768;
  * The 5 core bottom-nav actions. Order matters — it defines left-to-right
  * rendering order in the bar.
  */
-export const BOTTOM_NAV_ITEMS: readonly BottomNavItem[] = [
-  {
+export const BOTTOM_NAV_ITEMS: readonly BottomNavItem[] = Object.freeze([
+  Object.freeze({
     id: 'design',
     icon: 'Pencil',
     label: 'Design',
     viewMode: 'architecture',
-  },
-  {
+  } as BottomNavItem),
+  Object.freeze({
     id: 'validate',
     icon: 'ShieldCheck',
     label: 'Validate',
     viewMode: 'validation',
-  },
-  {
+  } as BottomNavItem),
+  Object.freeze({
     id: 'build',
     icon: 'Hammer',
     label: 'Build',
     viewMode: 'pcb',
-  },
-  {
+  } as BottomNavItem),
+  Object.freeze({
     id: 'chat',
     icon: 'MessageSquare',
     label: 'Chat',
     viewMode: 'dashboard',
-  },
-  {
+  } as BottomNavItem),
+  Object.freeze({
     id: 'more',
     icon: 'MoreHorizontal',
     label: 'More',
     viewMode: 'project_explorer',
-  },
-] as const;
+  } as BottomNavItem),
+]);
 
 // ---------------------------------------------------------------------------
 // Internal lookup tables (built once at module load)

@@ -78,12 +78,12 @@ export type QualityGrade = 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
 // ---------------------------------------------------------------------------
 
 /** Default thresholds: 80% across all four metrics */
-export const DEFAULT_THRESHOLDS: Readonly<CoverageThreshold> = {
+export const DEFAULT_THRESHOLDS: Readonly<CoverageThreshold> = Object.freeze({
   statements: 80,
   branches: 80,
   functions: 80,
   lines: 80,
-} as const;
+});
 
 /** Metrics within this margin of the threshold trigger a warning */
 const WARNING_MARGIN = 5;
