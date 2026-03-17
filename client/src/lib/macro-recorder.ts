@@ -160,7 +160,7 @@ export class MacroRecorder {
     if (!this.recording) {
       throw new Error('Not currently recording');
     }
-    this.currentActions.push({ ...action });
+    this.currentActions.push(deepCopyAction(action));
     this.notify();
   }
 
@@ -230,7 +230,7 @@ export class MacroRecorder {
             await sleep(delay);
           }
         }
-        await executor(recording.actions[i]);
+        await executor(deepCopyAction(recording.actions[i]));
       }
     } finally {
       this.playing = false;
@@ -380,6 +380,15 @@ function isValidAction(value: unknown): value is MacroAction {
 // ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
+
+/** Create a deep copy of a MacroAction (structuredClone-safe payload). */
+function deepCopyAction(action: MacroAction): MacroAction {
+  return {
+    type: action.type,
+    payload: JSON.parse(JSON.stringify(action.payload)) as Record<string, unknown>,
+    timestamp: action.timestamp,
+  };
+}
 
 /** Promise-based sleep using setTimeout. */
 function sleep(ms: number): Promise<void> {

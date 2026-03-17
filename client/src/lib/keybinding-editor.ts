@@ -390,6 +390,11 @@ export function normalizeDisplayKey(key: string): string {
  * Ensures canonical modifier order (Ctrl+Shift+Alt+Meta) and proper key casing.
  */
 export function normalizeKeysString(keys: string): string {
+  // Handle bare space character before splitting (split on '+' would lose it).
+  if (keys === ' ') {
+    return 'Space';
+  }
+
   const parts = keys.split('+').map((p) => p.trim()).filter(Boolean);
 
   const modifiers: string[] = [];

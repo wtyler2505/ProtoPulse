@@ -464,16 +464,20 @@ describe('MacroRecorder', () => {
     });
 
     it('resets isPlaying to false even if executor throws', async () => {
-      vi.useFakeTimers();
       const result = recordMacro('Error', [makeAction('a', {}, 100)]);
       const recorder = MacroRecorder.getInstance();
 
-      const promise = recorder.playRecording(result.id, async () => {
-        throw new Error('boom');
-      });
+      let caughtError: Error | null = null;
+      try {
+        await recorder.playRecording(result.id, async () => {
+          throw new Error('boom');
+        });
+      } catch (err) {
+        caughtError = err as Error;
+      }
 
-      await vi.runAllTimersAsync();
-      await expect(promise).rejects.toThrow('boom');
+      expect(caughtError).toBeTruthy();
+      expect(caughtError!.message).toBe('boom');
       expect(recorder.isPlaying()).toBe(false);
     });
 

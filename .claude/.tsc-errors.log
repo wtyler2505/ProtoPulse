@@ -909,3 +909,32 @@ client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListene
 12:32:48 AM - Found 0 errors. Watching for file changes.
 [2J[3J[H12:32:51 AM - File change detected. Starting incremental compilation...
 
+
+12:33:12 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:33:15 AM - File change detected. Starting incremental compilation...
+
+
+12:33:47 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:33:57 AM - File change detected. Starting incremental compilation...
+
+
+12:34:16 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:35:10 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/macro-recorder.ts(163,30): error TS2304: Cannot find name 'deepCopyAction'.
+
+12:35:27 AM - Found 1 error. Watching for file changes.
+[2J[3J[H12:36:34 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/macro-recorder.ts(163,30): error TS2304: Cannot find name 'deepCopyAction'.
+client/src/lib/macro-recorder.ts(233,24): error TS2304: Cannot find name 'deepCopyAction'.
+
+12:36:45 AM - Found 2 errors. Watching for file changes.
+[2J[3J[H12:38:06 AM - File change detected. Starting incremental compilation...
+
+
+12:38:22 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H12:41:00 AM - File change detected. Starting incremental compilation...
+
+
+12:41:20 AM - Found 0 errors. Watching for file changes.
