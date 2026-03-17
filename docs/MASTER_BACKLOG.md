@@ -1164,7 +1164,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0405 | Board package/version checker | DONE (Wave 119) | C3 | ARDX-010 |
 | BL-0406 | Per-project board profile | DONE (verified Wave 106) | C2 | ARDX-011 |
 | BL-0407 | Save last known good firmware build | DONE (Wave 120) | C3 | ARDX-012 |
-| BL-0408 | Pre-upload safety checks | OPEN | C3 | ARDX-015 |
+| BL-0408 | Pre-upload safety checks | DONE (Wave 120) | C3 | ARDX-015 |
 | BL-0409 | AI sketch starter from schematic | OPEN | C3 | ARDX-016 |
 | BL-0410 | Smart code snippets per component | DONE (Wave 120) | C3 | ARDX-017 |
 | BL-0411 | Board-aware suggestions (timers, PWM limits) | OPEN | C3 | ARDX-021 |
