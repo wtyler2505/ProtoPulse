@@ -310,3 +310,68 @@ client/src/lib/assembly-grouping.ts(268,31): error TS2339: Property 'totalPrice'
 8:19:53 PM - Found 0 errors. Watching for file changes.
 [2J[3J[H8:19:53 PM - File change detected. Starting incremental compilation...
 
+
+8:20:01 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:20:03 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,14): error TS2571: Object is of type 'unknown'.
+
+8:20:25 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:20:25 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,14): error TS2571: Object is of type 'unknown'.
+
+8:20:40 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:20:47 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,14): error TS2571: Object is of type 'unknown'.
+
+8:21:21 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:21:21 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,14): error TS2571: Object is of type 'unknown'.
+
+8:22:41 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:22:42 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,14): error TS2571: Object is of type 'unknown'.
+
+8:22:49 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:22:53 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,14): error TS2571: Object is of type 'unknown'.
+
+8:23:02 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:25:02 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,14): error TS2571: Object is of type 'unknown'.
+
+8:25:15 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:26:48 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,14): error TS2571: Object is of type 'unknown'.
+
+8:26:58 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:26:58 PM - File change detected. Starting incremental compilation...
+
+
+8:27:04 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:27:28 PM - File change detected. Starting incremental compilation...
+
+server/__tests__/websocket-revalidation.test.ts(245,16): error TS2352: Conversion of type 'CollabMessage' to type '{ payload: { user: { userId: number; }; }; }' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Types of property 'payload' are incompatible.
+    Property 'user' is missing in type 'Record<string, unknown>' but required in type '{ user: { userId: number; }; }'.
+
+8:27:34 PM - Found 1 error. Watching for file changes.
+[2J[3J[H8:32:59 PM - File change detected. Starting incremental compilation...
+
+
+8:33:08 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:35:27 PM - File change detected. Starting incremental compilation...
+
+
+8:35:29 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:36:18 PM - File change detected. Starting incremental compilation...
+
+
+8:36:25 PM - Found 0 errors. Watching for file changes.

@@ -621,17 +621,33 @@ export function calculateAssemblyRisk(item: BomItemRiskInput): AssemblyRiskResul
   const esdFactor = scoreEsdSensitivity(item.esdSensitive);
   if (esdFactor) { factors.push(esdFactor); }
 
-  // Weighted average → 0–100
-  let weightedSum = 0;
-  let totalWeight = 0;
-  for (const f of factors) {
-    weightedSum += f.score * f.weight;
-    totalWeight += f.weight;
+  // Scoring: primary factors (package, pins, pitch) determine base score via
+  // weighted average. Modifier factors (thermal pad, double-sided, mounting,
+  // ESD) add fixed point bumps. This prevents low-scoring boolean modifiers
+  // from diluting the base score of genuinely difficult components.
+  const PRIMARY_FACTOR_NAMES = new Set(['Package Complexity', 'Pin Count', 'Fine Pitch']);
+
+  const primaryFactors = factors.filter((f) => PRIMARY_FACTOR_NAMES.has(f.name));
+  const modifierFactors = factors.filter((f) => !PRIMARY_FACTOR_NAMES.has(f.name));
+
+  // Base score from primary factors (weighted average → 0–100)
+  let primaryWeightedSum = 0;
+  let primaryTotalWeight = 0;
+  for (const f of primaryFactors) {
+    primaryWeightedSum += f.score * f.weight;
+    primaryTotalWeight += f.weight;
+  }
+  const baseScore = primaryTotalWeight > 0
+    ? (primaryWeightedSum / primaryTotalWeight) * 10
+    : 0;
+
+  // Modifier bumps (each modifier's score is added directly as percentage points)
+  let modifierBump = 0;
+  for (const f of modifierFactors) {
+    modifierBump += f.score;
   }
 
-  const overall = totalWeight > 0
-    ? Math.round((weightedSum / totalWeight) * 10) // score is 0-10, * 10 → 0-100
-    : 0;
+  const overall = Math.min(100, Math.round(baseScore + modifierBump));
 
   const level = getStructuredRiskLevel(overall);
   const suggestions = generateSuggestions(factors);

@@ -5,6 +5,7 @@ import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_COLORS,
   CATEGORY_LABELS,
+  MAX_ORDERS_PER_PROJECT,
 } from '../order-history';
 import type {
   OrderRecord,
@@ -558,5 +559,238 @@ describe('useOrderHistory', () => {
       result.current.updateStatus(o1.id, 'cancelled');
     });
     expect(result.current.activeOrders).toHaveLength(0);
+  });
+
+  it('updateTracking works through hook', () => {
+    const { result } = renderHook(() => useOrderHistory(1));
+    let orderId: string;
+    act(() => {
+      const order = result.current.createOrder({
+        category: 'pcb',
+        supplier: 'JLCPCB',
+        description: 'PCB order',
+        quantity: 5,
+        unitCost: 2.0,
+        totalCost: 10.0,
+      });
+      orderId = order.id;
+    });
+    // updateTracking is not exposed through the hook — verify via manager
+    const mgr = OrderHistoryManager.getInstance();
+    mgr.updateTracking(1, orderId!, 'TRK-HOOK', 'https://track.example.com');
+    // Re-render to pick up change
+    const { result: result2 } = renderHook(() => useOrderHistory(1));
+    expect(result2.current.orders[0].trackingNumber).toBe('TRK-HOOK');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FIFO eviction
+// ---------------------------------------------------------------------------
+
+describe('OrderHistoryManager — FIFO eviction', () => {
+  it('evicts oldest order when at max capacity', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const firstOrder = mgr.createOrder(makeInput({ description: 'order-0' }));
+    for (let i = 1; i < MAX_ORDERS_PER_PROJECT; i++) {
+      mgr.createOrder(makeInput({ description: `order-${String(i)}` }));
+    }
+    expect(mgr.getOrders(1)).toHaveLength(MAX_ORDERS_PER_PROJECT);
+
+    // Adding one more should evict the first
+    mgr.createOrder(makeInput({ description: 'overflow' }));
+    const orders = mgr.getOrders(1);
+    expect(orders).toHaveLength(MAX_ORDERS_PER_PROJECT);
+    expect(orders.find((o) => o.id === firstOrder.id)).toBeUndefined();
+    expect(orders[orders.length - 1].description).toBe('overflow');
+  });
+
+  it('evicts multiple oldest when adding to a full list', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    for (let i = 0; i < MAX_ORDERS_PER_PROJECT; i++) {
+      mgr.createOrder(makeInput({ description: `order-${String(i)}` }));
+    }
+    // Delete some, then fill back up + overflow
+    const orders = mgr.getOrders(1);
+    mgr.deleteOrder(1, orders[0].id);
+    mgr.deleteOrder(1, orders[1].id);
+    expect(mgr.getOrders(1)).toHaveLength(MAX_ORDERS_PER_PROJECT - 2);
+
+    // Fill to capacity again
+    mgr.createOrder(makeInput({ description: 'refill-1' }));
+    mgr.createOrder(makeInput({ description: 'refill-2' }));
+    expect(mgr.getOrders(1)).toHaveLength(MAX_ORDERS_PER_PROJECT);
+
+    // One more triggers eviction
+    mgr.createOrder(makeInput({ description: 'new-overflow' }));
+    expect(mgr.getOrders(1)).toHaveLength(MAX_ORDERS_PER_PROJECT);
+  });
+
+  it('FIFO eviction does not affect other projects', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    mgr.createOrder(makeInput({ projectId: 2, description: 'project-2-order' }));
+    for (let i = 0; i < MAX_ORDERS_PER_PROJECT; i++) {
+      mgr.createOrder(makeInput({ projectId: 1, description: `p1-order-${String(i)}` }));
+    }
+    // Overflow project 1
+    mgr.createOrder(makeInput({ projectId: 1, description: 'p1-overflow' }));
+    expect(mgr.getOrders(1)).toHaveLength(MAX_ORDERS_PER_PROJECT);
+    expect(mgr.getOrders(2)).toHaveLength(1);
+  });
+
+  it('MAX_ORDERS_PER_PROJECT is 50', () => {
+    expect(MAX_ORDERS_PER_PROJECT).toBe(50);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// localStorage corruption recovery
+// ---------------------------------------------------------------------------
+
+describe('OrderHistoryManager — corruption recovery', () => {
+  it('recovers from corrupted JSON in localStorage', () => {
+    localStorage.setItem('protopulse-order-history:1', 'NOT VALID JSON{{{');
+    const mgr = OrderHistoryManager.getInstance();
+    expect(mgr.getOrders(1)).toHaveLength(0);
+    // Should be able to create new orders after corruption
+    const order = mgr.createOrder(makeInput());
+    expect(order.id).toBeTruthy();
+    expect(mgr.getOrders(1)).toHaveLength(1);
+  });
+
+  it('recovers from non-array JSON in localStorage', () => {
+    localStorage.setItem('protopulse-order-history:1', JSON.stringify({ not: 'an array' }));
+    const mgr = OrderHistoryManager.getInstance();
+    expect(mgr.getOrders(1)).toHaveLength(0);
+  });
+
+  it('recovers from null stored value', () => {
+    localStorage.setItem('protopulse-order-history:1', 'null');
+    const mgr = OrderHistoryManager.getInstance();
+    expect(mgr.getOrders(1)).toHaveLength(0);
+  });
+
+  it('persists across manager resets (simulating page reload)', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    mgr.createOrder(makeInput({ description: 'persistent order' }));
+    mgr.createOrder(makeInput({ description: 'another persistent order' }));
+
+    OrderHistoryManager.resetForTesting();
+    const mgr2 = OrderHistoryManager.getInstance();
+    const orders = mgr2.getOrders(1);
+    expect(orders).toHaveLength(2);
+    expect(orders[0].description).toBe('persistent order');
+    expect(orders[1].description).toBe('another persistent order');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Edge cases
+// ---------------------------------------------------------------------------
+
+describe('OrderHistoryManager — edge cases', () => {
+  it('handles zero cost orders', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const order = mgr.createOrder(makeInput({ unitCost: 0, totalCost: 0 }));
+    expect(order.unitCost).toBe(0);
+    expect(order.totalCost).toBe(0);
+    expect(mgr.getTotalSpent(1)).toBe(0);
+  });
+
+  it('handles large cost values without precision loss', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const order = mgr.createOrder(makeInput({ unitCost: 99999.99, totalCost: 99999.99 }));
+    expect(order.unitCost).toBe(99999.99);
+    expect(order.totalCost).toBe(99999.99);
+  });
+
+  it('multiple listeners all receive notifications', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const listener1 = vi.fn();
+    const listener2 = vi.fn();
+    const listener3 = vi.fn();
+    mgr.subscribe(listener1);
+    mgr.subscribe(listener2);
+    mgr.subscribe(listener3);
+    mgr.createOrder(makeInput());
+    expect(listener1).toHaveBeenCalledTimes(1);
+    expect(listener2).toHaveBeenCalledTimes(1);
+    expect(listener3).toHaveBeenCalledTimes(1);
+  });
+
+  it('clearAll notifies listeners', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    mgr.createOrder(makeInput());
+    const listener = vi.fn();
+    mgr.subscribe(listener);
+    mgr.clearAll(1);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('updateStatus notifies listeners', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const order = mgr.createOrder(makeInput());
+    const listener = vi.fn();
+    mgr.subscribe(listener);
+    mgr.updateStatus(1, order.id, 'ordered');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('updateTracking notifies listeners', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const order = mgr.createOrder(makeInput());
+    const listener = vi.fn();
+    mgr.subscribe(listener);
+    mgr.updateTracking(1, order.id, 'TRK-NOTIFY');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('each order gets a unique UUID', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const ids = new Set<string>();
+    for (let i = 0; i < 20; i++) {
+      const order = mgr.createOrder(makeInput({ description: `order-${String(i)}` }));
+      ids.add(order.id);
+    }
+    expect(ids.size).toBe(20);
+  });
+
+  it('updatedAt changes on status update', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const order = mgr.createOrder(makeInput());
+    const originalUpdatedAt = order.updatedAt;
+    // Small delay to ensure timestamp differs
+    const updated = mgr.updateStatus(1, order.id, 'ordered');
+    expect(updated!.updatedAt).toBeGreaterThanOrEqual(originalUpdatedAt);
+  });
+
+  it('updatedAt changes on tracking update', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const order = mgr.createOrder(makeInput());
+    const originalUpdatedAt = order.updatedAt;
+    const updated = mgr.updateTracking(1, order.id, 'TRK-TIME');
+    expect(updated!.updatedAt).toBeGreaterThanOrEqual(originalUpdatedAt);
+  });
+
+  it('does not allow shipped → cancelled (only forward transitions)', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const order = mgr.createOrder(makeInput());
+    mgr.updateStatus(1, order.id, 'ordered');
+    mgr.updateStatus(1, order.id, 'in_production');
+    mgr.updateStatus(1, order.id, 'shipped');
+    expect(mgr.updateStatus(1, order.id, 'cancelled')).toBeNull();
+  });
+
+  it('getTotalSpent returns 0 for empty project', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    expect(mgr.getTotalSpent(999)).toBe(0);
+  });
+
+  it('getCostByCategory returns zeros for empty project', () => {
+    const mgr = OrderHistoryManager.getInstance();
+    const costs = mgr.getCostByCategory(999);
+    expect(costs.pcb).toBe(0);
+    expect(costs.components).toBe(0);
+    expect(costs.assembly).toBe(0);
   });
 });

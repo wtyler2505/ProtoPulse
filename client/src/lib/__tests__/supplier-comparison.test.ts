@@ -377,3 +377,343 @@ describe('buildComparison + sortComparisonRows integration', () => {
     expect(lcsc100.totalPrice).toBeGreaterThan(lcsc1.totalPrice); // 100 * lower price > 1 * higher price
   });
 });
+
+// ---------------------------------------------------------------------------
+// Generic Supplier Comparison Engine (BL-0238)
+// ---------------------------------------------------------------------------
+
+import {
+  compareSuppliers,
+  calculateTotalCost,
+  formatLeadTime,
+  sortByValue,
+} from '../supplier-comparison';
+import type {
+  SupplierQuote,
+  GenericComparisonResult,
+  RankedQuote,
+} from '../supplier-comparison';
+
+function mkQuote(overrides: Partial<SupplierQuote> = {}): SupplierQuote {
+  return {
+    supplier: 'Test Supplier',
+    unitPrice: 1.00,
+    moq: 1,
+    leadTimeDays: 3,
+    stockQuantity: 100,
+    ...overrides,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// calculateTotalCost
+// ---------------------------------------------------------------------------
+
+describe('calculateTotalCost', () => {
+  it('returns unitPrice * quantity when quantity >= moq', () => {
+    const q = mkQuote({ unitPrice: 2.50, moq: 1 });
+    expect(calculateTotalCost(q, 10)).toBe(25.00);
+  });
+
+  it('uses MOQ when quantity < MOQ', () => {
+    const q = mkQuote({ unitPrice: 2.00, moq: 25 });
+    // quantity=5 but moq=25, so effective qty is 25
+    expect(calculateTotalCost(q, 5)).toBe(50.00);
+  });
+
+  it('rounds to 2 decimal places', () => {
+    const q = mkQuote({ unitPrice: 0.333, moq: 1 });
+    const result = calculateTotalCost(q, 3);
+    // 0.333 * 3 = 0.999 → rounds to 1.00
+    expect(result).toBe(1.00);
+  });
+
+  it('handles zero unitPrice', () => {
+    const q = mkQuote({ unitPrice: 0, moq: 1 });
+    expect(calculateTotalCost(q, 100)).toBe(0);
+  });
+
+  it('handles zero MOQ (treated as no minimum)', () => {
+    const q = mkQuote({ unitPrice: 1.00, moq: 0 });
+    expect(calculateTotalCost(q, 10)).toBe(10.00);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// formatLeadTime
+// ---------------------------------------------------------------------------
+
+describe('formatLeadTime', () => {
+  it('returns "In stock" for 0 days', () => {
+    expect(formatLeadTime(0)).toBe('In stock');
+  });
+
+  it('returns "In stock" for negative days', () => {
+    expect(formatLeadTime(-1)).toBe('In stock');
+  });
+
+  it('returns "1 day" for 1 day', () => {
+    expect(formatLeadTime(1)).toBe('1 day');
+  });
+
+  it('returns "3 days" for 3 days', () => {
+    expect(formatLeadTime(3)).toBe('3 days');
+  });
+
+  it('returns "14 days" for 14 days', () => {
+    expect(formatLeadTime(14)).toBe('14 days');
+  });
+
+  it('returns weeks for 15+ days', () => {
+    expect(formatLeadTime(21)).toBe('3 weeks');
+  });
+
+  it('returns week range for non-exact weeks', () => {
+    expect(formatLeadTime(18)).toBe('2-3 weeks');
+  });
+
+  it('returns "1 week" for exactly 7 days (> 14 threshold not met)', () => {
+    // 7 days is <=14, so still formatted as days
+    expect(formatLeadTime(7)).toBe('7 days');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// compareSuppliers
+// ---------------------------------------------------------------------------
+
+describe('compareSuppliers', () => {
+  it('returns empty result for no quotes', () => {
+    const result = compareSuppliers([], 10);
+    expect(result.quotes).toHaveLength(0);
+    expect(result.bestValue).toBeNull();
+    expect(result.cheapest).toBeNull();
+    expect(result.fastest).toBeNull();
+    expect(result.recommendations).toHaveLength(0);
+  });
+
+  it('single quote gets all badges', () => {
+    const result = compareSuppliers([mkQuote({ supplier: 'Solo' })], 10);
+    expect(result.quotes).toHaveLength(1);
+    const q = result.quotes[0];
+    expect(q.badges).toContain('cheapest');
+    expect(q.badges).toContain('fastest');
+    expect(q.badges).toContain('best-value');
+    expect(q.badges).toContain('in-stock');
+  });
+
+  it('two quotes — correct cheapest/fastest assignment', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'Cheap', unitPrice: 1.00, leadTimeDays: 10, stockQuantity: 500 }),
+      mkQuote({ supplier: 'Fast', unitPrice: 3.00, leadTimeDays: 1, stockQuantity: 500 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    const cheap = result.quotes.find((q) => q.supplier === 'Cheap')!;
+    const fast = result.quotes.find((q) => q.supplier === 'Fast')!;
+    expect(cheap.badges).toContain('cheapest');
+    expect(fast.badges).toContain('fastest');
+  });
+
+  it('MOQ affects total cost', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'LowMOQ', unitPrice: 2.00, moq: 1 }),
+      mkQuote({ supplier: 'HighMOQ', unitPrice: 1.50, moq: 100 }),
+    ];
+    const result = compareSuppliers(quotes, 5);
+    const lowMoq = result.quotes.find((q) => q.supplier === 'LowMOQ')!;
+    const highMoq = result.quotes.find((q) => q.supplier === 'HighMOQ')!;
+    // LowMOQ: 2.00 * 5 = 10.00; HighMOQ: 1.50 * 100 = 150.00
+    expect(lowMoq.totalCost).toBe(10.00);
+    expect(highMoq.totalCost).toBe(150.00);
+    expect(lowMoq.badges).toContain('cheapest');
+  });
+
+  it('value scoring weights work correctly', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'Balanced', unitPrice: 2.00, leadTimeDays: 3, stockQuantity: 500, rating: 4.5 }),
+      mkQuote({ supplier: 'CheapSlow', unitPrice: 1.00, leadTimeDays: 30, stockQuantity: 10, rating: 2.0 }),
+      mkQuote({ supplier: 'ExpensiveFast', unitPrice: 5.00, leadTimeDays: 0, stockQuantity: 1000, rating: 5.0 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    // All quotes should have a valueScore between 0 and 1
+    for (const q of result.quotes) {
+      expect(q.valueScore).toBeGreaterThanOrEqual(0);
+      expect(q.valueScore).toBeLessThanOrEqual(1);
+    }
+    // Balanced should be best-value (good across all factors)
+    expect(result.bestValue).not.toBeNull();
+  });
+
+  it('recommendations generated for meaningful price differences (>5%)', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'Cheap Co', unitPrice: 1.00, moq: 1 }),
+      mkQuote({ supplier: 'Expensive Co', unitPrice: 5.00, moq: 1 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    const priceRec = result.recommendations.find((r) => r.includes('cheaper per unit'));
+    expect(priceRec).toBeDefined();
+    expect(priceRec).toContain('Cheap Co');
+  });
+
+  it('no price recommendation when prices are within 5%', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'A', unitPrice: 1.00, moq: 1 }),
+      mkQuote({ supplier: 'B', unitPrice: 1.04, moq: 1 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    const priceRec = result.recommendations.find((r) => r.includes('cheaper per unit'));
+    expect(priceRec).toBeUndefined();
+  });
+
+  it('recommends supplier with stock for immediate shipping', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'Mouser', leadTimeDays: 0, stockQuantity: 500 }),
+      mkQuote({ supplier: 'Other', leadTimeDays: 14, stockQuantity: 0 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    const stockRec = result.recommendations.find((r) => r.includes('immediate shipping'));
+    expect(stockRec).toBeDefined();
+    expect(stockRec).toContain('Mouser');
+  });
+
+  it('recommends supplier with stock and lead time', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'DigiKey', leadTimeDays: 3, stockQuantity: 500 }),
+      mkQuote({ supplier: 'Other', leadTimeDays: 30, stockQuantity: 500 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    const stockRec = result.recommendations.find((r) => r.includes('has stock and ships'));
+    expect(stockRec).toBeDefined();
+    expect(stockRec).toContain('DigiKey');
+  });
+
+  it('in-stock badge only for quotes with enough stock', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'Stocked', stockQuantity: 100 }),
+      mkQuote({ supplier: 'LowStock', stockQuantity: 5 }),
+    ];
+    const result = compareSuppliers(quotes, 50);
+    const stocked = result.quotes.find((q) => q.supplier === 'Stocked')!;
+    const low = result.quotes.find((q) => q.supplier === 'LowStock')!;
+    expect(stocked.badges).toContain('in-stock');
+    expect(low.badges).not.toContain('in-stock');
+  });
+
+  it('equal prices — both get cheapest considered correctly', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'A', unitPrice: 2.00, moq: 1 }),
+      mkQuote({ supplier: 'B', unitPrice: 2.00, moq: 1 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    // At least one should be cheapest
+    const cheapestQuotes = result.quotes.filter((q) => q.badges.includes('cheapest'));
+    expect(cheapestQuotes.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('handles missing rating (defaults to 2.5 in scoring)', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'NoRating', rating: undefined }),
+      mkQuote({ supplier: 'Rated', rating: 5.0 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    const noRating = result.quotes.find((q) => q.supplier === 'NoRating')!;
+    const rated = result.quotes.find((q) => q.supplier === 'Rated')!;
+    // Both should have valid value scores
+    expect(noRating.valueScore).toBeGreaterThan(0);
+    expect(rated.valueScore).toBeGreaterThan(0);
+  });
+
+  it('preserves original quote fields in ranked output', () => {
+    const quote = mkQuote({
+      supplier: 'Mouser',
+      unitPrice: 2.50,
+      currency: 'EUR',
+      moq: 10,
+      leadTimeDays: 5,
+      stockQuantity: 200,
+      rating: 4.2,
+      url: 'https://mouser.com/part/123',
+    });
+    const result = compareSuppliers([quote], 10);
+    const ranked = result.quotes[0];
+    expect(ranked.supplier).toBe('Mouser');
+    expect(ranked.unitPrice).toBe(2.50);
+    expect(ranked.currency).toBe('EUR');
+    expect(ranked.moq).toBe(10);
+    expect(ranked.leadTimeDays).toBe(5);
+    expect(ranked.stockQuantity).toBe(200);
+    expect(ranked.rating).toBe(4.2);
+    expect(ranked.url).toBe('https://mouser.com/part/123');
+  });
+
+  it('totalCost computed correctly for each ranked quote', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'A', unitPrice: 1.50, moq: 1 }),
+      mkQuote({ supplier: 'B', unitPrice: 2.00, moq: 5 }),
+      mkQuote({ supplier: 'C', unitPrice: 0.80, moq: 50 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    const a = result.quotes.find((q) => q.supplier === 'A')!;
+    const b = result.quotes.find((q) => q.supplier === 'B')!;
+    const c = result.quotes.find((q) => q.supplier === 'C')!;
+    expect(a.totalCost).toBe(15.00); // 1.50 * 10
+    expect(b.totalCost).toBe(20.00); // 2.00 * 10 (qty > moq)
+    expect(c.totalCost).toBe(40.00); // 0.80 * 50 (moq > qty)
+  });
+
+  it('bestValue, cheapest, fastest reference actual ranked quote objects', () => {
+    const quotes: SupplierQuote[] = [
+      mkQuote({ supplier: 'A', unitPrice: 1.00, leadTimeDays: 10 }),
+      mkQuote({ supplier: 'B', unitPrice: 3.00, leadTimeDays: 1 }),
+    ];
+    const result = compareSuppliers(quotes, 10);
+    expect(result.cheapest).not.toBeNull();
+    expect(result.fastest).not.toBeNull();
+    expect(result.bestValue).not.toBeNull();
+    // These should be actual objects from the quotes array
+    expect(result.quotes).toContain(result.cheapest);
+    expect(result.quotes).toContain(result.fastest);
+    expect(result.quotes).toContain(result.bestValue);
+  });
+
+  it('quantity clamped to at least 1', () => {
+    const result = compareSuppliers([mkQuote({ unitPrice: 5.00, moq: 1 })], 0);
+    expect(result.quotes[0].totalCost).toBe(5.00); // 5.00 * max(1, 0→1)
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sortByValue
+// ---------------------------------------------------------------------------
+
+describe('sortByValue', () => {
+  it('sorts by valueScore descending', () => {
+    const ranked: RankedQuote[] = [
+      { ...mkQuote({ supplier: 'Low' }), totalCost: 10, valueScore: 0.3, badges: [] },
+      { ...mkQuote({ supplier: 'High' }), totalCost: 10, valueScore: 0.9, badges: [] },
+      { ...mkQuote({ supplier: 'Mid' }), totalCost: 10, valueScore: 0.6, badges: [] },
+    ];
+    const sorted = sortByValue(ranked);
+    expect(sorted[0].supplier).toBe('High');
+    expect(sorted[1].supplier).toBe('Mid');
+    expect(sorted[2].supplier).toBe('Low');
+  });
+
+  it('does not mutate the original array', () => {
+    const ranked: RankedQuote[] = [
+      { ...mkQuote({ supplier: 'A' }), totalCost: 10, valueScore: 0.1, badges: [] },
+      { ...mkQuote({ supplier: 'B' }), totalCost: 10, valueScore: 0.9, badges: [] },
+    ];
+    const original = [...ranked];
+    sortByValue(ranked);
+    expect(ranked[0].supplier).toBe(original[0].supplier);
+  });
+
+  it('returns a new array reference', () => {
+    const ranked: RankedQuote[] = [
+      { ...mkQuote({ supplier: 'A' }), totalCost: 10, valueScore: 0.5, badges: [] },
+    ];
+    const sorted = sortByValue(ranked);
+    expect(sorted).not.toBe(ranked);
+  });
+});

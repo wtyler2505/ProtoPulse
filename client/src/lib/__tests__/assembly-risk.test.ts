@@ -392,3 +392,550 @@ describe('sortRisks', () => {
     expect(risks).toEqual(original);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Structured Assembly Risk API — calculateAssemblyRisk
+// ---------------------------------------------------------------------------
+
+import {
+  calculateAssemblyRisk,
+  getStructuredRiskLevel,
+} from '../assembly-risk';
+import type { BomItemRiskInput } from '../assembly-risk';
+
+describe('calculateAssemblyRisk (structured input)', () => {
+  // -------------------------------------------------------------------------
+  // Package complexity factor
+  // -------------------------------------------------------------------------
+
+  describe('package complexity', () => {
+    it('scores BGA as 9', () => {
+      const result = calculateAssemblyRisk({ package: 'BGA' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(9);
+    });
+
+    it('scores WLCSP as 10', () => {
+      const result = calculateAssemblyRisk({ package: 'WLCSP' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(10);
+    });
+
+    it('scores QFN as 7', () => {
+      const result = calculateAssemblyRisk({ package: 'QFN' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(7);
+    });
+
+    it('scores QFP as 6', () => {
+      const result = calculateAssemblyRisk({ package: 'QFP' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(6);
+    });
+
+    it('scores SOIC as 3', () => {
+      const result = calculateAssemblyRisk({ package: 'SOIC' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(3);
+    });
+
+    it('scores DIP as 2', () => {
+      const result = calculateAssemblyRisk({ package: 'DIP' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(2);
+    });
+
+    it('scores axial as 1', () => {
+      const result = calculateAssemblyRisk({ package: 'axial' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(1);
+    });
+
+    it('scores 0201 as 8', () => {
+      const result = calculateAssemblyRisk({ package: '0201' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(8);
+    });
+
+    it('scores 01005 as 10', () => {
+      const result = calculateAssemblyRisk({ package: '01005' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(10);
+    });
+
+    it('matches case-insensitively', () => {
+      const result = calculateAssemblyRisk({ package: 'Bga' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(9);
+    });
+
+    it('matches substring packages (e.g. BGA-256)', () => {
+      const result = calculateAssemblyRisk({ package: 'BGA-256' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(9);
+    });
+
+    it('returns null factor for unknown package', () => {
+      const result = calculateAssemblyRisk({ package: 'XYZZY' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor).toBeUndefined();
+    });
+
+    it('returns null factor when package is undefined', () => {
+      const result = calculateAssemblyRisk({});
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Pin count factor
+  // -------------------------------------------------------------------------
+
+  describe('pin count', () => {
+    it('scores >100 pins as 9', () => {
+      const result = calculateAssemblyRisk({ pinCount: 144 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(9);
+    });
+
+    it('scores >50 pins as 7', () => {
+      const result = calculateAssemblyRisk({ pinCount: 64 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(7);
+    });
+
+    it('scores >20 pins as 5', () => {
+      const result = calculateAssemblyRisk({ pinCount: 28 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(5);
+    });
+
+    it('scores >10 pins as 3', () => {
+      const result = calculateAssemblyRisk({ pinCount: 14 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(3);
+    });
+
+    it('scores <=10 pins as 1', () => {
+      const result = calculateAssemblyRisk({ pinCount: 8 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(1);
+    });
+
+    it('boundary: 101 pins scores 9', () => {
+      const result = calculateAssemblyRisk({ pinCount: 101 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(9);
+    });
+
+    it('boundary: 100 pins scores 7', () => {
+      const result = calculateAssemblyRisk({ pinCount: 100 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(7);
+    });
+
+    it('boundary: 50 pins scores 5', () => {
+      const result = calculateAssemblyRisk({ pinCount: 50 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(5);
+    });
+
+    it('boundary: 10 pins scores 1', () => {
+      const result = calculateAssemblyRisk({ pinCount: 10 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor!.score).toBe(1);
+    });
+
+    it('returns no factor for undefined pinCount', () => {
+      const result = calculateAssemblyRisk({});
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor).toBeUndefined();
+    });
+
+    it('returns no factor for 0 pins', () => {
+      const result = calculateAssemblyRisk({ pinCount: 0 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Fine pitch factor
+  // -------------------------------------------------------------------------
+
+  describe('fine pitch', () => {
+    it('scores <0.4mm as 9', () => {
+      const result = calculateAssemblyRisk({ pitch: 0.3 });
+      const factor = result.factors.find((f) => f.name === 'Fine Pitch');
+      expect(factor!.score).toBe(9);
+    });
+
+    it('scores <0.5mm as 7', () => {
+      const result = calculateAssemblyRisk({ pitch: 0.4 });
+      const factor = result.factors.find((f) => f.name === 'Fine Pitch');
+      expect(factor!.score).toBe(7);
+    });
+
+    it('scores <0.65mm as 5', () => {
+      const result = calculateAssemblyRisk({ pitch: 0.5 });
+      const factor = result.factors.find((f) => f.name === 'Fine Pitch');
+      expect(factor!.score).toBe(5);
+    });
+
+    it('scores <1.0mm as 3', () => {
+      const result = calculateAssemblyRisk({ pitch: 0.8 });
+      const factor = result.factors.find((f) => f.name === 'Fine Pitch');
+      expect(factor!.score).toBe(3);
+    });
+
+    it('scores >=1.0mm as 1', () => {
+      const result = calculateAssemblyRisk({ pitch: 1.27 });
+      const factor = result.factors.find((f) => f.name === 'Fine Pitch');
+      expect(factor!.score).toBe(1);
+    });
+
+    it('returns no factor for undefined pitch', () => {
+      const result = calculateAssemblyRisk({});
+      const factor = result.factors.find((f) => f.name === 'Fine Pitch');
+      expect(factor).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Thermal pad factor
+  // -------------------------------------------------------------------------
+
+  describe('thermal pad', () => {
+    it('adds +3 risk when hasThermalPad is true', () => {
+      const result = calculateAssemblyRisk({ hasThermalPad: true });
+      const factor = result.factors.find((f) => f.name === 'Thermal Pad');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(3);
+    });
+
+    it('no factor when hasThermalPad is false', () => {
+      const result = calculateAssemblyRisk({ hasThermalPad: false });
+      const factor = result.factors.find((f) => f.name === 'Thermal Pad');
+      expect(factor).toBeUndefined();
+    });
+
+    it('no factor when hasThermalPad is undefined', () => {
+      const result = calculateAssemblyRisk({});
+      const factor = result.factors.find((f) => f.name === 'Thermal Pad');
+      expect(factor).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Double-sided assembly factor
+  // -------------------------------------------------------------------------
+
+  describe('double-sided assembly', () => {
+    it('adds +2 risk when isDoubleSided is true', () => {
+      const result = calculateAssemblyRisk({ isDoubleSided: true });
+      const factor = result.factors.find((f) => f.name === 'Double-Sided Assembly');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(2);
+    });
+
+    it('no factor when isDoubleSided is false', () => {
+      const result = calculateAssemblyRisk({ isDoubleSided: false });
+      const factor = result.factors.find((f) => f.name === 'Double-Sided Assembly');
+      expect(factor).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Mounting type factor
+  // -------------------------------------------------------------------------
+
+  describe('mounting type', () => {
+    it('adds +4 risk for manual placement', () => {
+      const result = calculateAssemblyRisk({ mountingType: 'manual' });
+      const factor = result.factors.find((f) => f.name === 'Manual Placement');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(4);
+    });
+
+    it('adds +2 risk for mixed technology', () => {
+      const result = calculateAssemblyRisk({ mountingType: 'mixed' });
+      const factor = result.factors.find((f) => f.name === 'Mixed Technology');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(2);
+    });
+
+    it('adds +1 risk for through-hole', () => {
+      const result = calculateAssemblyRisk({ mountingType: 'tht' });
+      const factor = result.factors.find((f) => f.name === 'Through-Hole');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(1);
+    });
+
+    it('no factor for smt (standard)', () => {
+      const result = calculateAssemblyRisk({ mountingType: 'smt' });
+      const mountFactors = result.factors.filter((f) =>
+        ['Manual Placement', 'Mixed Technology', 'Through-Hole'].includes(f.name),
+      );
+      expect(mountFactors).toHaveLength(0);
+    });
+
+    it('no factor when mountingType is undefined', () => {
+      const result = calculateAssemblyRisk({});
+      const mountFactors = result.factors.filter((f) =>
+        ['Manual Placement', 'Mixed Technology', 'Through-Hole'].includes(f.name),
+      );
+      expect(mountFactors).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // ESD sensitivity factor
+  // -------------------------------------------------------------------------
+
+  describe('ESD sensitivity', () => {
+    it('adds +2 risk when esdSensitive is true', () => {
+      const result = calculateAssemblyRisk({ esdSensitive: true });
+      const factor = result.factors.find((f) => f.name === 'ESD Sensitivity');
+      expect(factor).toBeDefined();
+      expect(factor!.score).toBe(2);
+    });
+
+    it('no factor when esdSensitive is false', () => {
+      const result = calculateAssemblyRisk({ esdSensitive: false });
+      const factor = result.factors.find((f) => f.name === 'ESD Sensitivity');
+      expect(factor).toBeUndefined();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Combined scoring — realistic components
+  // -------------------------------------------------------------------------
+
+  describe('combined scoring for realistic components', () => {
+    it('ATmega328P in DIP-28 is low risk', () => {
+      const result = calculateAssemblyRisk({
+        package: 'DIP',
+        pinCount: 28,
+        pitch: 2.54,
+      });
+      expect(result.level).toBe('low');
+      expect(result.overall).toBeLessThan(40);
+    });
+
+    it('BGA-256 with fine pitch is critical risk', () => {
+      const result = calculateAssemblyRisk({
+        package: 'BGA',
+        pinCount: 256,
+        pitch: 0.4,
+        hasThermalPad: true,
+        esdSensitive: true,
+      });
+      // Base: (9*0.3 + 9*0.2 + 7*0.2) / 0.7 = 84 + modifiers: thermal(3) + esd(2) = 89
+      expect(result.level).toBe('critical');
+      expect(result.overall).toBeGreaterThanOrEqual(80);
+    });
+
+    it('WLCSP-500 with ultra-fine pitch and manual placement is critical risk', () => {
+      const result = calculateAssemblyRisk({
+        package: 'WLCSP',
+        pinCount: 500,
+        pitch: 0.3,
+        hasThermalPad: true,
+        isDoubleSided: true,
+        mountingType: 'manual',
+        esdSensitive: true,
+      });
+      expect(result.level).toBe('critical');
+      expect(result.overall).toBeGreaterThanOrEqual(80);
+    });
+
+    it('QFN-20 with thermal pad is medium-to-high risk', () => {
+      const result = calculateAssemblyRisk({
+        package: 'QFN',
+        pinCount: 20,
+        pitch: 0.5,
+        hasThermalPad: true,
+      });
+      expect(result.overall).toBeGreaterThanOrEqual(40);
+      expect(result.factors.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('0402 resistor is moderate risk', () => {
+      const result = calculateAssemblyRisk({
+        package: '0402',
+        pinCount: 2,
+      });
+      expect(result.overall).toBeGreaterThan(0);
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor!.score).toBe(6);
+    });
+
+    it('through-hole 1206 resistor is low risk', () => {
+      const result = calculateAssemblyRisk({
+        package: '1206',
+        pinCount: 2,
+        pitch: 3.2,
+      });
+      expect(result.level).toBe('low');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Level thresholds
+  // -------------------------------------------------------------------------
+
+  describe('level thresholds', () => {
+    it('score 39 is low', () => {
+      expect(getStructuredRiskLevel(39)).toBe('low');
+    });
+
+    it('score 40 is medium', () => {
+      expect(getStructuredRiskLevel(40)).toBe('medium');
+    });
+
+    it('score 59 is medium', () => {
+      expect(getStructuredRiskLevel(59)).toBe('medium');
+    });
+
+    it('score 60 is high', () => {
+      expect(getStructuredRiskLevel(60)).toBe('high');
+    });
+
+    it('score 79 is high', () => {
+      expect(getStructuredRiskLevel(79)).toBe('high');
+    });
+
+    it('score 80 is critical', () => {
+      expect(getStructuredRiskLevel(80)).toBe('critical');
+    });
+
+    it('score 100 is critical', () => {
+      expect(getStructuredRiskLevel(100)).toBe('critical');
+    });
+
+    it('score 0 is low', () => {
+      expect(getStructuredRiskLevel(0)).toBe('low');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Suggestions generation
+  // -------------------------------------------------------------------------
+
+  describe('suggestions', () => {
+    it('generates suggestions for high-risk BGA packages', () => {
+      const result = calculateAssemblyRisk({ package: 'BGA', pinCount: 200 });
+      expect(result.suggestions.length).toBeGreaterThan(0);
+      expect(result.suggestions.some((s) => s.includes('X-ray'))).toBe(true);
+    });
+
+    it('generates stencil suggestion for thermal pad', () => {
+      const result = calculateAssemblyRisk({ hasThermalPad: true });
+      expect(result.suggestions.some((s) => s.includes('stencil'))).toBe(true);
+    });
+
+    it('generates ESD suggestion for esdSensitive', () => {
+      const result = calculateAssemblyRisk({ esdSensitive: true });
+      expect(result.suggestions.some((s) => s.includes('ESD') || s.includes('wrist strap'))).toBe(true);
+    });
+
+    it('generates drag soldering suggestion for fine pitch', () => {
+      const result = calculateAssemblyRisk({ pitch: 0.5 });
+      expect(result.suggestions.some((s) => s.includes('drag soldering') || s.includes('flux'))).toBe(true);
+    });
+
+    it('generates double-sided suggestion', () => {
+      const result = calculateAssemblyRisk({ isDoubleSided: true });
+      expect(result.suggestions.some((s) => s.includes('reflow side') || s.includes('heavier'))).toBe(true);
+    });
+
+    it('generates manual placement suggestion', () => {
+      const result = calculateAssemblyRisk({ mountingType: 'manual' });
+      expect(result.suggestions.some((s) => s.includes('manual assembly'))).toBe(true);
+    });
+
+    it('generates no suggestions for zero-risk items', () => {
+      const result = calculateAssemblyRisk({});
+      expect(result.suggestions).toHaveLength(0);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Edge cases
+  // -------------------------------------------------------------------------
+
+  describe('edge cases', () => {
+    it('empty input returns zero score and low level', () => {
+      const result = calculateAssemblyRisk({});
+      expect(result.overall).toBe(0);
+      expect(result.level).toBe('low');
+      expect(result.factors).toHaveLength(0);
+      expect(result.suggestions).toHaveLength(0);
+    });
+
+    it('all fields undefined returns zero score', () => {
+      const input: BomItemRiskInput = {
+        package: undefined,
+        pinCount: undefined,
+        pitch: undefined,
+        hasThermalPad: undefined,
+        isDoubleSided: undefined,
+        mountingType: undefined,
+        esdSensitive: undefined,
+      };
+      const result = calculateAssemblyRisk(input);
+      expect(result.overall).toBe(0);
+      expect(result.level).toBe('low');
+    });
+
+    it('negative pin count returns no pin factor', () => {
+      const result = calculateAssemblyRisk({ pinCount: -5 });
+      const factor = result.factors.find((f) => f.name === 'Pin Count');
+      expect(factor).toBeUndefined();
+    });
+
+    it('negative pitch returns no pitch factor', () => {
+      const result = calculateAssemblyRisk({ pitch: -1 });
+      const factor = result.factors.find((f) => f.name === 'Fine Pitch');
+      expect(factor).toBeUndefined();
+    });
+
+    it('empty string package returns no package factor', () => {
+      const result = calculateAssemblyRisk({ package: '' });
+      const factor = result.factors.find((f) => f.name === 'Package Complexity');
+      expect(factor).toBeUndefined();
+    });
+
+    it('returns correct factor count with all inputs populated', () => {
+      const result = calculateAssemblyRisk({
+        package: 'BGA',
+        pinCount: 256,
+        pitch: 0.4,
+        hasThermalPad: true,
+        isDoubleSided: true,
+        mountingType: 'manual',
+        esdSensitive: true,
+      });
+      // All 7 factors should be present
+      expect(result.factors).toHaveLength(7);
+    });
+
+    it('overall score is between 0 and 100', () => {
+      const result = calculateAssemblyRisk({
+        package: 'WLCSP',
+        pinCount: 500,
+        pitch: 0.2,
+        hasThermalPad: true,
+        isDoubleSided: true,
+        mountingType: 'manual',
+        esdSensitive: true,
+      });
+      expect(result.overall).toBeGreaterThanOrEqual(0);
+      expect(result.overall).toBeLessThanOrEqual(100);
+    });
+  });
+});
