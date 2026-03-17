@@ -438,6 +438,124 @@ describe('aiAnalysisExecutor', () => {
     expect(mockStorage.getBomItems).not.toHaveBeenCalled();
     expect(mockStorage.getValidationIssues).not.toHaveBeenCalled();
   });
+
+  it('only fetches BOM data when scope is bom', async () => {
+    const ctx = createContext();
+    await aiAnalysisExecutor({ projectId: 1, scope: 'bom' }, ctx);
+
+    expect(mockStorage.getBomItems).toHaveBeenCalledWith(1);
+    expect(mockStorage.getNodes).not.toHaveBeenCalled();
+    expect(mockStorage.getEdges).not.toHaveBeenCalled();
+    expect(mockStorage.getValidationIssues).not.toHaveBeenCalled();
+  });
+
+  it('only fetches validation data when scope is validation', async () => {
+    const ctx = createContext();
+    await aiAnalysisExecutor({ projectId: 1, scope: 'validation' }, ctx);
+
+    expect(mockStorage.getValidationIssues).toHaveBeenCalledWith(1);
+    expect(mockStorage.getNodes).not.toHaveBeenCalled();
+    expect(mockStorage.getEdges).not.toHaveBeenCalled();
+    expect(mockStorage.getBomItems).not.toHaveBeenCalled();
+  });
+
+  it('handles non-string totalPrice by treating as 0', async () => {
+    mockStorage.getBomItems.mockResolvedValue([
+      { partNumber: 'R1', totalPrice: 42, quantity: 1 },
+      { partNumber: 'C1', totalPrice: null, quantity: 1 },
+      { partNumber: 'L1', totalPrice: undefined, quantity: 1 },
+    ]);
+
+    const ctx = createContext();
+    const result = await aiAnalysisExecutor({ projectId: 1, scope: 'bom' }, ctx) as Record<string, unknown>;
+
+    const bom = (result.analysis as Record<string, unknown>).bom as Record<string, unknown>;
+    expect(bom.totalCost).toBe(0);
+    expect(bom.itemCount).toBe(3);
+  });
+
+  it('handles NaN totalPrice gracefully', async () => {
+    mockStorage.getBomItems.mockResolvedValue([
+      { partNumber: 'R1', totalPrice: 'not-a-number', quantity: 1 },
+      { partNumber: 'C1', totalPrice: '5.00', quantity: 1 },
+    ]);
+
+    const ctx = createContext();
+    const result = await aiAnalysisExecutor({ projectId: 1, scope: 'bom' }, ctx) as Record<string, unknown>;
+
+    const bom = (result.analysis as Record<string, unknown>).bom as Record<string, unknown>;
+    expect(bom.totalCost).toBe(5);
+  });
+
+  it('counts missing parts with null partNumber', async () => {
+    mockStorage.getBomItems.mockResolvedValue([
+      { partNumber: null, totalPrice: '0', quantity: 1 },
+      { partNumber: 'ATmega328P', totalPrice: '2.50', quantity: 1 },
+    ]);
+
+    const ctx = createContext();
+    const result = await aiAnalysisExecutor({ projectId: 1, scope: 'bom' }, ctx) as Record<string, unknown>;
+
+    const bom = (result.analysis as Record<string, unknown>).bom as Record<string, unknown>;
+    expect(bom.missingParts).toBe(1);
+  });
+
+  it('extracts unique node types in architecture analysis', async () => {
+    mockStorage.getNodes.mockResolvedValue([
+      { nodeId: 'n1', label: 'MCU1', nodeType: 'mcu', positionX: 0, positionY: 0 },
+      { nodeId: 'n2', label: 'MCU2', nodeType: 'mcu', positionX: 100, positionY: 0 },
+      { nodeId: 'n3', label: 'LED', nodeType: 'led', positionX: 200, positionY: 0 },
+    ]);
+    mockStorage.getEdges.mockResolvedValue([]);
+
+    const ctx = createContext();
+    const result = await aiAnalysisExecutor({ projectId: 1, scope: 'architecture' }, ctx) as Record<string, unknown>;
+
+    const arch = (result.analysis as Record<string, unknown>).architecture as Record<string, unknown>;
+    const types = arch.nodeTypes as string[];
+    expect(types).toHaveLength(2);
+    expect(types).toContain('mcu');
+    expect(types).toContain('led');
+  });
+
+  it('includes completedAt ISO timestamp in result', async () => {
+    const ctx = createContext();
+    const result = await aiAnalysisExecutor({ projectId: 1, scope: 'bom' }, ctx) as Record<string, unknown>;
+
+    expect(result.completedAt).toBeDefined();
+    expect(typeof result.completedAt).toBe('string');
+    // Should be a valid ISO date
+    expect(new Date(result.completedAt as string).toISOString()).toBe(result.completedAt);
+  });
+
+  it('handles empty nodes and edges', async () => {
+    mockStorage.getNodes.mockResolvedValue([]);
+    mockStorage.getEdges.mockResolvedValue([]);
+
+    const ctx = createContext();
+    const result = await aiAnalysisExecutor({ projectId: 1, scope: 'architecture' }, ctx) as Record<string, unknown>;
+
+    const arch = (result.analysis as Record<string, unknown>).architecture as Record<string, unknown>;
+    expect(arch.nodeCount).toBe(0);
+    expect(arch.edgeCount).toBe(0);
+    expect(arch.disconnectedNodes).toEqual([]);
+    expect(arch.nodeTypes).toEqual([]);
+  });
+
+  it('counts info-severity validation issues as zero when none exist', async () => {
+    mockStorage.getValidationIssues.mockResolvedValue([
+      { severity: 'error', message: 'err1' },
+    ]);
+
+    const ctx = createContext();
+    const result = await aiAnalysisExecutor({ projectId: 1, scope: 'validation' }, ctx) as Record<string, unknown>;
+
+    const val = (result.analysis as Record<string, unknown>).validation as Record<string, unknown>;
+    const bySev = val.bySeverity as Record<string, number>;
+    expect(bySev.info).toBe(0);
+    expect(bySev.error).toBe(1);
+    expect(bySev.warning).toBe(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
