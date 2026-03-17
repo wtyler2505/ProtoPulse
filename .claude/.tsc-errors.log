@@ -472,3 +472,7 @@ client/src/pages/ProjectWorkspace.tsx(609,7): error TS2353: Object literal may o
 
 
 9:24:08 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:27:01 PM - File change detected. Starting incremental compilation...
+
+
+9:27:13 PM - Found 0 errors. Watching for file changes.
