@@ -69,6 +69,31 @@ export interface FocusRingConfig {
 // Constants
 // ---------------------------------------------------------------------------
 
+/** Default focus ring configuration matching ProtoPulse's neon cyan theme. */
+export const DEFAULT_FOCUS_RING_CONFIG: Readonly<FocusRingConfig> = {
+  color: '#00F0FF',
+  width: 2,
+  offset: 2,
+  style: 'solid',
+} as const;
+
+/**
+ * Generate a CSS string for consistent `:focus-visible` styles across the app.
+ * Accepts an optional partial config; missing fields fall back to defaults.
+ */
+export function generateFocusRingCSS(config: Partial<FocusRingConfig> = {}): string {
+  const merged: FocusRingConfig = { ...DEFAULT_FOCUS_RING_CONFIG, ...config };
+  return [
+    `:focus-visible {`,
+    `  outline: ${merged.width}px ${merged.style} ${merged.color};`,
+    `  outline-offset: ${merged.offset}px;`,
+    `}`,
+  ].join('\n');
+}
+
+/** Pre-built CSS string using the default ProtoPulse focus ring config. */
+export const FOCUS_RING_CSS: string = generateFocusRingCSS();
+
 /** Interactive element selectors that MUST have visible focus indicators. */
 const INTERACTIVE_SELECTORS = [
   'a[href]',
