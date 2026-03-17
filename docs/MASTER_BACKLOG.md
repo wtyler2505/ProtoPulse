@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 113 | `BL-0265`, `BL-0343`, `BL-0345`, `BL-0344`, `BL-0340` | CI coverage gates, mobile review mode, gesture shortcuts, bottom nav, tablet layout — CI + mobile + responsive. |
 | 112 | `BL-0149`, `BL-0328`, `BL-0264`, `BL-0341`, `BL-0342` | Multi-angle photo, a11y audit dashboard, deployment profiles, touch-safe controls, mobile table overflow — accessibility + mobile + DevOps. |
 | 111 | `BL-0320`, `BL-0321`, `BL-0326`, `BL-0301`, `BL-0188` | Keyboard resize handles, focus ring audit, screen reader canvas labels, first PCB tutorial, team templates — accessibility + onboarding. |
 | 110 | `BL-0148`, `BL-0528`, `BL-0474`, `BL-0314`, `BL-0329` | Web Serial integration tests, PCB order tracking, AVL enforcement, progress milestones, font scaling — testing depth + procurement + onboarding + accessibility. |
@@ -418,11 +419,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 47 | 231 | 83% complete — Waves 61-112 |
+| P2 | 42 | 236 | 85% complete — Waves 61-113 |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **160** | **341** | **501 items tracked** |
+| **Total** | **155** | **346** | **501 items tracked** |
 
-*Snapshot updated: Wave 112 (2026-03-17)*
+*Snapshot updated: Wave 113 (2026-03-17)*
 
 ---
 
@@ -961,7 +962,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0262 | Error taxonomy with stable error codes | DONE (verified Wave 106) | C3 | MF-173 |
 | BL-0263 | Data retention policies and cleanup tooling | DONE (verified Wave 106) | C3 | MF-174 |
 | BL-0264 | Deployment profiles (dev/staging/prod) with config validation | DONE (Wave 112) | C3 | MF-179 |
-| BL-0265 | CI coverage gates and test quality thresholds | OPEN | C3 | MF-180 |
+| BL-0265 | CI coverage gates and test quality thresholds | DONE (Wave 113) | C3 | MF-180 |
 | BL-0266 | CSP policy parity across dev/prod — always-on CSP, `reportOnly: isDev`, wasm-unsafe-eval, dev connectSrc wildcards | DONE | C3 | Wave 61 |
 | BL-0267 | Health/readiness checks tied to real dependencies — Already implemented: `/api/health` checks PostgreSQL connectivity, `/api/ready` checks DB + latency + cache + AI provider keys. Returns 503 if DB down. | DONE (verified Wave 60) | C3 | MF-172 |
 | BL-0268 | Auth timing-safe compare + throttling for admin ops — Already implemented: `safeCompareAdminKey()` uses SHA-256 + timingSafeEqual. `adminRateLimiter` (5 req/60s) on admin endpoints. | DONE (verified Wave 60) | C3 | MF-168 |
@@ -1075,12 +1076,12 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0340 | Tablet layout for side panels/inspectors | OPEN | C3 | UX-091 |
+| BL-0340 | Tablet layout for side panels/inspectors | DONE (Wave 113) | C3 | UX-091 |
 | BL-0341 | Touch-safe controls in compact mode | DONE (Wave 112) | C2 | UX-092 |
 | BL-0342 | Mobile overflow handling for long tables | DONE (Wave 112) | C2 | UX-093 |
-| BL-0343 | Mobile "review mode" for comments/checks | OPEN | C2 | UX-094 |
-| BL-0344 | Bottom nav for core mobile actions | OPEN | C3 | UX-095 |
-| BL-0345 | Gesture shortcuts (pinch zoom, two-finger pan) | OPEN | C3 | UX-096 |
+| BL-0343 | Mobile "review mode" for comments/checks | DONE (Wave 113) | C2 | UX-094 |
+| BL-0344 | Bottom nav for core mobile actions | DONE (Wave 113) | C3 | UX-095 |
+| BL-0345 | Gesture shortcuts (pinch zoom, two-finger pan) | DONE (Wave 113) | C3 | UX-096 |
 | BL-0346 | Mobile capture workflows (photo→part, notes→BOM) | OPEN | C3 | UX-097 |
 | BL-0347 | Responsive layout presets by device type | OPEN | C3 | UX-100 |
 
