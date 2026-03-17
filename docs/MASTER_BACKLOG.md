@@ -1177,7 +1177,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0422 | Smart library install on compile error | OPEN | C3 | ARDX-066 |
 | BL-0423 | Firmware version linked to design snapshot | OPEN | C4 | ARDX-056 |
 | BL-0424 | One-click rollback to known-good sketch | OPEN | C3 | ARDX-057 |
-| BL-0425 | Secrets scan before upload (API keys in sketch) | OPEN | C3 | ARDX-096 |
+| BL-0425 | Secrets scan before upload (API keys in sketch) | DONE (Wave 118) | C3 | ARDX-096 |
 | BL-0426 | Hard block upload if target board mismatch | OPEN | C3 | ARDX-097 |
 
 ### Innovation Ideas
