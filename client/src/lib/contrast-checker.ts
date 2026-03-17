@@ -189,6 +189,83 @@ export function meetsWcagAAA(ratio: number): boolean {
 }
 
 // ---------------------------------------------------------------------------
+// Colour suggestion — lighten or darken to meet a target contrast ratio
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert RGB (0–255 per channel) back to a hex string.
+ */
+function rgbToHex(r: number, g: number, b: number): string {
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  const toHex = (v: number) => clamp(v).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/**
+ * Lighten `fgHex` (a hex colour) until the contrast ratio against `bgHex`
+ * meets or exceeds `targetRatio`. Returns the adjusted hex colour.
+ *
+ * Works by linearly interpolating each channel towards 255 (white) in small
+ * steps. If the target ratio cannot be reached (e.g. bg is also very light),
+ * returns pure white.
+ */
+export function suggestLighterColor(fgHex: string, bgHex: string, targetRatio: number): string {
+  const fg = parseHex(fgHex);
+  const bg = parseHex(bgHex);
+  const steps = 256;
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const r = fg.r + (255 - fg.r) * t;
+    const g = fg.g + (255 - fg.g) * t;
+    const b = fg.b + (255 - fg.b) * t;
+    const candidate: RgbColor = {
+      r: Math.round(r),
+      g: Math.round(g),
+      b: Math.round(b),
+    };
+    const ratio = checkContrast(candidate, bg);
+    if (ratio >= targetRatio) {
+      return rgbToHex(candidate.r, candidate.g, candidate.b);
+    }
+  }
+
+  return '#ffffff';
+}
+
+/**
+ * Darken `fgHex` (a hex colour) until the contrast ratio against `bgHex`
+ * meets or exceeds `targetRatio`. Returns the adjusted hex colour.
+ *
+ * Works by linearly interpolating each channel towards 0 (black) in small
+ * steps. If the target ratio cannot be reached (e.g. bg is also very dark),
+ * returns pure black.
+ */
+export function suggestDarkerColor(fgHex: string, bgHex: string, targetRatio: number): string {
+  const fg = parseHex(fgHex);
+  const bg = parseHex(bgHex);
+  const steps = 256;
+
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const r = fg.r * (1 - t);
+    const g = fg.g * (1 - t);
+    const b = fg.b * (1 - t);
+    const candidate: RgbColor = {
+      r: Math.round(r),
+      g: Math.round(g),
+      b: Math.round(b),
+    };
+    const ratio = checkContrast(candidate, bg);
+    if (ratio >= targetRatio) {
+      return rgbToHex(candidate.r, candidate.g, candidate.b);
+    }
+  }
+
+  return '#000000';
+}
+
+// ---------------------------------------------------------------------------
 // Contrast fixes — CSS variable overrides for WCAG AA compliance
 // ---------------------------------------------------------------------------
 

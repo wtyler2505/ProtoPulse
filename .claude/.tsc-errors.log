@@ -2,3 +2,47 @@
 
 
 7:30:34 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:37:54 PM - File change detected. Starting incremental compilation...
+
+
+7:38:10 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:38:16 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(2,15): error TS2305: Module '"../assembly-grouping"' has no exported member 'BomItemLike'.
+client/src/lib/__tests__/assembly-grouping.test.ts(2,28): error TS2305: Module '"../assembly-grouping"' has no exported member 'AssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(2,44): error TS2305: Module '"../assembly-grouping"' has no exported member 'AssemblySummary'.
+client/src/lib/__tests__/assembly-grouping.test.ts(4,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'classifyAssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(5,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'groupByAssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(6,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblySummary'.
+client/src/lib/__tests__/assembly-grouping.test.ts(7,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblyMethodLabel'.
+client/src/lib/__tests__/assembly-grouping.test.ts(8,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblyMethodColor'.
+client/src/lib/__tests__/assembly-grouping.test.ts(210,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(211,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(212,38): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(227,31): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(238,34): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(238,39): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(249,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(250,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+
+7:38:28 PM - Found 16 errors. Watching for file changes.
+[2J[3J[H7:38:29 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(2,15): error TS2305: Module '"../assembly-grouping"' has no exported member 'BomItemLike'.
+client/src/lib/__tests__/assembly-grouping.test.ts(2,28): error TS2305: Module '"../assembly-grouping"' has no exported member 'AssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(2,44): error TS2305: Module '"../assembly-grouping"' has no exported member 'AssemblySummary'.
+client/src/lib/__tests__/assembly-grouping.test.ts(4,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'classifyAssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(5,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'groupByAssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(6,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblySummary'.
+client/src/lib/__tests__/assembly-grouping.test.ts(7,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblyMethodLabel'.
+client/src/lib/__tests__/assembly-grouping.test.ts(8,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblyMethodColor'.
+client/src/lib/__tests__/assembly-grouping.test.ts(210,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(211,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(212,38): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(227,31): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(238,34): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(238,39): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(249,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(250,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+
+7:38:35 PM - Found 16 errors. Watching for file changes.

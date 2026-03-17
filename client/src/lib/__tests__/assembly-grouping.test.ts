@@ -1,466 +1,361 @@
 import { describe, it, expect } from 'vitest';
+import type { BomItemLike, AssemblyMethod, AssemblySummary } from '../assembly-grouping';
 import {
-  classifyItem,
-  groupBomByAssembly,
-  getOrderedGroups,
-  GROUP_LABELS,
-  GROUP_COLORS,
-  GROUP_DESCRIPTIONS,
+  classifyAssemblyMethod,
+  groupByAssemblyMethod,
+  getAssemblySummary,
+  getAssemblyMethodLabel,
+  getAssemblyMethodColor,
 } from '../assembly-grouping';
-import type { AssemblyGroup } from '../assembly-grouping';
-import type { BomItem } from '@/lib/project-context';
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// ── helpers ──────────────────────────────────────────────────────────
 
-function makeBomItem(overrides: Partial<BomItem> = {}): BomItem {
-  return {
-    id: '1',
-    partNumber: 'TEST-001',
-    manufacturer: 'TestCo',
-    description: 'Test component',
-    quantity: 1,
-    unitPrice: 1,
-    totalPrice: 1,
-    supplier: 'Digi-Key',
-    stock: 10,
-    status: 'In Stock',
-    ...overrides,
-  } as BomItem;
+function item(overrides: Partial<BomItemLike> = {}): BomItemLike {
+  return { id: 1, partNumber: 'X', ...overrides };
 }
 
-// ---------------------------------------------------------------------------
-// classifyItem — SMT detection
-// ---------------------------------------------------------------------------
+// ── classifyAssemblyMethod ───────────────────────────────────────────
 
-describe('classifyItem', () => {
-  describe('SMT classification', () => {
-    it('detects chip packages (0402)', () => {
-      const result = classifyItem(makeBomItem({ description: '100nF 0402 MLCC' }));
-      expect(result.group).toBe('smt');
-      expect(result.confidence).toBe(1.0);
-      expect(result.matchedRule).toBe('chip_package');
+describe('classifyAssemblyMethod', () => {
+  // ── mountingType priority ──
+  describe('mountingType takes priority', () => {
+    it('returns smt when mountingType is "smd"', () => {
+      expect(classifyAssemblyMethod(item({ mountingType: 'smd', package: 'DIP-8' }))).toBe('smt');
     });
 
-    it('detects chip packages (0603)', () => {
-      const result = classifyItem(makeBomItem({ description: '10K resistor 0603' }));
-      expect(result.group).toBe('smt');
-      expect(result.matchedRule).toBe('chip_package');
+    it('returns smt when mountingType is "SMD" (case-insensitive)', () => {
+      expect(classifyAssemblyMethod(item({ mountingType: 'SMD' }))).toBe('smt');
     });
 
-    it('detects chip packages (0805)', () => {
-      const result = classifyItem(makeBomItem({ description: '4.7uF 0805 ceramic' }));
-      expect(result.group).toBe('smt');
+    it('returns tht when mountingType is "tht"', () => {
+      expect(classifyAssemblyMethod(item({ mountingType: 'tht', package: 'QFP-44' }))).toBe('tht');
     });
 
-    it('detects chip packages (1206)', () => {
-      const result = classifyItem(makeBomItem({ description: '100uF 1206 tantalum' }));
-      expect(result.group).toBe('smt');
-    });
-
-    it('detects explicit SMD keyword', () => {
-      const result = classifyItem(makeBomItem({ description: 'LED SMD Red 3mm' }));
-      expect(result.group).toBe('smt');
-      expect(result.matchedRule).toBe('smt_explicit');
-    });
-
-    it('detects explicit SMT keyword', () => {
-      const result = classifyItem(makeBomItem({ description: 'SMT capacitor 10nF' }));
-      expect(result.group).toBe('smt');
-    });
-
-    it('detects surface mount keyword', () => {
-      const result = classifyItem(makeBomItem({ description: 'Surface Mount inductor 22uH' }));
-      expect(result.group).toBe('smt');
-    });
-
-    it('detects QFP packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'STM32F4 LQFP-48' }));
-      expect(result.group).toBe('smt');
-      expect(result.matchedRule).toBe('qfp_bga');
-    });
-
-    it('detects QFN packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'ATmega328P QFN-32' }));
-      expect(result.group).toBe('smt');
-    });
-
-    it('detects BGA packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'FPGA BGA-256' }));
-      expect(result.group).toBe('smt');
-      expect(result.matchedRule).toBe('qfp_bga');
-    });
-
-    it('detects SOIC packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'Op-amp SOIC-8' }));
-      expect(result.group).toBe('smt');
-      expect(result.matchedRule).toBe('soic_sop');
-    });
-
-    it('detects TSSOP packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'Shift register TSSOP-16' }));
-      expect(result.group).toBe('smt');
-    });
-
-    it('detects SOT-23 packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'MOSFET SOT-23' }));
-      expect(result.group).toBe('smt');
-      expect(result.matchedRule).toBe('sot');
-    });
-
-    it('detects SOT-223 packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'LDO regulator SOT-223' }));
-      expect(result.group).toBe('smt');
-    });
-
-    it('detects D-PAK packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'Voltage regulator D-PAK' }));
-      expect(result.group).toBe('smt');
+    it('returns tht when mountingType is "THT" (case-insensitive)', () => {
+      expect(classifyAssemblyMethod(item({ mountingType: 'THT' }))).toBe('tht');
     });
   });
 
-  // ---------------------------------------------------------------------------
-  // classifyItem — THT detection
-  // ---------------------------------------------------------------------------
-
-  describe('THT classification', () => {
-    it('detects DIP packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'ATmega328P DIP-28' }));
-      expect(result.group).toBe('tht');
-      expect(result.matchedRule).toBe('dip_sip');
-    });
-
-    it('detects SIP packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'Resistor network SIP-8' }));
-      expect(result.group).toBe('tht');
-    });
-
-    it('detects TO-92 packages', () => {
-      const result = classifyItem(makeBomItem({ description: '2N2222 NPN TO-92' }));
-      expect(result.group).toBe('tht');
-      expect(result.matchedRule).toBe('to_package');
-    });
-
-    it('detects TO-220 packages', () => {
-      const result = classifyItem(makeBomItem({ description: 'LM7805 TO-220' }));
-      expect(result.group).toBe('tht');
-    });
-
-    it('detects explicit through-hole keyword', () => {
-      const result = classifyItem(makeBomItem({ description: 'Through-hole resistor 1K' }));
-      expect(result.group).toBe('tht');
-      expect(result.confidence).toBe(1.0);
-      expect(result.matchedRule).toBe('tht_explicit');
-    });
-
-    it('detects THT keyword', () => {
-      const result = classifyItem(makeBomItem({ description: 'THT LED 5mm green' }));
-      expect(result.group).toBe('tht');
-    });
-
-    it('detects radial package', () => {
-      const result = classifyItem(makeBomItem({ description: '100uF 16V radial electrolytic' }));
-      expect(result.group).toBe('tht');
-      expect(result.matchedRule).toBe('radial_axial');
-    });
-
-    it('detects axial package', () => {
-      const result = classifyItem(makeBomItem({ description: '1N4148 axial diode' }));
-      expect(result.group).toBe('tht');
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // classifyItem — Manual detection
-  // ---------------------------------------------------------------------------
-
-  describe('Manual classification', () => {
-    it('detects connectors', () => {
-      const result = classifyItem(makeBomItem({ description: '2-pin JST connector' }));
-      expect(result.group).toBe('manual');
-      expect(result.matchedRule).toBe('connector');
-    });
-
-    it('detects Molex connectors', () => {
-      const result = classifyItem(makeBomItem({ description: 'Molex 4-pin power' }));
-      expect(result.group).toBe('manual');
-    });
-
-    it('detects headers', () => {
-      const result = classifyItem(makeBomItem({ description: 'Male header 2x20 2.54mm' }));
-      expect(result.group).toBe('manual');
-    });
-
-    it('detects USB connectors', () => {
-      const result = classifyItem(makeBomItem({ description: 'USB-C receptacle' }));
-      expect(result.group).toBe('manual');
-    });
-
-    it('detects heatsinks', () => {
-      const result = classifyItem(makeBomItem({ description: 'Aluminum heatsink TO-220' }));
-      expect(result.group).toBe('manual');
-      expect(result.matchedRule).toBe('mechanical');
-    });
-
-    it('detects standoffs', () => {
-      const result = classifyItem(makeBomItem({ description: 'M3 nylon standoff 10mm' }));
-      expect(result.group).toBe('manual');
-    });
-
-    it('detects switches', () => {
-      const result = classifyItem(makeBomItem({ description: 'Tactile switch 6x6mm' }));
-      expect(result.group).toBe('manual');
-      expect(result.matchedRule).toBe('switch_misc');
-    });
-
-    it('detects potentiometers', () => {
-      const result = classifyItem(makeBomItem({ description: '10K potentiometer linear' }));
-      expect(result.group).toBe('manual');
-    });
-
-    it('detects relays', () => {
-      const result = classifyItem(makeBomItem({ description: '5V SPDT relay' }));
-      expect(result.group).toBe('manual');
-    });
-
-    it('detects battery holders', () => {
-      const result = classifyItem(makeBomItem({ description: 'CR2032 battery holder' }));
-      expect(result.group).toBe('manual');
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // classifyItem — Unclassified
-  // ---------------------------------------------------------------------------
-
-  describe('Unclassified items', () => {
-    it('returns unclassified for generic descriptions', () => {
-      const result = classifyItem(makeBomItem({ description: 'Custom part XYZ', partNumber: 'CUSTOM-001' }));
-      expect(result.group).toBe('unclassified');
-      expect(result.confidence).toBe(0);
-      expect(result.matchedRule).toBeNull();
-    });
-
-    it('returns unclassified for empty description', () => {
-      const result = classifyItem(makeBomItem({ description: '' }));
-      expect(result.group).toBe('unclassified');
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // classifyItem — DB category override
-  // ---------------------------------------------------------------------------
-
-  describe('DB category override', () => {
-    it('uses stored assemblyCategory=smt', () => {
-      const result = classifyItem(makeBomItem({ assemblyCategory: 'smt', description: 'Generic part' }));
-      expect(result.group).toBe('smt');
-      expect(result.confidence).toBe(1.0);
-      expect(result.matchedRule).toBe('db_category');
-    });
-
-    it('maps stored through_hole to tht', () => {
-      const result = classifyItem(makeBomItem({ assemblyCategory: 'through_hole' }));
-      expect(result.group).toBe('tht');
-      expect(result.matchedRule).toBe('db_category');
-    });
-
-    it('maps stored hand_solder to manual', () => {
-      const result = classifyItem(makeBomItem({ assemblyCategory: 'hand_solder' }));
-      expect(result.group).toBe('manual');
-    });
-
-    it('maps stored mechanical to manual', () => {
-      const result = classifyItem(makeBomItem({ assemblyCategory: 'mechanical' }));
-      expect(result.group).toBe('manual');
-    });
-
-    it('falls back to pattern matching for unknown stored category', () => {
-      // Use null assemblyCategory + an SMT description to test pattern fallback
-      const result = classifyItem(makeBomItem({ assemblyCategory: null, description: '0603 resistor' }));
-      expect(result.group).toBe('smt');
-      expect(result.matchedRule).toBe('chip_package');
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // classifyItem — part number patterns
-  // ---------------------------------------------------------------------------
-
-  describe('Part number matching', () => {
-    it('classifies from part number when description is vague', () => {
-      const result = classifyItem(makeBomItem({ description: 'Capacitor', partNumber: 'GRM155R71C104KA88 0402' }));
-      expect(result.group).toBe('smt');
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// groupBomByAssembly
-// ---------------------------------------------------------------------------
-
-describe('groupBomByAssembly', () => {
-  it('returns empty groups for empty BOM', () => {
-    const result = groupBomByAssembly([]);
-    expect(result.totalItems).toBe(0);
-    expect(result.totalCost).toBe(0);
-    expect(result.classificationRate).toBe(1);
-    expect(result.groups.smt.itemCount).toBe(0);
-    expect(result.groups.tht.itemCount).toBe(0);
-    expect(result.groups.manual.itemCount).toBe(0);
-    expect(result.groups.unclassified.itemCount).toBe(0);
-  });
-
-  it('groups a mixed BOM correctly', () => {
-    const items = [
-      makeBomItem({ id: '1', description: '10K 0402 resistor', quantity: 10, totalPrice: 1 }),
-      makeBomItem({ id: '2', description: '100nF 0603 capacitor', quantity: 5, totalPrice: 0.5 }),
-      makeBomItem({ id: '3', description: 'ATmega328P DIP-28', quantity: 1, totalPrice: 3 }),
-      makeBomItem({ id: '4', description: 'JST connector 2-pin', quantity: 2, totalPrice: 0.8 }),
-      makeBomItem({ id: '5', description: 'Custom widget', quantity: 1, totalPrice: 5 }),
+  // ── SMT packages ──
+  describe('SMT package patterns', () => {
+    const smtPackages = [
+      'QFP-44',
+      'LQFP-48',
+      'QFN-32',
+      'VQFN-20',
+      'SOIC-8',
+      'SOP-16',
+      'SOT-23',
+      'SOT-223',
+      'BGA-256',
+      'TSSOP-20',
+      'MSOP-8',
+      'DFN-8',
+      '0201',
+      '0402',
+      '0603',
+      '0805',
+      '1206',
+      '1210',
+      '2512',
     ];
 
-    const result = groupBomByAssembly(items);
+    for (const pkg of smtPackages) {
+      it(`classifies "${pkg}" as smt`, () => {
+        expect(classifyAssemblyMethod(item({ package: pkg }))).toBe('smt');
+      });
+    }
 
-    expect(result.totalItems).toBe(5);
-    expect(result.groups.smt.itemCount).toBe(2);
-    expect(result.groups.smt.totalQuantity).toBe(15);
-    expect(result.groups.smt.totalCost).toBeCloseTo(1.5);
+    it('classifies "chip" package as smt', () => {
+      expect(classifyAssemblyMethod(item({ package: 'chip' }))).toBe('smt');
+    });
 
-    expect(result.groups.tht.itemCount).toBe(1);
-    expect(result.groups.tht.totalQuantity).toBe(1);
-    expect(result.groups.tht.totalCost).toBeCloseTo(3.0);
-
-    expect(result.groups.manual.itemCount).toBe(1);
-    expect(result.groups.manual.totalQuantity).toBe(2);
-    expect(result.groups.manual.totalCost).toBeCloseTo(0.8);
-
-    expect(result.groups.unclassified.itemCount).toBe(1);
-    expect(result.groups.unclassified.totalCost).toBeCloseTo(5.0);
+    it('classifies mixed-case "Soic-16" as smt', () => {
+      expect(classifyAssemblyMethod(item({ package: 'Soic-16' }))).toBe('smt');
+    });
   });
 
-  it('calculates correct classification rate', () => {
-    const items = [
-      makeBomItem({ id: '1', description: '0402 resistor' }),
-      makeBomItem({ id: '2', description: 'DIP-8 IC' }),
-      makeBomItem({ id: '3', description: 'Connector header' }),
-      makeBomItem({ id: '4', description: 'Mystery part' }),
+  // ── THT packages ──
+  describe('THT package patterns', () => {
+    const thtPackages = [
+      'DIP-8',
+      'PDIP-14',
+      'SIP-3',
+      'TO-220',
+      'TO-92',
+      'TO-3',
+      'TO-247',
     ];
 
-    const result = groupBomByAssembly(items);
-    expect(result.classificationRate).toBeCloseTo(0.75);
+    for (const pkg of thtPackages) {
+      it(`classifies "${pkg}" as tht`, () => {
+        expect(classifyAssemblyMethod(item({ package: pkg }))).toBe('tht');
+      });
+    }
+
+    it('classifies "Axial" as tht', () => {
+      expect(classifyAssemblyMethod(item({ package: 'Axial' }))).toBe('tht');
+    });
+
+    it('classifies "radial" as tht', () => {
+      expect(classifyAssemblyMethod(item({ package: 'radial' }))).toBe('tht');
+    });
   });
 
-  it('handles all items classified', () => {
-    const items = [
-      makeBomItem({ id: '1', description: '0402 resistor' }),
-      makeBomItem({ id: '2', description: 'TO-220 regulator' }),
+  // ── Manual packages ──
+  describe('manual assembly package patterns', () => {
+    const manualPackages = [
+      'header 2x5',
+      'JST-XH-2',
+      'Molex-KK-4',
+      'connector-DB9',
+      'switch-SPDT',
+      'potentiometer-10K',
+      'pot-1K',
+      'heatsink-TO220',
+      'terminal-block-2',
+      'barrel-jack',
+      'socket-DIP-28',
     ];
 
-    const result = groupBomByAssembly(items);
-    expect(result.classificationRate).toBe(1.0);
-  });
-
-  it('accumulates totalCost correctly', () => {
-    const items = [
-      makeBomItem({ id: '1', description: '0402 cap', totalPrice: 2.5 }),
-      makeBomItem({ id: '2', description: '0603 res', totalPrice: 1.25 }),
-      makeBomItem({ id: '3', description: 'DIP IC', totalPrice: 4 }),
-    ];
-
-    const result = groupBomByAssembly(items);
-    expect(result.totalCost).toBeCloseTo(7.75);
-  });
-
-  it('stores items in the correct group', () => {
-    const items = [
-      makeBomItem({ id: '10', description: 'SOIC-8 op-amp' }),
-      makeBomItem({ id: '20', description: 'SOIC-16 driver' }),
-    ];
-
-    const result = groupBomByAssembly(items);
-    expect(result.groups.smt.items).toHaveLength(2);
-    expect(result.groups.smt.items[0].item.id).toBe('10');
-    expect(result.groups.smt.items[1].item.id).toBe('20');
-  });
-
-  it('preserves group labels', () => {
-    const result = groupBomByAssembly([]);
-    expect(result.groups.smt.label).toBe('SMT (Surface Mount)');
-    expect(result.groups.tht.label).toBe('THT (Through-Hole)');
-    expect(result.groups.manual.label).toBe('Manual Assembly');
-    expect(result.groups.unclassified.label).toBe('Unclassified');
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getOrderedGroups
-// ---------------------------------------------------------------------------
-
-describe('getOrderedGroups', () => {
-  it('returns only non-empty groups', () => {
-    const items = [
-      makeBomItem({ id: '1', description: '0402 resistor' }),
-      makeBomItem({ id: '2', description: 'DIP-28 MCU' }),
-    ];
-
-    const result = groupBomByAssembly(items);
-    const ordered = getOrderedGroups(result);
-
-    expect(ordered).toHaveLength(2);
-    expect(ordered[0].group).toBe('smt');
-    expect(ordered[1].group).toBe('tht');
-  });
-
-  it('returns groups in display order: smt, tht, manual, unclassified', () => {
-    const items = [
-      makeBomItem({ id: '1', description: 'Mystery part' }),
-      makeBomItem({ id: '2', description: 'JST connector' }),
-      makeBomItem({ id: '3', description: 'DIP-8 chip' }),
-      makeBomItem({ id: '4', description: '0603 cap' }),
-    ];
-
-    const result = groupBomByAssembly(items);
-    const ordered = getOrderedGroups(result);
-
-    expect(ordered).toHaveLength(4);
-    expect(ordered[0].group).toBe('smt');
-    expect(ordered[1].group).toBe('tht');
-    expect(ordered[2].group).toBe('manual');
-    expect(ordered[3].group).toBe('unclassified');
-  });
-
-  it('returns empty array when all groups are empty', () => {
-    const result = groupBomByAssembly([]);
-    const ordered = getOrderedGroups(result);
-    expect(ordered).toHaveLength(0);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-describe('constants', () => {
-  it('GROUP_LABELS has all 4 groups', () => {
-    expect(Object.keys(GROUP_LABELS)).toHaveLength(4);
-    expect(GROUP_LABELS.smt).toBeDefined();
-    expect(GROUP_LABELS.tht).toBeDefined();
-    expect(GROUP_LABELS.manual).toBeDefined();
-    expect(GROUP_LABELS.unclassified).toBeDefined();
-  });
-
-  it('GROUP_COLORS has all 4 groups with text/bg/border', () => {
-    const groups: AssemblyGroup[] = ['smt', 'tht', 'manual', 'unclassified'];
-    for (const g of groups) {
-      expect(GROUP_COLORS[g].text).toBeDefined();
-      expect(GROUP_COLORS[g].bg).toBeDefined();
-      expect(GROUP_COLORS[g].border).toBeDefined();
+    for (const pkg of manualPackages) {
+      it(`classifies "${pkg}" as manual`, () => {
+        expect(classifyAssemblyMethod(item({ package: pkg }))).toBe('manual');
+      });
     }
   });
 
-  it('GROUP_DESCRIPTIONS has all 4 groups', () => {
-    expect(Object.keys(GROUP_DESCRIPTIONS)).toHaveLength(4);
+  // ── description fallback ──
+  describe('description fallback', () => {
+    it('uses description when package is missing', () => {
+      expect(classifyAssemblyMethod(item({ description: '100nF ceramic capacitor, 0805 SMD' }))).toBe('smt');
+    });
+
+    it('uses description when package is empty', () => {
+      expect(classifyAssemblyMethod(item({ package: '', description: 'DIP-8 op-amp' }))).toBe('tht');
+    });
+
+    it('detects manual from description', () => {
+      expect(classifyAssemblyMethod(item({ description: '2-pin screw terminal connector' }))).toBe('manual');
+    });
+
+    it('detects SMT from "surface mount" in description', () => {
+      expect(classifyAssemblyMethod(item({ description: 'surface mount LED' }))).toBe('smt');
+    });
+
+    it('detects THT from "through hole" in description', () => {
+      expect(classifyAssemblyMethod(item({ description: 'through hole resistor' }))).toBe('tht');
+    });
+
+    it('detects THT from "through-hole" (hyphenated) in description', () => {
+      expect(classifyAssemblyMethod(item({ description: 'through-hole component' }))).toBe('tht');
+    });
+  });
+
+  // ── edge cases ──
+  describe('edge cases', () => {
+    it('returns unknown for empty item', () => {
+      expect(classifyAssemblyMethod({})).toBe('unknown');
+    });
+
+    it('returns unknown for item with no classifiable info', () => {
+      expect(classifyAssemblyMethod(item({ partNumber: 'ABC123' }))).toBe('unknown');
+    });
+
+    it('returns unknown for undefined package and description', () => {
+      expect(classifyAssemblyMethod(item({ package: undefined, description: undefined }))).toBe('unknown');
+    });
+
+    it('returns unknown for unrecognized package', () => {
+      expect(classifyAssemblyMethod(item({ package: 'custom-module' }))).toBe('unknown');
+    });
+
+    it('handles package with leading/trailing whitespace', () => {
+      expect(classifyAssemblyMethod(item({ package: '  QFP-44  ' }))).toBe('smt');
+    });
+  });
+});
+
+// ── groupByAssemblyMethod ────────────────────────────────────────────
+
+describe('groupByAssemblyMethod', () => {
+  it('returns empty array for empty input', () => {
+    expect(groupByAssemblyMethod([])).toEqual([]);
+  });
+
+  it('groups all-SMT items into a single group', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, package: 'QFP-44' }),
+      item({ id: 2, package: '0805' }),
+      item({ id: 3, package: 'SOT-23' }),
+    ];
+    const groups = groupByAssemblyMethod(items);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].method).toBe('smt');
+    expect(groups[0].count).toBe(3);
+    expect(groups[0].percentage).toBe(100);
+    expect(groups[0].items).toHaveLength(3);
+  });
+
+  it('groups mixed items into separate groups', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, package: 'QFP-44' }),
+      item({ id: 2, package: 'DIP-8' }),
+      item({ id: 3, package: 'header 2x5' }),
+      item({ id: 4, package: '0603' }),
+    ];
+    const groups = groupByAssemblyMethod(items);
+    expect(groups).toHaveLength(3);
+
+    const smtGroup = groups.find((g) => g.method === 'smt');
+    const thtGroup = groups.find((g) => g.method === 'tht');
+    const manualGroup = groups.find((g) => g.method === 'manual');
+
+    expect(smtGroup?.count).toBe(2);
+    expect(thtGroup?.count).toBe(1);
+    expect(manualGroup?.count).toBe(1);
+  });
+
+  it('sorts groups: smt, tht, manual, unknown', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, description: 'connector' }),
+      item({ id: 2, package: 'DIP-8' }),
+      item({ id: 3, package: 'custom-xyz' }),
+      item({ id: 4, package: '0805' }),
+    ];
+    const groups = groupByAssemblyMethod(items);
+    const order = groups.map((g) => g.method);
+    expect(order).toEqual(['smt', 'tht', 'manual', 'unknown']);
+  });
+
+  it('percentages sum to ~100', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, package: 'QFP-44' }),
+      item({ id: 2, package: 'DIP-8' }),
+      item({ id: 3, package: 'header' }),
+    ];
+    const groups = groupByAssemblyMethod(items);
+    const total = groups.reduce((acc, g) => acc + g.percentage, 0);
+    expect(Math.round(total)).toBe(100);
+  });
+
+  it('calculates correct percentages for uneven splits', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, package: 'QFP-44' }),
+      item({ id: 2, package: '0805' }),
+      item({ id: 3, package: 'DIP-8' }),
+    ];
+    const groups = groupByAssemblyMethod(items);
+    const smtGroup = groups.find((g) => g.method === 'smt');
+    const thtGroup = groups.find((g) => g.method === 'tht');
+    expect(smtGroup?.percentage).toBeCloseTo(66.67, 1);
+    expect(thtGroup?.percentage).toBeCloseTo(33.33, 1);
+  });
+
+  it('omits groups with zero items', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, package: 'QFP-44' }),
+      item({ id: 2, package: '0402' }),
+    ];
+    const groups = groupByAssemblyMethod(items);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].method).toBe('smt');
+  });
+
+  it('preserves item references in groups', () => {
+    const original = item({ id: 42, package: 'SOT-23', partNumber: 'REG-3V3' });
+    const groups = groupByAssemblyMethod([original]);
+    expect(groups[0].items[0]).toBe(original);
+  });
+});
+
+// ── getAssemblySummary ───────────────────────────────────────────────
+
+describe('getAssemblySummary', () => {
+  it('returns all zeros for empty input', () => {
+    const summary = getAssemblySummary([]);
+    expect(summary).toEqual<AssemblySummary>({
+      total: 0,
+      smt: 0,
+      tht: 0,
+      manual: 0,
+      unknown: 0,
+      smtPercentage: 0,
+    });
+  });
+
+  it('calculates correct counts', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, package: 'QFP-44' }),
+      item({ id: 2, package: '0805' }),
+      item({ id: 3, package: 'DIP-8' }),
+      item({ id: 4, package: 'header' }),
+      item({ id: 5, package: 'custom-xyz' }),
+    ];
+    const summary = getAssemblySummary(items);
+    expect(summary.total).toBe(5);
+    expect(summary.smt).toBe(2);
+    expect(summary.tht).toBe(1);
+    expect(summary.manual).toBe(1);
+    expect(summary.unknown).toBe(1);
+    expect(summary.smtPercentage).toBe(40);
+  });
+
+  it('calculates smtPercentage correctly for all-SMT BOM', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, package: 'QFP-44' }),
+      item({ id: 2, package: '0402' }),
+    ];
+    const summary = getAssemblySummary(items);
+    expect(summary.smtPercentage).toBe(100);
+  });
+
+  it('calculates smtPercentage correctly for no-SMT BOM', () => {
+    const items: BomItemLike[] = [
+      item({ id: 1, package: 'DIP-8' }),
+      item({ id: 2, package: 'TO-220' }),
+    ];
+    const summary = getAssemblySummary(items);
+    expect(summary.smtPercentage).toBe(0);
+  });
+});
+
+// ── getAssemblyMethodLabel ───────────────────────────────────────────
+
+describe('getAssemblyMethodLabel', () => {
+  it('returns "SMT (Surface Mount)" for smt', () => {
+    expect(getAssemblyMethodLabel('smt')).toBe('SMT (Surface Mount)');
+  });
+
+  it('returns "THT (Through-Hole)" for tht', () => {
+    expect(getAssemblyMethodLabel('tht')).toBe('THT (Through-Hole)');
+  });
+
+  it('returns "Manual Assembly" for manual', () => {
+    expect(getAssemblyMethodLabel('manual')).toBe('Manual Assembly');
+  });
+
+  it('returns "Unknown" for unknown', () => {
+    expect(getAssemblyMethodLabel('unknown')).toBe('Unknown');
+  });
+});
+
+// ── getAssemblyMethodColor ───────────────────────────────────────────
+
+describe('getAssemblyMethodColor', () => {
+  it('returns a color string for each method', () => {
+    const methods: AssemblyMethod[] = ['smt', 'tht', 'manual', 'unknown'];
+    for (const m of methods) {
+      const color = getAssemblyMethodColor(m);
+      expect(typeof color).toBe('string');
+      expect(color.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('returns different colors for different methods', () => {
+    const colors = new Set(
+      (['smt', 'tht', 'manual', 'unknown'] as AssemblyMethod[]).map((m) => getAssemblyMethodColor(m)),
+    );
+    expect(colors.size).toBe(4);
   });
 });
