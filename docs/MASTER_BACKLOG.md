@@ -426,7 +426,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 9 | 269 | 97% complete — Waves 61-120 |
+| P2 | 8 | 270 | 97% complete — Waves 61-120 |
 | 120 | `BL-0407`, `BL-0410`, `BL-0442` | Firmware snapshots, smart code snippets, build journals — firmware safety + developer experience. |
 | 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
 | 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
@@ -435,7 +435,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **122** | **379** | **501 items tracked** |
+| **Total** | **121** | **380** | **501 items tracked** |
 
 *Snapshot updated: Wave 120 (2026-03-17)*
 
