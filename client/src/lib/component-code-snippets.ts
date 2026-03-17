@@ -804,7 +804,9 @@ const COMPONENT_TYPE_ALIASES: Record<string, string[]> = {
 const aliasToCanonical = new Map<string, string>();
 for (const [canonical, aliases] of Object.entries(COMPONENT_TYPE_ALIASES)) {
   for (const alias of aliases) {
-    aliasToCanonical.set(alias.toLowerCase(), canonical);
+    // Normalise the alias the same way getSnippetsForComponent normalises input
+    const normalised = alias.toLowerCase().replace(/[\s-]+/g, '_');
+    aliasToCanonical.set(normalised, canonical);
   }
 }
 
