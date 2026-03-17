@@ -498,3 +498,25 @@ client/src/lib/__tests__/touch-safe-controls.test.ts(178,15): error TS2352: Conv
 9:54:12 PM - Found 2 errors. Watching for file changes.
 [2J[3J[H9:54:39 PM - File change detected. Starting incremental compilation...
 
+client/src/lib/__tests__/touch-safe-controls.test.ts(164,15): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+client/src/lib/__tests__/touch-safe-controls.test.ts(178,15): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+
+9:55:11 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H9:55:13 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/touch-safe-controls.test.ts(164,15): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+client/src/lib/__tests__/touch-safe-controls.test.ts(178,15): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+
+9:55:31 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H9:56:08 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/touch-safe-controls.test.ts(164,15): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+client/src/lib/__tests__/touch-safe-controls.test.ts(178,15): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+
+9:56:48 PM - Found 2 errors. Watching for file changes.

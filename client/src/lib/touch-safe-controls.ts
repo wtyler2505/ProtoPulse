@@ -84,11 +84,11 @@ export interface TapTargetAudit {
 // ---------------------------------------------------------------------------
 
 /** The default configuration used when no override is supplied. */
-export const DEFAULT_CONFIG: Readonly<TouchSafeConfig> = {
+export const DEFAULT_CONFIG: Readonly<TouchSafeConfig> = Object.freeze({
   minTapTarget: MIN_TAP_TARGET_PX,
   spacing: DEFAULT_SPACING_PX,
   compactMultiplier: 0.75,
-};
+});
 
 // ---------------------------------------------------------------------------
 // Touch Detection
