@@ -555,21 +555,20 @@ export function useDeletePcbZone() {
 // Design Comments (Review) (BL-0180)
 // ===========================================================================
 
-export function useComments(projectId: number, filters?: { targetType?: string; targetId?: string; resolved?: boolean }) {
+export function useComments(projectId: number, filters?: { targetType?: string; targetId?: string; status?: string }) {
   return useQuery<{ data: DesignComment[]; total: number }>({
     queryKey: ['design-comments', projectId, filters],
     queryFn: async () => {
       const sp = new URLSearchParams();
       if (filters?.targetType) sp.append('targetType', filters.targetType);
       if (filters?.targetId) sp.append('targetId', filters.targetId);
-      if (filters?.resolved !== undefined) sp.append('resolved', String(filters.resolved));
-      
+      if (filters?.status !== undefined) sp.append('status', String(filters.status));
+
       const res = await apiRequest('GET', `/api/projects/${projectId}/comments?${sp.toString()}`);
       return res.json() as Promise<{ data: DesignComment[]; total: number }>;
     },
   });
 }
-
 export function useCreateComment() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -594,11 +593,11 @@ export function useCreateComment() {
   });
 }
 
-export function useResolveComment() {
+export function useUpdateCommentStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { projectId: number; commentId: number; resolvedBy?: number }) => {
-      const res = await apiRequest('POST', `/api/projects/${data.projectId}/comments/${data.commentId}/resolve`, { resolvedBy: data.resolvedBy });
+    mutationFn: async (data: { projectId: number; commentId: number; status: string; updatedBy?: number }) => {
+      const res = await apiRequest('PATCH', `/api/projects/${data.projectId}/comments/${data.commentId}/status`, { status: data.status, updatedBy: data.updatedBy });
       return res.json() as Promise<DesignComment>;
     },
     onSuccess: (_data, variables) => {

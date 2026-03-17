@@ -810,7 +810,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0180 | Spatial review comments pinned to coordinates — Full coordinate-based comment pinning on PCB canvas (and others), spatial field schema, CRUD routes, and interactive SVG markers with tooltips. | DONE | C4 | Wave 63 |
-| BL-0181 | Review resolution workflow (open/resolved/blocked) | OPEN | C2 | MF-115 |
+| BL-0181 | Review resolution workflow (open/resolved/blocked) | DONE (Wave 126) | C2 | MF-115 |
 | BL-0182 | Approval gates before release/export | OPEN | C4 | MF-116, IFX-053 |
 | BL-0183 | ECO workflow (propose/review/approve/apply) | OPEN | C4 | MF-117, IFX-058 |
 | BL-0184 | Design branching model | OPEN | C5 | MF-118, IFX-057 |

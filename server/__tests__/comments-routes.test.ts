@@ -18,8 +18,7 @@ const {
   mockGetComment,
   mockCreateComment,
   mockUpdateComment,
-  mockResolveComment,
-  mockUnresolveComment,
+  mockUpdateCommentStatus,
   mockDeleteComment,
   mockGetProject,
 } = vi.hoisted(() => ({
@@ -27,8 +26,7 @@ const {
   mockGetComment: vi.fn(),
   mockCreateComment: vi.fn(),
   mockUpdateComment: vi.fn(),
-  mockResolveComment: vi.fn(),
-  mockUnresolveComment: vi.fn(),
+  mockUpdateCommentStatus: vi.fn(),
   mockDeleteComment: vi.fn(),
   mockGetProject: vi.fn(),
 }));
@@ -40,8 +38,7 @@ vi.mock('../storage', () => ({
     getComment: mockGetComment,
     createComment: mockCreateComment,
     updateComment: mockUpdateComment,
-    resolveComment: mockResolveComment,
-    unresolveComment: mockUnresolveComment,
+    updateCommentStatus: mockUpdateCommentStatus,
     deleteComment: mockDeleteComment,
   },
 }));
@@ -79,9 +76,9 @@ function makeComment(overrides: Record<string, unknown> = {}) {
     targetId: null,
     parentId: null,
     userId: null,
-    resolved: false,
-    resolvedAt: null,
-    resolvedBy: null,
+    status: 'open',
+    statusUpdatedAt: null,
+    statusUpdatedBy: null,
     createdAt: NOW,
     updatedAt: NOW,
     ...overrides,
@@ -238,56 +235,37 @@ describe('PATCH /api/projects/:id/comments/:commentId', () => {
 });
 
 // ===========================================================================
-// POST /api/projects/:id/comments/:commentId/resolve
+// PATCH /api/projects/:id/comments/:commentId/status
 // ===========================================================================
 
-describe('POST /api/projects/:id/comments/:commentId/resolve', () => {
-  it('resolves a comment', async () => {
-    mockResolveComment.mockResolvedValue(makeComment({ resolved: true }));
+describe('PATCH /api/projects/:id/comments/:commentId/status', () => {
+  it('updates comment status', async () => {
+    mockUpdateCommentStatus.mockResolvedValue(makeComment({ status: 'resolved' }));
 
-    const res = await authFetch(`${baseUrl}/api/projects/1/comments/1/resolve`, {
-      method: 'POST',
+    const res = await authFetch(`${baseUrl}/api/projects/1/comments/1/status`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ status: 'resolved' }),
     });
     expect(res.status).toBe(200);
   });
 
-  it('returns 404 for non-existent comment', async () => {
-    mockResolveComment.mockResolvedValue(null);
-
-    const res = await authFetch(`${baseUrl}/api/projects/1/comments/999/resolve`, {
-      method: 'POST',
+  it('returns 400 for missing status', async () => {
+    const res = await authFetch(`${baseUrl}/api/projects/1/comments/1/status`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
-    expect(res.status).toBe(404);
-  });
-});
-
-// ===========================================================================
-// POST /api/projects/:id/comments/:commentId/unresolve
-// ===========================================================================
-
-describe('POST /api/projects/:id/comments/:commentId/unresolve', () => {
-  it('unresolves a comment', async () => {
-    mockUnresolveComment.mockResolvedValue(makeComment({ resolved: false }));
-
-    const res = await authFetch(`${baseUrl}/api/projects/1/comments/1/unresolve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
   });
 
   it('returns 404 for non-existent comment', async () => {
-    mockUnresolveComment.mockResolvedValue(null);
+    mockUpdateCommentStatus.mockResolvedValue(null);
 
-    const res = await authFetch(`${baseUrl}/api/projects/1/comments/999/unresolve`, {
-      method: 'POST',
+    const res = await authFetch(`${baseUrl}/api/projects/1/comments/999/status`, {
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ status: 'resolved' }),
     });
     expect(res.status).toBe(404);
   });

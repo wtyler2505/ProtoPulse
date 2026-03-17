@@ -580,9 +580,9 @@ export const designComments = pgTable('design_comments', {
   spatialY: real("spatial_y"),
   spatialView: text("spatial_view"), // 'architecture', 'schematic', 'pcb', 'breadboard'
   content: text("content").notNull(),
-  resolved: boolean('resolved').notNull().default(false),
-  resolvedBy: integer('resolved_by').references(() => users.id),
-  resolvedAt: timestamp('resolved_at'),
+  status: text('status').notNull().default('open'), // 'open', 'resolved', 'blocked', 'wontfix'
+  statusUpdatedBy: integer('status_updated_by').references(() => users.id),
+  statusUpdatedAt: timestamp('status_updated_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 }, (table) => [

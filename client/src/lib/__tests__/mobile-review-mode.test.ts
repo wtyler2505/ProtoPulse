@@ -47,7 +47,7 @@ function makeComment(overrides: Partial<ProjectComment> = {}): ProjectComment {
   return {
     id: 1,
     content: 'Review this connection',
-    resolved: false,
+    status: 'open',
     createdAt: '2026-03-10T12:00:00Z',
     ...overrides,
   };
@@ -433,7 +433,7 @@ describe('getReviewableItems', () => {
 
   it('handles resolved comments', () => {
     const project: ReviewableProject = {
-      comments: [makeComment({ id: 1, resolved: true })],
+      comments: [makeComment({ status: 'resolved' })],
     };
     const items = getReviewableItems(project);
     expect(items[0].resolved).toBe(true);

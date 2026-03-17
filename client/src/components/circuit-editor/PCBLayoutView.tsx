@@ -30,7 +30,7 @@ import {
   useDeletePcbZone,
   useComments,
   useCreateComment,
-  useResolveComment,
+  useUpdateCommentStatus,
   useDeleteComment,
 } from '@/lib/circuit-editor/hooks';
 import { useUndoRedo } from '@/lib/undo-redo-context';
@@ -416,7 +416,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const createZoneMutation = useCreatePcbZone();
   const deleteZoneMutation = useDeletePcbZone();
   const createCommentMutation = useCreateComment();
-  const resolveCommentMutation = useResolveComment();
+  const updateCommentStatusMutation = useUpdateCommentStatus();
   const deleteCommentMutation = useDeleteComment();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _updateInstanceMutation = useUpdateCircuitInstance();
@@ -1086,8 +1086,8 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                       >
                         <circle
                           r={6 / zoom}
-                          fill={comment.resolved ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)"}
-                          stroke={isSelected ? "#00F0FF" : (comment.resolved ? "#22c55e" : "#eab308")}
+                          fill={comment.status === 'resolved' ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)"}
+                          stroke={isSelected ? "#00F0FF" : (comment.status === 'resolved' ? "#22c55e" : "#eab308")}
                           strokeWidth={2 / zoom}
                         />
                         <text
@@ -1095,7 +1095,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                           textAnchor="middle"
                           fontSize={8 / zoom}
                           className="select-none pointer-events-none font-bold"
-                          fill={comment.resolved ? "#22c55e" : "#eab308"}
+                          fill={comment.status === 'resolved' ? "#22c55e" : "#eab308"}
                         >
                           ?
                         </text>

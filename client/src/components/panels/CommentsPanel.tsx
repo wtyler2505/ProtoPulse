@@ -25,7 +25,7 @@ import type { DesignComment } from '@shared/schema';
 // Types
 // ---------------------------------------------------------------------------
 
-type ResolvedFilter = 'all' | 'resolved' | 'unresolved';
+type ResolvedFilter = 'all' | 'open' | 'resolved' | 'blocked' | 'wontfix';
 type TargetFilter = 'all' | 'general' | 'node' | 'edge' | 'bom_item';
 
 interface CommentsPanelProps {
@@ -72,8 +72,7 @@ interface CommentItemProps {
   allComments: DesignComment[];
   depth: number;
   onReply: (parentId: number) => void;
-  onResolve: (id: number) => void;
-  onUnresolve: (id: number) => void;
+  onStatusChange: (id: number, status: string) => void;
   onDelete: (id: number) => void;
 }
 
@@ -83,11 +82,14 @@ function CommentItem({
   allComments,
   depth,
   onReply,
-  onResolve,
-  onUnresolve,
+  onStatusChange,
   onDelete,
 }: CommentItemProps) {
-  const isResolved = comment.resolved;
+  const status = comment.status ?? 'open';
+  const isResolved = status === 'resolved';
+  const isBlocked = status === 'blocked';
+  const isWontFix = status === 'wontfix';
+  const isClosed = isResolved || isWontFix;
 
   return (
     <div
@@ -96,7 +98,7 @@ function CommentItem({
     >
       <div className={cn(
         'rounded-md px-3 py-2 transition-colors',
-        isResolved ? 'bg-zinc-900/50' : 'bg-zinc-800/60',
+        isClosed ? 'bg-zinc-900/50' : 'bg-zinc-800/60',
       )}>
         {/* Header */}
         <div className="flex items-center justify-between gap-2 mb-1">
@@ -105,12 +107,18 @@ function CommentItem({
               variant="outline"
               className={cn(
                 'text-[10px] px-1.5 py-0 shrink-0',
-                isResolved ? 'border-green-700 text-green-400' : 'border-zinc-600 text-zinc-400',
+                isResolved ? 'border-green-700 text-green-400' :
+                isBlocked ? 'border-amber-700 text-amber-400' :
+                isWontFix ? 'border-rose-700 text-rose-400' :
+                'border-zinc-600 text-zinc-400',
               )}
               data-testid={`comment-target-badge-${comment.id}`}
             >
               {targetLabel(comment.targetType)}
             </Badge>
+            <span className="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">
+              {status}
+            </span>
             {comment.targetId && (
               <span className="text-[10px] text-zinc-400 truncate" data-testid={`comment-target-id-${comment.id}`}>
                 {comment.targetId}
@@ -126,7 +134,7 @@ function CommentItem({
         <p
           className={cn(
             'text-sm whitespace-pre-wrap break-words',
-            isResolved ? 'text-zinc-400 line-through' : 'text-zinc-200',
+            isClosed ? 'text-zinc-500' : 'text-zinc-200',
           )}
           data-testid={`comment-content-${comment.id}`}
         >
@@ -146,27 +154,41 @@ function CommentItem({
             Reply
           </Button>
 
-          {isResolved ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-2 text-xs text-green-400 hover:text-yellow-400"
-              onClick={() => { onUnresolve(comment.id); }}
-              data-testid={`comment-unresolve-btn-${comment.id}`}
-            >
-              <RotateCcw className="h-3 w-3 mr-1" />
-              Reopen
-            </Button>
-          ) : (
+          {status !== 'open' && (
             <Button
               variant="ghost"
               size="sm"
               className="h-6 px-2 text-xs text-zinc-400 hover:text-green-400"
-              onClick={() => { onResolve(comment.id); }}
+              onClick={() => { onStatusChange(comment.id, 'open'); }}
+              data-testid={`comment-reopen-btn-${comment.id}`}
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Reopen
+            </Button>
+          )}
+
+          {status !== 'resolved' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-zinc-400 hover:text-green-400"
+              onClick={() => { onStatusChange(comment.id, 'resolved'); }}
               data-testid={`comment-resolve-btn-${comment.id}`}
             >
               <Check className="h-3 w-3 mr-1" />
               Resolve
+            </Button>
+          )}
+
+          {status !== 'blocked' && status !== 'resolved' && status !== 'wontfix' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs text-zinc-400 hover:text-amber-400"
+              onClick={() => { onStatusChange(comment.id, 'blocked'); }}
+              data-testid={`comment-block-btn-${comment.id}`}
+            >
+              Block
             </Button>
           )}
 
@@ -233,8 +255,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
   // Build query string with filters
   const queryParams = useMemo(() => {
     const params = new URLSearchParams();
-    if (resolvedFilter === 'resolved') { params.set('resolved', 'true'); }
-    if (resolvedFilter === 'unresolved') { params.set('resolved', 'false'); }
+    if (resolvedFilter !== 'all') { params.set('status', resolvedFilter); }
     if (targetFilter !== 'all') { params.set('targetType', targetFilter); }
     const qs = params.toString();
     return qs ? `?${qs}` : '';
@@ -273,19 +294,9 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
     },
   });
 
-  const resolveMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest('POST', `/api/projects/${projectId}/comments/${id}/resolve`);
-      return res.json() as Promise<DesignComment>;
-    },
-    onSuccess: () => {
-      invalidateComments();
-    },
-  });
-
-  const unresolveMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await apiRequest('POST', `/api/projects/${projectId}/comments/${id}/unresolve`);
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      const res = await apiRequest('PATCH', `/api/projects/${projectId}/comments/${id}/status`, { status });
       return res.json() as Promise<DesignComment>;
     },
     onSuccess: () => {
@@ -323,8 +334,10 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
   const replyTarget = replyToId ? comments.find((c) => c.id === replyToId) : null;
 
   // --- Stats ---
-  const resolvedCount = comments.filter((c) => c.resolved).length;
-  const unresolvedCount = comments.length - resolvedCount;
+  const resolvedCount = comments.filter((c) => c.status === 'resolved').length;
+  const blockedCount = comments.filter((c) => c.status === 'blocked').length;
+  const wontfixCount = comments.filter((c) => c.status === 'wontfix').length;
+  const openCount = comments.filter((c) => !c.status || c.status === 'open').length;
 
   return (
     <div className="flex flex-col h-full bg-zinc-950" data-testid="comments-panel">
@@ -358,15 +371,15 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
       {/* Filter bar */}
       {showFilters && (
         <div className="px-4 py-2 border-b border-zinc-800 space-y-2" data-testid="comments-filter-bar">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 overflow-x-auto pb-1">
             <span className="text-[10px] text-zinc-400 w-14 shrink-0">Status:</span>
-            {(['all', 'unresolved', 'resolved'] as ResolvedFilter[]).map((f) => (
+            {(['all', 'open', 'resolved', 'blocked', 'wontfix'] as ResolvedFilter[]).map((f) => (
               <Button
                 key={f}
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  'h-6 px-2 text-[10px] capitalize',
+                  'h-6 px-2 text-[10px] capitalize shrink-0',
                   resolvedFilter === f ? 'text-[#00F0FF] bg-zinc-800' : 'text-zinc-400',
                 )}
                 onClick={() => { setResolvedFilter(f); }}
@@ -374,7 +387,9 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
               >
                 {f}
                 {f === 'resolved' && <span className="ml-1 text-green-400">({resolvedCount})</span>}
-                {f === 'unresolved' && <span className="ml-1 text-yellow-400">({unresolvedCount})</span>}
+                {f === 'open' && <span className="ml-1 text-yellow-400">({openCount})</span>}
+                {f === 'blocked' && <span className="ml-1 text-amber-400">({blockedCount})</span>}
+                {f === 'wontfix' && <span className="ml-1 text-rose-400">({wontfixCount})</span>}
               </Button>
             ))}
           </div>

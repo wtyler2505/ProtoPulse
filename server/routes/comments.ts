@@ -28,17 +28,15 @@ export function registerCommentRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
 
-      const filters: { targetType?: string; targetId?: string; resolved?: boolean } = {};
+      const filters: { targetType?: string; targetId?: string; status?: string } = {};
       if (typeof req.query.targetType === 'string' && req.query.targetType) {
         filters.targetType = req.query.targetType;
       }
       if (typeof req.query.targetId === 'string' && req.query.targetId) {
         filters.targetId = req.query.targetId;
       }
-      if (req.query.resolved === 'true') {
-        filters.resolved = true;
-      } else if (req.query.resolved === 'false') {
-        filters.resolved = false;
+      if (typeof req.query.status === 'string' && req.query.status) {
+        filters.status = req.query.status;
       }
 
       const comments = await storage.getComments(projectId, filters);
@@ -102,36 +100,25 @@ export function registerCommentRoutes(app: Express): void {
     }),
   );
 
-  // Resolve a comment
-  app.post(
-    '/api/projects/:id/comments/:commentId/resolve',
+  // Update comment status
+  app.patch(
+    '/api/projects/:id/comments/:commentId/status',
     requireProjectOwnership,
     asyncHandler(async (req, res) => {
       parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
-      const resolvedBy = typeof req.body?.resolvedBy === 'number' ? req.body.resolvedBy : undefined;
+      const status = req.body?.status;
+      const updatedBy = typeof req.body?.updatedBy === 'number' ? req.body.updatedBy : undefined;
 
-      const resolved = await storage.resolveComment(commentId, resolvedBy);
-      if (!resolved) {
+      if (!status || typeof status !== 'string') {
+        return res.status(400).json({ message: 'Missing or invalid status' });
+      }
+
+      const updated = await storage.updateCommentStatus(commentId, status, updatedBy);
+      if (!updated) {
         return res.status(404).json({ message: 'Comment not found' });
       }
-      res.json(resolved);
-    }),
-  );
-
-  // Unresolve a comment
-  app.post(
-    '/api/projects/:id/comments/:commentId/unresolve',
-    requireProjectOwnership,
-    asyncHandler(async (req, res) => {
-      parseIdParam(req.params.id);
-      const commentId = parseIdParam(req.params.commentId);
-
-      const unresolved = await storage.unresolveComment(commentId);
-      if (!unresolved) {
-        return res.status(404).json({ message: 'Comment not found' });
-      }
-      res.json(unresolved);
+      res.json(updated);
     }),
   );
 

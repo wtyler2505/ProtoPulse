@@ -169,8 +169,7 @@ export class DatabaseStorage {
   getComment = this._misc.getComment.bind(this._misc);
   createComment = this._misc.createComment.bind(this._misc);
   updateComment = this._misc.updateComment.bind(this._misc);
-  resolveComment = this._misc.resolveComment.bind(this._misc);
-  unresolveComment = this._misc.unresolveComment.bind(this._misc);
+  updateCommentStatus = this._misc.updateCommentStatus.bind(this._misc);
   deleteComment = this._misc.deleteComment.bind(this._misc);
 
   // --- PCB Orders ---

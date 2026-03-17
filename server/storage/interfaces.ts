@@ -200,12 +200,11 @@ export interface IStorage {
   deleteDesignSnapshot(id: number): Promise<boolean>;
 
   // Design comments
-  getComments(projectId: number, filters?: { targetType?: string; targetId?: string; resolved?: boolean }): Promise<DesignComment[]>;
+  getComments(projectId: number, filters?: { targetType?: string; targetId?: string; status?: string }): Promise<DesignComment[]>;
   getComment(id: number): Promise<DesignComment | undefined>;
   createComment(data: InsertDesignComment): Promise<DesignComment>;
   updateComment(id: number, data: { content?: string }): Promise<DesignComment | undefined>;
-  resolveComment(id: number, resolvedBy?: number): Promise<DesignComment | undefined>;
-  unresolveComment(id: number): Promise<DesignComment | undefined>;
+  updateCommentStatus(id: number, status: string, updatedBy?: number): Promise<DesignComment | undefined>;
   deleteComment(id: number): Promise<boolean>;
 
   // Arduino Workspace

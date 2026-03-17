@@ -295,7 +295,7 @@ export class MiscStorage {
 
   // --- Design Comments (FG-12) ---
 
-  async getComments(projectId: number, filters?: { targetType?: string; targetId?: string; resolved?: boolean }): Promise<DesignComment[]> {
+  async getComments(projectId: number, filters?: { targetType?: string; targetId?: string; status?: string }): Promise<DesignComment[]> {
     try {
       const conditions = [eq(designComments.projectId, projectId)];
 
@@ -305,8 +305,8 @@ export class MiscStorage {
       if (filters?.targetId) {
         conditions.push(eq(designComments.targetId, filters.targetId));
       }
-      if (filters?.resolved !== undefined) {
-        conditions.push(eq(designComments.resolved, filters.resolved));
+      if (filters?.status !== undefined) {
+        conditions.push(eq(designComments.status, filters.status));
       }
 
       return await this.db.select()
@@ -352,37 +352,20 @@ export class MiscStorage {
     }
   }
 
-  async resolveComment(id: number, resolvedBy?: number): Promise<DesignComment | undefined> {
+  async updateCommentStatus(id: number, status: string, updatedBy?: number): Promise<DesignComment | undefined> {
     try {
-      const [resolved] = await this.db.update(designComments)
+      const [updated] = await this.db.update(designComments)
         .set({
-          resolved: true,
-          resolvedBy: resolvedBy ?? null,
-          resolvedAt: new Date(),
+          status,
+          statusUpdatedBy: updatedBy ?? null,
+          statusUpdatedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(designComments.id, id))
         .returning();
-      return resolved;
+      return updated;
     } catch (e) {
-      throw new StorageError('resolveComment', `comments/${id}`, e);
-    }
-  }
-
-  async unresolveComment(id: number): Promise<DesignComment | undefined> {
-    try {
-      const [unresolved] = await this.db.update(designComments)
-        .set({
-          resolved: false,
-          resolvedBy: null,
-          resolvedAt: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(designComments.id, id))
-        .returning();
-      return unresolved;
-    } catch (e) {
-      throw new StorageError('unresolveComment', `comments/${id}`, e);
+      throw new StorageError('updateCommentStatus', `comments/${id}`, e);
     }
   }
 

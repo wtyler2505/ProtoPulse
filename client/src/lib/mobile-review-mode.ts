@@ -68,8 +68,8 @@ export interface ProjectComment {
   content: string;
   targetType?: string;
   targetId?: string;
-  resolved?: boolean;
-  createdAt?: string | Date | null;
+  status?: string;
+  createdAt?: string | Date;
 }
 
 /** A validation issue from the validation_issues table (minimal shape). */
@@ -335,7 +335,7 @@ export function getReviewableItems(
         severity: 'info',
         title: truncate(c.content, 80),
         description: c.content,
-        resolved: c.resolved ?? false,
+        resolved: c.status !== 'open',
         targetId: c.targetId,
         timestamp: toTimestamp(c.createdAt),
       });
