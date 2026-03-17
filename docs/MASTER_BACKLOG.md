@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | 113 | `BL-0265`, `BL-0343`, `BL-0345`, `BL-0344`, `BL-0340` | CI coverage gates, mobile review mode, gesture shortcuts, bottom nav, tablet layout — CI + mobile + responsive. |
 | 112 | `BL-0149`, `BL-0328`, `BL-0264`, `BL-0341`, `BL-0342` | Multi-angle photo, a11y audit dashboard, deployment profiles, touch-safe controls, mobile table overflow — accessibility + mobile + DevOps. |
@@ -420,12 +421,13 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 37 | 241 | 87% complete — Waves 61-114 |
+| P2 | 32 | 246 | 88% complete — Waves 61-115 |
+| 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **150** | **351** | **501 items tracked** |
+| **Total** | **145** | **356** | **501 items tracked** |
 
-*Snapshot updated: Wave 114 (2026-03-17)*
+*Snapshot updated: Wave 115 (2026-03-17)*
 
 ---
 
@@ -1084,15 +1086,15 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0343 | Mobile "review mode" for comments/checks | DONE (Wave 113) | C2 | UX-094 |
 | BL-0344 | Bottom nav for core mobile actions | DONE (Wave 113) | C3 | UX-095 |
 | BL-0345 | Gesture shortcuts (pinch zoom, two-finger pan) | DONE (Wave 113) | C3 | UX-096 |
-| BL-0346 | Mobile capture workflows (photo→part, notes→BOM) | OPEN | C3 | UX-097 |
-| BL-0347 | Responsive layout presets by device type | OPEN | C3 | UX-100 |
+| BL-0346 | Mobile capture workflows (photo→part, notes→BOM) | DONE (Wave 115) | C3 | UX-097 |
+| BL-0347 | Responsive layout presets by device type | DONE (Wave 115) | C3 | UX-100 |
 
 ### Visual Design System
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0350 | Standardize icon language by domain | DONE (Wave 114) | C2 | UX-102 |
-| BL-0351 | Consistent spacing scale and typography tokens | OPEN | C3 | UX-104 |
+| BL-0351 | Consistent spacing scale and typography tokens | DONE (Wave 115) | C3 | UX-104 |
 | BL-0352 | Light theme and OLED-black theme options | OPEN | C4 | UX-105, MF-192 |
 | BL-0353 | Consistent motion language for transitions | DONE (Wave 114) | C2 | UX-106 |
 | BL-0354 | State illustrations for empty/error/offline pages | DONE (Wave 114) | C2 | UX-107 |
@@ -1103,10 +1105,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0360 | Operation duration hints for long actions | OPEN | C1 | UX-112 |
-| BL-0361 | Partial loading per panel instead of blocking whole view | OPEN | C3 | UX-113 |
+| BL-0361 | Partial loading per panel instead of blocking whole view | DONE (Wave 115) | C3 | UX-113 |
 | BL-0362 | Background prefetch for likely next views | DONE (Wave 114) | C2 | UX-114 |
 | BL-0363 | Progressive render for large lists/tables | DONE (Wave 114) | C2 | UX-115 |
-| BL-0364 | "Slow path detected" UX with suggestions | OPEN | C2 | UX-117 |
+| BL-0364 | "Slow path detected" UX with suggestions | DONE (Wave 115) | C2 | UX-117 |
 
 ### Developer Platform
 
