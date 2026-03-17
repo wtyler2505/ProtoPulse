@@ -375,3 +375,9 @@ server/__tests__/websocket-revalidation.test.ts(245,16): error TS2352: Conversio
 
 
 8:36:25 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:52:04 PM - File change detected. Starting incremental compilation...
+
+
+8:52:10 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:53:13 PM - File change detected. Starting incremental compilation...
+
