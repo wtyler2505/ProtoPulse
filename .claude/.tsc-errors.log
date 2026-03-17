@@ -938,3 +938,7 @@ client/src/lib/macro-recorder.ts(233,24): error TS2304: Cannot find name 'deepCo
 
 
 12:41:20 AM - Found 0 errors. Watching for file changes.
+[2J[3J[H1:18:51 AM - File change detected. Starting incremental compilation...
+
+
+1:19:11 AM - Found 0 errors. Watching for file changes.
