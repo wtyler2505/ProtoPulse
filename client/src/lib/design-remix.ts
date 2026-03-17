@@ -169,12 +169,9 @@ export class DesignRemixManager {
    * remixedAt descending (most recent first).
    */
   getRemixHistory(projectId: string): RemixSource[] {
-    const results: RemixSource[] = [];
-    for (const source of this.history.values()) {
-      if (source.originalProjectId === projectId) {
-        results.push(source);
-      }
-    }
+    const results: RemixSource[] = Array.from(this.history.values()).filter(
+      (source) => source.originalProjectId === projectId,
+    );
     return results.sort((a, b) => b.remixedAt - a.remixedAt);
   }
 
