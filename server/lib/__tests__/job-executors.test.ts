@@ -1101,6 +1101,72 @@ describe('reportGenerationExecutor', () => {
       reportGenerationExecutor({ projectId: 1, reportType: 'design' }, ctx),
     ).rejects.toThrow('Job aborted');
   });
+
+  it('includes completedAt in result', async () => {
+    const ctx = createContext();
+    const result = await reportGenerationExecutor(
+      { projectId: 1, reportType: 'design' },
+      ctx,
+    ) as Record<string, unknown>;
+
+    expect(result.completedAt).toBeDefined();
+    expect(new Date(result.completedAt as string).toISOString()).toBe(result.completedAt);
+  });
+
+  it('fetches BOM items only for design report type', async () => {
+    const ctx = createContext();
+    await reportGenerationExecutor({ projectId: 1, reportType: 'design' }, ctx);
+
+    expect(mockStorage.getBomItems).toHaveBeenCalledWith(1);
+  });
+
+  it('does not fetch BOM items for FMEA report type', async () => {
+    const ctx = createContext();
+    await reportGenerationExecutor({ projectId: 1, reportType: 'fmea' }, ctx);
+
+    expect(mockStorage.getBomItems).not.toHaveBeenCalled();
+  });
+
+  it('handles null project description gracefully for design report', async () => {
+    mockStorage.getProject.mockResolvedValue({ id: 1, name: 'NoDesc', description: null });
+
+    const ctx = createContext();
+    await reportGenerationExecutor({ projectId: 1, reportType: 'design' }, ctx);
+
+    const { generateDesignReportMd } = await import('../../export/design-report');
+    const callArg = (generateDesignReportMd as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
+    expect(callArg.projectDescription).toBe('');
+  });
+
+  it('returns firmware-scaffold as stub', async () => {
+    const ctx = createContext();
+    const result = await reportGenerationExecutor(
+      { projectId: 1, reportType: 'firmware-scaffold' },
+      ctx,
+    ) as Record<string, unknown>;
+
+    const inner = result.result as Record<string, unknown>;
+    expect(inner.status).toBe('generated');
+    expect(inner.message).toContain('firmware-scaffold');
+  });
+
+  it('maps edge data correctly for FMEA report', async () => {
+    mockStorage.getEdges.mockResolvedValue([
+      {
+        edgeId: 'e1', source: 'n1', target: 'n2',
+        label: 'PWR', signalType: 'power', voltage: '5V', busWidth: 1, netName: 'VCC',
+      },
+    ]);
+
+    const ctx = createContext();
+    await reportGenerationExecutor({ projectId: 1, reportType: 'fmea' }, ctx);
+
+    const { generateFmeaReport } = await import('../../export/fmea-generator');
+    const callArg = (generateFmeaReport as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
+    const edges = callArg.edges as Array<Record<string, unknown>>;
+    expect(edges[0].netName).toBe('VCC');
+    expect(edges[0].signalType).toBe('power');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1180,6 +1246,62 @@ describe('importProcessingExecutor', () => {
         ctx,
       ),
     ).rejects.toThrow('Job aborted');
+  });
+
+  it('includes completedAt in result', async () => {
+    const ctx = createContext();
+    const result = await importProcessingExecutor(
+      { projectId: 1, format: 'kicad', data: 'x', filename: 'f.sch' },
+      ctx,
+    ) as Record<string, unknown>;
+
+    expect(result.completedAt).toBeDefined();
+    expect(new Date(result.completedAt as string).toISOString()).toBe(result.completedAt);
+  });
+
+  it('records history action with correct format and filename', async () => {
+    const ctx = createContext();
+    await importProcessingExecutor(
+      { projectId: 1, format: 'eagle', data: 'eagle data', filename: 'board.brd' },
+      ctx,
+    );
+
+    expect(mockStorage.createHistoryItem).toHaveBeenCalledWith({
+      projectId: 1,
+      action: 'import:eagle:board.brd',
+      user: 'system',
+    });
+  });
+
+  it('calculates dataLength correctly from data string', async () => {
+    const data = 'a'.repeat(1000);
+    const ctx = createContext();
+    const result = await importProcessingExecutor(
+      { projectId: 1, format: 'generic', data, filename: 'big.sch' },
+      ctx,
+    ) as Record<string, unknown>;
+
+    const meta = result.metadata as Record<string, unknown>;
+    expect(meta.dataLength).toBe(1000);
+  });
+
+  it('processes all supported import formats', async () => {
+    const formats = ['kicad', 'eagle', 'altium', 'geda', 'ltspice', 'proteus', 'orcad', 'generic'] as const;
+
+    for (const format of formats) {
+      vi.clearAllMocks();
+      mockStorage.getProject.mockResolvedValue({ id: 1, name: 'Test' });
+      mockStorage.createHistoryItem.mockResolvedValue({ id: 1 });
+
+      const ctx = createContext();
+      const result = await importProcessingExecutor(
+        { projectId: 1, format, data: 'content', filename: `test.${format}` },
+        ctx,
+      ) as Record<string, unknown>;
+
+      expect(result.format).toBe(format);
+      expect(result.status).toBe('processed');
+    }
   });
 });
 
