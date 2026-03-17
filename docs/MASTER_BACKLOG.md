@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | 113 | `BL-0265`, `BL-0343`, `BL-0345`, `BL-0344`, `BL-0340` | CI coverage gates, mobile review mode, gesture shortcuts, bottom nav, tablet layout — CI + mobile + responsive. |
@@ -421,13 +422,14 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 32 | 246 | 88% complete — Waves 61-115 |
+| P2 | 27 | 251 | 90% complete — Waves 61-116 |
+| 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **145** | **356** | **501 items tracked** |
+| **Total** | **140** | **361** | **501 items tracked** |
 
-*Snapshot updated: Wave 115 (2026-03-17)*
+*Snapshot updated: Wave 116 (2026-03-17)*
 
 ---
 
@@ -1098,7 +1100,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0352 | Light theme and OLED-black theme options | OPEN | C4 | UX-105, MF-192 |
 | BL-0353 | Consistent motion language for transitions | DONE (Wave 114) | C2 | UX-106 |
 | BL-0354 | State illustrations for empty/error/offline pages | DONE (Wave 114) | C2 | UX-107 |
-| BL-0355 | Design system docs site in-app | OPEN | C3 | UX-108 |
+| BL-0355 | Design system docs site in-app | DONE (Wave 116) | C3 | UX-108 |
 
 ### Performance Perception
 
@@ -1116,8 +1118,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0370 | Public API + webhook platform | OPEN | C5 | MF-181, IFX-092 |
 | BL-0371 | Plugin/extension SDK | OPEN | C5 | MF-182, IFX-091 |
-| BL-0372 | Macro recorder/player for repeated actions | OPEN | C3 | MF-183 |
-| BL-0373 | Custom keybinding editor | OPEN | C3 | MF-184 |
+| BL-0372 | Macro recorder/player for repeated actions | DONE (Wave 116) | C3 | MF-183 |
+| BL-0373 | Custom keybinding editor | DONE (Wave 116) | C3 | MF-184 |
 | BL-0374 | Scriptable command palette actions | OPEN | C4 | MF-185 |
 | BL-0375 | CLI tooling for headless validation/export | OPEN | C4 | MF-188 |
 | BL-0376 | Git-native design diff/merge | DONE (verified Wave 106) | C5 | MF-189 |
@@ -1130,8 +1132,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0380 | SSO/OIDC for team/org deployments | OPEN | C4 | MF-176 |
 | BL-0381 | RBAC + org/team tenancy model | DONE (verified Wave 106) | C5 | MF-177 |
-| BL-0382 | Audit log explorer UI | OPEN | C3 | MF-178 |
-| BL-0383 | Customizable workspace presets | OPEN | C2 | UX-020 |
+| BL-0382 | Audit log explorer UI | DONE (Wave 116) | C3 | MF-178 |
+| BL-0383 | Customizable workspace presets | DONE (Wave 116) | C2 | UX-020 |
 | BL-0384 | Team command center | OPEN | C3 | IFX-119 |
 
 ### Advanced Navigation
