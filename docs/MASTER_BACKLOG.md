@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 111 | `BL-0320`, `BL-0321`, `BL-0326`, `BL-0301`, `BL-0188` | Keyboard resize handles, focus ring audit, screen reader canvas labels, first PCB tutorial, team templates — accessibility + onboarding. |
 | 110 | `BL-0148`, `BL-0528`, `BL-0474`, `BL-0314`, `BL-0329` | Web Serial integration tests, PCB order tracking, AVL enforcement, progress milestones, font scaling — testing depth + procurement + onboarding + accessibility. |
 | 109 | `BL-0526`, `BL-0475`, `BL-0238`, `BL-0472`, `BL-0220` | WebSocket session revalidation, assembly risk scoring, supplier comparison engine, order history, import diff engine — security + procurement depth + design comparison. |
 | 108 | `BL-0470`, `BL-0572`, `BL-0239`, `BL-0313`, `BL-0324` | Manufacturing package validator, DFM→PCB highlight bridge, SMT/THT/manual assembly grouping, per-view onboarding hints, contrast audit — manufacturing trust + onboarding + accessibility. |
@@ -416,11 +417,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 57 | 221 | 79% complete — Waves 61-110 |
+| P2 | 52 | 226 | 81% complete — Waves 61-111 |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **170** | **331** | **501 items tracked** |
+| **Total** | **165** | **336** | **501 items tracked** |
 
-*Snapshot updated: Wave 110 (2026-03-17)*
+*Snapshot updated: Wave 111 (2026-03-17)*
 
 ---
 
@@ -806,7 +807,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0185 | Merge tooling for branch diffs | OPEN | C5 | MF-119 |
 | BL-0186 | Activity feed for team actions — activity-feed.ts implemented. | DONE (verified Wave 106) | C2 | MF-120, IFX-054 |
 | BL-0187 | Mentions/notifications for comments | DONE (verified Wave 106) | C2 | MF-121 |
-| BL-0188 | Team templates and standards packs | OPEN | C3 | MF-122, IFX-098 |
+| BL-0188 | Team templates and standards packs | DONE (Wave 111) | C3 | MF-122, IFX-098 |
 | BL-0189 | Full audit trail UI | DONE (verified Wave 106) | C3 | MF-124 |
 | BL-0190 | Time-travel restore at view/object granularity | OPEN | C4 | MF-125, IFX-088 |
 
@@ -1039,7 +1040,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0300 | Step-by-step beginner learning path (zero to PCB) | PARTIAL | C4 | MF-033 |
-| BL-0301 | Guided "first PCB" interactive tutorial | OPEN | C3 | MF-035 |
+| BL-0301 | Guided "first PCB" interactive tutorial | DONE (Wave 111) | C3 | MF-035 |
 | BL-0302 | Lesson mode that locks UI to only needed controls | DONE (verified Wave 106) | C3 | MF-036 |
 | BL-0303 | Skill-level adaptive hints (beginner/intermediate/advanced) | PARTIAL | C3 | MF-038, IFX-066 |
 | BL-0304 | Lab/assignment templates for educators | DONE (verified Wave 106) | C3 | MF-041 |
@@ -1058,13 +1059,13 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0320 | Keyboard-operable resize handles | OPEN | C2 | UX-081 |
-| BL-0321 | Visible focus rings on all interactive controls | OPEN | C2 | UX-082 |
+| BL-0320 | Keyboard-operable resize handles | DONE (Wave 111) | C2 | UX-081 |
+| BL-0321 | Visible focus rings on all interactive controls | DONE (Wave 111) | C2 | UX-082 |
 | BL-0322 | Fix off-screen tooltip placement | OPEN | C1 | UX-083 |
 | BL-0323 | Explicit `type` attribute on all form buttons | OPEN | C1 | UX-084 |
 | BL-0324 | Improve color contrast in low-contrast surfaces | DONE (Wave 108) | C2 | UX-085 |
 | BL-0325 | Reduced-motion mode | DONE (verified Wave 106) | C2 | UX-086 |
-| BL-0326 | Screen-reader labels for canvas actions | OPEN | C2 | UX-088 |
+| BL-0326 | Screen-reader labels for canvas actions | DONE (Wave 111) | C2 | UX-088 |
 | BL-0327 | Full keyboard-first editing mode | OPEN | C4 | UX-090 |
 | BL-0328 | Accessibility audit dashboard with tracked fixes | OPEN | C3 | UX-089 |
 | BL-0329 | Font scaling and spacing options | DONE (Wave 110) | C2 | UX-087 |
