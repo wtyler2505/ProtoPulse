@@ -605,3 +605,7 @@ client/src/lib/__tests__/gesture-shortcuts.test.ts(44,37): error TS2538: Type 'u
 
 
 10:34:19 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:27:45 PM - File change detected. Starting incremental compilation...
+
+
+11:27:53 PM - Found 0 errors. Watching for file changes.
