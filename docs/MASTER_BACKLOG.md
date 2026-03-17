@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 57 | 221 | 80% — Waves 61-121 |
-| P3 | 58 | 73 | 56% — many P3 items done in Waves 105-121 |
-| **Total** | **115** | **386** | **501 items tracked** |
+| P2 | 52 | 226 | 81% — Waves 61-122 |
+| P3 | 58 | 73 | 56% — Waves 105-122 |
+| **Total** | **110** | **391** | **501 items tracked** |
 
-*Snapshot updated: Wave 121 (2026-03-17)*
+*Snapshot updated: Wave 122 (2026-03-17)*
 
 ---
 
@@ -1071,8 +1071,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0320 | Keyboard-operable resize handles | DONE (Wave 111) | C2 | UX-081 |
 | BL-0321 | Visible focus rings on all interactive controls | DONE (Wave 111) | C2 | UX-082 |
-| BL-0322 | Fix off-screen tooltip placement | OPEN | C1 | UX-083 |
-| BL-0323 | Explicit `type` attribute on all form buttons | OPEN | C1 | UX-084 |
+| BL-0322 | Fix off-screen tooltip placement | DONE (Wave 122) | C1 | UX-083 |
+| BL-0323 | Explicit `type` attribute on all form buttons | DONE (Wave 122) | C1 | UX-084 |
 | BL-0324 | Improve color contrast in low-contrast surfaces | DONE (Wave 108) | C2 | UX-085 |
 | BL-0325 | Reduced-motion mode | DONE (verified Wave 106) | C2 | UX-086 |
 | BL-0326 | Screen-reader labels for canvas actions | DONE (Wave 111) | C2 | UX-088 |
@@ -1108,7 +1108,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0360 | Operation duration hints for long actions | OPEN | C1 | UX-112 |
+| BL-0360 | Operation duration hints for long actions | DONE (Wave 122) | C1 | UX-112 |
 | BL-0361 | Partial loading per panel instead of blocking whole view | DONE (Wave 115) | C3 | UX-113 |
 | BL-0362 | Background prefetch for likely next views | DONE (Wave 114) | C2 | UX-114 |
 | BL-0363 | Progressive render for large lists/tables | DONE (Wave 114) | C2 | UX-115 |
@@ -1184,10 +1184,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0430 | AI co-designer (iterates design options side-by-side) | OPEN | C4 | IFX-009 |
 | BL-0431 | AI root-cause map across circuit + firmware | OPEN | C5 | IFX-010 |
-| BL-0432 | Monte Carlo visual risk envelope | OPEN | C3 | IFX-016 |
+| BL-0432 | Monte Carlo visual risk envelope | DONE (Wave 122) | C3 | IFX-016 |
 | BL-0433 | Expected-vs-observed sim overlay from telemetry | OPEN | C4 | IFX-017 |
 | BL-0434 | Auto-tuning assistant for control loops (PID) | OPEN | C4 | IFX-020, ARDX-055 |
-| BL-0435 | Bench dashboard preset (upload/log/plot/debug) | OPEN | C3 | IFX-026 |
+| BL-0435 | Bench dashboard preset (upload/log/plot/debug) | DONE (Wave 122) | C3 | IFX-026 |
 | BL-0436 | Hardware incident bundle export | OPEN | C3 | IFX-028 |
 | BL-0437 | Guided "board doctor" conversational diagnostics | OPEN | C4 | IFX-030 |
 | BL-0438 | Predictive yield estimator | OPEN | C4 | IFX-040 |
