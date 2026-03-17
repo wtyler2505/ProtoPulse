@@ -92,7 +92,7 @@ interface AppState {
   changeDiff?: string;
   // Phase 2: Expanded context
   componentParts: Array<{ id: number; nodeId?: string; title?: string; family?: string; manufacturer?: string; mpn?: string; category?: string; pinCount: number }>;
-  circuitDesigns: Array<{ id: number; name: string; description?: string; instanceCount: number; netCount: number }>;
+  circuitDesigns: Array<{ id: number; name: string; description?: string; instanceCount: number; netCount: number; instances?: Array<{ id: string; partId?: string; referenceDesignator: string }>; nets?: Array<{ id: string; name: string }>; wires?: Array<{ id: string; netId: string; view: string }> }>;
   historyItems: Array<{ action: string; user: string; timestamp: string }>;
   bomMetadata: { totalCost: number; itemCount: number; outOfStockCount: number; lowStockCount: number };
   designPreferences: Array<{ category: string; key: string; value: string; source: string; confidence: number }>;
@@ -621,6 +621,25 @@ function buildValidationSummary(issues: AppState['validationIssues']): string {
   return `  ${issues.length} issues: ${Array.from(byLevel.entries()).map(([s, c]) => `${c} ${s}`).join(', ')}`;
 }
 
+function buildCircuitContext(circuits: AppState['circuitDesigns']): string {
+  if (!circuits || circuits.length === 0) return "  (none)";
+  return circuits.map(c => {
+    let summary = `  - "${c.name}" (id: ${c.id})\n`;
+    if (c.instances && c.instances.length > 0) {
+      summary += `    Instances (${c.instanceCount}): ` + c.instances.map(i => i.referenceDesignator).join(', ') + '\n';
+    } else {
+      summary += `    Instances (${c.instanceCount})\n`;
+    }
+    if (c.nets && c.nets.length > 0) {
+      summary += `    Nets (${c.netCount}): ` + c.nets.map(n => n.name).join(', ') + '\n';
+    } else {
+      summary += `    Nets (${c.netCount})\n`;
+    }
+    summary += `    Wires: ${c.wires ? c.wires.length : 0} total`;
+    return summary;
+  }).join("\n");
+}
+
 function buildSystemPrompt(appState: AppState): string {
   const view = appState.activeView;
   const archActive = isArchView(view);
@@ -696,10 +715,8 @@ function buildSystemPrompt(appState: AppState): string {
   let circuitDesignsDescription: string;
   if (appState.circuitDesigns.length === 0) {
     circuitDesignsDescription = "  (none)";
-  } else if (appState.circuitDesigns.length <= 20) {
-    circuitDesignsDescription = appState.circuitDesigns.map(c =>
-      `  - "${c.name}" (id: ${c.id}) — ${c.instanceCount} instances, ${c.netCount} nets${c.description ? ` | ${c.description}` : ""}`
-    ).join("\n");
+  } else if (appState.circuitDesigns.length <= 5) {
+    circuitDesignsDescription = buildCircuitContext(appState.circuitDesigns);
   } else {
     circuitDesignsDescription = `  ${appState.circuitDesigns.length} circuit designs (${appState.circuitDesigns.reduce((s, c) => s + c.instanceCount, 0)} total instances, ${appState.circuitDesigns.reduce((s, c) => s + c.netCount, 0)} total nets)`;
   }

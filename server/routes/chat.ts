@@ -214,17 +214,32 @@ async function buildAppStateFromProject(
     storage.getDesignPreferences(projectId),
   ]);
 
-  // Fetch instance/net counts and simulation results for all circuits in parallel (avoids sequential N+1)
+  // Fetch instance/net counts, wires, and simulation results for all circuits in parallel (avoids sequential N+1)
   const circuitIds = circuits.map((c) => c.id);
-  const [allInstances, allNets, allSimResults] = await Promise.all([
+  const [allInstances, allNets, allWires, allSimResults] = await Promise.all([
     Promise.all(circuitIds.map((id) => storage.getCircuitInstances(id))),
     Promise.all(circuitIds.map((id) => storage.getCircuitNets(id))),
+    Promise.all(circuitIds.map((id) => storage.getCircuitWires(id))),
     Promise.all(circuitIds.map((id) => storage.getSimulationResults(id))),
   ]);
   const circuitDesigns = circuits.map((c, i) => ({
     id: c.id,
     name: c.name,
     description: c.description || undefined,
+    instances: allInstances[i].map(inst => ({
+      id: String(inst.id),
+      partId: inst.partId ? String(inst.partId) : undefined,
+      referenceDesignator: inst.referenceDesignator,
+    })),
+    nets: allNets[i].map(net => ({
+      id: String(net.id),
+      name: net.name,
+    })),
+    wires: allWires[i].map(wire => ({
+      id: String(wire.id),
+      netId: String(wire.netId),
+      view: wire.view,
+    })),
     instanceCount: allInstances[i].length,
     netCount: allNets[i].length,
   }));

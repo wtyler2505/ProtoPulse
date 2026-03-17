@@ -9,7 +9,8 @@ import type {
   SerialMonitorLine,
 } from '@/lib/web-serial';
 import { SerialLogger } from '@/lib/arduino/serial-logger';
-import { TelemetryStore } from '@/lib/arduino/telemetry-parser';
+import { TelemetryStore, parseLine } from '@/lib/arduino/telemetry-parser';
+import { DeviceShadow } from '@/lib/digital-twin/device-shadow';
 import { detectEspException, parseEspException } from '@/lib/arduino/esp-exception-decoder';
 import { detectBaudMismatch, nonPrintableRatio } from '@/lib/arduino/baud-detector';
 import type { EspExceptionResult } from '@/lib/arduino/esp-exception-decoder';
@@ -228,6 +229,20 @@ export default function SerialMonitorPanel() {
           // Feed telemetry store (always, for RX lines)
           if (line.direction === 'rx') {
             telemetryStoreRef.current.ingest(line.data);
+            
+            // BL-0518: Route parsed telemetry to Digital Twin
+            const parsed = parseLine(line.data);
+            if (parsed) {
+              const ch: Record<string, number> = {};
+              for (const [key, val] of parsed.values.entries()) {
+                ch[key] = val;
+              }
+              DeviceShadow.getInstance().processFrame({
+                type: 'telemetry',
+                ts: Date.now(),
+                ch,
+              });
+            }
           }
         }
       }

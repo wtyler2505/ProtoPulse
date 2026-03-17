@@ -49,6 +49,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
 import CodeEditor from '@/components/views/circuit-code/CodeEditor';
 import ExamplesBrowser from '@/components/views/arduino/ExamplesBrowser';
@@ -382,6 +383,22 @@ export default function ArduinoWorkbenchView() {
           setFlashProgress(doneProgress);
           flashProgressRef.current = doneProgress;
           setFlashDiagnostic(null);
+
+          // BL-0518: Offer to open Serial Monitor after successful upload
+          if (selectedProfile?.port) {
+            toast({
+              title: 'Upload successful!',
+              description: `Firmware flashed to ${selectedProfile.port}.`,
+              action: (
+                <ToastAction 
+                  altText="Open Serial Monitor" 
+                  onClick={() => setBottomTab('serial')}
+                >
+                  Monitor
+                </ToastAction>
+              ),
+            });
+          }
         } else if (finishedUpload.status === 'failed') {
           const errorProgress: FlashProgress = {
             stage: 'error',
