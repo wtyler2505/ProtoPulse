@@ -46,3 +46,253 @@ client/src/lib/__tests__/assembly-grouping.test.ts(249,35): error TS7006: Parame
 client/src/lib/__tests__/assembly-grouping.test.ts(250,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
 
 7:38:35 PM - Found 16 errors. Watching for file changes.
+[2J[3J[H7:39:17 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(2,15): error TS2305: Module '"../assembly-grouping"' has no exported member 'BomItemLike'.
+client/src/lib/__tests__/assembly-grouping.test.ts(2,28): error TS2305: Module '"../assembly-grouping"' has no exported member 'AssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(2,44): error TS2305: Module '"../assembly-grouping"' has no exported member 'AssemblySummary'.
+client/src/lib/__tests__/assembly-grouping.test.ts(4,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'classifyAssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(5,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'groupByAssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(6,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblySummary'.
+client/src/lib/__tests__/assembly-grouping.test.ts(7,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblyMethodLabel'.
+client/src/lib/__tests__/assembly-grouping.test.ts(8,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblyMethodColor'.
+client/src/lib/__tests__/assembly-grouping.test.ts(210,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(211,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(212,38): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(227,31): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(238,34): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(238,39): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(249,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(250,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+
+7:39:24 PM - Found 16 errors. Watching for file changes.
+[2J[3J[H7:39:39 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/assembly-grouping.ts(29,1): error TS1005: '}' expected.
+
+7:39:44 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:39:48 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(7,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'groupBomByAssembly'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(8,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'getOrderedGroups'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(9,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GROUP_COLORS'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(10,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GROUP_DESCRIPTIONS'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(13,15): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GroupStats'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(63,31): error TS7006: Parameter 'gi' implicitly has an 'any' type.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(156,29): error TS7006: Parameter 'gs' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(4,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'classifyAssemblyMethod'.
+client/src/lib/__tests__/assembly-grouping.test.ts(5,3): error TS2724: '"../assembly-grouping"' has no exported member named 'groupByAssemblyMethod'. Did you mean 'AssemblyMethod'?
+client/src/lib/__tests__/assembly-grouping.test.ts(6,3): error TS2724: '"../assembly-grouping"' has no exported member named 'getAssemblySummary'. Did you mean 'AssemblySummary'?
+client/src/lib/__tests__/assembly-grouping.test.ts(7,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblyMethodLabel'.
+client/src/lib/__tests__/assembly-grouping.test.ts(8,3): error TS2305: Module '"../assembly-grouping"' has no exported member 'getAssemblyMethodColor'.
+client/src/lib/__tests__/assembly-grouping.test.ts(210,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(211,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(212,38): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(227,31): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(238,34): error TS7006: Parameter 'acc' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(238,39): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(249,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+client/src/lib/__tests__/assembly-grouping.test.ts(250,35): error TS7006: Parameter 'g' implicitly has an 'any' type.
+
+7:40:24 PM - Found 20 errors. Watching for file changes.
+[2J[3J[H7:40:24 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/assembly-grouping.ts(174,1): error TS1005: '}' expected.
+
+7:40:25 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:40:27 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/assembly-grouping.ts(203,1): error TS1005: '}' expected.
+
+7:40:29 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:40:33 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(7,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'groupBomByAssembly'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(8,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'getOrderedGroups'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(9,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GROUP_COLORS'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(10,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GROUP_DESCRIPTIONS'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(13,15): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GroupStats'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(63,31): error TS7006: Parameter 'gi' implicitly has an 'any' type.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(156,29): error TS7006: Parameter 'gs' implicitly has an 'any' type.
+
+7:40:55 PM - Found 7 errors. Watching for file changes.
+[2J[3J[H7:40:55 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(59,1): error TS1005: ']' expected.
+
+7:40:57 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:40:59 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(89,1): error TS1005: '}' expected.
+
+7:41:00 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:41:07 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(120,1): error TS1005: '}' expected.
+
+7:41:09 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:41:16 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(149,1): error TS1005: '}' expected.
+
+7:41:17 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:41:24 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(7,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'groupBomByAssembly'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(8,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'getOrderedGroups'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(9,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GROUP_COLORS'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(10,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GROUP_DESCRIPTIONS'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(13,15): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GroupStats'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(63,31): error TS7006: Parameter 'gi' implicitly has an 'any' type.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(156,29): error TS7006: Parameter 'gs' implicitly has an 'any' type.
+
+7:41:25 PM - Found 7 errors. Watching for file changes.
+[2J[3J[H7:41:32 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(208,1): error TS1005: '}' expected.
+
+7:41:34 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:41:39 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(238,1): error TS1005: '}' expected.
+
+7:41:40 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:41:49 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(268,1): error TS1005: '}' expected.
+
+7:41:50 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:41:57 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(298,1): error TS1005: '}' expected.
+
+7:41:59 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:42:05 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/assembly-grouping.test.ts(328,1): error TS1005: '}' expected.
+
+7:42:06 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:42:12 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(7,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'groupBomByAssembly'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(8,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'getOrderedGroups'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(9,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GROUP_COLORS'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(10,3): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GROUP_DESCRIPTIONS'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(13,15): error TS2305: Module '"@/lib/assembly-grouping"' has no exported member 'GroupStats'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(63,31): error TS7006: Parameter 'gi' implicitly has an 'any' type.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(156,29): error TS7006: Parameter 'gs' implicitly has an 'any' type.
+
+7:42:13 PM - Found 7 errors. Watching for file changes.
+[2J[3J[H7:42:35 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(101,51): error TS2345: Argument of type 'BomItem[]' is not assignable to parameter of type '(BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; })[]'.
+  Type 'BomItem' is not assignable to type 'BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+    Type 'BomItem' is not assignable to type 'BomItemLike'.
+      Types of property 'id' are incompatible.
+        Type 'string' is not assignable to type 'number'.
+
+7:43:03 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:43:36 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(101,51): error TS2345: Argument of type 'BomItem[]' is not assignable to parameter of type '(BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; })[]'.
+  Type 'BomItem' is not assignable to type 'BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+    Type 'BomItem' is not assignable to type 'BomItemLike'.
+      Types of property 'id' are incompatible.
+        Type 'string' is not assignable to type 'number'.
+
+7:43:40 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:45:43 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(101,51): error TS2345: Argument of type 'BomItem[]' is not assignable to parameter of type '(BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; })[]'.
+  Type 'BomItem' is not assignable to type 'BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+    Type 'BomItem' is not assignable to type 'BomItemLike'.
+      Types of property 'id' are incompatible.
+        Type 'string' is not assignable to type 'number'.
+
+7:45:49 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:45:49 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(101,51): error TS2345: Argument of type 'BomItem[]' is not assignable to parameter of type '(BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; })[]'.
+  Type 'BomItem' is not assignable to type 'BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+    Type 'BomItem' is not assignable to type '{ id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+      Types of property 'id' are incompatible.
+        Type 'string' is not assignable to type 'number'.
+
+7:46:27 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:50:55 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(101,51): error TS2345: Argument of type 'BomItem[]' is not assignable to parameter of type '(BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; })[]'.
+  Type 'BomItem' is not assignable to type 'BomItemLike & { id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+    Type 'BomItem' is not assignable to type '{ id?: number | undefined; quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+      Types of property 'id' are incompatible.
+        Type 'string' is not assignable to type 'number'.
+
+7:51:13 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:51:41 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(101,51): error TS2345: Argument of type 'BomItem[]' is not assignable to parameter of type '(BomItemLike & { quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; })[]'.
+  Type 'BomItem' is not assignable to type 'BomItemLike & { quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+    Type 'BomItem' is not assignable to type '{ quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+      Types of property 'esdSensitive' are incompatible.
+        Type 'boolean | null | undefined' is not assignable to type 'boolean | undefined'.
+          Type 'null' is not assignable to type 'boolean | undefined'.
+
+7:52:08 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:52:09 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(101,51): error TS2345: Argument of type 'BomItem[]' is not assignable to parameter of type '(BomItemLike & { quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; })[]'.
+  Type 'BomItem' is not assignable to type 'BomItemLike & { quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+    Type 'BomItem' is not assignable to type '{ quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+      Types of property 'esdSensitive' are incompatible.
+        Type 'boolean | null | undefined' is not assignable to type 'boolean | undefined'.
+          Type 'null' is not assignable to type 'boolean | undefined'.
+
+7:52:16 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:53:35 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(101,51): error TS2345: Argument of type 'BomItem[]' is not assignable to parameter of type '(BomItemLike & { quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; })[]'.
+  Type 'BomItem' is not assignable to type 'BomItemLike & { quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+    Type 'BomItem' is not assignable to type '{ quantity?: number | undefined; totalPrice?: string | number | undefined; esdSensitive?: boolean | undefined; }'.
+      Types of property 'esdSensitive' are incompatible.
+        Type 'boolean | null | undefined' is not assignable to type 'boolean | undefined'.
+          Type 'null' is not assignable to type 'boolean | undefined'.
+
+7:53:54 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:54:36 PM - File change detected. Starting incremental compilation...
+
+
+7:54:56 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:55:40 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/assembly-grouping.ts(280,20): error TS2322: Type 'BomItemLike & { quantity?: number | undefined; totalPrice?: string | number | null | undefined; esdSensitive?: boolean | null | undefined; }' is not assignable to type 'BomItemExtended'.
+  Index signature for type 'string' is missing in type 'BomItemLike & { quantity?: number | undefined; totalPrice?: string | number | null | undefined; esdSensitive?: boolean | null | undefined; }'.
+
+7:56:06 PM - Found 1 error. Watching for file changes.
+[2J[3J[H7:58:14 PM - File change detected. Starting incremental compilation...
+
+
+7:58:49 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H7:58:49 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(70,28): error TS2339: Property 'esdSensitive' does not exist on type 'BomItemLike'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(84,69): error TS2339: Property 'quantity' does not exist on type 'BomItemLike'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(85,92): error TS2339: Property 'totalPrice' does not exist on type 'BomItemLike'.
+
+7:59:00 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H7:59:05 PM - File change detected. Starting incremental compilation...
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(70,28): error TS2339: Property 'esdSensitive' does not exist on type 'BomItemLike'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(84,69): error TS2339: Property 'quantity' does not exist on type 'BomItemLike'.
+client/src/components/views/procurement/AssemblyGroupPanel.tsx(85,92): error TS2339: Property 'totalPrice' does not exist on type 'BomItemLike'.
+client/src/lib/assembly-grouping.ts(267,22): error TS2339: Property 'quantity' does not exist on type 'T'.
+client/src/lib/assembly-grouping.ts(268,31): error TS2339: Property 'totalPrice' does not exist on type 'T'.
+
+7:59:27 PM - Found 5 errors. Watching for file changes.
+[2J[3J[H8:00:16 PM - File change detected. Starting incremental compilation...
+
+
+8:00:46 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H8:01:27 PM - File change detected. Starting incremental compilation...
+
+
+8:02:29 PM - Found 0 errors. Watching for file changes.

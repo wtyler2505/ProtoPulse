@@ -9,6 +9,8 @@ import {
   meetsWcagAA,
   meetsWcagAALarge,
   meetsWcagAAA,
+  suggestLighterColor,
+  suggestDarkerColor,
   auditThemeContrast,
   CONTRAST_FIXES,
   THEME_MUTED_FIXES,
@@ -435,5 +437,116 @@ describe('edge cases', () => {
   it('contrast ratio is always >= 1', () => {
     const ratio = checkContrast('hsl(180 50% 50%)', 'hsl(180 50% 50%)');
     expect(ratio).toBeGreaterThanOrEqual(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// suggestLighterColor
+// ---------------------------------------------------------------------------
+
+describe('suggestLighterColor', () => {
+  it('returns a colour that meets the target contrast ratio', () => {
+    const result = suggestLighterColor('#555555', '#000000', 4.5);
+    const ratio = checkContrast(result, '#000000');
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('returns the original colour if it already meets the target', () => {
+    // White on black already exceeds any reasonable target
+    const result = suggestLighterColor('#FFFFFF', '#000000', 4.5);
+    expect(result.toLowerCase()).toBe('#ffffff');
+  });
+
+  it('lightens a dark grey to meet AA on black', () => {
+    const result = suggestLighterColor('#333333', '#000000', 4.5);
+    const ratio = checkContrast(result, '#000000');
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+    // Result should be lighter than the input
+    const input = parseHex('#333333');
+    const output = parseHex(result);
+    expect(output.r).toBeGreaterThanOrEqual(input.r);
+    expect(output.g).toBeGreaterThanOrEqual(input.g);
+    expect(output.b).toBeGreaterThanOrEqual(input.b);
+  });
+
+  it('returns white when target ratio is unreachable by lightening', () => {
+    // Light fg on light bg — lightening fg only moves it closer to bg
+    const result = suggestLighterColor('#CCCCCC', '#FFFFFF', 21);
+    expect(result.toLowerCase()).toBe('#ffffff');
+  });
+
+  it('preserves colour hue while lightening', () => {
+    // A dark blue lightened should still have blue > red and blue > green
+    const result = suggestLighterColor('#000066', '#000000', 3);
+    const rgb = parseHex(result);
+    expect(rgb.b).toBeGreaterThan(rgb.r);
+    expect(rgb.b).toBeGreaterThan(rgb.g);
+  });
+
+  it('returns valid 7-character hex string', () => {
+    const result = suggestLighterColor('#444444', '#000000', 4.5);
+    expect(result).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+
+  it('handles already-compliant muted foreground on dark bg', () => {
+    // Neon cyan muted-foreground on dark background
+    const result = suggestLighterColor('#808899', '#080a10', 4.5);
+    const ratio = checkContrast(result, '#080a10');
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// suggestDarkerColor
+// ---------------------------------------------------------------------------
+
+describe('suggestDarkerColor', () => {
+  it('returns a colour that meets the target contrast ratio', () => {
+    const result = suggestDarkerColor('#AAAAAA', '#FFFFFF', 4.5);
+    const ratio = checkContrast(result, '#FFFFFF');
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('returns the original colour if it already meets the target', () => {
+    // Black on white already exceeds any target
+    const result = suggestDarkerColor('#000000', '#FFFFFF', 4.5);
+    expect(result.toLowerCase()).toBe('#000000');
+  });
+
+  it('darkens a light grey to meet AA on white', () => {
+    const result = suggestDarkerColor('#CCCCCC', '#FFFFFF', 4.5);
+    const ratio = checkContrast(result, '#FFFFFF');
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+    // Result should be darker than the input
+    const input = parseHex('#CCCCCC');
+    const output = parseHex(result);
+    expect(output.r).toBeLessThanOrEqual(input.r);
+    expect(output.g).toBeLessThanOrEqual(input.g);
+    expect(output.b).toBeLessThanOrEqual(input.b);
+  });
+
+  it('returns black when target ratio is unreachable by darkening', () => {
+    // Dark fg on dark bg — darkening only moves fg closer to bg
+    const result = suggestDarkerColor('#333333', '#000000', 21);
+    expect(result.toLowerCase()).toBe('#000000');
+  });
+
+  it('preserves colour hue while darkening', () => {
+    // A light red darkened should still have red > green and red > blue
+    const result = suggestDarkerColor('#FF6666', '#FFFFFF', 3);
+    const rgb = parseHex(result);
+    expect(rgb.r).toBeGreaterThan(rgb.g);
+    expect(rgb.r).toBeGreaterThan(rgb.b);
+  });
+
+  it('returns valid 7-character hex string', () => {
+    const result = suggestDarkerColor('#BBBBBB', '#FFFFFF', 4.5);
+    expect(result).toMatch(/^#[0-9a-f]{6}$/i);
+  });
+
+  it('handles high target ratios (AAA = 7:1)', () => {
+    const result = suggestDarkerColor('#999999', '#FFFFFF', 7);
+    const ratio = checkContrast(result, '#FFFFFF');
+    expect(ratio).toBeGreaterThanOrEqual(7);
   });
 });
