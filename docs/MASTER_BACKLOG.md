@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 120 | `BL-0407`, `BL-0410`, `BL-0442` | Firmware snapshots, smart code snippets, build journals — firmware safety + developer experience. |
 | 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
 | 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
 | 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
@@ -425,7 +426,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 13 | 265 | 95% complete — Waves 61-119 |
+| P2 | 10 | 268 | 96% complete — Waves 61-120 |
+| 120 | `BL-0407`, `BL-0410`, `BL-0442` | Firmware snapshots, smart code snippets, build journals — firmware safety + developer experience. |
 | 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
 | 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
 | 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
@@ -433,9 +435,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **126** | **375** | **501 items tracked** |
+| **Total** | **123** | **378** | **501 items tracked** |
 
-*Snapshot updated: Wave 119 (2026-03-17)*
+*Snapshot updated: Wave 120 (2026-03-17)*
 
 ---
 
@@ -1161,10 +1163,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0404 | Dependency resolver for Arduino libraries | OPEN | C4 | ARDX-009 |
 | BL-0405 | Board package/version checker | DONE (Wave 119) | C3 | ARDX-010 |
 | BL-0406 | Per-project board profile | DONE (verified Wave 106) | C2 | ARDX-011 |
-| BL-0407 | Save last known good firmware build | OPEN | C3 | ARDX-012 |
+| BL-0407 | Save last known good firmware build | DONE (Wave 120) | C3 | ARDX-012 |
 | BL-0408 | Pre-upload safety checks | OPEN | C3 | ARDX-015 |
 | BL-0409 | AI sketch starter from schematic | OPEN | C3 | ARDX-016 |
-| BL-0410 | Smart code snippets per component | OPEN | C3 | ARDX-017 |
+| BL-0410 | Smart code snippets per component | DONE (Wave 120) | C3 | ARDX-017 |
 | BL-0411 | Board-aware suggestions (timers, PWM limits) | OPEN | C3 | ARDX-021 |
 | BL-0412 | "Refactor to non-blocking" assistant | OPEN | C4 | ARDX-022 |
 | BL-0413 | ISR safety scanner | OPEN | C4 | ARDX-023 |
@@ -1198,7 +1200,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0439 | Community template packs | DONE (Wave 118) | C2 | IFX-095 |
 | BL-0440 | Marketplace for reusable circuit blocks | OPEN | C4 | IFX-096 |
 | BL-0441 | "Remix this design" from public examples | OPEN | C3 | IFX-101 |
-| BL-0442 | Build journals (auto notes as project evolves) | OPEN | C3 | IFX-102 |
+| BL-0442 | Build journals (auto notes as project evolves) | DONE (Wave 120) | C3 | IFX-102 |
 | BL-0443 | Project scorecards (cost, risk, readiness) | OPEN | C3 | IFX-104 |
 | BL-0444 | Smart reminders for unfinished critical steps | DONE (Wave 118) | C2 | IFX-105 |
 | BL-0445 | Creator profile pages for shared projects | DONE (Wave 118) | C2 | IFX-107 |
