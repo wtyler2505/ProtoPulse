@@ -264,6 +264,10 @@ export class OrderHistoryManager {
     };
 
     const orders = this.loadProject(input.projectId);
+    // FIFO eviction: remove oldest orders when at capacity
+    while (orders.length >= MAX_ORDERS_PER_PROJECT) {
+      orders.shift();
+    }
     orders.push(order);
     this.saveProject(input.projectId);
     this.notify();
