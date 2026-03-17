@@ -109,6 +109,8 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 107 | `BL-0275`, `BL-0579`, `BL-0272`, `BL-0469`, `BL-0254` | GPU blur optimization, export design snapshots, telemetry→digital twin wiring, pick-and-place validation, release readiness scorecard — performance + manufacturing trust + system integration. |
+| 106 | Backlog reconciliation | 65 items verified DONE (Waves 88-104 retroactive). P2 went from 142→72 open. |
 | 105 | `BL-0217`, `BL-0215`, `BL-0240`, `BL-0536`, `BL-0219` | Export results panel, import mapping warnings, lifecycle badges on BOM cards, tutorial step navigation, import history — export/import UX + procurement trust + onboarding flow. |
 | 87 | `BL-0593`, `BL-0628`, `BL-0147`, `BL-0163`, `BL-0231` | Bendable breadboard legs, Arduino example library, flash diagnostics, AI testbench tools, radial menu — maker UX + firmware feedback loop. |
 | 86 | `BL-0627`, `BL-0629`, `BL-0523`, `BL-0152`, Electron shell | Starter circuits, etchable PCB export, DFM AI tools, pin constants, native desktop app foundation. |
@@ -411,11 +413,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 77 | 201 | 72% complete — Waves 61-106 |
+| P2 | 72 | 206 | 74% complete — Waves 61-107 |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **190** | **311** | **501 items tracked** |
+| **Total** | **185** | **316** | **501 items tracked** |
 
-*Snapshot updated: Wave 106 full reconciliation (2026-03-16) — systematic 4-batch codebase scan*
+*Snapshot updated: Wave 107 (2026-03-16)*
 
 ---
 
@@ -821,7 +823,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0468 | Panelization tool with tab/v-score/fiducial | OPEN | C4 | MF-132, IFX-037 |
-| BL-0469 | Pick-and-place validation and preview | OPEN | C3 | MF-133, IFX-038 |
+| BL-0469 | Pick-and-place validation and preview — pick-place-validator.ts with 7 rules + stats, 47 tests. | DONE (Wave 107) | C3 | MF-133, IFX-038 |
 | BL-0470 | Manufacturing package validator before download | OPEN | C3 | MF-135 |
 | BL-0471 | Build-time risk score (cost + supply + assembly) | OPEN | C4 | MF-137, IFX-031 |
 | BL-0472 | Quote and order history per project | OPEN | C3 | MF-140 |
@@ -913,7 +915,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0251 | Compare current vs manufacturer rule set | DONE (verified Wave 106) | C3 | UX-047 |
 | BL-0252 | Suppression workflow with reason + expiration — drc-suppression.ts implemented. | DONE (verified Wave 106) | C2 | UX-048 |
 | BL-0253 | Guided remediation wizard (step-by-step fixes) | DONE (verified Wave 106) | C3 | UX-049 |
-| BL-0254 | Risk score card for release readiness | OPEN | C3 | UX-050, IFX-031 |
+| BL-0254 | Risk score card for release readiness — release-readiness.ts with 5-category weighted scoring + grades, 58 tests. | DONE (Wave 107) | C3 | UX-050, IFX-031 |
 
 ### Security Hardening (P2)
 
@@ -965,10 +967,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0270 | `mulberry32` PRNG extracted to `shared/prng.ts` — monte-carlo.ts, gpu-monte-carlo.ts, generative.ts all import from shared | DONE | C3 | Wave 60 |
 | BL-0271 | GPU Monte Carlo evaluator runs on CPU — implement actual GPU batch-solve pipeline | DONE (verified Wave 106) | C4 | Wave 51 review |
-| BL-0272 | TelemetryLogger not connected to DeviceShadow live overlay | OPEN | C3 | Wave 51 review |
+| BL-0272 | TelemetryLogger not connected to DeviceShadow live overlay — telemetry-shadow-bridge.ts with 10Hz throttle + auto-start hook, 28 tests. | DONE (Wave 107) | C3 | Wave 51 review |
 | BL-0273 | Component Editor auto-save fires every 2s during active drawing (mouse-move driven) — FALSE POSITIVE: debounce works correctly, timer resets on each state change, save fires only 2s after last change | DONE | C2 | Wave 88 |
 | BL-0274 | React.memo on high-frequency components — HistoryList, ProjectExplorer, SortableBomRow, BomCardItem memoized | DONE | C3 | Wave 61 |
-| BL-0275 | `backdrop-blur-xl` GPU jank on low-end devices | OPEN | C2 | app-audit §15 |
+| BL-0275 | `backdrop-blur-xl` GPU jank on low-end devices — useOptimizedBlur hook + GPU detection + reduced-motion fallback, 87 tests. | DONE (Wave 107) | C2 | app-audit §15 |
 | BL-0276 | No cache headers on API responses — relying entirely on client-side React Query cache | DONE (verified Wave 106) | C3 | app-audit §16 |
 
 ### Cross-Tool Integration — All Domains (Wave 65 Audit)
@@ -1002,7 +1004,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0576 | **AI Chat → simulation results in system prompt context** — Simulation output (DC operating voltages, transient waveform peaks, Monte Carlo yield, thermal hotspots) is never included in the AI's context. AI answers about "why is my circuit misbehaving" have zero access to what the simulation actually showed. Add a `buildSimulationContext()` function that summarizes the most recent simulation result and includes it in the system prompt. | DONE | C3 | Wave 70 |
 | BL-0577 | **Digital Twin → out-of-spec telemetry creates validation issues** — When a connected device sends telemetry that exceeds a component's operating bounds (e.g. VCC = 4.1V, temperature = 87°C), the Digital Twin should automatically create a `validation_issue` record (type: "hardware-telemetry", severity: "warning") so it shows up in the ValidationView. Currently the Digital Twin and the validation system have zero connection. | OPEN | C4 | Wave 65 audit |
 | BL-0578 | **Engineering Calculators → apply result to design** — After computing a result in any calculator (Ohm's Law: R = 330Ω; RC filter: C = 100nF), there should be an "Add to BOM" and "Apply to component" button that uses the result as the value for a selected BOM item or schematic instance. Currently results must be manually transcribed — the calculators are completely isolated from the rest of the design. | DONE (verified Wave 106) | C3 | Wave 65 audit |
-| BL-0579 | **Export → auto-create design snapshot** — When a user exports Gerbers for fabrication (the most critical export), the system should offer (or automatically) create a timestamped design snapshot ("Sent to fab — 2026-03-12"). This ties design history to manufacturing milestones. Currently export and design history have zero connection. | OPEN | C3 | Wave 65 audit |
+| BL-0579 | **Export → auto-create design snapshot** — export-snapshot.ts with shouldAutoSnapshot + createExportSnapshot for manufacturing formats, 41 tests. | DONE (Wave 107) | C3 | Wave 65 audit |
 | BL-0580 | **Validation ↔ BOM completeness warnings** — BOM items with missing MPN, blank manufacturer, or unverified specs should generate validation issues (severity: "info" or "warning") in the ValidationView, e.g. "R3 has no MPN — cannot verify for manufacturing." Currently BOM and validation are entirely decoupled; you can submit a BOM full of blank fields and the validator never notices. | DONE (Wave 85) | C4 | Wave 65 audit |
 | BL-0581 | **Standards Compliance → unified ValidationView** — `StandardsCompliance` checker (IPC-2221, IPC-7711, RoHS, etc.) produces a separate panel/report. Its results should appear as first-class items in the `ValidationView` alongside DRC and ERC violations, with the same severity badges, group-by, filter, and click-to-navigate UX. Currently standards compliance is a completely separate surface. | OPEN | C4 | Wave 65 audit |
 | BL-0582 | **Unified component search across Standard Library + Community Library + BOM** — Users must search Standard Library and Community Library in separate panels, and there is no way to search BOM items from either. A single "Find component" search (Ctrl+K equivalent) that queries all three simultaneously and surfaces the best match — with an "Add to BOM" or "Place on schematic" action — would eliminate most of the cross-panel navigation overhead. | OPEN | C4 | Wave 65 audit |
