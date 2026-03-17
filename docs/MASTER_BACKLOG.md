@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
 | 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
@@ -422,14 +423,15 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 27 | 251 | 90% complete — Waves 61-116 |
+| P2 | 22 | 256 | 92% complete — Waves 61-117 |
+| 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
 | 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **140** | **361** | **501 items tracked** |
+| **Total** | **135** | **366** | **501 items tracked** |
 
-*Snapshot updated: Wave 116 (2026-03-17)*
+*Snapshot updated: Wave 117 (2026-03-17)*
 
 ---
 
@@ -1124,7 +1126,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0375 | CLI tooling for headless validation/export | OPEN | C4 | MF-188 |
 | BL-0376 | Git-native design diff/merge | DONE (verified Wave 106) | C5 | MF-189 |
 | BL-0377 | Public embed API for schematic/PCB views | DONE (verified Wave 106) | C4 | MF-164 |
-| BL-0378 | Versioned API docs synced from live routes | OPEN | C3 | MF-165 |
+| BL-0378 | Versioned API docs synced from live routes | DONE (Wave 117) | C3 | MF-165 |
 
 ### Advanced Collaboration
 
@@ -1134,15 +1136,15 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0381 | RBAC + org/team tenancy model | DONE (verified Wave 106) | C5 | MF-177 |
 | BL-0382 | Audit log explorer UI | DONE (Wave 116) | C3 | MF-178 |
 | BL-0383 | Customizable workspace presets | DONE (Wave 116) | C2 | UX-020 |
-| BL-0384 | Team command center | OPEN | C3 | IFX-119 |
+| BL-0384 | Team command center | DONE (Wave 117) | C3 | IFX-119 |
 
 ### Advanced Navigation
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0390 | Interaction history timeline for step-back | OPEN | C3 | UX-039, IFX-078 |
+| BL-0390 | Interaction history timeline for step-back | DONE (Wave 117) | C3 | UX-039, IFX-078 |
 | BL-0391 | Breadcrumbs for deep editor contexts | DONE (verified Wave 106) | C2 | UX-014 |
-| BL-0392 | Quick jump/search for views and tools | OPEN | C3 | UX-013 |
+| BL-0392 | Quick jump/search for views and tools | DONE (Wave 117) | C3 | UX-013 |
 
 ### Arduino IDE Integration
 
@@ -1150,7 +1152,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0400 | One-click "Open in Arduino IDE" from design | OPEN | C3 | ARDX-001 |
 | BL-0401 | Round-trip diff viewer (ProtoPulse vs IDE) | OPEN | C4 | ARDX-003 |
-| BL-0402 | Build/compile status panel | OPEN | C2 | ARDX-006 |
+| BL-0402 | Build/compile status panel | DONE (Wave 117) | C2 | ARDX-006 |
 | BL-0403 | Upload firmware with full log output | DONE (verified Wave 106) | C3 | ARDX-007 |
 | BL-0404 | Dependency resolver for Arduino libraries | OPEN | C4 | ARDX-009 |
 | BL-0405 | Board package/version checker | OPEN | C3 | ARDX-010 |
