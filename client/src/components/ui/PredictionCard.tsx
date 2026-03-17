@@ -148,7 +148,7 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
           data-testid={`prediction-dismiss-${prediction.id}`}
           onClick={() => { onDismiss(prediction.id); }}
           className={cn(
-            'flex-shrink-0 rounded p-0.5 text-zinc-500 transition-colors',
+            'flex-shrink-0 rounded p-0.5 text-zinc-400 transition-colors',
             'hover:bg-zinc-700/50 hover:text-zinc-300',
           )}
           aria-label="Dismiss suggestion"
@@ -173,7 +173,7 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
         <button
           data-testid={`prediction-toggle-${prediction.id}`}
           onClick={() => { setExpanded(!expanded); }}
-          className="flex items-center gap-1 text-xs text-zinc-500 transition-colors hover:text-zinc-300"
+          className="flex items-center gap-1 text-xs text-zinc-400 transition-colors hover:text-zinc-300"
         >
           {expanded ? (
             <>
@@ -213,7 +213,7 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
           <span className="font-medium text-zinc-300">Action: </span>
           {prediction.action.type.replace(/_/g, ' ')}
           {prediction.action.payload && Object.keys(prediction.action.payload).length > 0 && (
-            <span className="ml-1 text-zinc-500">
+            <span className="ml-1 text-zinc-400">
               ({Object.entries(prediction.action.payload)
                 .map(([k, v]) => `${k}: ${String(v)}`)
                 .join(', ')})

@@ -112,12 +112,12 @@ function CommentItem({
               {targetLabel(comment.targetType)}
             </Badge>
             {comment.targetId && (
-              <span className="text-[10px] text-zinc-500 truncate" data-testid={`comment-target-id-${comment.id}`}>
+              <span className="text-[10px] text-zinc-400 truncate" data-testid={`comment-target-id-${comment.id}`}>
                 {comment.targetId}
               </span>
             )}
           </div>
-          <span className="text-[10px] text-zinc-500 shrink-0" data-testid={`comment-time-${comment.id}`}>
+          <span className="text-[10px] text-zinc-400 shrink-0" data-testid={`comment-time-${comment.id}`}>
             {relativeTime(comment.createdAt)}
           </span>
         </div>
@@ -126,7 +126,7 @@ function CommentItem({
         <p
           className={cn(
             'text-sm whitespace-pre-wrap break-words',
-            isResolved ? 'text-zinc-500 line-through' : 'text-zinc-200',
+            isResolved ? 'text-zinc-400 line-through' : 'text-zinc-200',
           )}
           data-testid={`comment-content-${comment.id}`}
         >
@@ -359,7 +359,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
       {showFilters && (
         <div className="px-4 py-2 border-b border-zinc-800 space-y-2" data-testid="comments-filter-bar">
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-zinc-500 w-14 shrink-0">Status:</span>
+            <span className="text-[10px] text-zinc-400 w-14 shrink-0">Status:</span>
             {(['all', 'unresolved', 'resolved'] as ResolvedFilter[]).map((f) => (
               <Button
                 key={f}
@@ -379,7 +379,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
             ))}
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-[10px] text-zinc-500 w-14 shrink-0">Target:</span>
+            <span className="text-[10px] text-zinc-400 w-14 shrink-0">Target:</span>
             {(['all', 'general', 'node', 'edge', 'bom_item'] as TargetFilter[]).map((f) => (
               <Button
                 key={f}
@@ -403,13 +403,13 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
       <ScrollArea className="flex-1 min-h-0">
         <div className="px-3 py-2 space-y-2" data-testid="comments-list">
           {commentsQuery.isLoading && (
-            <p className="text-xs text-zinc-500 text-center py-8" data-testid="comments-loading">Loading comments...</p>
+            <p className="text-xs text-zinc-400 text-center py-8" data-testid="comments-loading">Loading comments...</p>
           )}
           {commentsQuery.isError && (
             <p className="text-xs text-red-400 text-center py-8" data-testid="comments-error">Failed to load comments</p>
           )}
           {!commentsQuery.isLoading && !commentsQuery.isError && topLevelComments.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-zinc-500" data-testid="comments-empty">
+            <div className="flex flex-col items-center justify-center py-12 text-zinc-400" data-testid="comments-empty">
               <MessageSquare className="h-8 w-8 mb-2 opacity-30" />
               <p className="text-xs">No comments yet</p>
               <p className="text-[10px] mt-1">Start a design review conversation</p>
@@ -446,7 +446,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="h-5 px-1 text-[10px] text-zinc-500 hover:text-zinc-300"
+              className="h-5 px-1 text-[10px] text-zinc-400 hover:text-zinc-300"
               onClick={handleCancelReply}
               data-testid="comments-cancel-reply"
             >
@@ -458,7 +458,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
           <Textarea
             placeholder={replyToId ? 'Write a reply...' : 'Add a comment...'}
             aria-label={replyToId ? 'Write a reply' : 'Add a comment'}
-            className="min-h-[60px] max-h-[120px] resize-none bg-zinc-900 border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-[#00F0FF]/30"
+            className="min-h-[60px] max-h-[120px] resize-none bg-zinc-900 border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:ring-[#00F0FF]/30"
             value={newContent}
             onChange={(e) => { setNewContent(e.target.value); }}
             onKeyDown={(e) => {

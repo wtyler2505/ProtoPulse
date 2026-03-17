@@ -148,7 +148,7 @@ const ActionRow = memo(function ActionRow({
           </div>
         )}
         {action.type === 'skip' && (
-          <div className="mt-1 text-xs text-zinc-500">{action.reason}</div>
+          <div className="mt-1 text-xs text-zinc-400">{action.reason}</div>
         )}
       </div>
       {action.type !== 'skip' && (
@@ -275,7 +275,7 @@ const SchematicBomSyncPanel = memo(function SchematicBomSyncPanel({
             'flex items-center gap-1 rounded px-3 py-1.5 text-xs font-medium',
             hasData
               ? 'bg-cyan-600 text-white hover:bg-cyan-500'
-              : 'cursor-not-allowed bg-zinc-700 text-zinc-500',
+              : 'cursor-not-allowed bg-zinc-700 text-zinc-400',
           )}
         >
           <RefreshCw className="h-3 w-3" />
@@ -286,7 +286,7 @@ const SchematicBomSyncPanel = memo(function SchematicBomSyncPanel({
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {!plan && !hasData && (
-          <div data-testid="empty-state" className="flex flex-col items-center gap-2 py-8 text-center text-zinc-500">
+          <div data-testid="empty-state" className="flex flex-col items-center gap-2 py-8 text-center text-zinc-400">
             <Package className="h-8 w-8" />
             <p className="text-sm">No schematic instances found.</p>
             <p className="text-xs">Add components to your schematic to sync them with the BOM.</p>
@@ -392,7 +392,7 @@ function SummaryStat({ label, value, color }: { label: string; value: number; co
   return (
     <div data-testid={`stat-${label.toLowerCase()}`} className="rounded border border-zinc-700 bg-zinc-800/50 px-2 py-1.5 text-center">
       <div className={cn('text-lg font-bold', color)}>{value}</div>
-      <div className="text-xs text-zinc-500">{label}</div>
+      <div className="text-xs text-zinc-400">{label}</div>
     </div>
   );
 }

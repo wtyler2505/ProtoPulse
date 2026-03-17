@@ -263,7 +263,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
         </div>
 
         {/* Preview */}
-        <div className="flex items-center gap-2 text-xs text-zinc-500">
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
           <Activity className="h-3 w-3" />
           <span>Z₀ at 0.2mm width: {previewZDisplay}</span>
         </div>
@@ -288,7 +288,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
         </div>
 
         {suggestions.length === 0 ? (
-          <p className="text-xs text-zinc-500 italic" data-testid="no-nets-message">
+          <p className="text-xs text-zinc-400 italic" data-testid="no-nets-message">
             No nets with impedance targets configured.
           </p>
         ) : (
@@ -316,7 +316,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
                     </td>
                     <td className="px-2 py-1.5 text-right font-mono text-zinc-300">
                       {s.currentWidth.toFixed(3)}mm
-                      <span className="ml-1 text-zinc-500">({s.actualZ}Ω)</span>
+                      <span className="ml-1 text-zinc-400">({s.actualZ}Ω)</span>
                     </td>
                     <td
                       className={cn(

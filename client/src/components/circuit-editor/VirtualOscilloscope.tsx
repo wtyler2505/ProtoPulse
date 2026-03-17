@@ -436,7 +436,7 @@ const VirtualOscilloscope = memo(function VirtualOscilloscope({
       {/* Timebase controls */}
       <div className="flex items-center justify-between px-3 py-1 border-b border-zinc-800">
         <div className="flex items-center gap-1 text-[10px]">
-          <span className="text-zinc-500">Time:</span>
+          <span className="text-zinc-400">Time:</span>
           <button
             type="button"
             onClick={handleTimebaseFaster}
@@ -460,7 +460,7 @@ const VirtualOscilloscope = memo(function VirtualOscilloscope({
 
         {/* Trigger controls */}
         <div className="flex items-center gap-1 text-[10px]">
-          <span className="text-zinc-500">Trig:</span>
+          <span className="text-zinc-400">Trig:</span>
           <button
             type="button"
             onClick={handleTriggerToggle}
@@ -468,7 +468,7 @@ const VirtualOscilloscope = memo(function VirtualOscilloscope({
               'px-1.5 py-0.5 rounded text-[8px] border cursor-pointer',
               state.trigger.enabled
                 ? 'border-amber-400/50 text-amber-400'
-                : 'border-zinc-600 text-zinc-500',
+                : 'border-zinc-600 text-zinc-400',
             )}
             data-testid="scope-trigger-toggle"
           >

@@ -213,7 +213,7 @@ export default function GenerativeDesignView() {
         )}
 
         {results.length > 0 && (
-          <div data-testid="generation-progress" className="text-xs text-zinc-500">
+          <div data-testid="generation-progress" className="text-xs text-zinc-400">
             Generation {results.length} / {generations}
             {latestResult && (
               <> — Best: {(latestResult.bestFitness * 100).toFixed(1)}% | Avg: {(latestResult.averageFitness * 100).toFixed(1)}%</>
@@ -225,7 +225,7 @@ export default function GenerativeDesignView() {
       {/* Right panel — Candidates */}
       <div className="flex-1 overflow-y-auto">
         {!latestResult ? (
-          <div data-testid="empty-state" className="flex h-full items-center justify-center text-zinc-500">
+          <div data-testid="empty-state" className="flex h-full items-center justify-center text-zinc-400">
             <div className="text-center">
               <p className="text-lg">No candidates yet</p>
               <p className="text-sm mt-1">Describe your circuit and click Generate to start</p>
@@ -247,7 +247,7 @@ export default function GenerativeDesignView() {
                   >
                     {(candidate.fitness.overall * 100).toFixed(1)}%
                   </span>
-                  <span className="text-xs text-zinc-500">
+                  <span className="text-xs text-zinc-400">
                     #{candidate.fitness.rank ?? '-'}
                   </span>
                 </div>
@@ -273,7 +273,7 @@ export default function GenerativeDesignView() {
                   <div className="mt-2 space-y-1">
                     {Object.entries(candidate.fitness.breakdown).map(([key, entry]) => (
                       <div key={key} className="flex items-center gap-2 text-xs">
-                        <span className="text-zinc-500 w-24 truncate">{key}</span>
+                        <span className="text-zinc-400 w-24 truncate">{key}</span>
                         <div className="flex-1 h-1 rounded bg-zinc-800">
                           <div
                             className="h-full rounded bg-zinc-500"

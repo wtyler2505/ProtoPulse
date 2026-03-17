@@ -43,7 +43,7 @@ function TutorialCard({
               </Badge>
             )}
           </div>
-          <p className="text-xs text-zinc-500 mt-1 line-clamp-2">{tutorial.description}</p>
+          <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{tutorial.description}</p>
         </div>
       </div>
       <div className="flex items-center gap-3 mt-2">
@@ -84,7 +84,7 @@ export default function TutorialMenu({ onClose }: { onClose?: () => void }) {
             variant="ghost"
             size="sm"
             onClick={resetProgress}
-            className="h-6 px-2 text-[10px] text-zinc-500 hover:text-zinc-300"
+            className="h-6 px-2 text-[10px] text-zinc-400 hover:text-zinc-300"
           >
             <RotateCcw className="h-3 w-3 mr-1" />
             Reset
@@ -93,7 +93,7 @@ export default function TutorialMenu({ onClose }: { onClose?: () => void }) {
       </div>
 
       <div className="px-4 pb-2">
-        <p className="text-xs text-zinc-500">
+        <p className="text-xs text-zinc-400">
           Step-by-step guides to help you get the most out of ProtoPulse.
         </p>
       </div>
@@ -106,7 +106,7 @@ export default function TutorialMenu({ onClose }: { onClose?: () => void }) {
             const categoryTutorials = TUTORIALS.filter((t) => t.category === category.id);
             return (
               <div key={category.id} data-testid={`tutorial-category-${category.id}`}>
-                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2 px-1">
+                <h3 className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-2 px-1">
                   {category.label}
                 </h3>
                 <div className="space-y-2">

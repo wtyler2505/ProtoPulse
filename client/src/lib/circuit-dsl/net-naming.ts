@@ -183,8 +183,8 @@ export class NetScopeManager {
    */
   flattenScopes(): LocalNet[] {
     const result: LocalNet[] = [];
-    for (const scope of this.scopes.values()) {
-      for (const net of scope.nets.values()) {
+    for (const scope of Array.from(this.scopes.values())) {
+      for (const net of Array.from(scope.nets.values())) {
         result.push(net);
       }
     }
@@ -291,7 +291,7 @@ export class NetScopeManager {
   getChildScopes(parentId: string): string[] {
     this.requireScope(parentId);
     const children: string[] = [];
-    for (const scope of this.scopes.values()) {
+    for (const scope of Array.from(this.scopes.values())) {
       if (scope.parentId === parentId) {
         children.push(scope.id);
       }

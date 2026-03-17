@@ -415,25 +415,25 @@ export function CameraComponentId({ onIdentify, onAddToBom, className }: CameraC
               <div className="grid grid-cols-2 gap-2 text-sm" data-testid="result-details">
                 {result.packageType && (
                   <div data-testid="result-package">
-                    <span className="text-zinc-500">Package:</span>{' '}
+                    <span className="text-zinc-400">Package:</span>{' '}
                     <span className="text-zinc-200">{result.packageType}</span>
                   </div>
                 )}
                 {result.partNumber && (
                   <div data-testid="result-part-number">
-                    <span className="text-zinc-500">Part #:</span>{' '}
+                    <span className="text-zinc-400">Part #:</span>{' '}
                     <span className="text-zinc-200">{result.partNumber}</span>
                   </div>
                 )}
                 {result.manufacturer && (
                   <div data-testid="result-manufacturer">
-                    <span className="text-zinc-500">Mfg:</span>{' '}
+                    <span className="text-zinc-400">Mfg:</span>{' '}
                     <span className="text-zinc-200">{result.manufacturer}</span>
                   </div>
                 )}
                 {result.pinCount !== null && (
                   <div data-testid="result-pin-count">
-                    <span className="text-zinc-500">Pins:</span>{' '}
+                    <span className="text-zinc-400">Pins:</span>{' '}
                     <span className="text-zinc-200">{result.pinCount}</span>
                   </div>
                 )}
@@ -441,7 +441,7 @@ export function CameraComponentId({ onIdentify, onAddToBom, className }: CameraC
 
               {result.specifications.length > 0 && (
                 <div data-testid="result-specifications">
-                  <span className="text-xs text-zinc-500">Specifications:</span>
+                  <span className="text-xs text-zinc-400">Specifications:</span>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {result.specifications.map((spec) => (
                       <Badge
@@ -459,7 +459,7 @@ export function CameraComponentId({ onIdentify, onAddToBom, className }: CameraC
 
               {result.notes && (
                 <p
-                  className="text-xs text-zinc-500 italic"
+                  className="text-xs text-zinc-400 italic"
                   data-testid="result-notes"
                 >
                   {result.notes}

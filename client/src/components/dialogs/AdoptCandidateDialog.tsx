@@ -128,8 +128,8 @@ export function AdoptCandidateDialog({
                 >
                   <StatusBadge status={diff.status} />
                   <span className="text-zinc-200 font-mono">{diff.refdes}</span>
-                  <span className="text-zinc-500">{diff.partId}</span>
-                  {diff.details && <span className="text-zinc-500 italic">{diff.details}</span>}
+                  <span className="text-zinc-400">{diff.partId}</span>
+                  {diff.details && <span className="text-zinc-400 italic">{diff.details}</span>}
                 </div>
               ))}
             </div>
@@ -151,7 +151,7 @@ export function AdoptCandidateDialog({
                   >
                     <StatusBadge status={diff.status} />
                     <span className="text-zinc-200 font-mono">{diff.name}</span>
-                    <span className="text-zinc-500">({diff.type})</span>
+                    <span className="text-zinc-400">({diff.type})</span>
                   </div>
                 ))}
             </div>
@@ -159,7 +159,7 @@ export function AdoptCandidateDialog({
         )}
 
         {/* Adopt result preview */}
-        <div data-testid="adopt-preview" className="text-xs text-zinc-500 pt-1">
+        <div data-testid="adopt-preview" className="text-xs text-zinc-400 pt-1">
           Will create {candidate.ir.components.length} architecture node{candidate.ir.components.length !== 1 ? 's' : ''} and connect
           them via shared nets.
         </div>

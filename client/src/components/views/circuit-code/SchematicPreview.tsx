@@ -100,7 +100,7 @@ export function SchematicPreview({ layout, isEvaluating }: SchematicPreviewProps
       className="relative h-full w-full overflow-hidden bg-[#0a0a1a]"
     >
       {isEmpty && !isEvaluating && (
-        <div className="absolute inset-0 flex items-center justify-center text-zinc-500">
+        <div className="absolute inset-0 flex items-center justify-center text-zinc-400">
           No components
         </div>
       )}

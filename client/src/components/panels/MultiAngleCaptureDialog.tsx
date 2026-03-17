@@ -277,7 +277,7 @@ export function MultiAngleCaptureDialog({
               <p className="text-sm text-zinc-400 mb-2">
                 {currentSuggestion.instruction}
               </p>
-              <p className="text-xs text-zinc-500 italic">
+              <p className="text-xs text-zinc-400 italic">
                 {currentSuggestion.reason}
               </p>
               <Button
@@ -390,7 +390,7 @@ export function MultiAngleCaptureDialog({
                   Manufacturer: {mergedResult.manufacturer}
                 </p>
               )}
-              <p className="text-xs text-zinc-500 mt-1">
+              <p className="text-xs text-zinc-400 mt-1">
                 Based on {totalCaptured} photo{totalCaptured !== 1 ? 's' : ''} from different angles.
               </p>
             </div>

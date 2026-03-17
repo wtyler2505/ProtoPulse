@@ -572,8 +572,8 @@ describe('TelemetryShadowBridge — wiring integration', () => {
 
     const state = bridge.getState();
     // Attempt to mutate the returned object
-    (state as Record<string, unknown>).framesForwarded = 999;
-    (state as Record<string, unknown>).active = false;
+    (state as unknown as Record<string, unknown>).framesForwarded = 999;
+    (state as unknown as Record<string, unknown>).active = false;
 
     // Internal state should be unaffected
     const freshState = bridge.getState();

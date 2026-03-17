@@ -383,7 +383,7 @@ function PinDiagram({ entry }: { entry: PinoutEntry }) {
 function PinTable({ pins }: { pins: PinInfo[] }) {
   return (
     <div data-testid="pinout-pin-table" className="text-xs">
-      <div className="grid grid-cols-[40px_1fr_1fr_50px] gap-x-2 px-2 py-1 text-zinc-500 font-semibold border-b border-zinc-700/50">
+      <div className="grid grid-cols-[40px_1fr_1fr_50px] gap-x-2 px-2 py-1 text-zinc-400 font-semibold border-b border-zinc-700/50">
         <span data-testid="pin-table-header-pin">#</span>
         <span data-testid="pin-table-header-name">Name</span>
         <span data-testid="pin-table-header-function">Function</span>
@@ -429,13 +429,13 @@ function KeySpecs({ partMeta }: { partMeta?: PartMeta }) {
 
   return (
     <div data-testid="pinout-key-specs" className="px-3 py-2 border-t border-zinc-700/50">
-      <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider mb-1">
+      <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">
         Key Specs
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-xs">
         {partMeta.properties.slice(0, 6).map((prop) => (
           <div key={prop.key} className="flex justify-between" data-testid={`spec-${prop.key}`}>
-            <span className="text-zinc-500">{prop.key}:</span>
+            <span className="text-zinc-400">{prop.key}:</span>
             <span className="text-zinc-300 font-mono">{prop.value}</span>
           </div>
         ))}
@@ -581,7 +581,7 @@ export function PinoutHoverCard({
           <span data-testid="pinout-component-name" className="text-sm font-semibold text-zinc-100">
             {pinout.name}
           </span>
-          <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+          <div className="flex items-center gap-2 text-[10px] text-zinc-400">
             <span data-testid="pinout-package">{pinout.package}</span>
             <span>|</span>
             <span data-testid="pinout-family">{pinout.family}</span>
@@ -592,7 +592,7 @@ export function PinoutHoverCard({
         <button
           data-testid="pinout-close-button"
           onClick={onClose}
-          className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+          className="text-zinc-400 hover:text-zinc-300 transition-colors p-1"
           aria-label="Close pinout card"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">

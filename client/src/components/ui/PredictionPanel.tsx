@@ -81,9 +81,9 @@ export default function PredictionPanel({
           <div className="flex-1" />
 
           {collapsed ? (
-            <ChevronDown className="h-4 w-4 text-zinc-500" />
+            <ChevronDown className="h-4 w-4 text-zinc-400" />
           ) : (
-            <ChevronUp className="h-4 w-4 text-zinc-500" />
+            <ChevronUp className="h-4 w-4 text-zinc-400" />
           )}
         </button>
 
@@ -91,7 +91,7 @@ export default function PredictionPanel({
           <button
             data-testid="prediction-panel-clear-all"
             onClick={onClearAll}
-            className="rounded p-1 text-zinc-500 transition-colors hover:bg-zinc-700/50 hover:text-zinc-300"
+            className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-700/50 hover:text-zinc-300"
             aria-label="Clear all suggestions"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -105,7 +105,7 @@ export default function PredictionPanel({
           {count === 0 ? (
             <p
               data-testid="prediction-panel-empty"
-              className="py-4 text-center text-xs text-zinc-500"
+              className="py-4 text-center text-xs text-zinc-400"
             >
               No suggestions — your design looks good!
             </p>

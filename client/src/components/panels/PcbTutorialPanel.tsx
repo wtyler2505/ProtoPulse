@@ -77,7 +77,7 @@ function StepStatusIcon({ status }: { status: PcbTutorialStepStatus }) {
           data-testid="step-status-skipped"
           className="w-6 h-6 rounded-full bg-zinc-600/30 flex items-center justify-center shrink-0"
         >
-          <SkipForward className="w-3.5 h-3.5 text-zinc-500" />
+          <SkipForward className="w-3.5 h-3.5 text-zinc-400" />
         </div>
       );
     case 'active':
@@ -234,14 +234,14 @@ export default function PcbTutorialPanel({
             className="p-1 hover:bg-zinc-800 rounded transition-colors"
             aria-label="Close tutorial"
           >
-            <X className="w-4 h-4 text-zinc-500" />
+            <X className="w-4 h-4 text-zinc-400" />
           </button>
         </div>
-        <p className="text-xs text-zinc-500 mb-3">{PCB_TUTORIAL_DESCRIPTION}</p>
+        <p className="text-xs text-zinc-400 mb-3">{PCB_TUTORIAL_DESCRIPTION}</p>
 
         {/* Progress bar */}
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-[11px] text-zinc-500">
+          <div className="flex items-center justify-between text-[11px] text-zinc-400">
             <span data-testid="pcb-tutorial-progress-text">
               {completedCount} of {PCB_TUTORIAL_STEPS.length} steps completed
             </span>
@@ -296,7 +296,7 @@ export default function PcbTutorialPanel({
                           {step.stepNumber}. {step.title}
                         </span>
                         {status === 'skipped' && (
-                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 text-zinc-500 border-zinc-700">
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 text-zinc-400 border-zinc-700">
                             Skipped
                           </Badge>
                         )}
@@ -323,7 +323,7 @@ export default function PcbTutorialPanel({
                           </div>
                           <ul className="space-y-1">
                             {step.tips.map((tip, tipIdx) => (
-                              <li key={tipIdx} className="text-[11px] text-zinc-500 pl-4 relative before:content-[''] before:absolute before:left-1.5 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-zinc-600">
+                              <li key={tipIdx} className="text-[11px] text-zinc-400 pl-4 relative before:content-[''] before:absolute before:left-1.5 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-zinc-600">
                                 {tip}
                               </li>
                             ))}
@@ -352,7 +352,7 @@ export default function PcbTutorialPanel({
                             onClick={() => {
                               handleSkip(step.id);
                             }}
-                            className="h-7 px-2 text-xs text-zinc-500"
+                            className="h-7 px-2 text-xs text-zinc-400"
                           >
                             <SkipForward className="w-3 h-3 mr-1" />
                             Skip

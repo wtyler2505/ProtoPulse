@@ -261,7 +261,7 @@ export default function TutorialOverlay() {
               <h3 data-testid="tutorial-step-title" className="text-sm font-semibold text-zinc-100">
                 {currentStep.title}
               </h3>
-              <span data-testid="tutorial-step-count" className="text-xs text-zinc-500 whitespace-nowrap">
+              <span data-testid="tutorial-step-count" className="text-xs text-zinc-400 whitespace-nowrap">
                 Step {progress.current} of {progress.total}
               </span>
             </div>
