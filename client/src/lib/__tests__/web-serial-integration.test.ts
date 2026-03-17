@@ -1361,5 +1361,754 @@ describe('WebSerialManager — Integration', () => {
 
       mockSerial = installMockNavigatorSerial();
     });
+
+    it('connect without port returns false and sets error', async () => {
+      removeMockNavigatorSerial();
+
+      const mgr = WebSerialManager.getInstance();
+      // No port selected, no serial support
+      const result = await mgr.connect();
+      expect(result).toBe(false);
+      expect(mgr.error).toBeTruthy();
+
+      mockSerial = installMockNavigatorSerial();
+    });
+  });
+
+  // =========================================================================
+  // 11. Permission denied & user cancellation
+  // =========================================================================
+
+  describe('permission denied and user cancellation', () => {
+    it('user cancelling port picker returns false without setting an error', async () => {
+      const domEx = new DOMException('User cancelled', 'NotAllowedError');
+      mockSerial.requestPort.mockRejectedValue(domEx);
+
+      const mgr = WebSerialManager.getInstance();
+      const result = await mgr.requestPort();
+
+      expect(result).toBe(false);
+      // NotAllowedError is treated as user cancellation, not an error
+      expect(mgr.error).toBeNull();
+    });
+
+    it('non-NotAllowedError DOMException during requestPort sets error', async () => {
+      const domEx = new DOMException('Security policy', 'SecurityError');
+      mockSerial.requestPort.mockRejectedValue(domEx);
+
+      const mgr = WebSerialManager.getInstance();
+      const result = await mgr.requestPort();
+
+      expect(result).toBe(false);
+      expect(mgr.error).toContain('Security policy');
+    });
+
+    it('generic error during requestPort sets error message', async () => {
+      mockSerial.requestPort.mockRejectedValue(new Error('Unexpected failure'));
+
+      const mgr = WebSerialManager.getInstance();
+      const result = await mgr.requestPort();
+
+      expect(result).toBe(false);
+      expect(mgr.error).toContain('Unexpected failure');
+    });
+
+    it('non-Error thrown during requestPort is stringified', async () => {
+      mockSerial.requestPort.mockRejectedValue('string error');
+
+      const mgr = WebSerialManager.getInstance();
+      const result = await mgr.requestPort();
+
+      expect(result).toBe(false);
+      expect(mgr.error).toContain('string error');
+    });
+  });
+
+  // =========================================================================
+  // 12. Port busy and device removed scenarios
+  // =========================================================================
+
+  describe('port busy and device removed', () => {
+    it('connect with port already in use (open rejects) enters error state', async () => {
+      const { port } = createMockPort({ openError: new Error('Failed to open serial port: port is already open') });
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      mgr.setAutoReconnect(false);
+      await mgr.requestPort();
+
+      const result = await mgr.connect();
+      expect(result).toBe(false);
+      expect(mgr.connectionState).toBe('error');
+      expect(mgr.error).toContain('port is already open');
+    });
+
+    it('device removal during active read triggers error state and schedules reconnect', async () => {
+      // Create a port where the reader will throw a fatal error (not line error)
+      let rejectRead: ((err: Error) => void) | undefined;
+      const mockReader = {
+        read: vi.fn(() => new Promise<ReadableStreamReadResult<Uint8Array>>((_, reject) => {
+          rejectRead = reject;
+        })),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
+        closed: Promise.resolve(undefined),
+      };
+
+      const port = {
+        open: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+        getInfo: vi.fn().mockReturnValue({ usbVendorId: 0x2341, usbProductId: 0x0043 }),
+        setSignals: vi.fn().mockResolvedValue(undefined),
+        readable: { getReader: vi.fn().mockReturnValue(mockReader), locked: false },
+        writable: {
+          getWriter: vi.fn().mockReturnValue({
+            write: vi.fn().mockResolvedValue(undefined),
+            releaseLock: vi.fn(),
+          }),
+          locked: false,
+        },
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      } as unknown as MockSerialPort;
+
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      const events: WebSerialEvent[] = [];
+      mgr.on((e) => events.push(e));
+      await mgr.requestPort();
+      await mgr.connect();
+
+      expect(mgr.connectionState).toBe('connected');
+
+      // Simulate device removal — fatal read error
+      if (rejectRead) {
+        rejectRead(new Error('The device has been lost'));
+      }
+      await vi.advanceTimersByTimeAsync(50);
+
+      expect(mgr.connectionState).toBe('error');
+      expect(events.some((e) => e.type === 'state_change' && e.state === 'error')).toBe(true);
+    });
+
+    it('line/framing/parity read errors continue the read loop without disconnecting', async () => {
+      // Create a port that first throws a framing error, then returns done
+      let readCallIdx = 0;
+      const mockReader = {
+        read: vi.fn(() => {
+          readCallIdx++;
+          if (readCallIdx === 1) {
+            return Promise.reject(new Error('framing error on line'));
+          }
+          // After error, keep the reader alive (never resolves — simulates stable idle)
+          return new Promise<ReadableStreamReadResult<Uint8Array>>(() => {});
+        }),
+        releaseLock: vi.fn(),
+        cancel: vi.fn(),
+        closed: Promise.resolve(undefined),
+      };
+
+      const port = {
+        open: vi.fn().mockResolvedValue(undefined),
+        close: vi.fn().mockResolvedValue(undefined),
+        getInfo: vi.fn().mockReturnValue({ usbVendorId: 0x2341 }),
+        setSignals: vi.fn().mockResolvedValue(undefined),
+        readable: { getReader: vi.fn().mockReturnValue(mockReader), locked: false },
+        writable: {
+          getWriter: vi.fn().mockReturnValue({ write: vi.fn(), releaseLock: vi.fn() }),
+          locked: false,
+        },
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      } as unknown as MockSerialPort;
+
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+      await mgr.connect();
+
+      await vi.advanceTimersByTimeAsync(50);
+
+      // Should still be connected — framing errors don't trigger disconnect
+      expect(mgr.connectionState).toBe('connected');
+      // Error is logged to monitor
+      const errorLine = mgr.monitor.find((l) => l.data.includes('framing'));
+      expect(errorLine).toBeDefined();
+    });
+
+    it('send failure on USB disconnect sets error and triggers disconnection handler', async () => {
+      const { port, mockWriter } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      mgr.setAutoReconnect(false);
+      await mgr.requestPort();
+      await mgr.connect();
+
+      // Simulate USB disconnect on write
+      mockWriter.write.mockRejectedValueOnce(new Error('NetworkError: The device has been lost'));
+
+      const result = await mgr.send('test');
+      expect(result).toBe(false);
+      expect(mgr.error).toContain('device has been lost');
+    });
+  });
+
+  // =========================================================================
+  // 13. Rapid connect/disconnect cycles
+  // =========================================================================
+
+  describe('rapid connect/disconnect cycles', () => {
+    it('rapid disconnect-reconnect cycle lands in a stable state', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+
+      // Rapid connect/disconnect cycles
+      for (let i = 0; i < 5; i++) {
+        await mgr.connect();
+        await mgr.disconnect();
+      }
+
+      expect(mgr.connectionState).toBe('disconnected');
+    });
+
+    it('connect → disconnect → connect cycle works cleanly', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+
+      await mgr.connect();
+      expect(mgr.connectionState).toBe('connected');
+
+      await mgr.disconnect();
+      expect(mgr.connectionState).toBe('disconnected');
+
+      // Port is still selected, so reconnecting should work
+      await mgr.connect();
+      expect(mgr.connectionState).toBe('connected');
+    });
+
+    it('multiple connect calls while connected are idempotent', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+      await mgr.connect();
+
+      const results = await Promise.all([
+        mgr.connect(),
+        mgr.connect(),
+        mgr.connect(),
+      ]);
+
+      // All return true since already connected
+      for (const r of results) {
+        expect(r).toBe(true);
+      }
+      expect(mgr.connectionState).toBe('connected');
+      // open should only have been called once
+      expect(port.open).toHaveBeenCalledTimes(1);
+    });
+
+    it('disconnect during pending connect does not throw', async () => {
+      const { port } = createMockPort();
+      let resolveOpen: (() => void) | undefined;
+      (port.open as ReturnType<typeof vi.fn>).mockImplementation(
+        () => new Promise<void>((resolve) => { resolveOpen = resolve; }),
+      );
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+
+      // Start connecting
+      const connectPromise = mgr.connect();
+      expect(mgr.connectionState).toBe('connecting');
+
+      // Disconnect while connecting — should not throw
+      await expect(mgr.disconnect()).resolves.not.toThrow();
+
+      // Resolve the open so the connect promise completes
+      resolveOpen?.();
+      await connectPromise;
+
+      // State is determined by whichever operation finishes last.
+      // The code does not have a connect-abort mechanism, so open() resolving
+      // after disconnect may leave state as 'connected'. This is acceptable —
+      // what matters is no unhandled error.
+      expect(['connected', 'disconnected']).toContain(mgr.connectionState);
+    });
+  });
+
+  // =========================================================================
+  // 14. Board profile matching for specific boards
+  // =========================================================================
+
+  describe('board profile matching for specific boards', () => {
+    it('Arduino Uno/Mega profile (0x2341:0x0043) is in KNOWN_BOARD_FILTERS', () => {
+      const match = KNOWN_BOARD_FILTERS.find(
+        (f) => f.usbVendorId === 0x2341 && f.usbProductId === 0x0043,
+      );
+      expect(match).toBeDefined();
+      expect(match!.label).toContain('Arduino');
+    });
+
+    it('ESP32 profile (0x303a) is in KNOWN_BOARD_FILTERS', () => {
+      const match = KNOWN_BOARD_FILTERS.find((f) => f.usbVendorId === 0x303a);
+      expect(match).toBeDefined();
+      expect(match!.label).toContain('ESP32');
+    });
+
+    it('Silicon Labs CP2102 (0x10c4:0xea60) is in KNOWN_BOARD_FILTERS', () => {
+      const match = KNOWN_BOARD_FILTERS.find(
+        (f) => f.usbVendorId === 0x10c4 && f.usbProductId === 0xea60,
+      );
+      expect(match).toBeDefined();
+      expect(match!.label).toContain('CP2102');
+    });
+
+    it('WCH CH340 (0x1a86:0x7523) is in KNOWN_BOARD_FILTERS', () => {
+      const match = KNOWN_BOARD_FILTERS.find(
+        (f) => f.usbVendorId === 0x1a86 && f.usbProductId === 0x7523,
+      );
+      expect(match).toBeDefined();
+      expect(match!.label).toContain('CH340');
+    });
+
+    it('FTDI FT232R (0x0403:0x6001) is in KNOWN_BOARD_FILTERS', () => {
+      const match = KNOWN_BOARD_FILTERS.find(
+        (f) => f.usbVendorId === 0x0403 && f.usbProductId === 0x6001,
+      );
+      expect(match).toBeDefined();
+      expect(match!.label).toContain('FTDI');
+    });
+
+    it('Raspberry Pi Pico (0x2e8a:0x0005) is in KNOWN_BOARD_FILTERS', () => {
+      const match = KNOWN_BOARD_FILTERS.find(
+        (f) => f.usbVendorId === 0x2e8a && f.usbProductId === 0x0005,
+      );
+      expect(match).toBeDefined();
+      expect(match!.label).toContain('Pico');
+    });
+
+    it('Teensy (0x16c0:0x0483) is in KNOWN_BOARD_FILTERS', () => {
+      const match = KNOWN_BOARD_FILTERS.find(
+        (f) => f.usbVendorId === 0x16c0 && f.usbProductId === 0x0483,
+      );
+      expect(match).toBeDefined();
+      expect(match!.label).toContain('Teensy');
+    });
+
+    it('requestPort with vendor-only filter omits usbProductId', async () => {
+      const { port } = createMockPort({ vendorId: 0x303a });
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      // ESP32 filter has no productId
+      await mgr.requestPort([{ usbVendorId: 0x303a }]);
+
+      expect(mockSerial.requestPort).toHaveBeenCalledWith({
+        filters: [{ usbVendorId: 0x303a }],
+      });
+    });
+
+    it('requestPort with vendor+product filter includes both', async () => {
+      const { port } = createMockPort({ vendorId: 0x2341, productId: 0x0043 });
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort([{ usbVendorId: 0x2341, usbProductId: 0x0043 }]);
+
+      expect(mockSerial.requestPort).toHaveBeenCalledWith({
+        filters: [{ usbVendorId: 0x2341, usbProductId: 0x0043 }],
+      });
+    });
+
+    it('KNOWN_BOARD_FILTERS has at least 15 entries', () => {
+      expect(KNOWN_BOARD_FILTERS.length).toBeGreaterThanOrEqual(15);
+    });
+
+    it('every KNOWN_BOARD_FILTERS entry has a non-empty label', () => {
+      for (const filter of KNOWN_BOARD_FILTERS) {
+        expect(filter.label.length).toBeGreaterThan(0);
+      }
+    });
+
+    it('port info is extracted correctly for a matched board', async () => {
+      const { port } = createMockPort({ vendorId: 0x239a, productId: 0x800b });
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+
+      expect(mgr.portInfo).toEqual({ usbVendorId: 0x239a, usbProductId: 0x800b });
+    });
+  });
+
+  // =========================================================================
+  // 15. Baud rate changes
+  // =========================================================================
+
+  describe('baud rate changes', () => {
+    it('setBaudRate updates state and persists to localStorage', () => {
+      const mgr = WebSerialManager.getInstance();
+      mgr.setBaudRate(9600);
+      expect(mgr.baudRate).toBe(9600);
+      expect(mgr.getState().baudRate).toBe(9600);
+
+      // Check localStorage was written
+      const stored = localStorageData.get('protopulse:serial:preferences');
+      expect(stored).toBeTruthy();
+      expect(JSON.parse(stored!).baudRate).toBe(9600);
+    });
+
+    it('connect with explicit baudRate overrides default', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+      await mgr.connect({ baudRate: 9600 });
+
+      expect(port.open).toHaveBeenCalledWith(
+        expect.objectContaining({ baudRate: 9600 }),
+      );
+      expect(mgr.baudRate).toBe(9600);
+    });
+
+    it('reconnect after disconnect preserves the last baudRate', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+      await mgr.connect({ baudRate: 57600 });
+      expect(mgr.baudRate).toBe(57600);
+
+      await mgr.disconnect();
+      expect(mgr.baudRate).toBe(57600);
+
+      // Reconnect without specifying baudRate — should use stored value
+      await mgr.connect();
+      expect(port.open).toHaveBeenLastCalledWith(
+        expect.objectContaining({ baudRate: 57600 }),
+      );
+    });
+
+    it('all COMMON_BAUD_RATES are positive integers', () => {
+      for (const rate of COMMON_BAUD_RATES) {
+        expect(Number.isInteger(rate)).toBe(true);
+        expect(rate).toBeGreaterThan(0);
+      }
+    });
+
+    it('connect with 7 data bits and 2 stop bits passes options through', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+      await mgr.connect({
+        baudRate: 9600,
+        dataBits: 7,
+        stopBits: 2,
+        parity: 'even',
+        flowControl: 'hardware',
+      });
+
+      expect(port.open).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baudRate: 9600,
+          dataBits: 7,
+          stopBits: 2,
+          parity: 'even',
+          flowControl: 'hardware',
+        }),
+      );
+    });
+  });
+
+  // =========================================================================
+  // 16. Binary data framing in receive direction
+  // =========================================================================
+
+  describe('binary data framing on receive', () => {
+    it('incoming binary data is formatted as hex in monitor', async () => {
+      const { port, pushData } = createControllableReadPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      mgr.setDataMode('binary');
+      await mgr.requestPort();
+      await mgr.connect();
+
+      await pushData(new Uint8Array([0x48, 0x65, 0x6c, 0x6c, 0x6f]));
+
+      const rxLines = mgr.monitor.filter((l) => l.direction === 'rx');
+      expect(rxLines.length).toBeGreaterThan(0);
+      expect(rxLines[0].data).toBe('48 65 6C 6C 6F');
+    });
+
+    it('incoming binary data emits data event with Uint8Array', async () => {
+      const { port, pushData } = createControllableReadPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      mgr.setDataMode('binary');
+
+      const dataEvents: Array<string | Uint8Array | undefined> = [];
+      mgr.on((e) => {
+        if (e.type === 'data') {
+          dataEvents.push(e.data);
+        }
+      });
+
+      await mgr.requestPort();
+      await mgr.connect();
+
+      await pushData(new Uint8Array([0xaa, 0xbb]));
+
+      expect(dataEvents.length).toBeGreaterThan(0);
+      // In binary mode, data event carries the Uint8Array
+      expect(dataEvents[0]).toBeInstanceOf(Uint8Array);
+    });
+
+    it('switching from text to binary mode mid-session changes data handling', async () => {
+      const { port, pushData } = createControllableReadPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      mgr.setDataMode('text');
+      await mgr.requestPort();
+      await mgr.connect();
+
+      // First message in text mode
+      await pushData(new TextEncoder().encode('Hello\n'));
+      const textRx = mgr.monitor.filter((l) => l.direction === 'rx');
+      expect(textRx[0].data).toBe('Hello');
+
+      // Switch to binary mode
+      mgr.setDataMode('binary');
+
+      // Second message in binary mode
+      await pushData(new Uint8Array([0xde, 0xad]));
+      const allRx = mgr.monitor.filter((l) => l.direction === 'rx');
+      // Last line should be hex formatted
+      expect(allRx[allRx.length - 1].data).toBe('DE AD');
+    });
+  });
+
+  // =========================================================================
+  // 17. Subscribe/unsubscribe edge cases
+  // =========================================================================
+
+  describe('subscribe/unsubscribe edge cases', () => {
+    it('unsubscribing event listener stops receiving events', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      let eventCount = 0;
+      const unsub = mgr.on(() => { eventCount++; });
+
+      await mgr.requestPort();
+      const countAfterRequest = eventCount;
+
+      // Unsubscribe
+      unsub();
+
+      // Further actions should not trigger the callback
+      await mgr.connect();
+      expect(eventCount).toBe(countAfterRequest);
+    });
+
+    it('unsubscribing state listener stops receiving notifications', () => {
+      const mgr = WebSerialManager.getInstance();
+      let stateChangeCount = 0;
+      const unsub = mgr.subscribe(() => { stateChangeCount++; });
+
+      mgr.setBaudRate(9600);
+      expect(stateChangeCount).toBe(1);
+
+      unsub();
+
+      mgr.setBaudRate(19200);
+      expect(stateChangeCount).toBe(1); // unchanged
+    });
+
+    it('double unsubscribe does not throw', () => {
+      const mgr = WebSerialManager.getInstance();
+      const unsub = mgr.on(() => {});
+      unsub();
+      expect(() => unsub()).not.toThrow();
+    });
+
+    it('event subscriber added mid-lifecycle receives subsequent events', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+      await mgr.connect();
+
+      // Subscribe after connection is already established
+      const events: WebSerialEvent[] = [];
+      mgr.on((e) => events.push(e));
+
+      await mgr.disconnect();
+
+      expect(events.some((e) => e.type === 'state_change' && e.state === 'disconnected')).toBe(true);
+    });
+  });
+
+  // =========================================================================
+  // 18. getState snapshot integrity
+  // =========================================================================
+
+  describe('getState snapshot integrity', () => {
+    it('getState returns a fresh copy of monitor (not a reference)', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+      await mgr.connect();
+      await mgr.send('test');
+
+      const state1 = mgr.getState();
+      const state2 = mgr.getState();
+
+      // Should be equal in content but different references
+      expect(state1.monitor).toEqual(state2.monitor);
+      expect(state1.monitor).not.toBe(state2.monitor);
+    });
+
+    it('getState includes all expected fields with correct types', () => {
+      const mgr = WebSerialManager.getInstance();
+      const state = mgr.getState();
+
+      expect(typeof state.connectionState).toBe('string');
+      expect(typeof state.baudRate).toBe('number');
+      expect(typeof state.lineEnding).toBe('string');
+      expect(typeof state.dataMode).toBe('string');
+      expect(typeof state.dtr).toBe('boolean');
+      expect(typeof state.rts).toBe('boolean');
+      expect(Array.isArray(state.monitor)).toBe(true);
+      expect(typeof state.isSupported).toBe('boolean');
+      expect(typeof state.bytesReceived).toBe('number');
+      expect(typeof state.bytesSent).toBe('number');
+    });
+
+    it('getMonitorLines returns a copy, not a reference to internal array', async () => {
+      const { port } = createMockPort();
+      mockSerial.requestPort.mockResolvedValue(port);
+
+      const mgr = WebSerialManager.getInstance();
+      await mgr.requestPort();
+      await mgr.connect();
+      await mgr.send('test');
+
+      const lines = mgr.getMonitorLines();
+      const internalMonitor = mgr.monitor;
+
+      expect(lines).toEqual(internalMonitor);
+      // getMonitorLines returns a copy
+      lines.push({ timestamp: 0, direction: 'rx', data: 'injected' });
+      expect(mgr.monitor.length).not.toBe(lines.length);
+    });
+  });
+
+  // =========================================================================
+  // 19. getPorts integration
+  // =========================================================================
+
+  describe('getPorts integration', () => {
+    it('getPorts returns port info for all previously authorized ports', async () => {
+      const port1 = { getInfo: vi.fn().mockReturnValue({ usbVendorId: 0x2341, usbProductId: 0x0043 }) };
+      const port2 = { getInfo: vi.fn().mockReturnValue({ usbVendorId: 0x10c4, usbProductId: 0xea60 }) };
+      mockSerial.getPorts.mockResolvedValue([port1, port2]);
+
+      const mgr = WebSerialManager.getInstance();
+      const ports = await mgr.getPorts();
+
+      expect(ports).toHaveLength(2);
+      expect(ports[0]).toEqual({ usbVendorId: 0x2341, usbProductId: 0x0043 });
+      expect(ports[1]).toEqual({ usbVendorId: 0x10c4, usbProductId: 0xea60 });
+    });
+
+    it('getPorts handles getInfo throwing gracefully', async () => {
+      const port1 = { getInfo: vi.fn().mockImplementation(() => { throw new Error('info unavailable'); }) };
+      mockSerial.getPorts.mockResolvedValue([port1]);
+
+      const mgr = WebSerialManager.getInstance();
+      const ports = await mgr.getPorts();
+
+      // Should return empty info object for ports where getInfo throws
+      expect(ports).toHaveLength(1);
+      expect(ports[0]).toEqual({});
+    });
+
+    it('getPorts returns empty array when getPorts rejects', async () => {
+      mockSerial.getPorts.mockRejectedValue(new Error('not available'));
+
+      const mgr = WebSerialManager.getInstance();
+      const ports = await mgr.getPorts();
+
+      expect(ports).toEqual([]);
+    });
+  });
+
+  // =========================================================================
+  // 20. Profile edge cases
+  // =========================================================================
+
+  describe('profile edge cases', () => {
+    it('importing invalid JSON returns 0', () => {
+      const mgr = WebSerialManager.getInstance();
+      const count = mgr.importProfiles('not valid json');
+      expect(count).toBe(0);
+    });
+
+    it('importing non-array JSON returns 0', () => {
+      const mgr = WebSerialManager.getInstance();
+      const count = mgr.importProfiles('{"name": "test"}');
+      expect(count).toBe(0);
+    });
+
+    it('importing array with no valid profiles returns 0', () => {
+      const mgr = WebSerialManager.getInstance();
+      const count = mgr.importProfiles('[{"invalid": true}]');
+      expect(count).toBe(0);
+    });
+
+    it('deleting non-existent profile returns false', () => {
+      const mgr = WebSerialManager.getInstance();
+      const result = mgr.deleteProfile('DoesNotExist');
+      expect(result).toBe(false);
+    });
+
+    it('corrupted profiles in localStorage returns empty array', () => {
+      localStorageData.set('protopulse:serial:profiles', '{{invalid json');
+
+      const mgr = WebSerialManager.getInstance();
+      const profiles = mgr.loadProfiles();
+      expect(profiles).toEqual([]);
+    });
+
+    it('non-array profiles in localStorage returns empty array', () => {
+      localStorageData.set('protopulse:serial:profiles', '"just a string"');
+
+      const mgr = WebSerialManager.getInstance();
+      const profiles = mgr.loadProfiles();
+      expect(profiles).toEqual([]);
+    });
   });
 });

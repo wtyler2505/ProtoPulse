@@ -393,3 +393,39 @@ client/src/pages/ProjectWorkspace.tsx(609,7): error TS2353: Object literal may o
 8:53:58 PM - Found 8 errors. Watching for file changes.
 [2J[3J[H8:54:03 PM - File change detected. Starting incremental compilation...
 
+client/src/lib/__tests__/progress-milestones.test.ts(14,5): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(34,5): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(122,11): error TS2339: Property 'architectureNodeCount' does not exist on type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(123,11): error TS2339: Property 'architectureEdgeCount' does not exist on type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(144,11): error TS2551: Property 'hasRunSimulation' does not exist on type 'ProjectProgress'. Did you mean 'hasSimulation'?
+client/src/lib/__tests__/progress-milestones.test.ts(177,11): error TS2551: Property 'hasExported' does not exist on type 'ProjectProgress'. Did you mean 'hasExport'?
+client/src/lib/__tests__/progress-milestones.test.ts(284,11): error TS2551: Property 'hasRunSimulation' does not exist on type 'ProjectProgress'. Did you mean 'hasSimulation'?
+client/src/pages/ProjectWorkspace.tsx(609,7): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+
+8:54:12 PM - Found 8 errors. Watching for file changes.
+[2J[3J[H8:54:56 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/progress-milestones.test.ts(14,5): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(34,5): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(122,11): error TS2339: Property 'architectureNodeCount' does not exist on type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(123,11): error TS2339: Property 'architectureEdgeCount' does not exist on type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(144,11): error TS2551: Property 'hasRunSimulation' does not exist on type 'ProjectProgress'. Did you mean 'hasSimulation'?
+client/src/lib/__tests__/progress-milestones.test.ts(177,11): error TS2551: Property 'hasExported' does not exist on type 'ProjectProgress'. Did you mean 'hasExport'?
+client/src/lib/__tests__/progress-milestones.test.ts(284,11): error TS2551: Property 'hasRunSimulation' does not exist on type 'ProjectProgress'. Did you mean 'hasSimulation'?
+client/src/pages/ProjectWorkspace.tsx(609,7): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+
+8:55:08 PM - Found 8 errors. Watching for file changes.
+[2J[3J[H8:56:17 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/progress-milestones.test.ts(14,5): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(34,5): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(122,11): error TS2339: Property 'architectureNodeCount' does not exist on type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(123,11): error TS2339: Property 'architectureEdgeCount' does not exist on type 'ProjectProgress'.
+client/src/lib/__tests__/progress-milestones.test.ts(144,11): error TS2551: Property 'hasRunSimulation' does not exist on type 'ProjectProgress'. Did you mean 'hasSimulation'?
+client/src/lib/__tests__/progress-milestones.test.ts(177,11): error TS2551: Property 'hasExported' does not exist on type 'ProjectProgress'. Did you mean 'hasExport'?
+client/src/lib/__tests__/progress-milestones.test.ts(284,11): error TS2551: Property 'hasRunSimulation' does not exist on type 'ProjectProgress'. Did you mean 'hasSimulation'?
+client/src/pages/ProjectWorkspace.tsx(609,7): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+
+8:56:31 PM - Found 8 errors. Watching for file changes.
+[2J[3J[H8:56:52 PM - File change detected. Starting incremental compilation...
+
