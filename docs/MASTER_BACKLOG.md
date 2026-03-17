@@ -1193,9 +1193,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0438 | Predictive yield estimator | OPEN | C4 | IFX-040 |
 | BL-0439 | Community template packs | DONE (Wave 118) | C2 | IFX-095 |
 | BL-0440 | Marketplace for reusable circuit blocks | OPEN | C4 | IFX-096 |
-| BL-0441 | "Remix this design" from public examples | OPEN | C3 | IFX-101 |
+| BL-0441 | "Remix this design" from public examples | DONE (Wave 123) | C3 | IFX-101 |
 | BL-0442 | Build journals (auto notes as project evolves) | DONE (Wave 120) | C3 | IFX-102 |
-| BL-0443 | Project scorecards (cost, risk, readiness) | OPEN | C3 | IFX-104 |
+| BL-0443 | Project scorecards (cost, risk, readiness) | DONE (Wave 123) | C3 | IFX-104 |
 | BL-0444 | Smart reminders for unfinished critical steps | DONE (Wave 118) | C2 | IFX-105 |
 | BL-0445 | Creator profile pages for shared projects | DONE (Wave 118) | C2 | IFX-107 |
 
@@ -1213,7 +1213,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0457 | Self-healing assistant with approval gates | OPEN | C5 | IFX-089, ARDX-084 |
 | BL-0458 | Predictive failure alerts from trend anomalies | OPEN | C4 | IFX-090 |
 | BL-0459 | Circuit sandbox game with score/feedback | DONE (Wave 123) | C3 | IFX-069 |
-| BL-0460 | AI tutor persona (Socratic questioning) | OPEN | C3 | IFX-070 |
+| BL-0460 | AI tutor persona (Socratic questioning) | DONE (Wave 123) | C3 | IFX-070 |
 | BL-0461 | Firmware-aware simulation mode | OPEN | C5 | ARDX-046 |
 | BL-0462 | HIL-lite mode (mock missing sensors) | OPEN | C4 | ARDX-054 |
 | BL-0463 | Real-time drift detection | OPEN | C4 | ARDX-112 |
