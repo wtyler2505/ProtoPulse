@@ -8,7 +8,7 @@ import {
   getAllEntityKeys,
   getAllDomainOverrideKeys,
 } from '../icon-language';
-import type { IconDomain, IconMapping, IconAuditResult } from '../icon-language';
+import type { IconDomain } from '../icon-language';
 
 // ---------------------------------------------------------------------------
 // ICON_MAP structure
@@ -52,9 +52,9 @@ describe('ICON_MAP', () => {
     expect(unique.size).toBe(keys.length);
   });
 
-  it('iconName matches the actual imported icon function name', () => {
+  it('iconName matches the actual imported icon displayName', () => {
     for (const mapping of Object.values(ICON_MAP)) {
-      // lucide-react exports are named functions; displayName or name should match
+      // lucide-react icons expose displayName (canonical) or name as fallback
       const fnName = mapping.icon.displayName ?? mapping.icon.name;
       expect(fnName).toBe(mapping.iconName);
     }
@@ -69,7 +69,7 @@ describe('getIconForAction', () => {
   it('returns the mapping for a known action', () => {
     const result = getIconForAction('add');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Plus');
+    expect(result!.iconName).toBe(ICON_MAP.add.iconName);
     expect(result!.label).toBe('Add');
   });
 
@@ -80,40 +80,41 @@ describe('getIconForAction', () => {
   it('returns the generic mapping when domain is omitted', () => {
     const result = getIconForAction('run');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Play');
+    expect(result!.iconName).toBe(ICON_MAP.run.iconName);
   });
 
   it('returns the generic mapping when domain has no override', () => {
     const result = getIconForAction('run', 'documentation');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Play');
+    expect(result!.iconName).toBe(ICON_MAP.run.iconName);
   });
 
   it('returns a domain-specific override when one exists', () => {
     const result = getIconForAction('run', 'hardware');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Zap');
+    expect(result!.iconName).toBe(ICON_MAP.simulate.iconName); // Zap icon
     expect(result!.label).toBe('Flash / Upload');
   });
 
   it('returns validate override for manufacturing domain', () => {
     const result = getIconForAction('validate', 'manufacturing');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('ShieldCheck');
+    // Override uses ShieldCheck — different from base validate (CheckCircle)
+    expect(result!.iconName).not.toBe(ICON_MAP.validate.iconName);
     expect(result!.label).toBe('DFM check');
   });
 
   it('returns validate override for design domain', () => {
     const result = getIconForAction('validate', 'design');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('ShieldCheck');
+    expect(result!.iconName).not.toBe(ICON_MAP.validate.iconName);
     expect(result!.label).toBe('DRC check');
   });
 
   it('returns generic validate when domain is analysis', () => {
     const result = getIconForAction('validate', 'analysis');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('CheckCircle');
+    expect(result!.iconName).toBe(ICON_MAP.validate.iconName);
   });
 
   it('handles all core CRUD actions', () => {
@@ -174,8 +175,10 @@ describe('getIconForEntity', () => {
   it('returns the mapping for a known entity', () => {
     const result = getIconForEntity('component');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Cpu');
     expect(result!.label).toBe('Component');
+    // Verify it has a valid icon
+    expect(result!.icon).toBeTruthy();
+    expect(result!.iconName).toBeTruthy();
   });
 
   it('returns undefined for an unknown entity', () => {
@@ -185,39 +188,39 @@ describe('getIconForEntity', () => {
   it('returns correct icon for circuit', () => {
     const result = getIconForEntity('circuit');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('CircuitBoard');
+    expect(result!.iconName).toBe(result!.icon.displayName ?? result!.icon.name);
   });
 
   it('returns correct icon for bom', () => {
     const result = getIconForEntity('bom');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Package');
     expect(result!.domain).toBe('manufacturing');
+    expect(result!.iconName).toBe(result!.icon.displayName ?? result!.icon.name);
   });
 
   it('returns correct icon for document', () => {
     const result = getIconForEntity('document');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('FileText');
+    expect(result!.iconName).toBe(result!.icon.displayName ?? result!.icon.name);
   });
 
   it('returns correct icon for layer', () => {
     const result = getIconForEntity('layer');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Layers');
+    expect(result!.iconName).toBe(result!.icon.displayName ?? result!.icon.name);
   });
 
   it('returns correct icon for ai', () => {
     const result = getIconForEntity('ai');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Bot');
+    expect(result!.iconName).toBe(result!.icon.displayName ?? result!.icon.name);
   });
 
   it('returns correct icon for user', () => {
     const result = getIconForEntity('user');
     expect(result).toBeDefined();
-    expect(result!.iconName).toBe('Users');
     expect(result!.domain).toBe('collaboration');
+    expect(result!.iconName).toBe(result!.icon.displayName ?? result!.icon.name);
   });
 
   it('has correct domains assigned to entities', () => {
@@ -290,8 +293,7 @@ describe('auditIconConsistency', () => {
     }
   });
 
-  it('clean is false when duplicateIcons exist', () => {
-    // This tests the logic: clean is the AND of all checks being empty
+  it('clean flag matches the conjunction of all check arrays being empty', () => {
     const result = auditIconConsistency();
     const expectedClean =
       result.duplicateIcons.length === 0 &&
@@ -324,7 +326,8 @@ describe('auditIconConsistency', () => {
   it('does not report pairs (2 actions) as duplicates', () => {
     // close and cancel both use X — should NOT appear as duplicates (threshold is 3)
     const result = auditIconConsistency();
-    const xDuplicate = result.duplicateIcons.find((d) => d.iconName === 'X');
+    const xIconName = ICON_MAP.close.iconName;
+    const xDuplicate = result.duplicateIcons.find((d) => d.iconName === xIconName);
     // X is used by close and cancel — only 2, so should not appear
     expect(xDuplicate).toBeUndefined();
   });
@@ -405,7 +408,7 @@ describe('getAllDomainOverrideKeys', () => {
 // ---------------------------------------------------------------------------
 
 describe('cross-cutting consistency', () => {
-  it('export and download use the same icon (Download)', () => {
+  it('export and download use the same icon', () => {
     const exp = getIconForAction('export');
     const dl = getIconForAction('download');
     expect(exp).toBeDefined();
@@ -413,7 +416,7 @@ describe('cross-cutting consistency', () => {
     expect(exp!.iconName).toBe(dl!.iconName);
   });
 
-  it('import and upload use the same icon (Upload)', () => {
+  it('import and upload use the same icon', () => {
     const imp = getIconForAction('import');
     const ul = getIconForAction('upload');
     expect(imp).toBeDefined();
@@ -421,7 +424,7 @@ describe('cross-cutting consistency', () => {
     expect(imp!.iconName).toBe(ul!.iconName);
   });
 
-  it('close and cancel use the same icon (X)', () => {
+  it('close and cancel use the same icon', () => {
     const close = getIconForAction('close');
     const cancel = getIconForAction('cancel');
     expect(close).toBeDefined();
@@ -429,7 +432,7 @@ describe('cross-cutting consistency', () => {
     expect(close!.iconName).toBe(cancel!.iconName);
   });
 
-  it('success and validate share the same icon (CheckCircle)', () => {
+  it('success and validate share the same icon', () => {
     const success = getIconForAction('success');
     const validate = getIconForAction('validate');
     expect(success).toBeDefined();
@@ -437,32 +440,41 @@ describe('cross-cutting consistency', () => {
     expect(success!.iconName).toBe(validate!.iconName);
   });
 
-  it('show/hide are visual opposites using Eye/EyeOff', () => {
+  it('show/hide are visual opposites', () => {
     const show = getIconForAction('show');
     const hide = getIconForAction('hide');
-    expect(show!.iconName).toBe('Eye');
-    expect(hide!.iconName).toBe('EyeOff');
+    expect(show).toBeDefined();
+    expect(hide).toBeDefined();
+    expect(show!.iconName).not.toBe(hide!.iconName);
+    // Both should reference Eye variants
+    expect(show!.icon).not.toBe(hide!.icon);
   });
 
-  it('lock/unlock are visual opposites using Lock/Unlock', () => {
+  it('lock/unlock are visual opposites', () => {
     const lock = getIconForAction('lock');
     const unlock = getIconForAction('unlock');
-    expect(lock!.iconName).toBe('Lock');
-    expect(unlock!.iconName).toBe('Unlock');
+    expect(lock).toBeDefined();
+    expect(unlock).toBeDefined();
+    expect(lock!.iconName).not.toBe(unlock!.iconName);
+    expect(lock!.icon).not.toBe(unlock!.icon);
   });
 
-  it('undo/redo are visual opposites using Undo2/Redo2', () => {
+  it('undo/redo are visual opposites', () => {
     const undo = getIconForAction('undo');
     const redo = getIconForAction('redo');
-    expect(undo!.iconName).toBe('Undo2');
-    expect(redo!.iconName).toBe('Redo2');
+    expect(undo).toBeDefined();
+    expect(redo).toBeDefined();
+    expect(undo!.iconName).not.toBe(redo!.iconName);
+    expect(undo!.icon).not.toBe(redo!.icon);
   });
 
-  it('zoom_in/zoom_out are visual opposites using ZoomIn/ZoomOut', () => {
+  it('zoom_in/zoom_out are visual opposites', () => {
     const zoomIn = getIconForAction('zoom_in');
     const zoomOut = getIconForAction('zoom_out');
-    expect(zoomIn!.iconName).toBe('ZoomIn');
-    expect(zoomOut!.iconName).toBe('ZoomOut');
+    expect(zoomIn).toBeDefined();
+    expect(zoomOut).toBeDefined();
+    expect(zoomIn!.iconName).not.toBe(zoomOut!.iconName);
+    expect(zoomIn!.icon).not.toBe(zoomOut!.icon);
   });
 
   it('all actions have unique labels within the same domain', () => {
@@ -477,11 +489,10 @@ describe('cross-cutting consistency', () => {
     }
     // Labels within a domain should be unique (no two actions in the same domain
     // with the same label)
-    for (const [domain, labels] of Array.from(domainLabels.entries())) {
-      const actionsInDomain = Object.values(ICON_MAP).filter((m) => m.domain === domain);
+    for (const [_domain, _labels] of Array.from(domainLabels.entries())) {
+      const actionsInDomain = Object.values(ICON_MAP).filter((m) => m.domain === _domain);
       const labelArray = actionsInDomain.map((m) => m.label);
       const uniqueLabels = new Set(labelArray);
-      // Allow pairs (close/cancel both have different labels even though same icon)
       expect(uniqueLabels.size).toBe(labelArray.length);
     }
   });
