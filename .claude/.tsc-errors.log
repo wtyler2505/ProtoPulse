@@ -944,3 +944,8 @@ client/src/lib/macro-recorder.ts(233,24): error TS2304: Cannot find name 'deepCo
 1:19:11 AM - Found 0 errors. Watching for file changes.
 [2J[3J[H1:20:16 AM - File change detected. Starting incremental compilation...
 
+client/src/lib/team-command-center.ts(167,26): error TS2802: Type 'MapIterator<TeamMember>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+1:20:34 AM - Found 1 error. Watching for file changes.
+[2J[3J[H1:20:37 AM - File change detected. Starting incremental compilation...
+
