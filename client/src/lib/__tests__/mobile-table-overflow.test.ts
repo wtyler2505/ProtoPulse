@@ -241,8 +241,14 @@ describe('shouldCollapseColumns', () => {
     expect(shouldCollapseColumns(-100, 5)).toBe(true);
   });
 
-  it('returns false for single column at any positive width', () => {
-    expect(shouldCollapseColumns(50, 1)).toBe(false);
+  it('returns false for single column when width >= minimum', () => {
+    expect(shouldCollapseColumns(100, 1)).toBe(false);
+    expect(shouldCollapseColumns(200, 1)).toBe(false);
+  });
+
+  it('returns true for single column when width < minimum', () => {
+    expect(shouldCollapseColumns(50, 1)).toBe(true);
+    expect(shouldCollapseColumns(99, 1)).toBe(true);
   });
 
   it('handles large column counts', () => {

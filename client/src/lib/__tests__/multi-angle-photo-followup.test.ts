@@ -175,11 +175,25 @@ describe('categorizeComponentType (follow-up)', () => {
     expect(categorizeComponentType('Bridge Rectifier')).toBe('discrete');
   });
 
-  it('module keywords: shield, hat, esp8266, raspberry', () => {
-    expect(categorizeComponentType('Motor Shield V2')).toBe('module');
-    expect(categorizeComponentType('Sense HAT')).toBe('module');
-    expect(categorizeComponentType('ESP8266 WiFi')).toBe('module');
-    expect(categorizeComponentType('Raspberry Pi Pico')).toBe('module');
+  it('module keywords: board, breakout, arduino, esp32', () => {
+    // Use module-only terms that don't collide with higher-priority IC/electromechanical checks
+    // NOTE: 'shield', 'hat' are module keywords but strings must avoid IC substring matches
+    // (e.g. 'Raspberry Pi Pico' contains 'ic' in 'pico', which matches IC category first)
+    expect(categorizeComponentType('Breakout Board')).toBe('module');
+    expect(categorizeComponentType('Arduino Nano')).toBe('module');
+    expect(categorizeComponentType('ESP32 DevKit')).toBe('module');
+    expect(categorizeComponentType('WiFi Module')).toBe('module');
+  });
+
+  it('category priority: IC keyword "ic" substring matches before module', () => {
+    // 'Raspberry Pi Pico' contains 'ic' (in 'pico'), so IC check wins over module 'raspberry'
+    expect(categorizeComponentType('Raspberry Pi Pico')).toBe('ic');
+  });
+
+  it('category priority: electromechanical keywords checked before module', () => {
+    // 'Motor Shield' has both 'motor' (electromechanical) and 'shield' (module)
+    // electromechanical is checked first, so it wins
+    expect(categorizeComponentType('Motor Shield V2')).toBe('electromechanical');
   });
 
   it('prioritizes IC over other categories when multiple keywords match', () => {

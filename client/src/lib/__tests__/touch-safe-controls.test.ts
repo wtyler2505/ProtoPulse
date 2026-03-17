@@ -161,7 +161,7 @@ describe('isTouchDevice', () => {
     });
     // Remove ontouchstart if present
     if ('ontouchstart' in window) {
-      delete (window as Record<string, unknown>)['ontouchstart'];
+      delete (window as unknown as Record<string, unknown>).ontouchstart;
     }
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as unknown as typeof window.matchMedia;
@@ -175,7 +175,7 @@ describe('isTouchDevice', () => {
       configurable: true,
     });
     if ('ontouchstart' in window) {
-      delete (window as Record<string, unknown>)['ontouchstart'];
+      delete (window as unknown as Record<string, unknown>).ontouchstart;
     }
     const originalMatchMedia = window.matchMedia;
     window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as unknown as typeof window.matchMedia;
