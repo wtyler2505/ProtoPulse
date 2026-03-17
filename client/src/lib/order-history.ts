@@ -107,6 +107,8 @@ export const CATEGORY_LABELS: Record<OrderCategory, string> = {
   assembly: 'Assembly',
 };
 
+const MAX_ORDERS_PER_PROJECT = 50;
+
 const VALID_TRANSITIONS: Record<OrderHistoryStatus, OrderHistoryStatus[]> = {
   quoted: ['ordered', 'cancelled'],
   ordered: ['in_production', 'cancelled'],

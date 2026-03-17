@@ -326,3 +326,203 @@ export function getMockDistributorCount(): number {
 export function getMockDistributorIds(): DistributorId[] {
   return [...MOCK_DISTRIBUTOR_IDS];
 }
+
+// ---------------------------------------------------------------------------
+// Generic Supplier Comparison Engine (BL-0238)
+// ---------------------------------------------------------------------------
+
+/** A single supplier's quote for a component. */
+export interface SupplierQuote {
+  supplier: string;
+  unitPrice: number;
+  currency?: string;
+  moq: number;
+  leadTimeDays: number;
+  stockQuantity: number;
+  rating?: number; // 0-5
+  url?: string;
+}
+
+export type QuoteBadge = 'best-value' | 'cheapest' | 'fastest' | 'in-stock';
+
+/** A quote enriched with computed comparison metrics. */
+export interface RankedQuote extends SupplierQuote {
+  totalCost: number;
+  valueScore: number;
+  badges: QuoteBadge[];
+}
+
+/** Full comparison result across all suppliers for a given quantity. */
+export interface GenericComparisonResult {
+  quotes: RankedQuote[];
+  bestValue: RankedQuote | null;
+  cheapest: RankedQuote | null;
+  fastest: RankedQuote | null;
+  recommendations: string[];
+}
+
+/** Calculate total cost for a quote at a given quantity, respecting MOQ. */
+export function calculateTotalCost(quote: SupplierQuote, quantity: number): number {
+  const effectiveQty = Math.max(quantity, quote.moq);
+  return Math.round(quote.unitPrice * effectiveQty * 100) / 100;
+}
+
+/** Format a lead time in days to a human-readable string. */
+export function formatLeadTime(days: number): string {
+  if (days <= 0) {
+    return 'In stock';
+  }
+  if (days <= 14) {
+    return `${days} day${days === 1 ? '' : 's'}`;
+  }
+  const weeks = Math.round(days / 7);
+  if (days % 7 === 0) {
+    return `${weeks} week${weeks === 1 ? '' : 's'}`;
+  }
+  const lowWeeks = Math.floor(days / 7);
+  const highWeeks = Math.ceil(days / 7);
+  return `${lowWeeks}-${highWeeks} weeks`;
+}
+
+/**
+ * Compute a multi-factor value score for a quote.
+ * Weights: price 40%, leadTime 30%, stock 20%, rating 10%.
+ * Each factor is normalized to 0-1 where 1 is best.
+ */
+function computeValueScore(
+  quote: SupplierQuote,
+  totalCost: number,
+  maxTotalCost: number,
+  maxLeadTime: number,
+  maxStock: number,
+): number {
+  // Price factor: lower is better (invert)
+  const priceFactor = maxTotalCost > 0 ? 1 - totalCost / maxTotalCost : 1;
+
+  // Lead time factor: lower is better (invert)
+  const leadTimeFactor = maxLeadTime > 0 ? 1 - quote.leadTimeDays / maxLeadTime : 1;
+
+  // Stock factor: higher is better
+  const stockFactor = maxStock > 0 ? quote.stockQuantity / maxStock : 0;
+
+  // Rating factor: higher is better, default 2.5 if missing
+  const ratingFactor = (quote.rating ?? 2.5) / 5;
+
+  return priceFactor * 0.4 + leadTimeFactor * 0.3 + stockFactor * 0.2 + ratingFactor * 0.1;
+}
+
+/**
+ * Compare multiple supplier quotes for a given quantity.
+ * Returns ranked quotes with badges and recommendations.
+ */
+export function compareSuppliers(
+  quotes: SupplierQuote[],
+  quantity: number,
+): GenericComparisonResult {
+  if (quotes.length === 0) {
+    return { quotes: [], bestValue: null, cheapest: null, fastest: null, recommendations: [] };
+  }
+
+  const effectiveQty = Math.max(1, quantity);
+
+  // Calculate total costs
+  const totalCosts = quotes.map((q) => calculateTotalCost(q, effectiveQty));
+
+  // Find maxima for normalization
+  const maxTotalCost = Math.max(...totalCosts);
+  const maxLeadTime = Math.max(...quotes.map((q) => q.leadTimeDays));
+  const maxStock = Math.max(...quotes.map((q) => q.stockQuantity));
+
+  // Build ranked quotes with value scores
+  const ranked: RankedQuote[] = quotes.map((q, i) => ({
+    ...q,
+    totalCost: totalCosts[i],
+    valueScore: computeValueScore(q, totalCosts[i], maxTotalCost, maxLeadTime, maxStock),
+    badges: [] as QuoteBadge[],
+  }));
+
+  // Determine cheapest (lowest totalCost)
+  let cheapestIdx = 0;
+  for (let i = 1; i < ranked.length; i++) {
+    if (ranked[i].totalCost < ranked[cheapestIdx].totalCost) {
+      cheapestIdx = i;
+    }
+  }
+  ranked[cheapestIdx].badges.push('cheapest');
+
+  // Determine fastest (shortest leadTimeDays)
+  let fastestIdx = 0;
+  for (let i = 1; i < ranked.length; i++) {
+    if (ranked[i].leadTimeDays < ranked[fastestIdx].leadTimeDays) {
+      fastestIdx = i;
+    }
+  }
+  ranked[fastestIdx].badges.push('fastest');
+
+  // Assign in-stock badge to any quote with stock >= quantity
+  for (const rq of ranked) {
+    if (rq.stockQuantity >= effectiveQty) {
+      rq.badges.push('in-stock');
+    }
+  }
+
+  // Determine best-value (highest valueScore)
+  let bestValueIdx = 0;
+  for (let i = 1; i < ranked.length; i++) {
+    if (ranked[i].valueScore > ranked[bestValueIdx].valueScore) {
+      bestValueIdx = i;
+    }
+  }
+  ranked[bestValueIdx].badges.push('best-value');
+
+  // Generate recommendations
+  const recommendations: string[] = [];
+  const cheapest = ranked[cheapestIdx];
+  const fastest = ranked[fastestIdx];
+  const bestValue = ranked[bestValueIdx];
+
+  // Recommend cheapest if meaningfully cheaper (>5% less) than the most expensive
+  const maxCostQuote = ranked.reduce((max, q) => (q.totalCost > max.totalCost ? q : max), ranked[0]);
+  if (ranked.length > 1 && maxCostQuote.totalCost > 0) {
+    const savingsPercent = ((maxCostQuote.totalCost - cheapest.totalCost) / maxCostQuote.totalCost) * 100;
+    if (savingsPercent > 5) {
+      const perUnitSavings = Math.round(
+        (maxCostQuote.unitPrice - cheapest.unitPrice) * 100,
+      ) / 100;
+      recommendations.push(
+        `Consider ${cheapest.supplier} \u2014 $${perUnitSavings.toFixed(2)} cheaper per unit`,
+      );
+    }
+  }
+
+  // Recommend fastest if it has stock for immediate shipping
+  if (fastest.stockQuantity >= effectiveQty && fastest.leadTimeDays === 0) {
+    recommendations.push(
+      `${fastest.supplier} has stock for immediate shipping`,
+    );
+  } else if (fastest.stockQuantity >= effectiveQty) {
+    recommendations.push(
+      `${fastest.supplier} has stock and ships in ${formatLeadTime(fastest.leadTimeDays)}`,
+    );
+  }
+
+  // If best-value differs from cheapest, call it out
+  if (bestValueIdx !== cheapestIdx) {
+    recommendations.push(
+      `${bestValue.supplier} offers the best overall value (price + speed + stock + rating)`,
+    );
+  }
+
+  return {
+    quotes: ranked,
+    bestValue,
+    cheapest,
+    fastest,
+    recommendations,
+  };
+}
+
+/** Sort ranked quotes by value score descending. Returns a new array. */
+export function sortByValue(quotes: RankedQuote[]): RankedQuote[] {
+  return [...quotes].sort((a, b) => b.valueScore - a.valueScore);
+}
