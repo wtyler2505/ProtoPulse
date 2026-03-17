@@ -137,8 +137,10 @@ function clampToViewport(
   const maxY = viewport.y + viewport.height - tooltip.height;
 
   return {
-    x: Math.min(Math.max(x, minX), maxX),
-    y: Math.min(Math.max(y, minY), maxY),
+    // When the tooltip is wider/taller than the viewport, maxX/maxY < minX/minY.
+    // In that case, align to the viewport origin so at least the start is visible.
+    x: maxX >= minX ? Math.min(Math.max(x, minX), maxX) : minX,
+    y: maxY >= minY ? Math.min(Math.max(y, minY), maxY) : minY,
   };
 }
 

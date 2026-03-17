@@ -341,9 +341,9 @@ describe('BenchDashboardManager - Save Custom Layout', () => {
   });
 
   it('throws when panel type is invalid', () => {
-    const bad = {
+    const bad: BenchLayout = {
       panels: ['serial_monitor', 'invalid_panel' as BenchPanel],
-      splitDirection: 'horizontal' as const,
+      splitDirection: 'horizontal',
       sizes: [50, 50],
     };
     expect(() => mgr.saveCustomLayout('bad', bad)).toThrow('Layout contains invalid panel types');

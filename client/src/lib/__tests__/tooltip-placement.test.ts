@@ -215,26 +215,30 @@ describe('calculateTooltipPosition — cascade fallback', () => {
 
 describe('calculateTooltipPosition — clamping', () => {
   it('clamps to viewport when no side has enough room', () => {
-    // Viewport is smaller than the tooltip
-    const tinyVp: Rect = { x: 0, y: 0, width: 80, height: 30 };
-    const trigger: Rect = { x: 20, y: 5, width: 40, height: 20 };
-    const result = calculateTooltipPosition(trigger, tooltip, 'top', tinyVp);
-    // All four sides overflow; result should be clamped
-    expect(result.x).toBeGreaterThanOrEqual(tinyVp.x);
-    expect(result.y).toBeGreaterThanOrEqual(tinyVp.y);
-    // Since tooltip (100w) > viewport (80w), clamped x = max(0, 80-100) = 0 clamped to 0
-    // Position stays as preferred when clamping
+    // Viewport smaller than the tooltip in BOTH dimensions and trigger fills it,
+    // so every side overflows: top/bottom (no vertical space), left/right (no horizontal space).
+    const tinyVp: Rect = { x: 0, y: 0, width: 50, height: 30 };
+    const bigTooltip: Rect = { x: 0, y: 0, width: 100, height: 80 };
+    const trigger: Rect = { x: 5, y: 5, width: 40, height: 20 };
+    const result = calculateTooltipPosition(trigger, bigTooltip, 'top', tinyVp);
+    // All four sides overflow; clamp fires. Position stays as preferred.
     expect(result.position).toBe('top');
+    // Clamped x: max(0, min(x, 50-100)) = max(0, -50) = 0
+    expect(result.x).toBe(0);
+    // Clamped y: max(0, min(y, 30-80)) = max(0, -50) = 0
+    expect(result.y).toBe(0);
   });
 
-  it('clamps x to left edge when tooltip would go left of viewport', () => {
-    const trigger: Rect = { x: 10, y: 500, width: 20, height: 20 };
-    // top: x = 10 + 10 - 50 = -30 (overflows left). All sides tried.
-    // For "top", if the tooltip x < 0 and no side fits, clamp x to 0
-    const narrowVp: Rect = { x: 0, y: 0, width: 60, height: 600 };
-    const result = calculateTooltipPosition(trigger, tooltip, 'top', narrowVp);
-    // Tooltip wider than viewport, so all sides may overflow
-    expect(result.x).toBeGreaterThanOrEqual(0);
+  it('clamps x when tooltip is wider than viewport', () => {
+    // Viewport 60px wide, tooltip 100px wide. Trigger centered.
+    // Every side overflows horizontally (tooltip can never fit width-wise).
+    const narrowVp: Rect = { x: 0, y: 0, width: 60, height: 30 };
+    const bigTooltip: Rect = { x: 0, y: 0, width: 100, height: 50 };
+    const trigger: Rect = { x: 10, y: 5, width: 40, height: 20 };
+    const result = calculateTooltipPosition(trigger, bigTooltip, 'top', narrowVp);
+    // clampToViewport: x = max(0, min(_, 60-100)) = 0
+    expect(result.position).toBe('top');
+    expect(result.x).toBe(0);
   });
 
   it('clamps y to top edge when tooltip would go above viewport', () => {
@@ -245,11 +249,15 @@ describe('calculateTooltipPosition — clamping', () => {
   });
 
   it('clamps coordinates to non-zero viewport origin', () => {
-    const offsetVp: Rect = { x: 100, y: 100, width: 50, height: 30 };
-    const trigger: Rect = { x: 110, y: 105, width: 30, height: 20 };
-    const result = calculateTooltipPosition(trigger, tooltip, 'top', offsetVp);
-    expect(result.x).toBeGreaterThanOrEqual(100);
-    expect(result.y).toBeGreaterThanOrEqual(100);
+    // Viewport and tooltip both small, trigger fills it — no side has room.
+    const offsetVp: Rect = { x: 100, y: 100, width: 30, height: 20 };
+    const bigTooltip: Rect = { x: 0, y: 0, width: 80, height: 60 };
+    const trigger: Rect = { x: 105, y: 105, width: 20, height: 10 };
+    const result = calculateTooltipPosition(trigger, bigTooltip, 'top', offsetVp);
+    // Clamped: x = max(100, min(_, 100+30-80)) = max(100, 50) = 100
+    expect(result.x).toBe(100);
+    // Clamped: y = max(100, min(_, 100+20-60)) = max(100, 60) = 100
+    expect(result.y).toBe(100);
   });
 });
 
@@ -282,9 +290,12 @@ describe('calculateTooltipPosition — edge cases', () => {
   it('handles trigger at bottom-right corner of viewport', () => {
     const trigger: Rect = { x: 1870, y: 1040, width: 50, height: 40 };
     const result = calculateTooltipPosition(trigger, tooltip, 'bottom', viewport);
-    // bottom: 1040+40+8 = 1088 > 1080 → flip to top: 1040 - 40 - 8 = 992
-    expect(result.position).toBe('top');
-    expect(result.y).toBe(992);
+    // bottom: y=1088 > 1080 (overflows).
+    // top: x=1870+25-50=1845, 1845+100=1945 > 1920 (overflows right).
+    // left: x=1870-100-8=1762, y=1040+20-20=1040, 1040+40=1080 (fits exactly).
+    expect(result.position).toBe('left');
+    expect(result.x).toBe(1762);
+    expect(result.y).toBe(1040);
   });
 
   it('handles zero-size trigger', () => {
