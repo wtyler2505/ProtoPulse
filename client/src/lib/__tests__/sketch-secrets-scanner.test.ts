@@ -91,7 +91,7 @@ describe('scanSketchForSecrets — WiFi patterns', () => {
   });
 
   it('detects ssid_key assignment', () => {
-    const result = scanLine('char ssid_key[] = "longpassword12";');
+    const result = scanLine('const char* ssid_key = "longpassword12";');
     expect(result.clean).toBe(false);
   });
 });
