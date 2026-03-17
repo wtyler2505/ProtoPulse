@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
 | 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
 | 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
@@ -423,15 +424,16 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 22 | 256 | 92% complete — Waves 61-117 |
+| P2 | 18 | 260 | 94% complete — Waves 61-118 |
+| 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
 | 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
 | 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **135** | **366** | **501 items tracked** |
+| **Total** | **131** | **370** | **501 items tracked** |
 
-*Snapshot updated: Wave 117 (2026-03-17)*
+*Snapshot updated: Wave 118 (2026-03-17)*
 
 ---
 
@@ -1150,7 +1152,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0400 | One-click "Open in Arduino IDE" from design | OPEN | C3 | ARDX-001 |
+| BL-0400 | One-click "Open in Arduino IDE" from design | DONE (Wave 118) | C3 | ARDX-001 |
 | BL-0401 | Round-trip diff viewer (ProtoPulse vs IDE) | OPEN | C4 | ARDX-003 |
 | BL-0402 | Build/compile status panel | DONE (Wave 117) | C2 | ARDX-006 |
 | BL-0403 | Upload firmware with full log output | DONE (verified Wave 106) | C3 | ARDX-007 |
@@ -1191,13 +1193,13 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0436 | Hardware incident bundle export | OPEN | C3 | IFX-028 |
 | BL-0437 | Guided "board doctor" conversational diagnostics | OPEN | C4 | IFX-030 |
 | BL-0438 | Predictive yield estimator | OPEN | C4 | IFX-040 |
-| BL-0439 | Community template packs | OPEN | C2 | IFX-095 |
+| BL-0439 | Community template packs | DONE (Wave 118) | C2 | IFX-095 |
 | BL-0440 | Marketplace for reusable circuit blocks | OPEN | C4 | IFX-096 |
 | BL-0441 | "Remix this design" from public examples | OPEN | C3 | IFX-101 |
 | BL-0442 | Build journals (auto notes as project evolves) | OPEN | C3 | IFX-102 |
 | BL-0443 | Project scorecards (cost, risk, readiness) | OPEN | C3 | IFX-104 |
-| BL-0444 | Smart reminders for unfinished critical steps | OPEN | C2 | IFX-105 |
-| BL-0445 | Creator profile pages for shared projects | OPEN | C2 | IFX-107 |
+| BL-0444 | Smart reminders for unfinished critical steps | DONE (Wave 118) | C2 | IFX-105 |
+| BL-0445 | Creator profile pages for shared projects | DONE (Wave 118) | C2 | IFX-107 |
 
 ### Moonshots
 
