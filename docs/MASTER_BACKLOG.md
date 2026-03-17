@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 108 | `BL-0470`, `BL-0572`, `BL-0239`, `BL-0313`, `BL-0324` | Manufacturing package validator, DFM→PCB highlight bridge, SMT/THT/manual assembly grouping, per-view onboarding hints, contrast audit — manufacturing trust + onboarding + accessibility. |
 | 107 | `BL-0275`, `BL-0579`, `BL-0272`, `BL-0469`, `BL-0254` | GPU blur optimization, export design snapshots, telemetry→digital twin wiring, pick-and-place validation, release readiness scorecard — performance + manufacturing trust + system integration. |
 | 106 | Backlog reconciliation | 65 items verified DONE (Waves 88-104 retroactive). P2 went from 142→72 open. |
 | 105 | `BL-0217`, `BL-0215`, `BL-0240`, `BL-0536`, `BL-0219` | Export results panel, import mapping warnings, lifecycle badges on BOM cards, tutorial step navigation, import history — export/import UX + procurement trust + onboarding flow. |
@@ -413,11 +414,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 72 | 206 | 74% complete — Waves 61-107 |
+| P2 | 67 | 211 | 76% complete — Waves 61-108 |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **185** | **316** | **501 items tracked** |
+| **Total** | **180** | **321** | **501 items tracked** |
 
-*Snapshot updated: Wave 107 (2026-03-16)*
+*Snapshot updated: Wave 108 (2026-03-17)*
 
 ---
 
@@ -824,7 +825,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0468 | Panelization tool with tab/v-score/fiducial | OPEN | C4 | MF-132, IFX-037 |
 | BL-0469 | Pick-and-place validation and preview — pick-place-validator.ts with 7 rules + stats, 47 tests. | DONE (Wave 107) | C3 | MF-133, IFX-038 |
-| BL-0470 | Manufacturing package validator before download | OPEN | C3 | MF-135 |
+| BL-0470 | Manufacturing package validator before download | DONE (Wave 108) | C3 | MF-135 |
 | BL-0471 | Build-time risk score (cost + supply + assembly) | OPEN | C4 | MF-137, IFX-031 |
 | BL-0472 | Quote and order history per project | OPEN | C3 | MF-140 |
 | BL-0473 | MPN normalization and dedup in BOM | PARTIAL | C3 | MF-129 |
@@ -882,7 +883,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0236 | Context-aware shortcuts panel — ? overlay with 7 view contexts, keyboard key badges. | DONE (Wave 89) | C2 | UX-017 |
 | BL-0237 | Recent projects with filters and pinning — RecentProjectsManager + RecentProjectsList + 3 sort modes + pinning + localStorage persistence. | DONE (verified Wave 105) | C2 | UX-019 |
 | BL-0238 | Supplier comparison drawer (price, lead time, MOQ) | OPEN | C3 | UX-065 |
-| BL-0239 | Auto-grouping for SMT/THT/manual assembly | OPEN | C3 | UX-066 |
+| BL-0239 | Auto-grouping for SMT/THT/manual assembly | DONE (Wave 108) | C3 | UX-066 |
 | BL-0240 | Lifecycle warning badges (NRND/EOL) — LifecycleBadge on BOM cards + procurement summary counter with tooltip breakdown, 33 tests. | DONE (Wave 105) | C2 | UX-067 |
 | BL-0241 | Cost optimization mode with goals/tradeoffs | DONE (verified Wave 106) | C3 | UX-068 |
 
@@ -997,7 +998,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0570 | **Architecture node → spawn schematic instance** — An architecture node typed as "Arduino Mega" or "LM7805" has zero connection to the schematic. Right-clicking a node should offer "Create schematic instance" which opens the schematic view and places the corresponding component. Without this, the architecture diagram is a whiteboard that contributes nothing to the rest of the design. | DONE | C4 | Wave 70 |
 | BL-0571 | **Schematic ↔ Breadboard shared netlist** — The schematic canvas and breadboard view both represent the same physical circuit but share zero data. Placing a component in the schematic should offer to add it to the breadboard, and breadboard wire connections should be reflected as schematic nets. This is Fritzing's core differentiator — ProtoPulse has both views but no bridge between them. | DONE (verified Wave 106) | C5 | Wave 65 audit |
-| BL-0572 | **DFM violations → highlight on PCB canvas** — `DfmChecker` results are displayed as a text list in the procurement/validation area. Clicking a violation should navigate to the PCB view and highlight the affected component/courtyard, exactly as BL-0566 does for DRC violations. Currently DFM and the PCB canvas are completely disconnected. | OPEN | C3 | Wave 65 audit |
+| BL-0572 | **DFM violations → highlight on PCB canvas** — `DfmChecker` results are displayed as a text list in the procurement/validation area. Clicking a violation should navigate to the PCB view and highlight the affected component/courtyard, exactly as BL-0566 does for DRC violations. Currently DFM and the PCB canvas are completely disconnected. | DONE (Wave 108) | C3 | Wave 65 audit |
 | BL-0573 | **Design Variables ↔ SPICE simulation parameters** — `DesignVariablesPanel` stores named parameters (e.g. `Vcc = 5`, `R_load = 1k`). These should be importable as SPICE `.param` directives so the simulation automatically uses your design's variables instead of requiring manual re-entry. Currently the two systems exist independently with zero connection. | DONE (verified Wave 106) | C3 | Wave 65 audit |
 | BL-0574 | **Monte Carlo ↔ BOM component tolerances** — Monte Carlo analysis requires manually specifying tolerance distributions (±1%, ±5%) for each component. It should read the `tolerance` field from `bom_items` and pre-populate distributions from the actual specified parts, so the simulation reflects the real components you've chosen rather than generic assumptions. | OPEN | C4 | Wave 65 audit |
 | BL-0575 | **AI Chat → trigger and deliver exports** — The AI can discuss exports and explain how to use them, but it cannot actually invoke an export and provide a download link. Add AI tools `trigger_export` and `get_export_status` so the AI can say "I'll export this as KiCad 7 for you" and follow through. Currently the entire export system is unreachable from AI. | DONE | C3 | Wave 70 |
@@ -1048,7 +1049,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0310 | Role presets (Student/Hobbyist/Pro) tune UI density | DONE (verified Wave 106) | C3 | UX-075, IFX-076 |
 | BL-0311 | Smart hints triggered by repeated user mistakes | DONE (verified Wave 106) | C3 | UX-076 |
 | BL-0312 | "Explain this panel" button everywhere — ExplainPanelButton.tsx + panel-explainer.ts implemented. | DONE (verified Wave 106) | C2 | UX-077 |
-| BL-0313 | Per-view onboarding hints for first 3 uses | OPEN | C2 | UX-018 |
+| BL-0313 | Per-view onboarding hints for first 3 uses | DONE (Wave 108) | C2 | UX-018 |
 | BL-0314 | Progress milestones from beginner to fab-ready | OPEN | C3 | IFX-064 |
 
 ### Accessibility
@@ -1059,7 +1060,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0321 | Visible focus rings on all interactive controls | OPEN | C2 | UX-082 |
 | BL-0322 | Fix off-screen tooltip placement | OPEN | C1 | UX-083 |
 | BL-0323 | Explicit `type` attribute on all form buttons | OPEN | C1 | UX-084 |
-| BL-0324 | Improve color contrast in low-contrast surfaces | OPEN | C2 | UX-085 |
+| BL-0324 | Improve color contrast in low-contrast surfaces | DONE (Wave 108) | C2 | UX-085 |
 | BL-0325 | Reduced-motion mode | DONE (verified Wave 106) | C2 | UX-086 |
 | BL-0326 | Screen-reader labels for canvas actions | OPEN | C2 | UX-088 |
 | BL-0327 | Full keyboard-first editing mode | OPEN | C4 | UX-090 |
