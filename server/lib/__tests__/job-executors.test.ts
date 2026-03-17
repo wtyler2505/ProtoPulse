@@ -633,6 +633,89 @@ describe('exportGenerationExecutor', () => {
       exportGenerationExecutor({ projectId: 1, format: 'bom-csv' }, ctx),
     ).rejects.toThrow('Job aborted');
   });
+
+  it('includes completedAt in result', async () => {
+    const ctx = createContext();
+    const result = await exportGenerationExecutor(
+      { projectId: 1, format: 'bom-csv' },
+      ctx,
+    ) as Record<string, unknown>;
+
+    expect(result.completedAt).toBeDefined();
+    expect(new Date(result.completedAt as string).toISOString()).toBe(result.completedAt);
+  });
+
+  it('generates BOM CSV with correct filename derived from project name', async () => {
+    const ctx = createContext();
+    const result = await exportGenerationExecutor(
+      { projectId: 1, format: 'bom-csv' },
+      ctx,
+    ) as Record<string, unknown>;
+
+    const inner = result.result as Record<string, unknown>;
+    expect(inner.filename).toBe('TestProject_BOM.csv');
+    expect(inner.encoding).toBe('utf8');
+  });
+
+  it('passes BOM items to exporter', async () => {
+    mockStorage.getBomItems.mockResolvedValue([
+      { partNumber: 'R1', totalPrice: '0.10', quantity: 10 },
+    ]);
+
+    const ctx = createContext();
+    await exportGenerationExecutor({ projectId: 1, format: 'bom-csv' }, ctx);
+
+    const { exportBom } = await import('../../export/bom-exporter');
+    expect(exportBom).toHaveBeenCalledWith(
+      [{ partNumber: 'R1', totalPrice: '0.10', quantity: 10 }],
+      { format: 'generic' },
+    );
+  });
+
+  it('returns stub with format and options for non-bom/non-report formats', async () => {
+    const ctx = createContext();
+    const result = await exportGenerationExecutor(
+      { projectId: 1, format: 'spice', options: { includeModels: true } },
+      ctx,
+    ) as Record<string, unknown>;
+
+    const inner = result.result as Record<string, unknown>;
+    expect(inner.format).toBe('spice');
+    expect(inner.options).toEqual({ includeModels: true });
+    expect(inner.projectId).toBe(1);
+  });
+
+  it('fetches all project data in parallel', async () => {
+    const ctx = createContext();
+    await exportGenerationExecutor({ projectId: 1, format: 'gerber' }, ctx);
+
+    expect(mockStorage.getProject).toHaveBeenCalledWith(1);
+    expect(mockStorage.getNodes).toHaveBeenCalledWith(1);
+    expect(mockStorage.getEdges).toHaveBeenCalledWith(1);
+    expect(mockStorage.getBomItems).toHaveBeenCalledWith(1);
+    expect(mockStorage.getValidationIssues).toHaveBeenCalledWith(1);
+  });
+
+  it('maps node data correctly for design-report format', async () => {
+    mockStorage.getNodes.mockResolvedValue([
+      { nodeId: 'n1', label: 'MCU', nodeType: 'mcu', positionX: 10, positionY: 20, data: { chip: 'ATmega' } },
+    ]);
+    mockStorage.getEdges.mockResolvedValue([
+      { edgeId: 'e1', source: 'n1', target: 'n2', label: 'I2C', signalType: 'digital', voltage: '3.3V', busWidth: 2, netName: 'I2C_BUS' },
+    ]);
+
+    const ctx = createContext();
+    await exportGenerationExecutor({ projectId: 1, format: 'design-report' }, ctx);
+
+    const { generateDesignReportMd } = await import('../../export/design-report');
+    expect(generateDesignReportMd).toHaveBeenCalledTimes(1);
+
+    const callArg = (generateDesignReportMd as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
+    expect(callArg.projectName).toBe('TestProject');
+    const nodes = callArg.nodes as Array<Record<string, unknown>>;
+    expect(nodes[0].nodeId).toBe('n1');
+    expect(nodes[0].data).toEqual({ chip: 'ATmega' });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -744,6 +827,202 @@ describe('batchDrcExecutor', () => {
   it('throws when signal is already aborted', async () => {
     const ctx = createAbortedContext();
     await expect(batchDrcExecutor({ projectId: 1 }, ctx)).rejects.toThrow('Job aborted');
+  });
+
+  it('uses default DRC rules when none provided', async () => {
+    mockStorage.getComponentParts.mockResolvedValue([
+      {
+        id: 1,
+        meta: {
+          title: 'R1',
+          tags: [],
+          mountingType: 'smd',
+          properties: [],
+          views: { schematic: { shapes: [{ id: 's1', type: 'rect', x: 0, y: 0, width: 10, height: 10, rotation: 0 }] } },
+        },
+        connectors: [],
+      },
+    ]);
+
+    const ctx = createContext();
+    await batchDrcExecutor({ projectId: 1 }, ctx);
+
+    const { getDefaultDRCRules, runDRC } = await import('@shared/drc-engine');
+    expect(getDefaultDRCRules).toHaveBeenCalled();
+    expect(runDRC).toHaveBeenCalled();
+  });
+
+  it('uses custom rules when provided in payload', async () => {
+    mockStorage.getComponentParts.mockResolvedValue([
+      {
+        id: 1,
+        meta: {
+          title: 'R1',
+          tags: [],
+          mountingType: 'smd',
+          properties: [],
+          views: { schematic: { shapes: [{ id: 's1', type: 'rect', x: 0, y: 0, width: 10, height: 10, rotation: 0 }] } },
+        },
+        connectors: [],
+      },
+    ]);
+
+    const customRules = [
+      { type: 'min-clearance', severity: 'warning' as const, enabled: true, params: { minClearance: 0.5 } },
+    ];
+
+    const ctx = createContext();
+    await batchDrcExecutor({ projectId: 1, rules: customRules }, ctx);
+
+    const { runDRC } = await import('@shared/drc-engine');
+    const lastCall = (runDRC as ReturnType<typeof vi.fn>).mock.calls[0];
+    const passedRules = lastCall[1] as Array<{ type: string; severity: string }>;
+    expect(passedRules[0].type).toBe('min-clearance');
+    expect(passedRules[0].severity).toBe('warning');
+  });
+
+  it('handles parts with array-type view entries', async () => {
+    mockStorage.getComponentParts.mockResolvedValue([
+      {
+        id: 1,
+        meta: {
+          title: 'R1',
+          tags: [],
+          mountingType: 'smd',
+          properties: [],
+          views: { schematic: [{ id: 's1', type: 'rect', x: 0, y: 0, width: 10, height: 10, rotation: 0 }] },
+        },
+        connectors: [],
+      },
+    ]);
+
+    const ctx = createContext();
+    const result = await batchDrcExecutor({ projectId: 1, view: 'schematic' }, ctx) as Record<string, unknown>;
+
+    const { runDRC } = await import('@shared/drc-engine');
+    expect(runDRC).toHaveBeenCalled();
+    expect(result.partsChecked).toBe(1);
+  });
+
+  it('handles multiple parts with violations from different parts', async () => {
+    const { runDRC } = await import('@shared/drc-engine');
+    (runDRC as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce([{ id: 'v1', ruleType: 'min-clearance', severity: 'error', message: 'Too close on part 1' }])
+      .mockReturnValueOnce([
+        { id: 'v2', ruleType: 'overlap', severity: 'warning', message: 'Overlap on part 2' },
+        { id: 'v3', ruleType: 'min-width', severity: 'error', message: 'Trace too thin' },
+      ]);
+
+    mockStorage.getComponentParts.mockResolvedValue([
+      {
+        id: 10,
+        meta: { title: 'P1', tags: [], mountingType: '', properties: [], views: { pcb: { shapes: [{ id: 's1', type: 'rect', x: 0, y: 0, width: 10, height: 10, rotation: 0 }] } } },
+        connectors: [],
+      },
+      {
+        id: 20,
+        meta: { title: 'P2', tags: [], mountingType: '', properties: [], views: { pcb: { shapes: [{ id: 's2', type: 'rect', x: 0, y: 0, width: 10, height: 10, rotation: 0 }] } } },
+        connectors: [],
+      },
+    ]);
+
+    const ctx = createContext();
+    const result = await batchDrcExecutor({ projectId: 1, view: 'pcb' }, ctx) as Record<string, unknown>;
+
+    expect(result.partsChecked).toBe(2);
+    expect(result.violationCount).toBe(3);
+    expect(result.partsWithViolations).toBe(2);
+  });
+
+  it('does not store violations when none are found', async () => {
+    mockStorage.getComponentParts.mockResolvedValue([
+      {
+        id: 1,
+        meta: { title: 'R1', tags: [], mountingType: '', properties: [], views: { schematic: { shapes: [{ id: 's1', type: 'rect', x: 0, y: 0, width: 5, height: 5, rotation: 0 }] } } },
+        connectors: [],
+      },
+    ]);
+
+    const ctx = createContext();
+    await batchDrcExecutor({ projectId: 1 }, ctx);
+
+    expect(mockStorage.bulkCreateValidationIssues).not.toHaveBeenCalled();
+  });
+
+  it('builds correct PartState with connectors for the target view', async () => {
+    const { runDRC } = await import('@shared/drc-engine');
+
+    mockStorage.getComponentParts.mockResolvedValue([
+      {
+        id: 5,
+        meta: {
+          title: 'IC1',
+          tags: ['microcontroller'],
+          mountingType: 'dip',
+          properties: [{ key: 'pins', value: '28' }],
+          views: {
+            breadboard: { shapes: [{ id: 'bb1', type: 'rect', x: 0, y: 0, width: 20, height: 40, rotation: 0 }] },
+            schematic: { shapes: [] },
+            pcb: { shapes: [] },
+          },
+        },
+        connectors: [{ id: 'pin1', name: 'VCC', type: 'male' }],
+      },
+    ]);
+
+    const ctx = createContext();
+    await batchDrcExecutor({ projectId: 1, view: 'breadboard' }, ctx);
+
+    expect(runDRC).toHaveBeenCalledTimes(1);
+    const callArgs = (runDRC as ReturnType<typeof vi.fn>).mock.calls[0];
+    const partState = callArgs[0] as Record<string, unknown>;
+    const meta = partState.meta as Record<string, unknown>;
+    expect(meta.title).toBe('IC1');
+    expect(meta.tags).toEqual(['microcontroller']);
+    expect(callArgs[2]).toBe('breadboard');
+  });
+
+  it('includes completedAt timestamp in result', async () => {
+    const ctx = createContext();
+    const result = await batchDrcExecutor({ projectId: 1 }, ctx) as Record<string, unknown>;
+
+    expect(result.completedAt).toBeDefined();
+    expect(new Date(result.completedAt as string).toISOString()).toBe(result.completedAt);
+  });
+
+  it('handles parts with null meta gracefully', async () => {
+    mockStorage.getComponentParts.mockResolvedValue([
+      {
+        id: 1,
+        meta: null,
+        connectors: [],
+      },
+    ]);
+
+    const ctx = createContext();
+    const result = await batchDrcExecutor({ projectId: 1 }, ctx) as Record<string, unknown>;
+
+    // Part has no views, so no shapes to check — should just pass through
+    expect(result.partsChecked).toBe(1);
+    expect(result.violationCount).toBe(0);
+  });
+
+  it('handles parts with null connectors', async () => {
+    mockStorage.getComponentParts.mockResolvedValue([
+      {
+        id: 1,
+        meta: {
+          title: 'R1',
+          views: { schematic: { shapes: [{ id: 's1', type: 'rect', x: 0, y: 0, width: 10, height: 10, rotation: 0 }] } },
+        },
+        connectors: null,
+      },
+    ]);
+
+    const ctx = createContext();
+    const result = await batchDrcExecutor({ projectId: 1 }, ctx) as Record<string, unknown>;
+
+    expect(result.partsChecked).toBe(1);
   });
 });
 
