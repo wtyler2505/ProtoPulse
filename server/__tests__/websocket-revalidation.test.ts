@@ -242,7 +242,9 @@ describe('BL-0526: WebSocket Session Re-validation on Reconnect', () => {
       const newMsgs = ws1.sent.slice(sentBefore).map((s) => JSON.parse(s) as CollabMessage);
       const joinMsgs = newMsgs.filter((m) => m.type === 'join');
       expect(joinMsgs).toHaveLength(1);
-      expect(joinMsgs[0].payload.user.userId).toBe(2);
+      const joinPayload = joinMsgs[0].payload as Record<string, unknown>;
+      const joinUser = joinPayload.user as Record<string, unknown>;
+      expect(joinUser.userId).toBe(2);
     });
   });
 

@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 109 | `BL-0526`, `BL-0475`, `BL-0238`, `BL-0472`, `BL-0220` | WebSocket session revalidation, assembly risk scoring, supplier comparison engine, order history, import diff engine — security + procurement depth + design comparison. |
 | 108 | `BL-0470`, `BL-0572`, `BL-0239`, `BL-0313`, `BL-0324` | Manufacturing package validator, DFM→PCB highlight bridge, SMT/THT/manual assembly grouping, per-view onboarding hints, contrast audit — manufacturing trust + onboarding + accessibility. |
 | 107 | `BL-0275`, `BL-0579`, `BL-0272`, `BL-0469`, `BL-0254` | GPU blur optimization, export design snapshots, telemetry→digital twin wiring, pick-and-place validation, release readiness scorecard — performance + manufacturing trust + system integration. |
 | 106 | Backlog reconciliation | 65 items verified DONE (Waves 88-104 retroactive). P2 went from 142→72 open. |
@@ -414,11 +415,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 67 | 211 | 76% complete — Waves 61-108 |
+| P2 | 62 | 216 | 78% complete — Waves 61-109 |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **180** | **321** | **501 items tracked** |
+| **Total** | **175** | **326** | **501 items tracked** |
 
-*Snapshot updated: Wave 108 (2026-03-17)*
+*Snapshot updated: Wave 109 (2026-03-17)*
 
 ---
 
@@ -814,7 +815,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0524 | **Conflict resolution UI** — When a CRDT merge produces a conflict (once BL-0486 is fixed), surface a diff dialog showing "your version" vs "their version" with accept/reject/merge controls. Without UI, silent last-write-wins is confusing. | BLOCKED on BL-0486 | C4 | Wave 64 audit |
 | BL-0525 | **Presence cursors on Schematic and PCB canvases** — Live collaboration cursors (`LiveCursor` from `collaboration-client.ts`) are not rendered on the Schematic or PCB SVG canvases. Only the Architecture ReactFlow canvas has cursor rendering. Extend to all interactive editors. | DONE (verified Wave 106) | C3 | Wave 64 audit |
-| BL-0526 | **Session re-validation on WebSocket reconnect** — After a WebSocket disconnect/reconnect, the server does not re-verify the session token or project membership before re-admitting the client to the room. An expired session can continue collaborating. | OPEN | C3 | Wave 64 audit |
+| BL-0526 | **Session re-validation on WebSocket reconnect** — After a WebSocket disconnect/reconnect, the server does not re-verify the session token or project membership before re-admitting the client to the room. An expired session can continue collaborating. | DONE (Wave 109) | C3 | Wave 64 audit |
 | BL-0527 | **Offline queue retry jitter** — addJitter() with ±20% randomized backoff in offline-sync.ts. | DONE (Wave 89) | C2 | Wave 64 audit |
 | BL-0640 | **Explicit collaboration membership / invite model** — Collaboration currently falls back to implicit `editor` access for non-owners in room admission logic. Add real membership/invite records and explicit per-project ACL decisions so collaboration rights are granted intentionally instead of by shortcut. | OPEN | C4 | Repo gap audit 2026-03-13 |
 | BL-0649 | **Kanban board should persist to project/account, not browser-only localStorage** — The task board is deep enough to be useful, but it does not reliably follow users across devices, exports, or collaborators. Back it with project-scoped persistence and optional team sharing. | DONE (verified Wave 106) | C3 | Repo gap audit 2026-03-13 |
@@ -827,10 +828,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0469 | Pick-and-place validation and preview — pick-place-validator.ts with 7 rules + stats, 47 tests. | DONE (Wave 107) | C3 | MF-133, IFX-038 |
 | BL-0470 | Manufacturing package validator before download | DONE (Wave 108) | C3 | MF-135 |
 | BL-0471 | Build-time risk score (cost + supply + assembly) | OPEN | C4 | MF-137, IFX-031 |
-| BL-0472 | Quote and order history per project | OPEN | C3 | MF-140 |
+| BL-0472 | Quote and order history per project | DONE (Wave 109) | C3 | MF-140 |
 | BL-0473 | MPN normalization and dedup in BOM | PARTIAL | C3 | MF-129 |
 | BL-0474 | AML/approved-vendor-list enforcement | OPEN | C3 | MF-138 |
-| BL-0475 | Assembly risk heatmap | OPEN | C3 | IFX-034 |
+| BL-0475 | Assembly risk heatmap | DONE (Wave 109) | C3 | IFX-034 |
 | BL-0476 | One-click manufacturing package wizard | OPEN | C4 | UX-060, IFX-036 |
 
 ### Manufacturing — Supply Chain Gaps (Wave 64 Audit)
@@ -867,7 +868,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0217 | Show exported files list and size after export — ExportResultsPanel with per-file sizes, auto-collapse, singleton manager, 42 tests. | DONE (Wave 105) | C1 | UX-054 |
 | BL-0218 | Export profiles ("Fab ready", "Sim bundle", "Docs") — 4 built-in profiles + ExportProfileSelector UI. | DONE (verified Wave 105) | C2 | UX-056 |
 | BL-0219 | Import history with one-click restore — ImportHistoryManager + ImportHistoryPanel, localStorage persistence, FIFO eviction, 49 tests. | DONE (Wave 105) | C2 | UX-057 |
-| BL-0220 | Side-by-side diff: imported vs current design | OPEN | C3 | UX-058 |
+| BL-0220 | Side-by-side diff: imported vs current design | DONE (Wave 109) | C3 | UX-058 |
 | BL-0221 | Guided migration flow for KiCad/Eagle/EasyEDA | OPEN | C4 | UX-059, IFX-093 |
 
 ### UX Polish — Editor & Navigation
@@ -882,7 +883,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0235 | Command palette categories — 6 workflow-stage groups with filter tabs. | DONE (Wave 88) | C2 | UX-016 |
 | BL-0236 | Context-aware shortcuts panel — ? overlay with 7 view contexts, keyboard key badges. | DONE (Wave 89) | C2 | UX-017 |
 | BL-0237 | Recent projects with filters and pinning — RecentProjectsManager + RecentProjectsList + 3 sort modes + pinning + localStorage persistence. | DONE (verified Wave 105) | C2 | UX-019 |
-| BL-0238 | Supplier comparison drawer (price, lead time, MOQ) | OPEN | C3 | UX-065 |
+| BL-0238 | Supplier comparison drawer (price, lead time, MOQ) | DONE (Wave 109) | C3 | UX-065 |
 | BL-0239 | Auto-grouping for SMT/THT/manual assembly | DONE (Wave 108) | C3 | UX-066 |
 | BL-0240 | Lifecycle warning badges (NRND/EOL) — LifecycleBadge on BOM cards + procurement summary counter with tooltip breakdown, 33 tests. | DONE (Wave 105) | C2 | UX-067 |
 | BL-0241 | Cost optimization mode with goals/tradeoffs | DONE (verified Wave 106) | C3 | UX-068 |
