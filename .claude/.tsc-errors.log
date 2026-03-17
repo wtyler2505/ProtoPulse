@@ -964,3 +964,8 @@ client/src/lib/team-command-center.ts(167,26): error TS2802: Type 'MapIterator<T
 1:22:09 AM - Found 1 error. Watching for file changes.
 [2J[3J[H1:22:35 AM - File change detected. Starting incremental compilation...
 
+client/src/lib/team-command-center.ts(167,26): error TS2802: Type 'MapIterator<TeamMember>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+1:23:04 AM - Found 1 error. Watching for file changes.
+[2J[3J[H1:23:08 AM - File change detected. Starting incremental compilation...
+
