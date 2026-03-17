@@ -123,6 +123,22 @@ describe('Payload schemas', () => {
     it('rejects invalid scope', () => {
       expect(() => aiAnalysisPayloadSchema.parse({ projectId: 1, scope: 'invalid' })).toThrow();
     });
+
+    it('rejects non-integer projectId', () => {
+      expect(() => aiAnalysisPayloadSchema.parse({ projectId: 1.5 })).toThrow();
+    });
+
+    it('accepts all valid scope values', () => {
+      for (const scope of ['architecture', 'bom', 'validation', 'full'] as const) {
+        const result = aiAnalysisPayloadSchema.parse({ projectId: 1, scope });
+        expect(result.scope).toBe(scope);
+      }
+    });
+
+    it('allows prompt to be omitted', () => {
+      const result = aiAnalysisPayloadSchema.parse({ projectId: 1, scope: 'bom' });
+      expect(result.prompt).toBeUndefined();
+    });
   });
 
   describe('exportGenerationPayloadSchema', () => {
@@ -145,6 +161,22 @@ describe('Payload schemas', () => {
 
     it('rejects unsupported format', () => {
       expect(() => exportGenerationPayloadSchema.parse({ projectId: 1, format: 'step' })).toThrow();
+    });
+
+    it('accepts all 12 supported export formats', () => {
+      const formats = [
+        'kicad', 'eagle', 'spice', 'gerber', 'drill', 'pick-place',
+        'bom-csv', 'netlist', 'odb++', 'ipc2581', 'pdf', 'design-report',
+      ] as const;
+      for (const format of formats) {
+        const result = exportGenerationPayloadSchema.parse({ projectId: 1, format });
+        expect(result.format).toBe(format);
+      }
+    });
+
+    it('defaults options to undefined when omitted', () => {
+      const result = exportGenerationPayloadSchema.parse({ projectId: 1, format: 'kicad' });
+      expect(result.options).toBeUndefined();
     });
   });
 
@@ -172,6 +204,33 @@ describe('Payload schemas', () => {
         }),
       ).toThrow();
     });
+
+    it('accepts all three view types', () => {
+      for (const view of ['breadboard', 'schematic', 'pcb'] as const) {
+        const result = batchDrcPayloadSchema.parse({ projectId: 1, view });
+        expect(result.view).toBe(view);
+      }
+    });
+
+    it('accepts rules without params', () => {
+      const result = batchDrcPayloadSchema.parse({
+        projectId: 1,
+        rules: [{ type: 'overlap', severity: 'warning', enabled: false }],
+      });
+      expect(result.rules![0].params).toBeUndefined();
+    });
+
+    it('accepts multiple rules', () => {
+      const result = batchDrcPayloadSchema.parse({
+        projectId: 1,
+        rules: [
+          { type: 'min-clearance', severity: 'error', enabled: true },
+          { type: 'overlap', severity: 'warning', enabled: true },
+          { type: 'unconnected', severity: 'error', enabled: false },
+        ],
+      });
+      expect(result.rules).toHaveLength(3);
+    });
   });
 
   describe('reportGenerationPayloadSchema', () => {
@@ -186,6 +245,28 @@ describe('Payload schemas', () => {
     it('defaults reportType to design', () => {
       const result = reportGenerationPayloadSchema.parse({ projectId: 1 });
       expect(result.reportType).toBe('design');
+    });
+
+    it('accepts all four report types', () => {
+      for (const reportType of ['design', 'fmea', 'pdf', 'firmware-scaffold'] as const) {
+        const result = reportGenerationPayloadSchema.parse({ projectId: 1, reportType });
+        expect(result.reportType).toBe(reportType);
+      }
+    });
+
+    it('rejects invalid report type', () => {
+      expect(() =>
+        reportGenerationPayloadSchema.parse({ projectId: 1, reportType: 'invalid' }),
+      ).toThrow();
+    });
+
+    it('accepts options record', () => {
+      const result = reportGenerationPayloadSchema.parse({
+        projectId: 1,
+        reportType: 'design',
+        options: { includeImages: true },
+      });
+      expect(result.options).toEqual({ includeImages: true });
     });
   });
 
@@ -219,6 +300,30 @@ describe('Payload schemas', () => {
           format: 'kicad',
           data: 'content',
           filename: '',
+        }),
+      ).toThrow();
+    });
+
+    it('accepts all 8 supported import formats', () => {
+      const formats = ['kicad', 'eagle', 'altium', 'geda', 'ltspice', 'proteus', 'orcad', 'generic'] as const;
+      for (const format of formats) {
+        const result = importProcessingPayloadSchema.parse({
+          projectId: 1,
+          format,
+          data: 'content',
+          filename: 'test.sch',
+        });
+        expect(result.format).toBe(format);
+      }
+    });
+
+    it('rejects unsupported import format', () => {
+      expect(() =>
+        importProcessingPayloadSchema.parse({
+          projectId: 1,
+          format: 'fritzing',
+          data: 'content',
+          filename: 'test.fzz',
         }),
       ).toThrow();
     });
