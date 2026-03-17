@@ -588,3 +588,20 @@ client/src/lib/__tests__/touch-safe-controls.test.ts(178,15): error TS2352: Conv
 10:31:16 PM - Found 0 errors. Watching for file changes.
 [2J[3J[H10:31:19 PM - File change detected. Starting incremental compilation...
 
+
+10:31:37 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:31:40 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/gesture-shortcuts.test.ts(44,4): error TS2352: Conversion of type 'TouchList' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'TouchList'.
+client/src/lib/__tests__/gesture-shortcuts.test.ts(44,37): error TS2538: Type 'unique symbol' cannot be used as an index type.
+
+10:32:03 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H10:33:37 PM - File change detected. Starting incremental compilation...
+
+
+10:33:47 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:34:07 PM - File change detected. Starting incremental compilation...
+
+
+10:34:19 PM - Found 0 errors. Watching for file changes.

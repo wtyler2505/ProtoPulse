@@ -32,25 +32,21 @@ function makeTouch(overrides: {
   } as Touch;
 }
 
-/** Build a TouchList from an array of Touch objects. */
+/** Build a TouchList-like object from an array of Touch objects. */
 function makeTouchList(touches: Touch[]): TouchList {
-  const list = touches as unknown as TouchList;
-  Object.defineProperty(list, 'length', { value: touches.length, writable: false });
-  Object.defineProperty(list, 'item', {
-    value: (index: number) => touches[index] ?? null,
-    writable: false,
-  });
-  // Make iterable
-  (list as Record<string, unknown>)[Symbol.iterator] = function* () {
-    for (let i = 0; i < touches.length; i++) {
-      yield touches[i];
-    }
+  const obj: Record<string | number | symbol, unknown> = {
+    length: touches.length,
+    item: (index: number) => touches[index] ?? null,
+    [Symbol.iterator]: function* () {
+      for (let i = 0; i < touches.length; i++) {
+        yield touches[i];
+      }
+    },
   };
-  // Index access
   for (let i = 0; i < touches.length; i++) {
-    Object.defineProperty(list, i, { value: touches[i], writable: false });
+    obj[i] = touches[i];
   }
-  return list;
+  return obj as unknown as TouchList;
 }
 
 /** Create a TouchEvent with the specified touches. */
@@ -59,15 +55,14 @@ function makeTouchEvent(
   changedTouches: Touch[],
   allTouches?: Touch[],
 ): TouchEvent {
-  const event = new Event(type, { bubbles: true, cancelable: true }) as unknown as TouchEvent;
-  Object.defineProperty(event, 'changedTouches', {
-    value: makeTouchList(changedTouches),
-    writable: false,
-  });
-  Object.defineProperty(event, 'touches', {
-    value: makeTouchList(allTouches ?? changedTouches),
-    writable: false,
-  });
+  // happy-dom's Event may have non-configurable touch properties,
+  // so we create a plain object with the Event prototype and override.
+  const base = new Event(type, { bubbles: true, cancelable: true });
+  const event = Object.create(base, {
+    changedTouches: { value: makeTouchList(changedTouches), configurable: true },
+    touches: { value: makeTouchList(allTouches ?? changedTouches), configurable: true },
+    preventDefault: { value: () => { /* noop in tests */ }, configurable: true },
+  }) as TouchEvent;
   return event;
 }
 
