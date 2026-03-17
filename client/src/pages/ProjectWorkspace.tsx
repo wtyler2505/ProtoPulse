@@ -605,21 +605,36 @@ function WorkspaceContent() {
   /* BL-0314: Check milestones when project state changes */
   useEffect(() => {
     const safeBom = bom ?? [];
+    const safeNodes = nodes ?? [];
+    const safeEdges = edges ?? [];
     const milestoneState: MilestoneProjectState = {
-      architectureNodeCount: (nodes ?? []).length,
-      architectureEdgeCount: (edges ?? []).length,
-      circuitInstanceCount: 0,
-      circuitWireCount: 0,
+      hasNodes: safeNodes.length > 0,
+      nodeCount: safeNodes.length,
+      hasEdges: safeEdges.length > 0,
+      edgeCount: safeEdges.length,
+      hasBom: safeBom.length > 0,
       bomItemCount: safeBom.length,
       bomItemsWithPartNumbers: safeBom.filter((b) => b.partNumber && b.partNumber.trim() !== '').length,
       bomItemsWithPrices: safeBom.filter((b) => Number(b.unitPrice) > 0).length,
-      hasRunSimulation: false,
-      hasPcbLayout: false,
-      pcbTraceCount: 0,
-      hasExported: false,
-      hasFabOrder: false,
+      hasCircuit: false,
+      circuitInstanceCount: 0,
+      circuitWireCount: 0,
+      hasDrc: false,
+      drcErrors: validationErrorCount,
       drcCleanRunCount: 0,
       drcTotalRunCount: 0,
+      hasSimulation: false,
+      hasExport: false,
+      exportFormats: [],
+      hasPcbLayout: false,
+      pcbTraceCount: 0,
+      hasFabOrder: false,
+      hasDesignVariables: false,
+      sheetCount: 1,
+      ercClean: false,
+      hasGerberExport: false,
+      projectCount: 1,
+      hasCommunityContribution: false,
       validationErrorCount,
     };
     const tracker = MilestoneTracker.getInstance();

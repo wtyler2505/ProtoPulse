@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 110 | `BL-0148`, `BL-0528`, `BL-0474`, `BL-0314`, `BL-0329` | Web Serial integration tests, PCB order tracking, AVL enforcement, progress milestones, font scaling — testing depth + procurement + onboarding + accessibility. |
 | 109 | `BL-0526`, `BL-0475`, `BL-0238`, `BL-0472`, `BL-0220` | WebSocket session revalidation, assembly risk scoring, supplier comparison engine, order history, import diff engine — security + procurement depth + design comparison. |
 | 108 | `BL-0470`, `BL-0572`, `BL-0239`, `BL-0313`, `BL-0324` | Manufacturing package validator, DFM→PCB highlight bridge, SMT/THT/manual assembly grouping, per-view onboarding hints, contrast audit — manufacturing trust + onboarding + accessibility. |
 | 107 | `BL-0275`, `BL-0579`, `BL-0272`, `BL-0469`, `BL-0254` | GPU blur optimization, export design snapshots, telemetry→digital twin wiring, pick-and-place validation, release readiness scorecard — performance + manufacturing trust + system integration. |
@@ -415,11 +416,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 62 | 216 | 78% complete — Waves 61-109 |
+| P2 | 57 | 221 | 79% complete — Waves 61-110 |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **175** | **326** | **501 items tracked** |
+| **Total** | **170** | **331** | **501 items tracked** |
 
-*Snapshot updated: Wave 109 (2026-03-17)*
+*Snapshot updated: Wave 110 (2026-03-17)*
 
 ---
 
@@ -704,7 +705,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0145 | Safe command sandbox for device interaction | OPEN | C4 | MF-092 |
 | BL-0146 | Board package/library manager integration | OPEN | C4 | MF-093 |
 | BL-0147 | Flashing progress/error diagnostics — avrdude+esptool output parsing, 25+ error patterns, FlashProgressBar with stage icons. | DONE (Wave 87) | C3 | MF-094, ARDX-063 |
-| BL-0148 | Web Serial integration tests | OPEN | C3 | MF-095 |
+| BL-0148 | Web Serial integration tests | DONE (Wave 110) | C3 | MF-095 |
 | BL-0149 | Multi-angle photo follow-up for component ID | OPEN | C3 | MF-097 |
 | BL-0150 | Inventory tracking tied to BOM consumption | PARTIAL | C4 | MF-101 |
 | BL-0151 | Compile error translator (plain English) | DONE (Wave 84) | C2 | ARDX-008 |
@@ -830,7 +831,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0471 | Build-time risk score (cost + supply + assembly) | OPEN | C4 | MF-137, IFX-031 |
 | BL-0472 | Quote and order history per project | DONE (Wave 109) | C3 | MF-140 |
 | BL-0473 | MPN normalization and dedup in BOM | PARTIAL | C3 | MF-129 |
-| BL-0474 | AML/approved-vendor-list enforcement | OPEN | C3 | MF-138 |
+| BL-0474 | AML/approved-vendor-list enforcement | DONE (Wave 110) | C3 | MF-138 |
 | BL-0475 | Assembly risk heatmap | DONE (Wave 109) | C3 | IFX-034 |
 | BL-0476 | One-click manufacturing package wizard | OPEN | C4 | UX-060, IFX-036 |
 
@@ -838,7 +839,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0528 | **PCB order tracking** — After placing an order via the ordering flow, provide a status tracker (Gerbers received → In production → Shipped → Delivered) linked to the PCB order record. JLCPCB and PCBWay both have order status APIs. | OPEN | C3 | Wave 64 audit |
+| BL-0528 | **PCB order tracking** — After placing an order via the ordering flow, provide a status tracker (Gerbers received → In production → Shipped → Delivered) linked to the PCB order record. JLCPCB and PCBWay both have order status APIs. | DONE (Wave 110) | C3 | Wave 64 audit |
 | BL-0529 | **Fab account linking** — Allow users to save JLCPCB / PCBWay / OSHPark API keys in the settings so orders can be submitted directly without leaving the app. Currently the ordering flow generates a package but requires manual upload to fab websites. | OPEN | C4 | Wave 64 audit |
 | BL-0530 | **DFM validates actual trace widths and clearances** — `DfmChecker` currently only validates component footprints and courtyard clearances. It does not read actual routed traces from `circuit_wires`. Add trace width and clearance checks against the selected fab preset. | DONE (verified Wave 106) | C4 | Wave 64 audit |
 | BL-0531 | **BOM component availability check in DFM** — Integrate BOM stock data (from supplier APIs, once real) into the DFM flow. Flag unavailable or long-lead-time components as DFM risks before the user commits to a fab order. | OPEN | C4 | Wave 64 audit |
@@ -1051,7 +1052,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0311 | Smart hints triggered by repeated user mistakes | DONE (verified Wave 106) | C3 | UX-076 |
 | BL-0312 | "Explain this panel" button everywhere — ExplainPanelButton.tsx + panel-explainer.ts implemented. | DONE (verified Wave 106) | C2 | UX-077 |
 | BL-0313 | Per-view onboarding hints for first 3 uses | DONE (Wave 108) | C2 | UX-018 |
-| BL-0314 | Progress milestones from beginner to fab-ready | OPEN | C3 | IFX-064 |
+| BL-0314 | Progress milestones from beginner to fab-ready | DONE (Wave 110) | C3 | IFX-064 |
 
 ### Accessibility
 
@@ -1066,7 +1067,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0326 | Screen-reader labels for canvas actions | OPEN | C2 | UX-088 |
 | BL-0327 | Full keyboard-first editing mode | OPEN | C4 | UX-090 |
 | BL-0328 | Accessibility audit dashboard with tracked fixes | OPEN | C3 | UX-089 |
-| BL-0329 | Font scaling and spacing options | OPEN | C2 | UX-087 |
+| BL-0329 | Font scaling and spacing options | DONE (Wave 110) | C2 | UX-087 |
 
 ### Mobile & Responsive
 
