@@ -635,3 +635,5 @@ client/src/lib/__tests__/motion-language.test.ts(30,5): error TS2322: Type 'Mock
         Type 'EventListenerObject' provides no match for the signature '(event: MediaQueryListEvent): void'.
 
 11:29:19 PM - Found 2 errors. Watching for file changes.
+[2J[3J[H11:29:29 PM - File change detected. Starting incremental compilation...
+
