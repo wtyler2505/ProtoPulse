@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 121 | `BL-0409`, `BL-0411`, `BL-0417`, `BL-0421` | AI sketch starter, board-aware suggestions, state machine skeletons, sketch explainer — Arduino intelligence. |
 | 120 | `BL-0407`, `BL-0410`, `BL-0442` | Firmware snapshots, smart code snippets, build journals — firmware safety + developer experience. |
 | 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
 | 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
@@ -426,7 +427,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 8 | 270 | 97% complete — Waves 61-120 |
+| P2 | 4 | 274 | 99% complete — Waves 61-121 |
+| 121 | `BL-0409`, `BL-0411`, `BL-0417`, `BL-0421` | AI sketch starter, board-aware suggestions, state machine skeletons, sketch explainer — Arduino intelligence. |
 | 120 | `BL-0407`, `BL-0410`, `BL-0442` | Firmware snapshots, smart code snippets, build journals — firmware safety + developer experience. |
 | 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
 | 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
@@ -435,9 +437,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **121** | **380** | **501 items tracked** |
+| **Total** | **117** | **384** | **501 items tracked** |
 
-*Snapshot updated: Wave 120 (2026-03-17)*
+*Snapshot updated: Wave 121 (2026-03-17)*
 
 ---
 
@@ -1165,19 +1167,19 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0406 | Per-project board profile | DONE (verified Wave 106) | C2 | ARDX-011 |
 | BL-0407 | Save last known good firmware build | DONE (Wave 120) | C3 | ARDX-012 |
 | BL-0408 | Pre-upload safety checks | DONE (Wave 120) | C3 | ARDX-015 |
-| BL-0409 | AI sketch starter from schematic | OPEN | C3 | ARDX-016 |
+| BL-0409 | AI sketch starter from schematic | DONE (Wave 121) | C3 | ARDX-016 |
 | BL-0410 | Smart code snippets per component | DONE (Wave 120) | C3 | ARDX-017 |
-| BL-0411 | Board-aware suggestions (timers, PWM limits) | OPEN | C3 | ARDX-021 |
+| BL-0411 | Board-aware suggestions (timers, PWM limits) | DONE (Wave 121) | C3 | ARDX-021 |
 | BL-0412 | "Refactor to non-blocking" assistant | OPEN | C4 | ARDX-022 |
 | BL-0413 | ISR safety scanner | OPEN | C4 | ARDX-023 |
 | BL-0414 | RAM usage early-warning | DONE (Wave 119) | C3 | ARDX-024 |
 | BL-0415 | Flash size budget tracker | DONE (Wave 119) | C3 | ARDX-025 |
 | BL-0416 | Loop-time profiler overlay | OPEN | C4 | ARDX-026 |
-| BL-0417 | Auto state-machine skeletons for robotics | OPEN | C3 | ARDX-027 |
+| BL-0417 | Auto state-machine skeletons for robotics | DONE (Wave 121) | C3 | ARDX-027 |
 | BL-0418 | Live variable watch over serial | OPEN | C4 | ARDX-028 |
 | BL-0419 | Library conflict detector | DONE (Wave 119) | C3 | ARDX-067 |
 | BL-0420 | AI "fix compile errors" action | DONE (verified Wave 106) | C4 | ARDX-076 |
-| BL-0421 | AI "explain this sketch for a beginner" | OPEN | C2 | ARDX-077 |
+| BL-0421 | AI "explain this sketch for a beginner" | DONE (Wave 121) | C2 | ARDX-077 |
 | BL-0422 | Smart library install on compile error | OPEN | C3 | ARDX-066 |
 | BL-0423 | Firmware version linked to design snapshot | OPEN | C4 | ARDX-056 |
 | BL-0424 | One-click rollback to known-good sketch | OPEN | C3 | ARDX-057 |
