@@ -427,17 +427,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 4 | 274 | 99% complete — Waves 61-121 |
-| 121 | `BL-0409`, `BL-0411`, `BL-0417`, `BL-0421` | AI sketch starter, board-aware suggestions, state machine skeletons, sketch explainer — Arduino intelligence. |
-| 120 | `BL-0407`, `BL-0410`, `BL-0442` | Firmware snapshots, smart code snippets, build journals — firmware safety + developer experience. |
-| 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
-| 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
-| 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
-| 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
-| 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
-| 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
-| P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **117** | **384** | **501 items tracked** |
+| P2 | 57 | 221 | 80% — Waves 61-121 |
+| P3 | 58 | 73 | 56% — many P3 items done in Waves 105-121 |
+| **Total** | **115** | **386** | **501 items tracked** |
 
 *Snapshot updated: Wave 121 (2026-03-17)*
 
@@ -1180,9 +1172,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0419 | Library conflict detector | DONE (Wave 119) | C3 | ARDX-067 |
 | BL-0420 | AI "fix compile errors" action | DONE (verified Wave 106) | C4 | ARDX-076 |
 | BL-0421 | AI "explain this sketch for a beginner" | DONE (Wave 121) | C2 | ARDX-077 |
-| BL-0422 | Smart library install on compile error | OPEN | C3 | ARDX-066 |
+| BL-0422 | Smart library install on compile error | DONE (Wave 121) | C3 | ARDX-066 |
 | BL-0423 | Firmware version linked to design snapshot | OPEN | C4 | ARDX-056 |
-| BL-0424 | One-click rollback to known-good sketch | OPEN | C3 | ARDX-057 |
+| BL-0424 | One-click rollback to known-good sketch | DONE (Wave 121) | C3 | ARDX-057 |
 | BL-0425 | Secrets scan before upload (API keys in sketch) | DONE (Wave 118) | C3 | ARDX-096 |
 | BL-0426 | Hard block upload if target board mismatch | DONE (Wave 120) | C3 | ARDX-097 |
 
