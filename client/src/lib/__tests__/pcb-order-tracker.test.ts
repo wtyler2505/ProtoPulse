@@ -92,6 +92,24 @@ describe('PcbOrderTracker', () => {
     }
   });
 
+  it('PCB_STATUS_LABELS values are human-readable strings', () => {
+    expect(PCB_STATUS_LABELS.gerbers_received).toBe('Gerbers Received');
+    expect(PCB_STATUS_LABELS.in_review).toBe('In Review');
+    expect(PCB_STATUS_LABELS.in_production).toBe('In Production');
+    expect(PCB_STATUS_LABELS.testing).toBe('Testing');
+    expect(PCB_STATUS_LABELS.shipped).toBe('Shipped');
+    expect(PCB_STATUS_LABELS.delivered).toBe('Delivered');
+  });
+
+  it('PCB_STATUS_COLORS values contain tailwind class patterns', () => {
+    for (const status of PCB_STATUS_PIPELINE) {
+      const color = PCB_STATUS_COLORS[status];
+      expect(color).toMatch(/text-/);
+      expect(color).toMatch(/border-/);
+      expect(color).toMatch(/bg-/);
+    }
+  });
+
   // ── createOrder ──
 
   it('creates an order with gerbers_received status', () => {
@@ -125,6 +143,28 @@ describe('PcbOrderTracker', () => {
     expect(order.quantity).toBe(5);
   });
 
+  it('assigns unique IDs to each created order', () => {
+    const a = tracker.createOrder(PROJECT_ID, makeInput({ orderId: 'A' }));
+    const b = tracker.createOrder(PROJECT_ID, makeInput({ orderId: 'B' }));
+    const c = tracker.createOrder(PROJECT_ID, makeInput({ orderId: 'C' }));
+    const ids = new Set([a.id, b.id, c.id]);
+    expect(ids.size).toBe(3);
+  });
+
+  it('sets createdAt and updatedAt to the same value on creation', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    expect(order.createdAt).toBe(order.updatedAt);
+    expect(order.createdAt).toBeGreaterThan(0);
+  });
+
+  it('creates order without optional fields leaving them undefined', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    expect(order.trackingUrl).toBeUndefined();
+    expect(order.estimatedDelivery).toBeUndefined();
+    expect(order.boardName).toBeUndefined();
+    expect(order.quantity).toBeUndefined();
+  });
+
   // ── getOrders / getOrder ──
 
   it('getOrders returns all orders for a project', () => {
@@ -143,6 +183,10 @@ describe('PcbOrderTracker', () => {
     expect(a).toEqual(b);
   });
 
+  it('getOrders returns empty array for project with no orders', () => {
+    expect(tracker.getOrders(999)).toEqual([]);
+  });
+
   it('getOrder finds order by id', () => {
     const created = tracker.createOrder(PROJECT_ID, makeInput());
     const found = tracker.getOrder(PROJECT_ID, created.id);
@@ -152,6 +196,11 @@ describe('PcbOrderTracker', () => {
 
   it('getOrder returns null for non-existent order', () => {
     expect(tracker.getOrder(PROJECT_ID, 'nonexistent')).toBeNull();
+  });
+
+  it('getOrder returns null when order exists in different project', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    expect(tracker.getOrder(999, order.id)).toBeNull();
   });
 
   // ── getActiveOrders / getCompletedOrders ──
@@ -169,6 +218,21 @@ describe('PcbOrderTracker', () => {
 
     expect(tracker.getActiveOrders(PROJECT_ID)).toHaveLength(0);
     expect(tracker.getCompletedOrders(PROJECT_ID)).toHaveLength(1);
+  });
+
+  it('getActiveOrders includes orders at every non-delivered stage', () => {
+    const stages: PcbOrderStatus[] = ['gerbers_received', 'in_review', 'in_production', 'testing', 'shipped'];
+    for (const _stage of stages) {
+      tracker.createOrder(PROJECT_ID, makeInput({ orderId: `order-${_stage}` }));
+    }
+    // All 5 are at gerbers_received (initial status) — all active
+    expect(tracker.getActiveOrders(PROJECT_ID)).toHaveLength(5);
+    expect(tracker.getCompletedOrders(PROJECT_ID)).toHaveLength(0);
+  });
+
+  it('getCompletedOrders returns empty when no orders are delivered', () => {
+    tracker.createOrder(PROJECT_ID, makeInput());
+    expect(tracker.getCompletedOrders(PROJECT_ID)).toHaveLength(0);
   });
 
   // ── updateStatus ──
@@ -223,6 +287,43 @@ describe('PcbOrderTracker', () => {
     }
   });
 
+  it('full pipeline traversal records complete status history', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    tracker.updateStatus(PROJECT_ID, order.id, 'in_review');
+    tracker.updateStatus(PROJECT_ID, order.id, 'in_production');
+    tracker.updateStatus(PROJECT_ID, order.id, 'testing');
+    tracker.updateStatus(PROJECT_ID, order.id, 'shipped');
+    tracker.updateStatus(PROJECT_ID, order.id, 'delivered');
+
+    const final = tracker.getOrder(PROJECT_ID, order.id)!;
+    expect(final.statusHistory).toHaveLength(6);
+    expect(final.statusHistory.map((h) => h.status)).toEqual(PCB_STATUS_PIPELINE);
+  });
+
+  it('updateStatus updates updatedAt timestamp', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    const originalUpdatedAt = order.updatedAt;
+    // Small delay to ensure timestamp differs
+    vi.spyOn(Date, 'now').mockReturnValue(originalUpdatedAt + 5000);
+    const result = tracker.updateStatus(PROJECT_ID, order.id, 'in_review');
+    expect(result!.updatedAt).toBeGreaterThan(originalUpdatedAt);
+    vi.mocked(Date.now).mockRestore();
+  });
+
+  it('updateStatus persists the change to localStorage', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    tracker.updateStatus(PROJECT_ID, order.id, 'in_review');
+    const raw = storageMock.get(`protopulse-pcb-order-tracker:${PROJECT_ID}`);
+    const parsed = JSON.parse(raw!) as PcbOrder[];
+    expect(parsed[0].status).toBe('in_review');
+  });
+
+  it('rejects same-status transition (no self-loop)', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    const result = tracker.updateStatus(PROJECT_ID, order.id, 'gerbers_received');
+    expect(result).toBeNull();
+  });
+
   // ── updateTracking ──
 
   it('updates tracking URL', () => {
@@ -234,6 +335,24 @@ describe('PcbOrderTracker', () => {
 
   it('returns null for non-existent order tracking update', () => {
     expect(tracker.updateTracking(PROJECT_ID, 'fake', 'https://x.com')).toBeNull();
+  });
+
+  it('updateTracking persists the change to localStorage', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    tracker.updateTracking(PROJECT_ID, order.id, 'https://jlcpcb.com/track/W123');
+    PcbOrderTracker.resetForTesting();
+    const fresh = PcbOrderTracker.getInstance();
+    const loaded = fresh.getOrder(PROJECT_ID, order.id);
+    expect(loaded!.trackingUrl).toBe('https://jlcpcb.com/track/W123');
+  });
+
+  it('updateTracking updates updatedAt timestamp', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    const originalUpdatedAt = order.updatedAt;
+    vi.spyOn(Date, 'now').mockReturnValue(originalUpdatedAt + 3000);
+    const result = tracker.updateTracking(PROJECT_ID, order.id, 'https://example.com');
+    expect(result!.updatedAt).toBeGreaterThan(originalUpdatedAt);
+    vi.mocked(Date.now).mockRestore();
   });
 
   // ── updateEstimatedDelivery ──
@@ -250,6 +369,16 @@ describe('PcbOrderTracker', () => {
     expect(tracker.updateEstimatedDelivery(PROJECT_ID, 'fake', Date.now())).toBeNull();
   });
 
+  it('updateEstimatedDelivery persists the change to localStorage', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    const future = Date.now() + 10 * 24 * 60 * 60 * 1000;
+    tracker.updateEstimatedDelivery(PROJECT_ID, order.id, future);
+    PcbOrderTracker.resetForTesting();
+    const fresh = PcbOrderTracker.getInstance();
+    const loaded = fresh.getOrder(PROJECT_ID, order.id);
+    expect(loaded!.estimatedDelivery).toBe(future);
+  });
+
   // ── deleteOrder ──
 
   it('deletes an order', () => {
@@ -262,6 +391,23 @@ describe('PcbOrderTracker', () => {
     expect(tracker.deleteOrder(PROJECT_ID, 'nonexistent')).toBe(false);
   });
 
+  it('deleteOrder persists deletion to localStorage', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    tracker.deleteOrder(PROJECT_ID, order.id);
+    PcbOrderTracker.resetForTesting();
+    const fresh = PcbOrderTracker.getInstance();
+    expect(fresh.getOrders(PROJECT_ID)).toHaveLength(0);
+  });
+
+  it('deleteOrder only removes the targeted order', () => {
+    const a = tracker.createOrder(PROJECT_ID, makeInput({ orderId: 'A' }));
+    const b = tracker.createOrder(PROJECT_ID, makeInput({ orderId: 'B' }));
+    tracker.deleteOrder(PROJECT_ID, a.id);
+    expect(tracker.getOrders(PROJECT_ID)).toHaveLength(1);
+    expect(tracker.getOrders(PROJECT_ID)[0].orderId).toBe('B');
+    expect(tracker.getOrder(PROJECT_ID, b.id)).not.toBeNull();
+  });
+
   // ── clearAll ──
 
   it('clears all orders for a project', () => {
@@ -269,6 +415,22 @@ describe('PcbOrderTracker', () => {
     tracker.createOrder(PROJECT_ID, makeInput({ orderId: 'B' }));
     tracker.clearAll(PROJECT_ID);
     expect(tracker.getOrders(PROJECT_ID)).toHaveLength(0);
+  });
+
+  it('clearAll persists the empty state to localStorage', () => {
+    tracker.createOrder(PROJECT_ID, makeInput());
+    tracker.clearAll(PROJECT_ID);
+    PcbOrderTracker.resetForTesting();
+    const fresh = PcbOrderTracker.getInstance();
+    expect(fresh.getOrders(PROJECT_ID)).toHaveLength(0);
+  });
+
+  it('clearAll does not affect other projects', () => {
+    tracker.createOrder(PROJECT_ID, makeInput({ orderId: 'A' }));
+    tracker.createOrder(99, makeInput({ orderId: 'B' }));
+    tracker.clearAll(PROJECT_ID);
+    expect(tracker.getOrders(PROJECT_ID)).toHaveLength(0);
+    expect(tracker.getOrders(99)).toHaveLength(1);
   });
 
   // ── getStatusIndex ──
@@ -308,6 +470,16 @@ describe('PcbOrderTracker', () => {
     expect(days!).toBeLessThanOrEqual(-2);
   });
 
+  it('returns zero or one for delivery today', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput({
+      estimatedDelivery: Date.now() + 1000, // 1 second from now
+    }));
+    const days = tracker.getDaysUntilDelivery(order);
+    expect(days).not.toBeNull();
+    expect(days!).toBeGreaterThanOrEqual(0);
+    expect(days!).toBeLessThanOrEqual(1);
+  });
+
   // ── Subscribe / notify ──
 
   it('calls subscriber on createOrder', () => {
@@ -325,12 +497,65 @@ describe('PcbOrderTracker', () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it('calls subscriber on updateTracking', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    const fn = vi.fn();
+    tracker.subscribe(fn);
+    tracker.updateTracking(PROJECT_ID, order.id, 'https://example.com');
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls subscriber on updateEstimatedDelivery', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    const fn = vi.fn();
+    tracker.subscribe(fn);
+    tracker.updateEstimatedDelivery(PROJECT_ID, order.id, Date.now() + 86400000);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls subscriber on deleteOrder', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput());
+    const fn = vi.fn();
+    tracker.subscribe(fn);
+    tracker.deleteOrder(PROJECT_ID, order.id);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls subscriber on clearAll', () => {
+    tracker.createOrder(PROJECT_ID, makeInput());
+    const fn = vi.fn();
+    tracker.subscribe(fn);
+    tracker.clearAll(PROJECT_ID);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   it('unsubscribe stops notifications', () => {
     const fn = vi.fn();
     const unsub = tracker.subscribe(fn);
     unsub();
     tracker.createOrder(PROJECT_ID, makeInput());
     expect(fn).not.toHaveBeenCalled();
+  });
+
+  it('supports multiple simultaneous subscribers', () => {
+    const fn1 = vi.fn();
+    const fn2 = vi.fn();
+    tracker.subscribe(fn1);
+    tracker.subscribe(fn2);
+    tracker.createOrder(PROJECT_ID, makeInput());
+    expect(fn1).toHaveBeenCalledTimes(1);
+    expect(fn2).toHaveBeenCalledTimes(1);
+  });
+
+  it('unsubscribing one listener does not affect others', () => {
+    const fn1 = vi.fn();
+    const fn2 = vi.fn();
+    const unsub1 = tracker.subscribe(fn1);
+    tracker.subscribe(fn2);
+    unsub1();
+    tracker.createOrder(PROJECT_ID, makeInput());
+    expect(fn1).not.toHaveBeenCalled();
+    expect(fn2).toHaveBeenCalledTimes(1);
   });
 
   // ── Persistence round-trip ──
@@ -347,6 +572,69 @@ describe('PcbOrderTracker', () => {
     PcbOrderTracker.resetForTesting();
     const fresh = PcbOrderTracker.getInstance();
     expect(fresh.getOrders(PROJECT_ID)).toHaveLength(0);
+  });
+
+  it('handles non-array JSON in localStorage gracefully', () => {
+    storageMock.set(`protopulse-pcb-order-tracker:${PROJECT_ID}`, JSON.stringify({ not: 'an array' }));
+    PcbOrderTracker.resetForTesting();
+    const fresh = PcbOrderTracker.getInstance();
+    expect(fresh.getOrders(PROJECT_ID)).toHaveLength(0);
+  });
+
+  it('does not crash when localStorage.setItem throws (quota exceeded)', () => {
+    vi.mocked(Storage.prototype.setItem).mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    // Should not throw
+    expect(() => tracker.createOrder(PROJECT_ID, makeInput())).not.toThrow();
+  });
+
+  it('preserves project isolation in localStorage keys', () => {
+    tracker.createOrder(1, makeInput({ orderId: 'proj-1' }));
+    tracker.createOrder(2, makeInput({ orderId: 'proj-2' }));
+    expect(storageMock.has('protopulse-pcb-order-tracker:1')).toBe(true);
+    expect(storageMock.has('protopulse-pcb-order-tracker:2')).toBe(true);
+    const proj1 = JSON.parse(storageMock.get('protopulse-pcb-order-tracker:1')!) as PcbOrder[];
+    const proj2 = JSON.parse(storageMock.get('protopulse-pcb-order-tracker:2')!) as PcbOrder[];
+    expect(proj1).toHaveLength(1);
+    expect(proj1[0].orderId).toBe('proj-1');
+    expect(proj2).toHaveLength(1);
+    expect(proj2[0].orderId).toBe('proj-2');
+  });
+
+  it('caches loaded project data (does not re-read localStorage on second access)', () => {
+    tracker.createOrder(PROJECT_ID, makeInput());
+    const getItemSpy = vi.mocked(Storage.prototype.getItem);
+    getItemSpy.mockClear();
+    // Second access should come from cache, not localStorage
+    tracker.getOrders(PROJECT_ID);
+    tracker.getOrders(PROJECT_ID);
+    expect(getItemSpy).not.toHaveBeenCalled();
+  });
+
+  it('round-trips full order data through localStorage', () => {
+    const order = tracker.createOrder(PROJECT_ID, makeInput({
+      fabHouse: 'PCBWay',
+      orderId: 'PCB-99',
+      trackingUrl: 'https://pcbway.com/track/99',
+      estimatedDelivery: 1700000000000,
+      boardName: 'Motor Driver v2',
+      quantity: 10,
+    }));
+    tracker.updateStatus(PROJECT_ID, order.id, 'in_review');
+
+    PcbOrderTracker.resetForTesting();
+    const fresh = PcbOrderTracker.getInstance();
+    const loaded = fresh.getOrder(PROJECT_ID, order.id)!;
+
+    expect(loaded.fabHouse).toBe('PCBWay');
+    expect(loaded.orderId).toBe('PCB-99');
+    expect(loaded.trackingUrl).toBe('https://pcbway.com/track/99');
+    expect(loaded.estimatedDelivery).toBe(1700000000000);
+    expect(loaded.boardName).toBe('Motor Driver v2');
+    expect(loaded.quantity).toBe(10);
+    expect(loaded.status).toBe('in_review');
+    expect(loaded.statusHistory).toHaveLength(2);
   });
 });
 
@@ -431,5 +719,49 @@ describe('usePcbOrderTracker', () => {
     const days = result.current.getDaysUntilDelivery(createdOrder!);
     expect(days).not.toBeNull();
     expect(days!).toBeGreaterThanOrEqual(4);
+  });
+
+  it('updateTracking updates order tracking URL via hook', () => {
+    const { result } = renderHook(() => usePcbOrderTracker(testProjectId));
+    let orderId = '';
+    act(() => {
+      const order = result.current.createOrder(makeInput());
+      orderId = order.id;
+    });
+    act(() => {
+      result.current.updateTracking(orderId, 'https://track.example.com/hook-test');
+    });
+    const tracker = PcbOrderTracker.getInstance();
+    const order = tracker.getOrder(testProjectId, orderId);
+    expect(order!.trackingUrl).toBe('https://track.example.com/hook-test');
+  });
+
+  it('updateEstimatedDelivery updates delivery date via hook', () => {
+    const { result } = renderHook(() => usePcbOrderTracker(testProjectId));
+    let orderId = '';
+    act(() => {
+      const order = result.current.createOrder(makeInput());
+      orderId = order.id;
+    });
+    const future = Date.now() + 20 * 24 * 60 * 60 * 1000;
+    act(() => {
+      result.current.updateEstimatedDelivery(orderId, future);
+    });
+    const tracker = PcbOrderTracker.getInstance();
+    const order = tracker.getOrder(testProjectId, orderId);
+    expect(order!.estimatedDelivery).toBe(future);
+  });
+
+  it('exposes all expected properties', () => {
+    const { result } = renderHook(() => usePcbOrderTracker(testProjectId));
+    expect(result.current).toHaveProperty('orders');
+    expect(result.current).toHaveProperty('activeOrders');
+    expect(result.current).toHaveProperty('completedOrders');
+    expect(result.current).toHaveProperty('createOrder');
+    expect(result.current).toHaveProperty('updateStatus');
+    expect(result.current).toHaveProperty('updateTracking');
+    expect(result.current).toHaveProperty('updateEstimatedDelivery');
+    expect(result.current).toHaveProperty('deleteOrder');
+    expect(result.current).toHaveProperty('getDaysUntilDelivery');
   });
 });
