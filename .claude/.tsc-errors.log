@@ -488,3 +488,11 @@ client/src/pages/ProjectWorkspace.tsx(609,7): error TS2353: Object literal may o
 
 
 9:53:31 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:53:54 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/touch-safe-controls.test.ts(164,15): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+client/src/lib/__tests__/touch-safe-controls.test.ts(178,15): error TS2352: Conversion of type 'Window & typeof globalThis' to type 'Record<string, unknown>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Index signature for type 'string' is missing in type 'Window & typeof globalThis'.
+
+9:54:12 PM - Found 2 errors. Watching for file changes.
