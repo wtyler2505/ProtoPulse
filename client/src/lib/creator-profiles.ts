@@ -66,27 +66,6 @@ const DEFAULT_PAGE_SIZE = 20;
 type Listener = () => void;
 
 // ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Case-insensitive substring match across multiple fields.
- */
-function matchesQuery(profile: CreatorProfile, query: string): boolean {
-  const q = query.toLowerCase();
-  if (profile.displayName.toLowerCase().includes(q)) {
-    return true;
-  }
-  if (profile.bio?.toLowerCase().includes(q)) {
-    return true;
-  }
-  if (profile.skills.some((s) => s.toLowerCase().includes(q))) {
-    return true;
-  }
-  return false;
-}
-
-// ---------------------------------------------------------------------------
 // CreatorProfileManager
 // ---------------------------------------------------------------------------
 
