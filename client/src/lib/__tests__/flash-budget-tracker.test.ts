@@ -373,7 +373,8 @@ describe('formatFlashBudget', () => {
 
   it('formats MB-scale values', () => {
     const budget: FlashBudget = { used: 1028614, total: 1310720, percentage: 78.48, level: 'warning' };
-    expect(formatFlashBudget(budget)).toBe('0.98 MB / 1.25 MB (78.48%) [WARNING]');
+    // 1028614 B = 1004.51 KB (< 1 MB), 1310720 B = 1.25 MB
+    expect(formatFlashBudget(budget)).toBe('1004.51 KB / 1.25 MB (78.48%) [WARNING]');
   });
 });
 
