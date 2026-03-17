@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
 | 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
 | 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
 | 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
@@ -424,16 +425,17 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 18 | 260 | 94% complete — Waves 61-118 |
+| P2 | 13 | 265 | 95% complete — Waves 61-119 |
+| 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
 | 118 | `BL-0400`, `BL-0439`, `BL-0444`, `BL-0445` | Arduino IDE launcher, community template packs, smart reminders, creator profiles — Arduino + community + guidance. |
 | 117 | `BL-0378`, `BL-0390`, `BL-0392`, `BL-0402`, `BL-0384` | API docs generator, interaction history, quick jump search, build status, team command center — DevOps + navigation + collaboration. |
 | 116 | `BL-0355`, `BL-0372`, `BL-0373`, `BL-0383`, `BL-0382` | Design system docs, macro recorder, keybinding editor, workspace presets, audit log explorer — extensibility + customization. |
 | 115 | `BL-0364`, `BL-0351`, `BL-0346`, `BL-0347`, `BL-0361` | Slow path detector, design tokens, mobile capture, responsive presets, panel loading — performance + mobile + design system. |
 | 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **131** | **370** | **501 items tracked** |
+| **Total** | **126** | **375** | **501 items tracked** |
 
-*Snapshot updated: Wave 118 (2026-03-17)*
+*Snapshot updated: Wave 119 (2026-03-17)*
 
 ---
 
@@ -1157,7 +1159,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0402 | Build/compile status panel | DONE (Wave 117) | C2 | ARDX-006 |
 | BL-0403 | Upload firmware with full log output | DONE (verified Wave 106) | C3 | ARDX-007 |
 | BL-0404 | Dependency resolver for Arduino libraries | OPEN | C4 | ARDX-009 |
-| BL-0405 | Board package/version checker | OPEN | C3 | ARDX-010 |
+| BL-0405 | Board package/version checker | DONE (Wave 119) | C3 | ARDX-010 |
 | BL-0406 | Per-project board profile | DONE (verified Wave 106) | C2 | ARDX-011 |
 | BL-0407 | Save last known good firmware build | OPEN | C3 | ARDX-012 |
 | BL-0408 | Pre-upload safety checks | OPEN | C3 | ARDX-015 |
@@ -1166,12 +1168,12 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0411 | Board-aware suggestions (timers, PWM limits) | OPEN | C3 | ARDX-021 |
 | BL-0412 | "Refactor to non-blocking" assistant | OPEN | C4 | ARDX-022 |
 | BL-0413 | ISR safety scanner | OPEN | C4 | ARDX-023 |
-| BL-0414 | RAM usage early-warning | OPEN | C3 | ARDX-024 |
-| BL-0415 | Flash size budget tracker | OPEN | C3 | ARDX-025 |
+| BL-0414 | RAM usage early-warning | DONE (Wave 119) | C3 | ARDX-024 |
+| BL-0415 | Flash size budget tracker | DONE (Wave 119) | C3 | ARDX-025 |
 | BL-0416 | Loop-time profiler overlay | OPEN | C4 | ARDX-026 |
 | BL-0417 | Auto state-machine skeletons for robotics | OPEN | C3 | ARDX-027 |
 | BL-0418 | Live variable watch over serial | OPEN | C4 | ARDX-028 |
-| BL-0419 | Library conflict detector | OPEN | C3 | ARDX-067 |
+| BL-0419 | Library conflict detector | DONE (Wave 119) | C3 | ARDX-067 |
 | BL-0420 | AI "fix compile errors" action | DONE (verified Wave 106) | C4 | ARDX-076 |
 | BL-0421 | AI "explain this sketch for a beginner" | OPEN | C2 | ARDX-077 |
 | BL-0422 | Smart library install on compile error | OPEN | C3 | ARDX-066 |
