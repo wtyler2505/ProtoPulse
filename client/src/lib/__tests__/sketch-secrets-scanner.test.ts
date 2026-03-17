@@ -903,8 +903,8 @@ describe('scanSketchForSecrets — end-to-end realistic sketch', () => {
       'void loop() {',
       '  HTTPClient http;',
       '  http.begin("http://api.example.com/data");',
-      '  String authHeader = "Bearer abcdefghijklmnopqrstuvwxyz1234567890";
-  http.addHeader("Authorization", authHeader);',
+      '  String authHeader = "Bearer abcdefghijklmnopqrstuvwxyz1234567890";',
+      '  http.addHeader("Authorization", authHeader);',
       '  int code = http.GET();',
       '  delay(60000);',
       '}',
