@@ -429,3 +429,20 @@ client/src/pages/ProjectWorkspace.tsx(609,7): error TS2353: Object literal may o
 8:56:31 PM - Found 8 errors. Watching for file changes.
 [2J[3J[H8:56:52 PM - File change detected. Starting incremental compilation...
 
+client/src/pages/ProjectWorkspace.tsx(609,7): error TS2353: Object literal may only specify known properties, and 'architectureNodeCount' does not exist in type 'ProjectProgress'.
+
+8:57:07 PM - Found 1 error. Watching for file changes.
+[2J[3J[H9:01:40 PM - File change detected. Starting incremental compilation...
+
+
+9:02:38 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:05:45 PM - File change detected. Starting incremental compilation...
+
+
+9:05:55 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:19:44 PM - File change detected. Starting incremental compilation...
+
+
+9:19:57 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H9:20:00 PM - File change detected. Starting incremental compilation...
+

@@ -37,6 +37,34 @@ export interface AuditFocusRingsOptions {
   exclude?: string;
 }
 
+/** Aggregate result from a focus-ring audit run. */
+export interface FocusRingAuditResult {
+  /** All detected violations. */
+  violations: FocusRingViolation[];
+  /** Total interactive elements scanned. */
+  totalScanned: number;
+  /** Number of elements that passed (had visible focus indicators). */
+  passed: number;
+  /** Number of elements that were skipped (hidden/disabled/excluded). */
+  skipped: number;
+  /** Pass rate as a value between 0 and 1. */
+  passRate: number;
+  /** ISO timestamp of when the audit ran. */
+  timestamp: string;
+}
+
+/** Configuration for customizing focus ring appearance. */
+export interface FocusRingConfig {
+  /** Ring color (CSS color value). Defaults to `'#00F0FF'` (neon cyan). */
+  color: string;
+  /** Ring width in pixels. Defaults to `2`. */
+  width: number;
+  /** Ring offset in pixels. Defaults to `2`. */
+  offset: number;
+  /** Ring style (CSS outline-style). Defaults to `'solid'`. */
+  style: 'solid' | 'dashed' | 'dotted' | 'double';
+}
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------

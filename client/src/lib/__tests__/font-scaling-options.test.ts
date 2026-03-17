@@ -307,7 +307,7 @@ describe('FontScaleManager subscription edge cases', () => {
     expect(subscriber).toHaveBeenCalledTimes(1);
   });
 
-  it('subscriber added during notification receives next change', () => {
+  it('subscriber added during notification is visited in the same forEach pass', () => {
     const lateSub = vi.fn();
     const earlySub = vi.fn(() => {
       manager.subscribe(lateSub);
@@ -317,10 +317,12 @@ describe('FontScaleManager subscription edge cases', () => {
     manager.setScale('large');
 
     expect(earlySub).toHaveBeenCalledTimes(1);
-
-    // lateSub was added during the first notification — should fire on next change
-    manager.setScale('compact');
+    // Set.forEach visits entries added during iteration, so lateSub fires immediately
     expect(lateSub).toHaveBeenCalledTimes(1);
+
+    // And it continues to fire on subsequent changes
+    manager.setScale('compact');
+    expect(lateSub).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -1,15 +1,22 @@
 /**
  * keyboard-resize.ts — Keyboard-operable resize handle utilities (BL-0320)
  *
- * Makes panel resize handles accessible via keyboard:
- *  - Arrow keys adjust width/height by STEP_SMALL (10px)
- *  - Shift+Arrow adjusts by STEP_LARGE (50px)
+ * Makes panel resize handles accessible via keyboard (WCAG 2.1 AA):
+ *  - Arrow keys adjust width/height by stepSmall (default 10px)
+ *  - Shift+Arrow adjusts by stepLarge (default 50px)
+ *  - Home/End jump to min/max
  *  - aria-valuenow/min/max for screen readers
+ *  - useKeyboardResize hook for attaching to a ref
  */
+
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 /** Default step sizes for keyboard resize (in pixels). */
 export const STEP_SMALL = 10;
 export const STEP_LARGE = 50;
+
+/** Resize direction: horizontal uses Left/Right arrows, vertical uses Up/Down. */
+export type ResizeDirection = 'horizontal' | 'vertical';
 
 /** Configuration for a keyboard-resizable panel. */
 export interface KeyboardResizeConfig {
@@ -29,18 +36,54 @@ export interface KeyboardResizeConfig {
    * 'horizontal' (default) — Left/Right arrows resize.
    * 'vertical' — Up/Down arrows resize.
    */
-  orientation?: 'horizontal' | 'vertical';
+  orientation?: ResizeDirection;
   /**
    * Whether positive arrow direction grows or shrinks the panel.
    * 'grow' (default) — Right/Down arrow increases size.
    * 'shrink' — Right/Down arrow decreases size (used for right-side panels).
    */
   positiveDirection?: 'grow' | 'shrink';
+  /**
+   * Small step size in pixels (default: STEP_SMALL = 10).
+   * Used for plain arrow key presses.
+   */
+  stepSmall?: number;
+  /**
+   * Large step size in pixels (default: STEP_LARGE = 50).
+   * Used for Shift+Arrow key presses.
+   */
+  stepLarge?: number;
+}
+
+/** Options for the useKeyboardResize hook. */
+export interface UseKeyboardResizeOptions {
+  /** Minimum allowed width/height in pixels. */
+  min: number;
+  /** Maximum allowed width/height in pixels. */
+  max: number;
+  /** Resize direction (default: 'horizontal'). */
+  direction?: ResizeDirection;
+  /**
+   * Whether the positive arrow direction grows or shrinks.
+   * Default: 'grow'.
+   */
+  positiveDirection?: 'grow' | 'shrink';
+  /** Small step in px (default 10). */
+  stepSmall?: number;
+  /** Large step in px (default 50). */
+  stepLarge?: number;
+  /** Whether the keyboard resize is enabled (default true). */
+  enabled?: boolean;
 }
 
 /**
  * Returns the delta to apply for a keyboard event, or 0 if the event
  * is not a resize key. Does NOT call preventDefault — the caller decides.
+ *
+ * Supported keys:
+ *  - Arrow keys (direction-aware) — step by stepSmall or stepLarge (Shift)
+ *  - Home — jump to min (delta = min - currentValue)
+ *  - End — jump to max (delta = max - currentValue)
  */
 export function getResizeDelta(
   event: { key: string; shiftKey: boolean },
@@ -48,7 +91,17 @@ export function getResizeDelta(
 ): number {
   const orientation = config.orientation ?? 'horizontal';
   const positiveDirection = config.positiveDirection ?? 'grow';
-  const step = event.shiftKey ? STEP_LARGE : STEP_SMALL;
+  const stepSmall = config.stepSmall ?? STEP_SMALL;
+  const stepLarge = config.stepLarge ?? STEP_LARGE;
+  const step = event.shiftKey ? stepLarge : stepSmall;
+
+  // Home/End: jump to min/max regardless of orientation
+  if (event.key === 'Home') {
+    return config.min - config.currentValue;
+  }
+  if (event.key === 'End') {
+    return config.max - config.currentValue;
+  }
 
   const growKeys = orientation === 'horizontal' ? ['ArrowRight'] : ['ArrowDown'];
   const shrinkKeys = orientation === 'horizontal' ? ['ArrowLeft'] : ['ArrowUp'];
@@ -123,4 +176,95 @@ export function getResizeAriaProps(config: KeyboardResizeConfig): {
     'aria-valuemax': config.max,
     'aria-label': `Resize panel, current width ${Math.round(config.currentValue)} pixels`,
   };
+}
+
+/**
+ * React hook that makes a resize handle element keyboard-operable.
+ *
+ * Attaches a keydown listener to the provided ref when focused.
+ * Returns:
+ *  - `handleKeyDown`: keydown event handler
+ *  - `ariaProps`: ARIA attributes for the separator role
+ *
+ * @param ref - React ref to the resize handle element
+ * @param currentValue - current panel size in px
+ * @param options - resize configuration
+ */
+export function useKeyboardResize(
+  ref: React.RefObject<HTMLElement | null>,
+  currentValue: number,
+  options: UseKeyboardResizeOptions & { onResize: (delta: number) => void },
+): {
+  handleKeyDown: (event: React.KeyboardEvent) => void;
+  ariaProps: ReturnType<typeof getResizeAriaProps>;
+} {
+  const {
+    min,
+    max,
+    direction = 'horizontal',
+    positiveDirection = 'grow',
+    stepSmall,
+    stepLarge,
+    onResize,
+    enabled = true,
+  } = options;
+
+  // Stable ref for the onResize callback to avoid re-attaching listeners
+  const onResizeRef = useRef(onResize);
+  onResizeRef.current = onResize;
+
+  const config: KeyboardResizeConfig = useMemo(
+    () => ({
+      currentValue,
+      min,
+      max,
+      onResize: (delta: number) => {
+        onResizeRef.current(delta);
+      },
+      orientation: direction,
+      positiveDirection,
+      stepSmall,
+      stepLarge,
+    }),
+    [currentValue, min, max, direction, positiveDirection, stepSmall, stepLarge],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (!enabled) {
+        return;
+      }
+      const delta = getResizeDelta(event, config);
+      if (delta !== 0) {
+        event.preventDefault();
+        config.onResize(delta);
+      }
+    },
+    [config, enabled],
+  );
+
+  // Attach native keydown listener to the ref element for imperative usage
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !enabled) {
+      return;
+    }
+
+    const nativeHandler = (event: KeyboardEvent) => {
+      const delta = getResizeDelta(event, config);
+      if (delta !== 0) {
+        event.preventDefault();
+        config.onResize(delta);
+      }
+    };
+
+    el.addEventListener('keydown', nativeHandler);
+    return () => {
+      el.removeEventListener('keydown', nativeHandler);
+    };
+  }, [ref, config, enabled]);
+
+  const ariaProps = useMemo(() => getResizeAriaProps(config), [config]);
+
+  return { handleKeyDown, ariaProps };
 }
