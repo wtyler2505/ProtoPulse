@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 112 | `BL-0149`, `BL-0328`, `BL-0264`, `BL-0341`, `BL-0342` | Multi-angle photo, a11y audit dashboard, deployment profiles, touch-safe controls, mobile table overflow — accessibility + mobile + DevOps. |
 | 111 | `BL-0320`, `BL-0321`, `BL-0326`, `BL-0301`, `BL-0188` | Keyboard resize handles, focus ring audit, screen reader canvas labels, first PCB tutorial, team templates — accessibility + onboarding. |
 | 110 | `BL-0148`, `BL-0528`, `BL-0474`, `BL-0314`, `BL-0329` | Web Serial integration tests, PCB order tracking, AVL enforcement, progress milestones, font scaling — testing depth + procurement + onboarding + accessibility. |
 | 109 | `BL-0526`, `BL-0475`, `BL-0238`, `BL-0472`, `BL-0220` | WebSocket session revalidation, assembly risk scoring, supplier comparison engine, order history, import diff engine — security + procurement depth + design comparison. |
@@ -417,11 +418,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 52 | 226 | 81% complete — Waves 61-111 |
+| P2 | 47 | 231 | 83% complete — Waves 61-112 |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **165** | **336** | **501 items tracked** |
+| **Total** | **160** | **341** | **501 items tracked** |
 
-*Snapshot updated: Wave 111 (2026-03-17)*
+*Snapshot updated: Wave 112 (2026-03-17)*
 
 ---
 
@@ -707,7 +708,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0146 | Board package/library manager integration | OPEN | C4 | MF-093 |
 | BL-0147 | Flashing progress/error diagnostics — avrdude+esptool output parsing, 25+ error patterns, FlashProgressBar with stage icons. | DONE (Wave 87) | C3 | MF-094, ARDX-063 |
 | BL-0148 | Web Serial integration tests | DONE (Wave 110) | C3 | MF-095 |
-| BL-0149 | Multi-angle photo follow-up for component ID | OPEN | C3 | MF-097 |
+| BL-0149 | Multi-angle photo follow-up for component ID | DONE (Wave 112) | C3 | MF-097 |
 | BL-0150 | Inventory tracking tied to BOM consumption | PARTIAL | C4 | MF-101 |
 | BL-0151 | Compile error translator (plain English) | DONE (Wave 84) | C2 | ARDX-008 |
 | BL-0152 | Auto-generate pin constants from schematic labels | DONE (Wave 86) | C3 | ARDX-019 |
@@ -959,7 +960,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0261 | Full observability (structured logs, traces, alerts) | OPEN | C4 | MF-171 |
 | BL-0262 | Error taxonomy with stable error codes | DONE (verified Wave 106) | C3 | MF-173 |
 | BL-0263 | Data retention policies and cleanup tooling | DONE (verified Wave 106) | C3 | MF-174 |
-| BL-0264 | Deployment profiles (dev/staging/prod) with config validation | OPEN | C3 | MF-179 |
+| BL-0264 | Deployment profiles (dev/staging/prod) with config validation | DONE (Wave 112) | C3 | MF-179 |
 | BL-0265 | CI coverage gates and test quality thresholds | OPEN | C3 | MF-180 |
 | BL-0266 | CSP policy parity across dev/prod — always-on CSP, `reportOnly: isDev`, wasm-unsafe-eval, dev connectSrc wildcards | DONE | C3 | Wave 61 |
 | BL-0267 | Health/readiness checks tied to real dependencies — Already implemented: `/api/health` checks PostgreSQL connectivity, `/api/ready` checks DB + latency + cache + AI provider keys. Returns 503 if DB down. | DONE (verified Wave 60) | C3 | MF-172 |
@@ -1067,7 +1068,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0325 | Reduced-motion mode | DONE (verified Wave 106) | C2 | UX-086 |
 | BL-0326 | Screen-reader labels for canvas actions | DONE (Wave 111) | C2 | UX-088 |
 | BL-0327 | Full keyboard-first editing mode | OPEN | C4 | UX-090 |
-| BL-0328 | Accessibility audit dashboard with tracked fixes | OPEN | C3 | UX-089 |
+| BL-0328 | Accessibility audit dashboard with tracked fixes | DONE (Wave 112) | C3 | UX-089 |
 | BL-0329 | Font scaling and spacing options | DONE (Wave 110) | C2 | UX-087 |
 
 ### Mobile & Responsive
@@ -1075,8 +1076,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0340 | Tablet layout for side panels/inspectors | OPEN | C3 | UX-091 |
-| BL-0341 | Touch-safe controls in compact mode | OPEN | C2 | UX-092 |
-| BL-0342 | Mobile overflow handling for long tables | OPEN | C2 | UX-093 |
+| BL-0341 | Touch-safe controls in compact mode | DONE (Wave 112) | C2 | UX-092 |
+| BL-0342 | Mobile overflow handling for long tables | DONE (Wave 112) | C2 | UX-093 |
 | BL-0343 | Mobile "review mode" for comments/checks | OPEN | C2 | UX-094 |
 | BL-0344 | Bottom nav for core mobile actions | OPEN | C3 | UX-095 |
 | BL-0345 | Gesture shortcuts (pinch zoom, two-finger pan) | OPEN | C3 | UX-096 |
