@@ -164,7 +164,7 @@ export class TeamCommandCenter {
    */
   getActiveViewDistribution(): Record<string, number> {
     const distribution: Record<string, number> = {};
-    for (const member of this.members.values()) {
+    for (const member of Array.from(this.members.values())) {
       if (!member.online) {
         continue;
       }

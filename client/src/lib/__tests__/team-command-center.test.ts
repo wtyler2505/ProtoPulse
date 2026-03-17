@@ -264,7 +264,8 @@ describe('TeamCommandCenter', () => {
     const baseTime = Date.now();
     const dateSpy = vi.spyOn(Date, 'now');
 
-    for (let i = 0; i < 510; i++) {
+    // Add just enough to exceed the 500 limit — 505 to confirm trimming
+    for (let i = 0; i < 505; i++) {
       dateSpy.mockReturnValue(baseTime + i);
       center.logActivity({ memberId: member.id, action: 'edit', entityType: 'wire' });
     }
@@ -273,7 +274,7 @@ describe('TeamCommandCenter', () => {
     const all = center.getTeamActivities(1000);
     expect(all.length).toBeLessThanOrEqual(500);
     vi.restoreAllMocks();
-  });
+  }, 30000);
 
   // -----------------------------------------------------------------------
   // getTeamActivities

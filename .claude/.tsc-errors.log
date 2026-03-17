@@ -977,3 +977,13 @@ client/src/lib/team-command-center.ts(167,26): error TS2802: Type 'MapIterator<T
 client/src/lib/team-command-center.ts(167,26): error TS2802: Type 'MapIterator<TeamMember>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 
 1:24:23 AM - Found 1 error. Watching for file changes.
+[2J[3J[H1:24:37 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/team-command-center.ts(167,26): error TS2802: Type 'MapIterator<TeamMember>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+1:24:58 AM - Found 1 error. Watching for file changes.
+[2J[3J[H1:25:24 AM - File change detected. Starting incremental compilation...
+
+client/src/lib/team-command-center.ts(167,26): error TS2802: Type 'MapIterator<TeamMember>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+1:25:52 AM - Found 1 error. Watching for file changes.
