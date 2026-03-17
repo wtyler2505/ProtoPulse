@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "persistedAt": "2026-03-17T10:28:07.892Z",
+  "routes": {
+    "GET /api/auth/me": {
+      "count": 1,
+      "totalDuration": 468,
+      "errors": 0,
+      "min": 468,
+      "max": 468,
+      "samples": [
+        468
+      ]
+    },
+    "GET /api/projects": {
+      "count": 1,
+      "totalDuration": 194,
+      "errors": 0,
+      "min": 194,
+      "max": 194,
+      "samples": [
+        194
+      ]
+    },
+    "POST /api/seed": {
+      "count": 1,
+      "totalDuration": 257,
+      "errors": 0,
+      "min": 257,
+      "max": 257,
+      "samples": [
+        257
+      ]
+    },
+    "GET /api/projects/:id/arduino/jobs": {
+      "count": 1,
+      "totalDuration": 423,
+      "errors": 0,
+      "min": 423,
+      "max": 423,
+      "samples": [
+        423
+      ]
+    },
+    "GET /api/projects/:id/arduino/profiles": {
+      "count": 1,
+      "totalDuration": 510,
+      "errors": 0,
+      "min": 510,
+      "max": 510,
+      "samples": [
+        510
+      ]
+    },
+    "GET /api/projects/:id/arduino/libraries/installed": {
+      "count": 1,
+      "totalDuration": 12619,
+      "errors": 0,
+      "min": 12619,
+      "max": 12619,
+      "samples": [
+        12619
+      ]
+    },
+    "GET /api/projects/:id": {
+      "count": 1,
+      "totalDuration": 14,
+      "errors": 0,
+      "min": 14,
+      "max": 14,
+      "samples": [
+        14
+      ]
+    },
+    "GET /api/projects/:id/validation": {
+      "count": 1,
+      "totalDuration": 13926,
+      "errors": 0,
+      "min": 13926,
+      "max": 13926,
+      "samples": [
+        13926
+      ]
+    },
+    "GET /api/projects/:id/bom": {
+      "count": 1,
+      "totalDuration": 13959,
+      "errors": 0,
+      "min": 13959,
+      "max": 13959,
+      "samples": [
+        13959
+      ]
+    },
+    "GET /api/projects/:id/history": {
+      "count": 1,
+      "totalDuration": 14293,
+      "errors": 0,
+      "min": 14293,
+      "max": 14293,
+      "samples": [
+        14293
+      ]
+    },
+    "GET /api/projects/:id/chat": {
+      "count": 1,
+      "totalDuration": 682,
+      "errors": 0,
+      "min": 682,
+      "max": 682,
+      "samples": [
+        682
+      ]
+    },
+    "GET /api/projects/:id/chat/branches": {
+      "count": 1,
+      "totalDuration": 238,
+      "errors": 0,
+      "min": 238,
+      "max": 238,
+      "samples": [
+        238
+      ]
+    }
+  }
+}
