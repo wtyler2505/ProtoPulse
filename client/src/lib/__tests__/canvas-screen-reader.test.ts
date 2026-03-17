@@ -221,7 +221,7 @@ describe('Screen reader workflow: PCB editing', () => {
     expect(steps[2]).toBe('Selected Component U1');
     expect(steps[3]).toBe('Rotated Component U1');
     expect(steps[4]).toBe('Switched tool to Place via on PCB layout');
-    expect(steps[5]).toBe('Added Via layer change F.Cu to B.Cu');
+    expect(steps[5]).toBe('Added via layer change F.Cu to B.Cu');
     expect(steps[6]).toBe('Zoomed in to 2.0x');
   });
 });

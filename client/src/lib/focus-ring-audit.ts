@@ -279,5 +279,65 @@ export function auditFocusRings(options: AuditFocusRingsOptions = {}): FocusRing
   return violations;
 }
 
+// ---------------------------------------------------------------------------
+// detectMissingFocusRings — runtime container audit
+// ---------------------------------------------------------------------------
+
+/**
+ * Audit a container element for interactive descendants that lack visible
+ * focus indicators. Returns an `FocusRingAuditResult` with aggregate stats.
+ *
+ * Unlike `auditFocusRings` (which returns a flat violations list), this
+ * function provides a richer result with pass/fail counts and a pass rate,
+ * making it suitable for CI assertions or dashboard display.
+ */
+export function detectMissingFocusRings(
+  container: Element,
+  options: { exclude?: string } = {},
+): FocusRingAuditResult {
+  const combinedSelector = INTERACTIVE_SELECTORS.join(', ');
+  const allCandidates = Array.from(container.querySelectorAll(combinedSelector));
+
+  let skipped = 0;
+  let passed = 0;
+  const violations: FocusRingViolation[] = [];
+
+  for (const el of allCandidates) {
+    if (options.exclude && el.closest(options.exclude)) {
+      skipped++;
+      continue;
+    }
+    if (isHiddenOrDisabled(el)) {
+      skipped++;
+      continue;
+    }
+    if (hasFocusIndicator(el)) {
+      passed++;
+    } else {
+      violations.push({
+        element: el,
+        selector: buildSelector(el),
+        reason: 'No visible :focus-visible indicator detected (no outline, ring, or focus-ring class)',
+        tagName: el.tagName.toLowerCase(),
+        role: el.getAttribute('role'),
+      });
+    }
+  }
+
+  const totalScanned = allCandidates.length;
+  const passRate = totalScanned - skipped > 0
+    ? passed / (totalScanned - skipped)
+    : 1;
+
+  return {
+    violations,
+    totalScanned,
+    passed,
+    skipped,
+    passRate,
+    timestamp: new Date().toISOString(),
+  };
+}
+
 /** Re-export constants for testing. */
 export { INTERACTIVE_SELECTORS, FOCUS_INDICATOR_PROPERTIES };
