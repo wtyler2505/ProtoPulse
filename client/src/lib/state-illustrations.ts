@@ -362,13 +362,24 @@ export function getStateIllustration(type: StateType, context?: StateContext): S
     return { ...base };
   }
 
-  return {
-    ...base,
+  // When a context override exists, it fully replaces the messaging fields.
+  // Optional fields (actionLabel, actionHref) that are absent in the override
+  // must NOT leak through from the base — they are context-irrelevant.
+  const result: StateIllustration = {
+    type: base.type,
     title: override.title,
     description: override.description,
-    ...(override.actionLabel !== undefined ? { actionLabel: override.actionLabel } : {}),
-    ...(override.actionHref !== undefined ? { actionHref: override.actionHref } : {}),
+    svgContent: base.svgContent,
   };
+
+  if (override.actionLabel !== undefined) {
+    result.actionLabel = override.actionLabel;
+  }
+  if (override.actionHref !== undefined) {
+    result.actionHref = override.actionHref;
+  }
+
+  return result;
 }
 
 /**

@@ -24,10 +24,10 @@ export interface ViewPrefetchConfig {
   maxPrefetch: number;
 }
 
-export const DEFAULT_PREFETCH_CONFIG: Readonly<ViewPrefetchConfig> = {
+export const DEFAULT_PREFETCH_CONFIG: Readonly<ViewPrefetchConfig> = Object.freeze({
   idleThresholdMs: 2000,
   maxPrefetch: 3,
-};
+});
 
 // ---------------------------------------------------------------------------
 // Priority map — higher = more likely to be navigated to next

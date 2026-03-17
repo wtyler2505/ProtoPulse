@@ -5,6 +5,11 @@
  * action and entity. Downstream components should use `getIconForAction()` and
  * `getIconForEntity()` rather than importing icons ad-hoc, ensuring visual
  * consistency and making future icon changes a one-line fix.
+ *
+ * NOTE: lucide-react periodically renames icons internally (e.g. Filter -> Funnel,
+ * AlertTriangle -> TriangleAlert). The `iconName` field uses the canonical
+ * `displayName` from the installed lucide-react version, which may differ from
+ * the backwards-compatible export alias used in the import statement.
  */
 
 import type { LucideIcon } from 'lucide-react';
@@ -100,12 +105,21 @@ export interface IconMapping {
   domain: IconDomain;
   /** The action verb or noun this icon represents. */
   action: string;
-  /** The lucide-react icon component name (for auditing / logging). */
+  /** The lucide-react icon canonical displayName (for auditing / logging). */
   iconName: string;
   /** The actual lucide-react icon component. */
   icon: LucideIcon;
   /** Human-readable label suitable for tooltips and aria-labels. */
   label: string;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: resolve canonical displayName at definition time
+// ---------------------------------------------------------------------------
+
+/** Returns the canonical displayName for a lucide-react icon. */
+function dn(icon: LucideIcon): string {
+  return icon.displayName ?? icon.name ?? 'Unknown';
 }
 
 // ---------------------------------------------------------------------------
@@ -121,89 +135,89 @@ export interface IconMapping {
  */
 export const ICON_MAP: Record<string, IconMapping> = {
   // ---- CRUD / generic ----
-  add: { domain: 'design', action: 'add', iconName: 'Plus', icon: Plus, label: 'Add' },
-  delete: { domain: 'design', action: 'delete', iconName: 'Trash2', icon: Trash2, label: 'Delete' },
-  edit: { domain: 'design', action: 'edit', iconName: 'Pencil', icon: Pencil, label: 'Edit' },
-  save: { domain: 'design', action: 'save', iconName: 'Save', icon: Save, label: 'Save' },
-  duplicate: { domain: 'design', action: 'duplicate', iconName: 'Copy', icon: Copy, label: 'Duplicate' },
-  paste: { domain: 'design', action: 'paste', iconName: 'ClipboardPaste', icon: ClipboardPaste, label: 'Paste' },
-  undo: { domain: 'design', action: 'undo', iconName: 'Undo2', icon: Undo2, label: 'Undo' },
-  redo: { domain: 'design', action: 'redo', iconName: 'Redo2', icon: Redo2, label: 'Redo' },
-  close: { domain: 'design', action: 'close', iconName: 'X', icon: X, label: 'Close' },
-  confirm: { domain: 'design', action: 'confirm', iconName: 'Check', icon: Check, label: 'Confirm' },
-  cancel: { domain: 'design', action: 'cancel', iconName: 'X', icon: X, label: 'Cancel' },
+  add: { domain: 'design', action: 'add', iconName: dn(Plus), icon: Plus, label: 'Add' },
+  delete: { domain: 'design', action: 'delete', iconName: dn(Trash2), icon: Trash2, label: 'Delete' },
+  edit: { domain: 'design', action: 'edit', iconName: dn(Pencil), icon: Pencil, label: 'Edit' },
+  save: { domain: 'design', action: 'save', iconName: dn(Save), icon: Save, label: 'Save' },
+  duplicate: { domain: 'design', action: 'duplicate', iconName: dn(Copy), icon: Copy, label: 'Duplicate' },
+  paste: { domain: 'design', action: 'paste', iconName: dn(ClipboardPaste), icon: ClipboardPaste, label: 'Paste' },
+  undo: { domain: 'design', action: 'undo', iconName: dn(Undo2), icon: Undo2, label: 'Undo' },
+  redo: { domain: 'design', action: 'redo', iconName: dn(Redo2), icon: Redo2, label: 'Redo' },
+  close: { domain: 'design', action: 'close', iconName: dn(X), icon: X, label: 'Close' },
+  confirm: { domain: 'design', action: 'confirm', iconName: dn(Check), icon: Check, label: 'Confirm' },
+  cancel: { domain: 'design', action: 'cancel', iconName: dn(X), icon: X, label: 'Cancel' },
 
   // ---- I/O ----
-  export: { domain: 'manufacturing', action: 'export', iconName: 'Download', icon: Download, label: 'Export' },
-  import: { domain: 'manufacturing', action: 'import', iconName: 'Upload', icon: Upload, label: 'Import' },
-  download: { domain: 'manufacturing', action: 'download', iconName: 'Download', icon: Download, label: 'Download' },
-  upload: { domain: 'manufacturing', action: 'upload', iconName: 'Upload', icon: Upload, label: 'Upload' },
-  share: { domain: 'collaboration', action: 'share', iconName: 'Share2', icon: Share2, label: 'Share' },
-  link: { domain: 'collaboration', action: 'link', iconName: 'Link', icon: Link, label: 'Link' },
-  unlink: { domain: 'collaboration', action: 'unlink', iconName: 'Unlink', icon: Unlink, label: 'Unlink' },
+  export: { domain: 'manufacturing', action: 'export', iconName: dn(Download), icon: Download, label: 'Export' },
+  import: { domain: 'manufacturing', action: 'import', iconName: dn(Upload), icon: Upload, label: 'Import' },
+  download: { domain: 'manufacturing', action: 'download', iconName: dn(Download), icon: Download, label: 'Download' },
+  upload: { domain: 'manufacturing', action: 'upload', iconName: dn(Upload), icon: Upload, label: 'Upload' },
+  share: { domain: 'collaboration', action: 'share', iconName: dn(Share2), icon: Share2, label: 'Share' },
+  link: { domain: 'collaboration', action: 'link', iconName: dn(Link), icon: Link, label: 'Link' },
+  unlink: { domain: 'collaboration', action: 'unlink', iconName: dn(Unlink), icon: Unlink, label: 'Unlink' },
   open_external: {
     domain: 'documentation',
     action: 'open_external',
-    iconName: 'ExternalLink',
+    iconName: dn(ExternalLink),
     icon: ExternalLink,
     label: 'Open external',
   },
 
   // ---- Search / filter / sort ----
-  search: { domain: 'design', action: 'search', iconName: 'Search', icon: Search, label: 'Search' },
-  filter: { domain: 'design', action: 'filter', iconName: 'Funnel', icon: Funnel, label: 'Filter' },
-  sort: { domain: 'design', action: 'sort', iconName: 'ArrowUpNarrowWide', icon: SortAsc, label: 'Sort' },
+  search: { domain: 'design', action: 'search', iconName: dn(Search), icon: Search, label: 'Search' },
+  filter: { domain: 'design', action: 'filter', iconName: dn(Funnel), icon: Funnel, label: 'Filter' },
+  sort: { domain: 'design', action: 'sort', iconName: dn(SortAsc), icon: SortAsc, label: 'Sort' },
 
   // ---- Visibility / lock ----
-  show: { domain: 'design', action: 'show', iconName: 'Eye', icon: Eye, label: 'Show' },
-  hide: { domain: 'design', action: 'hide', iconName: 'EyeOff', icon: EyeOff, label: 'Hide' },
-  lock: { domain: 'design', action: 'lock', iconName: 'Lock', icon: Lock, label: 'Lock' },
-  unlock: { domain: 'design', action: 'unlock', iconName: 'LockOpen', icon: Unlock, label: 'Unlock' },
+  show: { domain: 'design', action: 'show', iconName: dn(Eye), icon: Eye, label: 'Show' },
+  hide: { domain: 'design', action: 'hide', iconName: dn(EyeOff), icon: EyeOff, label: 'Hide' },
+  lock: { domain: 'design', action: 'lock', iconName: dn(Lock), icon: Lock, label: 'Lock' },
+  unlock: { domain: 'design', action: 'unlock', iconName: dn(Unlock), icon: Unlock, label: 'Unlock' },
 
   // ---- Transform ----
-  rotate: { domain: 'design', action: 'rotate', iconName: 'RotateCw', icon: RotateCw, label: 'Rotate' },
-  mirror: { domain: 'design', action: 'mirror', iconName: 'FlipHorizontal2', icon: FlipHorizontal2, label: 'Mirror' },
-  move: { domain: 'design', action: 'move', iconName: 'Move', icon: Move, label: 'Move' },
-  zoom_in: { domain: 'design', action: 'zoom_in', iconName: 'ZoomIn', icon: ZoomIn, label: 'Zoom in' },
-  zoom_out: { domain: 'design', action: 'zoom_out', iconName: 'ZoomOut', icon: ZoomOut, label: 'Zoom out' },
-  fit_view: { domain: 'design', action: 'fit_view', iconName: 'Maximize', icon: Maximize, label: 'Fit to view' },
+  rotate: { domain: 'design', action: 'rotate', iconName: dn(RotateCw), icon: RotateCw, label: 'Rotate' },
+  mirror: { domain: 'design', action: 'mirror', iconName: dn(FlipHorizontal2), icon: FlipHorizontal2, label: 'Mirror' },
+  move: { domain: 'design', action: 'move', iconName: dn(Move), icon: Move, label: 'Move' },
+  zoom_in: { domain: 'design', action: 'zoom_in', iconName: dn(ZoomIn), icon: ZoomIn, label: 'Zoom in' },
+  zoom_out: { domain: 'design', action: 'zoom_out', iconName: dn(ZoomOut), icon: ZoomOut, label: 'Zoom out' },
+  fit_view: { domain: 'design', action: 'fit_view', iconName: dn(Maximize), icon: Maximize, label: 'Fit to view' },
 
   // ---- Execution / simulation ----
-  run: { domain: 'analysis', action: 'run', iconName: 'Play', icon: Play, label: 'Run' },
-  stop: { domain: 'analysis', action: 'stop', iconName: 'Square', icon: Square, label: 'Stop' },
-  pause: { domain: 'analysis', action: 'pause', iconName: 'Pause', icon: Pause, label: 'Pause' },
-  simulate: { domain: 'analysis', action: 'simulate', iconName: 'Zap', icon: Zap, label: 'Simulate' },
+  run: { domain: 'analysis', action: 'run', iconName: dn(Play), icon: Play, label: 'Run' },
+  stop: { domain: 'analysis', action: 'stop', iconName: dn(Square), icon: Square, label: 'Stop' },
+  pause: { domain: 'analysis', action: 'pause', iconName: dn(Pause), icon: Pause, label: 'Pause' },
+  simulate: { domain: 'analysis', action: 'simulate', iconName: dn(Zap), icon: Zap, label: 'Simulate' },
   validate: {
     domain: 'analysis',
     action: 'validate',
-    iconName: 'CircleCheckBig',
+    iconName: dn(CheckCircle),
     icon: CheckCircle,
     label: 'Validate',
   },
-  refresh: { domain: 'design', action: 'refresh', iconName: 'RefreshCw', icon: RefreshCw, label: 'Refresh' },
+  refresh: { domain: 'design', action: 'refresh', iconName: dn(RefreshCw), icon: RefreshCw, label: 'Refresh' },
 
   // ---- Settings / info ----
-  settings: { domain: 'design', action: 'settings', iconName: 'Settings', icon: Settings, label: 'Settings' },
-  info: { domain: 'documentation', action: 'info', iconName: 'Info', icon: Info, label: 'Info' },
-  help: { domain: 'documentation', action: 'help', iconName: 'CircleQuestionMark', icon: HelpCircle, label: 'Help' },
+  settings: { domain: 'design', action: 'settings', iconName: dn(Settings), icon: Settings, label: 'Settings' },
+  info: { domain: 'documentation', action: 'info', iconName: dn(Info), icon: Info, label: 'Info' },
+  help: { domain: 'documentation', action: 'help', iconName: dn(HelpCircle), icon: HelpCircle, label: 'Help' },
 
   // ---- Navigation helpers ----
-  expand: { domain: 'design', action: 'expand', iconName: 'ChevronRight', icon: ChevronRight, label: 'Expand' },
-  collapse: { domain: 'design', action: 'collapse', iconName: 'ChevronDown', icon: ChevronDown, label: 'Collapse' },
+  expand: { domain: 'design', action: 'expand', iconName: dn(ChevronRight), icon: ChevronRight, label: 'Expand' },
+  collapse: { domain: 'design', action: 'collapse', iconName: dn(ChevronDown), icon: ChevronDown, label: 'Collapse' },
 
   // ---- Status ----
   warning: {
     domain: 'analysis',
     action: 'warning',
-    iconName: 'AlertTriangle',
+    iconName: dn(AlertTriangle),
     icon: AlertTriangle,
     label: 'Warning',
   },
-  error: { domain: 'analysis', action: 'error', iconName: 'AlertCircle', icon: AlertCircle, label: 'Error' },
-  success: { domain: 'analysis', action: 'success', iconName: 'CheckCircle', icon: CheckCircle, label: 'Success' },
-  measure: { domain: 'design', action: 'measure', iconName: 'Ruler', icon: Ruler, label: 'Measure' },
-  favorite: { domain: 'design', action: 'favorite', iconName: 'Star', icon: Star, label: 'Favorite' },
-  ai_assist: { domain: 'design', action: 'ai_assist', iconName: 'Sparkles', icon: Sparkles, label: 'AI assist' },
+  error: { domain: 'analysis', action: 'error', iconName: dn(AlertCircle), icon: AlertCircle, label: 'Error' },
+  success: { domain: 'analysis', action: 'success', iconName: dn(CheckCircle), icon: CheckCircle, label: 'Success' },
+  measure: { domain: 'design', action: 'measure', iconName: dn(Ruler), icon: Ruler, label: 'Measure' },
+  favorite: { domain: 'design', action: 'favorite', iconName: dn(Star), icon: Star, label: 'Favorite' },
+  ai_assist: { domain: 'design', action: 'ai_assist', iconName: dn(Sparkles), icon: Sparkles, label: 'AI assist' },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -218,21 +232,21 @@ const DOMAIN_OVERRIDES: Record<string, IconMapping> = {
   'run:hardware': {
     domain: 'hardware',
     action: 'run',
-    iconName: 'Zap',
+    iconName: dn(Zap),
     icon: Zap,
     label: 'Flash / Upload',
   },
   'validate:manufacturing': {
     domain: 'manufacturing',
     action: 'validate',
-    iconName: 'ShieldCheck',
+    iconName: dn(ShieldCheck),
     icon: ShieldCheck,
     label: 'DFM check',
   },
   'validate:design': {
     domain: 'design',
     action: 'validate',
-    iconName: 'ShieldCheck',
+    iconName: dn(ShieldCheck),
     icon: ShieldCheck,
     label: 'DRC check',
   },
@@ -249,119 +263,119 @@ const ENTITY_ICON_MAP: Record<string, IconMapping> = {
   component: {
     domain: 'design',
     action: 'component',
-    iconName: 'Cpu',
+    iconName: dn(Cpu),
     icon: Cpu,
     label: 'Component',
   },
   circuit: {
     domain: 'design',
     action: 'circuit',
-    iconName: 'CircuitBoard',
+    iconName: dn(CircuitBoard),
     icon: CircuitBoard,
     label: 'Circuit',
   },
   bom: {
     domain: 'manufacturing',
     action: 'bom',
-    iconName: 'Package',
+    iconName: dn(Package),
     icon: Package,
     label: 'Bill of Materials',
   },
   document: {
     domain: 'documentation',
     action: 'document',
-    iconName: 'FileText',
+    iconName: dn(FileText),
     icon: FileText,
     label: 'Document',
   },
   layer: {
     domain: 'design',
     action: 'layer',
-    iconName: 'Layers',
+    iconName: dn(Layers),
     icon: Layers,
     label: 'Layer',
   },
   branch: {
     domain: 'collaboration',
     action: 'branch',
-    iconName: 'GitBranch',
+    iconName: dn(GitBranch),
     icon: GitBranch,
     label: 'Branch',
   },
   ai: {
     domain: 'design',
     action: 'ai',
-    iconName: 'Bot',
+    iconName: dn(Bot),
     icon: Bot,
     label: 'AI Assistant',
   },
   user: {
     domain: 'collaboration',
     action: 'user',
-    iconName: 'Users',
+    iconName: dn(Users),
     icon: Users,
     label: 'Users',
   },
   factory: {
     domain: 'manufacturing',
     action: 'factory',
-    iconName: 'Factory',
+    iconName: dn(Factory),
     icon: Factory,
     label: 'Manufacturer',
   },
   validation: {
     domain: 'analysis',
     action: 'validation',
-    iconName: 'ShieldCheck',
+    iconName: dn(ShieldCheck),
     icon: ShieldCheck,
     label: 'Validation',
   },
   signal: {
     domain: 'analysis',
     action: 'signal',
-    iconName: 'Activity',
+    iconName: dn(Activity),
     icon: Activity,
     label: 'Signal',
   },
   metrics: {
     domain: 'analysis',
     action: 'metrics',
-    iconName: 'BarChart3',
+    iconName: dn(BarChart3),
     icon: BarChart3,
     label: 'Metrics',
   },
   idea: {
     domain: 'documentation',
     action: 'idea',
-    iconName: 'Lightbulb',
+    iconName: dn(Lightbulb),
     icon: Lightbulb,
     label: 'Idea',
   },
   tool: {
     domain: 'hardware',
     action: 'tool',
-    iconName: 'Wrench',
+    iconName: dn(Wrench),
     icon: Wrench,
     label: 'Tool',
   },
   knowledge: {
     domain: 'documentation',
     action: 'knowledge',
-    iconName: 'BookOpen',
+    iconName: dn(BookOpen),
     icon: BookOpen,
     label: 'Knowledge',
   },
   comment: {
     domain: 'collaboration',
     action: 'comment',
-    iconName: 'MessageSquare',
+    iconName: dn(MessageSquare),
     icon: MessageSquare,
     label: 'Comment',
   },
   history: {
     domain: 'design',
     action: 'history',
-    iconName: 'Clock',
+    iconName: dn(Clock),
     icon: Clock,
     label: 'History',
   },

@@ -789,3 +789,15 @@ client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListene
 11:47:58 PM - Found 0 errors. Watching for file changes.
 [2J[3J[H11:48:04 PM - File change detected. Starting incremental compilation...
 
+
+11:48:21 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:49:47 PM - File change detected. Starting incremental compilation...
+
+
+11:49:51 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:50:42 PM - File change detected. Starting incremental compilation...
+
+
+11:50:50 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:51:50 PM - File change detected. Starting incremental compilation...
+
