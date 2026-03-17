@@ -365,14 +365,11 @@ describe('validateSketchPath', () => {
     expect(validateSketchPath('/home/user/\x07bell')).toBe(false);
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   it('rejects non-string input', () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    expect(validateSketchPath(null as any)).toBe(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    expect(validateSketchPath(undefined as any)).toBe(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
-    expect(validateSketchPath(42 as any)).toBe(false);
+    // Cast through unknown to simulate runtime misuse without using `any`
+    expect(validateSketchPath(null as unknown as string)).toBe(false);
+    expect(validateSketchPath(undefined as unknown as string)).toBe(false);
+    expect(validateSketchPath(42 as unknown as string)).toBe(false);
   });
 
   it('accepts a drive-letter path with forward slashes', () => {

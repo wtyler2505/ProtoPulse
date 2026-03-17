@@ -225,12 +225,12 @@ export class CreatorProfileManager {
     const bioMatches: CreatorProfile[] = [];
     const skillMatches: CreatorProfile[] = [];
 
-    for (const profile of this.profiles.values()) {
+    for (const profile of Array.from(this.profiles.values())) {
       if (profile.displayName.toLowerCase().includes(q)) {
         nameMatches.push({ ...profile, skills: [...profile.skills] });
       } else if (profile.bio?.toLowerCase().includes(q)) {
         bioMatches.push({ ...profile, skills: [...profile.skills] });
-      } else if (profile.skills.some((s) => s.toLowerCase().includes(q))) {
+      } else if (profile.skills.some((s: string) => s.toLowerCase().includes(q))) {
         skillMatches.push({ ...profile, skills: [...profile.skills] });
       }
     }
