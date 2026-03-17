@@ -109,6 +109,7 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | 113 | `BL-0265`, `BL-0343`, `BL-0345`, `BL-0344`, `BL-0340` | CI coverage gates, mobile review mode, gesture shortcuts, bottom nav, tablet layout — CI + mobile + responsive. |
 | 112 | `BL-0149`, `BL-0328`, `BL-0264`, `BL-0341`, `BL-0342` | Multi-angle photo, a11y audit dashboard, deployment profiles, touch-safe controls, mobile table overflow — accessibility + mobile + DevOps. |
 | 111 | `BL-0320`, `BL-0321`, `BL-0326`, `BL-0301`, `BL-0188` | Keyboard resize handles, focus ring audit, screen reader canvas labels, first PCB tutorial, team templates — accessibility + onboarding. |
@@ -419,11 +420,12 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 42 | 236 | 85% complete — Waves 61-113 |
+| P2 | 37 | 241 | 87% complete — Waves 61-114 |
+| 114 | `BL-0350`, `BL-0353`, `BL-0354`, `BL-0362`, `BL-0363` | Icon language, motion language, state illustrations, background prefetch, progressive render — design system + performance. |
 | P3 | 113 | 18 | Moonshots + long-term features |
-| **Total** | **155** | **346** | **501 items tracked** |
+| **Total** | **150** | **351** | **501 items tracked** |
 
-*Snapshot updated: Wave 113 (2026-03-17)*
+*Snapshot updated: Wave 114 (2026-03-17)*
 
 ---
 
@@ -1089,11 +1091,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0350 | Standardize icon language by domain | OPEN | C2 | UX-102 |
+| BL-0350 | Standardize icon language by domain | DONE (Wave 114) | C2 | UX-102 |
 | BL-0351 | Consistent spacing scale and typography tokens | OPEN | C3 | UX-104 |
 | BL-0352 | Light theme and OLED-black theme options | OPEN | C4 | UX-105, MF-192 |
-| BL-0353 | Consistent motion language for transitions | OPEN | C2 | UX-106 |
-| BL-0354 | State illustrations for empty/error/offline pages | OPEN | C2 | UX-107 |
+| BL-0353 | Consistent motion language for transitions | DONE (Wave 114) | C2 | UX-106 |
+| BL-0354 | State illustrations for empty/error/offline pages | DONE (Wave 114) | C2 | UX-107 |
 | BL-0355 | Design system docs site in-app | OPEN | C3 | UX-108 |
 
 ### Performance Perception
@@ -1102,8 +1104,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0360 | Operation duration hints for long actions | OPEN | C1 | UX-112 |
 | BL-0361 | Partial loading per panel instead of blocking whole view | OPEN | C3 | UX-113 |
-| BL-0362 | Background prefetch for likely next views | OPEN | C2 | UX-114 |
-| BL-0363 | Progressive render for large lists/tables | OPEN | C2 | UX-115 |
+| BL-0362 | Background prefetch for likely next views | DONE (Wave 114) | C2 | UX-114 |
+| BL-0363 | Progressive render for large lists/tables | DONE (Wave 114) | C2 | UX-115 |
 | BL-0364 | "Slow path detected" UX with suggestions | OPEN | C2 | UX-117 |
 
 ### Developer Platform
