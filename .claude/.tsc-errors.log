@@ -558,3 +558,9 @@ client/src/lib/__tests__/touch-safe-controls.test.ts(178,15): error TS2352: Conv
 
 
 10:07:36 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:26:30 PM - File change detected. Starting incremental compilation...
+
+
+10:26:41 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H10:27:43 PM - File change detected. Starting incremental compilation...
+
