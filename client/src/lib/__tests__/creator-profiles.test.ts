@@ -211,16 +211,20 @@ describe('CreatorProfileManager - updateProfile', () => {
 
   it('does not change id (immutable)', () => {
     manager.addProfile(makeProfile());
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updated = manager.updateProfile('user-1', { id: 'hacked' } as any);
+    // Sneak an extra 'id' property via Object.assign to test runtime immutability
+    const sneakyUpdate: CreatorProfileUpdate = Object.assign({ displayName: 'Changed' }, { id: 'hacked' });
+    const updated = manager.updateProfile('user-1', sneakyUpdate);
     expect(updated?.id).toBe('user-1');
+    expect(manager.getProfile('user-1')?.id).toBe('user-1');
   });
 
   it('does not change joinedAt (immutable)', () => {
     manager.addProfile(makeProfile());
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const updated = manager.updateProfile('user-1', { joinedAt: 0 } as any);
+    // Sneak an extra 'joinedAt' property via Object.assign to test runtime immutability
+    const sneakyUpdate: CreatorProfileUpdate = Object.assign({ projectCount: 99 }, { joinedAt: 0 });
+    const updated = manager.updateProfile('user-1', sneakyUpdate);
     expect(updated?.joinedAt).toBe(1700000000000);
+    expect(manager.getProfile('user-1')?.joinedAt).toBe(1700000000000);
   });
 
   it('returns undefined for nonexistent profile', () => {
@@ -504,7 +508,7 @@ describe('CreatorProfileManager - Persistence', () => {
   });
 
   it('handles localStorage.setItem throwing (quota exceeded)', () => {
-    vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
+    const spy = vi.spyOn(localStorage, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceededError');
     });
     // Should not throw — just silently fail persistence
@@ -512,15 +516,17 @@ describe('CreatorProfileManager - Persistence', () => {
       manager.addProfile(makeProfile());
     }).not.toThrow();
     expect(manager.getProfileCount()).toBe(1);
+    spy.mockRestore();
   });
 
   it('handles localStorage.getItem throwing', () => {
-    vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
+    const spy = vi.spyOn(localStorage, 'getItem').mockImplementation(() => {
       throw new Error('SecurityError');
     });
     CreatorProfileManager.resetForTesting();
     const fresh = CreatorProfileManager.getInstance();
     expect(fresh.getProfileCount()).toBe(0);
+    spy.mockRestore();
   });
 });
 
