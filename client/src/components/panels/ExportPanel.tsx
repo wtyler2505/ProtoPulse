@@ -148,6 +148,15 @@ const EXPORT_CATEGORIES: ExportCategory[] = [
     icon: Cpu,
     formats: [
       {
+        id: 'fab-package',
+        label: 'Complete Fab Package',
+        extension: '.zip',
+        description: 'Single zip containing Gerbers, drill files, BOM, and Pick-and-Place (ready for JLCPCB/PCBWay)',
+        icon: Package,
+        endpoint: '/export/fab-package',
+        method: 'POST',
+      },
+      {
         id: 'gerber',
         label: 'Gerber + Drill',
         extension: '.gbr / .drl (RS-274X + Excellon)',
