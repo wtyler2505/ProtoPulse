@@ -23,7 +23,7 @@ import {
   Undo2,
   Redo2,
   Search,
-  Filter,
+  Funnel,
   SortAsc,
   Eye,
   EyeOff,

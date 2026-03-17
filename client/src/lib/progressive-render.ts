@@ -32,11 +32,11 @@ export interface ProgressiveRenderConfig {
 // Constants
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_CONFIG: Readonly<ProgressiveRenderConfig> = {
+export const DEFAULT_CONFIG: Readonly<ProgressiveRenderConfig> = Object.freeze({
   initialBatch: 20,
   batchSize: 10,
   intervalMs: 16,
-} as const;
+});
 
 // ---------------------------------------------------------------------------
 // shouldUseProgressive
@@ -117,7 +117,7 @@ export function useProgressiveRender<T>(
 
   // Track the current reveal cursor independently of React renders so that
   // the interval callback always sees the latest value.
-  const cursorRef = useRef(0);
+  const cursorRef = useRef(Math.min(initialBatch, items.length));
 
   // Monotonically increasing "generation" — bumped on reset or when the
   // source `items` array identity changes. Stale intervals compare their
@@ -127,35 +127,43 @@ export function useProgressiveRender<T>(
   // The number of items currently visible (drives the slice).
   const [visibleCount, setVisibleCount] = useState(() => Math.min(initialBatch, items.length));
 
+  // Track the previous items reference so we can detect identity changes.
+  const prevItemsRef = useRef(items);
+
   // -------------------------------------------------------------------
-  // Reset helper — callable externally via the returned `reset` function
-  // and also invoked internally when `items` changes identity.
+  // Reset helper — callable externally via the returned `reset` function.
   // -------------------------------------------------------------------
-  const resetInternal = useCallback(() => {
+  const reset = useCallback(() => {
     generationRef.current += 1;
     const count = Math.min(initialBatch, items.length);
     cursorRef.current = count;
     setVisibleCount(count);
   }, [initialBatch, items]);
 
+  // -------------------------------------------------------------------
   // Re-initialise when the items array reference changes.
-  const prevItemsRef = useRef(items);
-  if (prevItemsRef.current !== items) {
-    prevItemsRef.current = items;
-    // Direct mutation is fine here — we're in the render phase before
-    // effects run, and the state update below will trigger a re-render.
-    generationRef.current += 1;
-    const count = Math.min(initialBatch, items.length);
-    cursorRef.current = count;
-    // We intentionally call setState during render (the React docs call
-    // this "adjusting state during rendering" — it's the idiomatic
-    // pattern for synchronising derived state without useEffect).
-    setVisibleCount(count);
-  }
+  // -------------------------------------------------------------------
+  useEffect(() => {
+    if (prevItemsRef.current !== items) {
+      prevItemsRef.current = items;
+      generationRef.current += 1;
+      const count = Math.min(initialBatch, items.length);
+      cursorRef.current = count;
+      setVisibleCount(count);
+    }
+  }, [items, initialBatch]);
 
   // -------------------------------------------------------------------
   // Tick effect — schedules successive batches until the list is complete.
+  // Uses a separate effect that re-runs when generation/items change.
   // -------------------------------------------------------------------
+  const [generation, setGeneration] = useState(0);
+
+  // Sync generation state from ref (for effect dependency).
+  useEffect(() => {
+    setGeneration(generationRef.current);
+  }, [items]);
+
   useEffect(() => {
     // Already showing everything — nothing to schedule.
     if (cursorRef.current >= items.length) {
@@ -183,7 +191,8 @@ export function useProgressiveRender<T>(
     return () => {
       clearInterval(id);
     };
-  }, [items, batchSize, intervalMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, batchSize, intervalMs, generation]);
 
   // -------------------------------------------------------------------
   // Derived values
@@ -194,5 +203,5 @@ export function useProgressiveRender<T>(
   const isComplete = total === 0 || clampedCount >= total;
   const progress = total === 0 ? 1 : clampedCount / total;
 
-  return { visibleItems, isComplete, progress, reset: resetInternal };
+  return { visibleItems, isComplete, progress, reset };
 }
