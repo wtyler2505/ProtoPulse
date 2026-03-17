@@ -143,7 +143,7 @@ const UNO_FEATURE_TIMERS: FeatureTimerMap = {
   millis: [0],
   delay: [0],
   pwm: [0, 1, 2],
-  analogWrite: [0, 1, 2],
+  analogwrite: [0, 1, 2],
 };
 
 const MEGA_FEATURE_TIMERS: FeatureTimerMap = {
@@ -152,7 +152,7 @@ const MEGA_FEATURE_TIMERS: FeatureTimerMap = {
   millis: [0],
   delay: [0],
   pwm: [0, 1, 2, 3, 4, 5],
-  analogWrite: [0, 1, 2, 3, 4, 5],
+  analogwrite: [0, 1, 2, 3, 4, 5],
 };
 
 const ESP32_FEATURE_TIMERS: FeatureTimerMap = {
@@ -161,7 +161,7 @@ const ESP32_FEATURE_TIMERS: FeatureTimerMap = {
   millis: [0],
   delay: [0],
   pwm: [0, 1, 2, 3],
-  ledcWrite: [0, 1, 2, 3],
+  ledcwrite: [0, 1, 2, 3],
 };
 
 const STM32_FEATURE_TIMERS: FeatureTimerMap = {
@@ -170,7 +170,7 @@ const STM32_FEATURE_TIMERS: FeatureTimerMap = {
   millis: [2],
   delay: [2],
   pwm: [1, 2, 3, 4],
-  analogWrite: [1, 2, 3, 4],
+  analogwrite: [1, 2, 3, 4],
 };
 
 const PICO_FEATURE_TIMERS: FeatureTimerMap = {
@@ -179,7 +179,7 @@ const PICO_FEATURE_TIMERS: FeatureTimerMap = {
   millis: [3],
   delay: [3],
   pwm: [0, 1, 2, 3, 4, 5, 6, 7],
-  analogWrite: [0, 1, 2, 3, 4, 5, 6, 7],
+  analogwrite: [0, 1, 2, 3, 4, 5, 6, 7],
 };
 
 const BOARD_FEATURE_TIMERS: Record<string, FeatureTimerMap> = {

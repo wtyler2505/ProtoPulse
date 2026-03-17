@@ -186,8 +186,8 @@ describe('CONCEPT_DATABASE', () => {
 
   it('example code is syntactically plausible', () => {
     for (const [key, entry] of Object.entries(CONCEPT_DATABASE)) {
-      // Ensure examples are not just descriptions
-      expect(entry.example, `${key} example looks like a description, not code`).toMatch(/[;(){}=<>]|\/\//);
+      // Ensure examples are not just descriptions — allow code chars or preprocessor directives
+      expect(entry.example, `${key} example looks like a description, not code`).toMatch(/[;(){}=<>]|\/\/|^#/);
     }
   });
 });
