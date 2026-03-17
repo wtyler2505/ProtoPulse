@@ -25,7 +25,9 @@ describe('ICON_MAP', () => {
       expect(mapping.domain).toBeTruthy();
       expect(mapping.action).toBe(action);
       expect(mapping.iconName).toBeTruthy();
-      expect(typeof mapping.icon).toBe('function'); // LucideIcon is a component function
+      // lucide-react icons are forwardRef objects, not plain functions
+      expect(mapping.icon).toBeTruthy();
+      expect(typeof mapping.icon === 'function' || typeof mapping.icon === 'object').toBe(true);
       expect(mapping.label).toBeTruthy();
     }
   });

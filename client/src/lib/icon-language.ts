@@ -151,14 +151,14 @@ export const ICON_MAP: Record<string, IconMapping> = {
 
   // ---- Search / filter / sort ----
   search: { domain: 'design', action: 'search', iconName: 'Search', icon: Search, label: 'Search' },
-  filter: { domain: 'design', action: 'filter', iconName: 'Filter', icon: Filter, label: 'Filter' },
-  sort: { domain: 'design', action: 'sort', iconName: 'SortAsc', icon: SortAsc, label: 'Sort' },
+  filter: { domain: 'design', action: 'filter', iconName: 'Funnel', icon: Funnel, label: 'Filter' },
+  sort: { domain: 'design', action: 'sort', iconName: 'ArrowUpNarrowWide', icon: SortAsc, label: 'Sort' },
 
   // ---- Visibility / lock ----
   show: { domain: 'design', action: 'show', iconName: 'Eye', icon: Eye, label: 'Show' },
   hide: { domain: 'design', action: 'hide', iconName: 'EyeOff', icon: EyeOff, label: 'Hide' },
   lock: { domain: 'design', action: 'lock', iconName: 'Lock', icon: Lock, label: 'Lock' },
-  unlock: { domain: 'design', action: 'unlock', iconName: 'Unlock', icon: Unlock, label: 'Unlock' },
+  unlock: { domain: 'design', action: 'unlock', iconName: 'LockOpen', icon: Unlock, label: 'Unlock' },
 
   // ---- Transform ----
   rotate: { domain: 'design', action: 'rotate', iconName: 'RotateCw', icon: RotateCw, label: 'Rotate' },
@@ -176,7 +176,7 @@ export const ICON_MAP: Record<string, IconMapping> = {
   validate: {
     domain: 'analysis',
     action: 'validate',
-    iconName: 'CheckCircle',
+    iconName: 'CircleCheckBig',
     icon: CheckCircle,
     label: 'Validate',
   },
@@ -185,7 +185,7 @@ export const ICON_MAP: Record<string, IconMapping> = {
   // ---- Settings / info ----
   settings: { domain: 'design', action: 'settings', iconName: 'Settings', icon: Settings, label: 'Settings' },
   info: { domain: 'documentation', action: 'info', iconName: 'Info', icon: Info, label: 'Info' },
-  help: { domain: 'documentation', action: 'help', iconName: 'HelpCircle', icon: HelpCircle, label: 'Help' },
+  help: { domain: 'documentation', action: 'help', iconName: 'CircleQuestionMark', icon: HelpCircle, label: 'Help' },
 
   // ---- Navigation helpers ----
   expand: { domain: 'design', action: 'expand', iconName: 'ChevronRight', icon: ChevronRight, label: 'Expand' },

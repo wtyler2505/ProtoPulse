@@ -710,3 +710,82 @@ client/src/lib/icon-language.ts(154,75): error TS2552: Cannot find name 'Filter'
 client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
 
 11:31:30 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H11:31:44 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/motion-language.test.ts(27,5): error TS2322: Type 'Mock<(_event: string, cb: (event: MediaQueryListEvent) => void) => void>' is not assignable to type '{ <K extends keyof MediaQueryListEventMap>(type: K, listener: (this: MediaQueryList, ev: MediaQueryListEventMap[K]) => any, options?: boolean | AddEventListenerOptions | undefined): void; (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ... 1 more ... | undefined): void; }'.
+  Types of parameters 'cb' and 'listener' are incompatible.
+    Type 'EventListenerOrEventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+      Type 'EventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+        Type 'EventListenerObject' provides no match for the signature '(event: MediaQueryListEvent): void'.
+client/src/lib/__tests__/motion-language.test.ts(30,5): error TS2322: Type 'Mock<(_event: string, _cb: (event: MediaQueryListEvent) => void) => void>' is not assignable to type '{ <K extends keyof MediaQueryListEventMap>(type: K, listener: (this: MediaQueryList, ev: MediaQueryListEventMap[K]) => any, options?: boolean | EventListenerOptions | undefined): void; (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ... 1 more ... | undefined): void; }'.
+  Types of parameters '_cb' and 'listener' are incompatible.
+    Type 'EventListenerOrEventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+      Type 'EventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+        Type 'EventListenerObject' provides no match for the signature '(event: MediaQueryListEvent): void'.
+client/src/lib/icon-language.ts(154,75): error TS2552: Cannot find name 'Filter'. Did you mean 'File'?
+client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+11:31:53 PM - Found 4 errors. Watching for file changes.
+[2J[3J[H11:31:54 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/motion-language.test.ts(27,5): error TS2322: Type 'Mock<(_event: string, cb: (event: MediaQueryListEvent) => void) => void>' is not assignable to type '{ <K extends keyof MediaQueryListEventMap>(type: K, listener: (this: MediaQueryList, ev: MediaQueryListEventMap[K]) => any, options?: boolean | AddEventListenerOptions | undefined): void; (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ... 1 more ... | undefined): void; }'.
+  Types of parameters 'cb' and 'listener' are incompatible.
+    Type 'EventListenerOrEventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+      Type 'EventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+        Type 'EventListenerObject' provides no match for the signature '(event: MediaQueryListEvent): void'.
+client/src/lib/__tests__/motion-language.test.ts(30,5): error TS2322: Type 'Mock<(_event: string, _cb: (event: MediaQueryListEvent) => void) => void>' is not assignable to type '{ <K extends keyof MediaQueryListEventMap>(type: K, listener: (this: MediaQueryList, ev: MediaQueryListEventMap[K]) => any, options?: boolean | EventListenerOptions | undefined): void; (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ... 1 more ... | undefined): void; }'.
+  Types of parameters '_cb' and 'listener' are incompatible.
+    Type 'EventListenerOrEventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+      Type 'EventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+        Type 'EventListenerObject' provides no match for the signature '(event: MediaQueryListEvent): void'.
+client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+11:31:59 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H11:32:33 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/__tests__/motion-language.test.ts(27,5): error TS2322: Type 'Mock<(_event: string, cb: (event: MediaQueryListEvent) => void) => void>' is not assignable to type '{ <K extends keyof MediaQueryListEventMap>(type: K, listener: (this: MediaQueryList, ev: MediaQueryListEventMap[K]) => any, options?: boolean | AddEventListenerOptions | undefined): void; (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ... 1 more ... | undefined): void; }'.
+  Types of parameters 'cb' and 'listener' are incompatible.
+    Type 'EventListenerOrEventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+      Type 'EventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+        Type 'EventListenerObject' provides no match for the signature '(event: MediaQueryListEvent): void'.
+client/src/lib/__tests__/motion-language.test.ts(30,5): error TS2322: Type 'Mock<(_event: string, _cb: (event: MediaQueryListEvent) => void) => void>' is not assignable to type '{ <K extends keyof MediaQueryListEventMap>(type: K, listener: (this: MediaQueryList, ev: MediaQueryListEventMap[K]) => any, options?: boolean | EventListenerOptions | undefined): void; (type: string, listener: EventListenerOrEventListenerObject, options?: boolean | ... 1 more ... | undefined): void; }'.
+  Types of parameters '_cb' and 'listener' are incompatible.
+    Type 'EventListenerOrEventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+      Type 'EventListenerObject' is not assignable to type '(event: MediaQueryListEvent) => void'.
+        Type 'EventListenerObject' provides no match for the signature '(event: MediaQueryListEvent): void'.
+client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+11:32:40 PM - Found 3 errors. Watching for file changes.
+[2J[3J[H11:33:56 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+11:34:02 PM - Found 1 error. Watching for file changes.
+[2J[3J[H11:42:14 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+11:42:28 PM - Found 1 error. Watching for file changes.
+[2J[3J[H11:43:09 PM - File change detected. Starting incremental compilation...
+
+client/src/lib/view-prefetch.ts(225,28): error TS2802: Type 'Set<PrefetchListener>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+
+11:43:32 PM - Found 1 error. Watching for file changes.
+[2J[3J[H11:43:32 PM - File change detected. Starting incremental compilation...
+
+
+11:43:52 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:46:19 PM - File change detected. Starting incremental compilation...
+
+
+11:46:24 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:47:05 PM - File change detected. Starting incremental compilation...
+
+
+11:47:09 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:47:52 PM - File change detected. Starting incremental compilation...
+
+
+11:47:58 PM - Found 0 errors. Watching for file changes.
+[2J[3J[H11:48:04 PM - File change detected. Starting incremental compilation...
+

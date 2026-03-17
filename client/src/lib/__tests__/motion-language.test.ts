@@ -24,10 +24,10 @@ function mockMatchMedia(prefersReducedMotion: boolean): {
     matches: prefersReducedMotion,
     media: '(prefers-reduced-motion: reduce)',
     onchange: null,
-    addEventListener: vi.fn((_event: string, cb: (event: MediaQueryListEvent) => void) => {
-      currentListener = cb;
+    addEventListener: vi.fn((_event: string, cb: EventListenerOrEventListenerObject | null) => {
+      currentListener = cb as ((event: MediaQueryListEvent) => void) | null;
     }),
-    removeEventListener: vi.fn((_event: string, _cb: (event: MediaQueryListEvent) => void) => {
+    removeEventListener: vi.fn((_event: string, _cb: EventListenerOrEventListenerObject | null) => {
       currentListener = null;
     }),
     addListener: vi.fn(),

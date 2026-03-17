@@ -130,6 +130,10 @@ export function useProgressiveRender<T>(
   // Track the previous items reference so we can detect identity changes.
   const prevItemsRef = useRef(items);
 
+  // A state-level generation counter that drives effect re-runs.
+  // Bumped both on explicit reset() and on items identity change.
+  const [generation, setGeneration] = useState(0);
+
   // -------------------------------------------------------------------
   // Reset helper — callable externally via the returned `reset` function.
   // -------------------------------------------------------------------
@@ -138,6 +142,7 @@ export function useProgressiveRender<T>(
     const count = Math.min(initialBatch, items.length);
     cursorRef.current = count;
     setVisibleCount(count);
+    setGeneration(generationRef.current);
   }, [initialBatch, items]);
 
   // -------------------------------------------------------------------
@@ -150,19 +155,9 @@ export function useProgressiveRender<T>(
       const count = Math.min(initialBatch, items.length);
       cursorRef.current = count;
       setVisibleCount(count);
+      setGeneration(generationRef.current);
     }
   }, [items, initialBatch]);
-
-  // -------------------------------------------------------------------
-  // Tick effect — schedules successive batches until the list is complete.
-  // Uses a separate effect that re-runs when generation/items change.
-  // -------------------------------------------------------------------
-  const [generation, setGeneration] = useState(0);
-
-  // Sync generation state from ref (for effect dependency).
-  useEffect(() => {
-    setGeneration(generationRef.current);
-  }, [items]);
 
   useEffect(() => {
     // Already showing everything — nothing to schedule.
