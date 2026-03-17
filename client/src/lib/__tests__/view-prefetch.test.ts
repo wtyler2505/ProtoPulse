@@ -4,11 +4,25 @@ import {
   ViewPrefetchManager,
   DEFAULT_PREFETCH_CONFIG,
   PREFETCH_PRIORITIES,
+  VIEW_LOADERS,
   usePrefetch,
   getRegisteredViews,
 } from '../view-prefetch';
 import type { ViewPrefetchConfig, PrefetchState } from '../view-prefetch';
 import type { ViewMode } from '@/lib/project-context';
+
+// Mock all VIEW_LOADERS to resolve instantly (real dynamic imports hang in happy-dom)
+const originalLoaders = { ...VIEW_LOADERS };
+function installMockLoaders(): void {
+  for (const key of Object.keys(VIEW_LOADERS) as ViewMode[]) {
+    (VIEW_LOADERS as Record<string, () => Promise<unknown>>)[key] = () => Promise.resolve({ default: {} });
+  }
+}
+function restoreLoaders(): void {
+  for (const key of Object.keys(originalLoaders)) {
+    (VIEW_LOADERS as Record<string, (() => Promise<unknown>) | undefined>)[key] = originalLoaders[key as ViewMode];
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -21,14 +35,23 @@ async function flushAll(): Promise<void> {
   await Promise.resolve();
 }
 
-/** Advance past the default idle threshold and let the prefetch session run. */
+/**
+ * Advance past the idle threshold and then drain interleaved timers +
+ * microtasks so the entire prefetch session completes.
+ *
+ * The session loop does: await loader() → await setTimeout(50) per chunk.
+ * Each step alternates between microtask resolution (await) and timer
+ * callbacks (setTimeout). We pump in small increments to interleave both.
+ */
 async function advancePastIdle(ms?: number): Promise<void> {
   const threshold = ms ?? DEFAULT_PREFETCH_CONFIG.idleThresholdMs;
-  await vi.advanceTimersByTimeAsync(threshold + 100);
-  // Multiple rounds to let the async prefetch session resolve.
-  for (let i = 0; i < 20; i++) {
+  // Fire the idle timer.
+  await vi.advanceTimersByTimeAsync(threshold + 10);
+  // Drain: each iteration advances timers slightly and flushes microtasks.
+  // 40 rounds * 60ms = 2400ms of simulated time — more than enough for
+  // maxPrefetch=3 chunks with 50ms yields between them.
+  for (let i = 0; i < 40; i++) {
     await vi.advanceTimersByTimeAsync(60);
-    await Promise.resolve();
   }
 }
 
@@ -38,10 +61,12 @@ async function advancePastIdle(ms?: number): Promise<void> {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  installMockLoaders();
   ViewPrefetchManager.resetInstance();
 });
 
 afterEach(() => {
+  restoreLoaders();
   ViewPrefetchManager.resetInstance();
   vi.useRealTimers();
   vi.restoreAllMocks();

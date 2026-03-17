@@ -136,7 +136,7 @@ export const PREFETCH_PRIORITIES: Record<string, Record<string, number>> = {
 // This is the single source of truth for which modules back each view.
 // ---------------------------------------------------------------------------
 
-const VIEW_LOADERS: Partial<Record<ViewMode, () => Promise<unknown>>> = {
+export const VIEW_LOADERS: Partial<Record<ViewMode, () => Promise<unknown>>> = {
   dashboard: () => import('@/components/views/DashboardView'),
   architecture: () => import('@/components/views/ArchitectureView'),
   schematic: () => import('@/components/views/SchematicView'),
@@ -181,10 +181,13 @@ export interface PrefetchState {
   active: boolean;
 }
 
+export type ViewLoaderMap = Partial<Record<ViewMode, () => Promise<unknown>>>;
+
 export class ViewPrefetchManager {
   private static instance: ViewPrefetchManager | null = null;
 
   private config: ViewPrefetchConfig;
+  private loaders: ViewLoaderMap;
   private prefetchedSet = new Set<ViewMode>();
   private listeners = new Set<PrefetchListener>();
   private idleTimerId: ReturnType<typeof setTimeout> | null = null;
@@ -192,13 +195,14 @@ export class ViewPrefetchManager {
   private active = false;
   private currentView: ViewMode | null = null;
 
-  private constructor(config?: Partial<ViewPrefetchConfig>) {
+  private constructor(config?: Partial<ViewPrefetchConfig>, loaders?: ViewLoaderMap) {
     this.config = { ...DEFAULT_PREFETCH_CONFIG, ...config };
+    this.loaders = loaders ?? VIEW_LOADERS;
   }
 
-  static getInstance(config?: Partial<ViewPrefetchConfig>): ViewPrefetchManager {
+  static getInstance(config?: Partial<ViewPrefetchConfig>, loaders?: ViewLoaderMap): ViewPrefetchManager {
     if (!ViewPrefetchManager.instance) {
-      ViewPrefetchManager.instance = new ViewPrefetchManager(config);
+      ViewPrefetchManager.instance = new ViewPrefetchManager(config, loaders);
     }
     return ViewPrefetchManager.instance;
   }
@@ -290,7 +294,7 @@ export class ViewPrefetchManager {
     const candidates: Array<{ view: ViewMode; priority: number }> = [];
     for (const [view, priority] of Object.entries(priorityMap)) {
       const viewMode = view as ViewMode;
-      if (!this.prefetchedSet.has(viewMode) && VIEW_LOADERS[viewMode]) {
+      if (!this.prefetchedSet.has(viewMode) && this.loaders[viewMode]) {
         candidates.push({ view: viewMode, priority });
       }
     }
@@ -309,7 +313,7 @@ export class ViewPrefetchManager {
     if (this.prefetchedSet.has(view)) {
       return false;
     }
-    const loader = VIEW_LOADERS[view];
+    const loader = this.loaders[view];
     if (!loader) {
       return false;
     }
@@ -364,7 +368,7 @@ export class ViewPrefetchManager {
         break;
       }
 
-      const loader = VIEW_LOADERS[view];
+      const loader = this.loaders[view];
       if (!loader) {
         continue;
       }
@@ -382,11 +386,7 @@ export class ViewPrefetchManager {
       // Yield to main thread between chunks.
       if (!signal.aborted) {
         await new Promise<void>((resolve) => {
-          if (typeof requestIdleCallback === 'function') {
-            requestIdleCallback(() => { resolve(); });
-          } else {
-            setTimeout(resolve, 50);
-          }
+          setTimeout(resolve, 0);
         });
       }
     }
