@@ -904,7 +904,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0534 | **i18n string extraction pipeline** — `i18n-framework.ts` exists with dot-notation key lookup, interpolation, and ~100 en keys, but almost no UI strings are actually extracted. The majority of ProtoPulse UI is hardcoded English. Create a script to audit unextracted strings and a systematic extraction pass. | OPEN | C4 | Wave 64 audit |
+| BL-0534 | **i18n string extraction pipeline** — `i18n-framework.ts` exists with dot-notation key lookup, interpolation, and ~100 en keys, but almost no UI strings are actually extracted. The majority of ProtoPulse UI is hardcoded English. Create a script to audit unextracted strings and a systematic extraction pass. | DONE (Wave 130) | C4 | Wave 64 audit |
 | BL-0535 | **Community library → BOM integration** — community-bom-bridge.ts + AddToBomPrompt.tsx + tests. | DONE (verified Wave 106) | C3 | Wave 64 audit |
 | BL-0536 | **Tutorial step context wiring** — targetView + targetElement on TutorialStep, 26 built-in steps annotated, TutorialNavigator with highlight/scroll, 54 tests. | DONE (Wave 105) | C2 | Wave 64 audit |
 | BL-0537 | **ViewMode section grouping in sidebar** — 6 collapsible groups (Design/Analysis/Hardware/Manufacturing/AI & Code/Documentation) in sidebar-groups.ts, localStorage persistence, 43 tests. | DONE (verified Wave 106) | C2 | Wave 64 audit |

@@ -1,0 +1,1625 @@
+i18n Unextracted Strings Audit Summary
+======================================
+
+Total Unextracted Strings: 3210
+
+
+client/src/components/ErrorBoundary.tsx (5 strings):
+  Line 62: "Something went wrong rendering this section."
+  Line 76: "Try Again"
+  Line 84: "Clear Cache"
+  Line 92: "Settings"
+  Line 96: "If this keeps happening, try refreshing the page."
+
+client/src/components/arduino/ExampleLibraryPanel.tsx (9 strings):
+  Line 165: "Example Library"
+  Line 176: "Search examples..."
+  Line 196: "All"
+  Line 227: "Any Level"
+  Line 367: "Wiring"
+  ... and 4 more.
+
+client/src/components/arduino/FlashProgressBar.tsx (5 strings):
+  Line 162: "Dismiss"
+  Line 206: "Things to try"
+  Line 229: "Retry Upload"
+  Line 241: "Dismiss"
+  Line 253: "raw output"
+
+client/src/components/arduino/PinConstantPanel.tsx (10 strings):
+  Line 113: "Pin Constants"
+  Line 136: "Board"
+  Line 139: "Arduino Uno"
+  Line 140: "Arduino Nano"
+  Line 141: "Arduino Mega"
+  ... and 5 more.
+
+client/src/components/arduino/SimulationControlPanel.tsx (12 strings):
+  Line 305: "Firmware Simulation"
+  Line 333: "Start"
+  Line 344: "Stop"
+  Line 355: "Reset"
+  Line 365: "ATmega328P @ 16 MHz"
+  ... and 7 more.
+
+client/src/components/arduino/TelemetryDashboard.tsx (15 strings):
+  Line 41: "No data for sparkline"
+  Line 91: "Telemetry sparkline chart"
+  Line 154: "min:"
+  Line 157: "max:"
+  Line 160: "avg:"
+  ... and 10 more.
+
+client/src/components/arduino/TroubleshootWizard.tsx (14 strings):
+  Line 112: "Diagnosis Complete"
+  Line 123: "Restart"
+  Line 132: "Close"
+  Line 154: "Issues Found"
+  Line 187: "check"
+  ... and 9 more.
+
+client/src/components/circuit-editor/ActionErrorBanner.tsx (8 strings):
+  Line 67: "(retried"
+  Line 67: "x)"
+  Line 83: "Retry action"
+  Line 94: "Dismiss error"
+  Line 172: "action"
+  ... and 3 more.
+
+client/src/components/circuit-editor/AlternatePartsPopover.tsx (8 strings):
+  Line 67: "alt"
+  Line 85: "Alternates for"
+  Line 103: "Part"
+  Line 104: "Match"
+  Line 105: "Price"
+  ... and 3 more.
+
+client/src/components/circuit-editor/AudioOutputIndicator.tsx (1 strings):
+  Line 147: "Audio volume"
+
+client/src/components/circuit-editor/BaudRateSelector.tsx (11 strings):
+  Line 174: "baud"
+  Line 178: "Custom..."
+  Line 214: "Auto-detect"
+  Line 243: "Custom baud rate..."
+  Line 244: "Custom baud rate"
+  ... and 6 more.
+
+client/src/components/circuit-editor/BoardSettingsDialog.tsx (22 strings):
+  Line 217: "Board Settings"
+  Line 220: "Select your target board, programmer, and upload c..."
+  Line 227: "Board"
+  Line 232: "Search boards..."
+  Line 291: "No boards match your search."
+  ... and 17 more.
+
+client/src/components/circuit-editor/BreadboardDrcOverlay.tsx (1 strings):
+  Line 190: "DRC:"
+
+client/src/components/circuit-editor/BreadboardGrid.tsx (2 strings):
+  Line 472: "Add components to your schematic"
+  Line 483: "to see them on the breadboard."
+
+client/src/components/circuit-editor/BreadboardView.tsx (22 strings):
+  Line 119: "No Circuit Designs"
+  Line 121: "Create a circuit in the Schematic view first, then..."
+  Line 166: "Select circuit"
+  Line 199: "— Breadboard"
+  Line 638: "Select (1)"
+  ... and 17 more.
+
+client/src/components/circuit-editor/BusPinMappingDialog.tsx (20 strings):
+  Line 181: "Bus Pin Mapping"
+  Line 184: "Create named buses and assign individual signals t..."
+  Line 192: "Buses"
+  Line 219: "-bit"
+  Line 246: "No buses defined"
+  ... and 15 more.
+
+client/src/components/circuit-editor/CompileDiagnosticsPanel.tsx (12 strings):
+  Line 150: "No compile diagnostics"
+  Line 163: "error"
+  Line 169: "warning"
+  Line 174: "note"
+  Line 190: "Show all diagnostics"
+  ... and 7 more.
+
+client/src/components/circuit-editor/ComponentPlacer.tsx (8 strings):
+  Line 63: "Mfr:"
+  Line 64: "Package:"
+  Line 65: "pin"
+  Line 181: "Components"
+  Line 188: "Search parts..."
+  ... and 3 more.
+
+client/src/components/circuit-editor/ComponentReplacementDialog.tsx (12 strings):
+  Line 104: "Replace Component:"
+  Line 107: "Search for a compatible replacement part. Live pin..."
+  Line 115: "Search by part number, manufacturer, or specs..."
+  Line 131: "Search Results"
+  Line 165: "Compatibility Preview"
+  ... and 7 more.
+
+client/src/components/circuit-editor/CurrentAnimationRenderer.tsx (8 strings):
+  Line 291: "Stop animation"
+  Line 292: "Stop animation"
+  Line 316: "Animation speed"
+  Line 317: "Animation speed"
+  Line 335: "Toggle voltage colors"
+  ... and 3 more.
+
+client/src/components/circuit-editor/CurrentDensityRenderer.tsx (3 strings):
+  Line 228: "A/mm²"
+  Line 374: "Toggle current density overlay"
+  Line 391: "Density"
+
+client/src/components/circuit-editor/DCAnalysisPanel.tsx (20 strings):
+  Line 131: "DC Operating Point"
+  Line 143: "Run DC analysis"
+  Line 144: "Run DC analysis"
+  Line 147: "Run"
+  Line 160: "Click &quot;Run&quot; to solve the DC operating po..."
+  ... and 15 more.
+
+client/src/components/circuit-editor/DiffPairLengthMatchPanel.tsx (23 strings):
+  Line 67: "mm"
+  Line 77: "Matched"
+  Line 86: "Unmatched"
+  Line 97: "P+ length:"
+  Line 98: "mm"
+  ... and 18 more.
+
+client/src/components/circuit-editor/ERCPanel.tsx (12 strings):
+  Line 187: "ERC"
+  Line 195: "Rule settings"
+  Line 196: "ERC settings"
+  Line 204: "Run ERC"
+  Line 205: "Run ERC"
+  ... and 7 more.
+
+client/src/components/circuit-editor/EmiEmcPanel.tsx (15 strings):
+  Line 53: "EMC Score"
+  Line 178: "EMI/EMC Check"
+  Line 186: "Rule settings"
+  Line 187: "EMC settings"
+  Line 196: "Run EMC check"
+  ... and 10 more.
+
+client/src/components/circuit-editor/ErrorGutterMarker.tsx (1 strings):
+  Line 222: "Line"
+
+client/src/components/circuit-editor/ExportPanel.tsx (4 strings):
+  Line 309: "DRC Required"
+  Line 345: "formats"
+  Line 387: "Export Design"
+  Line 390: "Generate manufacturing files, EDA project exports,..."
+
+client/src/components/circuit-editor/FailureInjectionPanel.tsx (18 strings):
+  Line 112: "Component"
+  Line 116: "Select component"
+  Line 130: "Component ID"
+  Line 139: "Fault Type"
+  Line 157: "Severity"
+  ... and 13 more.
+
+client/src/components/circuit-editor/FunctionGeneratorPanel.tsx (10 strings):
+  Line 178: "Frequency"
+  Line 246: "Function Generator"
+  Line 271: "Waveform type"
+  Line 297: "Amplitude ("
+  Line 319: "DC Offset (V)"
+  ... and 5 more.
+
+client/src/components/circuit-editor/HierarchicalSheetPanel.tsx (3 strings):
+  Line 60: "No schematic sheets"
+  Line 70: "Sheets"
+  Line 116: "Multi-sheet connectivity coming soon"
+
+client/src/components/circuit-editor/ImpedanceTraceWidthPanel.tsx (26 strings):
+  Line 133: "Impedance Trace Width"
+  Line 136: "non-compliant"
+  Line 144: "Stackup Parameters"
+  Line 150: "Material Preset"
+  Line 154: "Select material..."
+  ... and 21 more.
+
+client/src/components/circuit-editor/MemoryUsageBar.tsx (14 strings):
+  Line 60: "0 B"
+  Line 117: "%)"
+  Line 157: "Memory Usage Details"
+  Line 161: "Flash used:"
+  Line 167: "Flash max:"
+  ... and 9 more.
+
+client/src/components/circuit-editor/MysteryPartConfigurator.tsx (18 strings):
+  Line 304: "Mystery Part Configurator"
+  Line 306: "Define a placeholder component with custom pin lay..."
+  Line 316: "Name"
+  Line 322: "Mystery Part"
+  Line 328: "Description"
+  ... and 13 more.
+
+client/src/components/circuit-editor/NetBrowserPanel.tsx (16 strings):
+  Line 107: "Pick net color"
+  Line 146: "Reset to default ("
+  Line 270: "Nets ("
+  Line 273: "pins total"
+  Line 284: "Search nets, refs, voltage..."
+  ... and 11 more.
+
+client/src/components/circuit-editor/NetClassPanel.tsx (23 strings):
+  Line 275: "Net Classes"
+  Line 280: "Add net class"
+  Line 281: "Add net class"
+  Line 284: "Add"
+  Line 303: "Classes"
+  ... and 18 more.
+
+client/src/components/circuit-editor/PCBLayoutView.tsx (52 strings):
+  Line 134: "View in 3D"
+  Line 135: "View in 3D"
+  Line 142: "3D"
+  Line 164: "Routing Progress"
+  Line 165: "nets routed ("
+  ... and 47 more.
+
+client/src/components/circuit-editor/PartFamilySwapPanel.tsx (11 strings):
+  Line 126: "Part Family Swap"
+  Line 135: "Select a component instance to see swap options."
+  Line 147: "Part Family Swap"
+  Line 154: "Current Component"
+  Line 172: "Family"
+  ... and 6 more.
+
+client/src/components/circuit-editor/PcbClipboardHandler.tsx (2 strings):
+  Line 205: "Click to place ("
+  Line 205: "items)"
+
+client/src/components/circuit-editor/PinoutHoverCard.tsx (7 strings):
+  Line 388: "Name"
+  Line 389: "Function"
+  Line 390: "Type"
+  Line 433: "Key Specs"
+  Line 589: "pins"
+  ... and 2 more.
+
+client/src/components/circuit-editor/PowerSymbolPalette.tsx (8 strings):
+  Line 119: "Custom Power Net"
+  Line 125: "Net name..."
+  Line 126: "Custom power net name"
+  Line 139: "Drag"
+  Line 163: "Power Symbols"
+  ... and 3 more.
+
+client/src/components/circuit-editor/ProtocolDecoderPanel.tsx (47 strings):
+  Line 98: "Address Mode"
+  Line 104: "7-bit"
+  Line 105: "10-bit"
+  Line 110: "Speed Grade"
+  Line 116: "Standard"
+  ... and 42 more.
+
+client/src/components/circuit-editor/PushShovePreviewRenderer.tsx (1 strings):
+  Line 131: "Toggle push-shove preview"
+
+client/src/components/circuit-editor/RatsnestFilterPanel.tsx (5 strings):
+  Line 91: "No nets in this design"
+  Line 104: "Ratsnest Filter"
+  Line 117: "Filter nets..."
+  Line 133: "Show All"
+  Line 143: "Hide All"
+
+client/src/components/circuit-editor/RotationInputPanel.tsx (16 strings):
+  Line 158: "Angle"
+  Line 171: "Rotation angle in degrees"
+  Line 173: "deg"
+  Line 180: "Presets"
+  Line 203: "Fine Adjust"
+  ... and 11 more.
+
+client/src/components/circuit-editor/SIOverlayRenderer.tsx (1 strings):
+  Line 319: "Toggle signal integrity overlay"
+
+client/src/components/circuit-editor/ScenarioManagerPanel.tsx (19 strings):
+  Line 157: "Scenario name"
+  Line 165: "Description (optional)"
+  Line 175: "DC Analysis"
+  Line 176: "AC Sweep"
+  Line 177: "Transient"
+  ... and 14 more.
+
+client/src/components/circuit-editor/SchematicAnnotationNode.tsx (3 strings):
+  Line 159: "Annotation controls"
+  Line 167: "Font size"
+  Line 171: "px"
+
+client/src/components/circuit-editor/SchematicBomSyncPanel.tsx (23 strings):
+  Line 59: "Add"
+  Line 68: "Update"
+  Line 77: "Skip"
+  Line 140: "Qty:"
+  Line 147: "Update quantity to"
+  ... and 18 more.
+
+client/src/components/circuit-editor/SchematicCanvas.tsx (21 strings):
+  Line 995: "Increment"
+  Line 1021: "Add to BOM"
+  Line 1559: "Toggle net browser panel"
+  Line 1688: "Empty Schematic"
+  Line 1689: "Your schematic is empty. Add components from the l..."
+  ... and 16 more.
+
+client/src/components/circuit-editor/SchematicSheetNode.tsx (1 strings):
+  Line 74: "Open Sheet"
+
+client/src/components/circuit-editor/SchematicToolbar.tsx (11 strings):
+  Line 98: "Undo (Ctrl+Z)"
+  Line 112: "Redo (Ctrl+Shift+Z)"
+  Line 128: "Toggle snap to grid"
+  Line 141: "Toggle grid visibility"
+  Line 166: "Free angle routing"
+  ... and 6 more.
+
+client/src/components/circuit-editor/SerialPlotterPanel.tsx (5 strings):
+  Line 356: "Resume"
+  Line 361: "Pause"
+  Line 375: "Clear"
+  Line 387: "CSV"
+  Line 405: "No data — connect a serial device and send numeric..."
+
+client/src/components/circuit-editor/SimComparePanel.tsx (21 strings):
+  Line 74: "No data points to display."
+  Line 167: "Snapshot A"
+  Line 171: "Snapshot B"
+  Line 222: "Compare Simulations"
+  Line 237: "Capture current simulation"
+  ... and 16 more.
+
+client/src/components/circuit-editor/SimComplexityWarningDialog.tsx (4 strings):
+  Line 162: "Warnings"
+  Line 201: "Suggestions"
+  Line 252: "Simulation Complexity Analysis"
+  Line 276: "Cancel"
+
+client/src/components/circuit-editor/SimResultsOverlay.tsx (4 strings):
+  Line 405: "Voltage"
+  Line 415: "Current"
+  Line 470: "Toggle simulation results overlay"
+  Line 487: "Sim Results"
+
+client/src/components/circuit-editor/SimulationScenarioPanel.tsx (8 strings):
+  Line 72: "Simulation Presets"
+  Line 91: "Scenario Name"
+  Line 95: "e.g. 5V Rail Transient"
+  Line 101: "Description"
+  Line 105: "Analysis of power-on ripple..."
+  ... and 3 more.
+
+client/src/components/circuit-editor/SimulationVisualOverlay.tsx (1 strings):
+  Line 182: "PUSH"
+
+client/src/components/circuit-editor/ThermalHeatmapRenderer.tsx (2 strings):
+  Line 182: "°C"
+  Line 342: "Thermal"
+
+client/src/components/circuit-editor/VirtualMultimeterPanel.tsx (8 strings):
+  Line 149: "Measurement mode"
+  Line 213: "Select net..."
+  Line 259: "Multimeter"
+  Line 266: "AUTO"
+  Line 287: "Probes"
+  ... and 3 more.
+
+client/src/components/circuit-editor/VirtualOscilloscope.tsx (8 strings):
+  Line 215: "-- Probe --"
+  Line 232: "/d"
+  Line 252: "Auto"
+  Line 357: "OSCILLOSCOPE"
+  Line 379: "CLR"
+  ... and 3 more.
+
+client/src/components/circuit-editor/WhatIfSliderPanel.tsx (6 strings):
+  Line 63: "Reset to nominal"
+  Line 89: "nom:"
+  Line 130: "What-If Sweep"
+  Line 143: "Reset all parameters"
+  Line 146: "Reset All"
+  ... and 1 more.
+
+client/src/components/circuit-editor/WorstCaseAnalysisPanel.tsx (15 strings):
+  Line 95: "ID"
+  Line 101: "R1"
+  Line 106: "Name"
+  Line 112: "R1 Resistance"
+  Line 120: "Nominal"
+  ... and 10 more.
+
+client/src/components/circuit-editor/__tests__/PinoutHoverCard.test.tsx (1 strings):
+  Line 211: "outside"
+
+client/src/components/dialogs/AdoptCandidateDialog.tsx (10 strings):
+  Line 99: "Adopt Candidate"
+  Line 101: "This will add the candidate's components as archit..."
+  Line 110: "fitness score"
+  Line 121: "Components"
+  Line 142: "Nets"
+  ... and 5 more.
+
+client/src/components/dialogs/ShareProjectDialog.tsx (14 strings):
+  Line 119: "Share Project"
+  Line 122: "Collaborate in real-time with others on this proje..."
+  Line 135: "online"
+  Line 142: "Project Link"
+  Line 152: "Copy"
+  ... and 9 more.
+
+client/src/components/layout/RecentProjectsList.tsx (3 strings):
+  Line 110: "Remove from recents"
+  Line 162: "Recent Projects"
+  Line 197: "No recent projects match your search"
+
+client/src/components/layout/Sidebar.tsx (11 strings):
+  Line 84: "Expand sidebar"
+  Line 152: "Settings"
+  Line 174: "Close sidebar"
+  Line 310: "Back to Projects"
+  Line 317: "Project Explorer"
+  ... and 6 more.
+
+client/src/components/layout/WorkflowBreadcrumb.tsx (1 strings):
+  Line 28: "Design workflow"
+
+client/src/components/layout/sidebar/ComponentTree.tsx (5 strings):
+  Line 152: "Focus in Architecture"
+  Line 153: "Search Datasheet"
+  Line 154: "Copy Name"
+  Line 155: "Remove from design"
+  Line 242: "No results"
+
+client/src/components/layout/sidebar/HistoryList.tsx (10 strings):
+  Line 99: "Undo action"
+  Line 124: "Copy details"
+  Line 133: "Copy"
+  Line 136: "Close details"
+  Line 144: "Close"
+  ... and 5 more.
+
+client/src/components/layout/sidebar/ProjectSettingsPanel.tsx (14 strings):
+  Line 143: "Project Settings"
+  Line 148: "Project Name"
+  Line 159: "Description"
+  Line 176: "Save Changes"
+  Line 182: "Saved successfully"
+  ... and 9 more.
+
+client/src/components/layout/sidebar/SidebarHeader.tsx (4 strings):
+  Line 23: "ProtoPulse"
+  Line 33: "Open color theme picker"
+  Line 64: "Sign out"
+  Line 75: "Close sidebar"
+
+client/src/components/panels/ActivityFeedPanel.tsx (9 strings):
+  Line 202: "Activity Feed"
+  Line 215: "Toggle filters"
+  Line 229: "Clear all activity"
+  Line 246: "Search activity..."
+  Line 247: "Search activity feed"
+  ... and 4 more.
+
+client/src/components/panels/CameraComponentId.tsx (18 strings):
+  Line 263: "Component Identification"
+  Line 284: "Take a photo of an electronic component to identif..."
+  Line 292: "Start Camera"
+  Line 307: "Requesting camera permission..."
+  Line 332: "Capture"
+  ... and 13 more.
+
+client/src/components/panels/ChatPanel.tsx (16 strings):
+  Line 143: "ProtoPulse AI Assistant"
+  Line 145: "Describe what you want to build, or choose a templ..."
+  Line 149: "Design & Architecture"
+  Line 155: "Generate new architecture"
+  Line 158: "Review & Optimization"
+  ... and 11 more.
+
+client/src/components/panels/CircuitSelectorDropdown.tsx (4 strings):
+  Line 36: "Loading circuits..."
+  Line 48: "No circuit designs"
+  Line 82: "Select circuit for export"
+  Line 84: "Select circuit..."
+
+client/src/components/panels/CommentsPanel.tsx (18 strings):
+  Line 154: "Reply"
+  Line 166: "Reopen"
+  Line 179: "Resolve"
+  Line 191: "Block"
+  Line 202: "Delete comment"
+  ... and 13 more.
+
+client/src/components/panels/DesignDiffPanel.tsx (14 strings):
+  Line 118: "No changes"
+  Line 194: "(not in baseline)"
+  Line 239: "(removed)"
+  Line 318: "DESIGN DIFF"
+  Line 324: "Close design diff"
+  ... and 9 more.
+
+client/src/components/panels/DesignTroubleshooterPanel.tsx (12 strings):
+  Line 150: "Back to list"
+  Line 177: "Symptoms"
+  Line 195: "Root Cause"
+  Line 255: "Prevention Tips"
+  Line 274: "Related Issues"
+  ... and 7 more.
+
+client/src/components/panels/DesignVariablesPanel.tsx (26 strings):
+  Line 273: "Design Variables"
+  Line 276: "Define parametric variables with expressions and S..."
+  Line 290: "Add Variable"
+  Line 310: "Variable name (e.g. VCC)"
+  Line 311: "Variable name"
+  ... and 21 more.
+
+client/src/components/panels/ExportPanel.tsx (11 strings):
+  Line 838: "EXPORT CENTER"
+  Line 841: "formats"
+  Line 939: "Preview pick-and-place data"
+  Line 980: "Loading preview..."
+  Line 1004: "Import Design"
+  ... and 6 more.
+
+client/src/components/panels/ExportPrecheckPanel.tsx (5 strings):
+  Line 81: "Pre-check:"
+  Line 87: "passed"
+  Line 123: "blocker"
+  Line 128: "warning"
+  Line 149: "Export Anyway"
+
+client/src/components/panels/ExportProfileSelector.tsx (3 strings):
+  Line 44: "Quick Export Profiles"
+  Line 80: "Exporting..."
+  Line 85: "Export All ("
+
+client/src/components/panels/ExportResultsPanel.tsx (4 strings):
+  Line 137: "Export Results"
+  Line 144: "file"
+  Line 156: "Dismiss export results"
+  Line 194: "file"
+
+client/src/components/panels/ImportHistoryPanel.tsx (5 strings):
+  Line 90: "No import history yet."
+  Line 92: "Import a design file to see it here."
+  Line 103: "import"
+  Line 110: "Clear all import history"
+  Line 176: "Restore"
+
+client/src/components/panels/ImportPreviewDialog.tsx (18 strings):
+  Line 210: "No mapping issues detected"
+  Line 225: "item"
+  Line 225: "could not be imported"
+  Line 237: "Mapping Warnings"
+  Line 296: "Import Preview"
+  ... and 13 more.
+
+client/src/components/panels/ImportRepairDialog.tsx (6 strings):
+  Line 94: "Fix:"
+  Line 181: "Import Repair Assistant"
+  Line 184: "Issues were found in"
+  Line 184: "and
+            can be auto-repaired."
+  Line 216: "Cancel"
+  ... and 1 more.
+
+client/src/components/panels/ImportWarningsPanel.tsx (2 strings):
+  Line 113: "Import Warnings"
+  Line 131: "Dismiss import warnings"
+
+client/src/components/panels/LabTemplatePanel.tsx (40 strings):
+  Line 146: "steps"
+  Line 204: "Back to lab list"
+  Line 207: "Back to Labs"
+  Line 215: "min"
+  Line 218: "steps"
+  ... and 35 more.
+
+client/src/components/panels/MilestonePanel.tsx (6 strings):
+  Line 114: "Unlocked"
+  Line 119: "Up next"
+  Line 151: "Progress Milestones"
+  Line 153: "of"
+  Line 153: "milestones unlocked"
+  ... and 1 more.
+
+client/src/components/panels/MultiAngleCaptureDialog.tsx (15 strings):
+  Line 230: "Additional Photos Needed"
+  Line 290: "Capture"
+  Line 315: "Capture"
+  Line 341: "Retake"
+  Line 353: "Analyzing..."
+  ... and 10 more.
+
+client/src/components/panels/PcbTutorialPanel.tsx (12 strings):
+  Line 115: "PCB Tutorial Complete!"
+  Line 117: "You have learned the full journey from schematic t..."
+  Line 129: "Start Over"
+  Line 137: "Done"
+  Line 235: "Close tutorial"
+  ... and 7 more.
+
+client/src/components/panels/PickPlacePreview.tsx (23 strings):
+  Line 132: "Pick-and-Place Preview"
+  Line 138: "Close pick-and-place preview"
+  Line 140: "Close"
+  Line 149: "parts"
+  Line 150: "front"
+  ... and 18 more.
+
+client/src/components/panels/SafetyConfirmDialog.tsx (7 strings):
+  Line 46: "Safe"
+  Line 56: "Caution"
+  Line 66: "Destructive"
+  Line 122: "What will happen:"
+  Line 152: "Don&apos;t ask again for this action"
+  ... and 2 more.
+
+client/src/components/panels/SerialMonitorPanel.tsx (45 strings):
+  Line 494: "Web Serial Not Supported"
+  Line 496: "The Web Serial API is only available in Chrome and..."
+  Line 512: "Serial Monitor"
+  Line 548: "Disconnect"
+  Line 560: "Connect"
+  ... and 40 more.
+
+client/src/components/panels/ThemePickerPanel.tsx (3 strings):
+  Line 58: "Aa Sample"
+  Line 84: "Color Theme"
+  Line 86: "Choose a color palette for the interface."
+
+client/src/components/panels/__tests__/ChatPanel.test.tsx (8 strings):
+  Line 194: "Search"
+  Line 195: "Settings"
+  Line 196: "Close"
+  Line 197: "Export"
+  Line 224: "Cancel"
+  ... and 3 more.
+
+client/src/components/panels/asset-manager/AssetGrid.tsx (36 strings):
+  Line 146: "Custom"
+  Line 159: "Toggle favorite"
+  Line 167: "Add to canvas"
+  Line 189: "Package:"
+  Line 195: "Voltage:"
+  ... and 31 more.
+
+client/src/components/panels/asset-manager/AssetSearch.tsx (5 strings):
+  Line 42: "Asset Library"
+  Line 49: "Close asset library"
+  Line 65: "Search parts... ( / )"
+  Line 66: "Search parts"
+  Line 77: "Sort assets"
+
+client/src/components/panels/chat/AnswerSourcePanel.tsx (2 strings):
+  Line 36: "Design Sources ("
+  Line 60: "AI Confidence"
+
+client/src/components/panels/chat/ApiKeySetupDialog.tsx (9 strings):
+  Line 83: "Set Up AI Assistant"
+  Line 97: "ProtoPulse uses AI to help you design circuits, ge..."
+  Line 100: "Your key stays in your browser and is sent directl..."
+  Line 107: "Get Started"
+  Line 133: "I Have My Key"
+  ... and 4 more.
+
+client/src/components/panels/chat/ChatHeader.tsx (9 strings):
+  Line 40: "ProtoPulse AI"
+  Line 44: "Select conversation branch"
+  Line 52: "Main"
+  Line 55: "Branch ("
+  Line 55: "msgs)"
+  ... and 4 more.
+
+client/src/components/panels/chat/ChatSearchBar.tsx (3 strings):
+  Line 20: "Search messages..."
+  Line 21: "Search messages"
+  Line 26: "Clear search"
+
+client/src/components/panels/chat/DesignAgentPanel.tsx (13 strings):
+  Line 184: "Design Agent"
+  Line 191: "Describe your circuit: e.g. 'Arduino-based motor c..."
+  Line 204: "Advanced"
+  Line 209: "Max steps:"
+  Line 240: "Run Design Agent"
+  ... and 8 more.
+
+client/src/components/panels/chat/MessageBubble.tsx (9 strings):
+  Line 147: "via"
+  Line 152: "tokens · ~$"
+  Line 162: "Update API Key"
+  Line 237: "Discard"
+  Line 245: "Confirm & Apply"
+  ... and 4 more.
+
+client/src/components/panels/chat/MessageInput.tsx (18 strings):
+  Line 74: "API key format looks incorrect for"
+  Line 90: "Remove image"
+  Line 93: "&times;"
+  Line 101: "Chat message"
+  Line 114: "Describe your system... (Shift+Enter for new line)"
+  ... and 13 more.
+
+client/src/components/panels/chat/QuickActionsBar.tsx (1 strings):
+  Line 80: "Scroll for more actions"
+
+client/src/components/panels/chat/SettingsPanel.tsx (30 strings):
+  Line 59: "AI Settings"
+  Line 70: "Could not load saved settings. Using defaults."
+  Line 71: "Error:"
+  Line 80: "Retry"
+  Line 88: "Provider"
+  ... and 25 more.
+
+client/src/components/panels/chat/StreamingIndicator.tsx (2 strings):
+  Line 22: "Analyzing system requirements..."
+  Line 32: "Cancel"
+
+client/src/components/panels/chat/VoiceInput.tsx (3 strings):
+  Line 212: "Push to talk"
+  Line 217: "Hands-free"
+  Line 230: "Check browser address bar for microphone permissio..."
+
+client/src/components/simulation/BodePlot.tsx (3 strings):
+  Line 202: "No frequency data to display. Run an analysis firs..."
+  Line 221: "Magnitude (dB)"
+  Line 289: "Phase (degrees)"
+
+client/src/components/simulation/FrequencyAnalysisPanel.tsx (22 strings):
+  Line 350: "Frequency Analysis"
+  Line 353: "Bode plot visualization for passive filter circuit..."
+  Line 364: "Reset"
+  Line 373: "Filter Topology"
+  Line 404: "Component Values"
+  ... and 17 more.
+
+client/src/components/simulation/SensorSliderPanel.tsx (4 strings):
+  Line 183: "· ADC:"
+  Line 250: "Sensor Inputs"
+  Line 277: "Reset all sensors to defaults"
+  Line 280: "Reset All"
+
+client/src/components/simulation/ShareSimulationButton.tsx (1 strings):
+  Line 78: "Copy shareable simulation link"
+
+client/src/components/simulation/SimPlayButton.tsx (5 strings):
+  Line 94: "Stopping..."
+  Line 99: "Stop"
+  Line 121: "Start Simulation"
+  Line 150: "Start Simulation"
+  Line 156: "Choose Analysis Type"
+
+client/src/components/simulation/SimulationPanel.tsx (76 strings):
+  Line 290: "Start Time"
+  Line 293: "0"
+  Line 299: "Stop Time"
+  Line 302: "10ms"
+  Line 308: "Time Step"
+  ... and 71 more.
+
+client/src/components/simulation/WaveformViewer.tsx (9 strings):
+  Line 1009: "Reset zoom (double-click plot)"
+  Line 1012: "Reset"
+  Line 1020: "Export as SVG"
+  Line 1023: "SVG"
+  Line 1030: "Export as PNG"
+  ... and 4 more.
+
+client/src/components/ui/AddToBomPrompt.tsx (4 strings):
+  Line 80: "Add to BOM?"
+  Line 87: "Dismiss"
+  Line 122: "Yes, add"
+  Line 131: "No thanks"
+
+client/src/components/ui/CalcApplyButtons.tsx (2 strings):
+  Line 90: "Add to BOM"
+  Line 102: "Apply to Component"
+
+client/src/components/ui/ConfidenceBadge.tsx (3 strings):
+  Line 61: "Confidence ("
+  Line 61: "%)"
+  Line 67: "--"
+
+client/src/components/ui/DatasheetLink.tsx (3 strings):
+  Line 33: "Datasheet"
+  Line 40: "No datasheet"
+  Line 49: "Find"
+
+client/src/components/ui/EmbedDialog.tsx (15 strings):
+  Line 188: "Share & Embed"
+  Line 202: "Share & Embed"
+  Line 210: "Close"
+  Line 212: "&times;"
+  Line 245: "Encoding circuit data..."
+  ... and 10 more.
+
+client/src/components/ui/ExplainPanelButton.tsx (4 strings):
+  Line 42: "Explain this panel"
+  Line 91: "Tips"
+  Line 99: "&#x2022;"
+  Line 111: "Related"
+
+client/src/components/ui/FirstRunChecklist.tsx (3 strings):
+  Line 99: "Getting Started"
+  Line 120: "Dismiss checklist"
+  Line 182: "All done! You're ready to build."
+
+client/src/components/ui/GlobalSearchDialog.tsx (10 strings):
+  Line 216: "Global search"
+  Line 232: "Search architecture, BOM, components, history..."
+  Line 239: "Ctrl+Shift+F"
+  Line 246: "No results found."
+  Line 288: "↑↓"
+  ... and 5 more.
+
+client/src/components/ui/LessonModeOverlay.tsx (2 strings):
+  Line 156: "Exit lesson mode"
+  Line 164: "Exit"
+
+client/src/components/ui/LibrarySuggestPopover.tsx (4 strings):
+  Line 83: "Matching library parts"
+  Line 88: "Dismiss suggestions"
+  Line 113: "% match"
+  Line 125: "BOM"
+
+client/src/components/ui/MentionBadge.tsx (7 strings):
+  Line 48: "mentioned you"
+  Line 67: "Mark as read"
+  Line 81: "Dismiss notification"
+  Line 127: "Mentions"
+  Line 136: "Mark all read"
+  ... and 2 more.
+
+client/src/components/ui/PredictionCard.tsx (5 strings):
+  Line 154: "Dismiss suggestion"
+  Line 181: "Less"
+  Line 186: "More"
+  Line 202: "Apply"
+  Line 213: "Action:"
+
+client/src/components/ui/PredictionPanel.tsx (3 strings):
+  Line 63: "Design Suggestions"
+  Line 95: "Clear all suggestions"
+  Line 110: "No suggestions — your design looks good!"
+
+client/src/components/ui/ProjectLoadingSkeleton.tsx (2 strings):
+  Line 13: "ProtoPulse"
+  Line 14: "Loading project..."
+
+client/src/components/ui/RadialMenu.tsx (1 strings):
+  Line 178: "Radial context menu"
+
+client/src/components/ui/ShortcutsOverlay.tsx (6 strings):
+  Line 94: "Keyboard shortcuts"
+  Line 107: "Keyboard Shortcuts"
+  Line 110: "Press"
+  Line 110: "or"
+  Line 110: "Esc"
+  ... and 1 more.
+
+client/src/components/ui/SmartHintToast.tsx (1 strings):
+  Line 116: "Dismiss hint"
+
+client/src/components/ui/TutorialMenu.tsx (8 strings):
+  Line 42: "Done"
+  Line 52: "min"
+  Line 54: "steps"
+  Line 78: "Interactive Tutorials"
+  Line 90: "Reset"
+  ... and 3 more.
+
+client/src/components/ui/TutorialOverlay.tsx (6 strings):
+  Line 265: "Step"
+  Line 265: "of"
+  Line 282: "Skip Tutorial"
+  Line 295: "Previous"
+  Line 305: "Finish"
+  ... and 1 more.
+
+client/src/components/ui/UnifiedComponentSearch.tsx (11 strings):
+  Line 184: "Find component"
+  Line 200: "Search components across standard library, communi..."
+  Line 207: "Ctrl+K"
+  Line 214: "No components found."
+  Line 254: "Place"
+  ... and 6 more.
+
+client/src/components/ui/ViewOnboardingHint.tsx (3 strings):
+  Line 52: "Showing"
+  Line 52: "more"
+  Line 60: "Dismiss onboarding hint"
+
+client/src/components/ui/WhatsNewPanel.tsx (4 strings):
+  Line 48: "What's new"
+  Line 67: "What&apos;s New"
+  Line 70: "Recent changes and updates to ProtoPulse"
+  Line 78: "No changelog entries found."
+
+client/src/components/ui/breadcrumb.tsx (2 strings):
+  Line 12: "breadcrumb"
+  Line 102: "More"
+
+client/src/components/ui/carousel.tsx (2 strings):
+  Line 218: "Previous slide"
+  Line 247: "Next slide"
+
+client/src/components/ui/command-palette.tsx (10 strings):
+  Line 164: "Command palette"
+  Line 176: "Type a command or search..."
+  Line 186: "Filter by category"
+  Line 200: "All"
+  Line 228: "No results found."
+  ... and 5 more.
+
+client/src/components/ui/command.tsx (2 strings):
+  Line 30: "Command palette"
+  Line 31: "Search for commands and actions"
+
+client/src/components/ui/confirm-dialog.tsx (1 strings):
+  Line 42: "Cancel"
+
+client/src/components/ui/dialog.tsx (1 strings):
+  Line 47: "Close"
+
+client/src/components/ui/keyboard-shortcuts-modal.tsx (60 strings):
+  Line 92: "Keyboard Shortcuts"
+  Line 95: "Quick reference for available shortcuts across all..."
+  Line 100: "Architecture View"
+  Line 102: "Undo"
+  Line 106: "Redo"
+  ... and 55 more.
+
+client/src/components/ui/pagination.tsx (6 strings):
+  Line 10: "pagination"
+  Line 67: "Go to previous page"
+  Line 73: "Previous"
+  Line 83: "Go to next page"
+  Line 88: "Next"
+  ... and 1 more.
+
+client/src/components/ui/sheet.tsx (1 strings):
+  Line 69: "Close"
+
+client/src/components/ui/sidebar.tsx (5 strings):
+  Line 199: "Sidebar"
+  Line 200: "Displays the mobile sidebar."
+  Line 277: "Toggle Sidebar"
+  Line 290: "Toggle Sidebar"
+  Line 293: "Toggle Sidebar"
+
+client/src/components/ui/spinner.tsx (1 strings):
+  Line 9: "Loading"
+
+client/src/components/views/ArchitectureView.tsx (48 strings):
+  Line 709: "Toggle asset manager"
+  Line 736: "Analyze design"
+  Line 786: "Edge Colors"
+  Line 790: "Data / Signal"
+  Line 794: "Power"
+  ... and 43 more.
+
+client/src/components/views/ArduinoWorkbenchView.tsx (60 strings):
+  Line 451: "Monitor"
+  Line 635: "Arduino Workbench"
+  Line 637: "Firmware Development"
+  Line 641: "CLI v"
+  Line 644: "CLI Disconnected"
+  ... and 55 more.
+
+client/src/components/views/AuditTrailView.tsx (17 strings):
+  Line 162: "No field changes"
+  Line 256: "by"
+  Line 258: "field"
+  Line 269: "Metadata:"
+  Line 347: "Audit Trail"
+  ... and 12 more.
+
+client/src/components/views/BoardViewer3DView.tsx (20 strings):
+  Line 327: "Dimensions"
+  Line 333: "Width:"
+  Line 334: "mm"
+  Line 337: "Height:"
+  Line 338: "mm"
+  ... and 15 more.
+
+client/src/components/views/BomDiffPanel.tsx (28 strings):
+  Line 115: "Retry"
+  Line 127: "BOM Comparison"
+  Line 136: "Take Snapshot"
+  Line 171: "Delete BOM Snapshot"
+  Line 184: "Computing diff..."
+  ... and 23 more.
+
+client/src/components/views/CalculatorsView.tsx (84 strings):
+  Line 108: "V = I x R — enter any 2 values"
+  Line 113: "Voltage (V)"
+  Line 118: "V"
+  Line 126: "Current (A)"
+  Line 131: "A"
+  ... and 79 more.
+
+client/src/components/views/CircuitCodeView.tsx (4 strings):
+  Line 109: "[Ln"
+  Line 125: "components"
+  Line 126: "nets"
+  Line 129: "Evaluating..."
+
+client/src/components/views/CommunityView.tsx (42 strings):
+  Line 140: "by"
+  Line 209: "Back to library"
+  Line 218: "by"
+  Line 233: "downloads"
+  Line 242: "Download Component"
+  ... and 37 more.
+
+client/src/components/views/ComponentEditorView.tsx (47 strings):
+  Line 57: "Title"
+  Line 63: "e.g. ATmega328P"
+  Line 69: "Family"
+  Line 75: "e.g. AVR"
+  Line 81: "Description"
+  ... and 42 more.
+
+client/src/components/views/CustomNode.tsx (9 strings):
+  Line 132: "Copy Label"
+  Line 133: "Duplicate Node"
+  Line 134: "Search Datasheet"
+  Line 137: "Change Type"
+  Line 145: "Delete Node"
+  ... and 4 more.
+
+client/src/components/views/DashboardView.tsx (31 strings):
+  Line 193: "Components"
+  Line 199: "Connections"
+  Line 205: "BOM Items"
+  Line 211: "Est. Cost"
+  Line 217: "Issues"
+  ... and 26 more.
+
+client/src/components/views/DesignHistoryView.tsx (48 strings):
+  Line 141: "Retry"
+  Line 155: "Design Version History"
+  Line 158: "snapshot"
+  Line 167: "Save Snapshot"
+  Line 176: "No snapshots yet. Save one to start tracking chang..."
+  ... and 43 more.
+
+client/src/components/views/DesignPatternsView.tsx (50 strings):
+  Line 165: "Why It Works"
+  Line 175: "Components"
+  Line 203: "Connections"
+  Line 214: "&rarr;"
+  Line 227: "Tips"
+  ... and 45 more.
+
+client/src/components/views/DigitalTwinView.tsx (45 strings):
+  Line 61: "Firmware:"
+  Line 70: "Hz"
+  Line 119: "STALE"
+  Line 132: "Toggle"
+  Line 151: "No channels available. Connect a device to see liv..."
+  ... and 40 more.
+
+client/src/components/views/DrcPresetSelector.tsx (7 strings):
+  Line 82: "Preset:"
+  Line 90: "Select preset..."
+  Line 119: "Apply"
+  Line 133: "Best for:"
+  Line 155: "rule change"
+  ... and 2 more.
+
+client/src/components/views/DrcSuppressionDialog.tsx (10 strings):
+  Line 136: "Suppress Violation"
+  Line 139: "Suppressed violations will be hidden from the vali..."
+  Line 165: "Reason for suppression"
+  Line 172: "e.g., Known spacing for this connector layout"
+  Line 177: "A reason is required to maintain audit trail."
+  ... and 5 more.
+
+client/src/components/views/GenerativeDesignView.tsx (19 strings):
+  Line 99: "Generative Design"
+  Line 104: "Circuit Description"
+  Line 111: "e.g., LED driver for 12V, 350mA"
+  Line 120: "Budget: $"
+  Line 132: "Max Power:"
+  ... and 14 more.
+
+client/src/components/views/KanbanView.tsx (37 strings):
+  Line 163: "Move task left"
+  Line 174: "Move task right"
+  Line 186: "Edit task"
+  Line 197: "Delete task"
+  Line 202: "Delete Task"
+  ... and 32 more.
+
+client/src/components/views/KnowledgeView.tsx (11 strings):
+  Line 226: "Back"
+  Line 253: "Tags"
+  Line 267: "Related Topics"
+  Line 369: "Electronics Knowledge Hub"
+  Line 370: "articles"
+  ... and 6 more.
+
+client/src/components/views/LifecycleDashboard.tsx (39 strings):
+  Line 166: "component"
+  Line 166: "require attention:"
+  Line 414: "Loading lifecycle data..."
+  Line 433: "Retry"
+  Line 447: "Component Lifecycle"
+  ... and 34 more.
+
+client/src/components/views/ManufacturerRuleCompare.tsx (16 strings):
+  Line 158: "Manufacturer Rule Compare"
+  Line 170: "Apply Rules"
+  Line 179: "Compare with:"
+  Line 183: "Select manufacturer..."
+  Line 210: "stricter"
+  ... and 11 more.
+
+client/src/components/views/OutputView.tsx (10 strings):
+  Line 66: "CONSOLE OUTPUT"
+  Line 73: "Copy all logs"
+  Line 84: "Clear logs"
+  Line 90: "Clear Output Logs"
+  Line 91: "Clear all output logs? This cannot be undone."
+  ... and 5 more.
+
+client/src/components/views/PcbOrderingView.tsx (72 strings):
+  Line 133: "Width (mm)"
+  Line 143: "Height (mm)"
+  Line 153: "Layers"
+  Line 163: "layer"
+  Line 169: "Thickness (mm)"
+  ... and 67 more.
+
+client/src/components/views/ProcurementView.tsx (21 strings):
+  Line 351: "BOM Management"
+  Line 352: "BOM Comparison"
+  Line 353: "Alternates"
+  Line 354: "Live Pricing"
+  Line 355: "Assembly Cost"
+  ... and 16 more.
+
+client/src/components/views/RemediationWizardDialog.tsx (10 strings):
+  Line 146: "Step-by-step guide to fix this design violation"
+  Line 162: "steps"
+  Line 173: "Violation:"
+  Line 186: "Step"
+  Line 186: "of"
+  ... and 5 more.
+
+client/src/components/views/ReviewResolutionControls.tsx (3 strings):
+  Line 104: "Resolution status"
+  Line 126: "Add a note..."
+  Line 129: "Resolution note"
+
+client/src/components/views/SampleProjectGallery.tsx (4 strings):
+  Line 136: "parts"
+  Line 152: "more"
+  Line 199: "Sample Projects"
+  Line 220: "All"
+
+client/src/components/views/SchematicView.tsx (24 strings):
+  Line 116: "Retry"
+  Line 127: "No Circuit Designs"
+  Line 129: "Create a circuit to start placing components and d..."
+  Line 140: "Create Circuit"
+  Line 150: "Expand from Architecture"
+  ... and 19 more.
+
+client/src/components/views/StarterCircuitsPanel.tsx (13 strings):
+  Line 131: "Starter Circuits"
+  Line 137: "Pre-built circuits with complete Arduino code. Pic..."
+  Line 145: "Search circuits..."
+  Line 161: "All"
+  Line 190: "All Levels"
+  ... and 8 more.
+
+client/src/components/views/StorageManagerPanel.tsx (37 strings):
+  Line 205: "/100"
+  Line 278: "Inventory Health"
+  Line 302: "Issues"
+  Line 314: "Recommendations"
+  Line 428: "Barcode Scanner"
+  ... and 32 more.
+
+client/src/components/views/TeamTemplateSelector.tsx (12 strings):
+  Line 101: "DRC rules"
+  Line 105: "exports"
+  Line 109: "components"
+  Line 126: "DRC Rules"
+  Line 133: "(disabled)"
+  ... and 7 more.
+
+client/src/components/views/ValidationView.tsx (79 strings):
+  Line 152: "Something went wrong loading the Validation view"
+  Line 155: "The validation engine encountered an unexpected er..."
+  Line 169: "Try Again"
+  Line 565: "System Validation"
+  Line 576: "Custom Rules"
+  ... and 74 more.
+
+client/src/components/views/WelcomeOverlay.tsx (6 strings):
+  Line 162: "Welcome to ProtoPulse"
+  Line 166: "AI-assisted electronic design automation. Build ar..."
+  Line 175: "Dismiss welcome screen"
+  Line 185: "What you can do"
+  Line 197: "Get started in 3 steps"
+  ... and 1 more.
+
+client/src/components/views/__tests__/ArchitectureView.test.tsx (1 strings):
+  Line 132: "Close"
+
+client/src/components/views/architecture/LinkIndicator.tsx (4 strings):
+  Line 114: "Link to Circuit Instance"
+  Line 119: "No unlinked circuit instances available."
+  Line 130: "Select instance..."
+  Line 170: "Unlink"
+
+client/src/components/views/architecture/NodeInspectorPanel.tsx (17 strings):
+  Line 111: "Node Properties"
+  Line 115: "Close inspector panel"
+  Line 128: "Label"
+  Line 145: "Type"
+  Line 168: "Description"
+  ... and 12 more.
+
+client/src/components/views/arduino/ExamplesBrowser.tsx (4 strings):
+  Line 74: "Arduino Examples"
+  Line 85: "Search examples..."
+  Line 105: "All"
+  Line 210: "Load into Editor"
+
+client/src/components/views/arduino/JobHistoryPanel.tsx (5 strings):
+  Line 147: "No jobs yet"
+  Line 149: "Compile or upload a sketch to see your build histo..."
+  Line 162: "Build History"
+  Line 163: "job"
+  Line 220: "exit:"
+
+client/src/components/views/circuit-code/SchematicPreview.tsx (2 strings):
+  Line 104: "No components"
+  Line 110: "Evaluating..."
+
+client/src/components/views/component-editor/ComponentInspector.tsx (50 strings):
+  Line 110: "Position"
+  Line 112: "X"
+  Line 113: "Y"
+  Line 116: "Size"
+  Line 118: "Width"
+  ... and 45 more.
+
+client/src/components/views/component-editor/ComponentLibraryBrowser.tsx (11 strings):
+  Line 72: "Component Library"
+  Line 74: "Browse and import components from the library"
+  Line 81: "Search components…"
+  Line 91: "Clear search"
+  Line 123: "No components found"
+  ... and 6 more.
+
+client/src/components/views/component-editor/DRCPanel.tsx (7 strings):
+  Line 88: "DRC"
+  Line 99: "Run DRC"
+  Line 107: "Show overlays on canvas"
+  Line 117: "JSON"
+  Line 125: "CSV"
+  ... and 2 more.
+
+client/src/components/views/component-editor/DatasheetExtractModal.tsx (17 strings):
+  Line 218: "Extract component metadata from a datasheet"
+  Line 232: "Upload an image of a datasheet page. The AI will e..."
+  Line 236: "Datasheet Image"
+  Line 244: "Click to upload PNG, JPEG, or WebP"
+  Line 256: "API Key"
+  ... and 12 more.
+
+client/src/components/views/component-editor/DiffPreview.tsx (8 strings):
+  Line 231: "Accept All"
+  Line 240: "Reject All"
+  Line 247: "Shape Changes"
+  Line 252: "(no changes)"
+  Line 268: "Connector Changes"
+  ... and 3 more.
+
+client/src/components/views/component-editor/GeneratorModal.tsx (17 strings):
+  Line 148: "Generate Package"
+  Line 149: "Generate a component package from templates or cus..."
+  Line 154: "Quick Templates"
+  Line 155: "Click a template to instantly add it"
+  Line 178: "Package Generator"
+  ... and 12 more.
+
+client/src/components/views/component-editor/HistoryPanel.tsx (3 strings):
+  Line 59: "History"
+  Line 73: "No history"
+  Line 105: "Current"
+
+client/src/components/views/component-editor/LayerPanel.tsx (1 strings):
+  Line 92: "Layers"
+
+client/src/components/views/component-editor/ModifyModal.tsx (11 strings):
+  Line 192: "Use AI to modify component properties and review c..."
+  Line 206: "Modification Instruction"
+  Line 210: "Describe what to change, e.g. 'Add 4 GPIO pins on ..."
+  Line 217: "API Key"
+  Line 222: "Gemini API key (optional if set server-side)"
+  ... and 6 more.
+
+client/src/components/views/component-editor/PinExtractModal.tsx (18 strings):
+  Line 174: "Extract pin definitions from a component photo"
+  Line 188: "Upload a photo of the physical chip. The AI will i..."
+  Line 192: "Chip Photo"
+  Line 200: "Click to upload a photo of the chip"
+  Line 212: "API Key"
+  ... and 13 more.
+
+client/src/components/views/component-editor/PinTable.tsx (18 strings):
+  Line 36: "male"
+  Line 37: "female"
+  Line 38: "pad"
+  Line 48: "—"
+  Line 63: "tht"
+  ... and 13 more.
+
+client/src/components/views/component-editor/ShapeCanvas.tsx (10 strings):
+  Line 583: "Drawing tools"
+  Line 604: "Toggle layers panel"
+  Line 618: "Zoom to fit (Ctrl+0)"
+  Line 626: "Upload reference image"
+  Line 633: "Reference image opacity"
+  ... and 5 more.
+
+client/src/components/views/component-editor/SpiceSubcircuitEditor.tsx (19 strings):
+  Line 105: "SPICE Subcircuit"
+  Line 108: "Attach a SPICE"
+  Line 108: ".SUBCKT"
+  Line 108: "definition to this component.
+        This model w..."
+  Line 115: "Subcircuit Definition"
+  ... and 14 more.
+
+client/src/components/views/component-editor/ValidationModal.tsx (5 strings):
+  Line 31: "Validation Results"
+  Line 32: "Component validation errors, warnings, and informa..."
+  Line 43: "info"
+  Line 50: "All checks passed!"
+  Line 85: "Close"
+
+client/src/components/views/pcb-layout/DrcConstraintToggle.tsx (1 strings):
+  Line 41: "DRC Zones"
+
+client/src/components/views/pcb-layout/LayerStackPanel.tsx (7 strings):
+  Line 159: "Layer Stack"
+  Line 169: "No stackup configured"
+  Line 181: "Apply 2-layer preset"
+  Line 272: "Total:"
+  Line 272: "mil"
+  ... and 2 more.
+
+client/src/components/views/pcb-layout/PCBBoardRenderer.tsx (14 strings):
+  Line 237: "Layers"
+  Line 241: "F.Cu (Front Copper)"
+  Line 245: "B.Cu (Back Copper)"
+  Line 249: "Board Outline"
+  Line 253: "mm"
+  ... and 9 more.
+
+client/src/components/views/procurement/AddItemDialog.tsx (16 strings):
+  Line 30: "Add BOM Item"
+  Line 31: "Enter the component details to add to your Bill of..."
+  Line 35: "Part Number"
+  Line 38: "e.g. STM32F407VGT6"
+  Line 47: "Manufacturer"
+  ... and 11 more.
+
+client/src/components/views/procurement/AlternatePartsPanel.tsx (14 strings):
+  Line 30: "Enter part number to find alternates..."
+  Line 43: "Find Alternates"
+  Line 50: "BOM Items"
+  Line 74: "Found"
+  Line 74: "alternate"
+  ... and 9 more.
+
+client/src/components/views/procurement/AssemblyCostPanel.tsx (30 strings):
+  Line 88: "BOM Parts"
+  Line 95: "SMT"
+  Line 102: "Through-Hole"
+  Line 109: "Total Pins"
+  Line 117: "part"
+  ... and 25 more.
+
+client/src/components/views/procurement/AssemblyGroupPanel.tsx (10 strings):
+  Line 46: "item"
+  Line 50: "Qty:"
+  Line 107: "Add items to the BOM to see assembly grouping."
+  Line 119: "Total Items"
+  Line 126: "SMT"
+  ... and 5 more.
+
+client/src/components/views/procurement/AssemblyGroups.tsx (1 strings):
+  Line 24: "item"
+
+client/src/components/views/procurement/AssemblyRiskHeatmap.tsx (14 strings):
+  Line 251: "Ref"
+  Line 252: "Part Number"
+  Line 253: "Description"
+  Line 254: "Score"
+  Line 255: "Factors"
+  ... and 9 more.
+
+client/src/components/views/procurement/AvlCompliancePanel.tsx (29 strings):
+  Line 62: "AVL"
+  Line 62: "Score"
+  Line 76: "Preferred"
+  Line 81: "Approved"
+  Line 86: "Restricted"
+  ... and 24 more.
+
+client/src/components/views/procurement/BomCards.tsx (5 strings):
+  Line 58: "Qty:"
+  Line 66: "Add to cart"
+  Line 78: "Copy part number"
+  Line 88: "Delete item"
+  Line 92: "Remove BOM Item"
+
+client/src/components/views/procurement/BomEmptyState.tsx (7 strings):
+  Line 15: "No matching components"
+  Line 16: "No BOM items match &quot;"
+  Line 16: "&quot;. Try a different search term."
+  Line 22: "Clear Search"
+  Line 27: "No items in your Bill of Materials"
+  ... and 2 more.
+
+client/src/components/views/procurement/BomSettings.tsx (7 strings):
+  Line 31: "Production Batch Size"
+  Line 46: "Max BOM Cost Target"
+  Line 61: "Sourcing Constraints"
+  Line 63: "In Stock Only"
+  Line 67: "Preferred Suppliers"
+  ... and 2 more.
+
+client/src/components/views/procurement/BomTable.tsx (30 strings):
+  Line 127: "Bill of Materials"
+  Line 131: "Status"
+  Line 132: "Part Number"
+  Line 133: "Manufacturer"
+  Line 134: "Description"
+  ... and 25 more.
+
+client/src/components/views/procurement/BomToolbar.tsx (9 strings):
+  Line 42: "Search components..."
+  Line 43: "Search components"
+  Line 59: "Cost Optimisation"
+  Line 71: "ESD"
+  Line 83: "Assembly"
+  ... and 4 more.
+
+client/src/components/views/procurement/ComponentReference.tsx (10 strings):
+  Line 26: "Component Parts Reference"
+  Line 39: "Loading component parts..."
+  Line 43: "No component parts defined"
+  Line 44: "Create parts in the Component Editor to see them h..."
+  Line 51: "Title"
+  ... and 5 more.
+
+client/src/components/views/procurement/CostOptimizerPanel.tsx (13 strings):
+  Line 62: "Cost Optimization"
+  Line 65: "Set your target budget and costs to get ranked sug..."
+  Line 71: "Target Budget ($)"
+  Line 86: "PCB Fabrication ($)"
+  Line 101: "Assembly Cost ($)"
+  ... and 8 more.
+
+client/src/components/views/procurement/CostSummary.tsx (8 strings):
+  Line 32: "Total BOM Cost"
+  Line 48: "vs snapshot"
+  Line 55: "Avg Unit Price"
+  Line 74: "item"
+  Line 86: "Cost by Status"
+  ... and 3 more.
+
+client/src/components/views/procurement/DamageAssessmentPanel.tsx (12 strings):
+  Line 48: "Damage Assessment"
+  Line 50: "Assess the physical condition of"
+  Line 50: "for salvage/reuse."
+  Line 55: "Component Type"
+  Line 69: "Damage Indicators"
+  ... and 7 more.
+
+client/src/components/views/procurement/ManufacturingValidatorPanel.tsx (5 strings):
+  Line 103: "passed,"
+  Line 103: "warning"
+  Line 103: "failure"
+  Line 209: "Manufacturing Package Validator"
+  Line 227: "Click "Validate Package" to run 18 cross-file cons..."
+
+client/src/components/views/procurement/OrderHistoryPanel.tsx (51 strings):
+  Line 62: "Timeline ("
+  Line 62: "events)"
+  Line 132: "Qty:"
+  Line 137: "Ref:"
+  Line 159: "Delete order"
+  ... and 46 more.
+
+client/src/components/views/procurement/PcbOrderTrackerPanel.tsx (33 strings):
+  Line 112: "History ("
+  Line 112: "events)"
+  Line 187: "Order:"
+  Line 188: "Qty:"
+  Line 200: "Open tracking URL"
+  ... and 28 more.
+
+client/src/components/views/procurement/RiskScorecardPanel.tsx (8 strings):
+  Line 53: "Overall Score:"
+  Line 53: "/100"
+  Line 211: "Risk Scorecard"
+  Line 214: "Release readiness assessment across 5 categories."
+  Line 230: "Overall Score"
+  ... and 3 more.
+
+client/src/components/views/procurement/SupplierDrawer.tsx (21 strings):
+  Line 169: "Compare Suppliers"
+  Line 171: "Search a part number to compare pricing, stock, an..."
+  Line 179: "Enter part number (e.g. ATmega328P)"
+  Line 192: "Compare"
+  Line 199: "Quantity:"
+  ... and 16 more.
+
+client/src/components/views/procurement/SupplierPricingPanel.tsx (22 strings):
+  Line 48: "Simulated pricing data"
+  Line 50: "Stock, pricing, and lead-time data shown here is g..."
+  Line 64: "Quote Entire BOM ("
+  Line 64: "items)"
+  Line 68: "Search individual part pricing..."
+  ... and 17 more.
+
+client/src/lib/__tests__/gpu-performance.test.tsx (5 strings):
+  Line 266: "Disable"
+  Line 267: "Enable"
+  Line 268: "Reset"
+  Line 711: "Off"
+  Line 742: "On"
+
+client/src/pages/AuthPage.tsx (8 strings):
+  Line 66: "ProtoPulse"
+  Line 67: "System Architect"
+  Line 80: "Username"
+  Line 90: "Enter username"
+  Line 97: "Password"
+  ... and 3 more.
+
+client/src/pages/EmbedViewerPage.tsx (6 strings):
+  Line 181: "Loading schematic..."
+  Line 195: "Failed to load schematic"
+  Line 204: "Open ProtoPulse"
+  Line 227: "Powered by"
+  Line 235: "ProtoPulse"
+  ... and 1 more.
+
+client/src/pages/ProjectPickerPage.tsx (28 strings):
+  Line 165: "No projects yet"
+  Line 167: "Create your first project to start designing circu..."
+  Line 175: "Create Your First Project"
+  Line 190: "Failed to load projects"
+  Line 199: "Try Again"
+  ... and 23 more.
+
+client/src/pages/ProjectWorkspace.tsx (10 strings):
+  Line 249: "Scroll tabs left"
+  Line 257: "Main views"
+  Line 267: "Scroll tabs right"
+  Line 669: "Skip to main content"
+  Line 672: "Skip to AI assistant"
+  ... and 5 more.
+
+client/src/pages/not-found.tsx (3 strings):
+  Line 13: "404 Page Not Found"
+  Line 17: "The page you are looking for does not exist or has..."
+  Line 24: "Return to Dashboard"

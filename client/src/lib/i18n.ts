@@ -80,6 +80,13 @@ const ENGLISH_LOCALE: LocaleData = {
       tagline: 'AI-Powered Electronic Design Automation',
       version: 'Version {{version}}',
     },
+    views: {
+      architecture: 'Architecture',
+      schematic: 'Schematic',
+      pcb: 'PCB Layout',
+      validation: 'Validation',
+      output: 'Output',
+    },
     menu: {
       file: {
         new: 'New Project',

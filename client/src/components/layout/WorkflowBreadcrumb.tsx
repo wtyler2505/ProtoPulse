@@ -1,23 +1,25 @@
 import { ChevronRight } from 'lucide-react';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { ViewMode } from '@/lib/project-context';
 
 interface WorkflowStep {
   id: ViewMode;
-  label: string;
+  labelKey: string;
 }
 
 const WORKFLOW_STEPS: WorkflowStep[] = [
-  { id: 'architecture', label: 'Architecture' },
-  { id: 'schematic', label: 'Schematic' },
-  { id: 'pcb', label: 'PCB Layout' },
-  { id: 'validation', label: 'Validation' },
-  { id: 'output', label: 'Output' },
+  { id: 'architecture', labelKey: 'views.architecture' },
+  { id: 'schematic', labelKey: 'views.schematic' },
+  { id: 'pcb', labelKey: 'views.pcb' },
+  { id: 'validation', labelKey: 'views.validation' },
+  { id: 'output', labelKey: 'views.output' },
 ];
 
 export default function WorkflowBreadcrumb() {
   const { activeView, setActiveView } = useProjectMeta();
+  const { t } = useI18n();
 
   const activeStepIndex = WORKFLOW_STEPS.findIndex((s) => s.id === activeView);
   const isWorkflowView = activeStepIndex !== -1;
@@ -55,7 +57,7 @@ export default function WorkflowBreadcrumb() {
                 !isActive && !isPast && 'text-muted-foreground hover:text-foreground hover:bg-muted/30',
               )}
             >
-              {step.label}
+              {t(step.labelKey)}
             </button>
           </div>
         );
