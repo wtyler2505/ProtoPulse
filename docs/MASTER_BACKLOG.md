@@ -714,7 +714,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0143 | Firmware scaffold tied to actual netlist/pins | PARTIAL | C4 | MF-088 |
 | BL-0144 | Hardware session recorder (logs + actions + replay) | OPEN | C4 | MF-089 |
 | BL-0145 | Safe command sandbox for device interaction | OPEN | C4 | MF-092 |
-| BL-0146 | Board package/library manager integration | OPEN | C4 | MF-093 |
+| BL-0146 | Board package/library manager integration | DONE (Wave 136) | C4 | MF-093 |
 | BL-0147 | Flashing progress/error diagnostics — avrdude+esptool output parsing, 25+ error patterns, FlashProgressBar with stage icons. | DONE (Wave 87) | C3 | MF-094, ARDX-063 |
 | BL-0148 | Web Serial integration tests | DONE (Wave 110) | C3 | MF-095 |
 | BL-0149 | Multi-angle photo follow-up for component ID | DONE (Wave 112) | C3 | MF-097 |
