@@ -226,8 +226,7 @@ function CommentItem({
                 allComments={allComments}
                 depth={depth + 1}
                 onReply={onReply}
-                onResolve={onResolve}
-                onUnresolve={onUnresolve}
+                onStatusChange={onStatusChange}
                 onDelete={onDelete}
               />
             );
@@ -440,8 +439,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
                 allComments={comments}
                 depth={0}
                 onReply={handleReply}
-                onResolve={(id) => { resolveMutation.mutate(id); }}
-                onUnresolve={(id) => { unresolveMutation.mutate(id); }}
+                onStatusChange={(id, status) => { statusMutation.mutate({ id, status }); }}
                 onDelete={(id) => { deleteMutation.mutate(id); }}
               />
             );

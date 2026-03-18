@@ -406,7 +406,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const { data: wires } = useCircuitWires(circuitId);
   const { data: circuitVias } = useCircuitVias(circuitId);
   const { data: zones } = usePcbZones(projectId);
-  const { data: commentResult } = useComments(projectId, { targetType: 'spatial', resolved: false });
+  const { data: commentResult } = useComments(projectId, { targetType: 'spatial', status: 'open' });
   const comments = commentResult?.data ?? [];
 
   const createWireMutation = useCreateCircuitWire();

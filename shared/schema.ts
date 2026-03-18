@@ -591,10 +591,10 @@ export const designComments = pgTable('design_comments', {
   index('idx_design_comments_parent').on(table.parentId),
 ]);
 
-export const insertDesignCommentSchema = createInsertSchema(designComments).omit({ id: true, resolved: true, resolvedBy: true, resolvedAt: true, createdAt: true, updatedAt: true }).extend({
-  targetType: z.enum(['node', 'edge', 'bom_item', 'general', 'spatial']).default('general'),
+export const insertDesignCommentSchema = createInsertSchema(designComments).omit({ id: true, statusUpdatedBy: true, statusUpdatedAt: true, createdAt: true, updatedAt: true }).extend({
+  targetType: z.enum(['general', 'node', 'edge', 'bom_item', 'spatial']).default('general'),
   spatialView: z.enum(['architecture', 'schematic', 'pcb', 'breadboard']).optional(),
-  content: z.string().min(1).max(5000),
+  content: z.string().min(1, "Comment cannot be empty"),
 });
 export type InsertDesignComment = z.infer<typeof insertDesignCommentSchema>;
 export type DesignComment = typeof designComments.$inferSelect;

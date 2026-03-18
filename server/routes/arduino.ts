@@ -195,6 +195,27 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
     if (!deleted) return res.status(404).json({ message: 'Profile not found' });
     res.status(204).end();
   }));
+  // --- Live Syntax Check (BL-0602) ---
+  app.post(`${arduinoPrefix}/check-syntax`, requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.id);
+    const { fqbn, sketchPath: clientPath, filename, sourceCode } = req.body;
+
+    if (!fqbn || !filename || typeof sourceCode !== 'string') {
+      return res.status(400).json({ message: 'Missing fqbn, filename, or sourceCode' });
+    }
+
+    const workspace = await storage.getArduinoWorkspace(projectId);
+    if (!workspace) {
+      return res.status(404).json({ message: 'Workspace not found' });
+    }
+
+    const sketchPath = (clientPath && clientPath !== '.') ? clientPath
+      : (workspace.activeSketchPath ?? workspace.rootPath ?? '.');
+
+    const stderr = await service.checkSyntax(projectId, fqbn, sketchPath, filename, sourceCode);
+    
+    res.json({ stderr });
+  }));
 
   // --- Jobs (Compile/Upload) ---
   app.get(`${arduinoPrefix}/jobs`, requireProjectOwnership, asyncHandler(async (req, res) => {

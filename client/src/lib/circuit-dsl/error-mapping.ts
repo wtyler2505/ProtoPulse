@@ -14,7 +14,7 @@ export interface EvalError {
 }
 
 /** Error prefixes that indicate hard errors (not warnings). */
-const ERROR_PREFIXES = ['SyntaxError:', 'TypeError:', 'ReferenceError:'];
+const ERROR_PREFIXES = ['SyntaxError:', 'TypeError:', 'ReferenceError:', 'error:', 'fatal error:'];
 
 function classifySeverity(message: string): 'error' | 'warning' {
   for (const prefix of ERROR_PREFIXES) {

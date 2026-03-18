@@ -234,7 +234,7 @@ export default function SerialMonitorPanel() {
             const parsed = parseLine(line.data);
             if (parsed) {
               const ch: Record<string, number> = {};
-              for (const [key, val] of parsed.values.entries()) {
+              for (const [key, val] of Array.from(parsed.values.entries())) {
                 ch[key] = val;
               }
               DeviceShadow.getInstance().processFrame({

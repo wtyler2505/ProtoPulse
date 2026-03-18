@@ -51,6 +51,8 @@ import {
 } from '@/components/ui/dialog';
 import { ToastAction } from '@/components/ui/toast';
 import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
+import { parseCompileOutput } from '@/lib/arduino/cli-error-parser';
 import CodeEditor from '@/components/views/circuit-code/CodeEditor';
 import ExamplesBrowser from '@/components/views/arduino/ExamplesBrowser';
 import ExampleLibraryPanel from '@/components/arduino/ExampleLibraryPanel';
@@ -127,6 +129,10 @@ export default function ArduinoWorkbenchView() {
   // Bottom panel tab
   const [bottomTab, setBottomTab] = useState<BottomTab>('console');
 
+  // BL-0602: Live error highlighting state
+  const [syntaxErrors, setSyntaxErrors] = useState<Array<{ message: string; line?: number }>>([]);
+  const [isCheckingSyntax, setIsCheckingSyntax] = useState(false);
+
   // Library manager state
   const [libSearchQuery, setLibSearchQuery] = useState('');
   const [libSearchResults, setLibSearchResults] = useState<unknown[]>([]);
@@ -198,6 +204,54 @@ export default function ArduinoWorkbenchView() {
       consoleEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [jobs, autoScroll]);
+  // --- BL-0602: Live Syntax Check (Debounced) ---
+  useEffect(() => {
+    if (!workspace || !selectedProfile || !activeFile) {
+      setSyntaxErrors([]);
+      return;
+    }
+    
+    // Don't check empty files
+    if (!code.trim()) {
+      setSyntaxErrors([]);
+      return;
+    }
+
+    const timeout = setTimeout(async () => {
+      setIsCheckingSyntax(true);
+      try {
+        const res = await apiRequest('POST', `/api/projects/${_projectId}/arduino/check-syntax`, {
+          fqbn: selectedProfile.fqbn,
+          sketchPath: workspace.activeSketchPath ?? '.',
+          filename: activeFile.relativePath,
+          sourceCode: code,
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.stderr) {
+            const parsed = parseCompileOutput(data.stderr);
+            // Only show errors for the current file
+            const fileErrors = parsed.diagnostics
+              .filter(d => d.file.endsWith(activeFile.relativePath) || d.file === activeFile.relativePath)
+              .map(d => ({
+                line: d.line,
+                message: `${d.severity}: ${d.message}${d.hint ? `\nHint: ${d.hint}` : ''}`
+              }));
+            setSyntaxErrors(fileErrors);
+          } else {
+            setSyntaxErrors([]); // No errors
+          }
+        }
+      } catch (e) {
+        // Ignore network errors for background checks
+      } finally {
+        setIsCheckingSyntax(false);
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timeout);
+  }, [code, workspace, selectedProfile, activeFile, _projectId]);
 
   // ---------------------------------------------------------------------------
   // Handlers
@@ -888,6 +942,7 @@ export default function ArduinoWorkbenchView() {
                   value={code}
                   onChange={handleCodeChange}
                   language={editorLanguage}
+                  errors={syntaxErrors}
                   className="h-full"
                 />
               </div>

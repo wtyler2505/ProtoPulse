@@ -465,7 +465,7 @@ describe('getReviewableItems', () => {
 
   it('handles null/undefined createdAt on comments', () => {
     const project: ReviewableProject = {
-      comments: [makeComment({ createdAt: null }), makeComment({ id: 2, createdAt: undefined })],
+      comments: [makeComment({ createdAt: undefined }), makeComment({ id: 2, createdAt: undefined })],
     };
     const items = getReviewableItems(project);
     expect(items).toHaveLength(2);
