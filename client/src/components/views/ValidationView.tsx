@@ -46,6 +46,8 @@ import { applyPreset, DRC_PRESETS } from '@/lib/drc-presets';
 import type { DrcPresetId } from '@/lib/drc-presets';
 import { useDesignGateway } from '@/lib/design-gateway';
 import type { DesignState } from '@/lib/design-gateway';
+import { useStandardsCompliance } from '@/lib/standards-compliance';
+import type { ComplianceFinding } from '@/lib/standards-compliance';
 import { useDfmChecker, bomToDfmInput } from '@/lib/dfm-checker';
 import { mapDfmViolationToHighlight } from '@/lib/dfm-pcb-bridge';
 import { useDrcScripts, BUILTIN_TEMPLATES } from '@/lib/drc-scripting';
@@ -193,6 +195,10 @@ function ValidationViewContent() {
   const [pendingDismissId, setPendingDismissId] = useState<number | string | null>(null);
   const projectId = useProjectId();
 
+  // Standards Compliance (BL-0581)
+  const { runCheck: runStandardsCheck, selectedDomains, setSelectedDomains, availableDomains } = useStandardsCompliance();
+  const [complianceResult, setComplianceResult] = useState<ReturnType<typeof runStandardsCheck> | null>(null);
+
   // DRC Suppression (BL-0252)
   const { suppressions, suppress, isSuppressed, activeCount: suppressionCount } = useDrcSuppression(projectId);
   const [suppressTarget, setSuppressTarget] = useState<DrcSuppressionTarget | null>(null);
@@ -232,6 +238,25 @@ function ValidationViewContent() {
   // Real project data for validation checks
   const { nodes, edges } = useArchitecture();
   const { bom } = useBom();
+
+  const complianceNodes = useMemo(() => nodes.map(n => ({
+    nodeId: String(n.id),
+    label: typeof n.data?.label === 'string' ? n.data.label : String(n.id),
+    nodeType: n.type ?? 'default',
+    data: n.data as Record<string, unknown> | null,
+  })), [nodes]);
+
+  const complianceBom = useMemo(() => bom.map(b => ({
+    id: b.id,
+    partNumber: b.partNumber,
+    manufacturer: b.manufacturer,
+    description: b.description,
+    quantity: b.quantity,
+    unitPrice: String(b.unitPrice),
+    totalPrice: String(b.totalPrice),
+    supplier: b.supplier ?? 'Unknown',
+    status: b.status,
+  })), [bom]);
 
   // Build DesignState for gateway from real architecture + BOM data
   const gatewayDesignState = useMemo((): DesignState => ({
@@ -318,6 +343,13 @@ function ValidationViewContent() {
   const [scriptName, setScriptName] = useState('');
   const [scriptDescription, setScriptDescription] = useState('');
   const [scriptCode, setScriptCode] = useState('');
+
+  const handleRunValidation = useCallback(() => {
+    runValidation();
+    const result = runStandardsCheck(complianceNodes, complianceBom, { maxVoltage: 24, maxCurrent: 2 }, selectedDomains);
+    setComplianceResult(result);
+    toast({ title: 'Validation Running', description: 'Design rule and compliance checks initiated.' });
+  }, [runValidation, runStandardsCheck, complianceNodes, complianceBom, selectedDomains, toast]);
 
   const handleRunGateway = useCallback(() => {
     runGateway(gatewayDesignState);
@@ -578,7 +610,7 @@ function ValidationViewContent() {
           <StyledTooltip content="Run design rule validation checks" side="bottom">
               <button
                 data-testid="run-drc-checks"
-                onClick={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
+                onClick={handleRunValidation}
                 className="px-6 py-2 bg-primary text-primary-foreground font-medium hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(6,182,212,0.3)] hover:shadow-[0_0_25px_rgba(6,182,212,0.5)] focus-ring"
               >
                 Run DRC Checks
@@ -649,13 +681,14 @@ function ValidationViewContent() {
           componentIssues={filteredComponentIssues}
           drcIssues={filteredDrcIssues}
           ercIssues={filteredErcViolations.map((v) => ({ id: v.id, severity: v.severity, message: v.message, ruleType: v.ruleType }))}
+          complianceResult={complianceResult}
           hasComponentParts={!!componentParts && componentParts.length > 0}
           getIcon={getIcon}
           deleteValidationIssue={deleteValidationIssue}
           addOutputLog={addOutputLog}
           setActiveView={setActiveView}
           setPendingDismissId={setPendingDismissId}
-          runValidation={runValidation}
+          runValidation={handleRunValidation}
           toast={toast}
           onIssueFocus={handleIssueFocus}
           onSuppress={handleOpenSuppress}
@@ -1091,9 +1124,11 @@ type VirtualRow =
   | { type: 'drc_header'; count: number }
   | { type: 'drc_rule_header'; ruleType: string; count: number }
   | { type: 'erc_header'; count: number }
+  | { type: 'compliance_header'; count: number }
   | { type: 'comp'; issue: CompIssue }
   | { type: 'drc'; issue: DRCIssue }
-  | { type: 'erc'; issue: ERCIssue };
+  | { type: 'erc'; issue: ERCIssue }
+  | { type: 'compliance'; issue: ComplianceFinding };
 
 /** Expandable DRC rule group header with "Why does this matter?" explanation toggle. */
 function RuleGroupHeader({ ruleType, count }: { ruleType: string; count: number }) {
@@ -1129,7 +1164,7 @@ function RuleGroupHeader({ ruleType, count }: { ruleType: string; count: number 
 }
 
 const VirtualizedIssueList = memo(function VirtualizedIssueList({
-  issues, componentIssues, drcIssues, ercIssues, hasComponentParts, getIcon,
+  issues, componentIssues, drcIssues, ercIssues, complianceResult, hasComponentParts, getIcon,
   deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
   onIssueFocus, onSuppress, onFix,
 }: {
@@ -1137,6 +1172,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
   componentIssues: CompIssue[];
   drcIssues: DRCIssue[];
   ercIssues: ERCIssue[];
+  complianceResult: { findings: ComplianceFinding[] } | null;
   hasComponentParts: boolean;
   getIcon: (severity: string) => React.ReactNode;
   deleteValidationIssue: (id: number | string) => void;
@@ -1192,8 +1228,18 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
         result.push({ type: 'erc' as const, issue });
       }
     }
+    if (complianceResult && complianceResult.findings.length > 0) {
+      const sortedComp = [...complianceResult.findings].sort((a, b) => {
+        const sevOrder: Record<string, number> = { violation: 0, warning: 1, recommendation: 2 };
+        return (sevOrder[a.severity] ?? 3) - (sevOrder[b.severity] ?? 3);
+      });
+      result.push({ type: 'compliance_header' as const, count: sortedComp.length });
+      for (const issue of sortedComp) {
+        result.push({ type: 'compliance' as const, issue });
+      }
+    }
     return result;
-  }, [issues, componentIssues, drcIssues, ercIssues, hasComponentParts]);
+  }, [issues, componentIssues, drcIssues, ercIssues, complianceResult, hasComponentParts]);
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -1216,7 +1262,7 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
           description="No design rule violations detected. Run DRC checks to validate your architecture against design rules."
           actionLabel="Run DRC Checks"
           actionTestId="button-run-drc-empty"
-          onAction={() => { runValidation(); toast({ title: 'Validation Running', description: 'Design rule checks initiated.' }); }}
+          onAction={runValidation}
         />
       </div>
     );
@@ -1430,6 +1476,48 @@ const VirtualizedIssueList = memo(function VirtualizedIssueList({
                       >
                         <Wrench className="w-3 h-3" />
                         Fix
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              {row.type === 'compliance_header' && (
+                <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/20 backdrop-blur">
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Standards Compliance</h3>
+                  <span className="text-xs text-muted-foreground">({row.count})</span>
+                </div>
+              )}
+              {row.type === 'compliance' && (
+                <div data-testid={`row-compliance-issue-${row.issue.id}`} role="button" tabIndex={0} onClick={() => { if (row.issue.componentId) onIssueFocus?.(row.issue.componentId); }} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (row.issue.componentId) onIssueFocus?.(row.issue.componentId); } }} className={cn("flex flex-col md:flex-row md:items-start gap-2 md:gap-6 p-3 md:p-4 border-b border-border/50 hover:bg-muted/30 transition-colors group", row.issue.componentId ? "cursor-pointer" : "cursor-default")}>
+                  <div className="flex items-center gap-2 md:w-8 md:justify-center md:mt-0.5">
+                    {getIcon(row.issue.severity === 'violation' ? 'error' : row.issue.severity === 'warning' ? 'warning' : 'info')}
+                    <span className="text-xs font-medium uppercase md:hidden">{row.issue.severity}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-medium text-foreground text-sm">{row.issue.message}</h3>
+                    <div className="mt-1 flex items-center gap-2">
+                      <div className="text-[10px] text-muted-foreground font-mono inline-block bg-muted px-1.5 py-0.5 rounded">{row.issue.standardRef}</div>
+                      <div className="text-[10px] text-muted-foreground capitalize">{row.issue.domain}</div>
+                      {row.issue.componentLabel && (
+                        <div className="text-[10px] text-muted-foreground/80 ml-2">Target: {row.issue.componentLabel}</div>
+                      )}
+                    </div>
+                    {row.issue.remediation && (
+                      <p className="mt-2 text-xs text-muted-foreground/80 bg-background/50 border border-border/30 p-2 rounded-md">
+                        <span className="font-semibold text-foreground/70 mr-1">Fix:</span>
+                        {row.issue.remediation}
+                      </p>
+                    )}
+                  </div>
+                  <div className="md:w-32 flex flex-col gap-1">
+                    {row.issue.componentId && (
+                      <button
+                        data-testid={`button-view-compliance-${row.issue.id}`}
+                        aria-label={`View component: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onIssueFocus?.(row.issue.componentId); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
+                      >
+                        View
                       </button>
                     )}
                   </div>
