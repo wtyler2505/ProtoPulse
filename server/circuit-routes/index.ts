@@ -12,9 +12,11 @@ import { registerCircuitExportRoutes } from './exports';
 import { registerCircuitImportRoutes } from './imports';
 import { registerCircuitSimulationRoutes } from './simulations';
 import { registerCircuitHierarchyRoutes } from './hierarchy';
+import { registerApplyCodeRoutes } from './apply-code';
 
 export function registerCircuitRoutes(app: Express, storage: IStorage): void {
   registerCircuitHierarchyRoutes(app, storage);
+  registerApplyCodeRoutes(app, storage);
   registerCircuitDesignRoutes(app, storage);
   registerCircuitInstanceRoutes(app, storage);
   registerCircuitNetRoutes(app, storage);

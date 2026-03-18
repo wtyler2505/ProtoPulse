@@ -22,6 +22,7 @@ export interface PinLayout {
 export interface ComponentLayout {
   id: string;
   refdes: string;
+  partId?: string;
   value?: string;
   x: number;
   y: number;

@@ -7,7 +7,7 @@
  */
 
 import { useState, useMemo, useCallback, useRef } from 'react';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { STARTER_TEMPLATE } from '@/lib/circuit-dsl/circuit-lang';
 import { useCircuitEvaluator } from '@/lib/circuit-dsl/use-circuit-evaluator';
 import { irToSchematicLayout } from '@/lib/circuit-dsl/ir-to-schematic';
@@ -19,8 +19,13 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { EvalError } from '@/lib/circuit-dsl/use-circuit-evaluator';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 // ---------------------------------------------------------------------------
 // Debounce hook
@@ -48,6 +53,25 @@ export default function CircuitCodeView() {
   const editorRef = useRef<CodeEditorHandle>(null);
   const { ir, error, isEvaluating, evaluate } = useCircuitEvaluator();
   const layout = useMemo(() => (ir ? irToSchematicLayout(ir) : null), [ir]);
+
+  const projectId = useProjectId();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const applyMutation = useMutation({
+    mutationFn: async () => {
+      if (!layout) throw new Error('No valid layout to apply');
+      const res = await apiRequest('POST', `/api/projects/${projectId}/circuits/apply-code`, { layout });
+      return res.json() as Promise<{ success: boolean; circuitId: number }>;
+    },
+    onSuccess: (data) => {
+      void queryClient.invalidateQueries({ queryKey: ['circuit-designs', projectId] });
+      toast({ title: 'Applied to project', description: `Created circuit design #${data.circuitId}` });
+    },
+    onError: (err: any) => {
+      toast({ title: 'Failed to apply', description: err.message, variant: 'destructive' });
+    }
+  });
 
   const debouncedEval = useDebouncedCallback(evaluate, 300);
 
@@ -124,12 +148,22 @@ export default function CircuitCodeView() {
       >
         <span>{componentCount} components</span>
         <span>{netCount} nets</span>
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-3">
           {isEvaluating ? (
             <span className="text-[#00F0FF]">Evaluating...</span>
           ) : (
             'Ready'
           )}
+          <Button
+            size="sm"
+            className="h-6 text-[10px] uppercase font-bold tracking-wider"
+            disabled={!layout || isEvaluating || applyMutation.isPending}
+            onClick={() => applyMutation.mutate()}
+            data-testid="button-apply-circuit-code"
+          >
+            {applyMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+            Apply to Project
+          </Button>
         </span>
       </div>
     </div>

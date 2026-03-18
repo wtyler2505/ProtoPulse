@@ -1,5 +1,327 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-17T20:35:38.355Z",
-  "routes": {}
+  "persistedAt": "2026-03-18T07:21:51.242Z",
+  "routes": {
+    "GET /api/auth/me": {
+      "count": 2,
+      "totalDuration": 89,
+      "errors": 0,
+      "min": 36,
+      "max": 53,
+      "samples": [
+        36,
+        53
+      ]
+    },
+    "GET /api/projects": {
+      "count": 2,
+      "totalDuration": 47,
+      "errors": 0,
+      "min": 10,
+      "max": 37,
+      "samples": [
+        10,
+        37
+      ]
+    },
+    "POST /api/seed": {
+      "count": 2,
+      "totalDuration": 64,
+      "errors": 0,
+      "min": 31,
+      "max": 33,
+      "samples": [
+        31,
+        33
+      ]
+    },
+    "GET /api/projects/:id/nodes": {
+      "count": 2,
+      "totalDuration": 1827,
+      "errors": 0,
+      "min": 163,
+      "max": 1664,
+      "samples": [
+        163,
+        1664
+      ]
+    },
+    "GET /api/projects/:id/arduino/jobs": {
+      "count": 2,
+      "totalDuration": 363,
+      "errors": 0,
+      "min": 16,
+      "max": 347,
+      "samples": [
+        16,
+        347
+      ]
+    },
+    "GET /api/projects/:id/arduino/files": {
+      "count": 2,
+      "totalDuration": 241,
+      "errors": 0,
+      "min": 26,
+      "max": 215,
+      "samples": [
+        26,
+        215
+      ]
+    },
+    "GET /api/projects/:id/arduino/health": {
+      "count": 2,
+      "totalDuration": 477,
+      "errors": 0,
+      "min": 81,
+      "max": 396,
+      "samples": [
+        81,
+        396
+      ]
+    },
+    "GET /api/projects/:id/edges": {
+      "count": 2,
+      "totalDuration": 2511,
+      "errors": 0,
+      "min": 107,
+      "max": 2404,
+      "samples": [
+        107,
+        2404
+      ]
+    },
+    "GET /api/projects/:id/arduino/libraries/installed": {
+      "count": 2,
+      "totalDuration": 4586,
+      "errors": 0,
+      "min": 2014,
+      "max": 2572,
+      "samples": [
+        2014,
+        2572
+      ]
+    },
+    "GET /api/projects/:id": {
+      "count": 2,
+      "totalDuration": 5,
+      "errors": 0,
+      "min": 2,
+      "max": 3,
+      "samples": [
+        2,
+        3
+      ]
+    },
+    "GET /api/projects/:id/arduino/profiles": {
+      "count": 2,
+      "totalDuration": 81,
+      "errors": 0,
+      "min": 38,
+      "max": 43,
+      "samples": [
+        38,
+        43
+      ]
+    },
+    "GET /api/projects/:id/validation": {
+      "count": 2,
+      "totalDuration": 84,
+      "errors": 0,
+      "min": 38,
+      "max": 46,
+      "samples": [
+        38,
+        46
+      ]
+    },
+    "GET /api/projects/:id/arduino/workspace": {
+      "count": 2,
+      "totalDuration": 138,
+      "errors": 0,
+      "min": 47,
+      "max": 91,
+      "samples": [
+        47,
+        91
+      ]
+    },
+    "GET /api/projects/:id/history": {
+      "count": 2,
+      "totalDuration": 76,
+      "errors": 0,
+      "min": 37,
+      "max": 39,
+      "samples": [
+        37,
+        39
+      ]
+    },
+    "GET /api/projects/:id/bom": {
+      "count": 2,
+      "totalDuration": 1455,
+      "errors": 0,
+      "min": 38,
+      "max": 1417,
+      "samples": [
+        38,
+        1417
+      ]
+    },
+    "GET /api/projects/:id/chat": {
+      "count": 2,
+      "totalDuration": 3326,
+      "errors": 0,
+      "min": 35,
+      "max": 3291,
+      "samples": [
+        35,
+        3291
+      ]
+    },
+    "GET /api/projects/:id/arduino/cores/list": {
+      "count": 2,
+      "totalDuration": 7309,
+      "errors": 0,
+      "min": 1415,
+      "max": 5894,
+      "samples": [
+        1415,
+        5894
+      ]
+    },
+    "GET /api/projects/:id/chat/branches": {
+      "count": 2,
+      "totalDuration": 108,
+      "errors": 0,
+      "min": 50,
+      "max": 58,
+      "samples": [
+        50,
+        58
+      ]
+    },
+    "GET /api/projects/:id/circuits": {
+      "count": 3,
+      "totalDuration": 128,
+      "errors": 0,
+      "min": 9,
+      "max": 102,
+      "samples": [
+        9,
+        17,
+        102
+      ]
+    },
+    "GET /api/settings/chat": {
+      "count": 2,
+      "totalDuration": 4,
+      "errors": 0,
+      "min": 2,
+      "max": 2,
+      "samples": [
+        2,
+        2
+      ]
+    },
+    "GET /api/projects/:id/circuits/:circuitId/scenarios": {
+      "count": 1,
+      "totalDuration": 23,
+      "errors": 0,
+      "min": 23,
+      "max": 23,
+      "samples": [
+        23
+      ]
+    },
+    "GET /api/settings/api-keys": {
+      "count": 2,
+      "totalDuration": 25,
+      "errors": 0,
+      "min": 5,
+      "max": 20,
+      "samples": [
+        5,
+        20
+      ]
+    },
+    "GET /api/circuits/:circuitId/instances": {
+      "count": 3,
+      "totalDuration": 206,
+      "errors": 0,
+      "min": 22,
+      "max": 152,
+      "samples": [
+        22,
+        32,
+        152
+      ]
+    },
+    "GET /api/projects/:id/snapshots": {
+      "count": 1,
+      "totalDuration": 25,
+      "errors": 0,
+      "min": 25,
+      "max": 25,
+      "samples": [
+        25
+      ]
+    },
+    "GET /api/circuits/:circuitId/nets": {
+      "count": 3,
+      "totalDuration": 276,
+      "errors": 0,
+      "min": 20,
+      "max": 161,
+      "samples": [
+        20,
+        95,
+        161
+      ]
+    },
+    "GET /api/projects/:id/component-parts": {
+      "count": 4,
+      "totalDuration": 215,
+      "errors": 0,
+      "min": 18,
+      "max": 105,
+      "samples": [
+        18,
+        23,
+        69,
+        105
+      ]
+    },
+    "GET /api/projects/:id/circuits/:circuitId": {
+      "count": 2,
+      "totalDuration": 181,
+      "errors": 0,
+      "min": 12,
+      "max": 169,
+      "samples": [
+        12,
+        169
+      ]
+    },
+    "GET /api/projects/:id/circuits/:circuitId/children": {
+      "count": 2,
+      "totalDuration": 141,
+      "errors": 0,
+      "min": 20,
+      "max": 121,
+      "samples": [
+        20,
+        121
+      ]
+    },
+    "GET /api/projects/:id/bom-snapshots": {
+      "count": 1,
+      "totalDuration": 20,
+      "errors": 0,
+      "min": 20,
+      "max": 20,
+      "samples": [
+        20
+      ]
+    }
+  }
 }
