@@ -1303,6 +1303,55 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleFitView, localNodes, instances, nets, settings, handlePaste]);
+  // Listen for unified component search "Place on schematic" actions
+  useEffect(() => {
+    const handlePlaceComponent = (e: Event) => {
+      const customEvent = e as CustomEvent<{ partId?: number, isPower?: boolean, type?: 'VCC' | 'GND', refDesPrefix?: string }>;
+      if (!customEvent.detail) return;
+      
+      const pos = reactFlowInstance.screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      const snapped = snapEnabled
+        ? { x: Math.round(pos.x / gridSize) * gridSize, y: Math.round(pos.y / gridSize) * gridSize }
+        : pos;
+
+      if (customEvent.detail.isPower) {
+        const type = customEvent.detail.type || 'VCC';
+        const newSymbol: PowerSymbol = {
+          id: crypto.randomUUID(),
+          type,
+          netName: type === 'GND' ? 'GND' : 'VCC',
+          x: snapped.x,
+          y: snapped.y,
+          rotation: 0,
+        };
+        const currentSymbols = settings.powerSymbols ?? [];
+        updateDesignRef.current.mutate({
+          projectId,
+          id: circuitId,
+          settings: { ...settings, powerSymbols: [...currentSymbols, newSymbol] },
+        });
+      } else if (customEvent.detail.partId !== undefined) {
+        const prefix = customEvent.detail.refDesPrefix || 'U';
+        let count = 1;
+        while (instances?.some(i => i.referenceDesignator === `${prefix}${count}`)) {
+          count++;
+        }
+        createInstanceRef.current.mutate({
+          circuitId,
+          partId: customEvent.detail.partId,
+          referenceDesignator: `${prefix}${count}`,
+          schematicX: snapped.x,
+          schematicY: snapped.y,
+        });
+      }
+    };
+    
+    window.addEventListener('protopulse:place-component-instance', handlePlaceComponent);
+    return () => window.removeEventListener('protopulse:place-component-instance', handlePlaceComponent);
+  }, [circuitId, reactFlowInstance, snapEnabled, gridSize, instances]);
 
   // Context menu handlers
   const handleCtxAddComponent = useCallback(() => {

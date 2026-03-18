@@ -21,7 +21,10 @@ describe('shortcuts-panel', () => {
   // ---------------------------------------------------------------------------
 
   describe('GLOBAL_SHORTCUTS', () => {
-    it('contains Ctrl+K for command palette', () => {
+    it('contains Ctrl+Shift+P for command palette and Ctrl+K for component search', () => {
+      expect(GLOBAL_SHORTCUTS).toContainEqual(
+        expect.objectContaining({ key: 'Ctrl+Shift+P', category: 'Global' }),
+      );
       expect(GLOBAL_SHORTCUTS).toContainEqual(
         expect.objectContaining({ key: 'Ctrl+K', category: 'Global' }),
       );

@@ -21,6 +21,7 @@ const LifecycleDashboard = lazy(() => import('@/components/views/LifecycleDashbo
 const WorkflowBreadcrumb = lazy(() => import('@/components/layout/WorkflowBreadcrumb'));
 const ShortcutsOverlay = lazy(() => import('@/components/ui/ShortcutsOverlay'));
 const CommandPalette = lazy(() => import('@/components/ui/command-palette'));
+const UnifiedComponentSearch = lazy(() => import('@/components/ui/UnifiedComponentSearch'));
 const GlobalSearchDialog = lazy(() => import('@/components/ui/GlobalSearchDialog'));
 const TutorialOverlay = lazy(() => import('@/components/ui/TutorialOverlay'));
 const TutorialMenu = lazy(() => import('@/components/ui/TutorialMenu'));
@@ -1249,6 +1250,7 @@ function WorkspaceContent() {
       </Suspense>
 
       <Suspense fallback={null}>
+        <UnifiedComponentSearch />
         <CommandPalette
           onNavigate={setActiveView}
           onToggleSidebar={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: !ws.sidebarCollapsed })}

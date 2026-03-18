@@ -28,7 +28,8 @@ export interface ShortcutEntry {
 
 /** Global shortcuts that apply regardless of active view. */
 export const GLOBAL_SHORTCUTS: ShortcutEntry[] = [
-  { key: 'Ctrl+K', description: 'Command palette', category: 'Global' },
+  { key: 'Ctrl+Shift+P', description: 'Command palette', category: 'Global' },
+  { key: 'Ctrl+K', description: 'Find component (Library/BOM)', category: 'Global' },
   { key: 'Ctrl+S', description: 'Save', category: 'Global' },
   { key: 'Ctrl+Z', description: 'Undo', category: 'Global' },
   { key: 'Ctrl+Shift+Z', description: 'Redo', category: 'Global' },
