@@ -83,7 +83,7 @@ export function registerApplyCodeRoutes(app: Express, storage: IStorage): void {
       let dbPartId: number | null = null;
       if (comp.partId) {
         // Try to find exact standard library match or similar name
-        const match = parts.find(p => p.name.toLowerCase().includes(comp.partId!.toLowerCase()) || (p.meta as any)?.partNumber === comp.partId);
+        const match = parts.find(p => ((p.meta as any)?.title || '').toLowerCase().includes(comp.partId!.toLowerCase()) || (p.meta as any)?.partNumber === comp.partId);
         if (match) dbPartId = match.id;
       }
       

@@ -44,6 +44,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { usePcbOrdering } from '@/lib/pcb-ordering';
+import { FabApiSettings } from '@/components/views/procurement/FabApiSettings';
 import type {
   BoardSpecification,
   FabricatorId,
@@ -800,6 +801,9 @@ export default function PcbOrderingView() {
                 quote={currentQuote}
                 quantity={quantity}
               />
+              {selectedFab && selectedFabProfile && (
+                <FabApiSettings fabId={selectedFab} fabName={selectedFabProfile.name} />
+              )}
               <Button
                 data-testid="place-order-btn"
                 size="lg"

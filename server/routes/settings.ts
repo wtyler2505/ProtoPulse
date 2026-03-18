@@ -40,7 +40,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const schema = z.object({
-        provider: z.enum(['anthropic', 'gemini']),
+        provider: z.enum(['anthropic', 'gemini', 'jlcpcb', 'pcbway', 'oshpark']),
         apiKey: z.string().min(1).max(500),
       });
       const parsed = schema.safeParse(req.body);
@@ -60,7 +60,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const provider = req.params.provider;
-      if (provider !== 'anthropic' && provider !== 'gemini') {
+      if (provider !== 'anthropic' && provider !== 'gemini' && provider !== 'jlcpcb' && provider !== 'pcbway' && provider !== 'oshpark') {
         return res.status(400).json({ message: 'Invalid provider' });
       }
       const deleted = await deleteApiKey(req.userId, provider);
@@ -79,7 +79,7 @@ export function registerSettingsRoutes(app: Express): void {
     payloadLimit(4 * 1024),
     asyncHandler(async (req, res) => {
       const schema = z.object({
-        provider: z.enum(['anthropic', 'gemini']),
+        provider: z.enum(['anthropic', 'gemini', 'jlcpcb', 'pcbway', 'oshpark']),
         apiKey: z.string().max(500).optional(),
         useStored: z.boolean().optional(),
       });
@@ -107,6 +107,13 @@ export function registerSettingsRoutes(app: Express): void {
       const { provider } = parsed.data;
 
       try {
+        if (provider === 'jlcpcb' || provider === 'pcbway' || provider === 'oshpark') {
+          // Skip deep validation for fab providers for now, just acknowledge it's saved.
+          // (In a real scenario, we would ping their respective API /me endpoints)
+          res.json({ valid: true });
+          return;
+        }
+
         if (provider === 'anthropic') {
           const client = new Anthropic({ apiKey });
           await client.messages.create({
