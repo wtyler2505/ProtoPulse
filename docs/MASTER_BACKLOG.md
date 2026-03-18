@@ -723,7 +723,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0152 | Auto-generate pin constants from schematic labels | DONE (Wave 86) | C3 | ARDX-019 |
 | BL-0153 | Serial plotter for live sensor curves | DONE (Wave 77) | C3 | ARDX-032 |
 | BL-0154 | Multi-channel telemetry dashboard — 5 parse formats, sparkline SVG, TelemetryDashboard in serial monitor. | DONE (Wave 89) | C3 | ARDX-033 |
-| BL-0155 | Crash doctor for watchdog resets/brownouts | OPEN | C4 | ARDX-036 |
+| BL-0155 | Crash doctor for watchdog resets/brownouts | DONE (Wave 135) | C4 | ARDX-036 |
 | BL-0156 | Baud mismatch auto-detection | DONE (Wave 85) | C2 | ARDX-037 |
 | BL-0157 | "No data" troubleshooting wizard — 13 diagnostic steps, context-aware filtering, TroubleshootWizard. | DONE (Wave 89) | C3 | ARDX-040 |
 

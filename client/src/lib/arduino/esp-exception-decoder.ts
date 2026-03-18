@@ -57,6 +57,7 @@ const CRASH_EXPLANATIONS: Record<string, string> = {
 // Stack overflow is reported differently (not inside the panic reason parens)
 const STACK_OVERFLOW_PATTERN = /stack\s*overflow/i;
 const WDT_RESET_PATTERN = /wdt\s*reset|watchdog|wdt/i;
+const BROWNOUT_PATTERN = /brownout\s*detector\s*was\s*triggered/i;
 
 // ---------------------------------------------------------------------------
 // Detection
@@ -71,6 +72,7 @@ const DETECTION_PATTERNS = [
   /abort\(\) was called/i,
   STACK_OVERFLOW_PATTERN,
   WDT_RESET_PATTERN,
+  BROWNOUT_PATTERN,
 ];
 
 /**
@@ -123,6 +125,14 @@ function parseCrashType(output: string): { crashType: string; description: strin
     return {
       crashType: 'WDT reset',
       description: 'Code blocked too long without yielding — watchdog timer fired',
+    };
+  }
+
+  // Brownout
+  if (BROWNOUT_PATTERN.test(output)) {
+    return {
+      crashType: 'Brownout detect',
+      description: 'Power supply voltage dropped below safe operating limit. The board reset to prevent memory corruption. Check USB cable, power supply, and external loads (e.g. WiFi, motors).',
     };
   }
 

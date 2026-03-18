@@ -838,12 +838,12 @@ export default function SerialMonitorPanel() {
           </div>
         )}
 
-        {/* ESP Exception Detection */}
+        {/* Crash Doctor Detection */}
         {showEspDecode && (
           <div data-testid="esp-exception-banner" className="space-y-1">
             <div className="flex items-center gap-2 text-xs text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded px-2 py-1.5">
               <Bug className="w-3 h-3 shrink-0" />
-              <span className="flex-1">ESP crash detected in serial output</span>
+              <span className="flex-1">Hardware crash detected in serial output</span>
               <Button
                 data-testid="esp-decode-button"
                 variant="outline"
@@ -851,7 +851,7 @@ export default function SerialMonitorPanel() {
                 className="h-5 text-[10px] px-2 border-orange-500/30 text-orange-300 hover:bg-orange-500/20"
                 onClick={handleDecodeException}
               >
-                {espException ? 'Re-decode' : 'Decode Exception'}
+                {espException ? 'Re-diagnose' : 'Diagnose Crash'}
               </Button>
             </div>
 

@@ -189,6 +189,13 @@ describe('parseEspException — crash types', () => {
     expect(result.description).toContain('watchdog');
   });
 
+  it('parses Brownout detect', () => {
+    const result = parseEspException('Brownout detector was triggered');
+    expect(result.decoded).toBe(true);
+    expect(result.crashType).toBe('Brownout detect');
+    expect(result.description).toContain('Power supply voltage dropped');
+  });
+
   it('parses rst:0x code when no other crash info', () => {
     const result = parseEspException(RST_CODE_ONLY);
     expect(result.decoded).toBe(true);
