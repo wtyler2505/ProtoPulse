@@ -469,12 +469,15 @@ function FirmwareDialog({
   );
 }
 
+import { useValidation } from '@/lib/contexts/validation-context';
+
 // ---------------------------------------------------------------------------
 // Main view
 // ---------------------------------------------------------------------------
 
 export default function DigitalTwinView() {
   const shadowState = useDeviceShadow();
+  const { addValidationIssue, issues } = useValidation();
   const [showFirmware, setShowFirmware] = useState(false);
   const [simulationResults] = useState<Map<string, number>>(() => new Map());
   const [comparisonConfig] = useState<ComparisonConfig>(defaultComparisonConfig);
@@ -498,6 +501,43 @@ export default function DigitalTwinView() {
       bridgeInitialized.current = false;
     };
   }, []);
+
+  // BL-0577: Digital Twin -> out-of-spec telemetry creates validation issues
+  useEffect(() => {
+    if (!shadowState.manifest) return;
+
+    for (const channel of shadowState.manifest.channels) {
+      const state = shadowState.reported.get(channel.id);
+      if (!state || state.stale || typeof state.value !== 'number') continue;
+
+      const value = state.value;
+      const min = channel.min;
+      const max = channel.max;
+
+      let isOutOfBounds = false;
+      let reason = '';
+
+      if (max !== undefined && value > max) {
+        isOutOfBounds = true;
+        reason = `exceeds maximum bound of ${max}`;
+      } else if (min !== undefined && value < min) {
+        isOutOfBounds = true;
+        reason = `is below minimum bound of ${min}`;
+      }
+
+      if (isOutOfBounds) {
+        const msg = `Hardware telemetry on ${channel.name} (${value.toFixed(2)}${channel.unit || ''}) ${reason}.`;
+        // Only add if not already in issues list
+        if (!issues.some(i => i.message === msg)) {
+          addValidationIssue({
+            severity: 'warning',
+            message: msg,
+            suggestion: `Check physical hardware limits or adjust expected bounds for ${channel.name}.`,
+          });
+        }
+      }
+    }
+  }, [shadowState.reported, shadowState.manifest, issues, addValidationIssue]);
 
   // Compute comparison results
   const comparisonResults = useMemo(() => {

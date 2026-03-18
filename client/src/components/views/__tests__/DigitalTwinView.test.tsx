@@ -4,6 +4,13 @@ import DigitalTwinView from '../DigitalTwinView';
 import { DeviceShadow } from '@/lib/digital-twin/device-shadow';
 import type { TelemetryManifest, TelemetryFrame } from '@/lib/digital-twin/telemetry-protocol';
 
+vi.mock('@/lib/contexts/validation-context', () => ({
+  useValidation: () => ({
+    issues: [],
+    addValidationIssue: vi.fn(),
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Test helpers
 // ---------------------------------------------------------------------------
