@@ -579,7 +579,7 @@ describe('prepareForPlacement — backwards compatibility', () => {
   });
 
   it('built-in snippets without circuit data still work', () => {
-    const builtinId = 'builtin-voltage-divider';
+    const builtinId = 'builtin-bypass-filter';
     const result = library.prepareForPlacement(builtinId, { x: 10, y: 20 });
 
     expect(result).not.toBeNull();

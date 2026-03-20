@@ -233,6 +233,7 @@ const SchematicBomSyncPanel = memo(function SchematicBomSyncPanel({
       minimumStock: null,
       esdSensitive: b.esdSensitive ?? null,
       assemblyCategory: b.assemblyCategory ?? null,
+      tolerance: null,
       version: 1,
       updatedAt: new Date(),
       deletedAt: null,

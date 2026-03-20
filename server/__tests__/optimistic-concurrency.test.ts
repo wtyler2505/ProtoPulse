@@ -169,6 +169,7 @@ function makeBomItem(overrides: Partial<BomItem> = {}): BomItem {
     minimumStock: null,
     esdSensitive: null,
     assemblyCategory: null,
+    tolerance: null,
     version: 1,
     updatedAt: now,
     deletedAt: null,

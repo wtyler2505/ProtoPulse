@@ -140,6 +140,15 @@ function createBuiltinSnippets(): DesignSnippet[] {
       ],
       edges: [{ id: 'vd-e1', source: 'vd-r1', target: 'vd-r2', label: 'Vout' }],
       wires: [{ id: 'vd-w1', startPin: 'vd-r1:2', endPin: 'vd-r2:1', netName: 'Vout' }],
+      circuitInstances: [
+        { id: 'vd-ci-r1', componentId: 'resistor', label: 'R1', type: 'resistor', properties: { value: '10k', package: '0805' }, position: { x: 0, y: 0 } },
+        { id: 'vd-ci-r2', componentId: 'resistor', label: 'R2', type: 'resistor', properties: { value: '10k', package: '0805' }, position: { x: 0, y: 100 } },
+      ],
+      circuitNets: [
+        { id: 'vd-cn-vin', name: 'VIN', connectedPins: [{ instanceId: 'vd-ci-r1', pinId: '1' }] },
+        { id: 'vd-cn-vout', name: 'Vout', connectedPins: [{ instanceId: 'vd-ci-r1', pinId: '2' }, { instanceId: 'vd-ci-r2', pinId: '1' }] },
+        { id: 'vd-cn-gnd', name: 'GND', connectedPins: [{ instanceId: 'vd-ci-r2', pinId: '2' }] },
+      ],
       metadata: { author: 'ProtoPulse', createdAt: now, updatedAt: now, version: 1, usageCount: 0, rating: 0 },
     },
     {
@@ -154,6 +163,15 @@ function createBuiltinSnippets(): DesignSnippet[] {
       ],
       edges: [{ id: 'led-e1', source: 'led-r1', target: 'led-d1' }],
       wires: [{ id: 'led-w1', startPin: 'led-r1:2', endPin: 'led-d1:anode' }],
+      circuitInstances: [
+        { id: 'led-ci-r1', componentId: 'resistor', label: 'R1', type: 'resistor', properties: { value: '330', package: '0805' }, position: { x: 0, y: 0 } },
+        { id: 'led-ci-d1', componentId: 'led', label: 'LED1', type: 'led', properties: { color: 'green', package: '0805' }, position: { x: 0, y: 100 } },
+      ],
+      circuitNets: [
+        { id: 'led-cn-in', name: 'LED_IN', connectedPins: [{ instanceId: 'led-ci-r1', pinId: '1' }] },
+        { id: 'led-cn-mid', name: 'LED_MID', connectedPins: [{ instanceId: 'led-ci-r1', pinId: '2' }, { instanceId: 'led-ci-d1', pinId: 'anode' }] },
+        { id: 'led-cn-gnd', name: 'GND', connectedPins: [{ instanceId: 'led-ci-d1', pinId: 'cathode' }] },
+      ],
       metadata: { author: 'ProtoPulse', createdAt: now, updatedAt: now, version: 1, usageCount: 0, rating: 0 },
     },
     {
@@ -170,6 +188,14 @@ function createBuiltinSnippets(): DesignSnippet[] {
       wires: [
         { id: 'dc-w1', startPin: 'dc-c1:1', endPin: 'dc-c2:1', netName: 'VCC' },
         { id: 'dc-w2', startPin: 'dc-c1:2', endPin: 'dc-c2:2', netName: 'GND' },
+      ],
+      circuitInstances: [
+        { id: 'dc-ci-c1', componentId: 'capacitor', label: 'C1', type: 'capacitor', properties: { value: '100nF', package: '0402' }, position: { x: 0, y: 0 } },
+        { id: 'dc-ci-c2', componentId: 'capacitor', label: 'C2', type: 'capacitor', properties: { value: '10uF', package: '0805' }, position: { x: 80, y: 0 } },
+      ],
+      circuitNets: [
+        { id: 'dc-cn-vcc', name: 'VCC', connectedPins: [{ instanceId: 'dc-ci-c1', pinId: '1' }, { instanceId: 'dc-ci-c2', pinId: '1' }] },
+        { id: 'dc-cn-gnd', name: 'GND', connectedPins: [{ instanceId: 'dc-ci-c1', pinId: '2' }, { instanceId: 'dc-ci-c2', pinId: '2' }] },
       ],
       metadata: { author: 'ProtoPulse', createdAt: now, updatedAt: now, version: 1, usageCount: 0, rating: 0 },
     },

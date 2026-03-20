@@ -120,9 +120,9 @@ export class BackAnnotationManager {
   }
 
   private notify(): void {
-    for (const listener of this.subscribers) {
+    this.subscribers.forEach((listener) => {
       listener();
-    }
+    });
   }
 }
 

@@ -99,7 +99,7 @@ export function parseTolerance(raw: string | null): number {
  */
 function inferToleranceFromDescription(description: string): number {
   const lower = description.toLowerCase();
-  for (const [keyword, tolerance] of DEFAULT_TOLERANCE_BY_KEYWORD) {
+  for (const [keyword, tolerance] of Array.from(DEFAULT_TOLERANCE_BY_KEYWORD.entries())) {
     if (lower.includes(keyword)) {
       return tolerance;
     }
