@@ -54,6 +54,21 @@ export interface SnippetWire {
   netName?: string;
 }
 
+export interface SnippetCircuitInstance {
+  id: string;
+  componentId: string;
+  label: string;
+  type: string;
+  properties: Record<string, unknown>;
+  position: { x: number; y: number };
+}
+
+export interface SnippetCircuitNet {
+  id: string;
+  name: string;
+  connectedPins: Array<{ instanceId: string; pinId: string }>;
+}
+
 export interface DesignSnippet {
   id: string;
   name: string;
