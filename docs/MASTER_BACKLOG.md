@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 47 | 231 | 83% — Waves 61-139 |
+| P2 | 43 | 235 | 85% — Waves 61-140 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **105** | **396** | **501 items tracked** |
+| **Total** | **101** | **400** | **501 items tracked** |
 
-*Snapshot updated: Wave 139 (2026-03-20)*
+*Snapshot updated: Wave 140 (2026-03-20)*
 
 ---
 
@@ -995,14 +995,14 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0559 | **PCB → Schematic back annotation** — BackAnnotationManager extended with PCB-specific methods (syncRefDesChange, syncPropertyChange). 29 tests. | DONE (Wave 139) | C4 | Wave 65 audit |
 | BL-0560 | **Simulation results overlay on schematic canvas** — After running a DC operating point or transient simulation, node voltages and branch currents should optionally render as colored annotations directly on the schematic (probe labels at nodes, current arrows on wires). Currently simulation results exist only in the SimulationPanel — there is zero visual connection between simulation output and the schematic that produced it. | DONE (Wave 79) | C4 | Wave 65 audit |
-| BL-0561 | **PDN/SI analysis reads actual routed PCB geometry** — `pdn-analysis.ts` and `si-advisor.ts` accept parametric inputs (trace width, length, layer stackup) entered manually. They do not read actual routed wire geometry from `circuit_wires`. A fully integrated flow would extract per-net trace statistics from the routed board and feed them directly into the PDN/SI solvers without user data entry. | OPEN | C4 | Wave 65 audit |
+| BL-0561 | **PDN/SI analysis reads actual routed PCB geometry** — pcb-geometry-bridge.ts with extractTraceGeometries() + traceGeometryToPdnInput/SiInput converters. 34 tests. | DONE (Wave 140) | C4 | Wave 65 audit |
 | BL-0562 | **Thermal analysis reads actual component placement** — pcb-thermal-bridge.ts with PACKAGE_THERMAL_DB (15 packages) + extractThermalComponents(). 30 tests. | DONE (Wave 139) | C4 | Wave 65 audit |
 | BL-0563 | **BOM back-annotation to schematic** — BackAnnotationManager singleton with findMatchingInstances(), generateBomBackAnnotationPatch(), patch CRUD. 38 tests. | DONE (Wave 139) | C4 | Wave 65 audit |
 | BL-0564 | **Assembly cost estimator reads actual BOM** — `AssemblyCostEstimator` uses a manually entered part list. It should read from the current project's `bom_items` table as its input, so users don't re-enter data they've already captured in the BOM. | DONE (Wave 82) | C3 | Wave 65 audit |
 | BL-0565 | **Inline supplier stock/price in BOM view** — The BOM table shows manufacturer and MPN but not real-time stock or pricing. Supplier data (from `supplier-apis.ts`, once real — see BL-0485) should be surfaced inline in the BOM row (stock badge, best price, lead time) without requiring a trip to the Procurement view. | DONE (verified Wave 106) | C4 | Wave 65 audit |
 | BL-0566 | **DRC/PCB violation click → navigate to PCB canvas** — Clicking a PCB DRC violation in the ValidationView navigates to the Schematic (because the existing `validation-focus-pulse` logic was built for architecture/schematic). PCB DRC violations should switch the active view to PCB, center the viewport on the offending trace/pad, and pulse it. | DONE (Wave 78) | C3 | Wave 65 audit |
 | BL-0567 | **Schematic component values → SPICE model auto-population** — When a resistor with `value: "10k"` is placed in the schematic, generating SPICE for simulation should auto-use that value rather than requiring the user to re-enter it in the SPICE editor. Currently the SPICE generator and the circuit instance schema are not linked — SPICE element values must be specified separately. | DONE | C3 | Wave 70 |
-| BL-0568 | **Design snapshot restore cascade** — Restoring a design snapshot currently restores architecture nodes/edges only. It does not offer to also restore the schematic, BOM, and simulation results that existed at snapshot time. A true "time travel" restore should let users choose which domains to roll back together or independently. | OPEN | C4 | Wave 65 audit |
+| BL-0568 | **Design snapshot restore cascade** — analyzeSnapshotDomains() + generateRestorePlan() with cross-domain dependency warnings. 46 tests. | DONE (Wave 140) | C4 | Wave 65 audit |
 | BL-0569 | **Global cross-domain search** — There is no single search box that queries across schematic instances + BOM items + architecture nodes + community library + standard library + design history simultaneously. Finding "where is my LM7805?" requires checking five different panels manually. A unified search (like VS Code's Ctrl+P but for design objects) would dramatically improve navigation on complex projects. | DONE | C4 | Wave 70 |
 
 ### Cross-Tool Integration — Second Pass (Wave 65 Audit, continued)
@@ -1154,7 +1154,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0401 | Round-trip diff viewer (ProtoPulse vs IDE) | OPEN | C4 | ARDX-003 |
 | BL-0402 | Build/compile status panel | DONE (Wave 117) | C2 | ARDX-006 |
 | BL-0403 | Upload firmware with full log output | DONE (verified Wave 106) | C3 | ARDX-007 |
-| BL-0404 | Dependency resolver for Arduino libraries | OPEN | C4 | ARDX-009 |
+| BL-0404 | Dependency resolver for Arduino libraries — extractIncludes(), 30+ KNOWN_LIBRARY_HEADERS, resolveDependencies() with conflict detection. 42 tests. | DONE (Wave 140) | C4 | ARDX-009 |
 | BL-0405 | Board package/version checker | DONE (Wave 119) | C3 | ARDX-010 |
 | BL-0406 | Per-project board profile | DONE (verified Wave 106) | C2 | ARDX-011 |
 | BL-0407 | Save last known good firmware build | DONE (Wave 120) | C3 | ARDX-012 |
@@ -1163,7 +1163,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0410 | Smart code snippets per component | DONE (Wave 120) | C3 | ARDX-017 |
 | BL-0411 | Board-aware suggestions (timers, PWM limits) | DONE (Wave 121) | C3 | ARDX-021 |
 | BL-0412 | "Refactor to non-blocking" assistant | OPEN | C4 | ARDX-022 |
-| BL-0413 | ISR safety scanner | OPEN | C4 | ARDX-023 |
+| BL-0413 | ISR safety scanner — 8 rules for ISR violations, findIsrBodies() + scanForIsrViolations(). 58 tests. | DONE (Wave 140) | C4 | ARDX-023 |
 | BL-0414 | RAM usage early-warning | DONE (Wave 119) | C3 | ARDX-024 |
 | BL-0415 | Flash size budget tracker | DONE (Wave 119) | C3 | ARDX-025 |
 | BL-0416 | Loop-time profiler overlay | OPEN | C4 | ARDX-026 |
