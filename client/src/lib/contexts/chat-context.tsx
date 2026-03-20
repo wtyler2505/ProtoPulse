@@ -86,7 +86,7 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
         mode: msg.mode,
         ...meta,
       };
-    }),
+    }).sort((a, b) => a.timestamp - b.timestamp),
   });
 
   const branchesQuery = useQuery({
