@@ -10,7 +10,7 @@ Native desktop AI-assisted EDA (Electronic Design Automation) platform — the a
 
 **Origin story:** Born from the OmniTrek Nexus rover project (Arduino Mega, NodeMCU ESP32, RioRand motor controllers, salvaged hoverboard wheels) where no single tool covered the full journey from "I don't know electronics" to "here are my Gerbers." That frustration became the mission: build one tool that does everything for any electronics/robotics/embedded project.
 
-**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 88 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC/DC/transient simulation, Monte Carlo tolerance analysis, generative circuit design, WebGPU acceleration, digital twin with IoT telemetry, Web Serial hardware communication, engineering calculators, 3D board viewer, PCB ordering, undo/redo, project ownership, design history, backup/restore, offline PWA, collaboration.
+**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 118 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC/DC/transient simulation, Monte Carlo tolerance analysis, generative circuit design, WebGPU acceleration, digital twin with IoT telemetry, Web Serial hardware communication, engineering calculators, 3D board viewer, PCB ordering, undo/redo, project ownership, design history, backup/restore, offline PWA, collaboration.
 
 **Where it's heading:** See `docs/MASTER_BACKLOG.md` for the single source of truth on all future work, tech debt, and feature ideas.
 
@@ -68,18 +68,18 @@ Starting immediately, all frontend/UI/UX modifications MUST be tested and fully 
 
 | File | Purpose |
 | ---- | ------- |
-| `shared/schema.ts` | ALL database tables (27), Zod insert schemas, TypeScript types |
+| `shared/schema.ts` | ALL database tables (36), Zod insert schemas, TypeScript types |
 | `shared/component-types.ts` | Component editor type system (shapes, connectors, buses, DRC rules) |
 | `shared/drc-engine.ts` | Design Rule Check engine (shared between server + client) |
-| `server/routes.ts` | Barrel — registers 28 domain routers from `server/routes/` |
+| `server/routes.ts` | Barrel — registers 30 domain routers from `server/routes/` |
 | `server/circuit-routes.ts` | Barrel — registers 13 circuit routers from `server/circuit-routes/` |
-| `server/ai.ts` | AI system: prompts, 88 AI tools, streaming, multi-model routing |
-| `server/ai-tools.ts` | Barrel — registers 12 tool modules from `server/ai-tools/` |
+| `server/ai.ts` | AI system: prompts, 118 AI tools, streaming, multi-model routing |
+| `server/ai-tools.ts` | Barrel — registers 17 tool modules from `server/ai-tools/` |
 | `server/storage.ts` | `IStorage` interface + `DatabaseStorage` (LRU cache, pagination, soft deletes) |
 | `server/auth.ts` | Session auth (scrypt), API key encryption (AES-256-GCM) |
 | `server/cache.ts` | LRU cache implementation |
 | `server/component-export.ts` | FZPZ import/export |
-| `server/export/` | 15 modules + types: KiCad, Eagle, SPICE, BOM exporters; Gerber, drill, pick-and-place, netlist generators; design-report, FMEA, firmware-scaffold, PDF, DRC-gate, FZPZ handler |
+| `server/export/` | 22 modules + types: KiCad, Eagle, SPICE, BOM exporters; Gerber, drill, pick-and-place, netlist generators; design-report, FMEA, firmware-scaffold, PDF, DRC-gate, FZPZ, ODB++, IPC-2581, etchable PCB, STEP, Fritzing, TinkerCad handlers |
 | `shared/bom-diff.ts` | BOM snapshot comparison engine |
 | `shared/arch-diff.ts` | Architecture snapshot diff engine |
 | `shared/netlist-diff.ts` | Netlist comparison / ECO engine |
@@ -106,32 +106,40 @@ client/src/
   lib/component-editor/            → Constraint solver, diff engine, snap engine
 
 server/
-  routes.ts           → Barrel — imports 28 domain routers from server/routes/
+  routes.ts           → Barrel — imports 30 domain routers from server/routes/
   routes/             → auth, projects, architecture, bom, validation, chat, history,
                          components, settings, admin, seed, batch, bom-snapshots,
                          chat-branches, design-preferences, spice-models, component-lifecycle,
-                         project-io, design-history, comments, backup, utils
+                         project-io, design-history, comments, backup, agent, arduino,
+                         embed, export-step, firmware-runtime, jobs, ordering, pcb-zones, rag, utils
   circuit-routes.ts   → Barrel — imports 13 circuit routers from server/circuit-routes/
   circuit-routes/     → designs, instances, nets, wires, netlist, exports, simulations,
                          hierarchy, imports, autoroute, expansion, utils, index
-  ai.ts               → Google Genkit streaming, system prompt builder, action parser
-  ai-tools.ts         → Barrel — imports 12 tool modules from server/ai-tools/
-  ai-tools/           → types, registry, navigation, architecture, circuit, component,
-                         bom, validation, export, project, index
+  ai.ts               → Google Genkit streaming, 118 AI tools, system prompt builder, action parser
+  ai-tools.ts         → Barrel — imports 17 tool modules from server/ai-tools/
+  ai-tools/           → types, registry, index, navigation, architecture, circuit, component,
+                         bom, bom-optimization, validation, export, project, vision,
+                         generative, simulation, manufacturing, testbench, risk-analysis, arduino
   storage.ts          → IStorage interface, DatabaseStorage with LRU cache
   cache.ts            → LRU cache (evicts least recently used)
   auth.ts             → Session-based auth (X-Session-Id header), encrypted API keys
   export/             → KiCad, Eagle, SPICE, BOM exporters; Gerber, drill, pick-and-place,
-                         netlist generators; design-report, firmware-scaffold, FMEA, types
+                         netlist, ODB++, IPC-2581, etchable PCB, STEP, Fritzing, TinkerCad
+                         generators; design-report, firmware-scaffold, FMEA, PDF, DRC-gate,
+                         FZZ handler, syntax-validator, types
 
 shared/
-  schema.ts           → Drizzle schema (27 tables): projects, architecture_nodes/edges,
-                         bom_items, validation_issues, chat_messages, history_items,
-                         users, sessions, api_keys, component_parts, component_library,
-                         user_chat_settings, circuit_designs, hierarchical_ports,
-                         circuit_instances, circuit_nets, circuit_wires, simulation_results,
+  schema.ts           → Drizzle schema (36 tables): projects, project_members,
+                         architecture_nodes/edges, bom_items, validation_issues,
+                         chat_messages, history_items, users, sessions, api_keys,
+                         user_chat_settings, component_parts, component_library,
+                         circuit_designs, hierarchical_ports, circuit_instances,
+                         circuit_nets, circuit_wires, circuit_vias, simulation_results,
                          ai_actions, design_preferences, bom_snapshots, spice_models,
-                         component_lifecycle, design_snapshots, design_comments
+                         component_lifecycle, design_snapshots, design_comments,
+                         pcb_orders, pcb_zones, simulation_scenarios,
+                         arduino_workspaces, arduino_build_profiles, arduino_jobs,
+                         arduino_serial_sessions, arduino_sketch_files
   component-types.ts  → Component editor type system (shapes, connectors, buses)
   drc-engine.ts       → Design rule checking engine
   bom-diff.ts         → BOM comparison engine (snapshot vs current)
@@ -230,7 +238,7 @@ shared/
 - **Coverage**: `@vitest/coverage-v8` — reports to `coverage/` directory
 - **Legacy**: `server/__tests__/api.test.ts` uses `node:test` runner (excluded from Vitest config)
 
-### Test File Locations (162 test files, ~7625 tests)
+### Test File Locations (474 test files)
 
 ```text
 server/__tests__/                          → API, auth, storage, exporters, generators, DRC, LRU cache, metrics, audit-log, circuit-breaker, stream-abuse, auth-regression, storage-transactions (30 files)
@@ -373,19 +381,19 @@ ProtoPulse/
 │   ├── lib/                # Contexts, hooks, utilities, circuit/simulation logic
 │   └── pages/              # Route pages
 ├── server/                 # Express API
-│   ├── __tests__/          # Server test files (30 files)
-│   ├── routes.ts           # Barrel — 28 domain routers
+│   ├── __tests__/          # Server test files
+│   ├── routes.ts           # Barrel — 30 domain routers
 │   ├── routes/             # Domain route modules (auth, bom, chat, etc.)
 │   ├── circuit-routes.ts   # Barrel — 13 circuit routers
 │   ├── circuit-routes/     # Circuit route modules (nets, wires, exports, etc.)
-│   ├── ai-tools.ts         # Barrel — 11 AI tool modules
+│   ├── ai-tools.ts         # Barrel — 17 AI tool modules
 │   ├── ai-tools/           # AI tool definitions (architecture, circuit, bom, etc.)
 │   ├── export/             # Export generators (KiCad, Eagle, Gerber, etc.)
 │   ├── storage.ts          # Data access layer (IStorage + DatabaseStorage)
 │   └── ai.ts               # AI integration (prompts, streaming, multi-model)
 ├── shared/                 # Shared types, schema, engines
 │   ├── __tests__/          # Shared module tests
-│   ├── schema.ts           # 27 Drizzle tables + Zod schemas
+│   ├── schema.ts           # 36 Drizzle tables + Zod schemas
 │   ├── bom-diff.ts         # BOM comparison engine
 │   ├── arch-diff.ts        # Architecture snapshot diff engine
 │   └── netlist-diff.ts     # Netlist comparison / ECO engine
