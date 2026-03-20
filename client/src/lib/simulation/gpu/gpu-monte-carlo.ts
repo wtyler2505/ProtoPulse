@@ -6,6 +6,11 @@
  * counts where GPU overhead would dominate), transparently falls back to the
  * CPU implementation.
  *
+ * Two APIs:
+ *   1. `runGpuMonteCarlo(config)` — stateless one-shot (original API, preserved)
+ *   2. `GpuMonteCarloEngine` class — managed lifecycle with init/run/dispose,
+ *      proper adapter retry (3 attempts, 500ms between), and explicit cleanup.
+ *
  * Primary acceleration target: batched Monte Carlo where the circuit topology
  * (MNA matrix structure) is fixed and only component values change per
  * iteration. The CPU stamps all N matrices, the GPU batch-solves them.
@@ -42,7 +47,17 @@ export interface GpuMonteCarloResult extends MonteCarloResult {
 }
 
 // ---------------------------------------------------------------------------
-// Implementation
+// Constants
+// ---------------------------------------------------------------------------
+
+/** Number of adapter request retries before giving up. */
+const MAX_ADAPTER_RETRIES = 3;
+
+/** Delay between adapter retries in milliseconds. */
+const RETRY_DELAY_MS = 500;
+
+// ---------------------------------------------------------------------------
+// Stateless one-shot API (original, preserved for backward compatibility)
 // ---------------------------------------------------------------------------
 
 /**
@@ -69,6 +84,108 @@ export async function runGpuMonteCarlo(config: GpuMonteCarloConfig): Promise<Gpu
   // CPU fallback
   return runCpuFallback(config);
 }
+
+// ---------------------------------------------------------------------------
+// GpuMonteCarloEngine — managed lifecycle class
+// ---------------------------------------------------------------------------
+
+/**
+ * GPU Monte Carlo engine with explicit lifecycle management.
+ *
+ * Provides proper async initialization with retry logic, a `run()` method
+ * that dispatches to GPU or CPU, and `dispose()` for cleanup.
+ *
+ * Usage:
+ *   const engine = new GpuMonteCarloEngine();
+ *   const ready = await engine.init();   // retries adapter 3x
+ *   const result = await engine.run(config);
+ *   engine.dispose();
+ */
+export class GpuMonteCarloEngine {
+  private accelerator: GpuAccelerator | null = null;
+  private ready = false;
+
+  /**
+   * Initialize the WebGPU pipeline with retry logic.
+   *
+   * Attempts to acquire a GPU adapter up to 3 times with 500ms delay
+   * between attempts. Returns true if a hardware (non-fallback) adapter
+   * and device were successfully acquired.
+   */
+  async init(): Promise<boolean> {
+    if (!GpuAccelerator.isSupported()) {
+      this.ready = false;
+      return false;
+    }
+
+    for (let attempt = 0; attempt < MAX_ADAPTER_RETRIES; attempt++) {
+      try {
+        // Reset singleton for fresh attempt if previous failed
+        if (attempt > 0) {
+          GpuAccelerator.resetInstance();
+          await delay(RETRY_DELAY_MS);
+        }
+
+        const acc = GpuAccelerator.getInstance();
+        const caps = await acc.initialize();
+
+        if (caps.available && !caps.isFallback) {
+          this.accelerator = acc;
+          this.ready = true;
+          return true;
+        }
+
+        // Fallback adapter — not usable, try again
+        if (caps.isFallback) {
+          this.ready = false;
+          return false;
+        }
+      } catch {
+        // Adapter request threw — retry
+      }
+    }
+
+    this.ready = false;
+    return false;
+  }
+
+  /**
+   * Whether the engine has a usable GPU device.
+   */
+  isReady(): boolean {
+    return this.ready;
+  }
+
+  /**
+   * Run Monte Carlo analysis.
+   *
+   * Uses the GPU-accelerated path if initialized and `preferGpu !== false`,
+   * otherwise falls back to CPU.
+   */
+  async run(config: GpuMonteCarloConfig): Promise<GpuMonteCarloResult> {
+    const preferGpu = config.preferGpu ?? true;
+
+    if (preferGpu && this.ready && this.accelerator) {
+      return runGpuPath(config, this.accelerator);
+    }
+
+    return runCpuFallback(config);
+  }
+
+  /**
+   * Release GPU resources. Safe to call multiple times or before init.
+   */
+  dispose(): void {
+    this.ready = false;
+    this.accelerator = null;
+    // Note: we don't resetInstance() here — the caller may want to
+    // re-init with a fresh GpuAccelerator later.
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Internal implementation
+// ---------------------------------------------------------------------------
 
 /**
  * CPU fallback — delegates to the existing MonteCarloAnalysis engine.
@@ -154,4 +271,14 @@ async function runGpuPath(
     cpuTimeMs,
     speedup,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Utility
+// ---------------------------------------------------------------------------
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
