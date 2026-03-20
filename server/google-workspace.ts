@@ -1,5 +1,6 @@
 import { generateGerber } from './export/gerber-generator';
 import { generateFirmwareScaffold } from './export/firmware-scaffold-generator';
+import type { CircuitWireRow } from '@shared/schema';
 import JSZip from 'jszip';
 import { Readable } from 'stream';
 import { google } from 'googleapis';
@@ -207,10 +208,10 @@ export async function exportProjectToDrive(projectId: number, accessToken: strin
   // 1. Generate Gerbers
   const boardWidth = 100;
   const boardHeight = 100;
-  let pcbWires: any[] = [];
+  let pcbWires: CircuitWireRow[] = [];
   if (circuits.length > 0) {
     const data = await storage.getCircuitWires(circuits[0].id);
-    pcbWires = data.filter((w: any) => w.view === 'pcb');
+    pcbWires = data.filter((w) => w.view === 'pcb');
   }
   
   const gerberOutput = generateGerber({
@@ -222,19 +223,19 @@ export async function exportProjectToDrive(projectId: number, accessToken: strin
       positionY: n.positionY,
       data: n.data as Record<string, unknown> | null,
     })),
-    wires: pcbWires.map((w: any) => ({
-      wireId: w.id.toString(),
-      sourceInstanceId: w.sourceInstanceId.toString(),
-      targetInstanceId: w.targetInstanceId.toString(),
-      vertices: Array.isArray(w.vertices) ? w.vertices : [],
-      width: w.width,
+    wires: pcbWires.map((w) => ({
       layer: w.layer || 'F.Cu',
+      points: (Array.isArray(w.points) ? w.points : []) as Array<{ x: number; y: number }>,
+      width: w.width,
     })),
   });
 
   const gerberFolder = zip.folder('gerbers');
-  for (const file of gerberOutput.files) {
-    gerberFolder?.file(file.filename, file.content);
+  for (const layer of gerberOutput.layers) {
+    gerberFolder?.file(`${layer.name}.gbr`, layer.content);
+  }
+  if (gerberOutput.drillFile) {
+    gerberFolder?.file('drill.drl', gerberOutput.drillFile);
   }
 
   // 2. Generate Firmware Scaffold

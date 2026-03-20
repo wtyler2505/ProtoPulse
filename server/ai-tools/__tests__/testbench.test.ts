@@ -807,32 +807,23 @@ describe('Instance classification patterns', () => {
 // 10. Anthropic / Gemini format conversion
 // ---------------------------------------------------------------------------
 
-describe('Format converters include testbench tools', () => {
+describe('getAll includes testbench tools', () => {
   const registry = createRegistry();
 
-  it('toAnthropicTools includes all 3 testbench tools', () => {
-    const tools = registry.toAnthropicTools();
+  it('getAll includes all 3 testbench tools', () => {
+    const tools = registry.getAll();
     expect(tools).toHaveLength(3);
-    const names = tools.map((t) => t.name);
+    const names = tools.map((t: { name: string }) => t.name);
     expect(names).toContain('suggest_testbench');
     expect(names).toContain('explain_test_point');
     expect(names).toContain('generate_test_sequence');
   });
 
-  it('toGeminiFunctionDeclarations includes all 3 testbench tools', () => {
-    const tools = registry.toGeminiFunctionDeclarations();
-    expect(tools).toHaveLength(3);
-    const names = tools.map((t) => t.name);
-    expect(names).toContain('suggest_testbench');
-    expect(names).toContain('explain_test_point');
-    expect(names).toContain('generate_test_sequence');
-  });
-
-  it('Anthropic schemas have no $schema or additionalProperties', () => {
-    const tools = registry.toAnthropicTools();
+  it('all tools have parameters and description', () => {
+    const tools = registry.getAll();
     for (const tool of tools) {
-      expect(tool.input_schema).not.toHaveProperty('$schema');
-      expect(tool.input_schema).not.toHaveProperty('additionalProperties');
+      expect(tool.parameters).toBeDefined();
+      expect(tool.description).toBeDefined();
     }
   });
 });

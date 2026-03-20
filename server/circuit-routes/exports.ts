@@ -821,64 +821,58 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    let pinConstants: any[] = [];
+    let pinConstants: unknown[] = [];
     if (circuits.length > 0) {
       try {
         const { generatePinConstants } = await import('@shared/arduino-pin-generator');
-        const [instances, nets, wires] = await Promise.all([
+        const [instances, nets] = await Promise.all([
           storage.getCircuitInstances(circuits[0].id),
           storage.getCircuitNets(circuits[0].id),
-          storage.getCircuitWires(circuits[0].id),
         ]);
-        
-        // Find MCU instance
-        const mcuInstance = instances.find(i => 
-          i.properties && 
-          ((i.properties as any).family?.toLowerCase().includes('arduino') || 
-           (i.properties as any).family?.toLowerCase().includes('esp'))
+
+        // Find MCU instance to determine board type
+        const mcuInstance = instances.find(i =>
+          i.properties &&
+          ((i.properties as Record<string, unknown>).family as string | undefined)?.toLowerCase().includes('arduino') ||
+          ((i.properties as Record<string, unknown>).family as string | undefined)?.toLowerCase().includes('esp')
         );
 
-        if (mcuInstance) {
-          const mcuBoardType = (mcuInstance.properties as any).family?.toLowerCase().includes('esp32') ? 'esp32' 
-            : (mcuInstance.properties as any).family?.toLowerCase().includes('esp8266') ? 'esp8266'
-            : 'uno';
-            
-          const mappedInstances = instances.map(i => ({
+        const boardType = mcuInstance
+          ? (((mcuInstance.properties as Record<string, unknown>).family as string | undefined)?.toLowerCase().includes('mega')
+            ? 'mega' as const
+            : ((mcuInstance.properties as Record<string, unknown>).family as string | undefined)?.toLowerCase().includes('nano')
+              ? 'nano' as const
+              : 'uno' as const)
+          : 'uno' as const;
+
+        // Map to the InstanceInfo/NetInfo shapes expected by generatePinConstants
+        const mappedNets = nets.map(n => ({
+          id: n.id.toString(),
+          name: n.name,
+        }));
+
+        const mappedInstances = instances.map(i => {
+          const props = (i.properties ?? {}) as Record<string, unknown>;
+          const pins = Array.isArray(props.pins) ? (props.pins as Array<Record<string, unknown>>).map(p => ({
+            pinName: String(p.pinName ?? ''),
+            netId: String(p.netId ?? ''),
+            physicalPin: p.physicalPin as number | string | undefined,
+          })) : [];
+          return {
             id: i.id.toString(),
-            name: i.referenceDesignator,
-            type: (i.properties as any).category || 'generic'
-          }));
+            componentType: String(props.category ?? 'generic'),
+            label: i.referenceDesignator,
+            pins,
+          };
+        });
 
-          const mappedNets = nets.map(n => ({
-            id: n.id.toString(),
-            name: n.name
-          }));
-
-          const connections: {netId: string; instanceId: string; pinId: string}[] = [];
-          for (const wire of wires) {
-            connections.push({
-              netId: wire.netId.toString(),
-              instanceId: wire.sourceInstanceId.toString(),
-              pinId: wire.sourcePinId
-            });
-            connections.push({
-              netId: wire.netId.toString(),
-              instanceId: wire.targetInstanceId.toString(),
-              pinId: wire.targetPinId
-            });
-          }
-
-          const result = generatePinConstants({
-            mcuId: mcuInstance.id.toString(),
-            boardType: mcuBoardType,
-            instances: mappedInstances,
-            nets: mappedNets,
-            connections
-          });
-          pinConstants = result.constants;
-        }
-      } catch (e) {
-        // Fall back to dummy pins if generation fails
+        pinConstants = generatePinConstants(mappedNets, mappedInstances, {
+          boardType,
+          includeComments: true,
+          groupByCategory: true,
+        });
+      } catch (_e) {
+        // Fall back to empty pins if generation fails
       }
     }
 

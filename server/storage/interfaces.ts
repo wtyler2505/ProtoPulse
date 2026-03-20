@@ -26,6 +26,7 @@ import type {
   DesignComment, InsertDesignComment,
   PcbOrder, InsertPcbOrder,
   PcbZone, InsertPcbZone,
+  ProjectMember, InsertProjectMember,
   ArduinoWorkspace, InsertArduinoWorkspace,
   ArduinoBuildProfile, InsertArduinoBuildProfile,
   ArduinoJob, InsertArduinoJob,

@@ -40,6 +40,20 @@ export class SerialLogger {
     inst._filename = undefined;
     inst._listeners = new Set();
     inst._durationTimer = undefined;
+    // Arrow function class fields are assigned in constructor, so we must
+    // manually bind them for instances created via Object.create.
+    inst.subscribe = (listener: () => void) => {
+      inst._listeners.add(listener);
+      return () => inst._listeners.delete(listener);
+    };
+    inst.getSnapshot = () => {
+      return {
+        recording: inst._recording,
+        size: inst._size,
+        filename: inst._filename,
+        hasData: inst._entries.length > 0,
+      };
+    };
     return inst;
   }
 

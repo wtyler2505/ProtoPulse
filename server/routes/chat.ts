@@ -444,8 +444,8 @@ export function registerChatRoutes(app: Express): void {
       }
 
       let apiKeyToUse = clientApiKey || '';
-      if (req.session?.userId) {
-        const storedKey = await getApiKey(req.session.userId, provider);
+      if (req.userId) {
+        const storedKey = await getApiKey(req.userId!, provider);
         if (storedKey) {
           apiKeyToUse = storedKey;
         }
@@ -475,7 +475,7 @@ export function registerChatRoutes(app: Express): void {
             }
           : undefined,
         projectId: pid,
-        userId: req.session?.userId,
+        userId: req.userId,
       });
 
       res.json(result);
@@ -531,8 +531,8 @@ export function registerChatRoutes(app: Express): void {
       }
 
       let apiKeyToUse = clientApiKey || '';
-      if (req.session?.userId) {
-        const storedKey = await getApiKey(req.session.userId, provider);
+      if (req.userId) {
+        const storedKey = await getApiKey(req.userId!, provider);
         if (storedKey) {
           apiKeyToUse = storedKey;
         }
@@ -665,7 +665,7 @@ export function registerChatRoutes(app: Express): void {
                   mediaType: parsed.data.imageMimeType || 'image/png',
                 }
               : undefined,
-            userId: req.session?.userId,
+            userId: req.userId,
           },
           async (event) => {
             if (!closed) {

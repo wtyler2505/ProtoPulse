@@ -247,7 +247,7 @@ function ValidationViewContent() {
   })), [nodes]);
 
   const complianceBom = useMemo(() => bom.map(b => ({
-    id: b.id,
+    id: Number(b.id),
     partNumber: b.partNumber,
     manufacturer: b.manufacturer,
     description: b.description,

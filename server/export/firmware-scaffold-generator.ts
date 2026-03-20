@@ -435,6 +435,9 @@ function generateConfigH(
         nodeId: p.nodeId,
         label: p.label,
         nodeType: p.nodeType,
+        positionX: 0,
+        positionY: 0,
+        data: null,
       });
 
       const pinComment = p.bus === 'analog' ? '(analog)' :

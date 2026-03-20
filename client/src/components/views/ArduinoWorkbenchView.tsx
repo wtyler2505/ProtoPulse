@@ -202,11 +202,11 @@ export default function ArduinoWorkbenchView() {
 
     const mappedInstances: InstanceInfo[] = circuitInstances.map(inst => {
       const part = componentParts.find(p => p.id === inst.partId);
-      const connectors = (part?.connectors as any[]) ?? [];
-      
-      const mappedPins = connectors.map((c: any) => {
+      const connectors = (part?.connectors ?? []) as Array<{ name?: string; padType?: string; padWidth?: number }>;
+
+      const mappedPins = connectors.map((c) => {
         // Find if this pin connects to any net via circuitNets
-        // circuitNets have segments that might link to instance pins. 
+        // circuitNets have segments that might link to instance pins.
         // For accurate checking, we look at the net labels connected to this pin.
         // For now, mapping accurately requires a full spatial trace which runERC does.
         // To simplify, we rely on the user having assigned 'netName' or physicalPin.
@@ -217,9 +217,10 @@ export default function ArduinoWorkbenchView() {
         };
       });
 
+      const meta = (part?.meta ?? {}) as Record<string, unknown>;
       return {
         id: String(inst.id),
-        componentType: (part?.meta as any)?.title ?? 'Unknown',
+        componentType: typeof meta.title === 'string' ? meta.title : 'Unknown',
         label: inst.referenceDesignator,
         pins: mappedPins,
       };
@@ -1244,7 +1245,7 @@ export default function ArduinoWorkbenchView() {
               {/* Serial Monitor Tab */}
               {bottomTab === 'serial' && (
                 <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
-                  <SerialMonitorPanel code={code} projectId={projectId} />
+                  <SerialMonitorPanel code={code} projectId={_projectId} />
                 </Suspense>
               )}
 
@@ -1577,7 +1578,7 @@ export default function ArduinoWorkbenchView() {
           profile={selectedProfile ?? null}
           onSave={async (updates) => {
             if (selectedProfile) {
-              await updateProfile(selectedProfile.id, updates);
+              await updateProfile(selectedProfile.id, updates as Parameters<typeof updateProfile>[1]);
             }
           }}
         />

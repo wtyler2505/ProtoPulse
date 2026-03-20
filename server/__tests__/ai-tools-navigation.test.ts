@@ -231,31 +231,16 @@ describe('Navigation tools — full registry integration', () => {
     expect(archTools).toHaveLength(0);
   });
 
-  it('toAnthropicTools includes navigation tools', () => {
+  it('getAll includes navigation tools with correct shape', () => {
     const registry = createRegistry();
-    const anthropicTools = registry.toAnthropicTools();
+    const allTools = registry.getAll();
 
-    expect(anthropicTools.length).toBe(2);
-    const names = anthropicTools.map((t) => t.name);
+    expect(allTools.length).toBe(2);
+    const names = allTools.map((t: { name: string }) => t.name);
     expect(names).toContain('switch_view');
     expect(names).toContain('switch_schematic_sheet');
 
-    for (const tool of anthropicTools) {
-      expect(tool.input_schema).toBeDefined();
-      expect(tool.description).toBeDefined();
-    }
-  });
-
-  it('toGeminiFunctionDeclarations includes navigation tools', () => {
-    const registry = createRegistry();
-    const geminiTools = registry.toGeminiFunctionDeclarations();
-
-    expect(geminiTools.length).toBe(2);
-    const names = geminiTools.map((t) => t.name);
-    expect(names).toContain('switch_view');
-    expect(names).toContain('switch_schematic_sheet');
-
-    for (const tool of geminiTools) {
+    for (const tool of allTools) {
       expect(tool.parameters).toBeDefined();
       expect(tool.description).toBeDefined();
     }

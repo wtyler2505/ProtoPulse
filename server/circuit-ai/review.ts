@@ -101,19 +101,23 @@ export function registerCircuitAiReviewRoute(app: Express, storage: IStorage): v
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
       }
 
-      const { description, apiKey, model } = parsed.data;
+      const { apiKey } = parsed.data;
 
       const circuit = await storage.getCircuitDesign(circuitId);
       if (!circuit) {
         return res.status(404).json({ message: 'Circuit not found' });
       }
 
-      const parts = await storage.getComponentParts(circuit.projectId);
+      const [parts, instances, nets] = await Promise.all([
+        storage.getComponentParts(circuit.projectId),
+        storage.getCircuitInstances(circuitId),
+        storage.getCircuitNets(circuitId),
+      ]);
       if (parts.length === 0) {
         return res.status(400).json({ message: 'No component parts available.' });
       }
 
-      const prompt = buildReviewPrompt(description, parts);
+      const prompt = buildReviewPrompt(instances, nets, parts);
 
       try {
         const response = await ai.generate({
@@ -133,7 +137,7 @@ export function registerCircuitAiReviewRoute(app: Express, storage: IStorage): v
           text = text.replace(/^```\n/, '').replace(/\n```$/, '');
         }
 
-        let resultData: any;
+        let resultData: unknown;
         try {
           resultData = JSON.parse(text);
         } catch {

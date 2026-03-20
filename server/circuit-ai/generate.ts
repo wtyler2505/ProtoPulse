@@ -97,7 +97,10 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
           text = text.replace(/^```\n/, '').replace(/\n```$/, '');
         }
 
-        let generated: any;
+        let generated: {
+          instances?: Array<{ partId: number; referenceDesignator: string; x?: number; y?: number }>;
+          nets?: Array<{ name: string; netType?: string; segments?: Array<{ fromInstanceRefDes: string; fromPin: string; toInstanceRefDes: string; toPin: string }> }>;
+        };
         try {
           generated = JSON.parse(text);
         } catch {
@@ -125,7 +128,13 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
           const createdNet = await storage.createCircuitNet({
             circuitId,
             name: net.name,
-            netClassId: null,
+            netType: net.netType ?? 'signal',
+            segments: (net.segments ?? []).map((seg: { fromInstanceRefDes: string; fromPin: string; toInstanceRefDes: string; toPin: string }) => ({
+              fromInstanceId: refDesToInstanceId.get(seg.fromInstanceRefDes) ?? 0,
+              fromPin: seg.fromPin,
+              toInstanceId: refDesToInstanceId.get(seg.toInstanceRefDes) ?? 0,
+              toPin: seg.toPin,
+            })),
           });
 
           for (const seg of net.segments ?? []) {
@@ -136,12 +145,8 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
               await storage.createCircuitWire({
                 circuitId,
                 netId: createdNet.id,
-                sourceInstanceId: fromInstId,
-                sourcePinId: seg.fromPin,
-                targetInstanceId: toInstId,
-                targetPinId: seg.toPin,
-                vertices: [],
-                properties: { aiGenerated: true },
+                view: 'schematic',
+                points: [],
               });
             }
           }

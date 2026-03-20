@@ -763,67 +763,19 @@ describe('Duplicate registration prevention', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 8. toAnthropicTools() produces valid schemas
+// 8. getAll() returns valid tool definitions
 // ---------------------------------------------------------------------------
 
-describe('toAnthropicTools() format converter', () => {
+describe('getAll() returns valid tool definitions', () => {
   const registry = createFullRegistry();
-  const anthropicTools = registry.toAnthropicTools();
+  const allTools = registry.getAll();
 
   it('returns an array matching total tool count', () => {
-    expect(anthropicTools).toHaveLength(121);
-  });
-
-  it('every entry has name, description, and input_schema', () => {
-    for (const tool of anthropicTools) {
-      expect(typeof tool.name).toBe('string');
-      expect(tool.name.length).toBeGreaterThan(0);
-      expect(typeof tool.description).toBe('string');
-      expect(tool.description.length).toBeGreaterThan(0);
-      expect(tool.input_schema).toBeDefined();
-      expect(typeof tool.input_schema).toBe('object');
-    }
-  });
-
-  it('no entry has $schema meta key (Anthropic rejects it)', () => {
-    for (const tool of anthropicTools) {
-      expect(tool.input_schema).not.toHaveProperty('$schema');
-    }
-  });
-
-  it('no entry has additionalProperties meta key', () => {
-    for (const tool of anthropicTools) {
-      expect(tool.input_schema).not.toHaveProperty('additionalProperties');
-    }
-  });
-
-  it('every schema has a type field', () => {
-    for (const tool of anthropicTools) {
-      expect(tool.input_schema).toHaveProperty('type');
-    }
-  });
-
-  it('tool names in Anthropic format match registry names', () => {
-    const registryNames = new Set(registry.getAll().map((t) => t.name));
-    const anthropicNames = new Set(anthropicTools.map((t) => t.name));
-    expect(anthropicNames).toEqual(registryNames);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// 9. toGeminiFunctionDeclarations() produces valid schemas
-// ---------------------------------------------------------------------------
-
-describe('toGeminiFunctionDeclarations() format converter', () => {
-  const registry = createFullRegistry();
-  const geminiTools = registry.toGeminiFunctionDeclarations();
-
-  it('returns an array matching total tool count', () => {
-    expect(geminiTools).toHaveLength(121);
+    expect(allTools).toHaveLength(121);
   });
 
   it('every entry has name, description, and parameters', () => {
-    for (const tool of geminiTools) {
+    for (const tool of allTools) {
       expect(typeof tool.name).toBe('string');
       expect(tool.name.length).toBeGreaterThan(0);
       expect(typeof tool.description).toBe('string');
@@ -833,22 +785,9 @@ describe('toGeminiFunctionDeclarations() format converter', () => {
     }
   });
 
-  it('no entry has $schema meta key', () => {
-    for (const tool of geminiTools) {
-      expect(tool.parameters).not.toHaveProperty('$schema');
-    }
-  });
-
-  it('no entry has additionalProperties meta key', () => {
-    for (const tool of geminiTools) {
-      expect(tool.parameters).not.toHaveProperty('additionalProperties');
-    }
-  });
-
-  it('tool names in Gemini format match registry names', () => {
-    const registryNames = new Set(registry.getAll().map((t) => t.name));
-    const geminiNames = new Set(geminiTools.map((t) => t.name));
-    expect(geminiNames).toEqual(registryNames);
+  it('all tool names are unique', () => {
+    const names = allTools.map((t: { name: string }) => t.name);
+    expect(new Set(names).size).toBe(names.length);
   });
 });
 
@@ -1044,14 +983,9 @@ describe('Registry edge cases', () => {
     expect(r.get('nonexistent')).toBeUndefined();
   });
 
-  it('toAnthropicTools() on empty registry returns empty array', () => {
+  it('getAll() on empty registry returns empty array', () => {
     const r = new ToolRegistry();
-    expect(r.toAnthropicTools()).toHaveLength(0);
-  });
-
-  it('toGeminiFunctionDeclarations() on empty registry returns empty array', () => {
-    const r = new ToolRegistry();
-    expect(r.toGeminiFunctionDeclarations()).toHaveLength(0);
+    expect(r.getAll()).toHaveLength(0);
   });
 
   it('validate with undefined params returns error', () => {

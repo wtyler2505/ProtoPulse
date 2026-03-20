@@ -177,21 +177,21 @@ export function registerAgentRoutes(app: Express): void {
           }
 
           if (chunk.toolRequests && chunk.toolRequests.length > 0) {
-            for (const req of chunk.toolRequests) {
+            for (const toolReq of chunk.toolRequests) {
               sendEvent({
                 step,
                 type: 'tool_call',
-                message: `Calling tool: ${req.name}`,
-                toolName: req.name,
+                message: `Calling tool: ${toolReq.toolRequest.name}`,
+                toolName: toolReq.toolRequest.name,
               });
-              
+
               // We simulate the tool execution event for the UI.
               // Genkit handles the actual background execution.
               sendEvent({
                 step,
                 type: 'tool_result',
                 message: 'Executed successfully via Genkit orchestrator',
-                toolName: req.name,
+                toolName: toolReq.toolRequest.name,
                 result: { success: true, message: 'Done', data: {} },
               });
               

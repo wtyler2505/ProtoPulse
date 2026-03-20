@@ -44,6 +44,7 @@ function makeStorage(overrides: Partial<IStorage> = {}): IStorage {
         width: 0.254,
       },
     ]),
+    getBomItems: vi.fn().mockResolvedValue([]),
     ...overrides,
   } as unknown as IStorage;
 }

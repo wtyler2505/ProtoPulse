@@ -125,6 +125,9 @@ export function registerProjectRoutes(app: Express): void {
       // Mark as approved (could be un-approved if a flag is passed, but for now just approve it)
       const isApproved = req.body.approved !== false;
       
+      // Note: approvedAt/approvedBy fields are not in InsertProject schema;
+      // a dedicated approval storage method is needed to set those columns.
+      // For now, touch the version to record the approval action.
       const updated = await storage.updateProject(id, {
         name: project.name,
       });
@@ -166,7 +169,7 @@ export function registerProjectRoutes(app: Express): void {
         userId: Number(userId),
         role,
         status,
-        invitedBy: req.session?.userId
+        invitedBy: req.userId
       });
       
       res.status(201).json(member);

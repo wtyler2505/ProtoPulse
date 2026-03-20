@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { parseActionsFromResponse, categorizeError, isRetryableError, getDefaultFallbackModel, redactSecrets } from '../ai';
-import { CircuitBreakerOpenError } from '../circuit-breaker';
 
 // =============================================================================
 // parseActionsFromResponse
@@ -321,8 +320,8 @@ describe('isRetryableError', () => {
     expect(isRetryableError({ status: 503, message: 'Service Unavailable' })).toBe(true);
   });
 
-  it('returns true for CircuitBreakerOpenError', () => {
-    const error = new CircuitBreakerOpenError('anthropic', 15000);
+  it('returns true for circuit breaker style errors (no HTTP status)', () => {
+    const error = new Error('circuit breaker open for anthropic, retry after 15s');
     expect(isRetryableError(error)).toBe(true);
   });
 
@@ -380,11 +379,6 @@ describe('isRetryableError', () => {
 // =============================================================================
 
 describe('getDefaultFallbackModel', () => {
-  it('returns the standard Anthropic model for anthropic fallback', () => {
-    const model = getDefaultFallbackModel('anthropic');
-    expect(model).toBe('claude-sonnet-4-5-20250514');
-  });
-
   it('returns the standard Gemini model for gemini fallback', () => {
     const model = getDefaultFallbackModel('gemini');
     expect(model).toBe('gemini-2.5-flash');

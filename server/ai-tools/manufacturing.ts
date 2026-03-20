@@ -492,9 +492,11 @@ interface ServerDfmViolation {
   severity: 'error' | 'warning' | 'info';
   category: string;
   message: string;
-  actual: number;
-  required: number;
-  unit: string;
+  actual?: number;
+  required?: number;
+  unit?: string;
+  currentValue?: string;
+  requiredValue?: string;
 }
 
 interface ServerDfmResult {

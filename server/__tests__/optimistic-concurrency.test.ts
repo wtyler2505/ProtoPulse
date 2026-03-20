@@ -105,6 +105,8 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
+    approvedAt: null,
+    approvedBy: null,
     ...overrides,
   };
 }
