@@ -463,7 +463,7 @@ export function scanForIsrViolations(code: string): IsrViolation[] {
   if (assignedInIsr.size > 0) {
     const codeLines = code.split('\n');
 
-    for (const varName of assignedInIsr) {
+    for (const varName of Array.from(assignedInIsr)) {
       // Skip common loop variables and temporaries
       if (/^[ijk]$/.test(varName) || varName.startsWith('_')) {
         continue;

@@ -254,7 +254,7 @@ export function resolveDependencies(
       };
 
       // Check if the inferred name matches anything installed
-      for (const [name, version] of installedLibraries) {
+      for (const [name, version] of Array.from(installedLibraries.entries())) {
         if (name.toLowerCase() === dep.name.toLowerCase()) {
           dep.installed = true;
           dep.version = version;
