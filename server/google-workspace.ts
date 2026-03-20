@@ -217,15 +217,15 @@ export async function exportProjectToDrive(projectId: number, accessToken: strin
   const gerberOutput = generateGerber({
     boardWidth,
     boardHeight,
-    instances: nodes.map(n => ({
-      instanceId: n.nodeId,
-      componentId: (n.data as Record<string, unknown> | null)?.componentId as string ?? n.nodeId,
-      label: n.label ?? n.nodeId,
-      x: n.positionX,
-      y: n.positionY,
-      rotation: 0,
-      side: 'front' as const,
-      packageType: ((n.data as Record<string, unknown> | null)?.packageType as string) ?? 'DIP-8',
+    instances: nodes.map((n, i) => ({
+      id: i + 1,
+      referenceDesignator: n.label ?? n.nodeId,
+      pcbX: n.positionX,
+      pcbY: n.positionY,
+      pcbRotation: 0,
+      pcbSide: 'front',
+      connectors: [],
+      footprint: ((n.data as Record<string, unknown> | null)?.packageType as string) ?? 'DIP-8',
     })),
     wires: pcbWires.map((w) => ({
       layer: w.layer || 'F.Cu',
