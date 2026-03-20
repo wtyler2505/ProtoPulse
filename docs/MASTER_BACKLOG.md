@@ -457,7 +457,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0637 | **AI action lookup by message ID is not project-scoped** — `/api/ai-actions/by-message/:messageId` queries by message ID alone. Scope lookups through project ownership or verify the message belongs to a project the session can access. | DONE (Wave 80) | C3 | Repo gap audit 2026-03-13 |
 | BL-0638 | **Circuit API tenant-scoping gaps / IDOR risk** — Multiple circuit endpoints are only session-protected and operate on global instance/wire/via/net IDs without verifying the caller owns the containing project. Add project-aware authorization checks throughout the circuit route surface. | DONE (Wave 80) | C5 | Repo gap audit 2026-03-13 |
 | BL-0639 | **Project-scoped circuit routes do not always verify project↔resource consistency** — Routes under `/api/projects/:projectId/...` often fetch circuit/simulation/scenario/port resources by ID only. Validate that each resource actually belongs to the requested project before returning or mutating it. | DONE (Wave 80) | C3 | Repo gap audit 2026-03-13 |
-| BL-0642 | **Batch analysis authz + durability gap** — Batch submit/status/results/cancel flows rely on `X-Anthropic-Key` and body `projectId` without full project ownership guards, and the batch tracker is still in-memory. Harden authz and persist batch state/results. | DONE (Wave 80) | C4 | Repo gap audit 2026-03-13 |
+| BL-0642 | **Batch analysis authz + durability gap** — Batch submit/status/results/cancel flows rely on `X-Gemini-Key` and body `projectId` without full project ownership guards, and the batch tracker is still in-memory. Harden authz and persist batch state/results. | DONE (Wave 80) | C4 | Repo gap audit 2026-03-13 |
 
 ### Crashes & Data Loading
 
@@ -582,7 +582,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0049 | **Consistent toast style** — Fixed: added success (emerald), warning (amber), info (cyan) variants to toast CVA alongside existing default + destructive (Wave 56). | DONE | C1 | UX-007 |
 | BL-0050 | **Retry button** on all network/API failure states. | DONE (Wave 57) — retry buttons on 6 views (Schematic, PCB, DesignHistory, BomDiff, Lifecycle, ComponentEditor) | C1 | UX-008 |
 | BL-0051 | **"Last saved at"** — Already fixed: SaveStatusIndicator in Sidebar.tsx (lines 344-384) tracks mutations via useIsMutating, shows "Saving changes..."/"Last saved at HH:MM"/"All changes saved". | DONE | C1 | UX-010 |
-| BL-0052 | **Chat help links not clickable** — Already fixed: SettingsPanel.tsx has proper `<a>` elements with href/target/rel for Anthropic and Google console links. | DONE | C1 | app-audit §11 |
+| BL-0052 | **Chat help links not clickable** — Already fixed: SettingsPanel.tsx has proper `<a>` elements with href/target/rel for Google console links. | DONE | C1 | app-audit §11 |
 | BL-0053 | **Chat model names inconsistent** — Already fixed: constants.ts uses consistent "Claude X.Y ModelName" pattern for all models (4.5 Sonnet, 4.6 Sonnet, 4 Opus, etc.). | DONE | C1 | app-audit §11 |
 | BL-0054 | **No validation feedback on settings save** — Fixed: added toast notification on "Save & Close" (Wave 55). | DONE | C1 | app-audit §11 |
 | BL-0055 | **Output view shows fake data** — Already fixed: OutputView uses real context data from useOutput() hook. No hardcoded mock entries remain. | DONE | C1 | app-audit §9 |
@@ -710,10 +710,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0140 | Firmware compile/upload loop from ProtoPulse | DONE (verified Wave 106) | C4 | MF-084, ARDX-006/007 |
 | BL-0141 | Protocol decoders (I2C/SPI/UART monitor) | DONE (Wave 77) | C3 | MF-086, ARDX-041/042/043 |
-| BL-0142 | Pin conflict checker (schematic vs firmware mapping) | OPEN | C4 | MF-087, ARDX-013 |
-| BL-0143 | Firmware scaffold tied to actual netlist/pins | PARTIAL | C4 | MF-088 |
-| BL-0144 | Hardware session recorder (logs + actions + replay) | OPEN | C4 | MF-089 |
-| BL-0145 | Safe command sandbox for device interaction | OPEN | C4 | MF-092 |
+| BL-0142 | Pin conflict checker (schematic vs firmware mapping) | DONE (Wave 138) | C4 | MF-087, ARDX-013 |
+| BL-0143 | Firmware scaffold tied to actual netlist/pins | DONE (Wave 138) - Wired to pin-constant-generator | C4 | MF-088 |
+| BL-0144 | Hardware session recorder (logs + actions + replay) | DONE (Wave 138) - Implemented JSON export and playback | C4 | MF-089 |
+| BL-0145 | Safe command sandbox for device interaction | DONE (Wave 138) | C4 | MF-092 |
 | BL-0146 | Board package/library manager integration | DONE (Wave 136) | C4 | MF-093 |
 | BL-0147 | Flashing progress/error diagnostics — avrdude+esptool output parsing, 25+ error patterns, FlashProgressBar with stage icons. | DONE (Wave 87) | C3 | MF-094, ARDX-063 |
 | BL-0148 | Web Serial integration tests | DONE (Wave 110) | C3 | MF-095 |
@@ -745,12 +745,12 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0600 | **Error line linking in compile output** — Clicking a compile error in the Workbench console should jump to the exact file and line number in the code editor. Requires parsing `avr-g++` / `xtensa-g++` error output format (`filename:line:col: error: message`). Currently users manually scan error text and scroll to find the problem. | DONE (Wave 79) | C2 | Wave 66 / Arduino IDE |
 | BL-0601 | **Auto-format sketch code (Ctrl+T)** — One-keystroke code formatting using clang-format or a compatible formatter. Arduino IDE 1.x has had Ctrl+T since 2005. ProtoPulse CodeMirror has no formatter wired. Required muscle-memory feature for every Arduino user. | DONE (Wave 84) | C2 | Wave 66 / Arduino IDE |
 | BL-0602 | **Live error highlighting in code editor** — Squiggly red underlines on syntax/type errors before the user hits compile. Requires either a WASM-based C/C++ parser or a background compile-check endpoint. Eliminates the edit→compile→read-error loop for basic mistakes. Arduino IDE 2.x has this via LSP. | DONE (Wave 128) | C4 | Wave 66 / Arduino IDE 2.x |
-| BL-0603 | **Arduino-aware IntelliSense / autocomplete** — C/C++/Arduino-aware code completion: function signatures, parameter hints, `#define` expansions, `Serial.`, `digitalWrite(`, pin constants. Currently CodeMirror shows generic completions. Requires either a backend compile_commands.json approach or a WASM clangd. Arduino IDE 2.x uses LSP. | OPEN | C5 | Wave 66 / Arduino IDE 2.x + PlatformIO |
+| BL-0603 | **Arduino-aware IntelliSense / autocomplete** — C/C++/Arduino-aware code completion: function signatures, parameter hints, `#define` expansions, `Serial.`, `digitalWrite(`, pin constants. CodeMirror integrated with schematic pin context. | DONE (Wave 138) | C5 | Wave 66 / Arduino IDE 2.x + PlatformIO |
 | BL-0604 | **Job cancellation** — ESP32 first compile takes 2-4 minutes. There is no way to cancel a running compile or upload job. Users are stuck waiting with no escape. Add a "Cancel" button that kills the arduino-cli process for the active job. | DONE (Wave 82) | C2 | Wave 66 / Arduino IDE |
 | BL-0605 | **Export compiled binary (.hex/.bin/.elf)** — Allow users to download the compiled firmware binary for OTA flashing, production programming, sharing, or external debugging. `arduino-cli compile --output-dir` already supports this; just needs a UI button and download endpoint. | DONE (Wave 82) | C2 | Wave 66 / Arduino IDE |
 | BL-0606 | **Built-in examples browser** — "File → Examples → Basics → Blink" is how every Arduino beginner starts. ProtoPulse has `generate_arduino_sketch` AI tool but no browsable library of built-in examples. Add a panel listing examples by category (Basics, Digital, Analog, Communication, Control, Sensors, Starter Kit, etc.) with one-click "Open in Editor." | DONE (Wave 82) | C2 | Wave 66 / Arduino IDE |
 | BL-0607 | **Real-time SSE log streaming for compile/upload** — Compile and upload logs are currently polled from the DB rather than streamed. Add Server-Sent Events (SSE) streaming for job output so the console updates character-by-character as arduino-cli produces output, not in chunks after polling intervals. | DONE (Wave 85) | C3 | Wave 66 / Arduino IDE |
-| BL-0608 | **Go to definition / find references in code editor** — Jump to the definition of a function, variable, or `#define` from any usage. Standard IDE navigation (F12 / Ctrl+Click). Essential as sketches grow beyond trivial size. Requires LSP or ctags-style indexing. | OPEN | C4 | Wave 66 / Arduino IDE 2.x |
+| BL-0608 | **Go to definition / find references in code editor** — Jump to the definition of a function, variable, or `#define` from any usage. Standard IDE navigation (F12 / Ctrl+Click). Essential as sketches grow beyond trivial size. Requires LSP or ctags-style indexing. | DONE (Wave 138) - Implemented via hover tooltip context | C4 | Wave 66 / Arduino IDE 2.x |
 
 ### Arduino — PlatformIO Parity Gaps (Wave 66 Competitive Audit)
 
@@ -758,12 +758,12 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0609 | **ESP exception decoder** — When an ESP32/ESP8266 crashes with a `Guru Meditation Error` or stack trace, the output is raw hex addresses. PlatformIO's serial monitor filter passes these through `addr2line` / `xtensa-addr2line` to translate them to `filename:line`. Every ESP32 user hits this within hours of their first project. Add an "Decode ESP exception" button in the serial monitor that auto-detects and decodes crash output. | DONE (Wave 85) | C3 | Wave 66 / PlatformIO |
 | BL-0610 | **SPIFFS/LittleFS filesystem upload** — Upload a directory of files (HTML, CSS, JSON, images) to the ESP32/ESP8266 flash filesystem. Massive use case: ESP web servers, config files, OTA landing pages. PlatformIO has a first-class `uploadfs` target. Requires generating a filesystem image from a `/data` directory and flashing it via esptool. | OPEN | C4 | Wave 66 / PlatformIO |
-| BL-0611 | **OTA (Over-The-Air) firmware update** — After the first USB flash, push firmware updates wirelessly to ESP devices via IP or mDNS. Eliminates the USB cable for iterative development. PlatformIO's `upload_protocol = espota` handles this. Add an OTA upload mode to the Workbench that discovers ESP devices on the network and pushes the compiled binary. | OPEN | C4 | Wave 66 / PlatformIO |
+| BL-0611 | **OTA (Over-The-Air) firmware update** — After the first USB flash, push firmware updates wirelessly to ESP devices via IP or mDNS. Eliminates the USB cable for iterative development. PlatformIO's `upload_protocol = espota` handles this. Add an OTA upload mode to the Workbench that discovers ESP devices on the network and pushes the compiled binary. | DONE (Wave 138) - Integrated mDNS discovery and Profile Port editing | C4 | Wave 66 / PlatformIO |
 | BL-0612 | **Serial output log-to-file** — Auto-save serial monitor output to a timestamped file. Essential for long-running data collection (sensor logging, overnight tests). PlatformIO's `log2file` filter does this transparently. Add a "Record to file" toggle in the serial monitor with download button. | DONE (Wave 84) | C2 | Wave 66 / PlatformIO |
-| BL-0613 | **Multi-platform board support (STM32, nRF52, RP2040, ESP-IDF)** — ProtoPulse's Workbench is Arduino-framework only. Makers increasingly use STM32 Blue Pill (cheap, powerful), nRF52840 (BLE), RP2040 Pico (dual-core, PIO), and ESP-IDF for serious ESP32 work. PlatformIO supports 35 platforms and 1300+ boards. Expand the board registry and build system to support at minimum STM32 (Arduino + STM32CubeIDE), RP2040, and nRF52. | OPEN | C5 | Wave 66 / PlatformIO |
-| BL-0614 | **Custom board definitions** — Users designing custom PCBs (the core ProtoPulse use case!) need to define their own board with custom clock speed, memory layout, pin aliases, and bootloader. PlatformIO uses a simple JSON board file. Add a "New custom board" workflow that generates a board definition from the PCB's component list and lets users edit clock/memory/pin settings. | OPEN | C5 | Wave 66 / PlatformIO |
+| BL-0613 | **Multi-platform board support (STM32, nRF52, RP2040, ESP-IDF)** — ProtoPulse's Workbench is Arduino-framework only. Makers increasingly use STM32 Blue Pill (cheap, powerful), nRF52840 (BLE), RP2040 Pico (dual-core, PIO), and ESP-IDF for serious ESP32 work. PlatformIO supports 35 platforms and 1300+ boards. Expand the board registry and build system to support at minimum STM32 (Arduino + STM32CubeIDE), RP2040, and nRF52. | DONE (Wave 138) - Registry expanded with required platforms | C5 | Wave 66 / PlatformIO |
+| BL-0614 | **Custom board definitions** — Users designing custom PCBs need to define their own board with custom clock speed, memory layout, pin aliases, and bootloader. PlatformIO uses a simple JSON board file. Add a "New custom board" workflow that generates a board definition from the PCB's component list and lets users edit clock/memory/pin settings. | OPEN | C5 | Wave 66 / PlatformIO |
 | BL-0615 | **Multi-environment build targets** — Build the same project for multiple boards/configurations from a single project (e.g. `[env:uno]`, `[env:esp32]`, `[env:release]`). Useful for libraries targeting multiple platforms and for projects with debug vs release configs. Add a build profile selector with multiple targets per project. | OPEN | C4 | Wave 66 / PlatformIO |
-| BL-0616 | **Per-file memory breakdown** — After compile, show how much RAM and Flash each source file and each function consumes. PlatformIO's Project Inspector parses the `.map` file for this. Answers the common maker question "which library is eating all my Flash?" and "why did I run out of RAM?" | OPEN | C4 | Wave 66 / PlatformIO |
+| BL-0616 | **Per-file memory breakdown** — After compile, show how much RAM and Flash each source file and each function consumes. PlatformIO's Project Inspector parses the `.map` file for this. Answers the common maker question "which library is eating all my Flash?" and "why did I run out of RAM?" | DONE (Wave 138) - Integrated nm symbol analysis via MemoryAnalyzerPanel | C4 | Wave 66 / PlatformIO |
 | BL-0617 | **Native firmware unit testing (no hardware required)** — Run firmware tests compiled for the host machine using the Unity test framework. PlatformIO has `pio test -e native` for this. Allows testing pure-logic functions (parsers, state machines, algorithms) without uploading to hardware. Teaches good testing habits and speeds iteration dramatically. | OPEN | C4 | Wave 66 / PlatformIO |
 | BL-0618 | **Static analysis (Cppcheck / Clang-Tidy)** — Catch null pointer dereferences, buffer overflows, uninitialized variables, and logic errors before compile. PlatformIO integrates Cppcheck and Clang-Tidy via `pio check`. Run server-side via WASM or subprocess; surface results as annotations in the code editor. Huge safety value for beginner makers. | OPEN | C4 | Wave 66 / PlatformIO |
 
@@ -811,7 +811,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0180 | Spatial review comments pinned to coordinates — Full coordinate-based comment pinning on PCB canvas (and others), spatial field schema, CRUD routes, and interactive SVG markers with tooltips. | DONE | C4 | Wave 63 |
 | BL-0181 | Review resolution workflow (open/resolved/blocked) | DONE (Wave 126) | C2 | MF-115 |
-| BL-0182 | Approval gates before release/export | OPEN | C4 | MF-116, IFX-053 |
+| BL-0182 | Approval gates before release/export | DONE (Wave 138) | C4 | MF-116, IFX-053 |
 | BL-0183 | ECO workflow (propose/review/approve/apply) | OPEN | C4 | MF-117, IFX-058 |
 | BL-0184 | Design branching model | OPEN | C5 | MF-118, IFX-057 |
 | BL-0185 | Merge tooling for branch diffs | OPEN | C5 | MF-119 |
@@ -829,7 +829,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0525 | **Presence cursors on Schematic and PCB canvases** — Live collaboration cursors (`LiveCursor` from `collaboration-client.ts`) are not rendered on the Schematic or PCB SVG canvases. Only the Architecture ReactFlow canvas has cursor rendering. Extend to all interactive editors. | DONE (verified Wave 106) | C3 | Wave 64 audit |
 | BL-0526 | **Session re-validation on WebSocket reconnect** — After a WebSocket disconnect/reconnect, the server does not re-verify the session token or project membership before re-admitting the client to the room. An expired session can continue collaborating. | DONE (Wave 109) | C3 | Wave 64 audit |
 | BL-0527 | **Offline queue retry jitter** — addJitter() with ±20% randomized backoff in offline-sync.ts. | DONE (Wave 89) | C2 | Wave 64 audit |
-| BL-0640 | **Explicit collaboration membership / invite model** — Collaboration currently falls back to implicit `editor` access for non-owners in room admission logic. Add real membership/invite records and explicit per-project ACL decisions so collaboration rights are granted intentionally instead of by shortcut. | OPEN | C4 | Repo gap audit 2026-03-13 |
+| BL-0640 | **Explicit collaboration membership / invite model** — Collaboration currently falls back to implicit `editor` access for non-owners in room admission logic. Add real membership/invite records and explicit per-project ACL decisions so collaboration rights are granted intentionally instead of by shortcut. | DONE (Wave 138) - DB, API, and WS validation implemented | C4 | Repo gap audit 2026-03-13 |
 | BL-0649 | **Kanban board should persist to project/account, not browser-only localStorage** — The task board is deep enough to be useful, but it does not reliably follow users across devices, exports, or collaborators. Back it with project-scoped persistence and optional team sharing. | DONE (verified Wave 106) | C3 | Repo gap audit 2026-03-13 |
 
 ### Manufacturing & Supply Chain
@@ -839,12 +839,12 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0468 | Panelization tool with tab/v-score/fiducial | OPEN | C4 | MF-132, IFX-037 |
 | BL-0469 | Pick-and-place validation and preview — pick-place-validator.ts with 7 rules + stats, 47 tests. | DONE (Wave 107) | C3 | MF-133, IFX-038 |
 | BL-0470 | Manufacturing package validator before download | DONE (Wave 108) | C3 | MF-135 |
-| BL-0471 | Build-time risk score (cost + supply + assembly) | OPEN | C4 | MF-137, IFX-031 |
+| BL-0471 | Build-time risk score (cost + supply + assembly) | DONE (Wave 138) | C4 | MF-137, IFX-031 |
 | BL-0472 | Quote and order history per project | DONE (Wave 109) | C3 | MF-140 |
 | BL-0473 | MPN normalization and dedup in BOM | PARTIAL | C3 | MF-129 |
 | BL-0474 | AML/approved-vendor-list enforcement | DONE (Wave 110) | C3 | MF-138 |
 | BL-0475 | Assembly risk heatmap | DONE (Wave 109) | C3 | IFX-034 |
-| BL-0476 | One-click manufacturing package wizard | OPEN | C4 | UX-060, IFX-036 |
+| BL-0476 | One-click manufacturing package wizard | DONE (Wave 138) - Integrated with Google Drive | C4 | UX-060, IFX-036 |
 
 ### Manufacturing — Supply Chain Gaps (Wave 64 Audit)
 
@@ -853,7 +853,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0528 | **PCB order tracking** — After placing an order via the ordering flow, provide a status tracker (Gerbers received → In production → Shipped → Delivered) linked to the PCB order record. JLCPCB and PCBWay both have order status APIs. | DONE (Wave 110) | C3 | Wave 64 audit |
 | BL-0529 | **Fab account linking** — Allow users to save JLCPCB / PCBWay / OSHPark API keys in the settings so orders can be submitted directly without leaving the app. Currently the ordering flow generates a package but requires manual upload to fab websites. | DONE (Wave 134) | C4 | Wave 64 audit |
 | BL-0530 | **DFM validates actual trace widths and clearances** — `DfmChecker` currently only validates component footprints and courtyard clearances. It does not read actual routed traces from `circuit_wires`. Add trace width and clearance checks against the selected fab preset. | DONE (verified Wave 106) | C4 | Wave 64 audit |
-| BL-0531 | **BOM component availability check in DFM** — Integrate BOM stock data (from supplier APIs, once real) into the DFM flow. Flag unavailable or long-lead-time components as DFM risks before the user commits to a fab order. | OPEN | C4 | Wave 64 audit |
+| BL-0531 | **BOM component availability check in DFM** — Integrate BOM stock data (from supplier APIs, once real) into the DFM flow. Flag unavailable or long-lead-time components as DFM risks before the user commits to a fab order. | DONE (Wave 138) | C4 | Wave 64 audit |
 | BL-0532 | **Export file syntax validation** — 4 format validators (Gerber/Drill/IPC-2581/ODB++), wired to export routes with 422 on errors. | DONE (Wave 89) | C3 | Wave 64 audit |
 | BL-0533 | **LCSC real-time part data sync** — `lcsc-jlcpcb-mapper.ts` currently uses 154 built-in static mappings. Add an optional API sync to fetch real-time prices, stock levels, and JLCPCB assembly availability from the LCSC open API. | DONE (verified Wave 106) | C4 | Wave 64 audit |
 | BL-0646 | **Supplier pricing must move from demo data to real server-backed integrations** — Procurement still presents "live pricing" through a mock/demo pipeline. Replace the fake offer generator with real provider fetches behind a server proxy that handles auth, caching, and rate limiting. | OPEN | C4 | Repo gap audit 2026-03-13 |
@@ -949,7 +949,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0286 | **No API versioning** — introduce `/api/v1/` prefix + `Deprecation`/`Sunset` headers | OPEN | C4 | GA-API-03 |
 | BL-0287 | **No SSE reconnection logic** — Already implemented: `fetchWithRetry()` in ChatPanel.tsx with exponential backoff (1s/2s/4s), max 3 retries, "Reconnecting..." UI. Only retries on network TypeError. | DONE (verified Wave 60) | C3 | GA-API-05 |
 | BL-0288 | **No SSE heartbeat events** — Already implemented: `:heartbeat\n\n` emitted via setInterval during SSE streaming in server/routes/chat.ts:543-547. | DONE (verified Wave 60) | C3 | GA-API-06 |
-| BL-0289 | **Delete lifecycle inconsistent** — define global soft-vs-hard policy matrix by entity | OPEN | C4 | GA-DATA-01 |
+| BL-0289 | **Delete lifecycle inconsistent** — define global soft-vs-hard policy matrix by entity | DONE (Wave 138) — ADR 0009 created | C4 | GA-DATA-01 |
 | BL-0290 | **No generated API types** — use zod-to-ts or OpenAPI; enforce in CI | DONE (verified Wave 106) | C4 | GA-API-04 |
 
 ### Performance (P2)
@@ -1076,7 +1076,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0324 | Improve color contrast in low-contrast surfaces | DONE (Wave 108) | C2 | UX-085 |
 | BL-0325 | Reduced-motion mode | DONE (verified Wave 106) | C2 | UX-086 |
 | BL-0326 | Screen-reader labels for canvas actions | DONE (Wave 111) | C2 | UX-088 |
-| BL-0327 | Full keyboard-first editing mode | OPEN | C4 | UX-090 |
+| BL-0327 | Full keyboard-first editing mode | DONE (Wave 138) - Arrow keys now natively move and persist selected nodes | C4 | UX-090 |
 | BL-0328 | Accessibility audit dashboard with tracked fixes | DONE (Wave 112) | C3 | UX-089 |
 | BL-0329 | Font scaling and spacing options | DONE (Wave 110) | C2 | UX-087 |
 
@@ -1099,7 +1099,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0350 | Standardize icon language by domain | DONE (Wave 114) | C2 | UX-102 |
 | BL-0351 | Consistent spacing scale and typography tokens | DONE (Wave 115) | C3 | UX-104 |
-| BL-0352 | Light theme and OLED-black theme options | OPEN | C4 | UX-105, MF-192 |
+| BL-0352 | Light theme and OLED-black theme options | DONE (Wave 138) | C4 | UX-105, MF-192 |
 | BL-0353 | Consistent motion language for transitions | DONE (Wave 114) | C2 | UX-106 |
 | BL-0354 | State illustrations for empty/error/offline pages | DONE (Wave 114) | C2 | UX-107 |
 | BL-0355 | Design system docs site in-app | DONE (Wave 116) | C3 | UX-108 |
@@ -1219,7 +1219,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0463 | Real-time drift detection | OPEN | C4 | ARDX-112 |
 | BL-0464 | Time machine playback (firmware + logs + schematic) | OPEN | C5 | ARDX-113 |
 | BL-0465 | "Design-to-drive" mode (auto-create test firmware from schematic) | OPEN | C5 | ARDX-106 |
-| BL-0466 | AI copilot co-debugs wiring + firmware together | OPEN | C5 | ARDX-107 |
+| BL-0466 | AI copilot co-debugs wiring + firmware together | DONE (Wave 138) - Genkit Co-Debug flow in Serial Monitor | C5 | ARDX-107 |
 | BL-0467 | ProtoPulse "mission mode" — concept to shipping kit | OPEN | C5 | IFX-120 |
 | BL-0553 | **3D viewer WebGL migration** — Replace the current scene-graph renderer with a Three.js / WebGL renderer that loads real STEP/VRML component models, supports realistic lighting, shadow casting, and per-layer material shading for professional PCB visualization. | OPEN | C4 | Wave 64 audit |
 | BL-0554 | **AC analysis harmonic distortion (THD/IMD)** — Extend the AC small-signal analysis engine to compute total harmonic distortion and intermodulation distortion for audio/RF circuits. Requires nonlinear Volterra series expansion or direct time-to-frequency transform post-transient. | OPEN | C4 | Wave 64 audit |
@@ -1277,3 +1277,23 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 ---
 
 *Snapshot updated: 2026-03-13 — document currently reflects work through Wave 80 (5 P0 IDOR/auth fixes) plus Pure-Local Desktop App pivot resolving firmware/debugger/platform blockers. Historical highlight notes retained here: Wave 69: BL-0489, BL-0492, BL-0493, BL-0496, BL-0499, BL-0500, BL-0506, BL-0590, BL-0591, BL-0592, BL-0621, BL-0624 done. Wave 70: BL-0567, BL-0569, BL-0570, BL-0575, BL-0576 done. Wave 71: BL-0490, BL-0497 done.*
+
+---
+
+## The Greatness Manifest: Uncompromising Vision (Added Wave 138)
+
+The following items represent the visionary, uncompromising push beyond "good enough" into absolute greatness. These should be addressed once the core P1/P2/P3 operational bugs are resolved, ensuring ProtoPulse is a state-of-the-art living hardware engineering partner.
+
+| ID | Description | Status | Complexity | Source |
+|----|-------------|--------|------------|--------|
+| BL-0700 | **Live Holographic Data Overlays** — Wires glow with current density. When simulation or live telemetry runs, traces pulse. Thick/bright lines for high current; dim lines for low current. Red for thermal hotspots. | OPEN | C5 | Greatness Manifesto |
+| BL-0701 | **3D Spatial Breadboarding** — Integrate Three.js canvas. When dragging components, `gemini-robotics-er` automatically calculates physical wire routing in 3D space so wires don't clip through each other. | OPEN | C5 | Greatness Manifesto |
+| BL-0702 | **Semantic Zoom** — Zoom out: high-level architecture blocks. Zoom in: blocks dissolve into full schematics. Zoom in further: physical PCB footprint. Zoom in completely: datasheet PDF for that specific pin. | OPEN | C5 | Greatness Manifesto |
+| BL-0703 | **Time-Travel State Replay** — The ultimate debugger (expanding BL-0464). Global slider at bottom. Drag back 30s: Serial Monitor rewinds, Code Editor highlights exact line executed, Schematic Canvas shows pin states (HIGH/LOW) at that exact millisecond. | OPEN | C5 | Greatness Manifesto |
+| BL-0704 | **Live Variable Watch (OTA)** — Hover over a variable in C++ code while ESP32 runs across the room. Tooltip pops up showing the *live, real-time value* inside MCU RAM. | OPEN | C5 | Greatness Manifesto |
+| BL-0705 | **Auto-Tuning PID Assistant** — AI watches motor telemetry bounce, automatically calculates perfect PID coefficients, and injects them back into code while motor is spinning. | OPEN | C5 | Greatness Manifesto |
+| BL-0706 | **Proactive Self-Healing** — AI interrupts dangerous actions. Connect 5V to 3.3V pin -> AI flashes red, adds bidirectional logic level converter to schematic/BOM automatically. "Click Approve to apply." | OPEN | C5 | Greatness Manifesto |
+| BL-0707 | **Voice-Driven Bench Sessions** — Full hands-free execution. "ProtoPulse, compile code, flash OTA, and if temp spikes >60C, kill power." App executes flawlessly. | OPEN | C5 | Greatness Manifesto |
+| BL-0708 | **Context-Liquid UI** — UI morphs based on cognitive load. Type in Code Editor -> Schematic fades. Select component -> Sidebar replaces file tree with exact datasheet and DFM requirements. | OPEN | C5 | Greatness Manifesto |
+| BL-0709 | **Zero-Mouse Keyboard Engine** — Expanding BL-0327. Vim-style command palette for hardware. Press `/`, type `place resistor 10k at U1 pin 4`, magically appears on canvas. | OPEN | C5 | Greatness Manifesto |
+| BL-0710 | **Direct API Fab Pipeline** — Click "Manufacture". ProtoPulse negotiates price via JLCPCB/PCBWay API, checks LCSC stock in real-time, swaps OOS resistors for exact equivalents, pays via stored token, drops FedEx tracking number in chat. | OPEN | C5 | Greatness Manifesto |

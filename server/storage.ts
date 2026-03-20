@@ -35,6 +35,10 @@ export class DatabaseStorage {
   getProject = this._projects.getProject.bind(this._projects);
   getProjectsByOwner = this._projects.getProjectsByOwner.bind(this._projects);
   isProjectOwner = this._projects.isProjectOwner.bind(this._projects);
+  getProjectMembers = this._projects.getProjectMembers.bind(this._projects);
+  addProjectMember = this._projects.addProjectMember.bind(this._projects);
+  updateProjectMember = this._projects.updateProjectMember.bind(this._projects);
+  removeProjectMember = this._projects.removeProjectMember.bind(this._projects);
   createProject = this._projects.createProject.bind(this._projects);
   updateProject = this._projects.updateProject.bind(this._projects);
   deleteProject = this._projects.deleteProject.bind(this._projects);

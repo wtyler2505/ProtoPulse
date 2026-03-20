@@ -38,8 +38,8 @@ export default function PinExtractModal({
   onApply,
 }: PinExtractModalProps) {
   const [modalState, setModalState] = useState<ModalState>('upload');
-  const { apiKey, setApiKey: setApiKeyForProvider } = useApiKeys('gemini');
-  const setApiKey = useCallback((key: string) => { setApiKeyForProvider('gemini', key); }, [setApiKeyForProvider]);
+  const { apiKey, updateLocalKey } = useApiKeys();
+  const setApiKey = useCallback((key: string) => { updateLocalKey('gemini', key); }, [updateLocalKey]);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extractedPins, setExtractedPins] = useState<Connector[]>([]);

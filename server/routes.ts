@@ -78,4 +78,15 @@ export async function registerRoutes(app: Express): Promise<void> {
   // --- Circuit AI Routes ---
   const { registerCircuitAIRoutes } = await import('./circuit-ai');
   registerCircuitAIRoutes(app, storage);
+
+  // --- Genkit Test Route ---
+  app.post('/api/genkit-test', async (req, res) => {
+    try {
+      const { generateArduinoSketchFlow } = await import('./genkit');
+      const result = await generateArduinoSketchFlow(req.body);
+      res.json({ result });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 }

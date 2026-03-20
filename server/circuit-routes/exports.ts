@@ -90,6 +90,16 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   // Export Gerber + Drill (manufacturing package)
   app.post('/api/projects/:projectId/export/gerber', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
+    
+    // Approval Gate
+    const project = await storage.getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    if (!project.approvedAt) {
+      return res.status(403).json({ message: 'Project must be approved before generating manufacturing files (Gerbers). Please approve the design first.' });
+    }
+
     const dims = boardDimensionsSchema.safeParse(req.body);
     const boardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
     const boardHeight = dims.success ? (dims.data.boardHeight ?? DEFAULT_BOARD_HEIGHT) : DEFAULT_BOARD_HEIGHT;
@@ -209,6 +219,16 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   // Export Pick-and-Place
   app.post('/api/projects/:projectId/export/pick-place', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
+    
+    // Approval Gate
+    const project = await storage.getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    if (!project.approvedAt) {
+      return res.status(403).json({ message: 'Project must be approved before generating manufacturing files (Pick & Place). Please approve the design first.' });
+    }
+
     const parsed = exportFormatSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
@@ -578,17 +598,27 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   // Export ODB++ (manufacturing package ZIP)
   app.post('/api/projects/:projectId/export/odb-plus-plus', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
+    
+    // Approval Gate
+    const project = await storage.getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    if (!project.approvedAt) {
+      return res.status(403).json({ message: 'Project must be approved before generating manufacturing files (ODB++). Please approve the design first.' });
+    }
+
     const dims = boardDimensionsSchema.safeParse(req.body);
     const boardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
     const boardHeight = dims.success ? (dims.data.boardHeight ?? DEFAULT_BOARD_HEIGHT) : DEFAULT_BOARD_HEIGHT;
 
-    const [project, circuits, bomItems] = await Promise.all([
+    const [proj, circuits, bomItems] = await Promise.all([
       storage.getProject(projectId),
       storage.getCircuitDesigns(projectId),
       storage.getBomItems(projectId),
     ]);
 
-    if (!project) {
+    if (!proj) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
@@ -676,17 +706,27 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   // Export IPC-2581 (XML manufacturing data)
   app.post('/api/projects/:projectId/export/ipc2581', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
+
+    // Approval Gate
+    const project = await storage.getProject(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    if (!project.approvedAt) {
+      return res.status(403).json({ message: 'Project must be approved before generating manufacturing files (IPC-2581). Please approve the design first.' });
+    }
+
     const dims = boardDimensionsSchema.safeParse(req.body);
     const boardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
     const boardHeight = dims.success ? (dims.data.boardHeight ?? DEFAULT_BOARD_HEIGHT) : DEFAULT_BOARD_HEIGHT;
 
-    const [project, circuits, bomItems] = await Promise.all([
+    const [proj, circuits, bomItems] = await Promise.all([
       storage.getProject(projectId),
       storage.getCircuitDesigns(projectId),
       storage.getBomItems(projectId),
     ]);
 
-    if (!project) {
+    if (!proj) {
       return res.status(404).json({ message: 'Project not found' });
     }
 
@@ -770,14 +810,76 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
   app.post('/api/projects/:projectId/export/firmware', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
-    const [project, nodes, edges] = await Promise.all([
+    const [project, nodes, edges, circuits] = await Promise.all([
       storage.getProject(projectId),
       storage.getNodes(projectId),
       storage.getEdges(projectId),
+      storage.getCircuitDesigns(projectId),
     ]);
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
+    }
+
+    let pinConstants: any[] = [];
+    if (circuits.length > 0) {
+      try {
+        const { generatePinConstants } = await import('@shared/arduino-pin-generator');
+        const [instances, nets, wires] = await Promise.all([
+          storage.getCircuitInstances(circuits[0].id),
+          storage.getCircuitNets(circuits[0].id),
+          storage.getCircuitWires(circuits[0].id),
+        ]);
+        
+        // Find MCU instance
+        const mcuInstance = instances.find(i => 
+          i.properties && 
+          ((i.properties as any).family?.toLowerCase().includes('arduino') || 
+           (i.properties as any).family?.toLowerCase().includes('esp'))
+        );
+
+        if (mcuInstance) {
+          const mcuBoardType = (mcuInstance.properties as any).family?.toLowerCase().includes('esp32') ? 'esp32' 
+            : (mcuInstance.properties as any).family?.toLowerCase().includes('esp8266') ? 'esp8266'
+            : 'uno';
+            
+          const mappedInstances = instances.map(i => ({
+            id: i.id.toString(),
+            name: i.referenceDesignator,
+            type: (i.properties as any).category || 'generic'
+          }));
+
+          const mappedNets = nets.map(n => ({
+            id: n.id.toString(),
+            name: n.name
+          }));
+
+          const connections: {netId: string; instanceId: string; pinId: string}[] = [];
+          for (const wire of wires) {
+            connections.push({
+              netId: wire.netId.toString(),
+              instanceId: wire.sourceInstanceId.toString(),
+              pinId: wire.sourcePinId
+            });
+            connections.push({
+              netId: wire.netId.toString(),
+              instanceId: wire.targetInstanceId.toString(),
+              pinId: wire.targetPinId
+            });
+          }
+
+          const result = generatePinConstants({
+            mcuId: mcuInstance.id.toString(),
+            boardType: mcuBoardType,
+            instances: mappedInstances,
+            nets: mappedNets,
+            connections
+          });
+          pinConstants = result.constants;
+        }
+      } catch (e) {
+        // Fall back to dummy pins if generation fails
+      }
     }
 
     const { generateFirmwareScaffold } = await import('../export/firmware-scaffold-generator');
@@ -801,6 +903,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
         busWidth: e.busWidth ?? null,
         netName: e.netName ?? null,
       })),
+      pinConstants,
     });
 
     res.json({

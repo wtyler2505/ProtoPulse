@@ -4,7 +4,7 @@
 
 cd /home/wtyler/Projects/ProtoPulse
 
-OUTPUT=$(npm run check 2>&1)
+OUTPUT=$(NODE_OPTIONS="--max-old-space-size=4096" npm run check 2>&1)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then

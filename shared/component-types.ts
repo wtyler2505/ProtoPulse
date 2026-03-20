@@ -140,6 +140,7 @@ export type DRCRuleType =
   | 'trace-to-edge'
   | 'via-in-pad'
   | 'solder-mask'
+  | 'bom-availability'
   | PcbDrcRuleType;
 
 /** PCB-level DRC rule types for board-level design rule checking. */

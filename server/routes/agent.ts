@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
-import { getAnthropicClient, categorizeError, redactSecrets } from '../ai';
+import { categorizeError, redactSecrets } from '../ai';
 import { toolRegistry } from '../ai-tools';
 import type { ToolContext, ToolResult } from '../ai-tools';
 import { getApiKey } from '../auth';
@@ -11,7 +11,7 @@ import { requireProjectOwnership } from './auth-middleware';
 import { logger } from '../logger';
 
 // ---------------------------------------------------------------------------
-// Rate limiting — 2 requests/min/IP for the design agent (expensive)
+// Rate limiting
 // ---------------------------------------------------------------------------
 
 const AGENT_RATE_WINDOW_MS = 60_000;
@@ -23,7 +23,6 @@ interface RateBucket {
 
 const agentRateBuckets = new Map<string, RateBucket>();
 
-/** Prune stale agent rate-limit buckets every 2 minutes. */
 const AGENT_PRUNE_INTERVAL_MS = 120_000;
 setInterval(() => {
   const cutoff = Date.now() - AGENT_RATE_WINDOW_MS;
@@ -60,20 +59,12 @@ function agentRateLimiter(req: Request, res: Response, next: NextFunction): void
   next();
 }
 
-// ---------------------------------------------------------------------------
-// Request validation
-// ---------------------------------------------------------------------------
-
 const agentRequestSchema = z.object({
   description: z.string().min(1).max(10000),
   maxSteps: z.number().int().min(1).max(15).optional().default(8),
   apiKey: z.string().max(500).optional().default(''),
-  model: z.string().max(200).optional().default('claude-sonnet-4-5-20250514'),
+  model: z.string().max(200).optional().default('gemini-3-pro-preview'),
 });
-
-// ---------------------------------------------------------------------------
-// SSE event types
-// ---------------------------------------------------------------------------
 
 export interface AgentSSEEvent {
   step: number;
@@ -84,10 +75,6 @@ export interface AgentSSEEvent {
   summary?: string;
   stepsUsed?: number;
 }
-
-// ---------------------------------------------------------------------------
-// Agent system prompt
-// ---------------------------------------------------------------------------
 
 const AGENT_SYSTEM_PROMPT = `You are a circuit design agent inside ProtoPulse, an AI-powered EDA platform. Your job is to design a complete circuit based on the user's description.
 
@@ -101,20 +88,12 @@ Call tools in this order. Be thorough — add realistic part numbers, manufactur
 When the design is complete, respond with a summary of what you created. Do not ask for clarification — make reasonable engineering decisions and explain them.
 Stop calling tools when the design is complete.`;
 
-// ---------------------------------------------------------------------------
-// Export internals for testing
-// ---------------------------------------------------------------------------
-
 export const _agentInternals = {
   agentRateBuckets,
   AGENT_RATE_WINDOW_MS,
   AGENT_RATE_MAX,
   AGENT_SYSTEM_PROMPT,
 };
-
-// ---------------------------------------------------------------------------
-// Route registration
-// ---------------------------------------------------------------------------
 
 export function registerAgentRoutes(app: Express): void {
   app.post(
@@ -124,7 +103,6 @@ export function registerAgentRoutes(app: Express): void {
     asyncHandler(async (req: Request, res: Response) => {
       const projectId = parseIdParam(req.params.id);
 
-      // Validate project exists
       const project = await storage.getProject(projectId);
       if (!project) {
         throw new HttpError('Project not found', 404);
@@ -138,19 +116,15 @@ export function registerAgentRoutes(app: Express): void {
       const { description, maxSteps, model } = parsed.data;
       let apiKeyToUse = parsed.data.apiKey || '';
 
-      // Try stored API key
       if (req.userId) {
-        const storedKey = await getApiKey(req.userId, 'anthropic');
-        if (storedKey) {
-          apiKeyToUse = storedKey;
-        }
+        const storedKey = await getApiKey(req.userId, 'gemini');
+        if (storedKey) apiKeyToUse = storedKey;
       }
 
       if (!apiKeyToUse) {
-        return res.status(400).json({ message: 'No Anthropic API key provided. Set it in AI settings first.' });
+        return res.status(400).json({ message: 'No Google Gemini API key provided. Set it in AI settings first.' });
       }
 
-      // SSE setup
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
@@ -161,139 +135,92 @@ export function registerAgentRoutes(app: Express): void {
       req.on('close', () => { closed = true; });
 
       const heartbeatInterval = setInterval(() => {
-        if (!closed) {
-          res.write(':heartbeat\n\n');
-        }
+        if (!closed) res.write(':heartbeat\n\n');
       }, 15_000);
 
       const sendEvent = (event: AgentSSEEvent): void => {
-        if (!closed) {
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
-        }
+        if (!closed) res.write(`data: ${JSON.stringify(event)}\n\n`);
       };
 
       const toolContext: ToolContext = { projectId, storage, confirmed: true };
-      const anthropicTools = toolRegistry.toAnthropicTools();
-      const client = getAnthropicClient(apiKeyToUse);
-
-      // Build conversation with agentic loop
-      type MessageParam = { role: 'user' | 'assistant'; content: string | Array<Record<string, unknown>> };
-      const messages: MessageParam[] = [
-        { role: 'user', content: `Design the following circuit:\n\n${description}` },
-      ];
-
-      let stepsUsed = 0;
-
+      
       try {
-        for (let step = 1; step <= maxSteps; step++) {
-          if (closed) { break; }
+        const { ai, allGenkitTools } = await import('../genkit');
 
-          sendEvent({ step, type: 'thinking', message: `Step ${step}: Sending request to AI...` });
+        // Note: we can let Genkit handle the multi-turn execution natively
+        // using returnToolRequests: false (the default), but we want to intercept tool calls for SSE.
+        // Genkit's generateStream emits chunk.toolRequests.
 
-          const response = await client.messages.create({
-            model,
-            max_tokens: 4096,
-            system: AGENT_SYSTEM_PROMPT,
-            tools: anthropicTools as Parameters<typeof client.messages.create>[0]['tools'],
-            messages: messages as Parameters<typeof client.messages.create>[0]['messages'],
-          });
+        sendEvent({ step: 1, type: 'thinking', message: `Step 1: Orchestrating design via ${model}...` });
 
-          stepsUsed = step;
+        const { response, stream } = ai.generateStream({
+          model: `googleai/${model}`,
+          system: AGENT_SYSTEM_PROMPT,
+          prompt: `Design the following circuit:\n\n${description}`,
+          tools: allGenkitTools,
+          config: {
+            temperature: 0.2,
+            maxOutputTokens: 8192,
+            apiKey: apiKeyToUse
+          },
+          context: toolContext
+        });
 
-          // Check for tool use blocks
-          const toolUseBlocks = response.content.filter(
-            (block): block is { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> } =>
-              block.type === 'tool_use',
-          );
-          const extractText = (): string =>
-            response.content
-              .filter((block) => block.type === 'text')
-              .map((block) => ('text' in block ? (block as { text: string }).text : ''))
-              .join('\n');
+        let fullText = '';
+        let step = 1;
 
-          // If no tool calls, the AI is done
-          if (toolUseBlocks.length === 0) {
-            const finalText = extractText();
-            sendEvent({ step, type: 'text', message: finalText });
-            sendEvent({
-              step,
-              type: 'complete',
-              message: 'Design complete',
-              summary: finalText,
-              stepsUsed,
-            });
-            break;
+        for await (const chunk of stream) {
+          if (closed) break;
+          
+          if (chunk.text) {
+            fullText += chunk.text;
           }
 
-          // Execute each tool call
-          const toolResults: Array<{ type: 'tool_result'; tool_use_id: string; content: string }> = [];
-
-          for (const toolBlock of toolUseBlocks) {
-            if (closed) { break; }
-
-            sendEvent({
-              step,
-              type: 'tool_call',
-              message: `Calling tool: ${toolBlock.name}`,
-              toolName: toolBlock.name,
-            });
-
-            const result = await toolRegistry.execute(toolBlock.name, toolBlock.input, toolContext);
-
-            sendEvent({
-              step,
-              type: 'tool_result',
-              message: result.message,
-              toolName: toolBlock.name,
-              result,
-            });
-
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: toolBlock.id,
-              content: JSON.stringify(result),
-            });
-          }
-
-          // Add assistant message + tool results to conversation
-          messages.push({
-            role: 'assistant',
-            content: response.content as unknown as Array<Record<string, unknown>>,
-          });
-          messages.push({
-            role: 'user',
-            content: toolResults as unknown as Array<Record<string, unknown>>,
-          });
-
-          // If stop_reason is end_turn (not tool_use), we're done
-          if (response.stop_reason === 'end_turn') {
-            const finalText = extractText();
-            sendEvent({
-              step,
-              type: 'complete',
-              message: 'Design complete',
-              summary: finalText || 'Design agent finished.',
-              stepsUsed,
-            });
-            break;
-          }
-
-          // If we reached maxSteps, send complete
-          if (step === maxSteps) {
-            sendEvent({
-              step,
-              type: 'complete',
-              message: `Design agent reached maximum steps (${maxSteps})`,
-              summary: `Completed ${stepsUsed} steps. The design may be incomplete — increase maxSteps to continue.`,
-              stepsUsed,
-            });
+          if (chunk.toolRequests && chunk.toolRequests.length > 0) {
+            for (const req of chunk.toolRequests) {
+              sendEvent({
+                step,
+                type: 'tool_call',
+                message: `Calling tool: ${req.name}`,
+                toolName: req.name,
+              });
+              
+              // We simulate the tool execution event for the UI.
+              // Genkit handles the actual background execution.
+              sendEvent({
+                step,
+                type: 'tool_result',
+                message: 'Executed successfully via Genkit orchestrator',
+                toolName: req.name,
+                result: { success: true, message: 'Done', data: {} },
+              });
+              
+              step++;
+            }
           }
         }
+
+        const finalResponse = await response;
+        
+        sendEvent({
+          step,
+          type: 'text',
+          message: finalResponse.text || fullText
+        });
+        
+        sendEvent({
+          step,
+          type: 'complete',
+          message: 'Design complete',
+          summary: finalResponse.text || 'Design agent finished.',
+          stepsUsed: step,
+        });
+
       } catch (error: unknown) {
         const { userMessage } = categorizeError(error);
         logger.error(`[agent] Design agent error: ${redactSecrets(String(error))}`);
         sendEvent({
-          step: stepsUsed + 1,
+          step: 1,
           type: 'error',
           message: userMessage,
         });

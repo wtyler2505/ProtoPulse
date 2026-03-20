@@ -527,10 +527,41 @@ function runServerDfmCheck(
     width: number;
     layer: string | null;
   }>,
+  bomItems: Array<{
+    partNumber: string;
+    status: string;
+    leadTime: string | null;
+  }>,
   fab: ServerFabCapabilities,
 ): ServerDfmResult {
   const violations: ServerDfmViolation[] = [];
   let totalChecks = 0;
+
+  // Check BOM Availability
+  for (const item of bomItems) {
+    totalChecks++;
+    if (item.status === 'Out of Stock') {
+      violations.push({
+        ruleId: 'DFM-BOM-001',
+        ruleName: 'Component Out of Stock',
+        severity: 'error',
+        category: 'bom',
+        message: `BOM component ${item.partNumber} is marked as Out of Stock. Procurement will be blocked.`,
+        currentValue: 'Out of Stock',
+        requiredValue: 'In Stock',
+      });
+    } else if (item.status === 'Low Stock' || (item.leadTime && item.leadTime.toLowerCase().includes('week'))) {
+      violations.push({
+        ruleId: 'DFM-BOM-002',
+        ruleName: 'Component Supply Risk',
+        severity: 'warning',
+        category: 'bom',
+        message: `BOM component ${item.partNumber} has low stock or long lead time (${item.leadTime || 'Low Stock'}). Consider finding an alternate part.`,
+        currentValue: item.status,
+        requiredValue: 'In Stock',
+      });
+    }
+  }
 
   // Check trace widths
   for (const wire of wires) {
@@ -713,9 +744,10 @@ export function registerManufacturingTools(registry: ToolRegistry): void {
       }
 
       // Fetch circuit data
-      const [instances, wires] = await Promise.all([
+      const [instances, wires, bomItems] = await Promise.all([
         ctx.storage.getCircuitInstances(designId),
         ctx.storage.getCircuitWires(designId),
+        ctx.storage.getBomItems(ctx.projectId),
       ]);
 
       // Map to simplified shapes
@@ -730,8 +762,13 @@ export function registerManufacturingTools(registry: ToolRegistry): void {
         width: w.width,
         layer: w.layer,
       }));
+      const bomData = bomItems.map((b) => ({
+        partNumber: b.partNumber,
+        status: b.status,
+        leadTime: b.leadTime,
+      }));
 
-      const result = runServerDfmCheck(instData, wireData, fab);
+      const result = runServerDfmCheck(instData, wireData, bomData, fab);
 
       // Group violations by severity
       const byCategory: Record<string, ServerDfmViolation[]> = {};

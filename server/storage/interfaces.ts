@@ -44,6 +44,13 @@ export interface IStorage {
   getProject(id: number): Promise<Project | undefined>;
   getProjectsByOwner(userId: number): Promise<Project[]>;
   isProjectOwner(projectId: number, userId: number): Promise<boolean>;
+  
+  // Project Members (Collaboration)
+  getProjectMembers(projectId: number): Promise<ProjectMember[]>;
+  addProjectMember(member: InsertProjectMember): Promise<ProjectMember>;
+  updateProjectMember(projectId: number, userId: number, data: Partial<InsertProjectMember>): Promise<ProjectMember | undefined>;
+  removeProjectMember(projectId: number, userId: number): Promise<boolean>;
+
   createProject(project: InsertProject, ownerId?: number): Promise<Project>;
   updateProject(id: number, data: Partial<InsertProject>, expectedVersion?: number): Promise<Project | undefined>;
   deleteProject(id: number): Promise<boolean>;

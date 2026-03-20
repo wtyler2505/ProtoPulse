@@ -57,8 +57,8 @@ export default function DatasheetExtractModal({
   onApply,
 }: DatasheetExtractModalProps) {
   const [modalState, setModalState] = useState<ModalState>('upload');
-  const { apiKey, setApiKey: setApiKeyForProvider } = useApiKeys('gemini');
-  const setApiKey = useCallback((key: string) => { setApiKeyForProvider('gemini', key); }, [setApiKeyForProvider]);
+  const { apiKey, updateLocalKey } = useApiKeys();
+  const setApiKey = useCallback((key: string) => { updateLocalKey('gemini', key); }, [updateLocalKey]);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [extracted, setExtracted] = useState<Partial<PartMeta> | null>(null);

@@ -9,7 +9,7 @@ import {
   formatAsDefines,
   getBoardPinMap,
   getConstantsSummary,
-} from '../pin-constant-generator';
+} from '@shared/arduino-pin-generator';
 import type {
   BoardPinMap,
   BoardType,
@@ -17,7 +17,7 @@ import type {
   InstanceInfo,
   PinGeneratorOptions,
   PinConstant,
-} from '../pin-constant-generator';
+} from '@shared/arduino-pin-generator';
 
 // ---------------------------------------------------------------------------
 // Helpers

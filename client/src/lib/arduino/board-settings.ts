@@ -102,6 +102,10 @@ export const BUILT_IN_PRESETS: readonly BoardPreset[] = [
 
   // Raspberry Pi
   { fqbn: 'rp2040:rp2040:rpipico', name: 'Raspberry Pi Pico', platform: 'Raspberry Pi RP2040', arch: 'rp2040', uploadSpeed: 115200 },
+
+  // Nordic nRF52
+  { fqbn: 'sandeepmistry:nRF5:Generic_nRF52832', name: 'Generic nRF52832', platform: 'Nordic nRF52', arch: 'nRF5', uploadSpeed: 115200 },
+  { fqbn: 'sandeepmistry:nRF5:Generic_nRF52840', name: 'Generic nRF52840', platform: 'Nordic nRF52', arch: 'nRF5', uploadSpeed: 115200 },
 ] as const;
 
 // ---------------------------------------------------------------------------

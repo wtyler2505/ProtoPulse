@@ -132,7 +132,7 @@ export class CollaborationServer {
     }
 
     const userId = validation.userId;
-    const role: CollabRole = validation.isOwner ? 'owner' : 'editor';
+    const role: CollabRole = validation.role;
     const username = validation.username;
 
     // Assign color

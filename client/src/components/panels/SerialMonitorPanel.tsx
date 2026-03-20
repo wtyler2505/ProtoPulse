@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useSyncExternalStore, lazy, Suspense } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 import {
   useWebSerial,
   COMMON_BAUD_RATES,
@@ -11,6 +13,7 @@ import type {
 import { SerialLogger } from '@/lib/arduino/serial-logger';
 import { TelemetryStore, parseLine } from '@/lib/arduino/telemetry-parser';
 import { DeviceShadow } from '@/lib/digital-twin/device-shadow';
+import DeviceCommandSandbox from '@/components/arduino/DeviceCommandSandbox';
 import { detectEspException, parseEspException } from '@/lib/arduino/esp-exception-decoder';
 import { detectBaudMismatch, nonPrintableRatio } from '@/lib/arduino/baud-detector';
 import type { EspExceptionResult } from '@/lib/arduino/esp-exception-decoder';
@@ -49,6 +52,8 @@ import {
   ArrowRightLeft,
   HelpCircle,
   Activity,
+  Wand2,
+  Loader2,
 } from 'lucide-react';
 
 const TroubleshootWizard = lazy(() => import('@/components/arduino/TroubleshootWizard'));
@@ -156,7 +161,12 @@ function formatRecordingSize(bytes: number): string {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function SerialMonitorPanel() {
+interface SerialMonitorPanelProps {
+  code?: string;
+  projectId?: number;
+}
+
+export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialMonitorPanelProps) {
   const {
     state,
     requestPort,
@@ -198,8 +208,29 @@ export default function SerialMonitorPanel() {
   const [showTroubleshootWizard, setShowTroubleshootWizard] = useState(false);
   const troubleshootTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // AI Hardware Copilot
+  const [copilotResult, setCopilotResult] = useState<string | null>(null);
+  const copilotMutation = useMutation({
+    mutationFn: async () => {
+      const recentLogs = state.monitor.slice(-50).map(l => l.data).join('\n');
+      const res = await apiRequest('POST', `/api/projects/${projectId}/arduino/co-debug`, {
+        code,
+        serialLogs: recentLogs || '(No recent logs)'
+      });
+      const data = await res.json();
+      return data.result as string;
+    },
+    onSuccess: (data) => setCopilotResult(data)
+  });
+
   // Tab: 'monitor' | 'dashboard'
   const [activeTab, setActiveTab] = useState<'monitor' | 'dashboard'>('monitor');
+
+  // Hardware Session Replay state
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [replayData, setReplayData] = useState<SerialMonitorLine[]>([]);
+  const replayFileRef = useRef<HTMLInputElement>(null);
+  const replayTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Telemetry store
   const telemetryStoreRef = useRef(TelemetryStore.getInstance());
@@ -350,6 +381,73 @@ export default function SerialMonitorPanel() {
   const handleDownloadRecording = useCallback(() => {
     serialLoggerRef.current.downloadAsFile();
   }, []);
+
+  const handleStopReplay = useCallback(() => {
+    setIsReplaying(false);
+    replayTimeoutsRef.current.forEach(clearTimeout);
+    replayTimeoutsRef.current = [];
+    setReplayData([]);
+  }, []);
+
+  const handleLoadReplay = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const parsed = JSON.parse(content);
+        if (parsed.entries && Array.isArray(parsed.entries)) {
+          clearMonitor(); // Clear current monitor
+          setIsReplaying(true);
+          setReplayData([]);
+          
+          const entries = parsed.entries as SerialMonitorLine[];
+          
+          // Replay lines with their original relative timing
+          entries.forEach((entry, idx) => {
+            const timeoutId = setTimeout(() => {
+              setReplayData(prev => {
+                const next = [...prev, entry];
+                // Keep only the last 1000 lines for performance
+                if (next.length > 1000) {
+                  return next.slice(next.length - 1000);
+                }
+                return next;
+              });
+              
+              // Feed to telemetry store for dashboard playback
+              if (entry.direction === 'rx') {
+                telemetryStoreRef.current.ingest(entry.data);
+                const parsedLine = parseLine(entry.data);
+                if (parsedLine) {
+                  const ch: Record<string, number> = {};
+                  for (const [key, val] of Array.from(parsedLine.values.entries())) {
+                    ch[key] = val;
+                  }
+                  DeviceShadow.getInstance().processFrame({
+                    type: 'telemetry',
+                    ts: Date.now(),
+                    ch,
+                  });
+                }
+              }
+            }, entry.timestamp); // Use the original timestamp offset
+            replayTimeoutsRef.current.push(timeoutId);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to parse replay file', err);
+      }
+      
+      // Reset input
+      if (replayFileRef.current) {
+        replayFileRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  }, [clearMonitor]);
 
   // Auto-load last-used preset on mount
   useEffect(() => {
@@ -985,25 +1083,49 @@ export default function SerialMonitorPanel() {
       {/* Monitor Output (visible when monitor tab active) */}
       {activeTab === 'monitor' && (
         <ScrollArea className="flex-1 min-h-0">
+          {copilotResult && (
+            <div className="m-2 p-3 bg-primary/10 border border-primary/20 rounded-md relative text-foreground">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="absolute top-1 right-1 h-6 w-6 p-0 hover:bg-primary/20 text-muted-foreground"
+                onClick={() => setCopilotResult(null)}
+              >
+                <X className="w-3 h-3" />
+              </Button>
+              <div className="flex items-center gap-2 mb-2 text-primary font-bold text-xs uppercase tracking-wider">
+                <Wand2 className="w-4 h-4" />
+                Hardware Co-Debug Analysis
+              </div>
+              <div className="text-xs prose prose-invert prose-p:leading-snug prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 max-w-none">
+                {/* For safety in a text area, we just render the raw string, or use a markdown component if available. We will just render simple text blocks. */}
+                {copilotResult.split('\n').map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
+            </div>
+          )}
           <div
             data-testid="serial-monitor-output"
             className="p-2 font-mono text-xs leading-relaxed"
           >
-            {state.monitor.length === 0 ? (
+            {(!isReplaying && state.monitor.length === 0) || (isReplaying && replayData.length === 0) ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-                {isConnected ? (
+                {isConnected || isReplaying ? (
                   <ZapOff className="w-8 h-8 opacity-50" />
                 ) : (
                   <Zap className="w-8 h-8 opacity-50" />
                 )}
                 <span className="text-sm">
-                  {isConnected
+                  {isReplaying
+                    ? 'Waiting for replay data...'
+                    : isConnected
                     ? 'Waiting for data...'
                     : 'Connect to a device to start monitoring'}
                 </span>
               </div>
             ) : (
-              state.monitor.map((line: SerialMonitorLine, i: number) => (
+              (isReplaying ? replayData : state.monitor).map((line: SerialMonitorLine, i: number) => (
                 <div
                   key={`${String(line.timestamp)}-${String(i)}`}
                   className={cn(
@@ -1089,8 +1211,56 @@ export default function SerialMonitorPanel() {
               Download
             </Button>
           )}
+
+          {!loggerSnap.recording && (
+            <>
+              <input
+                type="file"
+                accept=".json"
+                ref={replayFileRef}
+                style={{ display: 'none' }}
+                onChange={handleLoadReplay}
+              />
+              {!isReplaying ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 text-[10px] gap-1 px-1.5 text-emerald-400 hover:text-emerald-300"
+                  onClick={() => replayFileRef.current?.click()}
+                  title="Load and replay a recorded session"
+                >
+                  <RotateCcw className="w-2.5 h-2.5" />
+                  Replay
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 text-[10px] gap-1 px-1.5 text-red-400 hover:text-red-300"
+                  onClick={handleStopReplay}
+                  title="Stop playback"
+                >
+                  <X className="w-2.5 h-2.5" />
+                  Stop Replay
+                </Button>
+              )}
+            </>
+          )}
         </div>
       )}
+
+      {/* Command Sandbox */}
+      <DeviceCommandSandbox 
+        onSendCommand={(cmd) => {
+          setSendValue(cmd);
+          // Small delay to ensure state updates before sending
+          setTimeout(() => {
+            const btn = document.querySelector('[data-testid="serial-send-btn"]') as HTMLButtonElement;
+            if (btn) btn.click();
+          }, 50);
+        }} 
+        disabled={!isConnected} 
+      />
 
       {/* Send Input + Actions */}
       <div className="border-t border-border bg-card/60 p-2 flex items-center gap-2">
@@ -1137,6 +1307,18 @@ export default function SerialMonitorPanel() {
           title="Clear monitor"
         >
           <Trash2 className="w-3 h-3" />
+        </Button>
+        <Button
+          data-testid="serial-copilot-btn"
+          variant="secondary"
+          size="sm"
+          onClick={() => copilotMutation.mutate()}
+          disabled={copilotMutation.isPending}
+          className="h-8 text-xs gap-1 bg-primary/10 text-primary hover:bg-primary/20"
+          title="AI Co-Debug (Analyzes code, layout, and logs)"
+        >
+          {copilotMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
+          AI Copilot
         </Button>
       </div>
     </div>

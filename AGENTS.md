@@ -26,7 +26,7 @@ ProtoPulse has officially pivoted from a browser-based/hybrid platform to a Pure
 
 ## Stack
 
-React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark theme) + @xyflow/react | Express 5 + PostgreSQL + Drizzle ORM + TanStack React Query | AI: Anthropic Claude + Google Gemini via SSE streaming | Testing: Vitest 4 + happy-dom + @testing-library/react + Tauri v2 (native desktop)
+React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui (New York dark theme) + @xyflow/react | Express 5 + PostgreSQL + Drizzle ORM + TanStack React Query | AI: Google Genkit (gemini-3.1-pro-preview-customtools + gemini-robotics-er-1.5-preview) via SSE streaming | Testing: Vitest 4 + happy-dom + Tauri v2 (native desktop)
 
 ## Build & Commands
 
@@ -114,7 +114,7 @@ server/
   circuit-routes.ts   → Barrel — imports 13 circuit routers from server/circuit-routes/
   circuit-routes/     → designs, instances, nets, wires, netlist, exports, simulations,
                          hierarchy, imports, autoroute, expansion, utils, index
-  ai.ts               → Anthropic + Gemini streaming, system prompt builder, action parser
+  ai.ts               → Google Genkit streaming, system prompt builder, action parser
   ai-tools.ts         → Barrel — imports 12 tool modules from server/ai-tools/
   ai-tools/           → types, registry, navigation, architecture, circuit, component,
                          bom, validation, export, project, index
@@ -322,7 +322,6 @@ See `docs/product-analysis-checklist.md` for full security findings (CAPX-SEC-*)
 ## Gotchas
 
 - **Soft deletes**: `projects`, `architecture_nodes`, `architecture_edges`, `bom_items` use `deletedAt` — always filter with `isNull(deletedAt)` in queries
-- **PROJECT_ID = 1** is hardcoded in `project-context.tsx` — blocks multi-project (known debt)
 - **Auth uses header**: `X-Session-Id`, not cookies
 - **AI system prompt** rebuilds full project state (all nodes, edges, BOM, validation, chat) on every request — O(N) sequential queries (known performance debt GA-DB-01)
 - **Cache**: LRU eviction policy. Invalidation uses prefix matching: invalidating `"nodes:1"` clears all keys starting with `"nodes:1"`

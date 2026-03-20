@@ -37,6 +37,7 @@ import { generateEagleSch } from '../export/eagle-exporter';
 import { generateDesignReportMd } from '../export/design-report';
 import { generateFritzingProject } from '../export/fritzing-exporter';
 import { generateTinkercadProject } from '../export/tinkercad-exporter';
+import { exportBomToSheet, exportDesignReportToDoc, exportProjectToDrive } from '../google-workspace';
 import type {
   BomItemData,
   ComponentPartData,
@@ -957,6 +958,18 @@ export function registerExportTools(registry: ToolRegistry): void {
         };
       }
 
+      // Pre-flight check: Approval Gate for Manufacturing Exports
+      const manufacturingFormats = ['gerber', 'pick-place', 'odb-plus-plus', 'ipc2581'];
+      if (manufacturingFormats.includes(params.format)) {
+        const project = await ctx.storage.getProject(ctx.projectId);
+        if (!project?.approvedAt) {
+          return {
+            success: false,
+            message: `**Approval Required:** You cannot export manufacturing files (${fmt.label}) until the project has been approved. Please review the design and mark it as approved first.`
+          };
+        }
+      }
+
       // Pre-flight check: does the project have the required data?
       if (fmt.requiresCircuit) {
         const circuits = await ctx.storage.getCircuitDesigns(ctx.projectId);
@@ -1003,5 +1016,92 @@ export function registerExportTools(registry: ToolRegistry): void {
         },
       };
     },
+  });
+
+  /**
+   * export_bom_to_google_sheet — Syncs the current BOM to a live Google Sheet.
+   * Requires a valid googleWorkspaceToken in the tool context.
+   */
+  registry.register({
+    name: 'export_bom_to_google_sheet',
+    description: 'Creates a live Google Sheet containing the current Bill of Materials, calculating costs, and providing a shareable link. Requires the user to have provided a Google Workspace Token.',
+    category: 'export',
+    parameters: z.object({}),
+    requiresConfirmation: false,
+    execute: async (_params, ctx) => {
+      if (!ctx.googleWorkspaceToken) {
+        return {
+          success: false,
+          message: 'Missing Google Workspace Token. Please add your token in the AI Settings panel (gear icon) before syncing to Google Sheets.'
+        };
+      }
+      try {
+        const sheetUrl = await exportBomToSheet(ctx.projectId, ctx.googleWorkspaceToken);
+        return {
+          success: true,
+          message: `Successfully synced the Bill of Materials to Google Sheets! \n\n[Open BOM Sheet](${sheetUrl})`
+        };
+      } catch (err: any) {
+        return { success: false, message: `Failed to export BOM to Google Sheets: ${err.message}` };
+      }
+    }
+  });
+
+  /**
+   * export_design_report_to_google_doc — Syncs a design report to a live Google Doc.
+   * Requires a valid googleWorkspaceToken in the tool context.
+   */
+  registry.register({
+    name: 'export_design_report_to_google_doc',
+    description: 'Creates a live Google Doc containing a comprehensive design report, including executive summary, BOM overview, and validation status. Requires the user to have provided a Google Workspace Token.',
+    category: 'export',
+    parameters: z.object({}),
+    requiresConfirmation: false,
+    execute: async (_params, ctx) => {
+      if (!ctx.googleWorkspaceToken) {
+        return {
+          success: false,
+          message: 'Missing Google Workspace Token. Please add your token in the AI Settings panel (gear icon) before syncing to Google Docs.'
+        };
+      }
+      try {
+        const docUrl = await exportDesignReportToDoc(ctx.projectId, ctx.googleWorkspaceToken);
+        return {
+          success: true,
+          message: `Successfully generated the Design Report in Google Docs! \n\n[Open Design Report](${docUrl})`
+        };
+      } catch (err: any) {
+        return { success: false, message: `Failed to export Design Report to Google Docs: ${err.message}` };
+      }
+    }
+  });
+
+  /**
+   * export_project_to_drive — BL-0476 One-click manufacturing package wizard.
+   * Compiles Gerbers, Firmware, and BOM into a ZIP and uploads to Google Drive.
+   */
+  registry.register({
+    name: 'export_project_to_drive',
+    description: 'Generates a complete manufacturing package (Gerbers, Firmware Scaffold, BOM CSV) and uploads it as a ZIP file to a new Google Drive folder. Requires the user to have provided a Google Workspace Token.',
+    category: 'export',
+    parameters: z.object({}),
+    requiresConfirmation: false,
+    execute: async (_params, ctx) => {
+      if (!ctx.googleWorkspaceToken) {
+        return {
+          success: false,
+          message: 'Missing Google Workspace Token. Please add your token in the AI Settings panel (gear icon) before exporting to Google Drive.'
+        };
+      }
+      try {
+        const driveUrl = await exportProjectToDrive(ctx.projectId, ctx.googleWorkspaceToken);
+        return {
+          success: true,
+          message: `Successfully generated the full Manufacturing Package and uploaded it to Google Drive! \n\n[Open Drive Folder](${driveUrl})`
+        };
+      } catch (err: any) {
+        return { success: false, message: `Failed to export project to Google Drive: ${err.message}` };
+      }
+    }
   });
 }

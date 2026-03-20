@@ -20,16 +20,16 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   generatePinConstants,
+  formatAsConstExpressions,
   formatAsDefines,
   getConstantsSummary,
-} from '@/lib/arduino/pin-constant-generator';
+} from '@shared/arduino-pin-generator';
 import type {
   BoardType,
   NetInfo,
   InstanceInfo,
   PinGeneratorOptions,
-} from '@/lib/arduino/pin-constant-generator';
-
+} from '@shared/arduino-pin-generator';
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import { useApiKeyStatus } from '@/hooks/useApiKeyStatus';
 interface ApiKeySetupDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  aiProvider: 'anthropic' | 'gemini';
+  aiProvider: 'gemini';
   onApiKeySet: (key: string) => void;
 }
 

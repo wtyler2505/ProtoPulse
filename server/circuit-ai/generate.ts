@@ -6,14 +6,13 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import type { ComponentPart } from '@shared/schema';
 import type { Connector, PartMeta } from '@shared/component-types';
-import type { TextBlock } from '@anthropic-ai/sdk/resources/messages';
-import { parseIdParam, payloadLimit, asyncHandler } from '../routes';
-import { categorizeError, redactSecrets, getAnthropicClient } from '../ai';
+import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
+import { categorizeError, redactSecrets } from '../ai';
 import { fromZodError } from 'zod-validation-error';
-import { anthropicBreaker } from '../circuit-breaker';
 import { logger } from '../logger';
 import { generateSchema } from './schemas';
-import { getThinkingConfig } from './thinking';
+import { ai } from '../genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 function buildGeneratePrompt(description: string, parts: ComponentPart[]): string {
   const partsList = parts
@@ -67,7 +66,6 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
 
       const { description, apiKey, model } = parsed.data;
 
-      // Get circuit to find projectId
       const circuit = await storage.getCircuitDesign(circuitId);
       if (!circuit) {
         return res.status(404).json({ message: 'Circuit not found' });
@@ -81,59 +79,35 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
       const prompt = buildGeneratePrompt(description, parts);
 
       try {
-        const client = getAnthropicClient(apiKey);
-        const thinkingConfig = getThinkingConfig();
-        const response = await anthropicBreaker.execute(() =>
-          client.messages.create({
-            model,
-            max_tokens: 4096 + (thinkingConfig.thinking ? thinkingConfig.thinking.budget_tokens : 0),
-            messages: [{ role: 'user', content: prompt }],
-            ...thinkingConfig,
-          }),
-        );
+        const response = await ai.generate({
+          model: googleAI.model('gemini-3-pro-preview'), // Ignore requested anthropic model, use gemini
+          prompt,
+          config: {
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+            apiKey: apiKey || undefined
+          }
+        });
 
-        const text = response.content
-          .filter((b): b is TextBlock => b.type === 'text')
-          .map((b) => b.text)
-          .join('');
-
-        // Log thinking blocks for transparency (if present)
-        const thinkingBlocks = response.content.filter((b) => b.type === 'thinking');
-        if (thinkingBlocks.length > 0) {
-          logger.info('Extended thinking used for circuit generation', {
-            thinkingBlocks: thinkingBlocks.length,
-            model,
-          });
+        let text = response.text || '';
+        // Clean up markdown fences if model returned them
+        if (text.startsWith('```json')) {
+          text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
+        } else if (text.startsWith('```')) {
+          text = text.replace(/^```\n/, '').replace(/\n```$/, '');
         }
 
-        // Parse the AI response
-        let generated: {
-          instances: Array<{ partId: number; referenceDesignator: string; x: number; y: number }>;
-          nets: Array<{
-            name: string;
-            netType: string;
-            segments: Array<{
-              fromInstanceRefDes: string;
-              fromPin: string;
-              toInstanceRefDes: string;
-              toPin: string;
-            }>;
-          }>;
-        };
-
+        let generated: any;
         try {
           generated = JSON.parse(text);
         } catch {
           return res.status(422).json({ message: 'AI returned invalid JSON', raw: redactSecrets(text) });
         }
 
-        // Create instances
         const refDesToInstanceId = new Map<string, number>();
         for (const inst of generated.instances ?? []) {
           const part = parts.find((p) => p.id === inst.partId);
-          if (!part) {
-            continue;
-          }
+          if (!part) continue;
 
           const created = await storage.createCircuitInstance({
             circuitId,
@@ -147,43 +121,37 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
           refDesToInstanceId.set(inst.referenceDesignator, created.id);
         }
 
-        // Create nets
-        let netCount = 0;
         for (const net of generated.nets ?? []) {
-          const segments = (net.segments ?? [])
-            .map((seg) => ({
-              fromInstanceId: refDesToInstanceId.get(seg.fromInstanceRefDes) ?? 0,
-              fromPin: seg.fromPin,
-              toInstanceId: refDesToInstanceId.get(seg.toInstanceRefDes) ?? 0,
-              toPin: seg.toPin,
-            }))
-            .filter((s) => s.fromInstanceId > 0 && s.toInstanceId > 0);
-
-          if (segments.length === 0) {
-            continue;
-          }
-
-          await storage.createCircuitNet({
+          const createdNet = await storage.createCircuitNet({
             circuitId,
             name: net.name,
-            netType: net.netType || 'signal',
-            segments,
-            labels: [],
-            style: {},
+            netClassId: null,
           });
-          netCount++;
+
+          for (const seg of net.segments ?? []) {
+            const fromInstId = refDesToInstanceId.get(seg.fromInstanceRefDes);
+            const toInstId = refDesToInstanceId.get(seg.toInstanceRefDes);
+
+            if (fromInstId && toInstId) {
+              await storage.createCircuitWire({
+                circuitId,
+                netId: createdNet.id,
+                sourceInstanceId: fromInstId,
+                sourcePinId: seg.fromPin,
+                targetInstanceId: toInstId,
+                targetPinId: seg.toPin,
+                vertices: [],
+                properties: { aiGenerated: true },
+              });
+            }
+          }
         }
 
-        res.json({
-          instanceCount: refDesToInstanceId.size,
-          netCount,
-          message: `Generated ${refDesToInstanceId.size} instances and ${netCount} nets`,
-        });
-      } catch (error) {
-        const { code, userMessage } = categorizeError(error);
-        res
-          .status(code === 'AUTH_FAILED' ? 401 : code === 'RATE_LIMITED' ? 429 : 500)
-          .json({ message: userMessage, code });
+        res.json({ success: true, message: 'Circuit generated successfully' });
+      } catch (error: unknown) {
+        const { userMessage } = categorizeError(error);
+        logger.error(`[circuit-ai] Generation error: ${redactSecrets(String(error))}`);
+        res.status(500).json({ message: userMessage });
       }
     }),
   );

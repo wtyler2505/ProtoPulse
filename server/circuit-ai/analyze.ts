@@ -1,19 +1,18 @@
 /**
- * POST /api/circuits/:circuitId/ai/analyze — AI circuit analysis (what-if, filter topology, power est.)
+ * POST /api/circuits/:id/ai/analyze
  */
 
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
-import type { CircuitInstanceRow, CircuitNetRow, ComponentPart } from '@shared/schema';
+import type { ComponentPart, CircuitInstanceRow, CircuitNetRow } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
-import type { TextBlock } from '@anthropic-ai/sdk/resources/messages';
-import { parseIdParam, payloadLimit, asyncHandler } from '../routes';
-import { categorizeError, getAnthropicClient } from '../ai';
+import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
+import { categorizeError, redactSecrets } from '../ai';
 import { fromZodError } from 'zod-validation-error';
-import { anthropicBreaker } from '../circuit-breaker';
 import { logger } from '../logger';
 import { analyzeSchema } from './schemas';
-import { getThinkingConfig } from './thinking';
+import { ai } from '../genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 function buildAnalyzePrompt(
   question: string,
@@ -98,69 +97,54 @@ export function registerCircuitAiAnalyzeRoute(app: Express, storage: IStorage): 
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
       }
 
-      const { question, apiKey, model } = parsed.data;
+      const { question, apiKey } = parsed.data;
 
       const circuit = await storage.getCircuitDesign(circuitId);
       if (!circuit) {
         return res.status(404).json({ message: 'Circuit not found' });
       }
 
-      const instances = await storage.getCircuitInstances(circuitId);
-      const nets = await storage.getCircuitNets(circuitId);
-      const parts = await storage.getComponentParts(circuit.projectId);
+      const [parts, instances, nets] = await Promise.all([
+        storage.getComponentParts(circuit.projectId),
+        storage.getCircuitInstances(circuitId),
+        storage.getCircuitNets(circuitId),
+      ]);
+      if (parts.length === 0) {
+        return res.status(400).json({ message: 'No component parts available.' });
+      }
 
       const prompt = buildAnalyzePrompt(question, instances, nets, parts);
 
       try {
-        const client = getAnthropicClient(apiKey);
-        const thinkingConfig = getThinkingConfig();
-        const response = await anthropicBreaker.execute(() =>
-          client.messages.create({
-            model,
-            max_tokens: 4096 + (thinkingConfig.thinking ? thinkingConfig.thinking.budget_tokens : 0),
-            messages: [{ role: 'user', content: prompt }],
-            ...thinkingConfig,
-          }),
-        );
-
-        const text = response.content
-          .filter((b): b is TextBlock => b.type === 'text')
-          .map((b) => b.text)
-          .join('');
-
-        // Log thinking usage for observability
-        const thinkingBlocks = response.content.filter((b) => b.type === 'thinking');
-        if (thinkingBlocks.length > 0) {
-          logger.info('Extended thinking used for circuit analysis', {
-            thinkingBlocks: thinkingBlocks.length,
-            model,
-          });
-        }
-
-        let analysis: {
-          answer: string;
-          calculations?: Array<{ label: string; value: string; formula?: string }>;
-          affectedComponents?: string[];
-          suggestions?: string[];
-        };
-
-        try {
-          analysis = JSON.parse(text);
-        } catch {
-          // If JSON parsing fails, return the raw text as the answer
-          analysis = { answer: text };
-        }
-
-        res.json({
-          ...analysis,
-          analyzedInstances: instances.length,
-          analyzedNets: nets.length,
+        const response = await ai.generate({
+          model: googleAI.model('gemini-3-pro-preview'), // Force gemini
+          prompt,
+          config: {
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+            apiKey: apiKey || undefined
+          }
         });
-      } catch (error) {
-        const { code, userMessage } = categorizeError(error);
-        res
-          .status(code === 'AUTH_FAILED' ? 401 : code === 'RATE_LIMITED' ? 429 : 500)
-          .json({ message: userMessage, code });
+
+        let text = response.text || '';
+        if (text.startsWith('```json')) {
+          text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
+        } else if (text.startsWith('```')) {
+          text = text.replace(/^```\n/, '').replace(/\n```$/, '');
+        }
+
+        let resultData: unknown;
+        try {
+          resultData = JSON.parse(text);
+        } catch {
+          return res.status(422).json({ message: 'AI returned invalid JSON', raw: redactSecrets(text) });
+        }
+
+        res.json({ success: true, message: 'Analysis completed', data: resultData });
+      } catch (error: unknown) {
+        const { userMessage } = categorizeError(error);
+        logger.error(`[circuit-ai] Generation error: ${redactSecrets(String(error))}`);
+        res.status(500).json({ message: userMessage });
       }
     }),
   );

@@ -3,12 +3,14 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import SettingsPanel from '../SettingsPanel';
 
 const defaultProps = {
-  aiProvider: 'anthropic' as const,
+  aiProvider: 'gemini' as const,
   setAiProvider: vi.fn(),
   aiModel: 'claude-sonnet-4-5-20250514',
   setAiModel: vi.fn(),
   aiApiKey: '',
   setAiApiKey: vi.fn(),
+  googleWorkspaceToken: '',
+  setGoogleWorkspaceToken: vi.fn(),
   showApiKey: false,
   setShowApiKey: vi.fn(),
   aiTemperature: 0.7,

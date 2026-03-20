@@ -18,6 +18,4 @@ export type {
   ToolContext,
   ModelTier,
   ToolDefinition,
-  AnthropicTool,
-  GeminiFunctionDeclaration,
 } from './ai-tools/index';

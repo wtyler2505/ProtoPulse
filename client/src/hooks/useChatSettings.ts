@@ -5,27 +5,29 @@ import { STORAGE_KEYS } from '@/lib/constants';
 import { AI_MODELS, type RoutingStrategy } from '@/components/panels/chat/constants';
 
 interface ChatSettings {
-  aiProvider: 'anthropic' | 'gemini';
+  aiProvider: 'gemini';
   aiModel: string;
   aiTemperature: number;
   customSystemPrompt: string;
   routingStrategy: RoutingStrategy;
   previewAiChanges: boolean;
+  googleWorkspaceToken: string;
 }
 
 const DEFAULTS: ChatSettings = {
-  aiProvider: 'anthropic',
-  aiModel: AI_MODELS.anthropic[0].id,
+  aiProvider: 'gemini',
+  aiModel: AI_MODELS.gemini[0].id,
   aiTemperature: 0.7,
   customSystemPrompt: '',
-  routingStrategy: 'user' as RoutingStrategy,
+  routingStrategy: 'auto' as RoutingStrategy,
   previewAiChanges: true,
+  googleWorkspaceToken: '',
 };
 
 /** Read chat settings from localStorage with validation and fallback defaults. */
 function readLocalStorage(): ChatSettings {
   try {
-    const provider = (localStorage.getItem(STORAGE_KEYS.AI_PROVIDER) as ChatSettings['aiProvider']) || DEFAULTS.aiProvider;
+    const provider = 'gemini';
     const storedModel = localStorage.getItem(STORAGE_KEYS.AI_MODEL);
     const models = AI_MODELS[provider];
     const model = storedModel && models.some(m => m.id === storedModel) ? storedModel : models[0].id;
@@ -35,6 +37,7 @@ function readLocalStorage(): ChatSettings {
     const routingStrategy = (localStorage.getItem(STORAGE_KEYS.ROUTING_STRATEGY) as RoutingStrategy) || DEFAULTS.routingStrategy;
     const previewRaw = localStorage.getItem(STORAGE_KEYS.AI_PREVIEW_CHANGES);
     const previewAiChanges = previewRaw !== null ? previewRaw === 'true' : DEFAULTS.previewAiChanges;
+    const googleWorkspaceToken = localStorage.getItem('protopulse-google-workspace-token') || '';
     
     return {
       aiProvider: provider,
@@ -43,6 +46,7 @@ function readLocalStorage(): ChatSettings {
       customSystemPrompt,
       routingStrategy,
       previewAiChanges,
+      googleWorkspaceToken,
     };
   } catch {
     return DEFAULTS;
@@ -58,6 +62,7 @@ function writeLocalStorage(patch: Partial<ChatSettings>) {
     if (patch.customSystemPrompt !== undefined) localStorage.setItem(STORAGE_KEYS.AI_SYSTEM_PROMPT, patch.customSystemPrompt);
     if (patch.routingStrategy !== undefined) localStorage.setItem(STORAGE_KEYS.ROUTING_STRATEGY, patch.routingStrategy);
     if (patch.previewAiChanges !== undefined) localStorage.setItem(STORAGE_KEYS.AI_PREVIEW_CHANGES, String(patch.previewAiChanges));
+    if (patch.googleWorkspaceToken !== undefined) localStorage.setItem('protopulse-google-workspace-token', patch.googleWorkspaceToken);
   } catch {
     // Quota exceeded — silently ignore, server is the durable store
   }
@@ -65,23 +70,13 @@ function writeLocalStorage(patch: Partial<ChatSettings>) {
 
 const DEBOUNCE_MS = 500;
 
-/**
- * Chat settings hook with dual persistence: server-side (durable, auth-gated)
- * with localStorage fallback (for unauthenticated users or offline).
- *
- * - On mount: loads from localStorage immediately, then fetches from server.
- * - On server success: overrides local state with server values.
- * - On setting change: writes to localStorage immediately + debounced PATCH to server.
- */
 export function useChatSettings() {
   const queryClient = useQueryClient();
   const [settings, setSettings] = useState<ChatSettings>(readLocalStorage);
 
-  // Accumulate changes and flush in a single PATCH after debounce
   const pendingRef = useRef<Partial<ChatSettings>>({});
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Fetch settings from server — returns null on 401 or any error (no toast)
   const settingsQuery = useQuery<ChatSettings | null>({
     queryKey: ['/api/settings/chat'],
     queryFn: async () => {
@@ -101,15 +96,13 @@ export function useChatSettings() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // When server data arrives, sync local state + localStorage
   useEffect(() => {
     if (settingsQuery.data) {
-      setSettings(settingsQuery.data);
-      writeLocalStorage(settingsQuery.data);
+      setSettings({ ...settingsQuery.data, aiProvider: 'gemini' });
+      writeLocalStorage({ ...settingsQuery.data, aiProvider: 'gemini' });
     }
   }, [settingsQuery.data]);
 
-  // Server save mutation — errors silently (localStorage is the fallback)
   const { mutate: saveToServer } = useMutation({
     mutationFn: async (patch: Partial<ChatSettings>) => {
       const res = await apiRequest('PATCH', '/api/settings/chat', patch);
@@ -118,11 +111,9 @@ export function useChatSettings() {
     onSuccess: (data: ChatSettings) => {
       queryClient.setQueryData(['/api/settings/chat'], data);
     },
-    // Override global onError to suppress toast — localStorage is the fallback
     onError: () => {},
   });
 
-  // Debounced save: accumulates changes and flushes in a single PATCH
   const scheduleSave = useCallback((patch: Partial<ChatSettings>) => {
     pendingRef.current = { ...pendingRef.current, ...patch };
     clearTimeout(timerRef.current);
@@ -133,7 +124,6 @@ export function useChatSettings() {
     }, DEBOUNCE_MS);
   }, [saveToServer]);
 
-  // Flush pending changes on unmount
   useEffect(() => {
     return () => {
       clearTimeout(timerRef.current);
@@ -143,71 +133,80 @@ export function useChatSettings() {
     };
   }, [saveToServer]);
 
-  const setAiProvider = useCallback((v: 'anthropic' | 'gemini') => {
+  const setAiProvider = useCallback((v: 'gemini') => {
     setSettings(prev => {
-      // Auto-reset model if it's not valid for the new provider
       const models = AI_MODELS[v];
       const model = models.some(m => m.id === prev.aiModel) ? prev.aiModel : models[0].id;
-      const patch = { aiProvider: v, aiModel: model };
-      writeLocalStorage(patch);
-      scheduleSave(patch);
-      return { ...prev, ...patch };
+      const next = { ...prev, aiProvider: v, aiModel: model };
+      writeLocalStorage({ aiProvider: v, aiModel: model });
+      scheduleSave({ aiProvider: v, aiModel: model });
+      return next;
     });
   }, [scheduleSave]);
 
   const setAiModel = useCallback((v: string) => {
     setSettings(prev => {
+      const next = { ...prev, aiModel: v };
       writeLocalStorage({ aiModel: v });
       scheduleSave({ aiModel: v });
-      return { ...prev, aiModel: v };
+      return next;
     });
   }, [scheduleSave]);
 
   const setAiTemperature = useCallback((v: number) => {
     setSettings(prev => {
+      const next = { ...prev, aiTemperature: v };
       writeLocalStorage({ aiTemperature: v });
       scheduleSave({ aiTemperature: v });
-      return { ...prev, aiTemperature: v };
+      return next;
     });
   }, [scheduleSave]);
 
   const setCustomSystemPrompt = useCallback((v: string) => {
     setSettings(prev => {
+      const next = { ...prev, customSystemPrompt: v };
       writeLocalStorage({ customSystemPrompt: v });
       scheduleSave({ customSystemPrompt: v });
-      return { ...prev, customSystemPrompt: v };
+      return next;
     });
   }, [scheduleSave]);
 
   const setRoutingStrategy = useCallback((v: RoutingStrategy) => {
     setSettings(prev => {
+      const next = { ...prev, routingStrategy: v };
       writeLocalStorage({ routingStrategy: v });
       scheduleSave({ routingStrategy: v });
-      return { ...prev, routingStrategy: v };
+      return next;
     });
   }, [scheduleSave]);
 
   const setPreviewAiChanges = useCallback((v: boolean) => {
     setSettings(prev => {
+      const next = { ...prev, previewAiChanges: v };
       writeLocalStorage({ previewAiChanges: v });
       scheduleSave({ previewAiChanges: v });
-      return { ...prev, previewAiChanges: v };
+      return next;
+    });
+  }, [scheduleSave]);
+
+  const setGoogleWorkspaceToken = useCallback((v: string) => {
+    setSettings(prev => {
+      const next = { ...prev, googleWorkspaceToken: v };
+      writeLocalStorage({ googleWorkspaceToken: v });
+      scheduleSave({ googleWorkspaceToken: v });
+      return next;
     });
   }, [scheduleSave]);
 
   return {
-    aiProvider: settings.aiProvider,
+    ...settings,
     setAiProvider,
-    aiModel: settings.aiModel,
     setAiModel,
-    aiTemperature: settings.aiTemperature,
     setAiTemperature,
-    customSystemPrompt: settings.customSystemPrompt,
     setCustomSystemPrompt,
-    routingStrategy: settings.routingStrategy,
     setRoutingStrategy,
-    previewAiChanges: settings.previewAiChanges,
     setPreviewAiChanges,
-    isLoaded: settingsQuery.isFetched,
+    setGoogleWorkspaceToken,
+    settingsQuery,
   };
 }

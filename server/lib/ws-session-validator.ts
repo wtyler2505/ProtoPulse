@@ -25,6 +25,7 @@ export interface WsSessionValidResult {
   userId: number;
   username: string;
   isOwner: boolean;
+  role: 'owner' | 'editor' | 'viewer';
 }
 
 export interface WsSessionInvalidResult {
@@ -73,8 +74,32 @@ export async function validateWsSession(
     return { valid: false, userId: null, reason: 'project_deleted' };
   }
 
-  // 3. Check ownership (for role assignment, not access gating)
+  // 3. Check ownership and membership
   const isOwner = await storage.isProjectOwner(projectId, userId);
+  let isMember = false;
+  let role: 'owner' | 'editor' | 'viewer' = 'viewer';
+
+  if (isOwner) {
+    isMember = true;
+    role = 'owner';
+  } else {
+    const members = await storage.getProjectMembers(projectId);
+    const member = members.find(m => m.userId === userId && m.status === 'accepted');
+    if (member) {
+      isMember = true;
+      role = member.role as 'editor' | 'viewer';
+    } else {
+      // Check if project has no owner (backward compat)
+      if (project.ownerId === null) {
+        isMember = true;
+        role = 'editor';
+      }
+    }
+  }
+
+  if (!isMember) {
+    return { valid: false, userId: null, reason: 'no_access' };
+  }
 
   // 4. Look up username for the collaboration user entry
   const dbUser = await getUserById(userId);
@@ -84,6 +109,7 @@ export async function validateWsSession(
     valid: true,
     userId,
     username,
-    isOwner,
+    isOwner, // keeping for backward compatibility in types
+    role,
   };
 }

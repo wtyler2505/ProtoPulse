@@ -13,14 +13,11 @@
  * @module ai-tools/registry
  */
 
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import type {
   ToolCategory,
   ToolDefinition,
   ToolResult,
   ToolContext,
-  AnthropicTool,
-  GeminiFunctionDeclaration,
 } from './types';
 
 /**
@@ -133,7 +130,7 @@ export class ToolRegistry {
   async execute(toolName: string, rawParams: unknown, ctx: ToolContext): Promise<ToolResult> {
     const validation = this.validate(toolName, rawParams);
     if (!validation.ok) {
-      return { success: false, message: validation.error };
+      return { success: false, message: (validation as { ok: false; error: string }).error };
     }
 
     const tool = this.tools.get(toolName)!;
@@ -150,67 +147,6 @@ export class ToolRegistry {
     }
 
     return tool.execute(validation.params, ctx);
-  }
-
-  // -------------------------------------------------------------------------
-  // Format converters for native tool use
-  // -------------------------------------------------------------------------
-
-  /**
-   * Convert registered tools to Anthropic's native tool format.
-   *
-   * @param allowlist - Optional array of tool names to include. If omitted, all tools are returned.
-   * @returns Array of Anthropic tool objects.
-   */
-  toAnthropicTools(allowlist?: string[]): AnthropicTool[] {
-    const toolsToFormat = allowlist 
-      ? this.getAll().filter(t => allowlist.includes(t.name))
-      : this.getAll();
-
-    return toolsToFormat.map((tool) => {
-      const jsonSchema = zodToJsonSchema(tool.parameters, {
-        target: 'openApi3',
-        $refStrategy: 'none',
-      }) as Record<string, unknown>;
-
-      // Remove $schema and other meta keys Anthropic doesn't expect
-      delete jsonSchema.$schema;
-      delete jsonSchema.additionalProperties;
-
-      return {
-        name: tool.name,
-        description: tool.description,
-        input_schema: jsonSchema,
-      };
-    });
-  }
-
-  /**
-   * Convert registered tools to Gemini's `functionDeclarations` format.
-   *
-   * @param allowlist - Optional array of tool names to include. If omitted, all tools are returned.
-   * @returns Array of Gemini function declaration objects.
-   */
-  toGeminiFunctionDeclarations(allowlist?: string[]): GeminiFunctionDeclaration[] {
-    const toolsToFormat = allowlist 
-      ? this.getAll().filter(t => allowlist.includes(t.name))
-      : this.getAll();
-
-    return toolsToFormat.map((tool) => {
-      const jsonSchema = zodToJsonSchema(tool.parameters, {
-        target: 'openApi3',
-        $refStrategy: 'none',
-      }) as Record<string, unknown>;
-
-      delete jsonSchema.$schema;
-      delete jsonSchema.additionalProperties;
-
-      return {
-        name: tool.name,
-        description: tool.description,
-        parameters: jsonSchema,
-      };
-    });
   }
 }
 

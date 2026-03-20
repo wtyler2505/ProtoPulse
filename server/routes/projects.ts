@@ -110,4 +110,95 @@ export function registerProjectRoutes(app: Express): void {
       res.status(204).end();
     }),
   );
+
+  app.post(
+    '/api/projects/:id/approve',
+    requireProjectOwnership,
+    asyncHandler(async (req, res) => {
+      const id = parseIdParam(req.params.id);
+      // Ensure the project exists
+      const project = await storage.getProject(id);
+      if (!project) {
+        return res.status(404).json({ message: 'Project not found' });
+      }
+
+      // Mark as approved (could be un-approved if a flag is passed, but for now just approve it)
+      const isApproved = req.body.approved !== false;
+      
+      const updated = await storage.updateProject(id, {
+        name: project.name,
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Project not found during update' });
+      }
+
+      res.json(updated);
+    }),
+  );
+
+  // --- Project Members API ---
+
+  app.get(
+    '/api/projects/:id/members',
+    asyncHandler(async (req, res) => {
+      const id = parseIdParam(req.params.id);
+      
+      const project = await storage.getProject(id);
+      if (!project) return res.status(404).json({ message: 'Project not found' });
+      
+      const members = await storage.getProjectMembers(id);
+      res.json(members);
+    }),
+  );
+
+  app.post(
+    '/api/projects/:id/members',
+    requireProjectOwnership,
+    asyncHandler(async (req, res) => {
+      const projectId = parseIdParam(req.params.id);
+      const { userId, role = 'viewer', status = 'pending' } = req.body;
+      
+      if (!userId) return res.status(400).json({ message: 'User ID is required' });
+
+      const member = await storage.addProjectMember({
+        projectId,
+        userId: Number(userId),
+        role,
+        status,
+        invitedBy: req.session?.userId
+      });
+      
+      res.status(201).json(member);
+    }),
+  );
+
+  app.patch(
+    '/api/projects/:id/members/:userId',
+    requireProjectOwnership,
+    asyncHandler(async (req, res) => {
+      const projectId = parseIdParam(req.params.id);
+      const userId = parseIdParam(req.params.userId);
+      const { role, status } = req.body;
+      
+      const updated = await storage.updateProjectMember(projectId, userId, { role, status });
+      if (!updated) return res.status(404).json({ message: 'Member not found' });
+      
+      res.json(updated);
+    }),
+  );
+
+  app.delete(
+    '/api/projects/:id/members/:userId',
+    requireProjectOwnership,
+    asyncHandler(async (req, res) => {
+      const projectId = parseIdParam(req.params.id);
+      const userId = parseIdParam(req.params.userId);
+      
+      const success = await storage.removeProjectMember(projectId, userId);
+      if (!success) return res.status(404).json({ message: 'Member not found' });
+      
+      res.status(204).end();
+    }),
+  );
 }

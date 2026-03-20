@@ -26,8 +26,8 @@ type ModalState = 'input' | 'loading' | 'review';
 export default function ModifyModal({ open, onOpenChange, currentPart, projectId, partId, onApply }: ModifyModalProps) {
   const [modalState, setModalState] = useState<ModalState>('input');
   const [instruction, setInstruction] = useState('');
-  const { apiKey, setApiKey: setApiKeyForProvider } = useApiKeys('gemini');
-  const setApiKey = useCallback((key: string) => { setApiKeyForProvider('gemini', key); }, [setApiKeyForProvider]);
+  const { apiKey, updateLocalKey } = useApiKeys();
+  const setApiKey = useCallback((key: string) => { updateLocalKey('gemini', key); }, [updateLocalKey]);
   const [error, setError] = useState<string | null>(null);
 
   const [diff, setDiff] = useState<PartDiff | null>(null);

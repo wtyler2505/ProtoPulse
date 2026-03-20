@@ -157,7 +157,7 @@ export function registerBatchRoutes(app: Express): void {
 
     // First check if the batch has ended
     const status = await getBatchStatus(batchId, apiKey);
-    if (status.status !== 'ended') {
+    if (status.status !== 'completed') {
       res.json({
         batchId,
         status: status.status,

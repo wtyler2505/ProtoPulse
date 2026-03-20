@@ -298,6 +298,7 @@ function generateConfigH(
   peripherals: PeripheralInfo[],
   buses: BusConnection[],
   boardTemplate?: import('./firmware-templates').BoardTemplate,
+  pinConstants: import('@shared/arduino-pin-generator').PinConstant[] = [],
 ): string {
   const lines: string[] = [];
   const now = new Date().toISOString().split('T')[0];
@@ -394,9 +395,16 @@ function generateConfigH(
     const csDefaults = [mcu.spiCs, '4', '15', '2', '27', '26'];
     for (const p of spiPeripherals) {
       const id = toIdentifier(p.label);
-      const csPin = csDefaults[csCounter] ?? String(csCounter + 10);
-      lines.push(`#define ${id}_CS_PIN ${csPin}  // TODO: Assign correct CS pin for ${p.label}`);
-      csCounter++;
+      const constantName = `${id}_CS_PIN`;
+      const matchedPin = pinConstants.find(c => c.name === constantName);
+
+      if (matchedPin) {
+        lines.push(`#define ${constantName} ${matchedPin.pinNumber}  // ${p.label} CS (Mapped from schematic)`);
+      } else {
+        const csPin = csDefaults[csCounter] ?? String(csCounter + 10);
+        lines.push(`#define ${constantName} ${csPin}  // TODO: Assign correct CS pin for ${p.label}`);
+        csCounter++;
+      }
     }
     lines.push('');
   }
@@ -427,17 +435,23 @@ function generateConfigH(
         nodeId: p.nodeId,
         label: p.label,
         nodeType: p.nodeType,
-        positionX: 0,
-        positionY: 0,
-        data: null,
       });
+
       const pinComment = p.bus === 'analog' ? '(analog)' :
         p.bus === 'pwm' ? '(PWM)' :
         category === 'input' ? '(digital input)' :
         category === 'actuator' ? '(digital output)' :
         '';
-      lines.push(`#define ${id}_PIN ${gpioCounter}  // TODO: Assign correct pin for ${p.label} ${pinComment}`);
-      gpioCounter++;
+
+      const constantName = `${id}_PIN`;
+      const matchedPin = pinConstants.find(c => c.name === constantName);
+
+      if (matchedPin) {
+        lines.push(`#define ${constantName} ${matchedPin.pinNumber}  // ${p.label} ${pinComment} (Mapped from schematic)`);
+      } else {
+        lines.push(`#define ${constantName} ${gpioCounter}  // TODO: Assign correct pin for ${p.label} ${pinComment}`);
+        gpioCounter++;
+      }
     }
     lines.push('');
   }
@@ -888,8 +902,9 @@ function generatePlatformioIni(
 export function generateFirmwareScaffold(data: {
   nodes: ArchNodeData[];
   edges: ArchEdgeData[];
+  pinConstants?: import('@shared/arduino-pin-generator').PinConstant[];
 }): FirmwareScaffoldOutput {
-  const { nodes, edges } = data;
+  const { nodes, edges, pinConstants } = data;
 
   // 1. Identify the MCU node and its profile
   let mcuNode: ArchNodeData | null = null;
@@ -983,7 +998,7 @@ export function generateFirmwareScaffold(data: {
   }
 
   // 4. Generate files
-  const configH = generateConfigH(mcuProfile, peripherals, busConnections, boardTemplate);
+  const configH = generateConfigH(mcuProfile, peripherals, busConnections, boardTemplate, pinConstants);
   const mainCpp = generateMainCpp(mcuProfile, peripherals, busConnections, boardTemplate);
   const platformioIni = generatePlatformioIni(mcuProfile, busConnections, peripherals, boardTemplate);
 

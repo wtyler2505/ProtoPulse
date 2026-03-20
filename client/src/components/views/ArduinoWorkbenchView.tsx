@@ -62,16 +62,25 @@ import { linkErrorsToKnowledge } from '@/lib/arduino/error-knowledge-linker';
 import type { LinkedError } from '@/lib/arduino/error-knowledge-linker';
 import { parseFlashOutput, diagnoseFlashError, createInitialProgress } from '@/lib/arduino/flash-diagnostics';
 import type { FlashProgress, FlashDiagnostic } from '@/lib/arduino/flash-diagnostics';
+import { useCircuitDesigns, useCircuitInstances, useCircuitNets } from '@/lib/circuit-editor/hooks';
+import { useComponentParts } from '@/lib/component-editor/hooks';
+import { generatePinConstants } from '@shared/arduino-pin-generator';
+import type { NetInfo, InstanceInfo } from '@shared/arduino-pin-generator';
+import { detectPinConflicts } from '@/lib/arduino/pin-conflict-checker';
+import { createArduinoAutocompletion } from '@/lib/arduino/autocomplete';
 
 const FlashProgressBar = lazy(() => import('@/components/arduino/FlashProgressBar'));
+const MemoryAnalyzerPanel = lazy(() => import('@/components/arduino/MemoryAnalyzerPanel'));
 const SerialMonitorPanel = lazy(() => import('@/components/panels/SerialMonitorPanel'));
 const PinConstantPanel = lazy(() => import('@/components/arduino/PinConstantPanel'));
 const SimulationControlPanel = lazy(() => import('@/components/arduino/SimulationControlPanel'));
+const ProfileSettingsDialog = lazy(() => import('@/components/arduino/ProfileSettingsDialog'));
 
 type BottomTab = 'console' | 'serial' | 'libraries' | 'boards' | 'pins' | 'simulate';
 
 export default function ArduinoWorkbenchView() {
   const _projectId = useProjectId();
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const {
     health,
     workspace,
@@ -179,6 +188,57 @@ export default function ArduinoWorkbenchView() {
     [jobs],
   );
 
+  // --- BL-0142: Schematic Pin Data ---
+  const { data: circuits } = useCircuitDesigns(_projectId);
+  const activeCircuitId = circuits?.[0]?.id ?? 0;
+  const { data: circuitInstances } = useCircuitInstances(activeCircuitId);
+  const { data: circuitNets } = useCircuitNets(activeCircuitId);
+  const { data: componentParts } = useComponentParts(_projectId);
+
+  const schematicPinData = useMemo(() => {
+    if (!circuitInstances || !circuitNets || !componentParts) {
+      return { mappedInstances: [], mappedNets: [], schematicPinConstants: [] };
+    }
+
+    const mappedInstances: InstanceInfo[] = circuitInstances.map(inst => {
+      const part = componentParts.find(p => p.id === inst.partId);
+      const connectors = (part?.connectors as any[]) ?? [];
+      
+      const mappedPins = connectors.map((c: any) => {
+        // Find if this pin connects to any net via circuitNets
+        // circuitNets have segments that might link to instance pins. 
+        // For accurate checking, we look at the net labels connected to this pin.
+        // For now, mapping accurately requires a full spatial trace which runERC does.
+        // To simplify, we rely on the user having assigned 'netName' or physicalPin.
+        return {
+          pinName: c.name || 'Pin',
+          netId: 'mock-net',
+          physicalPin: c.padType === 'tht' ? c.padWidth : undefined // placeholder
+        };
+      });
+
+      return {
+        id: String(inst.id),
+        componentType: (part?.meta as any)?.title ?? 'Unknown',
+        label: inst.referenceDesignator,
+        pins: mappedPins,
+      };
+    });
+
+    const mappedNets: NetInfo[] = circuitNets.map(n => ({
+      id: String(n.id),
+      name: n.name,
+    }));
+
+    const schematicPinConstants = generatePinConstants(mappedNets, mappedInstances, {
+      boardType: selectedProfile?.fqbn.includes('mega') ? 'mega' : (selectedProfile?.fqbn.includes('nano') ? 'nano' : 'uno'),
+      includeComments: false,
+      groupByCategory: false,
+    });
+
+    return { mappedInstances, mappedNets, schematicPinConstants };
+  }, [circuitInstances, circuitNets, componentParts, selectedProfile?.fqbn]);
+
   // ---------------------------------------------------------------------------
   // File loading — `readFile` is a stable callback so safe in deps
   // ---------------------------------------------------------------------------
@@ -238,9 +298,28 @@ export default function ArduinoWorkbenchView() {
                 line: d.line,
                 message: `${d.severity}: ${d.message}${d.hint ? `\nHint: ${d.hint}` : ''}`
               }));
+
+            // Check for pin mapping conflicts
+            const conflicts = detectPinConflicts(code, schematicPinData.schematicPinConstants);
+            for (const conflict of conflicts) {
+              fileErrors.push({
+                line: conflict.line,
+                message: `warning: ${conflict.message}`,
+              });
+            }
+
             setSyntaxErrors(fileErrors);
           } else {
-            setSyntaxErrors([]); // No errors
+            // Check for pin mapping conflicts even if compilation passes
+            const fileErrors: Array<{ message: string; line?: number }> = [];
+            const conflicts = detectPinConflicts(code, schematicPinData.schematicPinConstants);
+            for (const conflict of conflicts) {
+              fileErrors.push({
+                line: conflict.line,
+                message: `warning: ${conflict.message}`,
+              });
+            }
+            setSyntaxErrors(fileErrors); // No compiler errors, but maybe pin conflicts
           }
         }
       } catch (e) {
@@ -664,6 +743,17 @@ export default function ArduinoWorkbenchView() {
             </SelectContent>
           </Select>
 
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 px-2 text-muted-foreground hover:text-foreground"
+            disabled={!selectedProfile}
+            onClick={() => setProfileDialogOpen(true)}
+            title="Edit Profile & Port"
+          >
+            <Wand2 className="w-3.5 h-3.5" />
+          </Button>
+
           <Separator orientation="vertical" className="h-4 mx-0.5" />
 
           <Button
@@ -752,6 +842,13 @@ export default function ArduinoWorkbenchView() {
             onDismiss={handleFlashDismiss}
             className="mx-3 mb-1"
           />
+        </Suspense>
+      )}
+
+      {/* BL-0616: Memory Breakdown Panel */}
+      {lastCompletedCompile && !activeJob && (
+        <Suspense fallback={null}>
+          <MemoryAnalyzerPanel projectId={_projectId} jobId={lastCompletedCompile.id} />
         </Suspense>
       )}
 
@@ -944,6 +1041,7 @@ export default function ArduinoWorkbenchView() {
                   language={editorLanguage}
                   errors={syntaxErrors}
                   className="h-full"
+                  customExtensions={[createArduinoAutocompletion(schematicPinData.schematicPinConstants)]}
                 />
               </div>
             </>
@@ -1146,7 +1244,7 @@ export default function ArduinoWorkbenchView() {
               {/* Serial Monitor Tab */}
               {bottomTab === 'serial' && (
                 <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
-                  <SerialMonitorPanel />
+                  <SerialMonitorPanel code={code} projectId={projectId} />
                 </Suspense>
               )}
 
@@ -1421,8 +1519,8 @@ export default function ArduinoWorkbenchView() {
                 <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>}>
                   <div className="h-full overflow-auto p-2" data-testid="arduino-pin-constants-tab">
                     <PinConstantPanel
-                      nets={[]}
-                      instances={[]}
+                      nets={schematicPinData.mappedNets}
+                      instances={schematicPinData.mappedInstances}
                       onInsertIntoSketch={(pinCode) => {
                         setCode((prev) => pinCode + '\n' + prev);
                         setIsDirty(true);
@@ -1470,6 +1568,20 @@ export default function ArduinoWorkbenchView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Settings Dialog for OTA & Port selection */}
+      <Suspense fallback={null}>
+        <ProfileSettingsDialog 
+          open={profileDialogOpen} 
+          onOpenChange={setProfileDialogOpen}
+          profile={selectedProfile ?? null}
+          onSave={async (updates) => {
+            if (selectedProfile) {
+              await updateProfile(selectedProfile.id, updates);
+            }
+          }}
+        />
+      </Suspense>
     </div>
   );
 }

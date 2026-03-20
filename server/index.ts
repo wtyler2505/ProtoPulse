@@ -15,6 +15,7 @@ import { validateSession } from "./auth";
 import { auditLogMiddleware } from "./audit-log";
 import { attachCollaborationServer } from "./collaboration";
 import { registerCollaborationServer } from "./shutdown";
+import "./genkit"; // Initialize Genkit flows on startup
 
 declare global {
   namespace Express {

@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState, useEffect } from 'react';
 import { Settings2, Eye, EyeOff, ChevronDown, Trash2, Loader2, CheckCircle2, XCircle, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -12,12 +12,14 @@ interface AIModel {
 }
 
 interface SettingsPanelProps {
-  aiProvider: 'anthropic' | 'gemini';
-  setAiProvider: (provider: 'anthropic' | 'gemini') => void;
+  aiProvider: 'gemini';
+  setAiProvider: (provider: 'gemini') => void;
   aiModel: string;
   setAiModel: (model: string) => void;
   aiApiKey: string;
   setAiApiKey: (key: string) => void;
+  googleWorkspaceToken: string;
+  setGoogleWorkspaceToken: (token: string) => void;
   showApiKey: boolean;
   setShowApiKey: (show: boolean) => void;
   aiTemperature: number;
@@ -41,22 +43,28 @@ interface SettingsPanelProps {
 
 function SettingsPanel({
   aiProvider, setAiProvider, aiModel, setAiModel, aiApiKey, setAiApiKey,
+  googleWorkspaceToken, setGoogleWorkspaceToken,
   showApiKey, setShowApiKey, aiTemperature, setAiTemperature,
   customSystemPrompt, setCustomSystemPrompt, routingStrategy, setRoutingStrategy,
   previewAiChanges, setPreviewAiChanges,
   apiKeyValid, onClearApiKey, onClose, keyStatus, keyErrorMessage, onValidateKey, isValidating,
   settingsLoadError, onRetrySettingsLoad,
 }: SettingsPanelProps) {
+  const [localKey, setLocalKey] = useState(aiApiKey || '');
+  const [localWorkspaceToken, setLocalWorkspaceToken] = useState(googleWorkspaceToken || '');
+
   const handleSaveAndClose = useCallback(() => {
+    setAiApiKey(localKey);
+    setGoogleWorkspaceToken(localWorkspaceToken);
     onClose();
     toast({ title: 'Settings saved', description: 'Your AI settings have been updated.' });
-  }, [onClose]);
+  }, [onClose, setAiApiKey, localKey, setGoogleWorkspaceToken, localWorkspaceToken]);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
+    <section aria-labelledby="settings-heading" className="flex-1 overflow-y-auto bg-background/95 backdrop-blur-xl p-4 space-y-5">
       <div className="flex items-center gap-2 mb-2">
         <Settings2 className="w-4 h-4 text-primary" />
-        <h4 className="font-display font-bold tracking-wider text-sm">AI Settings</h4>
+        <h2 id="settings-heading" className="font-display font-bold tracking-wider text-sm">AI Settings</h2>
       </div>
 
       {settingsLoadError && (
@@ -84,33 +92,7 @@ function SettingsPanel({
         </div>
       )}
 
-      <div>
-        <label className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Provider</label>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            data-testid="provider-anthropic"
-            onClick={() => { setAiProvider('anthropic'); setAiModel(AI_MODELS.anthropic[0].id); }}
-            aria-pressed={aiProvider === 'anthropic'}
-            className={cn(
-              "p-3 border text-center text-sm font-bold transition-all",
-              aiProvider === 'anthropic' ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]" : "border-border bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
-            )}
-          >
-            Anthropic
-          </button>
-          <button
-            data-testid="provider-gemini"
-            onClick={() => { setAiProvider('gemini'); setAiModel(AI_MODELS.gemini[0].id); }}
-            aria-pressed={aiProvider === 'gemini'}
-            className={cn(
-              "p-3 border text-center text-sm font-bold transition-all",
-              aiProvider === 'gemini' ? "border-primary bg-primary/10 text-primary shadow-[0_0_12px_rgba(6,182,212,0.15)]" : "border-border bg-muted/20 text-muted-foreground hover:border-muted-foreground/50"
-            )}
-          >
-            Gemini
-          </button>
-        </div>
-      </div>
+      
 
       <div>
         <label htmlFor="settings-model" className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block">Model</label>
@@ -122,7 +104,7 @@ function SettingsPanel({
             onChange={(e) => setAiModel(e.target.value)}
             className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus:outline-none focus:border-primary"
           >
-            {AI_MODELS[aiProvider as keyof typeof AI_MODELS].map((m: AIModel) => (
+            {AI_MODELS.gemini.map((m: AIModel) => (
               <option key={m.id} value={m.id} className="bg-background text-foreground">{m.label}</option>
             ))}
           </select>
@@ -164,30 +146,33 @@ function SettingsPanel({
             id="settings-api-key"
             data-testid="api-key-input"
             type={showApiKey ? 'text' : 'password'}
-            value={aiApiKey}
-            onChange={(e) => setAiApiKey(e.target.value)}
-            placeholder={aiProvider === 'anthropic' ? "sk-ant-..." : "Enter your API key..."}
+            value={localKey}
+            onChange={(e) => setLocalKey(e.target.value)}
+            placeholder={"Enter your API key..."}
             className={cn(
               "w-full bg-muted/30 border text-foreground text-sm p-2.5 pr-10 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40",
-              aiApiKey && !apiKeyValid() ? "border-destructive/70 ring-1 ring-destructive/30" : "border-border"
+              localKey && localKey.length < 20 ? "border-destructive/70 ring-1 ring-destructive/30" : "border-border"
             )}
+            aria-invalid={localKey && localKey.length < 20 ? "true" : "false"}
+            aria-describedby={localKey && localKey.length < 20 ? "api-key-error" : undefined}
           />
           <button
             data-testid="toggle-api-key-visibility"
             type="button"
             onClick={() => setShowApiKey(!showApiKey)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+            aria-label={showApiKey ? "Hide API Key" : "Show API Key"}
           >
             {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
-        {aiApiKey && !apiKeyValid() && (
-          <p className="text-xs text-destructive mt-1.5 flex items-center gap-1" data-testid="api-key-error">
+        {localKey && localKey.length < 20 && (
+          <p id="api-key-error" className="text-xs text-destructive mt-1.5 flex items-center gap-1 font-medium" data-testid="api-key-error">
             <span className="w-1 h-1 bg-destructive rounded-full shrink-0" />
-            {aiProvider === 'anthropic' ? "Anthropic keys must start with 'sk-ant-'" : "API key appears too short"}
+            {"API key appears too short"}
           </p>
         )}
-        {aiApiKey && (
+        {localKey && (
           <button
             data-testid="clear-api-key"
             type="button"
@@ -227,21 +212,36 @@ function SettingsPanel({
         )}
         <p className="text-[10px] text-muted-foreground/60 mt-1.5">
           Need a key?{' '}
-          {aiProvider === 'anthropic' ? (
-            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">console.anthropic.com/settings/keys</a>
-          ) : (
-            <a href="https://aistudio.google.dev/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">aistudio.google.dev/apikeys</a>
-          )}
+          <a href="https://aistudio.google.dev/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary/70 underline hover:text-white">aistudio.google.dev/apikeys</a>
         </p>
-        <p className="text-[10px] text-amber-400/60 mt-1">
+        <p className="text-[11px] text-amber-500 font-medium mt-1">
           Key is stored in browser localStorage (unencrypted).
+        </p>
+      </div>
+
+      <div>
+        <label htmlFor="settings-workspace-token" className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold mb-2 block flex items-center gap-1">
+          Google Workspace Token
+        </label>
+        <div className="relative">
+          <input
+            id="settings-workspace-token"
+            type="password"
+            value={localWorkspaceToken}
+            onChange={(e) => setLocalWorkspaceToken(e.target.value)}
+            placeholder="Enter an OAuth token for Docs/Sheets export..."
+            className="w-full bg-muted/30 border text-foreground text-sm p-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40 border-border"
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground/60 mt-1.5">
+          Required for Google Sheets BOM sync and Google Docs reports.
         </p>
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">
           <label htmlFor="settings-temperature" className="text-[11px] uppercase tracking-wider text-muted-foreground font-bold">Temperature</label>
-          <span className="text-xs text-primary font-mono">{(Math.round(aiTemperature * 10) / 10).toFixed(1)}</span>
+          <span className="text-xs text-primary font-mono" aria-hidden="true">{(Math.round(aiTemperature * 10) / 10).toFixed(1)}</span>
         </div>
         <input
           id="settings-temperature"
@@ -253,9 +253,9 @@ function SettingsPanel({
           value={aiTemperature}
           onChange={(e) => setAiTemperature(Math.round(parseFloat(e.target.value) * 10) / 10)}
           aria-valuetext={(Math.round(aiTemperature * 10) / 10).toFixed(1)}
-          className="w-full h-1.5 bg-muted/50 appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border-0"
+          className="w-full h-1.5 bg-muted/50 appearance-none cursor-pointer accent-primary [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:border-0 focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
         />
-        <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-1">
+        <div className="flex justify-between text-[9px] text-muted-foreground/50 mt-1" aria-hidden="true">
           <span>Precise</span>
           <span>Balanced</span>
           <span>Creative</span>
@@ -272,7 +272,7 @@ function SettingsPanel({
             onCheckedChange={setPreviewAiChanges}
           />
         </div>
-        <p className="text-[10px] text-muted-foreground/60">
+        <p className="text-[10px] text-muted-foreground/60" id="preview-changes-desc">
           Ask for confirmation before the AI modifies your design. Highly recommended for complex changes.
         </p>
       </div>
@@ -286,7 +286,7 @@ function SettingsPanel({
           onChange={(e) => setCustomSystemPrompt(e.target.value)}
           placeholder="Add custom instructions for the AI..."
           rows={3}
-          className="w-full bg-muted/30 border border-border text-foreground text-xs p-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40 resize-none"
+          className="w-full bg-muted/30 border border-border text-foreground text-xs p-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40 resize-none focus-visible:ring-2 focus-visible:ring-primary"
         />
         <p className="text-[10px] text-muted-foreground/60 mt-1">These instructions are appended to the AI's system prompt.</p>
       </div>
@@ -294,11 +294,11 @@ function SettingsPanel({
       <button
         data-testid="save-settings"
         onClick={handleSaveAndClose}
-        className="w-full py-2.5 bg-primary text-primary-foreground font-bold text-sm tracking-wider hover:bg-primary/90 transition-colors"
+        className="w-full py-2.5 bg-primary text-primary-foreground font-bold text-sm tracking-wider hover:bg-primary/90 transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary focus-visible:outline-none"
       >
         Save & Close
       </button>
-    </div>
+    </section>
   );
 }
 

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Key, Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { useApiKeys } from '@/hooks/useApiKeys';
+import type { ApiKeyProvider } from '@/hooks/useApiKeys';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { FabricatorId } from '@/lib/pcb-ordering';
@@ -11,30 +12,30 @@ interface FabApiSettingsProps {
 }
 
 export function FabApiSettings({ fabId, fabName }: FabApiSettingsProps) {
-  const { data: apiKeysData, saveApiKey, deleteApiKey } = useApiKeys();
+  const { providers, updateLocalKey, clearApiKey } = useApiKeys();
   const [keyInput, setKeyInput] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Consider all known fab IDs as providers
-  const hasKey = apiKeysData?.providers.includes(fabId as string);
+  const hasKey = providers.includes(fabId as string);
 
-  const handleSave = useCallback(async () => {
+  const handleSave = useCallback(() => {
     if (!keyInput.trim()) return;
     setIsSaving(true);
     try {
-      await saveApiKey({ provider: fabId as 'jlcpcb' | 'pcbway' | 'oshpark', apiKey: keyInput.trim() });
+      updateLocalKey(fabId as unknown as ApiKeyProvider, keyInput.trim());
       setKeyInput('');
-    } catch (e) {
+    } catch {
       // ignore
     } finally {
       setIsSaving(false);
     }
-  }, [keyInput, fabId, saveApiKey]);
+  }, [keyInput, fabId, updateLocalKey]);
 
   const handleDelete = useCallback(() => {
-    deleteApiKey(fabId as 'jlcpcb' | 'pcbway' | 'oshpark');
-  }, [fabId, deleteApiKey]);
+    clearApiKey(fabId as unknown as ApiKeyProvider);
+  }, [fabId, clearApiKey]);
 
   return (
     <div className="border border-border rounded-lg p-3 bg-muted/20 mt-4">

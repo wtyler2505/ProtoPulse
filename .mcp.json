@@ -2,7 +2,10 @@
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"],
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
       "timeout": 60000
     },
     "postgres": {
@@ -13,6 +16,11 @@
         "postgresql://protopulse:protopulse@localhost:5432/protopulse"
       ],
       "timeout": 60000
+    },
+    "desktop-commander": {
+      "command": "desktop-commander",
+      "args": [],
+      "timeout": 30000
     }
   }
 }

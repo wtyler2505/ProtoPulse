@@ -11,8 +11,6 @@ export type {
   ToolContext,
   ModelTier,
   ToolDefinition,
-  AnthropicTool,
-  GeminiFunctionDeclaration,
 } from './types';
 
 export { ToolRegistry } from './registry';
@@ -33,6 +31,7 @@ import { registerSimulationTools } from './simulation';
 import { registerManufacturingTools } from './manufacturing';
 import { registerTestbenchTools } from './testbench';
 import { registerBomOptimizationTools } from './bom-optimization';
+import { registerRiskAnalysisTools } from './risk-analysis';
 
 function createRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
@@ -53,6 +52,7 @@ function createRegistry(): ToolRegistry {
   registerManufacturingTools(registry);
   registerTestbenchTools(registry);
   registerBomOptimizationTools(registry);
+  registerRiskAnalysisTools(registry);
   return registry;
 }
 

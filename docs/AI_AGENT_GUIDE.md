@@ -41,7 +41,7 @@
 | Component Editor (SVG canvas, connectors, buses, DRC) | ✅ Shipped |
 | Bill of Materials (BOM) management | ✅ Shipped |
 | Design validation with categorized issues | ✅ Shipped |
-| AI chat with 82 tool actions (Anthropic + Gemini) | ✅ Shipped |
+| AI chat with 88 tool actions (Google Genkit) | ✅ Shipped |
 | Session-based auth with encrypted API key storage | ✅ Shipped |
 | Circuit schematic capture | ✅ Shipped |
 | Breadboard / PCB layout views | ✅ Shipped |
@@ -75,7 +75,7 @@
 | Backend | Node.js, Express 5, TypeScript (tsx) |
 | Database | PostgreSQL |
 | ORM | Drizzle ORM |
-| AI providers | Anthropic SDK (Claude), Google Generative AI (Gemini) |
+| AI providers | Google Genkit |
 | Build | Vite (client), esbuild (server via `tsx script/build.ts`) |
 | Testing | Vitest 4, happy-dom, @testing-library/react, @vitest/coverage-v8 |
 
@@ -975,7 +975,7 @@ Full details: `docs/product-analysis-checklist.md` and `docs/app-audit-checklist
 
 ## 11. AI Action System Reference
 
-The AI system (`server/ai.ts` + `server/ai-tools/`) exposes **82 tool actions** via the Anthropic/Gemini function-calling API. Tools are organized in 11 modules under `server/ai-tools/`.
+The AI system (`server/ai.ts` + `server/ai-tools/`) exposes **88 tool actions** via the Google Genkit API. Tools are organized in 11 modules under `server/ai-tools/`.
 
 ### Tool Modules
 
@@ -1033,7 +1033,7 @@ The AI system (`server/ai.ts` + `server/ai-tools/`) exposes **82 tool actions** 
 1. User sends message via ChatPanel
 2. ChatPanel calls `POST /api/chat/ai/stream` with message + project state
 3. Server builds system prompt with full project state (nodes, edges, BOM, validation, chat history)
-4. AI provider (Anthropic/Gemini) streams response via SSE using function-calling API
+4. AI provider (Genkit) streams response via SSE using function-calling API
 5. ChatPanel receives SSE chunks, accumulates response text
 6. On stream end, the tool call results are parsed and returned as a structured action list
 7. ChatPanel dispatches each action through intent handlers in `client/src/components/panels/chat/intent-handlers/`
@@ -1044,7 +1044,6 @@ The AI system (`server/ai.ts` + `server/ai-tools/`) exposes **82 tool actions** 
 The `routingStrategy` in `user_chat_settings` controls which AI provider handles requests:
 - `user` — uses the provider the user has configured
 - `auto` — the server decides based on request complexity
-- `always_claude` — force Anthropic Claude
 - `always_gemini` — force Google Gemini
 
 ---
@@ -1174,7 +1173,7 @@ npx vitest run -t "test name"               # By test name
 |--------|---------|
 | **Tool dispatch** | Tools are dispatched via the function-calling API, not via JSON parsing a text response. The old `parseActionsFromResponse()` pattern is replaced by structured function calls. |
 | **Node references** | AI tools reference architecture nodes by LABEL, not by internal database ID. Resolution happens in the frontend. |
-| **Client caching** | LRU cache (size 10) for Anthropic/Gemini client instances, keyed by API key. |
+| **Client caching** | LRU cache (size 10) for Genkit client instances, keyed by API key. |
 | **Multi-model routing** | `routingStrategy` in `user_chat_settings` controls whether Claude or Gemini handles each request. |
 
 ### Exports

@@ -110,7 +110,7 @@ The application is structured into a frontend, backend, and shared components.
 **Backend:**
 - Implemented with Node.js and Express 5, using TypeScript (via `tsx` for development).
 - Exposes a REST JSON API under `/api/`.
-- `server/routes.ts` defines all API endpoints, with `server/ai.ts` handling AI endpoint logic (Anthropic and Gemini streaming).
+- `server/routes.ts` defines all API endpoints, with `server/ai.ts` handling AI endpoint logic (Google Genkit streaming).
 - `server/storage.ts` defines the `IStorage` interface and `DatabaseStorage` class for data persistence.
 - Session-based authentication is implemented with routes for registration, login, logout, and user details. Most `/api` routes are protected, except for authentication, health, documentation, metrics, and seed endpoints.
 - AI keys are stored server-side encrypted (AES-256-GCM) via `/api/settings/api-keys`, with a fallback for per-request keys.
@@ -141,7 +141,7 @@ The application is structured into a frontend, backend, and shared components.
 - **UI Component Library:** shadcn/ui (based on Radix UI)
 - **Styling:** Tailwind CSS v4
 - **Diagramming Library:** `@xyflow/react` (for React Flow)
-- **AI Providers:** Anthropic (`@anthropic-ai/sdk`), Google Gemini (`@google/generative-ai`)
+- **AI Providers:** Google Genkit (`genkit`, `@genkit-ai/google-genai`)
 - **Server Framework:** Express 5
 - **TypeScript Runtime:** `tsx`
 - **Build Tool:** Vite (for client), Esbuild (for server)

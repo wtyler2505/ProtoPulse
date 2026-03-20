@@ -96,6 +96,7 @@ export interface CodeEditorProps {
   errors?: Array<{ message: string; line?: number }>;
   readOnly?: boolean;
   className?: string;
+  customExtensions?: Extension[];
 }
 
 export interface CodeEditorHandle {
@@ -108,7 +109,7 @@ export interface CodeEditorHandle {
 // ---------------------------------------------------------------------------
 
 const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEditor(
-  { value, onChange, language = 'javascript', errors, readOnly = false, className },
+  { value, onChange, language = 'javascript', errors, readOnly = false, className, customExtensions = [] },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -172,6 +173,7 @@ const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(function CodeEd
           onChangeRef.current(update.state.doc.toString());
         }
       }),
+      ...customExtensions,
     ];
 
     const state = EditorState.create({

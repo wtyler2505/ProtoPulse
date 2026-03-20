@@ -13,17 +13,11 @@ export const quickActionDescriptions: Record<string, string> = {
 };
 
 export const AI_MODELS = {
-  anthropic: [
-    { id: 'claude-sonnet-4-5-20250514', label: 'Claude 4.5 Sonnet' },
-    { id: 'claude-sonnet-4-6-20250514', label: 'Claude 4.6 Sonnet' },
-    { id: 'claude-sonnet-4-20250514', label: 'Claude 4 Sonnet' },
-    { id: 'claude-opus-4-20250514', label: 'Claude 4 Opus' },
-    { id: 'claude-opus-4-6-20250514', label: 'Claude 4.6 Opus' },
-    { id: 'claude-haiku-4-5-20251001', label: 'Claude 4.5 Haiku' },
-  ],
   gemini: [
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+    { id: 'gemini-3.1-pro-preview-customtools', label: 'Gemini 3.1 Pro (Custom Tools)' },
+    { id: 'gemini-3-pro-preview', label: 'Gemini 3.0 Pro' },
+    { id: 'gemini-3-flash-preview', label: 'Gemini 3.0 Flash' },
+    { id: 'gemini-robotics-er-1.5-preview', label: 'Gemini ER (Embodied Reasoning)' },
   ],
 };
 

@@ -171,7 +171,7 @@ export const _streamInternals = {
 
 const aiRequestSchema = z.object({
   message: z.string().min(1).max(32000),
-  provider: z.enum(['anthropic', 'gemini']),
+  provider: z.enum(['gemini']),
   model: z.string().min(1).max(200),
   apiKey: z.string().max(500).optional().default(''),
   projectId: z.number(),
@@ -444,8 +444,8 @@ export function registerChatRoutes(app: Express): void {
       }
 
       let apiKeyToUse = clientApiKey || '';
-      if (req.userId) {
-        const storedKey = await getApiKey(req.userId, provider);
+      if (req.session?.userId) {
+        const storedKey = await getApiKey(req.session.userId, provider);
         if (storedKey) {
           apiKeyToUse = storedKey;
         }
@@ -475,7 +475,7 @@ export function registerChatRoutes(app: Express): void {
             }
           : undefined,
         projectId: pid,
-        userId: req.userId,
+        userId: req.session?.userId,
       });
 
       res.json(result);
@@ -531,8 +531,8 @@ export function registerChatRoutes(app: Express): void {
       }
 
       let apiKeyToUse = clientApiKey || '';
-      if (req.userId) {
-        const storedKey = await getApiKey(req.userId, provider);
+      if (req.session?.userId) {
+        const storedKey = await getApiKey(req.session.userId, provider);
         if (storedKey) {
           apiKeyToUse = storedKey;
         }
@@ -647,20 +647,25 @@ export function registerChatRoutes(app: Express): void {
         await streamAIMessage(
           {
             message,
-            provider,
+            provider: "gemini",
             model: resolvedModel,
             apiKey: apiKeyToUse,
             appState,
             temperature: temperature ?? 0.7,
             maxTokens,
-            toolContext: { projectId: pid, storage, confirmed: parsed.data.confirmed },
+            toolContext: { 
+              projectId: pid, 
+              storage, 
+              confirmed: parsed.data.confirmed,
+              googleWorkspaceToken: req.body.googleWorkspaceToken
+            },
             imageContent: parsed.data.imageBase64
               ? {
                   base64: parsed.data.imageBase64,
                   mediaType: parsed.data.imageMimeType || 'image/png',
                 }
               : undefined,
-            userId: req.userId,
+            userId: req.session?.userId,
           },
           async (event) => {
             if (!closed) {

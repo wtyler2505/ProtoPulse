@@ -122,7 +122,7 @@ The app will be available at `http://localhost:5000`.
 │   ┌──────────────────────────┼───────────────────────────────────┐  │
 │   │          AI Engine        │    Storage Layer                  │  │
 │   │  ┌────────────────────┐  │  ┌──────────────────────────────┐ │  │
-│   │  │ Anthropic + Gemini │  │  │  IStorage / DatabaseStorage  │ │  │
+│   │  │ Google Genkit    │  │  │  IStorage / DatabaseStorage  │ │  │
 │   │  │ SSE streaming      │  │  │  LRU cache (evicts least     │ │  │
 │   │  │ 80+ AI tools       │  │  │  recently used, prefix-based │ │  │
 │   │  │ multi-model routing│  │  │  invalidation)               │ │  │
@@ -249,7 +249,7 @@ ProtoPulse/
 │   ├── index.ts                         # App bootstrap, middleware stack, graceful shutdown
 │   ├── routes.ts                        # Barrel (57 lines) — registers 21 domain routers
 │   ├── circuit-routes.ts                # Barrel — re-exports registerCircuitRoutes
-│   ├── ai.ts                            # AI engine: 1,368 lines — Anthropic + Gemini,
+│   ├── ai.ts                            # AI engine: Genkit + Google AI,
 │   │                                    # streaming SSE, action parser, multi-model routing
 │   ├── ai-tools.ts                      # Barrel — 11 AI tool modules
 │   ├── circuit-ai.ts                    # Circuit-specific AI endpoints
@@ -263,7 +263,7 @@ ProtoPulse/
 │   ├── env.ts                           # Environment variable validation
 │   ├── component-export.ts              # FZPZ import/export
 │   ├── component-ai.ts                  # Gemini AI for component generation/modification
-│   ├── batch-analysis.ts                # Anthropic Message Batches API integration
+│   ├── batch-analysis.ts                # Genkit Queue mocking for async analysis
 │   ├── audit-log.ts                     # Audit event logging
 │   ├── circuit-breaker.ts               # Circuit breaker pattern for external calls
 │   ├── simulation.ts                    # SPICE simulation runner
@@ -282,7 +282,7 @@ ProtoPulse/
 │   │   ├── components.ts                # CRUD component-parts, library, DRC, AI ops
 │   │   ├── seed.ts                      # POST /api/seed (dev only)
 │   │   ├── admin.ts                     # GET /api/admin/metrics, DELETE /api/admin/purge
-│   │   ├── batch.ts                     # POST/GET /api/batch/* (Anthropic batch analysis)
+│   │   ├── batch.ts                     # POST/GET /api/batch/* (Async batch analysis)
 │   │   ├── project-io.ts                # GET /api/projects/:id/export, POST /api/projects/import
 │   │   ├── chat-branches.ts             # POST/GET /api/projects/:id/chat/branches
 │   │   ├── spice-models.ts              # CRUD /api/spice-models + seed endpoint
@@ -570,7 +570,7 @@ Additional tables (also under projects.id cascade):
 |---|---|---|---|
 | `id` | `serial` | PK | |
 | `user_id` | `integer` | FK → users.id CASCADE | |
-| `provider` | `text` | NOT NULL | `anthropic` or `gemini` |
+| `provider` | `text` | NOT NULL | `gemini` |
 | `encrypted_key` | `text` | NOT NULL | AES-256-GCM encrypted |
 | `iv` | `text` | NOT NULL | Initialization vector (hex) |
 | `created_at` | `timestamp` | NOT NULL, DEFAULT NOW | |
@@ -580,7 +580,7 @@ Additional tables (also under projects.id cascade):
 |---|---|---|---|
 | `id` | `serial` | PK | |
 | `user_id` | `integer` | FK → users.id CASCADE | |
-| `ai_provider` | `text` | NOT NULL, DEFAULT `anthropic` | |
+| `ai_provider` | `text` | NOT NULL, DEFAULT `gemini` | |
 | `ai_model` | `text` | NOT NULL, DEFAULT `claude-sonnet-4-5-20250514` | |
 | `ai_temperature` | `real` | NOT NULL, DEFAULT 0.7 | |
 | `custom_system_prompt` | `text` | DEFAULT `''` | |
@@ -932,7 +932,7 @@ All auth endpoints have a rate limit of 10 requests per 15-minute window per IP.
 ```json
 {
   "message": string,
-  "provider": "anthropic" | "gemini",
+  "provider": "gemini",
   "model": string,
   "apiKey"?: string,
   "projectId": number,
@@ -1043,7 +1043,7 @@ All auth endpoints have a rate limit of 10 requests per 15-minute window per IP.
 
 ### Batch Analysis Endpoints (`server/routes/batch.ts`)
 
-Requires `X-Anthropic-Key` header (not X-Session-Id).
+Requires `X-Gemini-Key` header (not X-Session-Id).
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
@@ -1176,7 +1176,7 @@ All export endpoints respond with appropriate `Content-Type` and `Content-Dispos
 
 ### Overview
 
-`server/ai.ts` (1,368 lines) orchestrates all AI interactions. It builds a full project state snapshot on every request (O(N) sequential queries — known performance debt GA-DB-01), calls either Anthropic Claude or Google Gemini, and parses structured tool call responses.
+`server/ai.ts` (1,368 lines) orchestrates all AI interactions. It builds a full project state snapshot on every request (O(N) sequential queries — known performance debt GA-DB-01), calls Google Genkit, and parses structured tool call responses.
 
 ### Multi-Model Routing
 
@@ -1297,7 +1297,7 @@ Wire routing uses `client/src/lib/circuit-editor/` (wire router with 90-degree r
 | `server/metrics.ts` | ~100 | In-memory per-route metrics (request count, total latency, error count). |
 | `server/circuit-breaker.ts` | ~150 | Circuit breaker for external API calls (half-open, open, closed states). |
 | `server/audit-log.ts` | ~100 | Structured audit event logging. |
-| `server/batch-analysis.ts` | ~300 | Anthropic Message Batches API integration for async background analysis. |
+| `server/batch-analysis.ts` | ~300 | Genkit queue mocking for async background analysis. |
 
 ### Storage Layer
 
@@ -1394,7 +1394,7 @@ scrypt with salt (Node.js `crypto.scrypt`). Stored as `<salt>:<hash>` in `passwo
 
 ### API Key Encryption
 
-Stored API keys (Anthropic, Gemini) are encrypted with AES-256-GCM using `API_KEY_ENCRYPTION_KEY` env var. The encrypted key and IV are stored separately in `api_keys`. Keys are decrypted in-memory only when needed for AI requests.
+Stored API keys (Gemini) are encrypted with AES-256-GCM using `API_KEY_ENCRYPTION_KEY` env var. The encrypted key and IV are stored separately in `api_keys`. Keys are decrypted in-memory only when needed for AI requests.
 
 **Critical**: If `API_KEY_ENCRYPTION_KEY` is not set in production, a random key is generated per boot, making previously stored API keys unrecoverable after restart.
 
@@ -1566,7 +1566,7 @@ All phases shipped as of 2026-03-02:
 | 6 | Export expansion (KiCad, Eagle, SPICE, Gerber, pick-place, BOM, netlist) | Shipped |
 | 7 | SPICE model library, BOM snapshots, design preferences | Shipped |
 | 8 | Component lifecycle tracking, chat branches, project I/O | Shipped |
-| 9 | Batch analysis (Anthropic Message Batches API), metrics, admin | Shipped |
+| 9 | Batch analysis (Genkit Queues), metrics, admin | Shipped |
 | 10 | Circuit schematic editor (canvas, instances, nets, wires) | Shipped |
 | 11 | Breadboard + PCB views, ERC engine, net classes | Shipped |
 | 12 | Simulation (SPICE netlist generation + solver, power analysis, signal integrity) | Shipped |

@@ -2,6 +2,7 @@ import { eq, and, desc, asc, isNull, sql, inArray } from 'drizzle-orm';
 import type { PgTable } from 'drizzle-orm/pg-core';
 import {
   projects, type Project, type InsertProject,
+  projectMembers, type ProjectMember, type InsertProjectMember,
   architectureNodes, architectureEdges, bomItems,
 } from '@shared/schema';
 import { StorageError, VersionConflictError } from './errors';
@@ -61,6 +62,46 @@ export class ProjectStorage {
       return project.ownerId === userId;
     } catch (e) {
       throw new StorageError('isProjectOwner', `projects/${projectId}`, e);
+    }
+  }
+
+  async getProjectMembers(projectId: number): Promise<ProjectMember[]> {
+    try {
+      return await this.db.select().from(projectMembers).where(eq(projectMembers.projectId, projectId));
+    } catch (e) {
+      throw new StorageError('getProjectMembers', `projects/${projectId}/members`, e);
+    }
+  }
+
+  async addProjectMember(member: InsertProjectMember): Promise<ProjectMember> {
+    try {
+      const [created] = await this.db.insert(projectMembers).values(member).returning();
+      return created;
+    } catch (e) {
+      throw new StorageError('addProjectMember', `projects/${member.projectId}/members`, e);
+    }
+  }
+
+  async updateProjectMember(projectId: number, userId: number, data: Partial<InsertProjectMember>): Promise<ProjectMember | undefined> {
+    try {
+      const [updated] = await this.db.update(projectMembers)
+        .set({ ...data, updatedAt: new Date() })
+        .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+        .returning();
+      return updated;
+    } catch (e) {
+      throw new StorageError('updateProjectMember', `projects/${projectId}/members/${userId}`, e);
+    }
+  }
+
+  async removeProjectMember(projectId: number, userId: number): Promise<boolean> {
+    try {
+      const [deleted] = await this.db.delete(projectMembers)
+        .where(and(eq(projectMembers.projectId, projectId), eq(projectMembers.userId, userId)))
+        .returning();
+      return !!deleted;
+    } catch (e) {
+      throw new StorageError('removeProjectMember', `projects/${projectId}/members/${userId}`, e);
     }
   }
 

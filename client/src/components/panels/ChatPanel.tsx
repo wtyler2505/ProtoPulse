@@ -302,10 +302,11 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     customSystemPrompt, setCustomSystemPrompt,
     routingStrategy, setRoutingStrategy,
     previewAiChanges, setPreviewAiChanges,
+    googleWorkspaceToken, setGoogleWorkspaceToken,
   } = useChatSettings();
   const { status: keyStatus, errorMessage: keyErrorMessage, validate: validateKey, reset: resetKeyStatus } = useApiKeyStatus();
   // BL-0005: API keys managed by useApiKeys — server-side when authenticated, localStorage fallback
-  const { apiKey: aiApiKey, setApiKey: setApiKeyForProvider, clearApiKey: clearApiKeyForProvider } = useApiKeys(aiProvider);
+  const { apiKey: aiApiKey, updateLocalKey: setApiKeyForProvider, clearApiKey: clearApiKeyForProvider } = useApiKeys();
   const setAiApiKey = useCallback((key: string) => { setApiKeyForProvider(aiProvider, key); }, [setApiKeyForProvider, aiProvider]);
   const [isListening, setIsListening] = useState(false);
 
@@ -436,11 +437,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const sendStateRef = useRef<{
     input: string;
     aiApiKey: string;
-    aiProvider: 'anthropic' | 'gemini';
+    aiProvider: 'gemini';
     aiModel: string;
     aiTemperature: number;
     customSystemPrompt: string;
     routingStrategy: string;
+    googleWorkspaceToken: string;
     activeView: ViewMode;
     activeSheetId: string | null;
     selectedNodeId: string | null;
@@ -461,7 +463,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   }>(null!);
   sendStateRef.current = {
     input, aiApiKey, aiProvider, aiModel, aiTemperature, customSystemPrompt,
-    routingStrategy, activeView, activeSheetId, selectedNodeId, projectId,
+    routingStrategy, googleWorkspaceToken, activeView, activeSheetId, selectedNodeId, projectId,
     attachedImage, nodes, edges, bom, issues, projectName, projectDescription,
     addMessage, setIsGenerating, executeAIActions, getChangeDiff, captureSnapshot,
     isGenerating,
@@ -586,6 +588,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         selectedNodeId: s.selectedNodeId,
         changeDiff,
         routingStrategy: s.routingStrategy,
+        googleWorkspaceToken: s.googleWorkspaceToken,
         ...(currentImage ? {
           imageBase64: currentImage.base64,
           imageMimeType: currentImage.mimeType,
@@ -693,9 +696,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
                 const inputTokens = Math.ceil(msgText.length / 4);
                 const outputTokens = Math.ceil(fullText.length / 4);
-                const cost = s.aiProvider === 'anthropic'
-                  ? (inputTokens * 0.003 + outputTokens * 0.015) / 1000
-                  : (inputTokens * 0.00025 + outputTokens * 0.0005) / 1000;
+                const cost = (inputTokens * 0.00025 + outputTokens * 0.0005) / 1000;
                 setTokenInfo({ input: inputTokens, output: outputTokens, cost });
               } else if (data.type === 'error') {
                 const streamErr = mapStreamErrorToUserMessage(
@@ -963,9 +964,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
   const apiKeyValid = useCallback(() => {
     if (!aiApiKey) return true;
-    // Sentinel '••••••••' means server has the real key — always valid
-    if (aiApiKey === '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022') return true;
-    if (aiProvider === 'anthropic') return aiApiKey.startsWith('sk-ant-');
+    // Sentinel '********' means server has the real key — always valid
+    if (aiApiKey === '********' || aiApiKey === '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022') return true;
     if (aiProvider === 'gemini') return aiApiKey.length >= 20;
     return true;
   }, [aiApiKey, aiProvider]);
@@ -1105,6 +1105,8 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   setAiModel={setAiModel}
                   aiApiKey={aiApiKey}
                   setAiApiKey={setAiApiKey}
+                  googleWorkspaceToken={googleWorkspaceToken}
+                  setGoogleWorkspaceToken={setGoogleWorkspaceToken}
                   showApiKey={showApiKey}
                   setShowApiKey={setShowApiKey}
                   aiTemperature={aiTemperature}

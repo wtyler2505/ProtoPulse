@@ -1,17 +1,18 @@
 /**
- * POST /api/circuits/:id/ai/review — analyze schematic for issues
+ * POST /api/circuits/:id/ai/review
  */
 
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
-import type { CircuitInstanceRow, CircuitNetRow, ComponentPart } from '@shared/schema';
+import type { ComponentPart, CircuitInstanceRow, CircuitNetRow } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
-import type { TextBlock } from '@anthropic-ai/sdk/resources/messages';
-import { parseIdParam, payloadLimit, asyncHandler } from '../routes';
-import { categorizeError, redactSecrets, getAnthropicClient } from '../ai';
+import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
+import { categorizeError, redactSecrets } from '../ai';
 import { fromZodError } from 'zod-validation-error';
-import { anthropicBreaker } from '../circuit-breaker';
+import { logger } from '../logger';
 import { reviewSchema } from './schemas';
+import { ai } from '../genkit';
+import { googleAI } from '@genkit-ai/google-genai';
 
 function buildReviewPrompt(
   instances: CircuitInstanceRow[],
@@ -92,7 +93,7 @@ Respond ONLY with valid JSON, no markdown fences or extra text`;
 export function registerCircuitAiReviewRoute(app: Express, storage: IStorage): void {
   app.post(
     '/api/circuits/:circuitId/ai/review',
-    payloadLimit(16 * 1024),
+    payloadLimit(64 * 1024),
     asyncHandler(async (req, res) => {
       const circuitId = parseIdParam(req.params.circuitId);
       const parsed = reviewSchema.safeParse(req.body);
@@ -100,66 +101,50 @@ export function registerCircuitAiReviewRoute(app: Express, storage: IStorage): v
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
       }
 
-      const { apiKey, model } = parsed.data;
+      const { description, apiKey, model } = parsed.data;
 
       const circuit = await storage.getCircuitDesign(circuitId);
       if (!circuit) {
         return res.status(404).json({ message: 'Circuit not found' });
       }
 
-      const instances = await storage.getCircuitInstances(circuitId);
-      const nets = await storage.getCircuitNets(circuitId);
       const parts = await storage.getComponentParts(circuit.projectId);
-
-      if (instances.length === 0) {
-        return res.status(400).json({ message: 'No instances to review. Add components first.' });
+      if (parts.length === 0) {
+        return res.status(400).json({ message: 'No component parts available.' });
       }
 
-      const prompt = buildReviewPrompt(instances, nets, parts);
+      const prompt = buildReviewPrompt(description, parts);
 
       try {
-        const client = getAnthropicClient(apiKey);
-        // Review is a simple task -- no extended thinking, but use circuit breaker
-        const response = await anthropicBreaker.execute(() =>
-          client.messages.create({
-            model,
-            max_tokens: 4096,
-            messages: [{ role: 'user', content: prompt }],
-          }),
-        );
+        const response = await ai.generate({
+          model: googleAI.model('gemini-3-pro-preview'), // Force gemini
+          prompt,
+          config: {
+            temperature: 0.1,
+            maxOutputTokens: 8192,
+            apiKey: apiKey || undefined
+          }
+        });
 
-        const text = response.content
-          .filter((b): b is TextBlock => b.type === 'text')
-          .map((b) => b.text)
-          .join('');
+        let text = response.text || '';
+        if (text.startsWith('```json')) {
+          text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
+        } else if (text.startsWith('```')) {
+          text = text.replace(/^```\n/, '').replace(/\n```$/, '');
+        }
 
-        let suggestions: Array<{
-          severity: string;
-          message: string;
-          suggestion: string;
-          affectedComponents?: string[];
-        }>;
-
+        let resultData: any;
         try {
-          suggestions = JSON.parse(text);
+          resultData = JSON.parse(text);
         } catch {
           return res.status(422).json({ message: 'AI returned invalid JSON', raw: redactSecrets(text) });
         }
 
-        if (!Array.isArray(suggestions)) {
-          suggestions = [];
-        }
-
-        res.json({
-          suggestions,
-          reviewedInstances: instances.length,
-          reviewedNets: nets.length,
-        });
-      } catch (error) {
-        const { code, userMessage } = categorizeError(error);
-        res
-          .status(code === 'AUTH_FAILED' ? 401 : code === 'RATE_LIMITED' ? 429 : 500)
-          .json({ message: userMessage, code });
+        res.json({ success: true, message: 'Review completed', data: resultData });
+      } catch (error: unknown) {
+        const { userMessage } = categorizeError(error);
+        logger.error(`[circuit-ai] Generation error: ${redactSecrets(String(error))}`);
+        res.status(500).json({ message: userMessage });
       }
     }),
   );

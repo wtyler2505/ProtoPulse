@@ -20,7 +20,7 @@ interface MessageInputProps {
   showQuickActions: boolean;
   onVoiceToggle: () => void;
   isListening: boolean;
-  aiProvider: 'anthropic' | 'gemini';
+  aiProvider: 'gemini';
   aiModel: string;
   apiKeyValid: boolean;
   aiApiKey: string;
@@ -71,7 +71,7 @@ export default function MessageInput({
       {!apiKeyValid && aiApiKey && (
         <div className="flex items-center gap-2 text-[10px] text-amber-400/80 mb-2 px-1">
           <AlertTriangle className="w-3 h-3 shrink-0" />
-          <span>API key format looks incorrect for {aiProvider === 'anthropic' ? 'Anthropic' : 'Gemini'}</span>
+          <span>API key format looks incorrect for {'Gemini'}</span>
         </div>
       )}
       {attachedImage && (
@@ -269,7 +269,7 @@ export default function MessageInput({
               </span>
             </StyledTooltip>
             <span className="text-muted-foreground/40">—</span>
-            <span>{aiProvider === 'anthropic' ? 'Anthropic' : 'Gemini'} {AI_MODELS[aiProvider].find(m => m.id === aiModel)?.label || aiModel}</span>
+            <span>{'Gemini'} {AI_MODELS[aiProvider].find(m => m.id === aiModel)?.label || aiModel}</span>
           </>
         ) : (
           <>
