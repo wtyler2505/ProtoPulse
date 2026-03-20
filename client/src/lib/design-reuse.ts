@@ -349,6 +349,12 @@ export class SnippetLibrary {
     if (updates.wires !== undefined) {
       snippet.wires = updates.wires;
     }
+    if (updates.circuitInstances !== undefined) {
+      snippet.circuitInstances = updates.circuitInstances;
+    }
+    if (updates.circuitNets !== undefined) {
+      snippet.circuitNets = updates.circuitNets;
+    }
     if (updates.author !== undefined) {
       snippet.metadata.author = updates.author;
     }
