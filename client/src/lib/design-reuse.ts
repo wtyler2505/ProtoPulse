@@ -367,7 +367,14 @@ export class SnippetLibrary {
 
     this.save();
     this.notify();
-    return { ...snippet, nodes: [...snippet.nodes], edges: [...snippet.edges], wires: [...snippet.wires] };
+    return {
+      ...snippet,
+      nodes: [...snippet.nodes],
+      edges: [...snippet.edges],
+      wires: [...snippet.wires],
+      ...(snippet.circuitInstances ? { circuitInstances: [...snippet.circuitInstances] } : {}),
+      ...(snippet.circuitNets ? { circuitNets: [...snippet.circuitNets] } : {}),
+    };
   }
 
   /** Get a snippet by ID. Returns undefined if not found. */
@@ -427,6 +434,23 @@ export class SnippetLibrary {
       nodes: source.nodes.map((n) => ({ ...n, properties: { ...n.properties }, position: { ...n.position } })),
       edges: source.edges.map((e) => ({ ...e })),
       wires: source.wires.map((w) => ({ ...w })),
+      ...(source.circuitInstances
+        ? {
+            circuitInstances: source.circuitInstances.map((ci) => ({
+              ...ci,
+              properties: { ...ci.properties },
+              position: { ...ci.position },
+            })),
+          }
+        : {}),
+      ...(source.circuitNets
+        ? {
+            circuitNets: source.circuitNets.map((cn) => ({
+              ...cn,
+              connectedPins: cn.connectedPins.map((p) => ({ ...p })),
+            })),
+          }
+        : {}),
       metadata: {
         author: source.metadata.author,
         createdAt: now,
@@ -532,7 +556,48 @@ export class SnippetLibrary {
       };
     });
 
-    return { nodeIdMap, nodes, edges, wires };
+    // Remap circuit instances if present
+    let instanceIdMap: Map<string, string> | undefined;
+    let circuitInstances: SnippetCircuitInstance[] | undefined;
+    let circuitNets: SnippetCircuitNet[] | undefined;
+
+    if (snippet.circuitInstances) {
+      instanceIdMap = new Map<string, string>();
+      snippet.circuitInstances.forEach((ci) => {
+        instanceIdMap!.set(ci.id, crypto.randomUUID());
+      });
+
+      circuitInstances = snippet.circuitInstances.map((ci) => ({
+        ...ci,
+        id: instanceIdMap!.get(ci.id) ?? ci.id,
+        properties: { ...ci.properties },
+        position: {
+          x: ci.position.x + offset.x,
+          y: ci.position.y + offset.y,
+        },
+      }));
+    }
+
+    if (snippet.circuitNets) {
+      circuitNets = snippet.circuitNets.map((cn) => ({
+        ...cn,
+        id: crypto.randomUUID(),
+        connectedPins: cn.connectedPins.map((pin) => ({
+          ...pin,
+          instanceId: instanceIdMap?.get(pin.instanceId) ?? pin.instanceId,
+        })),
+      }));
+    }
+
+    return {
+      nodeIdMap,
+      nodes,
+      edges,
+      wires,
+      ...(instanceIdMap !== undefined ? { instanceIdMap } : {}),
+      ...(circuitInstances !== undefined ? { circuitInstances } : {}),
+      ...(circuitNets !== undefined ? { circuitNets } : {}),
+    };
   }
 
   // -----------------------------------------------------------------------
