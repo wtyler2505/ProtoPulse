@@ -78,6 +78,8 @@ export interface DesignSnippet {
   nodes: SnippetNode[];
   edges: SnippetEdge[];
   wires: SnippetWire[];
+  circuitInstances?: SnippetCircuitInstance[];
+  circuitNets?: SnippetCircuitNet[];
   metadata: {
     author: string;
     createdAt: number;
@@ -97,6 +99,8 @@ export interface CreateSnippetInput {
   nodes?: SnippetNode[];
   edges?: SnippetEdge[];
   wires?: SnippetWire[];
+  circuitInstances?: SnippetCircuitInstance[];
+  circuitNets?: SnippetCircuitNet[];
   author?: string;
   thumbnail?: string;
 }
@@ -106,6 +110,9 @@ export interface PlacementResult {
   nodes: SnippetNode[];
   edges: SnippetEdge[];
   wires: SnippetWire[];
+  instanceIdMap?: Map<string, string>;
+  circuitInstances?: SnippetCircuitInstance[];
+  circuitNets?: SnippetCircuitNet[];
 }
 
 // ---------------------------------------------------------------------------
@@ -283,6 +290,8 @@ export class SnippetLibrary {
       nodes: input.nodes ?? [],
       edges: input.edges ?? [],
       wires: input.wires ?? [],
+      ...(input.circuitInstances !== undefined ? { circuitInstances: input.circuitInstances } : {}),
+      ...(input.circuitNets !== undefined ? { circuitNets: input.circuitNets } : {}),
       metadata: {
         author: input.author ?? 'User',
         createdAt: now,
