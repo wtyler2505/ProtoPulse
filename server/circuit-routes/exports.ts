@@ -821,7 +821,7 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
       return res.status(404).json({ message: 'Project not found' });
     }
 
-    let pinConstants: unknown[] = [];
+    let pinConstants: import('@shared/arduino-pin-generator').PinConstant[] = [];
     if (circuits.length > 0) {
       try {
         const { generatePinConstants } = await import('@shared/arduino-pin-generator');
