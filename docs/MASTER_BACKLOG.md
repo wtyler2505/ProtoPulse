@@ -427,9 +427,9 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 43 | 235 | 85% — Waves 61-140 |
+| P2 | 42 | 236 | 85% — Waves 61-140 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **101** | **400** | **501 items tracked** |
+| **Total** | **100** | **401** | **501 items tracked** |
 
 *Snapshot updated: Wave 140 (2026-03-20)*
 
@@ -1036,7 +1036,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0550 | **GPU Monte Carlo: implement actual GPU pipeline** — `gpu-monte-carlo.ts` has a CPU fallback but the WebGPU path never actually parallelizes the Monte Carlo batches; it falls back immediately if GPU init takes > 100ms. Implement proper async pipeline initialization and a retry path. | OPEN | C4 | Wave 64 audit |
+| BL-0550 | **GPU Monte Carlo: implement actual GPU pipeline** — GpuMonteCarloEngine class with async init (3-attempt retry), run (GPU/CPU dispatch), dispose. 28 tests. | DONE (Wave 140) | C4 | Wave 64 audit |
 | BL-0551 | **TelemetryLogger → DeviceShadow live overlay wiring** — `telemetry-logger.ts` persists frames to IndexedDB and `device-shadow.ts` tracks reported/desired state, but the Digital Twin overlay in `DigitalTwinView` reads only the shadow snapshot, not the live telemetry ring buffer. Wire `TelemetryLogger.subscribe()` to update the overlay in real time. | DONE (Wave 124) | C3 | Wave 64 audit |
 | BL-0552 | **API type generation CI gate** — `shared/api-types.generated.ts` exists but is generated manually and not enforced in CI. Add a `npm run check:api-types` script that regenerates and compares against committed types, failing if they drift. | DONE (verified Wave 106) | C3 | Wave 64 audit |
 | BL-0643 | **Async jobs need real executor registration in production** — The job queue framework is solid, but many submitted job types still fail immediately when no executor is registered. Wire actual runtime executors for the supported async workflows and add startup validation so broken job types are obvious. | DONE (Wave 124) | C3 | Repo gap audit 2026-03-13 |
