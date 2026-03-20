@@ -124,6 +124,7 @@ export const bomItems = pgTable("bom_items", {
   minimumStock: integer("minimum_stock"),
   esdSensitive: boolean("esd_sensitive"),
   assemblyCategory: text("assembly_category"),
+  tolerance: text("tolerance"),
   version: integer("version").notNull().default(1),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
