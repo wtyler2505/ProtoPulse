@@ -403,7 +403,10 @@ describe('DriftDetector reports', () => {
   });
 
   it('generates report for healthy sensor', () => {
-    dd.addReading('temp', 25.05, 25.0, 1000);
+    // Calibrate with a recent timestamp so it doesn't trigger overdue interval warning
+    const recentTs = Date.now() - 1000;
+    dd.calibrate('temp', 25.0, 25.0, recentTs);
+    dd.addReading('temp', 25.05, 25.0, Date.now());
     const report = dd.generateReport('temp')!;
     expect(report.sensorName).toBe('temp');
     expect(report.health).toBe('good');

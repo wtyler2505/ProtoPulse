@@ -96,13 +96,18 @@ describe('generateWaveformSample — square', () => {
 // ──────────────────────────────────────────────────────────────────
 
 describe('generateWaveformSample — triangle', () => {
-  it('starts at -amplitude', () => {
+  it('starts at -amplitude (cyclePos=0)', () => {
     const v = generateWaveformSample(wave({ type: 'triangle', amplitude: 5 }), 0);
     expect(v).toBeCloseTo(-5, 5);
   });
 
-  it('peaks at +amplitude at 0.25 period', () => {
+  it('crosses zero at 0.25 period', () => {
     const v = generateWaveformSample(wave({ type: 'triangle', amplitude: 5 }), 0.25);
+    expect(v).toBeCloseTo(0, 5);
+  });
+
+  it('peaks at +amplitude at 0.5 period', () => {
+    const v = generateWaveformSample(wave({ type: 'triangle', amplitude: 5 }), 0.5);
     expect(v).toBeCloseTo(5, 5);
   });
 
