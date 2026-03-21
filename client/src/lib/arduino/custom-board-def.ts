@@ -281,42 +281,53 @@ const STM32F103_PINS: PinDefinition[] = [
   { pin: 27, name: 'PB11', gpio: 27, capabilities: ['digital', 'uart', 'i2c'], uart: { index: 2, role: 'RX' }, i2c: { bus: 1, role: 'SDA' } },
 ];
 
+/** Mutable builder type for constructing PinDefinition objects. */
+type MutablePin = {
+  pin: number;
+  name: string;
+  gpio: number;
+  capabilities: PinCapability[];
+  pwmChannel?: number;
+  analogChannel?: number;
+  i2c?: { bus: number; role: I2CRole };
+  spi?: { bus: number; role: SPIRole };
+  uart?: { index: number; role: UARTRole };
+};
+
 const RP2040_PINS: PinDefinition[] = Array.from({ length: 30 }, (_, i): PinDefinition => {
-  const caps: PinCapability[] = ['digital', 'pwm', 'interrupt'];
-  const extras: Partial<PinDefinition> = {};
-
-  // ADC channels on GP26-GP29
-  if (i >= 26 && i <= 29) {
-    caps.push('analog');
-    extras.analogChannel = i - 26;
-  }
-
-  // I2C: GP0/GP1 = I2C0, GP2/GP3 = I2C1 (also available on many other pins)
-  if (i === 0) { caps.push('i2c'); extras.i2c = { bus: 0, role: 'SDA' }; }
-  if (i === 1) { caps.push('i2c'); extras.i2c = { bus: 0, role: 'SCL' }; }
-  if (i === 2) { caps.push('i2c'); extras.i2c = { bus: 1, role: 'SDA' }; }
-  if (i === 3) { caps.push('i2c'); extras.i2c = { bus: 1, role: 'SCL' }; }
-
-  // SPI: GP16-GP19 = SPI0
-  if (i === 16) { caps.push('spi'); extras.spi = { bus: 0, role: 'MISO' }; }
-  if (i === 17) { caps.push('spi'); extras.spi = { bus: 0, role: 'SS' }; }
-  if (i === 18) { caps.push('spi'); extras.spi = { bus: 0, role: 'SCK' }; }
-  if (i === 19) { caps.push('spi'); extras.spi = { bus: 0, role: 'MOSI' }; }
-
-  // UART: GP0/GP1 = UART0 TX/RX
-  if (i === 0) { caps.push('uart'); extras.uart = { index: 0, role: 'TX' }; }
-  if (i === 1) { caps.push('uart'); extras.uart = { index: 0, role: 'RX' }; }
-  if (i === 4) { caps.push('uart'); extras.uart = { index: 1, role: 'TX' }; }
-  if (i === 5) { caps.push('uart'); extras.uart = { index: 1, role: 'RX' }; }
-
-  return {
+  const pin: MutablePin = {
     pin: i,
     name: `GP${i}`,
     gpio: i,
-    capabilities: caps,
+    capabilities: ['digital', 'pwm', 'interrupt'],
     pwmChannel: Math.floor(i / 2), // RP2040: 8 PWM slices, 2 channels each
-    ...extras,
   };
+
+  // ADC channels on GP26-GP29
+  if (i >= 26 && i <= 29) {
+    pin.capabilities.push('analog');
+    pin.analogChannel = i - 26;
+  }
+
+  // I2C: GP0/GP1 = I2C0, GP2/GP3 = I2C1
+  if (i === 0) { pin.capabilities.push('i2c'); pin.i2c = { bus: 0, role: 'SDA' }; }
+  if (i === 1) { pin.capabilities.push('i2c'); pin.i2c = { bus: 0, role: 'SCL' }; }
+  if (i === 2) { pin.capabilities.push('i2c'); pin.i2c = { bus: 1, role: 'SDA' }; }
+  if (i === 3) { pin.capabilities.push('i2c'); pin.i2c = { bus: 1, role: 'SCL' }; }
+
+  // SPI: GP16-GP19 = SPI0
+  if (i === 16) { pin.capabilities.push('spi'); pin.spi = { bus: 0, role: 'MISO' }; }
+  if (i === 17) { pin.capabilities.push('spi'); pin.spi = { bus: 0, role: 'SS' }; }
+  if (i === 18) { pin.capabilities.push('spi'); pin.spi = { bus: 0, role: 'SCK' }; }
+  if (i === 19) { pin.capabilities.push('spi'); pin.spi = { bus: 0, role: 'MOSI' }; }
+
+  // UART: GP0/GP1 = UART0 TX/RX, GP4/GP5 = UART1 TX/RX
+  if (i === 0) { pin.capabilities.push('uart'); pin.uart = { index: 0, role: 'TX' }; }
+  if (i === 1) { pin.capabilities.push('uart'); pin.uart = { index: 0, role: 'RX' }; }
+  if (i === 4) { pin.capabilities.push('uart'); pin.uart = { index: 1, role: 'TX' }; }
+  if (i === 5) { pin.capabilities.push('uart'); pin.uart = { index: 1, role: 'RX' }; }
+
+  return pin;
 });
 
 export const MCU_TEMPLATES: readonly McuTemplate[] = [
