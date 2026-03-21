@@ -1326,7 +1326,9 @@ describe('DesignBranchManager', () => {
       domains.forEach((domain, i) => {
         recordTestChange(manager, b.id, { domain, entityId: `e-${i}` });
       });
-      expect(manager.getAffectedDomains(b.id)).toEqual(domains);
+      // getAffectedDomains returns sorted alphabetically
+      const expected: BranchDomain[] = ['architecture', 'bom', 'pcb', 'schematic', 'simulation'];
+      expect(manager.getAffectedDomains(b.id)).toEqual(expected);
     });
 
     it('handles merge with no changes gracefully', () => {

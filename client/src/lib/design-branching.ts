@@ -23,13 +23,13 @@ type Listener = () => void;
 export type BranchDomain = 'architecture' | 'schematic' | 'bom' | 'simulation' | 'pcb';
 
 /** All possible branch domains. */
-export const ALL_BRANCH_DOMAINS: readonly BranchDomain[] = [
+export const ALL_BRANCH_DOMAINS: readonly BranchDomain[] = Object.freeze([
   'architecture',
   'schematic',
   'bom',
   'simulation',
   'pcb',
-] as const;
+] as const);
 
 /** Branch lifecycle states. */
 export type BranchState = 'active' | 'review_requested' | 'approved' | 'rejected' | 'merged' | 'abandoned';
