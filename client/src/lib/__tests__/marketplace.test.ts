@@ -1,11 +1,25 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MarketplaceManager, fuzzyMatch } from '../marketplace';
 import type {
   MarketplaceItem,
-  MarketplaceSearchOptions,
   PublishInput,
 } from '../marketplace';
 import type { DesignSnippet } from '../design-reuse';
+
+// ---------------------------------------------------------------------------
+// localStorage mock
+// ---------------------------------------------------------------------------
+
+const storageMap = new Map<string, string>();
+
+const mockStorage: Storage = {
+  getItem: (key: string) => storageMap.get(key) ?? null,
+  setItem: (key: string, value: string) => { storageMap.set(key, value); },
+  removeItem: (key: string) => { storageMap.delete(key); },
+  clear: () => { storageMap.clear(); },
+  get length() { return storageMap.size; },
+  key: (index: number) => Array.from(storageMap.keys())[index] ?? null,
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -50,8 +64,14 @@ function makePublishInput(overrides: Partial<PublishInput> = {}): PublishInput {
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
-  localStorage.clear();
+  storageMap.clear();
   MarketplaceManager.resetInstance();
+
+  vi.stubGlobal('localStorage', mockStorage);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 // ---------------------------------------------------------------------------

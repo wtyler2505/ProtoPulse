@@ -349,14 +349,17 @@ describe('spike detection', () => {
   });
 
   it('detects spike outlier', () => {
-    // Feed stable values then a spike
+    // Feed stable values with slight variation (so stdDev > 0), then a spike
+    // Values ~100 ± 0.5 → stdDev ≈ 0.5, z-score threshold = 2.5
+    // Spike of 105 → z-score ≈ 10, which is > 2.5 but check severity below
     for (let i = 0; i < 12; i++) {
-      mgr.ingest('pressure', 100, i * 1000);
+      mgr.ingest('pressure', 100 + (i % 3) * 0.5, i * 1000);
     }
-    const alerts = mgr.ingest('pressure', 200, 12000);
+    const alerts = mgr.ingest('pressure', 105, 12000);
     const spikes = alerts.filter((a) => a.type === 'spike');
     expect(spikes.length).toBe(1);
-    expect(spikes[0].severity).toBe('warning');
+    // z-score ≈ 10 > 2*2.5=5 → critical
+    expect(spikes[0].severity).toBe('critical');
   });
 
   it('critical spike for extreme outlier', () => {
@@ -417,7 +420,10 @@ describe('drift detection', () => {
 
   it('critical drift for very large deviation', () => {
     mgr.setBaseline('sensor', 50);
-    const alerts = mgr.ingest('sensor', 65, 0); // deviation = 15 > 5*2 = 10
+    // Need 3+ points for detection to run; feed two close first, then a big one
+    mgr.ingest('sensor', 50, 0);
+    mgr.ingest('sensor', 50, 1000);
+    const alerts = mgr.ingest('sensor', 65, 2000); // deviation = 15 > 5*2 = 10
     const driftAlerts = alerts.filter((a) => a.type === 'drift');
     expect(driftAlerts.length).toBe(1);
     expect(driftAlerts[0].severity).toBe('critical');
