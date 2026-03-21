@@ -404,7 +404,7 @@ describe('suggestSubstitutes', () => {
 
   it('suggests MCU substitutes for ATmega328P', () => {
     const subs = suggestSubstitutes([
-      defaultBomItem({ partNumber: 'ATmega328P-AU', available: false }),
+      defaultBomItem({ partNumber: 'ATmega328P-AU', description: 'ATmega328P microcontroller', available: false }),
     ]);
     expect(subs.length).toBe(1);
     expect(subs[0].substitute).toContain('ATmega328PB');
@@ -412,7 +412,7 @@ describe('suggestSubstitutes', () => {
 
   it('returns incompatible flag when no substitute found', () => {
     const subs = suggestSubstitutes([
-      defaultBomItem({ partNumber: 'EXOTIC-PART-12345', available: false }),
+      defaultBomItem({ partNumber: 'EXOTIC-PART-12345', description: 'Exotic widget', available: false }),
     ]);
     expect(subs.length).toBe(1);
     expect(subs[0].compatible).toBe(false);

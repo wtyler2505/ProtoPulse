@@ -381,15 +381,16 @@ export class HolographicOverlayEngine {
 
   /** Set thermal hotspot data. Recomputes thermal styles. */
   setHotspots(hotspots: ThermalHotspot[]): void {
-    this.hotspots = [...hotspots];
+    this.hotspots = hotspots.map((h) => ({ ...h }));
     this.recomputeThermalStyles();
     this.notify();
   }
 
   /** Add a single hotspot. */
   addHotspot(hotspot: ThermalHotspot): void {
-    this.hotspots.push(hotspot);
-    this.thermalStyleCache.set(hotspot.id, this.computeThermalStyle(hotspot));
+    const copy = { ...hotspot };
+    this.hotspots.push(copy);
+    this.thermalStyleCache.set(copy.id, this.computeThermalStyle(copy));
     this.notify();
   }
 
@@ -409,7 +410,7 @@ export class HolographicOverlayEngine {
 
   /** Get all hotspots. */
   getHotspots(): ThermalHotspot[] {
-    return [...this.hotspots];
+    return this.hotspots.map((h) => ({ ...h }));
   }
 
   private recomputeThermalStyles(): void {
