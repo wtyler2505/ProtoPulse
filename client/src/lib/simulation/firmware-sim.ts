@@ -459,11 +459,6 @@ export class FirmwareSimManager {
     const timersTriggered: number[] = [];
 
     try {
-      // Capture previous digital values for edge detection
-      this._pins.forEach((ps, pin) => {
-        this._previousDigitalValues.set(pin, ps.digitalValue);
-      });
-
       // Run setup once
       if (!this._setupDone && this._setup) {
         const ctx = this.createContext();
