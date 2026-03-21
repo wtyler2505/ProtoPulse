@@ -558,7 +558,7 @@ export class ServerStaticAnalysisManager {
   private _isAnalyzing = false;
   private _lastResult: MergedResult | null = null;
   private _lastAnnotations: CodeMirrorAnnotation[] = [];
-  private _availableTools: Set<ToolSource> = new Set(['local']);
+  private _availableTools: Set<ToolSource> = new Set<ToolSource>(['local']);
   private _error: string | null = null;
   private _listeners: Set<Listener> = new Set();
 

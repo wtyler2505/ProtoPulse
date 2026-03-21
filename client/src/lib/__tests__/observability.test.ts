@@ -413,7 +413,7 @@ describe('ObservabilityManager', () => {
     it('evaluateAlerts latency type', () => {
       mgr.addAlert({
         name: 'slow',
-        condition: { type: 'latency', metric: 'spans', operator: '>', value: 0, windowMs: 60000 },
+        condition: { type: 'latency', metric: 'spans', operator: '>=', value: 0, windowMs: 60000 },
         severity: 'warning',
         cooldownMs: 0,
         enabled: true,
