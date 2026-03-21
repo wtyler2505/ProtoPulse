@@ -460,6 +460,12 @@ export function parsePartitionTableCsv(csv: string): PartitionEntry[] {
 export function parseSizeToBytes(size: string): number {
   const trimmed = size.trim().toUpperCase();
 
+  if (trimmed.endsWith('KB')) {
+    return parseInt(trimmed.slice(0, -2), 10) * 1024;
+  }
+  if (trimmed.endsWith('MB')) {
+    return parseInt(trimmed.slice(0, -2), 10) * 1024 * 1024;
+  }
   if (trimmed.endsWith('K')) {
     return parseInt(trimmed.slice(0, -1), 10) * 1024;
   }
