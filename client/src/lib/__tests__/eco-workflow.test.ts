@@ -92,7 +92,10 @@ describe('EcoWorkflowManager', () => {
   let mgr: EcoWorkflowManager;
 
   beforeEach(() => {
-    localStorage.clear();
+    for (const k of Object.keys(store)) {
+      delete store[k];
+    }
+    uuidCounter = 0;
     EcoWorkflowManager.resetInstance();
     mgr = EcoWorkflowManager.getInstance();
   });
@@ -230,8 +233,6 @@ describe('EcoWorkflowManager', () => {
     it('updates updatedAt timestamp', () => {
       const eco = mgr.createEco(makeEcoData());
       const before = eco.updatedAt;
-      // Ensure clock advances
-      vi.advanceTimersByTime?.(10);
       const updated = mgr.updateEco(eco.id, { title: 'Changed' });
       expect(updated!.updatedAt).toBeGreaterThanOrEqual(before);
     });
