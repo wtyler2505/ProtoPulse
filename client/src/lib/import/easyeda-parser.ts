@@ -290,7 +290,7 @@ export function mmToEasyEda(mm: number): number {
 export function convertCoordinates(x: number, y: number): { x: number; y: number } {
   return {
     x: easyEdaToMm(x),
-    y: -easyEdaToMm(y), // Invert Y axis
+    y: -easyEdaToMm(y) || 0, // Invert Y axis; normalize -0 to 0
   };
 }
 
