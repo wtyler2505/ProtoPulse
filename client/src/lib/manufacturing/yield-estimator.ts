@@ -164,7 +164,7 @@ const DFM_SEVERITY_WEIGHTS: Record<DfmSeverityLevel, number> = {
 const COMPLEXITY_THRESHOLDS = {
   simple: { maxLayers: 2, maxComponents: 30, maxBga: 0 },
   moderate: { maxLayers: 4, maxComponents: 100, maxBga: 2 },
-  complex: { maxLayers: 8, maxComponents: 300, maxBga: 5 },
+  complex: { maxLayers: 8, maxComponents: 200, maxBga: 4 },
   // extreme: everything above complex
 };
 
@@ -528,16 +528,15 @@ export function calculateCpk(overallYield: number): CpkResult {
   // Clamp yield to avoid math errors
   const clamped = Math.max(0.001, Math.min(0.999999, overallYield));
 
-  // Convert yield to DPMO
-  const dpmo = (1 - clamped) * 1_000_000;
+  // Convert yield to Z-score (sigma level) using inverse normal CDF
+  const sigma = approximateInverseNormal(clamped);
 
-  // Approximate sigma level from DPMO using inverse normal CDF approximation
-  // Using Beasley-Springer-Moro algorithm simplified
-  const p = 1 - dpmo / 1_000_000;
-  const sigma = approximateInverseNormal(p);
+  // Apply the standard 1.5σ shift convention used in Six Sigma:
+  // A process with long-term yield Y has short-term sigma = Z + 1.5
+  const shortTermSigma = sigma + 1.5;
 
-  // Cpk = sigma / 3, Cp = Cpk * 1.1 (assuming slight process centering offset)
-  const cpk = Math.max(sigma / 3, 0);
+  // Cpk = short-term sigma / 3
+  const cpk = Math.max(shortTermSigma / 3, 0);
   const cp = cpk * 1.1;
 
   let rating: CpkResult['rating'];
