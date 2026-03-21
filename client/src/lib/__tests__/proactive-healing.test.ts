@@ -74,6 +74,7 @@ Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, wri
 beforeEach(() => {
   ProactiveHealingEngine.resetInstance();
   localStorageMock.clear();
+  uuidCounter = 0;
   vi.clearAllMocks();
 });
 
