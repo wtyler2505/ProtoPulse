@@ -670,7 +670,7 @@ describe('MixedSignalSimulator — digital only', () => {
     expect(step2.digitalStates.get('out')).toBe(1);
   });
 
-  it('simulates SR latch (NOR-NOR)', () => {
+  it('simulates SR latch (NOR-NOR) after initialization', () => {
     const sim = MixedSignalSimulator.getInstance();
     const circuit: MixedSignalCircuit = {
       numAnalogNodes: 0,
@@ -684,16 +684,18 @@ describe('MixedSignalSimulator — digital only', () => {
     };
     sim.loadCircuit(circuit);
 
-    // Set S=1, R=0 → Q should be 1
-    sim.setDigitalInputs(new Map([['S', 1 as LogicLevel], ['R', 0 as LogicLevel]]));
-    const step1 = sim.step();
-    expect(step1.digitalStates.get('Q')).toBe(0); // NOR(1, Q_bar) = 0 since S=1
+    // Initialize Q_bar to a known state first so X doesn't propagate through feedback
+    sim.setDigitalInputs(new Map([
+      ['S', 1 as LogicLevel],
+      ['R', 0 as LogicLevel],
+      ['Q_bar', 0 as LogicLevel],
+    ]));
 
-    // More complex — the latch behavior depends on propagation
-    // After S=1, Q_bar should go 0, then Q = NOR(1, 0) = 0 — S=1 forces Q to 0 for NOR-based
-    // Actually for active-high NOR latch: S=1,R=0 → Q=0 (Q_bar NOR with R=0,Q=0 → 1)
-    // Let's just check it reaches a stable state
-    expect(step1.digitalStates.get('Q')).not.toBe('X');
+    const step1 = sim.step();
+    // NOR(S=1, Q_bar=0) = 0 → Q=0
+    expect(step1.digitalStates.get('Q')).toBe(0);
+    // NOR(R=0, Q=0) = 1 → Q_bar=1
+    expect(step1.digitalStates.get('Q_bar')).toBe(1);
   });
 
   it('tracks step count correctly', () => {
