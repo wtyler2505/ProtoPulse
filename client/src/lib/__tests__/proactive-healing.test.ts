@@ -53,17 +53,16 @@ vi.stubGlobal('crypto', {
 // localStorage mock
 // ---------------------------------------------------------------------------
 
-const localStorageMock = (() => {
-  let store: Record<string, string> = {};
-  return {
-    getItem: vi.fn((key: string) => store[key] ?? null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
-    removeItem: vi.fn((key: string) => { delete store[key]; }),
-    clear: vi.fn(() => { store = {}; }),
-    get length() { return Object.keys(store).length; },
-    key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
-  };
-})();
+let mockStore: Record<string, string> = {};
+
+const localStorageMock = {
+  getItem(key: string): string | null { return mockStore[key] ?? null; },
+  setItem(key: string, value: string): void { mockStore[key] = value; },
+  removeItem(key: string): void { delete mockStore[key]; },
+  clear(): void { mockStore = {}; },
+  get length() { return Object.keys(mockStore).length; },
+  key(index: number): string | null { return Object.keys(mockStore)[index] ?? null; },
+};
 
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
 
@@ -73,9 +72,8 @@ Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, wri
 
 beforeEach(() => {
   ProactiveHealingEngine.resetInstance();
-  localStorageMock.clear();
+  mockStore = {};
   uuidCounter = 0;
-  vi.clearAllMocks();
 });
 
 afterEach(() => {
