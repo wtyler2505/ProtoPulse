@@ -52,7 +52,6 @@ function makePublishInput(overrides: Partial<PublishInput> = {}): PublishInput {
 beforeEach(() => {
   localStorage.clear();
   MarketplaceManager.resetInstance();
-  SnippetLibrary.resetInstance();
 });
 
 // ---------------------------------------------------------------------------
