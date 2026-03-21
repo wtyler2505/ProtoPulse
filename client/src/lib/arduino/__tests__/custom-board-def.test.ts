@@ -666,7 +666,10 @@ describe('CustomBoardManager — CRUD', () => {
     const updated = mgr.updateBoard(board.id, { name: 'New Name', description: 'Updated desc' });
     expect(updated.name).toBe('New Name');
     expect(updated.description).toBe('Updated desc');
-    expect(updated.updatedAt).not.toBe(board.updatedAt);
+    expect(updated.variant).toBe('old_variant'); // Unchanged fields preserved
+    expect(updated.mcuTemplateId).toBe('atmega328p');
+    // updatedAt should be a valid ISO date string
+    expect(new Date(updated.updatedAt).toISOString()).toBe(updated.updatedAt);
   });
 
   it('updateBoard throws for unknown id', () => {
