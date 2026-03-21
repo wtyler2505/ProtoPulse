@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 32 | 246 | 88% — Waves 61-142 |
+| P2 | 27 | 251 | 90% — Waves 61-143 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **90** | **411** | **501 items tracked** |
+| **Total** | **85** | **416** | **501 items tracked** |
 
-*Snapshot updated: Wave 142 (2026-03-21)*
+*Snapshot updated: Wave 143 (2026-03-21)*
 
 ---
 
@@ -757,12 +757,12 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0609 | **ESP exception decoder** — When an ESP32/ESP8266 crashes with a `Guru Meditation Error` or stack trace, the output is raw hex addresses. PlatformIO's serial monitor filter passes these through `addr2line` / `xtensa-addr2line` to translate them to `filename:line`. Every ESP32 user hits this within hours of their first project. Add an "Decode ESP exception" button in the serial monitor that auto-detects and decodes crash output. | DONE (Wave 85) | C3 | Wave 66 / PlatformIO |
-| BL-0610 | **SPIFFS/LittleFS filesystem upload** — Upload a directory of files (HTML, CSS, JSON, images) to the ESP32/ESP8266 flash filesystem. Massive use case: ESP web servers, config files, OTA landing pages. PlatformIO has a first-class `uploadfs` target. Requires generating a filesystem image from a `/data` directory and flashing it via esptool. | OPEN | C4 | Wave 66 / PlatformIO |
+| BL-0610 | **SPIFFS/LittleFS filesystem upload** — FilesystemUploadManager with file validation, 8 partition presets, 5 board profiles, flash time estimation, CLI command generation. 119 tests. | DONE (Wave 143) | C4 | Wave 66 / PlatformIO |
 | BL-0611 | **OTA (Over-The-Air) firmware update** — After the first USB flash, push firmware updates wirelessly to ESP devices via IP or mDNS. Eliminates the USB cable for iterative development. PlatformIO's `upload_protocol = espota` handles this. Add an OTA upload mode to the Workbench that discovers ESP devices on the network and pushes the compiled binary. | DONE (Wave 138) - Integrated mDNS discovery and Profile Port editing | C4 | Wave 66 / PlatformIO |
 | BL-0612 | **Serial output log-to-file** — Auto-save serial monitor output to a timestamped file. Essential for long-running data collection (sensor logging, overnight tests). PlatformIO's `log2file` filter does this transparently. Add a "Record to file" toggle in the serial monitor with download button. | DONE (Wave 84) | C2 | Wave 66 / PlatformIO |
 | BL-0613 | **Multi-platform board support (STM32, nRF52, RP2040, ESP-IDF)** — ProtoPulse's Workbench is Arduino-framework only. Makers increasingly use STM32 Blue Pill (cheap, powerful), nRF52840 (BLE), RP2040 Pico (dual-core, PIO), and ESP-IDF for serious ESP32 work. PlatformIO supports 35 platforms and 1300+ boards. Expand the board registry and build system to support at minimum STM32 (Arduino + STM32CubeIDE), RP2040, and nRF52. | DONE (Wave 138) - Registry expanded with required platforms | C5 | Wave 66 / PlatformIO |
 | BL-0614 | **Custom board definitions** — Users designing custom PCBs need to define their own board with custom clock speed, memory layout, pin aliases, and bootloader. PlatformIO uses a simple JSON board file. Add a "New custom board" workflow that generates a board definition from the PCB's component list and lets users edit clock/memory/pin settings. | OPEN | C5 | Wave 66 / PlatformIO |
-| BL-0615 | **Multi-environment build targets** — Build the same project for multiple boards/configurations from a single project (e.g. `[env:uno]`, `[env:esp32]`, `[env:release]`). Useful for libraries targeting multiple platforms and for projects with debug vs release configs. Add a build profile selector with multiple targets per project. | OPEN | C4 | Wave 66 / PlatformIO |
+| BL-0615 | **Multi-environment build targets** — BuildEnvironmentManager with 10 board presets, PlatformIO INI gen/parse, environment diffing. 101 tests. | DONE (Wave 143) | C4 | Wave 66 / PlatformIO |
 | BL-0616 | **Per-file memory breakdown** — After compile, show how much RAM and Flash each source file and each function consumes. PlatformIO's Project Inspector parses the `.map` file for this. Answers the common maker question "which library is eating all my Flash?" and "why did I run out of RAM?" | DONE (Wave 138) - Integrated nm symbol analysis via MemoryAnalyzerPanel | C4 | Wave 66 / PlatformIO |
 | BL-0617 | **Native firmware unit testing (no hardware required)** — Run firmware tests compiled for the host machine using the Unity test framework. PlatformIO has `pio test -e native` for this. Allows testing pure-logic functions (parsers, state machines, algorithms) without uploading to hardware. Teaches good testing habits and speeds iteration dramatically. | OPEN | C4 | Wave 66 / PlatformIO |
 | BL-0618 | **Static analysis (Cppcheck / Clang-Tidy)** — Catch null pointer dereferences, buffer overflows, uninitialized variables, and logic errors before compile. PlatformIO integrates Cppcheck and Clang-Tidy via `pio check`. Run server-side via WASM or subprocess; surface results as annotations in the code editor. Huge safety value for beginner makers. | OPEN | C4 | Wave 66 / PlatformIO |
@@ -819,7 +819,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0187 | Mentions/notifications for comments | DONE (verified Wave 106) | C2 | MF-121 |
 | BL-0188 | Team templates and standards packs | DONE (Wave 111) | C3 | MF-122, IFX-098 |
 | BL-0189 | Full audit trail UI | DONE (verified Wave 106) | C3 | MF-124 |
-| BL-0190 | Time-travel restore at view/object granularity | OPEN | C4 | MF-125, IFX-088 |
+| BL-0190 | Time-travel restore at view/object granularity — per-object field diffs, restore preview with cross-domain warnings. 61 tests. | DONE (Wave 143) | C4 | MF-125, IFX-088 |
 
 ### Collaboration — Implementation Gaps (Wave 64 Audit)
 
@@ -1122,7 +1122,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0371 | Plugin/extension SDK | OPEN | C5 | MF-182, IFX-091 |
 | BL-0372 | Macro recorder/player for repeated actions | DONE (Wave 116) | C3 | MF-183 |
 | BL-0373 | Custom keybinding editor | DONE (Wave 116) | C3 | MF-184 |
-| BL-0374 | Scriptable command palette actions | OPEN | C4 | MF-185 |
+| BL-0374 | Scriptable command palette actions — 12 built-in commands, fuzzy search, shortcut parsing, execution history, import/export. 76 tests. | DONE (Wave 143) | C4 | MF-185 |
 | BL-0375 | CLI tooling for headless validation/export | OPEN | C4 | MF-188 |
 | BL-0376 | Git-native design diff/merge | DONE (verified Wave 106) | C5 | MF-189 |
 | BL-0377 | Public embed API for schematic/PCB views | DONE (verified Wave 106) | C4 | MF-164 |
@@ -1182,7 +1182,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0430 | AI co-designer (iterates design options side-by-side) | OPEN | C4 | IFX-009 |
+| BL-0430 | AI co-designer — session management, constraint-based scoring, comparison matrix, refinement iterations. 77 tests. | DONE (Wave 143) | C4 | IFX-009 |
 | BL-0431 | AI root-cause map across circuit + firmware | OPEN | C5 | IFX-010 |
 | BL-0432 | Monte Carlo visual risk envelope | DONE (Wave 122) | C3 | IFX-016 |
 | BL-0433 | Expected-vs-observed sim overlay from telemetry — SimTelemetryOverlayManager with severity classification, trend tracking, health scoring. 78 tests. | DONE (Wave 142) | C4 | IFX-017 |
