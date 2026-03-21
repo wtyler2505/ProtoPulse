@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 7 | 271 | 97% — Waves 61-147 |
+| P2 | 2 | 276 | 99% — Waves 61-148 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **65** | **436** | **501 items tracked** |
+| **Total** | **60** | **441** | **501 items tracked** |
 
-*Snapshot updated: Wave 147 (2026-03-21)*
+*Snapshot updated: Wave 148 (2026-03-21)*
 
 ---
 
@@ -669,7 +669,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0120 | Worst-case corner analysis | DONE (Wave 75) | C3 | MF-069 |
-| BL-0121 | Mixed-signal simulation (analog + digital logic) | OPEN | C5 | MF-070 |
+| BL-0121 | Mixed-signal simulation — MixedSignalSimulator with 8 logic gates, ADC/DAC models, Schmitt trigger, step simulation, domain boundary detection. 55+ tests. | DONE (Wave 148) | C5 | MF-070 |
 | BL-0122 | EMI/EMC pre-check workflows | DONE (Wave 76) | C3 | MF-073 |
 | BL-0123 | Current density visualization on traces/pours | DONE (Wave 76) | C3 | MF-075 |
 | BL-0124 | Simulation scenario manager with presets | DONE (Wave 73) | C3 | MF-076, IFX-018 |
@@ -761,7 +761,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0611 | **OTA (Over-The-Air) firmware update** — After the first USB flash, push firmware updates wirelessly to ESP devices via IP or mDNS. Eliminates the USB cable for iterative development. PlatformIO's `upload_protocol = espota` handles this. Add an OTA upload mode to the Workbench that discovers ESP devices on the network and pushes the compiled binary. | DONE (Wave 138) - Integrated mDNS discovery and Profile Port editing | C4 | Wave 66 / PlatformIO |
 | BL-0612 | **Serial output log-to-file** — Auto-save serial monitor output to a timestamped file. Essential for long-running data collection (sensor logging, overnight tests). PlatformIO's `log2file` filter does this transparently. Add a "Record to file" toggle in the serial monitor with download button. | DONE (Wave 84) | C2 | Wave 66 / PlatformIO |
 | BL-0613 | **Multi-platform board support (STM32, nRF52, RP2040, ESP-IDF)** — ProtoPulse's Workbench is Arduino-framework only. Makers increasingly use STM32 Blue Pill (cheap, powerful), nRF52840 (BLE), RP2040 Pico (dual-core, PIO), and ESP-IDF for serious ESP32 work. PlatformIO supports 35 platforms and 1300+ boards. Expand the board registry and build system to support at minimum STM32 (Arduino + STM32CubeIDE), RP2040, and nRF52. | DONE (Wave 138) - Registry expanded with required platforms | C5 | Wave 66 / PlatformIO |
-| BL-0614 | **Custom board definitions** — Users designing custom PCBs need to define their own board with custom clock speed, memory layout, pin aliases, and bootloader. PlatformIO uses a simple JSON board file. Add a "New custom board" workflow that generates a board definition from the PCB's component list and lets users edit clock/memory/pin settings. | OPEN | C5 | Wave 66 / PlatformIO |
+| BL-0614 | **Custom board definitions** — CustomBoardManager with 6 MCU templates, PCB-to-board inference, PlatformIO JSON + Arduino boards.txt + pins_arduino.h generation. 50+ tests. | DONE (Wave 148) | C5 | Wave 66 / PlatformIO |
 | BL-0615 | **Multi-environment build targets** — BuildEnvironmentManager with 10 board presets, PlatformIO INI gen/parse, environment diffing. 101 tests. | DONE (Wave 143) | C4 | Wave 66 / PlatformIO |
 | BL-0616 | **Per-file memory breakdown** — After compile, show how much RAM and Flash each source file and each function consumes. PlatformIO's Project Inspector parses the `.map` file for this. Answers the common maker question "which library is eating all my Flash?" and "why did I run out of RAM?" | DONE (Wave 138) - Integrated nm symbol analysis via MemoryAnalyzerPanel | C4 | Wave 66 / PlatformIO |
 | BL-0617 | **Native firmware unit testing** — FirmwareTestManager with Unity C file generation, PlatformIO native config, output parser, 35 assertion templates. 93 tests. | DONE (Wave 144) | C4 | Wave 66 / PlatformIO |
@@ -946,7 +946,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0285 | **No pagination on circuit endpoints** — add `limit/offset/sort` on instances/nets/wires | DONE (verified Wave 106) | C3 | GA-API-02 |
-| BL-0286 | **No API versioning** — introduce `/api/v1/` prefix + `Deprecation`/`Sunset` headers | OPEN | C4 | GA-API-03 |
+| BL-0286 | **API versioning** — ApiVersionManager with /api/v1/ prefixing, RFC 8594 deprecation headers, migration guides, OpenAPI info. 98 tests. | DONE (Wave 148) | C4 | GA-API-03 |
 | BL-0287 | **No SSE reconnection logic** — Already implemented: `fetchWithRetry()` in ChatPanel.tsx with exponential backoff (1s/2s/4s), max 3 retries, "Reconnecting..." UI. Only retries on network TypeError. | DONE (verified Wave 60) | C3 | GA-API-05 |
 | BL-0288 | **No SSE heartbeat events** — Already implemented: `:heartbeat\n\n` emitted via setInterval during SSE streaming in server/routes/chat.ts:543-547. | DONE (verified Wave 60) | C3 | GA-API-06 |
 | BL-0289 | **Delete lifecycle inconsistent** — define global soft-vs-hard policy matrix by entity | DONE (Wave 138) — ADR 0009 created | C4 | GA-DATA-01 |
@@ -1132,7 +1132,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0380 | SSO/OIDC for team/org deployments | OPEN | C4 | MF-176 |
+| BL-0380 | SSO/OIDC — 7 preset providers, PKCE S256, JWT decode, token refresh, group-to-role mapping. 105 tests. | DONE (Wave 148) | C4 | MF-176 |
 | BL-0381 | RBAC + org/team tenancy model | DONE (verified Wave 106) | C5 | MF-177 |
 | BL-0382 | Audit log explorer UI | DONE (Wave 116) | C3 | MF-178 |
 | BL-0383 | Customizable workspace presets | DONE (Wave 116) | C2 | UX-020 |
@@ -1221,7 +1221,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0465 | "Design-to-drive" mode (auto-create test firmware from schematic) | OPEN | C5 | ARDX-106 |
 | BL-0466 | AI copilot co-debugs wiring + firmware together | DONE (Wave 138) - Genkit Co-Debug flow in Serial Monitor | C5 | ARDX-107 |
 | BL-0467 | ProtoPulse "mission mode" — concept to shipping kit | OPEN | C5 | IFX-120 |
-| BL-0553 | **3D viewer WebGL migration** — Replace the current scene-graph renderer with a Three.js / WebGL renderer that loads real STEP/VRML component models, supports realistic lighting, shadow casting, and per-layer material shading for professional PCB visualization. | OPEN | C4 | Wave 64 audit |
+| BL-0553 | **3D viewer WebGL framework** — WebGLViewerEngine with 9 layers, 8 cameras, 23 packages, 6 materials, geometry creation, layer stack, raycasting. 133 tests. | DONE (Wave 148) | C4 | Wave 64 audit |
 | BL-0554 | **AC analysis harmonic distortion (THD/IMD)** — Radix-2 DIT FFT, 4 window functions, THD/IMD computation, spectral peak detection, classification. 59 tests. | DONE (Wave 145) | C4 | Wave 64 audit |
 | BL-0555 | **SI Advisor + PDN deep integration** — SiPdnIntegrationEngine with cross-domain issue detection, SSN estimation, unified scoring, prioritized recommendations. 67 tests. | DONE (Wave 146) | C4 | Wave 64 audit |
 | BL-0556 | **BGA fanout and escape routing** — 3 fanout patterns (dog-bone/via-in-pad/escape-channel), 6 BGA presets, 6 DRC violation types, pattern recommendation. 60 tests. | DONE (Wave 146) | C4 | Wave 64 audit |
