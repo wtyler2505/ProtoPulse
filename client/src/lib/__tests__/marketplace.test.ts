@@ -5,8 +5,7 @@ import type {
   MarketplaceSearchOptions,
   PublishInput,
 } from '../marketplace';
-import type { DesignSnippet, SnippetCategory } from '../design-reuse';
-import { SnippetLibrary } from '../design-reuse';
+import type { DesignSnippet } from '../design-reuse';
 
 // ---------------------------------------------------------------------------
 // Helpers
