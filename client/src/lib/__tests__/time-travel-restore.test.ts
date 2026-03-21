@@ -158,7 +158,7 @@ describe('TimeTravelRestoreManager', () => {
 
       const result = manager.analyzeDomain('schematic', snap, current);
       expect(result.summary.modified).toBe(1); // i1 changed componentId
-      expect(result.summary.unchanged).toBe(1); // net1
+      expect(result.summary.unchanged).toBe(2); // net1 + w1
       expect(result.summary.added).toBe(1); // w2
     });
 
