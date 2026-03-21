@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 2 | 276 | 99% — Waves 61-148 |
-| P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **60** | **441** | **501 items tracked** |
+| P2 | **0** | **278** | **100%** — Waves 61-149 |
+| P3 | 54 | 77 | 59% — Waves 105-149 |
+| **Total** | **54** | **447** | **501 items tracked** |
 
-*Snapshot updated: Wave 148 (2026-03-21)*
+*Snapshot updated: Wave 149 (2026-03-21)*
 
 ---
 
@@ -813,8 +813,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0181 | Review resolution workflow (open/resolved/blocked) | DONE (Wave 126) | C2 | MF-115 |
 | BL-0182 | Approval gates before release/export | DONE (Wave 138) | C4 | MF-116, IFX-053 |
 | BL-0183 | ECO workflow — EcoWorkflowManager with full state machine, impact assessment, review comments, snapshot linking. 95 tests. | DONE (Wave 142) | C4 | MF-117, IFX-058 |
-| BL-0184 | Design branching model | OPEN | C5 | MF-118, IFX-057 |
-| BL-0185 | Merge tooling for branch diffs | OPEN | C5 | MF-119 |
+| BL-0184 | Design branching model — DesignBranchManager with full lifecycle, change tracking, diff computation, conflict detection/resolution, review workflow. 122 tests (combined with BL-0185). | DONE (Wave 149) | C5 | MF-118, IFX-057 |
+| BL-0185 | Merge tooling for branch diffs — merged with BL-0184 (conflict detection, resolution, merge pre-checks). | DONE (Wave 149) | C5 | MF-119 |
 | BL-0186 | Activity feed for team actions — activity-feed.ts implemented. | DONE (verified Wave 106) | C2 | MF-120, IFX-054 |
 | BL-0187 | Mentions/notifications for comments | DONE (verified Wave 106) | C2 | MF-121 |
 | BL-0188 | Team templates and standards packs | DONE (Wave 111) | C3 | MF-122, IFX-098 |
@@ -1183,7 +1183,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0430 | AI co-designer — session management, constraint-based scoring, comparison matrix, refinement iterations. 77 tests. | DONE (Wave 143) | C4 | IFX-009 |
-| BL-0431 | AI root-cause map across circuit + firmware | OPEN | C5 | IFX-010 |
+| BL-0431 | AI root-cause map — 21 failure patterns, causal graph, cross-domain correlation, probability scoring, fix recommendations. 80 tests. | DONE (Wave 149) | C5 | IFX-010 |
 | BL-0432 | Monte Carlo visual risk envelope | DONE (Wave 122) | C3 | IFX-016 |
 | BL-0433 | Expected-vs-observed sim overlay from telemetry — SimTelemetryOverlayManager with severity classification, trend tracking, health scoring. 78 tests. | DONE (Wave 142) | C4 | IFX-017 |
 | BL-0434 | Auto-tuning assistant for control loops (PID) — Ziegler-Nichols + Cohen-Coon tuning, step response analysis, Arduino code generation. 59 tests. | DONE (Wave 142) | C4 | IFX-020, ARDX-055 |
@@ -1210,7 +1210,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0454 | Multi-board system orchestrator | OPEN | C5 | IFX-115, ARDX-065 |
 | BL-0455 | AR overlay — 7 board layouts, DLT perspective transform, pin/net highlighting, alt function lookup. 99 tests. | DONE (Wave 147) | C4 | IFX-079 |
 | BL-0456 | Voice-driven workflow — 20 built-in voice commands, Levenshtein fuzzy matching, parameterized templates. 59 tests. | DONE (Wave 147) | C4 | IFX-080, ARDX-094 |
-| BL-0457 | Self-healing assistant with approval gates | OPEN | C5 | IFX-089, ARDX-084 |
+| BL-0457 | Self-healing assistant — 12 hazard detectors, fix proposals with component additions, approval gates with expiry. 94 tests. | DONE (Wave 149) | C5 | IFX-089, ARDX-084 |
 | BL-0458 | Predictive failure alerts — 6 anomaly types (trend/spike/drift/oscillation/flatline), time-to-threshold extrapolation. 71 tests. | DONE (Wave 145) | C4 | IFX-090 |
 | BL-0459 | Circuit sandbox game with score/feedback | DONE (Wave 123) | C3 | IFX-069 |
 | BL-0460 | AI tutor persona (Socratic questioning) | DONE (Wave 123) | C3 | IFX-070 |
@@ -1218,7 +1218,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0462 | HIL-lite mode — 8 waveform generators, 12 sensor presets, batch generation, 3 output formats. 71 tests. | DONE (Wave 145) | C4 | ARDX-054 |
 | BL-0463 | Real-time drift detection — DriftDetector with rolling window, drift rate, recalibration estimation, health assessment. 60 tests. | DONE (Wave 145) | C4 | ARDX-112 |
 | BL-0464 | Time machine playback (firmware + logs + schematic) | OPEN | C5 | ARDX-113 |
-| BL-0465 | "Design-to-drive" mode (auto-create test firmware from schematic) | OPEN | C5 | ARDX-106 |
+| BL-0465 | "Design-to-drive" mode — 6 test modes, pin inference from schematic, Arduino sketch generation with Serial reporting. 112 tests. | DONE (Wave 149) | C5 | ARDX-106 |
 | BL-0466 | AI copilot co-debugs wiring + firmware together | DONE (Wave 138) - Genkit Co-Debug flow in Serial Monitor | C5 | ARDX-107 |
 | BL-0467 | ProtoPulse "mission mode" — concept to shipping kit | OPEN | C5 | IFX-120 |
 | BL-0553 | **3D viewer WebGL framework** — WebGLViewerEngine with 9 layers, 8 cameras, 23 packages, 6 materials, geometry creation, layer stack, raycasting. 133 tests. | DONE (Wave 148) | C4 | Wave 64 audit |
