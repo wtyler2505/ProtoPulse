@@ -132,16 +132,24 @@ export function extractParameters(transcript: string, template: string): Record<
     return null;
   }
 
-  // Build a regex from the template by replacing {param} with capture groups
+  // Build a regex from the template by replacing {param} with capture groups.
+  // First replace param placeholders with unique tokens, then escape regex chars,
+  // then swap tokens for capture groups.
   let regexStr = template.toLowerCase().trim();
-  // Escape regex special characters in non-param parts
-  regexStr = regexStr.replace(/[.*+?^${}()|[\]\\]/g, (ch) => {
-    // Don't escape our own braces that are part of params — they're already replaced
-    return ch === '{' || ch === '}' ? ch : `\\${ch}`;
-  });
-  // Replace {paramName} with capture groups
-  for (const name of paramNames) {
-    regexStr = regexStr.replace(`{${name}}`, '(.+?)');
+
+  // Step 1: Replace {paramName} with unique tokens.
+  // Note: regexStr is already lowercased so we must match lowercased param names.
+  const TOKEN_PREFIX = '__PARAM_';
+  for (let i = 0; i < paramNames.length; i++) {
+    regexStr = regexStr.replace(`{${paramNames[i].toLowerCase()}}`, `${TOKEN_PREFIX}${i}__`);
+  }
+
+  // Step 2: Escape regex special characters
+  regexStr = regexStr.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  // Step 3: Replace tokens with capture groups
+  for (let i = 0; i < paramNames.length; i++) {
+    regexStr = regexStr.replace(`${TOKEN_PREFIX}${i}__`, '(.+?)');
   }
   regexStr = `^${regexStr}$`;
 
