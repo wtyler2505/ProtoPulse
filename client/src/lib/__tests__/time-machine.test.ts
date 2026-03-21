@@ -420,7 +420,9 @@ describe('playback', () => {
     const mgr = TimeMachineManager.getInstance();
     seedAndStop(mgr);
     mgr.setSpeed(4);
+    vi.setSystemTime(new Date(0));
     mgr.play();
+    vi.setSystemTime(new Date(100));
     vi.advanceTimersByTime(100);
     const time4x = mgr.currentTime;
     mgr.pause();
@@ -430,7 +432,9 @@ describe('playback', () => {
     const mgr2 = TimeMachineManager.getInstance();
     seedAndStop(mgr2);
     mgr2.setSpeed(1);
+    vi.setSystemTime(new Date(1000));
     mgr2.play();
+    vi.setSystemTime(new Date(1100));
     vi.advanceTimersByTime(100);
     const time1x = mgr2.currentTime;
     mgr2.pause();
@@ -442,14 +446,17 @@ describe('playback', () => {
   it('speed can be changed during playback', () => {
     const mgr = TimeMachineManager.getInstance();
     seedAndStop(mgr);
+    vi.setSystemTime(new Date(0));
     mgr.play();
+    vi.setSystemTime(new Date(50));
     vi.advanceTimersByTime(50);
     const timeBefore = mgr.currentTime;
     mgr.setSpeed(8);
+    vi.setSystemTime(new Date(100));
     vi.advanceTimersByTime(50);
     const timeAfter = mgr.currentTime;
     mgr.pause();
-    // After speed change, should advance much faster
+    // After speed change at 8x, 50ms wall time = 400ms sim time
     expect(timeAfter - timeBefore).toBeGreaterThan(50);
   });
 });

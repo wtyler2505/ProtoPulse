@@ -244,11 +244,12 @@ export class TimeMachineManager {
     this.notify();
   }
 
-  /** Stop recording. Transitions to idle. */
+  /** Stop recording. Transitions to idle. Resets current time to 0 for playback. */
   stopRecording(): void {
     if (this._state !== 'recording') {
       return;
     }
+    this._currentTime = 0;
     this._state = 'idle';
     this.notify();
   }
@@ -324,6 +325,12 @@ export class TimeMachineManager {
     this._events.push(event);
     this._domainCounts[domain]++;
     this._currentTime = Math.max(this._currentTime, timestamp);
+
+    // Auto-snapshot at intervals
+    if (this._snapshots.length === 0 ||
+        timestamp - this._snapshots[this._snapshots.length - 1].timestamp >= this._snapshotIntervalMs) {
+      this.captureSnapshot(timestamp);
+    }
 
     this.notify();
     return event;

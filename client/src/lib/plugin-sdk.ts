@@ -343,6 +343,7 @@ export class PluginSdkManager {
   private plugins: Map<string, Plugin> = new Map();
   private hookHandlers: Map<HookName, Map<string, HookHandler[]>> = new Map();
   private initFns: Map<string, PluginInitFn> = new Map();
+  private pluginStorageKeys: Map<string, Set<string>> = new Map();
   private listeners = new Set<Listener>();
 
   constructor() {
@@ -404,6 +405,12 @@ export class PluginSdkManager {
 
   private createPluginStorage(pluginId: string, plugin: Plugin): PluginStorageApi {
     const prefix = `${STORAGE_PREFIX}${pluginId}:`;
+    const storageKeyTracker = this.pluginStorageKeys;
+
+    if (!storageKeyTracker.has(pluginId)) {
+      storageKeyTracker.set(pluginId, new Set());
+    }
+    const trackedKeys = storageKeyTracker.get(pluginId)!;
 
     return {
       get(key: string): unknown {
@@ -424,44 +431,33 @@ export class PluginSdkManager {
         if (!hasPermission(plugin, 'storage:write')) {
           throw new Error(`Plugin "${pluginId}" lacks storage:write permission`);
         }
-        // Check key limit
-        const existingKeys = this.keys();
-        if (!existingKeys.includes(key) && existingKeys.length >= MAX_STORAGE_KEYS) {
+        if (!trackedKeys.has(key) && trackedKeys.size >= MAX_STORAGE_KEYS) {
           throw new Error(`Plugin storage limit exceeded (max ${String(MAX_STORAGE_KEYS)} keys)`);
         }
         localStorage.setItem(`${prefix}${key}`, JSON.stringify(value));
+        trackedKeys.add(key);
       },
       delete(key: string): void {
         if (!hasPermission(plugin, 'storage:write')) {
           throw new Error(`Plugin "${pluginId}" lacks storage:write permission`);
         }
         localStorage.removeItem(`${prefix}${key}`);
+        trackedKeys.delete(key);
       },
       keys(): string[] {
         if (!hasPermission(plugin, 'storage:read')) {
           throw new Error(`Plugin "${pluginId}" lacks storage:read permission`);
         }
-        const result: string[] = [];
-        for (const k of Object.keys(localStorage)) {
-          if (typeof k === 'string' && k.startsWith(prefix)) {
-            result.push(k.slice(prefix.length));
-          }
-        }
-        return result;
+        return Array.from(trackedKeys);
       },
       clear(): void {
         if (!hasPermission(plugin, 'storage:write')) {
           throw new Error(`Plugin "${pluginId}" lacks storage:write permission`);
         }
-        const keysToRemove: string[] = [];
-        for (const k of Object.keys(localStorage)) {
-          if (typeof k === 'string' && k.startsWith(prefix)) {
-            keysToRemove.push(k);
-          }
-        }
-        keysToRemove.forEach((k) => {
-          localStorage.removeItem(k);
+        trackedKeys.forEach((key) => {
+          localStorage.removeItem(`${prefix}${key}`);
         });
+        trackedKeys.clear();
       },
     };
   }
@@ -696,17 +692,15 @@ export class PluginSdkManager {
       hookMap.delete(pluginId);
     });
 
-    // Clear plugin storage
+    // Clear plugin storage using tracked keys
     const prefix = `${STORAGE_PREFIX}${pluginId}:`;
-    const keysToRemove: string[] = [];
-    for (const k of Object.keys(localStorage)) {
-      if (typeof k === 'string' && k.startsWith(prefix)) {
-        keysToRemove.push(k);
-      }
+    const trackedKeys = this.pluginStorageKeys.get(pluginId);
+    if (trackedKeys) {
+      trackedKeys.forEach((key: string) => {
+        localStorage.removeItem(`${prefix}${key}`);
+      });
     }
-    keysToRemove.forEach((k) => {
-      localStorage.removeItem(k);
-    });
+    this.pluginStorageKeys.delete(pluginId);
 
     this.plugins.delete(pluginId);
     this.initFns.delete(pluginId);
@@ -834,22 +828,17 @@ export class PluginSdkManager {
   // -----------------------------------------------------------------------
 
   clearAll(): void {
-    // Clear all plugin storage
-    this.plugins.forEach((_plugin, pluginId) => {
+    // Clear all plugin storage using tracked keys
+    this.pluginStorageKeys.forEach((trackedKeys, pluginId) => {
       const prefix = `${STORAGE_PREFIX}${pluginId}:`;
-      const keysToRemove: string[] = [];
-      for (const k of Object.keys(localStorage)) {
-        if (typeof k === 'string' && k.startsWith(prefix)) {
-          keysToRemove.push(k);
-        }
-      }
-      keysToRemove.forEach((k) => {
-        localStorage.removeItem(k);
+      trackedKeys.forEach((key: string) => {
+        localStorage.removeItem(`${prefix}${key}`);
       });
     });
     this.plugins = new Map();
     this.hookHandlers = new Map();
     this.initFns = new Map();
+    this.pluginStorageKeys = new Map();
     this.saveState();
     this.notify();
   }
