@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 22 | 256 | 92% — Waves 61-144 |
+| P2 | 17 | 261 | 94% — Waves 61-145 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **80** | **421** | **501 items tracked** |
+| **Total** | **75** | **426** | **501 items tracked** |
 
-*Snapshot updated: Wave 144 (2026-03-21)*
+*Snapshot updated: Wave 145 (2026-03-21)*
 
 ---
 
@@ -1192,7 +1192,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0437 | Guided "board doctor" conversational diagnostics — 42-node decision tree, 7 symptom categories, fuzzy symptom matching, session tracking. 114 tests. | DONE (Wave 142) | C4 | IFX-030 |
 | BL-0438 | Predictive yield estimator — 10 independent yield factors, Cpk calculation, cost impact, improvement suggestions. 75 tests. | DONE (Wave 144) | C4 | IFX-040 |
 | BL-0439 | Community template packs | DONE (Wave 118) | C2 | IFX-095 |
-| BL-0440 | Marketplace for reusable circuit blocks | OPEN | C4 | IFX-096 |
+| BL-0440 | Marketplace for reusable circuit blocks — MarketplaceManager with 12 seed items, fuzzy search, install/rate/publish. 72 tests. | DONE (Wave 145) | C4 | IFX-096 |
 | BL-0441 | "Remix this design" from public examples | DONE (Wave 123) | C3 | IFX-101 |
 | BL-0442 | Build journals (auto notes as project evolves) | DONE (Wave 120) | C3 | IFX-102 |
 | BL-0443 | Project scorecards (cost, risk, readiness) | DONE (Wave 123) | C3 | IFX-104 |
@@ -1211,18 +1211,18 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0455 | AR overlay for real-board pin mapping | OPEN | C4 | IFX-079 |
 | BL-0456 | Voice-driven workflow for bench sessions | OPEN | C4 | IFX-080, ARDX-094 |
 | BL-0457 | Self-healing assistant with approval gates | OPEN | C5 | IFX-089, ARDX-084 |
-| BL-0458 | Predictive failure alerts from trend anomalies | OPEN | C4 | IFX-090 |
+| BL-0458 | Predictive failure alerts — 6 anomaly types (trend/spike/drift/oscillation/flatline), time-to-threshold extrapolation. 71 tests. | DONE (Wave 145) | C4 | IFX-090 |
 | BL-0459 | Circuit sandbox game with score/feedback | DONE (Wave 123) | C3 | IFX-069 |
 | BL-0460 | AI tutor persona (Socratic questioning) | DONE (Wave 123) | C3 | IFX-070 |
 | BL-0461 | Firmware-aware simulation mode | OPEN | C5 | ARDX-046 |
-| BL-0462 | HIL-lite mode (mock missing sensors) | OPEN | C4 | ARDX-054 |
-| BL-0463 | Real-time drift detection | OPEN | C4 | ARDX-112 |
+| BL-0462 | HIL-lite mode — 8 waveform generators, 12 sensor presets, batch generation, 3 output formats. 71 tests. | DONE (Wave 145) | C4 | ARDX-054 |
+| BL-0463 | Real-time drift detection — DriftDetector with rolling window, drift rate, recalibration estimation, health assessment. 60 tests. | DONE (Wave 145) | C4 | ARDX-112 |
 | BL-0464 | Time machine playback (firmware + logs + schematic) | OPEN | C5 | ARDX-113 |
 | BL-0465 | "Design-to-drive" mode (auto-create test firmware from schematic) | OPEN | C5 | ARDX-106 |
 | BL-0466 | AI copilot co-debugs wiring + firmware together | DONE (Wave 138) - Genkit Co-Debug flow in Serial Monitor | C5 | ARDX-107 |
 | BL-0467 | ProtoPulse "mission mode" — concept to shipping kit | OPEN | C5 | IFX-120 |
 | BL-0553 | **3D viewer WebGL migration** — Replace the current scene-graph renderer with a Three.js / WebGL renderer that loads real STEP/VRML component models, supports realistic lighting, shadow casting, and per-layer material shading for professional PCB visualization. | OPEN | C4 | Wave 64 audit |
-| BL-0554 | **AC analysis harmonic distortion (THD/IMD)** — Extend the AC small-signal analysis engine to compute total harmonic distortion and intermodulation distortion for audio/RF circuits. Requires nonlinear Volterra series expansion or direct time-to-frequency transform post-transient. | OPEN | C4 | Wave 64 audit |
+| BL-0554 | **AC analysis harmonic distortion (THD/IMD)** — Radix-2 DIT FFT, 4 window functions, THD/IMD computation, spectral peak detection, classification. 59 tests. | DONE (Wave 145) | C4 | Wave 64 audit |
 | BL-0555 | **SI Advisor + PDN circuit-solver deep integration** — Currently `si-advisor.ts` and `pdn-analysis.ts` produce separate reports. Build a unified power/signal integrity dashboard where PDN impedance results (via Z(f) solver) feed directly into SI stack-up recommendations, and topology changes update both simultaneously. | OPEN | C4 | Wave 64 audit |
 | BL-0556 | **BGA fanout and escape routing rule set** — Add specialized DRC rules and a fanout-routing assistant for BGA packages: dog-bone via patterns, escape channel width enforcement, ball-pitch vs via-size constraints, and anti-pad clearances. Required for any design with fine-pitch BGAs. | OPEN | C4 | Wave 64 audit |
 | BL-0557 | **Circuit Code DSL: pin alias and local net naming** — Allow named local nets within a DSL block scope (e.g. `const vref = net('VREF')`) so that complex sub-circuits can be composed without polluting the global net namespace. Enables reusable DSL modules. | DONE (Wave 124) | C3 | Wave 64 audit |
