@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 12 | 266 | 96% — Waves 61-146 |
+| P2 | 7 | 271 | 97% — Waves 61-147 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **70** | **431** | **501 items tracked** |
+| **Total** | **65** | **436** | **501 items tracked** |
 
-*Snapshot updated: Wave 146 (2026-03-21)*
+*Snapshot updated: Wave 147 (2026-03-21)*
 
 ---
 
@@ -856,7 +856,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0531 | **BOM component availability check in DFM** — Integrate BOM stock data (from supplier APIs, once real) into the DFM flow. Flag unavailable or long-lead-time components as DFM risks before the user commits to a fab order. | DONE (Wave 138) | C4 | Wave 64 audit |
 | BL-0532 | **Export file syntax validation** — 4 format validators (Gerber/Drill/IPC-2581/ODB++), wired to export routes with 422 on errors. | DONE (Wave 89) | C3 | Wave 64 audit |
 | BL-0533 | **LCSC real-time part data sync** — `lcsc-jlcpcb-mapper.ts` currently uses 154 built-in static mappings. Add an optional API sync to fetch real-time prices, stock levels, and JLCPCB assembly availability from the LCSC open API. | DONE (verified Wave 106) | C4 | Wave 64 audit |
-| BL-0646 | **Supplier pricing must move from demo data to real server-backed integrations** — Procurement still presents "live pricing" through a mock/demo pipeline. Replace the fake offer generator with real provider fetches behind a server proxy that handles auth, caching, and rate limiting. | OPEN | C4 | Repo gap audit 2026-03-13 |
+| BL-0646 | **Supplier pricing real integrations** — SupplierPricingEngine with 6 providers, single+bulk quoting, LRU caching, provider comparison. 49 tests. | DONE (Wave 147) | C4 | Repo gap audit 2026-03-13 |
 
 ### Learning & Content — Competitive Gaps (Wave 66 Audit)
 
@@ -966,7 +966,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0260 | Persistent job durability store (not in-memory only) | DONE (verified Wave 106) | C4 | MF-170 |
-| BL-0261 | Full observability (structured logs, traces, alerts) | OPEN | C4 | MF-171 |
+| BL-0261 | Full observability — structured logging (10K ring buffer), distributed tracing, alert rules with conditions. 59 tests. | DONE (Wave 147) | C4 | MF-171 |
 | BL-0262 | Error taxonomy with stable error codes | DONE (verified Wave 106) | C3 | MF-173 |
 | BL-0263 | Data retention policies and cleanup tooling | DONE (verified Wave 106) | C3 | MF-174 |
 | BL-0264 | Deployment profiles (dev/staging/prod) with config validation | DONE (Wave 112) | C3 | MF-179 |
@@ -1208,8 +1208,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0452 | AI textual product goals → architecture — 35+ keyword rules, 12 domain detectors, 36-component knowledge base, 2-3 architecture candidates. 75 tests. | DONE (Wave 144) | C4 | IFX-113 |
 | BL-0453 | Automated bench robot integration | OPEN | C5 | IFX-114 |
 | BL-0454 | Multi-board system orchestrator | OPEN | C5 | IFX-115, ARDX-065 |
-| BL-0455 | AR overlay for real-board pin mapping | OPEN | C4 | IFX-079 |
-| BL-0456 | Voice-driven workflow for bench sessions | OPEN | C4 | IFX-080, ARDX-094 |
+| BL-0455 | AR overlay — 7 board layouts, DLT perspective transform, pin/net highlighting, alt function lookup. 99 tests. | DONE (Wave 147) | C4 | IFX-079 |
+| BL-0456 | Voice-driven workflow — 20 built-in voice commands, Levenshtein fuzzy matching, parameterized templates. 59 tests. | DONE (Wave 147) | C4 | IFX-080, ARDX-094 |
 | BL-0457 | Self-healing assistant with approval gates | OPEN | C5 | IFX-089, ARDX-084 |
 | BL-0458 | Predictive failure alerts — 6 anomaly types (trend/spike/drift/oscillation/flatline), time-to-threshold extrapolation. 71 tests. | DONE (Wave 145) | C4 | IFX-090 |
 | BL-0459 | Circuit sandbox game with score/feedback | DONE (Wave 123) | C3 | IFX-069 |
@@ -1230,7 +1230,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0631 | **Simulator-based firmware execution (QEMU / simavr)** — Run compiled Arduino firmware in a software simulator (simavr for AVR, QEMU for ARM/RISC-V) without physical hardware. Debug with breakpoints, inspect registers and memory, fast-forward time. PlatformIO supports this via `test_speed = host`. Enables full development and testing workflow for users without hardware at hand. | DONE (verified Wave 106) | C5 | Wave 66 / PlatformIO |
 | BL-0632 | **Hardware debugger integration (ST-LINK, J-Link, CMSIS-DAP)** — Full GDB-based debugging over SWD/JTAG: breakpoints, watchpoints, variable inspection, peripheral register view (SVD), FreeRTOS thread awareness. PlatformIO supports 30+ debug probes out of the box. Browser-based approach requires a local proxy agent or WebUSB + OpenOCD integration. The most powerful feature gap vs PlatformIO for serious embedded developers. | OPEN | C5 | Wave 66 / PlatformIO |
 | BL-0633 | **ESP-IDF framework support** — ESP-IDF (the official Espressif SDK) unlocks WiFi stacks, BLE, FreeRTOS tasks, partitions, NVS, and deep-sleep properly on ESP32 — things the Arduino framework abstracts poorly. PlatformIO supports ESP-IDF alongside Arduino in the same project. Relevant for any serious ESP32 maker project going beyond basic connectivity. | OPEN | C5 | Wave 66 / PlatformIO |
-| BL-0634 | **Static analysis (Cppcheck / Clang-Tidy) for firmware** — Run Cppcheck or Clang-Tidy server-side on uploaded Arduino/C++ code and surface annotations in the editor: null pointer dereferences, buffer overflows, uninitialized variables, integer overflow risks, dead code. PlatformIO integrates 3 analyzers. Particularly valuable for beginner makers who don't know what they don't know. | OPEN | C4 | Wave 66 / PlatformIO |
+| BL-0634 | **Server-side static analysis** — Cppcheck XML + Clang-Tidy parsers, 36 rule DB with CWE IDs, result merging, CodeMirror annotations. 70 tests. | DONE (Wave 147) | C4 | Wave 66 / PlatformIO |
 | BL-0635 | **Arduino code simulation (compile + run in browser)** — Compile and execute actual Arduino C/C++ code in the browser against a software-simulated microcontroller (simavr WASM build or equivalent). Serial.print() output appears in Serial Monitor, pin states drive component visual states (BL-0619), sensor sliders feed analogRead(). TinkerCAD does this for ~9 built-in libraries. The holy grail for a browser-based EDA+firmware tool. (See also BL-0461 firmware-aware simulation.) | OPEN | C5 | Wave 66 / TinkerCAD + PlatformIO |
 
 ---
