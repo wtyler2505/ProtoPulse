@@ -298,7 +298,7 @@ export class AiCoDesigner {
     return this.sessions.get(sessionId) ?? null;
   }
 
-  /** Get all sessions as summaries. */
+  /** Get all sessions as summaries (most recently updated first). */
   listSessions(): SessionSummary[] {
     const summaries: SessionSummary[] = [];
     this.sessions.forEach((session) => {
@@ -321,7 +321,16 @@ export class AiCoDesigner {
       });
     });
 
-    summaries.sort((a, b) => b.updatedAt - a.updatedAt);
+    // Sort by updatedAt descending; tiebreak by createdAt descending (newer first)
+    summaries.sort((a, b) => {
+      const timeDiff = b.updatedAt - a.updatedAt;
+      if (timeDiff !== 0) {
+        return timeDiff;
+      }
+      // When timestamps tie (same ms), use session ID comparison
+      // IDs incorporate a counter, so later-created sessions have lexically later IDs
+      return b.id.localeCompare(a.id);
+    });
     return summaries;
   }
 
