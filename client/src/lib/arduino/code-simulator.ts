@@ -498,6 +498,15 @@ export class CodeSimulator {
       return charMatch ? charMatch[1].charCodeAt(0) : parseInt(trimmed, 10) || 0;
     }
 
+    // Hex literal
+    if (/^0x[0-9a-fA-F]+$/.test(trimmed)) {
+      return parseInt(trimmed, 16);
+    }
+    // Binary literal
+    if (/^0b[01]+$/.test(trimmed)) {
+      return parseInt(trimmed.slice(2), 2);
+    }
+
     const num = parseFloat(trimmed);
     return Number.isNaN(num) ? 0 : num;
   }
@@ -974,7 +983,7 @@ export class CodeSimulator {
       const [, typeName, varName, valueStr] = declMatch;
       const type = this._mapType(typeName);
       if (type) {
-        const value = this._parseValue(valueStr, type);
+        const value = this._evaluateExpression(valueStr.replace(/;$/, '').trim());
         const scope = this._callStack.length > 1 ? 'local' : 'global';
         const v: SimVariable = { name: varName, type, value, scope };
         if (scope === 'local' && this._callStack.length > 0) {
