@@ -645,7 +645,7 @@ describe('ServerStaticAnalysisManager — analyze', () => {
   });
 
   it('analyze merges local + cppcheck', () => {
-    const code = 'void f() { int x; }';
+    const code = 'void f() {\n  strcpy(buf, input);\n}';
     const cppcheckXml = makeCppcheckXml(`
       <error id="uninitvar" severity="error" msg="Uninitialized variable: x" cwe="457">
         <location file="test.c" line="1" column="16"/>
@@ -664,13 +664,13 @@ describe('ServerStaticAnalysisManager — analyze', () => {
   });
 
   it('analyze merges all three sources', () => {
-    const code = 'void f() { int x; }';
+    const code = 'void f() {\n  strcpy(buf, input);\n}';
     const cppcheckXml = makeCppcheckXml(`
       <error id="uninitvar" severity="error" msg="Uninit var" cwe="457">
         <location file="t.c" line="1" column="1"/>
       </error>
     `);
-    const clangOutput = 'test.c:1:16: warning: var not init [cppcoreguidelines-init-variables]';
+    const clangOutput = 'test.c:2:3: warning: unsafe function [bugprone-unsafe-function]';
     const result = mgr.analyze(code, cppcheckXml, clangOutput);
     expect(result.sources).toContain('local');
     expect(result.sources).toContain('cppcheck');

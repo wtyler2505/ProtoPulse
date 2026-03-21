@@ -166,13 +166,16 @@ export function getCppcheckRule(id: string): CppcheckRule | undefined {
 export function parseCppcheckXml(xml: string): ServerFinding[] {
   const findings: ServerFinding[] = [];
 
-  // Match each <error> element
-  const errorRe = /<error\s+([^>]*)(?:\/>|>([\s\S]*?)<\/error>)/g;
+  // Match each <error> element. Self-closing alternative MUST come first
+  // so that `<error .../>` doesn't get consumed by the open-tag pattern
+  // (since `[^>]*` would capture the `/` before `>`).
+  const errorRe = /<error\s+([^>]*?)\/\s*>|<error\s+([^>]*)>([\s\S]*?)<\/error>/g;
   let errorMatch: RegExpExecArray | null = null;
 
   while ((errorMatch = errorRe.exec(xml)) !== null) {
-    const attrs = errorMatch[1];
-    const inner = errorMatch[2] ?? '';
+    // Group 1 = self-closing attrs, Group 2+3 = open-tag attrs + inner
+    const attrs = errorMatch[1] ?? errorMatch[2] ?? '';
+    const inner = errorMatch[3] ?? '';
 
     const id = extractAttr(attrs, 'id');
     const severity = extractAttr(attrs, 'severity');
@@ -365,7 +368,7 @@ function buildClangTidySuggestion(checkName: string): string {
  * Generate a dedup key for a finding.
  */
 function findingKey(f: ServerFinding): string {
-  return `${f.line}:${f.column}:${f.severity}:${f.message}`;
+  return `${f.line}:${f.column}:${f.message}`;
 }
 
 /**
