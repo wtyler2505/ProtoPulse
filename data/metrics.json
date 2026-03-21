@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-21T06:11:15.146Z",
+  "persistedAt": "2026-03-21T08:51:15.221Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 21,
@@ -129,8 +129,8 @@
       ]
     },
     "GET /api/projects/:id/arduino/files": {
-      "count": 17,
-      "totalDuration": 35100,
+      "count": 18,
+      "totalDuration": 35146,
       "errors": 0,
       "min": 26,
       "max": 12653,
@@ -139,6 +139,7 @@
         28,
         31,
         45,
+        46,
         65,
         154,
         215,
@@ -210,8 +211,8 @@
       ]
     },
     "GET /api/projects/:id/arduino/libraries/installed": {
-      "count": 17,
-      "totalDuration": 60620,
+      "count": 18,
+      "totalDuration": 66755,
       "errors": 0,
       "min": 1582,
       "max": 12673,
@@ -231,6 +232,7 @@
         3648,
         3739,
         6120,
+        6135,
         6853,
         12673
       ]
@@ -464,8 +466,8 @@
       ]
     },
     "GET /api/projects/:id/chat/branches": {
-      "count": 27,
-      "totalDuration": 5188,
+      "count": 28,
+      "totalDuration": 5300,
       "errors": 0,
       "min": 5,
       "max": 2590,
@@ -494,6 +496,7 @@
         66,
         94,
         95,
+        112,
         466,
         1346,
         2590
@@ -813,14 +816,15 @@
       ]
     },
     "POST /api/projects/:id/agent": {
-      "count": 2,
-      "totalDuration": 192,
+      "count": 3,
+      "totalDuration": 1040,
       "errors": 0,
       "min": 86,
-      "max": 106,
+      "max": 848,
       "samples": [
         86,
-        106
+        106,
+        848
       ]
     },
     "GET /api/component-library": {
