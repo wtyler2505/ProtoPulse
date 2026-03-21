@@ -249,8 +249,8 @@ describe('calculatePanel — validation', () => {
   it('rejects zero columns', () => {
     const config = makeConfig({ columns: 0, rows: 1 });
     const result = calculatePanel(config);
-    // columns gets clamped to 1
-    expect(result.columns).toBeGreaterThanOrEqual(1);
+    expect(warningCodes(result)).toContain('INVALID_COLUMNS');
+    expect(result.boardCount).toBe(0);
   });
 
   it('warns about narrow rails', () => {
