@@ -559,9 +559,18 @@ describe('volume bonus', () => {
 
 describe('calculateCpk', () => {
   it('high yield gives excellent Cpk', () => {
-    const result = calculateCpk(0.9999);
+    // Cpk >= 2.0 requires ~6σ short-term = Z ≈ 4.5 (with 1.5σ shift) → yield ~0.999997
+    const result = calculateCpk(0.999997);
     expect(result.rating).toBe('excellent');
     expect(result.cpk).toBeGreaterThanOrEqual(2.0);
+  });
+
+  it('very high yield (99.99%) gives good Cpk', () => {
+    // 99.99% yield → Z ≈ 3.72 → short-term σ ≈ 5.22 → Cpk ≈ 1.74
+    const result = calculateCpk(0.9999);
+    expect(result.rating).toBe('good');
+    expect(result.cpk).toBeGreaterThanOrEqual(1.33);
+    expect(result.cpk).toBeLessThan(2.0);
   });
 
   it('moderate yield gives good Cpk', () => {
@@ -581,11 +590,11 @@ describe('calculateCpk', () => {
   });
 
   it('returns description for each rating', () => {
-    const excellent = calculateCpk(0.9999);
-    const good = calculateCpk(0.9999 - 0.003);
+    const excellent = calculateCpk(0.999997);
+    const good = calculateCpk(0.9999);
     const poor = calculateCpk(0.7);
     expect(excellent.description).toContain('World-class');
-    expect(good.description.length).toBeGreaterThan(0);
+    expect(good.description).toContain('Capable');
     expect(poor.description).toContain('Incapable');
   });
 

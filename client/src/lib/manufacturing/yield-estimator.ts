@@ -826,7 +826,7 @@ export function generateYieldImprovements(
  */
 export function detectPlacementType(description: string): PlacementType {
   const d = description.toLowerCase();
-  if (/\bbga\b|ball\s*grid/i.test(d)) {
+  if (/\bbga\b|\bfbga\b|\bwlcsp\b|ball\s*grid/i.test(d)) {
     return 'bga';
   }
   if (/\btht\b|\bthrough[- ]?hole\b|\bdip\b|\bto-\d+\b|\bpdip\b/i.test(d)) {

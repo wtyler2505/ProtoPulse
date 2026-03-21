@@ -466,15 +466,16 @@ const checkDangerousFunction: Checker = (lines, findings) => {
     { fn: 'atof', reason: 'No error detection on invalid input.', safe: 'strtod', re: /\batof\s*\(/ },
     { fn: 'atol', reason: 'No error detection on invalid input.', safe: 'strtol', re: /\batol\s*\(/ },
     { fn: 'system', reason: 'Arbitrary shell command execution is a security risk.', safe: 'exec family', re: /\bsystem\s*\(/ },
-    { fn: 'scanf', reason: 'No width limit on %s format specifier.', safe: 'scanf with width specifier (%99s)', re: /\bscanf\s*\(\s*"[^"]*%s/ },
+    { fn: 'scanf', reason: 'No width limit on %s format specifier.', safe: 'scanf with width specifier (%99s)', re: /\bscanf\s*\(\s*"[^"]*%s/, useOriginal: true as const },
   ];
 
   lines.forEach((line, i) => {
     const stripped = stripStrings(line);
     if (isPreprocessorLine(stripped)) { return; }
 
-    dangerous.forEach(({ fn, reason, safe, re }) => {
-      const match = re.exec(stripped);
+    dangerous.forEach(({ fn, reason, safe, re, ...rest }) => {
+      const searchLine = ('useOriginal' in rest && rest.useOriginal) ? line : stripped;
+      const match = re.exec(searchLine);
       if (match) {
         findings.push({
           line: i + 1,
@@ -732,25 +733,21 @@ const checkDoubleFree: Checker = (lines, findings) => {
 };
 
 const checkFormatString: Checker = (lines, findings) => {
-  // Detect printf/sprintf/fprintf where format is a variable
-  const printfRe = /\b(printf|sprintf|fprintf|snprintf)\s*\(\s*(?:[^,]+,\s*)?(\w+)\s*[,)]/;
+  // Detect printf/sprintf where the format argument is a variable, not a string literal.
+  // We check the ORIGINAL line (not stripped) so string literals are visible.
+  const printfCallRe = /\b(printf|sprintf)\s*\(\s*(\w+)\s*[,)]/;
 
   lines.forEach((line, i) => {
-    const stripped = stripStrings(line);
-    if (isPreprocessorLine(stripped)) { return; }
+    if (isPreprocessorLine(line)) { return; }
 
-    const match = printfRe.exec(stripped);
+    // Use original line so we can see if first arg is a string literal
+    const match = printfCallRe.exec(line);
     if (match) {
       const fn = match[1];
       const arg = match[2];
-      // If the format argument looks like a variable (not a string literal)
-      // We check stripped version — string literals are already removed
-      if (arg && !/^"/.test(arg) && !/^(stdout|stderr|stdin)$/.test(arg)) {
-        // For fprintf, the format is the second arg
-        if (fn === 'fprintf' || fn === 'snprintf') {
-          // These have an extra arg before format — this is a simplification
-          return;
-        }
+      // arg is the first argument — if it's a variable name (not a string literal),
+      // that's a format string vulnerability
+      if (arg && !/^(stdout|stderr|stdin)$/.test(arg)) {
         findings.push({
           line: i + 1,
           column: match.index + 1,
