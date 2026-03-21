@@ -350,7 +350,7 @@ describe('SiPdnIntegrationEngine', () => {
 
     it('should use default switching current if not specified', () => {
       const config = makeConfig({ numSwitchingOutputs: 8 });
-      delete (config as Record<string, unknown>)['switchingCurrentPerOutput'];
+      delete (config as unknown as Record<string, unknown>)['switchingCurrentPerOutput'];
 
       const engine = new SiPdnIntegrationEngine();
       engine.setConfig(config);
