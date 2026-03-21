@@ -3,8 +3,7 @@
  *
  * Orchestrates the complete journey from initial concept to ordered PCB across
  * 8 stages with 18 discrete steps.  Tracks progress, estimates time remaining,
- * and generates per-step recommendations so the user never has to wonder
- * "what do I do next?"
+ * generates per-step recommendations, and exports a markdown session report.
  *
  * Singleton + Subscribe pattern.
  */
@@ -18,44 +17,44 @@ export type WorkflowStage =
   | 'architecture'
   | 'schematic'
   | 'simulation'
-  | 'pcb'
+  | 'pcb_layout'
   | 'validation'
   | 'manufacturing'
   | 'ordering';
 
 export type StepStatus = 'pending' | 'active' | 'completed' | 'skipped' | 'blocked';
 
+export interface StepResult {
+  success: boolean;
+  artifacts: string[];
+  warnings: string[];
+  blockers: string[];
+  completedAt: number;
+}
+
 export interface WorkflowStep {
   id: string;
   stage: WorkflowStage;
-  name: string;
+  title: string;
   description: string;
   status: StepStatus;
-  /** Estimated minutes to complete this step. */
+  order: number;
   estimatedMinutes: number;
-  /** Prerequisites — step IDs that must be completed/skipped first. */
-  prerequisites: string[];
-  /** IDs of ProtoPulse view modes this step relates to. */
-  relatedViews: string[];
-  /** Free-form recommendations surfaced to the user. */
-  recommendations: string[];
-  /** Timestamp (epoch ms) when the step was completed, or null. */
-  completedAt: number | null;
+  automatable: boolean;
+  completionCriteria: string[];
+  result?: StepResult;
 }
 
-export interface StageInfo {
-  stage: WorkflowStage;
-  label: string;
+export interface IdeaToPcbSession {
+  id: string;
+  projectName: string;
   description: string;
-  steps: string[]; // step IDs belonging to this stage
-}
-
-export interface WorkflowProgress {
-  completedSteps: number;
-  totalSteps: number;
-  percentage: number;
+  startedAt: number;
   currentStage: WorkflowStage;
-  estimatedMinutesRemaining: number;
+  steps: WorkflowStep[];
+  totalEstimatedMinutes: number;
+  elapsedMinutes: number;
+  completionPercent: number;
 }
 
 export interface WorkflowRecommendation {
@@ -66,17 +65,8 @@ export interface WorkflowRecommendation {
   relatedView?: string;
 }
 
-export interface WorkflowConfig {
-  projectName: string;
-  complexity: 'simple' | 'moderate' | 'complex';
-  /** Skip simulation stages for simple projects. */
-  skipSimulation: boolean;
-  /** Skip ordering stage (design-only flow). */
-  skipOrdering: boolean;
-}
-
 // ---------------------------------------------------------------------------
-// Constants — Stage metadata
+// Constants
 // ---------------------------------------------------------------------------
 
 const STAGE_ORDER: WorkflowStage[] = [
@@ -84,251 +74,259 @@ const STAGE_ORDER: WorkflowStage[] = [
   'architecture',
   'schematic',
   'simulation',
-  'pcb',
+  'pcb_layout',
   'validation',
   'manufacturing',
   'ordering',
 ];
 
-const STAGE_INFO: Record<WorkflowStage, Omit<StageInfo, 'steps'>> = {
-  ideation: {
-    stage: 'ideation',
-    label: 'Ideation',
-    description: 'Define project goals, requirements, and high-level approach',
-  },
-  architecture: {
-    stage: 'architecture',
-    label: 'Architecture',
-    description: 'Design the system block diagram and select key components',
-  },
-  schematic: {
-    stage: 'schematic',
-    label: 'Schematic',
-    description: 'Capture the full circuit schematic with component values',
-  },
-  simulation: {
-    stage: 'simulation',
-    label: 'Simulation',
-    description: 'Verify circuit behavior with DC, AC, and transient analysis',
-  },
-  pcb: {
-    stage: 'pcb',
-    label: 'PCB Layout',
-    description: 'Place components and route traces on the physical board',
-  },
-  validation: {
-    stage: 'validation',
-    label: 'Validation',
-    description: 'Run DRC, ERC, and DFM checks to catch issues before fabrication',
-  },
-  manufacturing: {
-    stage: 'manufacturing',
-    label: 'Manufacturing Prep',
-    description: 'Generate Gerbers, drill files, BOM, and pick-and-place data',
-  },
-  ordering: {
-    stage: 'ordering',
-    label: 'Ordering',
-    description: 'Submit to a fab house and order components',
-  },
+const STAGE_LABELS: Record<WorkflowStage, string> = {
+  ideation: 'Ideation',
+  architecture: 'Architecture',
+  schematic: 'Schematic',
+  simulation: 'Simulation',
+  pcb_layout: 'PCB Layout',
+  validation: 'Validation',
+  manufacturing: 'Manufacturing Prep',
+  ordering: 'Ordering',
 };
 
 // ---------------------------------------------------------------------------
-// Complexity multipliers for time estimation
-// ---------------------------------------------------------------------------
-
-const COMPLEXITY_MULTIPLIERS: Record<WorkflowConfig['complexity'], number> = {
-  simple: 0.6,
-  moderate: 1.0,
-  complex: 1.8,
-};
-
-// ---------------------------------------------------------------------------
-// Default step definitions
+// Step template
 // ---------------------------------------------------------------------------
 
 interface StepDef {
   id: string;
   stage: WorkflowStage;
-  name: string;
+  title: string;
   description: string;
   estimatedMinutes: number;
+  automatable: boolean;
+  completionCriteria: string[];
+  /** Step IDs that must be completed/skipped before this step can start. */
   prerequisites: string[];
-  relatedViews: string[];
+  relatedView?: string;
 }
 
-const DEFAULT_STEPS: StepDef[] = [
+const STEP_DEFS: StepDef[] = [
   // ── Ideation ──────────────────────────────────────────────────────────
   {
     id: 'idea-define-goals',
     stage: 'ideation',
-    name: 'Define project goals',
+    title: 'Define project goals',
     description: 'Write down what the project should do and its key constraints',
     estimatedMinutes: 15,
+    automatable: false,
+    completionCriteria: ['Project goals documented', 'Key constraints identified'],
     prerequisites: [],
-    relatedViews: ['architecture'],
+    relatedView: 'architecture',
   },
   {
     id: 'idea-research',
     stage: 'ideation',
-    name: 'Research reference designs',
+    title: 'Research reference designs',
     description: 'Look at existing designs and datasheets for inspiration',
     estimatedMinutes: 30,
+    automatable: false,
+    completionCriteria: ['Reference designs reviewed', 'Key datasheets collected'],
     prerequisites: ['idea-define-goals'],
-    relatedViews: ['knowledge'],
+    relatedView: 'knowledge',
   },
   // ── Architecture ──────────────────────────────────────────────────────
   {
     id: 'arch-block-diagram',
     stage: 'architecture',
-    name: 'Create block diagram',
+    title: 'Create block diagram',
     description: 'Add blocks for each subsystem and connect them',
     estimatedMinutes: 20,
+    automatable: false,
+    completionCriteria: ['All subsystems represented', 'Connections drawn'],
     prerequisites: ['idea-define-goals'],
-    relatedViews: ['architecture'],
+    relatedView: 'architecture',
   },
   {
     id: 'arch-select-components',
     stage: 'architecture',
-    name: 'Select key components',
+    title: 'Select key components',
     description: 'Choose MCU, power supply, connectors, and other critical parts',
     estimatedMinutes: 45,
+    automatable: true,
+    completionCriteria: ['MCU selected', 'Power solution chosen', 'Connectors specified'],
     prerequisites: ['arch-block-diagram'],
-    relatedViews: ['architecture', 'bom'],
+    relatedView: 'architecture',
   },
   {
     id: 'arch-bom-initial',
     stage: 'architecture',
-    name: 'Build initial BOM',
+    title: 'Build initial BOM',
     description: 'Add all required components to the Bill of Materials',
     estimatedMinutes: 30,
+    automatable: true,
+    completionCriteria: ['All components in BOM', 'Quantities specified'],
     prerequisites: ['arch-select-components'],
-    relatedViews: ['bom'],
+    relatedView: 'bom',
   },
   // ── Schematic ─────────────────────────────────────────────────────────
   {
     id: 'sch-capture',
     stage: 'schematic',
-    name: 'Capture schematic',
+    title: 'Capture schematic',
     description: 'Place components and draw all connections in the schematic editor',
     estimatedMinutes: 60,
+    automatable: false,
+    completionCriteria: ['All components placed', 'All connections made'],
     prerequisites: ['arch-bom-initial'],
-    relatedViews: ['schematic'],
+    relatedView: 'schematic',
   },
   {
     id: 'sch-power-decoupling',
     stage: 'schematic',
-    name: 'Add power and decoupling',
+    title: 'Add power and decoupling',
     description: 'Ensure every IC has decoupling caps and power connections',
     estimatedMinutes: 20,
+    automatable: true,
+    completionCriteria: ['Decoupling caps on all ICs', 'Power rails connected'],
     prerequisites: ['sch-capture'],
-    relatedViews: ['schematic'],
+    relatedView: 'schematic',
   },
   {
     id: 'sch-net-labels',
     stage: 'schematic',
-    name: 'Label nets and buses',
+    title: 'Label nets and buses',
     description: 'Name all important signals for readability',
     estimatedMinutes: 10,
+    automatable: true,
+    completionCriteria: ['All nets named', 'Bus labels applied'],
     prerequisites: ['sch-capture'],
-    relatedViews: ['schematic'],
+    relatedView: 'schematic',
   },
   // ── Simulation ────────────────────────────────────────────────────────
   {
     id: 'sim-dc-analysis',
     stage: 'simulation',
-    name: 'DC operating point',
+    title: 'DC operating point',
     description: 'Verify voltages and currents at key nodes',
     estimatedMinutes: 15,
+    automatable: true,
+    completionCriteria: ['DC operating point converges', 'Key voltages verified'],
     prerequisites: ['sch-capture'],
-    relatedViews: ['simulation'],
+    relatedView: 'simulation',
   },
   {
     id: 'sim-transient',
     stage: 'simulation',
-    name: 'Transient analysis',
+    title: 'Transient analysis',
     description: 'Check time-domain behavior (startup, switching)',
     estimatedMinutes: 20,
+    automatable: true,
+    completionCriteria: ['Startup behavior verified', 'No oscillations detected'],
     prerequisites: ['sim-dc-analysis'],
-    relatedViews: ['simulation'],
+    relatedView: 'simulation',
   },
-  // ── PCB ───────────────────────────────────────────────────────────────
+  // ── PCB Layout ────────────────────────────────────────────────────────
   {
     id: 'pcb-board-setup',
-    stage: 'pcb',
-    name: 'Board setup',
+    stage: 'pcb_layout',
+    title: 'Board setup',
     description: 'Define board outline, layer stackup, and design rules',
     estimatedMinutes: 15,
+    automatable: false,
+    completionCriteria: ['Board outline defined', 'Layer stackup configured', 'Design rules set'],
     prerequisites: ['sch-power-decoupling', 'sch-net-labels'],
-    relatedViews: ['pcb'],
+    relatedView: 'pcb',
   },
   {
     id: 'pcb-placement',
-    stage: 'pcb',
-    name: 'Component placement',
+    stage: 'pcb_layout',
+    title: 'Component placement',
     description: 'Arrange footprints for optimal signal flow and thermal performance',
     estimatedMinutes: 45,
+    automatable: false,
+    completionCriteria: ['All components placed', 'No courtyard violations'],
     prerequisites: ['pcb-board-setup'],
-    relatedViews: ['pcb'],
+    relatedView: 'pcb',
   },
   {
     id: 'pcb-routing',
-    stage: 'pcb',
-    name: 'Trace routing',
+    stage: 'pcb_layout',
+    title: 'Trace routing',
     description: 'Route all nets respecting impedance and clearance rules',
     estimatedMinutes: 60,
+    automatable: true,
+    completionCriteria: ['All nets routed', 'Impedance targets met'],
     prerequisites: ['pcb-placement'],
-    relatedViews: ['pcb'],
+    relatedView: 'pcb',
   },
   {
     id: 'pcb-copper-pour',
-    stage: 'pcb',
-    name: 'Copper pour / ground planes',
+    stage: 'pcb_layout',
+    title: 'Copper pour / ground planes',
     description: 'Add ground and power planes, thermal relief as needed',
     estimatedMinutes: 15,
+    automatable: true,
+    completionCriteria: ['Ground plane filled', 'Thermal relief configured'],
     prerequisites: ['pcb-routing'],
-    relatedViews: ['pcb'],
+    relatedView: 'pcb',
   },
   // ── Validation ────────────────────────────────────────────────────────
   {
     id: 'val-drc',
     stage: 'validation',
-    name: 'Design Rule Check',
+    title: 'Design Rule Check',
     description: 'Run DRC and fix all violations',
     estimatedMinutes: 20,
+    automatable: true,
+    completionCriteria: ['DRC passes with zero violations'],
     prerequisites: ['pcb-copper-pour'],
-    relatedViews: ['validation'],
+    relatedView: 'validation',
   },
   {
     id: 'val-dfm',
     stage: 'validation',
-    name: 'DFM check',
+    title: 'DFM check',
     description: 'Verify design meets manufacturer capabilities',
     estimatedMinutes: 15,
+    automatable: true,
+    completionCriteria: ['DFM rules pass for target fab house'],
     prerequisites: ['val-drc'],
-    relatedViews: ['validation'],
+    relatedView: 'validation',
   },
   // ── Manufacturing ─────────────────────────────────────────────────────
   {
     id: 'mfg-generate',
     stage: 'manufacturing',
-    name: 'Generate output files',
+    title: 'Generate output files',
     description: 'Export Gerber, drill, BOM CSV, and pick-and-place files',
     estimatedMinutes: 10,
+    automatable: true,
+    completionCriteria: ['Gerber files generated', 'Drill file generated', 'BOM CSV exported', 'Pick-and-place file exported'],
     prerequisites: ['val-dfm'],
-    relatedViews: ['output'],
+    relatedView: 'output',
   },
   // ── Ordering ──────────────────────────────────────────────────────────
   {
     id: 'ord-submit',
     stage: 'ordering',
-    name: 'Place order',
+    title: 'Place order',
     description: 'Submit Gerbers to fab house and order components',
     estimatedMinutes: 15,
+    automatable: false,
+    completionCriteria: ['PCB order submitted', 'Component order placed'],
     prerequisites: ['mfg-generate'],
-    relatedViews: ['ordering'],
+    relatedView: 'ordering',
   },
 ];
+
+// ---------------------------------------------------------------------------
+// Prerequisite index — built once at module load
+// ---------------------------------------------------------------------------
+
+const STEP_PREREQS = new Map<string, string[]>();
+const STEP_RELATED_VIEWS = new Map<string, string | undefined>();
+STEP_DEFS.forEach((def) => {
+  STEP_PREREQS.set(def.id, def.prerequisites);
+  STEP_RELATED_VIEWS.set(def.id, def.relatedView);
+});
 
 // ---------------------------------------------------------------------------
 // IdeaToPcbManager — singleton
@@ -337,26 +335,17 @@ const DEFAULT_STEPS: StepDef[] = [
 export class IdeaToPcbManager {
   private static instance: IdeaToPcbManager | null = null;
 
-  private steps: Map<string, WorkflowStep> = new Map();
-  private stages: StageInfo[] = [];
-  private config: WorkflowConfig;
+  private sessions = new Map<string, IdeaToPcbSession>();
   private subscribers = new Set<() => void>();
-  private createdAt: number;
+  private nextSessionNum = 1;
 
-  constructor(config?: Partial<WorkflowConfig>) {
-    this.config = {
-      projectName: config?.projectName ?? 'Untitled Project',
-      complexity: config?.complexity ?? 'moderate',
-      skipSimulation: config?.skipSimulation ?? false,
-      skipOrdering: config?.skipOrdering ?? false,
-    };
-    this.createdAt = Date.now();
-    this.initSteps();
+  constructor() {
+    // No-op — call startSession to begin a workflow
   }
 
-  static getInstance(config?: Partial<WorkflowConfig>): IdeaToPcbManager {
+  static getInstance(): IdeaToPcbManager {
     if (!IdeaToPcbManager.instance) {
-      IdeaToPcbManager.instance = new IdeaToPcbManager(config);
+      IdeaToPcbManager.instance = new IdeaToPcbManager();
     }
     return IdeaToPcbManager.instance;
   }
@@ -381,197 +370,231 @@ export class IdeaToPcbManager {
   }
 
   // -----------------------------------------------------------------------
-  // Initialization
+  // Session management
   // -----------------------------------------------------------------------
 
-  private initSteps(): void {
-    const multiplier = COMPLEXITY_MULTIPLIERS[this.config.complexity];
+  startSession(projectName: string, description: string): IdeaToPcbSession {
+    const id = `session-${this.nextSessionNum++}`;
+    const steps = this.buildSteps();
+    const totalEstimatedMinutes = steps.reduce((sum, s) => sum + s.estimatedMinutes, 0);
 
-    DEFAULT_STEPS.forEach((def) => {
-      const shouldSkip =
-        (this.config.skipSimulation && def.stage === 'simulation') ||
-        (this.config.skipOrdering && def.stage === 'ordering');
+    const session: IdeaToPcbSession = {
+      id,
+      projectName,
+      description,
+      startedAt: Date.now(),
+      currentStage: 'ideation',
+      steps,
+      totalEstimatedMinutes,
+      elapsedMinutes: 0,
+      completionPercent: 0,
+    };
 
-      const step: WorkflowStep = {
-        id: def.id,
-        stage: def.stage,
-        name: def.name,
-        description: def.description,
-        status: shouldSkip ? 'skipped' : 'pending',
-        estimatedMinutes: Math.round(def.estimatedMinutes * multiplier),
-        prerequisites: def.prerequisites,
-        relatedViews: def.relatedViews,
-        recommendations: [],
-        completedAt: null,
-      };
-      this.steps.set(def.id, step);
+    this.updateBlockedStatuses(session);
+    this.sessions.set(id, session);
+    this.notify();
+    return this.cloneSession(session);
+  }
+
+  getSession(sessionId: string): IdeaToPcbSession | undefined {
+    const s = this.sessions.get(sessionId);
+    if (!s) { return undefined; }
+    this.refreshSession(s);
+    return this.cloneSession(s);
+  }
+
+  getAllSessions(): IdeaToPcbSession[] {
+    const result: IdeaToPcbSession[] = [];
+    this.sessions.forEach((s) => {
+      this.refreshSession(s);
+      result.push(this.cloneSession(s));
     });
+    return result;
+  }
 
-    // Rebuild stage info
-    this.stages = STAGE_ORDER.map((stage) => {
-      const stepIds: string[] = [];
-      this.steps.forEach((s) => {
-        if (s.stage === stage) {
-          stepIds.push(s.id);
-        }
-      });
-      return { ...STAGE_INFO[stage], steps: stepIds };
-    });
+  // -----------------------------------------------------------------------
+  // Step generation
+  // -----------------------------------------------------------------------
 
-    this.updateBlockedStatuses();
-    this.generateRecommendations();
+  getStepsForSession(): WorkflowStep[] {
+    return this.buildSteps();
+  }
+
+  private buildSteps(): WorkflowStep[] {
+    return STEP_DEFS.map((def, index) => ({
+      id: def.id,
+      stage: def.stage,
+      title: def.title,
+      description: def.description,
+      status: 'pending' as StepStatus,
+      order: index + 1,
+      estimatedMinutes: def.estimatedMinutes,
+      automatable: def.automatable,
+      completionCriteria: [...def.completionCriteria],
+    }));
   }
 
   // -----------------------------------------------------------------------
   // Step transitions
   // -----------------------------------------------------------------------
 
-  completeStep(stepId: string): boolean {
-    const step = this.steps.get(stepId);
-    if (!step) { return false; }
-    if (step.status === 'blocked') { return false; }
-    if (step.status === 'completed') { return false; }
-    if (step.status === 'skipped') { return false; }
+  advanceStep(sessionId: string): WorkflowStep {
+    const session = this.sessions.get(sessionId);
+    if (!session) { throw new Error(`Session not found: ${sessionId}`); }
 
-    step.status = 'completed';
-    step.completedAt = Date.now();
+    // Find first pending step
+    const next = session.steps.find((s) => s.status === 'pending');
+    if (!next) { throw new Error('No pending steps available to advance'); }
 
-    this.updateBlockedStatuses();
-    this.generateRecommendations();
+    next.status = 'active';
+    this.updateSessionState(session);
     this.notify();
-    return true;
+    return { ...next, completionCriteria: [...next.completionCriteria] };
   }
 
-  skipStep(stepId: string): boolean {
-    const step = this.steps.get(stepId);
-    if (!step) { return false; }
-    if (step.status === 'completed') { return false; }
-    if (step.status === 'blocked') { return false; }
+  completeStep(sessionId: string, result: StepResult): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) { throw new Error(`Session not found: ${sessionId}`); }
 
-    step.status = 'skipped';
-    step.completedAt = null;
+    const active = session.steps.find((s) => s.status === 'active');
+    if (!active) { throw new Error('No active step to complete'); }
 
-    this.updateBlockedStatuses();
-    this.generateRecommendations();
+    active.status = 'completed';
+    active.result = { ...result, artifacts: [...result.artifacts], warnings: [...result.warnings], blockers: [...result.blockers] };
+
+    this.updateBlockedStatuses(session);
+    this.updateSessionState(session);
     this.notify();
-    return true;
   }
 
-  activateStep(stepId: string): boolean {
-    const step = this.steps.get(stepId);
-    if (!step) { return false; }
-    if (step.status !== 'pending') { return false; }
+  skipStep(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) { throw new Error(`Session not found: ${sessionId}`); }
 
-    step.status = 'active';
+    // Skip the first active step, or the first pending step if none is active
+    const target = session.steps.find((s) => s.status === 'active') ??
+                   session.steps.find((s) => s.status === 'pending');
+    if (!target) { throw new Error('No step available to skip'); }
+
+    target.status = 'skipped';
+
+    this.updateBlockedStatuses(session);
+    this.updateSessionState(session);
     this.notify();
-    return true;
-  }
-
-  resetStep(stepId: string): boolean {
-    const step = this.steps.get(stepId);
-    if (!step) { return false; }
-    if (step.status === 'pending') { return false; }
-
-    step.status = 'pending';
-    step.completedAt = null;
-
-    this.updateBlockedStatuses();
-    this.generateRecommendations();
-    this.notify();
-    return true;
   }
 
   // -----------------------------------------------------------------------
-  // Blocked-status propagation
+  // Progress & advance checks
   // -----------------------------------------------------------------------
 
-  private updateBlockedStatuses(): void {
-    this.steps.forEach((step) => {
-      if (step.status === 'completed' || step.status === 'skipped') { return; }
+  getProgress(sessionId: string): { stage: string; percent: number; estimated: number; elapsed: number } {
+    const session = this.sessions.get(sessionId);
+    if (!session) { throw new Error(`Session not found: ${sessionId}`); }
 
-      const unmetPrereqs = step.prerequisites.filter((preId) => {
-        const pre = this.steps.get(preId);
-        return pre && pre.status !== 'completed' && pre.status !== 'skipped';
+    this.refreshSession(session);
+
+    return {
+      stage: STAGE_LABELS[session.currentStage],
+      percent: session.completionPercent,
+      estimated: this.estimateTimeRemaining(sessionId),
+      elapsed: session.elapsedMinutes,
+    };
+  }
+
+  canAdvance(sessionId: string): { ok: boolean; blockers: string[] } {
+    const session = this.sessions.get(sessionId);
+    if (!session) { return { ok: false, blockers: ['Session not found'] }; }
+
+    // If there's already an active step, can't advance until it's completed
+    const active = session.steps.find((s) => s.status === 'active');
+    if (active) {
+      return { ok: false, blockers: [`Step "${active.title}" is currently active — complete or skip it first`] };
+    }
+
+    // Find next pending step and check prerequisites
+    const next = session.steps.find((s) => s.status === 'pending');
+    if (!next) {
+      return { ok: false, blockers: ['No more steps to advance'] };
+    }
+
+    const prereqs = STEP_PREREQS.get(next.id) ?? [];
+    const unmet = prereqs.filter((preId) => {
+      const pre = session.steps.find((s) => s.id === preId);
+      return pre && pre.status !== 'completed' && pre.status !== 'skipped';
+    });
+
+    if (unmet.length > 0) {
+      const blockerNames = unmet.map((id) => {
+        const step = session.steps.find((s) => s.id === id);
+        return step ? step.title : id;
       });
+      return { ok: false, blockers: blockerNames.map((n) => `Prerequisite not met: ${n}`) };
+    }
 
-      if (unmetPrereqs.length > 0 && step.status !== 'blocked') {
-        step.status = 'blocked';
-      } else if (unmetPrereqs.length === 0 && step.status === 'blocked') {
-        step.status = 'pending';
+    return { ok: true, blockers: [] };
+  }
+
+  estimateTimeRemaining(sessionId: string): number {
+    const session = this.sessions.get(sessionId);
+    if (!session) { return 0; }
+
+    let remaining = 0;
+    session.steps.forEach((step) => {
+      if (step.status !== 'completed' && step.status !== 'skipped') {
+        remaining += step.estimatedMinutes;
       }
     });
+    return remaining;
   }
 
   // -----------------------------------------------------------------------
   // Recommendations
   // -----------------------------------------------------------------------
 
-  private generateRecommendations(): void {
-    this.steps.forEach((step) => {
-      step.recommendations = [];
-    });
+  getRecommendations(sessionId: string): string[] {
+    const session = this.sessions.get(sessionId);
+    if (!session) { return []; }
 
-    // Find the first pending/active step per stage
-    STAGE_ORDER.forEach((stage) => {
-      const stageSteps = this.getStepsForStage(stage);
-      const next = stageSteps.find((s) => s.status === 'pending' || s.status === 'active');
-      if (next) {
-        next.recommendations.push(`Start "${next.name}" to progress in ${STAGE_INFO[stage].label}`);
+    const recs: string[] = [];
+
+    // Active step guidance
+    const active = session.steps.find((s) => s.status === 'active');
+    if (active) {
+      recs.push(`Focus on completing: ${active.title}`);
+      if (active.automatable) {
+        recs.push(`Tip: "${active.title}" can be automated — try the AI assistant`);
       }
-    });
-
-    // Warn about skipped simulation when complexity is high
-    if (this.config.skipSimulation && this.config.complexity === 'complex') {
-      const simSteps = this.getStepsForStage('simulation');
-      simSteps.forEach((s) => {
-        s.recommendations.push('Consider enabling simulation for complex designs to catch issues early');
-      });
-    }
-  }
-
-  getRecommendations(): WorkflowRecommendation[] {
-    const recs: WorkflowRecommendation[] = [];
-
-    // Active steps get high priority
-    this.steps.forEach((step) => {
-      if (step.status === 'active') {
-        recs.push({
-          stepId: step.id,
-          priority: 'high',
-          message: `Continue working on: ${step.name}`,
-          action: `Open ${step.relatedViews[0] ?? 'architecture'} view`,
-          relatedView: step.relatedViews[0],
-        });
-      }
-    });
-
-    // First pending step in current stage gets medium priority
-    const progress = this.getProgress();
-    const currentStageSteps = this.getStepsForStage(progress.currentStage);
-    const nextPending = currentStageSteps.find((s) => s.status === 'pending');
-    if (nextPending) {
-      recs.push({
-        stepId: nextPending.id,
-        priority: 'medium',
-        message: `Next step: ${nextPending.name}`,
-        action: nextPending.description,
-        relatedView: nextPending.relatedViews[0],
+      active.completionCriteria.forEach((c) => {
+        recs.push(`Criteria: ${c}`);
       });
     }
 
-    // Remaining pending steps in later stages get low priority
-    const currentIdx = STAGE_ORDER.indexOf(progress.currentStage);
-    STAGE_ORDER.slice(currentIdx + 1).forEach((stage) => {
-      const stageSteps = this.getStepsForStage(stage);
-      const pending = stageSteps.find((s) => s.status === 'pending');
-      if (pending) {
-        recs.push({
-          stepId: pending.id,
-          priority: 'low',
-          message: `Upcoming: ${pending.name}`,
-          action: pending.description,
-          relatedView: pending.relatedViews[0],
-        });
+    // Next pending step preview
+    const nextPending = session.steps.find((s) => s.status === 'pending');
+    if (nextPending && !active) {
+      recs.push(`Next step: ${nextPending.title} — ${nextPending.description}`);
+    }
+
+    // Stage transition hints
+    const currentStageIdx = STAGE_ORDER.indexOf(session.currentStage);
+    const stepsInStage = session.steps.filter((s) => s.stage === session.currentStage);
+    const allDone = stepsInStage.every((s) => s.status === 'completed' || s.status === 'skipped');
+    if (allDone && currentStageIdx < STAGE_ORDER.length - 1) {
+      const nextStage = STAGE_ORDER[currentStageIdx + 1];
+      recs.push(`Stage "${STAGE_LABELS[session.currentStage]}" complete — moving to "${STAGE_LABELS[nextStage]}"`);
+    }
+
+    // Warn about skipped simulation
+    const simSteps = session.steps.filter((s) => s.stage === 'simulation');
+    const allSimSkipped = simSteps.length > 0 && simSteps.every((s) => s.status === 'skipped');
+    if (allSimSkipped) {
+      recs.push('Warning: Simulation was skipped — consider running at least a DC check before manufacturing');
+    }
+
+    // Warn about unresolved blockers in results
+    session.steps.forEach((s) => {
+      if (s.result && s.result.blockers.length > 0) {
+        recs.push(`Unresolved blocker from "${s.title}": ${s.result.blockers[0]}`);
       }
     });
 
@@ -579,303 +602,153 @@ export class IdeaToPcbManager {
   }
 
   // -----------------------------------------------------------------------
-  // Progress
+  // Session report
   // -----------------------------------------------------------------------
 
-  getProgress(): WorkflowProgress {
-    let completed = 0;
-    let total = 0;
-    let remainingMinutes = 0;
+  exportSessionReport(sessionId: string): string {
+    const session = this.sessions.get(sessionId);
+    if (!session) { return '# Session not found'; }
 
-    this.steps.forEach((step) => {
-      if (step.status === 'skipped') { return; }
-      total++;
-      if (step.status === 'completed') {
-        completed++;
-      } else {
-        remainingMinutes += step.estimatedMinutes;
-      }
+    this.refreshSession(session);
+
+    const lines: string[] = [];
+    lines.push(`# Idea-to-PCB Report: ${session.projectName}`);
+    lines.push('');
+    lines.push(`**Description:** ${session.description}`);
+    lines.push(`**Started:** ${new Date(session.startedAt).toISOString()}`);
+    lines.push(`**Elapsed:** ${session.elapsedMinutes} minutes`);
+    lines.push(`**Completion:** ${session.completionPercent}%`);
+    lines.push(`**Current Stage:** ${STAGE_LABELS[session.currentStage]}`);
+    lines.push('');
+
+    // Steps grouped by stage
+    STAGE_ORDER.forEach((stage) => {
+      const stageSteps = session.steps.filter((s) => s.stage === stage);
+      if (stageSteps.length === 0) { return; }
+
+      lines.push(`## ${STAGE_LABELS[stage]}`);
+      lines.push('');
+
+      stageSteps.forEach((step) => {
+        const statusIcon = step.status === 'completed' ? '[x]' :
+          step.status === 'skipped' ? '[-]' :
+          step.status === 'active' ? '[>]' : '[ ]';
+        lines.push(`- ${statusIcon} **${step.title}** (${step.estimatedMinutes} min est.)`);
+
+        if (step.result) {
+          if (step.result.artifacts.length > 0) {
+            lines.push(`  - Artifacts: ${step.result.artifacts.join(', ')}`);
+          }
+          if (step.result.warnings.length > 0) {
+            lines.push(`  - Warnings: ${step.result.warnings.join(', ')}`);
+          }
+          if (step.result.blockers.length > 0) {
+            lines.push(`  - Blockers: ${step.result.blockers.join(', ')}`);
+          }
+        }
+      });
+      lines.push('');
     });
 
-    const percentage = total === 0 ? 100 : Math.round((completed / total) * 100);
+    // Summary
+    const completed = session.steps.filter((s) => s.status === 'completed').length;
+    const skipped = session.steps.filter((s) => s.status === 'skipped').length;
+    const total = session.steps.length;
+    lines.push('## Summary');
+    lines.push('');
+    lines.push(`- **Total steps:** ${total}`);
+    lines.push(`- **Completed:** ${completed}`);
+    lines.push(`- **Skipped:** ${skipped}`);
+    lines.push(`- **Remaining:** ${total - completed - skipped}`);
+    lines.push(`- **Estimated time remaining:** ${this.estimateTimeRemaining(sessionId)} minutes`);
+
+    return lines.join('\n');
+  }
+
+  // -----------------------------------------------------------------------
+  // Blocked-status propagation
+  // -----------------------------------------------------------------------
+
+  private updateBlockedStatuses(session: IdeaToPcbSession): void {
+    session.steps.forEach((step) => {
+      if (step.status === 'completed' || step.status === 'skipped' || step.status === 'active') { return; }
+
+      const prereqs = STEP_PREREQS.get(step.id) ?? [];
+      const unmet = prereqs.filter((preId) => {
+        const pre = session.steps.find((s) => s.id === preId);
+        return pre && pre.status !== 'completed' && pre.status !== 'skipped';
+      });
+
+      if (unmet.length > 0) {
+        step.status = 'blocked';
+      } else if (step.status === 'blocked') {
+        step.status = 'pending';
+      }
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Session state refresh
+  // -----------------------------------------------------------------------
+
+  private updateSessionState(session: IdeaToPcbSession): void {
+    this.refreshSession(session);
+  }
+
+  private refreshSession(session: IdeaToPcbSession): void {
+    // Elapsed time
+    session.elapsedMinutes = Math.round((Date.now() - session.startedAt) / 60_000);
+
+    // Completion percent (skipped steps count as done for percentage)
+    const actionable = session.steps.length;
+    const done = session.steps.filter((s) => s.status === 'completed' || s.status === 'skipped').length;
+    session.completionPercent = actionable === 0 ? 100 : Math.round((done / actionable) * 100);
 
     // Current stage = first stage with incomplete steps
-    let currentStage: WorkflowStage = 'ordering';
+    session.currentStage = 'ordering';
     for (const stage of STAGE_ORDER) {
-      const stageSteps = this.getStepsForStage(stage);
+      const stageSteps = session.steps.filter((s) => s.stage === stage);
       const hasIncomplete = stageSteps.some(
         (s) => s.status !== 'completed' && s.status !== 'skipped',
       );
       if (hasIncomplete) {
-        currentStage = stage;
+        session.currentStage = stage;
         break;
       }
     }
-
-    return { completedSteps: completed, totalSteps: total, percentage, currentStage, estimatedMinutesRemaining: remainingMinutes };
   }
 
   // -----------------------------------------------------------------------
-  // Time estimation
+  // Clone helpers
   // -----------------------------------------------------------------------
 
-  getEstimatedTotalMinutes(): number {
-    let total = 0;
-    this.steps.forEach((step) => {
-      if (step.status !== 'skipped') {
-        total += step.estimatedMinutes;
-      }
-    });
-    return total;
-  }
-
-  getElapsedMinutes(): number {
-    return Math.round((Date.now() - this.createdAt) / 60_000);
-  }
-
-  // -----------------------------------------------------------------------
-  // Queries
-  // -----------------------------------------------------------------------
-
-  getStep(stepId: string): WorkflowStep | undefined {
-    const s = this.steps.get(stepId);
-    return s ? { ...s, recommendations: [...s.recommendations] } : undefined;
-  }
-
-  getAllSteps(): WorkflowStep[] {
-    const result: WorkflowStep[] = [];
-    this.steps.forEach((s) => {
-      result.push({ ...s, recommendations: [...s.recommendations] });
-    });
-    return result;
-  }
-
-  getStepsForStage(stage: WorkflowStage): WorkflowStep[] {
-    const result: WorkflowStep[] = [];
-    this.steps.forEach((s) => {
-      if (s.stage === stage) {
-        result.push({ ...s, recommendations: [...s.recommendations] });
-      }
-    });
-    return result;
-  }
-
-  getStages(): StageInfo[] {
-    return this.stages.map((s) => ({ ...s, steps: [...s.steps] }));
-  }
-
-  getConfig(): Readonly<WorkflowConfig> {
-    return { ...this.config };
-  }
-
-  getCreatedAt(): number {
-    return this.createdAt;
-  }
-
-  isComplete(): boolean {
-    let allDone = true;
-    this.steps.forEach((step) => {
-      if (step.status !== 'completed' && step.status !== 'skipped') {
-        allDone = false;
-      }
-    });
-    return allDone;
-  }
-
-  // -----------------------------------------------------------------------
-  // Bulk operations
-  // -----------------------------------------------------------------------
-
-  completeStage(stage: WorkflowStage): number {
-    let count = 0;
-    this.steps.forEach((step) => {
-      if (step.stage === stage && step.status !== 'completed' && step.status !== 'skipped') {
-        if (step.status !== 'blocked') {
-          step.status = 'completed';
-          step.completedAt = Date.now();
-          count++;
-        }
-      }
-    });
-    this.updateBlockedStatuses();
-    this.generateRecommendations();
-    if (count > 0) { this.notify(); }
-    return count;
-  }
-
-  skipStage(stage: WorkflowStage): number {
-    let count = 0;
-    this.steps.forEach((step) => {
-      if (step.stage === stage && step.status !== 'completed') {
-        step.status = 'skipped';
-        step.completedAt = null;
-        count++;
-      }
-    });
-    this.updateBlockedStatuses();
-    this.generateRecommendations();
-    if (count > 0) { this.notify(); }
-    return count;
-  }
-
-  resetAll(): void {
-    this.initSteps();
-    this.createdAt = Date.now();
-    this.notify();
-  }
-
-  // -----------------------------------------------------------------------
-  // Configuration updates
-  // -----------------------------------------------------------------------
-
-  updateConfig(updates: Partial<WorkflowConfig>): void {
-    const oldSkipSim = this.config.skipSimulation;
-    const oldSkipOrd = this.config.skipOrdering;
-    const oldComplexity = this.config.complexity;
-
-    if (updates.projectName !== undefined) { this.config.projectName = updates.projectName; }
-    if (updates.complexity !== undefined) { this.config.complexity = updates.complexity; }
-    if (updates.skipSimulation !== undefined) { this.config.skipSimulation = updates.skipSimulation; }
-    if (updates.skipOrdering !== undefined) { this.config.skipOrdering = updates.skipOrdering; }
-
-    // Re-apply skip statuses if toggles changed
-    if (updates.skipSimulation !== undefined && updates.skipSimulation !== oldSkipSim) {
-      this.steps.forEach((step) => {
-        if (step.stage === 'simulation') {
-          step.status = updates.skipSimulation ? 'skipped' : 'pending';
-          step.completedAt = null;
-        }
-      });
-    }
-    if (updates.skipOrdering !== undefined && updates.skipOrdering !== oldSkipOrd) {
-      this.steps.forEach((step) => {
-        if (step.stage === 'ordering') {
-          step.status = updates.skipOrdering ? 'skipped' : 'pending';
-          step.completedAt = null;
-        }
-      });
-    }
-
-    // Re-calc time estimates if complexity changed
-    if (updates.complexity !== undefined && updates.complexity !== oldComplexity) {
-      const newMultiplier = COMPLEXITY_MULTIPLIERS[this.config.complexity];
-      const oldMultiplier = COMPLEXITY_MULTIPLIERS[oldComplexity];
-      this.steps.forEach((step) => {
-        step.estimatedMinutes = Math.round((step.estimatedMinutes / oldMultiplier) * newMultiplier);
-      });
-    }
-
-    this.updateBlockedStatuses();
-    this.generateRecommendations();
-    this.notify();
-  }
-
-  // -----------------------------------------------------------------------
-  // Serialization
-  // -----------------------------------------------------------------------
-
-  serialize(): string {
-    const stepArr: WorkflowStep[] = [];
-    this.steps.forEach((s) => stepArr.push(s));
-    return JSON.stringify({
-      config: this.config,
-      steps: stepArr,
-      createdAt: this.createdAt,
-    });
-  }
-
-  static deserialize(json: string): IdeaToPcbManager {
-    const data = JSON.parse(json) as {
-      config: WorkflowConfig;
-      steps: WorkflowStep[];
-      createdAt: number;
+  private cloneSession(s: IdeaToPcbSession): IdeaToPcbSession {
+    return {
+      ...s,
+      steps: s.steps.map((step) => this.cloneStep(step)),
     };
-    const mgr = new IdeaToPcbManager(data.config);
-    mgr.createdAt = data.createdAt;
-
-    data.steps.forEach((s) => {
-      if (mgr.steps.has(s.id)) {
-        const existing = mgr.steps.get(s.id)!;
-        existing.status = s.status;
-        existing.completedAt = s.completedAt;
-        existing.recommendations = s.recommendations;
-      }
-    });
-
-    mgr.updateBlockedStatuses();
-    mgr.generateRecommendations();
-    return mgr;
   }
 
-  // -----------------------------------------------------------------------
-  // Dependency graph
-  // -----------------------------------------------------------------------
-
-  getDependencyGraph(): Array<{ from: string; to: string }> {
-    const edges: Array<{ from: string; to: string }> = [];
-    this.steps.forEach((step) => {
-      step.prerequisites.forEach((preId) => {
-        edges.push({ from: preId, to: step.id });
-      });
-    });
-    return edges;
-  }
-
-  getBlockersFor(stepId: string): string[] {
-    const step = this.steps.get(stepId);
-    if (!step) { return []; }
-    return step.prerequisites.filter((preId) => {
-      const pre = this.steps.get(preId);
-      return pre && pre.status !== 'completed' && pre.status !== 'skipped';
-    });
-  }
-
-  getDependentsOf(stepId: string): string[] {
-    const deps: string[] = [];
-    this.steps.forEach((step) => {
-      if (step.prerequisites.includes(stepId)) {
-        deps.push(step.id);
-      }
-    });
-    return deps;
-  }
-
-  /**
-   * Returns the critical path — the longest chain of pending/active steps.
-   */
-  getCriticalPath(): string[] {
-    const memo = new Map<string, string[]>();
-
-    const longestFrom = (id: string): string[] => {
-      if (memo.has(id)) { return memo.get(id)!; }
-      const step = this.steps.get(id);
-      if (!step || step.status === 'completed' || step.status === 'skipped') {
-        memo.set(id, []);
-        return [];
-      }
-
-      const dependents = this.getDependentsOf(id);
-      let best: string[] = [];
-      dependents.forEach((depId) => {
-        const path = longestFrom(depId);
-        if (path.length > best.length) {
-          best = path;
-        }
-      });
-
-      const result = [id, ...best];
-      memo.set(id, result);
-      return result;
+  private cloneStep(s: WorkflowStep): WorkflowStep {
+    return {
+      ...s,
+      completionCriteria: [...s.completionCriteria],
+      result: s.result ? {
+        ...s.result,
+        artifacts: [...s.result.artifacts],
+        warnings: [...s.result.warnings],
+        blockers: [...s.result.blockers],
+      } : undefined,
     };
+  }
 
-    let criticalPath: string[] = [];
-    this.steps.forEach((_step, id) => {
-      const path = longestFrom(id);
-      if (path.length > criticalPath.length) {
-        criticalPath = path;
-      }
-    });
+  // -----------------------------------------------------------------------
+  // Reset
+  // -----------------------------------------------------------------------
 
-    return criticalPath;
+  reset(): void {
+    this.sessions.clear();
+    this.nextSessionNum = 1;
+    this.notify();
   }
 }

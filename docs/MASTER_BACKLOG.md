@@ -428,10 +428,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
 | P2 | **0** | **278** | **100%** — Waves 61-149 |
-| P3 | 49 | 82 | 63% — Waves 105-150 |
-| **Total** | **49** | **452** | **501 items tracked** |
+| P3 | 44 | 87 | 66% — Waves 105-151 |
+| **Total** | **44** | **457** | **501 items tracked** |
 
-*Snapshot updated: Wave 150 (2026-03-21)*
+*Snapshot updated: Wave 151 (2026-03-21)*
 
 ---
 

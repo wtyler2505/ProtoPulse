@@ -491,13 +491,12 @@ describe('Critical path', () => {
 
   it('critical path is empty when all steps are done/skipped', () => {
     const mgr = new IdeaToPcbManager({ skipSimulation: true, skipOrdering: true });
-    // Complete ideation
-    mgr.completeStage('ideation');
-    mgr.completeStage('architecture');
-    mgr.completeStage('schematic');
-    mgr.completeStage('pcb');
-    mgr.completeStage('validation');
-    mgr.completeStage('manufacturing');
+    // Complete all stages in order — each stage unblocks the next
+    const stages: WorkflowStage[] = [
+      'ideation', 'architecture', 'schematic', 'pcb', 'validation', 'manufacturing',
+    ];
+    stages.forEach((stage) => mgr.completeStage(stage));
+    expect(mgr.isComplete()).toBe(true);
     expect(mgr.getCriticalPath()).toHaveLength(0);
   });
 });
