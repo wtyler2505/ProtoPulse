@@ -1,5 +1,29 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+// ---------------------------------------------------------------------------
+// Mocks — must be set up before importing the module under test
+// ---------------------------------------------------------------------------
+
+vi.stubGlobal('crypto', {
+  randomUUID: vi.fn<() => string>(() => `uuid-${Math.random().toString(36).slice(2, 10)}`),
+});
+
+const store: Record<string, string> = {};
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn<(key: string) => string | null>((key: string) => store[key] ?? null),
+  setItem: vi.fn<(key: string, val: string) => void>((key: string, val: string) => {
+    store[key] = val;
+  }),
+  removeItem: vi.fn<(key: string) => void>((key: string) => {
+    delete store[key];
+  }),
+  clear: vi.fn<() => void>(() => {
+    for (const k of Object.keys(store)) {
+      delete store[k];
+    }
+  }),
+});
+
 import {
   DesignBranchManager,
   ALL_BRANCH_DOMAINS,
@@ -66,7 +90,9 @@ describe('DesignBranchManager', () => {
   let manager: DesignBranchManager;
 
   beforeEach(() => {
-    localStorage.clear();
+    for (const k of Object.keys(store)) {
+      delete store[k];
+    }
     manager = createManager();
   });
 
@@ -367,7 +393,6 @@ describe('DesignBranchManager', () => {
     it('updates branch updatedAt', () => {
       const b = createTestBranch(manager);
       const before = b.updatedAt;
-      vi.advanceTimersByTime?.(10);
       recordTestChange(manager, b.id);
       expect(manager.getBranch(b.id)!.updatedAt).toBeGreaterThanOrEqual(before);
     });

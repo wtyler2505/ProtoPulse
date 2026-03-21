@@ -458,7 +458,7 @@ export class DesignBranchManager {
     branch.changes.forEach((c) => {
       const key = `${c.domain}:${c.entityId}`;
       const existing = latest.get(key);
-      if (!existing || c.timestamp > existing.timestamp) {
+      if (!existing || c.timestamp >= existing.timestamp) {
         latest.set(key, c);
       }
     });

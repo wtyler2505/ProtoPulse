@@ -212,7 +212,11 @@ const REFDES_CATEGORY_MAP: Array<{ prefix: string; category: ComponentCategory }
 ];
 
 const LABEL_CATEGORY_KEYWORDS: Array<{ keyword: string; category: ComponentCategory }> = [
+  // More-specific keywords must appear before less-specific ones
+  // (e.g. "oled" before "led", "stepper" before generic "motor")
+  { keyword: 'oled', category: 'display' },
   { keyword: 'led', category: 'led' },
+  { keyword: 'stepper', category: 'motor' },
   { keyword: 'motor', category: 'motor' },
   { keyword: 'servo', category: 'motor' },
   { keyword: 'stepper', category: 'motor' },
@@ -352,8 +356,16 @@ export function inferPinMappings(
 ): PinMapping[] {
   const mappings: PinMapping[] = [];
   const boardInfo = BOARD_PIN_INFO[boardType];
+  const usedPins = new Set<string>(); // Track assigned pins to avoid collisions
   let nextDigitalPin = 2; // Start after TX/RX (0, 1)
   let nextAnalogIdx = 0;
+
+  /** Advance nextDigitalPin past any already-used pins. */
+  const advanceDigital = (): void => {
+    while (usedPins.has(String(nextDigitalPin)) && nextDigitalPin < boardInfo.digitalPinCount) {
+      nextDigitalPin++;
+    }
+  };
 
   for (const inst of instances) {
     const category = classifyComponent(inst);
@@ -376,27 +388,24 @@ export function inferPinMappings(
       pin = boardInfo.analogPins[nextAnalogIdx];
       nextAnalogIdx++;
     } else if (category === 'motor' && boardInfo.pwmPins.length > 0) {
-      // Motors default to PWM pins
-      const pwmCandidates = boardInfo.pwmPins.filter((p) => p >= nextDigitalPin);
+      // Motors default to PWM pins — pick first unused PWM pin
+      const pwmCandidates = boardInfo.pwmPins.filter((p) => !usedPins.has(String(p)));
       if (pwmCandidates.length > 0) {
         pin = String(pwmCandidates[0]);
-        nextDigitalPin = pwmCandidates[0] + 1;
       } else {
-        pin = String(nextDigitalPin);
+        advanceDigital();
+        pin = String(Math.min(nextDigitalPin, boardInfo.digitalPinCount - 1));
         nextDigitalPin++;
       }
-    } else if (category === 'led' && nextDigitalPin <= boardInfo.defaultLedPin) {
+    } else if (category === 'led' && !usedPins.has(String(boardInfo.defaultLedPin))) {
       pin = String(boardInfo.defaultLedPin);
-      nextDigitalPin = Math.max(nextDigitalPin, boardInfo.defaultLedPin + 1);
     } else {
-      pin = String(nextDigitalPin);
+      advanceDigital();
+      pin = String(Math.min(nextDigitalPin, boardInfo.digitalPinCount - 1));
       nextDigitalPin++;
     }
 
-    // Clamp to board limits
-    if (nextDigitalPin >= boardInfo.digitalPinCount) {
-      nextDigitalPin = boardInfo.digitalPinCount - 1;
-    }
+    usedPins.add(pin);
 
     // Build label
     const label = sanitizeLabel(inst.refDes, inst.label, category);
