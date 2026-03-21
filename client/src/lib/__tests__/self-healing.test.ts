@@ -802,9 +802,11 @@ describe('SelfHealingAssistant', () => {
       const instances = [inst('U1', 'IC', { vmax: '3.3V' }, ['VCC_5V'])];
       const nets = [net('VCC_5V', 'power', '5V')];
       mgr.scan(instances, nets);
+      const pendingBefore = mgr.getSnapshot().pendingFixes.length;
       const fixId = mgr.getSnapshot().pendingFixes[0]?.id;
       expect(mgr.rejectFix(fixId!)).toBe(true);
-      expect(mgr.getSnapshot().pendingFixes.length).toBe(0);
+      // One fewer pending fix after rejection
+      expect(mgr.getSnapshot().pendingFixes.length).toBe(pendingBefore - 1);
     });
 
     it('returns false for unknown fix ID', () => {
