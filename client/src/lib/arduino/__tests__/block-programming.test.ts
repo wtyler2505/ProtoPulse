@@ -847,7 +847,7 @@ void loop() {
   describe('createBlinkProgram', () => {
     it('creates a valid blink program', () => {
       engine.createBlinkProgram();
-      expect(engine.getBlockCount()).toBe(6); // setup + pin_mode + loop + high + delay + low + delay
+      expect(engine.getBlockCount()).toBe(7); // setup + pin_mode + loop + high + delay1 + low + delay2
       const result = engine.generateCode();
       expect(result.errors.filter((e) => e.severity === 'error')).toHaveLength(0);
     });

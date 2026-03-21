@@ -572,7 +572,7 @@ export class CodeSimulator {
     if (!this._sketch) {
       return;
     }
-    if (this._status === 'error' || this._status === 'stopped') {
+    if (this._shouldStop()) {
       return;
     }
 
@@ -591,7 +591,7 @@ export class CodeSimulator {
   /** Execute N loop iterations. */
   runLoops(count: number): void {
     for (let i = 0; i < count; i++) {
-      if (this._status === 'error' || this._status === 'stopped') {
+      if (this._shouldStop()) {
         break;
       }
       if (this._executionCount >= MAX_EXECUTION_STEPS) {
@@ -669,6 +669,11 @@ export class CodeSimulator {
     this._status = 'error';
   }
 
+  /** Check if execution should halt (error or stopped). Avoids TS type narrowing issues. */
+  private _shouldStop(): boolean {
+    return this._status === 'error' || this._status === 'stopped';
+  }
+
   getErrors(): SimulatorError[] {
     return [...this._errors];
   }
@@ -683,7 +688,7 @@ export class CodeSimulator {
 
     let i = 0;
     while (i < lines.length) {
-      if (this._status === 'error' || this._status === 'stopped') {
+      if (this._shouldStop()) {
         break;
       }
       if (this._executionCount >= MAX_EXECUTION_STEPS) {
@@ -737,7 +742,7 @@ export class CodeSimulator {
         this._executeLine(init.trim());
         let loopGuard = 0;
         while (this._isTruthy(this._evaluateExpression(cond.trim())) && loopGuard < 10_000) {
-          if (this._status === 'error' || this._status === 'stopped') { break; }
+          if ((this._status as SimulatorStatus) === 'error' || (this._status as SimulatorStatus) === 'stopped') { break; }
           this._executeBlock(block.body, 'for');
           this._executeLine(incr.trim());
           loopGuard++;
@@ -754,7 +759,7 @@ export class CodeSimulator {
 
         let loopGuard = 0;
         while (this._isTruthy(this._evaluateExpression(whileMatch[1])) && loopGuard < 10_000) {
-          if (this._status === 'error' || this._status === 'stopped') { break; }
+          if ((this._status as SimulatorStatus) === 'error' || (this._status as SimulatorStatus) === 'stopped') { break; }
           this._executeBlock(block.body, 'while');
           loopGuard++;
           this._executionCount++;
@@ -1470,7 +1475,7 @@ export class CodeSimulator {
     // Execute function body
     let i = 0;
     while (i < func.body.length) {
-      if (this._status === 'error') { break; }
+      if (this._shouldStop()) { break; }
       const line = func.body[i].trim();
 
       // return statement
