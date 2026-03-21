@@ -398,8 +398,16 @@ void loop() {
   it('score does not go below 0', () => {
     const code = `
 void loop() {
-  delay(1); delay(2); delay(3); delay(4); delay(5);
-  delay(6); delay(7); delay(8); delay(9); delay(10);
+  delay(1);
+  delay(2);
+  delay(3);
+  delay(4);
+  delay(5);
+  delay(6);
+  delay(7);
+  delay(8);
+  delay(9);
+  delay(10);
   Serial.readString();
   Serial.readStringUntil('x');
   pulseIn(1, HIGH);

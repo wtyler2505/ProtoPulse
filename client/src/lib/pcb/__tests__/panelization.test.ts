@@ -366,8 +366,8 @@ describe('calculatePanel — tab', () => {
     const result = calculatePanel(config);
     const tabs = featuresByType(result, 'tab');
     // Horizontal: (rows-1) * columns * count = 1*2*2 = 4
-    // Vertical: rows * (columns-1) * count = 2*1*2 = 2
-    expect(tabs).toHaveLength(6);
+    // Vertical: rows * (columns-1) * count = 2*1*2 = 4
+    expect(tabs).toHaveLength(8);
   });
 
   it('generates perforation holes for tabs', () => {
