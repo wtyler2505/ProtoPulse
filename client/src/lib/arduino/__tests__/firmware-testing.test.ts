@@ -29,7 +29,7 @@ import {
   exportState,
   importState,
 } from '../firmware-testing';
-import type { TestSuite, TestResult } from '../firmware-testing';
+import type { TestSuite, TestResult, TestAssertion } from '../firmware-testing';
 
 beforeEach(() => {
   resetFirmwareTestState();
