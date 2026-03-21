@@ -1,27 +1,31 @@
-[2J[3J[H11:50:35 AM - Starting compilation in watch mode...
+[2J[3J[H7:15:48 PM - Starting compilation in watch mode...
 
 
 <--- Last few GCs --->
 
-[3800:0x6057709c3000]   123112 ms: Mark-Compact 2039.7 (2053.8) -> 2037.0 (2053.0) MB, pooled: 3.5 MB, 3228.11 / 0.00 ms (average mu = 0.131, current mu = 0.037) allocation failure; scavenge might not succeed
-[3800:0x6057709c3000]   126298 ms: Mark-Compact 2041.2 (2053.5) -> 2038.3 (2054.0) MB, pooled: 2.5 MB, 3126.98 / 0.00 ms (average mu = 0.077, current mu = 0.019) allocation failure; scavenge might not succeed
+[3935:0x62187efe6000]   120833 ms: Mark-Compact 2039.5 (2051.8) -> 2037.8 (2050.0) MB, pooled: 3.2 MB, 3337.94 / 0.00 ms (average mu = 0.099, current mu = 0.020) allocation failure; scavenge might not succeed
 
 FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
 ----- Native stack trace -----
 
- 1: 0x7e81722015f8 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
- 2: 0x7e8172eda7c4  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
- 3: 0x7e8172eda8ad  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
- 4: 0x7e817314bebb  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
- 5: 0x7e817314bfb8  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
- 6: 0x7e817314c07d  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
- 7: 0x7e817315a889  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
- 8: 0x7e817315d804  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
- 9: 0x7e8173affd47  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
-10: 0x7e817315b16f  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
-11: 0x7e8173134cb2  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
-12: 0x7e8173134e4e  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
-13: 0x7e8173110555  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
-14: 0x7e817354eb2e  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
-15: 0x7e8172d23e76  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 1: 0x74f3ac0015f8 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 2: 0x74f3accda7c4  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 3: 0x74f3accda8ad  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 4: 0x74f3acf4bebb  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 5: 0x74f3acf4bfb8  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 6: 0x74f3acf4c07d  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 7: 0x74f3acf5a889  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 8: 0x74f3acf5d804  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+ 9: 0x74f3ad8ffd47  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+10: 0x74f3acf5b16f  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+11: 0x74f3acf34cb2  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+12: 0x74f3acf34e4e  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+13: 0x74f3acf0fa0f  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+14: 0x74f3acef91d4  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+15: 0x74f3acefa203  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+16: 0x74f3acefa271  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+17: 0x74f3ad1072c1  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+18: 0x74f3ad11b249  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+19: 0x74f3acd38816  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
+20: 0x74f3acb23db6  [/home/linuxbrew/.linuxbrew/Cellar/node/25.8.1_1/bin/../lib/libnode.so.141]
 Aborted (core dumped)

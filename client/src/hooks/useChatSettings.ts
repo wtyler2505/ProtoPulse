@@ -98,8 +98,15 @@ export function useChatSettings() {
 
   useEffect(() => {
     if (settingsQuery.data) {
-      setSettings({ ...settingsQuery.data, aiProvider: 'gemini' });
-      writeLocalStorage({ ...settingsQuery.data, aiProvider: 'gemini' });
+      const serverData = settingsQuery.data;
+      const provider = 'gemini' as const;
+      const models = AI_MODELS[provider];
+      const validModel = models.some(m => m.id === serverData.aiModel)
+        ? serverData.aiModel
+        : models[0].id;
+      const validated: ChatSettings = { ...serverData, aiProvider: provider, aiModel: validModel };
+      setSettings(validated);
+      writeLocalStorage(validated);
     }
   }, [settingsQuery.data]);
 

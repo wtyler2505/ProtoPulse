@@ -143,11 +143,11 @@ export function registerSettingsRoutes(app: Express): void {
     setCacheHeaders('api_list'),
     asyncHandler(async (req, res) => {
       const defaults = {
-        aiProvider: 'anthropic',
-        aiModel: 'claude-sonnet-4-5-20250514',
+        aiProvider: 'gemini',
+        aiModel: 'gemini-3.1-pro-preview-customtools',
         aiTemperature: 0.7,
         customSystemPrompt: '',
-        routingStrategy: 'user',
+        routingStrategy: 'auto',
         previewAiChanges: true,
       };
 
@@ -179,7 +179,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const chatSettingsSchema = z.object({
-        aiProvider: z.enum(['anthropic', 'gemini']).optional(),
+        aiProvider: z.enum(['gemini']).optional(),
         aiModel: z.string().min(1).max(200).optional(),
         aiTemperature: z.number().min(0).max(2).optional(),
         customSystemPrompt: z.string().max(10000).optional(),
