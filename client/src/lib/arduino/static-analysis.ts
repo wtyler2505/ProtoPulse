@@ -658,7 +658,7 @@ const checkMissingVolatile: Checker = (lines, findings) => {
   }
 
   // Find ISR/attachInterrupt bodies and extract modified variables
-  const isrBodyRe = /\b(?:ISR|SIGNAL)\s*\([^)]+\)\s*\{([^}]*)}/gs;
+  const isrBodyRe = /\b(?:ISR|SIGNAL)\s*\([^)]+\)\s*\{([^}]*)}/g;
   let isrMatch: RegExpExecArray | null = null;
   while ((isrMatch = isrBodyRe.exec(allText)) !== null) {
     const body = isrMatch[1];

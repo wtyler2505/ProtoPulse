@@ -157,7 +157,7 @@ const VOLUME_YIELD_BONUS: Array<{ minVolume: number; bonus: number }> = [
 const DFM_SEVERITY_WEIGHTS: Record<DfmSeverityLevel, number> = {
   error: 0.02, // each error reduces DFM yield by 2%
   warning: 0.005, // each warning reduces by 0.5%
-  info: 0.001, // each info reduces by 0.1%
+  info: 0.0005, // each info reduces by 0.05%
 };
 
 /** Board complexity thresholds */
@@ -640,15 +640,19 @@ export function estimateYield(input: YieldInput): YieldEstimate {
   const volumeBonus = getVolumeBonus(input.productionVolume);
   overallYield = Math.min(overallYield + volumeBonus, 0.9999);
 
-  // Calculate DPMO
-  const dpmo = Math.round((1 - overallYield) * 1_000_000);
+  // Round yield first, then derive all dependent values from rounded yield
+  const roundedYield = round4(overallYield);
+
+  // Calculate DPMO from rounded yield for consistency
+  const dpmo = Math.round((1 - roundedYield) * 1_000_000);
 
   // Cpk
-  const cpk = calculateCpk(overallYield);
+  const cpk = calculateCpk(roundedYield);
 
-  // Scrap and rework rates
-  const estimatedScrapRate = (1 - overallYield) * 0.4; // 40% of defects are scrap
-  const estimatedReworkRate = (1 - overallYield) * 0.6; // 60% of defects are reworkable
+  // Scrap and rework rates from rounded yield
+  const defectRate = 1 - roundedYield;
+  const estimatedScrapRate = round4(defectRate * 0.4); // 40% of defects are scrap
+  const estimatedReworkRate = round4(defectRate * 0.6); // 60% of defects are reworkable
 
   // Cost impact
   const scrapCostMultiplier = 1 + estimatedScrapRate;
@@ -662,14 +666,14 @@ export function estimateYield(input: YieldInput): YieldEstimate {
   const fabFactor = factors.find((f) => f.id === 'pcb_fabrication');
 
   return {
-    overallYield: round4(overallYield),
-    overallYieldPercent: round2(overallYield * 100),
+    overallYield: roundedYield,
+    overallYieldPercent: round2(roundedYield * 100),
     factors,
     cpk,
     dpmo,
     boardComplexity: complexity,
-    estimatedScrapRate: round4(estimatedScrapRate),
-    estimatedReworkRate: round4(estimatedReworkRate),
+    estimatedScrapRate,
+    estimatedReworkRate,
     costImpact: {
       scrapCostMultiplier: round4(scrapCostMultiplier),
       reworkCostMultiplier: round4(reworkCostMultiplier),
