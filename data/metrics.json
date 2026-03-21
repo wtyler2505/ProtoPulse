@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-21T01:35:13.761Z",
+  "persistedAt": "2026-03-21T01:37:13.763Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 19,
@@ -503,8 +503,8 @@
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 19,
-      "totalDuration": 5558,
+      "count": 20,
+      "totalDuration": 5590,
       "errors": 0,
       "min": 7,
       "max": 4495,
@@ -522,6 +522,7 @@
         28,
         29,
         31,
+        32,
         35,
         52,
         102,
@@ -822,6 +823,16 @@
       "samples": [
         86,
         106
+      ]
+    },
+    "POST /api/projects/:id/component-parts/21/ai/modify": {
+      "count": 1,
+      "totalDuration": 821,
+      "errors": 1,
+      "min": 821,
+      "max": 821,
+      "samples": [
+        821
       ]
     }
   }
