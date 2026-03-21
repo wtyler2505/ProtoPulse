@@ -492,24 +492,38 @@ describe('SiPdnIntegrationEngine', () => {
   });
 
   describe('unified scoring', () => {
-    it('should produce lower score for poor PDN + SI', () => {
-      const goodConfig = makeConfig();
-      const badConfig = makeConfig({
-        caps: [],
-        traces: [
-          makeTraceInfo({ name: 'BAD', width: 0.01, targetZ0: 50 }),
-        ],
+    it('should produce lower score when more cross-domain issues are present', () => {
+      // A config with many SSN/cross-domain issues should score lower
+      // than the same config without them
+      const baseConfig = makeConfig({
+        numSwitchingOutputs: 0,
+        edgeRateNs: 10,
+        traces: [],
       });
 
       const engine1 = new SiPdnIntegrationEngine();
-      engine1.setConfig(goodConfig);
-      const goodResult = engine1.analyze();
+      engine1.setConfig(baseConfig);
+      const baseResult = engine1.analyze();
+
+      // Same PDN/SI setup, but add massive SSN that triggers critical issues
+      const ssnConfig = makeConfig({
+        numSwitchingOutputs: 128,
+        switchingCurrentPerOutput: 0.5,
+        noiseMarginMv: 1,
+        edgeRateNs: 10,
+        traces: [],
+      });
 
       const engine2 = new SiPdnIntegrationEngine();
-      engine2.setConfig(badConfig);
-      const badResult = engine2.analyze();
+      engine2.setConfig(ssnConfig);
+      const ssnResult = engine2.analyze();
 
-      expect(badResult.unifiedScore).toBeLessThanOrEqual(goodResult.unifiedScore);
+      // SSN config should have more cross-domain issues
+      expect(ssnResult.crossDomainIssues.length).toBeGreaterThanOrEqual(
+        baseResult.crossDomainIssues.length,
+      );
+      // And therefore a lower or equal unified score
+      expect(ssnResult.unifiedScore).toBeLessThanOrEqual(baseResult.unifiedScore);
     });
 
     it('should cap score at 100', () => {

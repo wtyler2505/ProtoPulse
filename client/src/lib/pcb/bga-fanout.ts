@@ -221,10 +221,12 @@ export function recommendPattern(
   const antiPadNeeded = Math.max(rules.minAntiPad, viaOuter + 2 * rules.minClearance);
 
   // Can a dog-bone via fit between pads?
-  // Dog-bone via is placed at pitch/2 offset from the pad center.
-  // Space available between adjacent ball pads: pitch - ballDiameter
+  // Dog-bone via is placed diagonally at pitch * sqrt(2) / 2 from pad center.
+  // The diagonal center-to-center distance between four balls is pitch * sqrt(2).
+  // Available space at the diagonal: pitch * sqrt(2) - ballDiameter
   const spaceBetweenBalls = preset.pitch - preset.ballDiameter;
-  const dogBoneViaFits = viaOuter < spaceBetweenBalls - 2 * rules.minClearance;
+  const diagonalSpace = preset.pitch * Math.SQRT2 - preset.ballDiameter;
+  const dogBoneViaFits = viaOuter + 2 * rules.minClearance < diagonalSpace;
 
   // Can via-in-pad fit under the ball?
   const viaInPadFits = rules.allowViaInPad && viaOuter <= preset.ballDiameter;
@@ -700,8 +702,9 @@ export function checkBgaDrc(
   }
 
   // Check 4: Anti-pad overlap between adjacent vias
-  for (let i = 0; i < fanout.vias.length; i++) {
-    for (let j = i + 1; j < fanout.vias.length; j++) {
+  let antiPadViolationCount = 0;
+  for (let i = 0; i < fanout.vias.length && antiPadViolationCount < 20; i++) {
+    for (let j = i + 1; j < fanout.vias.length && antiPadViolationCount < 20; j++) {
       const va = fanout.vias[i];
       const vb = fanout.vias[j];
 
@@ -722,11 +725,8 @@ export function checkBgaDrc(
           actual: dist,
           required: antiPadNeeded,
         });
+        antiPadViolationCount++;
       }
-    }
-    // Limit total violations to prevent O(n^2) blowup on large BGAs
-    if (violations.filter((v) => v.type === 'anti_pad_overlap').length >= 20) {
-      break;
     }
   }
 
