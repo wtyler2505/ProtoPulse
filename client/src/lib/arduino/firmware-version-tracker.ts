@@ -179,11 +179,11 @@ export class FirmwareVersionTracker {
     return { versions: [...this.versions], version: this._version };
   }
 
-  /** List all versions for a project, newest first. */
+  /** List all versions for a project, newest first. Stable sort by insertion order on tie. */
   listVersions(projectId: number): FirmwareVersion[] {
-    return this.versions
-      .filter((v) => v.projectId === projectId)
-      .sort((a, b) => b.buildTimestamp - a.buildTimestamp);
+    const filtered = this.versions.filter((v) => v.projectId === projectId);
+    // Reverse to get newest-first (later insertions = newer), then stable-sort by timestamp
+    return filtered.reverse().sort((a, b) => b.buildTimestamp - a.buildTimestamp);
   }
 
   /** Get a single version by ID. */
