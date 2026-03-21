@@ -413,6 +413,7 @@ export class FirmwareSimManager {
     const totalPins = boardConfig.digitalPinCount + boardConfig.analogPinCount;
     for (let i = 0; i < totalPins; i++) {
       this._pins.set(i, createPinState(i, boardConfig));
+      this._previousDigitalValues.set(i, 0);
     }
 
     // Initialize timers
@@ -536,6 +537,11 @@ export class FirmwareSimManager {
             }
           }
         }
+      });
+
+      // Snapshot current digital values for next step's edge detection
+      this._pins.forEach((ps, pin) => {
+        this._previousDigitalValues.set(pin, ps.digitalValue);
       });
 
       // Write outputs to circuit bridge
