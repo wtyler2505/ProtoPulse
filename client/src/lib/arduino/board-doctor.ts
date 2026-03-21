@@ -918,11 +918,19 @@ function computeMatchScore(inputTokens: string[], keywords: readonly string[]): 
         matchedKeywords += 2; // Phrase matches are worth double
       }
     } else {
-      // Single-word keywords: check token-level match or substring
+      // Single-word keywords: require exact token match or that one fully
+      // contains the other with a minimum length of 3 to avoid false positives
+      // from short common words like "is", "no", "up"
       for (const token of inputTokens) {
-        if (token === kwLower || token.includes(kwLower) || kwLower.includes(token)) {
+        if (token === kwLower) {
           matchedKeywords += 1;
           break;
+        }
+        if (token.length >= 3 && kwLower.length >= 3) {
+          if (token.includes(kwLower) || kwLower.includes(token)) {
+            matchedKeywords += 1;
+            break;
+          }
         }
       }
     }

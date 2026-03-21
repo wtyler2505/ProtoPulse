@@ -11,6 +11,31 @@ import {
 } from '../eco-workflow';
 
 // ---------------------------------------------------------------------------
+// Global mocks
+// ---------------------------------------------------------------------------
+
+let uuidCounter = 0;
+vi.stubGlobal('crypto', {
+  randomUUID: vi.fn(() => `uuid-${++uuidCounter}`),
+});
+
+const store: Record<string, string> = {};
+vi.stubGlobal('localStorage', {
+  getItem: vi.fn((key: string) => store[key] ?? null),
+  setItem: vi.fn((key: string, val: string) => {
+    store[key] = val;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete store[key];
+  }),
+  clear: vi.fn(() => {
+    for (const k of Object.keys(store)) {
+      delete store[k];
+    }
+  }),
+});
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
