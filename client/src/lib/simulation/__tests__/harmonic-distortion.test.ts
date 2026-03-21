@@ -590,7 +590,8 @@ describe('generateSineWave', () => {
   });
 
   it('respects amplitude parameter', () => {
-    const signal = generateSineWave(100, 1000, 1000, 2.5);
+    // Use frequency that divides evenly into sample rate for exact peak alignment
+    const signal = generateSineWave(250, 4000, 4000, 2.5);
     const maxVal = Math.max(...Array.from(signal));
     expect(maxVal).toBeCloseTo(2.5, 1);
   });
