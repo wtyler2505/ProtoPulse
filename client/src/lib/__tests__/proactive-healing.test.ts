@@ -53,26 +53,23 @@ vi.stubGlobal('crypto', {
 // localStorage mock
 // ---------------------------------------------------------------------------
 
-let mockStore: Record<string, string> = {};
+// ---------------------------------------------------------------------------
+// localStorage — we don't mock it; we just clear the known keys before each
+// test so the engine's loadConfig/loadHistory get clean state.
+// ---------------------------------------------------------------------------
 
-const localStorageMock = {
-  getItem(key: string): string | null { return mockStore[key] ?? null; },
-  setItem(key: string, value: string): void { mockStore[key] = value; },
-  removeItem(key: string): void { delete mockStore[key]; },
-  clear(): void { mockStore = {}; },
-  get length() { return Object.keys(mockStore).length; },
-  key(index: number): string | null { return Object.keys(mockStore)[index] ?? null; },
-};
-
-Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
+const HEALING_STORAGE_KEYS = ['protopulse-healing-config', 'protopulse-healing-history'];
 
 // ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
+  // Clear known storage keys so the engine's loadConfig/loadHistory get clean state.
+  HEALING_STORAGE_KEYS.forEach((k) => {
+    try { localStorage.setItem(k, ''); } catch { /* noop */ }
+  });
   ProactiveHealingEngine.resetInstance();
-  mockStore = {};
   uuidCounter = 0;
 });
 
@@ -861,6 +858,8 @@ describe('rule management', () => {
 describe('proposal management', () => {
   it('approves proposals', () => {
     const engine = ProactiveHealingEngine.getInstance();
+    // Verify clean state — no ruleOverrides from previous tests
+    expect(engine.getConfig().ruleOverrides).toEqual({});
     const state: DesignState = {
       nodes: [
         node({ id: 'mcu1', type: 'mcu', label: 'Arduino' }),
