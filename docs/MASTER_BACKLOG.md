@@ -428,10 +428,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
 | P2 | **0** | **278** | **100%** — Waves 61-149 |
-| P3 | 54 | 77 | 59% — Waves 105-149 |
-| **Total** | **54** | **447** | **501 items tracked** |
+| P3 | 49 | 82 | 63% — Waves 105-150 |
+| **Total** | **49** | **452** | **501 items tracked** |
 
-*Snapshot updated: Wave 149 (2026-03-21)*
+*Snapshot updated: Wave 150 (2026-03-21)*
 
 ---
 
@@ -1054,7 +1054,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0302 | Lesson mode that locks UI to only needed controls | DONE (verified Wave 106) | C3 | MF-036 |
 | BL-0303 | Skill-level adaptive hints (beginner/intermediate/advanced) | PARTIAL | C3 | MF-038, IFX-066 |
 | BL-0304 | Lab/assignment templates for educators | DONE (verified Wave 106) | C3 | MF-041 |
-| BL-0305 | Classroom mode (teacher dashboard + student submissions) | OPEN | C5 | MF-042, IFX-067 |
+| BL-0305 | Classroom mode — ClassroomManager with assignments, rubric grading, submissions, class stats, CSV export. 60+ tests. | DONE (Wave 150) | C5 | MF-042, IFX-067 |
 | BL-0306 | Interactive troubleshooting wizard for common mistakes | DONE (verified Wave 106) | C3 | MF-043, IFX-063 |
 | BL-0307 | First-run checklist with progress — first-run-checklist.ts + FirstRunChecklist.tsx implemented. | DONE (verified Wave 106) | C2 | UX-071 |
 | BL-0308 | Guided sample projects ("learn by doing") | DONE (verified Wave 106) | C3 | UX-072, IFX-062 |
@@ -1118,8 +1118,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0370 | Public API + webhook platform | OPEN | C5 | MF-181, IFX-092 |
-| BL-0371 | Plugin/extension SDK | OPEN | C5 | MF-182, IFX-091 |
+| BL-0370 | Public API + webhooks — 20+ endpoint catalog, webhook CRUD, HMAC signatures, OpenAPI spec generation. 55+ tests. | DONE (Wave 150) | C5 | MF-181, IFX-092 |
+| BL-0371 | Plugin/extension SDK — manifest validation, permission system, sandboxed context, 3 built-in plugins. 55+ tests. | DONE (Wave 150) | C5 | MF-182, IFX-091 |
 | BL-0372 | Macro recorder/player for repeated actions | DONE (Wave 116) | C3 | MF-183 |
 | BL-0373 | Custom keybinding editor | DONE (Wave 116) | C3 | MF-184 |
 | BL-0374 | Scriptable command palette actions — 12 built-in commands, fuzzy search, shortcut parsing, execution history, import/export. 76 tests. | DONE (Wave 143) | C4 | MF-185 |
@@ -1214,10 +1214,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0458 | Predictive failure alerts — 6 anomaly types (trend/spike/drift/oscillation/flatline), time-to-threshold extrapolation. 71 tests. | DONE (Wave 145) | C4 | IFX-090 |
 | BL-0459 | Circuit sandbox game with score/feedback | DONE (Wave 123) | C3 | IFX-069 |
 | BL-0460 | AI tutor persona (Socratic questioning) | DONE (Wave 123) | C3 | IFX-070 |
-| BL-0461 | Firmware-aware simulation mode | OPEN | C5 | ARDX-046 |
+| BL-0461 | Firmware-aware simulation — FirmwareSimManager with Arduino API, pin I/O, interrupts, timers, circuit bridge, 4 board configs. 80 tests. | DONE (Wave 150) | C5 | ARDX-046 |
 | BL-0462 | HIL-lite mode — 8 waveform generators, 12 sensor presets, batch generation, 3 output formats. 71 tests. | DONE (Wave 145) | C4 | ARDX-054 |
 | BL-0463 | Real-time drift detection — DriftDetector with rolling window, drift rate, recalibration estimation, health assessment. 60 tests. | DONE (Wave 145) | C4 | ARDX-112 |
-| BL-0464 | Time machine playback (firmware + logs + schematic) | OPEN | C5 | ARDX-113 |
+| BL-0464 | Time machine playback — 100K event ring buffer, multi-domain timeline, state reconstruction, playback controls, bookmarks. 92 tests. | DONE (Wave 150) | C5 | ARDX-113 |
 | BL-0465 | "Design-to-drive" mode — 6 test modes, pin inference from schematic, Arduino sketch generation with Serial reporting. 112 tests. | DONE (Wave 149) | C5 | ARDX-106 |
 | BL-0466 | AI copilot co-debugs wiring + firmware together | DONE (Wave 138) - Genkit Co-Debug flow in Serial Monitor | C5 | ARDX-107 |
 | BL-0467 | ProtoPulse "mission mode" — concept to shipping kit | OPEN | C5 | IFX-120 |
