@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 17 | 261 | 94% — Waves 61-145 |
+| P2 | 12 | 266 | 96% — Waves 61-146 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **75** | **426** | **501 items tracked** |
+| **Total** | **70** | **431** | **501 items tracked** |
 
-*Snapshot updated: Wave 145 (2026-03-21)*
+*Snapshot updated: Wave 146 (2026-03-21)*
 
 ---
 
@@ -870,7 +870,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0210 | EasyEDA import | OPEN | C4 | MF-158 |
+| BL-0210 | EasyEDA import — JSON parser, coordinate conversion, 60+ package mappings, net building, board outline. 98 tests. | DONE (Wave 146) | C4 | MF-158 |
 | BL-0211 | Cross-tool mapping validator — validateCrossToolConsistency() with 10 check types (net/layer/footprint/orphan/duplicate ref des). 48 tests. | DONE (Wave 141) | C4 | MF-161 |
 | BL-0212 | Import repair assistant for broken files | DONE (verified Wave 106) | C3 | MF-162 |
 | BL-0213 | Shareable simulation links with frozen settings | DONE (verified Wave 106) | C3 | MF-163 |
@@ -881,7 +881,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0218 | Export profiles ("Fab ready", "Sim bundle", "Docs") — 4 built-in profiles + ExportProfileSelector UI. | DONE (verified Wave 105) | C2 | UX-056 |
 | BL-0219 | Import history with one-click restore — ImportHistoryManager + ImportHistoryPanel, localStorage persistence, FIFO eviction, 49 tests. | DONE (Wave 105) | C2 | UX-057 |
 | BL-0220 | Side-by-side diff: imported vs current design | DONE (Wave 109) | C3 | UX-058 |
-| BL-0221 | Guided migration flow for KiCad/Eagle/EasyEDA | OPEN | C4 | UX-059, IFX-093 |
+| BL-0221 | Guided migration flow — MigrationWizard with source detection, compatibility assessment, step-by-step plans for 5 EDA tools. 94 tests. | DONE (Wave 146) | C4 | UX-059, IFX-093 |
 
 ### UX Polish — Editor & Navigation
 
@@ -1123,7 +1123,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0372 | Macro recorder/player for repeated actions | DONE (Wave 116) | C3 | MF-183 |
 | BL-0373 | Custom keybinding editor | DONE (Wave 116) | C3 | MF-184 |
 | BL-0374 | Scriptable command palette actions — 12 built-in commands, fuzzy search, shortcut parsing, execution history, import/export. 76 tests. | DONE (Wave 143) | C4 | MF-185 |
-| BL-0375 | CLI tooling for headless validation/export | OPEN | C4 | MF-188 |
+| BL-0375 | CLI tooling for headless validation/export — HeadlessRunner with 8 built-in commands, arg parsing, table/JSON formatters. 85 tests. | DONE (Wave 146) | C4 | MF-188 |
 | BL-0376 | Git-native design diff/merge | DONE (verified Wave 106) | C5 | MF-189 |
 | BL-0377 | Public embed API for schematic/PCB views | DONE (verified Wave 106) | C4 | MF-164 |
 | BL-0378 | Versioned API docs synced from live routes | DONE (Wave 117) | C3 | MF-165 |
@@ -1223,8 +1223,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0467 | ProtoPulse "mission mode" — concept to shipping kit | OPEN | C5 | IFX-120 |
 | BL-0553 | **3D viewer WebGL migration** — Replace the current scene-graph renderer with a Three.js / WebGL renderer that loads real STEP/VRML component models, supports realistic lighting, shadow casting, and per-layer material shading for professional PCB visualization. | OPEN | C4 | Wave 64 audit |
 | BL-0554 | **AC analysis harmonic distortion (THD/IMD)** — Radix-2 DIT FFT, 4 window functions, THD/IMD computation, spectral peak detection, classification. 59 tests. | DONE (Wave 145) | C4 | Wave 64 audit |
-| BL-0555 | **SI Advisor + PDN circuit-solver deep integration** — Currently `si-advisor.ts` and `pdn-analysis.ts` produce separate reports. Build a unified power/signal integrity dashboard where PDN impedance results (via Z(f) solver) feed directly into SI stack-up recommendations, and topology changes update both simultaneously. | OPEN | C4 | Wave 64 audit |
-| BL-0556 | **BGA fanout and escape routing rule set** — Add specialized DRC rules and a fanout-routing assistant for BGA packages: dog-bone via patterns, escape channel width enforcement, ball-pitch vs via-size constraints, and anti-pad clearances. Required for any design with fine-pitch BGAs. | OPEN | C4 | Wave 64 audit |
+| BL-0555 | **SI Advisor + PDN deep integration** — SiPdnIntegrationEngine with cross-domain issue detection, SSN estimation, unified scoring, prioritized recommendations. 67 tests. | DONE (Wave 146) | C4 | Wave 64 audit |
+| BL-0556 | **BGA fanout and escape routing** — 3 fanout patterns (dog-bone/via-in-pad/escape-channel), 6 BGA presets, 6 DRC violation types, pattern recommendation. 60 tests. | DONE (Wave 146) | C4 | Wave 64 audit |
 | BL-0557 | **Circuit Code DSL: pin alias and local net naming** — Allow named local nets within a DSL block scope (e.g. `const vref = net('VREF')`) so that complex sub-circuits can be composed without polluting the global net namespace. Enables reusable DSL modules. | DONE (Wave 124) | C3 | Wave 64 audit |
 | BL-0630 | **Scratch-like visual block programming for Arduino** — Drag-and-drop block coding (Scratch/MIT App Inventor style) that generates valid Arduino C/C++. Categories: Output (digitalWrite, analogWrite, tone), Input (digitalRead, analogRead), Control (if/else, loops, delay), Math, Variables, Functions. Side-by-side blocks+text view where editing one updates the other. The primary reason TinkerCAD dominates K-12 education. Enables truly zero-experience users to make circuits work. | OPEN | C5 | Wave 66 / TinkerCAD |
 | BL-0631 | **Simulator-based firmware execution (QEMU / simavr)** — Run compiled Arduino firmware in a software simulator (simavr for AVR, QEMU for ARM/RISC-V) without physical hardware. Debug with breakpoints, inspect registers and memory, fast-forward time. PlatformIO supports this via `test_speed = host`. Enables full development and testing workflow for users without hardware at hand. | DONE (verified Wave 106) | C5 | Wave 66 / PlatformIO |
