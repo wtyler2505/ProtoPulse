@@ -185,6 +185,15 @@ describe('parseSizeToBytes', () => {
     expect(parseSizeToBytes('4M')).toBe(4194304);
     expect(parseSizeToBytes('1m')).toBe(1048576);
   });
+
+  it('parses MB suffix', () => {
+    expect(parseSizeToBytes('4MB')).toBe(4194304);
+    expect(parseSizeToBytes('8MB')).toBe(8388608);
+  });
+
+  it('parses KB suffix', () => {
+    expect(parseSizeToBytes('64KB')).toBe(65536);
+  });
 });
 
 // ---------------------------------------------------------------------------
