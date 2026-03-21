@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 37 | 241 | 87% — Waves 61-141 |
+| P2 | 32 | 246 | 88% — Waves 61-142 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **95** | **406** | **501 items tracked** |
+| **Total** | **90** | **411** | **501 items tracked** |
 
-*Snapshot updated: Wave 141 (2026-03-21)*
+*Snapshot updated: Wave 142 (2026-03-21)*
 
 ---
 
@@ -812,7 +812,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0180 | Spatial review comments pinned to coordinates — Full coordinate-based comment pinning on PCB canvas (and others), spatial field schema, CRUD routes, and interactive SVG markers with tooltips. | DONE | C4 | Wave 63 |
 | BL-0181 | Review resolution workflow (open/resolved/blocked) | DONE (Wave 126) | C2 | MF-115 |
 | BL-0182 | Approval gates before release/export | DONE (Wave 138) | C4 | MF-116, IFX-053 |
-| BL-0183 | ECO workflow (propose/review/approve/apply) | OPEN | C4 | MF-117, IFX-058 |
+| BL-0183 | ECO workflow — EcoWorkflowManager with full state machine, impact assessment, review comments, snapshot linking. 95 tests. | DONE (Wave 142) | C4 | MF-117, IFX-058 |
 | BL-0184 | Design branching model | OPEN | C5 | MF-118, IFX-057 |
 | BL-0185 | Merge tooling for branch diffs | OPEN | C5 | MF-119 |
 | BL-0186 | Activity feed for team actions — activity-feed.ts implemented. | DONE (verified Wave 106) | C2 | MF-120, IFX-054 |
@@ -1173,7 +1173,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0420 | AI "fix compile errors" action | DONE (verified Wave 106) | C4 | ARDX-076 |
 | BL-0421 | AI "explain this sketch for a beginner" | DONE (Wave 121) | C2 | ARDX-077 |
 | BL-0422 | Smart library install on compile error | DONE (Wave 121) | C3 | ARDX-066 |
-| BL-0423 | Firmware version linked to design snapshot | OPEN | C4 | ARDX-056 |
+| BL-0423 | Firmware version linked to design snapshot — FirmwareVersionTracker with semantic labels, sketch hashing, snapshot linking, version diffing. 60 tests. | DONE (Wave 142) | C4 | ARDX-056 |
 | BL-0424 | One-click rollback to known-good sketch | DONE (Wave 121) | C3 | ARDX-057 |
 | BL-0425 | Secrets scan before upload (API keys in sketch) | DONE (Wave 118) | C3 | ARDX-096 |
 | BL-0426 | Hard block upload if target board mismatch | DONE (Wave 120) | C3 | ARDX-097 |
@@ -1185,11 +1185,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0430 | AI co-designer (iterates design options side-by-side) | OPEN | C4 | IFX-009 |
 | BL-0431 | AI root-cause map across circuit + firmware | OPEN | C5 | IFX-010 |
 | BL-0432 | Monte Carlo visual risk envelope | DONE (Wave 122) | C3 | IFX-016 |
-| BL-0433 | Expected-vs-observed sim overlay from telemetry | OPEN | C4 | IFX-017 |
-| BL-0434 | Auto-tuning assistant for control loops (PID) | OPEN | C4 | IFX-020, ARDX-055 |
+| BL-0433 | Expected-vs-observed sim overlay from telemetry — SimTelemetryOverlayManager with severity classification, trend tracking, health scoring. 78 tests. | DONE (Wave 142) | C4 | IFX-017 |
+| BL-0434 | Auto-tuning assistant for control loops (PID) — Ziegler-Nichols + Cohen-Coon tuning, step response analysis, Arduino code generation. 59 tests. | DONE (Wave 142) | C4 | IFX-020, ARDX-055 |
 | BL-0435 | Bench dashboard preset (upload/log/plot/debug) | DONE (Wave 122) | C3 | IFX-026 |
 | BL-0436 | Hardware incident bundle export | DONE (Wave 123) | C3 | IFX-028 |
-| BL-0437 | Guided "board doctor" conversational diagnostics | OPEN | C4 | IFX-030 |
+| BL-0437 | Guided "board doctor" conversational diagnostics — 42-node decision tree, 7 symptom categories, fuzzy symptom matching, session tracking. 114 tests. | DONE (Wave 142) | C4 | IFX-030 |
 | BL-0438 | Predictive yield estimator | OPEN | C4 | IFX-040 |
 | BL-0439 | Community template packs | DONE (Wave 118) | C2 | IFX-095 |
 | BL-0440 | Marketplace for reusable circuit blocks | OPEN | C4 | IFX-096 |
