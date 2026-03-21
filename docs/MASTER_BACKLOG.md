@@ -428,10 +428,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
 | P2 | **0** | **278** | **100%** — Waves 61-149 |
-| P3 | 10 | 121 | 92% — Waves 105-152 |
-| **Total** | **10** | **491** | **501 items tracked** |
+| P3 | 5 | 126 | 96% — Waves 105-153 |
+| **Total** | **5** | **496** | **501 items tracked** |
 
-*Snapshot updated: Wave 152 — reconciled (2026-03-21)*
+*Snapshot updated: Wave 153 (2026-03-21)*
 
 ---
 
@@ -1206,7 +1206,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0450 | End-to-end idea to PCB — 18 steps across 8 stages, prerequisite blocking, complexity multipliers, critical path, recommendations. 74 tests. | DONE (Wave 151) | C5 | IFX-111 |
 | BL-0451 | Co-design flow — cross-domain sync points, conflict detection, enclosure generation, 10-material DB, firmware resource tracking. 72 tests. | DONE (Wave 151) | C5 | IFX-112 |
 | BL-0452 | AI textual product goals → architecture — 35+ keyword rules, 12 domain detectors, 36-component knowledge base, 2-3 architecture candidates. 75 tests. | DONE (Wave 144) | C4 | IFX-113 |
-| BL-0453 | Automated bench robot integration | OPEN | C5 | IFX-114 |
+| BL-0453 | Automated bench robot — BenchRobotManager with 7 command types, test sequences, auto-generate from schematic, CSV/JSON export. 91 tests. | DONE (Wave 153) | C5 | IFX-114 |
 | BL-0454 | Multi-board system orchestrator — board CRUD, inter-board links, power budget, BFS signal tracing, topology validation, cost estimation. 59 tests. | DONE (Wave 151) | C5 | IFX-115, ARDX-065 |
 | BL-0455 | AR overlay — 7 board layouts, DLT perspective transform, pin/net highlighting, alt function lookup. 99 tests. | DONE (Wave 147) | C4 | IFX-079 |
 | BL-0456 | Voice-driven workflow — 20 built-in voice commands, Levenshtein fuzzy matching, parameterized templates. 59 tests. | DONE (Wave 147) | C4 | IFX-080, ARDX-094 |
@@ -1220,18 +1220,18 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0464 | Time machine playback — 100K event ring buffer, multi-domain timeline, state reconstruction, playback controls, bookmarks. 92 tests. | DONE (Wave 150) | C5 | ARDX-113 |
 | BL-0465 | "Design-to-drive" mode — 6 test modes, pin inference from schematic, Arduino sketch generation with Serial reporting. 112 tests. | DONE (Wave 149) | C5 | ARDX-106 |
 | BL-0466 | AI copilot co-debugs wiring + firmware together | DONE (Wave 138) - Genkit Co-Debug flow in Serial Monitor | C5 | ARDX-107 |
-| BL-0467 | ProtoPulse "mission mode" — concept to shipping kit | OPEN | C5 | IFX-120 |
+| BL-0467 | Mission mode — 7 phases (concept→ship), milestones, risk assessment, cost breakdowns, packing list, BOM costing. 95 tests. | DONE (Wave 153) | C5 | IFX-120 |
 | BL-0553 | **3D viewer WebGL framework** — WebGLViewerEngine with 9 layers, 8 cameras, 23 packages, 6 materials, geometry creation, layer stack, raycasting. 133 tests. | DONE (Wave 148) | C4 | Wave 64 audit |
 | BL-0554 | **AC analysis harmonic distortion (THD/IMD)** — Radix-2 DIT FFT, 4 window functions, THD/IMD computation, spectral peak detection, classification. 59 tests. | DONE (Wave 145) | C4 | Wave 64 audit |
 | BL-0555 | **SI Advisor + PDN deep integration** — SiPdnIntegrationEngine with cross-domain issue detection, SSN estimation, unified scoring, prioritized recommendations. 67 tests. | DONE (Wave 146) | C4 | Wave 64 audit |
 | BL-0556 | **BGA fanout and escape routing** — 3 fanout patterns (dog-bone/via-in-pad/escape-channel), 6 BGA presets, 6 DRC violation types, pattern recommendation. 60 tests. | DONE (Wave 146) | C4 | Wave 64 audit |
 | BL-0557 | **Circuit Code DSL: pin alias and local net naming** — Allow named local nets within a DSL block scope (e.g. `const vref = net('VREF')`) so that complex sub-circuits can be composed without polluting the global net namespace. Enables reusable DSL modules. | DONE (Wave 124) | C3 | Wave 64 audit |
-| BL-0630 | **Scratch-like visual block programming for Arduino** — Drag-and-drop block coding (Scratch/MIT App Inventor style) that generates valid Arduino C/C++. Categories: Output (digitalWrite, analogWrite, tone), Input (digitalRead, analogRead), Control (if/else, loops, delay), Math, Variables, Functions. Side-by-side blocks+text view where editing one updates the other. The primary reason TinkerCAD dominates K-12 education. Enables truly zero-experience users to make circuits work. | OPEN | C5 | Wave 66 / TinkerCAD |
+| BL-0630 | **Scratch-like block programming** — 28 block types across 9 categories, block-to-C++ code generation, C++-to-blocks parsing, validation, category coloring. 97 tests. | DONE (Wave 153) | C5 | Wave 66 / TinkerCAD |
 | BL-0631 | **Simulator-based firmware execution (QEMU / simavr)** — Run compiled Arduino firmware in a software simulator (simavr for AVR, QEMU for ARM/RISC-V) without physical hardware. Debug with breakpoints, inspect registers and memory, fast-forward time. PlatformIO supports this via `test_speed = host`. Enables full development and testing workflow for users without hardware at hand. | DONE (verified Wave 106) | C5 | Wave 66 / PlatformIO |
 | BL-0632 | **Hardware debugger** — 6 probe profiles, debug session lifecycle, breakpoints/watchpoints, variable inspection, peripheral registers, GDB/OpenOCD config generation. 130 tests. | DONE (Wave 151) | C5 | Wave 66 / PlatformIO |
 | BL-0633 | **ESP-IDF framework support** — 6 ESP targets, CMakeLists/partition/sdkconfig generation, 16 IDF components, 21 SDK options, starter main.c. 117 tests. | DONE (Wave 151) | C5 | Wave 66 / PlatformIO |
 | BL-0634 | **Server-side static analysis** — Cppcheck XML + Clang-Tidy parsers, 36 rule DB with CWE IDs, result merging, CodeMirror annotations. 70 tests. | DONE (Wave 147) | C4 | Wave 66 / PlatformIO |
-| BL-0635 | **Arduino code simulation (compile + run in browser)** — Compile and execute actual Arduino C/C++ code in the browser against a software-simulated microcontroller (simavr WASM build or equivalent). Serial.print() output appears in Serial Monitor, pin states drive component visual states (BL-0619), sensor sliders feed analogRead(). TinkerCAD does this for ~9 built-in libraries. The holy grail for a browser-based EDA+firmware tool. (See also BL-0461 firmware-aware simulation.) | OPEN | C5 | Wave 66 / TinkerCAD + PlatformIO |
+| BL-0635 | **Arduino code simulation in browser** — CodeSimulator with sketch parser, line-by-line execution, Arduino API interpreter, sensor injection, 4 board profiles, breakpoints. 87 tests. | DONE (Wave 153) | C5 | Wave 66 / TinkerCAD + PlatformIO |
 
 ---
 
@@ -1287,7 +1287,7 @@ The following items represent the visionary, uncompromising push beyond "good en
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0700 | **Live Holographic Data Overlays** — HolographicOverlayEngine with current density wire coloring, thermal hotspots, 3 animation modes. 68 tests. | DONE (Wave 152) | C5 | Greatness Manifesto |
-| BL-0701 | **3D Spatial Breadboarding** — Integrate Three.js canvas. When dragging components, `gemini-robotics-er` automatically calculates physical wire routing in 3D space so wires don't clip through each other. | OPEN | C5 | Greatness Manifesto |
+| BL-0701 | **3D Spatial Breadboarding** — 830-point layout, component placement, A* 3D wire routing, internal row connections, power rails, auto-route from netlist. 79 tests. | DONE (Wave 153) | C5 | Greatness Manifesto |
 | BL-0702 | **Semantic Zoom** — 6 zoom levels, configurable thresholds, dissolve/reveal transitions, per-element visibility rules. 57 tests. | DONE (Wave 152) | C5 | Greatness Manifesto |
 | BL-0703 | **Time-Travel State Replay** — The ultimate debugger (expanding BL-0464). Global slider at bottom. Drag back 30s: Serial Monitor rewinds, Code Editor highlights exact line executed, Schematic Canvas shows pin states (HIGH/LOW) at that exact millisecond. | OPEN | C5 | Greatness Manifesto |
 | BL-0704 | **Live Variable Watch (OTA)** — Hover over a variable in C++ code while ESP32 runs across the room. Tooltip pops up showing the *live, real-time value* inside MCU RAM. | OPEN | C5 | Greatness Manifesto |
