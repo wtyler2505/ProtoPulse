@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 27 | 251 | 90% — Waves 61-143 |
+| P2 | 22 | 256 | 92% — Waves 61-144 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **85** | **416** | **501 items tracked** |
+| **Total** | **80** | **421** | **501 items tracked** |
 
-*Snapshot updated: Wave 143 (2026-03-21)*
+*Snapshot updated: Wave 144 (2026-03-21)*
 
 ---
 
@@ -764,8 +764,8 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0614 | **Custom board definitions** — Users designing custom PCBs need to define their own board with custom clock speed, memory layout, pin aliases, and bootloader. PlatformIO uses a simple JSON board file. Add a "New custom board" workflow that generates a board definition from the PCB's component list and lets users edit clock/memory/pin settings. | OPEN | C5 | Wave 66 / PlatformIO |
 | BL-0615 | **Multi-environment build targets** — BuildEnvironmentManager with 10 board presets, PlatformIO INI gen/parse, environment diffing. 101 tests. | DONE (Wave 143) | C4 | Wave 66 / PlatformIO |
 | BL-0616 | **Per-file memory breakdown** — After compile, show how much RAM and Flash each source file and each function consumes. PlatformIO's Project Inspector parses the `.map` file for this. Answers the common maker question "which library is eating all my Flash?" and "why did I run out of RAM?" | DONE (Wave 138) - Integrated nm symbol analysis via MemoryAnalyzerPanel | C4 | Wave 66 / PlatformIO |
-| BL-0617 | **Native firmware unit testing (no hardware required)** — Run firmware tests compiled for the host machine using the Unity test framework. PlatformIO has `pio test -e native` for this. Allows testing pure-logic functions (parsers, state machines, algorithms) without uploading to hardware. Teaches good testing habits and speeds iteration dramatically. | OPEN | C4 | Wave 66 / PlatformIO |
-| BL-0618 | **Static analysis (Cppcheck / Clang-Tidy)** — Catch null pointer dereferences, buffer overflows, uninitialized variables, and logic errors before compile. PlatformIO integrates Cppcheck and Clang-Tidy via `pio check`. Run server-side via WASM or subprocess; surface results as annotations in the code editor. Huge safety value for beginner makers. | OPEN | C4 | Wave 66 / PlatformIO |
+| BL-0617 | **Native firmware unit testing** — FirmwareTestManager with Unity C file generation, PlatformIO native config, output parser, 35 assertion templates. 93 tests. | DONE (Wave 144) | C4 | Wave 66 / PlatformIO |
+| BL-0618 | **Static analysis (Cppcheck/Clang-Tidy style)** — 14 regex-based C/C++ checkers with CWE IDs, configurable rules, severity filtering. 77 tests. | DONE (Wave 144) | C4 | Wave 66 / PlatformIO |
 
 ### Arduino — Workbench Gaps (Wave 64 Audit)
 
@@ -1151,7 +1151,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0400 | One-click "Open in Arduino IDE" from design | DONE (Wave 118) | C3 | ARDX-001 |
-| BL-0401 | Round-trip diff viewer (ProtoPulse vs IDE) | OPEN | C4 | ARDX-003 |
+| BL-0401 | Round-trip diff viewer — LCS-based line diff, hunk grouping, similarity score, unified diff output, conflict detection. 74 tests. | DONE (Wave 144) | C4 | ARDX-003 |
 | BL-0402 | Build/compile status panel | DONE (Wave 117) | C2 | ARDX-006 |
 | BL-0403 | Upload firmware with full log output | DONE (verified Wave 106) | C3 | ARDX-007 |
 | BL-0404 | Dependency resolver for Arduino libraries — extractIncludes(), 30+ KNOWN_LIBRARY_HEADERS, resolveDependencies() with conflict detection. 42 tests. | DONE (Wave 140) | C4 | ARDX-009 |
@@ -1190,7 +1190,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0435 | Bench dashboard preset (upload/log/plot/debug) | DONE (Wave 122) | C3 | IFX-026 |
 | BL-0436 | Hardware incident bundle export | DONE (Wave 123) | C3 | IFX-028 |
 | BL-0437 | Guided "board doctor" conversational diagnostics — 42-node decision tree, 7 symptom categories, fuzzy symptom matching, session tracking. 114 tests. | DONE (Wave 142) | C4 | IFX-030 |
-| BL-0438 | Predictive yield estimator | OPEN | C4 | IFX-040 |
+| BL-0438 | Predictive yield estimator — 10 independent yield factors, Cpk calculation, cost impact, improvement suggestions. 75 tests. | DONE (Wave 144) | C4 | IFX-040 |
 | BL-0439 | Community template packs | DONE (Wave 118) | C2 | IFX-095 |
 | BL-0440 | Marketplace for reusable circuit blocks | OPEN | C4 | IFX-096 |
 | BL-0441 | "Remix this design" from public examples | DONE (Wave 123) | C3 | IFX-101 |
@@ -1205,7 +1205,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----|-------------|--------|------------|--------|
 | BL-0450 | End-to-end "idea to ordered PCB" in 30 minutes | OPEN | C5 | IFX-111 |
 | BL-0451 | Full circuit + firmware + enclosure co-design flow | OPEN | C5 | IFX-112 |
-| BL-0452 | AI textual product goals → architecture options | OPEN | C4 | IFX-113 |
+| BL-0452 | AI textual product goals → architecture — 35+ keyword rules, 12 domain detectors, 36-component knowledge base, 2-3 architecture candidates. 75 tests. | DONE (Wave 144) | C4 | IFX-113 |
 | BL-0453 | Automated bench robot integration | OPEN | C5 | IFX-114 |
 | BL-0454 | Multi-board system orchestrator | OPEN | C5 | IFX-115, ARDX-065 |
 | BL-0455 | AR overlay for real-board pin mapping | OPEN | C4 | IFX-079 |
