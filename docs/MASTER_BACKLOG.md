@@ -427,11 +427,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
 | P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | 42 | 236 | 85% — Waves 61-140 |
+| P2 | 37 | 241 | 87% — Waves 61-141 |
 | P3 | 58 | 73 | 56% — Waves 105-122 |
-| **Total** | **100** | **401** | **501 items tracked** |
+| **Total** | **95** | **406** | **501 items tracked** |
 
-*Snapshot updated: Wave 140 (2026-03-20)*
+*Snapshot updated: Wave 141 (2026-03-21)*
 
 ---
 
@@ -836,7 +836,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0468 | Panelization tool with tab/v-score/fiducial | OPEN | C4 | MF-132, IFX-037 |
+| BL-0468 | Panelization tool with tab/v-score/fiducial — calculatePanel() + autoPanel() + 6 standard sizes + tab/v-score/mouse-bite separation + fiducials + tooling holes. 78 tests. | DONE (Wave 141) | C4 | MF-132, IFX-037 |
 | BL-0469 | Pick-and-place validation and preview — pick-place-validator.ts with 7 rules + stats, 47 tests. | DONE (Wave 107) | C3 | MF-133, IFX-038 |
 | BL-0470 | Manufacturing package validator before download | DONE (Wave 108) | C3 | MF-135 |
 | BL-0471 | Build-time risk score (cost + supply + assembly) | DONE (Wave 138) | C4 | MF-137, IFX-031 |
@@ -871,7 +871,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
 | BL-0210 | EasyEDA import | OPEN | C4 | MF-158 |
-| BL-0211 | Cross-tool mapping validator (net/layer/footprint parity) | OPEN | C4 | MF-161 |
+| BL-0211 | Cross-tool mapping validator — validateCrossToolConsistency() with 10 check types (net/layer/footprint/orphan/duplicate ref des). 48 tests. | DONE (Wave 141) | C4 | MF-161 |
 | BL-0212 | Import repair assistant for broken files | DONE (verified Wave 106) | C3 | MF-162 |
 | BL-0213 | Shareable simulation links with frozen settings | DONE (verified Wave 106) | C3 | MF-163 |
 | BL-0214 | Import preview summary — diff dialog with add/modify/remove counts + warnings + conflicts. | DONE (Wave 88) | C2 | UX-051 |
@@ -1162,13 +1162,13 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0409 | AI sketch starter from schematic | DONE (Wave 121) | C3 | ARDX-016 |
 | BL-0410 | Smart code snippets per component | DONE (Wave 120) | C3 | ARDX-017 |
 | BL-0411 | Board-aware suggestions (timers, PWM limits) | DONE (Wave 121) | C3 | ARDX-021 |
-| BL-0412 | "Refactor to non-blocking" assistant | OPEN | C4 | ARDX-022 |
+| BL-0412 | "Refactor to non-blocking" assistant — 13 blocking patterns detected with code snippet alternatives + scoring. 63 tests. | DONE (Wave 141) | C4 | ARDX-022 |
 | BL-0413 | ISR safety scanner — 8 rules for ISR violations, findIsrBodies() + scanForIsrViolations(). 58 tests. | DONE (Wave 140) | C4 | ARDX-023 |
 | BL-0414 | RAM usage early-warning | DONE (Wave 119) | C3 | ARDX-024 |
 | BL-0415 | Flash size budget tracker | DONE (Wave 119) | C3 | ARDX-025 |
-| BL-0416 | Loop-time profiler overlay | OPEN | C4 | ARDX-026 |
+| BL-0416 | Loop-time profiler overlay — profileLoop() with 50+ operation timing DB, section categorization, estimated Hz, top-5 bottlenecks. 55 tests. | DONE (Wave 141) | C4 | ARDX-026 |
 | BL-0417 | Auto state-machine skeletons for robotics | DONE (Wave 121) | C3 | ARDX-027 |
-| BL-0418 | Live variable watch over serial | OPEN | C4 | ARDX-028 |
+| BL-0418 | Live variable watch over serial — VariableWatchManager singleton, 5 parse formats, rolling history, stats (min/max/avg/rate). 79 tests. | DONE (Wave 141) | C4 | ARDX-028 |
 | BL-0419 | Library conflict detector | DONE (Wave 119) | C3 | ARDX-067 |
 | BL-0420 | AI "fix compile errors" action | DONE (verified Wave 106) | C4 | ARDX-076 |
 | BL-0421 | AI "explain this sketch for a beginner" | DONE (Wave 121) | C2 | ARDX-077 |
