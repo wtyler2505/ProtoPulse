@@ -53,6 +53,7 @@ describe('ScriptableCommandManager', () => {
   let manager: ScriptableCommandManager;
 
   beforeEach(() => {
+    localStorage.clear();
     ScriptableCommandManager.resetInstance();
     manager = ScriptableCommandManager.getInstance();
   });

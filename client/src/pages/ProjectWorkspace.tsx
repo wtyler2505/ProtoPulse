@@ -11,7 +11,7 @@ const ArchitectureView = lazy(() => import('@/components/views/ArchitectureView'
 const ComponentEditorView = lazy(() => import('@/components/views/ComponentEditorView'));
 const ProcurementView = lazy(() => import('@/components/views/ProcurementView'));
 const ValidationView = lazy(() => import('@/components/views/ValidationView'));
-const OutputView = lazy(() => import('@/components/views/OutputView'));
+const ExportPanel = lazy(() => import('@/components/panels/ExportPanel'));
 const SchematicView = lazy(() => import('@/components/views/SchematicView'));
 const BreadboardView = lazy(() => import('@/components/circuit-editor/BreadboardView'));
 const PCBLayoutView = lazy(() => import('@/components/circuit-editor/PCBLayoutView'));
@@ -94,7 +94,7 @@ const prefetchQueue: Array<() => Promise<unknown>> = [
   () => import('@/components/circuit-editor/PCBLayoutView'),
   () => import('@/components/views/ProcurementView'),
   () => import('@/components/views/ValidationView'),
-  () => import('@/components/views/OutputView'),
+  () => import('@/components/panels/ExportPanel'),
   () => import('@/components/simulation/SimulationPanel'),
   // Tier 3 — secondary views (prefetch last)
   () => import('@/components/views/ComponentEditorView'),
@@ -373,7 +373,7 @@ import type { MenuContext, MenuContextType, TargetKind } from '@/lib/radial-menu
 
 function WorkspaceContent() {
   const projectId = useProjectId();
-  const { activeView, setActiveView, projectName } = useProjectMeta();
+  const { activeView, setActiveView, projectName, projectNotFound } = useProjectMeta();
   const { runValidation, issues } = useValidation();
   const { nodes, edges, setNodes, setEdges, pushUndoState } = useArchitecture();
   const { bom, addBomItem } = useBom();
@@ -381,6 +381,15 @@ function WorkspaceContent() {
   const mainRef = useRef<HTMLElement>(null);
   const [location, setLocation] = useLocation();
   const initialUrlApplied = useRef(false);
+
+  // C2 fix: redirect to project picker when the project is not found (deleted or not owned)
+  useEffect(() => {
+    if (projectNotFound) {
+      localStorage.removeItem('protopulse-last-project');
+      toast({ title: 'Project not found', description: 'This project may have been deleted or you don\'t have access.', variant: 'destructive' });
+      setLocation('/projects');
+    }
+  }, [projectNotFound, setLocation, toast]);
 
   // Initialize prediction engine
   const executeActions = useActionExecutor();
@@ -955,7 +964,7 @@ function WorkspaceContent() {
               {activeView === 'output' && (
                 <ErrorBoundary>
                   <Suspense fallback={<ViewLoadingFallback />}>
-                    <OutputView />
+                    <ExportPanel />
                   </Suspense>
                 </ErrorBoundary>
               )}

@@ -1,4 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+
+vi.mock('../db', () => ({ db: {}, pool: { end: vi.fn() } }));
+vi.mock('../auth', () => ({
+  validateSession: vi.fn().mockResolvedValue({ userId: 1 }),
+  getUserById: vi.fn().mockResolvedValue({ username: 'test' }),
+  requireAuth: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+vi.mock('../routes/auth-middleware', () => ({
+  requireProjectOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+  requireCircuitOwnership: (_req: unknown, _res: unknown, next: () => void) => next(),
+}));
+
 import express from 'express';
 import type { Server } from 'http';
 import type { IStorage } from '../storage';

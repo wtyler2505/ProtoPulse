@@ -203,7 +203,7 @@ function ErrorState({ error, onRetry }: { error: Error; onRetry: () => void }) {
 }
 
 export default function ProjectPickerPage() {
-  const [, navigate] = useLocation();
+  const [locationPath, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -238,9 +238,12 @@ export default function ProjectPickerPage() {
     );
   }, [projects, searchQuery]);
 
-  // Auto-redirect to last visited project
+  // Auto-redirect to last visited project — only from root URL ("/"), not "/projects".
+  // When a user explicitly navigates to /projects they want to see the project picker.
   const lastProjectId = getLastProjectId();
+  const isRootEntry = locationPath === '/' || locationPath === '';
   const shouldAutoRedirect =
+    isRootEntry &&
     !autoRedirectDismissed &&
     !isLoading &&
     !error &&

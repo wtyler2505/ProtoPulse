@@ -146,7 +146,7 @@ export const VIEW_LOADERS: Partial<Record<ViewMode, () => Promise<unknown>>> = {
   procurement: () => import('@/components/views/ProcurementView'),
   validation: () => import('@/components/views/ValidationView'),
   simulation: () => import('@/components/simulation/SimulationPanel'),
-  output: () => import('@/components/views/OutputView'),
+  output: () => import('@/components/panels/ExportPanel'),
   design_history: () => import('@/components/views/DesignHistoryView'),
   lifecycle: () => import('@/components/views/LifecycleDashboard'),
   calculators: () => import('@/components/views/CalculatorsView'),

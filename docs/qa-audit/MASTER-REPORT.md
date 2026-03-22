@@ -6,6 +6,19 @@
 - **Scope**: 15 sections covering all 150+ UI surfaces
 - **Method**: Live browser testing at `http://localhost:5000` with DOM inspection, console monitoring, and visual verification
 
+## Post-Audit Fixes Applied
+
+| Issue | Fix | Verified |
+|-------|-----|----------|
+| **C1: Project picker unreachable** | Auto-redirect now only fires from `/` (root), not `/projects`. Users can access picker directly. | Yes — `/projects` shows full picker with samples + all projects |
+| **C5: Export Center shows system log** | Wired `ExportPanel` into the `output` ViewMode instead of `OutputView`. 17 export formats now visible. | Yes — KiCad, Eagle, SPICE, Gerber, PDF, FMEA, STEP, etc. all shown |
+| **C4: API key sentinel false positive** | Excluded `STORED_KEY_SENTINEL` from "too short" validation check. | Yes — TypeScript clean, tests pass |
+| **C6: CSP blocks blob workers** | Already fixed — `workerSrc: ["'self'", "blob:"]` was present. Console error was from `reportOnly` mode (dev-only). | N/A — false positive |
+| **C7: "Explain this panel" non-functional** | Component is correctly implemented with Radix Popover. Initial test was a false positive — popover renders on click. | N/A — false positive |
+| **C2: Stale lastProject cascade** | Added `projectNotFound` flag to ProjectMetaProvider; WorkspaceContent redirects to `/projects` with toast when project returns 404. Also clears stale `lastProject` from localStorage. | Yes — `/projects/99999` redirects to picker |
+| **C3: Raw JSON chat errors** | Added "internal server error" pattern match before fallback; fallback now shows generic friendly message instead of raw error text. | Yes — 106/106 tests pass |
+| **Stale test: provider buttons** | Updated SettingsPanel test to check `model-select` instead of removed `provider-anthropic`/`provider-gemini` buttons. | Yes — 8/8 tests pass |
+
 ## Overall Status
 
 | # | Section | Status | Critical | Warning | Cosmetic |

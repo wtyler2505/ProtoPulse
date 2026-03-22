@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../db', () => ({ db: {}, pool: { end: vi.fn() } }));
+
 import { ToolRegistry } from '../ai-tools/registry';
 import { registerExportTools } from '../ai-tools/export';
 import type { ToolContext } from '../ai-tools/types';
@@ -151,16 +154,17 @@ describe('trigger_export', () => {
     expect(result.message).toContain('no BOM items');
   });
 
-  it('returns error for circuit-dependent format when no circuits exist', async () => {
+  it('returns approval-required error for manufacturing format when project is not approved', async () => {
     const ctx = createCtx();
     const result = await registry.execute('trigger_export', { format: 'gerber' }, ctx);
     expect(result.success).toBe(false);
-    expect(result.message).toContain('no circuit designs');
+    expect(result.message).toContain('Approval Required');
   });
 
-  it('returns download URL for gerber when circuit exists', async () => {
+  it('returns download URL for gerber when circuit exists and project is approved', async () => {
     const storage = createMockStorage({
       circuits: [{ id: 1, name: 'Main', description: '' }],
+      project: { name: 'TestProject', description: '', approvedAt: new Date() },
     });
     const ctx = createCtx(storage);
     const result = await registry.execute('trigger_export', { format: 'gerber' }, ctx);

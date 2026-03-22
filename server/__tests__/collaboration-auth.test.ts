@@ -31,11 +31,13 @@ vi.mock('../auth', () => ({
 }));
 
 const mockGetProject = vi.fn<(id: number) => Promise<{ id: number; ownerId: number | null } | undefined>>();
+const mockGetProjectMembers = vi.fn<(projectId: number) => Promise<{ userId: number; role: string; status: string }[]>>();
 
 vi.mock('../storage', () => ({
   storage: {
     isProjectOwner: (...args: unknown[]) => mockIsProjectOwner(args[0] as number, args[1] as number),
     getProject: (...args: unknown[]) => mockGetProject(args[0] as number),
+    getProjectMembers: (...args: unknown[]) => mockGetProjectMembers(args[0] as number),
   },
 }));
 
@@ -132,6 +134,9 @@ async function simulateJoin(
   mockGetUserById.mockResolvedValueOnce({ username });
   mockIsProjectOwner.mockResolvedValueOnce(isOwner);
   mockGetProject.mockResolvedValueOnce({ id: projectId, ownerId: isOwner ? userId : 999 });
+  if (!isOwner) {
+    mockGetProjectMembers.mockResolvedValueOnce([{ userId, role: 'editor', status: 'accepted' }]);
+  }
 
   const ws = new MockWebSocket();
   const url = `/ws/collab?projectId=${String(projectId)}&sessionId=${sessionId}`;
@@ -175,6 +180,7 @@ describe('Collaboration Auth — Handshake', () => {
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
     mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
+    mockGetProjectMembers.mockResolvedValue([]);
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });
@@ -344,6 +350,7 @@ describe('Collaboration Auth — Role Enforcement', () => {
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
     mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
+    mockGetProjectMembers.mockResolvedValue([]);
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });
@@ -557,6 +564,7 @@ describe('Collaboration Auth — Lock Enforcement', () => {
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
     mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
+    mockGetProjectMembers.mockResolvedValue([]);
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });
@@ -690,6 +698,7 @@ describe('Collaboration Auth — Room Isolation', () => {
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
     mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
+    mockGetProjectMembers.mockResolvedValue([]);
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });
@@ -779,6 +788,7 @@ describe('Collaboration Auth — Reconnection', () => {
     mockGetUserById.mockResolvedValue({ username: 'alice' });
     mockIsProjectOwner.mockResolvedValue(true);
     mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
+    mockGetProjectMembers.mockResolvedValue([]);
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });

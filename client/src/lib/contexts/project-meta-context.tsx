@@ -21,6 +21,8 @@ interface ProjectMetaState {
   activeSheetId: string;
   setActiveSheetId: (id: string) => void;
   isLoading: boolean;
+  /** True when the project API returned 404 (deleted or not owned). */
+  projectNotFound: boolean;
 }
 
 const ProjectMetaContext = createContext<ProjectMetaState | undefined>(undefined);
@@ -74,6 +76,9 @@ export function ProjectMetaProvider({ seeded, children }: { seeded: boolean; chi
   }, [projectQuery.data]);
 
   const isLoading = !seeded || projectQuery.isLoading;
+  const projectNotFound = projectQuery.isError &&
+    projectQuery.error instanceof Error &&
+    projectQuery.error.message.includes('404');
 
   const contextValue = useMemo<ProjectMetaState>(() => ({
     activeView,
@@ -86,6 +91,7 @@ export function ProjectMetaProvider({ seeded, children }: { seeded: boolean; chi
     activeSheetId,
     setActiveSheetId,
     isLoading,
+    projectNotFound,
   }), [
     activeView,
     setActiveView,
@@ -97,6 +103,7 @@ export function ProjectMetaProvider({ seeded, children }: { seeded: boolean; chi
     activeSheetId,
     setActiveSheetId,
     isLoading,
+    projectNotFound,
   ]);
 
   return (

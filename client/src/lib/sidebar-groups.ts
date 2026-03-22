@@ -98,6 +98,7 @@ export const SIDEBAR_GROUPS: readonly SidebarGroup[] = [
     views: [
       'knowledge',
       'community',
+      'labs',
     ],
   },
 ] as const;

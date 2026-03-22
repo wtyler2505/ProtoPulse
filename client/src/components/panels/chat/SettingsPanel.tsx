@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch';
 import { AI_MODELS, type RoutingStrategy } from './constants';
 import type { KeyStatus } from '@/hooks/useApiKeyStatus';
+import { STORED_KEY_SENTINEL } from '@/hooks/useApiKeys';
 
 interface AIModel {
   id: string;
@@ -166,7 +167,7 @@ function SettingsPanel({
             {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
           </button>
         </div>
-        {localKey && localKey.length < 20 && (
+        {localKey && localKey !== STORED_KEY_SENTINEL && localKey.length < 20 && (
           <p id="api-key-error" className="text-xs text-destructive mt-1.5 flex items-center gap-1 font-medium" data-testid="api-key-error">
             <span className="w-1 h-1 bg-destructive rounded-full shrink-0" />
             {"API key appears too short"}

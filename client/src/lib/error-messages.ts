@@ -276,10 +276,19 @@ export function mapErrorToUserMessage(error: unknown, options?: ErrorMapOptions)
     return NETWORK_ERROR;
   }
 
-  // Fallback: return the raw message wrapped in a generic shape
+  // Match common server error phrases that didn't have a status code prefix
+  if (/internal server error/i.test(error.message)) {
+    return {
+      ...HTTP_STATUS_MAP[500],
+      description: appendRequestId(HTTP_STATUS_MAP[500].description, requestId),
+      requestId,
+    };
+  }
+
+  // Fallback: return a friendly generic message (never expose raw error text to users)
   return {
     title: 'Something went wrong',
-    description: appendRequestId(error.message || 'An unexpected error occurred. Please try again.', requestId),
+    description: appendRequestId('An unexpected error occurred. Please try again.', requestId),
     retryable: true,
     requestId,
   };

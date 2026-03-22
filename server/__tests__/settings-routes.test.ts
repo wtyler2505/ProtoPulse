@@ -242,7 +242,7 @@ describe('GET /api/settings/chat', () => {
     const res = await fetch(`${baseUrlNoAuth}/api/settings/chat`);
     expect(res.status).toBe(200);
     const body = await res.json() as { aiProvider: string; aiModel: string };
-    expect(body.aiProvider).toBe('anthropic');
+    expect(body.aiProvider).toBe('gemini');
   });
 
   it('returns defaults when user has no saved settings', async () => {
@@ -251,7 +251,7 @@ describe('GET /api/settings/chat', () => {
     const res = await fetch(`${baseUrlAuth}/api/settings/chat`);
     expect(res.status).toBe(200);
     const body = await res.json() as { aiProvider: string };
-    expect(body.aiProvider).toBe('anthropic');
+    expect(body.aiProvider).toBe('gemini');
   });
 
   it('returns saved settings for authenticated user', async () => {

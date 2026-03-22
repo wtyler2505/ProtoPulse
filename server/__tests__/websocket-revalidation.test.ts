@@ -26,10 +26,13 @@ vi.mock('../auth', () => ({
   getUserById: (...args: unknown[]) => mockGetUserById(args[0] as number),
 }));
 
+const mockGetProjectMembers = vi.fn<(projectId: number) => Promise<{ userId: number; role: string; status: string }[]>>();
+
 vi.mock('../storage', () => ({
   storage: {
     isProjectOwner: (...args: unknown[]) => mockIsProjectOwner(args[0] as number, args[1] as number),
     getProject: (...args: unknown[]) => mockGetProject(args[0] as number),
+    getProjectMembers: (...args: unknown[]) => mockGetProjectMembers(args[0] as number),
   },
 }));
 
@@ -137,6 +140,9 @@ function setupValidSession(userId: number, projectId: number, opts?: { isOwner?:
   mockGetProject.mockResolvedValueOnce({ id: projectId, ownerId: isOwner ? userId : 999 });
   mockIsProjectOwner.mockResolvedValueOnce(isOwner);
   mockGetUserById.mockResolvedValueOnce({ username });
+  if (!isOwner) {
+    mockGetProjectMembers.mockResolvedValueOnce([{ userId, role: 'editor', status: 'accepted' }]);
+  }
 }
 
 async function joinSuccessfully(
@@ -162,6 +168,7 @@ describe('BL-0526: WebSocket Session Re-validation on Reconnect', () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    mockGetProjectMembers.mockResolvedValue([]);
     const httpServer = createMockHttpServer();
     server = new CollaborationServer(httpServer as unknown as import('http').Server);
   });

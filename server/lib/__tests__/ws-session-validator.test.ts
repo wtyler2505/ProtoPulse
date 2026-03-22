@@ -15,6 +15,7 @@ const mockValidateSession = vi.fn<(sessionId: string) => Promise<{ userId: numbe
 const mockGetUserById = vi.fn<(id: number) => Promise<{ username: string } | null>>();
 const mockIsProjectOwner = vi.fn<(projectId: number, userId: number) => Promise<boolean>>();
 const mockGetProject = vi.fn<(id: number) => Promise<{ id: number; ownerId: number | null } | undefined>>();
+const mockGetProjectMembers = vi.fn<(projectId: number) => Promise<{ userId: number; role: string; status: string }[]>>();
 
 vi.mock('../../auth', () => ({
   validateSession: (...args: unknown[]) => mockValidateSession(args[0] as string),
@@ -25,6 +26,7 @@ vi.mock('../../storage', () => ({
   storage: {
     isProjectOwner: (...args: unknown[]) => mockIsProjectOwner(args[0] as number, args[1] as number),
     getProject: (...args: unknown[]) => mockGetProject(args[0] as number),
+    getProjectMembers: (...args: unknown[]) => mockGetProjectMembers(args[0] as number),
   },
 }));
 
@@ -46,6 +48,7 @@ beforeEach(() => {
   mockGetUserById.mockResolvedValue({ username: 'alice' });
   mockIsProjectOwner.mockResolvedValue(true);
   mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
+  mockGetProjectMembers.mockResolvedValue([]);
 });
 
 /* ------------------------------------------------------------------ */
@@ -143,6 +146,7 @@ describe('validateWsSession', () => {
 
     it('should return valid with isOwner=false for non-owner', async () => {
       mockIsProjectOwner.mockResolvedValueOnce(false);
+      mockGetProjectMembers.mockResolvedValueOnce([{ userId: 1, role: 'editor', status: 'accepted' }]);
 
       const result = await validateWsSession('valid-session', 1);
 
@@ -212,6 +216,7 @@ describe('validateWsSession', () => {
         userId: 3,
         username: 'charlie',
         isOwner: true,
+        role: 'owner',
       });
     });
 
@@ -219,6 +224,7 @@ describe('validateWsSession', () => {
       mockValidateSession.mockResolvedValueOnce({ userId: 4 });
       mockGetProject.mockResolvedValueOnce({ id: 10, ownerId: 3 });
       mockIsProjectOwner.mockResolvedValueOnce(false);
+      mockGetProjectMembers.mockResolvedValueOnce([{ userId: 4, role: 'editor', status: 'accepted' }]);
       mockGetUserById.mockResolvedValueOnce({ username: 'dave' });
 
       const result = await validateWsSession('session-xyz', 10);
@@ -228,6 +234,7 @@ describe('validateWsSession', () => {
         userId: 4,
         username: 'dave',
         isOwner: false,
+        role: 'editor',
       });
     });
   });

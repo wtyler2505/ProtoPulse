@@ -6,6 +6,9 @@
  * isolation, and format converter outputs.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('../db', () => ({ db: {}, pool: { end: vi.fn() } }));
+
 import { ToolRegistry } from '../ai-tools/registry';
 import { registerNavigationTools } from '../ai-tools/navigation';
 import { registerArchitectureTools } from '../ai-tools/architecture';
@@ -133,7 +136,7 @@ describe('Registry completeness', () => {
   });
 
   it('registers exactly 121 tools total', () => {
-    expect(allTools).toHaveLength(121);
+    expect(allTools).toHaveLength(124);
   });
 
   it('every registered tool has a unique name', () => {
@@ -176,8 +179,8 @@ describe('Registry completeness', () => {
     expect(registry.getByCategory('validation')).toHaveLength(14);
   });
 
-  it('export category registers 14 tools', () => {
-    expect(registry.getByCategory('export')).toHaveLength(14);
+  it('export category registers 17 tools', () => {
+    expect(registry.getByCategory('export')).toHaveLength(17);
   });
 
   it('project category registers 10 tools', () => {
@@ -771,7 +774,7 @@ describe('getAll() returns valid tool definitions', () => {
   const allTools = registry.getAll();
 
   it('returns an array matching total tool count', () => {
-    expect(allTools).toHaveLength(121);
+    expect(allTools).toHaveLength(124);
   });
 
   it('every entry has name, description, and parameters', () => {

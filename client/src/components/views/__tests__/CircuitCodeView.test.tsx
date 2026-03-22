@@ -51,7 +51,20 @@ vi.mock('@/components/views/circuit-code/SchematicPreview', () => ({
 // Import under test (AFTER mocks)
 // ---------------------------------------------------------------------------
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CircuitCodeView from '../CircuitCodeView';
+import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
+
+function renderView() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <ProjectIdProvider projectId={1}>
+        <CircuitCodeView />
+      </ProjectIdProvider>
+    </QueryClientProvider>
+  );
+}
 
 describe('CircuitCodeView', () => {
   beforeEach(() => {
@@ -65,7 +78,7 @@ describe('CircuitCodeView', () => {
   });
 
   it('renders with code editor area and preview area', () => {
-    render(<CircuitCodeView />);
+    renderView();
 
     expect(screen.getByTestId('circuit-code-view')).toBeDefined();
     expect(screen.getByTestId('circuit-code-editor')).toBeDefined();
@@ -73,14 +86,14 @@ describe('CircuitCodeView', () => {
   });
 
   it('shows starter template as initial code', () => {
-    render(<CircuitCodeView />);
+    renderView();
 
     const textarea = screen.getByTestId('code-editor-textarea') as HTMLTextAreaElement;
     expect(textarea.value).toContain('Starter template');
   });
 
   it('shows status bar with component/net counts', () => {
-    render(<CircuitCodeView />);
+    renderView();
 
     const statusBar = screen.getByTestId('circuit-code-status-bar');
     expect(statusBar).toBeDefined();
@@ -97,7 +110,7 @@ describe('CircuitCodeView', () => {
       },
     };
 
-    render(<CircuitCodeView />);
+    renderView();
 
     const statusBar = screen.getByTestId('circuit-code-status-bar');
     expect(statusBar.textContent).toContain('3 components');
@@ -105,7 +118,7 @@ describe('CircuitCodeView', () => {
   });
 
   it('shows "Ready" status when not evaluating', () => {
-    render(<CircuitCodeView />);
+    renderView();
 
     const statusBar = screen.getByTestId('circuit-code-status-bar');
     expect(statusBar.textContent).toContain('Ready');
@@ -117,7 +130,7 @@ describe('CircuitCodeView', () => {
       isEvaluating: true,
     };
 
-    render(<CircuitCodeView />);
+    renderView();
 
     const statusBar = screen.getByTestId('circuit-code-status-bar');
     expect(statusBar.textContent).toContain('Evaluating...');
@@ -129,7 +142,7 @@ describe('CircuitCodeView', () => {
       error: { message: 'Unexpected token at line 5', line: 5 },
     };
 
-    render(<CircuitCodeView />);
+    renderView();
 
     const errorPanel = screen.getByTestId('circuit-code-error-panel');
     expect(errorPanel).toBeDefined();
@@ -138,20 +151,20 @@ describe('CircuitCodeView', () => {
   });
 
   it('hides error panel when there are no errors', () => {
-    render(<CircuitCodeView />);
+    renderView();
 
     expect(screen.queryByTestId('circuit-code-error-panel')).toBeNull();
   });
 
   it('"No components" placeholder shown in preview when code produces no IR', () => {
-    render(<CircuitCodeView />);
+    renderView();
 
     expect(screen.getByTestId('preview-no-components')).toBeDefined();
   });
 
   it('triggers debounced evaluation on code change', () => {
     vi.useFakeTimers();
-    render(<CircuitCodeView />);
+    renderView();
 
     const textarea = screen.getByTestId('code-editor-textarea') as HTMLTextAreaElement;
 
@@ -178,7 +191,7 @@ describe('CircuitCodeView', () => {
       error: { message: 'SyntaxError: unexpected }', line: 12 },
     };
 
-    render(<CircuitCodeView />);
+    renderView();
 
     const errorPanel = screen.getByTestId('circuit-code-error-panel');
     expect(errorPanel.textContent).toContain('[Ln 12]');

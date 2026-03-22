@@ -80,10 +80,9 @@ describe('SettingsPanel', () => {
     expect(screen.queryByTestId('retry-settings-load')).toBeNull();
   });
 
-  it('renders provider buttons', () => {
+  it('renders model select dropdown', () => {
     render(<SettingsPanel {...defaultProps} />);
-    expect(screen.getByTestId('provider-anthropic')).toBeTruthy();
-    expect(screen.getByTestId('provider-gemini')).toBeTruthy();
+    expect(screen.getByTestId('model-select')).toBeTruthy();
   });
 
   it('calls onClose when Save & Close is clicked', () => {

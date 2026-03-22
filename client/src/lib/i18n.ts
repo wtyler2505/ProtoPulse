@@ -85,7 +85,7 @@ const ENGLISH_LOCALE: LocaleData = {
       schematic: 'Schematic',
       pcb: 'PCB Layout',
       validation: 'Validation',
-      output: 'Output',
+      output: 'Export',
     },
     menu: {
       file: {

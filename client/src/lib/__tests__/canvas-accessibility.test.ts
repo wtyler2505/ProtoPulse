@@ -369,12 +369,12 @@ describe('CanvasAnnouncer', () => {
 
   it('should clear the message after timeout', async () => {
     vi.useFakeTimers();
+    const rafSpy = vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((cb) => { cb(0); return 0; });
     announcer.announce('Deleted Wire');
-    // Trigger the rAF
-    await new Promise((resolve) => { requestAnimationFrame(resolve); });
     expect(announcer.getCurrentMessage()).toBe('Deleted Wire');
     vi.advanceTimersByTime(1100);
     expect(announcer.getCurrentMessage()).toBe('');
+    rafSpy.mockRestore();
     vi.useRealTimers();
   });
 
