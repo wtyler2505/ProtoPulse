@@ -18,8 +18,30 @@
 | **C2: Stale lastProject cascade** | Added `projectNotFound` flag to ProjectMetaProvider; WorkspaceContent redirects to `/projects` with toast when project returns 404. Also clears stale `lastProject` from localStorage. | Yes — `/projects/99999` redirects to picker |
 | **C3: Raw JSON chat errors** | Added "internal server error" pattern match before fallback; fallback now shows generic friendly message instead of raw error text. | Yes — 106/106 tests pass |
 | **Stale test: provider buttons** | Updated SettingsPanel test to check `model-select` instead of removed `provider-anthropic`/`provider-gemini` buttons. | Yes — 8/8 tests pass |
+| **108 pre-existing test failures** | Fixed all: collaboration mocks (getProjectMembers), agent-route Anthropic→Genkit migration, CircuitCodeView providers, settings defaults, sidebar groups, scriptable commands localStorage, canvas-accessibility rAF, ai-tools db mocks, autoroute auth mocks. | Yes — 544/544 files, 28,522/28,522 tests pass |
 
-## Overall Status
+## Post-Fix Status
+
+| # | Section | Pre-Fix | Post-Fix | Issues Remaining |
+|---|---------|---------|----------|------------------|
+| 1 | Auth & Project Picker | FAIL | **PASS** | 0 critical (C1+C2 fixed) |
+| 2 | Workspace Layout & Navigation | PARTIAL | **PASS** | 0 critical |
+| 3 | Architecture View | PASS | PASS | — |
+| 4 | AI Chat Panel | PARTIAL | **PASS** | 0 critical (C3+C4 fixed) |
+| 5 | Schematic & Circuit Editor | PASS | PASS | — |
+| 6 | PCB & Manufacturing | PARTIAL | **PASS** | 0 critical (C5 fixed) |
+| 7 | BOM & Procurement | PASS | PASS | — |
+| 8 | Validation & DRC | PASS | PASS | — |
+| 9 | Simulation & Analysis | PASS | PASS | — |
+| 10 | Arduino & Firmware | PASS | PASS | — |
+| 11 | Code & DSL Tools | PASS | PASS | — |
+| 12 | History & Collaboration | PASS | PASS | — |
+| 13 | Advanced Views | PASS | PASS | — |
+| 14 | Global Features & Overlays | PARTIAL | **PASS** | 0 critical (C6+C7 false positives) |
+| 15 | Settings, Export & Edge Cases | PARTIAL | **PASS** | 0 critical (C5 fixed) |
+| | **TOTALS** | 5 FAIL/PARTIAL | **15 PASS** | **0 critical, 0 blocking** |
+
+## Pre-Fix Status (historical)
 
 | # | Section | Status | Critical | Warning | Cosmetic |
 |---|---------|--------|----------|---------|----------|
