@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-22T02:08:23.574Z",
+  "persistedAt": "2026-03-22T02:09:23.574Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 34,
@@ -1008,8 +1008,8 @@
       ]
     },
     "GET /api/projects/:id/component-parts": {
-      "count": 36,
-      "totalDuration": 13958,
+      "count": 37,
+      "totalDuration": 13974,
       "errors": 0,
       "min": 4,
       "max": 12758,
@@ -1032,6 +1032,7 @@
         13,
         14,
         15,
+        16,
         16,
         16,
         16,
