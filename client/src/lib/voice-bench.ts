@@ -259,8 +259,8 @@ export function parseSafetyCondition(transcript: string): Omit<SafetyOverride, '
     }
   }
 
-  // Extract threshold number and unit
-  const numMatch = conditionPart.match(/(\d+(?:\.\d+)?)\s*([a-zA-Z°%]*)/);
+  // Extract threshold number and unit (use original transcript to preserve unit case)
+  const numMatch = transcript.match(/(\d+(?:\.\d+)?)\s*([a-zA-Z°%]*)/);
   if (!numMatch) { return null; }
 
   const threshold = parseFloat(numMatch[1]);
@@ -278,7 +278,9 @@ function fuzzyScore(input: string, target: string): number {
   const b = target.toLowerCase();
   if (a === b) { return 1.0; }
   if (b.startsWith(a)) { return 0.9; }
+  if (a.startsWith(b)) { return 0.85; }
   if (b.includes(a)) { return 0.7; }
+  if (a.includes(b)) { return 0.65; }
 
   // Simple word overlap
   const inputWords = a.split(/\s+/);
