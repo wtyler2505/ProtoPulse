@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-22T01:47:23.568Z",
+  "persistedAt": "2026-03-22T01:53:23.569Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 33,
@@ -901,8 +901,8 @@
       ]
     },
     "GET /api/settings/api-keys": {
-      "count": 40,
-      "totalDuration": 556,
+      "count": 41,
+      "totalDuration": 560,
       "errors": 0,
       "min": 2,
       "max": 121,
@@ -912,6 +912,7 @@
         3,
         3,
         3,
+        4,
         4,
         4,
         4,
@@ -1110,12 +1111,13 @@
       ]
     },
     "PATCH /api/settings/chat": {
-      "count": 4,
-      "totalDuration": 20,
-      "errors": 4,
+      "count": 5,
+      "totalDuration": 22,
+      "errors": 5,
       "min": 2,
       "max": 13,
       "samples": [
+        2,
         2,
         2,
         3,
@@ -1123,12 +1125,13 @@
       ]
     },
     "POST /api/settings/api-keys": {
-      "count": 4,
-      "totalDuration": 114,
+      "count": 5,
+      "totalDuration": 134,
       "errors": 0,
       "min": 20,
       "max": 36,
       "samples": [
+        20,
         20,
         24,
         34,
