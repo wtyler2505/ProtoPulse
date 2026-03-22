@@ -391,6 +391,13 @@ function WorkspaceContent() {
     }
   }, [projectNotFound, setLocation, toast]);
 
+  // Set browser tab title to project name + active view
+  useEffect(() => {
+    const viewLabel = navItems.find(n => n.view === activeView)?.label ?? activeView;
+    document.title = `${viewLabel} — ${projectName} — ProtoPulse`;
+    return () => { document.title = 'ProtoPulse'; };
+  }, [activeView, projectName]);
+
   // Initialize prediction engine
   const executeActions = useActionExecutor();
   const { predictions, dismiss, accept, clearAll, isAnalyzing } = usePredictions(
@@ -497,30 +504,26 @@ function WorkspaceContent() {
     setRadialMenu(null);
   }, [radialMenu, toast]);
 
-  // BL-0114 + BL-0234: Restore activeView from URL (priority) or localStorage (fallback) on mount
+  // BL-0114 + BL-0234: Sync activeView from URL on mount AND on location changes (browser back/forward)
   useEffect(() => {
-    // Parse viewName from current URL path: /projects/:projectId/:viewName
     const segments = location.split('/').filter(Boolean);
-    // Expected: ['projects', projectId, viewName?]
     const urlViewName = segments.length >= 3 && segments[0] === 'projects' ? segments[2] : undefined;
 
     if (urlViewName && VALID_VIEW_MODES.has(urlViewName)) {
-      // URL takes priority
       if (urlViewName !== activeView) {
         setActiveView(urlViewName as ViewMode);
       }
-    } else {
-      // Fallback to localStorage
+    } else if (!initialUrlApplied.current) {
+      // First mount only: fallback to localStorage if no viewName in URL
       const saved = persisted.activeView;
       if (saved && saved !== activeView && VALID_VIEW_MODES.has(saved)) {
         setActiveView(saved as ViewMode);
       }
-      // Update URL to reflect the resolved view (no viewName in URL yet)
       setLocation(`/projects/${String(projectId)}/${activeView}`, { replace: true });
     }
     initialUrlApplied.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location]);
 
   // UX-011 + BL-0234: Persist panel sizes, collapsed states, and activeView to localStorage (debounced)
   useEffect(() => {
@@ -750,21 +753,20 @@ function WorkspaceContent() {
                   <button
                     role="tab"
                     id={`tab-${tab.view}`}
+                    aria-label={tab.label}
                     aria-selected={activeView === tab.view}
                     aria-controls="main-panel"
                     data-testid={`tab-${tab.view}`}
                     onClick={() => setActiveView(tab.view)}
                     className={cn(
-                      /* AS-10: text-sm instead of text-xs; AS-12: h-[3px] accent */
-                      "h-8 px-4 flex items-center gap-2 text-sm font-medium transition-all relative top-[1px] whitespace-nowrap shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                      /* Icon-only tabs — labels shown via tooltip on hover */
+                      "h-8 w-8 flex items-center justify-center text-sm font-medium transition-all relative top-[1px] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
                       activeView === tab.view
                         ? "bg-card border-x border-t border-border text-primary z-20 before:absolute before:inset-x-0 before:-top-[1px] before:h-[3px] before:bg-primary before:rounded-b-sm"
                         : "text-muted-foreground hover:bg-muted/30 hover:text-foreground border-transparent"
                     )}
                   >
-                    {/* AS-11: Normalize icon stroke width */}
-                    {tab.icon && <tab.icon className="w-3.5 h-3.5 [stroke-width:1.75]" />}
-                    {tab.label}
+                    {tab.icon && <tab.icon className="w-4 h-4 [stroke-width:1.75]" />}
                     {/* UI-18: Badge counts for Validation and Procurement */}
                     {tab.view === 'validation' && validationErrorCount > 0 && (
                       <span data-testid="tab-validation-badge" className="text-[10px] font-medium bg-destructive/20 text-destructive px-1.5 py-0.5 tabular-nums rounded-sm">

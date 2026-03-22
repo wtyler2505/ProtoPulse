@@ -5,6 +5,8 @@
  */
 
 import { useState, useMemo, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { copyToClipboard } from '@/lib/clipboard';
 import {
   Search,
   Zap,
@@ -117,10 +119,15 @@ export default function StarterCircuitsPanel() {
     }
   }, []);
 
+  const { toast } = useToast();
+
   const handleOpenCircuit = useCallback((circuit: StarterCircuit) => {
-    // eslint-disable-next-line no-console
-    console.log('[StarterCircuits] Open circuit:', circuit.id, circuit.name);
-  }, []);
+    copyToClipboard(circuit.arduinoCode);
+    toast({
+      title: `"${circuit.name}" copied`,
+      description: 'Arduino code copied to clipboard. Switch to the Arduino tab to paste it into a sketch.',
+    });
+  }, [toast]);
 
   return (
     <div data-testid="starter-circuits-panel" className="h-full flex flex-col overflow-hidden">

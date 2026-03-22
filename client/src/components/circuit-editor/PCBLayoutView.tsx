@@ -418,8 +418,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
   const createCommentMutation = useCreateComment();
   const updateCommentStatusMutation = useUpdateCommentStatus();
   const deleteCommentMutation = useDeleteComment();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _updateInstanceMutation = useUpdateCircuitInstance();
+  const updateInstanceMutation = useUpdateCircuitInstance();
 
   const { toast } = useToast();
 
@@ -552,8 +551,8 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
       setMouseBoardPos,
       setNewCommentPos,
       setIsCommentDialogOpen,
-      setInstanceRotation: (_instanceId: number, _rotation: number) => {
-        // TODO: Wire to updateInstanceMutation
+      setInstanceRotation: (instanceId: number, rotation: number) => {
+        updateInstanceMutation.mutate({ circuitId, id: instanceId, pcbRotation: rotation });
       },
       setSelectionRect,
     }),

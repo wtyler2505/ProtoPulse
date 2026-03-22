@@ -1,11 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
-  LayoutGrid,
-  Cpu,
-  Activity,
-  Package,
-  TerminalSquare,
+  Blocks,
+  ShieldCheck,
+  ShoppingCart,
+  FileOutput,
   Zap,
   CircuitBoard,
   Grid3X3,
@@ -27,6 +26,9 @@ import {
   MessageSquare,
   FileCode,
   GraduationCap,
+  FlaskConical,
+  PenTool,
+  Lightbulb,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -38,15 +40,15 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   { icon: LayoutDashboard, view: 'dashboard', label: 'Dashboard' },
-  { icon: LayoutGrid, view: 'architecture', label: 'Architecture' },
+  { icon: Blocks, view: 'architecture', label: 'Architecture' },
   { icon: CircuitBoard, view: 'schematic', label: 'Schematic' },
   { icon: FileCode, view: 'arduino', label: 'Arduino' },
   { icon: Code2, view: 'circuit_code', label: 'Circuit Code' },
   { icon: Grid3X3, view: 'breadboard', label: 'Breadboard' },
   { icon: Microchip, view: 'pcb', label: 'PCB' },
-  { icon: Cpu, view: 'component_editor', label: 'Component Editor' },
-  { icon: Package, view: 'procurement', label: 'Procurement' },
-  { icon: Activity, view: 'validation', label: 'Validation' },
+  { icon: PenTool, view: 'component_editor', label: 'Component Editor' },
+  { icon: ShoppingCart, view: 'procurement', label: 'Procurement' },
+  { icon: ShieldCheck, view: 'validation', label: 'Validation' },
   { icon: Zap, view: 'simulation', label: 'Simulation' },
   { icon: KanbanSquare, view: 'kanban', label: 'Tasks' },
   { icon: BookMarked, view: 'knowledge', label: 'Learn' },
@@ -57,14 +59,14 @@ export const navItems: NavItem[] = [
   { icon: Plug, view: 'serial_monitor', label: 'Serial Monitor' },
   { icon: Calculator, view: 'calculators', label: 'Calculators' },
   { icon: BookOpen, view: 'design_patterns', label: 'Patterns' },
-  { icon: Zap, view: 'starter_circuits', label: 'Starter Circuits' },
+  { icon: Lightbulb, view: 'starter_circuits', label: 'Starter Circuits' },
   { icon: GraduationCap, view: 'labs', label: 'Labs' },
   { icon: History, view: 'design_history', label: 'History' },
   { icon: HeartPulse, view: 'lifecycle', label: 'Lifecycle' },
   { icon: MessageSquare, view: 'comments', label: 'Comments' },
   { icon: Wand2, view: 'generative_design', label: 'Generative' },
   { icon: Radio, view: 'digital_twin', label: 'Digital Twin' },
-  { icon: TerminalSquare, view: 'output', label: 'Exports' },
+  { icon: FileOutput, view: 'output', label: 'Exports' },
 ];
 
 

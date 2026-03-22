@@ -153,6 +153,18 @@ function ArchitectureFlow() {
   const [localEdges, setLocalEdges, onEdgesChange] = useEdgesState(edges);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const reactFlowInstance = useReactFlow();
+  const initialFitDone = useRef(false);
+
+  // Auto-fit canvas when nodes first load from the server
+  useEffect(() => {
+    if (!initialFitDone.current && localNodes.length > 0) {
+      initialFitDone.current = true;
+      // Delay to let ReactFlow measure nodes
+      requestAnimationFrame(() => {
+        reactFlowInstance.fitView({ padding: 0.2, duration: 300 });
+      });
+    }
+  }, [localNodes.length, reactFlowInstance]);
 
   // @dnd-kit droppable zone for the canvas area
   const { setNodeRef: setDropRef, isOver } = useDroppable({ id: 'architecture-canvas' });

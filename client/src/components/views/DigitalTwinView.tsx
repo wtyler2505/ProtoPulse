@@ -11,6 +11,7 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { useDeviceShadow } from '@/lib/digital-twin/device-shadow';
 import { DeviceShadow } from '@/lib/digital-twin/device-shadow';
 import type { ChannelState, ShadowState } from '@/lib/digital-twin/device-shadow';
@@ -31,10 +32,12 @@ function ConnectionBar({
   state,
   onConnect,
   onDisconnect,
+  serialSupported = true,
 }: {
   state: ShadowState;
   onConnect: () => void;
   onDisconnect: () => void;
+  serialSupported?: boolean;
 }) {
   const boardName = state.manifest?.board ?? 'No device';
   const firmware = state.manifest?.firmware ?? '';
@@ -73,11 +76,15 @@ function ConnectionBar({
         <button
           className={cn(
             'rounded-md px-3 py-1.5 text-sm font-medium',
-            state.connected
-              ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
-              : 'bg-primary text-primary-foreground hover:bg-primary/90',
+            !serialSupported && !state.connected
+              ? 'bg-muted text-muted-foreground cursor-not-allowed'
+              : state.connected
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                : 'bg-primary text-primary-foreground hover:bg-primary/90',
           )}
           onClick={state.connected ? onDisconnect : onConnect}
+          disabled={!serialSupported && !state.connected}
+          title={!serialSupported ? 'Web Serial API not supported — use Chrome or Edge' : undefined}
           data-testid={state.connected ? 'disconnect-button' : 'connect-button'}
         >
           {state.connected ? 'Disconnect' : 'Connect'}
@@ -482,6 +489,7 @@ export default function DigitalTwinView() {
   const [simulationResults] = useState<Map<string, number>>(() => new Map());
   const [comparisonConfig] = useState<ComparisonConfig>(defaultComparisonConfig);
   const bridgeInitialized = useRef(false);
+  const { toast } = useToast();
 
   // Initialize TelemetryShadowBridge to persist telemetry to IndexedDB
   useEffect(() => {
@@ -553,18 +561,23 @@ export default function DigitalTwinView() {
 
   const handleConnect = useCallback(async () => {
     if (!WebSerialManager.isSupported()) {
+      toast({ title: 'Web Serial not supported', description: 'Your browser does not support Web Serial API. Use Chrome or Edge to connect to hardware.', variant: 'destructive' });
       return;
     }
     const manager = WebSerialManager.getInstance();
     const portOk = await manager.requestPort();
     if (!portOk) {
+      toast({ title: 'No port selected', description: 'Select a serial port to connect to your device.' });
       return;
     }
     const connected = await manager.connect({ baudRate: 115200 });
     if (connected) {
       shadowState.attachSerial(manager);
+      toast({ title: 'Connected', description: 'Device connected successfully.' });
+    } else {
+      toast({ title: 'Connection failed', description: 'Could not open serial port. Check your device connection.', variant: 'destructive' });
     }
-  }, [shadowState]);
+  }, [shadowState, toast]);
 
   const handleDisconnect = useCallback(() => {
     shadowState.detachSerial();
@@ -577,6 +590,7 @@ export default function DigitalTwinView() {
         state={shadowState}
         onConnect={handleConnect}
         onDisconnect={handleDisconnect}
+        serialSupported={WebSerialManager.isSupported()}
       />
 
       {/* Section 2: Live values */}

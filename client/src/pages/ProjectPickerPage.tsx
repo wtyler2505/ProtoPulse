@@ -143,10 +143,12 @@ function ProjectCard({ project, onSelect }: ProjectCardProps) {
             <Clock className="w-3 h-3" />
             {formatRelativeTime(project.updatedAt)}
           </span>
-          <span className="flex items-center gap-1" data-testid={`project-version-${String(project.id)}`}>
-            <Layers className="w-3 h-3" />
-            v{project.version}
-          </span>
+          {project.version > 1 && (
+            <span className="flex items-center gap-1" data-testid={`project-version-${String(project.id)}`}>
+              <Layers className="w-3 h-3" />
+              v{project.version}
+            </span>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -211,6 +213,11 @@ export default function ProjectPickerPage() {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [autoRedirectDismissed, setAutoRedirectDismissed] = useState(false);
+
+  useEffect(() => {
+    document.title = 'Projects — ProtoPulse';
+    return () => { document.title = 'ProtoPulse'; };
+  }, []);
 
   // Fetch projects
   const {

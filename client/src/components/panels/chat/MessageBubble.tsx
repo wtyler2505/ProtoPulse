@@ -278,7 +278,7 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
               </StyledTooltip>
             )}
             {onBranch && (
-              <StyledTooltip content="Branch conversation" side="top">
+              <StyledTooltip content="Branch conversation — create a new thread from this message" side="top">
                   <button
                     onClick={() => onBranch(msg.id)}
                     data-testid={`branch-msg-${msg.id}`}

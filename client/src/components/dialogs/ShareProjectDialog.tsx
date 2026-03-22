@@ -97,9 +97,9 @@ export function ShareProjectDialog({
       toast({ title: 'Missing Session ID', description: 'Enter a session ID to invite.', variant: 'destructive' });
       return;
     }
-    // In a full implementation, this would send an invite via the collaboration WebSocket.
-    // For now we show a success toast — the backend invite endpoint (CollabInvite) would handle this.
-    toast({ title: 'Invite Sent', description: `Invited session "${sessionId}" as ${inviteRole}.` });
+    // Collaboration invites require a running WebSocket server. Show the session ID so
+    // the other user can connect manually via the same project URL.
+    toast({ title: 'Share this project URL', description: `Send the project URL to your collaborator. They can join as ${inviteRole} by opening the same project.` });
     setInviteSessionId('');
   }, [inviteSessionId, inviteRole, toast]);
 

@@ -317,8 +317,7 @@ describe('StarterCircuitsPanel', () => {
     expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
   });
 
-  it('open circuit button logs to console', () => {
-    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  it('open circuit button copies code to clipboard', () => {
     render(<StarterCircuitsPanel />);
     const firstCircuit = getAllStarterCircuits()[0];
     fireEvent.click(screen.getByTestId(`starter-expand-${firstCircuit.id}`));
@@ -326,12 +325,7 @@ describe('StarterCircuitsPanel', () => {
     const openBtn = screen.getByTestId(`starter-open-${firstCircuit.id}`);
     fireEvent.click(openBtn);
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[StarterCircuits] Open circuit:',
-      firstCircuit.id,
-      firstCircuit.name,
-    );
-    consoleSpy.mockRestore();
+    expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
   });
 
   it('displays difficulty badge for each circuit', () => {

@@ -262,14 +262,14 @@ export default function MessageInput({
       <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground/70 mt-2 font-mono" data-testid="chat-status-line">
         {aiApiKey ? (
           <>
-            <StyledTooltip content="AI Mode: natural language understanding, 80 tools, architecture generation, code analysis, multi-model routing" side="top">
+            <StyledTooltip content="AI Mode: natural language understanding, 124 tools, architecture generation, code analysis, multi-model routing" side="top">
               <span className="inline-flex items-center gap-1 cursor-help" data-testid="mode-indicator-api">
                 <Cloud className="w-3 h-3 text-primary/70" />
                 <span>API</span>
               </span>
             </StyledTooltip>
             <span className="text-muted-foreground/40">—</span>
-            <span>{'Gemini'} {AI_MODELS[aiProvider].find(m => m.id === aiModel)?.label || aiModel}</span>
+            <span>{AI_MODELS[aiProvider].find(m => m.id === aiModel)?.label || aiModel}</span>
           </>
         ) : (
           <>

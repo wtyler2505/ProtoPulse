@@ -113,7 +113,7 @@ const HierarchicalSheetPanel = memo(function HierarchicalSheetPanel({
         <div className="border-t border-border px-3 py-2 shrink-0">
           <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground">
             <ArrowRightLeft className="w-3 h-3" />
-            <span>Multi-sheet connectivity coming soon</span>
+            <span>Inter-sheet net connections are managed automatically</span>
           </div>
         </div>
       )}

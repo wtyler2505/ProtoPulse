@@ -219,7 +219,7 @@ function SchematicViewContent() {
           onClick={() => setPushDialogOpen(true)}
           disabled={!activeCircuit || !instances || instances.length === 0 || unplacedInstances.length === 0 || pushToPcbMutation.isPending}
           className="h-7 gap-1 text-muted-foreground hover:text-foreground"
-          title={unplacedInstances.length === 0 ? 'All components already placed on PCB' : `Push ${String(unplacedInstances.length)} component${unplacedInstances.length === 1 ? '' : 's'} to PCB`}
+          title={!instances || instances.length === 0 ? 'No components to push — add components to the schematic first' : unplacedInstances.length === 0 ? 'All components already placed on PCB' : `Push ${String(unplacedInstances.length)} component${unplacedInstances.length === 1 ? '' : 's'} to PCB`}
         >
           {pushToPcbMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArrowRightToLine className="w-3.5 h-3.5" />}
           <span className="text-xs">Push to PCB</span>
