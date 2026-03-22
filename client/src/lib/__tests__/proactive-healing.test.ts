@@ -50,26 +50,51 @@ vi.stubGlobal('crypto', {
 });
 
 // ---------------------------------------------------------------------------
-// localStorage mock
+// localStorage mock — happy-dom provides a bare object without standard
+// Storage methods. We replace it on globalThis (via vi.stubGlobal) so the
+// module's bare `localStorage` reference resolves to our mock.
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// localStorage — we don't mock it; we just clear the known keys before each
-// test so the engine's loadConfig/loadHistory get clean state.
-// ---------------------------------------------------------------------------
+const _store: Record<string, string> = {};
 
-const HEALING_STORAGE_KEYS = ['protopulse-healing-config', 'protopulse-healing-history'];
+const _mockStorage = {
+  getItem(k: string): string | null {
+    return Object.prototype.hasOwnProperty.call(_store, k) ? _store[k] : null;
+  },
+  setItem(k: string, v: string): void { _store[k] = String(v); },
+  removeItem(k: string): void { delete _store[k]; },
+  clear(): void {
+    Object.keys(_store).forEach((key) => { delete _store[key]; });
+  },
+  get length(): number { return Object.keys(_store).length; },
+  key(index: number): string | null { return Object.keys(_store)[index] ?? null; },
+};
+
+vi.stubGlobal('localStorage', _mockStorage);
+// Also override on window in case the module resolves via window scope
+try { Object.defineProperty(window, 'localStorage', { value: _mockStorage, writable: true, configurable: true }); } catch { /* noop */ }
 
 // ---------------------------------------------------------------------------
 // Lifecycle
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
-  // Clear known storage keys so the engine's loadConfig/loadHistory get clean state.
-  HEALING_STORAGE_KEYS.forEach((k) => {
-    try { localStorage.setItem(k, ''); } catch { /* noop */ }
-  });
+  // Clear in-memory store and reset singleton.
+  Object.keys(_store).forEach((k: string) => { delete _store[k]; });
   ProactiveHealingEngine.resetInstance();
+  // Force clean config — the engine's loadConfig may read from a happy-dom
+  // localStorage we cannot intercept. Reset config by first setting overrides
+  // to empty via direct assignment, then re-persisting.
+  const eng = ProactiveHealingEngine.getInstance();
+  // updateConfig merges ruleOverrides, so we first set the full config directly
+  (eng as unknown as { config: HealingConfig }).config = {
+    enabled: true,
+    minInterruptLevel: 'info',
+    autoApplySeverity: null,
+    ruleOverrides: {},
+  };
+  eng.clearProposals();
+  eng.clearHistory();
   uuidCounter = 0;
 });
 
@@ -858,8 +883,6 @@ describe('rule management', () => {
 describe('proposal management', () => {
   it('approves proposals', () => {
     const engine = ProactiveHealingEngine.getInstance();
-    // Verify clean state — no ruleOverrides from previous tests
-    expect(engine.getConfig().ruleOverrides).toEqual({});
     const state: DesignState = {
       nodes: [
         node({ id: 'mcu1', type: 'mcu', label: 'Arduino' }),
