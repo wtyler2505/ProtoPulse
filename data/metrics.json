@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-03-22T02:09:23.574Z",
+  "persistedAt": "2026-03-22T02:11:23.574Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 34,
@@ -829,8 +829,8 @@
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 42,
-      "totalDuration": 6054,
+      "count": 43,
+      "totalDuration": 6127,
       "errors": 12,
       "min": 3,
       "max": 4495,
@@ -871,6 +871,7 @@
         31,
         35,
         52,
+        73,
         102,
         105,
         110,
@@ -972,8 +973,8 @@
       ]
     },
     "GET /api/circuits/:circuitId/instances": {
-      "count": 4,
-      "totalDuration": 223,
+      "count": 5,
+      "totalDuration": 296,
       "errors": 0,
       "min": 17,
       "max": 152,
@@ -981,6 +982,7 @@
         17,
         22,
         32,
+        73,
         152
       ]
     },
@@ -995,14 +997,15 @@
       ]
     },
     "GET /api/circuits/:circuitId/nets": {
-      "count": 4,
-      "totalDuration": 305,
+      "count": 5,
+      "totalDuration": 375,
       "errors": 0,
       "min": 20,
       "max": 161,
       "samples": [
         20,
         29,
+        70,
         95,
         161
       ]
