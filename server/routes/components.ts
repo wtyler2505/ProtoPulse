@@ -41,6 +41,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:projectId/component-parts/by-node/:nodeId',
+    requireProjectOwnership,
     setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -55,6 +56,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:projectId/component-parts/:id',
+    requireProjectOwnership,
     setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -69,6 +71,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts',
+    requireProjectOwnership,
     payloadLimit(32 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -83,6 +86,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.patch(
     '/api/projects/:projectId/component-parts/:id',
+    requireProjectOwnership,
     payloadLimit(32 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -101,6 +105,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.delete(
     '/api/projects/:projectId/component-parts/:id',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
@@ -116,6 +121,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:projectId/component-parts/:id/export/fzpz',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
@@ -145,6 +151,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts/import/fzpz',
+    requireProjectOwnership,
     payloadLimit(5 * 1024 * 1024),
     asyncHandler(async (req, res) => {
       let buffer: Buffer;
@@ -188,6 +195,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts/:id/import/svg',
+    requireProjectOwnership,
     payloadLimit(2 * 1024 * 1024),
     asyncHandler(async (req, res) => {
       const svgContent = typeof req.body === 'string' ? req.body : '';
@@ -313,6 +321,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts/:id/drc',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
@@ -352,6 +361,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts/ai/generate',
+    requireProjectOwnership,
     payloadLimit(5 * 1024 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -384,6 +394,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts/:id/ai/modify',
+    requireProjectOwnership,
     payloadLimit(64 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -426,6 +437,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts/:id/ai/extract',
+    requireProjectOwnership,
     payloadLimit(10 * 1024 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -450,6 +462,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts/:id/ai/suggest',
+    requireProjectOwnership,
     payloadLimit(16 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
@@ -476,6 +489,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.post(
     '/api/projects/:projectId/component-parts/:id/ai/extract-pins',
+    requireProjectOwnership,
     payloadLimit(10 * 1024 * 1024),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);

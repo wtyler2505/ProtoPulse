@@ -150,4 +150,6 @@ export interface ToolDefinition<TSchema extends ZodRawShape = ZodRawShape> {
   requiresConfirmation: boolean;
   /** Hint for multi-model routing — suggests which model tier is best for this tool. */
   modelPreference?: ModelTier;
+  /** Permission tier for access control — defaults to `'destructive'` when requiresConfirmation is true, `'suggest'` otherwise. */
+  permissionTier?: PermissionTier;
 }

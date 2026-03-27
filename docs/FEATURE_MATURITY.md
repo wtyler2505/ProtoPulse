@@ -139,32 +139,32 @@ This does not mean they are low quality. Many are well-engineered, well-tested, 
 | Token-aware history truncation | Production | Prevents context overflow. |
 | View-aware prompt optimization | Production | Reduces prompt size for non-active views. |
 | Error handling | Production | 6 error categories, secret redaction, user-friendly messages. |
-| Custom system prompt | Functional | Users can inject arbitrary instructions without sanitization (CORE-05 HIGH). |
+| Custom system prompt | Production | Sanitized: markdown headings and code fences stripped, wrapped in `<user-instructions>` tags with safety note (P2 fix). |
 
 ### Agent Loop
 
 | Feature | Maturity | Notes |
 |---------|----------|-------|
 | POST /api/projects/:id/agent SSE | Functional | Multi-turn tool-use loop works. P0 fixes added timeout, maxSteps, concurrency controls. |
-| Auto-confirmation of destructive ops | **Aspirational** | Agent hardcodes `confirmed: true` (AI-RT-03 CRITICAL) — destructive tools execute without user consent. The UI implies user control that does not exist in agent mode. |
-| maxSteps enforcement | Stub | Parsed from request but never checked in the loop (AI-RT-11 HIGH). |
+| Destructive tool confirmation | Production | Agent uses `confirmed: false` — destructive tools rejected by registry (P0 fix). |
+| maxSteps enforcement | Production | Enforced in stream loop with `complete` event on limit (P0 fix). |
 
 ### Circuit AI (generate / review / analyze)
 
 | Feature | Maturity | Notes |
 |---------|----------|-------|
-| Circuit generation from description | Functional | Works end-to-end but has zero auth (AI-RT-01 CRITICAL), no rate limiting (AI-RT-09 HIGH), no transaction wrapping (AI-RT-05 CRITICAL). |
-| Circuit review | Functional | Same auth/rate-limit gaps. |
-| Circuit analysis | Functional | Same auth/rate-limit gaps. |
+| Circuit generation from description | Production | Auth (requireCircuitOwnership), rate limiting (5/min), compensating transaction all added (P0 fix). |
+| Circuit review | Production | Auth + rate limiting added (P0 fix). |
+| Circuit analysis | Production | Auth + rate limiting added (P0 fix). |
 
 ### Genkit Integration
 
 | Feature | Maturity | Notes |
 |---------|----------|-------|
-| Genkit -> Gemini bridge | Functional | Works but imports internal Genkit module path (CORE-01 CRITICAL — will break on upgrade). |
-| Tool double-execution guard | Partial | Streaming fallback re-executes tools Genkit already ran (CORE-02 HIGH). |
+| Genkit -> Gemini bridge | Production | Internal module import removed, uses public API only (P1 fix). |
+| Tool double-execution guard | Production | Destructive tools skipped in streaming fallback (P1 fix). |
 | Output validation | Stub | All tool output schemas are `z.any()` (CORE-04 HIGH). |
-| Standalone Genkit flows | Stub | 4 POC flows with stale model IDs, mock pricing tool, hardcoded `projectId: 1`. |
+| Standalone Genkit flows | Partial | 4 POC flows dev-gated. Mock pricing tool removed, projectId from context not model input (P0+P2 fixes). |
 | Model routing | Partial | Gemini fast/standard tiers use identical model (`gemini-2.5-flash` for both) (CORE-06 HIGH). |
 
 ---

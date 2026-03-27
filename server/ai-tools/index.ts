@@ -10,6 +10,7 @@ export type {
   ToolResult,
   ToolContext,
   ModelTier,
+  PermissionTier,
   ToolDefinition,
 } from './types';
 
@@ -60,4 +61,6 @@ function createRegistry(): ToolRegistry {
 export const toolRegistry = createRegistry();
 
 /** List of tool names that require user confirmation before execution. */
-export const DESTRUCTIVE_TOOLS = toolRegistry.getDestructiveTools();
+export const DESTRUCTIVE_TOOLS = toolRegistry.getAll()
+  .filter((t) => t.requiresConfirmation || t.permissionTier === 'destructive')
+  .map((t) => t.name);

@@ -682,15 +682,15 @@ These are not all proven broken. They are areas that still warrant active suspic
 
 ### Must-fix
 - [x] full repo typecheck completes cleanly (fixed: added `--max-old-space-size=4096` to `check` script — Wave 156)
-- [ ] route ownership matrix re-audited after recent hardening
+- [x] route ownership matrix re-audited after recent hardening (fixed: added requireProjectOwnership to 16 component/project-member endpoints, requireCircuitOwnership to 2 netlist endpoints — audit-sweep)
 - [ ] all primary workspace tabs covered by current live smoke tests
-- [ ] stale backup/temporary source files removed from app tree
+- [x] stale backup/temporary source files removed from app tree (Wave 157)
 
 ### Should-fix
 - [ ] break up the top 10 largest production files
 - [ ] add tab/route matrix browser tests
-- [ ] classify feature maturity and truthfulness in UI
-- [ ] add stronger AI action permission boundaries
+- [x] classify feature maturity and truthfulness in UI (Wave 157 — see docs/FEATURE_MATURITY.md)
+- [x] add stronger AI action permission boundaries (Wave 157 — PermissionTier type system added)
 
 ### Nice-to-have
 - [ ] grouped tab modes

@@ -20,6 +20,8 @@ import type {
   ToolContext,
 } from './types';
 
+import { logger } from '../logger';
+
 /**
  * Central registry that stores, validates, executes, and serializes AI tools.
  *
@@ -134,6 +136,8 @@ export class ToolRegistry {
     }
 
     const tool = this.tools.get(toolName)!;
+    const tier = tool.permissionTier ?? (tool.requiresConfirmation ? 'destructive' : 'suggest');
+    logger.debug('ai:tool-execute', { name: toolName, tier });
 
     // Server-side enforcement: destructive tools require explicit user confirmation.
     // If the tool has requiresConfirmation=true and the context doesn't have confirmed=true,
