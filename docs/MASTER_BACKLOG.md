@@ -1049,10 +1049,10 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0300 | Step-by-step beginner learning path (zero to PCB) | PARTIAL | C4 | MF-033 |
+| BL-0300 | Step-by-step beginner learning path (zero to PCB) | DONE (Wave 155) | C4 | MF-033 |
 | BL-0301 | Guided "first PCB" interactive tutorial | DONE (Wave 111) | C3 | MF-035 |
 | BL-0302 | Lesson mode that locks UI to only needed controls | DONE (verified Wave 106) | C3 | MF-036 |
-| BL-0303 | Skill-level adaptive hints (beginner/intermediate/advanced) | PARTIAL | C3 | MF-038, IFX-066 |
+| BL-0303 | Skill-level adaptive hints (beginner/intermediate/advanced) | DONE (Wave 155) | C3 | MF-038, IFX-066 |
 | BL-0304 | Lab/assignment templates for educators | DONE (verified Wave 106) | C3 | MF-041 |
 | BL-0305 | Classroom mode — ClassroomManager with assignments, rubric grading, submissions, class stats, CSV export. 60+ tests. | DONE (Wave 150) | C5 | MF-042, IFX-067 |
 | BL-0306 | Interactive troubleshooting wizard for common mistakes | DONE (verified Wave 106) | C3 | MF-043, IFX-063 |
