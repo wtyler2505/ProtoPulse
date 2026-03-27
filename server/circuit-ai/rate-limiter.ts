@@ -1,21 +1,8 @@
 /**
- * Circuit AI — AI-assisted schematic generation and review
- *
- * Endpoints:
- *   POST /api/circuits/:id/ai/generate — generate schematic from description
- *   POST /api/circuits/:id/ai/review   — analyze schematic for issues
- *   POST /api/circuits/:id/ai/analyze  — AI circuit analysis (what-if, filter topology, power est.)
+ * Shared rate limiter for circuit-AI endpoints (5 req/min per IP, sliding window)
  */
 
-import type { Express, Request, Response, NextFunction } from 'express';
-import type { IStorage } from '../storage';
-import { registerCircuitAiGenerateRoute } from './generate';
-import { registerCircuitAiReviewRoute } from './review';
-import { registerCircuitAiAnalyzeRoute } from './analyze';
-
-// ---------------------------------------------------------------------------
-// Shared rate limiter for circuit-AI endpoints (5 req/min per IP)
-// ---------------------------------------------------------------------------
+import type { Request, Response, NextFunction } from 'express';
 
 const CIRCUIT_AI_RATE_WINDOW_MS = 60_000;
 const CIRCUIT_AI_RATE_MAX = 5;
@@ -60,10 +47,4 @@ export function circuitAiRateLimiter(req: Request, res: Response, next: NextFunc
 
   bucket.timestamps.push(now);
   next();
-}
-
-export function registerCircuitAIRoutes(app: Express, storage: IStorage): void {
-  registerCircuitAiGenerateRoute(app, storage);
-  registerCircuitAiReviewRoute(app, storage);
-  registerCircuitAiAnalyzeRoute(app, storage);
 }

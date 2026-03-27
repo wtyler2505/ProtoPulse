@@ -8,12 +8,12 @@ export const ai = genkit({
   plugins: [googleAI()],
 });
 
-// Dynamically convert all 88 legacy tools to Genkit tools
+// Dynamically convert all 125 tools to Genkit tools
 export const allGenkitTools = toolRegistry.getAll().map(toolDef => 
   ai.defineTool({
     name: toolDef.name,
     description: toolDef.description,
-    inputSchema: toolDef.parameters as any,
+    inputSchema: toolDef.parameters as z.ZodTypeAny,
     outputSchema: z.any() 
   }, async (input) => {
     // Access context from Genkit's current execution context
@@ -25,27 +25,31 @@ export const allGenkitTools = toolRegistry.getAll().map(toolDef =>
   })
 );
 
-// A real tool using Genkit's Zod-based tooling that hooks into the actual database
+// A real tool using Genkit's Zod-based tooling that hooks into the actual database.
+// projectId is read from the Genkit execution context (ToolContext), NOT from model input,
+// to prevent model-controlled cross-tenant data access (AI-RT-04).
 export const queryBomItemsTool = ai.defineTool({
   name: 'queryBomItems',
-  description: 'Fetch all items in the Bill of Materials to analyze costs, availability, or specifications. Uses PROJECT_ID = 1 by default.',
-  inputSchema: z.object({ projectId: z.number().optional().default(1) }),
-  outputSchema: z.array(z.any())
-}, async (input) => {
-  const items = await storage.getBomItems(input.projectId);
-  return items;
+  description: 'Fetch all items in the Bill of Materials to analyze costs, availability, or specifications.',
+  inputSchema: z.object({}),
+  outputSchema: z.array(z.unknown())
+}, async () => {
+  const ctx = ai.currentContext() as ToolContext;
+  if (!ctx?.projectId) {
+    throw new Error('queryBomItems: no project context available');
+  }
+  return await storage.getBomItems(ctx.projectId);
 });
 
-// A sample tool using Genkit's Zod-based tooling
+// DEV-ONLY MOCK — returns random pricing data. Do NOT use in production flows.
+// Kept for local testing of generateArduinoSketchFlow only.
 export const pricingLookupTool = ai.defineTool({
   name: 'pricingLookup',
-  description: 'Looks up the estimated price of a component part number',
+  description: '[DEV MOCK] Returns fake pricing data for a component part number. Not connected to real supplier APIs.',
   inputSchema: z.object({ partNumber: z.string() }),
   outputSchema: z.object({ price: z.number(), currency: z.string(), inStock: z.boolean() })
-}, async (input) => {
-  // In a real scenario, this would hit an API.
-  // We mock it for the POC.
-  return { price: Math.random() * 10, currency: "USD", inStock: true }; 
+}, async (_input) => {
+  return { price: Math.random() * 10, currency: 'USD', inStock: true };
 });
 
 // A proof-of-concept flow that takes an intent and uses Gemini via Genkit

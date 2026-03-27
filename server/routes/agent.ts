@@ -88,17 +88,45 @@ Call tools in this order. Be thorough — add realistic part numbers, manufactur
 When the design is complete, respond with a summary of what you created. Do not ask for clarification — make reasonable engineering decisions and explain them.
 Stop calling tools when the design is complete.`;
 
+// ---------------------------------------------------------------------------
+// Per-session concurrency guard (max 1 active agent stream per session)
+// ---------------------------------------------------------------------------
+
+const activeAgentSessions = new Set<string>();
+
+// ---------------------------------------------------------------------------
+// Absolute stream timeout (hard kill after 300 s regardless of activity)
+// ---------------------------------------------------------------------------
+
+const ABSOLUTE_AGENT_TIMEOUT_MS = 300_000;
+
+function agentConcurrencyGuard(req: Request, res: Response, next: NextFunction): void {
+  const sessionId = req.headers['x-session-id'] as string | undefined;
+  if (!sessionId) {
+    res.status(401).json({ message: 'Authentication required' });
+    return;
+  }
+  if (activeAgentSessions.has(sessionId)) {
+    res.status(429).json({ message: 'An agent session is already active for this session' });
+    return;
+  }
+  next();
+}
+
 export const _agentInternals = {
   agentRateBuckets,
   AGENT_RATE_WINDOW_MS,
   AGENT_RATE_MAX,
   AGENT_SYSTEM_PROMPT,
+  activeAgentSessions,
+  ABSOLUTE_AGENT_TIMEOUT_MS,
 };
 
 export function registerAgentRoutes(app: Express): void {
   app.post(
     '/api/projects/:id/agent',
     requireProjectOwnership,
+    agentConcurrencyGuard,
     agentRateLimiter,
     asyncHandler(async (req: Request, res: Response) => {
       const projectId = parseIdParam(req.params.id);
@@ -131,25 +159,37 @@ export function registerAgentRoutes(app: Express): void {
       res.setHeader('X-Accel-Buffering', 'no');
       res.flushHeaders();
 
+      // --- Per-session concurrency: register this session ---
+      const sessionId = req.headers['x-session-id'] as string | undefined;
+      if (sessionId) {
+        activeAgentSessions.add(sessionId);
+      }
+
+      // --- Absolute timeout: 300 s hard cap ---
+      const abortController = new AbortController();
+      const timeoutHandle = setTimeout(() => {
+        abortController.abort();
+      }, ABSOLUTE_AGENT_TIMEOUT_MS);
+
       let closed = false;
       req.on('close', () => { closed = true; });
 
       const heartbeatInterval = setInterval(() => {
-        if (!closed) res.write(':heartbeat\n\n');
+        if (!closed) {
+          res.write(':heartbeat\n\n');
+        }
       }, 15_000);
 
       const sendEvent = (event: AgentSSEEvent): void => {
-        if (!closed) res.write(`data: ${JSON.stringify(event)}\n\n`);
+        if (!closed) {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        }
       };
 
-      const toolContext: ToolContext = { projectId, storage, confirmed: true };
-      
+      const toolContext: ToolContext = { projectId, storage, confirmed: false };
+
       try {
         const { ai, allGenkitTools } = await import('../genkit');
-
-        // Note: we can let Genkit handle the multi-turn execution natively
-        // using returnToolRequests: false (the default), but we want to intercept tool calls for SSE.
-        // Genkit's generateStream emits chunk.toolRequests.
 
         sendEvent({ step: 1, type: 'thinking', message: `Step 1: Orchestrating design via ${model}...` });
 
@@ -170,14 +210,32 @@ export function registerAgentRoutes(app: Express): void {
         let step = 1;
 
         for await (const chunk of stream) {
-          if (closed) break;
-          
+          if (closed || abortController.signal.aborted) {
+            break;
+          }
+
+          // --- Enforce maxSteps: break with 'complete' event when limit reached ---
+          if (step >= maxSteps) {
+            sendEvent({
+              step,
+              type: 'complete',
+              message: `Reached maximum steps (${String(maxSteps)})`,
+              summary: fullText || 'Design agent reached step limit.',
+              stepsUsed: step,
+            });
+            break;
+          }
+
           if (chunk.text) {
             fullText += chunk.text;
           }
 
           if (chunk.toolRequests && chunk.toolRequests.length > 0) {
             for (const toolReq of chunk.toolRequests) {
+              if (step >= maxSteps) {
+                break;
+              }
+
               sendEvent({
                 step,
                 type: 'tool_call',
@@ -185,8 +243,6 @@ export function registerAgentRoutes(app: Express): void {
                 toolName: toolReq.toolRequest.name,
               });
 
-              // We simulate the tool execution event for the UI.
-              // Genkit handles the actual background execution.
               sendEvent({
                 step,
                 type: 'tool_result',
@@ -194,27 +250,37 @@ export function registerAgentRoutes(app: Express): void {
                 toolName: toolReq.toolRequest.name,
                 result: { success: true, message: 'Done', data: {} },
               });
-              
+
               step++;
             }
           }
         }
 
-        const finalResponse = await response;
-        
-        sendEvent({
-          step,
-          type: 'text',
-          message: finalResponse.text || fullText
-        });
-        
-        sendEvent({
-          step,
-          type: 'complete',
-          message: 'Design complete',
-          summary: finalResponse.text || 'Design agent finished.',
-          stepsUsed: step,
-        });
+        // If we broke out due to abort timeout, send error event
+        if (abortController.signal.aborted) {
+          sendEvent({
+            step,
+            type: 'error',
+            message: 'Agent session timed out after 300 seconds',
+          });
+        } else if (!closed && step < maxSteps) {
+          // Normal completion — only emit if we didn't already emit a maxSteps complete
+          const finalResponse = await response;
+
+          sendEvent({
+            step,
+            type: 'text',
+            message: finalResponse.text || fullText
+          });
+
+          sendEvent({
+            step,
+            type: 'complete',
+            message: 'Design complete',
+            summary: finalResponse.text || 'Design agent finished.',
+            stepsUsed: step,
+          });
+        }
 
       } catch (error: unknown) {
         const { userMessage } = categorizeError(error);
@@ -225,7 +291,11 @@ export function registerAgentRoutes(app: Express): void {
           message: userMessage,
         });
       } finally {
+        clearTimeout(timeoutHandle);
         clearInterval(heartbeatInterval);
+        if (sessionId) {
+          activeAgentSessions.delete(sessionId);
+        }
         if (!closed) {
           closed = true;
           res.end();

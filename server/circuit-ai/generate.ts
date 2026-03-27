@@ -7,6 +7,8 @@ import type { IStorage } from '../storage';
 import type { ComponentPart } from '@shared/schema';
 import type { Connector, PartMeta } from '@shared/component-types';
 import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
+import { requireCircuitOwnership } from '../routes/auth-middleware';
+import { circuitAiRateLimiter } from './index';
 import { categorizeError, redactSecrets } from '../ai';
 import { fromZodError } from 'zod-validation-error';
 import { logger } from '../logger';
