@@ -153,7 +153,7 @@ describe('AuthProvider session resilience', () => {
     expect(screen.getByTestId('session').textContent).toBe('null');
   });
 
-  it('clears session on HTTP 500 (non-network, non-auth error)', async () => {
+  it('keeps session but marks reconnecting on HTTP 500', async () => {
     localStorage.setItem('protopulse-session-id', 'server-error-session');
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
       new Response('Internal Server Error', { status: 500 }),
@@ -164,8 +164,9 @@ describe('AuthProvider session resilience', () => {
     await waitFor(() => {
       expect(screen.getByTestId('loading').textContent).toBe('false');
     });
-    expect(screen.getByTestId('user').textContent).toBe('null');
-    expect(screen.getByTestId('session').textContent).toBe('null');
+    // Session preserved — server errors are transient, not auth failures
+    expect(screen.getByTestId('session').textContent).toBe('server-error-session');
+    expect(screen.getByTestId('connection').textContent).toMatch(/reconnecting|offline/);
   });
 
   it('marks offline when navigator.onLine is false', async () => {
