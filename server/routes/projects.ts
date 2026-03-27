@@ -28,6 +28,7 @@ export function registerProjectRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:id',
+    requireProjectOwnership,
     setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const project = await storage.getProject(parseIdParam(req.params.id));

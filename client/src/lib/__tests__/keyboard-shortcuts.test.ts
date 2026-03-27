@@ -1,7 +1,10 @@
+import { renderHook } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   KeyboardShortcutManager,
   DEFAULT_SHORTCUTS,
+  isEditableShortcutTarget,
+  shouldIgnoreKeyboardShortcut,
   useKeyboardShortcuts,
 } from '../keyboard-shortcuts';
 import type { KeyCombo } from '../keyboard-shortcuts';
@@ -367,5 +370,63 @@ describe('useKeyboardShortcuts', () => {
 
   it('is a function', () => {
     expect(typeof useKeyboardShortcuts).toBe('function');
+  });
+
+  it('detects editable shortcut targets', () => {
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = '<div contenteditable="true"><span id="child">edit me</span></div>';
+    document.body.appendChild(wrapper);
+
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+
+    const child = document.getElementById('child');
+    expect(isEditableShortcutTarget(textarea)).toBe(true);
+    expect(isEditableShortcutTarget(child)).toBe(true);
+    expect(isEditableShortcutTarget(document.body)).toBe(false);
+
+    wrapper.remove();
+    textarea.remove();
+  });
+
+  it('ignores shortcuts when the active element is editable even if the event target is not', () => {
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.focus();
+
+    const event = new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true });
+    expect(shouldIgnoreKeyboardShortcut(event)).toBe(true);
+
+    textarea.remove();
+  });
+
+  it('does not fire handlers when focus remains in a textarea', () => {
+    const onSave = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ save: onSave }));
+
+    const textarea = document.createElement('textarea');
+    document.body.appendChild(textarea);
+    textarea.focus();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+
+    expect(onSave).not.toHaveBeenCalled();
+
+    textarea.remove();
+  });
+
+  it('still fires handlers when focus is outside editable elements', () => {
+    const onSave = vi.fn();
+    renderHook(() => useKeyboardShortcuts({ save: onSave }));
+
+    const button = document.createElement('button');
+    document.body.appendChild(button);
+    button.focus();
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true }));
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+
+    button.remove();
   });
 });

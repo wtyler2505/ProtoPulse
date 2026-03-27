@@ -57,7 +57,9 @@ app.use(helmet({
     reportOnly: isDev,
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'wasm-unsafe-eval'"],
+      scriptSrc: isDev
+        ? ["'self'", "'unsafe-inline'", "'wasm-unsafe-eval'", "blob:"]
+        : ["'self'", "'wasm-unsafe-eval'"],
       // CSP Level 3 granular style directives:
       // - style-src-elem: nonce-based for <style> elements (blocks injected <style> without nonce)
       // - style-src-attr: 'unsafe-inline' for inline style="" attributes (required by Radix UI
@@ -66,27 +68,30 @@ app.use(helmet({
       //   directives — they fall back to style-src which permits inline styles.
       //   Browsers that DO support style-src-elem/style-src-attr ignore style-src for those cases.
       'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      'style-src-elem': [
-        "'self'",
-        "https://fonts.googleapis.com",
-        // Helmet types res as http.ServerResponse but Express passes its Response with locals.
-        // Cast through Express.Locals so a cspNonce rename triggers a compile error here too.
-        (_req: IncomingMessage, res: ServerResponse) => {
-          const locals = (res as unknown as { locals: Express.Locals }).locals;
-          return `'nonce-${locals.cspNonce}'`;
-        },
-      ],
+      'style-src-elem': isDev
+        ? ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"]
+        : [
+            "'self'",
+            "https://fonts.googleapis.com",
+            // Helmet types res as http.ServerResponse but Express passes its Response with locals.
+            // Cast through Express.Locals so a cspNonce rename triggers a compile error here too.
+            (_req: IncomingMessage, res: ServerResponse) => {
+              const locals = (res as unknown as { locals: Express.Locals }).locals;
+              return `'nonce-${locals.cspNonce}'`;
+            },
+          ],
       'style-src-attr': ["'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       connectSrc: isDev
-        ? ["'self'", "ws://localhost:*", "ws://127.0.0.1:*", "http://localhost:*"]
+        ? ["'self'", "ws://localhost:*", "ws://127.0.0.1:*", "http://localhost:*", "http://127.0.0.1:*"]
         : ["'self'"],
       frameSrc: ["'none'"],
       workerSrc: ["'self'", "blob:"],
       frameAncestors: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
+      'upgrade-insecure-requests': isDev ? null : [],
     },
   },
   crossOriginEmbedderPolicy: false,

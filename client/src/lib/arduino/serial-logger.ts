@@ -6,6 +6,13 @@ export interface SerialLogEntry {
   data: string;
 }
 
+export interface SerialLoggerSnapshot {
+  recording: boolean;
+  size: number;
+  filename?: string;
+  hasData: boolean;
+}
+
 const MAX_RECORDING_DURATION_MS = 60 * 60 * 1000; // 1 hour
 
 export class SerialLogger {
@@ -17,6 +24,12 @@ export class SerialLogger {
   private _filename?: string;
   private _listeners = new Set<() => void>();
   private _durationTimer?: ReturnType<typeof setTimeout>;
+  private _snapshot: SerialLoggerSnapshot = {
+    recording: false,
+    size: 0,
+    filename: undefined,
+    hasData: false,
+  };
 
   // Private constructor for singleton pattern; use create() for fresh instances
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -40,20 +53,19 @@ export class SerialLogger {
     inst._filename = undefined;
     inst._listeners = new Set();
     inst._durationTimer = undefined;
+    inst._snapshot = {
+      recording: false,
+      size: 0,
+      filename: undefined,
+      hasData: false,
+    };
     // Arrow function class fields are assigned in constructor, so we must
     // manually bind them for instances created via Object.create.
     inst.subscribe = (listener: () => void) => {
       inst._listeners.add(listener);
       return () => inst._listeners.delete(listener);
     };
-    inst.getSnapshot = () => {
-      return {
-        recording: inst._recording,
-        size: inst._size,
-        filename: inst._filename,
-        hasData: inst._entries.length > 0,
-      };
-    };
+    inst.getSnapshot = () => inst._snapshot;
     return inst;
   }
 
@@ -62,14 +74,16 @@ export class SerialLogger {
     return () => this._listeners.delete(listener);
   };
 
-  getSnapshot = () => {
-    return {
+  getSnapshot = () => this._snapshot;
+
+  private refreshSnapshot(): void {
+    this._snapshot = {
       recording: this._recording,
       size: this._size,
       filename: this._filename,
       hasData: this._entries.length > 0,
     };
-  };
+  }
 
   private notify() {
     this._listeners.forEach((listener) => {
@@ -87,6 +101,7 @@ export class SerialLogger {
     this._startTime = Date.now();
     this._entries = [];
     this._size = 0;
+    this.refreshSnapshot();
 
     // Auto-stop after 1 hour to prevent unbounded memory growth
     this._durationTimer = setTimeout(() => {
@@ -107,6 +122,7 @@ export class SerialLogger {
       clearTimeout(this._durationTimer);
       this._durationTimer = undefined;
     }
+    this.refreshSnapshot();
     this.notify();
     return this.getRecordedData();
   }
@@ -130,6 +146,7 @@ export class SerialLogger {
     });
 
     this._size += byteSize;
+    this.refreshSnapshot();
     this.notify();
   }
 
@@ -191,6 +208,7 @@ export class SerialLogger {
   clear(): void {
     this._entries = [];
     this._size = 0;
+    this.refreshSnapshot();
     this.notify();
   }
 
@@ -201,6 +219,7 @@ export class SerialLogger {
     this._entries = [];
     this._size = 0;
     this._filename = undefined;
+    this.refreshSnapshot();
     this.notify();
   }
 }

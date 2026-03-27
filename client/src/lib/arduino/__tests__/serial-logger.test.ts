@@ -159,6 +159,19 @@ describe('SerialLogger', () => {
     expect(listener).toHaveBeenCalledTimes(3);
   });
 
+  it('getSnapshot is referentially stable until state changes', () => {
+    const snap1 = logger.getSnapshot();
+    const snap2 = logger.getSnapshot();
+    expect(snap2).toBe(snap1);
+
+    logger.startRecording();
+    const snap3 = logger.getSnapshot();
+    expect(snap3).not.toBe(snap1);
+
+    const snap4 = logger.getSnapshot();
+    expect(snap4).toBe(snap3);
+  });
+
   // -----------------------------------------------------------------------
   // Download
   // -----------------------------------------------------------------------

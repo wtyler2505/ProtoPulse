@@ -26,7 +26,10 @@ export function requireProjectOwnership(req: Request, res: Response, next: NextF
     return;
   }
 
-  const projectIdRaw = req.params.id ?? req.params.projectId;
+  // Prefer the explicit projectId param when both are present.
+  // Routes like /api/projects/:projectId/circuits/:id use :id for a circuit id,
+  // not the project id.
+  const projectIdRaw = req.params.projectId ?? req.params.id;
   const projectId = Number(projectIdRaw);
   if (!Number.isFinite(projectId)) {
     next(new HttpError('Invalid project id', 400));

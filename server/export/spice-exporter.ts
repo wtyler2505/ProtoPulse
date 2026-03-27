@@ -153,6 +153,16 @@ function resolvePinNet(
 // Component SPICE line generators
 // ---------------------------------------------------------------------------
 
+
+
+function sanitizeSpiceToken(val: unknown): string {
+  if (val == null) return '';
+  // Strip newlines, carriage returns, and control characters to prevent SPICE directive injection
+  const str = String(val).replace(/[\r\n\x00-\x1F]+/g, ' ').trim();
+  // Allow alphanumeric, basic symbols for values/names, drop potentially executable shell sequences
+  // We keep space because some models/types might be separated by space
+  return str.replace(/[^a-zA-Z0-9_:.+\- ]/g, '');
+}
 function getFamily(part: ComponentPart): string {
   const meta = (part.meta ?? {}) as Partial<PartMeta>;
   return (meta.family || '').toLowerCase().trim();
@@ -198,21 +208,21 @@ function generateComponentLine(
 
   switch (family) {
     case 'resistor': {
-      const value = props.value || props.resistance || '1k';
+      const value = sanitizeSpiceToken(props.value || props.resistance || '1k');
       const n1 = node(connectors[0]?.id || 'pin1');
       const n2 = node(connectors[1]?.id || 'pin2');
       return { line: `R${refDes.replace(/^R/i, '')} ${n1} ${n2} ${value}` };
     }
 
     case 'capacitor': {
-      const value = props.value || props.capacitance || '100n';
+      const value = sanitizeSpiceToken(props.value || props.capacitance || '100n');
       const n1 = node(connectors[0]?.id || 'pin1');
       const n2 = node(connectors[1]?.id || 'pin2');
       return { line: `C${refDes.replace(/^C/i, '')} ${n1} ${n2} ${value}` };
     }
 
     case 'inductor': {
-      const value = props.value || props.inductance || '10u';
+      const value = sanitizeSpiceToken(props.value || props.inductance || '10u');
       const n1 = node(connectors[0]?.id || 'pin1');
       const n2 = node(connectors[1]?.id || 'pin2');
       return { line: `L${refDes.replace(/^L/i, '')} ${n1} ${n2} ${value}` };
@@ -220,33 +230,33 @@ function generateComponentLine(
 
     case 'diode':
     case 'led': {
-      const modelName = props.model || `D_${refDes}`;
+      const modelName = sanitizeSpiceToken(props.model) || `D_${refDes}`;
       const anode = findConnector(connectors, 'anode', 'A', 'pin1') || connectors[0];
       const cathode = findConnector(connectors, 'cathode', 'K', 'C', 'pin2') || connectors[1];
       const n1 = node(anode.id);
       const n2 = node(cathode.id);
       return {
         line: `D${refDes.replace(/^D/i, '')} ${n1} ${n2} ${modelName}`,
-        model: `.MODEL ${modelName} D(IS=${props.Is || '1e-14'} N=${props.N || '1'})`,
+        model: `.MODEL ${modelName} D(IS=${sanitizeSpiceToken(props.Is) || '1e-14'} N=${sanitizeSpiceToken(props.N) || '1'})`,
       };
     }
 
     case 'transistor':
     case 'bjt': {
-      const type = (props.type || 'NPN').toUpperCase();
-      const modelName = props.model || `Q_${refDes}`;
+      const type = (sanitizeSpiceToken(props.type) || 'NPN').toUpperCase();
+      const modelName = sanitizeSpiceToken(props.model) || `Q_${refDes}`;
       const c = findConnector(connectors, 'collector', 'C', 'pin1') || connectors[0];
       const b = findConnector(connectors, 'base', 'B', 'pin2') || connectors[1];
       const e = findConnector(connectors, 'emitter', 'E', 'pin3') || connectors[2];
       return {
         line: `Q${refDes.replace(/^Q/i, '')} ${node(c.id)} ${node(b.id)} ${node(e.id)} ${modelName}`,
-        model: `.MODEL ${modelName} ${type}(BF=${props.BF || '100'} IS=${props.Is || '1e-14'})`,
+        model: `.MODEL ${modelName} ${type}(BF=${sanitizeSpiceToken(props.BF) || '100'} IS=${sanitizeSpiceToken(props.Is) || '1e-14'})`,
       };
     }
 
     case 'mosfet': {
-      const type = (props.type || 'NMOS').toUpperCase();
-      const modelName = props.model || `M_${refDes}`;
+      const type = (sanitizeSpiceToken(props.type) || 'NMOS').toUpperCase();
+      const modelName = sanitizeSpiceToken(props.model) || `M_${refDes}`;
       const d = findConnector(connectors, 'drain', 'D', 'pin1') || connectors[0];
       const g = findConnector(connectors, 'gate', 'G', 'pin2') || connectors[1];
       const s = findConnector(connectors, 'source', 'S', 'pin3') || connectors[2];

@@ -29,6 +29,7 @@ import {
   FlaskConical,
   PenTool,
   Lightbulb,
+  ClipboardList,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -62,6 +63,7 @@ export const navItems: NavItem[] = [
   { icon: Lightbulb, view: 'starter_circuits', label: 'Starter Circuits' },
   { icon: GraduationCap, view: 'labs', label: 'Labs' },
   { icon: History, view: 'design_history', label: 'History' },
+  { icon: ClipboardList, view: 'audit_trail', label: 'Audit Trail' },
   { icon: HeartPulse, view: 'lifecycle', label: 'Lifecycle' },
   { icon: MessageSquare, view: 'comments', label: 'Comments' },
   { icon: Wand2, view: 'generative_design', label: 'Generative' },
@@ -81,6 +83,7 @@ export const tabDescriptions: Record<string, string> = {
   procurement: 'Manage bill of materials and sourcing',
   validation: 'Run design rule checks',
   design_history: 'Architecture snapshot history and visual diff',
+  audit_trail: 'Detailed audit log of design and workflow changes',
   lifecycle: 'Component lifecycle tracking and supply chain risk',
   comments: 'Design review comments and discussions',
   calculators: 'Electronics engineering calculators',
@@ -118,10 +121,10 @@ export const alwaysVisibleIds = new Set<ViewMode>([
   'generative_design',
   'digital_twin',
   'design_history',
+  'audit_trail',
   'lifecycle',
   'comments',
   'output',
   'starter_circuits',
   'labs',
 ]);
-

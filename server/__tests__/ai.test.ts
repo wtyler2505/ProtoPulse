@@ -301,6 +301,24 @@ describe('categorizeError', () => {
 
     expect(result.code).toBe('RATE_LIMITED');
   });
+
+  it('categorizes schema validation errors as MODEL_ERROR without echoing the raw payload', () => {
+    const result = categorizeError({
+      message: 'INVALID_ARGUMENT: Schema validation failed. Parse Errors: messages.2.role: must be equal to one of the allowed values',
+    });
+
+    expect(result.code).toBe('MODEL_ERROR');
+    expect(result.userMessage).not.toContain('messages.2.role');
+    expect(result.userMessage).toContain('Invalid request sent to the AI provider');
+  });
+
+  it('truncates oversized unknown errors', () => {
+    const result = categorizeError({ message: `prefix ${'x'.repeat(400)}` });
+
+    expect(result.code).toBe('UNKNOWN');
+    expect(result.userMessage.length).toBeLessThanOrEqual(260);
+    expect(result.userMessage.endsWith('...')).toBe(true);
+  });
 });
 
 // =============================================================================

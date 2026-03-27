@@ -59,7 +59,7 @@ import {
   WIRE_COLOR_PRESETS as MODEL_WIRE_COLOR_PRESETS,
   type ComponentPlacement,
 } from '@/lib/circuit-editor/breadboard-model';
-import type { CircuitDesignRow, CircuitWireRow, ComponentPart } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 import { formatSIValue } from '@/lib/simulation/visual-state';
 import type { WireVisualState } from '@/lib/simulation/visual-state';
 import { useCanvasAnnouncer } from '@/lib/use-canvas-announcer';
@@ -77,6 +77,45 @@ interface WireInProgress {
   points: PixelPos[];
   coordPath: BreadboardCoord[];
   color: string;
+}
+
+interface AutoPlacementPlan {
+  id: number;
+  breadboardX: number;
+  breadboardY: number;
+}
+
+function buildAutoPlacementTemplate(inst: CircuitInstanceRow, part?: ComponentPart): ComponentPlacement {
+  const meta = (part?.meta as Record<string, unknown> | null) ?? null;
+  const properties = (inst.properties as Record<string, unknown> | null) ?? null;
+  const rawType = String(meta?.type ?? properties?.type ?? '').toLowerCase();
+  const pinCount = (part?.connectors as unknown[])?.length ?? 2;
+  const isDipLike = rawType === 'ic' || rawType === 'mcu' || inst.referenceDesignator.startsWith('U');
+  const rowSpan = isDipLike ? Math.max(2, Math.ceil(pinCount / 2)) : Math.max(1, Math.ceil(pinCount / 2));
+
+  return {
+    refDes: inst.referenceDesignator,
+    startCol: isDipLike ? 'e' : 'a',
+    startRow: 1,
+    rowSpan,
+    crossesChannel: isDipLike,
+  };
+}
+
+function findAutoPlacement(
+  template: ComponentPlacement,
+  existingPlacements: ComponentPlacement[],
+): ComponentPlacement | null {
+  const maxStartRow = BB.ROWS - template.rowSpan + 1;
+
+  for (let startRow = 1; startRow <= maxStartRow; startRow += 1) {
+    const candidate: ComponentPlacement = { ...template, startRow };
+    if (!checkCollision(candidate, existingPlacements)) {
+      return candidate;
+    }
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -239,6 +278,12 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const isPanning = useRef(false);
   const lastMouse = useRef<PixelPos>({ x: 0, y: 0 });
+  const autoPlacementRequests = useRef<Set<number>>(new Set());
+
+  const partsMap = useMemo(
+    () => new Map((parts ?? []).map((part: ComponentPart) => [part.id, part])),
+    [parts],
+  );
 
   // BB-01: Center the breadboard on mount
   useEffect(() => {
@@ -265,7 +310,6 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
   // Build ComponentPlacement for each placed instance (used by collision + drag-to-place)
   const instancePlacements = useMemo(() => {
     if (!instances) return [];
-    const partsMap = new Map((parts ?? []).map((p: ComponentPart) => [p.id, p]));
     const placements: Array<{ instanceId: number; placement: ComponentPlacement }> = [];
     for (const inst of instances) {
       if (inst.breadboardX == null || inst.breadboardY == null) continue;
@@ -292,7 +336,33 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
       });
     }
     return placements;
-  }, [instances, parts]);
+  }, [instances, partsMap]);
+
+  const autoPlacementPlans = useMemo((): AutoPlacementPlan[] => {
+    if (!instances || instances.length === 0) return [];
+
+    const plannedPlacements = instancePlacements.map(({ placement }) => placement);
+    const plans: AutoPlacementPlan[] = [];
+
+    for (const inst of instances) {
+      if (inst.breadboardX != null && inst.breadboardY != null) continue;
+
+      const part = inst.partId ? partsMap.get(inst.partId) : undefined;
+      const template = buildAutoPlacementTemplate(inst, part);
+      const placement = findAutoPlacement(template, plannedPlacements);
+      if (!placement) continue;
+
+      plannedPlacements.push(placement);
+      const anchor = coordToPixel({ type: 'terminal', col: placement.startCol, row: placement.startRow });
+      plans.push({
+        id: inst.id,
+        breadboardX: anchor.x,
+        breadboardY: anchor.y,
+      });
+    }
+
+    return plans;
+  }, [instances, instancePlacements, partsMap]);
 
   // Occupied points from placed instances
   const occupiedPoints = useMemo(() => {
@@ -305,12 +375,48 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
     return set;
   }, [instancePlacements]);
 
+  useEffect(() => {
+    if (!instances) return;
+
+    for (const inst of instances) {
+      if (inst.breadboardX != null && inst.breadboardY != null) {
+        autoPlacementRequests.current.delete(inst.id);
+      }
+    }
+
+    autoPlacementRequests.current.forEach((id) => {
+      if (!instances.some((inst) => inst.id === id)) {
+        autoPlacementRequests.current.delete(id);
+      }
+    });
+  }, [instances]);
+
+  useEffect(() => {
+    for (const plan of autoPlacementPlans) {
+      if (autoPlacementRequests.current.has(plan.id)) continue;
+
+      autoPlacementRequests.current.add(plan.id);
+      updateInstanceMutation.mutate(
+        {
+          circuitId,
+          id: plan.id,
+          breadboardX: plan.breadboardX,
+          breadboardY: plan.breadboardY,
+        },
+        {
+          onError: () => {
+            autoPlacementRequests.current.delete(plan.id);
+          },
+        },
+      );
+    }
+  }, [autoPlacementPlans, circuitId, updateInstanceMutation]);
+
   // BL-0594: Selected instance family detection for value swapping
   const selectedInstanceInfo = useMemo(() => {
     if (selectedInstanceId == null || !instances) return null;
     const inst = instances.find(i => i.id === selectedInstanceId);
     if (!inst) return null;
-    const partsMap = new Map((parts ?? []).map((p: ComponentPart) => [p.id, p]));
     const part = inst.partId ? partsMap.get(inst.partId) : undefined;
     const type = (part?.meta as Record<string, unknown>)?.type as string | undefined
       ?? (inst.properties as Record<string, unknown>)?.type as string | undefined;

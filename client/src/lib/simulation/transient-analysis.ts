@@ -564,6 +564,13 @@ export function runTransientAnalysis(config: TransientAnalysisConfig): Transient
     limits = DEFAULT_SIM_LIMITS,
   } = config;
 
+  if (tStep <= 0) {
+    throw new Error(`Invalid tStep: ${tStep}. Time step must be strictly positive.`);
+  }
+  if (tStop <= tStart) {
+    throw new Error(`Invalid time range: tStop (${tStop}) must be strictly greater than tStart (${tStart}).`);
+  }
+
   const { nodes, groundNode, components, sources } = circuit;
 
   // Build node index map: non-ground nodes get indices 0..N-1

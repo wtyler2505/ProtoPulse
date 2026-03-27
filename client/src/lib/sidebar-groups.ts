@@ -89,6 +89,7 @@ export const SIDEBAR_GROUPS: readonly SidebarGroup[] = [
       'kanban',
       'comments',
       'design_history',
+      'audit_trail',
     ],
   },
   {

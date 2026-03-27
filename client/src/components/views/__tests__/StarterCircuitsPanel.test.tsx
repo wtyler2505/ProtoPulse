@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import StarterCircuitsPanel from '../StarterCircuitsPanel';
+import { PENDING_STARTER_CIRCUIT_LAUNCH_KEY } from '@/lib/starter-circuit-launch';
 import {
   getAllStarterCircuits,
   getStarterCircuitsByCategory,
@@ -10,6 +11,14 @@ import {
   STARTER_DIFFICULTIES,
 } from '@shared/starter-circuits';
 import type { StarterCategory, StarterDifficulty } from '@shared/starter-circuits';
+
+const mockSetActiveView = vi.fn();
+
+vi.mock('@/lib/contexts/project-meta-context', () => ({
+  useProjectMeta: () => ({
+    setActiveView: mockSetActiveView,
+  }),
+}));
 
 // ---------------------------------------------------------------------------
 // Shared library unit tests
@@ -133,6 +142,8 @@ describe('StarterCircuitsPanel', () => {
       configurable: true,
     });
     mockWriteText.mockClear();
+    mockSetActiveView.mockClear();
+    sessionStorage.clear();
   });
 
   it('renders the panel with all circuits', () => {
@@ -317,7 +328,7 @@ describe('StarterCircuitsPanel', () => {
     expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
   });
 
-  it('open circuit button copies code to clipboard', () => {
+  it('open circuit button queues the sketch and switches to Arduino', () => {
     render(<StarterCircuitsPanel />);
     const firstCircuit = getAllStarterCircuits()[0];
     fireEvent.click(screen.getByTestId(`starter-expand-${firstCircuit.id}`));
@@ -325,7 +336,20 @@ describe('StarterCircuitsPanel', () => {
     const openBtn = screen.getByTestId(`starter-open-${firstCircuit.id}`);
     fireEvent.click(openBtn);
 
-    expect(mockWriteText).toHaveBeenCalledWith(firstCircuit.arduinoCode);
+    expect(mockWriteText).not.toHaveBeenCalled();
+    expect(mockSetActiveView).toHaveBeenCalledWith('arduino');
+
+    const queued = sessionStorage.getItem(PENDING_STARTER_CIRCUIT_LAUNCH_KEY);
+    expect(queued).not.toBeNull();
+
+    const parsed = JSON.parse(queued ?? '{}') as {
+      id?: string;
+      name?: string;
+      arduinoCode?: string;
+    };
+    expect(parsed.id).toBe(firstCircuit.id);
+    expect(parsed.name).toBe(firstCircuit.name);
+    expect(parsed.arduinoCode).toBe(firstCircuit.arduinoCode);
   });
 
   it('displays difficulty badge for each circuit', () => {

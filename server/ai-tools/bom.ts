@@ -147,7 +147,18 @@ export function registerBomTools(registry: ToolRegistry): void {
     category: 'bom',
     parameters: z.object({
       partNumber: z.string().min(1).describe('Part number of the item to update'),
-      updates: z.record(z.unknown()).describe('Map of field names to new values'),
+      updates: z
+        .object({
+          manufacturer: z.unknown().optional(),
+          description: z.unknown().optional(),
+          quantity: z.unknown().optional(),
+          unitPrice: z.unknown().optional(),
+          supplier: z.unknown().optional(),
+          status: z.unknown().optional(),
+          notes: z.unknown().optional(),
+        })
+        .passthrough()
+        .describe('Map of field names to new values'),
     }),
     requiresConfirmation: false,
     execute: async (params) => clientAction('update_bom_item', params),
@@ -243,7 +254,18 @@ export function registerBomTools(registry: ToolRegistry): void {
           'Component category: mcu, sensor, regulator, capacitor, resistor, inductor, connector, transistor, diode, opamp',
         ),
       specs: z
-        .record(z.string())
+        .object({
+          voltage: z.string().optional(),
+          package: z.string().optional(),
+          frequency: z.string().optional(),
+          current: z.string().optional(),
+          tolerance: z.string().optional(),
+          size: z.string().optional(),
+          interface: z.string().optional(),
+          temperatureRange: z.string().optional(),
+          mountingType: z.string().optional(),
+        })
+        .passthrough()
         .describe("Map of parameter names to values/ranges (e.g., voltage: '3.3V', package: 'QFP-48')"),
     }),
     requiresConfirmation: false,

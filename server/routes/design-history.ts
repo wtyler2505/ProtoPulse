@@ -29,10 +29,10 @@ export function registerDesignHistoryRoutes(app: Express): void {
     '/api/projects/:id/snapshots/:snapshotId',
     requireProjectOwnership,
     asyncHandler(async (req, res) => {
-      parseIdParam(req.params.id); // validate project id
+      const projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);
       const snapshot = await storage.getDesignSnapshot(snapshotId);
-      if (!snapshot) {
+      if (!snapshot || snapshot.projectId !== projectId) {
         return res.status(404).json({ message: 'Design snapshot not found' });
       }
       res.json(snapshot);
@@ -73,8 +73,12 @@ export function registerDesignHistoryRoutes(app: Express): void {
     '/api/projects/:id/snapshots/:snapshotId',
     requireProjectOwnership,
     asyncHandler(async (req, res) => {
-      parseIdParam(req.params.id); // validate project id
+      const projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);
+      const snapshot = await storage.getDesignSnapshot(snapshotId);
+      if (!snapshot || snapshot.projectId !== projectId) {
+        return res.status(404).json({ message: 'Design snapshot not found' });
+      }
       const deleted = await storage.deleteDesignSnapshot(snapshotId);
       if (!deleted) {
         return res.status(404).json({ message: 'Design snapshot not found' });
@@ -92,7 +96,7 @@ export function registerDesignHistoryRoutes(app: Express): void {
       const snapshotId = parseIdParam(req.params.snapshotId);
 
       const snapshot = await storage.getDesignSnapshot(snapshotId);
-      if (!snapshot) {
+      if (!snapshot || snapshot.projectId !== projectId) {
         return res.status(404).json({ message: 'Design snapshot not found' });
       }
 

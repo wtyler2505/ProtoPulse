@@ -9,7 +9,7 @@
  * connections, tips, and common mistakes.
  */
 
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   Search,
   Cpu,
@@ -622,17 +622,16 @@ function SnippetFormDialog({
     }
   }, []);
 
-  // Reset when dialog opens/closes or editSnippet changes
-  useState(() => { resetForm(editSnippet); });
-
-  // Use effect to reset form when dialog becomes open
-  // (useState initializer only runs once)
-  const handleOpenChange = useCallback((v: boolean) => {
-    if (v) {
+  // Keep the form in sync with the active dialog mode without mutating state during render.
+  useEffect(() => {
+    if (open) {
       resetForm(editSnippet);
     }
+  }, [editSnippet, open, resetForm]);
+
+  const handleOpenChange = useCallback((v: boolean) => {
     onOpenChange(v);
-  }, [editSnippet, onOpenChange, resetForm]);
+  }, [onOpenChange]);
 
   const handleSubmit = useCallback(() => {
     if (!name.trim()) {
@@ -659,8 +658,8 @@ function SnippetFormDialog({
     }
 
     onSave(input, editSnippet?.id);
-    onOpenChange(false);
-  }, [name, description, category, tagsInput, editSnippet, onSave, onOpenChange]);
+    handleOpenChange(false);
+  }, [name, description, category, tagsInput, editSnippet, onSave, handleOpenChange]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>

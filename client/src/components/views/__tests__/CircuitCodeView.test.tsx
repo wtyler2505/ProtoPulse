@@ -162,9 +162,17 @@ describe('CircuitCodeView', () => {
     expect(screen.getByTestId('preview-no-components')).toBeDefined();
   });
 
+  it('evaluates the starter template on initial mount', () => {
+    renderView();
+
+    expect(mockEvaluate).toHaveBeenCalledWith('// Starter template\nconst c = circuit(\'My Circuit\');\n');
+  });
+
   it('triggers debounced evaluation on code change', () => {
     vi.useFakeTimers();
     renderView();
+
+    expect(mockEvaluate).toHaveBeenCalledTimes(1);
 
     const textarea = screen.getByTestId('code-editor-textarea') as HTMLTextAreaElement;
 
@@ -172,8 +180,8 @@ describe('CircuitCodeView', () => {
       fireEvent.change(textarea, { target: { value: 'const c = circuit("test");' } });
     });
 
-    // Should not evaluate immediately (debounced)
-    expect(mockEvaluate).not.toHaveBeenCalled();
+    // Should not evaluate the changed code immediately (debounced)
+    expect(mockEvaluate).toHaveBeenCalledTimes(1);
 
     // Advance past debounce delay
     act(() => {
@@ -181,6 +189,7 @@ describe('CircuitCodeView', () => {
     });
 
     expect(mockEvaluate).toHaveBeenCalledWith('const c = circuit("test");');
+    expect(mockEvaluate).toHaveBeenCalledTimes(2);
 
     vi.useRealTimers();
   });

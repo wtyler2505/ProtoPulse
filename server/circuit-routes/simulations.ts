@@ -169,7 +169,14 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
     const circuits = await storage.getCircuitDesigns(projectId);
     if (circuits.length === 0) { return res.status(404).json({ message: 'No circuit designs found' }); }
 
-    const analysisType = (req.body.analysisType as string) || 'op';
+    const body = (req.body ?? {}) as Partial<{
+      analysisType: string;
+      transient: unknown;
+      ac: unknown;
+      dcSweep: unknown;
+      temperature: number;
+    }>;
+    const analysisType = body.analysisType || 'op';
     const data = await gatherCircuitData(storage, circuits[0].id);
     if (!data) { return res.status(404).json({ message: 'Circuit data not found' }); }
 
@@ -181,10 +188,10 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
       parts: data.parts,
       config: {
         analysis: analysisType as 'op' | 'tran' | 'ac' | 'dc',
-        transient: req.body.transient,
-        ac: req.body.ac,
-        dcSweep: req.body.dcSweep,
-        temperature: req.body.temperature,
+        transient: body.transient as { startTime: number; stopTime: number; timeStep: number } | undefined,
+        ac: body.ac as { startFreq: number; stopFreq: number; numPoints: number; sweepType: 'dec' | 'lin' | 'oct' } | undefined,
+        dcSweep: body.dcSweep as { sourceName: string; startValue: number; stopValue: number; stepValue: number } | undefined,
+        temperature: body.temperature,
       },
     });
 

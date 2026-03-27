@@ -41,6 +41,7 @@ interface EdgeData {
 interface ArchitectureState {
   nodes: Node[];
   edges: Edge[];
+  hasResolvedInitialGraph: boolean;
   setNodes: (nodes: Node[]) => void;
   setEdges: (edges: Edge[]) => void;
 
@@ -315,12 +316,14 @@ export function ArchitectureProvider({
 
   const nodes = nodesQuery.data ?? [];
   const edges = edgesQuery.data ?? [];
+  const hasResolvedInitialGraph = nodesQuery.isFetched || nodesQuery.isError;
   const canUndo = undoStack.length > 0;
   const canRedo = redoStack.length > 0;
 
   const contextValue = useMemo<ArchitectureState>(() => ({
     nodes,
     edges,
+    hasResolvedInitialGraph,
     setNodes,
     setEdges,
     selectedNodeId,
@@ -342,6 +345,7 @@ export function ArchitectureProvider({
   }), [
     nodes,
     edges,
+    hasResolvedInitialGraph,
     setNodes,
     setEdges,
     selectedNodeId,

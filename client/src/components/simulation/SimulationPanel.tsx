@@ -118,6 +118,23 @@ interface SimulationRun {
   params: AnalysisParams[AnalysisType];
 }
 
+type ApiAnalysisType = 'op' | 'tran' | 'ac' | 'dc';
+
+interface ApiSimulationTrace {
+  name: string;
+  unit: string;
+  data: number[];
+}
+
+interface ApiSimulationResponse {
+  success: boolean;
+  analysisType: ApiAnalysisType;
+  traces?: ApiSimulationTrace[];
+  nodeVoltages?: Record<string, number>;
+  branchCurrents?: Record<string, number>;
+  error?: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Value parser: "10k" -> 10000, "100u" -> 0.0001, etc.
 // ---------------------------------------------------------------------------
@@ -170,6 +187,147 @@ const ANALYSIS_TYPES: Array<{
   { id: 'ac', label: 'AC Analysis', description: 'Frequency-domain Bode plot', icon: TrendingUp },
   { id: 'dcsweep', label: 'DC Sweep', description: 'Sweep a source and measure responses', icon: ArrowUpDown },
 ];
+
+const TRACE_COLORS = ['#22d3ee', '#f97316', '#a855f7', '#84cc16', '#f43f5e', '#eab308'];
+
+function mapAnalysisTypeToApi(analysisType: AnalysisType): ApiAnalysisType {
+  switch (analysisType) {
+    case 'dcop':
+      return 'op';
+    case 'transient':
+      return 'tran';
+    case 'ac':
+      return 'ac';
+    case 'dcsweep':
+      return 'dc';
+  }
+}
+
+function resolveTransientTimeStepSeconds(params: TransientParams): number {
+  const explicitStep = params.timeStep.trim() ? parseValueWithUnit(params.timeStep) : NaN;
+  if (!Number.isNaN(explicitStep) && explicitStep > 0) {
+    return explicitStep;
+  }
+
+  const start = parseValueWithUnit(params.startTime) || 0;
+  const stop = parseValueWithUnit(params.stopTime);
+  const span = stop - start;
+  if (!Number.isNaN(span) && span > 0) {
+    return Math.max(span / 1000, 1e-9);
+  }
+
+  return 1e-6;
+}
+
+function buildSimulationPayload(
+  analysisType: AnalysisType,
+  currentParams: AnalysisParams[AnalysisType],
+  options?: { cornerMode?: 'random_extreme'; seed?: number },
+): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    analysisType: mapAnalysisTypeToApi(analysisType),
+  };
+
+  switch (analysisType) {
+    case 'dcop':
+      break;
+    case 'transient': {
+      const params = currentParams as TransientParams;
+      payload.transient = {
+        startTime: parseValueWithUnit(params.startTime) || 0,
+        stopTime: parseValueWithUnit(params.stopTime),
+        timeStep: resolveTransientTimeStepSeconds(params),
+      };
+      break;
+    }
+    case 'ac': {
+      const params = currentParams as ACParams;
+      payload.ac = {
+        startFreq: parseValueWithUnit(params.startFrequency),
+        stopFreq: parseValueWithUnit(params.stopFrequency),
+        numPoints: Math.max(1, Math.round(Number(params.pointsPerDecade) || 100)),
+        sweepType: 'dec',
+      };
+      break;
+    }
+    case 'dcsweep': {
+      const params = currentParams as DCSweepParams;
+      payload.dcSweep = {
+        sourceName: params.source,
+        startValue: parseValueWithUnit(params.startValue),
+        stopValue: parseValueWithUnit(params.stopValue),
+        stepValue: parseValueWithUnit(params.stepValue),
+      };
+      break;
+    }
+  }
+
+  if (options?.cornerMode) {
+    payload.cornerMode = options.cornerMode;
+  }
+  if (options?.seed !== undefined) {
+    payload.seed = options.seed;
+  }
+
+  return payload;
+}
+
+function normalizeSimulationResponse(
+  response: ApiSimulationResponse,
+  requestedAnalysisType: AnalysisType,
+): SimulationResult {
+  if (!response.success) {
+    throw new Error(response.error || 'Simulation failed');
+  }
+
+  if (requestedAnalysisType === 'dcop') {
+    const voltageRows = Object.entries(response.nodeVoltages ?? {}).map(([node, value]) => ({
+      node,
+      value,
+      unit: 'V',
+    }));
+    const currentRows = Object.entries(response.branchCurrents ?? {}).map(([node, value]) => ({
+      node,
+      value,
+      unit: 'A',
+    }));
+
+    return {
+      type: 'dcop',
+      rows: [...voltageRows, ...currentRows],
+    };
+  }
+
+  const traces = response.traces ?? [];
+  const [firstTrace, ...remainingTraces] = traces;
+  const xTrace = firstTrace && firstTrace.data.length > 1 ? firstTrace : null;
+  const yTraceSources = xTrace ? remainingTraces : traces;
+  const xValues = xTrace?.data ?? yTraceSources[0]?.data.map((_, index) => index) ?? [];
+
+  return {
+    type: 'waveform',
+    plotType:
+      requestedAnalysisType === 'ac'
+        ? 'bode'
+        : requestedAnalysisType === 'dcsweep'
+          ? 'dc-sweep'
+          : 'time',
+    traces: yTraceSources.map((trace, index) => ({
+      id: `${trace.name}-${index}`,
+      label: trace.name,
+      data: trace.data.map((y, pointIndex) => ({
+        x: xValues[pointIndex] ?? pointIndex,
+        y,
+      })),
+      color: TRACE_COLORS[index % TRACE_COLORS.length],
+      unit: trace.unit || (requestedAnalysisType === 'ac' ? 'dB' : 'V'),
+      visible: true,
+    })),
+    xLabel: xTrace?.name,
+    xUnit: xTrace?.unit,
+    title: ANALYSIS_TYPES.find((item) => item.id === requestedAnalysisType)?.label,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Default parameter factories
@@ -814,8 +972,13 @@ export default function SimulationPanel() {
   // Populate DC sweep source list from actual circuit instances
   const { data: circuits } = useCircuitDesigns(projectId);
   const firstCircuitId = circuits?.[0]?.id ?? 0;
-  const { data: circuitInstances } = useCircuitInstances(firstCircuitId);
+  const {
+    data: circuitInstances,
+    isLoading: isCircuitInstancesLoading,
+  } = useCircuitInstances(firstCircuitId);
   const { updateComponentState } = useSimulation();
+  const hasPlacedCircuitInstances = (circuitInstances?.length ?? 0) > 0;
+  const emptyCircuitMessage = 'Place at least one component in the schematic before running a simulation.';
 
   // Auto-detect analysis type from circuit topology
   const autoDetected = useMemo(() => {
@@ -910,6 +1073,30 @@ export default function SimulationPanel() {
   // Run simulation
   // ---------------------------
   const handleRun = useCallback(async (isSilent = false) => {
+    if (!firstCircuitId) {
+      const message = 'No circuit design is available to simulate yet.';
+      setError(message);
+      if (!isSilent) {
+        toast({ variant: 'destructive', title: 'Simulation Failed', description: message });
+      }
+      return;
+    }
+    if (isCircuitInstancesLoading) {
+      const message = 'Circuit data is still loading. Try running the simulation again in a moment.';
+      setError(message);
+      if (!isSilent) {
+        toast({ variant: 'destructive', title: 'Simulation Failed', description: message });
+      }
+      return;
+    }
+    if (!hasPlacedCircuitInstances) {
+      setError(emptyCircuitMessage);
+      if (!isSilent) {
+        toast({ variant: 'destructive', title: 'Simulation Failed', description: emptyCircuitMessage });
+      }
+      return;
+    }
+
     const validationError = validate();
     if (validationError) {
       setError(validationError);
@@ -929,13 +1116,15 @@ export default function SimulationPanel() {
     setResults(null);
 
     try {
-      const response = await apiRequest('POST', `/api/projects/${projectId}/simulate`, {
-        analysisType,
-        params: currentParams,
-        probes: probes.map((p) => ({ name: p.name, type: p.type, nodeOrComponent: p.nodeOrComponent })),
-      }, controller.signal);
+      const response = await apiRequest(
+        'POST',
+        `/api/projects/${projectId}/circuits/${firstCircuitId}/simulate`,
+        buildSimulationPayload(analysisType, currentParams),
+        controller.signal,
+      );
 
-      let data: SimulationResult = await response.json();
+      const responseJson = (await response.json()) as ApiSimulationResponse;
+      let data = normalizeSimulationResponse(responseJson, analysisType);
 
       // BL-0120: Worst-case corner analysis
       if (cornerAnalysis && data.type === 'waveform' && cornerIterations > 0) {
@@ -947,15 +1136,18 @@ export default function SimulationPanel() {
           
           // Request a corner variation from the backend
           // We pass a 'seed' and 'mode: corner' to the simulator
-          const cornerResponse = await apiRequest('POST', `/api/projects/${projectId}/simulate`, {
-            analysisType,
-            params: currentParams,
-            probes: probes.map((p) => ({ name: p.name, type: p.type, nodeOrComponent: p.nodeOrComponent })),
-            cornerMode: 'random_extreme',
-            seed: i + 100, // Different seed per corner
-          }, controller.signal);
+          const cornerResponse = await apiRequest(
+            'POST',
+            `/api/projects/${projectId}/circuits/${firstCircuitId}/simulate`,
+            buildSimulationPayload(analysisType, currentParams, {
+              cornerMode: 'random_extreme',
+              seed: i + 100,
+            }),
+            controller.signal,
+          );
           
-          const cornerData: SimulationResult = await cornerResponse.json();
+          const cornerJson = (await cornerResponse.json()) as ApiSimulationResponse;
+          const cornerData = normalizeSimulationResponse(cornerJson, analysisType);
           if (cornerData.type === 'waveform') {
             cornerData.traces.forEach(t => {
               combinedTraces.push({
@@ -1016,7 +1208,23 @@ export default function SimulationPanel() {
       setIsStopping(false);
       abortRef.current = null;
     }
-  }, [validate, projectId, analysisType, currentParams, probes, toast, cornerAnalysis, cornerIterations, circuitInstances, updateComponentState, setIsSimRunning, setActiveAnalysisType]);
+  }, [
+    validate,
+    firstCircuitId,
+    isCircuitInstancesLoading,
+    hasPlacedCircuitInstances,
+    emptyCircuitMessage,
+    projectId,
+    analysisType,
+    currentParams,
+    toast,
+    cornerAnalysis,
+    cornerIterations,
+    circuitInstances,
+    updateComponentState,
+    setIsSimRunning,
+    setActiveAnalysisType,
+  ]);
 
   // BL-0150: Live simulation loop
   useEffect(() => {
@@ -1236,6 +1444,7 @@ export default function SimulationPanel() {
           <SimPlayButton
             isRunning={isRunning}
             isStopping={isStopping}
+            disabled={!firstCircuitId || isCircuitInstancesLoading || !hasPlacedCircuitInstances}
             detection={simTypeDetection}
             onStart={handleSimPlayStart}
             onStop={handleStop}
@@ -1465,7 +1674,7 @@ export default function SimulationPanel() {
               <button
                 type="button"
                 onClick={handleRunWithComplexityCheck}
-                disabled={isRunning}
+                disabled={isRunning || isCircuitInstancesLoading || !hasPlacedCircuitInstances}
                 className={runButtonClasses}
                 data-testid="button-run-simulation"
               >
@@ -1487,10 +1696,17 @@ export default function SimulationPanel() {
           {/* ------- Results ------- */}
           <CollapsibleSection title="Results" defaultOpen={results !== null} testId="section-results">
             <div data-testid="simulation-results">
-              {results === null && !isRunning && (
+              {!isRunning && !isCircuitInstancesLoading && firstCircuitId > 0 && !hasPlacedCircuitInstances && (
                 <p className="text-xs text-muted-foreground italic">
-                  No results yet. Configure analysis and press Run.
+                  Nothing to simulate yet. Place at least one component in the schematic before running a simulation.
                 </p>
+              )}
+              {results === null && !isRunning && (
+                hasPlacedCircuitInstances ? (
+                  <p className="text-xs text-muted-foreground italic">
+                    No results yet. Configure analysis and press Run.
+                  </p>
+                ) : null
               )}
               {isRunning && (
                 <div className="flex items-center justify-center py-8">

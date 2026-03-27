@@ -6,7 +6,7 @@
  * Bottom: Collapsible error panel + status bar
  */
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { STARTER_TEMPLATE } from '@/lib/circuit-dsl/circuit-lang';
 import { useCircuitEvaluator } from '@/lib/circuit-dsl/use-circuit-evaluator';
@@ -74,6 +74,10 @@ export default function CircuitCodeView() {
   });
 
   const debouncedEval = useDebouncedCallback(evaluate, 300);
+
+  useEffect(() => {
+    evaluate(STARTER_TEMPLATE);
+  }, [evaluate]);
 
   const handleCodeChange = useCallback(
     (newCode: string) => {

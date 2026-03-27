@@ -218,6 +218,14 @@ describe('insertBomItemSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts numeric unitPrice input and normalizes it to a string', () => {
+    const result = insertBomItemSchema.safeParse({ ...validBom, unitPrice: 5.5 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.unitPrice).toBe('5.5');
+    }
+  });
+
   it('defaults status to "In Stock"', () => {
     const result = insertBomItemSchema.safeParse(validBom);
     expect(result.success).toBe(true);

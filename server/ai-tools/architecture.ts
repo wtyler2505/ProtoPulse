@@ -439,7 +439,20 @@ export function registerArchitectureTools(registry: ToolRegistry): void {
     category: 'architecture',
     parameters: z.object({
       nodeLabel: z.string().min(1).describe('Label of the component'),
-      pins: z.record(z.string()).describe('Map of pin names to connected signals'),
+      pins: z
+        .object({
+          MOSI: z.string().optional(),
+          MISO: z.string().optional(),
+          SCK: z.string().optional(),
+          SDA: z.string().optional(),
+          SCL: z.string().optional(),
+          TX: z.string().optional(),
+          RX: z.string().optional(),
+          VCC: z.string().optional(),
+          GND: z.string().optional(),
+        })
+        .passthrough()
+        .describe('Map of pin names to connected signals'),
     }),
     requiresConfirmation: false,
     execute: async (params) => clientAction('set_pin_map', params),

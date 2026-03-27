@@ -453,9 +453,9 @@ describe('requireProjectOwnership param extraction edge cases', () => {
     );
   });
 
-  it('prefers params.id over params.projectId when both present', async () => {
+  it('prefers params.projectId over params.id when both present', async () => {
     mockValidateSession.mockResolvedValue({ userId: 42 });
-    const project = makeProject({ id: 1, ownerId: 42 });
+    const project = makeProject({ id: 999, ownerId: 42 });
     mockCache.get.mockReturnValue(project);
 
     const req = makeReq({ id: '1', projectId: '999' }, { 'x-session-id': 'session' });
@@ -468,7 +468,7 @@ describe('requireProjectOwnership param extraction edge cases', () => {
       expect(next).toHaveBeenCalled();
     });
 
-    // Should pass because it reads params.id (1) not params.projectId (999)
+    // Should pass because it reads params.projectId (999) not params.id (1)
     expect(next).toHaveBeenCalledWith();
   });
 

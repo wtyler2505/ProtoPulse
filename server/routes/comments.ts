@@ -85,17 +85,18 @@ export function registerCommentRoutes(app: Express): void {
     requireProjectOwnership,
     payloadLimit(16 * 1024),
     asyncHandler(async (req, res) => {
-      parseIdParam(req.params.id);
+      const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
+      const existing = await storage.getComment(commentId);
+      if (!existing || existing.projectId !== projectId) {
+        return res.status(404).json({ message: 'Comment not found' });
+      }
       const parsed = updateCommentSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
 
       const updated = await storage.updateComment(commentId, { content: parsed.data.content });
-      if (!updated) {
-        return res.status(404).json({ message: 'Comment not found' });
-      }
       res.json(updated);
     }),
   );
@@ -105,19 +106,20 @@ export function registerCommentRoutes(app: Express): void {
     '/api/projects/:id/comments/:commentId/status',
     requireProjectOwnership,
     asyncHandler(async (req, res) => {
-      parseIdParam(req.params.id);
+      const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
+      const existing = await storage.getComment(commentId);
+      if (!existing || existing.projectId !== projectId) {
+        return res.status(404).json({ message: 'Comment not found' });
+      }
       const status = req.body?.status;
-      const updatedBy = typeof req.body?.updatedBy === 'number' ? req.body.updatedBy : undefined;
+      const updatedBy = res.locals.userId; // Enforce logged-in user
 
       if (!status || typeof status !== 'string') {
         return res.status(400).json({ message: 'Missing or invalid status' });
       }
 
       const updated = await storage.updateCommentStatus(commentId, status, updatedBy);
-      if (!updated) {
-        return res.status(404).json({ message: 'Comment not found' });
-      }
       res.json(updated);
     }),
   );
@@ -127,12 +129,13 @@ export function registerCommentRoutes(app: Express): void {
     '/api/projects/:id/comments/:commentId',
     requireProjectOwnership,
     asyncHandler(async (req, res) => {
-      parseIdParam(req.params.id);
+      const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
-      const deleted = await storage.deleteComment(commentId);
-      if (!deleted) {
+      const existing = await storage.getComment(commentId);
+      if (!existing || existing.projectId !== projectId) {
         return res.status(404).json({ message: 'Comment not found' });
       }
+      await storage.deleteComment(commentId);
       res.status(204).end();
     }),
   );

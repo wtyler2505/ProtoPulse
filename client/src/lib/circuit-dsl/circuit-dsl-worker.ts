@@ -269,12 +269,20 @@ self.onmessage = function(e) {
   var componentCatalog = data.componentCatalog || [];
 
   try {
-    // Create the sandboxed circuit builder
-    var c = createCircuitBuilder('UserCircuit', componentCatalog);
+    // Support both DSL styles:
+    // 1. explicit builder declaration, e.g. const c = circuit("My Circuit");
+    // 2. shorthand builder usage, e.g. c.resistor({ value: "10k" })
+    var hasBuilderDeclaration = /(^|[\\s;])(const|let|var)\\s+c\\s*=/.test(transpiledCode);
+    var runnableCode = hasBuilderDeclaration
+      ? transpiledCode
+      : 'const c = circuit("UserCircuit");\\n' + transpiledCode;
 
-    // Evaluate the transpiled code with the circuit builder in scope
-    var fn = new Function('c', 'circuit', transpiledCode + '; return c.export();');
-    var ir = fn(c, function(name) { return createCircuitBuilder(name || 'UserCircuit', componentCatalog); });
+    // Evaluate the transpiled code and export the builder it leaves in scope.
+    var fn = new Function(
+      'circuit',
+      runnableCode + '; return typeof c !== "undefined" && c && typeof c.export === "function" ? c.export() : undefined;'
+    );
+    var ir = fn(function(name) { return createCircuitBuilder(name || 'UserCircuit', componentCatalog); });
 
     var irJson = JSON.stringify(ir);
 

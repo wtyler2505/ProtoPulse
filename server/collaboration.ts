@@ -54,7 +54,9 @@ interface LockEntry {
 /* ------------------------------------------------------------------ */
 
 export class CollaborationServer {
+  private readonly server: Server;
   private readonly wss: WebSocketServer;
+  private readonly upgradeHandler: (req: IncomingMessage, socket: import('net').Socket, head: Buffer) => void;
   private readonly rooms = new Map<number, Map<number, ClientEntry>>();
   private readonly locks = new Map<string, LockEntry>();
   private readonly stateVersions = new Map<number, number>();
@@ -79,10 +81,27 @@ export class CollaborationServer {
   private static readonly MERGE_WINDOW_SIZE = 200;
 
   constructor(server: Server) {
-    this.wss = new WebSocketServer({ server, path: '/ws/collab' });
+    this.server = server;
+    this.wss = new WebSocketServer({ noServer: true });
+
+    this.upgradeHandler = (req, socket, head) => {
+      const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
+      if (url.pathname !== '/ws/collab') {
+        return;
+      }
+
+      this.wss.handleUpgrade(req, socket, head, (ws) => {
+        this.wss.emit('connection', ws, req);
+      });
+    };
+
+    server.on('upgrade', this.upgradeHandler);
 
     this.wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-      void this.onConnection(ws, req);
+      void this.onConnection(ws, req).catch((err) => {
+        console.error('[Collaboration] Handshake error:', err);
+        ws.close(1011, 'Internal Server Error');
+      });
     });
 
     this.heartbeatTimer = setInterval(() => {
@@ -754,6 +773,7 @@ export class CollaborationServer {
     this.stateVersions.clear();
     this.lamportClocks.clear();
     this.recentOps.clear();
+    this.server.off('upgrade', this.upgradeHandler);
     this.wss.close();
   }
 }

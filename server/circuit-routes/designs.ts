@@ -28,9 +28,10 @@ export function registerCircuitDesignRoutes(app: Express, storage: IStorage): vo
   }));
 
   app.get('/api/projects/:projectId/circuits/:id', requireProjectOwnership, asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
     const id = parseIdParam(req.params.id);
     const circuit = await storage.getCircuitDesign(id);
-    if (!circuit) { return res.status(404).json({ message: 'Circuit design not found' }); }
+    if (!circuit || circuit.projectId !== projectId) { return res.status(404).json({ message: 'Circuit design not found' }); }
     res.setHeader('ETag', `"${circuit.version}"`);
     res.json(circuit);
   }));
@@ -47,7 +48,12 @@ export function registerCircuitDesignRoutes(app: Express, storage: IStorage): vo
   }));
 
   app.patch('/api/projects/:projectId/circuits/:id', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
     const id = parseIdParam(req.params.id);
+    const existing = await storage.getCircuitDesign(id);
+    if (!existing || existing.projectId !== projectId) {
+      return res.status(404).json({ message: 'Circuit design not found' });
+    }
     const parsed = updateCircuitDesignSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
@@ -71,7 +77,12 @@ export function registerCircuitDesignRoutes(app: Express, storage: IStorage): vo
   }));
 
   app.delete('/api/projects/:projectId/circuits/:id', requireProjectOwnership, asyncHandler(async (req, res) => {
+    const projectId = parseIdParam(req.params.projectId);
     const id = parseIdParam(req.params.id);
+    const existing = await storage.getCircuitDesign(id);
+    if (!existing || existing.projectId !== projectId) {
+      return res.status(404).json({ message: 'Circuit design not found' });
+    }
     const deleted = await storage.deleteCircuitDesign(id);
     if (!deleted) { return res.status(404).json({ message: 'Circuit design not found' }); }
     res.status(204).end();

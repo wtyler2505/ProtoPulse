@@ -191,18 +191,26 @@ describe('PredictionPanel', () => {
   });
 
   it('renders panel container', () => {
+    const preds = [makePrediction({ id: 'p1' })];
     render(
-      <PredictionPanel predictions={[]} onAccept={onAccept} onDismiss={onDismiss} onClearAll={onClearAll} />,
+      <PredictionPanel predictions={preds} onAccept={onAccept} onDismiss={onDismiss} onClearAll={onClearAll} />,
     );
     expect(screen.getByTestId('prediction-panel')).toBeDefined();
   });
 
-  it('shows empty state when no predictions', () => {
+  it('does not render when idle with no predictions', () => {
     render(
       <PredictionPanel predictions={[]} onAccept={onAccept} onDismiss={onDismiss} onClearAll={onClearAll} />,
     );
-    expect(screen.getByTestId('prediction-panel-empty')).toBeDefined();
-    expect(screen.getByText('No suggestions — your design looks good!')).toBeDefined();
+    expect(screen.queryByTestId('prediction-panel')).toBeNull();
+  });
+
+  it('shows analyzing state when loading with no predictions', () => {
+    render(
+      <PredictionPanel predictions={[]} onAccept={onAccept} onDismiss={onDismiss} onClearAll={onClearAll} isAnalyzing />,
+    );
+    expect(screen.getByTestId('prediction-panel-analyzing')).toBeDefined();
+    expect(screen.getByText('Analyzing your design for next-step suggestions...')).toBeDefined();
   });
 
   it('renders prediction cards when predictions exist', () => {

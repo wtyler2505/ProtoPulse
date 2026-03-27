@@ -45,6 +45,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -68,6 +69,7 @@ import { generatePinConstants } from '@shared/arduino-pin-generator';
 import type { NetInfo, InstanceInfo } from '@shared/arduino-pin-generator';
 import { detectPinConflicts } from '@/lib/arduino/pin-conflict-checker';
 import { createArduinoAutocompletion } from '@/lib/arduino/autocomplete';
+import { consumePendingStarterCircuitLaunch } from '@/lib/starter-circuit-launch';
 
 const FlashProgressBar = lazy(() => import('@/components/arduino/FlashProgressBar'));
 const MemoryAnalyzerPanel = lazy(() => import('@/components/arduino/MemoryAnalyzerPanel'));
@@ -77,6 +79,15 @@ const SimulationControlPanel = lazy(() => import('@/components/arduino/Simulatio
 const ProfileSettingsDialog = lazy(() => import('@/components/arduino/ProfileSettingsDialog'));
 
 type BottomTab = 'console' | 'serial' | 'libraries' | 'boards' | 'pins' | 'simulate';
+
+function toStarterSketchFilename(title: string): string {
+  const base = title
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+  return `${base || 'Starter_Circuit'}.ino`;
+}
 
 export default function ArduinoWorkbenchView() {
   const _projectId = useProjectId();
@@ -258,6 +269,44 @@ export default function ArduinoWorkbenchView() {
         toast({ variant: 'destructive', title: 'Error reading file', description: e.message });
       });
   }, [activeFilePath, readFile, toast]);
+
+  useEffect(() => {
+    const pendingStarter = consumePendingStarterCircuitLaunch();
+    if (!pendingStarter) {
+      return;
+    }
+
+    const filename = toStarterSketchFilename(pendingStarter.name);
+    let cancelled = false;
+
+    void createFile(filename, pendingStarter.arduinoCode)
+      .then(() => {
+        if (cancelled) {
+          return;
+        }
+
+        setActiveFilePath(filename);
+        toast({
+          title: 'Starter sketch loaded',
+          description: `${filename} is ready in the Arduino workbench.`,
+        });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) {
+          return;
+        }
+
+        toast({
+          variant: 'destructive',
+          title: 'Failed to open starter sketch',
+          description: error instanceof Error ? error.message : String(error),
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [createFile, toast]);
 
   // Auto-scroll console
   useEffect(() => {
@@ -1552,6 +1601,9 @@ export default function ArduinoWorkbenchView() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>New Sketch File</DialogTitle>
+            <DialogDescription>
+              Create a new Arduino sketch file and add it to this project workspace.
+            </DialogDescription>
           </DialogHeader>
           <Input
             autoFocus

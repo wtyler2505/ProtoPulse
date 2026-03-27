@@ -118,11 +118,12 @@ beforeAll(async () => {
   });
 
   await new Promise<void>((resolve) => {
-    server = app.listen(0, () => {
-      const addr = server.address();
+    const instance = app.listen(0, () => {
+      const addr = instance.address();
       if (typeof addr === 'object' && addr !== null) {
         baseUrl = `http://127.0.0.1:${String(addr.port)}`;
       }
+      server = instance;
       resolve();
     });
   });
@@ -235,6 +236,31 @@ describe('POST /api/projects/:id/bom', () => {
     expect(res.headers.get('etag')).toBe('"1"');
   });
 
+  it('accepts numeric unitPrice input and normalizes it before storage', async () => {
+    mockCreateBomItem.mockResolvedValue(makeBomItem({ id: 11, unitPrice: '0', totalPrice: '0' }));
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/bom`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        partNumber: 'CALC-250R',
+        manufacturer: 'Calculated',
+        description: '250 Ohm resistor from Ohm\'s Law',
+        quantity: 1,
+        unitPrice: 0,
+        supplier: 'Unknown',
+        stock: 0,
+        status: 'In Stock',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(mockCreateBomItem).toHaveBeenCalledWith(expect.objectContaining({
+      projectId: 1,
+      unitPrice: '0',
+    }));
+  });
+
   it('returns 400 for missing fields', async () => {
     const res = await authFetch(`${baseUrl}/api/projects/1/bom`, {
       method: 'POST',
@@ -260,6 +286,21 @@ describe('PATCH /api/projects/:id/bom/:bomId', () => {
     });
     expect(res.status).toBe(200);
     expect(res.headers.get('etag')).toBe('"2"');
+  });
+
+  it('accepts numeric unitPrice in PATCH payloads and normalizes it before storage', async () => {
+    mockUpdateBomItem.mockResolvedValue(makeBomItem({ unitPrice: '0.25', totalPrice: '0.25', version: 2 }));
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/bom/1`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ unitPrice: 0.25 }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(mockUpdateBomItem).toHaveBeenCalledWith(1, 1, expect.objectContaining({
+      unitPrice: '0.25',
+    }), undefined);
   });
 
   it('returns 404 for non-existent item', async () => {

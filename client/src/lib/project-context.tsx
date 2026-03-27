@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
 import { ProjectLoadingSkeleton } from '@/components/ui/ProjectLoadingSkeleton';
 
@@ -139,26 +140,53 @@ export type ViewMode = 'dashboard' | 'project_explorer' | 'output' | 'architectu
 function SeededProviders({ children }: { children: React.ReactNode }) {
   const pid = useProjectId();
   return (
-    <OutputProvider>
-      <ChatProvider seeded>
-        <HistoryProvider seeded>
-          <BomProvider seeded>
-            <ValidationProvider seeded>
-              <ProjectMetaProvider seeded>
-                <ArduinoProvider projectId={pid}>
-                  <SimulationProvider>
-                    <ArchitectureBridge>
-                      {children}
-                    </ArchitectureBridge>
-                  </SimulationProvider>
-                </ArduinoProvider>
-              </ProjectMetaProvider>
-            </ValidationProvider>
-          </BomProvider>
-        </HistoryProvider>
-      </ChatProvider>
-    </OutputProvider>
+    <ProjectMetaProvider seeded>
+      <ProjectBootstrapGate projectId={pid}>
+        <OutputProvider>
+          <ChatProvider seeded>
+            <HistoryProvider seeded>
+              <BomProvider seeded>
+                <ValidationProvider seeded>
+                  <ArduinoProvider projectId={pid}>
+                    <SimulationProvider>
+                      <ArchitectureBridge>
+                        {children}
+                      </ArchitectureBridge>
+                    </SimulationProvider>
+                  </ArduinoProvider>
+                </ValidationProvider>
+              </BomProvider>
+            </HistoryProvider>
+          </ChatProvider>
+        </OutputProvider>
+      </ProjectBootstrapGate>
+    </ProjectMetaProvider>
   );
+}
+
+function ProjectBootstrapGate({
+  children,
+  projectId,
+}: {
+  children: React.ReactNode;
+  projectId: number;
+}) {
+  const [, setLocation] = useLocation();
+  const { isLoading, projectNotFound } = useProjectMeta();
+
+  useEffect(() => {
+    if (!projectNotFound) {
+      return;
+    }
+    localStorage.removeItem('protopulse-last-project');
+    setLocation('/projects', { replace: true });
+  }, [projectNotFound, setLocation]);
+
+  if (isLoading || projectNotFound) {
+    return <ProjectLoadingSkeleton />;
+  }
+
+  return <>{children}</>;
 }
 
 /**

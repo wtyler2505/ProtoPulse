@@ -45,6 +45,8 @@ export interface SimPlayButtonProps {
   isRunning: boolean;
   /** Whether the simulation is in the process of stopping. */
   isStopping: boolean;
+  /** Whether the control should be disabled. */
+  disabled?: boolean;
   /** Detected simulation type result (from detectSimulationType). */
   detection: SimulationTypeResult | null;
   /** Called to start a simulation with a specific analysis type. */
@@ -56,6 +58,7 @@ export interface SimPlayButtonProps {
 export default function SimPlayButton({
   isRunning,
   isStopping,
+  disabled = false,
   detection,
   onStart,
   onStop,
@@ -110,6 +113,7 @@ export default function SimPlayButton({
         <Button
           data-testid="sim-play-button"
           onClick={handlePlayClick}
+          disabled={disabled}
           className={cn(
             'h-11 px-6 gap-2 text-sm font-semibold transition-all',
             'bg-emerald-600 text-white hover:bg-emerald-500',
@@ -139,6 +143,7 @@ export default function SimPlayButton({
         <DropdownMenuTrigger asChild>
           <Button
             data-testid="sim-play-button"
+            disabled={disabled}
             className={cn(
               'h-11 px-6 gap-2 text-sm font-semibold transition-all',
               'bg-emerald-600 text-white hover:bg-emerald-500',

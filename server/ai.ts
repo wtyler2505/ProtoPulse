@@ -1,5 +1,7 @@
+import crypto from "node:crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
+import type { MessageData } from "@genkit-ai/ai/model";
 import { LRUClientCache } from "./lib/lru-cache";
 import { logger } from "./logger";
 import { toolRegistry, DESTRUCTIVE_TOOLS, type ToolResult, type ToolContext } from "./ai-tools";
@@ -462,6 +464,17 @@ function hashAppState(appState: AppState, userId?: number): string {
 }
 
 type AIErrorCode = 'AUTH_FAILED' | 'RATE_LIMITED' | 'TIMEOUT' | 'MODEL_ERROR' | 'PROVIDER_ERROR' | 'UNKNOWN';
+type GenkitMessageRole = 'user' | 'model' | 'system' | 'tool';
+
+function normalizeGenkitRole(role: string): GenkitMessageRole {
+  if (role === 'assistant') {
+    return 'model';
+  }
+  if (role === 'user' || role === 'model' || role === 'system' || role === 'tool') {
+    return role;
+  }
+  return 'user';
+}
 
 /** Safely extract message and HTTP status from unknown error shapes. */
 function extractErrorInfo(error: unknown): { message: string; status: number | undefined } {
@@ -485,6 +498,8 @@ export function redactSecrets(text: string): string {
 
 export function categorizeError(error: unknown): { code: AIErrorCode; userMessage: string } {
   const { message: msg, status } = extractErrorInfo(error);
+  const redactedMsg = redactSecrets(msg);
+  const compactMsg = redactedMsg.replace(/\s+/g, ' ').trim();
 
   if (status === 401 || msg.includes('authentication') || msg.includes('API key') || msg.includes('invalid_api_key')) {
     return { code: 'AUTH_FAILED', userMessage: `Authentication failed. Please check your API key in settings.` };
@@ -495,14 +510,30 @@ export function categorizeError(error: unknown): { code: AIErrorCode; userMessag
   if (msg.includes('timeout') || msg.includes('ETIMEDOUT') || msg.includes('ECONNABORTED')) {
     return { code: 'TIMEOUT', userMessage: 'Request timed out. Try again with a shorter message.' };
   }
-  if (status === 400 || msg.includes('invalid_request') || msg.includes('model not found')) {
+  if (msg.includes('model not found')) {
     return { code: 'MODEL_ERROR', userMessage: `Invalid request. The model "${msg}" may not be available.` };
+  }
+  if (
+    status === 400
+    || msg.includes('invalid_request')
+    || msg.includes('INVALID_ARGUMENT')
+    || msg.includes('Schema validation failed')
+    || msg.includes('Parse Errors')
+  ) {
+    return {
+      code: 'MODEL_ERROR',
+      userMessage: 'Invalid request sent to the AI provider. Please try again. If it keeps happening, clear the chat history for this project.',
+    };
   }
   if (status !== undefined && status >= 500) {
     return { code: 'PROVIDER_ERROR', userMessage: 'The AI provider is experiencing issues. Try again shortly.' };
   }
 
-  return { code: 'UNKNOWN', userMessage: `AI error: ${redactSecrets(msg)}` };
+  const preview = compactMsg.length > 240 ? `${compactMsg.slice(0, 240)}...` : compactMsg;
+  return {
+    code: 'UNKNOWN',
+    userMessage: preview ? `AI error: ${preview}` : 'AI error. Please try again.',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -552,8 +583,10 @@ export function getDefaultFallbackModel(fallbackProvider: 'gemini'): string {
 
 const activeRequests = new Map<string, Promise<{ message: string; actions: AIAction[] }>>();
 
-function requestKey(message: string, provider: string, projectId: string): string {
-  return `${provider}:${projectId}:${message.slice(0, 100)}`;
+function requestKey(message: string, provider: string, projectId: string, apiKey: string): string {
+  // Using a fast simple hash of the API key to avoid logging full secret in memory keys
+  const keyHash = apiKey ? crypto.createHash('sha256').update(apiKey).digest('hex').substring(0, 8) : 'none';
+  return `${provider}:${projectId}:${keyHash}:${message.slice(0, 100)}`;
 }
 
 function getGeminiClient(apiKey: string): GoogleGenAI {
@@ -878,11 +911,11 @@ async function callGenkit(
   const { ai, allGenkitTools } = await import('./genkit');
   
   const messages = chatHistory.map(m => ({
-    role: m.role as 'user' | 'model' | 'system' | 'tool',
+    role: normalizeGenkitRole(m.role),
     content: [{ text: m.content }]
   }));
   
-  const promptParts: any[] = [];
+  const promptParts: Array<{ text: string } | { media: { url: string } }> = [];
   if (imageContent) {
     promptParts.push({ media: { url: `data:${imageContent.mediaType};base64,${imageContent.base64}` } });
   }
@@ -891,13 +924,13 @@ async function callGenkit(
   const { text, message } = await ai.generate({
     model: `googleai/${model}`,
     system: systemPrompt,
-    messages: messages as any,
+    messages: messages as MessageData[],
     prompt: promptParts,
     tools: allGenkitTools,
     config: {
       temperature,
       maxOutputTokens: maxTokens || 4096,
-      version: 'v1beta'
+      apiVersion: 'v1beta'
     }
   });
 
@@ -957,7 +990,7 @@ export async function processAIMessage(params: {
       model,
     );
 
-    const dedupeKey = requestKey(message, provider, String(projectId ?? appState.projectName));
+    const dedupeKey = requestKey(message, provider, String(projectId ?? appState.projectName), apiKey);
     const existing = activeRequests.get(dedupeKey);
     if (existing) return existing;
 
@@ -1015,19 +1048,41 @@ async function executeStreamForProvider(
   const { ai, allGenkitTools } = await import('./genkit');
   
   const messages = recentHistory.map(m => ({
-    role: m.role as 'user' | 'model' | 'system' | 'tool',
+    role: normalizeGenkitRole(m.role),
     content: [{ text: m.content }]
   }));
   
-  const promptParts: any[] = [];
+  const promptParts: Array<{ text: string } | { media: { url: string } }> = [];
   if (imageContent) {
     promptParts.push({ media: { url: `data:${imageContent.mediaType};base64,${imageContent.base64}` } });
   }
   promptParts.push({ text: message });
 
-  const selectedTools = toolAllowlist 
+  const selectedTools = toolAllowlist
     ? allGenkitTools.filter(t => toolAllowlist.includes(t.name))
     : allGenkitTools;
+
+  const { toGeminiTool } = await import('../node_modules/@genkit-ai/google-genai/lib/common/converters.js');
+  const geminiToolSchemaFailures = selectedTools
+    .map((tool) => {
+      try {
+        toGeminiTool(tool as never);
+        return null;
+      } catch (error) {
+        return {
+          name: tool.name,
+          message: error instanceof Error ? error.message : String(error),
+        };
+      }
+    })
+    .filter((failure): failure is { name: string; message: string } => failure !== null);
+
+  if (geminiToolSchemaFailures.length > 0) {
+    logger.error('ai:tool-schema-preflight-failed', {
+      count: geminiToolSchemaFailures.length,
+      failures: geminiToolSchemaFailures,
+    });
+  }
 
   let fullText = '';
   const allToolCalls: ToolCallRecord[] = [];
@@ -1036,63 +1091,69 @@ async function executeStreamForProvider(
     const { response, stream } = ai.generateStream({
       model: `googleai/${model}`,
       system: systemPrompt,
-      messages: messages as any,
+      messages: messages as MessageData[],
       prompt: promptParts,
       tools: selectedTools,
       config: {
         temperature,
         maxOutputTokens: maxTokens,
-        version: 'v1beta'
+        apiVersion: 'v1beta'
       },
       context: toolContext
     });
 
     for await (const chunk of stream) {
       if (signal?.aborted) break;
-      
+
       if (chunk.text) {
         fullText += chunk.text;
         await onEvent({ type: 'text', text: chunk.text });
       }
 
-      // Genkit parses tool requests internally
+      // Genkit parses tool requests internally — ToolRequestPart has { toolRequest: { ref?, name, input? } }
       const toolRequests = chunk.toolRequests;
       if (toolRequests && toolRequests.length > 0) {
         for (const req of toolRequests) {
-          const id = (req as any).ref || crypto.randomUUID();
-          await onEvent({ type: 'tool_call', id, name: (req as any).name, input: (req as any).input as Record<string, unknown> });
+          const id = req.toolRequest.ref || crypto.randomUUID();
+          await onEvent({ type: 'tool_call', id, name: req.toolRequest.name, input: (req.toolRequest.input ?? {}) as Record<string, unknown> });
         }
       }
     }
-    
+
     if (signal?.aborted) return { fullText, toolCalls: allToolCalls };
 
     const finalResponse = await response;
-    
-    if (finalResponse.message?.content) {
-      const parts = finalResponse.message.content;
-      for (const part of parts) {
-         if (part.toolRequest) {
-           const req = part.toolRequest;
-           // Wait, how do we get the actual tool result if Genkit executed it?
-           // Genkit normally requires another generate call to pass results back unless returnToolRequests is true.
-           // However, if tools were executed, Genkit might append them to the history or output.
-           // For now, let's log them.
-           const id = req.ref || crypto.randomUUID();
-           // We will fetch the output if available
-         }
+
+    if (finalResponse.request?.messages) {
+      for (const msg of finalResponse.request.messages) {
+        if (msg.role === 'tool' && msg.content) {
+          for (const part of msg.content) {
+            if (part.toolResponse) {
+              allToolCalls.push({
+                id: part.toolResponse.ref || crypto.randomUUID(),
+                name: part.toolResponse.name,
+                input: {},
+                result: part.toolResponse.output
+              } as unknown as ToolCallRecord);
+            }
+          }
+        }
       }
     }
 
-    // Since we provided the tools, Genkit will auto-execute them.
-    // If it executed tools, we can inspect the `steps` or `toolCalls` in finalResponse
-    // Wait, the new API has `finalResponse.toolCalls`? No, it's just the final text.
-    // We can pull the executed tool calls from Genkit's trace or we just let the frontend know the final text.
-    // We already dispatched client actions via clientAction, but wait, server-side tools execute automatically!
-    // Since we wrap the toolRegistry, our tools return `ToolResult`.
-
-  } catch (err: any) {
+  } catch (err: unknown) {
     if (signal?.aborted) return { fullText, toolCalls: allToolCalls };
+    logger.error('ai:stream-provider-failed', {
+      provider,
+      model,
+      error: err instanceof Error
+        ? {
+            message: err.message,
+            stack: err.stack,
+            name: err.name,
+          }
+        : redactSecrets(String(err)),
+    });
     const { userMessage: errMsg } = categorizeError(err);
     fullText += `\n\n[Stream interrupted: ${redactSecrets(errMsg)}]`;
     await onEvent({ type: 'text', text: `\n\n[Stream interrupted: ${redactSecrets(errMsg)}]` });
@@ -1107,7 +1168,7 @@ export async function streamAIMessage(
     provider: 'gemini';
     model: string;
     apiKey: string;
-    appState: any;
+    appState: AppState;
     temperature?: number;
     maxTokens?: number;
     toolContext?: ToolContext;
@@ -1120,7 +1181,7 @@ export async function streamAIMessage(
   onEvent: (event: AIStreamEvent) => void | Promise<void>,
   signal?: AbortSignal,
 ): Promise<void> {
-  const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens = 4096, toolContext, toolAllowlist, imageContent, fallback, projectId } = params;
+  const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens = 4096, toolContext, toolAllowlist, imageContent, fallback, userId, projectId } = params;
 
   if (!apiKey || apiKey.trim().length === 0) {
     const noKeyMsg = `No API key provided for ${provider}. Please add your Google Gemini API key in the settings panel to enable AI features.`;
@@ -1130,7 +1191,7 @@ export async function streamAIMessage(
   }
 
   const systemPrompt = await (async () => {
-    const stateHash = JSON.stringify(appState);
+    const stateHash = hashAppState(appState, userId);
     if (promptCache.get(stateHash) !== undefined) return promptCache.get(stateHash)!;
     const built = buildSystemPrompt(appState);
     promptCache.set(stateHash, built);
@@ -1144,7 +1205,7 @@ export async function streamAIMessage(
     model,
   );
 
-  const dedupeKey = requestKey(message, provider, String(projectId ?? appState.projectName));
+  const dedupeKey = requestKey(message, provider, String(projectId ?? appState.projectName), apiKey);
   const existing = activeRequests.get(dedupeKey);
   
   // Actually, we shouldn't dedupe streaming requests the same way because they attach different SSE streams.

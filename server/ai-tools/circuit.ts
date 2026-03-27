@@ -200,7 +200,22 @@ export function registerCircuitTools(registry: ToolRegistry): void {
         .default('signal')
         .describe('Net type'),
       voltage: z.string().optional().describe("Voltage (for power nets, e.g., '3.3V')"),
-      segments: z.array(z.record(z.unknown())).optional().default([]).describe('Net routing segments'),
+      segments: z
+        .array(
+          z
+            .object({
+              x1: z.number().optional(),
+              y1: z.number().optional(),
+              x2: z.number().optional(),
+              y2: z.number().optional(),
+              layer: z.string().optional(),
+              width: z.number().optional(),
+            })
+            .passthrough(),
+        )
+        .optional()
+        .default([])
+        .describe('Net routing segments'),
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {

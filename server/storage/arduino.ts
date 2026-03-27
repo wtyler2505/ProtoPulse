@@ -220,18 +220,30 @@ export class ArduinoStorage {
 
   async upsertArduinoSketchFile(data: InsertArduinoSketchFile): Promise<ArduinoSketchFile> {
     try {
-      const [upserted] = await this.db.insert(arduinoSketchFiles)
-        .values(data)
-        .onConflictDoUpdate({
-          target: [arduinoSketchFiles.workspaceId, arduinoSketchFiles.relativePath],
-          set: {
+      const [existing] = await this.db.select().from(arduinoSketchFiles)
+        .where(
+          and(
+            eq(arduinoSketchFiles.workspaceId, data.workspaceId),
+            eq(arduinoSketchFiles.relativePath, data.relativePath),
+          ),
+        );
+
+      if (existing) {
+        const [updated] = await this.db.update(arduinoSketchFiles)
+          .set({
             language: data.language,
             sizeBytes: data.sizeBytes,
             updatedAt: new Date(),
-          },
-        })
+          })
+          .where(eq(arduinoSketchFiles.id, existing.id))
+          .returning();
+        return updated;
+      }
+
+      const [created] = await this.db.insert(arduinoSketchFiles)
+        .values(data)
         .returning();
-      return upserted;
+      return created;
     } catch (e) {
       throw new StorageError('upsertArduinoSketchFile', 'arduino-sketch-files', e);
     }

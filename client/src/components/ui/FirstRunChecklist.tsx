@@ -6,7 +6,7 @@
  * Dismissible, collapsible, and draggable-positioned at bottom-right.
  */
 
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useFirstRunChecklist } from '@/lib/first-run-checklist';
 import type { ProjectStateSnapshot } from '@/lib/first-run-checklist';
 import { useProjectId } from '@/lib/contexts/project-id-context';
@@ -61,11 +61,10 @@ export default function FirstRunChecklist() {
     progress,
     visible,
     dismiss,
-    markCompleted,
   } = useFirstRunChecklist(projectId, snapshot);
 
   // Listen for export events via a custom event (fired by ExportPanel)
-  useState(() => {
+  useEffect(() => {
     const handler = () => {
       setHasExported(true);
       try {
@@ -76,7 +75,7 @@ export default function FirstRunChecklist() {
     };
     window.addEventListener('protopulse:export', handler);
     return () => window.removeEventListener('protopulse:export', handler);
-  });
+  }, [projectId]);
 
   if (!visible) {
     return null;

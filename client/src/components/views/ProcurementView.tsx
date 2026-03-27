@@ -52,6 +52,7 @@ import type { AssemblyCategory, EnrichedBomItem, EditValues, NewItemValues, Cost
 const BomDiffPanel = lazy(() => import('@/components/views/BomDiffPanel'));
 const AssemblyGroupPanel = lazy(() => import('./procurement/AssemblyGroupPanel').then((m) => ({ default: m.AssemblyGroupPanel })));
 const AvlCompliancePanel = lazy(() => import('./procurement/AvlCompliancePanel'));
+const PROCUREMENT_BISECT_MINIMAL = false;
 
 function ProcurementView() {
   const { bom, bomSettings, setBomSettings, addBomItem, deleteBomItem, updateBomItem } = useBom();
@@ -344,6 +345,16 @@ function ProcurementView() {
   const resetAndShowAddDialog = useCallback(() => { setNewItem({ ...defaultNewItem }); setShowAddItemDialog(true); }, [defaultNewItem]);
 
   // ── Render ──
+  if (PROCUREMENT_BISECT_MINIMAL) {
+    return (
+      <div className="h-full p-6" data-testid="procurement-view">
+        <div className="border border-border bg-card/80 p-4 text-sm text-muted-foreground">
+          Procurement bisect mode
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Tabs defaultValue="management" className="h-full flex flex-col bg-background/50" data-testid="procurement-view">
       <div className="px-4 pt-3 pb-0 border-b border-border bg-card/30 backdrop-blur flex items-end gap-2">

@@ -3,6 +3,12 @@ import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp, seria
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+const nonNegativeNumericInputSchema = z.union([z.string(), z.number()])
+  .transform((value) => typeof value === 'string' ? value.trim() : String(value))
+  .refine((value) => value.length > 0 && Number.isFinite(Number(value)) && Number(value) >= 0, {
+    message: 'Expected a non-negative numeric value',
+  });
+
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -134,6 +140,7 @@ export const bomItems = pgTable("bom_items", {
 ]);
 
 export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true, totalPrice: true, version: true, updatedAt: true, deletedAt: true }).extend({
+  unitPrice: nonNegativeNumericInputSchema,
   status: z.enum(["In Stock", "Low Stock", "Out of Stock", "On Order"]).default("In Stock"),
 });
 export type InsertBomItem = z.infer<typeof insertBomItemSchema>;
@@ -814,4 +821,3 @@ export type InsertArduinoBuildProfile = z.infer<typeof insertArduinoBuildProfile
 export type InsertArduinoJob = z.infer<typeof insertArduinoJobSchema>;
 export type InsertArduinoSerialSession = z.infer<typeof insertArduinoSerialSessionSchema>;
 export type InsertArduinoSketchFile = z.infer<typeof insertArduinoSketchFileSchema>;
-

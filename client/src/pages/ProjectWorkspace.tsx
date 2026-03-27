@@ -74,6 +74,7 @@ import { TutorialProvider } from '@/lib/tutorial-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { UndoRedoProvider } from '@/lib/undo-redo-context';
 import { navItems, tabDescriptions, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
+import { shouldIgnoreKeyboardShortcut } from '@/lib/keyboard-shortcuts';
 import { createResizeKeyHandler, getResizeAriaProps } from '@/lib/keyboard-resize';
 import type { KeyboardResizeConfig } from '@/lib/keyboard-resize';
 
@@ -367,29 +368,27 @@ import { useActionExecutor } from '@/components/panels/chat/hooks/useActionExecu
 import PredictionPanel from '@/components/ui/PredictionPanel';
 import { usePredictions } from '@/hooks/usePredictions';
 import RadialMenu from '@/components/ui/RadialMenu';
+import { buildPredictionAddNodeActions, getPredictionComponentCount, getPredictionComponentLabel } from '@/lib/prediction-actions';
 import { getActionsForContext } from '@/lib/radial-menu-actions';
 import type { RadialMenuPosition } from '@/components/ui/RadialMenu';
 import type { MenuContext, MenuContextType, TargetKind } from '@/lib/radial-menu-actions';
 
 function WorkspaceContent() {
   const projectId = useProjectId();
-  const { activeView, setActiveView, projectName, projectNotFound } = useProjectMeta();
+  const { activeView, setActiveView, projectName } = useProjectMeta();
   const { runValidation, issues } = useValidation();
-  const { nodes, edges, setNodes, setEdges, pushUndoState } = useArchitecture();
+  const { nodes, edges, hasResolvedInitialGraph, setNodes, setEdges, pushUndoState } = useArchitecture();
   const { bom, addBomItem } = useBom();
   const { toast } = useToast();
   const mainRef = useRef<HTMLElement>(null);
   const [location, setLocation] = useLocation();
   const initialUrlApplied = useRef(false);
+  const initialViewSyncComplete = useRef(false);
+  const activeViewRef = useRef(activeView);
 
-  // C2 fix: redirect to project picker when the project is not found (deleted or not owned)
   useEffect(() => {
-    if (projectNotFound) {
-      localStorage.removeItem('protopulse-last-project');
-      toast({ title: 'Project not found', description: 'This project may have been deleted or you don\'t have access.', variant: 'destructive' });
-      setLocation('/projects');
-    }
-  }, [projectNotFound, setLocation, toast]);
+    activeViewRef.current = activeView;
+  }, [activeView]);
 
   // Set browser tab title to project name + active view
   useEffect(() => {
@@ -405,18 +404,22 @@ function WorkspaceContent() {
     edges.map(e => ({ id: e.id, source: e.source, target: e.target, label: e.label as string })),
     bom.map(b => ({ id: String(b.id), partNumber: b.partNumber, description: b.description, quantity: b.quantity }))
   );
+  const shouldShowPredictionPanel = isAnalyzing || predictions.length > 0;
 
   const handlePredictionAccept = useCallback((id: string) => {
     const pred = predictions.find(p => p.id === id);
     if (pred && pred.action) {
       if (pred.action.type === 'add_component') {
-        const payload = pred.action.payload as { component: string; value: string };
-        executeActions([{
-          type: 'add_node',
-          nodeType: payload.component,
-          label: `${payload.value} ${payload.component}`,
-        }]);
-        toast({ title: 'Component added', description: `Added ${payload.value} ${payload.component} to architecture.` });
+        const payload = pred.action.payload;
+        const label = getPredictionComponentLabel(payload);
+        const count = getPredictionComponentCount(payload);
+        executeActions(buildPredictionAddNodeActions(payload));
+        toast({
+          title: count === 1 ? 'Component added' : 'Components added',
+          description: count === 1
+            ? `Added ${label} to architecture.`
+            : `Added ${count} ${label} components to architecture.`,
+        });
       }
     }
     accept(id);
@@ -504,26 +507,53 @@ function WorkspaceContent() {
     setRadialMenu(null);
   }, [radialMenu, toast]);
 
-  // BL-0114 + BL-0234: Sync activeView from URL on mount AND on location changes (browser back/forward)
+  // BL-0114 + BL-0234: Bootstrap the first active view from the URL (or
+  // persisted layout) before enabling the steady-state URL<->view sync.
   useEffect(() => {
+    if (initialUrlApplied.current) {
+      return;
+    }
+
     const segments = location.split('/').filter(Boolean);
     const urlViewName = segments.length >= 3 && segments[0] === 'projects' ? segments[2] : undefined;
 
     if (urlViewName && VALID_VIEW_MODES.has(urlViewName)) {
       if (urlViewName !== activeView) {
         setActiveView(urlViewName as ViewMode);
+        return;
       }
-    } else if (!initialUrlApplied.current) {
-      // First mount only: fallback to localStorage if no viewName in URL
-      const saved = persisted.activeView;
-      if (saved && saved !== activeView && VALID_VIEW_MODES.has(saved)) {
-        setActiveView(saved as ViewMode);
-      }
-      setLocation(`/projects/${String(projectId)}/${activeView}`, { replace: true });
+
+      initialUrlApplied.current = true;
+      initialViewSyncComplete.current = true;
+      return;
+    }
+
+    // First mount only: fallback to localStorage if no viewName in URL.
+    const saved = persisted.activeView;
+    if (saved && saved !== activeView && VALID_VIEW_MODES.has(saved)) {
+      setActiveView(saved as ViewMode);
+      return;
     }
     initialUrlApplied.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location]);
+    initialViewSyncComplete.current = true;
+    setLocation(`/projects/${String(projectId)}/${activeView}`, { replace: true });
+  }, [activeView, location, projectId, setActiveView, setLocation]);
+
+  // Important: this must only react to real location changes, not local
+  // activeView updates, or it can race against the companion activeView->URL
+  // effect and bounce between the old and new view during tab clicks.
+  useEffect(() => {
+    if (!initialViewSyncComplete.current) {
+      return;
+    }
+
+    const segments = location.split('/').filter(Boolean);
+    const urlViewName = segments.length >= 3 && segments[0] === 'projects' ? segments[2] : undefined;
+
+    if (urlViewName && VALID_VIEW_MODES.has(urlViewName) && urlViewName !== activeViewRef.current) {
+      setActiveView(urlViewName as ViewMode);
+    }
+  }, [location, setActiveView]);
 
   // UX-011 + BL-0234: Persist panel sizes, collapsed states, and activeView to localStorage (debounced)
   useEffect(() => {
@@ -546,7 +576,7 @@ function WorkspaceContent() {
 
   // BL-0114: Sync URL when activeView changes (after initial mount)
   useEffect(() => {
-    if (!initialUrlApplied.current) { return; }
+    if (!initialUrlApplied.current || !initialViewSyncComplete.current) { return; }
     const expectedPath = `/projects/${String(projectId)}/${activeView}`;
     if (location !== expectedPath) {
       setLocation(expectedPath, { replace: true });
@@ -555,8 +585,9 @@ function WorkspaceContent() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+      if (shouldIgnoreKeyboardShortcut(e)) {
+        return;
+      }
       if (e.key === '?') {
         e.preventDefault();
         dispatch({ type: 'TOGGLE_SHORTCUTS' });
@@ -662,13 +693,18 @@ function WorkspaceContent() {
     }
   }, [nodes, edges, bom, validationErrorCount, toast]);
 
-  /* UI-18: If current view is hidden by progressive disclosure, redirect to architecture */
+  /* UI-18: Redirect hidden deep links by changing the URL first so route sync can converge. */
   useEffect(() => {
-    if (!alwaysVisibleIds.has(activeView) && !hasDesignContent) {
-      setActiveView('architecture');
+    if (!hasResolvedInitialGraph) {
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasDesignContent, activeView]);
+    if (!alwaysVisibleIds.has(activeView) && !hasDesignContent) {
+      const fallbackPath = `/projects/${String(projectId)}/architecture`;
+      if (location !== fallbackPath) {
+        setLocation(fallbackPath, { replace: true });
+      }
+    }
+  }, [activeView, hasDesignContent, hasResolvedInitialGraph, location, projectId, setLocation]);
 
   /* RS-02: Mobile bottom nav primary/secondary split */
   const primaryMobileTabIds = useMemo(() => new Set<ViewMode>(['dashboard', 'architecture', 'schematic', 'component_editor', 'procurement']), []);
@@ -711,20 +747,23 @@ function WorkspaceContent() {
 
       <DndProvider>
       <div className="flex flex-1 min-h-0">
-        <Suspense fallback={null}>
-          <Sidebar
-            isOpen={ws.sidebarOpen}
-            onClose={() => dispatch({ type: 'SET_SIDEBAR_OPEN', open: false })}
-            collapsed={ws.sidebarCollapsed}
-            width={ws.sidebarWidth}
-            onToggleCollapse={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: false })}
-          />
-        </Suspense>
+        <ErrorBoundary fallback={<div data-testid="diag-sidebar-error" className="w-64 shrink-0 border-r border-border bg-card/60 p-4 text-xs text-destructive">Sidebar region error</div>}>
+          <Suspense fallback={null}>
+            <Sidebar
+              isOpen={ws.sidebarOpen}
+              onClose={() => dispatch({ type: 'SET_SIDEBAR_OPEN', open: false })}
+              collapsed={ws.sidebarCollapsed}
+              width={ws.sidebarWidth}
+              onToggleCollapse={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: false })}
+            />
+          </Suspense>
+        </ErrorBoundary>
 
         {!ws.sidebarCollapsed && <ResizeHandle side="left" onResize={handleSidebarResize} keyboardConfig={{ currentValue: ws.sidebarWidth, min: 180, max: 480, onResize: handleSidebarResize, orientation: 'horizontal', positiveDirection: 'grow' }} />}
 
         <main id="main-content" data-testid="workspace-main" ref={mainRef} tabIndex={-1} aria-live="polite" className="flex-1 flex flex-col min-w-0 relative bg-background">
           <h2 className="sr-only">Design workspace</h2>
+          <ErrorBoundary fallback={<div data-testid="diag-header-error" className="border-b border-border bg-card/60 p-3 text-xs text-destructive">Header region error</div>}>
           <header className="h-10 border-b border-border bg-background/60 backdrop-blur-xl hidden lg:flex items-center px-1 gap-0 z-10">
             {/* AS-04: Larger toggle buttons with better contrast */}
             <StyledTooltip content="Toggle sidebar" side="bottom">
@@ -950,11 +989,14 @@ function WorkspaceContent() {
           <Suspense fallback={null}>
             <WorkflowBreadcrumb />
           </Suspense>
+          </ErrorBoundary>
 
           <div key={activeView} role="tabpanel" id="main-panel" aria-labelledby={activeTabId} className="view-enter flex-1 relative overflow-hidden flex flex-col bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
-              <Suspense fallback={null}>
-                <ViewOnboardingHint viewName={activeView} />
-              </Suspense>
+              <ErrorBoundary fallback={<div data-testid="diag-onboarding-error" className="mx-4 mt-3 rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Onboarding hint error</div>}>
+                <Suspense fallback={null}>
+                  <ViewOnboardingHint viewName={activeView} />
+                </Suspense>
+              </ErrorBoundary>
               <div className="flex-1 relative overflow-hidden">
               {activeView === 'dashboard' && (
                 <ErrorBoundary>
@@ -1173,15 +1215,22 @@ function WorkspaceContent() {
               </div>
           </div>
 
-          <div className="absolute bottom-4 right-4 z-40 w-80 shadow-2xl">
-            <PredictionPanel
-              predictions={predictions}
-              onAccept={handlePredictionAccept}
-              onDismiss={dismiss}
-              onClearAll={clearAll}
-              isAnalyzing={isAnalyzing}
-            />
-          </div>
+          {shouldShowPredictionPanel && (
+            <div
+              data-testid="prediction-panel-dock"
+              className="shrink-0 border-t border-border/60 bg-background/90 px-4 py-3 backdrop-blur-xl"
+            >
+              <div className="ml-auto w-full max-w-sm">
+                <PredictionPanel
+                  predictions={predictions}
+                  onAccept={handlePredictionAccept}
+                  onDismiss={dismiss}
+                  onClearAll={clearAll}
+                  isAnalyzing={isAnalyzing}
+                />
+              </div>
+            </div>
+          )}
 
           {/* BL-0186: Activity feed slide-over */}
           {ws.activityFeedOpen && (
@@ -1227,19 +1276,23 @@ function WorkspaceContent() {
           )}
 
           {/* BL-0307: First-run onboarding checklist */}
-          <Suspense fallback={null}>
-            <FirstRunChecklist />
-          </Suspense>
+          <ErrorBoundary fallback={<div data-testid="diag-checklist-error" className="fixed bottom-4 right-4 z-40 rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Checklist error</div>}>
+            <Suspense fallback={null}>
+              <FirstRunChecklist />
+            </Suspense>
+          </ErrorBoundary>
 
           {/* BL-0311: Smart hints triggered by repeated mistakes */}
-          <Suspense fallback={null}>
-            <SmartHintToast />
-          </Suspense>
+          <ErrorBoundary fallback={<div data-testid="diag-smart-hint-error" className="fixed bottom-4 left-4 z-50 rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Smart hint error</div>}>
+            <Suspense fallback={null}>
+              <SmartHintToast />
+            </Suspense>
+          </ErrorBoundary>
         </main>
 
         {!ws.chatCollapsed && <ResizeHandle side="right" onResize={handleChatResize} keyboardConfig={{ currentValue: ws.chatWidth, min: 280, max: 600, onResize: handleChatResize, orientation: 'horizontal', positiveDirection: 'shrink' }} />}
 
-        <ErrorBoundary>
+        <ErrorBoundary fallback={<div data-testid="diag-chat-error" className="w-[350px] shrink-0 border-l border-border bg-card/60 p-4 text-xs text-destructive">Chat region error</div>}>
           <div id="chat-panel">
             <h2 className="sr-only">AI Assistant</h2>
             <Suspense fallback={null}>
@@ -1256,27 +1309,34 @@ function WorkspaceContent() {
       </div>
       </DndProvider>
 
-      <Suspense fallback={null}>
-        <ShortcutsOverlay open={ws.shortcutsOpen} onClose={() => dispatch({ type: 'SET_SHORTCUTS_OPEN', open: false })} activeView={activeView} />
-      </Suspense>
+      <ErrorBoundary fallback={<div data-testid="diag-shortcuts-error" className="fixed inset-x-4 top-4 z-[100] rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Shortcuts overlay error</div>}>
+        <Suspense fallback={null}>
+          <ShortcutsOverlay open={ws.shortcutsOpen} onClose={() => dispatch({ type: 'SET_SHORTCUTS_OPEN', open: false })} activeView={activeView} />
+        </Suspense>
+      </ErrorBoundary>
 
-      <Suspense fallback={null}>
-        <UnifiedComponentSearch />
-        <CommandPalette
-          onNavigate={setActiveView}
-          onToggleSidebar={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: !ws.sidebarCollapsed })}
-          onToggleChat={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: !ws.chatCollapsed })}
-          onRunDrc={runValidation}
-          sidebarCollapsed={ws.sidebarCollapsed}
-          chatCollapsed={ws.chatCollapsed}
-        />
-      </Suspense>
+      <ErrorBoundary fallback={<div data-testid="diag-command-error" className="fixed inset-x-4 top-16 z-[100] rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Command/search region error</div>}>
+        <Suspense fallback={null}>
+          <UnifiedComponentSearch />
+          <CommandPalette
+            onNavigate={setActiveView}
+            onToggleSidebar={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: !ws.sidebarCollapsed })}
+            onToggleChat={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: !ws.chatCollapsed })}
+            onRunDrc={runValidation}
+            sidebarCollapsed={ws.sidebarCollapsed}
+            chatCollapsed={ws.chatCollapsed}
+          />
+        </Suspense>
+      </ErrorBoundary>
 
-      <Suspense fallback={null}>
-        <GlobalSearchDialog onNavigate={setActiveView} />
-      </Suspense>
+      <ErrorBoundary fallback={<div data-testid="diag-global-search-error" className="fixed inset-x-4 top-28 z-[100] rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Global search error</div>}>
+        <Suspense fallback={null}>
+          <GlobalSearchDialog onNavigate={setActiveView} />
+        </Suspense>
+      </ErrorBoundary>
 
       {/* RS-02 + RS-08: Mobile bottom nav with primary tabs + More menu + active indicators */}
+      <ErrorBoundary fallback={<div data-testid="diag-mobile-nav-error" className="h-16 border-t border-border bg-card/60 p-3 text-xs text-destructive lg:hidden">Mobile nav error</div>}>
       <div data-testid="mobile-bottom-nav" className="h-16 border-t border-border bg-card/60 backdrop-blur-xl flex items-center justify-around lg:hidden px-2">
         {primaryMobileTabs.map((tab) => (
           <button
@@ -1338,6 +1398,7 @@ function WorkspaceContent() {
           </PopoverContent>
         </Popover>
       </div>
+      </ErrorBoundary>
 
     </div>
   );

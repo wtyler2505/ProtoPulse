@@ -4,7 +4,7 @@ import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useCommunityLibrary } from '@/lib/community-library';
 import { useComponentParts } from '@/lib/component-editor/hooks';
-import { mapCommunityPartToBom, shouldPromptBomAdd } from '@/lib/community-bom-bridge';
+import { mapCommunityPartToBom } from '@/lib/community-bom-bridge';
 import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import {
   Search,
@@ -15,7 +15,6 @@ import {
   ArrowRightToLine,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import Fuse from 'fuse.js';
 import type { IFuseOptions } from 'fuse.js';
 
@@ -38,6 +37,10 @@ const FUSE_OPTIONS: IFuseOptions<SearchResult> = {
   minMatchCharLength: 2,
   keys: ['label', 'description'],
 };
+
+function getDefaultActionType(result: SearchResult): 'place' | 'bom' {
+  return result.category === 'Community Library' ? 'bom' : 'place';
+}
 
 export default function UnifiedComponentSearch() {
   const [open, setOpen] = useState(false);
@@ -229,7 +232,7 @@ export default function UnifiedComponentSearch() {
                   <Command.Item
                     key={item.id}
                     value={item.id}
-                    onSelect={() => {}}
+                    onSelect={() => { handleAction(item, getDefaultActionType(item)); }}
                     className={cn(
                       'group flex items-center gap-3 rounded-md px-2 py-2 text-sm cursor-pointer',
                       'text-foreground/80',
@@ -246,22 +249,28 @@ export default function UnifiedComponentSearch() {
                     {/* Action Buttons */}
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 pr-2 transition-opacity">
                       {(item.category === 'Standard Library' || item.category === 'BOM Items') && (
-                        <div
+                        <button
+                          type="button"
                           className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded bg-muted hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer"
+                          aria-label={`Place ${item.label} on schematic`}
+                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                           onClick={(e) => { e.stopPropagation(); handleAction(item, 'place'); }}
                         >
                           <ArrowRightToLine className="w-3 h-3" />
                           Place
-                        </div>
+                        </button>
                       )}
                       {(item.category === 'Standard Library' || item.category === 'Community Library') && (
-                        <div
+                        <button
+                          type="button"
                           className="flex items-center gap-1 px-2 py-1 text-[10px] font-medium rounded bg-muted hover:bg-green-500/20 hover:text-green-400 transition-colors cursor-pointer"
+                          aria-label={`Add ${item.label} to BOM`}
+                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
                           onClick={(e) => { e.stopPropagation(); handleAction(item, 'bom'); }}
                         >
                           <Plus className="w-3 h-3" />
                           Add to BOM
-                        </div>
+                        </button>
                       )}
                     </div>
                   </Command.Item>

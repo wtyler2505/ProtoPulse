@@ -57,6 +57,8 @@ export interface ShortcutConflict {
 
 const STORAGE_KEY = 'protopulse-keyboard-shortcuts';
 
+const EDITABLE_ROLES = new Set(['combobox', 'searchbox', 'textbox']);
+
 /** Default shortcut definitions. */
 export const DEFAULT_SHORTCUTS: ShortcutAction[] = [
   { id: 'undo', label: 'Undo', category: 'edit', defaultCombo: { key: 'z', ctrl: true } },
@@ -332,6 +334,39 @@ export class KeyboardShortcutManager {
 // React hook
 // ---------------------------------------------------------------------------
 
+function isEditableElement(element: HTMLElement | null): boolean {
+  let current = element;
+  while (current) {
+    const tagName = current.tagName.toLowerCase();
+    if (tagName === 'input' || tagName === 'select' || tagName === 'textarea') {
+      return true;
+    }
+    if (current.isContentEditable) {
+      return true;
+    }
+    const role = current.getAttribute('role');
+    if (role && EDITABLE_ROLES.has(role)) {
+      return true;
+    }
+    current = current.parentElement;
+  }
+  return false;
+}
+
+export function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement ? isEditableElement(target) : false;
+}
+
+export function shouldIgnoreKeyboardShortcut(event: KeyboardEvent): boolean {
+  if (event.defaultPrevented) {
+    return true;
+  }
+  if (isEditableShortcutTarget(event.target)) {
+    return true;
+  }
+  return isEditableShortcutTarget(document.activeElement);
+}
+
 /**
  * Hook that registers a global keydown listener and dispatches to handlers
  * based on the active keyboard shortcuts.
@@ -348,13 +383,8 @@ export function useKeyboardShortcuts(handlers: Record<string, () => void>): void
     const manager = KeyboardShortcutManager.getInstance();
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Skip when focus is in an editable element
-      const target = event.target as HTMLElement | null;
-      if (target) {
-        const tagName = target.tagName.toLowerCase();
-        if (tagName === 'input' || tagName === 'textarea' || target.isContentEditable) {
-          return;
-        }
+      if (shouldIgnoreKeyboardShortcut(event)) {
+        return;
       }
 
       const active = manager.getActiveShortcuts();

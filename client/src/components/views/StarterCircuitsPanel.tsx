@@ -6,7 +6,8 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { copyToClipboard } from '@/lib/clipboard';
+import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { queueStarterCircuitLaunch } from '@/lib/starter-circuit-launch';
 import {
   Search,
   Zap,
@@ -81,6 +82,7 @@ export default function StarterCircuitsPanel() {
   const [selectedDifficulty, setSelectedDifficulty] = useState<StarterDifficulty | 'all'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const { setActiveView } = useProjectMeta();
 
   // Filter circuits based on search, category, and difficulty
   const filteredCircuits = useMemo(() => {
@@ -122,12 +124,17 @@ export default function StarterCircuitsPanel() {
   const { toast } = useToast();
 
   const handleOpenCircuit = useCallback((circuit: StarterCircuit) => {
-    copyToClipboard(circuit.arduinoCode);
-    toast({
-      title: `"${circuit.name}" copied`,
-      description: 'Arduino code copied to clipboard. Switch to the Arduino tab to paste it into a sketch.',
+    queueStarterCircuitLaunch({
+      id: circuit.id,
+      name: circuit.name,
+      arduinoCode: circuit.arduinoCode,
     });
-  }, [toast]);
+    setActiveView('arduino');
+    toast({
+      title: `"${circuit.name}" opened`,
+      description: 'Queued the starter sketch and switched to the Arduino workbench.',
+    });
+  }, [setActiveView, toast]);
 
   return (
     <div data-testid="starter-circuits-panel" className="h-full flex flex-col overflow-hidden">

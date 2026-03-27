@@ -425,6 +425,24 @@ describe('requireProjectOwnership middleware', () => {
 
     expect(next).toHaveBeenCalledWith();
   });
+
+  it('prefers params.projectId when params.id is a nested resource id', async () => {
+    mockValidateSession.mockResolvedValue({ userId: 42 });
+    const project = makeProject({ id: 18, ownerId: 42 });
+    mockCache.get.mockReturnValue(project);
+
+    const req = makeReq({ projectId: '18', id: '5' }, { 'x-session-id': 'valid-session' });
+    const res = makeRes();
+    const next = vi.fn();
+
+    requireProjectOwnership(req as never, res as never, next);
+
+    await vi.waitFor(() => {
+      expect(next).toHaveBeenCalled();
+    });
+
+    expect(next).toHaveBeenCalledWith();
+  });
 });
 
 // =============================================================================

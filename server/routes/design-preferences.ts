@@ -56,8 +56,13 @@ export function registerDesignPreferenceRoutes(app: Express): void {
     '/api/projects/:id/preferences/:prefId',
     requireProjectOwnership,
     asyncHandler(async (req, res) => {
-      parseIdParam(req.params.id); // validate project id
+      const projectId = parseIdParam(req.params.id);
       const prefId = parseIdParam(req.params.prefId);
+      const allPrefs = await storage.getDesignPreferences(projectId);
+      const existing = allPrefs.find(p => p.id === prefId);
+      if (!existing) {
+        return res.status(404).json({ message: 'Preference not found' });
+      }
       const deleted = await storage.deleteDesignPreference(prefId);
       if (!deleted) {
         return res.status(404).json({ message: 'Preference not found' });

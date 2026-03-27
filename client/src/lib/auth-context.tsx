@@ -131,8 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Other HTTP error (e.g. 500) — clear session
-      clearSession();
+      // Other HTTP error (e.g. 500) — keep session but mark offline
+      setConnectionStatus(navigator.onLine ? 'reconnecting' : 'offline');
       setLoading(false);
     }
 

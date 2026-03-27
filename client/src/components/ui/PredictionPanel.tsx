@@ -39,6 +39,10 @@ export default function PredictionPanel({
 
   const count = predictions.length;
 
+  if (!isAnalyzing && count === 0) {
+    return null;
+  }
+
   return (
     <div
       data-testid="prediction-panel"
@@ -104,10 +108,10 @@ export default function PredictionPanel({
         <div data-testid="prediction-panel-body" className="p-2">
           {count === 0 ? (
             <p
-              data-testid="prediction-panel-empty"
+              data-testid="prediction-panel-analyzing"
               className="py-4 text-center text-xs text-zinc-400"
             >
-              No suggestions — your design looks good!
+              Analyzing your design for next-step suggestions...
             </p>
           ) : (
             <div className="flex flex-col gap-2">
