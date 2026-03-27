@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { categorizeError, redactSecrets } from '../ai';
-import { toolRegistry } from '../ai-tools';
 import type { ToolContext, ToolResult } from '../ai-tools';
 import { getApiKey } from '../auth';
 import { asyncHandler, parseIdParam, HttpError } from './utils';

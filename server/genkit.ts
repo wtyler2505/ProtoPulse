@@ -52,20 +52,22 @@ export const pricingLookupTool = ai.defineTool({
   return { price: Math.random() * 10, currency: 'USD', inStock: true };
 });
 
-// A proof-of-concept flow that takes an intent and uses Gemini via Genkit
+// A proof-of-concept flow that takes an intent and uses Gemini via Genkit (dev-only)
 export const generateArduinoSketchFlow = ai.defineFlow({
   name: 'generateArduinoSketchFlow',
   inputSchema: z.object({
-    intent: z.string().describe("What the Arduino sketch should do"),
-    boardType: z.string().optional()
+    intent: z.string().describe('What the Arduino sketch should do'),
+    boardType: z.string().optional(),
+    projectId: z.number().optional().default(1),
   }),
-  outputSchema: z.string().describe("The generated C++ code"),
+  outputSchema: z.string().describe('The generated C++ code'),
 }, async (input) => {
   const response = await ai.generate({
     model: googleAI.model('gemini-3-flash-preview'),
     prompt: `Write an Arduino sketch for a ${input.boardType || 'generic'} board. Intent: ${input.intent}. Respond ONLY with code.`,
     config: { temperature: 0.2 },
-    tools: [pricingLookupTool, queryBomItemsTool] // Give the model access to the tool we defined
+    context: { projectId: input.projectId, storage } as ToolContext,
+    tools: [queryBomItemsTool],
   });
   return response.text;
 });
@@ -75,39 +77,48 @@ export const analyzeBomFlow = ai.defineFlow({
   name: 'analyzeBomFlow',
   inputSchema: z.object({
     projectId: z.number().optional().default(1),
-    query: z.string().describe("What to ask about the BOM")
+    query: z.string().describe('What to ask about the BOM'),
   }),
-  outputSchema: z.string().describe("The analysis result"),
+  outputSchema: z.string().describe('The analysis result'),
 }, async (input) => {
   const response = await ai.generate({
     model: googleAI.model('gemini-3-flash-preview'),
     prompt: `Analyze the BOM for project ${input.projectId} using your tools. Query: ${input.query}`,
     config: { temperature: 0.2 },
-    tools: [queryBomItemsTool]
+    context: { projectId: input.projectId, storage } as ToolContext,
+    tools: [queryBomItemsTool],
   });
   return response.text;
 });
 
 // --- NEW EMBODIED REASONING TOOLS ---
 
+// projectId read from Genkit execution context, not model input (AI-RT-04).
 export const queryNodesTool = ai.defineTool({
   name: 'queryNodes',
   description: 'Fetch all component nodes in the architecture diagram to analyze system structure.',
-  inputSchema: z.object({ projectId: z.number().optional().default(1) }),
-  outputSchema: z.array(z.any())
-}, async (input) => {
-  const nodes = await storage.getNodes(input.projectId);
-  return nodes;
+  inputSchema: z.object({}),
+  outputSchema: z.array(z.unknown())
+}, async () => {
+  const ctx = ai.currentContext() as ToolContext;
+  if (!ctx?.projectId) {
+    throw new Error('queryNodes: no project context available');
+  }
+  return await storage.getNodes(ctx.projectId);
 });
 
+// projectId read from Genkit execution context, not model input (AI-RT-04).
 export const queryEdgesTool = ai.defineTool({
   name: 'queryEdges',
   description: 'Fetch all connections between components in the architecture diagram.',
-  inputSchema: z.object({ projectId: z.number().optional().default(1) }),
-  outputSchema: z.array(z.any())
-}, async (input) => {
-  const edges = await storage.getEdges(input.projectId);
-  return edges;
+  inputSchema: z.object({}),
+  outputSchema: z.array(z.unknown())
+}, async () => {
+  const ctx = ai.currentContext() as ToolContext;
+  if (!ctx?.projectId) {
+    throw new Error('queryEdges: no project context available');
+  }
+  return await storage.getEdges(ctx.projectId);
 });
 
 // A highly advanced flow that utilizes Google's experimental Embodied Reasoning model
@@ -132,7 +143,8 @@ User Query: ${input.query}
 
 Provide concrete spatial reasoning: center of gravity impacts, optimal physical placement (X,Y,Z), wire harness routing paths to avoid kinematic pinch points, and thermal considerations. Do not write code, just provide expert spatial analysis.`,
     config: { temperature: 0.4 },
-    tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool]
+    context: { projectId: input.projectId, storage } as ToolContext,
+    tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool],
   });
   return response.text;
 });
@@ -166,7 +178,8 @@ ${input.serialLogs}
 
 Give the user a clear, direct, and brilliant root-cause analysis. If they have a pin mismatch (e.g. code says pin 4, but schematic says pin 5), point it out. If they are reading an analog value from a digital-only pin, point it out. Do not write generic boilerplate. Be a senior hardware engineer.`,
     config: { temperature: 0.2 },
-    tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool]
+    context: { projectId: input.projectId, storage } as ToolContext,
+    tools: [queryNodesTool, queryEdgesTool, queryBomItemsTool],
   });
   return response.text;
 });

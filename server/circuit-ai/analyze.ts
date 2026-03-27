@@ -7,6 +7,8 @@ import type { IStorage } from '../storage';
 import type { ComponentPart, CircuitInstanceRow, CircuitNetRow } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
 import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
+import { requireCircuitOwnership } from '../routes/auth-middleware';
+import { circuitAiRateLimiter } from './rate-limiter';
 import { categorizeError, redactSecrets } from '../ai';
 import { fromZodError } from 'zod-validation-error';
 import { logger } from '../logger';
@@ -89,6 +91,8 @@ Respond ONLY with valid JSON, no markdown fences or extra text`;
 export function registerCircuitAiAnalyzeRoute(app: Express, storage: IStorage): void {
   app.post(
     '/api/circuits/:circuitId/ai/analyze',
+    requireCircuitOwnership,
+    circuitAiRateLimiter,
     payloadLimit(64 * 1024),
     asyncHandler(async (req, res) => {
       const circuitId = parseIdParam(req.params.circuitId);
@@ -143,7 +147,7 @@ export function registerCircuitAiAnalyzeRoute(app: Express, storage: IStorage): 
         res.json({ success: true, message: 'Analysis completed', data: resultData });
       } catch (error: unknown) {
         const { userMessage } = categorizeError(error);
-        logger.error(`[circuit-ai] Generation error: ${redactSecrets(String(error))}`);
+        logger.error(`[circuit-ai] Analysis error: ${redactSecrets(String(error))}`);
         res.status(500).json({ message: userMessage });
       }
     }),
