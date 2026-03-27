@@ -17,6 +17,7 @@ import {
   TrendingUp,
   Sparkles,
   Clock,
+  Trash2,
 } from 'lucide-react';
 import AddToBomPrompt from '@/components/ui/AddToBomPrompt';
 import { shouldPromptBomAdd, mapCommunityPartToBom } from '@/lib/community-bom-bridge';
@@ -304,9 +305,10 @@ const ComponentDetail = memo(function ComponentDetail({
 interface CollectionsPanelProps {
   collections: LibraryCollection[];
   onCreate: (name: string, description: string) => void;
+  onDelete: (id: string) => void;
 }
 
-const CollectionsPanel = memo(function CollectionsPanel({ collections, onCreate }: CollectionsPanelProps) {
+const CollectionsPanel = memo(function CollectionsPanel({ collections, onCreate, onDelete }: CollectionsPanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
@@ -348,13 +350,25 @@ const CollectionsPanel = memo(function CollectionsPanel({ collections, onCreate 
         <Card key={col.id} data-testid={`collection-${col.id}`} className="bg-card/60">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <div>
-                <div className="text-sm font-medium">{col.name}</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate">{col.name}</div>
                 <div className="text-xs text-muted-foreground">{col.componentIds.length} components</div>
               </div>
-              <Badge variant="outline" className="text-xs">
-                {col.isPublic ? 'Public' : 'Private'}
-              </Badge>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Badge variant="outline" className="text-xs">
+                  {col.isPublic ? 'Public' : 'Private'}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                  aria-label={`Delete collection ${col.name}`}
+                  data-testid={`delete-collection-${col.id}`}
+                  onClick={() => { onDelete(col.id); }}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -410,6 +424,7 @@ export default function CommunityView() {
     downloadComponent,
     collections,
     createCollection,
+    deleteCollection,
     featured,
     trending,
     newArrivals,
@@ -642,6 +657,7 @@ export default function CommunityView() {
             <CollectionsPanel
               collections={collections}
               onCreate={handleCreateCollection}
+              onDelete={deleteCollection}
             />
           </ScrollArea>
         </TabsContent>

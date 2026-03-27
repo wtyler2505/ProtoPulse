@@ -1177,6 +1177,8 @@ export function useCommunityLibrary(): {
   collections: LibraryCollection[];
   createCollection: (input: CreateCollectionInput) => LibraryCollection;
   addToCollection: (collectionId: string, componentId: string) => boolean;
+  removeFromCollection: (collectionId: string, componentId: string) => boolean;
+  deleteCollection: (id: string) => boolean;
   featured: CommunityComponent[];
   trending: CommunityComponent[];
   newArrivals: CommunityComponent[];
@@ -1214,6 +1216,14 @@ export function useCommunityLibrary(): {
     return CommunityLibrary.getInstance().addToCollection(collectionId, componentId);
   }, []);
 
+  const removeFromCollection = useCallback((collectionId: string, componentId: string) => {
+    return CommunityLibrary.getInstance().removeFromCollection(collectionId, componentId);
+  }, []);
+
+  const deleteCollection = useCallback((id: string) => {
+    return CommunityLibrary.getInstance().deleteCollection(id);
+  }, []);
+
   const exportLibrary = useCallback(() => {
     return CommunityLibrary.getInstance().exportLibrary();
   }, []);
@@ -1232,6 +1242,8 @@ export function useCommunityLibrary(): {
     collections: lib.getCollections(),
     createCollection,
     addToCollection,
+    removeFromCollection,
+    deleteCollection,
     featured: lib.getFeatured(),
     trending: lib.getTrending(),
     newArrivals: lib.getNewArrivals(),

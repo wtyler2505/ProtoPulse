@@ -133,7 +133,7 @@ Important scope note:
 - Needs deeper revalidation:
   - advanced wiring, annotation, net-browser, and sheet-editing edge cases
   - Push-to-PCB behavior after multi-component or non-trivial schematic edits
-  - Breadboard currently has a real placement/sync gap in the current pass: with `U1` present in schematic, the route still showed `Getting Started`, and a fresh API probe showed the instance exists but still has `breadboardX: null` / `breadboardY: null`
+  - ~~Breadboard placement/sync gap~~ **FIXED (Wave 155)**: auto-placement already assigns coordinates on mount; wire sync now calls `syncSchematicToBreadboard()` to create missing breadboard wires from schematic net segments
   - the current Breadboard UI did not expose an obvious placement source beyond the generic project explorer/sidebar in the same pass, so the route remains low-confidence for practical usability
   - manufacturing/export parity
 
@@ -562,7 +562,7 @@ Explore advanced support and ecosystem tabs.
   - calculator apply-actions are now only partially covered: the Ohm's Law `Apply to Component` and `Add to BOM` paths are live-verified, but equivalent apply paths from other calculator result types still need revalidation
   - lab authoring/branching/submission behavior beyond progress persistence and reset
   - community collection management remains incomplete in the current UI: add/remove/delete controls are missing even though the data layer supports them
-  - community `Download Component` remains mislabeled because it only increments local counters instead of exporting or importing anything
+  - ~~community `Download Component` remains mislabeled~~ **FIXED (Wave 155)**: now produces a real JSON blob download via createObjectURL
   - seeded community sample data needs richer sourcing metadata before the BOM-prompt bridge can be exercised live
   - real hardware connection via native serial picker and attached device data in Digital Twin
   - generative input validation and candidate-score truthfulness
