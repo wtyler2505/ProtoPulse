@@ -39,6 +39,40 @@ vi.mock('@/lib/circuit-dsl/ir-to-schematic', () => ({
   irToSchematicLayout: vi.fn().mockReturnValue(null),
 }));
 
+const mockSetNodes = vi.fn();
+const mockSetEdges = vi.fn();
+const mockPushUndoState = vi.fn();
+
+vi.mock('@/hooks/use-toast', () => ({
+  toast: vi.fn(),
+}));
+
+vi.mock('@/lib/contexts/architecture-context', () => ({
+  useArchitecture: () => ({
+    nodes: [],
+    edges: [],
+    setNodes: mockSetNodes,
+    setEdges: mockSetEdges,
+    pushUndoState: mockPushUndoState,
+    hasResolvedInitialGraph: true,
+    selectedNodeId: null,
+    setSelectedNodeId: vi.fn(),
+    focusNodeId: null,
+    focusNode: vi.fn(),
+    undoStack: [],
+    redoStack: [],
+    undo: vi.fn(),
+    redo: vi.fn(),
+    canUndo: false,
+    canRedo: false,
+    lastAITurnSnapshot: null,
+    captureSnapshot: vi.fn(),
+    getChangeDiff: vi.fn().mockReturnValue(''),
+    pendingComponentPartId: null,
+    setPendingComponentPartId: vi.fn(),
+  }),
+}));
+
 // ---------------------------------------------------------------------------
 // Import under test (AFTER mocks)
 // ---------------------------------------------------------------------------

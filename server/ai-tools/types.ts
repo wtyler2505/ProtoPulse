@@ -29,7 +29,13 @@ export type ToolCategory =
   | 'project'
   | 'navigation'
   | 'arduino'
-  | 'simulation';
+  | 'simulation'
+  | 'vision'
+  | 'manufacturing'
+  | 'testbench'
+  | 'generative'
+  | 'bom-optimization'
+  | 'risk-analysis';
 
 /**
  * Reference to a design element used as a source for an AI answer.

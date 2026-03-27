@@ -1041,8 +1041,8 @@ export function registerExportTools(registry: ToolRegistry): void {
           success: true,
           message: `Successfully synced the Bill of Materials to Google Sheets! \n\n[Open BOM Sheet](${sheetUrl})`
         };
-      } catch (err: any) {
-        return { success: false, message: `Failed to export BOM to Google Sheets: ${err.message}` };
+      } catch (err: unknown) {
+        return { success: false, message: `Failed to export BOM to Google Sheets: ${err instanceof Error ? err.message : String(err)}` };
       }
     }
   });
@@ -1070,8 +1070,8 @@ export function registerExportTools(registry: ToolRegistry): void {
           success: true,
           message: `Successfully generated the Design Report in Google Docs! \n\n[Open Design Report](${docUrl})`
         };
-      } catch (err: any) {
-        return { success: false, message: `Failed to export Design Report to Google Docs: ${err.message}` };
+      } catch (err: unknown) {
+        return { success: false, message: `Failed to export Design Report to Google Docs: ${err instanceof Error ? err.message : String(err)}` };
       }
     }
   });
@@ -1099,8 +1099,8 @@ export function registerExportTools(registry: ToolRegistry): void {
           success: true,
           message: `Successfully generated the full Manufacturing Package and uploaded it to Google Drive! \n\n[Open Drive Folder](${driveUrl})`
         };
-      } catch (err: any) {
-        return { success: false, message: `Failed to export project to Google Drive: ${err.message}` };
+      } catch (err: unknown) {
+        return { success: false, message: `Failed to export project to Google Drive: ${err instanceof Error ? err.message : String(err)}` };
       }
     }
   });

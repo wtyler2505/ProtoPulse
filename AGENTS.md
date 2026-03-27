@@ -10,7 +10,7 @@ Native desktop AI-assisted EDA (Electronic Design Automation) platform — the a
 
 **Origin story:** Born from the OmniTrek Nexus rover project (Arduino Mega, NodeMCU ESP32, RioRand motor controllers, salvaged hoverboard wheels) where no single tool covered the full journey from "I don't know electronics" to "here are my Gerbers." That frustration became the mission: build one tool that does everything for any electronics/robotics/embedded project.
 
-**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 118 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC/DC/transient simulation, Monte Carlo tolerance analysis, generative circuit design, WebGPU acceleration, digital twin with IoT telemetry, Web Serial hardware communication, engineering calculators, 3D board viewer, PCB ordering, undo/redo, project ownership, design history, backup/restore, offline PWA, collaboration.
+**Current capabilities:** Architecture block diagrams, circuit schematic editor, BOM management, design validation (DRC/ERC), AI chat with 125 AI tools, multi-format export (KiCad, Eagle, SPICE, Gerber, drill, pick-and-place, design report, FMEA, firmware scaffold, PDF), AC/DC/transient simulation, Monte Carlo tolerance analysis, generative circuit design, WebGPU acceleration, digital twin with IoT telemetry, Web Serial hardware communication, engineering calculators, 3D board viewer, PCB ordering, undo/redo, project ownership, design history, backup/restore, offline PWA, collaboration.
 
 **Where it's heading:** See `docs/MASTER_BACKLOG.md` for the single source of truth on all future work, tech debt, and feature ideas.
 
@@ -73,7 +73,7 @@ Starting immediately, all frontend/UI/UX modifications MUST be tested and fully 
 | `shared/drc-engine.ts` | Design Rule Check engine (shared between server + client) |
 | `server/routes.ts` | Barrel — registers 30 domain routers from `server/routes/` |
 | `server/circuit-routes.ts` | Barrel — registers 13 circuit routers from `server/circuit-routes/` |
-| `server/ai.ts` | AI system: prompts, 118 AI tools, streaming, multi-model routing |
+| `server/ai.ts` | AI system: prompts, 125 AI tools, streaming, multi-model routing |
 | `server/ai-tools.ts` | Barrel — registers 17 tool modules from `server/ai-tools/` |
 | `server/storage.ts` | `IStorage` interface + `DatabaseStorage` (LRU cache, pagination, soft deletes) |
 | `server/auth.ts` | Session auth (scrypt), API key encryption (AES-256-GCM) |
@@ -115,7 +115,7 @@ server/
   circuit-routes.ts   → Barrel — imports 13 circuit routers from server/circuit-routes/
   circuit-routes/     → designs, instances, nets, wires, netlist, exports, simulations,
                          hierarchy, imports, autoroute, expansion, utils, index
-  ai.ts               → Google Genkit streaming, 118 AI tools, system prompt builder, action parser
+  ai.ts               → Google Genkit streaming, 125 AI tools, system prompt builder, action parser
   ai-tools.ts         → Barrel — imports 17 tool modules from server/ai-tools/
   ai-tools/           → types, registry, index, navigation, architecture, circuit, component,
                          bom, bom-optimization, validation, export, project, vision,

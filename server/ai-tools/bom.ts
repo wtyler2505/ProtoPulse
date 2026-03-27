@@ -149,15 +149,14 @@ export function registerBomTools(registry: ToolRegistry): void {
       partNumber: z.string().min(1).describe('Part number of the item to update'),
       updates: z
         .object({
-          manufacturer: z.unknown().optional(),
-          description: z.unknown().optional(),
-          quantity: z.unknown().optional(),
-          unitPrice: z.unknown().optional(),
-          supplier: z.unknown().optional(),
-          status: z.unknown().optional(),
-          notes: z.unknown().optional(),
+          manufacturer: z.string().optional(),
+          description: z.string().optional(),
+          quantity: z.number().int().positive().optional(),
+          unitPrice: z.union([z.string(), z.number()]).optional(),
+          supplier: z.string().optional(),
+          status: z.string().optional(),
+          notes: z.string().optional(),
         })
-        .passthrough()
         .describe('Map of field names to new values'),
     }),
     requiresConfirmation: false,

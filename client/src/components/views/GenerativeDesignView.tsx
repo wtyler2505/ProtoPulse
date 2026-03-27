@@ -10,11 +10,13 @@
 
 import { useState, useCallback } from 'react';
 import { useGenerativeDesign } from '@/lib/generative-design/generative-engine';
-import type { DesignSpec, CandidateEntry } from '@/lib/generative-design/generative-engine';
 import { defaultCriteria } from '@/lib/generative-design/fitness-scorer';
 import { compareCandidateWithCurrent, exportCandidate } from '@/lib/generative-design/generative-adopt';
-import type { ComparisonResult } from '@/lib/generative-design/generative-adopt';
 import { AdoptCandidateDialog } from '@/components/dialogs/AdoptCandidateDialog';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { toast } from '@/hooks/use-toast';
+import type { DesignSpec, CandidateEntry } from '@/lib/generative-design/generative-engine';
+import type { ComparisonResult, AdoptResult } from '@/lib/generative-design/generative-adopt';
 import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
 
 // ---------------------------------------------------------------------------
@@ -42,6 +44,7 @@ function defaultBaseCircuit(): CircuitIR {
 
 export default function GenerativeDesignView() {
   const { state, results, run, cancel } = useGenerativeDesign();
+  const { nodes: existingNodes, edges: existingEdges, setNodes, setEdges, pushUndoState } = useArchitecture();
 
   const [description, setDescription] = useState('');
   const [budgetUsd, setBudgetUsd] = useState(25);
@@ -353,9 +356,36 @@ export default function GenerativeDesignView() {
         onOpenChange={setAdoptDialogOpen}
         candidate={selectedCandidate}
         currentIR={defaultBaseCircuit()}
-        onAdopt={() => {
-          // AdoptResult is produced — in the future, this calls the project mutation
-          // to actually create architecture nodes. For now the dialog confirms the action.
+        onAdopt={(result: AdoptResult) => {
+          pushUndoState();
+
+          // Convert AdoptResult nodes to @xyflow/react Node format and merge with existing
+          const newNodes = result.nodes.map((n) => ({
+            id: n.nodeId,
+            type: 'custom' as const,
+            position: { x: n.positionX, y: n.positionY },
+            data: {
+              label: n.label,
+              type: n.nodeType,
+              description: (n.data.generatedFrom as string) || undefined,
+            },
+          }));
+
+          // Convert AdoptResult edges to @xyflow/react Edge format and merge with existing
+          const newEdges = result.edges.map((e) => ({
+            id: e.edgeId,
+            source: e.source,
+            target: e.target,
+            label: e.label,
+          }));
+
+          setNodes([...existingNodes, ...newNodes]);
+          setEdges([...existingEdges, ...newEdges]);
+
+          toast({
+            title: 'Design adopted',
+            description: `Added ${result.componentCount} component${result.componentCount !== 1 ? 's' : ''} and ${result.netCount} net${result.netCount !== 1 ? 's' : ''} to architecture.`,
+          });
         }}
       />
     </div>

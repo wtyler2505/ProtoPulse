@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import type { MessageData } from "@genkit-ai/ai/model";
 import { LRUClientCache } from "./lib/lru-cache";
@@ -437,7 +436,6 @@ export interface ImageContent {
 
 const MAX_CLIENT_CACHE = 10;
 
-const anthropicClients = new LRUClientCache<Anthropic>(MAX_CLIENT_CACHE);
 const geminiClients = new LRUClientCache<GoogleGenAI>(MAX_CLIENT_CACHE);
 
 /**
@@ -1062,27 +1060,9 @@ async function executeStreamForProvider(
     ? allGenkitTools.filter(t => toolAllowlist.includes(t.name))
     : allGenkitTools;
 
-  const { toGeminiTool } = await import('../node_modules/@genkit-ai/google-genai/lib/common/converters.js');
-  const geminiToolSchemaFailures = selectedTools
-    .map((tool) => {
-      try {
-        toGeminiTool(tool as never);
-        return null;
-      } catch (error) {
-        return {
-          name: tool.name,
-          message: error instanceof Error ? error.message : String(error),
-        };
-      }
-    })
-    .filter((failure): failure is { name: string; message: string } => failure !== null);
-
-  if (geminiToolSchemaFailures.length > 0) {
-    logger.error('ai:tool-schema-preflight-failed', {
-      count: geminiToolSchemaFailures.length,
-      failures: geminiToolSchemaFailures,
-    });
-  }
+  // Tool schema pre-flight validation removed (AI-RT-01): the previous implementation
+  // imported an internal Genkit module path (converters.js) that would break on upgrades.
+  // Gemini API returns clear schema errors at call time if a tool is incompatible.
 
   let fullText = '';
   const allToolCalls: ToolCallRecord[] = [];
@@ -1102,7 +1082,8 @@ async function executeStreamForProvider(
         maxOutputTokens: maxTokens,
         apiVersion: 'v1beta'
       },
-      context: toolContext
+      context: toolContext,
+      abortSignal: signal,
     });
 
     for await (const chunk of stream) {
@@ -1195,6 +1176,12 @@ async function executeStreamForProvider(
       for (const [id, { name, input }] of Array.from(streamingToolRequests.entries())) {
         const toolDef = toolRegistry.get(name);
         if (toolDef && toolContext) {
+          // Guard: never re-execute destructive tools — Genkit already ran them
+          // during generateStream. Re-executing would cause duplicate DB writes.
+          if (DESTRUCTIVE_TOOLS.includes(name)) {
+            logger.warn('ai:tool-fallback-skip-destructive', { tool: name });
+            continue;
+          }
           try {
             const result = await toolDef.execute(input, toolContext);
             allToolCalls.push({ id, name, input, result });

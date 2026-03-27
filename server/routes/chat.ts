@@ -40,6 +40,56 @@ setInterval(() => {
   });
 }, RATE_PRUNE_INTERVAL_MS).unref();
 
+// ---------------------------------------------------------------------------
+// Per-IP sliding window rate limiter for non-streaming AI chat requests
+// ---------------------------------------------------------------------------
+
+const CHAT_AI_RATE_WINDOW_MS = 60_000;
+const CHAT_AI_RATE_MAX = 10;
+
+const chatAiRateBuckets = new Map<string, RateBucket>();
+
+/** Periodically prune stale chat-AI rate-limit buckets (every 2 minutes) */
+setInterval(() => {
+  const cutoff = Date.now() - CHAT_AI_RATE_WINDOW_MS;
+  chatAiRateBuckets.forEach((bucket, ip) => {
+    bucket.timestamps = bucket.timestamps.filter((t: number) => t > cutoff);
+    if (bucket.timestamps.length === 0) {
+      chatAiRateBuckets.delete(ip);
+    }
+  });
+}, RATE_PRUNE_INTERVAL_MS).unref();
+
+/**
+ * Middleware: per-IP sliding-window rate limiter for non-streaming AI chat requests.
+ * Max `CHAT_AI_RATE_MAX` requests per `CHAT_AI_RATE_WINDOW_MS` per IP.
+ */
+function chatAiRateLimiter(req: Request, res: Response, next: NextFunction): void {
+  const ip = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+  const now = Date.now();
+  const cutoff = now - CHAT_AI_RATE_WINDOW_MS;
+
+  let bucket = chatAiRateBuckets.get(ip);
+  if (!bucket) {
+    bucket = { timestamps: [] };
+    chatAiRateBuckets.set(ip, bucket);
+  }
+
+  // Prune expired timestamps from this bucket
+  bucket.timestamps = bucket.timestamps.filter((t) => t > cutoff);
+
+  if (bucket.timestamps.length >= CHAT_AI_RATE_MAX) {
+    const oldestInWindow = bucket.timestamps[0];
+    const retryAfterSec = Math.ceil((oldestInWindow + CHAT_AI_RATE_WINDOW_MS - now) / 1000);
+    res.setHeader('Retry-After', String(retryAfterSec));
+    res.status(429).json({ message: `Rate limit exceeded. Max ${CHAT_AI_RATE_MAX} AI chat requests per minute.` });
+    return;
+  }
+
+  bucket.timestamps.push(now);
+  next();
+}
+
 /** Absolute maximum stream duration (5 minutes) — hard kill regardless of activity */
 const ABSOLUTE_STREAM_TIMEOUT_MS = 300_000;
 
@@ -167,6 +217,9 @@ export const _streamInternals = {
   STREAM_RATE_MAX,
   ABSOLUTE_STREAM_TIMEOUT_MS,
   STREAM_MESSAGE_MAX_BYTES,
+  chatAiRateBuckets,
+  CHAT_AI_RATE_WINDOW_MS,
+  CHAT_AI_RATE_MAX,
 };
 
 const aiRequestSchema = z.object({
@@ -402,6 +455,7 @@ export function registerChatRoutes(app: Express): void {
   app.post(
     '/api/chat/ai',
     payloadLimit(10 * 1024 * 1024),
+    chatAiRateLimiter,
     asyncHandler(async (req, res) => {
       const parsed = aiRequestSchema.safeParse(req.body);
       if (!parsed.success) {
