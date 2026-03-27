@@ -187,7 +187,7 @@ export default function GenerativeDesignView() {
           <button
             data-testid="generate-button"
             onClick={handleGenerate}
-            disabled={isRunning}
+            disabled={isRunning || description.trim().length === 0}
             className="flex-1 rounded bg-cyan-600 px-3 py-2 text-sm font-medium text-white hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {state === 'complete' ? 'Regenerate' : 'Generate'}
