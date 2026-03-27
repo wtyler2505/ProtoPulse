@@ -23,6 +23,7 @@ import { BreadboardComponentOverlay, detectFamily, getFamilyValues, getCurrentVa
 import BendableLegRenderer from './BendableLegRenderer';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import BreadboardConnectivityOverlay from './BreadboardConnectivityOverlay';
+import { syncSchematicToBreadboard } from '@/lib/circuit-editor/view-sync';
 import BreadboardDrcOverlay from './BreadboardDrcOverlay';
 import BreadboardWireEditor from './BreadboardWireEditor';
 import ToolButton from './ToolButton';
@@ -411,6 +412,37 @@ function BreadboardCanvas({ circuitId }: { circuitId: number }) {
       );
     }
   }, [autoPlacementPlans, circuitId, updateInstanceMutation]);
+
+  // Wire sync: create breadboard wires for schematic net segments whose
+  // endpoints have been placed on the breadboard. Only runs when there are
+  // no pending auto-placement requests (all instances have coordinates).
+  const wireSyncVersion = useRef('');
+  useEffect(() => {
+    if (!instances || !nets || !wires) return;
+    // Wait for all auto-placements to settle
+    if (autoPlacementPlans.length > 0) return;
+
+    const placedInstances = instances.filter(i => i.breadboardX != null && i.breadboardY != null);
+    if (placedInstances.length === 0) return;
+
+    // Build a version key to avoid re-syncing the same state
+    const version = `${placedInstances.map(i => i.id).sort().join(',')}-${nets.length}-${breadboardWires.length}`;
+    if (wireSyncVersion.current === version) return;
+    wireSyncVersion.current = version;
+
+    const result = syncSchematicToBreadboard(nets, wires, instances, partsMap);
+    if (result.wiresToCreate.length === 0) return;
+
+    for (const wire of result.wiresToCreate) {
+      createWireMutation.mutate({
+        circuitId,
+        netId: wire.netId,
+        view: 'breadboard',
+        points: wire.points,
+        color: wire.color ?? null,
+      });
+    }
+  }, [instances, nets, wires, breadboardWires, autoPlacementPlans, partsMap, circuitId, createWireMutation]);
 
   // BL-0594: Selected instance family detection for value swapping
   const selectedInstanceInfo = useMemo(() => {
