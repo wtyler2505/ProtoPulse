@@ -409,8 +409,9 @@ function WorkspaceContent() {
   const handlePredictionAccept = useCallback((id: string) => {
     const pred = predictions.find(p => p.id === id);
     if (pred && pred.action) {
-      if (pred.action.type === 'add_component') {
-        const payload = pred.action.payload;
+      const { type, payload } = pred.action;
+
+      if (type === 'add_component') {
         const label = getPredictionComponentLabel(payload);
         const count = getPredictionComponentCount(payload);
         executeActions(buildPredictionAddNodeActions(payload));
@@ -420,10 +421,22 @@ function WorkspaceContent() {
             ? `Added ${label} to architecture.`
             : `Added ${count} ${label} components to architecture.`,
         });
+      } else if (type === 'open_view') {
+        const view = typeof payload.view === 'string' ? payload.view : null;
+        if (view && VALID_VIEW_MODES.has(view)) {
+          setActiveView(view as ViewMode);
+          toast({ title: 'View switched', description: `Opened ${view.replace(/_/g, ' ')} view.` });
+        }
+      } else if (type === 'show_info') {
+        const topic = typeof payload.topic === 'string' ? payload.topic : null;
+        if (topic) {
+          setActiveView('knowledge');
+          toast({ title: 'Knowledge Hub', description: `Showing information about ${topic.replace(/[-_]/g, ' ')}.` });
+        }
       }
     }
     accept(id);
-  }, [predictions, executeActions, accept, toast]);
+  }, [predictions, executeActions, accept, toast, setActiveView]);
 
   useEffect(() => {
     if (mainRef.current) {
