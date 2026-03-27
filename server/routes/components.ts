@@ -9,6 +9,7 @@ import { exportToFzpz, importFromFzpz } from '../component-export';
 import { parseSvgToShapes } from '../svg-parser';
 import { getApiKey } from '../auth';
 import { asyncHandler, payloadLimit, parseIdParam, HttpError } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 import { setCacheHeaders } from '../lib/cache-headers';
 
 async function resolveGeminiApiKey(clientKey: string | undefined, userId: number | undefined): Promise<string> {
@@ -29,6 +30,7 @@ export function registerComponentRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:projectId/component-parts',
+    requireProjectOwnership,
     setCacheHeaders('project_data'),
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);

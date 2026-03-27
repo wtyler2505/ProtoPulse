@@ -97,6 +97,17 @@ export interface ToolContext {
 export type ModelTier = 'fast' | 'standard' | 'premium';
 
 /**
+ * Permission tier for AI tool access control.
+ *
+ * Classifies tools by the level of privilege they require:
+ * - `'read'`        - Read-only lookups (no side effects).
+ * - `'suggest'`     - Propose changes the user can accept or reject.
+ * - `'mutate'`      - Directly modify project state (add/update/delete entities).
+ * - `'destructive'` - Irreversible or bulk-destructive operations requiring explicit confirmation.
+ */
+export type PermissionTier = 'read' | 'suggest' | 'mutate' | 'destructive';
+
+/**
  * AI confidence scoring for tool results and suggestions.
  *
  * Attached to AI responses that involve data lookups, component matching,
