@@ -216,6 +216,7 @@ describe('POST /api/projects/:projectId/circuits', () => {
 
 describe('PATCH /api/projects/:projectId/circuits/:id', () => {
   it('updates a circuit design', async () => {
+    mockGetCircuitDesign.mockResolvedValue(makeDesign());
     mockUpdateCircuitDesign.mockResolvedValue(makeDesign({ name: 'Renamed', version: 2 }));
 
     const res = await authFetch(`${baseUrl}/api/projects/1/circuits/1`, {
@@ -239,6 +240,7 @@ describe('PATCH /api/projects/:projectId/circuits/:id', () => {
   });
 
   it('returns 409 on version conflict', async () => {
+    mockGetCircuitDesign.mockResolvedValue(makeDesign());
     const { VersionConflictError } = await import('../storage');
     mockUpdateCircuitDesign.mockRejectedValue(new VersionConflictError('circuit_design', 1, 5));
 
@@ -260,6 +262,7 @@ describe('PATCH /api/projects/:projectId/circuits/:id', () => {
 
 describe('DELETE /api/projects/:projectId/circuits/:id', () => {
   it('deletes a circuit design', async () => {
+    mockGetCircuitDesign.mockResolvedValue(makeDesign());
     mockDeleteCircuitDesign.mockResolvedValue(true);
 
     const res = await authFetch(`${baseUrl}/api/projects/1/circuits/1`, { method: 'DELETE' });

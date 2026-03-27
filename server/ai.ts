@@ -1087,6 +1087,9 @@ async function executeStreamForProvider(
   let fullText = '';
   const allToolCalls: ToolCallRecord[] = [];
 
+  // Track streaming tool requests so we can pair them with results later
+  const streamingToolRequests = new Map<string, { name: string; input: Record<string, unknown> }>();
+
   try {
     const { response, stream } = ai.generateStream({
       model: `googleai/${model}`,
@@ -1115,7 +1118,9 @@ async function executeStreamForProvider(
       if (toolRequests && toolRequests.length > 0) {
         for (const req of toolRequests) {
           const id = req.toolRequest.ref || crypto.randomUUID();
-          await onEvent({ type: 'tool_call', id, name: req.toolRequest.name, input: (req.toolRequest.input ?? {}) as Record<string, unknown> });
+          const input = (req.toolRequest.input ?? {}) as Record<string, unknown>;
+          streamingToolRequests.set(id, { name: req.toolRequest.name, input });
+          await onEvent({ type: 'tool_call', id, name: req.toolRequest.name, input });
         }
       }
     }
@@ -1124,21 +1129,90 @@ async function executeStreamForProvider(
 
     const finalResponse = await response;
 
+    // Extract tool call results from the full conversation history.
+    // Genkit's generateStream wraps generate() internally, which auto-executes tools
+    // and appends tool-role messages to request.messages. Each tool response contains
+    // the ToolResult returned by our execute() functions (including clientAction data).
     if (finalResponse.request?.messages) {
       for (const msg of finalResponse.request.messages) {
         if (msg.role === 'tool' && msg.content) {
           for (const part of msg.content) {
             if (part.toolResponse) {
+              const id = part.toolResponse.ref || crypto.randomUUID();
+              const requestInfo = streamingToolRequests.get(id);
               allToolCalls.push({
-                id: part.toolResponse.ref || crypto.randomUUID(),
+                id,
                 name: part.toolResponse.name,
-                input: {},
-                result: part.toolResponse.output
-              } as unknown as ToolCallRecord);
+                input: requestInfo?.input ?? {},
+                result: part.toolResponse.output as ToolResult,
+              });
             }
           }
         }
       }
+    }
+
+    // Fallback: if no tool responses were found in request.messages but we saw
+    // streaming tool requests, check the model message content for tool requests
+    // that Genkit resolved (the tool result is in the output field).
+    if (allToolCalls.length === 0 && streamingToolRequests.size > 0) {
+      // Try the response's own messages (full history including model response)
+      try {
+        const fullMessages = finalResponse.messages;
+        for (const msg of fullMessages) {
+          if (msg.role === 'tool' && msg.content) {
+            for (const part of msg.content) {
+              if (part.toolResponse) {
+                const id = part.toolResponse.ref || crypto.randomUUID();
+                const requestInfo = streamingToolRequests.get(id);
+                allToolCalls.push({
+                  id,
+                  name: part.toolResponse.name,
+                  input: requestInfo?.input ?? {},
+                  result: part.toolResponse.output as ToolResult,
+                });
+              }
+            }
+          }
+        }
+      } catch {
+        // messages getter throws if request is missing — already handled above
+      }
+    }
+
+    // Last resort: if Genkit didn't surface tool results through either path,
+    // construct ToolCallRecords from the streaming requests alone. This happens
+    // when tools are client-dispatched (navigation, view switching) — the tool
+    // execute() function returns a ToolResult with data: { type, ...params },
+    // but Genkit may not include the response in the conversation history for
+    // single-turn streaming. We reconstruct the expected result from the tool
+    // registry's execute function.
+    if (allToolCalls.length === 0 && streamingToolRequests.size > 0) {
+      logger.info('ai:tool-fallback-execution', {
+        count: streamingToolRequests.size,
+        tools: Array.from(streamingToolRequests.values()).map(t => t.name),
+      });
+      for (const [id, { name, input }] of Array.from(streamingToolRequests.entries())) {
+        const toolDef = toolRegistry.get(name);
+        if (toolDef && toolContext) {
+          try {
+            const result = await toolDef.execute(input, toolContext);
+            allToolCalls.push({ id, name, input, result });
+          } catch (execErr: unknown) {
+            logger.warn('ai:tool-fallback-execute-failed', {
+              tool: name,
+              error: execErr instanceof Error ? execErr.message : String(execErr),
+            });
+          }
+        }
+      }
+    }
+
+    if (allToolCalls.length > 0) {
+      logger.info('ai:tool-calls-captured', {
+        count: allToolCalls.length,
+        tools: allToolCalls.map(tc => tc.name),
+      });
     }
 
   } catch (err: unknown) {

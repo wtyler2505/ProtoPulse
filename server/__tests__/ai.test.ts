@@ -1,4 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+// Mock modules that transitively require DATABASE_URL
+vi.mock('../db', () => ({ db: {}, pool: {} }));
+vi.mock('../storage', () => ({ storage: {} }));
+vi.mock('../google-workspace', () => ({
+  exportBomToSheet: vi.fn(),
+  exportDesignReportToDoc: vi.fn(),
+  exportProjectToDrive: vi.fn(),
+}));
+
 import { parseActionsFromResponse, categorizeError, isRetryableError, getDefaultFallbackModel, redactSecrets } from '../ai';
 
 // =============================================================================

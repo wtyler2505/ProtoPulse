@@ -212,6 +212,7 @@ describe('POST /api/projects/:id/comments', () => {
 
 describe('PATCH /api/projects/:id/comments/:commentId', () => {
   it('updates a comment', async () => {
+    mockGetComment.mockResolvedValue(makeComment());
     mockUpdateComment.mockResolvedValue(makeComment({ content: 'Updated' }));
 
     const res = await authFetch(`${baseUrl}/api/projects/1/comments/1`, {
@@ -223,6 +224,7 @@ describe('PATCH /api/projects/:id/comments/:commentId', () => {
   });
 
   it('returns 404 for non-existent comment', async () => {
+    mockGetComment.mockResolvedValue(null);
     mockUpdateComment.mockResolvedValue(null);
 
     const res = await authFetch(`${baseUrl}/api/projects/1/comments/999`, {
@@ -240,6 +242,7 @@ describe('PATCH /api/projects/:id/comments/:commentId', () => {
 
 describe('PATCH /api/projects/:id/comments/:commentId/status', () => {
   it('updates comment status', async () => {
+    mockGetComment.mockResolvedValue(makeComment());
     mockUpdateCommentStatus.mockResolvedValue(makeComment({ status: 'resolved' }));
 
     const res = await authFetch(`${baseUrl}/api/projects/1/comments/1/status`, {
@@ -251,6 +254,7 @@ describe('PATCH /api/projects/:id/comments/:commentId/status', () => {
   });
 
   it('returns 400 for missing status', async () => {
+    mockGetComment.mockResolvedValue(makeComment());
     const res = await authFetch(`${baseUrl}/api/projects/1/comments/1/status`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -260,6 +264,7 @@ describe('PATCH /api/projects/:id/comments/:commentId/status', () => {
   });
 
   it('returns 404 for non-existent comment', async () => {
+    mockGetComment.mockResolvedValue(null);
     mockUpdateCommentStatus.mockResolvedValue(null);
 
     const res = await authFetch(`${baseUrl}/api/projects/1/comments/999/status`, {
@@ -277,6 +282,7 @@ describe('PATCH /api/projects/:id/comments/:commentId/status', () => {
 
 describe('DELETE /api/projects/:id/comments/:commentId', () => {
   it('deletes a comment', async () => {
+    mockGetComment.mockResolvedValue(makeComment());
     mockDeleteComment.mockResolvedValue(true);
 
     const res = await authFetch(`${baseUrl}/api/projects/1/comments/1`, { method: 'DELETE' });
@@ -284,6 +290,7 @@ describe('DELETE /api/projects/:id/comments/:commentId', () => {
   });
 
   it('returns 404 for non-existent comment', async () => {
+    mockGetComment.mockResolvedValue(null);
     mockDeleteComment.mockResolvedValue(false);
 
     const res = await authFetch(`${baseUrl}/api/projects/1/comments/999`, { method: 'DELETE' });
