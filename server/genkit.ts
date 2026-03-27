@@ -41,17 +41,6 @@ export const queryBomItemsTool = ai.defineTool({
   return await storage.getBomItems(ctx.projectId);
 });
 
-// DEV-ONLY MOCK — returns random pricing data. Do NOT use in production flows.
-// Kept for local testing of generateArduinoSketchFlow only.
-export const pricingLookupTool = ai.defineTool({
-  name: 'pricingLookup',
-  description: '[DEV MOCK] Returns fake pricing data for a component part number. Not connected to real supplier APIs.',
-  inputSchema: z.object({ partNumber: z.string() }),
-  outputSchema: z.object({ price: z.number(), currency: z.string(), inStock: z.boolean() })
-}, async (_input) => {
-  return { price: Math.random() * 10, currency: 'USD', inStock: true };
-});
-
 // A proof-of-concept flow that takes an intent and uses Gemini via Genkit (dev-only)
 export const generateArduinoSketchFlow = ai.defineFlow({
   name: 'generateArduinoSketchFlow',

@@ -32,11 +32,19 @@ export function registerNavigationTools(registry: ToolRegistry): void {
   registry.register({
     name: 'switch_view',
     description:
-      'Switch the active view in the application. Use this to navigate between architecture diagram, schematic, procurement/BOM, validation, output, or project explorer views.',
+      'Switch the active view in the application. Navigate between any of the 30 views: design (architecture, schematic, breadboard, pcb, component_editor, circuit_code, generative_design), simulation (simulation, digital_twin, calculators), BOM (procurement, ordering, storage), validation, project management (dashboard, project_explorer, design_history, lifecycle, comments, kanban, audit_trail), output (output, viewer_3d), learning (knowledge, design_patterns, community, starter_circuits), hardware (arduino, serial_monitor), and experimental (labs).',
     category: 'navigation',
     parameters: z.object({
       view: z
-        .enum(['architecture', 'schematic', 'procurement', 'validation', 'output', 'project_explorer'])
+        .enum([
+          'dashboard', 'architecture', 'schematic', 'breadboard', 'pcb',
+          'component_editor', 'procurement', 'validation', 'simulation',
+          'output', 'design_history', 'lifecycle', 'comments', 'calculators',
+          'design_patterns', 'storage', 'kanban', 'knowledge', 'viewer_3d',
+          'community', 'ordering', 'serial_monitor', 'circuit_code',
+          'generative_design', 'digital_twin', 'arduino', 'starter_circuits',
+          'audit_trail', 'labs', 'project_explorer',
+        ])
         .describe('The view to switch to'),
     }),
     requiresConfirmation: false,
