@@ -9,7 +9,7 @@
     "genkit:dev": "genkit start -- npm run dev",
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
-    "check": "tsc",
+    "check": "NODE_OPTIONS='--max-old-space-size=4096' tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

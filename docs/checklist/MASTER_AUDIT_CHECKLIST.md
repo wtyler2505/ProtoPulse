@@ -681,7 +681,7 @@ These are not all proven broken. They are areas that still warrant active suspic
 ## 14. Final Checklist
 
 ### Must-fix
-- [ ] full repo typecheck completes cleanly
+- [x] full repo typecheck completes cleanly (fixed: added `--max-old-space-size=4096` to `check` script — Wave 156)
 - [ ] route ownership matrix re-audited after recent hardening
 - [ ] all primary workspace tabs covered by current live smoke tests
 - [ ] stale backup/temporary source files removed from app tree
