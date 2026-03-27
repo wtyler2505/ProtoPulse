@@ -21,9 +21,13 @@ function genkitStreamResult(opts: {
   error?: Error;
 }): { stream: AsyncIterable<Record<string, unknown>>; response: Promise<{ text: string }> } {
   if (opts.error) {
+    // The response promise must be silently rejected (not unhandled) because
+    // the route's try/catch catches the stream error first and never awaits response.
+    const rejected = Promise.reject(opts.error);
+    rejected.catch(() => {}); // prevent unhandled rejection
     return {
       stream: (async function* () { throw opts.error; })(),
-      response: Promise.reject(opts.error),
+      response: rejected,
     };
   }
   const chunks: Array<Record<string, unknown>> = [];
