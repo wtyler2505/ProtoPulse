@@ -439,7 +439,20 @@ export default function CommunityView() {
   }, [query, typeFilter, sortBy, search]);
 
   const handleDownload = useCallback((id: string) => {
-    downloadComponent(id);
+    const result = downloadComponent(id);
+    if (result) {
+      // Trigger a real browser file download with the component data
+      const blob = new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${result.name.replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase()}.json`;
+      anchor.rel = 'noopener noreferrer';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    }
     const allComponents = [...components, ...featured, ...trending, ...newArrivals];
     const part = allComponents.find((c) => c.id === id);
     if (part && shouldPromptBomAdd(part)) {
