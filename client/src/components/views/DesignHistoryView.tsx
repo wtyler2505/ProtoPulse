@@ -220,6 +220,7 @@ export default function DesignHistoryView() {
                             variant="ghost"
                             size="sm"
                             data-testid={`btn-delete-snapshot-${snapshot.id}`}
+                            aria-label={`Delete snapshot ${String(snapshot.name)}`}
                             disabled={deleteMutation.isPending}
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
