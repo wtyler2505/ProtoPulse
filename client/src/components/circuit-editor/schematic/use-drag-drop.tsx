@@ -2,7 +2,7 @@
  * Drag-over and drop handlers for the schematic canvas: placing component
  * instances and power symbols from the sidebar palettes.
  */
-import { useCallback, createElement } from 'react';
+import { useCallback } from 'react';
 import type { ReactFlowInstance } from '@xyflow/react';
 import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import { COMPONENT_DRAG_TYPE } from '../ComponentPlacer';
