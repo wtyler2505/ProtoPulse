@@ -2,7 +2,7 @@
  * Drag-over and drop handlers for the schematic canvas: placing component
  * instances and power symbols from the sidebar palettes.
  */
-import { useCallback } from 'react';
+import { useCallback, createElement } from 'react';
 import type { ReactFlowInstance } from '@xyflow/react';
 import { generateRefDes } from '@/lib/circuit-editor/ref-des';
 import { COMPONENT_DRAG_TYPE } from '../ComponentPlacer';
@@ -117,26 +117,27 @@ export function useSchematicDragDrop({
           mutationRefs.toast.current!({
             title: `Add ${bomLabel} to BOM?`,
             description: `"${partTitle}" already in BOM (qty ${String(existingBomItem.quantity)}). Increment?`,
-            action: createElement(
-              ToastAction,
-              {
-                altText: 'Increment quantity',
-                onClick: () => {
+            action: (
+              <ToastAction
+                altText="Increment quantity"
+                data-testid="bom-increment-action"
+                onClick={() => {
                   updateBomItem(existingBomItem.id, { quantity: existingBomItem.quantity + 1 });
-                },
-              },
-              'Increment',
+                }}
+              >
+                Increment
+              </ToastAction>
             ),
           });
         } else {
           mutationRefs.toast.current!({
             title: `Add ${bomLabel} to BOM?`,
             description: `Place "${partTitle}" in your bill of materials.`,
-            action: createElement(
-              ToastAction,
-              {
-                altText: 'Add to BOM',
-                onClick: () => {
+            action: (
+              <ToastAction
+                altText="Add to BOM"
+                data-testid="bom-add-action"
+                onClick={() => {
                   addBomItem({
                     partNumber: partMpn,
                     manufacturer: partMeta.manufacturer || '',
@@ -148,9 +149,10 @@ export function useSchematicDragDrop({
                     stock: 0,
                     status: 'In Stock',
                   });
-                },
-              },
-              'Add to BOM',
+                }}
+              >
+                Add to BOM
+              </ToastAction>
             ),
           });
         }
