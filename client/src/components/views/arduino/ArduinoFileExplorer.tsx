@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import {
   FileCode,
@@ -18,10 +18,11 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ExamplesBrowser from '@/components/views/arduino/ExamplesBrowser';
 import ExampleLibraryPanel from '@/components/arduino/ExampleLibraryPanel';
+import type { ArduinoSketchFile } from '@shared/schema';
 import type { BottomTab } from './types';
 
 interface ArduinoFileExplorerProps {
-  files: Array<{ id: number; relativePath: string; language: string; sizeBytes: number }>;
+  files: ArduinoSketchFile[];
   isFilesLoading: boolean;
   activeFilePath: string | null;
   onSelectFile: (path: string) => void;
@@ -49,43 +50,12 @@ export default function ArduinoFileExplorer({
   onOpenNewFileDialog,
   onSetBottomTab,
 }: ArduinoFileExplorerProps) {
-  const [searchQuery, setSearchQuery] = [
-    // We need local state for the search query
-  ] as never;
-  // Use a local search query instead — we'll manage it internally
-  return <ArduinoFileExplorerInner {...{
-    files,
-    isFilesLoading,
-    activeFilePath,
-    onSelectFile,
-    isDirty,
-    showExamples,
-    onShowExamples,
-    showExampleLibrary,
-    onShowExampleLibrary,
-    onLoadExample,
-    onOpenNewFileDialog,
-    onSetBottomTab,
-  }} />;
-}
+  const [searchQuery, setSearchQuery] = useState('');
 
-function ArduinoFileExplorerInner({
-  files,
-  isFilesLoading,
-  activeFilePath,
-  onSelectFile,
-  isDirty,
-  showExamples,
-  onShowExamples,
-  showExampleLibrary,
-  onShowExampleLibrary,
-  onLoadExample,
-  onOpenNewFileDialog,
-  onSetBottomTab,
-}: ArduinoFileExplorerProps) {
-  // Intentionally not using the destructured hook pattern to keep the component clean
-  // eslint-disable-next-line react-hooks/rules-of-hooks -- this is a stable inner component
-  const { searchQuery, setSearchQuery, filteredFiles } = useFileSearch(files);
+  const filteredFiles = useMemo(
+    () => files.filter(f => f.relativePath.toLowerCase().includes(searchQuery.toLowerCase())),
+    [files, searchQuery],
+  );
 
   return (
     <div className="w-64 border-r border-border flex flex-col bg-card/30 shrink-0">
@@ -249,14 +219,4 @@ function ArduinoFileExplorerInner({
       )}
     </div>
   );
-}
-
-function useFileSearch(files: ArduinoFileExplorerProps['files']) {
-  const { useState } = require('react');
-  const [searchQuery, setSearchQuery] = useState('');
-  const filteredFiles = useMemo(
-    () => files.filter(f => f.relativePath.toLowerCase().includes(searchQuery.toLowerCase())),
-    [files, searchQuery],
-  );
-  return { searchQuery, setSearchQuery, filteredFiles };
 }

@@ -1,3 +1,10 @@
+import {
+  Zap,
+  Activity,
+  TrendingUp,
+  ArrowUpDown,
+} from 'lucide-react';
+
 import type { PlotType, WaveformTrace } from './WaveformViewer';
 
 // ---------------------------------------------------------------------------
@@ -126,13 +133,6 @@ export function parseValueWithUnit(input: string): number {
 // ---------------------------------------------------------------------------
 // Analysis type metadata
 // ---------------------------------------------------------------------------
-
-import {
-  Zap,
-  Activity,
-  TrendingUp,
-  ArrowUpDown,
-} from 'lucide-react';
 
 export const ANALYSIS_TYPES: Array<{
   id: AnalysisType;
