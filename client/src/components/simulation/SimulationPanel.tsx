@@ -18,9 +18,6 @@ import {
   Loader2,
   Download,
   AlertCircle,
-  Crosshair,
-  Trash2,
-  Plus,
 } from 'lucide-react';
 
 import {
@@ -34,6 +31,7 @@ import {
 import SpiceImportSection from './SpiceImportSection';
 import ResultHistorySection from './ResultHistorySection';
 import ComplexityWarningDialog from './ComplexityWarningDialog';
+import ProbeManager from './ProbeManager';
 import {
   ANALYSIS_TYPES,
   parseValueWithUnit,
