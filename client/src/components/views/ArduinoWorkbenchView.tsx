@@ -27,7 +27,7 @@ import type { FlashProgress, FlashDiagnostic } from '@/lib/arduino/flash-diagnos
 import { useCircuitDesigns, useCircuitInstances, useCircuitNets } from '@/lib/circuit-editor/hooks';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import { generatePinConstants } from '@shared/arduino-pin-generator';
-import type { NetInfo, InstanceInfo } from '@shared/arduino-pin-generator';
+import type { NetInfo, InstanceInfo, PinConstant } from '@shared/arduino-pin-generator';
 import { detectPinConflicts } from '@/lib/arduino/pin-conflict-checker';
 import { createArduinoAutocompletion } from '@/lib/arduino/autocomplete';
 import { consumePendingStarterCircuitLaunch } from '@/lib/starter-circuit-launch';
@@ -149,7 +149,7 @@ export default function ArduinoWorkbenchView() {
 
   const schematicPinData = useMemo(() => {
     if (!circuitInstances || !circuitNets || !componentParts) {
-      return { mappedInstances: [] as InstanceInfo[], mappedNets: [] as NetInfo[], schematicPinConstants: [] as string[] };
+      return { mappedInstances: [] as InstanceInfo[], mappedNets: [] as NetInfo[], schematicPinConstants: [] as PinConstant[] };
     }
 
     const mappedInstances: InstanceInfo[] = circuitInstances.map(inst => {
