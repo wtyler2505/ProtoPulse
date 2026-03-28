@@ -12,7 +12,6 @@ import type { PowerSymbolDragData } from '../PowerSymbolPalette';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 import type { CircuitSettings, PowerSymbol } from '@shared/circuit-types';
 import type { Connector, PartMeta } from '@shared/component-types';
-import { createElement } from 'react';
 import { ToastAction } from '@/components/ui/toast';
 
 // ---------------------------------------------------------------------------
@@ -122,7 +121,6 @@ export function useSchematicDragDrop({
               ToastAction,
               {
                 altText: 'Increment quantity',
-                'data-testid': 'bom-increment-action',
                 onClick: () => {
                   updateBomItem(existingBomItem.id, { quantity: existingBomItem.quantity + 1 });
                 },
