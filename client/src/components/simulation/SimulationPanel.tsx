@@ -4,892 +4,66 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useCircuitDesigns, useCircuitInstances } from '@/lib/circuit-editor/hooks';
 import { cn } from '@/lib/utils';
-import type { CircuitDesignRow } from '@shared/schema';
 import SimulationScenarioPanel from '@/components/circuit-editor/SimulationScenarioPanel';
 import SensorSliderPanel from '@/components/simulation/SensorSliderPanel';
 import { useSimulation } from '@/lib/contexts/simulation-context';
-import type { WaveformTrace, PlotType } from './WaveformViewer';
-import {
-  parseSpiceNetlist,
-  runParsedNetlist,
-} from '@/lib/simulation/spice-netlist-parser';
-import { mergeDesignVarsIntoNetlist } from '@/lib/simulation/design-var-spice-bridge';
-import { VariableStore } from '@shared/design-variables';
-import type { DesignVariable } from '@shared/design-variables';
-import type { SimulationResult as SpiceSimResult } from '@/lib/simulation/spice-netlist-parser';
 import { autoDetectAnalysisType, detectSimulationType } from '@/lib/simulation/auto-detect';
-import type { AnalysisType as AutoDetectAnalysisType, CircuitInstanceForDetection } from '@/lib/simulation/auto-detect';
 import { checkCircuitComplexity } from '@/lib/simulation/complexity-check';
-import type { CircuitInstanceForComplexity } from '@/lib/simulation/complexity-check';
 import SimPlayButton from '@/components/simulation/SimPlayButton';
 import ShareSimulationButton from '@/components/simulation/ShareSimulationButton';
 import {
   Play,
   Square,
-  Zap,
   Activity,
-  TrendingUp,
-  ArrowUpDown,
-  Trash2,
-  Clock,
   Loader2,
   Download,
-  ChevronDown,
-  ChevronRight,
-  Crosshair,
-  Plus,
-  RotateCcw,
-  FileText,
   AlertCircle,
-  AlertTriangle,
 } from 'lucide-react';
+
+import {
+  CollapsibleSection,
+  ParamField,
+  TransientParamsForm,
+  ACParamsForm,
+  DCSweepParamsForm,
+  DCOPResultTable,
+} from './AnalysisParamsForms';
+import SpiceImportSection from './SpiceImportSection';
+import ResultHistorySection from './ResultHistorySection';
+import ComplexityWarningDialog from './ComplexityWarningDialog';
+import {
+  ANALYSIS_TYPES,
+  parseValueWithUnit,
+  buildSimulationPayload,
+  normalizeSimulationResponse,
+  defaultTransientParams,
+  defaultACParams,
+  defaultDCSweepParams,
+} from './simulation-types';
+
+import type { CircuitInstanceForDetection, AnalysisType as AutoDetectAnalysisType } from '@/lib/simulation/auto-detect';
+import type { CircuitInstanceForComplexity } from '@/lib/simulation/complexity-check';
+import type { WaveformTrace } from './WaveformViewer';
+import type {
+  AnalysisType,
+  AnalysisParams,
+  DCOPParams,
+  TransientParams,
+  ACParams,
+  DCSweepParams,
+  Probe,
+  SimulationResult,
+  SimulationRun,
+  ApiSimulationResponse,
+} from './simulation-types';
+
+// Re-export for consumers that import parseValueWithUnit from this file
+export { parseValueWithUnit } from './simulation-types';
 
 // ---------------------------------------------------------------------------
 // Lazy-loaded WaveformViewer — only pulled in when results need graphing
 // ---------------------------------------------------------------------------
 const WaveformViewer = lazy(() => import('./WaveformViewer'));
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-type AnalysisType = 'dcop' | 'transient' | 'ac' | 'dcsweep';
-
-interface DCOPParams {
-  // DC Operating Point requires no additional parameters.
-}
-
-interface TransientParams {
-  startTime: string;
-  stopTime: string;
-  timeStep: string;
-}
-
-interface ACParams {
-  startFrequency: string;
-  stopFrequency: string;
-  pointsPerDecade: string;
-}
-
-interface DCSweepParams {
-  source: string;
-  startValue: string;
-  stopValue: string;
-  stepValue: string;
-}
-
-type AnalysisParams = {
-  dcop: DCOPParams;
-  transient: TransientParams;
-  ac: ACParams;
-  dcsweep: DCSweepParams;
-};
-
-interface Probe {
-  id: string;
-  name: string;
-  type: 'voltage' | 'current';
-  nodeOrComponent: string;
-}
-
-interface DCOPResult {
-  type: 'dcop';
-  rows: Array<{ node: string; value: number; unit: string }>;
-}
-
-interface WaveformResult {
-  type: 'waveform';
-  plotType: PlotType;
-  traces: WaveformTrace[];
-  xLabel?: string;
-  xUnit?: string;
-  yLabel?: string;
-  y2Label?: string;
-  title?: string;
-}
-
-type SimulationResult = DCOPResult | WaveformResult;
-
-interface SimulationRun {
-  id: string;
-  analysisType: AnalysisType;
-  timestamp: number;
-  result: SimulationResult;
-  params: AnalysisParams[AnalysisType];
-}
-
-type ApiAnalysisType = 'op' | 'tran' | 'ac' | 'dc';
-
-interface ApiSimulationTrace {
-  name: string;
-  unit: string;
-  data: number[];
-}
-
-interface ApiSimulationResponse {
-  success: boolean;
-  analysisType: ApiAnalysisType;
-  traces?: ApiSimulationTrace[];
-  nodeVoltages?: Record<string, number>;
-  branchCurrents?: Record<string, number>;
-  error?: string | null;
-}
-
-// ---------------------------------------------------------------------------
-// Value parser: "10k" -> 10000, "100u" -> 0.0001, etc.
-// ---------------------------------------------------------------------------
-
-const SI_SUFFIXES: Record<string, number> = {
-  T: 1e12,
-  G: 1e9,
-  M: 1e6,
-  k: 1e3,
-  K: 1e3,
-  m: 1e-3,
-  u: 1e-6,
-  n: 1e-9,
-  p: 1e-12,
-  f: 1e-15,
-};
-
-export function parseValueWithUnit(input: string): number {
-  const trimmed = input.trim();
-  if (trimmed === '') return NaN;
-
-  // Try a plain number first.
-  const plainNumber = Number(trimmed);
-  if (!Number.isNaN(plainNumber)) return plainNumber;
-
-  // Match a number followed by an SI suffix (with optional trailing unit chars like "Hz", "V", "s").
-  const match = trimmed.match(/^([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*([TGMkKmunpf])(?:[A-Za-z]*)?$/);
-  if (!match) return NaN;
-
-  const numeric = Number(match[1]);
-  const suffix = match[2];
-  const multiplier = SI_SUFFIXES[suffix];
-  if (multiplier === undefined) return NaN;
-
-  return numeric * multiplier;
-}
-
-// ---------------------------------------------------------------------------
-// Analysis type metadata
-// ---------------------------------------------------------------------------
-
-const ANALYSIS_TYPES: Array<{
-  id: AnalysisType;
-  label: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-}> = [
-  { id: 'dcop', label: 'DC Operating Point', description: 'Compute node voltages and branch currents', icon: Zap },
-  { id: 'transient', label: 'Transient', description: 'Time-domain waveform analysis', icon: Activity },
-  { id: 'ac', label: 'AC Analysis', description: 'Frequency-domain Bode plot', icon: TrendingUp },
-  { id: 'dcsweep', label: 'DC Sweep', description: 'Sweep a source and measure responses', icon: ArrowUpDown },
-];
-
-const TRACE_COLORS = ['#22d3ee', '#f97316', '#a855f7', '#84cc16', '#f43f5e', '#eab308'];
-
-function mapAnalysisTypeToApi(analysisType: AnalysisType): ApiAnalysisType {
-  switch (analysisType) {
-    case 'dcop':
-      return 'op';
-    case 'transient':
-      return 'tran';
-    case 'ac':
-      return 'ac';
-    case 'dcsweep':
-      return 'dc';
-  }
-}
-
-function resolveTransientTimeStepSeconds(params: TransientParams): number {
-  const explicitStep = params.timeStep.trim() ? parseValueWithUnit(params.timeStep) : NaN;
-  if (!Number.isNaN(explicitStep) && explicitStep > 0) {
-    return explicitStep;
-  }
-
-  const start = parseValueWithUnit(params.startTime) || 0;
-  const stop = parseValueWithUnit(params.stopTime);
-  const span = stop - start;
-  if (!Number.isNaN(span) && span > 0) {
-    return Math.max(span / 1000, 1e-9);
-  }
-
-  return 1e-6;
-}
-
-function buildSimulationPayload(
-  analysisType: AnalysisType,
-  currentParams: AnalysisParams[AnalysisType],
-  options?: { cornerMode?: 'random_extreme'; seed?: number },
-): Record<string, unknown> {
-  const payload: Record<string, unknown> = {
-    analysisType: mapAnalysisTypeToApi(analysisType),
-  };
-
-  switch (analysisType) {
-    case 'dcop':
-      break;
-    case 'transient': {
-      const params = currentParams as TransientParams;
-      payload.transient = {
-        startTime: parseValueWithUnit(params.startTime) || 0,
-        stopTime: parseValueWithUnit(params.stopTime),
-        timeStep: resolveTransientTimeStepSeconds(params),
-      };
-      break;
-    }
-    case 'ac': {
-      const params = currentParams as ACParams;
-      payload.ac = {
-        startFreq: parseValueWithUnit(params.startFrequency),
-        stopFreq: parseValueWithUnit(params.stopFrequency),
-        numPoints: Math.max(1, Math.round(Number(params.pointsPerDecade) || 100)),
-        sweepType: 'dec',
-      };
-      break;
-    }
-    case 'dcsweep': {
-      const params = currentParams as DCSweepParams;
-      payload.dcSweep = {
-        sourceName: params.source,
-        startValue: parseValueWithUnit(params.startValue),
-        stopValue: parseValueWithUnit(params.stopValue),
-        stepValue: parseValueWithUnit(params.stepValue),
-      };
-      break;
-    }
-  }
-
-  if (options?.cornerMode) {
-    payload.cornerMode = options.cornerMode;
-  }
-  if (options?.seed !== undefined) {
-    payload.seed = options.seed;
-  }
-
-  return payload;
-}
-
-function normalizeSimulationResponse(
-  response: ApiSimulationResponse,
-  requestedAnalysisType: AnalysisType,
-): SimulationResult {
-  if (!response.success) {
-    throw new Error(response.error || 'Simulation failed');
-  }
-
-  if (requestedAnalysisType === 'dcop') {
-    const voltageRows = Object.entries(response.nodeVoltages ?? {}).map(([node, value]) => ({
-      node,
-      value,
-      unit: 'V',
-    }));
-    const currentRows = Object.entries(response.branchCurrents ?? {}).map(([node, value]) => ({
-      node,
-      value,
-      unit: 'A',
-    }));
-
-    return {
-      type: 'dcop',
-      rows: [...voltageRows, ...currentRows],
-    };
-  }
-
-  const traces = response.traces ?? [];
-  const [firstTrace, ...remainingTraces] = traces;
-  const xTrace = firstTrace && firstTrace.data.length > 1 ? firstTrace : null;
-  const yTraceSources = xTrace ? remainingTraces : traces;
-  const xValues = xTrace?.data ?? yTraceSources[0]?.data.map((_, index) => index) ?? [];
-
-  return {
-    type: 'waveform',
-    plotType:
-      requestedAnalysisType === 'ac'
-        ? 'bode'
-        : requestedAnalysisType === 'dcsweep'
-          ? 'dc-sweep'
-          : 'time',
-    traces: yTraceSources.map((trace, index) => ({
-      id: `${trace.name}-${index}`,
-      label: trace.name,
-      data: trace.data.map((y, pointIndex) => ({
-        x: xValues[pointIndex] ?? pointIndex,
-        y,
-      })),
-      color: TRACE_COLORS[index % TRACE_COLORS.length],
-      unit: trace.unit || (requestedAnalysisType === 'ac' ? 'dB' : 'V'),
-      visible: true,
-    })),
-    xLabel: xTrace?.name,
-    xUnit: xTrace?.unit,
-    title: ANALYSIS_TYPES.find((item) => item.id === requestedAnalysisType)?.label,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Default parameter factories
-// ---------------------------------------------------------------------------
-
-function defaultTransientParams(): TransientParams {
-  return { startTime: '0', stopTime: '10ms', timeStep: '' };
-}
-
-function defaultACParams(): ACParams {
-  return { startFrequency: '1Hz', stopFrequency: '1MHz', pointsPerDecade: '100' };
-}
-
-function defaultDCSweepParams(): DCSweepParams {
-  return { source: '', startValue: '0', stopValue: '5V', stepValue: '0.1V' };
-}
-
-// ---------------------------------------------------------------------------
-// Collapsible section wrapper
-// ---------------------------------------------------------------------------
-
-function CollapsibleSection({
-  title,
-  defaultOpen = true,
-  children,
-  testId,
-}: {
-  title: string;
-  defaultOpen?: boolean;
-  children: React.ReactNode;
-  testId?: string;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-
-  return (
-    <div className="border-b border-border/50" data-testid={testId}>
-      <button
-        type="button"
-        className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
-      >
-        {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-        {title}
-      </button>
-      {open && <div className="px-4 pb-4">{children}</div>}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Reusable form field
-// ---------------------------------------------------------------------------
-
-function ParamField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  unit,
-  testId,
-  disabled,
-}: {
-  label: string;
-  value: string;
-  onChange: (val: string) => void;
-  placeholder?: string;
-  unit?: string;
-  testId?: string;
-  disabled?: boolean;
-}) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
-      <div className="flex items-center">
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          disabled={disabled}
-          data-testid={testId}
-          className={cn(
-            'flex-1 h-8 px-2.5 text-xs bg-background border border-border text-foreground',
-            'placeholder:text-muted-foreground/50',
-            'focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/20',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            'transition-colors',
-            unit ? 'rounded-l' : '',
-          )}
-        />
-        {unit && (
-          <span className="h-8 px-2 flex items-center text-[10px] font-mono text-muted-foreground bg-muted/30 border border-l-0 border-border rounded-r select-none">
-            {unit}
-          </span>
-        )}
-      </div>
-    </label>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Parameter forms per analysis type
-// ---------------------------------------------------------------------------
-
-function TransientParamsForm({
-  params,
-  onChange,
-  disabled,
-}: {
-  params: TransientParams;
-  onChange: (p: TransientParams) => void;
-  disabled: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <ParamField
-        label="Start Time"
-        value={params.startTime}
-        onChange={(v) => onChange({ ...params, startTime: v })}
-        placeholder="0"
-        unit="s"
-        testId="param-transient-start"
-        disabled={disabled}
-      />
-      <ParamField
-        label="Stop Time"
-        value={params.stopTime}
-        onChange={(v) => onChange({ ...params, stopTime: v })}
-        placeholder="10ms"
-        unit="s"
-        testId="param-transient-stop"
-        disabled={disabled}
-      />
-      <ParamField
-        label="Time Step"
-        value={params.timeStep}
-        onChange={(v) => onChange({ ...params, timeStep: v })}
-        placeholder="auto"
-        unit="s"
-        testId="param-transient-step"
-        disabled={disabled}
-      />
-    </div>
-  );
-}
-
-function ACParamsForm({
-  params,
-  onChange,
-  disabled,
-}: {
-  params: ACParams;
-  onChange: (p: ACParams) => void;
-  disabled: boolean;
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <ParamField
-        label="Start Frequency"
-        value={params.startFrequency}
-        onChange={(v) => onChange({ ...params, startFrequency: v })}
-        placeholder="1Hz"
-        unit="Hz"
-        testId="param-ac-start"
-        disabled={disabled}
-      />
-      <ParamField
-        label="Stop Frequency"
-        value={params.stopFrequency}
-        onChange={(v) => onChange({ ...params, stopFrequency: v })}
-        placeholder="1MHz"
-        unit="Hz"
-        testId="param-ac-stop"
-        disabled={disabled}
-      />
-      <ParamField
-        label="Points/Decade"
-        value={params.pointsPerDecade}
-        onChange={(v) => onChange({ ...params, pointsPerDecade: v })}
-        placeholder="100"
-        testId="param-ac-points"
-        disabled={disabled}
-      />
-    </div>
-  );
-}
-
-function DCSweepParamsForm({
-  params,
-  onChange,
-  disabled,
-  sources,
-}: {
-  params: DCSweepParams;
-  onChange: (p: DCSweepParams) => void;
-  disabled: boolean;
-  sources: string[];
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <label className="flex flex-col gap-1 sm:col-span-2">
-        <span className="text-[11px] text-muted-foreground font-medium">Source</span>
-        <select
-          value={params.source}
-          onChange={(e) => onChange({ ...params, source: e.target.value })}
-          disabled={disabled || sources.length === 0}
-          data-testid="param-dcsweep-source"
-          className={cn(
-            'h-8 px-2 text-xs bg-background border border-border text-foreground',
-            'focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/20',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            'transition-colors appearance-none',
-          )}
-        >
-          <option value="">
-            {sources.length === 0 ? 'No sources in circuit' : 'Select a source...'}
-          </option>
-          {sources.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </label>
-      <ParamField
-        label="Start Value"
-        value={params.startValue}
-        onChange={(v) => onChange({ ...params, startValue: v })}
-        placeholder="0"
-        unit="V"
-        testId="param-dcsweep-start"
-        disabled={disabled}
-      />
-      <ParamField
-        label="Stop Value"
-        value={params.stopValue}
-        onChange={(v) => onChange({ ...params, stopValue: v })}
-        placeholder="5V"
-        unit="V"
-        testId="param-dcsweep-stop"
-        disabled={disabled}
-      />
-      <ParamField
-        label="Step Value"
-        value={params.stepValue}
-        onChange={(v) => onChange({ ...params, stepValue: v })}
-        placeholder="0.1V"
-        unit="V"
-        testId="param-dcsweep-step"
-        disabled={disabled}
-      />
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// DC Operating Point results table
-// ---------------------------------------------------------------------------
-
-function DCOPResultTable({ rows }: { rows: DCOPResult['rows'] }) {
-  return (
-    <div className="overflow-auto max-h-72">
-      <table className="w-full text-xs" data-testid="dcop-results-table">
-        <thead>
-          <tr className="border-b border-border text-muted-foreground">
-            <th className="text-left py-2 px-3 font-semibold">Node / Component</th>
-            <th className="text-right py-2 px-3 font-semibold">Value</th>
-            <th className="text-left py-2 px-3 font-semibold">Unit</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr
-              key={`${row.node}-${i}`}
-              className="border-b border-border/30 hover:bg-muted/20 transition-colors"
-            >
-              <td className="py-1.5 px-3 font-mono text-foreground">{row.node}</td>
-              <td className="py-1.5 px-3 text-right font-mono text-primary">
-                {row.value.toFixed(6)}
-              </td>
-              <td className="py-1.5 px-3 text-muted-foreground">{row.unit}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// SPICE Import Section
-// ---------------------------------------------------------------------------
-
-const SAMPLE_SPICE_NETLIST = `* Voltage Divider Example
-V1 vcc 0 DC 10
-R1 vcc out 10k
-R2 out 0 10k
-.OP
-.END`;
-
-function SpiceImportSection() {
-  const [netlistText, setNetlistText] = useState('');
-  const [spiceRunning, setSpiceRunning] = useState(false);
-  const [spiceErrors, setSpiceErrors] = useState<Array<{ line: number; message: string }>>([]);
-  const [spiceResult, setSpiceResult] = useState<SpiceSimResult | null>(null);
-  const [useDesignVars, setUseDesignVars] = useState(false);
-
-  /** Load design variables from localStorage (same key as DesignVariablesPanel). */
-  const loadDesignVars = useCallback((): DesignVariable[] => {
-    try {
-      const raw = localStorage.getItem('protopulse:design-variables');
-      if (!raw) { return []; }
-      const vars = JSON.parse(raw) as DesignVariable[];
-      if (!Array.isArray(vars)) { return []; }
-      // Resolve all so .resolved is populated
-      const store = new VariableStore();
-      for (const v of vars) {
-        if (typeof v.name === 'string' && typeof v.value === 'string') {
-          store.addVariable(v);
-        }
-      }
-      store.resolveAll();
-      return store.all();
-    } catch {
-      return [];
-    }
-  }, []);
-
-  const handleRunSpice = useCallback(async () => {
-    if (!netlistText.trim()) {
-      return;
-    }
-
-    setSpiceRunning(true);
-    setSpiceErrors([]);
-    setSpiceResult(null);
-
-    try {
-      // Optionally merge design variables into the netlist
-      let effectiveNetlist = netlistText;
-      if (useDesignVars) {
-        const vars = loadDesignVars();
-        if (vars.length > 0) {
-          effectiveNetlist = mergeDesignVarsIntoNetlist(netlistText, vars);
-        }
-      }
-
-      const parsed = parseSpiceNetlist(effectiveNetlist);
-
-      if (parsed.errors.length > 0) {
-        setSpiceErrors(parsed.errors);
-      }
-
-      // Only abort if the netlist has no elements at all
-      if (parsed.elements.length === 0 && parsed.errors.length > 0) {
-        setSpiceRunning(false);
-        return;
-      }
-
-      const result = await runParsedNetlist(parsed);
-      setSpiceResult(result);
-    } catch (err) {
-      setSpiceErrors([{
-        line: 0,
-        message: err instanceof Error ? err.message : 'Simulation failed',
-      }]);
-    } finally {
-      setSpiceRunning(false);
-    }
-  }, [netlistText, useDesignVars, loadDesignVars]);
-
-  return (
-    <CollapsibleSection title="Import SPICE Netlist" defaultOpen={false} testId="section-spice-import">
-      <div className="flex flex-col gap-3">
-        <textarea
-          value={netlistText}
-          onChange={(e) => setNetlistText(e.target.value)}
-          placeholder={SAMPLE_SPICE_NETLIST}
-          rows={10}
-          disabled={spiceRunning}
-          data-testid="spice-netlist-input"
-          className={cn(
-            'w-full px-3 py-2 text-xs font-mono bg-background border border-border text-foreground',
-            'placeholder:text-muted-foreground/40 resize-y min-h-[120px]',
-            'focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/20',
-            'disabled:opacity-50 disabled:cursor-not-allowed',
-            'transition-colors',
-          )}
-        />
-
-        {/* Use Design Variables toggle */}
-        <label
-          className="flex items-center gap-2 cursor-pointer select-none"
-          data-testid="toggle-use-design-vars"
-        >
-          <input
-            type="checkbox"
-            checked={useDesignVars}
-            onChange={(e) => setUseDesignVars(e.target.checked)}
-            className="accent-primary w-3.5 h-3.5"
-            data-testid="checkbox-use-design-vars"
-          />
-          <span className="text-xs text-muted-foreground">
-            Use Design Variables
-          </span>
-          {useDesignVars && (() => {
-            const count = loadDesignVars().length;
-            return (
-              <span className="text-[10px] text-primary/70">
-                ({String(count)} var{count !== 1 ? 's' : ''} available)
-              </span>
-            );
-          })()}
-        </label>
-
-        {/* Parse errors */}
-        {spiceErrors.length > 0 && (
-          <div className="flex flex-col gap-1" data-testid="spice-parse-errors">
-            {spiceErrors.map((err, i) => (
-              <div
-                key={`${err.line}-${i}`}
-                className="flex items-start gap-2 px-3 py-1.5 text-xs bg-destructive/10 border border-destructive/30 text-destructive"
-              >
-                <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-                <span>
-                  {err.line > 0 && <span className="font-mono font-semibold">Line {err.line}: </span>}
-                  {err.message}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Run button */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleRunSpice}
-            disabled={spiceRunning || !netlistText.trim()}
-            data-testid="run-spice-netlist"
-            className={cn(
-              'h-8 px-4 flex items-center gap-2 text-xs font-medium transition-all',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              spiceRunning
-                ? 'bg-muted text-muted-foreground cursor-wait'
-                : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.2)]',
-            )}
-          >
-            {spiceRunning ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Running...
-              </>
-            ) : (
-              <>
-                <FileText className="w-3.5 h-3.5" />
-                Run SPICE Netlist
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Results */}
-        {spiceResult && (
-          <div className="border border-border bg-background/50 p-3" data-testid="spice-import-results">
-            <div className="flex items-center gap-2 mb-2">
-              <span className={cn(
-                'inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold uppercase',
-                spiceResult.converged
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-destructive/20 text-destructive border border-destructive/30',
-              )}>
-                {spiceResult.converged ? 'Converged' : 'Did not converge'}
-              </span>
-              <span className="text-[10px] text-muted-foreground uppercase">
-                {spiceResult.analysisType} analysis
-              </span>
-            </div>
-
-            {/* Warnings */}
-            {spiceResult.warnings.length > 0 && (
-              <div className="mb-2 flex flex-col gap-0.5">
-                {spiceResult.warnings.map((w, i) => (
-                  <span key={i} className="text-[10px] text-amber-400">{w}</span>
-                ))}
-              </div>
-            )}
-
-            {/* DC OP results table */}
-            {spiceResult.analysisType === 'op' && spiceResult.dcResult && (
-              <div className="overflow-auto max-h-60">
-                <table className="w-full text-xs" data-testid="spice-dcop-table">
-                  <thead>
-                    <tr className="border-b border-border text-muted-foreground">
-                      <th className="text-left py-1.5 px-2 font-semibold">Node</th>
-                      <th className="text-right py-1.5 px-2 font-semibold">Voltage (V)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(spiceResult.nodeMap).map(([nodeName, nodeNum]) => (
-                      <tr key={nodeName} className="border-b border-border/30 hover:bg-muted/20">
-                        <td className="py-1 px-2 font-mono text-foreground">{nodeName}</td>
-                        <td className="py-1 px-2 text-right font-mono text-primary">
-                          {(spiceResult.dcResult!.nodeVoltages[nodeNum] ?? 0).toFixed(6)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                {/* Branch currents */}
-                {Object.keys(spiceResult.dcResult.branchCurrents).length > 0 && (
-                  <table className="w-full text-xs mt-2">
-                    <thead>
-                      <tr className="border-b border-border text-muted-foreground">
-                        <th className="text-left py-1.5 px-2 font-semibold">Component</th>
-                        <th className="text-right py-1.5 px-2 font-semibold">Current (A)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(spiceResult.dcResult.branchCurrents).map(([compId, current]) => (
-                        <tr key={compId} className="border-b border-border/30 hover:bg-muted/20">
-                          <td className="py-1 px-2 font-mono text-foreground">{compId}</td>
-                          <td className="py-1 px-2 text-right font-mono text-primary">
-                            {current.toExponential(4)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            )}
-
-            {/* DC Sweep summary */}
-            {spiceResult.analysisType === 'dc' && spiceResult.dcSweepResult && (
-              <p className="text-xs text-muted-foreground">
-                DC sweep completed: {spiceResult.dcSweepResult.sweepValues.length} points
-              </p>
-            )}
-
-            {/* Transient summary */}
-            {spiceResult.analysisType === 'tran' && spiceResult.transientResult && (
-              <p className="text-xs text-muted-foreground">
-                Transient analysis completed: {spiceResult.transientResult.timePoints.length} time points
-                {!spiceResult.transientResult.converged && ' (did not converge at some steps)'}
-              </p>
-            )}
-
-            {/* AC summary */}
-            {spiceResult.analysisType === 'ac' && spiceResult.acResult && (
-              <p className="text-xs text-muted-foreground">
-                AC analysis completed: {spiceResult.acResult.frequencies.length} frequency points
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-    </CollapsibleSection>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -946,16 +120,16 @@ export default function SimulationPanel() {
   }, [analysisType, transientParams, acParams, dcsweepParams]);
 
   const handleLoadPreset = useCallback((config: Record<string, unknown>) => {
-    if (!config) return;
-    if (config.analysisType) setAnalysisType(config.analysisType as AnalysisType);
-    if (config.transientParams) setTransientParams(config.transientParams as TransientParams);
-    if (config.acParams) setACParams(config.acParams as ACParams);
-    if (config.dcsweepParams) setDCSweepParams(config.dcsweepParams as DCSweepParams);
-    if (config.probes) setProbes(config.probes as Probe[]);
-    
+    if (!config) { return; }
+    if (config.analysisType) { setAnalysisType(config.analysisType as AnalysisType); }
+    if (config.transientParams) { setTransientParams(config.transientParams as TransientParams); }
+    if (config.acParams) { setACParams(config.acParams as ACParams); }
+    if (config.dcsweepParams) { setDCSweepParams(config.dcsweepParams as DCSweepParams); }
+    if (config.probes) { setProbes(config.probes as Probe[]); }
+
     toast({
       title: 'Preset loaded',
-      description: `Restored simulation configuration.`,
+      description: 'Restored simulation configuration.',
     });
   }, [toast]);
 
@@ -1048,23 +222,23 @@ export default function SimulationPanel() {
   const validate = useCallback((): string | null => {
     if (analysisType === 'transient') {
       const stop = parseValueWithUnit(transientParams.stopTime);
-      if (Number.isNaN(stop) || stop <= 0) return 'Stop time must be a positive value';
+      if (Number.isNaN(stop) || stop <= 0) { return 'Stop time must be a positive value'; }
     }
     if (analysisType === 'ac') {
       const start = parseValueWithUnit(acParams.startFrequency);
       const stop = parseValueWithUnit(acParams.stopFrequency);
-      if (Number.isNaN(start) || start <= 0) return 'Start frequency must be a positive value';
-      if (Number.isNaN(stop) || stop <= 0) return 'Stop frequency must be a positive value';
-      if (start >= stop) return 'Start frequency must be less than stop frequency';
+      if (Number.isNaN(start) || start <= 0) { return 'Start frequency must be a positive value'; }
+      if (Number.isNaN(stop) || stop <= 0) { return 'Stop frequency must be a positive value'; }
+      if (start >= stop) { return 'Start frequency must be less than stop frequency'; }
     }
     if (analysisType === 'dcsweep') {
-      if (!dcsweepParams.source) return 'Select a source for DC Sweep';
+      if (!dcsweepParams.source) { return 'Select a source for DC Sweep'; }
       const start = parseValueWithUnit(dcsweepParams.startValue);
       const stop = parseValueWithUnit(dcsweepParams.stopValue);
       const step = parseValueWithUnit(dcsweepParams.stepValue);
-      if (Number.isNaN(start)) return 'Start value is invalid';
-      if (Number.isNaN(stop)) return 'Stop value is invalid';
-      if (Number.isNaN(step) || step <= 0) return 'Step value must be a positive number';
+      if (Number.isNaN(start)) { return 'Start value is invalid'; }
+      if (Number.isNaN(stop)) { return 'Stop value is invalid'; }
+      if (Number.isNaN(step) || step <= 0) { return 'Step value must be a positive number'; }
     }
     return null;
   }, [analysisType, transientParams, acParams, dcsweepParams]);
@@ -1100,7 +274,7 @@ export default function SimulationPanel() {
     const validationError = validate();
     if (validationError) {
       setError(validationError);
-      if (!isSilent) toast({ variant: 'destructive', title: 'Validation Error', description: validationError });
+      if (!isSilent) { toast({ variant: 'destructive', title: 'Validation Error', description: validationError }); }
       return;
     }
 
@@ -1130,12 +304,11 @@ export default function SimulationPanel() {
       if (cornerAnalysis && data.type === 'waveform' && cornerIterations > 0) {
         const cornerRuns = Math.min(cornerIterations, 10); // Safety limit
         const combinedTraces: WaveformTrace[] = [...data.traces.map(t => ({ ...t, label: `${t.label} (Nominal)` }))];
-        
+
         for (let i = 0; i < cornerRuns; i++) {
-          if (controller.signal.aborted) break;
-          
+          if (controller.signal.aborted) { break; }
+
           // Request a corner variation from the backend
-          // We pass a 'seed' and 'mode: corner' to the simulator
           const cornerResponse = await apiRequest(
             'POST',
             `/api/projects/${projectId}/circuits/${firstCircuitId}/simulate`,
@@ -1145,7 +318,7 @@ export default function SimulationPanel() {
             }),
             controller.signal,
           );
-          
+
           const cornerJson = (await cornerResponse.json()) as ApiSimulationResponse;
           const cornerData = normalizeSimulationResponse(cornerJson, analysisType);
           if (cornerData.type === 'waveform') {
@@ -1153,7 +326,6 @@ export default function SimulationPanel() {
               combinedTraces.push({
                 ...t,
                 label: `${t.label} (Corner ${i + 1})`,
-                // Use slightly different opacities/colors if possible or just rely on legend
               });
             });
           }
@@ -1166,16 +338,14 @@ export default function SimulationPanel() {
       // BL-0151: Reflect results in component live states
       if (data.type === 'waveform' && circuitInstances) {
         circuitInstances.forEach(inst => {
-          // Look for probes or nodes related to this instance
-          // Heuristic: if probe matches refDes, use its last value
           const relevantTraces = data.traces.filter(t => t.label.includes(inst.referenceDesignator));
           if (relevantTraces.length > 0) {
             const lastTrace = relevantTraces[0];
             const lastVal = lastTrace.data[lastTrace.data.length - 1]?.y || 0;
-            
+
             updateComponentState(inst.referenceDesignator, {
-              isActive: lastVal > 1.0, // Basic threshold
-              brightness: Math.min(1, Math.max(0, lastVal / 5.0)), // Normalized 5V scale
+              isActive: lastVal > 1.0,
+              brightness: Math.min(1, Math.max(0, lastVal / 5.0)),
             });
           }
         });
@@ -1195,11 +365,11 @@ export default function SimulationPanel() {
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        if (!isSilent) toast({ title: 'Simulation Stopped', description: 'The running simulation was cancelled.' });
+        if (!isSilent) { toast({ title: 'Simulation Stopped', description: 'The running simulation was cancelled.' }); }
       } else {
         const message = err instanceof Error ? err.message : 'Simulation failed';
         setError(message);
-        if (!isSilent) toast({ variant: 'destructive', title: 'Simulation Failed', description: message });
+        if (!isSilent) { toast({ variant: 'destructive', title: 'Simulation Failed', description: message }); }
       }
     } finally {
       setIsRunning(false);
@@ -1230,14 +400,13 @@ export default function SimulationPanel() {
   useEffect(() => {
     let timer: NodeJS.Timeout | null = null;
     if (isLive && !isRunning) {
-      // Trigger a run immediately, then every 500ms
       void handleRun(true);
       timer = setInterval(() => {
-        if (!isRunning) void handleRun(true);
+        if (!isRunning) { void handleRun(true); }
       }, 500);
     }
     return () => {
-      if (timer) clearInterval(timer);
+      if (timer) { clearInterval(timer); }
     };
   }, [isLive, isRunning, handleRun]);
 
@@ -1311,23 +480,6 @@ export default function SimulationPanel() {
   }, []);
 
   // ---------------------------
-  // BL-0620: Unified play/stop handler (auto-detect + toggle)
-  // ---------------------------
-  const handleUnifiedPlayStop = useCallback(() => {
-    if (isRunning) {
-      handleStop();
-      return;
-    }
-
-    // Auto-detect and set analysis type if user hasn't explicitly chosen
-    if (autoDetected) {
-      setAnalysisType(autoDetected.recommended);
-    }
-
-    handleRunWithComplexityCheck();
-  }, [isRunning, handleStop, autoDetected, handleRunWithComplexityCheck]);
-
-  // ---------------------------
   // BL-0620: SimPlayButton start handler — sets type then runs
   // ---------------------------
   const handleSimPlayStart = useCallback((type: AutoDetectAnalysisType) => {
@@ -1389,7 +541,6 @@ export default function SimulationPanel() {
     setResults(run.result);
     setError(null);
 
-    // Restore parameters based on the analysis type.
     switch (run.analysisType) {
       case 'transient':
         setTransientParams(run.params as TransientParams);
@@ -1549,7 +700,7 @@ export default function SimulationPanel() {
                     className="flex items-center gap-2 p-2 bg-background border border-border"
                     data-testid={`probe-${probe.id}`}
                   >
-                    <Crosshair className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <svg className="w-3.5 h-3.5 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>
                     <input
                       type="text"
                       value={probe.name}
@@ -1584,7 +735,7 @@ export default function SimulationPanel() {
                       data-testid={`probe-remove-${probe.id}`}
                       title="Remove probe"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
                     </button>
                   </div>
                 ))}
@@ -1600,7 +751,7 @@ export default function SimulationPanel() {
                 'disabled:opacity-50 disabled:cursor-not-allowed',
               )}
             >
-              <Plus className="w-3.5 h-3.5" />
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               Add Probe
             </button>
           </CollapsibleSection>
@@ -1739,55 +890,11 @@ export default function SimulationPanel() {
           <SpiceImportSection />
 
           {/* ------- Result History ------- */}
-          <CollapsibleSection title="Result History" defaultOpen={false} testId="section-result-history">
-            {/* ... historical entries ... */}
-            <div data-testid="result-history">
-              {resultHistory.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">
-                  No previous runs. Results will appear here after each simulation.
-                </p>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] text-muted-foreground">
-                      {resultHistory.length} run{resultHistory.length !== 1 ? 's' : ''}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={clearHistory}
-                      className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-destructive transition-colors"
-                      data-testid="clear-result-history"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      Clear
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-1 max-h-48 overflow-y-auto">
-                    {resultHistory.map((run) => (
-                      <button
-                        key={run.id}
-                        type="button"
-                        onClick={() => loadHistoryEntry(run)}
-                        className="flex items-center gap-3 px-3 py-2 text-xs bg-background border border-border hover:bg-muted/30 hover:border-primary/30 transition-colors text-left group"
-                        data-testid={`history-entry-${run.id}`}
-                      >
-                        <Clock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <span className="font-medium text-foreground">
-                            {ANALYSIS_TYPES.find((a) => a.id === run.analysisType)?.label}
-                          </span>
-                          <span className="ml-2 text-muted-foreground">
-                            {new Date(run.timestamp).toLocaleTimeString()}
-                          </span>
-                        </div>
-                        <RotateCcw className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          </CollapsibleSection>
+          <ResultHistorySection
+            resultHistory={resultHistory}
+            onLoadEntry={loadHistoryEntry}
+            onClear={clearHistory}
+          />
 
           {/* ------- Simulation Presets (BL-0124) ------- */}
           <CollapsibleSection title="Presets" defaultOpen={true} testId="section-simulation-presets">
@@ -1812,58 +919,12 @@ export default function SimulationPanel() {
 
       {/* BL-0514: Complexity Warning Dialog */}
       {showComplexityWarning && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          data-testid="complexity-warning-overlay"
-        >
-          <div
-            className="w-full max-w-md mx-4 bg-card border border-border shadow-2xl"
-            role="alertdialog"
-            aria-labelledby="complexity-warning-title"
-            aria-describedby="complexity-warning-desc"
-            data-testid="complexity-warning-dialog"
-          >
-            <div className="flex items-start gap-3 px-6 pt-6 pb-2">
-              <AlertTriangle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
-              <div>
-                <h3 id="complexity-warning-title" className="text-base font-semibold text-foreground">
-                  Large Circuit Warning
-                </h3>
-                <p id="complexity-warning-desc" className="text-xs text-muted-foreground mt-1">
-                  This simulation may take a while. Estimated runtime: <strong className="text-foreground">{complexityEstimate}</strong>
-                </p>
-              </div>
-            </div>
-            <div className="px-6 py-3">
-              <ul className="space-y-1.5">
-                {complexityWarnings.map((w, i) => (
-                  <li key={i} className="flex items-start gap-2 text-xs text-amber-400/90">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <span>{w}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="flex items-center justify-end gap-2 px-6 pb-6 pt-2">
-              <button
-                type="button"
-                onClick={handleCancelComplexityRun}
-                className="h-8 px-4 text-xs font-medium border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
-                data-testid="complexity-warning-cancel"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmComplexityRun}
-                className="h-8 px-4 text-xs font-medium bg-amber-600 text-white hover:bg-amber-500 transition-colors"
-                data-testid="complexity-warning-confirm"
-              >
-                Run Anyway
-              </button>
-            </div>
-          </div>
-        </div>
+        <ComplexityWarningDialog
+          warnings={complexityWarnings}
+          estimate={complexityEstimate}
+          onConfirm={handleConfirmComplexityRun}
+          onCancel={handleCancelComplexityRun}
+        />
       )}
     </div>
   );
