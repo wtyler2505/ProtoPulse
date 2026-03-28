@@ -136,7 +136,6 @@ export function useSchematicDragDrop({
               ToastAction,
               {
                 altText: 'Add to BOM',
-                'data-testid': 'bom-add-action',
                 onClick: () => {
                   addBomItem({
                     partNumber: partMpn,
