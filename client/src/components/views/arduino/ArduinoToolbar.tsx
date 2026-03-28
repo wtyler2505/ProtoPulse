@@ -22,6 +22,7 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import type { FlashProgress, FlashDiagnostic } from '@/lib/arduino/flash-diagnostics';
+import type { ArduinoBuildProfile, ArduinoJob, ArduinoWorkspace } from '@shared/schema';
 
 const FlashProgressBar = lazy(() => import('@/components/arduino/FlashProgressBar'));
 const MemoryAnalyzerPanel = lazy(() => import('@/components/arduino/MemoryAnalyzerPanel'));
@@ -29,23 +30,23 @@ const MemoryAnalyzerPanel = lazy(() => import('@/components/arduino/MemoryAnalyz
 interface ArduinoToolbarProps {
   health: { status: string; version?: string } | undefined;
   isHealthLoading: boolean;
-  profiles: Array<{ id: number; name: string; isDefault: boolean; fqbn: string; port?: string }>;
+  profiles: ArduinoBuildProfile[];
   selectedProfileId: string;
   onProfileChange: (id: string) => void;
   onEditProfile: () => void;
-  selectedProfile: { id: number; fqbn: string; port?: string } | undefined;
+  selectedProfile: ArduinoBuildProfile | undefined;
   activeFilePath: string | null;
   isSaving: boolean;
   isDirty: boolean;
   onSave: () => void;
   onFormat: () => void;
   code: string;
-  workspace: { activeSketchPath?: string } | undefined;
-  activeJob: { id: number; jobType: string } | undefined;
+  workspace: ArduinoWorkspace | undefined;
+  activeJob: ArduinoJob | undefined;
   onCompile: () => void;
   onUpload: () => void;
   onCancelJob: () => void;
-  lastCompletedCompile: { id: number } | undefined;
+  lastCompletedCompile: ArduinoJob | undefined;
   onDownloadArtifact: (jobId: number) => void;
   flashProgress: FlashProgress | null;
   flashDiagnostic: FlashDiagnostic | null;
