@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -22,7 +22,6 @@ import {
   useCircuitInstances,
   useCircuitNets,
   useChildDesigns,
-  useHierarchicalPorts,
   useUpdateCircuitDesign,
   useUpdateCircuitInstance,
   useCreateCircuitInstance,
@@ -32,26 +31,22 @@ import {
   useDeleteCircuitNet,
 } from '@/lib/circuit-editor/hooks';
 import { useComponentParts } from '@/lib/component-editor/hooks';
-import { generateRefDes } from '@/lib/circuit-editor/ref-des';
-import SchematicInstanceNode, { type InstanceNodeData } from './SchematicInstanceNode';
-import SchematicPowerNode, { type PowerNodeData } from './SchematicPowerNode';
-import SchematicNetLabelNode, { type NetLabelNodeData } from './SchematicNetLabelNode';
-import SchematicNoConnectNode, { type NoConnectNodeData } from './SchematicNoConnectNode';
-import SchematicSheetNode, { type SheetNodeData } from './SchematicSheetNode';
-import SchematicAnnotationNode, { type AnnotationNodeData } from './SchematicAnnotationNode';
-import SchematicNetEdge from './SchematicNetEdge';
-import NetDrawingTool, { type NetDrawingResult } from './NetDrawingTool';
+import type { InstanceNodeData } from './SchematicInstanceNode';
+import type { PowerNodeData } from './SchematicPowerNode';
+import type { NetLabelNodeData } from './SchematicNetLabelNode';
+import type { NoConnectNodeData } from './SchematicNoConnectNode';
+import type { AnnotationNodeData } from './SchematicAnnotationNode';
+import NetDrawingTool from './NetDrawingTool';
+import type { NetDrawingResult } from './NetDrawingTool';
 import SchematicToolbar from './SchematicToolbar';
 import NetBrowserPanel from './NetBrowserPanel';
 import ComponentReplacementDialog from './ComponentReplacementDialog';
 import AlternatePartsPopover from './AlternatePartsPopover';
 import type { AngleConstraint } from './SchematicToolbar';
-import type { SchematicTool, CircuitSettings, PowerSymbol, SchematicNetLabel, SchematicAnnotation, NoConnectMarker, ERCViolation } from '@shared/circuit-types';
+import type { SchematicTool, CircuitSettings, SchematicAnnotation, ERCViolation } from '@shared/circuit-types';
 import { DEFAULT_CIRCUIT_SETTINGS } from '@shared/circuit-types';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, ComponentPart, HierarchicalPortRow } from '@shared/schema';
-import type { Connector, Shape, PartMeta, PartViews } from '@shared/component-types';
-import { COMPONENT_DRAG_TYPE, type ComponentDragData } from './ComponentPlacer';
-import { POWER_SYMBOL_DRAG_TYPE, type PowerSymbolDragData } from './PowerSymbolPalette';
+import type { HierarchicalPortRow } from '@shared/schema';
+import type { Connector } from '@shared/component-types';
 import { CircuitBoard, Plus, Cable, Zap, ClipboardPaste, CheckSquare, ShieldAlert, ArrowRightLeft, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
@@ -61,11 +56,10 @@ import CollaborationCursors, { useCursorEmitter } from './CollaborationCursors';
 import type { CollaborationClient } from '@/lib/collaboration-client';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { useToast } from '@/hooks/use-toast';
-import { ToastAction } from '@/components/ui/toast';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useSchematicAlternates } from '@/lib/schematic-alternates';
 import { useCanvasAnnouncer } from '@/lib/use-canvas-announcer';
-import { getCanvasAriaLabel, getActionAnnouncement, getToolChangeAnnouncement } from '@/lib/canvas-accessibility';
+import { getCanvasAriaLabel } from '@/lib/canvas-accessibility';
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -74,239 +68,21 @@ import {
   ContextMenuSeparator,
 } from '@/components/ui/context-menu';
 
-// ---------------------------------------------------------------------------
-// Clipboard bundle types (used by copy/paste)
-// ---------------------------------------------------------------------------
-
-interface ClipboardInstance {
-  partId: number | null;
-  referenceDesignator: string;
-  schematicX: number;
-  schematicY: number;
-  schematicRotation: number;
-  properties: unknown;
-  oldId: number;
-}
-
-interface ClipboardNetSegment {
-  fromInstanceId: number;
-  fromPin: string;
-  toInstanceId: number;
-  toPin: string;
-  waypoints?: Array<{ x: number; y: number }>;
-}
-
-interface ClipboardNet {
-  name: string;
-  netType: string;
-  style: unknown;
-  segments: ClipboardNetSegment[];
-}
-
-interface SchematicClipboardBundle {
-  type: 'protopulse-schematic-bundle';
-  instances: ClipboardInstance[];
-  powerSymbols: PowerSymbol[];
-  netLabels: SchematicNetLabel[];
-  noConnectMarkers: NoConnectMarker[];
-  nets: ClipboardNet[];
-}
-
-// ---------------------------------------------------------------------------
-// React Flow type registrations
-// ---------------------------------------------------------------------------
-
-const nodeTypes = {
-  'schematic-instance': SchematicInstanceNode,
-  'schematic-power': SchematicPowerNode,
-  'schematic-net-label': SchematicNetLabelNode,
-  'schematic-no-connect': SchematicNoConnectNode,
-  'schematic-sheet': SchematicSheetNode,
-  'schematic-annotation': SchematicAnnotationNode,
-};
-const edgeTypes = { 'schematic-net': SchematicNetEdge };
-
-// ---------------------------------------------------------------------------
-// Converters: DB rows → React Flow elements
-// ---------------------------------------------------------------------------
-
-function instanceToNode(
-  row: CircuitInstanceRow,
-  part: ComponentPart | undefined,
-  subDesigns?: CircuitDesignRow[],
-  portsByDesign?: Map<number, HierarchicalPortRow[]>,
-  onEnterSheet?: (id: number) => void,
-  onRefdesChange?: (newRefdes: string) => void,
-): Node<InstanceNodeData | SheetNodeData> {
-  // 1. Check if this is a hierarchical sub-sheet
-  if (row.subDesignId) {
-    const subDesign = subDesigns?.find(d => d.id === row.subDesignId);
-    const ports = portsByDesign?.get(row.subDesignId) || [];
-    
-    return {
-      id: `instance-${row.id}`,
-      type: 'schematic-sheet',
-      position: { x: row.schematicX, y: row.schematicY },
-      data: {
-        instanceId: row.id,
-        subDesignId: row.subDesignId,
-        referenceDesignator: row.referenceDesignator,
-        sheetName: subDesign?.name || 'Sub-sheet',
-        ports,
-        onEnterSheet,
-      },
-    };
-  }
-
-  // 2. Otherwise it's a standard component instance
-  const meta = (part?.meta ?? {}) as Partial<PartMeta>;
-  const connectors = (part?.connectors ?? []) as Connector[];
-  const views = (part?.views ?? {}) as Partial<PartViews>;
-  const schematicShapes = (views.schematic?.shapes ?? []) as Shape[];
-
-  return {
-    id: `instance-${row.id}`,
-    type: 'schematic-instance',
-    position: { x: row.schematicX, y: row.schematicY },
-    data: {
-      instanceId: row.id,
-      referenceDesignator: row.referenceDesignator,
-      rotation: row.schematicRotation,
-      partTitle: meta.title || 'Untitled',
-      connectors,
-      schematicShapes,
-      onRefdesChange,
-    },
-  } as Node<InstanceNodeData>;
-}
-
-interface NetSegmentJSON {
-  fromInstanceId: number;
-  fromPin: string;
-  toInstanceId: number;
-  toPin: string;
-  waypoints?: Array<{ x: number; y: number }>;
-}
-
-/**
- * Resolve a pin reference to a connector ID. If the pin reference is already
- * a valid connector ID, return it. Otherwise, try matching by connector name
- * (case-insensitive) — this handles AI/import-generated nets that use pin
- * names (e.g. "PB0") instead of connector IDs (e.g. "pin1"). (BL-0014)
- */
-function resolvePinId(
-  pin: string,
-  instanceId: number,
-  connectorsByInstance: Map<number, Connector[]>,
-): string {
-  const connectors = connectorsByInstance.get(instanceId);
-  if (!connectors) { return pin; }
-  // Direct match by ID — already correct
-  if (connectors.some((c) => c.id === pin)) { return pin; }
-  // Fallback: match by name (case-insensitive)
-  const byName = connectors.find((c) => c.name.toLowerCase() === pin.toLowerCase());
-  if (byName) { return byName.id; }
-  // No match found — return as-is (will cause React Flow warning)
-  return pin;
-}
-
-function netToEdges(
-  net: CircuitNetRow,
-  connectorsByInstance: Map<number, Connector[]>,
-  onNetNameChange?: (netId: number, newName: string) => void,
-): Edge[] {
-  const segments = (net.segments ?? []) as NetSegmentJSON[];
-  const style = (net.style ?? {}) as { color?: string };
-
-  return segments.map((seg) => {
-    const fromPin = resolvePinId(seg.fromPin, seg.fromInstanceId, connectorsByInstance);
-    const toPin = resolvePinId(seg.toPin, seg.toInstanceId, connectorsByInstance);
-    return {
-      // Stable ID derived from segment endpoints — survives reordering
-      id: `net-${net.id}-${seg.fromInstanceId}:${seg.fromPin}-${seg.toInstanceId}:${seg.toPin}`,
-      type: 'schematic-net',
-      source: `instance-${seg.fromInstanceId}`,
-      sourceHandle: `pin-${fromPin}`,
-      target: `instance-${seg.toInstanceId}`,
-      targetHandle: `pin-${toPin}`,
-      data: {
-        netName: net.name,
-        netType: net.netType,
-        color: style.color,
-        busWidth: net.busWidth ?? undefined,
-        netId: net.id,
-        onNetNameChange,
-      },
-    };
-  });
-}
-
-function powerSymbolToNode(ps: PowerSymbol): Node<PowerNodeData> {
-  return {
-    id: `power-${ps.id}`,
-    type: 'schematic-power',
-    position: { x: ps.x, y: ps.y },
-    data: {
-      symbolId: ps.id,
-      symbolType: ps.type,
-      netName: ps.netName,
-      rotation: ps.rotation,
-      customLabel: ps.customLabel,
-    },
-  };
-}
-
-function netLabelToNode(
-  label: SchematicNetLabel,
-  onNetNameChange?: (labelId: string, newName: string) => void,
-): Node<NetLabelNodeData> {
-  return {
-    id: `netlabel-${label.id}`,
-    type: 'schematic-net-label',
-    position: { x: label.x, y: label.y },
-    data: {
-      labelId: label.id,
-      netName: label.netName,
-      rotation: label.rotation,
-      onNetNameChange,
-    },
-  };
-}
-
-function noConnectToNode(nc: NoConnectMarker): Node<NoConnectNodeData> {
-  return {
-    id: `noconnect-${nc.id}`,
-    type: 'schematic-no-connect',
-    position: { x: nc.x, y: nc.y },
-    data: {
-      markerId: nc.id,
-      instanceId: nc.instanceId,
-      pin: nc.pin,
-    },
-  };
-}
-
-function annotationToNode(
-  ann: SchematicAnnotation,
-  onTextChange?: (id: string, text: string) => void,
-  onFontSizeChange?: (id: string, fontSize: number) => void,
-  onColorChange?: (id: string, color: string) => void,
-): Node<AnnotationNodeData> {
-  return {
-    id: `annotation-${ann.id}`,
-    type: 'schematic-annotation',
-    position: { x: ann.x, y: ann.y },
-    data: {
-      annotationId: ann.id,
-      text: ann.text,
-      fontSize: ann.fontSize,
-      color: ann.color,
-      onTextChange,
-      onFontSizeChange,
-      onColorChange,
-    },
-  };
-}
+// Extracted sub-modules
+import {
+  nodeTypes,
+  edgeTypes,
+  instanceToNode,
+  netToEdges,
+  powerSymbolToNode,
+  netLabelToNode,
+  noConnectToNode,
+  annotationToNode,
+} from './schematic/converters';
+import { useSchematicClipboard } from './schematic/use-clipboard';
+import { useSchematicDragDrop } from './schematic/use-drag-drop';
+import { useSchematicKeyboardShortcuts } from './schematic/use-keyboard-shortcuts';
+import { useSchematicContextMenu } from './schematic/use-context-menu';
 
 // ---------------------------------------------------------------------------
 // Inner canvas (requires ReactFlowProvider ancestor)
@@ -329,20 +105,10 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const { data: instances } = useCircuitInstances(circuitId);
   const { data: nets } = useCircuitNets(circuitId);
   const { data: subDesigns } = useChildDesigns(projectId, circuitId);
-  
-  // Fetch ports for ALL sub-designs to render Sheet Symbols accurately
-  // In a real large app we'd batch this, but for now we'll handle sub-sheets
-  // by assuming the model can handle several queries or we might need a batch port API.
-  // Actually, let's just fetch for the subDesigns we found.
+
   const subDesignIds = useMemo(() => (subDesigns ?? []).map(d => d.id), [subDesigns]);
-  
-  // This is a bit tricky with hooks in a loop, so we'll just support 
-  // one level of ports for now if we can or use a combined query if available.
-  // Given current architecture, we'll assume ports for Sheet Symbols are 
-  // fetched when we have sub-designs.
   const portsByDesign = new Map<number, HierarchicalPortRow[]>();
-  // TODO: Implement batch ports API or sequential fetch if sub-sheet count is low
-  
+
   const { data: parts } = useComponentParts(projectId);
   const { pushUndoState } = useArchitecture();
 
@@ -356,9 +122,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   const deleteNet = useDeleteCircuitNet();
 
   // Stable refs for mutation objects — TanStack Query mutation hooks return a new
-  // object every render (with updated loading/error state). Using these in useCallback
-  // deps causes the callbacks to recreate every render, which cascades into rfNodes
-  // useMemo → useEffect setLocalNodes → ReactFlow StoreUpdater → infinite re-render loop.
+  // object every render. Using these in useCallback deps causes infinite re-render loops.
   const createInstanceRef = useRef(createInstance);
   createInstanceRef.current = createInstance;
   const updateDesignRef = useRef(updateDesign);
@@ -396,11 +160,11 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // BL-0105: Replacement dialog state
   const [isReplacementOpen, setIsReplacementOpen] = useState(false);
   const [showNetBrowser, setShowNetBrowser] = useState(false);
-  const [replacementInstance, setReplacementInstance] = useState<CircuitInstanceRow | null>(null);
-  const [replacementPart, setReplacementPart] = useState<ComponentPart | null>(null);
+  const [replacementInstance, setReplacementInstance] = useState<import('@shared/schema').CircuitInstanceRow | null>(null);
+  const [replacementPart, setReplacementPart] = useState<import('@shared/schema').ComponentPart | null>(null);
 
   const handleReplaceComponent = useCallback((newPartId: number) => {
-    if (!replacementInstance) return;
+    if (!replacementInstance) { return; }
     void updateInstanceRef.current.mutateAsync({
       circuitId,
       id: replacementInstance.id,
@@ -415,7 +179,6 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
   // Drag guard — prevents server refetch from resetting node mid-drag
   const isDragging = useRef(false);
-  const clipboardRef = useRef<SchematicClipboardBundle | null>(null);
 
   const reactFlowInstance = useReactFlow();
 
@@ -487,7 +250,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
   // Build parts lookup map
   const partsMap = useMemo(() => {
-    const map = new Map<number, ComponentPart>();
+    const map = new Map<number, import('@shared/schema').ComponentPart>();
     parts?.forEach((p) => map.set(p.id, p));
     return map;
   }, [parts]);
@@ -495,7 +258,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // BL-0540: Compute alternate parts info for all instances
   const alternatesMap = useSchematicAlternates(instances, partsMap);
 
-  // Convert DB data → React Flow nodes (instances + power symbols + net labels + no-connects)
+  // Convert DB data → React Flow nodes
   const rfNodes = useMemo(() => {
     const instanceNodes = (instances ?? []).map((inst) =>
       instanceToNode(
@@ -572,35 +335,35 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
 
       if (node.id.startsWith('power-')) {
         const symbolId = (node.data as PowerNodeData)?.symbolId;
-        if (!symbolId) return;
+        if (!symbolId) { return; }
         const updated = (settings.powerSymbols ?? []).map((ps) =>
           ps.id === symbolId ? { ...ps, x, y } : ps,
         );
         updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, powerSymbols: updated } });
       } else if (node.id.startsWith('netlabel-')) {
         const labelId = (node.data as NetLabelNodeData)?.labelId;
-        if (!labelId) return;
+        if (!labelId) { return; }
         const updated = (settings.netLabels ?? []).map((nl) =>
           nl.id === labelId ? { ...nl, x, y } : nl,
         );
         updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, netLabels: updated } });
       } else if (node.id.startsWith('noconnect-')) {
         const markerId = (node.data as NoConnectNodeData)?.markerId;
-        if (!markerId) return;
+        if (!markerId) { return; }
         const updated = (settings.noConnectMarkers ?? []).map((nc) =>
           nc.id === markerId ? { ...nc, x, y } : nc,
         );
         updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, noConnectMarkers: updated } });
       } else if (node.id.startsWith('annotation-')) {
         const annotationId = (node.data as AnnotationNodeData)?.annotationId;
-        if (!annotationId) return;
+        if (!annotationId) { return; }
         const updated = (settings.annotations ?? []).map((a) =>
           a.id === annotationId ? { ...a, x, y } : a,
         );
         updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
       } else {
         const instanceId = (node.data as InstanceNodeData)?.instanceId;
-        if (typeof instanceId !== 'number') return;
+        if (typeof instanceId !== 'number') { return; }
         updateInstanceRef.current.mutate({ circuitId, id: instanceId, schematicX: x, schematicY: y });
       }
     },
@@ -636,7 +399,6 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         }
       }
 
-      // Batch-update settings if any settings-stored nodes were deleted
       const needsUpdate =
         deletedPowerIds.length > 0 || deletedLabelIds.length > 0 || deletedNcIds.length > 0 || deletedAnnotationIds.length > 0;
 
@@ -664,20 +426,20 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // Delete selected edges — removes individual segments, not entire nets
   const onEdgesDelete = useCallback(
     (deleted: Edge[]) => {
-      // Group deletions by net ID
       const segmentRemovals = new Map<number, Set<string>>();
 
       for (const edge of deleted) {
         const match = edge.id.match(/^net-(\d+)-/);
-        if (!match) continue;
+        if (!match) { continue; }
         const netId = parseInt(match[1], 10);
-        if (!segmentRemovals.has(netId)) segmentRemovals.set(netId, new Set());
+        if (!segmentRemovals.has(netId)) { segmentRemovals.set(netId, new Set()); }
         segmentRemovals.get(netId)!.add(edge.id);
       }
 
+      interface NetSegmentJSON { fromInstanceId: number; fromPin: string; toInstanceId: number; toPin: string }
       Array.from(segmentRemovals.entries()).forEach(([netId, removedEdgeIds]) => {
         const net = nets?.find((n) => n.id === netId);
-        if (!net) return;
+        if (!net) { return; }
 
         const allSegments = (net.segments ?? []) as NetSegmentJSON[];
         const remaining = allSegments.filter((seg) => {
@@ -715,10 +477,10 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       const sourcePinId = connection.sourceHandle?.replace('pin-', '') ?? '';
       const targetPinId = connection.targetHandle?.replace('pin-', '') ?? '';
 
-      if (!sourceInstanceId || !targetInstanceId || !sourcePinId || !targetPinId)
+      if (!sourceInstanceId || !targetInstanceId || !sourcePinId || !targetPinId) {
         return;
+      }
 
-      // Resolve human-readable pin names and ref designators for the net name
       const sourceNode = localNodes.find((n) => n.id === connection.source);
       const targetNode = localNodes.find((n) => n.id === connection.target);
       const sourceData = sourceNode?.data as InstanceNodeData | undefined;
@@ -755,7 +517,6 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
       const rx = Math.round(pos.x);
       const ry = Math.round(pos.y);
       setMouseFlowPos({ x: rx, y: ry });
-      // BL-0525: emit cursor position for collaboration
       emitCursor(rx, ry);
     },
     [reactFlowInstance, emitCursor],
@@ -770,363 +531,113 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     reactFlowInstance.fitView({ padding: 0.2 });
   }, [reactFlowInstance]);
 
-  const handlePaste = useCallback(async (bundle: SchematicClipboardBundle) => {
-    if (!bundle || bundle.type !== 'protopulse-schematic-bundle') return;
-
-    const center = reactFlowInstance.screenToFlowPosition({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    });
-
-    const insts = bundle.instances || [];
-    const pwr = bundle.powerSymbols || [];
-    const lbl = bundle.netLabels || [];
-    const ncm = bundle.noConnectMarkers || [];
-
-    if (insts.length === 0 && pwr.length === 0 && lbl.length === 0 && ncm.length === 0) return;
-
-    const allX = [...insts.map((i) => i.schematicX), ...pwr.map((p) => p.x)];
-    const allY = [...insts.map((i) => i.schematicY), ...pwr.map((p) => p.y)];
-    const minX = Math.min(...allX);
-    const maxX = Math.max(...allX);
-    const minY = Math.min(...allY);
-    const maxY = Math.max(...allY);
-    const bboxCenterX = (minX + maxX) / 2;
-    const bboxCenterY = (minY + maxY) / 2;
-
-    const offsetX = center.x - bboxCenterX;
-    const offsetY = center.y - bboxCenterY;
-
-    const idMap = new Map<number, number>();
-    const usedRefDes = new Set((instances ?? []).map(i => i.referenceDesignator));
-
-    try {
-      // 1. Create instances
-      for (const inst of insts) {
-        const part = inst.partId != null ? partsMap.get(inst.partId) : undefined;
-        const refDes = generateRefDes(instances, part);
-        // Ensure unique refDes in the batch
-        let uniqueRefDes = refDes;
-        let suffix = 1;
-        while (usedRefDes.has(uniqueRefDes)) {
-          const prefix = uniqueRefDes.replace(/\d+$/, '');
-          const match = uniqueRefDes.match(/\d+$/);
-          const num = match ? parseInt(match[0], 10) : 0;
-          uniqueRefDes = `${prefix}${num + suffix}`;
-          suffix++;
-        }
-        usedRefDes.add(uniqueRefDes);
-
-        const newInst = await createInstanceRef.current.mutateAsync({
-          circuitId,
-          partId: inst.partId,
-          referenceDesignator: uniqueRefDes,
-          schematicX: inst.schematicX + offsetX,
-          schematicY: inst.schematicY + offsetY,
-          schematicRotation: inst.schematicRotation,
-          properties: inst.properties as Record<string, string> | undefined,
-        });
-        idMap.set(inst.oldId, newInst.id);
-      }
-
-      // 2. Create nets
-      for (const net of (bundle.nets || [])) {
-        const newSegments = net.segments.map((seg: ClipboardNetSegment) => ({
-          ...seg,
-          fromInstanceId: idMap.get(seg.fromInstanceId),
-          toInstanceId: idMap.get(seg.toInstanceId),
-        })).filter((s) => s.fromInstanceId && s.toInstanceId);
-
-        if (newSegments.length > 0) {
-          await createNetRef.current.mutateAsync({
-            circuitId,
-            name: `${net.name}_copy`,
-            netType: net.netType as 'signal' | 'power' | 'ground' | 'bus' | undefined,
-            segments: newSegments,
-            style: net.style,
-          });
-        }
-      }
-
-      // 3. Annotations
-      const newPowerSymbols = pwr.map((ps) => ({
-        ...ps,
-        id: crypto.randomUUID(),
-        x: ps.x + offsetX,
-        y: ps.y + offsetY,
-      }));
-
-      const newNetLabels = lbl.map((nl) => ({
-        ...nl,
-        id: crypto.randomUUID(),
-        x: nl.x + offsetX,
-        y: nl.y + offsetY,
-      }));
-
-      const newNoConnectMarkers = ncm.map((nc) => ({
-        ...nc,
-        id: crypto.randomUUID(),
-        x: nc.x + offsetX,
-        y: nc.y + offsetY,
-      }));
-
-      if (newPowerSymbols.length > 0 || newNetLabels.length > 0 || newNoConnectMarkers.length > 0) {
-        await updateDesignRef.current.mutateAsync({
-          projectId,
-          id: circuitId,
-          settings: {
-            ...settings,
-            powerSymbols: [...(settings.powerSymbols ?? []), ...newPowerSymbols],
-            netLabels: [...(settings.netLabels ?? []), ...newNetLabels],
-            noConnectMarkers: [...(settings.noConnectMarkers ?? []), ...newNoConnectMarkers],
-          }
-        });
-      }
-
-      toastRef.current({
-        title: 'Pasted successfully',
-        description: `Added ${insts.length} components and ${bundle.nets?.length || 0} nets.`,
-      });
-    } catch (err) {
-      console.error('Paste failed', err);
-      toastRef.current({
-        variant: 'destructive',
-        title: 'Paste failed',
-        description: 'An error occurred while pasting schematic elements.',
-      });
-    }
-  }, [circuitId, projectId, instances, partsMap, settings, reactFlowInstance]);
-
   const handleOpenShortcuts = useCallback(() => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
   }, []);
 
-  const triggerPaste = useCallback(async () => {
-    let bundle = clipboardRef.current;
-    if (!bundle) {
-      try {
-        const text = await navigator.clipboard.readText();
-        const parsed = JSON.parse(text);
-        if (parsed.type === 'protopulse-schematic-bundle') {
-          bundle = parsed;
-        }
-      } catch (err) {
-        // Not a valid bundle in clipboard
-      }
-    }
+  // --- Extracted hooks ---
 
-    if (bundle) {
-      void handlePaste(bundle);
-    }
-  }, [handlePaste]);
-
-  // Drag-over handler — accept component and power symbol drops
-  const onDragOver = useCallback((e: React.DragEvent) => {
-    if (
-      e.dataTransfer.types.includes(COMPONENT_DRAG_TYPE) ||
-      e.dataTransfer.types.includes(POWER_SYMBOL_DRAG_TYPE)
-    ) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-    }
-  }, []);
-
-  // Drop handler — component instances and power symbols
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      // Helper: snap drop position to grid
-      const getDropPosition = () => {
-        const pos = reactFlowInstance.screenToFlowPosition({
-          x: e.clientX,
-          y: e.clientY,
-        });
-        if (snapEnabled) {
-          pos.x = Math.round(pos.x / gridSize) * gridSize;
-          pos.y = Math.round(pos.y / gridSize) * gridSize;
-        }
-        return pos;
-      };
-
-      // Component instance drop
-      const componentRaw = e.dataTransfer.getData(COMPONENT_DRAG_TYPE);
-      if (componentRaw) {
-        e.preventDefault();
-        let dragData: ComponentDragData;
-        try {
-          dragData = JSON.parse(componentRaw) as ComponentDragData;
-        } catch {
-          return;
-        }
-
-        const part = partsMap.get(dragData.partId);
-        const position = getDropPosition();
-        const refDes = generateRefDes(instances, part);
-        const partMeta = (part?.meta ?? {}) as Partial<PartMeta>;
-        const partTitle = partMeta.title || 'Component';
-        const partValueProp = partMeta.properties?.find((p) => p.key === 'value');
-        const partValue = partValueProp?.value ?? '';
-        const partMpn = partMeta.mpn ?? '';
-
-        createInstanceRef.current.mutate({
-          circuitId,
-          partId: dragData.partId,
-          referenceDesignator: refDes,
-          schematicX: position.x,
-          schematicY: position.y,
-        });
-
-        // BL-0498: Offer to add to BOM after placement
-        const bomLabel = partValue ? `${refDes} (${partValue})` : refDes;
-        const existingBomItem = bom.find(
-          (item) => item.description === partTitle && item.partNumber === partMpn,
-        );
-        if (existingBomItem) {
-          toastRef.current({
-            title: `Add ${bomLabel} to BOM?`,
-            description: `"${partTitle}" already in BOM (qty ${String(existingBomItem.quantity)}). Increment?`,
-            action: (
-              <ToastAction
-                altText="Increment quantity"
-                data-testid="bom-increment-action"
-                onClick={() => {
-                  updateBomItem(existingBomItem.id, { quantity: existingBomItem.quantity + 1 });
-                }}
-              >
-                Increment
-              </ToastAction>
-            ),
-          });
-        } else {
-          toastRef.current({
-            title: `Add ${bomLabel} to BOM?`,
-            description: `Place "${partTitle}" in your bill of materials.`,
-            action: (
-              <ToastAction
-                altText="Add to BOM"
-                data-testid="bom-add-action"
-                onClick={() => {
-                  addBomItem({
-                    partNumber: partMpn,
-                    manufacturer: partMeta.manufacturer || '',
-                    description: partTitle,
-                    quantity: 1,
-                    unitPrice: 0,
-                    totalPrice: 0,
-                    supplier: 'Unknown',
-                    stock: 0,
-                    status: 'In Stock',
-                  });
-                }}
-              >
-                Add to BOM
-              </ToastAction>
-            ),
-          });
-        }
-        return;
-      }
-
-      // Power symbol drop
-      const powerRaw = e.dataTransfer.getData(POWER_SYMBOL_DRAG_TYPE);
-      if (powerRaw) {
-        e.preventDefault();
-        let dragData: PowerSymbolDragData;
-        try {
-          dragData = JSON.parse(powerRaw) as PowerSymbolDragData;
-        } catch {
-          return;
-        }
-
-        const position = getDropPosition();
-        const newSymbol: PowerSymbol = {
-          id: crypto.randomUUID(),
-          type: dragData.symbolType,
-          netName: dragData.netName,
-          x: position.x,
-          y: position.y,
-          rotation: 0,
-          customLabel: dragData.customLabel,
-        };
-
-        const currentSymbols = settings.powerSymbols ?? [];
-        updateDesignRef.current.mutate({
-          projectId,
-          id: circuitId,
-          settings: { ...settings, powerSymbols: [...currentSymbols, newSymbol] },
-        });
-
-        // BL-0493: Auto-connect — find compatible pins within snap distance
-        const SNAP_DISTANCE = gridSize * 3;
-        const isGround = /gnd|ground|vss|v\-/i.test(dragData.netName);
-        const isPower = /vcc|vdd|vpp|v\+|power/i.test(dragData.netName);
-
-        if ((isGround || isPower) && instances) {
-          const compatiblePins: Array<{ instanceId: number; pinId: string; refDes: string }> = [];
-
-          for (const inst of instances) {
-            const part = inst.partId != null ? partsMap.get(inst.partId) : undefined;
-            if (!part) { continue; }
-            const connectors = (part.connectors ?? []) as Connector[];
-            const instX = inst.schematicX;
-            const instY = inst.schematicY;
-
-            for (const conn of connectors) {
-              const pinNameMatch = isGround
-                ? /gnd|ground|vss|v\-/i.test(conn.name)
-                : /vcc|vdd|vpp|v\+|power/i.test(conn.name);
-              if (!pinNameMatch) { continue; }
-
-              // Compute actual pin world position using terminal offset from instance origin
-              const terminal = conn.terminalPositions?.schematic;
-              const pinX = instX + (terminal?.x ?? 0);
-              const pinY = instY + (terminal?.y ?? 0);
-              const dx = Math.abs(position.x - pinX);
-              const dy = Math.abs(position.y - pinY);
-              const dist = Math.sqrt(dx * dx + dy * dy);
-
-              if (dist <= SNAP_DISTANCE) {
-                compatiblePins.push({ instanceId: inst.id, pinId: conn.id, refDes: inst.referenceDesignator });
-              }
-            }
-          }
-
-          // Create nets connecting pairs of compatible pins to the power net
-          if (compatiblePins.length >= 2) {
-            for (let i = 1; i < compatiblePins.length; i++) {
-              const from = compatiblePins[i - 1];
-              const to = compatiblePins[i];
-              createNetRef.current.mutate({
-                circuitId,
-                name: dragData.netName,
-                netType: isGround ? 'ground' : 'power',
-                segments: [{
-                  fromInstanceId: from.instanceId,
-                  fromPin: from.pinId,
-                  toInstanceId: to.instanceId,
-                  toPin: to.pinId,
-                }],
-              });
-            }
-            toastRef.current({
-              title: 'Auto-connected power pins',
-              description: `Connected ${String(compatiblePins.length)} pins to ${dragData.netName}.`,
-            });
-          } else if (compatiblePins.length === 1) {
-            toastRef.current({
-              title: 'Power pin detected',
-              description: `${compatiblePins[0].refDes} has a compatible ${dragData.netName} pin nearby.`,
-            });
-          }
-        }
-      }
+  // Clipboard (copy/paste)
+  const { handlePaste, handleCopy, triggerPaste } = useSchematicClipboard({
+    circuitId,
+    projectId,
+    instances,
+    nets,
+    partsMap,
+    settings,
+    localNodes,
+    reactFlowInstance,
+    mutationRefs: {
+      createInstance: createInstanceRef,
+      updateDesign: updateDesignRef,
+      createNet: createNetRef,
+      toast: toastRef,
     },
-    [circuitId, projectId, instances, partsMap, settings, reactFlowInstance, snapEnabled, gridSize],
-  );
+  });
+
+  // Drag and drop
+  const { onDragOver, onDrop } = useSchematicDragDrop({
+    circuitId,
+    projectId,
+    instances,
+    partsMap,
+    settings,
+    reactFlowInstance,
+    snapEnabled,
+    gridSize,
+    bom,
+    addBomItem,
+    updateBomItem,
+    mutationRefs: {
+      createInstance: createInstanceRef,
+      updateDesign: updateDesignRef,
+      createNet: createNetRef,
+      toast: toastRef,
+    },
+  });
+
+  // Keyboard shortcuts
+  useSchematicKeyboardShortcuts({
+    circuitId,
+    projectId,
+    instances,
+    nets,
+    partsMap,
+    settings,
+    localNodes,
+    setLocalNodes,
+    activeTool,
+    setActiveTool,
+    setSnapEnabled,
+    snapEnabled,
+    gridSize,
+    reactFlowInstance,
+    handleFitView,
+    handleCopy,
+    handlePaste,
+    announce,
+    mutationRefs: {
+      updateDesign: updateDesignRef,
+      updateInstance: updateInstanceRef,
+      createInstance: createInstanceRef,
+    },
+  });
+
+  // Context menu
+  const {
+    handleCtxAddComponent,
+    handleCtxAddWire,
+    handleCtxAddPower,
+    handleCtxSelectAll,
+    handleCtxReplaceComponent,
+    handleCtxAddDecoupling,
+    handleCtxRunErc,
+  } = useSchematicContextMenu({
+    circuitId,
+    projectId,
+    instances,
+    partsMap,
+    settings,
+    reactFlowInstance,
+    snapEnabled,
+    gridSize,
+    setActiveTool,
+    setLocalNodes,
+    setReplacementInstance,
+    setReplacementPart,
+    setIsReplacementOpen,
+    pushUndoState,
+    mutationRefs: {
+      createInstance: createInstanceRef,
+      updateDesign: updateDesignRef,
+      createNet: createNetRef,
+      toast: toastRef,
+    },
+  });
 
   // Net drawing tool callback — creates a net with waypoints
   const onNetDrawn = useCallback(
     (result: NetDrawingResult) => {
-      // Resolve human-readable pin names and ref designators
       const sourceNode = localNodes.find((n) => n.id === `instance-${result.sourceInstanceId}`);
       const targetNode = localNodes.find((n) => n.id === `instance-${result.targetInstanceId}`);
       const sourceData = sourceNode?.data as InstanceNodeData | undefined;
@@ -1156,397 +667,6 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     [circuitId, localNodes],
   );
 
-  // Keyboard shortcuts (only for implemented tools)
-  useEffect(() => {
-    const handleKeyDown = async (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      )
-        return;
-
-      const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-      const modKey = isMac ? e.metaKey : e.ctrlKey;
-
-      // Ctrl+C — copy selected instances, nets, and annotations
-      if (modKey && e.key.toLowerCase() === 'c' && !e.shiftKey) {
-        const selectedNodes = localNodes.filter(n => n.selected);
-        if (selectedNodes.length === 0) return;
-
-        e.preventDefault();
-
-        const selectedInstanceIds = new Set(
-          selectedNodes
-            .filter(n => n.type === 'schematic-instance')
-            .map(n => (n.data as InstanceNodeData).instanceId)
-        );
-
-        const bundle: SchematicClipboardBundle = {
-          type: 'protopulse-schematic-bundle',
-          instances: (instances ?? [])
-            .filter(inst => selectedInstanceIds.has(inst.id))
-            .map(inst => ({
-              partId: inst.partId,
-              referenceDesignator: inst.referenceDesignator,
-              schematicX: inst.schematicX,
-              schematicY: inst.schematicY,
-              schematicRotation: inst.schematicRotation,
-              properties: inst.properties,
-              oldId: inst.id
-            })),
-          powerSymbols: selectedNodes
-            .filter(n => n.type === 'schematic-power')
-            .map(n => {
-              const d = n.data as PowerNodeData;
-              return (settings.powerSymbols ?? []).find(ps => ps.id === d.symbolId);
-            })
-            .filter((ps): ps is PowerSymbol => ps != null),
-          netLabels: selectedNodes
-            .filter(n => n.type === 'schematic-net-label')
-            .map(n => {
-              const d = n.data as NetLabelNodeData;
-              return (settings.netLabels ?? []).find(nl => nl.id === d.labelId);
-            })
-            .filter((nl): nl is SchematicNetLabel => nl != null),
-          noConnectMarkers: selectedNodes
-            .filter(n => n.type === 'schematic-no-connect')
-            .map(n => {
-              const d = n.data as NoConnectNodeData;
-              return (settings.noConnectMarkers ?? []).find(nc => nc.id === d.markerId);
-            })
-            .filter((nc): nc is NoConnectMarker => nc != null),
-          nets: (nets ?? [])
-            .filter(net => {
-              const segments = (net.segments ?? []) as NetSegmentJSON[];
-              return segments.some(seg =>
-                selectedInstanceIds.has(seg.fromInstanceId) &&
-                selectedInstanceIds.has(seg.toInstanceId)
-              );
-            })
-            .map(net => ({
-              name: net.name,
-              netType: net.netType,
-              style: net.style,
-              segments: ((net.segments ?? []) as NetSegmentJSON[]).filter((seg) =>
-                selectedInstanceIds.has(seg.fromInstanceId) &&
-                selectedInstanceIds.has(seg.toInstanceId)
-              )
-            }))
-        };
-
-        clipboardRef.current = bundle;
-        try {
-          await navigator.clipboard.writeText(JSON.stringify(bundle, null, 2));
-          toastRef.current({
-            title: 'Copied to clipboard',
-            description: `Copied ${bundle.instances.length} components and ${bundle.nets.length} nets.`,
-          });
-        } catch (err) {
-          console.error('Copy failed', err);
-        }
-        return;
-      }
-
-      // Ctrl+V — paste from internal or system clipboard
-      if (modKey && e.key.toLowerCase() === 'v' && !e.shiftKey) {
-        let bundle = clipboardRef.current;
-        if (!bundle) {
-          try {
-            const text = await navigator.clipboard.readText();
-            const parsed = JSON.parse(text);
-            if (parsed.type === 'protopulse-schematic-bundle') {
-              bundle = parsed;
-            }
-          } catch (err) {
-            // Not a valid bundle in clipboard
-          }
-        }
-
-        if (bundle) {
-          e.preventDefault();
-          void handlePaste(bundle);
-        }
-        return;
-      }
-
-      switch (e.key.toLowerCase()) {
-        case 'v':
-          setActiveTool('select');
-          announce(getToolChangeAnnouncement('select', 'schematic'));
-          break;
-        case 'h':
-          setActiveTool('pan');
-          announce(getToolChangeAnnouncement('pan', 'schematic'));
-          break;
-        case 'w':
-          setActiveTool('draw-net');
-          announce(getToolChangeAnnouncement('draw-net', 'schematic'));
-          break;
-        case 't':
-          setActiveTool('place-annotation');
-          announce(getToolChangeAnnouncement('place-annotation', 'schematic'));
-          break;
-        case 'g':
-          setSnapEnabled((s) => !s);
-          break;
-        case 'f':
-          handleFitView();
-          break;
-        case 'escape':
-          setActiveTool('select');
-          announce(getToolChangeAnnouncement('select', 'schematic'));
-          break;
-        case 'arrowup':
-        case 'arrowdown':
-        case 'arrowleft':
-        case 'arrowright': {
-          const selectedNodes = localNodes.filter(n => n.selected);
-          if (selectedNodes.length === 0) break;
-          e.preventDefault();
-          const dx = e.key.toLowerCase() === 'arrowleft' ? -10 : e.key.toLowerCase() === 'arrowright' ? 10 : 0;
-          const dy = e.key.toLowerCase() === 'arrowup' ? -10 : e.key.toLowerCase() === 'arrowdown' ? 10 : 0;
-
-          // Optimistically update UI
-          setLocalNodes(nodes => nodes.map(n => {
-            if (n.selected) {
-              return { ...n, position: { x: n.position.x + dx, y: n.position.y + dy } };
-            }
-            return n;
-          }));
-
-          // Persist
-          selectedNodes.forEach(node => {
-            const newPos = { x: node.position.x + dx, y: node.position.y + dy };
-            if (node.id.startsWith('power-')) {
-              const symbolId = (node.data as any)?.symbolId;
-              if (symbolId) {
-                const updated = (settings.powerSymbols ?? []).map(ps => ps.id === symbolId ? { ...ps, ...newPos } : ps);
-                updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, powerSymbols: updated } });
-              }
-            } else if (node.id.startsWith('netlabel-')) {
-              const labelId = (node.data as any)?.labelId;
-              if (labelId) {
-                const updated = (settings.netLabels ?? []).map(nl => nl.id === labelId ? { ...nl, ...newPos } : nl);
-                updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, netLabels: updated } });
-              }
-            } else if (node.id.startsWith('noconnect-')) {
-              const markerId = (node.data as any)?.markerId;
-              if (markerId) {
-                const updated = (settings.noConnectMarkers ?? []).map(nc => nc.id === markerId ? { ...nc, ...newPos } : nc);
-                updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, noConnectMarkers: updated } });
-              }
-            } else if (node.id.startsWith('annotation-')) {
-              const annotationId = (node.data as any)?.annotationId;
-              if (annotationId) {
-                const updated = (settings.annotations ?? []).map(a => a.id === annotationId ? { ...a, ...newPos } : a);
-                updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
-              }
-            } else {
-              const instanceId = (node.data as any)?.instanceId;
-              if (typeof instanceId === 'number') {
-                updateInstanceRef.current.mutate({ circuitId, id: instanceId, schematicX: newPos.x, schematicY: newPos.y });
-              }
-            }
-          });
-          break;
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleFitView, localNodes, instances, nets, settings, handlePaste]);
-  // Listen for unified component search "Place on schematic" actions
-  useEffect(() => {
-    const handlePlaceComponent = (e: Event) => {
-      const customEvent = e as CustomEvent<{ partId?: number, isPower?: boolean, type?: 'VCC' | 'GND', refDesPrefix?: string }>;
-      if (!customEvent.detail) return;
-      
-      const pos = reactFlowInstance.screenToFlowPosition({
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-      });
-      const snapped = snapEnabled
-        ? { x: Math.round(pos.x / gridSize) * gridSize, y: Math.round(pos.y / gridSize) * gridSize }
-        : pos;
-
-      if (customEvent.detail.isPower) {
-        const type = customEvent.detail.type || 'VCC';
-        const newSymbol: PowerSymbol = {
-          id: crypto.randomUUID(),
-          type,
-          netName: type === 'GND' ? 'GND' : 'VCC',
-          x: snapped.x,
-          y: snapped.y,
-          rotation: 0,
-        };
-        const currentSymbols = settings.powerSymbols ?? [];
-        updateDesignRef.current.mutate({
-          projectId,
-          id: circuitId,
-          settings: { ...settings, powerSymbols: [...currentSymbols, newSymbol] },
-        });
-      } else if (customEvent.detail.partId !== undefined) {
-        const prefix = customEvent.detail.refDesPrefix || 'U';
-        let count = 1;
-        while (instances?.some(i => i.referenceDesignator === `${prefix}${count}`)) {
-          count++;
-        }
-        createInstanceRef.current.mutate({
-          circuitId,
-          partId: customEvent.detail.partId,
-          referenceDesignator: `${prefix}${count}`,
-          schematicX: snapped.x,
-          schematicY: snapped.y,
-        });
-      }
-    };
-    
-    window.addEventListener('protopulse:place-component-instance', handlePlaceComponent);
-    return () => window.removeEventListener('protopulse:place-component-instance', handlePlaceComponent);
-  }, [circuitId, reactFlowInstance, snapEnabled, gridSize, instances]);
-
-  // Context menu handlers
-  const handleCtxAddComponent = useCallback(() => {
-    // Focus the sidebar component search so the user can pick a component to place
-    window.dispatchEvent(new CustomEvent('protopulse:focus-component-search'));
-  }, []);
-
-  const handleCtxAddWire = useCallback(() => {
-    setActiveTool('draw-net');
-  }, []);
-
-  const handleCtxAddPower = useCallback(() => {
-    const pos = reactFlowInstance.screenToFlowPosition({
-      x: window.innerWidth / 2,
-      y: window.innerHeight / 2,
-    });
-    const snapped = snapEnabled
-      ? { x: Math.round(pos.x / gridSize) * gridSize, y: Math.round(pos.y / gridSize) * gridSize }
-      : pos;
-    const newSymbol: PowerSymbol = {
-      id: crypto.randomUUID(),
-      type: 'VCC',
-      netName: 'VCC',
-      x: snapped.x,
-      y: snapped.y,
-      rotation: 0,
-    };
-    const currentSymbols = settings.powerSymbols ?? [];
-    updateDesignRef.current.mutate({
-      projectId,
-      id: circuitId,
-      settings: { ...settings, powerSymbols: [...currentSymbols, newSymbol] },
-    });
-  }, [reactFlowInstance, snapEnabled, gridSize, settings, projectId, circuitId]);
-
-  const handleCtxSelectAll = useCallback(() => {
-    setLocalNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
-  }, [setLocalNodes]);
-
-  const handleCtxReplaceComponent = useCallback(() => {
-    const selected = reactFlowInstance.getNodes().filter(n => n.selected);
-    if (selected.length === 1 && selected[0].type === 'schematic-instance') {
-      const instId = Number(selected[0].id.replace('instance-', ''));
-      const inst = instances?.find(i => i.id === instId);
-      if (inst) {
-        setReplacementInstance(inst);
-        setReplacementPart(partsMap.get(inst.partId!) || null);
-        setIsReplacementOpen(true);
-      }
-    }
-  }, [reactFlowInstance, instances, partsMap]);
-
-  const handleCtxAddDecoupling = useCallback(() => {
-    const selected = reactFlowInstance.getNodes().filter(n => n.selected);
-    if (selected.length !== 1 || selected[0].type !== 'schematic-instance') return;
-
-    const instId = Number(selected[0].id.replace('instance-', ''));
-    const inst = instances?.find(i => i.id === instId);
-    if (!inst) return;
-
-    const part = partsMap.get(inst.partId!);
-    if (!part) return;
-
-    const connectors = (part.connectors ?? []) as Connector[];
-    const vccPins = connectors.filter(c => /vcc|vdd|vpp|v\+|power/i.test(c.name));
-    const gndPins = connectors.filter(c => /gnd|ground|vss|v\-/i.test(c.name));
-
-    if (vccPins.length === 0 || gndPins.length === 0) {
-      toastRef.current({
-        title: 'No power pins found',
-        description: `Could not identify power/ground pins for ${inst.referenceDesignator}.`,
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    pushUndoState();
-
-    // 1. Create two capacitors (100nF and 10uF)
-    const caps = [
-      { value: '100nF', dx: 150, dy: -100 },
-      { value: '10uF', dx: 150, dy: 100 }
-    ];
-
-    const createPromises = caps.map(async (cap, i) => {
-      const cInstance = await createInstanceRef.current.mutateAsync({
-        circuitId,
-        partId: null, // Generic capacitor
-        referenceDesignator: `C_DEC${i + 1}`,
-        schematicX: (inst.schematicX || 0) + cap.dx,
-        schematicY: (inst.schematicY || 0) + cap.dy,
-        properties: { type: 'capacitor', value: cap.value },
-      });
-
-      // 2. Connect to first VCC and first GND pin
-      const vccPin = vccPins[0].id;
-      const gndPin = gndPins[0].id;
-
-      // Pin 1 to VCC
-      await createNetRef.current.mutateAsync({
-        circuitId,
-        name: `VCC_DEC_${inst.referenceDesignator}`,
-        netType: 'power',
-        segments: [{
-          fromInstanceId: cInstance.id,
-          fromPin: '1',
-          toInstanceId: inst.id,
-          toPin: vccPin
-        }]
-      });
-
-      // Pin 2 to GND
-      await createNetRef.current.mutateAsync({
-        circuitId,
-        name: `GND_DEC_${inst.referenceDesignator}`,
-        netType: 'ground',
-        segments: [{
-          fromInstanceId: cInstance.id,
-          fromPin: '2',
-          toInstanceId: inst.id,
-          toPin: gndPin
-        }]
-      });
-    });
-
-    Promise.all(createPromises).then(() => {
-      toastRef.current({
-        title: 'Decoupling added',
-        description: `Added 100nF and 10uF capacitors to ${inst.referenceDesignator}.`,
-      });
-    }).catch(err => {
-      console.error('Failed to add decoupling:', err);
-      toastRef.current({ title: 'Error', description: 'Failed to add decoupling capacitors.', variant: 'destructive' });
-    });
-
-  }, [reactFlowInstance, instances, partsMap, circuitId, pushUndoState]);
-
-  const handleCtxRunErc = useCallback(() => {
-    window.dispatchEvent(new CustomEvent('protopulse:run-erc'));
-  }, []);
-
   // BL-0492: Handle pane click — place annotation when annotation tool active, else clear net selection
   const handlePaneClick = useCallback(
     (event: React.MouseEvent) => {
@@ -1570,7 +690,6 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           id: circuitId,
           settings: { ...settings, annotations: [...currentAnnotations, newAnnotation] },
         });
-        // Switch back to select tool after placing
         setActiveTool('select');
         return;
       }
@@ -1579,12 +698,11 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     [activeTool, reactFlowInstance, snapEnabled, gridSize, settings, projectId, circuitId],
   );
 
-  // Stable toolbar callbacks — prevent SchematicToolbar from re-rendering on every ReactFlow store update
+  // Stable toolbar callbacks
   const handleToggleSnap = useCallback(() => setSnapEnabled((s) => !s), []);
   const handleToggleGridVisible = useCallback(() => setGridVisible((v) => !v), []);
 
-  // Stable ReactFlow props — inline lambdas and array literals cause StoreUpdater to
-  // detect prop changes every render, contributing to the infinite update loop.
+  // Stable ReactFlow props
   const handleEdgeClick = useCallback((_event: React.MouseEvent, edge: Edge) => {
     const netName = (edge.data as Record<string, unknown> | undefined)?.netName;
     if (typeof netName === 'string') {
@@ -1695,13 +813,10 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         />
       )}
 
-      {/* BL-0619: Simulation visual state overlay (LED glow, resistor labels, switch states) */}
       <SimulationVisualOverlay />
 
-      {/* BL-0525: Collaboration presence cursors */}
       <CollaborationCursors client={collaborationClient} view="schematic" />
 
-      {/* BL-0540: Alternate parts badges on instance nodes */}
       {alternatesMap.size > 0 && (
         <div className="absolute inset-0 pointer-events-none z-[5]" data-testid="alt-parts-overlay">
           {localNodes
@@ -1720,10 +835,6 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
                     position: 'absolute',
                     left: 0,
                     top: 0,
-                    // Use ReactFlow's CSS transform to position relative to node
-                    // The react-flow__nodes container already handles viewport transform,
-                    // but this overlay is outside it. We use the node position directly
-                    // and let the popover float from there.
                     transform: `translate(${String(node.position.x)}px, ${String(node.position.y)}px)`,
                   }}
                 >
@@ -1749,7 +860,6 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         </div>
       )}
 
-      {/* UX-031: Selected net pill label */}
       {selectedNetName && (
         <div
           data-testid="selected-net-pill"
@@ -1770,7 +880,6 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         </div>
       )}
 
-      {/* UX-032: Inline ERC violations near cursor */}
       {ercViolations && ercViolations.length > 0 && mouseFlowPos && (
         <div
           data-testid="inline-erc-errors"

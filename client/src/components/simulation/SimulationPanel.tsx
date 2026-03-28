@@ -18,6 +18,9 @@ import {
   Loader2,
   Download,
   AlertCircle,
+  Crosshair,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 
 import {
