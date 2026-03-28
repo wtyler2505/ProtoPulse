@@ -145,9 +145,10 @@ export function registerProjectRoutes(app: Express): void {
 
   app.get(
     '/api/projects/:id/members',
+    requireProjectOwnership,
     asyncHandler(async (req, res) => {
       const id = parseIdParam(req.params.id);
-      
+
       const project = await storage.getProject(id);
       if (!project) return res.status(404).json({ message: 'Project not found' });
       
