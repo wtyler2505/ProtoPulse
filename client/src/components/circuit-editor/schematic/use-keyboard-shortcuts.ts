@@ -13,15 +13,16 @@ import type { NoConnectNodeData } from '../SchematicNoConnectNode';
 import type { AnnotationNodeData } from '../SchematicAnnotationNode';
 import type { SchematicClipboardBundle, NetSegmentJSON } from './converters';
 import { getToolChangeAnnouncement } from '@/lib/canvas-accessibility';
+import type { UpdateDesignMutation, UpdateInstanceMutation, CreateInstanceMutation } from './types';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types
 // ---------------------------------------------------------------------------
 
 interface KeyboardMutationRefs {
-  updateDesign: React.RefObject<{ mutate: (args: Record<string, unknown>) => void }>;
-  updateInstance: React.RefObject<{ mutate: (args: Record<string, unknown>) => void }>;
-  createInstance: React.RefObject<{ mutate: (args: Record<string, unknown>) => void }>;
+  updateDesign: React.RefObject<UpdateDesignMutation>;
+  updateInstance: React.RefObject<UpdateInstanceMutation>;
+  createInstance: React.RefObject<CreateInstanceMutation>;
 }
 
 interface UseKeyboardShortcutsParams {

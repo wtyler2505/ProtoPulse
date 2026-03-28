@@ -13,16 +13,17 @@ import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 import type { CircuitSettings, PowerSymbol } from '@shared/circuit-types';
 import type { Connector, PartMeta } from '@shared/component-types';
 import { ToastAction } from '@/components/ui/toast';
+import type { CreateInstanceMutation, UpdateDesignMutation, CreateNetMutation, ToastFn, BomState } from './types';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types
 // ---------------------------------------------------------------------------
 
 interface DragDropMutationRefs {
-  createInstance: React.RefObject<{ mutate: (args: Record<string, unknown>) => void }>;
-  updateDesign: React.RefObject<{ mutate: (args: Record<string, unknown>) => void }>;
-  createNet: React.RefObject<{ mutate: (args: Record<string, unknown>) => void }>;
-  toast: React.RefObject<(opts: Record<string, unknown>) => void>;
+  createInstance: React.RefObject<CreateInstanceMutation>;
+  updateDesign: React.RefObject<UpdateDesignMutation>;
+  createNet: React.RefObject<CreateNetMutation>;
+  toast: React.RefObject<ToastFn>;
 }
 
 interface UseDragDropParams {
@@ -34,9 +35,9 @@ interface UseDragDropParams {
   reactFlowInstance: ReactFlowInstance;
   snapEnabled: boolean;
   gridSize: number;
-  bom: Array<{ id: number; description: string; partNumber: string; quantity: number }>;
-  addBomItem: (item: Record<string, unknown>) => void;
-  updateBomItem: (id: number, patch: Record<string, unknown>) => void;
+  bom: BomState['bom'];
+  addBomItem: BomState['addBomItem'];
+  updateBomItem: BomState['updateBomItem'];
   mutationRefs: DragDropMutationRefs;
 }
 

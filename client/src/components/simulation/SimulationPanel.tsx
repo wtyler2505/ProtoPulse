@@ -512,29 +512,6 @@ export default function SimulationPanel() {
   }, [projectId, toast]);
 
   // ---------------------------
-  // Probe management
-  // ---------------------------
-  const addProbe = useCallback(() => {
-    const newProbe: Probe = {
-      id: crypto.randomUUID(),
-      name: `Probe ${probes.length + 1}`,
-      type: 'voltage',
-      nodeOrComponent: '',
-    };
-    setProbes((prev) => [...prev, newProbe]);
-  }, [probes.length]);
-
-  const removeProbe = useCallback((probeId: string) => {
-    setProbes((prev) => prev.filter((p) => p.id !== probeId));
-  }, []);
-
-  const updateProbe = useCallback((probeId: string, updates: Partial<Omit<Probe, 'id'>>) => {
-    setProbes((prev) =>
-      prev.map((p) => (p.id === probeId ? { ...p, ...updates } : p)),
-    );
-  }, []);
-
-  // ---------------------------
   // Load a historical result
   // ---------------------------
   const loadHistoryEntry = useCallback((run: SimulationRun) => {
@@ -688,74 +665,11 @@ export default function SimulationPanel() {
           </CollapsibleSection>
 
           {/* ------- Probe Setup ------- */}
-          <CollapsibleSection title="Probes" testId="section-probes">
-            {probes.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic mb-3">
-                No probes placed. Add probes to monitor specific nodes or component currents.
-              </p>
-            ) : (
-              <div className="flex flex-col gap-2 mb-3">
-                {probes.map((probe) => (
-                  <div
-                    key={probe.id}
-                    className="flex items-center gap-2 p-2 bg-background border border-border"
-                    data-testid={`probe-${probe.id}`}
-                  >
-                    <Crosshair className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <input
-                      type="text"
-                      value={probe.name}
-                      onChange={(e) => updateProbe(probe.id, { name: e.target.value })}
-                      className="flex-1 h-6 px-2 text-xs bg-transparent border-none focus:outline-none text-foreground placeholder:text-muted-foreground/50"
-                      placeholder="Probe name"
-                      data-testid={`probe-name-${probe.id}`}
-                    />
-                    <select
-                      value={probe.type}
-                      onChange={(e) =>
-                        updateProbe(probe.id, { type: e.target.value as 'voltage' | 'current' })
-                      }
-                      className="h-6 px-1 text-[10px] bg-muted/30 border border-border text-muted-foreground appearance-none"
-                      data-testid={`probe-type-${probe.id}`}
-                    >
-                      <option value="voltage">Voltage</option>
-                      <option value="current">Current</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={probe.nodeOrComponent}
-                      onChange={(e) => updateProbe(probe.id, { nodeOrComponent: e.target.value })}
-                      className="w-28 h-6 px-2 text-xs bg-transparent border border-border focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/50 font-mono"
-                      placeholder="Node/Comp"
-                      data-testid={`probe-node-${probe.id}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeProbe(probe.id)}
-                      className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-                      data-testid={`probe-remove-${probe.id}`}
-                      title="Remove probe"
-                    >
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={addProbe}
-              disabled={isRunning}
-              data-testid="add-probe"
-              className={cn(
-                'flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-              )}
-            >
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              Add Probe
-            </button>
-          </CollapsibleSection>
+          <ProbeManager
+            probes={probes}
+            onProbesChange={setProbes}
+            disabled={isRunning}
+          />
 
           {/* ------- Corner Analysis (BL-0120) ------- */}
           <CollapsibleSection title="Corner Analysis" testId="section-corners" defaultOpen={false}>

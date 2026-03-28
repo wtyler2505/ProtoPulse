@@ -6,16 +6,17 @@ import type { ReactFlowInstance, Node } from '@xyflow/react';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 import type { CircuitSettings, PowerSymbol, SchematicTool } from '@shared/circuit-types';
 import type { Connector } from '@shared/component-types';
+import type { CreateInstanceMutation, UpdateDesignMutation, CreateNetMutation, ToastFn } from './types';
 
 // ---------------------------------------------------------------------------
 // Mutation ref types
 // ---------------------------------------------------------------------------
 
 interface ContextMenuMutationRefs {
-  createInstance: React.RefObject<{ mutateAsync: (args: Record<string, unknown>) => Promise<{ id: number }> }>;
-  updateDesign: React.RefObject<{ mutate: (args: Record<string, unknown>) => void }>;
-  createNet: React.RefObject<{ mutateAsync: (args: Record<string, unknown>) => Promise<unknown> }>;
-  toast: React.RefObject<(opts: Record<string, unknown>) => void>;
+  createInstance: React.RefObject<CreateInstanceMutation>;
+  updateDesign: React.RefObject<UpdateDesignMutation>;
+  createNet: React.RefObject<CreateNetMutation>;
+  toast: React.RefObject<ToastFn>;
 }
 
 interface UseContextMenuParams {
