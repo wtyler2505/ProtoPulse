@@ -16,16 +16,17 @@ import type {
   ClipboardNetSegment,
   NetSegmentJSON,
 } from './converters';
+import type { CreateInstanceMutation, UpdateDesignMutation, CreateNetMutation, ToastFn } from './types';
 
 // ---------------------------------------------------------------------------
-// Mutation ref types — mirrors the ref pattern used in the parent component
+// Mutation ref types — uses proper types derived from actual hooks
 // ---------------------------------------------------------------------------
 
 interface MutationRefs {
-  createInstance: React.RefObject<{ mutateAsync: (args: Record<string, unknown>) => Promise<{ id: number }> }>;
-  updateDesign: React.RefObject<{ mutate: (args: Record<string, unknown>) => void; mutateAsync: (args: Record<string, unknown>) => Promise<unknown> }>;
-  createNet: React.RefObject<{ mutateAsync: (args: Record<string, unknown>) => Promise<unknown> }>;
-  toast: React.RefObject<(opts: Record<string, unknown>) => void>;
+  createInstance: React.RefObject<CreateInstanceMutation>;
+  updateDesign: React.RefObject<UpdateDesignMutation>;
+  createNet: React.RefObject<CreateNetMutation>;
+  toast: React.RefObject<ToastFn>;
 }
 
 interface UseClipboardParams {
