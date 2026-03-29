@@ -39,7 +39,7 @@ import type {
   ImportResult,
   Listener,
 } from './import/import-types';
-import { STORAGE_KEY, SUPPORTED_FORMATS, createEmptyDesign } from './import/import-types';
+import { STORAGE_KEY, SUPPORTED_FORMATS } from './import/import-types';
 
 // Format parsers
 import { parseAltiumPcb, parseAltiumSchematic } from './import/altium-parser';
@@ -49,9 +49,6 @@ import { parseKicadPcb, parseKicadSchematic, parseKicadSymbol } from './import/k
 import { parseLtspiceSchematic } from './import/ltspice-parser';
 import { parseOrcadSchematic } from './import/orcad-parser';
 import { parseProteusSchematic } from './import/proteus-parser';
-
-// Suppress unused import warnings — these are used internally
-void createEmptyDesign;
 
 // ---------------------------------------------------------------------------
 // DesignImporter

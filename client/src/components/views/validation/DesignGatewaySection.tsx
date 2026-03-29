@@ -4,15 +4,13 @@ import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getRuleExplanation } from './validation-helpers';
-import type { useDesignGateway } from '@/lib/design-gateway';
-
-type GatewayHook = ReturnType<typeof useDesignGateway>;
+import type { GatewayRule, GatewayViolation } from '@/lib/design-gateway';
 
 interface DesignGatewaySectionProps {
-  gatewayRules: GatewayHook['rules'];
-  gatewayViolations: GatewayHook['violations'];
-  enableGatewayRule: GatewayHook['enableRule'];
-  disableGatewayRule: GatewayHook['disableRule'];
+  gatewayRules: GatewayRule[];
+  gatewayViolations: GatewayViolation[];
+  enableGatewayRule: (ruleId: string) => void;
+  disableGatewayRule: (ruleId: string) => void;
   onRun: () => void;
 }
 
