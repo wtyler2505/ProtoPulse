@@ -62,6 +62,8 @@ import type { BomCompletionIssue } from '@/lib/bom-validation';
 import { useDrcSuppression } from '@/lib/drc-suppression';
 import { DrcSuppressionDialog } from '@/components/views/DrcSuppressionDialog';
 import type { DrcSuppressionTarget } from '@/components/views/DrcSuppressionDialog';
+import { VirtualizedIssueList } from '@/components/views/validation/VirtualizedIssueList';
+import type { ArchIssue, CompIssue, ERCIssue, DRCIssue } from '@/components/views/validation/VirtualizedIssueList';
 import { RemediationWizardDialog } from '@/components/views/RemediationWizardDialog';
 import { getRecipe, hasRecipe } from '@/lib/remediation-wizard';
 import type { RemediationRecipe } from '@/lib/remediation-wizard';
