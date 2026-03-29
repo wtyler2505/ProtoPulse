@@ -14,6 +14,7 @@ import type {
   ComplianceFinding,
   ComplianceNode,
   ComplianceRule,
+  ComplianceSeverity,
   ComponentRating,
   DesignParameters,
   DeratingFactors,
@@ -31,7 +32,7 @@ import {
   nextFindingId,
   STORAGE_KEY,
 } from './compliance-constants';
-import { BUILTIN_RULES } from './index';
+import { BUILTIN_RULES } from './builtin-rules';
 
 export class StandardsComplianceEngine {
   private static instance: StandardsComplianceEngine | null = null;
