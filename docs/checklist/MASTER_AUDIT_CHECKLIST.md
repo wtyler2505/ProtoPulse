@@ -688,7 +688,7 @@ These are not all proven broken. They are areas that still warrant active suspic
 
 ### Should-fix
 - [ ] break up the top 10 largest production files
-- [ ] add tab/route matrix browser tests
+- [x] add tab/route matrix browser tests (Wave 158)
 - [x] classify feature maturity and truthfulness in UI (Wave 157 — see docs/FEATURE_MATURITY.md)
 - [x] add stronger AI action permission boundaries (Wave 157 — PermissionTier type system added)
 
