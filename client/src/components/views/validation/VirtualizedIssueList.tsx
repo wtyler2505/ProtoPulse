@@ -1,72 +1,24 @@
-/**
- * VirtualizedIssueList — virtualized rendering of validation issues
- * grouped by type (architecture, component, DRC, ERC, compliance).
- *
- * Extracted from ValidationView.tsx to reduce file size.
- */
-
 import { useState, useMemo, useRef, memo } from 'react';
+import type { ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import type { ViewMode } from '@/lib/project-context';
-import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, CheckCircle2, ShieldCheck, ShieldOff, HelpCircle, Wrench } from 'lucide-react';
+import { AlertTriangle, AlertCircle, CheckCircle2, XCircle, ShieldCheck, ShieldOff, HelpCircle, Wrench } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ContextMenu, ContextMenuTrigger, ContextMenuContent, ContextMenuItem, ContextMenuSeparator } from '@/components/ui/context-menu';
 import { copyToClipboard } from '@/lib/clipboard';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { DRC_EXPLANATIONS } from '@shared/drc-engine';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { DRC_EXPLANATIONS } from '@shared/drc-engine';
 import { ReviewResolutionControls } from '@/components/views/ReviewResolutionControls';
 import { hasRecipe } from '@/lib/remediation-wizard';
-import type { DrcSuppressionTarget } from '@/components/views/DrcSuppressionDialog';
+import { getRuleExplanation } from './validation-helpers';
+import type { ArchIssue, CompIssue, ERCIssue, DRCIssue, VirtualRow } from './validation-helpers';
 import type { ComplianceFinding } from '@/lib/standards-compliance';
+import type { ViewMode } from '@/lib/project-context';
+import type { DrcSuppressionTarget } from '@/components/views/DrcSuppressionDialog';
+import type { useToast } from '@/hooks/use-toast';
 
-// ---------------------------------------------------------------------------
-// Issue types
-// ---------------------------------------------------------------------------
-
-export type ArchIssue = { id: number | string; severity: string; message: string; suggestion?: string; componentId?: string };
-export type CompIssue = { id: string; severity: string; message: string; suggestion?: string; componentId: string };
-export type ERCIssue = { id: string; severity: string; message: string; ruleType: string };
-export type DRCIssue = { id: string; severity: string; message: string; ruleType: string; view: string; componentId: string };
-export type VirtualRow =
-  | { type: 'arch'; issue: ArchIssue }
-  | { type: 'section_header'; count: number }
-  | { type: 'drc_header'; count: number }
-  | { type: 'drc_rule_header'; ruleType: string; count: number }
-  | { type: 'erc_header'; count: number }
-  | { type: 'compliance_header'; count: number }
-  | { type: 'comp'; issue: CompIssue }
-  | { type: 'drc'; issue: DRCIssue }
-  | { type: 'erc'; issue: ERCIssue }
-  | { type: 'compliance'; issue: ComplianceFinding };
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-const RULE_CATEGORY_EXPLANATIONS: Record<string, string> = {
-  clearance: 'Minimum distance between conductive elements',
-  overlap: 'Shapes or pads that overlap incorrectly',
-  'missing-connection': 'Required connections that are absent',
-  'unconnected-pin': 'Component pins with no net attachment',
-  'minimum-width': 'Traces narrower than the design rule minimum',
-  'thermal-relief': 'Insufficient thermal relief on pads connected to planes',
-  'silkscreen-overlap': 'Silkscreen text overlapping pads or other silkscreen',
-  'courtyard-violation': 'Component courtyards overlapping other components',
-  'drill-size': 'Drill holes smaller than fabrication minimum',
-  'annular-ring': 'Annular ring too small for reliable plating',
-};
-
-function getRuleExplanation(ruleType: string, fallbackPrefix: string): string {
-  return DRC_EXPLANATIONS[ruleType] ?? RULE_CATEGORY_EXPLANATIONS[ruleType] ?? `${fallbackPrefix} rule: ${ruleType}`;
-}
-
-// ---------------------------------------------------------------------------
-// RuleGroupHeader
-// ---------------------------------------------------------------------------
-
+/** Expandable DRC rule group header with "Why does this matter?" explanation toggle. */
 function RuleGroupHeader({ ruleType, count }: { ruleType: string; count: number }) {
   const [showExplanation, setShowExplanation] = useState(false);
   const explanation = DRC_EXPLANATIONS[ruleType];
@@ -99,18 +51,18 @@ function RuleGroupHeader({ ruleType, count }: { ruleType: string; count: number 
   );
 }
 
-// ---------------------------------------------------------------------------
-// VirtualizedIssueList
-// ---------------------------------------------------------------------------
-
-export interface VirtualizedIssueListProps {
+export const VirtualizedIssueList = memo(function VirtualizedIssueList({
+  issues, componentIssues, drcIssues, ercIssues, complianceResult, hasComponentParts, getIcon,
+  deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation, toast,
+  onIssueFocus, onSuppress, onFix,
+}: {
   issues: ArchIssue[];
   componentIssues: CompIssue[];
   drcIssues: DRCIssue[];
   ercIssues: ERCIssue[];
   complianceResult: { findings: ComplianceFinding[] } | null;
   hasComponentParts: boolean;
-  getIcon: (severity: string) => React.ReactNode;
+  getIcon: (severity: string) => ReactNode;
   deleteValidationIssue: (id: number | string) => void;
   addOutputLog: (msg: string) => void;
   setActiveView: (view: ViewMode) => void;
@@ -120,15 +72,7 @@ export interface VirtualizedIssueListProps {
   onIssueFocus?: (componentId: string | undefined) => void;
   onSuppress?: (target: DrcSuppressionTarget) => void;
   onFix?: (ruleType: string, violationMessage: string, violationId: string) => void;
-}
-
-export const VirtualizedIssueList = memo(function VirtualizedIssueList(props: VirtualizedIssueListProps) {
-  const {
-    issues, componentIssues, drcIssues, ercIssues, complianceResult, hasComponentParts, getIcon,
-    deleteValidationIssue, addOutputLog, setActiveView, setPendingDismissId, runValidation,
-    onIssueFocus, onSuppress, onFix,
-  } = props;
-
+}) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rows = useMemo<VirtualRow[]>(() => {
@@ -334,15 +278,34 @@ export const VirtualizedIssueList = memo(function VirtualizedIssueList(props: Vi
                     {row.issue.componentId}
                   </div>
                   <div className="md:w-32 flex flex-col gap-1">
-                    <button data-testid={`button-view-drc-${row.issue.id}`} aria-label={`View in editor: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); setActiveView('component_editor'); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">View</button>
+                    <button
+                      data-testid={`button-view-drc-${row.issue.id}`}
+                      aria-label={`View in editor: ${row.issue.message}`}
+                      onClick={(e) => { e.stopPropagation(); setActiveView('component_editor'); }}
+                      className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
+                    >
+                      View
+                    </button>
                     {onSuppress && (
-                      <button data-testid={`button-suppress-drc-${row.issue.id}`} aria-label={`Suppress: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); onSuppress({ ruleId: row.issue.ruleType, instanceId: row.issue.id, message: row.issue.message, severity: row.issue.severity }); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-yellow-500/50 bg-background hover:bg-yellow-600 hover:text-white hover:border-yellow-600 px-3 py-1.5 w-full flex items-center justify-center gap-1">
-                        <ShieldOff className="w-3 h-3" />Suppress
+                      <button
+                        data-testid={`button-suppress-drc-${row.issue.id}`}
+                        aria-label={`Suppress: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onSuppress({ ruleId: row.issue.ruleType, instanceId: row.issue.id, message: row.issue.message, severity: row.issue.severity }); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-yellow-500/50 bg-background hover:bg-yellow-600 hover:text-white hover:border-yellow-600 px-3 py-1.5 w-full flex items-center justify-center gap-1"
+                      >
+                        <ShieldOff className="w-3 h-3" />
+                        Suppress
                       </button>
                     )}
                     {onFix && hasRecipe(row.issue.ruleType) && (
-                      <button data-testid={`button-fix-drc-${row.issue.id}`} aria-label={`Fix: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); onFix(row.issue.ruleType, row.issue.message, row.issue.id); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-emerald-500/50 bg-background hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-3 py-1.5 w-full flex items-center justify-center gap-1">
-                        <Wrench className="w-3 h-3" />Fix
+                      <button
+                        data-testid={`button-fix-drc-${row.issue.id}`}
+                        aria-label={`Fix: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onFix(row.issue.ruleType, row.issue.message, row.issue.id); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-emerald-500/50 bg-background hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-3 py-1.5 w-full flex items-center justify-center gap-1"
+                      >
+                        <Wrench className="w-3 h-3" />
+                        Fix
                       </button>
                     )}
                   </div>
@@ -367,17 +330,38 @@ export const VirtualizedIssueList = memo(function VirtualizedIssueList(props: Vi
                     </StyledTooltip>
                     <ReviewResolutionControls issueId={String(row.issue.id)} />
                   </div>
-                  <div className="md:w-32 text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-1 self-start text-center">ERC</div>
+                  <div className="md:w-32 text-xs font-mono text-amber-500 bg-amber-500/10 px-2 py-1 self-start text-center">
+                    ERC
+                  </div>
                   <div className="md:w-32 flex flex-col gap-1">
-                    <button data-testid={`button-view-erc-${row.issue.id}`} aria-label={`View in schematic: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); setActiveView('schematic'); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">View</button>
+                    <button
+                      data-testid={`button-view-erc-${row.issue.id}`}
+                      aria-label={`View in schematic: ${row.issue.message}`}
+                      onClick={(e) => { e.stopPropagation(); setActiveView('schematic'); }}
+                      className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
+                    >
+                      View
+                    </button>
                     {onSuppress && (
-                      <button data-testid={`button-suppress-erc-${row.issue.id}`} aria-label={`Suppress: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); onSuppress({ ruleId: row.issue.ruleType, instanceId: row.issue.id, message: row.issue.message, severity: row.issue.severity }); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-yellow-500/50 bg-background hover:bg-yellow-600 hover:text-white hover:border-yellow-600 px-3 py-1.5 w-full flex items-center justify-center gap-1">
-                        <ShieldOff className="w-3 h-3" />Suppress
+                      <button
+                        data-testid={`button-suppress-erc-${row.issue.id}`}
+                        aria-label={`Suppress: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onSuppress({ ruleId: row.issue.ruleType, instanceId: row.issue.id, message: row.issue.message, severity: row.issue.severity }); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-yellow-500/50 bg-background hover:bg-yellow-600 hover:text-white hover:border-yellow-600 px-3 py-1.5 w-full flex items-center justify-center gap-1"
+                      >
+                        <ShieldOff className="w-3 h-3" />
+                        Suppress
                       </button>
                     )}
                     {onFix && hasRecipe(row.issue.ruleType) && (
-                      <button data-testid={`button-fix-erc-${row.issue.id}`} aria-label={`Fix: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); onFix(row.issue.ruleType, row.issue.message, row.issue.id); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-emerald-500/50 bg-background hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-3 py-1.5 w-full flex items-center justify-center gap-1">
-                        <Wrench className="w-3 h-3" />Fix
+                      <button
+                        data-testid={`button-fix-erc-${row.issue.id}`}
+                        aria-label={`Fix: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onFix(row.issue.ruleType, row.issue.message, row.issue.id); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-emerald-500/50 bg-background hover:bg-emerald-600 hover:text-white hover:border-emerald-600 px-3 py-1.5 w-full flex items-center justify-center gap-1"
+                      >
+                        <Wrench className="w-3 h-3" />
+                        Fix
                       </button>
                     )}
                   </div>
@@ -413,7 +397,14 @@ export const VirtualizedIssueList = memo(function VirtualizedIssueList(props: Vi
                   </div>
                   <div className="md:w-32 flex flex-col gap-1">
                     {row.issue.componentId && (
-                      <button data-testid={`button-view-compliance-${row.issue.id}`} aria-label={`View component: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); onIssueFocus?.(row.issue.componentId); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">View</button>
+                      <button
+                        data-testid={`button-view-compliance-${row.issue.id}`}
+                        aria-label={`View component: ${row.issue.message}`}
+                        onClick={(e) => { e.stopPropagation(); onIssueFocus?.(row.issue.componentId); }}
+                        className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full"
+                      >
+                        View
+                      </button>
                     )}
                   </div>
                 </div>
@@ -425,3 +416,11 @@ export const VirtualizedIssueList = memo(function VirtualizedIssueList(props: Vi
     </div>
   );
 });
+
+export function ActivityIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-primary">
+      <path d="M22 12H18L15 21L9 3L6 12H2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}

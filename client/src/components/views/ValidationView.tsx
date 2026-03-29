@@ -1116,21 +1116,7 @@ function ValidationViewContent() {
   );
 }
 
-type ArchIssue = { id: number | string; severity: string; message: string; suggestion?: string; componentId?: string };
-type CompIssue = { id: string; severity: string; message: string; suggestion?: string; componentId: string };
-type ERCIssue = { id: string; severity: string; message: string; ruleType: string };
-type DRCIssue = { id: string; severity: string; message: string; ruleType: string; view: string; componentId: string };
-type VirtualRow =
-  | { type: 'arch'; issue: ArchIssue }
-  | { type: 'section_header'; count: number }
-  | { type: 'drc_header'; count: number }
-  | { type: 'drc_rule_header'; ruleType: string; count: number }
-  | { type: 'erc_header'; count: number }
-  | { type: 'compliance_header'; count: number }
-  | { type: 'comp'; issue: CompIssue }
-  | { type: 'drc'; issue: DRCIssue }
-  | { type: 'erc'; issue: ERCIssue }
-  | { type: 'compliance'; issue: ComplianceFinding };
+// Issue types and VirtualizedIssueList extracted to validation/VirtualizedIssueList.tsx
 
 /** Expandable DRC rule group header with "Why does this matter?" explanation toggle. */
 function RuleGroupHeader({ ruleType, count }: { ruleType: string; count: number }) {
