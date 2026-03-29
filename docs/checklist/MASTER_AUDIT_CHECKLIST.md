@@ -683,7 +683,7 @@ These are not all proven broken. They are areas that still warrant active suspic
 ### Must-fix
 - [x] full repo typecheck completes cleanly (fixed: added `--max-old-space-size=4096` to `check` script — Wave 156)
 - [x] route ownership matrix re-audited after recent hardening (fixed: added requireProjectOwnership to 16 component/project-member endpoints, requireCircuitOwnership to 2 netlist endpoints — audit-sweep)
-- [ ] all primary workspace tabs covered by current live smoke tests
+- [x] all primary workspace tabs covered by current live smoke tests (Wave 158 — Playwright matrix)
 - [x] stale backup/temporary source files removed from app tree (Wave 157)
 
 ### Should-fix
