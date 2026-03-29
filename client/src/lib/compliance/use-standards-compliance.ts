@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type {
+  ClearanceCreepageResult,
   ComplianceBomItem,
   ComplianceCheckResult,
   ComplianceDomain,
