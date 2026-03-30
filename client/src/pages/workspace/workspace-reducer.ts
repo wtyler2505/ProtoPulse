@@ -1,0 +1,101 @@
+// ─── Workspace panel state management ──────────────────────────────────────
+
+export interface WorkspaceState {
+  sidebarOpen: boolean;
+  chatOpen: boolean;
+  sidebarCollapsed: boolean;
+  chatCollapsed: boolean;
+  sidebarWidth: number;
+  chatWidth: number;
+  shortcutsOpen: boolean;
+  moreMenuOpen: boolean;
+  activityFeedOpen: boolean;
+  pcbTutorialOpen: boolean;
+}
+
+export type WorkspaceAction =
+  | { type: 'SET_SIDEBAR_OPEN'; open: boolean }
+  | { type: 'SET_CHAT_OPEN'; open: boolean }
+  | { type: 'SET_SIDEBAR_COLLAPSED'; collapsed: boolean }
+  | { type: 'SET_CHAT_COLLAPSED'; collapsed: boolean }
+  | { type: 'SET_SIDEBAR_WIDTH'; width: number }
+  | { type: 'SET_CHAT_WIDTH'; width: number }
+  | { type: 'SET_SHORTCUTS_OPEN'; open: boolean }
+  | { type: 'SET_MORE_MENU_OPEN'; open: boolean }
+  | { type: 'TOGGLE_SHORTCUTS' }
+  | { type: 'SET_ACTIVITY_FEED_OPEN'; open: boolean }
+  | { type: 'SET_PCB_TUTORIAL_OPEN'; open: boolean };
+
+export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
+  switch (action.type) {
+    case 'SET_SIDEBAR_OPEN':
+      return { ...state, sidebarOpen: action.open };
+    case 'SET_CHAT_OPEN':
+      return { ...state, chatOpen: action.open };
+    case 'SET_SIDEBAR_COLLAPSED':
+      return { ...state, sidebarCollapsed: action.collapsed };
+    case 'SET_CHAT_COLLAPSED':
+      return { ...state, chatCollapsed: action.collapsed };
+    case 'SET_SIDEBAR_WIDTH':
+      return { ...state, sidebarWidth: action.width };
+    case 'SET_CHAT_WIDTH':
+      return { ...state, chatWidth: action.width };
+    case 'SET_SHORTCUTS_OPEN':
+      return { ...state, shortcutsOpen: action.open };
+    case 'SET_MORE_MENU_OPEN':
+      return { ...state, moreMenuOpen: action.open };
+    case 'TOGGLE_SHORTCUTS':
+      return { ...state, shortcutsOpen: !state.shortcutsOpen };
+    case 'SET_ACTIVITY_FEED_OPEN':
+      return { ...state, activityFeedOpen: action.open };
+    case 'SET_PCB_TUTORIAL_OPEN':
+      return { ...state, pcbTutorialOpen: action.open };
+  }
+}
+
+// ─── Panel layout persistence ──────────────────────────────────────────────
+
+const PANEL_LAYOUT_KEY = 'protopulse-panel-layout';
+
+export interface PersistedPanelLayout {
+  sidebarCollapsed: boolean;
+  chatCollapsed: boolean;
+  sidebarWidth: number;
+  chatWidth: number;
+  activeView?: string;
+}
+
+function loadPersistedLayout(): Partial<PersistedPanelLayout> {
+  try {
+    const raw = localStorage.getItem(PANEL_LAYOUT_KEY);
+    if (raw) {
+      return JSON.parse(raw) as Partial<PersistedPanelLayout>;
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return {};
+}
+
+export const persisted = loadPersistedLayout();
+
+export const initialWorkspaceState: WorkspaceState = {
+  sidebarOpen: false,
+  chatOpen: false,
+  sidebarCollapsed: persisted.sidebarCollapsed ?? false,
+  chatCollapsed: persisted.chatCollapsed ?? false,
+  sidebarWidth: persisted.sidebarWidth ?? 256,
+  chatWidth: persisted.chatWidth ?? 350,
+  shortcutsOpen: false,
+  moreMenuOpen: false,
+  activityFeedOpen: false,
+  pcbTutorialOpen: false,
+};
+
+export function persistLayout(layout: PersistedPanelLayout): void {
+  try {
+    localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout));
+  } catch {
+    // localStorage unavailable
+  }
+}
