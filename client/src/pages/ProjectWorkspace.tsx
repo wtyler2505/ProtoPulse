@@ -523,9 +523,9 @@ function WorkspaceContent() {
           {shouldShowPredictionPanel && (
             <div
               data-testid="prediction-panel-dock"
-              className="shrink-0 border-t border-border/60 bg-background/90 px-4 py-3 backdrop-blur-xl"
+              className="shrink border-t border-border/60 bg-background/90 px-4 py-3 backdrop-blur-xl max-h-[35vh] overflow-y-auto flex justify-end"
             >
-              <div className="ml-auto w-full max-w-sm">
+              <div className="w-full max-w-sm">
                 <PredictionPanel
                   predictions={predictions}
                   onAccept={handlePredictionAccept}
