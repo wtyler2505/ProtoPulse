@@ -3,21 +3,8 @@
  */
 
 import type { ErrorCode } from './error-codes';
-import type { ErrorCatalogEntry, ErrorSeverity, ProtoPulseErrorOptions } from './error-types';
-
-/**
- * Structured error class for ProtoPulse.
- *
- * Requires the assembled `errorCatalog` to be injected at module level
- * (done by the barrel `index.ts`) to avoid circular imports.
- */
-
-let _catalog: Record<ErrorCode, ErrorCatalogEntry> | undefined;
-
-/** Called once from index.ts after the catalog is assembled. */
-export function _injectCatalog(catalog: Record<ErrorCode, ErrorCatalogEntry>): void {
-  _catalog = catalog;
-}
+import type { ErrorSeverity, ProtoPulseErrorOptions } from './error-types';
+import { errorCatalog } from './catalog';
 
 export class ProtoPulseError extends Error {
   /** Stable error code from the ErrorCode enum. */
@@ -34,10 +21,7 @@ export class ProtoPulseError extends Error {
   readonly context: Record<string, unknown>;
 
   constructor(code: ErrorCode, options: ProtoPulseErrorOptions = {}) {
-    if (!_catalog) {
-      throw new Error('ProtoPulseError: catalog not initialized. Import from shared/errors or shared/error-taxonomy.');
-    }
-    const entry = _catalog[code];
+    const entry = errorCatalog[code];
     const message = options.detail ?? entry.label;
     super(message);
     this.name = 'ProtoPulseError';
