@@ -16,6 +16,8 @@ export interface UsePredictionsReturn {
   accept: (id: string) => void;
   clearAll: () => void;
   isAnalyzing: boolean;
+  /** Trigger AI-enhanced analysis (heuristics + Gemini). Requires API key. */
+  analyzeWithAI: (options: { apiKey: string; projectId: number; sessionId: string }) => Promise<void>;
 }
 
 export function usePredictions(
@@ -56,6 +58,10 @@ export function usePredictions(
     PredictionEngine.getInstance().clearAll();
   }, []);
 
+  const analyzeWithAI = useCallback(async (options: { apiKey: string; projectId: number; sessionId: string }) => {
+    await PredictionEngine.getInstance().analyzeWithAI(nodes, edges, bomItems, options);
+  }, [nodes, edges, bomItems]);
+
   const engine = engineRef.current ?? PredictionEngine.getInstance();
 
   return {
@@ -64,5 +70,6 @@ export function usePredictions(
     accept,
     clearAll,
     isAnalyzing: engine.getIsAnalyzing(),
+    analyzeWithAI,
   };
 }
