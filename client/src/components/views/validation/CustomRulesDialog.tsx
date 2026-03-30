@@ -25,8 +25,8 @@ interface CustomRulesDialogProps {
   scripts: DrcScript[];
   scriptResults: ScriptResult[];
   scriptDesignData: ScriptDesignData;
-  runScript: (id: string, data: ScriptDesignData) => Promise<ScriptResult>;
-  runAllEnabled: (data: ScriptDesignData) => Promise<ScriptResult[]>;
+  runScript: (id: string, data: ScriptDesignData) => Promise<ScriptResult | null>;
+  runAllEnabled: (data: ScriptDesignData) => Promise<Array<ScriptResult | null>>;
   addScript: (name: string, description: string, code: string) => void;
   updateScript: (id: string, updates: Partial<Pick<DrcScript, 'name' | 'description' | 'code' | 'enabled'>>) => void;
   deleteScript: (id: string) => void;
@@ -89,7 +89,7 @@ export function CustomRulesDialog({
 
   const handleRunAllScripts = useCallback(async () => {
     const allResults = await runAllEnabled(scriptDesignData);
-    const totalViolations = allResults.reduce((sum, r) => sum + r.violations.length, 0);
+    const totalViolations = allResults.reduce((sum, r) => sum + (r?.violations.length ?? 0), 0);
     toast({ title: 'Scripts Executed', description: `Ran ${allResults.length} script(s), found ${totalViolations} violation(s).` });
   }, [runAllEnabled, scriptDesignData, toast]);
 
