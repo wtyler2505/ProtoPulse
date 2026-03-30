@@ -523,17 +523,15 @@ function WorkspaceContent() {
           {shouldShowPredictionPanel && (
             <div
               data-testid="prediction-panel-dock"
-              className="shrink border-t border-border/60 bg-background/90 px-4 py-3 backdrop-blur-xl max-h-[35vh] overflow-y-auto flex justify-end"
+              className="absolute bottom-4 right-4 z-20 w-full max-w-sm max-h-[40vh] overflow-y-auto"
             >
-              <div className="w-full max-w-sm">
-                <PredictionPanel
-                  predictions={predictions}
-                  onAccept={handlePredictionAccept}
-                  onDismiss={dismiss}
-                  onClearAll={clearAll}
-                  isAnalyzing={isAnalyzing}
-                />
-              </div>
+              <PredictionPanel
+                predictions={predictions}
+                onAccept={handlePredictionAccept}
+                onDismiss={dismiss}
+                onClearAll={clearAll}
+                isAnalyzing={isAnalyzing}
+              />
             </div>
           )}
 
