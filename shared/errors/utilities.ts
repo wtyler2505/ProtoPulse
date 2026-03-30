@@ -4,39 +4,29 @@
 
 import { ErrorCode } from './error-codes';
 import type { ErrorCatalogEntry } from './error-types';
-
-/** Injected by index.ts after assembly. */
-let _catalog: Record<ErrorCode, ErrorCatalogEntry> | undefined;
-
-/** Called once from index.ts after the catalog is assembled. */
-export function _injectCatalog(catalog: Record<ErrorCode, ErrorCatalogEntry>): void {
-  _catalog = catalog;
-}
+import { errorCatalog } from './catalog';
 
 /**
  * Retrieve the catalog entry for a given error code string.
  * Returns `undefined` if the code is not in the taxonomy.
  */
 export function lookupErrorCode(code: string): ErrorCatalogEntry | undefined {
-  if (!_catalog) { return undefined; }
-  return _catalog[code as ErrorCode];
+  return errorCatalog[code as ErrorCode];
 }
 
 /**
  * Check whether a string is a valid ProtoPulse error code.
  */
 export function isValidErrorCode(code: string): code is ErrorCode {
-  if (!_catalog) { return false; }
-  return code in _catalog;
+  return code in errorCatalog;
 }
 
 /**
  * Get all error codes for a given domain (e.g. '1' for auth, '5' for circuit).
  */
 export function getErrorCodesByDomain(domainDigit: string): ErrorCatalogEntry[] {
-  if (!_catalog) { return []; }
   const prefix = `PP-${domainDigit}`;
-  return Object.values(_catalog).filter((entry) => entry.code.startsWith(prefix));
+  return Object.values(errorCatalog).filter((entry) => entry.code.startsWith(prefix));
 }
 
 /**
