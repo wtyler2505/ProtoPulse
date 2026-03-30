@@ -1,0 +1,130 @@
+/**
+ * 9xxx — System & Infrastructure error catalog entries.
+ */
+
+import { ErrorCode } from './error-codes';
+import { ErrorSeverity } from './error-types';
+import type { ErrorCatalogEntry } from './error-types';
+
+export const systemCatalog: Partial<Record<ErrorCode, ErrorCatalogEntry>> = {
+  [ErrorCode.SYSTEM_INTERNAL]: {
+    code: ErrorCode.SYSTEM_INTERNAL,
+    httpStatus: 500,
+    severity: ErrorSeverity.ERROR,
+    label: 'Internal server error',
+    description: 'An unclassified internal error occurred.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_UNAVAILABLE]: {
+    code: ErrorCode.SYSTEM_UNAVAILABLE,
+    httpStatus: 503,
+    severity: ErrorSeverity.CRITICAL,
+    label: 'Service unavailable',
+    description: 'The server is unavailable (shutting down, overloaded, or in maintenance).',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_RATE_LIMITED]: {
+    code: ErrorCode.SYSTEM_RATE_LIMITED,
+    httpStatus: 429,
+    severity: ErrorSeverity.WARNING,
+    label: 'Rate limited',
+    description: 'Too many requests. Wait before retrying.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_JOB_QUEUE_FULL]: {
+    code: ErrorCode.SYSTEM_JOB_QUEUE_FULL,
+    httpStatus: 503,
+    severity: ErrorSeverity.WARNING,
+    label: 'Job queue full',
+    description: 'The background job queue is at capacity. Try again later.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_JOB_FAILED]: {
+    code: ErrorCode.SYSTEM_JOB_FAILED,
+    httpStatus: 500,
+    severity: ErrorSeverity.ERROR,
+    label: 'Job failed',
+    description: 'A background job failed to complete.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_JOB_TIMEOUT]: {
+    code: ErrorCode.SYSTEM_JOB_TIMEOUT,
+    httpStatus: 408,
+    severity: ErrorSeverity.ERROR,
+    label: 'Job timed out',
+    description: 'A background job exceeded its execution time limit.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_EXTERNAL_SERVICE]: {
+    code: ErrorCode.SYSTEM_EXTERNAL_SERVICE,
+    httpStatus: 502,
+    severity: ErrorSeverity.ERROR,
+    label: 'External service error',
+    description: 'An external service (supplier API, package manager, etc.) is unreachable.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_SERIAL_ERROR]: {
+    code: ErrorCode.SYSTEM_SERIAL_ERROR,
+    httpStatus: 500,
+    severity: ErrorSeverity.ERROR,
+    label: 'Serial port error',
+    description: 'A Web Serial API operation failed.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_SERIAL_NOT_FOUND]: {
+    code: ErrorCode.SYSTEM_SERIAL_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'Serial port not found',
+    description: 'The requested serial port was not found or is disconnected.',
+    retryable: false,
+  },
+  [ErrorCode.SYSTEM_SERIAL_PERMISSION]: {
+    code: ErrorCode.SYSTEM_SERIAL_PERMISSION,
+    httpStatus: 403,
+    severity: ErrorSeverity.ERROR,
+    label: 'Serial permission denied',
+    description: 'The browser denied permission to access the serial port.',
+    retryable: false,
+  },
+  [ErrorCode.SYSTEM_INDEXEDDB_ERROR]: {
+    code: ErrorCode.SYSTEM_INDEXEDDB_ERROR,
+    httpStatus: 500,
+    severity: ErrorSeverity.ERROR,
+    label: 'IndexedDB error',
+    description: 'An IndexedDB operation (offline storage) failed.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_SW_ERROR]: {
+    code: ErrorCode.SYSTEM_SW_ERROR,
+    httpStatus: 500,
+    severity: ErrorSeverity.ERROR,
+    label: 'Service worker error',
+    description: 'Service worker registration or cache operation failed.',
+    retryable: true,
+  },
+  [ErrorCode.SYSTEM_API_NOT_FOUND]: {
+    code: ErrorCode.SYSTEM_API_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'API route not found',
+    description: 'The requested API endpoint does not exist.',
+    retryable: false,
+  },
+  [ErrorCode.SYSTEM_CSP_VIOLATION]: {
+    code: ErrorCode.SYSTEM_CSP_VIOLATION,
+    httpStatus: 200,
+    severity: ErrorSeverity.WARNING,
+    label: 'CSP violation',
+    description: 'A Content-Security-Policy violation was reported.',
+    retryable: false,
+  },
+  [ErrorCode.SYSTEM_SHUTTING_DOWN]: {
+    code: ErrorCode.SYSTEM_SHUTTING_DOWN,
+    httpStatus: 503,
+    severity: ErrorSeverity.CRITICAL,
+    label: 'Server shutting down',
+    description: 'The server is performing a graceful shutdown and is not accepting new work.',
+    retryable: true,
+  },
+};
