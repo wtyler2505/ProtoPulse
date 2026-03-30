@@ -1,0 +1,138 @@
+/**
+ * 4xxx — Import & Parsing error catalog entries.
+ */
+
+import { ErrorCode } from './error-codes';
+import { ErrorSeverity } from './error-types';
+import type { ErrorCatalogEntry } from './error-types';
+
+export const importCatalog: Partial<Record<ErrorCode, ErrorCatalogEntry>> = {
+  [ErrorCode.IMPORT_FAILED]: {
+    code: ErrorCode.IMPORT_FAILED,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Import failed',
+    description: 'A generic import operation failed.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_FORMAT_UNKNOWN]: {
+    code: ErrorCode.IMPORT_FORMAT_UNKNOWN,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Unknown import format',
+    description: 'The file format could not be detected or is not supported.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_KICAD]: {
+    code: ErrorCode.IMPORT_KICAD,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'KiCad import error',
+    description: 'Failed to parse KiCad format file.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_EAGLE]: {
+    code: ErrorCode.IMPORT_EAGLE,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Eagle import error',
+    description: 'Failed to parse Eagle XML file.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_ALTIUM]: {
+    code: ErrorCode.IMPORT_ALTIUM,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Altium import error',
+    description: 'Failed to parse Altium Designer file.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_GEDA]: {
+    code: ErrorCode.IMPORT_GEDA,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'gEDA import error',
+    description: 'Failed to parse gEDA/gschem file.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_LTSPICE]: {
+    code: ErrorCode.IMPORT_LTSPICE,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'LTspice import error',
+    description: 'Failed to parse LTspice schematic file.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_PROTEUS]: {
+    code: ErrorCode.IMPORT_PROTEUS,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Proteus import error',
+    description: 'Failed to parse Proteus Design Suite file.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_ORCAD]: {
+    code: ErrorCode.IMPORT_ORCAD,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'OrCAD import error',
+    description: 'Failed to parse OrCAD file.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_FZPZ]: {
+    code: ErrorCode.IMPORT_FZPZ,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'FZPZ import error',
+    description: 'Failed to parse Fritzing component package.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_FZZ]: {
+    code: ErrorCode.IMPORT_FZZ,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'FZZ import error',
+    description: 'Failed to parse Fritzing project archive.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_ZIP_BOMB]: {
+    code: ErrorCode.IMPORT_ZIP_BOMB,
+    httpStatus: 400,
+    severity: ErrorSeverity.CRITICAL,
+    label: 'ZIP bomb detected',
+    description: 'Archive decompression ratio indicates a potential ZIP bomb attack.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_SPICE_NETLIST]: {
+    code: ErrorCode.IMPORT_SPICE_NETLIST,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'SPICE netlist parse error',
+    description: 'Failed to parse SPICE netlist text.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_SIZE_EXCEEDED]: {
+    code: ErrorCode.IMPORT_SIZE_EXCEEDED,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Import size exceeded',
+    description: 'Decompressed content exceeds the maximum allowed size.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_FILE_COUNT_EXCEEDED]: {
+    code: ErrorCode.IMPORT_FILE_COUNT_EXCEEDED,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Too many files in archive',
+    description: 'The archive contains more files than the allowed maximum.',
+    retryable: false,
+  },
+  [ErrorCode.IMPORT_BACKUP_CORRUPT]: {
+    code: ErrorCode.IMPORT_BACKUP_CORRUPT,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Backup file corrupt',
+    description: 'The backup/restore file is corrupt, incomplete, or invalid.',
+    retryable: false,
+  },
+};
