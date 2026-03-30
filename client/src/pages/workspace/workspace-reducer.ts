@@ -11,6 +11,7 @@ export interface WorkspaceState {
   moreMenuOpen: boolean;
   activityFeedOpen: boolean;
   pcbTutorialOpen: boolean;
+  predictionPanelOpen: boolean;
 }
 
 export type WorkspaceAction =
@@ -24,7 +25,8 @@ export type WorkspaceAction =
   | { type: 'SET_MORE_MENU_OPEN'; open: boolean }
   | { type: 'TOGGLE_SHORTCUTS' }
   | { type: 'SET_ACTIVITY_FEED_OPEN'; open: boolean }
-  | { type: 'SET_PCB_TUTORIAL_OPEN'; open: boolean };
+  | { type: 'SET_PCB_TUTORIAL_OPEN'; open: boolean }
+  | { type: 'TOGGLE_PREDICTION_PANEL' };
 
 export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction): WorkspaceState {
   switch (action.type) {
@@ -50,6 +52,8 @@ export function workspaceReducer(state: WorkspaceState, action: WorkspaceAction)
       return { ...state, activityFeedOpen: action.open };
     case 'SET_PCB_TUTORIAL_OPEN':
       return { ...state, pcbTutorialOpen: action.open };
+    case 'TOGGLE_PREDICTION_PANEL':
+      return { ...state, predictionPanelOpen: !state.predictionPanelOpen };
   }
 }
 
@@ -90,6 +94,7 @@ export const initialWorkspaceState: WorkspaceState = {
   moreMenuOpen: false,
   activityFeedOpen: false,
   pcbTutorialOpen: false,
+  predictionPanelOpen: false,
 };
 
 export function persistLayout(layout: PersistedPanelLayout): void {

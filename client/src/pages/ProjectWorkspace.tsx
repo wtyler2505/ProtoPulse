@@ -521,18 +521,29 @@ function WorkspaceContent() {
           </div>
 
           {shouldShowPredictionPanel && (
-            <div
-              data-testid="prediction-panel-dock"
-              className="absolute bottom-4 right-4 z-20 w-full max-w-sm max-h-[40vh] overflow-y-auto"
-            >
-              <PredictionPanel
-                predictions={predictions}
-                onAccept={handlePredictionAccept}
-                onDismiss={dismiss}
-                onClearAll={clearAll}
-                isAnalyzing={isAnalyzing}
-              />
-            </div>
+            ws.predictionPanelOpen ? (
+              <div
+                data-testid="prediction-panel-dock"
+                className="absolute bottom-4 right-4 z-20 w-full max-w-sm max-h-[40vh] overflow-y-auto"
+              >
+                <PredictionPanel
+                  predictions={predictions}
+                  onAccept={handlePredictionAccept}
+                  onDismiss={dismiss}
+                  onClearAll={clearAll}
+                  isAnalyzing={isAnalyzing}
+                />
+              </div>
+            ) : (
+              <button
+                data-testid="prediction-panel-badge"
+                onClick={() => dispatch({ type: 'TOGGLE_PREDICTION_PANEL' })}
+                className="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-lg border border-border/60 bg-card/90 px-3 py-2 text-xs font-medium text-foreground shadow-lg backdrop-blur-xl hover:bg-card transition-colors"
+              >
+                <span className="text-[#00F0FF]">{predictions.length}</span>
+                <span>Design Suggestions</span>
+              </button>
+            )
           )}
 
           {/* BL-0186: Activity feed slide-over */}
