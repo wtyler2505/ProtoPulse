@@ -227,3 +227,137 @@
 - [ ] Generative Design — candidate generation
 - [ ] Comments — thread management
 - [ ] Inventory/Storage — barcode and label workflows
+
+---
+
+## Additional View Test Results (Continued)
+
+### Breadboard View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| Board renders | Navigate to /breadboard | Physical breadboard grid | Full breadboard with power rails (+/-), columns (a-j), numbered rows, 3.0x zoom | **PASS** |
+| Toolbar | Visual inspection | Drawing tools | Select(1), Wire(2), Delete(3) tool buttons with keyboard shortcuts | **PASS** |
+| DRC Check button | Visual inspection | DRC available | DRC Check button present in toolbar | **PASS** |
+| Live Simulation toggle | Visual inspection | Sim toggle | "LIVE SIMULATION" button visible | **PASS** |
+| Circuit selector | Visual inspection | Circuit dropdown | "New Circuit" dropdown matching schematic | **PASS** |
+
+### Circuit Code View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| Editor renders | Navigate to /circuit_code | Code editor with starter DSL | CodeMirror editor with 16-line starter template visible | **PASS** |
+| Starter template content | Visual inspection | Valid DSL code | circuit(), resistor(), net(), connect(), export() — correct DSL syntax | **PASS** |
+| DSL evaluation | Auto-evaluate on mount | Preview with R1/10k | **FAIL** — "Evaluation timed out after 2s — possible infinite loop" error. Preview shows "No components". Status: "0 components, 0 nets" | **BUG-004** |
+
+**BUG-004: Circuit Code DSL evaluation timeout on starter template [MEDIUM]**
+- The starter template should evaluate cleanly and show a component preview
+- Error message: "Evaluation timed out after 2s — possible infinite loop"
+- This was supposedly fixed by Codex (mount-time evaluation + worker runtime reconciliation)
+- May be a regression from our file decompositions or a pre-existing issue
+
+### Ordering View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| Wizard renders | Navigate to /ordering | Multi-step wizard | 5-step wizard: Board Specs → Select Fab → DFM Check → Quotes → Summary | **PASS** |
+| Board Specs form | Visual inspection | Complete specification form | Quantity, Width/Height, Layers, Thickness, Copper Weight, Surface Finish, Solder Mask Color (8 swatches), Silkscreen Color, Min Trace Width, Min Drill Size | **PASS** |
+| Special Features | Visual inspection | Feature checkboxes | Castellated Holes, Via-in-Pad, Impedance Control, Gold Fingers | **PASS** |
+| Navigation | Visual inspection | Step navigation | Previous button, step dots (4 dots visible), "Board Specs" tab highlighted | **PASS** |
+| Default values | Visual inspection | Reasonable defaults | Qty=5, 100×80mm, 2-layer, 1.6mm, 1oz, HASL, Green mask, White silk, 0.2mm trace, 0.3mm drill | **PASS** |
+
+### Design History View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| View renders | Navigate to /design_history | Snapshot list | "Design Version History" with "1 snapshot" badge | **PASS** |
+| Existing snapshot | Visual inspection | Snapshot from Codex audit | "Audit Snapshot 1" — "Created during live audit verification" Mar 23, 2026 9:45 AM | **PASS** |
+| Action buttons | Visual inspection | Compare/delete | "Compare to Current" and delete (trash icon) buttons | **PASS** |
+| Save Snapshot button | Visual inspection | Create new snapshot | "Save Snapshot" button visible in header | **PASS** |
+
+### Starter Circuits View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| View renders | Navigate to /starter_circuits | Circuit template grid | "Starter Circuits" with "15/15" count badge | **PASS** |
+| Category filters | Visual inspection | Filter buttons | All, Basics, Sensors, Displays, Motors, Communication | **PASS** |
+| Level filters | Visual inspection | Difficulty filter | All Levels, Beginner, Intermediate | **PASS** |
+| Circuit cards | Visual inspection | Rich cards | 12+ cards visible: LED Blink, Traffic Light, Button Input, Potentiometer Reader, RGB LED Color Mixer, Servo Sweep, Temperature Sensor, Ultrasonic Distance, LCD Hello World, etc. | **PASS** |
+| Card content | Visual inspection | Tags and metadata | Each card has: title, description, difficulty badge, category tags, board (Arduino Uno) | **PASS** |
+| Search | Visual inspection | Search field | "Search circuits..." textbox present | **PASS** |
+
+### Generative Design View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| View renders | Navigate to /generative_design | Design spec form | Circuit Description textarea, constraint sliders, Generate button | **PASS** |
+| Generate disabled when empty | Visual inspection | Button disabled | Generate button correctly disabled with empty description (our fix!) | **PASS** |
+| Constraint sliders | Visual inspection | 3 sliders | Budget ($25), Max Power (5W), Max Temp (85°C) — all with sliders | **PASS** |
+| Population/Generations | Visual inspection | Input fields | Population: 6, Generations: 5 — editable | **PASS** |
+| Empty state | Visual inspection | "No candidates yet" | Correct empty state with "Describe your circuit and click Generate to start" | **PASS** |
+
+### Export Center View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| View renders | Navigate to /output | Export format list | "EXPORT CENTER" with "17 formats" badge | **PASS** |
+| Quick Export Profiles | Visual inspection | 4 profiles | Fab Ready (3), Sim Bundle (2), Documentation (3), Full Package (16) | **PASS** |
+| Schematic & Netlist | Visual inspection | 5 formats | KiCad Project, Eagle Project, SPICE Netlist, Netlist CSV, Netlist KiCad | **PASS** |
+| PCB Fabrication | Visual inspection | Fab package | Complete Fab Package (.zip) visible | **PASS** |
+| DRC status indicators | Visual inspection | Warning icons | Orange warning icons on some exports (DRC pre-check needed) | **PASS** |
+| Download buttons | Visual inspection | Per-format download | Download icon button on each format row | **PASS** |
+
+### Labs View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| View renders | Navigate to /labs | Lab template list | "Lab Templates" with 5 labs, search, level/category filters | **PASS** |
+| Lab cards | Visual inspection | Rich lab info | LED Circuit Basics (Beginner, 20m, Fundamentals), Voltage Divider Lab (Beginner, 30m, Analog), Arduino Sensor Project (Intermediate, 45m, Microcontroller), PCB Design Intro (Intermediate, 40m, PCB) | **PASS** |
+| Filters | Visual inspection | Dropdowns | "All Levels" and "All Categories" dropdown filters | **PASS** |
+
+### Audit Trail View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| View renders | Navigate to /audit_trail | Audit log list | "Audit Trail" with 5 entries, search, filters, Export CSV | **PASS** |
+| Entry types | Visual inspection | Multiple actions | Created (Architecture Node, Circuit Design), Updated (BOM Item), Deleted (Architecture Edge), Exported (Project) | **PASS** |
+| Entry metadata | Visual inspection | Timestamp/user/fields | Each entry shows: timestamp, user (Tyler), field count, expandable details | **PASS** |
+| Filters | Visual inspection | Filter controls | Search textbox, "All entities" dropdown, "All actions" dropdown, date range pickers | **PASS** |
+| Export CSV | Visual inspection | Export button | "Export CSV" button in header | **PASS** |
+
+### PCB Layout View
+
+| Test | Action | Expected | Actual | Status |
+|------|--------|----------|--------|--------|
+| View renders | Navigate to /pcb | PCB editor | Full PCB editor with board outline, layer stack, toolbar | **PASS** |
+| Layer Stack | Visual inspection | Stack info | Top (1oz, 1.4mil), Core (FR4, 59.2mil), Bottom (1oz, 1.4mil), Total: 62mil, 2-layer | **PASS** |
+| Layer count selector | Visual inspection | Layer buttons | 2-layer through 32-layer selector buttons | **PASS** |
+| Trace width control | Visual inspection | Width slider + presets | Trace slider at 2.0mm with preset buttons (0.15, 0.25, 0.3, 1, 2) | **PASS** |
+| Board dimensions | Visual inspection | Size display | 50 × 40 mm | **PASS** |
+| Empty board state | Visual inspection | Guidance text | "Empty PCB Board — Component footprints will appear here once placed in the Schematic view" | **PASS** |
+| Layer legend | Visual inspection | Color-coded layers | F.Cu (Front Copper) red, B.Cu (Back Copper) blue, Board Outline gold | **PASS** |
+| 3D toggle | Visual inspection | 3D button | 3D view toggle button in toolbar | **PASS** |
+
+---
+
+## All Bugs Found
+
+| ID | Severity | Description | Status |
+|----|----------|-------------|--------|
+| BUG-001 | CRITICAL | Design Suggestions panel blocking ALL view content (shrink-0 consuming all space) | **FIXED** (f76b9dc) |
+| BUG-002 | HIGH | Full-width gray background bar behind suggestions panel | **FIXED** (7c74ffa) |
+| BUG-003 | MEDIUM | Design Suggestions always expanded, covering content | **FIXED** (aea69ba) |
+| BUG-004 | MEDIUM | Circuit Code DSL evaluation times out on starter template ("possible infinite loop") | **OPEN** |
+| BUG-005 | LOW | "undefined led" in timeline/history — stale entry from pre-fix bug | **OPEN** (cosmetic) |
+| BUG-006 | LOW | "Something went wrong" error persists in chat history from previous session | **OPEN** (cosmetic) |
+| BUG-007 | LOW | "Switch to the Validati" truncated message in chat | **OPEN** (cosmetic) |
+| BUG-008 | LOW | 3 toolbar buttons without accessible labels (icon-only, uid 22_119-22_121) | **OPEN** |
+| BUG-009 | INFO | React Flow parent container sizing warning (console) | **KNOWN** |
+
+---
+
+## Views Tested: 22 / 30
+
+**Tested:** Architecture, Schematic, Validation, Procurement, Kanban, Knowledge Hub, 3D Viewer, Simulation, Dashboard, Calculators, Breadboard, Circuit Code, Ordering, Design History, Starter Circuits, Generative Design, Export Center, Labs, Audit Trail, PCB Layout, Community (earlier session), Digital Twin (earlier session)
+
+**Remaining:** Component Editor, Arduino Workbench, Serial Monitor, Design Patterns, Comments, Lifecycle, Inventory/Storage
