@@ -1,0 +1,130 @@
+/**
+ * 8xxx — Project & Collaboration error catalog entries.
+ */
+
+import { ErrorCode } from './error-codes';
+import { ErrorSeverity } from './error-types';
+import type { ErrorCatalogEntry } from './error-types';
+
+export const projectCatalog: Partial<Record<ErrorCode, ErrorCatalogEntry>> = {
+  [ErrorCode.PROJECT_NOT_FOUND]: {
+    code: ErrorCode.PROJECT_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'Project not found',
+    description: 'The specified project does not exist or has been deleted.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_INVALID_NAME]: {
+    code: ErrorCode.PROJECT_INVALID_NAME,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Invalid project name',
+    description: 'Project name is empty or does not meet naming requirements.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_DELETED]: {
+    code: ErrorCode.PROJECT_DELETED,
+    httpStatus: 410,
+    severity: ErrorSeverity.ERROR,
+    label: 'Project deleted',
+    description: 'The project has been soft-deleted and is no longer accessible.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_BOM_NOT_FOUND]: {
+    code: ErrorCode.PROJECT_BOM_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'BOM item not found',
+    description: 'The specified Bill of Materials item does not exist.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_NODE_NOT_FOUND]: {
+    code: ErrorCode.PROJECT_NODE_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'Architecture node not found',
+    description: 'The specified architecture block/node does not exist.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_EDGE_NOT_FOUND]: {
+    code: ErrorCode.PROJECT_EDGE_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'Architecture edge not found',
+    description: 'The specified architecture connection/edge does not exist.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_VALIDATION_NOT_FOUND]: {
+    code: ErrorCode.PROJECT_VALIDATION_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'Validation issue not found',
+    description: 'The specified validation issue does not exist.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_ORDER_NOT_FOUND]: {
+    code: ErrorCode.PROJECT_ORDER_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'PCB order not found',
+    description: 'The specified PCB fabrication order does not exist.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_ORDER_WRONG_STATUS]: {
+    code: ErrorCode.PROJECT_ORDER_WRONG_STATUS,
+    httpStatus: 400,
+    severity: ErrorSeverity.ERROR,
+    label: 'Order in wrong status',
+    description: 'The order is not in the required status for this operation.',
+    retryable: false,
+  },
+  [ErrorCode.COLLAB_JOIN_FAILED]: {
+    code: ErrorCode.COLLAB_JOIN_FAILED,
+    httpStatus: 500,
+    severity: ErrorSeverity.ERROR,
+    label: 'Failed to join collaboration room',
+    description: 'Could not join the real-time collaboration room for this project.',
+    retryable: true,
+  },
+  [ErrorCode.COLLAB_ENTITY_LOCKED]: {
+    code: ErrorCode.COLLAB_ENTITY_LOCKED,
+    httpStatus: 409,
+    severity: ErrorSeverity.WARNING,
+    label: 'Entity locked',
+    description: 'The entity is currently being edited by another collaborator.',
+    retryable: true,
+  },
+  [ErrorCode.COLLAB_WS_ERROR]: {
+    code: ErrorCode.COLLAB_WS_ERROR,
+    httpStatus: 500,
+    severity: ErrorSeverity.ERROR,
+    label: 'WebSocket error',
+    description: 'The WebSocket connection for real-time collaboration failed.',
+    retryable: true,
+  },
+  [ErrorCode.COLLAB_CRDT_CONFLICT]: {
+    code: ErrorCode.COLLAB_CRDT_CONFLICT,
+    httpStatus: 409,
+    severity: ErrorSeverity.WARNING,
+    label: 'CRDT conflict',
+    description: 'Concurrent CRDT operations produced a conflict that needs resolution.',
+    retryable: true,
+  },
+  [ErrorCode.PROJECT_SNAPSHOT_NOT_FOUND]: {
+    code: ErrorCode.PROJECT_SNAPSHOT_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'Snapshot not found',
+    description: 'The specified design snapshot does not exist.',
+    retryable: false,
+  },
+  [ErrorCode.PROJECT_LIFECYCLE_NOT_FOUND]: {
+    code: ErrorCode.PROJECT_LIFECYCLE_NOT_FOUND,
+    httpStatus: 404,
+    severity: ErrorSeverity.ERROR,
+    label: 'Lifecycle entry not found',
+    description: 'The specified component lifecycle entry does not exist.',
+    retryable: false,
+  },
+};
