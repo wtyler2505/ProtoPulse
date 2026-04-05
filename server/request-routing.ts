@@ -9,7 +9,6 @@ export const PUBLIC_API_PATHS = [
   '/api/docs',
   '/api/metrics',
   '/api/settings/chat',
-  '/api/seed',
 ] as const;
 
 const SSE_ROUTE_PATTERNS = [

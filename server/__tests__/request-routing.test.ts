@@ -30,7 +30,7 @@ describe('request-routing helpers', () => {
       expect(isPublicApiPath('/api/auth/login')).toBe(true);
       expect(isPublicApiPath('/api/health')).toBe(true);
       expect(isPublicApiPath('/api/settings/chat')).toBe(true);
-      expect(isPublicApiPath('/api/seed')).toBe(true);
+      expect(isPublicApiPath('/api/seed')).toBe(false);
     });
 
     it('does not accidentally expose protected project routes', () => {

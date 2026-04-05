@@ -186,5 +186,86 @@
 - **Findings:**
   - **Silent Metric Dropping:** `server/metrics.ts` collects detailed system telemetry (CPU, memory, request rates). However, if the external metrics pipeline is down, these metrics are silently dropped from memory (`flushTimer`). In an embedded or local-first desktop application, metrics should either be logged locally to a rotating file or exposed via a dedicated local debugging dashboard (e.g., an internal `chrome-devtools` trace panel) so the user can diagnose why their application is freezing during SPICE simulations.
 
+## 24. Pass 9: AI & Industry State-of-the-Art (2026 Trends)
+*Utilized Google Web Search & Genkit Docs to evaluate ProtoPulse against 2026 EDA & Tauri industry standards.*
+
+- **Findings:**
+  - **Tauri v2 IPC Performance Bottleneck:** By 2026, Tauri v2's primary advantage is passing Raw Payloads and using Channels to completely bypass JSON serialization overhead. ProtoPulse still heavily relies on an HTTP Express server (`localhost:5000`) for all internal communication between the frontend and backend. Migrating heavy data operations (like loading massive JSON components or streaming SPICE outputs) to Tauri's native `tauri::ipc::Channel` or Custom Protocols (`register_uri_scheme_protocol`) would reduce memory overhead by completely bypassing the HTTP networking stack and JSON serialization.
+  - **Genkit Multi-Agent Systems:** Based on the Genkit 2026 documentation (`js/multi-agent.md`), ProtoPulse's approach of passing 125 flat tools to a single monolithic Gemini model (`server/ai.ts`) is an outdated anti-pattern. The state-of-the-art approach uses a Multi-Agent System where a "Router Agent" delegates to specialized agents (e.g., a "Routing Agent" or "Component Selection Agent"), each with a focused context window. This prevents the primary LLM from context-collapsing under 125 tool schemas.
+  - **Agentic Debugging (HITL Shift):** 2026 EDA industry trends show a shift away from pure "LLM generates the whole circuit" toward "Human-in-the-Loop (HITL) Agentic Debugging." ProtoPulse's AI is largely reactive (user asks -> AI does). The platform should be enhanced to feature an autonomous background agent that constantly listens to the `drc-engine.ts` output and proactively suggests specific, scoped architectural fixes when the user creates a violation, rather than waiting to be prompted.
+
+## 25. Pass 10: Accessibility & UI Component Auditing
+*Evaluating keyboard operability, screen reader compliance, and UI security.*
+
+- **Findings:**
+  - **Focus Trap & WCAG Violations (`focus:outline-none`):** Across several core components (`OutputView.tsx`, `BomToolbar.tsx`, `BomTable.tsx`, `CustomRulesDialog.tsx`), input fields and textareas apply the Tailwind class `focus:outline-none` without providing a high-contrast `focus-visible` alternative ring. This completely strips away the browser's default focus indicator. This is a severe WCAG Level AA violation, rendering the application functionally unusable for keyboard-only navigation and users with motor disabilities.
+  - **Missing ARIA Labels on Inline Inputs:** In `BomTable.tsx`, the inline edit fields for `partNumber`, `manufacturer`, and `description` are raw `<input>` tags completely missing `<label>` associations or `aria-label` attributes. Screen readers parsing this table will simply announce "edit text" without providing any context on what column is being edited.
+  - **Lacking Automated A11y Enforcement:** The project's ESLint configuration (`eslint.config.js`) enforces strict TypeScript rules but entirely omits accessibility linters like `eslint-plugin-jsx-a11y`. Accessibility is treated as an afterthought rather than being statically analyzed in the CI pipeline.
+
+## 26. Pass 11: 2026 Simulation & Real-time Collaboration Standards
+*Utilized Web Research to benchmark ProtoPulse's internal engines against 2026 industry standards.*
+
+- **Findings:**
+  - **Simulation Engine Deficit (WebAssembly ngspice):** ProtoPulse currently relies on a custom JavaScript Modified Nodal Analysis (MNA) solver (`client/src/lib/simulation/circuit-solver.ts`). Based on 2026 industry EDA benchmarks, this is highly discouraged for production tools. Modern web EDA platforms (like KiCad-Web) exclusively use **WebAssembly 3.0 compiled ngspice** (leveraging Memory64 and Relaxed SIMD). The custom JS solver will inherently fail on complex non-linear models (like BSIM4 transistors) and lacks the decades of convergence hardening present in ngspice. ProtoPulse should deprecate the custom JS math engine and migrate to a Wasm-ngspice core to achieve 10x performance gains and professional accuracy.
+  - **Collaborative CRDT Anti-Pattern:** The real-time collaboration engine (`server/collaboration.ts`) currently uses a custom, manual Last-Write-Wins (LWW) mechanism. In the 2026 ecosystem, building custom LWW logic for complex nested objects (like a schematic graph) is considered an anti-pattern due to the extreme difficulty of handling destructive merges (e.g., two users editing the same text label). ProtoPulse should rip out the custom LWW implementation and adopt **Yjs**, the industry-standard CRDT framework, which natively integrates with React 19's `useOptimistic` hook and handles deep structural merging without data loss.
+
+## 27. Pass 12: AI Core Logic & Tool Safety
+*Evaluating AI prompt construction, hallucination vectors, and multi-model fallback routines inside server/ai.ts and server/ai-tools/.*
+
+- **Findings:**
+  - **O(N*M) Edge Resolution Bottleneck:** In `server/ai.ts`, the `buildSystemPrompt` function performs linear array scans (`appState.nodes.find()`) for the source and target of *every single edge* in the project. For a medium-sized schematic with 100 nodes and 200 edges, this results in 40,000 array iterations purely to build a text string. This blocks the main thread heavily before the AI request is even sent. It must be refactored to use an O(1) Map lookup.
+  - **Production Mock Data (Hallucination Vector):** The `pricingLookupTool` found inside the Genkit setup actively returns hardcoded mock data (`Math.random() * 10` and `inStock: true`) to the AI. Because this mock tool is running in production, the AI will confidently hallucinate fake component prices and fake stock availability to the user. This severely degrades trust in the tool and will cause users to design boards with out-of-stock components.
+  - **Silent Fallback Error Masking:** The `processAIMessage` function implements a multi-model routing fallback (e.g., trying Gemini if Claude fails). However, the `try/catch` block is structured such that if the primary provider fails, and the fallback provider ALSO fails, the outer catch block only receives the error from the *fallback* provider. The original, primary failure reason (which might be an important rate limit or prompt size error) is completely swallowed and never logged.
+  - **Untyped Catch Blocks in Tool Execution:** Multiple AI tools (e.g., in `server/ai-tools/export.ts`) use `catch (err: any)` to handle failures when executing commands. This explicitly violates the project's strict `@typescript-eslint/no-explicit-any` ESLint rule and removes type safety from the error handler, creating a risk of server crashes if the thrown entity isn't an Error object.
+
+## 28. Pass 13: AI Tool Abstractions & Data Coercion
+*Evaluating type coercion in export pipelines and round-trip UI coupling in hardware tools.*
+
+- **Findings:**
+  - **Dangerous Type Coercion in Export Pipelines:** In `server/ai-tools/export.ts`, the data mappers (`toComponentPartData`, `toArchNodeData`) explicitly coerce unknown JSONB blobs from the database into strict shapes using `as Record<string, unknown>` and `as unknown[]`. This completely bypasses runtime Zod validation. If the database contains malformed JSON from an old migration or a corrupted write, the export generators (KiCad, Gerber) will crash deep inside their file-writing logic, making it incredibly difficult to debug. The mappers must be refactored to use `z.parse()` or `z.safeParse()` to guarantee schema integrity at the boundary.
+  - **Unnecessary Client Round-Trips:** In `server/ai-tools/arduino.ts`, tools like `compile_sketch` and `upload_firmware` are dispatched as client-side actions via `clientAction()`. This means the AI tells the React client to make a REST API call *back* to the server to execute the compilation. This tight coupling means the AI hardware workflow will instantly fail if the user's browser tab refreshes or disconnects mid-generation. Since these operations require server-side execution (Node/Rust) anyway, they should be converted to execute natively server-side within the tool definition itself, isolating the workload from the fragile UI layer.
+
+## 29. Pass 14: AI Action Blindspots & Tool Coverage
+*Mapping the AI toolset against API capabilities to find functional blindspots.*
+
+- **Findings:**
+  - **No AI Version Control / Rollback Capabilities:** While there is a robust history endpoint (`server/routes/history.ts`), the AI tool registry (`server/ai-tools/index.ts`) completely lacks any history or version control tools. The AI cannot list previous commits, revert a project snapshot, or undo its own mistakes. If the AI destructively deletes a large sub-circuit, the user is forced to manually navigate the UI to find the undo button. The AI must be wired into the project history.
+  - **No Access to Settings or Preferences:** The AI cannot modify routing preferences, grid snapping settings, or UI themes. It is entirely blind to the `server/routes/settings.ts` and `design-preferences.ts` logic. If a user asks the AI to "turn on strict grid snapping", it will hallucinate a success response but do nothing.
+  - **No Collaboration Management:** The AI has no tools to invite users to a project, revoke access, or manage roles. The `projects/:id/members` endpoints exist, but the AI is blind to them.
+
+## 30. Pass 15: AI Logic Constraints & Data Modeling
+*Evaluating the mathematical integrity, schema alignment, and hardcoded boundaries of individual AI tools.*
+
+- **Findings:**
+  - **Deterministic Generation Flaw:** The generative design tool (`server/ai-tools/generative.ts`) uses a `mulberry32` PRNG to generate circuit candidates. However, the seed is calculated as `description.length * 31 + count * 7`. This means if a user types "Make me a driver circuit" and asks for 3 candidates, the seed will be identical every single time they ask. The AI will output the *exact same* "randomized" candidate topologies repeatedly, entirely defeating the purpose of a generative exploration tool. The seed must incorporate `Date.now()` or `crypto.randomBytes`.
+  - **Schema Typo in Risk Analysis:** In `server/ai-tools/risk-analysis.ts`, the `calculateBuildRiskScore` function loops over `bomItems` and accesses `item.assemblyCategory` and `item.esdSensitive`. However, cross-referencing `shared/schema.ts` reveals that the `bom_items` table *does not contain these columns*. The ORM will return `undefined` for these fields, meaning the risk analysis engine is fundamentally broken and will always silently skip THT and ESD assembly risk calculations.
+  - **Database Decoupling in BOM Optimization:** The `analyze_bom_optimization` tool (`server/ai-tools/bom-optimization.ts`) uses massive hardcoded static dictionaries (like `RESISTOR_PACKAGES` and `IC_ALTERNATES`) to suggest alternative components to the user. Because this is hardcoded into the backend script, it is completely decoupled from the PostgreSQL `component_library` table. The AI will regularly hallucinate suggestions for parts like the `ATmega328PB` or `GD32F103`, even if those components do not exist in the project's actual database library, causing placed components to break.
+
+## 31. Pass 16: The "Wired Into Everything" Audit (Total API Coverage Mapping)
+*Mapping the AI tool registry against all backend REST endpoints to identify domains where the AI is completely blind and powerless.*
+
+- **Findings:**
+  - **No AI Design Comments / Review Capabiltiies (`server/routes/comments.ts`):** The application allows users to drop spatial comments/pins on the schematic or PCB to discuss design choices. The AI is completely blind to these endpoints. An AI assistant in a professional EDA tool should be able to read a user's comment, reply to it, resolve it, or even proactively drop its own warning pins directly onto the schematic canvas (e.g., "Why is this 10k resistor placed here instead of near the MCU?").
+  - **No Component Lifecycle Management (`server/routes/component-lifecycle.ts`):** The AI can place components, but it cannot manage the underlying library. It lacks the tools to deprecate a part, mark a part as End-Of-Life (EOL), or suggest migration paths to active components within the library database.
+  - **No PCB Copper Pour / Zone Capabilities (`server/routes/pcb-zones.ts`):** While the AI has the `draw_pcb_trace` tool, it has absolutely no capability to create or manage copper pour zones (e.g., creating a massive GND plane). This is a fundamental requirement for any serious PCB layout task.
+  - **No BOM Snapshotting or ECO Management (`server/routes/bom-snapshots.ts`):** The AI can add and remove parts from the Bill of Materials. However, if asked to perform a massive optimization (like swapping all 0805 resistors to 0402), it cannot explicitly snapshot the BOM *before* making the change, nor can it run a diff against a previous snapshot to summarize the Engineering Change Order (ECO) impact to the user.
+  - **No Chat Branching or Context Tree Control (`server/routes/chat-branches.ts`):** If the AI makes a massive mistake, or the user wants to explore a different design path, the user can branch the chat. The AI, however, has no tools to branch *its own* conversation or prune its own context tree when it detects it is going down an unhelpful path.
+
+## 32. Pass 17: Genkit Architectural Evolution & Enhancements
+*Evaluating the AI pipeline against official Genkit features, searching for capability gaps and structural improvements.*
+
+- **Findings:**
+  - **Missing Evaluation Framework (Evals):** The application has absolutely no AI evaluation test coverage. In a professional AI integration, developers must use Genkit's Evaluation capabilities (`genkit eval:run`) to test LLM responses against "golden datasets" to mathematically prove that model updates or prompt tweaks don't cause regressions. Right now, ProtoPulse relies entirely on manual "vibe checks" in production. Claude must build a suite of deterministic and LLM-as-a-judge tests for the core circuit generation flows.
+  - **In-Memory RAG vs. Genkit Retrievers:** As noted in Pass 12, `server/routes/rag.ts` is an isolated, in-memory, memory-leaking implementation. Genkit has native first-class support for Retrieval-Augmented Generation (RAG) via its `ai.defineRetriever` API and native integrations with vector stores like `pgvector` for PostgreSQL. ProtoPulse needs to delete its custom, broken RAG endpoint and replace it with a Genkit Retriever backed by Drizzle and `pgvector`, providing a secure, scalable, and standardized data ingestion pipeline for the LLM.
+  - **No Genkit Developer UI Integration:** The project lacks the necessary configuration to spin up the Genkit Developer UI (`npx genkit start`). This tool is essential for visualizing traces, debugging prompt latency, and inspecting exactly what context the tools are pulling from the database during execution. 
+  - **Missing Middleware Guardrails:** ProtoPulse passes user input directly to the Gemini model inside `generateArduinoSketchFlow` and `hardwareCoDebugFlow`. Genkit supports powerful Middleware interceptors. Claude should implement middleware to automatically sanitize user inputs (removing PII or stripping out XSS injection attempts) *before* it hits the LLM, and to validate the schema of the LLM's output *before* it is returned to the client UI.
+
+## 33. Pass 18: Unwired Features & Missing Context Windows
+*Evaluating recent feature additions against AI tool visibility.*
+
+- **Findings:**
+  - **Design Variables Blindspot:** The application recently introduced a powerful parameterized "Design Variables" engine (`shared/design-variables.ts`) that allows users to define mathematical variables (e.g., `R_Pullup = 10k`) and use them in component values. However, the AI toolset (`server/ai-tools/`) is completely blind to this entire engine. There are no tools for the AI to query the current variables, evaluate expressions, or define new parameters.
+  - **The Hallucination Consequence:** If an AI agent looks at the BOM and sees a resistor with a value of `R_LED_Limit`, it has no capability to resolve that variable to its actual integer value. The AI will instead hallucinate a generic value or fail to run mathematical analyses (like the `analyze_build_risk` tool) because the data type is a string expression instead of a resolved float. The AI must be given read/write access to the Design Variables engine.
+
 ---
-*Note: This document has undergone an exhaustive 12 passes and is considered a finalized blueprint for Claude.*
+*Note: This document has undergone 22 exhaustive passes and is considered a finalized blueprint for Claude.*

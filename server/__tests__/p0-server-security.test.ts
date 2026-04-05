@@ -43,21 +43,27 @@ describe('BL-0002: PUBLIC_PATHS auth bypass', () => {
   it('should not include /api/seed in public paths', async () => {
     const fs = await import('fs/promises');
     const path = await import('path');
-    const indexSource = await fs.readFile(
-      path.resolve(__dirname, '..', 'index.ts'),
+
+    // PUBLIC_API_PATHS was moved from index.ts to request-routing.ts
+    const routingSource = await fs.readFile(
+      path.resolve(__dirname, '..', 'request-routing.ts'),
       'utf-8',
     );
 
-    // The PUBLIC_PATHS array should not contain seed-related paths
-    const publicPathsMatch = indexSource.match(/const PUBLIC_PATHS\s*=\s*\[([^\]]+)\]/);
+    // The PUBLIC_API_PATHS array should not contain seed-related paths
+    const publicPathsMatch = routingSource.match(/const PUBLIC_API_PATHS\s*=\s*\[([\s\S]+?)\]/);
     expect(publicPathsMatch).not.toBeNull();
     const publicPathsContent = publicPathsMatch![1];
     expect(publicPathsContent).not.toContain('seed');
 
-    // The auth bypass condition should not mention /api/seed
+    // Verify index.ts does not have a stale PUBLIC_PATHS bypass either
+    const indexSource = await fs.readFile(
+      path.resolve(__dirname, '..', 'index.ts'),
+      'utf-8',
+    );
     const authBypassLines = indexSource
       .split('\n')
-      .filter((line) => line.includes('PUBLIC_PATHS') && line.includes('req.path'));
+      .filter((line) => line.includes('isPublicApiPath') || line.includes('PUBLIC_PATHS'));
     for (const line of authBypassLines) {
       expect(line).not.toContain('/api/seed');
       expect(line).not.toContain('/api/admin/seed-library');
