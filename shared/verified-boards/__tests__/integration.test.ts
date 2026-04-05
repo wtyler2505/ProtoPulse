@@ -115,7 +115,10 @@ describe('Verified Board Pack integration', () => {
   it('header pinCount matches pinIds length', () => {
     for (const board of getAllVerifiedBoards()) {
       for (const header of board.headerLayout) {
-        expect(header.pinCount).toBe(header.pinIds.length);
+        expect(
+          header.pinIds.length,
+          `Board "${board.id}" header "${header.id}": pinCount=${header.pinCount} but pinIds has ${header.pinIds.length} entries`,
+        ).toBe(header.pinCount);
       }
     }
   });

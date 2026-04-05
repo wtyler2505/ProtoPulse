@@ -25,19 +25,18 @@ describe('Arduino Mega 2560 R3 board definition', () => {
   });
 
   it('has all 54 digital pins (D0-D53)', () => {
-    const digitalPins = MEGA_2560_R3.pins.filter((p) => p.id.startsWith('D'));
-    expect(digitalPins).toHaveLength(54);
     for (let i = 0; i <= 53; i++) {
-      expect(digitalPins.find((p) => p.id === `D${i}`)).toBeDefined();
+      expect(MEGA_2560_R3.pins.find((p) => p.id === `D${i}`)).toBeDefined();
     }
   });
 
   it('has all 16 analog pins (A0-A15)', () => {
-    const analogPins = MEGA_2560_R3.pins.filter((p) => p.id.startsWith('A'));
-    expect(analogPins).toHaveLength(16);
     for (let i = 0; i <= 15; i++) {
-      expect(analogPins.find((p) => p.id === `A${i}`)).toBeDefined();
+      expect(MEGA_2560_R3.pins.find((p) => p.id === `A${i}`)).toBeDefined();
     }
+    // Exactly 16 analog-role pins
+    const analogPins = MEGA_2560_R3.pins.filter((p) => p.role === 'analog');
+    expect(analogPins).toHaveLength(16);
   });
 
   it('has exactly 15 PWM pins', () => {

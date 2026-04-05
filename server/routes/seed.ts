@@ -591,4 +591,98 @@ export function registerSeedRoutes(app: Express): void {
       res.status(201).json({ message: 'Seeded successfully', project: result });
     }),
   );
+
+  // Seed verified board pack — creates component_parts and component_library entries
+  // for research-backed, pin-accurate board definitions.
+  app.post(
+    '/api/admin/seed-verified-boards',
+    payloadLimit(64 * 1024),
+    asyncHandler(async (_req, res) => {
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(404).json({ message: 'Not found' });
+      }
+
+      const { getAllVerifiedBoards } = await import('@shared/verified-boards');
+      const { boardDefinitionToPartState } = await import('@shared/verified-boards/to-part-state');
+
+      const boards = getAllVerifiedBoards();
+      const seeded: string[] = [];
+      const updated: string[] = [];
+      const skipped: string[] = [];
+
+      // Get or create a system project for global library parts
+      const allProjects = await storage.getProjects();
+      if (allProjects.length === 0) {
+        return res.status(400).json({ message: 'No projects exist. Seed a project first.' });
+      }
+      const targetProject = allProjects[0];
+
+      for (const board of boards) {
+        const partState = boardDefinitionToPartState(board);
+
+        // Check if this board already exists in the library
+        const existingLibrary = await db
+          .select({ cnt: count() })
+          .from(componentLibrary)
+          .where(
+            and(
+              eq(componentLibrary.title, board.title),
+              eq(componentLibrary.category, 'Microcontrollers'),
+            ),
+          );
+
+        const alreadyInLibrary = (existingLibrary[0]?.cnt ?? 0) > 0;
+
+        // Upsert into component_parts for the target project
+        const existingParts = await storage.getComponentParts(targetProject.id);
+        const existingPart = existingParts.find((p) => {
+          const meta = (p.meta as Record<string, unknown> | null) ?? {};
+          return meta['mpn'] === board.mpn && meta['manufacturer'] === board.manufacturer;
+        });
+
+        if (existingPart) {
+          await storage.updateComponentPart(existingPart.id, targetProject.id, {
+            meta: partState.meta as unknown as Record<string, unknown>,
+            connectors: partState.connectors as unknown as Record<string, unknown>[],
+            buses: partState.buses as unknown as Record<string, unknown>[],
+            views: partState.views as unknown as Record<string, unknown>,
+          });
+          updated.push(board.id);
+        } else {
+          await storage.createComponentPart({
+            projectId: targetProject.id,
+            meta: partState.meta as unknown as Record<string, unknown>,
+            connectors: partState.connectors as unknown as Record<string, unknown>[],
+            buses: partState.buses as unknown as Record<string, unknown>[],
+            views: partState.views as unknown as Record<string, unknown>,
+          });
+          seeded.push(board.id);
+        }
+
+        // Add to public library if not already there
+        if (!alreadyInLibrary) {
+          await db.insert(componentLibrary).values({
+            title: board.title,
+            description: board.description,
+            category: board.family === 'driver' ? 'Motor Controllers' : 'Microcontrollers',
+            tags: board.aliases,
+            authorId: 'verified-board-pack',
+            isPublic: true,
+            meta: partState.meta as unknown as Record<string, unknown>,
+            connectors: partState.connectors as unknown as Record<string, unknown>[],
+            buses: partState.buses as unknown as Record<string, unknown>[],
+            views: partState.views as unknown as Record<string, unknown>,
+          });
+        }
+      }
+
+      res.json({
+        message: 'Verified board pack seeded',
+        seeded,
+        updated,
+        skipped,
+        total: boards.length,
+      });
+    }),
+  );
 }

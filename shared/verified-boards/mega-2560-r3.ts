@@ -67,8 +67,8 @@ const POWER_PINS: VerifiedPin[] = [
   { id: 'NC', name: 'NC', headerGroup: 'power', headerPosition: 7, role: 'nc', direction: 'input', voltage: 0, functions: [] },
 ];
 
-// Digital pins 0-13 (communication header + digital low)
-const DIGITAL_LOW_PINS: VerifiedPin[] = [
+// Pins 0-1 (Serial0 / USB — part of comm header)
+const SERIAL0_PINS: VerifiedPin[] = [
   digitalPin(0, 'comm', 0, {
     role: 'communication',
     functions: [{ type: 'uart', signal: 'RX', channel: 'UART0', bus: 'serial0' }],
@@ -79,6 +79,10 @@ const DIGITAL_LOW_PINS: VerifiedPin[] = [
     functions: [{ type: 'uart', signal: 'TX', channel: 'UART0', bus: 'serial0' }],
     warnings: ['Shared with USB-to-serial — avoid for general I/O when using Serial Monitor'],
   }),
+];
+
+// Digital pins 2-13 + GND + AREF (digital low header)
+const DIGITAL_LOW_PINS: VerifiedPin[] = [
   digitalPin(2, 'digital-low', 0, {
     functions: [
       { type: 'pwm', channel: 'PWM2' },
@@ -210,8 +214,8 @@ const SERIAL_PINS: VerifiedPin[] = [
   }),
 ];
 
-// Digital pins 22-53 (extended digital header)
-const DIGITAL_HIGH_PINS: VerifiedPin[] = Array.from({ length: 32 }, (_, i) => {
+// Digital pins 22-49 (extended digital header — 50-53 are in the SPI section)
+const DIGITAL_HIGH_PINS: VerifiedPin[] = Array.from({ length: 28 }, (_, i) => {
   const num = 22 + i;
   const extras: Partial<VerifiedPin> = {};
 
@@ -262,6 +266,7 @@ const ICSP_PINS: VerifiedPin[] = [
 
 const ALL_PINS: VerifiedPin[] = [
   ...POWER_PINS,
+  ...SERIAL0_PINS,
   ...DIGITAL_LOW_PINS,
   ...SERIAL_PINS,
   ...DIGITAL_HIGH_PINS,
@@ -327,9 +332,9 @@ const BUSES: VerifiedBus[] = [
 
 const HEADER_LAYOUT: HeaderGroup[] = [
   { id: 'power', name: 'Power Header', side: 'left', pinCount: 8, pinIds: POWER_PINS.map((p) => p.id) },
-  { id: 'comm', name: 'Communication (0-1, 14-21)', side: 'right', pinCount: 10, pinIds: ['D0', 'D1', 'D14', 'D15', 'D16', 'D17', 'D18', 'D19', 'D20', 'D21'] },
+  { id: 'comm', name: 'Communication (0-1, 14-21)', side: 'right', pinCount: 10, pinIds: [...SERIAL0_PINS.map((p) => p.id), ...SERIAL_PINS.map((p) => p.id)] },
   { id: 'digital-low', name: 'Digital Pins 2-13 + GND/AREF', side: 'right', pinCount: 14, pinIds: DIGITAL_LOW_PINS.map((p) => p.id) },
-  { id: 'digital-high', name: 'Digital Pins 22-53', side: 'right', pinCount: 32, pinIds: DIGITAL_HIGH_PINS.map((p) => p.id) },
+  { id: 'digital-high', name: 'Digital Pins 22-49', side: 'right', pinCount: 28, pinIds: DIGITAL_HIGH_PINS.map((p) => p.id) },
   { id: 'analog', name: 'Analog Pins A0-A15', side: 'left', pinCount: 16, pinIds: ANALOG_PINS.map((p) => p.id) },
   { id: 'spi', name: 'SPI Header (50-53)', side: 'right', pinCount: 4, pinIds: SPI_PINS.map((p) => p.id) },
   { id: 'icsp', name: 'ICSP Header', side: 'top', pinCount: 6, pinIds: ICSP_PINS.map((p) => p.id) },
