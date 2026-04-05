@@ -97,5 +97,35 @@
 - **Findings:**
   - **Unfinished Approval Logic:** In `server/routes/projects.ts`, the `/approve` endpoint does not actually update the `approvedAt` or `approvedBy` database columns. It contains comments noting this tech debt and instead executes a dummy update (`name: project.name`) just to bump the project version.
 
+## 13. Pass 2 Audit Findings (Code Quality, Leaks, and Safety)
+*Evaluating deeper patterns, memory leaks, type safety, and framework encapsulation.*
+
+- **Findings:**
+  - **Memory Leaks via setInterval:** The codebase contains numerous `setInterval` calls in `server/routes/arduino.ts`, `server/routes/agent.ts`, and `server/routes/chat.ts`. These intervals are often created per-connection or globally but are never assigned to a variable to be cleared with `clearInterval()`. Over time, these dangling intervals will capture closures and leak memory until the Node process crashes.
+  - **React Encapsulation Violations:** In `client/src/components/panels/SerialMonitorPanel.tsx` and `BreadboardWireEditor.tsx`, DOM elements are selected directly using `document.querySelector()`. This bypasses React's Virtual DOM and component encapsulation. If multiple instances of these components are ever rendered, or if the DOM structure changes dynamically, these queries will fail or target the wrong elements. React `useRef` should be used instead.
+  - **Type Safety Bypasses in Genkit:** In `server/genkit.ts`, the parameter schema for AI tools is cast with `inputSchema: toolDef.parameters as any`. This completely bypasses TypeScript's safety checks and effectively disables Zod validation at the boundary between Genkit's execution and the tool definition, meaning invalid LLM outputs might not be caught before executing database mutations.
+
+## 14. Pass 3 Audit Findings (Weak Randomness & Collision Risks)
+*Evaluating ID generation, cryptographic security, and token generation.*
+
+- **Findings:**
+  - **Insecure Math.random() Usage:** Across the codebase, `Math.random()` is used to generate identifiers (e.g. `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` in `server/routes/rag.ts` and `bus-${Date.now()}-${Math.random().toString(36).slice(2, 9)}` in `client/src/lib/circuit-editor/bus-pin-mapper.ts`). `Math.random()` is not cryptographically secure and the entropy generated here is extremely low. At scale, this guarantees ID collisions. The built-in `crypto.randomUUID()` (which is mandated by the project's own documentation) should be used instead.
+
+## 15. Pass 4 Audit Findings (Client-Side Security & Execution)
+*Evaluating client-side execution, code compilation, and session storage.*
+
+- **Findings:**
+  - **Client-Side Arbitrary Execution (`eval`):** Despite earlier documentation claiming 0 uses of `eval()`, I found that `client/src/components/views/CircuitCodeView.tsx` explicitly calls `debouncedEval(newCode)`. This allows arbitrary JavaScript execution directly within the React application context. If an attacker can share a project with malicious code, or if the AI hallucinates a malicious payload into the Circuit Code View, it will execute with full privileges over the user's session.
+  - **Session Hijacking Vulnerability (XSS to Token Theft):** The `client-state-scope.ts` file manages the session by reading from and writing to `window.localStorage.getItem(SESSION_STORAGE_KEY)`. Storing session tokens in LocalStorage makes them permanently accessible via JavaScript. Combined with the `eval()` usage in the Code View and the `dangerouslySetInnerHTML` usage in other parts of the app, any successful Cross-Site Scripting (XSS) attack will immediately lead to full session hijacking, as the attacker's script can simply read the token from `localStorage`. Sessions should be migrated to `HttpOnly` Secure cookies.
+
+## 16. Pass 5 Audit Findings (Native Security, Networking, & Build Tooling)
+*Evaluating Tauri Rust bindings, WebSocket/SSE memory management, and Vite build optimizations.*
+
+- **Findings:**
+  - **Tauri Security (Disabled CSP):** In `src-tauri/tauri.conf.json`, the configuration explicitly sets `"csp": null`. This completely disables the Content Security Policy within the Tauri WebView. Any Cross-Site Scripting (XSS) payload can now execute uninhibited network requests, load external scripts, and exfiltrate sensitive data without the browser intervening.
+  - **Tauri Security (Global API Exposure):** Additionally, `"withGlobalTauri": true` is enabled in `tauri.conf.json`. This injects the powerful Rust Tauri API directly into the global `window.__TAURI__` object. An attacker exploiting the `eval()` vulnerability in the Circuit Code View doesn't even need to bypass bundler imports; they can directly invoke `window.__TAURI__.invoke('spawn_process', ...)` to achieve instant Arbitrary Remote Code Execution (RCE) on the host operating system.
+  - **SSE Connection Memory Leaks:** While the streaming endpoint (`server/routes/chat.ts`) listens to `req.on('close')` to abort streams when a user disconnects, the underlying AI execution engine (`server/ai.ts`) completely ignores the passed `abortSignal` inside `executeStreamForProvider`. If a user closes their browser mid-stream, the Node process forgets the user, but the HTTP request to the Gemini API continues running in the background, consuming API tokens and memory until the model decides it has finished generating.
+  - **De-optimized Vite Chunking:** In `vite.config.ts`, the custom `manualChunks` strategy isolates massive libraries (`@xyflow`, `react-markdown`, `recharts`, `codemirror`) into their own dedicated vendor chunks. While intended to improve caching, this actually forces all users to download the entirety of these libraries upon initial load—even if they only visit a route that doesn't use them. This defeats Vite's native dynamic import and tree-shaking optimizations, resulting in a massively bloated initial JS payload.
+
 ---
 *Note: This document will be frequently updated as the audit progresses.*
