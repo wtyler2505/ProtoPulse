@@ -25,14 +25,13 @@ import { useBom, useProjectMeta } from '@/lib/project-context';
 import BreadboardGrid from './BreadboardGrid';
 import { BreadboardComponentOverlay, detectFamily, getFamilyValues, getCurrentValueLabel } from './BreadboardComponentRenderer';
 import BendableLegRenderer from './BendableLegRenderer';
-import { CapacitorSvg, ResistorSvg } from './breadboard-components';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import BreadboardConnectivityOverlay from './BreadboardConnectivityOverlay';
 import { syncSchematicToBreadboard } from '@/lib/circuit-editor/view-sync';
 import BreadboardDrcOverlay from './BreadboardDrcOverlay';
 import BreadboardInventoryDialog from './BreadboardInventoryDialog';
 import BreadboardExactPartRequestDialog from './BreadboardExactPartRequestDialog';
-import BreadboardPartInspector, { type BreadboardCoachActionItem } from './BreadboardPartInspector';
+import BreadboardPartInspector from './BreadboardPartInspector';
 import BreadboardWorkbenchSidebar from './BreadboardWorkbenchSidebar';
 import BreadboardWireEditor from './BreadboardWireEditor';
 import { COMPONENT_DRAG_TYPE } from './ComponentPlacer';
@@ -51,16 +50,15 @@ import {
   buildBreadboardSelectionPrompt,
 } from '@/lib/breadboard-ai-prompts';
 import {
-  buildBreadboardCoachPlan,
-  type BreadboardCoachHookup,
-  type BreadboardCoachRailBridge,
-  type BreadboardCoachSuggestion,
-} from '@/lib/breadboard-coach-plan';
-import {
   buildBreadboardSelectedPartModel,
-  type BreadboardPinRole,
 } from '@/lib/breadboard-part-inspector';
-import { calculateBreadboardLayoutQuality } from '@/lib/breadboard-layout-quality';
+import {
+  useBreadboardCoachPlan,
+  normalizeCoachNetName,
+  getStarterRefDesPrefix,
+  getCoachHookupColor,
+} from './useBreadboardCoachPlan';
+import { BreadboardCoachPlanOverlay, BreadboardPinAnchorOverlay } from './BreadboardCoachOverlay';
 import ToolButton from './ToolButton';
 import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
@@ -89,13 +87,11 @@ import { cn } from '@/lib/utils';
 import {
   BB,
   type BreadboardCoord,
-  type ColumnLetter,
   type PixelPos,
   type TiePoint,
   coordKey,
   coordToPixel,
   pixelToCoord,
-  areConnected,
   getBoardDimensions,
   getOccupiedPoints,
   getConnectedPoints,
@@ -104,7 +100,7 @@ import {
   WIRE_COLOR_PRESETS as MODEL_WIRE_COLOR_PRESETS,
   type ComponentPlacement,
 } from '@/lib/circuit-editor/breadboard-model';
-import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, ComponentPart } from '@shared/schema';
+import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
 import type { ExactPartDraftSeed } from '@shared/exact-part-resolver';
 import { formatSIValue } from '@/lib/simulation/visual-state';
@@ -130,36 +126,6 @@ interface AutoPlacementPlan {
   id: number;
   breadboardX: number;
   breadboardY: number;
-}
-
-interface ResolvedCoachSuggestion extends BreadboardCoachSuggestion {
-  anchor: TiePoint;
-  placement: ComponentPlacement;
-  pixel: PixelPos;
-  targetPixels: PixelPos[];
-}
-
-interface StagedCoachSuggestion extends BreadboardCoachSuggestion {
-  instanceId: number;
-  pixel: PixelPos;
-  referenceDesignator: string;
-  targetPixels: PixelPos[];
-}
-
-interface ResolvedCoachHookup extends BreadboardCoachHookup {
-  isRouted: boolean;
-  netId: number | null;
-  path: PixelPos[];
-  railPixel: PixelPos;
-  targetPixel: PixelPos;
-}
-
-interface ResolvedCoachBridge extends BreadboardCoachRailBridge {
-  isRouted: boolean;
-  netId: number | null;
-  path: PixelPos[];
-  fromPixel: PixelPos;
-  toPixel: PixelPos;
 }
 
 function buildAutoPlacementTemplate(inst: CircuitInstanceRow, part?: ComponentPart): ComponentPlacement {
@@ -222,285 +188,6 @@ function buildPlacementForDrop(
     rowSpan,
     crossesChannel: dipLike,
   };
-}
-
-function clampBreadboardRow(row: number, maxRow: number = BB.ROWS): number {
-  return Math.max(1, Math.min(maxRow, row));
-}
-
-function getCoachToneColor(tone: 'power' | 'communication' | 'control' | 'analog'): string {
-  switch (tone) {
-    case 'power':
-      return '#fb7185';
-    case 'communication':
-      return '#22d3ee';
-    case 'control':
-      return '#f59e0b';
-    case 'analog':
-    default:
-      return '#a3e635';
-  }
-}
-
-function getCoachHookupColor(netType: 'power' | 'ground'): string {
-  return netType === 'power' ? '#fb7185' : '#38bdf8';
-}
-
-function buildCoachHookupPath(railPixel: PixelPos, targetPixel: PixelPos): PixelPos[] {
-  const elbowX = railPixel.x < targetPixel.x ? railPixel.x + 10 : railPixel.x - 10;
-  const rawPath = [
-    railPixel,
-    { x: elbowX, y: railPixel.y },
-    targetPixel,
-  ];
-
-  if (railPixel.y !== targetPixel.y) {
-    rawPath.splice(2, 0, { x: elbowX, y: targetPixel.y });
-  }
-
-  return rawPath.filter((point, index) => index === 0 || point.x !== rawPath[index - 1]?.x || point.y !== rawPath[index - 1]?.y);
-}
-
-function buildCoachRailBridgePath(fromPixel: PixelPos, toPixel: PixelPos): PixelPos[] {
-  return (fromPixel.x <= toPixel.x ? [fromPixel, toPixel] : [toPixel, fromPixel]).filter(
-    (point, index, points) => index === 0 || point.x !== points[index - 1]?.x || point.y !== points[index - 1]?.y,
-  );
-}
-
-function pointsMatch(left: PixelPos[], right: PixelPos[]): boolean {
-  return left.length === right.length && left.every((point, index) => point.x === right[index]?.x && point.y === right[index]?.y);
-}
-
-function reversePoints(points: PixelPos[]): PixelPos[] {
-  return [...points].reverse();
-}
-
-function getWireEndpointCoords(points: PixelPos[]): [BreadboardCoord | null, BreadboardCoord | null] {
-  if (points.length < 2) {
-    return [null, null];
-  }
-
-  return [pixelToCoord(points[0]), pixelToCoord(points[points.length - 1])];
-}
-
-function wireMatchesCoachConnection(
-  wire: CircuitWireRow,
-  expectedNetId: number | null,
-  endpointA: BreadboardCoord,
-  endpointB: BreadboardCoord,
-): boolean {
-  if (expectedNetId == null || wire.netId !== expectedNetId) {
-    return false;
-  }
-
-  const points = ((wire.points as Array<{ x: number; y: number }> | null) ?? []).map((point) => ({
-    x: point.x,
-    y: point.y,
-  }));
-  const [startCoord, endCoord] = getWireEndpointCoords(points);
-  if (!startCoord || !endCoord) {
-    return false;
-  }
-
-  return (
-    (areConnected(startCoord, endpointA) && areConnected(endCoord, endpointB))
-    || (areConnected(startCoord, endpointB) && areConnected(endCoord, endpointA))
-  );
-}
-
-function normalizeCoachNetName(name: string): string {
-  return name.trim().toUpperCase();
-}
-
-function findCoachNetId(
-  nets: CircuitNetRow[] | undefined,
-  hookup: Pick<BreadboardCoachHookup, 'netName' | 'netType'>,
-): number | null {
-  if (!nets || nets.length === 0) {
-    return null;
-  }
-
-  const exactMatch = nets.find((net) => normalizeCoachNetName(net.name) === normalizeCoachNetName(hookup.netName));
-  if (exactMatch) {
-    return exactMatch.id;
-  }
-
-  const typedMatch = nets.find((net) => net.netType === hookup.netType);
-  return typedMatch?.id ?? null;
-}
-
-function getStarterRefDesPrefix(type: string): string {
-  const lower = type.toLowerCase();
-  if (lower === 'mcu' || lower === 'ic' || lower === 'microcontroller') {
-    return 'U';
-  }
-  if (lower === 'resistor') {
-    return 'R';
-  }
-  if (lower === 'capacitor') {
-    return 'C';
-  }
-  if (lower === 'diode') {
-    return 'D';
-  }
-  if (lower === 'transistor') {
-    return 'Q';
-  }
-  if (lower === 'led') {
-    return 'LED';
-  }
-  if (lower === 'switch') {
-    return 'SW';
-  }
-  return lower.charAt(0).toUpperCase() || 'X';
-}
-
-function resolveCoachSuggestionPlacement(
-  suggestion: BreadboardCoachSuggestion,
-  placements: ComponentPlacement[],
-  targetPixels: PixelPos[],
-): ResolvedCoachSuggestion | null {
-  const rowOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5];
-
-  for (const offset of rowOffsets) {
-    for (const col of suggestion.preferredColumns) {
-      const anchor: TiePoint = {
-        type: 'terminal',
-        col,
-        row: clampBreadboardRow(
-          suggestion.desiredAnchor.row + offset,
-          suggestion.type === 'capacitor' ? BB.ROWS - 1 : BB.ROWS,
-        ),
-      };
-      const placement = buildPlacementForDrop(anchor, suggestion.type, 2);
-      const candidatePlacement = {
-        ...placement,
-        refDes: suggestion.id,
-      };
-      if (checkCollision(candidatePlacement, placements)) {
-        continue;
-      }
-
-      return {
-        ...suggestion,
-        anchor,
-        placement: candidatePlacement,
-        pixel: coordToPixel({
-          type: 'terminal',
-          col: candidatePlacement.startCol,
-          row: candidatePlacement.startRow,
-        }),
-        targetPixels,
-      };
-    }
-  }
-
-  return null;
-}
-
-function getPinRoleColor(role: BreadboardPinRole): string {
-  switch (role) {
-    case 'power':
-      return '#fb7185';
-    case 'ground':
-      return '#38bdf8';
-    case 'clock':
-      return '#a78bfa';
-    case 'control':
-      return '#f59e0b';
-    case 'communication':
-      return '#22d3ee';
-    case 'analog':
-      return '#a3e635';
-    case 'passive':
-      return '#34d399';
-    case 'signal':
-    default:
-      return '#e2e8f0';
-  }
-}
-
-function CoachSuggestionOverlay({
-  suggestion,
-  status,
-}: {
-  suggestion: Pick<BreadboardCoachSuggestion, 'id' | 'label' | 'priority' | 'type' | 'value'> & {
-    pixel: PixelPos;
-    targetPixels: PixelPos[];
-  };
-  status: 'pending' | 'staged';
-}) {
-  const isCapacitor = suggestion.type === 'capacitor';
-  const strokeColor = suggestion.priority === 'critical' ? '#fb7185' : '#22d3ee';
-  const textColor = suggestion.priority === 'critical' ? '#fecdd3' : '#cffafe';
-  const subhead = status === 'pending'
-    ? suggestion.priority === 'critical'
-      ? 'critical coach move'
-      : 'recommended support move'
-    : 'staged support';
-
-  return (
-    <g data-testid={`breadboard-coach-suggestion-${suggestion.id}`}>
-      {suggestion.targetPixels.map((targetPixel, index) => (
-        <line
-          key={`${suggestion.id}-target-${index}`}
-          x1={suggestion.pixel.x}
-          y1={suggestion.pixel.y}
-          x2={targetPixel.x}
-          y2={targetPixel.y}
-          stroke={strokeColor}
-          strokeWidth={status === 'pending' ? 0.9 : 0.85}
-          strokeDasharray={status === 'pending' ? '2 2' : undefined}
-          opacity={status === 'pending' ? 0.7 : 0.45}
-        />
-      ))}
-
-      {status === 'pending' ? (
-        <g opacity={0.45}>
-          {isCapacitor ? (
-            <CapacitorSvg cx={suggestion.pixel.x} cy={suggestion.pixel.y} farads={Number(suggestion.value)} />
-          ) : (
-            <ResistorSvg cx={suggestion.pixel.x} cy={suggestion.pixel.y} ohms={Number(suggestion.value)} />
-          )}
-        </g>
-      ) : (
-        <g opacity={0.74}>
-          <circle cx={suggestion.pixel.x} cy={suggestion.pixel.y} r={9} fill={`${strokeColor}16`} />
-          <circle cx={suggestion.pixel.x} cy={suggestion.pixel.y} r={11} fill="none" stroke={strokeColor} strokeWidth={0.9} />
-        </g>
-      )}
-
-      <rect
-        x={suggestion.pixel.x + 10}
-        y={suggestion.pixel.y - 15}
-        width={56}
-        height={18}
-        rx={4}
-        fill={status === 'pending' ? 'rgba(4,8,15,0.88)' : 'rgba(4,8,15,0.76)'}
-        stroke={strokeColor}
-        strokeWidth={0.75}
-      />
-      <text
-        x={suggestion.pixel.x + 14}
-        y={suggestion.pixel.y - 8}
-        fill={textColor}
-        fontSize={4.4}
-        fontFamily="monospace"
-      >
-        {suggestion.label}
-      </text>
-      <text
-        x={suggestion.pixel.x + 14}
-        y={suggestion.pixel.y - 2}
-        fill={status === 'pending' ? '#cbd5e1' : textColor}
-        fontSize={3.8}
-        fontFamily="monospace"
-        opacity={status === 'pending' ? 0.9 : 0.82}
-      >
-        {subhead}
-      </text>
-    </g>
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -926,16 +613,16 @@ function BreadboardToolbar({
           ))}
         </SelectContent>
       </Select>
-      
+
       <div className="w-px h-4 bg-border mx-1" />
-      
+
       <Button
         variant="outline"
         size="sm"
         className={cn(
           "h-7 gap-1.5 px-2.5 text-[10px] font-bold uppercase tracking-wider transition-all",
-          isLive 
-            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20" 
+          isLive
+            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/30 hover:bg-emerald-500/20"
             : "text-muted-foreground hover:text-foreground"
         )}
         onClick={() => {
@@ -975,7 +662,7 @@ function BreadboardCanvas({
   const { data: parts } = useComponentParts(projectId);
   const { isLive, wireVisualStates, componentVisualStates } = useSimulation();
   const { toast } = useToast();
-  
+
   const createNetMutation = useCreateCircuitNet();
   const createWireMutation = useCreateCircuitWire();
   const createInstanceMutation = useCreateCircuitInstance();
@@ -1207,331 +894,27 @@ function BreadboardCanvas({
     return instances.find((candidate) => candidate.id === selectedInstanceId) ?? null;
   }, [instances, selectedInstanceId]);
 
-  const coachPlan = useMemo(
-    () => (selectedInstanceModel ? buildBreadboardCoachPlan(selectedInstanceModel) : null),
-    [selectedInstanceModel],
-  );
-
-  const existingCoachPlanKeys = useMemo(() => {
-    if (!instances || !selectedInstanceModel) {
-      return new Set<string>();
-    }
-
-    return new Set(
-      instances
-        .map((instance) => instance.properties as Record<string, unknown> | null)
-        .filter((properties) => properties?.coachPlanFor === selectedInstanceModel.refDes)
-        .map((properties) => String(properties?.coachPlanKey ?? ''))
-        .filter((value) => value.length > 0),
-    );
-  }, [instances, selectedInstanceModel]);
-
-  const resolvedCoachSuggestions = useMemo(() => {
-    if (!coachPlan || !selectedInstanceModel) {
-      return [];
-    }
-
-    const placements = [...instancePlacements.map((entry) => entry.placement)];
-    const targetPixelMap = new Map(selectedInstanceModel.pins.map((pin) => [pin.id, pin.pixel]));
-    const resolved: ResolvedCoachSuggestion[] = [];
-
-    for (const suggestion of coachPlan.suggestions) {
-      if (existingCoachPlanKeys.has(suggestion.id)) {
-        continue;
-      }
-      const targetPixels = suggestion.targetPinIds
-        .map((pinId) => targetPixelMap.get(pinId))
-        .filter((pixel): pixel is PixelPos => Boolean(pixel));
-      const candidate = resolveCoachSuggestionPlacement(suggestion, placements, targetPixels);
-      if (!candidate) {
-        continue;
-      }
-      placements.push(candidate.placement);
-      resolved.push(candidate);
-    }
-
-    return resolved;
-  }, [coachPlan, existingCoachPlanKeys, instancePlacements, selectedInstanceModel]);
-
-  const stagedCoachSuggestions = useMemo((): StagedCoachSuggestion[] => {
-    if (!coachPlan || !instances || !selectedInstanceModel) {
-      return [];
-    }
-
-    const targetPixelMap = new Map(selectedInstanceModel.pins.map((pin) => [pin.id, pin.pixel]));
-
-    return coachPlan.suggestions.flatMap((suggestion) => {
-      if (!existingCoachPlanKeys.has(suggestion.id)) {
-        return [];
-      }
-
-      const stagedInstance = instances.find((instance) => {
-        const properties = instance.properties as Record<string, unknown> | null;
-        return (
-          properties?.coachPlanFor === selectedInstanceModel.refDes
-          && properties?.coachPlanKey === suggestion.id
-          && instance.breadboardX != null
-          && instance.breadboardY != null
-        );
-      });
-
-      if (!stagedInstance || stagedInstance.breadboardX == null || stagedInstance.breadboardY == null) {
-        return [];
-      }
-
-      const targetPixels = suggestion.targetPinIds
-        .map((pinId) => targetPixelMap.get(pinId))
-        .filter((pixel): pixel is PixelPos => Boolean(pixel));
-
-      return [{
-        ...suggestion,
-        instanceId: stagedInstance.id,
-        pixel: {
-          x: stagedInstance.breadboardX,
-          y: stagedInstance.breadboardY,
-        },
-        referenceDesignator: stagedInstance.referenceDesignator,
-        targetPixels,
-      }];
-    });
-  }, [coachPlan, existingCoachPlanKeys, instances, selectedInstanceModel]);
-
-  const preparedCoachHookups = useMemo((): ResolvedCoachHookup[] => {
-    if (!coachPlan || !selectedInstanceModel) {
-      return [];
-    }
-
-    const pinPixelMap = new Map(selectedInstanceModel.pins.map((pin) => [pin.id, pin.pixel]));
-
-    return coachPlan.hookups
-      .map((hookup) => {
-        const targetPixel = pinPixelMap.get(hookup.targetPinId);
-        if (!targetPixel) {
-          return null;
-        }
-
-        const railPixel = coordToPixel(hookup.railPoint);
-        const path = buildCoachHookupPath(railPixel, targetPixel);
-        const targetCoord = selectedInstanceModel.pins.find((pin) => pin.id === hookup.targetPinId)?.coord;
-        const resolvedNetId = findCoachNetId(nets, hookup);
-        const alreadyRouted = breadboardWires.some((wire) => {
-          const points = ((wire.points as Array<{ x: number; y: number }> | null) ?? []).map((point) => ({
-            x: point.x,
-            y: point.y,
-          }));
-          return (
-            pointsMatch(points, path)
-            || pointsMatch(points, reversePoints(path))
-            || (
-              targetCoord != null
-              && wireMatchesCoachConnection(wire, resolvedNetId, hookup.railPoint, targetCoord)
-            )
-          );
-        });
-
-        return {
-          ...hookup,
-          isRouted: alreadyRouted,
-          netId: resolvedNetId,
-          path,
-          railPixel,
-          targetPixel,
-        };
-      })
-      .filter((hookup): hookup is ResolvedCoachHookup => Boolean(hookup));
-  }, [breadboardWires, coachPlan, nets, selectedInstanceModel]);
-
-  const resolvedCoachHookups = useMemo(
-    () => preparedCoachHookups.filter((hookup) => !hookup.isRouted),
-    [preparedCoachHookups],
-  );
-
-  const preparedCoachBridges = useMemo((): ResolvedCoachBridge[] => {
-    if (!coachPlan) {
-      return [];
-    }
-
-    return coachPlan.bridges
-      .map((bridge) => {
-        const fromPixel = coordToPixel(bridge.fromRail);
-        const toPixel = coordToPixel(bridge.toRail);
-        const path = buildCoachRailBridgePath(fromPixel, toPixel);
-        const resolvedNetId = findCoachNetId(nets, bridge);
-        const alreadyRouted = breadboardWires.some((wire) => {
-          const points = ((wire.points as Array<{ x: number; y: number }> | null) ?? []).map((point) => ({
-            x: point.x,
-            y: point.y,
-          }));
-          return (
-            pointsMatch(points, path)
-            || pointsMatch(points, reversePoints(path))
-            || wireMatchesCoachConnection(wire, resolvedNetId, bridge.fromRail, bridge.toRail)
-          );
-        });
-
-        return {
-          ...bridge,
-          isRouted: alreadyRouted,
-          netId: resolvedNetId,
-          path,
-          fromPixel,
-          toPixel,
-        };
-      })
-      .filter((bridge): bridge is ResolvedCoachBridge => Boolean(bridge));
-  }, [breadboardWires, coachPlan, nets]);
-
-  const resolvedCoachBridges = useMemo(
-    () => preparedCoachBridges.filter((bridge) => !bridge.isRouted),
-    [preparedCoachBridges],
-  );
-
-  const nearbyBenchContext = useMemo(() => {
-    if (!instances || !selectedInstanceModel || !selectedPlacedInstance) {
-      return { nearbyForeignPartCount: 0, nearbyWireCount: 0 };
-    }
-
-    const anchorX = selectedPlacedInstance.breadboardX ?? selectedInstanceModel.pins[0]?.pixel.x ?? 0;
-    const anchorY = selectedPlacedInstance.breadboardY ?? selectedInstanceModel.pins[0]?.pixel.y ?? 0;
-    const partRadiusX = 42;
-    const partRadiusY = 24;
-    const wireRadiusX = 48;
-    const wireRadiusY = 28;
-
-    const nearbyForeignPartCount = instances.filter((instance) => {
-      if (instance.id === selectedPlacedInstance.id || instance.breadboardX == null || instance.breadboardY == null) {
-        return false;
-      }
-
-      const properties = (instance.properties as Record<string, unknown> | null) ?? null;
-      const isCoachSupport =
-        properties?.coachPlanFor === selectedInstanceModel.refDes
-        && typeof properties.coachPlanKey === 'string'
-        && properties.coachPlanKey.startsWith('support-');
-      if (isCoachSupport) {
-        return false;
-      }
-
-      return (
-        Math.abs(instance.breadboardX - anchorX) <= partRadiusX
-        && Math.abs(instance.breadboardY - anchorY) <= partRadiusY
-      );
-    }).length;
-
-    const nearbyWireCount = breadboardWires.filter((wire) => {
-      const points = ((wire.points as Array<{ x: number; y: number }> | null) ?? []);
-      return points.some((point) => (
-        Math.abs(point.x - anchorX) <= wireRadiusX
-        && Math.abs(point.y - anchorY) <= wireRadiusY
-      ));
-    }).length;
-
-    return {
-      nearbyForeignPartCount,
-      nearbyWireCount,
-    };
-  }, [breadboardWires, instances, selectedInstanceModel, selectedPlacedInstance]);
-
-  const benchLayoutQuality = useMemo(
-    () => (
-      selectedInstanceModel
-        ? calculateBreadboardLayoutQuality({
-            expectedBridgeCount: preparedCoachBridges.length,
-            expectedHookupCount: preparedCoachHookups.length,
-            expectedSupportCount: coachPlan?.suggestions.length ?? 0,
-            model: selectedInstanceModel,
-            nearbyForeignPartCount: nearbyBenchContext.nearbyForeignPartCount,
-            nearbyWireCount: nearbyBenchContext.nearbyWireCount,
-            stagedBridgeCount: preparedCoachBridges.filter((bridge) => bridge.isRouted).length,
-            stagedHookupCount: preparedCoachHookups.filter((hookup) => hookup.isRouted).length,
-            stagedSupportCount: stagedCoachSuggestions.length,
-          })
-        : null
-    ),
-    [coachPlan, nearbyBenchContext, preparedCoachBridges, preparedCoachHookups, selectedInstanceModel, stagedCoachSuggestions],
-  );
-
-  const coachActionCount = resolvedCoachSuggestions.length + resolvedCoachHookups.length + resolvedCoachBridges.length;
-
-  const coachActionItems = useMemo((): BreadboardCoachActionItem[] => {
-    if (!coachPlan || !selectedInstanceModel) {
-      return [];
-    }
-
-    const pinLabelMap = new Map(selectedInstanceModel.pins.map((pin) => [pin.id, pin.label]));
-    const pendingSupportIds = new Set(resolvedCoachSuggestions.map((suggestion) => suggestion.id));
-
-    const supportActions = coachPlan.suggestions.flatMap((suggestion): BreadboardCoachActionItem[] => {
-      const targetLabels = suggestion.targetPinIds
-        .map((pinId) => pinLabelMap.get(pinId))
-        .filter((label): label is string => Boolean(label));
-      const detail = targetLabels.length > 0
-        ? `${suggestion.reason} Targets: ${targetLabels.join(' + ')}.`
-        : suggestion.reason;
-
-      if (existingCoachPlanKeys.has(suggestion.id)) {
-        return [{
-          id: suggestion.id,
-          detail,
-          label: suggestion.label,
-          status: 'staged',
-          tone: suggestion.id === 'support-control-pull' ? 'control' : 'support',
-        }];
-      }
-
-      if (!pendingSupportIds.has(suggestion.id)) {
-        return [];
-      }
-
-      return [{
-        id: suggestion.id,
-        detail,
-        label: suggestion.label,
-        status: 'pending',
-        tone: suggestion.id === 'support-control-pull' ? 'control' : 'support',
-      }];
-    });
-
-    const hookupActions = preparedCoachHookups.map((hookup) => ({
-      id: hookup.id,
-      detail: `${hookup.reason} Target pin: ${pinLabelMap.get(hookup.targetPinId) ?? hookup.targetPinId}.`,
-      label: `${hookup.netName} rail jumper`,
-      status: hookup.isRouted ? 'staged' as const : 'pending' as const,
-      tone: hookup.netType === 'power' ? 'power' as const : 'ground' as const,
-    }));
-
-    const bridgeActions = preparedCoachBridges.map((bridge) => ({
-      id: bridge.id,
-      detail: `${bridge.reason} Bridge row: ${String(bridge.fromRail.index + 1)}.`,
-      label: `${bridge.netName} rail bridge`,
-      status: bridge.isRouted ? 'staged' as const : 'pending' as const,
-      tone: bridge.netType === 'power' ? 'power' as const : 'ground' as const,
-    }));
-
-    const corridorActions = coachPlan.corridorHints.map((hint) => ({
-      id: hint.id,
-      detail: `${hint.label} across rows ${String(hint.rows[0])}–${String(hint.rows[1])} on the ${hint.side} bench lane.`,
-      label: hint.label,
-      status: 'advisory' as const,
-      tone: hint.tone,
-    }));
-
-    const statusRank = { pending: 0, staged: 1, advisory: 2 } as const;
-    return [...hookupActions, ...bridgeActions, ...supportActions, ...corridorActions].sort((left, right) => {
-      const statusDelta = statusRank[left.status] - statusRank[right.status];
-      if (statusDelta !== 0) {
-        return statusDelta;
-      }
-      return left.label.localeCompare(right.label);
-    });
-  }, [
+  // Coach plan resolution — extracted to useBreadboardCoachPlan hook
+  const {
     coachPlan,
-    existingCoachPlanKeys,
-    preparedCoachBridges,
-    preparedCoachHookups,
     resolvedCoachSuggestions,
+    stagedCoachSuggestions,
+    preparedCoachHookups,
+    resolvedCoachHookups,
+    preparedCoachBridges,
+    resolvedCoachBridges,
+    benchLayoutQuality,
+    coachActionCount,
+    coachActionItems,
+  } = useBreadboardCoachPlan({
     selectedInstanceModel,
-  ]);
+    selectedPlacedInstance,
+    instances,
+    instancePlacements,
+    breadboardWires,
+    nets,
+    projectName,
+  });
 
   useEffect(() => {
     setCoachPlanVisible(false);
@@ -2126,164 +1509,23 @@ function BreadboardCanvas({
               onInstanceClick={(id) => setSelectedInstanceId(id)}
             />
 
-            {selectedInstanceModel && selectedInstanceModel.pins.length > 0 && (
-              <g data-testid="breadboard-pin-anchor-overlay" pointerEvents="none">
-                {selectedInstanceModel.pins.map((pin) => {
-                  const roleColor = getPinRoleColor(pin.role);
-                  const isHovered = hoveredInspectorPinId === pin.id;
-                  const isCoachTarget = coachPlanVisible && Boolean(coachPlan?.highlightedPinIds.includes(pin.id));
-                  return (
-                    <g key={pin.id} data-testid={`breadboard-pin-anchor-${pin.id}`}>
-                      <circle
-                        cx={pin.pixel.x}
-                        cy={pin.pixel.y}
-                        r={isHovered ? 6.2 : isCoachTarget ? 5.2 : pin.isCritical ? 4.6 : 4}
-                        fill={`${roleColor}20`}
-                        stroke={roleColor}
-                        strokeWidth={isCoachTarget ? 1.45 : pin.isCritical ? 1.25 : 0.9}
-                        strokeDasharray={pin.confidence === 'heuristic' ? '1.2 1.2' : undefined}
-                        opacity={isHovered ? 1 : 0.9}
-                      />
-                      <circle
-                        cx={pin.pixel.x}
-                        cy={pin.pixel.y}
-                        r={pin.confidence === 'exact' ? 2.1 : 1.7}
-                        fill={roleColor}
-                        opacity={pin.confidence === 'exact' ? 0.95 : 0.72}
-                      />
-                      {pin.isCritical && (
-                        <circle
-                          cx={pin.pixel.x}
-                          cy={pin.pixel.y}
-                          r={0.8}
-                          fill="#f8fafc"
-                          opacity={0.95}
-                        />
-                      )}
-                    </g>
-                  );
-                })}
-              </g>
+            {selectedInstanceModel && (
+              <BreadboardPinAnchorOverlay
+                selectedInstanceModel={selectedInstanceModel}
+                hoveredInspectorPinId={hoveredInspectorPinId}
+                coachPlanVisible={coachPlanVisible}
+                coachPlan={coachPlan}
+              />
             )}
 
             {coachPlanVisible && coachPlan && (
-              <g data-testid="breadboard-coach-plan-overlay" pointerEvents="none">
-                {coachPlan.corridorHints.map((hint) => {
-                  const startCol: ColumnLetter = hint.side === 'left' ? 'a' : 'h';
-                  const endCol: ColumnLetter = hint.side === 'left' ? 'd' : 'j';
-                  const startPx = coordToPixel({ type: 'terminal', col: startCol, row: hint.rows[0] });
-                  const endPx = coordToPixel({ type: 'terminal', col: endCol, row: hint.rows[1] });
-                  const toneColor = getCoachToneColor(hint.tone);
-                  return (
-                    <g key={hint.id} data-testid={`breadboard-coach-corridor-${hint.id}`}>
-                      <rect
-                        x={Math.min(startPx.x, endPx.x) - 8}
-                        y={Math.min(startPx.y, endPx.y) - 6}
-                        width={Math.abs(endPx.x - startPx.x) + 16}
-                        height={Math.abs(endPx.y - startPx.y) + 12}
-                        rx={8}
-                        fill={`${toneColor}12`}
-                        stroke={toneColor}
-                        strokeWidth={0.8}
-                        strokeDasharray="3 2"
-                        opacity={0.72}
-                      />
-                      <text
-                        x={Math.min(startPx.x, endPx.x)}
-                        y={Math.min(startPx.y, endPx.y) - 10}
-                        fill={toneColor}
-                        fontSize={5}
-                        fontFamily="monospace"
-                      >
-                        {hint.label}
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {preparedCoachHookups.map((hookup) => {
-                  const color = getCoachHookupColor(hookup.netType);
-                  const polylinePoints = hookup.path.map((point) => `${point.x},${point.y}`).join(' ');
-                  const labelX = Math.min(hookup.railPixel.x, hookup.targetPixel.x) + 8;
-                  const labelY = hookup.targetPixel.y - 11;
-                  const isPending = !hookup.isRouted;
-
-                  return (
-                    <g key={hookup.id} data-testid={`breadboard-coach-hookup-${hookup.id}`}>
-                      <polyline
-                        points={polylinePoints}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth={isPending ? 1.15 : 1}
-                        strokeDasharray={isPending ? '3 2' : undefined}
-                        opacity={isPending ? 0.82 : 0.52}
-                      />
-                      <circle cx={hookup.railPixel.x} cy={hookup.railPixel.y} r={2.2} fill={color} opacity={isPending ? 0.9 : 0.58} />
-                      <rect
-                        x={labelX}
-                        y={labelY - 6}
-                        width={38}
-                        height={14}
-                        rx={4}
-                        fill={isPending ? 'rgba(4,8,15,0.9)' : 'rgba(4,8,15,0.72)'}
-                        stroke={color}
-                        strokeWidth={0.75}
-                      />
-                      <text x={labelX + 4} y={labelY} fill={color} fontSize={4.2} fontFamily="monospace">
-                        {hookup.netName} rail
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {preparedCoachBridges.map((bridge) => {
-                  const color = getCoachHookupColor(bridge.netType);
-                  const polylinePoints = bridge.path.map((point) => `${point.x},${point.y}`).join(' ');
-                  const labelX = Math.min(bridge.fromPixel.x, bridge.toPixel.x) + 28;
-                  const labelY = bridge.fromPixel.y - 11;
-                  const isPending = !bridge.isRouted;
-
-                  return (
-                    <g key={bridge.id} data-testid={`breadboard-coach-bridge-${bridge.id}`}>
-                      <polyline
-                        points={polylinePoints}
-                        fill="none"
-                        stroke={color}
-                        strokeWidth={isPending ? 1.1 : 1}
-                        strokeDasharray={isPending ? '4 2' : undefined}
-                        opacity={isPending ? 0.78 : 0.5}
-                      />
-                      <circle cx={bridge.fromPixel.x} cy={bridge.fromPixel.y} r={2.1} fill={color} opacity={isPending ? 0.88 : 0.56} />
-                      <circle cx={bridge.toPixel.x} cy={bridge.toPixel.y} r={2.1} fill={color} opacity={isPending ? 0.88 : 0.56} />
-                      <rect
-                        x={labelX}
-                        y={labelY - 6}
-                        width={46}
-                        height={14}
-                        rx={4}
-                        fill={isPending ? 'rgba(4,8,15,0.9)' : 'rgba(4,8,15,0.72)'}
-                        stroke={color}
-                        strokeWidth={0.75}
-                      />
-                      <text x={labelX + 4} y={labelY} fill={color} fontSize={4.1} fontFamily="monospace">
-                        {bridge.netName} bridge
-                      </text>
-                    </g>
-                  );
-                })}
-
-                {stagedCoachSuggestions.map((suggestion) => (
-                  <CoachSuggestionOverlay
-                    key={`staged-${suggestion.id}-${suggestion.instanceId}`}
-                    suggestion={suggestion}
-                    status="staged"
-                  />
-                ))}
-
-                {resolvedCoachSuggestions.map((suggestion) => (
-                  <CoachSuggestionOverlay key={`pending-${suggestion.id}`} suggestion={suggestion} status="pending" />
-                ))}
-              </g>
+              <BreadboardCoachPlanOverlay
+                coachPlan={coachPlan}
+                preparedCoachHookups={preparedCoachHookups}
+                preparedCoachBridges={preparedCoachBridges}
+                stagedCoachSuggestions={stagedCoachSuggestions}
+                resolvedCoachSuggestions={resolvedCoachSuggestions}
+              />
             )}
 
             {/* Existing wires */}
