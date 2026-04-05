@@ -142,7 +142,7 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
-      const part = await ctx.storage.getComponentPart(params.partId);
+      const part = await ctx.storage.getComponentPart(params.partId, ctx.projectId);
       if (!part) {
         return { success: false, message: `Component part ${String(params.partId)} not found` };
       }

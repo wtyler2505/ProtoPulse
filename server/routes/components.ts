@@ -10,6 +10,7 @@ import {
   markPartMetaAsVerified,
   requiresVerifiedExactness,
   type PartSourceEvidence,
+  type PartTrustCarrier,
   type PartVerificationLevel,
 } from '@shared/component-trust';
 import { buildExactPartVerificationReadiness } from '@shared/exact-part-verification';
@@ -583,11 +584,11 @@ export function registerComponentRoutes(app: Express): void {
 
       const meta = normalizeStoredPartMeta(part.meta);
       const verificationLevel = parsed.data.verificationLevel as PartVerificationLevel | undefined;
-      const verificationMeta = {
+      const verificationMeta: PartTrustCarrier = {
         ...meta,
-        pinAccuracyReport: parsed.data.pinAccuracyReport ?? meta.pinAccuracyReport,
-        sourceEvidence: parsed.data.evidence ?? meta.sourceEvidence,
-        visualAccuracyReport: parsed.data.visualAccuracyReport ?? meta.visualAccuracyReport,
+        pinAccuracyReport: (parsed.data.pinAccuracyReport ?? meta.pinAccuracyReport) as PartTrustCarrier['pinAccuracyReport'],
+        sourceEvidence: (parsed.data.evidence ?? meta.sourceEvidence) as PartTrustCarrier['sourceEvidence'],
+        visualAccuracyReport: (parsed.data.visualAccuracyReport ?? meta.visualAccuracyReport) as PartTrustCarrier['visualAccuracyReport'],
       };
       const readiness = buildExactPartVerificationReadiness(
         verificationMeta,

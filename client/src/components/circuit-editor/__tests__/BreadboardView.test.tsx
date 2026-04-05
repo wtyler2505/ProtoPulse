@@ -619,7 +619,7 @@ describe('BreadboardView', () => {
           type: 'microcontroller',
           verificationLevel: 'official-backed',
           verificationStatus: 'verified',
-        },
+        } as unknown as (typeof mockParts)[number]['meta'],
         connectors: [],
         buses: [],
         views: {
@@ -627,7 +627,7 @@ describe('BreadboardView', () => {
           schematic: { shapes: [] },
           pcb: { shapes: [] },
         },
-        constraints: [],
+        constraints: null,
         version: 1,
         createdAt: new Date(),
         updatedAt: new Date(),
