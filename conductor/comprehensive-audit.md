@@ -267,5 +267,25 @@
   - **Design Variables Blindspot:** The application recently introduced a powerful parameterized "Design Variables" engine (`shared/design-variables.ts`) that allows users to define mathematical variables (e.g., `R_Pullup = 10k`) and use them in component values. However, the AI toolset (`server/ai-tools/`) is completely blind to this entire engine. There are no tools for the AI to query the current variables, evaluate expressions, or define new parameters.
   - **The Hallucination Consequence:** If an AI agent looks at the BOM and sees a resistor with a value of `R_LED_Limit`, it has no capability to resolve that variable to its actual integer value. The AI will instead hallucinate a generic value or fail to run mathematical analyses (like the `analyze_build_risk` tool) because the data type is a string expression instead of a resolved float. The AI must be given read/write access to the Design Variables engine.
 
+## 34. Pass 19: Live Web Accessibility (WCAG) Execution Audit
+*Utilized the `mcp_web-accessibility` tool to perform a dynamic DOM audit against the running `localhost:5000` Express/Vite instance.*
+
+- **Findings:**
+  - **Hardcoded Zoom Disable (WCAG Violation):** The live DOM audit explicitly flagged the `<meta name="viewport">` tag for containing `maximum-scale=1`. This completely disables the ability for users to pinch-to-zoom on mobile or touch-enabled devices. This is a critical WCAG violation, as users with visual impairments must be able to scale the UI by at least 200% without assistive technology.
+  - **Landmark Misconfiguration:** The audit flagged multiple core components (including the auth pages and sidebar sections) for not being contained within standard HTML5 semantic landmarks (like `<main>`, `<nav>`, `<aside>`). Screen readers rely on these landmarks to build a navigational tree of the application; without them, the user is forced to linearly tab through every single element on the page.
+
+## 35. Pass 20: Google Workspace Integration & Export Enhancements
+*Utilized `mcp_workspace-developer` to pull 2026 best practices for Google Sheets API integration.*
+
+- **Findings:**
+  - **Primitive BOM Exports:** Currently, the `exportBomToSheet` tool (referenced in `server/ai-tools/export.ts`) relies on generating a raw, unstyled CSV file and dumping it. Based on the Google Workspace documentation for the `spreadsheets.batchUpdate` endpoint, this is an incredibly primitive approach. The AI tool should be enhanced to natively construct a styled Google Sheet directly via the API. Claude must update the export tool to apply formatting (e.g., frozen header rows, bold text, currency validation for unit prices, and auto-sizing columns) rather than treating Google Sheets like a dumb CSV viewer.
+
+## 36. Pass 21: Genkit Observability & Auth Middleware
+*Utilized `mcp_genkit` to query documentation regarding telemetry collection and authorization.*
+
+- **Findings:**
+  - **Missing OpenTelemetry Traces:** According to the Genkit `telemetry-collection.md` specs, professional AI integrations must implement OpenTelemetry to track prompt latency, token costs, and tool-call success rates. ProtoPulse relies on custom `logger.info` calls in `server/ai.ts`. Claude must wire the native Firebase/OpenTelemetry plugin into the Genkit initialization so that production token usage is rigorously tracked and exported.
+  - **Bypassed Flow Authentication:** Currently, ProtoPulse authenticates API requests via standard Express middleware (`requireProjectOwnership`), but leaves the actual Genkit flows (`ai.defineFlow`) mathematically unprotected. According to Genkit's `authorization.md` documentation, flows should define an `authPolicy` internally. This ensures that even if an AI flow is invoked via a different execution path (like a background job or direct CLI call), the Genkit engine itself will actively reject unauthorized execution.
+
 ---
-*Note: This document has undergone 22 exhaustive passes and is considered a finalized blueprint for Claude.*
+*Note: This document has undergone 25 exhaustive passes (including dynamic live-server testing, Workspace API mapping, and Genkit documentation indexing) and is considered a finalized blueprint for Claude.*
