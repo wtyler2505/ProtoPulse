@@ -162,5 +162,29 @@
   - **Brittle SPICE Value Parsing:** The `parseSpiceValue` function in `client/src/lib/simulation/spice-generator.ts` relies on basic regex (`parseFloat` + string matching for suffixes). This completely breaks on complex SPICE syntax like parameter expressions (e.g., `{R_val + 1k}`) or node-referenced behavioral sources. This will cause silent simulation failures for any advanced imported components.
   - **PDF Generator Memory Spikes:** In `server/export/pdf-report-generator.ts`, the `pdfkit` document is constructed synchronously in memory. For massive project reports (BOMs with hundreds of rows, huge schematic snapshots), generating the PDF entirely in memory before streaming it to the response will cause massive heap allocations, triggering heavy Garbage Collection (GC) pauses on the Node.js server.
 
+## 20. Pass 9: External Threat Intelligence & Web Research
+*Utilized Google Web Search MCP to validate security vulnerabilities against known industry exploits.*
+
+- **Findings:**
+  - **Tauri Global Exposure CVE Alignment:** I used `google_web_search` to pull external threat intelligence on `"withGlobalTauri" XSS RCE`. The web search confirmed that injecting `window.__TAURI__` is explicitly cited by security researchers (e.g., Huntress) as a critical escalation path. The research states that setting `withGlobalTauri: true` combined with a missing CSP is the most dangerous configuration possible for Tauri, actively turning any minor XSS into an instant sandbox-escape RCE. This confirms my previous findings are not just theoretical, but represent a severe, documented security posture failure.
+
+## 21. Pass 10: AI Tool Ecosystem Analysis
+*Evaluating Genkit implementation against modern AI agent architecture standards.*
+
+- **Findings:**
+  - **Legacy Tool Wrapping:** The application currently manually maps AI tool outputs to client UI actions using a rudimentary parser (`server/ai.ts`). Modern Genkit applications should leverage Genkit's native `uiAction` definitions or structured schema streaming to allow the LLM to directly emit UI state changes. The current implementation is fragile and relies on strict JSON parsing of a text block rather than taking advantage of Genkit's native tool-calling protocol for the client layer.
+
+## 22. Pass 11: Database Scalability & Best Practices
+*Evaluating Drizzle ORM usage against modern PostgreSQL scaling standards.*
+
+- **Findings:**
+  - **JSONB Indexing Gaps:** The `components` and `architecture_nodes` tables make heavy use of `jsonb` columns for storing arbitrary component data (like `connectors` and `properties`). However, there are no GIN (Generalized Inverted Index) indices created for these columns in `shared/schema.ts`. When the AI tools or the user searches for components by property (e.g., all 10k resistors), PostgreSQL is forced to do a sequential table scan of every single JSONB blob. This will cause exponential slowdowns as the component library grows.
+
+## 23. Pass 12: Network Observability & Logging
+*Evaluating system metrics and failure transparency.*
+
+- **Findings:**
+  - **Silent Metric Dropping:** `server/metrics.ts` collects detailed system telemetry (CPU, memory, request rates). However, if the external metrics pipeline is down, these metrics are silently dropped from memory (`flushTimer`). In an embedded or local-first desktop application, metrics should either be logged locally to a rotating file or exposed via a dedicated local debugging dashboard (e.g., an internal `chrome-devtools` trace panel) so the user can diagnose why their application is freezing during SPICE simulations.
+
 ---
-*Note: This document has undergone an exhaustive 8 passes and is considered a finalized blueprint for Claude.*
+*Note: This document has undergone an exhaustive 12 passes and is considered a finalized blueprint for Claude.*
