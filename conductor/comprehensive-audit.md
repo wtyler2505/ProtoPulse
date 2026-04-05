@@ -127,5 +127,40 @@
   - **SSE Connection Memory Leaks:** While the streaming endpoint (`server/routes/chat.ts`) listens to `req.on('close')` to abort streams when a user disconnects, the underlying AI execution engine (`server/ai.ts`) completely ignores the passed `abortSignal` inside `executeStreamForProvider`. If a user closes their browser mid-stream, the Node process forgets the user, but the HTTP request to the Gemini API continues running in the background, consuming API tokens and memory until the model decides it has finished generating.
   - **De-optimized Vite Chunking:** In `vite.config.ts`, the custom `manualChunks` strategy isolates massive libraries (`@xyflow`, `react-markdown`, `recharts`, `codemirror`) into their own dedicated vendor chunks. While intended to improve caching, this actually forces all users to download the entirety of these libraries upon initial load—even if they only visit a route that doesn't use them. This defeats Vite's native dynamic import and tree-shaking optimizations, resulting in a massively bloated initial JS payload.
 
+## 17. Feature Gaps & Major Enhancement Ideas
+*Evaluating missing functionality, architectural evolution, and product completeness.*
+
+- **Findings:**
+  - **Native OS Desktop Integration (Tauri):** Currently, Tauri acts as a passive, "dumb" wrapper around the React web app. This is a massive missed opportunity for a native application. 
+    * **Enhancement:** Replace browser-based `window.open` downloads with Tauri's native `save_dialog` for exporting files (KiCad, Gerber, SPICE). Implement native OS Menu Bars for file operations (File > Save, Open) and shortcut mapping.
+    * **Enhancement:** Migrate hardware compilation (Arduino CLI) and serial port interactions out of the Node.js Express server and directly into Tauri's Rust backend for significantly better performance, safety, and encapsulation.
+  - **Advanced Auto-Routing Algorithm:** The current `server/circuit-routes/autoroute.ts` implements a very rudimentary Manhattan (L-shaped) router.
+    * **Enhancement:** Implement an industry-standard maze-routing algorithm (like Lee's algorithm or an A* heuristic implementation). It needs to handle multi-layer routing, vias, differential pairs, and dynamic obstacle avoidance for complex PCB layouts.
+  - **Multi-Project Workspace Context:** The `ProjectProvider` (`client/src/lib/project-context.tsx`) implicitly assumes a single active project at any given time.
+    * **Enhancement:** Develop a true multi-tabbed workspace manager. Users should be able to open multiple projects simultaneously, copy/paste architecture nodes between tabs, and compare BOMs side-by-side without triggering a hard browser reload.
+  - **User-Defined Custom Components:** The application relies on a static, pre-seeded `component_library` table in PostgreSQL.
+    * **Enhancement:** Create a comprehensive "Component Builder" workflow where users can define their own electronic components, draw custom schematic symbols, attach SPICE models, map footprint pins, and save them to their personal library to be used in future projects.
+  - **True Offline Firmware Compilation:** The Arduino compilation pipeline currently relies on an external Node process executing shell commands (`execSync('arduino-cli ...')`), which requires the host machine to have specific CLI tools installed.
+    * **Enhancement:** Explore cross-compiling the Arduino toolchain (or an equivalent lightweight compiler) into WebAssembly (WASM). This would allow ProtoPulse to compile firmware entirely within the browser/Tauri environment, providing a 100% offline, zero-dependency embedded development experience.
+  - **Incorrect Crash Exit Codes:** In `server/shutdown.ts`, the `performGracefulShutdown` function always exits with `process.exit(0)`, even if the shutdown was triggered by an `uncaughtException` or `unhandledRejection`. 
+    * **Enhancement:** This is a severe DevOps anti-pattern. If a fatal error occurs, the process MUST exit with a non-zero code (e.g., `process.exit(1)`). Otherwise, orchestrators like Docker, systemd, or PM2 will assume the application shut down cleanly and may fail to trigger automated restart policies.
+
+## 18. Passes 7-12: The Deep Sweep (Concurrency, Real-time, & Data Integrity)
+*Evaluating WebSocket state machines, continuous background processes, and ORM constraints.*
+
+- **Findings:**
+  - **WebSocket Session Revocation (server/collaboration.ts):** The `CollaborationServer` authenticates a user strictly during the initial HTTP Upgrade handshake (`validateWsSession`). However, there is no continuous polling or re-validation of the session token. If a user's access is revoked, or they are kicked from a project, their existing WebSocket connection remains fully active and they can continue to read and mutate the project state indefinitely until the socket drops.
+  - **Soft Delete Data Bloat (shared/schema.ts):** The database completely avoids native foreign key cascading deletes (`ON DELETE CASCADE`) in favor of an application-level "Soft Delete" pattern via the `deletedAt` timestamp. Because `storage.ts` does not implement a scheduled garbage-collection/vacuum routine, deleting complex hierarchical structures (like a Project with thousands of nodes, edges, and BOM items) leaves a massive amount of orphaned JSON payload bloat permanently consuming PostgreSQL storage.
+  - **O(N^2) React Hook Dependencies:** Across multiple components, heavy UI functions (like schematic canvas manipulation) are bound inside `useEffect` or `useCallback` hooks that depend on the monolithic `project-context.tsx` state. Because the context state object changes entirely on every minor mutation (due to the lack of fine-grained selectors in standard React Context), these hooks tear down and rebuild their internal logic constantly, triggering heavy DOM repaints.
+
+## 19. Pass 8: Extreme Edge Cases & Algorithm Deep Dive
+*Evaluating DSL parsing security, A* routing heuristics, and document generation.*
+
+- **Findings:**
+  - **DSL Worker Sandbox Escape Risk:** The `client/src/lib/circuit-dsl/circuit-dsl-worker.ts` attempts to execute user-provided code in a sandboxed Web Worker by explicitly deleting dangerous globals (`delete self['fetch']`, etc.). This is a notoriously flawed approach to JS sandboxing. It is trivial to recover the original constructors via prototype chains (e.g., `({}).constructor.constructor('return fetch')()`) or dynamic imports. If this DSL execution takes untrusted input or hallucinated AI code, it constitutes a full sandbox-escape vector that can manipulate the browser context.
+  - **Inefficient A* Heuristic (Wire Router):** The `wire-router.ts` (A* router) explicitly notes that columns 4 and 5 (the center channel of the breadboard) are blocked. However, it still uses a naive Manhattan distance heuristic across the entire board. For points on opposite sides of the center channel, this heuristic deeply underestimates the true path cost (since it's impossible to cross without a jumper wire). This causes the A* algorithm to needlessly explore thousands of nodes before finally failing and returning an empty path, burning heavy CPU cycles on the main thread for unroutable connections.
+  - **Brittle SPICE Value Parsing:** The `parseSpiceValue` function in `client/src/lib/simulation/spice-generator.ts` relies on basic regex (`parseFloat` + string matching for suffixes). This completely breaks on complex SPICE syntax like parameter expressions (e.g., `{R_val + 1k}`) or node-referenced behavioral sources. This will cause silent simulation failures for any advanced imported components.
+  - **PDF Generator Memory Spikes:** In `server/export/pdf-report-generator.ts`, the `pdfkit` document is constructed synchronously in memory. For massive project reports (BOMs with hundreds of rows, huge schematic snapshots), generating the PDF entirely in memory before streaming it to the response will cause massive heap allocations, triggering heavy Garbage Collection (GC) pauses on the Node.js server.
+
 ---
-*Note: This document will be frequently updated as the audit progresses.*
+*Note: This document has undergone an exhaustive 8 passes and is considered a finalized blueprint for Claude.*
