@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ProjectHistoryItem } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { projectMutationKeys, projectQueryKeys } from '@/lib/query-keys';
 
 
 interface HistoryState {
@@ -15,9 +16,10 @@ const HistoryContext = createContext<HistoryState | undefined>(undefined);
 export function HistoryProvider({ seeded, children }: { seeded: boolean; children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const projectId = useProjectId();
+  const historyQueryKey = projectQueryKeys.history(projectId);
 
   const historyQuery = useQuery({
-    queryKey: [`/api/projects/${projectId}/history`],
+    queryKey: historyQueryKey,
     enabled: seeded,
     select: (response: { data: Array<{ id: number | string; action: string; user: 'User' | 'AI'; timestamp: string }>; total: number }) => response.data.map((item): ProjectHistoryItem => ({
       id: String(item.id),
@@ -28,11 +30,12 @@ export function HistoryProvider({ seeded, children }: { seeded: boolean; childre
   });
 
   const addHistoryMutation = useMutation({
+    mutationKey: projectMutationKeys.history(projectId),
     mutationFn: async (data: { action: string; user: string }) => {
       await apiRequest('POST', `/api/projects/${projectId}/history`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/history`] });
+      void queryClient.invalidateQueries({ queryKey: historyQueryKey });
     },
   });
 

@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ViewMode } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { projectMutationKeys, projectQueryKeys } from '@/lib/query-keys';
 
 /** API response shape for project metadata. */
 interface ProjectApiResponse {
@@ -31,7 +32,7 @@ export function ProjectMetaProvider({ seeded, children }: { seeded: boolean; chi
   const queryClient = useQueryClient();
   const projectId = useProjectId();
 
-  const [activeView, setActiveView] = useState<ViewMode>('architecture');
+  const [activeView, setActiveView] = useState<ViewMode>('dashboard');
   const [projectName, setProjectNameState] = useState('Smart_Agro_Node_v1');
   const [projectDescription, setProjectDescriptionState] = useState('IoT Agriculture Sensor Node');
 
@@ -41,18 +42,20 @@ export function ProjectMetaProvider({ seeded, children }: { seeded: boolean; chi
     { id: 'mcu', name: 'MCU_Core.sch', content: {} },
   ]);
   const [activeSheetId, setActiveSheetId] = useState('top');
+  const projectDetailKey = projectQueryKeys.detail(projectId);
 
   const projectQuery = useQuery({
-    queryKey: [`/api/projects/${projectId}`],
+    queryKey: projectDetailKey,
     enabled: seeded,
   });
 
   const updateProjectMutation = useMutation({
+    mutationKey: projectMutationKeys.meta(projectId),
     mutationFn: async (data: { name?: string; description?: string }) => {
       await apiRequest('PATCH', `/api/projects/${projectId}`, data);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}`] });
+      void queryClient.invalidateQueries({ queryKey: projectDetailKey });
     },
   });
 

@@ -1,5 +1,7 @@
 // ─── Workspace panel state management ──────────────────────────────────────
 
+import { getProjectScopedStorageKey } from '@/lib/client-state-scope';
+
 export interface WorkspaceState {
   sidebarOpen: boolean;
   chatOpen: boolean;
@@ -69,9 +71,9 @@ export interface PersistedPanelLayout {
   activeView?: string;
 }
 
-function loadPersistedLayout(): Partial<PersistedPanelLayout> {
+export function loadPersistedLayout(projectId: number): Partial<PersistedPanelLayout> {
   try {
-    const raw = localStorage.getItem(PANEL_LAYOUT_KEY);
+    const raw = localStorage.getItem(getProjectScopedStorageKey(PANEL_LAYOUT_KEY, projectId));
     if (raw) {
       return JSON.parse(raw) as Partial<PersistedPanelLayout>;
     }
@@ -81,25 +83,27 @@ function loadPersistedLayout(): Partial<PersistedPanelLayout> {
   return {};
 }
 
-export const persisted = loadPersistedLayout();
+export function createInitialWorkspaceState(projectId: number): WorkspaceState {
+  const persisted = loadPersistedLayout(projectId);
 
-export const initialWorkspaceState: WorkspaceState = {
-  sidebarOpen: false,
-  chatOpen: false,
-  sidebarCollapsed: persisted.sidebarCollapsed ?? false,
-  chatCollapsed: persisted.chatCollapsed ?? false,
-  sidebarWidth: persisted.sidebarWidth ?? 256,
-  chatWidth: persisted.chatWidth ?? 350,
-  shortcutsOpen: false,
-  moreMenuOpen: false,
-  activityFeedOpen: false,
-  pcbTutorialOpen: false,
-  predictionPanelOpen: false,
-};
+  return {
+    sidebarOpen: false,
+    chatOpen: false,
+    sidebarCollapsed: persisted.sidebarCollapsed ?? false,
+    chatCollapsed: persisted.chatCollapsed ?? false,
+    sidebarWidth: persisted.sidebarWidth ?? 256,
+    chatWidth: persisted.chatWidth ?? 350,
+    shortcutsOpen: false,
+    moreMenuOpen: false,
+    activityFeedOpen: false,
+    pcbTutorialOpen: false,
+    predictionPanelOpen: false,
+  };
+}
 
-export function persistLayout(layout: PersistedPanelLayout): void {
+export function persistLayout(projectId: number, layout: PersistedPanelLayout): void {
   try {
-    localStorage.setItem(PANEL_LAYOUT_KEY, JSON.stringify(layout));
+    localStorage.setItem(getProjectScopedStorageKey(PANEL_LAYOUT_KEY, projectId), JSON.stringify(layout));
   } catch {
     // localStorage unavailable
   }

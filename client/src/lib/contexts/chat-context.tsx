@@ -3,9 +3,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { ChatMessage, ChatAction, ToolCallInfo } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { projectMutationKeys, projectQueryKeys } from '@/lib/query-keys';
 
 interface ChatMessageMetadata {
   actions?: ChatAction[];
+  clientId?: string;
   toolCalls?: ToolCallInfo[];
   isError?: boolean;
   isKeyError?: boolean;
@@ -26,6 +28,9 @@ function serializeMetadata(msg: ChatMessage): string | undefined {
   const meta: ChatMessageMetadata = {};
   if (msg.actions && msg.actions.length > 0) {
     meta.actions = msg.actions;
+  }
+  if (msg.clientId) {
+    meta.clientId = msg.clientId;
   }
   if (msg.toolCalls && msg.toolCalls.length > 0) {
     meta.toolCalls = msg.toolCalls;
@@ -68,13 +73,11 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
   const projectId = useProjectId();
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeBranchId, setActiveBranchId] = useState<string | null>(null);
-
-  const chatQueryKey = activeBranchId
-    ? `/api/projects/${projectId}/chat?branchId=${activeBranchId}`
-    : `/api/projects/${projectId}/chat`;
+  const chatQueryKey = projectQueryKeys.chat(projectId, activeBranchId);
+  const chatBranchesQueryKey = projectQueryKeys.chatBranches(projectId);
 
   const chatQuery = useQuery({
-    queryKey: [chatQueryKey],
+    queryKey: chatQueryKey,
     enabled: seeded,
     select: (response: { data: Array<{ id: number | string; role: string; content: string; timestamp: string; mode?: ChatMessage['mode']; metadata?: string | null }>; total: number }) => response.data.map((msg): ChatMessage => {
       const meta = deserializeMetadata(msg.metadata);
@@ -90,7 +93,7 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
   });
 
   const branchesQuery = useQuery({
-    queryKey: [`/api/projects/${projectId}/chat/branches`],
+    queryKey: chatBranchesQueryKey,
     enabled: seeded,
     select: (response: { data: ChatBranch[]; total: number }) => response.data,
   });
@@ -99,13 +102,14 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
   type ChatRawResponse = { data: ChatRawMessage[]; total: number };
 
   const addChatMutation = useMutation({
+    mutationKey: projectMutationKeys.chat(projectId),
     mutationFn: async (msg: { role: string; content: string; mode?: string; branchId?: string | null; metadata?: string }) => {
       await apiRequest('POST', `/api/projects/${projectId}/chat`, msg);
     },
     onMutate: async (newMsg) => {
-      await queryClient.cancelQueries({ queryKey: [chatQueryKey] });
-      const previous = queryClient.getQueryData<ChatRawResponse>([chatQueryKey]);
-      queryClient.setQueryData<ChatRawResponse>([chatQueryKey], (old) => {
+      await queryClient.cancelQueries({ queryKey: chatQueryKey });
+      const previous = queryClient.getQueryData<ChatRawResponse>(chatQueryKey);
+      queryClient.setQueryData<ChatRawResponse>(chatQueryKey, (old) => {
         const msgs = old?.data ?? [];
         const optimistic: ChatRawMessage = {
           id: `temp-${crypto.randomUUID()}`,
@@ -121,22 +125,23 @@ export function ChatProvider({ seeded, children }: { seeded: boolean; children: 
     },
     onError: (_err, _vars, context) => {
       if (context?.previous) {
-        queryClient.setQueryData([chatQueryKey], context.previous);
+        queryClient.setQueryData(chatQueryKey, context.previous);
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: [chatQueryKey] });
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/chat/branches`] });
+      void queryClient.invalidateQueries({ queryKey: chatQueryKey });
+      void queryClient.invalidateQueries({ queryKey: chatBranchesQueryKey });
     },
   });
 
   const createBranchMutation = useMutation({
+    mutationKey: projectMutationKeys.chat(projectId),
     mutationFn: async (parentMessageId: number) => {
       const res = await apiRequest('POST', `/api/projects/${projectId}/chat/branches`, { parentMessageId });
       return res.json() as Promise<{ branchId: string; parentMessageId: number }>;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/chat/branches`] });
+      void queryClient.invalidateQueries({ queryKey: chatBranchesQueryKey });
     },
   });
 

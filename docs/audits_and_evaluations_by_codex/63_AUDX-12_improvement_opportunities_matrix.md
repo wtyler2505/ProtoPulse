@@ -1,0 +1,271 @@
+# AUDX-12: Improvement Opportunities Matrix
+
+Date: 2026-03-30  
+Author: Codex  
+Wave: Deep Systems Expansion  
+Purpose: Turn the deep-systems audit findings into a cross-domain opportunity map with concrete quick wins, medium lifts, big swings, integrations, beginner-friendly improvements, and trust/safety upgrades.
+
+## Simulation
+- `Quick Wins`
+  - Add learning-grade / fallback / model-limited badges.
+  - Reject invalid timestep and sweep inputs early.
+  - Centralize SPICE value parsing.
+  - Add a short “when to trust this” help panel.
+  - Cap sweep/sample sizes deterministically.
+- `Medium Lifts`
+  - Build a golden reference-circuit suite.
+  - Unify solver-path behavior across UI and backend.
+  - Add result receipts with solver and model metadata.
+  - Add simulation regression tracking in CI.
+  - Add explicit comparison against external reference engines.
+- `Big Swings`
+  - Build a Simulation Trust Center.
+  - Add compare-to-hardware workflows.
+  - Turn simulation into an explain-as-you-learn environment.
+- `Integrations`
+  - Knowledge
+  - Labs
+  - Validation
+  - AI tutor
+- `Beginner-Friendly Enhancements`
+  - Explain what changed and why, not just waveform output.
+  - Add guided reference circuits.
+- `Trust/Safety Enhancements`
+  - Netlist sanitization
+  - resource caps
+  - explicit confidence labels
+
+## Import / Export
+- `Quick Wins`
+  - Separate parse success from apply success.
+  - Fix known FE/BE contract mismatches.
+  - Require explicit circuit selection.
+  - Add preflight warnings for skipped checks.
+  - Standardize archive safety limits.
+- `Medium Lifts`
+  - Structured export manifests
+  - roundtrip diffing
+  - compatibility badges
+  - import commit review
+  - semantic comparison for key formats
+- `Big Swings`
+  - Interchange Lab
+  - one-click fab handoff package
+  - external compatibility certification workflow
+- `Integrations`
+  - Manufacturing review
+  - ordering
+  - design history
+  - AI export assistant
+- `Beginner-Friendly Enhancements`
+  - Plain-English “what survived / what changed / what was skipped”
+- `Trust/Safety Enhancements`
+  - hostile archive protections
+  - semantic output validation
+  - export receipts
+
+## Data Integrity
+- `Quick Wins`
+  - Clear cache on auth identity changes.
+  - Reset state on project change.
+  - Separate empty/error/stale states.
+  - wait for confirmed persistence before success messaging.
+  - structured query key factories.
+- `Medium Lifts`
+  - Project-scoped storage APIs
+  - broader optimistic concurrency
+  - normalized delete policy
+  - integrity checks
+  - checkpoint/restore UI
+- `Big Swings`
+  - Integrity and Recovery Center
+  - snapshot/event-backed replay model
+  - project trust-grade system
+- `Integrations`
+  - History
+  - backup/restore
+  - AI apply
+  - export receipts
+- `Beginner-Friendly Enhancements`
+  - “Your project is safe / unsaved / recovered” status in plain language
+- `Trust/Safety Enhancements`
+  - entity-scoped versioning
+  - repair tools
+  - schema parity gates
+
+## Permissions / Isolation / Collaboration
+- `Quick Wins`
+  - Universal project access middleware
+  - stop accepting client-supplied actor IDs
+  - project-scoped lock keys
+  - assign owners on import
+  - reject unauthorized collaboration joins
+- `Medium Lifts`
+  - project-scoped child-resource storage APIs
+  - collaborator role system
+  - scoped jobs/batch/RAG state
+  - AI permission tiers
+  - cross-user regression tests
+- `Big Swings`
+  - centralized Trust and Access Layer
+  - review/approval workflows
+  - first-class shared workspace model
+- `Integrations`
+  - Comments
+  - design history
+  - AI review queue
+  - classroom mode
+- `Beginner-Friendly Enhancements`
+  - clear “who can do what here?” explanations
+- `Trust/Safety Enhancements`
+  - audit receipts
+  - server-enforced approval
+  - role-aware UI
+
+## Hardware Runtime
+- `Quick Wins`
+  - distinguish no-device from failed-discovery.
+  - board/port identity confirmation.
+  - terminal receipts for cancel/disconnect/timeout.
+  - review-gated hardware AI actions.
+  - setup-oriented Arduino view states.
+- `Medium Lifts`
+  - spec-parity for busy-port and timeout behavior
+  - unified serial transport abstraction
+  - stale-session cleanup
+  - runtime watchdogs
+  - disconnect/port-busy integration tests
+- `Big Swings`
+  - Hardware Bench
+  - hardware-in-loop validation
+  - beginner-safe physical build workflows
+- `Integrations`
+  - Arduino
+  - serial monitor
+  - firmware runtime
+  - AI co-debug
+- `Beginner-Friendly Enhancements`
+  - safe upload wizard
+  - wrong-device recovery coach
+- `Trust/Safety Enhancements`
+  - device trust UI
+  - hardware action gates
+  - explicit preflight
+
+## Performance / Observability
+- `Quick Wins`
+  - start/stop metrics lifecycle correctly
+  - exclude SSE from compression
+  - fix cache invalidation churn
+  - scope query invalidations
+  - show heavy-operation loading states
+- `Medium Lifts`
+  - benchmark fixture projects
+  - route-template metrics normalization
+  - stream-health telemetry
+  - performance budgets
+  - operator dashboards
+- `Big Swings`
+  - Performance Lab
+  - adaptive degradation by project size/machine capability
+  - in-app observability surfaces
+- `Integrations`
+  - AI streams
+  - simulation
+  - export
+  - hardware streams
+- `Beginner-Friendly Enhancements`
+  - “what is taking so long?” explanations
+- `Trust/Safety Enhancements`
+  - degraded-mode clarity
+  - retry visibility
+  - load receipts
+
+## Manufacturing
+- `Quick Wins`
+  - shared preflight summary
+  - active fab/template visibility
+  - warnings for skipped checks
+  - maturity labels
+  - final package manifests
+- `Medium Lifts`
+  - manufacturing review panel
+  - runtime manufacturer-template wiring
+  - assembly completeness checks
+  - route/UI parity tests
+  - semantic comparison for manufacturing outputs
+- `Big Swings`
+  - Ship to Fab workflow
+  - panelization and tooling features
+  - full design-to-fab pipeline
+- `Integrations`
+  - Procurement
+  - validation
+  - export
+  - ordering
+- `Beginner-Friendly Enhancements`
+  - proto-run vs production-run modes
+- `Trust/Safety Enhancements`
+  - manufacturing readiness score
+  - fab receipts
+  - final review gates
+
+## Learning / Accessibility / Honesty / Maturity
+- `Quick Wins`
+  - visible role presets
+  - labeled help/coach controls
+  - maturity badges
+  - plain-English feature-state warnings
+  - earlier surfacing of learning destinations
+- `Medium Lifts`
+  - learner-safe shell
+  - accessibility layout presets
+  - docs parity workflow
+  - maturity metadata system
+  - contextual learning links
+- `Big Swings`
+  - Learn Mode
+  - product honesty layer
+  - teacher/makerspace edition
+- `Integrations`
+  - Dashboard
+  - Knowledge
+  - Labs
+  - Validation
+- `Beginner-Friendly Enhancements`
+  - concept translation
+  - staged unlocks
+  - coach panel
+- `Trust/Safety Enhancements`
+  - explicit readiness labels
+  - documented limits
+  - consistent truth maintenance
+
+## Test Reality / Failure Recovery / Release Confidence
+- `Quick Wins`
+  - remove skip-prone external-server dependence
+  - route smoke tests for all route families
+  - standardized error envelopes
+  - coverage thresholds
+  - release checklist tied to evidence
+- `Medium Lifts`
+  - real DB-backed integrations
+  - failure-injection tests
+  - middleware-stack security tests
+  - golden-project E2E flows
+  - maturity-aware release flags
+- `Big Swings`
+  - Reliability Lab
+  - evidence-tier release framework
+  - canary projects with automated trust receipts
+- `Integrations`
+  - CI
+  - telemetry
+  - product maturity labels
+  - incident response
+- `Beginner-Friendly Enhancements`
+  - failures that teach, not just fail
+- `Trust/Safety Enhancements`
+  - confidence scorecards
+  - regression packs from incidents
+  - release-blocking trust gates

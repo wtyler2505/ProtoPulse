@@ -134,6 +134,32 @@ function validateGerber(data: ProjectExportData): ExportPreflightResult {
   return result;
 }
 
+function validateFabPackage(data: ProjectExportData): ExportPreflightResult {
+  const result = makeResult('fab-package');
+  commonChecks(result, data);
+
+  if (!data.hasPcbLayout) {
+    result.errors.push('No PCB layout data — a fabrication bundle needs placed board data.');
+    result.suggestions.push('Place components on the PCB in the PCB Layout view.');
+  }
+
+  if (!data.hasCircuitInstances) {
+    result.errors.push('No circuit instances — the fabrication bundle needs a placed circuit design.');
+    result.suggestions.push('Create a circuit design with components first.');
+  }
+
+  if (data.bomItemCount === 0) {
+    result.warnings.push('No BOM items found — the bundle can export, but assembly handoff will be incomplete.');
+    result.suggestions.push('Populate the BOM before handing the package to a fab or assembler.');
+  } else if (data.bomItemsWithPartNumber < data.bomItemCount) {
+    result.warnings.push('Some BOM items are missing part numbers — assembly documentation may be incomplete.');
+    result.suggestions.push('Add part numbers to BOM items for a cleaner manufacturing handoff.');
+  }
+
+  result.canExport = result.errors.length === 0;
+  return result;
+}
+
 function validateDrill(data: ProjectExportData): ExportPreflightResult {
   const result = makeResult('drill');
   commonChecks(result, data);
@@ -326,6 +352,7 @@ const FORMAT_VALIDATORS: Record<string, FormatValidator> = {
   kicad: validateKiCad,
   eagle: validateEagle,
   spice: validateSpice,
+  'fab-package': validateFabPackage,
   gerber: validateGerber,
   drill: validateDrill,
   'pick-place': validatePickPlace,

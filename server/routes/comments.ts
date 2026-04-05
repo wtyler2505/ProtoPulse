@@ -13,7 +13,6 @@ const createCommentSchema = z.object({
   spatialY: z.number().nullish(),
   spatialView: z.enum(['architecture', 'schematic', 'pcb', 'breadboard']).nullish(),
   parentId: z.number().int().positive().nullish(),
-  userId: z.number().int().positive().nullish(),
 });
 
 const updateCommentSchema = z.object({
@@ -56,10 +55,15 @@ export function registerCommentRoutes(app: Express): void {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
 
+      const userId = res.locals.userId as number | undefined;
+      if (!Number.isFinite(userId)) {
+        throw new HttpError('Authentication required', 401);
+      }
+
       // If parentId is provided, verify it exists and belongs to same project
       if (parsed.data.parentId) {
-        const parent = await storage.getComment(parsed.data.parentId);
-        if (!parent || parent.projectId !== projectId) {
+        const parent = await storage.getComment(projectId, parsed.data.parentId);
+        if (!parent) {
           throw new HttpError('Parent comment not found in this project', 404);
         }
       }
@@ -73,7 +77,7 @@ export function registerCommentRoutes(app: Express): void {
         spatialY: parsed.data.spatialY,
         spatialView: parsed.data.spatialView ?? undefined,
         parentId: parsed.data.parentId ?? null,
-        userId: parsed.data.userId ?? null,
+        userId,
       });
       res.status(201).json(comment);
     }),
@@ -87,8 +91,8 @@ export function registerCommentRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
-      const existing = await storage.getComment(commentId);
-      if (!existing || existing.projectId !== projectId) {
+      const existing = await storage.getComment(projectId, commentId);
+      if (!existing) {
         return res.status(404).json({ message: 'Comment not found' });
       }
       const parsed = updateCommentSchema.safeParse(req.body);
@@ -96,7 +100,7 @@ export function registerCommentRoutes(app: Express): void {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
 
-      const updated = await storage.updateComment(commentId, { content: parsed.data.content });
+      const updated = await storage.updateComment(projectId, commentId, { content: parsed.data.content });
       res.json(updated);
     }),
   );
@@ -108,8 +112,8 @@ export function registerCommentRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
-      const existing = await storage.getComment(commentId);
-      if (!existing || existing.projectId !== projectId) {
+      const existing = await storage.getComment(projectId, commentId);
+      if (!existing) {
         return res.status(404).json({ message: 'Comment not found' });
       }
       const status = req.body?.status;
@@ -119,7 +123,7 @@ export function registerCommentRoutes(app: Express): void {
         return res.status(400).json({ message: 'Missing or invalid status' });
       }
 
-      const updated = await storage.updateCommentStatus(commentId, status, updatedBy);
+      const updated = await storage.updateCommentStatus(projectId, commentId, status, updatedBy);
       res.json(updated);
     }),
   );
@@ -131,11 +135,11 @@ export function registerCommentRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
-      const existing = await storage.getComment(commentId);
-      if (!existing || existing.projectId !== projectId) {
+      const existing = await storage.getComment(projectId, commentId);
+      if (!existing) {
         return res.status(404).json({ message: 'Comment not found' });
       }
-      await storage.deleteComment(commentId);
+      await storage.deleteComment(projectId, commentId);
       res.status(204).end();
     }),
   );

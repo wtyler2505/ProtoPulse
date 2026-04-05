@@ -167,6 +167,17 @@ function gerberChecks(data: ProjectExportData): PrecheckResult[] {
   ];
 }
 
+function fabPackageChecks(data: ProjectExportData): PrecheckResult[] {
+  return [
+    sessionCheck(data),
+    projectNameCheck(data, false),
+    pcbLayoutCheck(data),
+    circuitInstanceCheck(data),
+    bomItemCheck(data),
+    bomPartNumberCheck(data),
+  ];
+}
+
 function kicadChecks(data: ProjectExportData): PrecheckResult[] {
   return [
     sessionCheck(data),
@@ -303,6 +314,7 @@ const FORMAT_PRECHECK_RUNNERS: Record<string, FormatPrecheckRunner> = {
   kicad: kicadChecks,
   eagle: eagleChecks,
   spice: spiceChecks,
+  'fab-package': fabPackageChecks,
   gerber: gerberChecks,
   'pick-place': pickPlaceChecks,
   'bom-csv': bomCsvChecks,

@@ -20,7 +20,7 @@ function shapeStyleToCSS(style?: Shape['style']): CSSProperties {
   return css;
 }
 
-function renderShape(shape: Shape): ReactNode {
+export function renderPartShape(shape: Shape): ReactNode {
   const style = shapeStyleToCSS(shape.style);
   const cx = shape.x + shape.width / 2;
   const cy = shape.y + shape.height / 2;
@@ -72,7 +72,7 @@ function renderShape(shape: Shape): ReactNode {
     case 'group':
       return (
         <g key={shape.id} transform={transform}>
-          {shape.children.map(renderShape)}
+          {shape.children.map(renderPartShape)}
         </g>
       );
   }
@@ -119,7 +119,7 @@ const PartSymbolRenderer = memo(function PartSymbolRenderer({
       viewBox={viewBox ?? `0 0 ${width} ${height}`}
       className={className}
     >
-      {shapes.map(renderShape)}
+      {shapes.map(renderPartShape)}
     </svg>
   );
 });

@@ -23,7 +23,7 @@ function createMockLocalStorage(): Storage {
     get length() {
       return store.size;
     },
-    key: vi.fn((_index: number) => null),
+    key: vi.fn((index: number) => Array.from(store.keys())[index] ?? null),
   };
 }
 
@@ -460,6 +460,49 @@ describe('RecentProjectsManager - Persistence', () => {
     RecentProjectsManager.resetForTesting();
     const fresh = RecentProjectsManager.getInstance();
     expect(fresh.getCount()).toBe(0);
+  });
+
+  it('switches to a different scope and reloads that scope entries', () => {
+    mockStorage.setItem(
+      'protopulse-recent-projects:scope-a',
+      JSON.stringify({ entries: [{ projectId: 1, name: 'Scope A', lastAccessedAt: 10, pinned: false }] }),
+    );
+    mockStorage.setItem(
+      'protopulse-recent-projects:scope-b',
+      JSON.stringify({ entries: [{ projectId: 2, name: 'Scope B', lastAccessedAt: 20, pinned: true }] }),
+    );
+
+    RecentProjectsManager.resetForTesting();
+    const fresh = RecentProjectsManager.getInstance();
+
+    fresh.setScope('scope-a');
+    expect(fresh.getScope()).toBe('scope-a');
+    expect(fresh.getEntries()).toHaveLength(1);
+    expect(fresh.findEntry(1)?.name).toBe('Scope A');
+
+    fresh.setScope('scope-b');
+    expect(fresh.getScope()).toBe('scope-b');
+    expect(fresh.getEntries()).toHaveLength(1);
+    expect(fresh.findEntry(2)?.name).toBe('Scope B');
+  });
+
+  it('migrates legacy recent projects into the active scoped key', () => {
+    mockStorage.setItem(
+      'protopulse-recent-projects',
+      JSON.stringify({ entries: [{ projectId: 8, name: 'Legacy', lastAccessedAt: 99, pinned: false }] }),
+    );
+    mockStorage.setItem('protopulse-session-id', 'session-88');
+
+    RecentProjectsManager.resetForTesting();
+    const fresh = RecentProjectsManager.getInstance();
+
+    expect(fresh.findEntry(8)?.name).toBe('Legacy');
+    expect(mockStorage.getItem('protopulse-recent-projects')).toBeNull();
+    expect(mockStorage.getItem('protopulse-recent-projects:session-88')).toBe(
+      JSON.stringify({
+        entries: [{ projectId: 8, name: 'Legacy', lastAccessedAt: 99, pinned: false }],
+      }),
+    );
   });
 });
 

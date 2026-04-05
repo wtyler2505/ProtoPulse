@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, useCallback, Dispatch, SetStateAction } from 'react';
-import { useIsMutating } from '@tanstack/react-query';
+import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
-import { useArchitecture } from '@/lib/contexts/architecture-context';
-import { useBom } from '@/lib/contexts/bom-context';
-import { useValidation } from '@/lib/contexts/validation-context';
-import { useHistory } from '@/lib/contexts/history-context';
-import { useOutput } from '@/lib/contexts/output-context';
-import { BomItem, ValidationIssue, ProjectHistoryItem } from '@/lib/project-context';
-import type { ViewMode } from '@/lib/project-context';
+import {
+  useArchitecture,
+  useBom,
+  useHistory,
+  useOutput,
+  useProjectId,
+  useProjectMeta,
+  useValidation,
+} from '@/lib/project-context';
+import type { BomItem, ProjectHistoryItem, ValidationIssue, ViewMode } from '@/lib/project-context';
 import type { Node, Edge } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import {
@@ -17,14 +19,22 @@ import {
   FolderOpen,
   Search,
   Pencil,
-  Cloud,
   Loader2,
+  ShieldCheck,
+  AlertTriangle,
+  History,
   ChevronLeft,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import FeatureMaturityBadge from '@/components/ui/FeatureMaturityBadge';
+import { useToast } from '@/hooks/use-toast';
 import { alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
+import { getViewFeatureMaturity } from '@/lib/feature-maturity';
+import { projectMutationKeys, projectQueryKeys, isProjectMutationKey } from '@/lib/query-keys';
+import { apiRequest } from '@/lib/queryClient';
 import {
   SIDEBAR_GROUPS,
   getNavItemsForGroup,
@@ -34,7 +44,18 @@ import {
 import { useBeginnerMode } from '@/lib/beginner-mode';
 import { useRolePreset } from '@/lib/role-presets';
 import SidebarHeader from '@/components/layout/sidebar/SidebarHeader';
+import CoachPanel from '@/components/layout/sidebar/CoachPanel';
 import ProjectSettingsPanel from '@/components/layout/sidebar/ProjectSettingsPanel';
+import {
+  getHardwareWorkspaceFactClasses,
+  getHardwareWorkspaceToneClasses,
+  useHardwareWorkspaceStatus,
+} from '@/lib/hardware-workspace-status';
+import {
+  getProjectHealthFactClasses,
+  getProjectHealthToneClasses,
+  useProjectHealth,
+} from '@/lib/project-health';
 import ProjectExplorer from './sidebar/ProjectExplorer';
 import HistoryList from './sidebar/HistoryList';
 
@@ -122,25 +143,38 @@ export default function Sidebar({ isOpen, onClose, collapsed = false, width = 25
                     <GroupIcon className="w-3 h-3" />
                   </button>
                 </StyledTooltip>
-                {!isGroupCollapsed && items.map((item) => (
-                  <StyledTooltip key={item.view} content={getLabel(item.label)} side="right">
-                    <button
-                      data-testid={`sidebar-icon-${item.view}`}
-                      className={cn(
-                        "w-8 h-8 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-                        activeView === item.view
-                          ? "text-primary bg-primary/10 shadow-[0_0_8px_rgba(6,182,212,0.2)]"
-                          : "text-muted-foreground hover:text-primary hover:bg-muted/50"
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveView(item.view);
-                      }}
+                {!isGroupCollapsed && items.map((item) => {
+                  const maturity = getViewFeatureMaturity(item.view);
+                  return (
+                    <StyledTooltip
+                      key={item.view}
+                      content={maturity ? (
+                        <div className="space-y-1">
+                          <p>{getLabel(item.label)}</p>
+                          <FeatureMaturityBadge maturity={maturity.maturity} label={maturity.shortLabel} className="pointer-events-none" />
+                          <p className="max-w-[220px] text-[11px] text-muted-foreground">{maturity.description}</p>
+                        </div>
+                      ) : getLabel(item.label)}
+                      side="right"
                     >
-                      <item.icon className="w-4 h-4" />
-                    </button>
-                  </StyledTooltip>
-                ))}
+                      <button
+                        data-testid={`sidebar-icon-${item.view}`}
+                        className={cn(
+                          'w-8 h-8 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background',
+                          activeView === item.view
+                            ? 'text-primary bg-primary/10 shadow-[0_0_8px_rgba(6,182,212,0.2)]'
+                            : 'text-muted-foreground hover:text-primary hover:bg-muted/50',
+                        )}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveView(item.view);
+                        }}
+                      >
+                        <item.icon className="w-4 h-4" />
+                      </button>
+                    </StyledTooltip>
+                  );
+                })}
               </div>
             );
           })}
@@ -409,28 +443,41 @@ function SidebarContent({
                 </div>
                 {!isGroupCollapsed && (
                   <div className="space-y-0.5">
-                    {items.map((item) => (
-                      <button
-                        key={item.view}
-                        data-testid={`sidebar-nav-${item.view}`}
-                        className={cn(
-                          "w-full px-4 pl-10 py-1 flex items-center gap-2 text-xs transition-colors",
-                          activeView === item.view
-                            ? "text-primary bg-primary/10"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                        onClick={() => setActiveView(item.view)}
-                      >
-                        <item.icon className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{getLabel(item.label)}</span>
-                      </button>
-                    ))}
+                    {items.map((item) => {
+                      const maturity = getViewFeatureMaturity(item.view);
+                      return (
+                        <button
+                          key={item.view}
+                          data-testid={`sidebar-nav-${item.view}`}
+                          className={cn(
+                            'w-full px-4 pl-10 py-1 flex items-center gap-2 text-xs transition-colors',
+                            activeView === item.view
+                              ? 'text-primary bg-primary/10'
+                              : 'text-muted-foreground hover:text-foreground hover:bg-muted/30',
+                          )}
+                          onClick={() => setActiveView(item.view)}
+                        >
+                          <item.icon className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate flex-1 text-left">{getLabel(item.label)}</span>
+                          {maturity && (
+                            <FeatureMaturityBadge
+                              maturity={maturity.maturity}
+                              label={maturity.shortLabel}
+                              className="ml-auto shrink-0"
+                              data-testid={`sidebar-maturity-${item.view}`}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
             );
           })}
         </div>
+
+        <CoachPanel />
 
         <HistoryList
           history={history}
@@ -461,7 +508,13 @@ function SidebarContent({
 // ---------------------------------------------------------------------------
 
 function SaveStatusIndicator() {
-  const mutatingCount = useIsMutating();
+  const projectId = useProjectId();
+  const { setActiveView } = useProjectMeta();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const mutatingCount = useIsMutating({
+    predicate: (mutation) => isProjectMutationKey(mutation.options.mutationKey, projectId),
+  });
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const prevMutating = useRef(0);
 
@@ -473,31 +526,161 @@ function SaveStatusIndicator() {
     prevMutating.current = mutatingCount;
   }, [mutatingCount]);
 
-  const formatTime = (date: Date): string => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  const health = useProjectHealth(projectId, {
+    isSaving: mutatingCount > 0,
+    lastSavedAt,
+  });
+  const hardwareStatus = useHardwareWorkspaceStatus();
+  const createRestorePointMutation = useMutation({
+    mutationKey: projectMutationKeys.designSnapshots(projectId),
+    mutationFn: async () => {
+      const now = new Date();
+      const datePart = now.toLocaleDateString([], {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      });
+      const timePart = now.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const response = await apiRequest('POST', `/api/projects/${projectId}/snapshots`, {
+        name: `Recovery checkpoint - ${datePart} ${timePart}`,
+        description: 'Quick restore point created from the workspace health panel.',
+      });
+
+      return response.json() as Promise<{ id: number; name: string }>;
+    },
+    onSuccess: async (snapshot) => {
+      await queryClient.invalidateQueries({ queryKey: projectQueryKeys.designSnapshots(projectId) });
+      toast({
+        title: 'Restore point saved',
+        description: `"${snapshot.name}" is now available in Design History.`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to save restore point',
+        description: error.message,
+      });
+    },
+  });
+
+  const StatusIcon = health.isSaving
+    ? Loader2
+    : health.tone === 'warning'
+      ? AlertTriangle
+      : health.tone === 'recovery'
+        ? History
+        : ShieldCheck;
 
   return (
     <div
-      data-testid="save-status-indicator"
-      className="px-4 py-2 border-t border-sidebar-border flex items-center gap-1.5 text-[10px] text-muted-foreground"
+      data-testid="project-health-indicator"
+      className="px-4 py-2.5 border-t border-sidebar-border space-y-1.5"
     >
-      {mutatingCount > 0 ? (
-        <>
-          <Loader2 className="w-3 h-3 animate-spin text-primary" />
-          <span>Saving changes...</span>
-        </>
-      ) : lastSavedAt ? (
-        <>
-          <Cloud className="w-3 h-3 text-emerald-400" />
-          <span>Last saved at {formatTime(lastSavedAt)}</span>
-        </>
-      ) : (
-        <>
-          <Cloud className="w-3 h-3" />
-          <span>All changes saved</span>
-        </>
-      )}
+      <div className="flex items-center gap-1.5 text-[10px] text-foreground">
+        <span
+          data-testid="project-health-badge"
+          className={cn(
+            'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium',
+            getProjectHealthToneClasses(health.tone),
+          )}
+        >
+          <StatusIcon className={cn('w-3 h-3', health.isSaving && 'animate-spin')} />
+          <span>{health.badgeLabel}</span>
+        </span>
+        <span data-testid="project-health-summary" className="truncate">
+          {health.summary}
+        </span>
+      </div>
+      <p data-testid="project-health-detail" className="pl-[18px] text-[10px] leading-relaxed text-muted-foreground">
+        {health.detail}
+      </p>
+      <div className="pl-[18px] flex flex-wrap gap-1">
+        {health.facts.map((fact) => (
+          <span
+            key={fact.id}
+            data-testid={`project-health-fact-${fact.id}`}
+            className={cn(
+              'inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+              getProjectHealthFactClasses(fact.tone),
+            )}
+          >
+            {fact.label}
+          </span>
+        ))}
+      </div>
+      <div
+        data-testid="hardware-status-indicator"
+        className="pl-[18px] mt-2 space-y-1.5"
+      >
+        <div className="flex items-center gap-1.5 text-[10px] text-foreground">
+          <span
+            data-testid="hardware-status-badge"
+            className={cn(
+              'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium',
+              getHardwareWorkspaceToneClasses(hardwareStatus.tone),
+            )}
+          >
+            <span>{hardwareStatus.badgeLabel}</span>
+          </span>
+          <span data-testid="hardware-status-summary" className="truncate">
+            {hardwareStatus.summary}
+          </span>
+        </div>
+        <p data-testid="hardware-status-detail" className="text-[10px] leading-relaxed text-muted-foreground">
+          {hardwareStatus.detail}
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {hardwareStatus.facts.map((fact) => (
+            <span
+              key={fact.id}
+              data-testid={`hardware-status-fact-${fact.id}`}
+              className={cn(
+                'inline-flex items-center rounded-full border px-1.5 py-0.5 text-[9px] font-medium',
+                getHardwareWorkspaceFactClasses(fact.tone),
+              )}
+            >
+              {fact.label}
+            </span>
+          ))}
+        </div>
+        <div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            data-testid="hardware-status-action"
+            className="h-7 px-2 text-[10px] font-medium text-primary hover:text-primary"
+            onClick={() => setActiveView(hardwareStatus.actionView)}
+          >
+            {hardwareStatus.actionLabel}
+          </Button>
+        </div>
+      </div>
+      <div className="pl-[18px]">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="project-health-action"
+          className="h-7 px-2 text-[10px] font-medium text-primary hover:text-primary"
+          disabled={createRestorePointMutation.isPending}
+          onClick={() => {
+            if (health.actionMode === 'createSnapshot') {
+              createRestorePointMutation.mutate();
+              return;
+            }
+
+            setActiveView('design_history');
+          }}
+        >
+          {createRestorePointMutation.isPending ? 'Saving restore point...' : health.actionLabel}
+        </Button>
+      </div>
     </div>
   );
 }

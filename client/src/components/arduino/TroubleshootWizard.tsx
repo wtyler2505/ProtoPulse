@@ -74,6 +74,9 @@ export default function TroubleshootWizard({
     () => getCurrentStep(wizardState),
     [wizardState],
   );
+  const hasPreflightContext = Boolean(
+    context.detectedDeviceLabel || context.arduinoProfileLabel || context.boardSafetyLabel,
+  );
 
   const progress = useMemo(() => getProgress(wizardState), [wizardState]);
   const remaining = useMemo(
@@ -252,6 +255,42 @@ export default function TroubleshootWizard({
 
       {/* Current Step */}
       <div className="space-y-2">
+        {hasPreflightContext && (
+          <div
+            data-testid="troubleshoot-preflight-summary"
+            className={cn(
+              'rounded border p-2 text-xs',
+              context.boardBlockerReason
+                ? 'border-yellow-500/20 bg-yellow-500/5'
+                : 'border-border bg-muted/20',
+            )}
+          >
+            <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+              Current hardware truth
+            </div>
+            <div className="grid gap-1 sm:grid-cols-3">
+              <div>
+                <span className="text-muted-foreground">Detected device:</span>{' '}
+                <span className="text-foreground">{context.detectedDeviceLabel ?? 'Unknown'}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Arduino profile:</span>{' '}
+                <span className="text-foreground">{context.arduinoProfileLabel ?? 'None'}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Board safety:</span>{' '}
+                <span className="text-foreground">{context.boardSafetyLabel ?? 'Not checked'}</span>
+              </div>
+            </div>
+            {context.boardBlockerReason && (
+              <div className="mt-1.5 flex items-start gap-1.5 text-yellow-300">
+                <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
+                <span>{context.boardBlockerReason}</span>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center gap-1.5">
           <CatIcon className={cn('w-3.5 h-3.5', cat.color)} />
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">

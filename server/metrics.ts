@@ -90,6 +90,17 @@ const NORMALIZATION_RULES: Array<{ pattern: RegExp; replacement: string }> = [
   { pattern: /\/api\/projects\/\d+\/circuits/g, replacement: '/api/projects/:id/circuits' },
 
   // Project sub-resources
+  { pattern: /\/api\/projects\/\d+\/agent/g, replacement: '/api/projects/:id/agent' },
+  { pattern: /\/api\/projects\/\d+\/arduino\/jobs\/\d+\/artifact/g, replacement: '/api/projects/:id/arduino/jobs/:jobId/artifact' },
+  { pattern: /\/api\/projects\/\d+\/arduino\/jobs\/\d+\/memory/g, replacement: '/api/projects/:id/arduino/jobs/:jobId/memory' },
+  { pattern: /\/api\/projects\/\d+\/arduino\/jobs\/\d+\/cancel/g, replacement: '/api/projects/:id/arduino/jobs/:jobId/cancel' },
+  { pattern: /\/api\/projects\/\d+\/arduino\/jobs\/\d+\/stream/g, replacement: '/api/projects/:id/arduino/jobs/:jobId/stream' },
+  { pattern: /\/api\/projects\/\d+\/arduino\/jobs\/\d+/g, replacement: '/api/projects/:id/arduino/jobs/:jobId' },
+  { pattern: /\/api\/projects\/\d+\/arduino\/jobs\/(?:compile|upload)/g, replacement: '/api/projects/:id/arduino/jobs/:action' },
+  { pattern: /\/api\/projects\/\d+\/arduino\/jobs/g, replacement: '/api/projects/:id/arduino/jobs' },
+  { pattern: /\/api\/projects\/\d+\/arduino\/serial\/[^/]+\/close/g, replacement: '/api/projects/:id/arduino/serial/:sessionId/close' },
+  { pattern: /\/api\/projects\/\d+\/firmware\/simulate\/[^/]+\/(?:events|status|reset|stop)/g, replacement: '/api/projects/:id/firmware/simulate/:sessionId/:action' },
+  { pattern: /\/api\/projects\/\d+\/firmware\/simulate/g, replacement: '/api/projects/:id/firmware/simulate' },
   { pattern: /\/api\/projects\/\d+\/bom\/\d+/g, replacement: '/api/projects/:id/bom/:bomId' },
   { pattern: /\/api\/projects\/\d+\/bom/g, replacement: '/api/projects/:id/bom' },
   { pattern: /\/api\/projects\/\d+\/nodes\/\d+/g, replacement: '/api/projects/:id/nodes/:nodeId' },
@@ -155,6 +166,7 @@ const routeMetrics = new Map<string, LatencyHistogram>();
 let eventLoopHistogram: IntervalHistogram | null = null;
 let flushTimer: ReturnType<typeof setInterval> | null = null;
 let processTimer: ReturnType<typeof setInterval> | null = null;
+let persistedMetricsLoaded = false;
 let latestProcessMetrics: ProcessMetrics = {
   memory: { rss: 0, heapUsed: 0, heapTotal: 0 },
   eventLoop: { p50Ms: 0, p95Ms: 0, p99Ms: 0 },
@@ -317,6 +329,8 @@ async function loadFromDisk(): Promise<void> {
     }
   } catch {
     // File doesn't exist or is corrupt — start fresh
+  } finally {
+    persistedMetricsLoaded = true;
   }
 }
 
@@ -349,8 +363,14 @@ export async function flushMetrics(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export function startMetricsCollection(): void {
+  if (eventLoopHistogram || flushTimer || processTimer) {
+    return;
+  }
+
   // Load persisted metrics from previous run
-  void loadFromDisk();
+  if (!persistedMetricsLoaded) {
+    void loadFromDisk();
+  }
 
   // Start event loop delay monitoring
   eventLoopHistogram = monitorEventLoopDelay({ resolution: 20 });
@@ -389,6 +409,7 @@ export function stopMetricsCollection(): void {
  */
 export function _resetForTesting(): void {
   routeMetrics.clear();
+  persistedMetricsLoaded = false;
   latestProcessMetrics = {
     memory: { rss: 0, heapUsed: 0, heapTotal: 0 },
     eventLoop: { p50Ms: 0, p95Ms: 0, p99Ms: 0 },

@@ -60,6 +60,8 @@ export class ArduinoService {
   private runningProcesses = new Map<number, ReturnType<typeof spawn>>();
   /** Tracks active SSE streams by job ID. */
   private jobStreams = new Map<number, JobStream>();
+  /** Deduplicates concurrent workspace bootstrap calls per project. */
+  private workspaceEnsures = new Map<number, Promise<ArduinoWorkspace>>();
 
   constructor(private storage: IStorage) {
     this.config = {
@@ -91,16 +93,34 @@ export class ArduinoService {
 
   /** Get or create a workspace root for a project. */
   async ensureWorkspace(projectId: number): Promise<ArduinoWorkspace> {
-    const existing = await this.storage.getArduinoWorkspace(projectId);
-    if (existing) return existing;
+    const inflight = this.workspaceEnsures.get(projectId);
+    if (inflight) {
+      return await inflight;
+    }
 
-    const rootPath = resolve(join(this.config.sketchRoot, `project_${projectId}`));
-    await fs.mkdir(rootPath, { recursive: true });
+    const ensurePromise = (async () => {
+      const existing = await this.storage.getArduinoWorkspace(projectId);
+      if (existing) {
+        // A workspace row can outlive its directory. Heal the filesystem on read.
+        await fs.mkdir(existing.rootPath, { recursive: true });
+        return existing;
+      }
 
-    return await this.storage.createArduinoWorkspace({
-      projectId,
-      rootPath,
-    });
+      const rootPath = resolve(join(this.config.sketchRoot, `project_${projectId}`));
+      await fs.mkdir(rootPath, { recursive: true });
+
+      return await this.storage.createArduinoWorkspace({
+        projectId,
+        rootPath,
+      });
+    })();
+
+    this.workspaceEnsures.set(projectId, ensurePromise);
+    try {
+      return await ensurePromise;
+    } finally {
+      this.workspaceEnsures.delete(projectId);
+    }
   }
 
   /** Resolve a relative path within the workspace root, rejecting path traversal attempts. */
@@ -118,6 +138,7 @@ export class ArduinoService {
     const workspaces = await this.storage.getArduinoWorkspaces();
     const ws = workspaces.find(w => w.id === workspaceId);
     if (!ws) throw new Error(`Workspace ${workspaceId} not found`);
+    await fs.mkdir(ws.rootPath, { recursive: true });
 
     const scan = async (dir: string, relative: string = '') => {
       const entries = await fs.readdir(dir, { withFileTypes: true });

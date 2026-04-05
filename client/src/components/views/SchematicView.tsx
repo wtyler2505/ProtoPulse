@@ -1,10 +1,17 @@
 import { useState, useCallback } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
-import { useCircuitDesigns, useCircuitInstances, useCreateCircuitDesign, useExpandArchitecture, usePushToPcb } from '@/lib/circuit-editor/hooks';
+import {
+  useCircuitDesigns,
+  useCircuitInstances,
+  useCreateCircuitDesign,
+  useExpandArchitecture,
+  useGenerateCircuitWithAi,
+  usePushToPcb,
+} from '@/lib/circuit-editor/hooks';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,8 +22,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Plus, Loader2, CircuitBoard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Cpu, Zap, ShieldCheck, GitBranchPlus, FileStack, RefreshCw, ChevronUp, ArrowLeft, History, ArrowRightToLine } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Plus, Loader2, CircuitBoard, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Cpu, Zap, ShieldCheck, GitBranchPlus, FileStack, RefreshCw, ChevronUp, History, ArrowRightToLine, Wand2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { CircuitAiExactPartWorkflow } from '@shared/circuit-ai-types';
 import type { CircuitDesignRow } from '@shared/schema';
 import type { ERCViolation } from '@shared/circuit-types';
 import { SchematicCanvasInner } from '@/components/circuit-editor/SchematicCanvas';
@@ -30,9 +41,9 @@ import { useToast } from '@/hooks/use-toast';
 function SchematicViewContent() {
   const projectId = useProjectId();
   const { data: circuits, isLoading, isError, error, refetch } = useCircuitDesigns(projectId);
-  const { setActiveView } = useProjectMeta();
   const createMutation = useCreateCircuitDesign();
   const expandMutation = useExpandArchitecture();
+  const generateAiMutation = useGenerateCircuitWithAi();
   const pushToPcbMutation = usePushToPcb();
   const { toast } = useToast();
   const [activeCircuitId, setActiveCircuitId] = useState<number | null>(null);
@@ -43,6 +54,10 @@ function SchematicViewContent() {
   const [highlightedViolationId, setHighlightedViolationId] = useState<string | null>(null);
   const [currentSimConfig, setCurrentSimConfig] = useState<Record<string, unknown>>({ analysisType: 'op' });
   const [pushDialogOpen, setPushDialogOpen] = useState(false);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiApiKey, setAiApiKey] = useState('');
+  const [aiWorkflow, setAiWorkflow] = useState<CircuitAiExactPartWorkflow | null>(null);
 
   const activeCircuit = circuits?.find(c => c.id === activeCircuitId) ?? circuits?.[0] ?? null;
 
@@ -91,6 +106,34 @@ function SchematicViewContent() {
       });
     }
   }, [activeCircuit, pushToPcbMutation, toast]);
+
+  const handleGenerateWithAi = useCallback(async () => {
+    if (!activeCircuit || aiPrompt.trim().length === 0 || aiApiKey.trim().length === 0) {
+      return;
+    }
+
+    try {
+      const result = await generateAiMutation.mutateAsync({
+        circuitId: activeCircuit.id,
+        description: aiPrompt.trim(),
+        apiKey: aiApiKey.trim(),
+      });
+      setAiWorkflow(result.exactPartWorkflow ?? null);
+      setAiDialogOpen(false);
+      toast({
+        title: result.exactPartWorkflow?.authoritativeWiringAllowed
+          ? 'AI schematic generated'
+          : 'AI schematic generated provisionally',
+        description: result.exactPartWorkflow?.summary ?? result.message,
+      });
+    } catch (err) {
+      toast({
+        title: 'AI schematic generation failed',
+        description: err instanceof Error ? err.message : 'Unknown error',
+        variant: 'destructive',
+      });
+    }
+  }, [activeCircuit, aiApiKey, aiPrompt, generateAiMutation, toast]);
 
   if (isLoading) {
     return (
@@ -215,6 +258,21 @@ function SchematicViewContent() {
         <Button
           variant="ghost"
           size="sm"
+          data-testid="button-open-ai-generate"
+          onClick={() => setAiDialogOpen(true)}
+          disabled={!activeCircuit}
+          className={cn(
+            'h-7 gap-1 text-muted-foreground hover:text-foreground',
+            aiWorkflow && !aiWorkflow.authoritativeWiringAllowed && 'text-amber-300 hover:text-amber-200',
+          )}
+          title={!activeCircuit ? 'Select a circuit first' : 'Generate schematic content with AI'}
+        >
+          <Wand2 className="w-3.5 h-3.5" />
+          <span className="text-xs">AI Generate</span>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           data-testid="button-push-to-pcb"
           onClick={() => setPushDialogOpen(true)}
           disabled={!activeCircuit || !instances || instances.length === 0 || unplacedInstances.length === 0 || pushToPcbMutation.isPending}
@@ -249,6 +307,98 @@ function SchematicViewContent() {
           )}
         </Button>
       </div>
+
+      {aiWorkflow ? (
+        <div
+          className={cn(
+            'border-b px-3 py-2 text-xs',
+            aiWorkflow.authoritativeWiringAllowed
+              ? 'border-emerald-500/30 bg-emerald-500/10'
+              : 'border-amber-500/30 bg-amber-500/10',
+          )}
+          data-testid="schematic-ai-workflow-banner"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant={aiWorkflow.authoritativeWiringAllowed ? 'default' : 'outline'}
+                  data-testid="schematic-ai-workflow-badge"
+                  className={aiWorkflow.authoritativeWiringAllowed ? 'bg-emerald-500 text-black hover:bg-emerald-400' : 'border-amber-300/60 text-amber-100'}
+                >
+                  {aiWorkflow.authoritativeWiringAllowed ? 'Authoritative exact workflow' : 'Provisional exact workflow'}
+                </Badge>
+                <span className="text-[11px] text-muted-foreground">
+                  {aiWorkflow.usedParts.length} placed part{aiWorkflow.usedParts.length === 1 ? '' : 's'} tracked
+                </span>
+              </div>
+              <p
+                className={cn(
+                  'max-w-5xl leading-relaxed',
+                  aiWorkflow.authoritativeWiringAllowed ? 'text-emerald-100' : 'text-amber-50',
+                )}
+                data-testid="schematic-ai-workflow-summary"
+              >
+                {aiWorkflow.summary}
+              </p>
+              {aiWorkflow.requestedExactParts.length > 0 ? (
+                <div className="space-y-1" data-testid="schematic-ai-requested-exact-parts">
+                  {aiWorkflow.requestedExactParts.map((intent) => (
+                    <div key={`${intent.title}-${intent.kind}`} className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          'border-white/10',
+                          intent.kind === 'verified-match'
+                            ? 'text-emerald-100'
+                            : intent.kind === 'candidate-match'
+                              ? 'text-amber-100'
+                              : 'text-muted-foreground',
+                        )}
+                      >
+                        {intent.title}
+                      </Badge>
+                      <span className="text-muted-foreground">{intent.message}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {aiWorkflow.usedParts.length > 0 ? (
+                <div className="flex flex-wrap gap-2" data-testid="schematic-ai-used-parts">
+                  {aiWorkflow.usedParts.map((usage) => (
+                    <Badge
+                      key={`${usage.referenceDesignator}-${usage.partId}`}
+                      variant="outline"
+                      className="border-white/10 text-foreground"
+                    >
+                      {usage.referenceDesignator}: {usage.title} ({usage.placementMode})
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
+              {aiWorkflow.warnings.length > 0 ? (
+                <div className="space-y-1" data-testid="schematic-ai-workflow-warnings">
+                  {aiWorkflow.warnings.slice(0, 3).map((warning) => (
+                    <div key={warning} className="flex items-start gap-2 text-amber-100">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <span>{warning}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              data-testid="button-dismiss-ai-workflow-banner"
+              onClick={() => setAiWorkflow(null)}
+              className="h-7 text-muted-foreground hover:text-foreground"
+            >
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="flex-1 flex overflow-hidden">
         {partsPanel && activeCircuit && (
@@ -397,6 +547,65 @@ function SchematicViewContent() {
           </p>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+        <DialogContent className="sm:max-w-2xl bg-card border-border" data-testid="dialog-ai-generate-circuit">
+          <DialogHeader>
+            <DialogTitle>Generate schematic with AI</DialogTitle>
+            <DialogDescription>
+              Ask ProtoPulse to place parts and connect a starting schematic. Exact board/module requests will be checked against the verified exact-part pipeline before the result is marked authoritative.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="ai-generate-description" className="text-sm font-medium text-foreground">
+                Circuit request
+              </label>
+              <Textarea
+                id="ai-generate-description"
+                data-testid="textarea-ai-generate-description"
+                placeholder="Example: Add an Arduino Mega 2560 R3, a RioRand motor controller, and the power wiring needed for a first-pass bench test."
+                value={aiPrompt}
+                onChange={(event) => setAiPrompt(event.target.value)}
+                className="min-h-[140px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="ai-generate-api-key" className="text-sm font-medium text-foreground">
+                Gemini API key
+              </label>
+              <Input
+                id="ai-generate-api-key"
+                data-testid="input-ai-generate-api-key"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Paste a Gemini API key for this generation run"
+                value={aiApiKey}
+                onChange={(event) => setAiApiKey(event.target.value)}
+              />
+            </div>
+            <div
+              className="rounded-lg border border-border/70 bg-muted/30 p-3 text-xs text-muted-foreground"
+              data-testid="ai-generate-exact-part-note"
+            >
+              Verified exact boards/modules can unlock authoritative wiring. Candidate exact boards/modules can still be placed, but ProtoPulse will flag the result as provisional until the part is reviewed.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAiDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              data-testid="button-ai-generate-submit"
+              onClick={() => void handleGenerateWithAi()}
+              disabled={generateAiMutation.isPending || aiPrompt.trim().length === 0 || aiApiKey.trim().length === 0 || !activeCircuit}
+            >
+              {generateAiMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+              Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -48,9 +48,10 @@ describe('getSupportedPrecheckFormats', () => {
     expect(formats).toContain('firmware');
   });
 
-  it('includes all 17 registered formats', () => {
+  it('includes all 18 registered formats', () => {
     const formats = getSupportedPrecheckFormats();
-    expect(formats).toHaveLength(17);
+    expect(formats).toHaveLength(18);
+    expect(formats).toContain('fab-package');
   });
 });
 
@@ -157,6 +158,31 @@ describe('gerber precheck', () => {
   it('includes 4 checks', () => {
     const result = runExportPrecheck('gerber', makeData());
     expect(result.checks).toHaveLength(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Fab package format
+// ---------------------------------------------------------------------------
+
+describe('fab-package precheck', () => {
+  it('passes with full data', () => {
+    const result = runExportPrecheck('fab-package', makeData());
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'PCB Layout', 'pass')).toBe(true);
+    expect(hasCheckWithStatus(result, 'BOM Items', 'pass')).toBe(true);
+  });
+
+  it('fails without PCB layout', () => {
+    const result = runExportPrecheck('fab-package', makeData({ hasPcbLayout: false }));
+    expect(result.passed).toBe(false);
+    expect(hasCheckWithStatus(result, 'PCB Layout', 'fail')).toBe(true);
+  });
+
+  it('warns when part numbers are missing', () => {
+    const result = runExportPrecheck('fab-package', makeData({ bomItemsWithPartNumber: 2 }));
+    expect(result.passed).toBe(true);
+    expect(hasCheckWithStatus(result, 'Part Numbers', 'warn')).toBe(true);
   });
 });
 

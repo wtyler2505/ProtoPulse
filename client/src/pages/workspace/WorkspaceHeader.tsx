@@ -1,18 +1,27 @@
 import { useState, useCallback, useRef, useEffect, useMemo, Suspense } from 'react';
+import { useIsMutating } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Upload, GraduationCap, CircuitBoard, Activity } from 'lucide-react';
 import ThemeToggle from '@/components/ui/theme-toggle';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
+import FeatureMaturityBadge from '@/components/ui/FeatureMaturityBadge';
+import RolePresetSelector from '@/components/ui/RolePresetSelector';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { navItems, tabDescriptions, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
-import { useArchitecture } from '@/lib/contexts/architecture-context';
-import { useBom } from '@/lib/contexts/bom-context';
-import { useValidation } from '@/lib/contexts/validation-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
-import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useBeginnerMode } from '@/lib/beginner-mode';
+import { getViewFeatureMaturity } from '@/lib/feature-maturity';
+import { useArchitecture, useBom, useProjectId, useProjectMeta, useValidation } from '@/lib/project-context';
+import {
+  getHardwareWorkspaceFactClasses,
+  getHardwareWorkspaceToneClasses,
+  useHardwareWorkspaceStatus,
+} from '@/lib/hardware-workspace-status';
+import { useRolePreset } from '@/lib/role-presets';
 import { useToast } from '@/hooks/use-toast';
 import type { ViewMode } from '@/lib/project-context';
 import type { WorkspaceState, WorkspaceAction } from './workspace-reducer';
+import { getProjectHealthToneClasses, useProjectHealth } from '@/lib/project-health';
+import { isProjectMutationKey } from '@/lib/query-keys';
 import {
   TutorialMenu,
   ExplainPanelButton,
@@ -99,10 +108,17 @@ interface WorkspaceHeaderProps {
 export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: WorkspaceHeaderProps) {
   const projectId = useProjectId();
   const { projectName } = useProjectMeta();
+  const { preset } = useRolePreset();
+  const { isEnabled: plainLabelsEnabled, toggle: togglePlainLabels } = useBeginnerMode();
   const { nodes, edges, setNodes, setEdges, pushUndoState } = useArchitecture();
   const { bom, addBomItem } = useBom();
   const { issues } = useValidation();
   const { toast } = useToast();
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const previousMutating = useRef(0);
+  const mutatingCount = useIsMutating({
+    predicate: (mutation) => isProjectMutationKey(mutation.options.mutationKey, projectId),
+  });
 
   /* UI-18: Progressive disclosure — hide advanced tabs until prerequisite content exists. */
   const hasDesignContent = (nodes ?? []).length > 0;
@@ -115,6 +131,19 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
   const validationErrorCount = (issues ?? []).filter(i => i.severity === 'error').length;
   const validationWarningCount = (issues ?? []).filter(i => i.severity === 'warning').length;
   const bomCount = (bom ?? []).length;
+
+  useEffect(() => {
+    if (previousMutating.current > 0 && mutatingCount === 0) {
+      setLastSavedAt(new Date());
+    }
+    previousMutating.current = mutatingCount;
+  }, [mutatingCount]);
+
+  const health = useProjectHealth(projectId, {
+    isSaving: mutatingCount > 0,
+    lastSavedAt,
+  });
+  const hardwareStatus = useHardwareWorkspaceStatus();
 
   const handleImportDesign = useCallback(() => {
     const input = document.createElement('input');
@@ -215,8 +244,20 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
 
       {/* AS-05 + RS-09: Scrollable tab bar with fade indicators */}
       <ScrollableTabBar>
-        {visibleTabs.map((tab) => (
-          <StyledTooltip key={tab.view} content={tabDescriptions[tab.view] || tab.label} side="bottom">
+        {visibleTabs.map((tab) => {
+          const maturity = getViewFeatureMaturity(tab.view);
+          return (
+            <StyledTooltip
+              key={tab.view}
+              content={maturity ? (
+                <div className="space-y-1">
+                  <p>{tabDescriptions[tab.view] || tab.label}</p>
+                  <FeatureMaturityBadge maturity={maturity.maturity} label={maturity.shortLabel} className="pointer-events-none" />
+                  <p className="max-w-[220px] text-[11px] text-muted-foreground">{maturity.description}</p>
+                </div>
+              ) : (tabDescriptions[tab.view] || tab.label)}
+              side="bottom"
+            >
             <button
               role="tab"
               id={`tab-${tab.view}`}
@@ -251,8 +292,9 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
                 </span>
               )}
             </button>
-          </StyledTooltip>
-        ))}
+            </StyledTooltip>
+          );
+        })}
       </ScrollableTabBar>
 
       <div className="border-b border-border h-full w-2 shrink-0"></div>
@@ -270,6 +312,106 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
       </StyledTooltip>
 
       <div className="ml-2 flex items-center gap-1">
+        <StyledTooltip
+          content={(
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">{hardwareStatus.summary}</p>
+              <p className="max-w-[260px] text-[11px] leading-relaxed text-muted-foreground">{hardwareStatus.detail}</p>
+              <div className="flex flex-wrap gap-1">
+                {hardwareStatus.facts.map((fact) => (
+                  <span
+                    key={fact.id}
+                    className={cn(
+                      'inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium',
+                      getHardwareWorkspaceFactClasses(fact.tone),
+                    )}
+                  >
+                    {fact.label}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[10px] font-medium text-primary">{hardwareStatus.actionLabel}</p>
+            </div>
+          )}
+          side="bottom"
+        >
+          <button
+            type="button"
+            data-testid="workspace-hardware-badge"
+            aria-label={hardwareStatus.actionLabel}
+            onClick={() => setActiveView(hardwareStatus.actionView)}
+            className={cn(
+              'inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              getHardwareWorkspaceToneClasses(hardwareStatus.tone),
+            )}
+          >
+            {hardwareStatus.badgeLabel}
+          </button>
+        </StyledTooltip>
+        <StyledTooltip
+          content={(
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-foreground">{health.summary}</p>
+              <p className="max-w-[260px] text-[11px] leading-relaxed text-muted-foreground">{health.detail}</p>
+              <div className="flex flex-wrap gap-1">
+                {health.facts.map((fact) => (
+                  <span
+                    key={fact.id}
+                    className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-1.5 py-0.5 text-[10px] font-medium text-foreground"
+                  >
+                    {fact.label}
+                  </span>
+                ))}
+              </div>
+              <p className="text-[10px] font-medium text-primary">{health.actionLabel}</p>
+            </div>
+          )}
+          side="bottom"
+        >
+          <button
+            type="button"
+            data-testid="workspace-health-badge"
+            aria-label="Open Design History"
+            onClick={() => setActiveView('design_history')}
+            className={cn(
+              'inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-medium transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              getProjectHealthToneClasses(health.tone),
+            )}
+          >
+            {health.badgeLabel}
+          </button>
+        </StyledTooltip>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              data-testid="workspace-mode-button"
+              className="inline-flex items-center gap-2 rounded-sm border border-border/60 bg-muted/20 px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <GraduationCap className="h-4 w-4" />
+              <span>{preset.label} Mode</span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 space-y-3" align="end">
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">Workspace Mode</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">{preset.description}</p>
+            </div>
+            <RolePresetSelector className="flex-wrap bg-background/60" />
+            <button
+              data-testid="workspace-plain-labels-toggle"
+              type="button"
+              onClick={togglePlainLabels}
+              className={cn(
+                'w-full rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors',
+                plainLabelsEnabled
+                  ? 'border-primary/30 bg-primary/10 text-primary'
+                  : 'border-border bg-background/60 text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {plainLabelsEnabled ? 'Plain-language labels are on' : 'Use plain-language labels'}
+            </button>
+          </PopoverContent>
+        </Popover>
         <Suspense fallback={null}>
           <ExplainPanelButton view={activeView} onNavigate={setActiveView} />
         </Suspense>
@@ -284,12 +426,13 @@ export function WorkspaceHeader({ ws, dispatch, activeView, setActiveView }: Wor
         </StyledTooltip>
         <Popover>
           <PopoverTrigger asChild>
-            <StyledTooltip content="Tutorials" side="bottom">
+            <StyledTooltip content="Coach and tutorials" side="bottom">
               <button
-                data-testid="tutorials-button"
-                className="p-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                data-testid="coach-help-button"
+                className="inline-flex items-center gap-2 rounded-sm px-2.5 py-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <GraduationCap className="w-4 h-4" />
+                <span>Coach &amp; Help</span>
               </button>
             </StyledTooltip>
           </PopoverTrigger>

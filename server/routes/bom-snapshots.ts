@@ -50,11 +50,11 @@ export function registerBomSnapshotRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);
-      const snapshot = await storage.getBomSnapshot(snapshotId);
-      if (!snapshot || snapshot.projectId !== projectId) {
+      const snapshot = await storage.getBomSnapshot(projectId, snapshotId);
+      if (!snapshot) {
         return res.status(404).json({ message: 'BOM snapshot not found' });
       }
-      const deleted = await storage.deleteBomSnapshot(snapshotId);
+      const deleted = await storage.deleteBomSnapshot(projectId, snapshotId);
       if (!deleted) {
         return res.status(404).json({ message: 'BOM snapshot not found' });
       }
@@ -74,8 +74,8 @@ export function registerBomSnapshotRoutes(app: Express): void {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
 
-      const snapshot = await storage.getBomSnapshot(parsed.data.snapshotId);
-      if (!snapshot || snapshot.projectId !== projectId) {
+      const snapshot = await storage.getBomSnapshot(projectId, parsed.data.snapshotId);
+      if (!snapshot) {
         return res.status(404).json({ message: 'BOM snapshot not found' });
       }
 

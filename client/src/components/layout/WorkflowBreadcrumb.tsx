@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useProjectMeta } from '@/lib/project-context';
 import { useI18n } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import type { ViewMode } from '@/lib/project-context';

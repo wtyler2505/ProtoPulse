@@ -64,6 +64,14 @@ export interface SerialContext {
   hasGarbledData: boolean;
   /** Board profile label selected in the serial monitor, if any. */
   selectedBoard?: string;
+  /** Human-readable connected device label from preflight. */
+  detectedDeviceLabel?: string;
+  /** Human-readable Arduino profile label from preflight. */
+  arduinoProfileLabel?: string;
+  /** Human-readable board safety label from preflight. */
+  boardSafetyLabel?: string;
+  /** Optional blocker/mismatch reason from preflight. */
+  boardBlockerReason?: string | null;
 }
 
 /** Summary diagnosis returned after completing all steps. */
@@ -452,8 +460,8 @@ export function buildStepOrder(context: SerialContext): string[] {
       return false;
     }
 
-    // If a board profile is selected, skip the board-selection step
-    if (context.selectedBoard && step.id === 'board-selection') {
+    // If a board profile is selected and there is no detected mismatch, skip the board-selection step
+    if (context.selectedBoard && !context.boardBlockerReason && step.id === 'board-selection') {
       return false;
     }
 
@@ -468,7 +476,18 @@ export function buildStepOrder(context: SerialContext): string[] {
   };
 
   // Stable sort: within the same severity, preserve original definition order
-  filtered.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
+  filtered.sort((a, b) => {
+    if (context.boardBlockerReason) {
+      if (a.id === 'board-selection') {
+        return -1;
+      }
+      if (b.id === 'board-selection') {
+        return 1;
+      }
+    }
+
+    return severityOrder[a.severity] - severityOrder[b.severity];
+  });
 
   return filtered.map((s) => s.id);
 }

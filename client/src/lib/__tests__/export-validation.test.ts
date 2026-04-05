@@ -149,6 +149,29 @@ describe('validateExportPreflight', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Fab Package
+  // -------------------------------------------------------------------------
+
+  describe('fab-package', () => {
+    it('errors when no PCB layout', () => {
+      const result = validateExportPreflight('fab-package', makeProjectData({ hasPcbLayout: false }));
+      expect(result.canExport).toBe(false);
+      expect(result.errors.some((e) => e.includes('fabrication bundle'))).toBe(true);
+    });
+
+    it('warns when BOM part numbers are incomplete', () => {
+      const result = validateExportPreflight('fab-package', makeProjectData({ bomItemsWithPartNumber: 1 }));
+      expect(result.canExport).toBe(true);
+      expect(result.warnings.some((w) => w.includes('part numbers'))).toBe(true);
+    });
+
+    it('passes with valid data', () => {
+      const result = validateExportPreflight('fab-package', makeProjectData());
+      expect(result.canExport).toBe(true);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Pick-and-Place
   // -------------------------------------------------------------------------
 
@@ -433,6 +456,7 @@ describe('validateExportPreflight', () => {
       expect(formats).toContain('kicad');
       expect(formats).toContain('eagle');
       expect(formats).toContain('spice');
+      expect(formats).toContain('fab-package');
       expect(formats).toContain('gerber');
       expect(formats).toContain('bom-csv');
       expect(formats).toContain('pdf');

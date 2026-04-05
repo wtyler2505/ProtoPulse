@@ -3,6 +3,10 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import type { Project } from '@shared/schema';
+import { getScopedStorageKey } from '@/lib/client-state-scope';
+import { getHiddenProjectStorageKey } from '@/lib/project-picker-visibility';
+import { getLastProjectStorageKey } from '@/lib/project-navigation-state';
+import { RecentProjectsManager } from '@/lib/recent-projects';
 
 // ---------------------------------------------------------------------------
 // Mock wouter
@@ -49,8 +53,6 @@ function makeProject(overrides: Partial<Project> = {}): Project {
   } as Project;
 }
 
-const LAST_PROJECT_KEY = 'protopulse-last-project';
-
 function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
@@ -79,12 +81,15 @@ beforeEach(() => {
   mockNavigate.mockReset();
   mockApiRequest.mockReset();
   localStorage.clear();
+  localStorage.setItem('protopulse-session-id', 'test-session');
+  RecentProjectsManager.resetForTesting();
 
   fetchMock = vi.fn();
   vi.stubGlobal('fetch', fetchMock);
 });
 
 afterEach(() => {
+  RecentProjectsManager.resetForTesting();
   vi.restoreAllMocks();
 });
 
@@ -368,6 +373,50 @@ describe('ProjectPickerPage', () => {
     });
   });
 
+  describe('Recent project truth', () => {
+    it('filters and prunes stale recent projects that are no longer in the live project list', async () => {
+      const scopedRecentKey = getScopedStorageKey('protopulse-recent-projects', 'test-session');
+      localStorage.setItem(
+        scopedRecentKey,
+        JSON.stringify({
+          entries: [
+            { projectId: 999, name: 'Ghost Project', lastAccessedAt: Date.now(), pinned: false },
+            { projectId: 1, name: 'Test Project', lastAccessedAt: Date.now() - 1000, pinned: false },
+          ],
+        }),
+      );
+
+      mockFetchProjects([makeProject({ id: 1, name: 'Test Project' })]);
+      renderPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('recent-project-1')).toBeDefined();
+      });
+
+      expect(screen.queryByTestId('recent-project-999')).toBeNull();
+
+      await waitFor(() => {
+        expect(localStorage.getItem(scopedRecentKey)).not.toContain('"projectId":999');
+      });
+
+      expect(screen.getByTestId('recent-projects-helper-text').textContent).toContain('Removed unavailable project from recents.');
+    });
+
+    it('clears a stale last-project ID when that project is no longer available', async () => {
+      localStorage.setItem(getLastProjectStorageKey(), '999');
+
+      mockFetchProjects([makeProject({ id: 1, name: 'Test Project' })]);
+      renderPage();
+
+      await waitFor(() => {
+        expect(screen.getByTestId('project-card-1')).toBeDefined();
+      });
+
+      expect(mockNavigate).not.toHaveBeenCalled();
+      expect(localStorage.getItem(getLastProjectStorageKey())).toBeNull();
+    });
+  });
+
   // ========================================================================
   // NAVIGATION
   // ========================================================================
@@ -389,7 +438,7 @@ describe('ProjectPickerPage', () => {
         expect(screen.getByTestId('project-card-7')).toBeDefined();
       });
       fireEvent.click(screen.getByTestId('project-card-7'));
-      expect(localStorage.getItem(LAST_PROJECT_KEY)).toBe('7');
+      expect(localStorage.getItem(getLastProjectStorageKey())).toBe('7');
     });
 
     it('navigates on Enter key press on project card', async () => {
@@ -427,6 +476,48 @@ describe('ProjectPickerPage', () => {
   // SEARCH / FILTER
   // ========================================================================
   describe('Search and filter', () => {
+    it('filters the project grid to sample projects when the sample facet is selected', async () => {
+      mockFetchProjects([
+        makeProject({ id: 1, name: 'Blink LED (Sample)' }),
+        makeProject({ id: 2, name: 'Rover Controller' }),
+      ]);
+      renderPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('project-card-1')).toBeDefined();
+      });
+
+      fireEvent.click(screen.getByTestId('facet-filter-sample'));
+
+      expect(screen.getByTestId('project-card-1')).toBeDefined();
+      expect(screen.queryByTestId('project-card-2')).toBeNull();
+      expect(screen.getByTestId('all-projects-heading').textContent).toContain('Sample');
+    });
+
+    it('archives a project from home and shows it in the archived facet', async () => {
+      mockFetchProjects([
+        makeProject({ id: 1, name: 'E2E Test Project' }),
+        makeProject({ id: 2, name: 'Rover Controller' }),
+      ]);
+      renderPage();
+      await waitFor(() => {
+        expect(screen.getByTestId('project-card-1')).toBeDefined();
+      });
+
+      fireEvent.click(screen.getByTestId('archive-project-1'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('project-card-1')).toBeNull();
+      });
+      expect(localStorage.getItem(getHiddenProjectStorageKey())).toContain('1');
+
+      fireEvent.click(screen.getByTestId('facet-filter-archived'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('project-card-1')).toBeDefined();
+      });
+      expect(screen.getByTestId('restore-project-1')).toBeDefined();
+    });
+
     it('renders the search input', async () => {
       mockFetchProjects([makeProject()]);
       renderPage();
@@ -673,7 +764,7 @@ describe('ProjectPickerPage', () => {
       fireEvent.click(screen.getByTestId('button-skip-template'));
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/projects/99');
+        expect(mockNavigate).toHaveBeenCalledWith('/projects/99/dashboard');
       });
     });
 
@@ -703,7 +794,7 @@ describe('ProjectPickerPage', () => {
       fireEvent.click(screen.getByTestId('button-skip-template'));
 
       await waitFor(() => {
-        expect(localStorage.getItem(LAST_PROJECT_KEY)).toBe('55');
+        expect(localStorage.getItem(getLastProjectStorageKey())).toBe('55');
       });
     });
 
@@ -804,7 +895,7 @@ describe('ProjectPickerPage', () => {
   // ========================================================================
   describe('Auto-redirect', () => {
     it('auto-redirects to last project when saved in localStorage', async () => {
-      localStorage.setItem(LAST_PROJECT_KEY, '10');
+      localStorage.setItem(getLastProjectStorageKey(), '10');
       mockFetchProjects([makeProject({ id: 10, name: 'Last Visited' })]);
       renderPage();
       await waitFor(() => {
@@ -813,7 +904,7 @@ describe('ProjectPickerPage', () => {
     });
 
     it('shows auto-redirect notice while redirecting', async () => {
-      localStorage.setItem(LAST_PROJECT_KEY, '10');
+      localStorage.setItem(getLastProjectStorageKey(), '10');
       mockFetchProjects([makeProject({ id: 10, name: 'Last Visited' })]);
       renderPage();
       await waitFor(() => {
@@ -822,7 +913,7 @@ describe('ProjectPickerPage', () => {
     });
 
     it('shows "View All Projects" button during auto-redirect', async () => {
-      localStorage.setItem(LAST_PROJECT_KEY, '10');
+      localStorage.setItem(getLastProjectStorageKey(), '10');
       mockFetchProjects([makeProject({ id: 10, name: 'Last Visited' })]);
       renderPage();
       await waitFor(() => {
@@ -831,7 +922,7 @@ describe('ProjectPickerPage', () => {
     });
 
     it('dismisses auto-redirect when "View All Projects" is clicked', async () => {
-      localStorage.setItem(LAST_PROJECT_KEY, '10');
+      localStorage.setItem(getLastProjectStorageKey(), '10');
       mockFetchProjects([makeProject({ id: 10, name: 'Last Visited' })]);
       renderPage();
       await waitFor(() => {
@@ -847,7 +938,7 @@ describe('ProjectPickerPage', () => {
     });
 
     it('does not auto-redirect if saved project no longer exists', async () => {
-      localStorage.setItem(LAST_PROJECT_KEY, '999');
+      localStorage.setItem(getLastProjectStorageKey(), '999');
       mockFetchProjects([makeProject({ id: 1, name: 'Only Project' })]);
       renderPage();
       await waitFor(() => {
@@ -866,7 +957,7 @@ describe('ProjectPickerPage', () => {
     });
 
     it('does not auto-redirect if localStorage has invalid value', async () => {
-      localStorage.setItem(LAST_PROJECT_KEY, 'not-a-number');
+      localStorage.setItem(getLastProjectStorageKey(), 'not-a-number');
       mockFetchProjects([makeProject({ id: 1, name: 'Project' })]);
       renderPage();
       await waitFor(() => {
@@ -876,7 +967,7 @@ describe('ProjectPickerPage', () => {
     });
 
     it('does not auto-redirect when project list is empty', async () => {
-      localStorage.setItem(LAST_PROJECT_KEY, '1');
+      localStorage.setItem(getLastProjectStorageKey(), '1');
       mockFetchProjects([]);
       renderPage();
       await waitFor(() => {
@@ -886,7 +977,7 @@ describe('ProjectPickerPage', () => {
     });
 
     it('does not auto-redirect if last project id is negative', async () => {
-      localStorage.setItem(LAST_PROJECT_KEY, '-5');
+      localStorage.setItem(getLastProjectStorageKey(), '-5');
       mockFetchProjects([makeProject({ id: 1, name: 'Project' })]);
       renderPage();
       await waitFor(() => {

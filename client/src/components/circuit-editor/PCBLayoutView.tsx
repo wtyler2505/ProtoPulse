@@ -113,7 +113,7 @@ import {
 } from '@/components/views/pcb-layout';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import type { ActiveLayer, PcbTool, PanState, SelectionRect, SelectionDragState } from '@/components/views/pcb-layout';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useProjectMeta } from '@/lib/project-context';
 import { calculateRoutingStatus } from '@/lib/pcb/routing-status';
 import type { Via, ViaType } from '@/lib/pcb/via-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow } from '@shared/schema';

@@ -22,18 +22,26 @@ import {
   GitCompareArrows,
 } from 'lucide-react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useProjectMeta } from '@/lib/project-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
+import { useArduino } from '@/lib/contexts/arduino-context';
 import { useOutput } from '@/lib/contexts/output-context';
+import { useValidation } from '@/lib/contexts/validation-context';
+import { useCircuitDesigns, useCircuitInstances } from '@/lib/circuit-editor/hooks';
+import { useCircuitSelector } from '@/lib/circuit-selector';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import ReleaseConfidenceCard from '@/components/ui/ReleaseConfidenceCard';
+import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { downloadBlob } from '@/lib/csv';
 import { validateExportPreflight } from '@/lib/export-validation';
 import { runExportPrecheck } from '@/lib/export-precheck';
 import { shouldAutoSnapshot, createExportSnapshot } from '@/lib/export-snapshot';
+import { buildExportTrustReceipt } from '@/lib/trust-receipts';
+import { buildWorkspaceReleaseConfidence } from '@/lib/workspace-release-confidence';
 import { apiRequest } from '@/lib/queryClient';
 import { ExportResultsManager } from '@/lib/export-results';
 import ExportResultsPanel from '@/components/panels/ExportResultsPanel';
@@ -296,10 +304,13 @@ type DownloadState = 'idle' | 'loading' | 'success' | 'error';
 function ExportPanel() {
   const projectId = useProjectId();
   const { projectName } = useProjectMeta();
-  const { nodes } = useArchitecture();
+  const { nodes, edges } = useArchitecture();
   const { bom } = useBom();
+  const { issues } = useValidation();
+  const { profiles } = useArduino();
   const { addOutputLog } = useOutput();
   const { toast } = useToast();
+  const { data: circuits } = useCircuitDesigns(projectId);
 
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     schematic: true,
@@ -341,20 +352,72 @@ function ExportPanel() {
   const [diffBaselineName, setDiffBaselineName] = useState('');
   const diffFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const availableCircuits = useMemo(
+    () => circuits?.map((circuit) => ({ id: circuit.id, name: circuit.name })) ?? [],
+    [circuits],
+  );
+  const { selected: selectedCircuit } = useCircuitSelector(projectId, availableCircuits);
+  const activeCircuitId = selectedCircuit?.circuitId ?? availableCircuits[0]?.id ?? 0;
+  const activeCircuitName = selectedCircuit?.circuitName ?? availableCircuits[0]?.name ?? null;
+  const { data: activeCircuitInstances } = useCircuitInstances(activeCircuitId);
+
+  const selectedCircuitHasInstances = (activeCircuitInstances?.length ?? 0) > 0;
+  const selectedCircuitHasPcbLayout = useMemo(
+    () =>
+      (activeCircuitInstances ?? []).some(
+        (instance) => instance.pcbX !== null && instance.pcbY !== null,
+      ),
+    [activeCircuitInstances],
+  );
+  const selectedCircuitHasSource = useMemo(
+    () =>
+      (activeCircuitInstances ?? []).some((instance) => {
+        const props = instance.properties && typeof instance.properties === 'object'
+          ? instance.properties as Record<string, unknown>
+          : {};
+        const componentType = String(props.componentType ?? '');
+        return /^[VI]/i.test(instance.referenceDesignator)
+          || /voltage.source|current.source|dc.source|ac.source|signal.source|function.generator/i.test(componentType);
+      }),
+    [activeCircuitInstances],
+  );
+  const selectedCircuitHasComponents = useMemo(
+    () =>
+      (activeCircuitInstances ?? []).some((instance) => {
+        const props = instance.properties && typeof instance.properties === 'object'
+          ? instance.properties as Record<string, unknown>
+          : {};
+        const componentType = String(props.componentType ?? '');
+        const isSource = /^[VI]/i.test(instance.referenceDesignator)
+          || /voltage.source|current.source|dc.source|ac.source|signal.source|function.generator/i.test(componentType);
+        return !isSource;
+      }),
+    [activeCircuitInstances],
+  );
+
   // Build export validation data from available context
   const exportData: ProjectExportData = useMemo(() => ({
     projectName,
     hasSession: !!localStorage.getItem(SESSION_KEY),
     architectureNodeCount: nodes.length,
-    hasCircuitInstances: false, // Conservative — no circuit context here
-    hasPcbLayout: false,
+    hasCircuitInstances: selectedCircuitHasInstances,
+    hasPcbLayout: selectedCircuitHasPcbLayout,
     bomItemCount: bom.length,
     bomItemsWithPartNumber: bom.filter((item) => item.partNumber.trim().length > 0).length,
-    hasCircuitSource: false,
-    hasCircuitComponent: false,
-    hasBoardProfile: false,
+    hasCircuitSource: selectedCircuitHasSource,
+    hasCircuitComponent: selectedCircuitHasComponents,
+    hasBoardProfile: profiles.length > 0,
     bomItemsWithFailureData: 0,
-  }), [projectName, nodes.length, bom]);
+  }), [
+    bom,
+    nodes.length,
+    profiles.length,
+    projectName,
+    selectedCircuitHasComponents,
+    selectedCircuitHasInstances,
+    selectedCircuitHasPcbLayout,
+    selectedCircuitHasSource,
+  ]);
 
   // Pre-compute validation results for all formats
   const validationResults = useMemo(() => {
@@ -366,6 +429,29 @@ function ExportPanel() {
     }
     return results;
   }, [exportData]);
+
+  const exportReceipt = useMemo(
+    () =>
+      buildExportTrustReceipt({
+        selectedCircuitName: activeCircuitName,
+        availableCircuitCount: availableCircuits.length,
+        buildProfileCount: profiles.length,
+        exportData,
+        validationResults,
+      }),
+    [activeCircuitName, availableCircuits.length, exportData, profiles.length, validationResults],
+  );
+
+  const releaseConfidence = useMemo(
+    () =>
+      buildWorkspaceReleaseConfidence({
+        bomItems: bom,
+        validationIssues: issues,
+        nodes,
+        edges,
+      }),
+    [bom, edges, issues, nodes],
+  );
 
   const toggleCategory = useCallback((catId: string) => {
     setExpandedCategories((prev) => ({ ...prev, [catId]: !prev[catId] }));
@@ -841,6 +927,14 @@ function ExportPanel() {
           {EXPORT_CATEGORIES.reduce((sum, cat) => sum + cat.formats.length, 0)} formats
         </Badge>
       </div>
+
+      <ReleaseConfidenceCard
+        result={releaseConfidence}
+        title="Export Release Confidence"
+        sourceNote="Based on BOM, validation, and architecture signals visible in this workspace. Use the export trust receipt below for format-specific caveats."
+      />
+
+      <TrustReceiptCard receipt={exportReceipt} data-testid="trust-receipt-export" />
 
       {/* Active circuit selector */}
       <CircuitSelectorDropdown />

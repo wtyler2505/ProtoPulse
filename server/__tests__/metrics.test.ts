@@ -82,6 +82,18 @@ describe('normalizePath', () => {
     expect(normalizePath('/api/projects/1/import/kicad')).toBe('/api/projects/:id/import/:format');
   });
 
+  it('normalizes agent, arduino, and firmware runtime paths', () => {
+    expect(normalizePath('/api/projects/7/agent')).toBe('/api/projects/:id/agent');
+    expect(normalizePath('/api/projects/7/arduino/jobs/12')).toBe('/api/projects/:id/arduino/jobs/:jobId');
+    expect(normalizePath('/api/projects/7/arduino/jobs/12/stream')).toBe('/api/projects/:id/arduino/jobs/:jobId/stream');
+    expect(normalizePath('/api/projects/7/arduino/jobs/12/memory')).toBe('/api/projects/:id/arduino/jobs/:jobId/memory');
+    expect(normalizePath('/api/projects/7/arduino/jobs/12/artifact')).toBe('/api/projects/:id/arduino/jobs/:jobId/artifact');
+    expect(normalizePath('/api/projects/7/arduino/jobs/upload')).toBe('/api/projects/:id/arduino/jobs/:action');
+    expect(normalizePath('/api/projects/7/arduino/serial/session-1/close')).toBe('/api/projects/:id/arduino/serial/:sessionId/close');
+    expect(normalizePath('/api/projects/7/firmware/simulate/runtime-1/events')).toBe('/api/projects/:id/firmware/simulate/:sessionId/:action');
+    expect(normalizePath('/api/projects/7/firmware/simulate/runtime-1/status')).toBe('/api/projects/:id/firmware/simulate/:sessionId/:action');
+  });
+
   it('normalizes component library paths', () => {
     expect(normalizePath('/api/components/5')).toBe('/api/components/:id');
     expect(normalizePath('/api/components/library/3')).toBe('/api/components/library/:id');
@@ -344,6 +356,12 @@ describe('file persistence', () => {
 
 describe('startMetricsCollection / stopMetricsCollection', () => {
   it('starts and stops without error', () => {
+    expect(() => startMetricsCollection()).not.toThrow();
+    expect(() => stopMetricsCollection()).not.toThrow();
+  });
+
+  it('is idempotent on repeated start', () => {
+    expect(() => startMetricsCollection()).not.toThrow();
     expect(() => startMetricsCollection()).not.toThrow();
     expect(() => stopMetricsCollection()).not.toThrow();
   });

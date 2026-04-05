@@ -248,7 +248,14 @@ export function ArduinoProvider({ children, projectId }: { children: ReactNode; 
     mutationFn: async () => {
       const res = await apiRequest('GET', `${prefix}/boards/discover`);
       const json = await res.json();
-      return (json.data ?? []) as unknown[];
+      const data = json.data;
+      if (Array.isArray(data)) {
+        return data as unknown[];
+      }
+      if (typeof data === 'object' && data !== null && Array.isArray((data as { detected_ports?: unknown[] }).detected_ports)) {
+        return (data as { detected_ports: unknown[] }).detected_ports;
+      }
+      return [];
     },
   });
 

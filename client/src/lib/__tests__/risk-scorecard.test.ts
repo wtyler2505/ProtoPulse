@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculateScorecard,
+  confidenceBandColor,
   readinessColor,
   readinessLabel,
   severityClasses,
@@ -14,6 +15,7 @@ import type {
   ScorecardEdge,
   ScorecardResult,
   ReadinessLevel,
+  ConfidenceBand,
 } from '../risk-scorecard';
 
 // ---------------------------------------------------------------------------
@@ -32,6 +34,7 @@ function makeBomItem(overrides: Partial<ScorecardBomItem> = {}): ScorecardBomIte
     status: 'In Stock',
     esdSensitive: false,
     assemblyCategory: 'smt',
+    lifecycleStatus: 'active',
     ...overrides,
   };
 }
@@ -171,6 +174,47 @@ describe('risk-scorecard', () => {
       expect(result.overallScore).toBeGreaterThanOrEqual(50);
       expect(result.overallScore).toBeLessThan(80);
       expect(result.readiness).toBe('yellow');
+    });
+  });
+
+  describe('confidence snapshot', () => {
+    it('marks a healthy design as production-ready with strong evidence', () => {
+      const result = calculateScorecard(healthyInput());
+      expect(result.confidence.band).toBe('production');
+      expect(result.confidence.label).toBe('Production-ready');
+      expect(result.confidence.evidenceStrength).toBe('strong');
+      expect(result.confidence.blockers).toHaveLength(0);
+      expect(result.confidence.nextActions.length).toBeGreaterThan(0);
+    });
+
+    it('marks a risky design as exploratory with blockers', () => {
+      const result = calculateScorecard({
+        validationIssues: [
+          makeIssue({ severity: 'error' }),
+          makeIssue({ severity: 'error' }),
+        ],
+        bomItems: [
+          makeBomItem({ partNumber: '', unitPrice: 0, status: 'Out of Stock', assemblyCategory: null, lifecycleStatus: 'obsolete' }),
+        ],
+        nodes: [makeNode({ label: '', description: '' })],
+        edges: [],
+      });
+
+      expect(result.confidence.band).toBe('exploratory');
+      expect(result.confidence.blockers.length).toBeGreaterThan(0);
+      expect(result.confidence.summary.toLowerCase()).toContain('exploratory');
+    });
+
+    it('uses a guided band for moderate designs', () => {
+      const result = calculateScorecard({
+        validationIssues: [makeIssue({ severity: 'warning' })],
+        bomItems: [makeBomItem({ unitPrice: 0, status: 'Low Stock', assemblyCategory: null, lifecycleStatus: 'nrnd' })],
+        nodes: [makeNode({ id: 'n1' })],
+        edges: [makeEdge('n1', 'n1')],
+      });
+
+      expect(result.confidence.band).toBe('guided');
+      expect(result.confidence.evidenceStrength).not.toBe('thin');
     });
   });
 
@@ -343,6 +387,24 @@ describe('risk-scorecard', () => {
       expect(mfg.items.find((i) => i.id === 'mfg-low-stock')!.passed).toBe(false);
     });
 
+    it('flags EOL or obsolete lifecycle risks', () => {
+      const result = calculateScorecard({
+        ...emptyInput(),
+        bomItems: [makeBomItem({ lifecycleStatus: 'obsolete' })],
+      });
+      const mfg = result.categories.find((c) => c.id === 'manufacturing')!;
+      expect(mfg.items.find((i) => i.id === 'mfg-lifecycle-critical')!.passed).toBe(false);
+    });
+
+    it('flags NRND or preliminary lifecycle cautions', () => {
+      const result = calculateScorecard({
+        ...emptyInput(),
+        bomItems: [makeBomItem({ lifecycleStatus: 'nrnd' })],
+      });
+      const mfg = result.categories.find((c) => c.id === 'manufacturing')!;
+      expect(mfg.items.find((i) => i.id === 'mfg-lifecycle-caution')!.passed).toBe(false);
+    });
+
     it('passes ESD check (always passes, informational)', () => {
       const result = calculateScorecard({
         ...emptyInput(),
@@ -352,13 +414,13 @@ describe('risk-scorecard', () => {
       expect(mfg.items.find((i) => i.id === 'mfg-esd-flagged')!.passed).toBe(true);
     });
 
-    it('has 4 items', () => {
+    it('has 6 items', () => {
       const result = calculateScorecard({
         ...emptyInput(),
         bomItems: [makeBomItem()],
       });
       const mfg = result.categories.find((c) => c.id === 'manufacturing')!;
-      expect(mfg.items).toHaveLength(4);
+      expect(mfg.items).toHaveLength(6);
     });
   });
 
@@ -589,6 +651,21 @@ describe('risk-scorecard', () => {
     it('returns red color for red', () => {
       expect(readinessColor('red')).toBe('#ef4444');
     });
+  });
+
+  describe('confidenceBandColor', () => {
+    const expectations: Record<ConfidenceBand, string> = {
+      production: '#22c55e',
+      review: '#38bdf8',
+      guided: '#eab308',
+      exploratory: '#f97316',
+    };
+
+    for (const [band, color] of Object.entries(expectations) as Array<[ConfidenceBand, string]>) {
+      it(`returns the correct color for ${band}`, () => {
+        expect(confidenceBandColor(band)).toBe(color);
+      });
+    }
   });
 
   describe('readinessLabel', () => {

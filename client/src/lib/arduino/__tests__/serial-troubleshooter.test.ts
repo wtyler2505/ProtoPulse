@@ -30,6 +30,10 @@ function defaultContext(overrides?: Partial<SerialContext>): SerialContext {
     bytesReceived: 0,
     hasGarbledData: false,
     selectedBoard: undefined,
+    detectedDeviceLabel: undefined,
+    arduinoProfileLabel: undefined,
+    boardSafetyLabel: undefined,
+    boardBlockerReason: null,
     ...overrides,
   };
 }
@@ -200,6 +204,16 @@ describe('createWizardState', () => {
   it('filters board-selection step when a board is already selected', () => {
     const state = createWizardState(defaultContext({ selectedBoard: 'Arduino Uno' }));
     expect(state.stepOrder).not.toContain('board-selection');
+  });
+
+  it('keeps board-selection when the selected board is flagged as mismatched', () => {
+    const state = createWizardState(
+      defaultContext({
+        selectedBoard: 'Arduino Uno',
+        boardBlockerReason: 'Selected board does not match the connected device.',
+      }),
+    );
+    expect(state.stepOrder).toContain('board-selection');
   });
 });
 
@@ -562,6 +576,17 @@ describe('context-aware filtering', () => {
     );
     expect(withBoard.stepOrder).not.toContain('board-selection');
     expect(withoutBoard.stepOrder).toContain('board-selection');
+  });
+
+  it('board mismatch context prioritizes board-selection even when a board is selected', () => {
+    const state = createWizardState(
+      defaultContext({
+        selectedBoard: 'ESP32',
+        boardBlockerReason: 'Selected board does not match the connected device.',
+      }),
+    );
+
+    expect(state.stepOrder[0]).toBe('board-selection');
   });
 
   it('all filters combined produces minimal step list', () => {

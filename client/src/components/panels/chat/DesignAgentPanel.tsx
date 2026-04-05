@@ -1,5 +1,15 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Bot, CheckCircle, AlertCircle, Loader2, ChevronDown, ChevronUp, Play, RotateCcw, Wrench, WifiOff } from 'lucide-react';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useBom } from '@/lib/contexts/bom-context';
+import { useValidation } from '@/lib/contexts/validation-context';
+import ReleaseConfidenceCard from '@/components/ui/ReleaseConfidenceCard';
+import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
+import { useAISafetyMode } from '@/lib/ai-safety-mode';
+import { useAuth } from '@/lib/auth-context';
+import { useReviewQueue } from '@/lib/ai-review-queue';
+import { buildDesignAgentTrustReceipt } from '@/lib/trust-receipts';
+import { buildWorkspaceReleaseConfidence } from '@/lib/workspace-release-confidence';
 import { cn } from '@/lib/utils';
 import { resilientStreamFetch, StreamServerError } from '@/lib/stream-resilience';
 
@@ -34,13 +44,27 @@ interface StepEntry {
 interface DesignAgentPanelProps {
   projectId: number;
   apiKey: string;
+  apiKeyValid: boolean;
+  onConsumeSeed?: () => void;
+  previewAiChanges: boolean;
+  seedPrompt?: string | null;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanelProps) {
+export default function DesignAgentPanel({
+  projectId,
+  apiKey,
+  apiKeyValid,
+  onConsumeSeed,
+  previewAiChanges,
+  seedPrompt,
+}: DesignAgentPanelProps) {
+  const { nodes, edges } = useArchitecture();
+  const { bom } = useBom();
+  const { issues } = useValidation();
   const [description, setDescription] = useState('');
   const [maxSteps, setMaxSteps] = useState(8);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -53,6 +77,65 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const { sessionId, connectionStatus } = useAuth();
+  const { enabled: safetyModeEnabled } = useAISafetyMode();
+  const { stats: reviewStats, threshold: reviewThreshold } = useReviewQueue();
+  const hasApiKey = apiKey.trim().length > 0;
+  const hasSession = Boolean(sessionId);
+  const strongestSafetyClassification = previewAiChanges
+    ? 'destructive'
+    : safetyModeEnabled
+      ? 'caution'
+      : 'safe';
+
+  const trustReceipt = useMemo(
+    () =>
+      buildDesignAgentTrustReceipt({
+        apiKeyValid,
+        connectionStatus,
+        hasApiKey,
+        hasSession,
+        isReconnecting,
+        isRunning,
+        previewAiChanges,
+        reviewPendingCount: reviewStats.pending,
+        reviewThreshold,
+        safetyModeEnabled,
+        strongestSafetyClassification,
+      }),
+    [
+      apiKeyValid,
+      connectionStatus,
+      hasApiKey,
+      hasSession,
+      isReconnecting,
+      isRunning,
+      previewAiChanges,
+      reviewStats.pending,
+      reviewThreshold,
+      safetyModeEnabled,
+      strongestSafetyClassification,
+    ],
+  );
+  const releaseConfidence = useMemo(
+    () =>
+      buildWorkspaceReleaseConfidence({
+        bomItems: bom,
+        validationIssues: issues,
+        nodes,
+        edges,
+      }),
+    [bom, edges, issues, nodes],
+  );
+  const canRun = Boolean(description.trim()) && hasApiKey && apiKeyValid && hasSession && connectionStatus !== 'offline';
+
+  useEffect(() => {
+    if (!seedPrompt || seedPrompt.trim().length === 0) {
+      return;
+    }
+    setDescription(seedPrompt);
+    onConsumeSeed?.();
+  }, [onConsumeSeed, seedPrompt]);
 
   const scrollToBottom = useCallback(() => {
     if (logRef.current) {
@@ -61,7 +144,9 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
   }, []);
 
   const runAgent = useCallback(async () => {
-    if (!description.trim() || isRunning) { return; }
+    if (!description.trim() || isRunning || !hasSession || !hasApiKey || !apiKeyValid || connectionStatus === 'offline') {
+      return;
+    }
 
     setIsRunning(true);
     setIsReconnecting(false);
@@ -81,7 +166,7 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-Session-Id': localStorage.getItem('protopulse-session-id') ?? '',
+            'X-Session-Id': sessionId ?? '',
           },
           body: JSON.stringify({
             description: description.trim(),
@@ -156,7 +241,7 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
       setIsReconnecting(false);
       abortRef.current = null;
     }
-  }, [description, maxSteps, isRunning, projectId, apiKey, scrollToBottom]);
+  }, [description, maxSteps, isRunning, projectId, apiKey, scrollToBottom, sessionId, hasSession, hasApiKey, apiKeyValid, connectionStatus]);
 
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
@@ -183,6 +268,17 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
         <Bot className="w-5 h-5 text-primary" />
         <h3 className="font-display font-bold text-sm tracking-wider">Design Agent</h3>
       </div>
+
+      <ReleaseConfidenceCard
+        result={releaseConfidence}
+        title="AI Project Readiness Confidence"
+        sourceNote="Based on BOM, validation, architecture, and manufacturing signals visible in this workspace. Use the design-agent trust receipt below for AI-specific setup and autonomy truth."
+      />
+
+      <TrustReceiptCard
+        receipt={trustReceipt}
+        data-testid="trust-receipt-design-agent"
+      />
 
       <textarea
         data-testid="agent-description-input"
@@ -229,7 +325,7 @@ export default function DesignAgentPanel({ projectId, apiKey }: DesignAgentPanel
             data-testid="agent-run-button"
             type="button"
             onClick={() => { void runAgent(); }}
-            disabled={!description.trim() || !apiKey}
+            disabled={!canRun}
             className={cn(
               'flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors',
               'bg-primary text-primary-foreground hover:bg-primary/90',

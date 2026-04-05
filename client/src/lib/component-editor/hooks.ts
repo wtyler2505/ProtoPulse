@@ -48,12 +48,80 @@ export function useCreateComponentPart() {
   });
 }
 
+export function useGenerateExactComponentPart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      apiKey,
+      communitySourceUrl,
+      description,
+      imageBase64,
+      imageMimeType,
+      marketplaceSourceUrl,
+      officialSourceUrl,
+      projectId,
+    }: {
+      apiKey?: string;
+      communitySourceUrl?: string;
+      description: string;
+      imageBase64?: string;
+      imageMimeType?: string;
+      marketplaceSourceUrl?: string;
+      officialSourceUrl?: string;
+      projectId: number;
+    }) => {
+      const res = await apiRequest('POST', `/api/projects/${projectId}/component-parts/ai/generate`, {
+        apiKey,
+        communitySourceUrl,
+        description,
+        imageBase64,
+        imageMimeType,
+        marketplaceSourceUrl,
+        officialSourceUrl,
+      });
+      return res.json() as Promise<ComponentPart>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['component-parts'] });
+    },
+  });
+}
+
 export function useUpdateComponentPart() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, projectId, data }: { id: number; projectId: number; data: { meta?: unknown; connectors?: unknown; buses?: unknown; views?: unknown; constraints?: unknown; nodeId?: string | null } }) => {
       const res = await apiRequest('PATCH', `/api/projects/${projectId}/component-parts/${id}`, data);
       return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['component-parts'] });
+      queryClient.invalidateQueries({ queryKey: ['component-part'] });
+    },
+  });
+}
+
+export function useVerifyComponentPart() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      projectId,
+      data,
+    }: {
+      data: {
+        evidence?: unknown[];
+        note?: string;
+        pinAccuracyReport?: unknown;
+        verificationLevel?: string;
+        verifiedBy?: string;
+        visualAccuracyReport?: unknown;
+      };
+      id: number;
+      projectId: number;
+    }) => {
+      const res = await apiRequest('POST', `/api/projects/${projectId}/component-parts/${id}/verify`, data);
+      return res.json() as Promise<ComponentPart>;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['component-parts'] });

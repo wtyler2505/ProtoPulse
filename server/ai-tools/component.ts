@@ -18,6 +18,7 @@
  */
 
 import { z } from 'zod';
+import { inferPartFamily, markPartMetaAsCandidate } from '@shared/component-trust';
 import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
 import type { ToolResult } from './types';
@@ -81,7 +82,15 @@ export function registerComponentTools(registry: ToolRegistry): void {
       const part = await ctx.storage.createComponentPart({
         projectId: ctx.projectId,
         nodeId: params.nodeId ?? null,
-        meta,
+        meta: markPartMetaAsCandidate(
+          {
+            ...meta,
+            partFamily: inferPartFamily(meta),
+          },
+          {
+            note: 'Created from an AI tool action. Review the exact-part details before relying on authoritative wiring guidance.',
+          },
+        ),
         connectors: [],
         buses: [],
         views: {},

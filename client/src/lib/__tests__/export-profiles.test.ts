@@ -16,6 +16,7 @@ const ALL_FORMAT_IDS = new Set([
   'spice',
   'netlist-csv',
   'netlist-kicad',
+  'fab-package',
   'gerber',
   'pick-place',
   'odb-plus-plus',
@@ -75,7 +76,8 @@ describe('Fab Ready profile', () => {
     expect(profile).toBeDefined();
   });
 
-  it('includes gerber, pick-place, and bom-csv', () => {
+  it('includes fab-package, gerber, pick-place, and bom-csv', () => {
+    expect(profile.formatIds).toContain('fab-package');
     expect(profile.formatIds).toContain('gerber');
     expect(profile.formatIds).toContain('pick-place');
     expect(profile.formatIds).toContain('bom-csv');

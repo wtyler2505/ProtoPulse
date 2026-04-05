@@ -103,11 +103,12 @@ beforeAll(async () => {
   });
 
   await new Promise<void>((resolve) => {
-    server = app.listen(0, () => {
+    server = app.listen(0, '127.0.0.1', () => {
       const addr = server.address();
-      if (typeof addr === 'object' && addr !== null) {
-        baseUrl = `http://127.0.0.1:${String(addr.port)}`;
+      if (!addr || typeof addr === 'string') {
+        throw new Error('Test server did not expose a TCP port');
       }
+      baseUrl = `http://127.0.0.1:${String(addr.port)}`;
       resolve();
     });
   });
@@ -160,6 +161,7 @@ describe('POST /api/projects/:id/comments', () => {
     expect(res.status).toBe(201);
     const body = await res.json() as { id: number };
     expect(body.id).toBe(10);
+    expect(mockCreateComment).toHaveBeenCalledWith(expect.objectContaining({ userId: 1 }));
   });
 
   it('creates a spatial comment', async () => {
@@ -181,8 +183,22 @@ describe('POST /api/projects/:id/comments', () => {
       targetType: 'spatial',
       spatialX: 100,
       spatialY: 200,
-      spatialView: 'pcb'
+      spatialView: 'pcb',
+      userId: 1,
     }));
+  });
+
+  it('ignores userId provided in the request body', async () => {
+    mockCreateComment.mockResolvedValue(makeComment({ id: 12, userId: 1 }));
+
+    const res = await authFetch(`${baseUrl}/api/projects/1/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: 'New comment', userId: 999 }),
+    });
+
+    expect(res.status).toBe(201);
+    expect(mockCreateComment).toHaveBeenCalledWith(expect.objectContaining({ userId: 1 }));
   });
 
   it('returns 400 for empty content', async () => {

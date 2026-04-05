@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useValidation } from '@/lib/contexts/validation-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useProjectMeta } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, AlertCircle, XCircle, ShieldOff, Code2 } from 'lucide-react';

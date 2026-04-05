@@ -208,7 +208,7 @@ export class CollaborationServer {
 
     // Release all locks held by this user
     for (const [key, lock] of Array.from(this.locks)) {
-      if (lock.userId === userId) {
+      if (lock.userId === userId && key.startsWith(`${String(projectId)}:`)) {
         this.locks.delete(key);
         this.broadcastToRoom(projectId, {
           type: 'lock-released',
@@ -419,7 +419,7 @@ export class CollaborationServer {
     // Collect current locks relevant to this project
     const activeLocks: Record<string, number> = {};
     for (const [key, lock] of Array.from(this.locks)) {
-      if (lock.expiresAt > Date.now()) {
+      if (lock.expiresAt > Date.now() && key.startsWith(`${String(projectId)}:`)) {
         activeLocks[key] = lock.userId;
       }
     }
@@ -603,8 +603,11 @@ export class CollaborationServer {
     for (const [key, lock] of Array.from(this.locks)) {
       if (lock.expiresAt <= now) {
         this.locks.delete(key);
-        // Broadcast release to all rooms (we don't track which room a lock belongs to)
-        for (const [projectId] of Array.from(this.rooms)) {
+        const [projectIdRaw] = key.split(':', 1);
+        const projectId = Number(projectIdRaw);
+        if (!Number.isFinite(projectId) || !this.rooms.has(projectId)) {
+          continue;
+        }
           this.broadcastToRoom(projectId, {
             type: 'lock-released',
             userId: lock.userId,
@@ -612,7 +615,6 @@ export class CollaborationServer {
             timestamp: now,
             payload: { entityKey: key },
           });
-        }
       }
     }
   }

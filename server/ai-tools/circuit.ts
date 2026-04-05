@@ -15,6 +15,7 @@
  */
 
 import { z } from 'zod';
+import { buildExactPartAiPolicy } from '@shared/exact-part-ai-policy';
 import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
 
@@ -141,6 +142,12 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const part = await ctx.storage.getComponentPart(params.partId);
+      if (!part) {
+        return { success: false, message: `Component part ${String(params.partId)} not found` };
+      }
+
+      const exactPartPolicy = buildExactPartAiPolicy(part);
       const instance = await ctx.storage.createCircuitInstance({
         circuitId: params.circuitId,
         partId: params.partId,
@@ -148,8 +155,33 @@ export function registerCircuitTools(registry: ToolRegistry): void {
         schematicX: params.x,
         schematicY: params.y,
         schematicRotation: params.rotation,
+        properties: {
+          exactPartTrust: {
+            authoritativeWiringAllowed: exactPartPolicy.authoritativeWiringAllowed,
+            family: exactPartPolicy.family,
+            level: exactPartPolicy.level,
+            placementMode: exactPartPolicy.placementMode,
+            requiresVerification: exactPartPolicy.requiresVerification,
+            status: exactPartPolicy.status,
+            summary: exactPartPolicy.summary,
+            title: exactPartPolicy.title,
+          },
+          provisionalWiring:
+            exactPartPolicy.requiresVerification && !exactPartPolicy.authoritativeWiringAllowed,
+        },
       });
-      return { success: true, message: `Placed ${params.referenceDesignator} (instance id: ${instance.id})` };
+
+      return {
+        success: true,
+        message: exactPartPolicy.placementMode === 'provisional-exact'
+          ? `Placed ${params.referenceDesignator} as a provisional exact part (instance id: ${instance.id}). ProtoPulse can place "${exactPartPolicy.title}" visually, but exact wiring guidance stays blocked until verification is complete.`
+          : exactPartPolicy.placementMode === 'verified-exact'
+            ? `Placed ${params.referenceDesignator} using verified exact part "${exactPartPolicy.title}" (instance id: ${instance.id}).`
+            : `Placed ${params.referenceDesignator} (instance id: ${instance.id})`,
+        data: {
+          exactPartTrust: exactPartPolicy,
+        },
+      };
     },
   });
 

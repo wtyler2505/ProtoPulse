@@ -1,12 +1,14 @@
 import { useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
-import { useArchitecture } from '@/lib/contexts/architecture-context';
-import { useBom } from '@/lib/contexts/bom-context';
-import { useValidation } from '@/lib/contexts/validation-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
-import { useHistory } from '@/lib/contexts/history-context';
-import { useOutput } from '@/lib/contexts/output-context';
-import { useArduino } from '@/lib/contexts/arduino-context';
+import {
+  useArchitecture,
+  useArduino,
+  useBom,
+  useHistory,
+  useOutput,
+  useProjectMeta,
+  useValidation,
+} from '@/lib/project-context';
 import type { BomItem } from '@/lib/project-context';
 import { ACTION_LABELS } from '../constants';
 import type { AIAction } from '../chat-types';

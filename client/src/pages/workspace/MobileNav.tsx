@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { MoreHorizontal } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { navItems, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
-import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useArchitecture } from '@/lib/project-context';
 import type { ViewMode } from '@/lib/project-context';
 import type { WorkspaceState, WorkspaceAction } from './workspace-reducer';
 

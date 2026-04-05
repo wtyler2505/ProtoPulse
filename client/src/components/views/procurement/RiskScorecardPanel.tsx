@@ -2,17 +2,11 @@ import { useState, useMemo, useCallback } from 'react';
 import { Shield, ChevronDown, ChevronUp, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import ReleaseConfidenceCard from '@/components/ui/ReleaseConfidenceCard';
 import { cn } from '@/lib/utils';
-import { useBom } from '@/lib/contexts/bom-context';
-import { useValidation } from '@/lib/contexts/validation-context';
-import { useArchitecture } from '@/lib/contexts/architecture-context';
-import {
-  calculateScorecard,
-  readinessColor,
-  readinessLabel,
-  severityClasses,
-  CATEGORY_WEIGHTS,
-} from '@/lib/risk-scorecard';
+import { useArchitecture, useBom, useValidation } from '@/lib/project-context';
+import { readinessColor, readinessLabel, severityClasses } from '@/lib/risk-scorecard';
+import { buildWorkspaceReleaseConfidence } from '@/lib/workspace-release-confidence';
 import type {
   ScorecardResult,
   ScorecardCategory,
@@ -22,18 +16,6 @@ import type {
 
 // ---------------------------------------------------------------------------
 // Constants
-// ---------------------------------------------------------------------------
-
-const CATEGORY_LABELS: Record<ScorecardCategoryId, string> = {
-  drc: 'DRC',
-  bom: 'BOM',
-  manufacturing: 'Manufacturing',
-  documentation: 'Documentation',
-  testing: 'Testing',
-};
-
-// ---------------------------------------------------------------------------
-// Sub-components
 // ---------------------------------------------------------------------------
 
 function TrafficLight({ result }: { result: ScorecardResult }) {
@@ -171,24 +153,11 @@ export function RiskScorecardPanel() {
   const [expandedId, setExpandedId] = useState<ScorecardCategoryId | null>(null);
 
   const result = useMemo(() => {
-    const scorecardNodes = nodes.map((n) => ({
-      id: String(n.id),
-      label: typeof n.data?.label === 'string' ? n.data.label : String(n.id),
-      type: String(n.type ?? 'default'),
-      description: typeof n.data?.description === 'string' ? n.data.description : undefined,
-    }));
-
-    const scorecardEdges = edges.map((e) => ({
-      id: String(e.id),
-      source: e.source,
-      target: e.target,
-    }));
-
-    return calculateScorecard({
-      validationIssues: issues,
+    return buildWorkspaceReleaseConfidence({
       bomItems: bom,
-      nodes: scorecardNodes,
-      edges: scorecardEdges,
+      validationIssues: issues,
+      nodes,
+      edges,
     });
   }, [bom, issues, nodes, edges]);
 
@@ -203,6 +172,8 @@ export function RiskScorecardPanel() {
 
   return (
     <div className="space-y-6 p-4" data-testid="risk-scorecard-panel">
+      <ReleaseConfidenceCard result={result} />
+
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>

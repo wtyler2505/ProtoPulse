@@ -97,6 +97,57 @@ interface SchematicCanvasInnerProps {
   collaborationClient?: CollaborationClient | null;
 }
 
+function normalizeFlowValue(value: unknown): unknown {
+  if (typeof value === 'function' || value === undefined) {
+    return undefined;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeFlowValue(item));
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value as Record<string, unknown>)
+      .sort()
+      .reduce<Record<string, unknown>>((acc, key) => {
+        const normalized = normalizeFlowValue((value as Record<string, unknown>)[key]);
+        if (normalized !== undefined) {
+          acc[key] = normalized;
+        }
+        return acc;
+      }, {});
+  }
+  return value;
+}
+
+function flowNodeSyncSignature(nodes: Node[]): string {
+  return JSON.stringify(
+    nodes.map((node) => ({
+      id: node.id,
+      type: node.type,
+      position: node.position,
+      data: normalizeFlowValue(node.data),
+      hidden: node.hidden ?? false,
+      parentId: node.parentId ?? null,
+      zIndex: node.zIndex ?? null,
+    })),
+  );
+}
+
+function flowEdgeSyncSignature(edges: Edge[]): string {
+  return JSON.stringify(
+    edges.map((edge) => ({
+      id: edge.id,
+      type: edge.type,
+      source: edge.source,
+      sourceHandle: edge.sourceHandle ?? null,
+      target: edge.target,
+      targetHandle: edge.targetHandle ?? null,
+      data: normalizeFlowValue(edge.data),
+      hidden: edge.hidden ?? false,
+      style: normalizeFlowValue(edge.style),
+    })),
+  );
+}
+
 function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId, onEnterSheet, collaborationClient = null }: SchematicCanvasInnerProps) {
   const projectId = useProjectId();
 
@@ -187,49 +238,55 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     ...DEFAULT_CIRCUIT_SETTINGS,
     ...(circuitDesign?.settings as Partial<CircuitSettings> | null),
   }), [circuitDesign?.settings]);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
 
   const gridSize = settings.gridSize;
 
   // BL-0489: Net label inline editing — rename a label and persist to design settings
   const handleNetNameChange = useCallback(
     (labelId: string, newName: string) => {
-      const updated = (settings.netLabels ?? []).map((nl) =>
+      const currentSettings = settingsRef.current;
+      const updated = (currentSettings.netLabels ?? []).map((nl) =>
         nl.id === labelId ? { ...nl, netName: newName } : nl,
       );
-      updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, netLabels: updated } });
+      updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...currentSettings, netLabels: updated } });
     },
-    [circuitId, projectId, settings],
+    [circuitId, projectId],
   );
 
   // BL-0492: Annotation inline editing callbacks
   const handleAnnotationTextChange = useCallback(
     (annotationId: string, text: string) => {
-      const updated = (settings.annotations ?? []).map((a) =>
+      const currentSettings = settingsRef.current;
+      const updated = (currentSettings.annotations ?? []).map((a) =>
         a.id === annotationId ? { ...a, text } : a,
       );
-      updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
+      updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...currentSettings, annotations: updated } });
     },
-    [circuitId, projectId, settings],
+    [circuitId, projectId],
   );
 
   const handleAnnotationFontSizeChange = useCallback(
     (annotationId: string, fontSize: number) => {
-      const updated = (settings.annotations ?? []).map((a) =>
+      const currentSettings = settingsRef.current;
+      const updated = (currentSettings.annotations ?? []).map((a) =>
         a.id === annotationId ? { ...a, fontSize } : a,
       );
-      updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
+      updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...currentSettings, annotations: updated } });
     },
-    [circuitId, projectId, settings],
+    [circuitId, projectId],
   );
 
   const handleAnnotationColorChange = useCallback(
     (annotationId: string, color: string) => {
-      const updated = (settings.annotations ?? []).map((a) =>
+      const currentSettings = settingsRef.current;
+      const updated = (currentSettings.annotations ?? []).map((a) =>
         a.id === annotationId ? { ...a, color } : a,
       );
-      updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
+      updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...currentSettings, annotations: updated } });
     },
-    [circuitId, projectId, settings],
+    [circuitId, projectId],
   );
 
   // BL-0489: Instance refdes inline editing — persist rename to server
@@ -310,17 +367,23 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
   // Local React Flow state
   const [localNodes, setLocalNodes, onNodesChange] = useNodesState(rfNodes);
   const [localEdges, setLocalEdges, onEdgesChange] = useEdgesState(rfEdges);
+  const rfNodeSignature = useMemo(() => flowNodeSyncSignature(rfNodes), [rfNodes]);
+  const localNodeSignature = useMemo(() => flowNodeSyncSignature(localNodes), [localNodes]);
+  const rfEdgeSignature = useMemo(() => flowEdgeSyncSignature(rfEdges), [rfEdges]);
+  const localEdgeSignature = useMemo(() => flowEdgeSyncSignature(localEdges), [localEdges]);
 
   // Sync server data → local state (guarded against in-flight drag)
   useEffect(() => {
-    if (!isDragging.current) {
+    if (!isDragging.current && rfNodeSignature !== localNodeSignature) {
       setLocalNodes(rfNodes);
     }
-  }, [rfNodes, setLocalNodes]);
+  }, [localNodeSignature, rfNodeSignature, rfNodes, setLocalNodes]);
 
   useEffect(() => {
-    setLocalEdges(rfEdges);
-  }, [rfEdges, setLocalEdges]);
+    if (rfEdgeSignature !== localEdgeSignature) {
+      setLocalEdges(rfEdges);
+    }
+  }, [localEdgeSignature, rfEdgeSignature, rfEdges, setLocalEdges]);
 
   // Track drag start
   const onNodeDragStart = useCallback(() => {
@@ -332,42 +395,43 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
     (_: React.MouseEvent, node: Node) => {
       isDragging.current = false;
       const { x, y } = node.position;
+      const currentSettings = settingsRef.current;
 
       if (node.id.startsWith('power-')) {
         const symbolId = (node.data as PowerNodeData)?.symbolId;
         if (!symbolId) { return; }
-        const updated = (settings.powerSymbols ?? []).map((ps) =>
+        const updated = (currentSettings.powerSymbols ?? []).map((ps) =>
           ps.id === symbolId ? { ...ps, x, y } : ps,
         );
-        updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, powerSymbols: updated } });
+        updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...currentSettings, powerSymbols: updated } });
       } else if (node.id.startsWith('netlabel-')) {
         const labelId = (node.data as NetLabelNodeData)?.labelId;
         if (!labelId) { return; }
-        const updated = (settings.netLabels ?? []).map((nl) =>
+        const updated = (currentSettings.netLabels ?? []).map((nl) =>
           nl.id === labelId ? { ...nl, x, y } : nl,
         );
-        updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, netLabels: updated } });
+        updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...currentSettings, netLabels: updated } });
       } else if (node.id.startsWith('noconnect-')) {
         const markerId = (node.data as NoConnectNodeData)?.markerId;
         if (!markerId) { return; }
-        const updated = (settings.noConnectMarkers ?? []).map((nc) =>
+        const updated = (currentSettings.noConnectMarkers ?? []).map((nc) =>
           nc.id === markerId ? { ...nc, x, y } : nc,
         );
-        updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, noConnectMarkers: updated } });
+        updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...currentSettings, noConnectMarkers: updated } });
       } else if (node.id.startsWith('annotation-')) {
         const annotationId = (node.data as AnnotationNodeData)?.annotationId;
         if (!annotationId) { return; }
-        const updated = (settings.annotations ?? []).map((a) =>
+        const updated = (currentSettings.annotations ?? []).map((a) =>
           a.id === annotationId ? { ...a, x, y } : a,
         );
-        updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...settings, annotations: updated } });
+        updateDesignRef.current.mutate({ projectId, id: circuitId, settings: { ...currentSettings, annotations: updated } });
       } else {
         const instanceId = (node.data as InstanceNodeData)?.instanceId;
         if (typeof instanceId !== 'number') { return; }
         updateInstanceRef.current.mutate({ circuitId, id: instanceId, schematicX: x, schematicY: y });
       }
     },
-    [circuitId, projectId, settings],
+    [circuitId, projectId],
   );
 
   // Delete selected nodes — routes to correct storage per node type
@@ -403,6 +467,7 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
         deletedPowerIds.length > 0 || deletedLabelIds.length > 0 || deletedNcIds.length > 0 || deletedAnnotationIds.length > 0;
 
       if (needsUpdate) {
+        const currentSettings = settingsRef.current;
         const powerSet = new Set(deletedPowerIds);
         const labelSet = new Set(deletedLabelIds);
         const ncSet = new Set(deletedNcIds);
@@ -411,16 +476,16 @@ function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId
           projectId,
           id: circuitId,
           settings: {
-            ...settings,
-            powerSymbols: (settings.powerSymbols ?? []).filter((ps) => !powerSet.has(ps.id)),
-            netLabels: (settings.netLabels ?? []).filter((nl) => !labelSet.has(nl.id)),
-            noConnectMarkers: (settings.noConnectMarkers ?? []).filter((nc) => !ncSet.has(nc.id)),
-            annotations: (settings.annotations ?? []).filter((a) => !annotationSet.has(a.id)),
+            ...currentSettings,
+            powerSymbols: (currentSettings.powerSymbols ?? []).filter((ps) => !powerSet.has(ps.id)),
+            netLabels: (currentSettings.netLabels ?? []).filter((nl) => !labelSet.has(nl.id)),
+            noConnectMarkers: (currentSettings.noConnectMarkers ?? []).filter((nc) => !ncSet.has(nc.id)),
+            annotations: (currentSettings.annotations ?? []).filter((a) => !annotationSet.has(a.id)),
           },
         });
       }
     },
-    [circuitId, projectId, settings],
+    [circuitId, projectId],
   );
 
   // Delete selected edges — removes individual segments, not entire nets

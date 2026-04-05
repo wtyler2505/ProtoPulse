@@ -14,6 +14,8 @@
  * Pure function library — no React dependencies, no side effects.
  */
 
+import type { LifecycleStatus } from './lifecycle-badges';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -43,11 +45,27 @@ export interface ScorecardCategory {
   items: ScorecardItem[];
 }
 
+export type ConfidenceBand = 'exploratory' | 'guided' | 'review' | 'production';
+
+export type EvidenceStrength = 'thin' | 'partial' | 'strong';
+
+export interface ConfidenceSnapshot {
+  band: ConfidenceBand;
+  label: string;
+  evidenceStrength: EvidenceStrength;
+  evidenceLabel: string;
+  summary: string;
+  blockers: string[];
+  nextActions: string[];
+  sourceNote: string;
+}
+
 export interface ScorecardResult {
   overallScore: number;
   readiness: ReadinessLevel;
   categories: ScorecardCategory[];
   timestamp: number;
+  confidence: ConfidenceSnapshot;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,6 +89,7 @@ export interface ScorecardBomItem {
   status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'On Order';
   esdSensitive?: boolean | null;
   assemblyCategory?: 'smt' | 'through_hole' | 'hand_solder' | 'mechanical' | null;
+  lifecycleStatus?: LifecycleStatus | null;
 }
 
 export interface ScorecardNode {
@@ -142,6 +161,164 @@ function getReadiness(score: number): ReadinessLevel {
   if (score >= READINESS_THRESHOLDS.green) { return 'green'; }
   if (score >= READINESS_THRESHOLDS.yellow) { return 'yellow'; }
   return 'red';
+}
+
+function unique<T>(values: readonly T[]): T[] {
+  return Array.from(new Set(values));
+}
+
+function failedItems(categories: ScorecardCategory[], severity?: ScorecardItem['severity']): ScorecardItem[] {
+  return categories.flatMap((category) =>
+    category.items.filter((item) => !item.passed && (severity === undefined || item.severity === severity)),
+  );
+}
+
+function actionForItem(item: ScorecardItem): string {
+  switch (item.id) {
+    case 'drc-no-errors':
+      return 'Resolve all DRC errors before treating the design as order-ready.';
+    case 'drc-no-warnings':
+      return 'Review and either fix or consciously accept the remaining warnings.';
+    case 'bom-non-empty':
+      return 'Populate the BOM so procurement, costing, and ordering checks have something real to evaluate.';
+    case 'bom-part-numbers':
+      return 'Add exact manufacturer part numbers for every BOM item.';
+    case 'bom-pricing':
+      return 'Fill in unit pricing so cost and sourcing risk are grounded in real data.';
+    case 'bom-stock':
+      return 'Replace or resource out-of-stock parts before spending money on fabrication.';
+    case 'mfg-assembly-categories':
+      return 'Assign assembly categories so manufacturing prep stops guessing what is hand-soldered vs assembly-safe.';
+    case 'mfg-lifecycle-critical':
+      return 'Replace EOL or obsolete components before committing to procurement or manufacturing.';
+    case 'mfg-lifecycle-caution':
+      return 'Review NRND or preliminary parts and decide whether they are acceptable for this build.';
+    case 'mfg-low-stock':
+      return 'Address low-stock items now so they do not become last-minute blockers.';
+    case 'doc-architecture':
+      return 'Document the architecture so reviewers and future-you can understand what is being built.';
+    case 'doc-connections':
+      return 'Add or verify component connections so the design is reviewable, not just listed.';
+    case 'test-validation-run':
+      return 'Run validation and capture results before treating the project as release-ready.';
+    case 'test-error-resolution':
+      return 'Clear all unresolved validation errors before fabrication or ordering.';
+    case 'test-component-coverage':
+      return 'Bring the BOM and architecture into closer alignment so procurement reflects the actual design.';
+    default:
+      return item.detail;
+  }
+}
+
+function summarizeConfidence(
+  overallScore: number,
+  band: ConfidenceBand,
+  blockers: string[],
+  evidenceStrength: EvidenceStrength,
+): string {
+  switch (band) {
+    case 'production':
+      return evidenceStrength === 'strong'
+        ? 'Procurement and manufacturing signals are strong. You are close to order-ready, but still confirm final export outputs and fab-specific checks before spending money.'
+        : 'Core release signals look strong, but a few evidence gaps still deserve a final review before you commit to fabrication.';
+    case 'review':
+      return blockers.length === 0
+        ? 'Most visible release signals look healthy. Run a focused review pass before you treat the design as ready to buy or build.'
+        : 'This design is approaching review-ready, but a few important gaps still need attention before procurement or manufacturing.';
+    case 'guided':
+      return overallScore >= 60
+        ? 'The project has enough structure for guided iteration, but it still needs real review before you spend money or lock decisions.'
+        : 'Useful progress is visible, but the current evidence is still too thin to trust this as an order-ready design.';
+    case 'exploratory':
+      return 'Treat this as an exploratory snapshot, not a release decision. The currently loaded signals are too incomplete or risky for confident procurement.';
+  }
+}
+
+function getConfidenceBand(overallScore: number, criticalFailures: number, majorFailures: number): ConfidenceBand {
+  if (criticalFailures > 0 && overallScore < 75) {
+    return 'exploratory';
+  }
+  if (overallScore >= 90 && criticalFailures === 0 && majorFailures === 0) {
+    return 'production';
+  }
+  if (overallScore >= 75 && criticalFailures === 0 && majorFailures <= 1) {
+    return 'review';
+  }
+  if (overallScore >= 50) {
+    return 'guided';
+  }
+  return 'exploratory';
+}
+
+function getEvidenceStrength(categories: ScorecardCategory[]): EvidenceStrength {
+  const evidenceCategories = categories.filter((category) =>
+    category.id === 'drc' || category.id === 'documentation' || category.id === 'testing',
+  );
+  const evidenceScore = Math.round(
+    evidenceCategories.reduce((sum, category) => sum + category.score, 0) / evidenceCategories.length,
+  );
+
+  if (evidenceScore >= 80) {
+    return 'strong';
+  }
+  if (evidenceScore >= 55) {
+    return 'partial';
+  }
+  return 'thin';
+}
+
+function evidenceLabel(strength: EvidenceStrength): string {
+  switch (strength) {
+    case 'strong':
+      return 'Evidence strong';
+    case 'partial':
+      return 'Evidence partial';
+    case 'thin':
+      return 'Evidence thin';
+  }
+}
+
+function confidenceLabel(band: ConfidenceBand): string {
+  switch (band) {
+    case 'production':
+      return 'Production-ready';
+    case 'review':
+      return 'Review-ready';
+    case 'guided':
+      return 'Guided build candidate';
+    case 'exploratory':
+      return 'Exploratory only';
+  }
+}
+
+function buildConfidenceSnapshot(categories: ScorecardCategory[], overallScore: number): ConfidenceSnapshot {
+  const criticalFailures = failedItems(categories, 'critical');
+  const majorFailures = failedItems(categories, 'major');
+  const majorOrCritical = [...criticalFailures, ...majorFailures];
+  const band = getConfidenceBand(overallScore, criticalFailures.length, majorFailures.length);
+  const strength = getEvidenceStrength(categories);
+  const blockers = unique(
+    majorOrCritical.slice(0, 4).map((item) => `${item.label}: ${item.detail}`),
+  );
+  const nextActions = unique(
+    majorOrCritical.concat(failedItems(categories, 'minor'))
+      .slice(0, 4)
+      .map(actionForItem),
+  );
+  const normalizedNextActions = nextActions.length > 0
+    ? nextActions
+    : ['Run final export and fab-specific preflight checks before spending money on manufacturing.'];
+
+  return {
+    band,
+    label: confidenceLabel(band),
+    evidenceStrength: strength,
+    evidenceLabel: evidenceLabel(strength),
+    summary: summarizeConfidence(overallScore, band, blockers, strength),
+    blockers,
+    nextActions: normalizedNextActions,
+    sourceNote: 'Based on BOM, validation, architecture, and manufacturing signals visible in this workspace. Final fabrication/export trust still needs separate confirmation.',
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +493,32 @@ function scoreManufacturing(bomItems: ScorecardBomItem[]): ScorecardCategory {
     detail: lowStock.length === 0
       ? 'No items with low stock.'
       : `${String(lowStock.length)} item${lowStock.length === 1 ? '' : 's'} on low stock — order soon.`,
+  });
+
+  const lifecycleCritical = bomItems.filter(
+    (b) => b.lifecycleStatus === 'eol' || b.lifecycleStatus === 'obsolete',
+  );
+  items.push({
+    id: 'mfg-lifecycle-critical',
+    label: 'No EOL or obsolete parts',
+    passed: lifecycleCritical.length === 0,
+    severity: 'critical',
+    detail: lifecycleCritical.length === 0
+      ? 'No EOL or obsolete lifecycle risks detected.'
+      : `${String(lifecycleCritical.length)} part${lifecycleCritical.length === 1 ? '' : 's'} flagged as EOL or obsolete.`,
+  });
+
+  const lifecycleCaution = bomItems.filter(
+    (b) => b.lifecycleStatus === 'nrnd' || b.lifecycleStatus === 'preliminary',
+  );
+  items.push({
+    id: 'mfg-lifecycle-caution',
+    label: 'No NRND or preliminary parts',
+    passed: lifecycleCaution.length === 0,
+    severity: 'major',
+    detail: lifecycleCaution.length === 0
+      ? 'No NRND or preliminary lifecycle cautions detected.'
+      : `${String(lifecycleCaution.length)} part${lifecycleCaution.length === 1 ? '' : 's'} flagged as NRND or preliminary.`,
   });
 
   return {
@@ -499,12 +702,14 @@ export function calculateScorecard(input: ScorecardInput): ScorecardResult {
   const overallScore = Math.round(
     categories.reduce((acc, cat) => acc + cat.score * cat.weight, 0),
   );
+  const clampedOverallScore = clamp(overallScore, 0, 100);
 
   return {
-    overallScore: clamp(overallScore, 0, 100),
-    readiness: getReadiness(overallScore),
+    overallScore: clampedOverallScore,
+    readiness: getReadiness(clampedOverallScore),
     categories,
     timestamp: Date.now(),
+    confidence: buildConfidenceSnapshot(categories, clampedOverallScore),
   };
 }
 
@@ -527,6 +732,15 @@ export function readinessLabel(level: ReadinessLevel): string {
     case 'green': return 'Ready for Release';
     case 'yellow': return 'Needs Attention';
     case 'red': return 'Not Ready';
+  }
+}
+
+export function confidenceBandColor(band: ConfidenceBand): string {
+  switch (band) {
+    case 'production': return '#22c55e';
+    case 'review': return '#38bdf8';
+    case 'guided': return '#eab308';
+    case 'exploratory': return '#f97316';
   }
 }
 

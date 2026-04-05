@@ -176,24 +176,24 @@ export class BomStorage {
     }
   }
 
-  async getBomSnapshot(id: number): Promise<BomSnapshot | undefined> {
+  async getBomSnapshot(projectId: number, id: number): Promise<BomSnapshot | undefined> {
     try {
       const [snapshot] = await this.db.select().from(bomSnapshots)
-        .where(eq(bomSnapshots.id, id));
+        .where(and(eq(bomSnapshots.projectId, projectId), eq(bomSnapshots.id, id)));
       return snapshot;
     } catch (e) {
-      throw new StorageError('getBomSnapshot', `bom-snapshots/${id}`, e);
+      throw new StorageError('getBomSnapshot', `projects/${projectId}/bom-snapshots/${id}`, e);
     }
   }
 
-  async deleteBomSnapshot(id: number): Promise<boolean> {
+  async deleteBomSnapshot(projectId: number, id: number): Promise<boolean> {
     try {
       const [deleted] = await this.db.delete(bomSnapshots)
-        .where(eq(bomSnapshots.id, id))
+        .where(and(eq(bomSnapshots.projectId, projectId), eq(bomSnapshots.id, id)))
         .returning();
       return !!deleted;
     } catch (e) {
-      throw new StorageError('deleteBomSnapshot', `bom-snapshots/${id}`, e);
+      throw new StorageError('deleteBomSnapshot', `projects/${projectId}/bom-snapshots/${id}`, e);
     }
   }
 }

@@ -43,8 +43,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import ReleaseConfidenceCard from '@/components/ui/ReleaseConfidenceCard';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useBom } from '@/lib/contexts/bom-context';
+import { useValidation } from '@/lib/contexts/validation-context';
 import { usePcbOrdering } from '@/lib/pcb-ordering';
+import { buildOrderingTrustReceipt } from '@/lib/trust-receipts';
+import { buildWorkspaceReleaseConfidence } from '@/lib/workspace-release-confidence';
 import { FabApiSettings } from '@/components/views/procurement/FabApiSettings';
+import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import type {
   BoardSpecification,
   FabricatorId,
@@ -606,6 +613,9 @@ const OrderSummary = memo(function OrderSummary({ spec, fabName, quote, quantity
 // ---------------------------------------------------------------------------
 
 export default function PcbOrderingView() {
+  const { nodes, edges } = useArchitecture();
+  const { bom } = useBom();
+  const { issues } = useValidation();
   const {
     fabricators,
     runDfmCheck,
@@ -626,6 +636,10 @@ export default function PcbOrderingView() {
   const selectedFabProfile = useMemo(
     () => fabricators.find((f) => f.id === selectedFab) ?? null,
     [fabricators, selectedFab],
+  );
+  const compatibleFabCount = useMemo(
+    () => compareFabricators(spec).filter((result) => result.compatible).length,
+    [compareFabricators, spec],
   );
 
   const currentQuote = useMemo(() => {
@@ -676,6 +690,29 @@ export default function PcbOrderingView() {
     }
   }, [step, spec, selectedFab, dfmResult, quotes]);
 
+  const orderingReceipt = useMemo(
+    () =>
+      buildOrderingTrustReceipt({
+        compatibleFabCount,
+        dfmResult,
+        quotes,
+        selectedFabName: selectedFabProfile?.name ?? null,
+        totalFabCount: fabricators.length,
+      }),
+    [compatibleFabCount, dfmResult, fabricators.length, quotes, selectedFabProfile?.name],
+  );
+
+  const releaseConfidence = useMemo(
+    () =>
+      buildWorkspaceReleaseConfidence({
+        bomItems: bom,
+        validationIssues: issues,
+        nodes,
+        edges,
+      }),
+    [bom, edges, issues, nodes],
+  );
+
   return (
     <div data-testid="pcb-ordering-view" className="flex flex-col h-full gap-4 p-4">
       {/* Header */}
@@ -683,6 +720,14 @@ export default function PcbOrderingView() {
         <ShoppingBag className="w-5 h-5 text-primary" />
         <h2 data-testid="ordering-title" className="text-lg font-semibold">Order PCB</h2>
       </div>
+
+      <ReleaseConfidenceCard
+        result={releaseConfidence}
+        title="Order Readiness Confidence"
+        sourceNote="Based on BOM, validation, architecture, and manufacturing signals visible in this workspace. Use the ordering trust receipt below for fab-specific and DFM-specific truth."
+      />
+
+      <TrustReceiptCard receipt={orderingReceipt} data-testid="trust-receipt-ordering" />
 
       <Tabs
         value={String(step)}

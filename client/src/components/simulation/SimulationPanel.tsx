@@ -3,12 +3,19 @@ import { useProjectId } from '@/lib/contexts/project-id-context';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useCircuitDesigns, useCircuitInstances } from '@/lib/circuit-editor/hooks';
+import { useArchitecture } from '@/lib/contexts/architecture-context';
+import { useBom } from '@/lib/contexts/bom-context';
+import { useValidation } from '@/lib/contexts/validation-context';
 import { cn } from '@/lib/utils';
+import ReleaseConfidenceCard from '@/components/ui/ReleaseConfidenceCard';
+import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import SimulationScenarioPanel from '@/components/circuit-editor/SimulationScenarioPanel';
 import SensorSliderPanel from '@/components/simulation/SensorSliderPanel';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import { autoDetectAnalysisType, detectSimulationType } from '@/lib/simulation/auto-detect';
 import { checkCircuitComplexity } from '@/lib/simulation/complexity-check';
+import { buildSimulationTrustReceipt } from '@/lib/trust-receipts';
+import { buildWorkspaceReleaseConfidence } from '@/lib/workspace-release-confidence';
 import SimPlayButton from '@/components/simulation/SimPlayButton';
 import ShareSimulationButton from '@/components/simulation/ShareSimulationButton';
 import {
@@ -73,6 +80,9 @@ const WaveformViewer = lazy(() => import('./WaveformViewer'));
 export default function SimulationPanel() {
   const projectId = useProjectId();
   const { toast } = useToast();
+  const { nodes, edges } = useArchitecture();
+  const { bom } = useBom();
+  const { issues } = useValidation();
 
   // Analysis type selection
   const [analysisType, setAnalysisType] = useState<AnalysisType>('dcop');
@@ -147,6 +157,7 @@ export default function SimulationPanel() {
   // Populate DC sweep source list from actual circuit instances
   const { data: circuits } = useCircuitDesigns(projectId);
   const firstCircuitId = circuits?.[0]?.id ?? 0;
+  const selectedCircuitName = circuits?.[0]?.name ?? null;
   const {
     data: circuitInstances,
     isLoading: isCircuitInstancesLoading,
@@ -200,6 +211,45 @@ export default function SimulationPanel() {
       })
       .map((inst) => inst.referenceDesignator);
   }, [circuitInstances]);
+
+  const simulationReceipt = useMemo(
+    () =>
+      buildSimulationTrustReceipt({
+        analysisType,
+        autoDetected,
+        circuitName: selectedCircuitName,
+        detection: simTypeDetection,
+        error,
+        hasCircuit: firstCircuitId > 0,
+        hasPlacedCircuitInstances,
+        isCircuitLoading: isCircuitInstancesLoading,
+        resultsAvailable: results !== null,
+        cornerAnalysisEnabled: cornerAnalysis,
+      }),
+    [
+      analysisType,
+      autoDetected,
+      cornerAnalysis,
+      error,
+      firstCircuitId,
+      hasPlacedCircuitInstances,
+      isCircuitInstancesLoading,
+      results,
+      selectedCircuitName,
+      simTypeDetection,
+    ],
+  );
+
+  const releaseConfidence = useMemo(
+    () =>
+      buildWorkspaceReleaseConfidence({
+        bomItems: bom,
+        validationIssues: issues,
+        nodes,
+        edges,
+      }),
+    [bom, edges, issues, nodes],
+  );
 
   // ---------------------------
   // Resolve current params
@@ -602,6 +652,21 @@ export default function SimulationPanel() {
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-6">
         <div className="max-w-4xl mx-auto flex flex-col gap-0 bg-card/40 border border-border backdrop-blur-xl shadow-xl">
+          <div className="px-4 pt-4 md:px-6 md:pt-6">
+            <ReleaseConfidenceCard
+              result={releaseConfidence}
+              title="Simulation Readiness Confidence"
+              sourceNote="Based on BOM, validation, and architecture signals visible in this workspace. Use the simulation trust receipt below for run-specific caveats."
+            />
+          </div>
+
+          <div className="px-4 pt-4 md:px-6">
+            <TrustReceiptCard
+              receipt={simulationReceipt}
+              data-testid="trust-receipt-simulation"
+            />
+          </div>
+
           {/* ------- Analysis Type Selector ------- */}
           <CollapsibleSection title="Analysis Type" testId="section-analysis-type">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">

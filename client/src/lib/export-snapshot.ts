@@ -8,6 +8,7 @@
  * at export time provides an audit trail of exactly what was sent to fab.
  */
 const MANUFACTURING_FORMATS = new Set([
+  'fab-package',
   'gerber',
   'pick-place',
   'odb-plus-plus',
@@ -51,6 +52,7 @@ export function formatSnapshotLabel(format: string, date?: Date): string {
   const dateStr = d.toISOString().slice(0, 10); // YYYY-MM-DD
 
   const formatLabels: Record<string, string> = {
+    'fab-package': 'Fab Package',
     'gerber': 'Gerber',
     'pick-place': 'Pick & Place',
     'odb-plus-plus': 'ODB++',

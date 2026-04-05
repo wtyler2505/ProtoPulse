@@ -13,10 +13,9 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
-import { useCircuitDesigns } from '@/lib/circuit-editor/hooks';
-import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useProjectId, useProjectMeta } from '@/lib/project-context';
 import type { BomItem, ValidationIssue, ViewMode } from '@/lib/project-context';
+import { useCircuitDesigns } from '@/lib/circuit-editor/hooks';
 import ComponentTree from './ComponentTree';
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,18 @@
 import type { Express } from 'express';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
+import {
+  getVerificationLevel,
+  getVerificationNotes,
+  getVerificationStatus,
+  inferPartFamily,
+  markPartMetaAsCandidate,
+  markPartMetaAsVerified,
+  requiresVerifiedExactness,
+  type PartSourceEvidence,
+  type PartVerificationLevel,
+} from '@shared/component-trust';
+import { buildExactPartVerificationReadiness } from '@shared/exact-part-verification';
 import { storage } from '../storage';
 import { insertComponentPartSchema, insertComponentLibrarySchema } from '@shared/schema';
 import type { PartMeta, Connector, PartViews, Bus, Constraint, PartState } from '@shared/component-types';
@@ -23,6 +35,32 @@ async function resolveGeminiApiKey(clientKey: string | undefined, userId: number
     }
   }
   throw new HttpError('No Gemini API key available. Set one in Settings or provide it in the request.', 400);
+}
+
+function normalizeStoredPartMeta(meta: unknown): Record<string, unknown> {
+  const record = meta && typeof meta === 'object' ? { ...(meta as Record<string, unknown>) } : {};
+  const normalizedFamily = inferPartFamily(record);
+
+  if (record.verificationStatus === 'verified') {
+    return {
+      ...record,
+      partFamily: normalizedFamily,
+      sourceEvidence: (record.sourceEvidence as PartSourceEvidence[] | undefined) ?? [],
+      verificationNotes: getVerificationNotes(record),
+      verificationLevel: getVerificationLevel(record),
+    };
+  }
+
+  return markPartMetaAsCandidate(
+    {
+      ...record,
+      partFamily: normalizedFamily,
+    },
+    {
+      modelQuality: typeof record.breadboardModelQuality === 'string' ? record.breadboardModelQuality : undefined,
+      verificationLevel: getVerificationLevel(record),
+    },
+  );
 }
 
 export function registerComponentRoutes(app: Express): void {
@@ -79,7 +117,11 @@ export function registerComponentRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
-      const part = await storage.createComponentPart({ ...parsed.data, projectId });
+      const part = await storage.createComponentPart({
+        ...parsed.data,
+        projectId,
+        meta: normalizeStoredPartMeta(parsed.data.meta),
+      });
       res.status(201).json(part);
     }),
   );
@@ -95,7 +137,11 @@ export function registerComponentRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
       }
-      const updated = await storage.updateComponentPart(id, projectId, parsed.data);
+      const nextData = {
+        ...parsed.data,
+        ...(parsed.data.meta !== undefined ? { meta: normalizeStoredPartMeta(parsed.data.meta) } : {}),
+      };
+      const updated = await storage.updateComponentPart(id, projectId, nextData);
       if (!updated) {
         return res.status(404).json({ message: 'Component part not found' });
       }
@@ -181,7 +227,25 @@ export function registerComponentRoutes(app: Express): void {
 
       const part = await storage.createComponentPart({
         projectId,
-        meta: partState.meta,
+        meta: markPartMetaAsCandidate(
+          {
+            ...partState.meta,
+            partFamily: inferPartFamily(partState.meta),
+          },
+          {
+            evidence: [
+              {
+                type: 'community-fzpz',
+                label: 'Imported FZPZ package',
+                supports: ['outline', 'pins', 'labels'],
+                confidence: 'medium',
+                reviewStatus: 'pending',
+              },
+            ],
+            modelQuality: partState.meta.breadboardModelQuality ?? 'community',
+            note: 'Imported from Fritzing/FZPZ. Review against source evidence before relying on exact wiring guidance.',
+          },
+        ),
         connectors: partState.connectors,
         buses: partState.buses,
         views: partState.views,
@@ -249,8 +313,15 @@ export function registerComponentRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).message });
       }
+      const normalizedMeta = normalizeStoredPartMeta(parsed.data.meta);
+      if (parsed.data.isPublic && requiresVerifiedExactness(normalizedMeta) && getVerificationStatus(normalizedMeta) !== 'verified') {
+        return res.status(400).json({
+          message: 'Board/module exact parts must be verified before they can be published publicly.',
+        });
+      }
       const entry = await storage.createLibraryEntry({
         ...parsed.data,
+        meta: normalizedMeta,
         authorId: req.userId != null ? String(req.userId) : (parsed.data.authorId ?? null),
       });
       res.status(201).json(entry);
@@ -285,7 +356,7 @@ export function registerComponentRoutes(app: Express): void {
       }
       const part = await storage.createComponentPart({
         projectId,
-        meta: entry.meta as PartMeta,
+        meta: normalizeStoredPartMeta(entry.meta),
         connectors: entry.connectors as Connector[],
         buses: entry.buses as Bus[],
         views: entry.views as PartViews,
@@ -355,8 +426,11 @@ export function registerComponentRoutes(app: Express): void {
   const generateBodySchema = z.object({
     description: z.string().min(1).max(10000),
     apiKey: z.string().max(500).optional(),
+    communitySourceUrl: z.string().url().optional(),
     imageBase64: z.string().optional(),
     imageMimeType: z.string().optional(),
+    marketplaceSourceUrl: z.string().url().optional(),
+    officialSourceUrl: z.string().url().optional(),
   });
 
   app.post(
@@ -369,14 +443,32 @@ export function registerComponentRoutes(app: Express): void {
       if (!parsed.success) {
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
       }
-      const { description, apiKey: clientApiKey, imageBase64, imageMimeType } = parsed.data;
+      const {
+        communitySourceUrl,
+        description,
+        apiKey: clientApiKey,
+        imageBase64,
+        imageMimeType,
+        marketplaceSourceUrl,
+        officialSourceUrl,
+      } = parsed.data;
       const apiKey = await resolveGeminiApiKey(clientApiKey, req.userId);
 
       const { generatePartFromDescription } = await import('../component-ai');
-      const partState = await generatePartFromDescription(apiKey, description.trim(), imageBase64, imageMimeType);
+      const partState = await generatePartFromDescription(
+        apiKey,
+        description.trim(),
+        imageBase64,
+        imageMimeType,
+        {
+          communitySourceUrl,
+          marketplaceSourceUrl,
+          officialSourceUrl,
+        },
+      );
       const part = await storage.createComponentPart({
         projectId,
-        meta: partState.meta,
+        meta: normalizeStoredPartMeta(partState.meta),
         connectors: partState.connectors,
         buses: partState.buses,
         views: partState.views,
@@ -426,6 +518,107 @@ export function registerComponentRoutes(app: Express): void {
       const { modifyPartWithAI } = await import('../component-ai');
       const modified = await modifyPartWithAI(apiKey, partState, instruction.trim());
       res.json(modified);
+    }),
+  );
+
+  const sourceEvidenceSchema = z.object({
+    confidence: z.enum(['low', 'medium', 'high']).optional(),
+    href: z.string().url().optional(),
+    id: z.string().optional(),
+    label: z.string().min(1).max(240),
+    note: z.string().max(500).optional(),
+    reviewStatus: z.enum(['pending', 'accepted', 'rejected']).optional(),
+    supports: z
+      .array(z.enum(['outline', 'pins', 'labels', 'dimensions', 'mounting-holes', 'breadboard-fit']))
+      .min(1),
+    type: z.enum([
+      'official-image',
+      'datasheet',
+      'pinout',
+      'mechanical-drawing',
+      'marketplace-listing',
+      'community-fzpz',
+      'community-svg',
+      'user-photo',
+      'text-request',
+      'ai-inference',
+    ]),
+  });
+
+  const verifyExactPartSchema = z.object({
+    evidence: z.array(sourceEvidenceSchema).optional(),
+    note: z.string().max(2000).optional(),
+    pinAccuracyReport: z.object({
+      breadboardAnchors: z.enum(['unknown', 'approximate', 'exact']),
+      connectorNames: z.enum(['unknown', 'approximate', 'exact']),
+      electricalRoles: z.enum(['unknown', 'approximate', 'exact']),
+      unresolved: z.array(z.string().max(500)),
+    }).optional(),
+    verificationLevel: z.enum(['official-backed', 'mixed-source', 'community-only']).optional(),
+    verifiedBy: z.string().max(120).optional(),
+    visualAccuracyReport: z.object({
+      connectors: z.enum(['unknown', 'approximate', 'exact']),
+      mountingHoles: z.enum(['unknown', 'approximate', 'exact']),
+      outline: z.enum(['unknown', 'approximate', 'exact']),
+      silkscreen: z.enum(['unknown', 'approximate', 'exact']),
+    }).optional(),
+  });
+
+  app.post(
+    '/api/projects/:projectId/component-parts/:id/verify',
+    requireProjectOwnership,
+    payloadLimit(32 * 1024),
+    asyncHandler(async (req, res) => {
+      const projectId = parseIdParam(req.params.projectId);
+      const id = parseIdParam(req.params.id);
+      const parsed = verifyExactPartSchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return res.status(400).json({ message: 'Invalid verification request: ' + fromZodError(parsed.error).toString() });
+      }
+
+      const part = await storage.getComponentPart(id, projectId);
+      if (!part) {
+        return res.status(404).json({ message: 'Component part not found' });
+      }
+
+      const meta = normalizeStoredPartMeta(part.meta);
+      const verificationLevel = parsed.data.verificationLevel as PartVerificationLevel | undefined;
+      const verificationMeta = {
+        ...meta,
+        pinAccuracyReport: parsed.data.pinAccuracyReport ?? meta.pinAccuracyReport,
+        sourceEvidence: parsed.data.evidence ?? meta.sourceEvidence,
+        visualAccuracyReport: parsed.data.visualAccuracyReport ?? meta.visualAccuracyReport,
+      };
+      const readiness = buildExactPartVerificationReadiness(
+        verificationMeta,
+        ((part.connectors ?? []) as Connector[]),
+        (part.views as PartViews),
+      );
+      if (readiness.requiresVerification && !readiness.canVerify) {
+        return res.status(400).json({
+          message: readiness.summary,
+          blockers: readiness.blockers,
+        });
+      }
+
+      const updated = await storage.updateComponentPart(id, projectId, {
+        meta: markPartMetaAsVerified({
+          ...meta,
+          pinAccuracyReport: parsed.data.pinAccuracyReport ?? meta.pinAccuracyReport,
+          visualAccuracyReport: parsed.data.visualAccuracyReport ?? meta.visualAccuracyReport,
+        }, {
+          evidence: parsed.data.evidence,
+          note: parsed.data.note?.trim(),
+          verificationLevel,
+          verifiedBy: parsed.data.verifiedBy?.trim() || (req.userId != null ? `user:${String(req.userId)}` : 'local-review'),
+        }),
+      });
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Component part not found' });
+      }
+
+      res.json(updated);
     }),
   );
 

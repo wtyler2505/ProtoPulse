@@ -59,6 +59,20 @@ function createWrapper(seeded = true) {
   return Wrapper;
 }
 
+function createWrapperWithQueryClient(queryClient: QueryClient, seeded = true) {
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <ProjectIdProvider projectId={1}>
+          <ChatProvider seeded={seeded}>
+            {children}
+          </ChatProvider>
+        </ProjectIdProvider>
+      </QueryClientProvider>
+    );
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -136,6 +150,73 @@ describe('ChatContext', () => {
         '/api/projects/1/chat',
         { role: 'assistant', content: 'AI response', mode: 'chat', branchId: null },
       );
+    });
+  });
+
+  it('serializes clientId metadata when adding a ChatMessage object', async () => {
+    mockedApiRequest.mockResolvedValue(
+      new Response(JSON.stringify({}), { status: 200 }),
+    );
+    const { result } = renderHook(() => useChat(), { wrapper: createWrapper() });
+    await waitFor(() => {
+      expect(result.current.messages).toEqual([]);
+    });
+
+    act(() => {
+      result.current.addMessage({
+        id: 'msg-2',
+        clientId: 'client-123',
+        role: 'assistant',
+        content: 'Review this change',
+        timestamp: Date.now(),
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockedApiRequest).toHaveBeenCalledWith(
+        'POST',
+        '/api/projects/1/chat',
+        {
+          role: 'assistant',
+          content: 'Review this change',
+          branchId: null,
+          metadata: JSON.stringify({ clientId: 'client-123' }),
+        },
+      );
+    });
+  });
+
+  it('hydrates clientId from stored chat metadata', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+          gcTime: 0,
+          queryFn: async () => ({
+            data: [
+              {
+                id: 7,
+                role: 'assistant',
+                content: 'Persisted response',
+                timestamp: new Date('2026-03-31T18:35:00.000Z').toISOString(),
+                metadata: JSON.stringify({ clientId: 'client-789' }),
+              },
+            ],
+            total: 1,
+          }),
+        },
+        mutations: { retry: false },
+      },
+    });
+
+    const { result } = renderHook(() => useChat(), {
+      wrapper: createWrapperWithQueryClient(queryClient),
+    });
+
+    await waitFor(() => {
+      expect(result.current.messages).toHaveLength(1);
+      expect(result.current.messages[0]?.id).toBe('7');
+      expect(result.current.messages[0]?.clientId).toBe('client-789');
     });
   });
 

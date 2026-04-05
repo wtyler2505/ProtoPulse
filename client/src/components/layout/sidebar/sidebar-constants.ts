@@ -107,7 +107,9 @@ export const tabDescriptions: Record<string, string> = {
 export const alwaysVisibleIds = new Set<ViewMode>([
   'dashboard',
   'architecture',
+  'breadboard',
   'component_editor',
+  'procurement',
   'arduino',
   'calculators',
   'design_patterns',

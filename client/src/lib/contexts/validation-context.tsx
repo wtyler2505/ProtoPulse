@@ -4,6 +4,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
 import type { ValidationIssue } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { projectMutationKeys, projectQueryKeys } from '@/lib/query-keys';
 
 const validationChecks: Array<{ severity: 'error' | 'warning' | 'info'; message: string; componentId: string; suggestion: string }> = [
   { severity: 'info', message: 'Check I2C pull-up resistor values for SHT40', componentId: '4', suggestion: 'Recommended 4.7kΩ for 100kHz standard mode.' },
@@ -29,7 +30,7 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
   const validationCheckIndex = useRef(0);
 
   const validationQuery = useQuery({
-    queryKey: [`/api/projects/${projectId}/validation`],
+    queryKey: projectQueryKeys.validation(projectId),
     enabled: seeded,
     select: (response: { data: Array<Omit<ValidationIssue, 'id'> & { id: number | string }>; total: number }) => response.data.map((issue): ValidationIssue => ({
       ...issue,
@@ -37,12 +38,13 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
     })),
   });
 
-  const validationQueryKey = [`/api/projects/${projectId}/validation`];
+  const validationQueryKey = projectQueryKeys.validation(projectId);
 
   type ValidationRawItem = Omit<ValidationIssue, 'id'> & { id: number | string };
   type ValidationRawResponse = { data: ValidationRawItem[]; total: number };
 
   const addValidationIssueMutation = useMutation({
+    mutationKey: projectMutationKeys.validation(projectId),
     mutationFn: async (issue: { severity: 'error' | 'warning' | 'info'; message: string; componentId?: string; suggestion?: string }) => {
       await apiRequest('POST', `/api/projects/${projectId}/validation`, issue);
     },
@@ -75,6 +77,7 @@ export function ValidationProvider({ seeded, children }: { seeded: boolean; chil
   });
 
   const deleteValidationIssueMutation = useMutation({
+    mutationKey: projectMutationKeys.validation(projectId),
     mutationFn: async (id: number | string) => {
       await apiRequest('DELETE', `/api/projects/${projectId}/validation/${Number(id)}`);
     },

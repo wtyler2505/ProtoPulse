@@ -11,6 +11,10 @@ import type { ExportSnapshot } from '../export-snapshot';
 // ---------------------------------------------------------------------------
 
 describe('shouldAutoSnapshot', () => {
+  it('returns true for fab-package format', () => {
+    expect(shouldAutoSnapshot('fab-package')).toBe(true);
+  });
+
   it('returns true for gerber format', () => {
     expect(shouldAutoSnapshot('gerber')).toBe(true);
   });
@@ -78,6 +82,12 @@ describe('formatSnapshotLabel', () => {
   it('formats gerber label with date', () => {
     expect(formatSnapshotLabel('gerber', fixedDate)).toBe(
       'Sent to fab \u2014 Gerber \u2014 2026-03-15',
+    );
+  });
+
+  it('formats fab-package label with date', () => {
+    expect(formatSnapshotLabel('fab-package', fixedDate)).toBe(
+      'Sent to fab \u2014 Fab Package \u2014 2026-03-15',
     );
   });
 
@@ -194,16 +204,16 @@ describe('export snapshot integration', () => {
   it('only creates snapshots for manufacturing formats', () => {
     const allFormats = [
       'kicad', 'eagle', 'spice', 'netlist-csv', 'netlist-kicad',
-      'gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb',
+      'fab-package', 'gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb',
       'bom-csv', 'fzz', 'pdf', 'fmea', 'step', 'firmware',
     ];
     const snapshotFormats = allFormats.filter(shouldAutoSnapshot);
-    expect(snapshotFormats).toEqual(['gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb', 'step']);
+    expect(snapshotFormats).toEqual(['fab-package', 'gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb', 'step']);
   });
 
   it('every manufacturing format produces a valid snapshot', () => {
     const fixedDate = new Date('2026-06-01T12:00:00Z');
-    const mfgFormats = ['gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb', 'step'];
+    const mfgFormats = ['fab-package', 'gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb', 'step'];
 
     for (const format of mfgFormats) {
       expect(shouldAutoSnapshot(format)).toBe(true);

@@ -3,6 +3,8 @@ import { fromZodError } from 'zod-validation-error';
 import { validateSession } from '../auth';
 import { storage, VersionConflictError } from '../storage';
 import { insertProjectSchema } from '@shared/schema';
+import { logger } from '../logger';
+import { findProjectListAnomalies } from '../lib/project-list-sanity';
 import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { setCacheHeaders } from '../lib/cache-headers';
@@ -22,6 +24,13 @@ export function registerProjectRoutes(app: Express): void {
       const opts = paginationSchema.safeParse(req.query);
       const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
       const result = await storage.getProjects(pagination);
+      const anomalies = findProjectListAnomalies(result);
+      if (anomalies.length > 0) {
+        logger.warn('projects:list:sanity-check', {
+          anomalyCount: anomalies.length,
+          anomalies,
+        });
+      }
       res.json({ data: result, total: result.length });
     }),
   );

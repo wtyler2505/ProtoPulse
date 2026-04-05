@@ -4,8 +4,7 @@
 
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
-import type { ComponentPart } from '@shared/schema';
-import type { Connector, PartMeta } from '@shared/component-types';
+import { buildExactPartAiPolicy, summarizeGeneratedCircuitTrust } from '@shared/exact-part-ai-policy';
 import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { circuitAiRateLimiter } from './rate-limiter';
@@ -13,47 +12,9 @@ import { categorizeError, redactSecrets } from '../ai';
 import { fromZodError } from 'zod-validation-error';
 import { logger } from '../logger';
 import { generateSchema } from './schemas';
+import { buildGeneratePrompt, collectCircuitAiExactPartIntents } from './prompt';
 import { ai } from '../genkit';
 import { googleAI } from '@genkit-ai/google-genai';
-
-function buildGeneratePrompt(description: string, parts: ComponentPart[]): string {
-  const partsList = parts
-    .map((p) => {
-      const meta = (p.meta ?? {}) as Partial<PartMeta>;
-      const conns = (p.connectors ?? []) as Connector[];
-      return `  - Part #${p.id}: "${meta.title || 'Untitled'}" (family: ${meta.family || 'unknown'}, pins: ${conns.map((c) => `${c.id}(${c.name})`).join(', ')})`;
-    })
-    .join('\n');
-
-  return `You are an electronics design assistant. Given a circuit description and available component parts, generate a schematic.
-
-AVAILABLE PARTS:
-${partsList || '  (no parts available)'}
-
-USER'S CIRCUIT DESCRIPTION:
-${description}
-
-Generate a JSON response with this structure:
-{
-  "instances": [
-    { "partId": <number>, "referenceDesignator": "<string>", "x": <number>, "y": <number> }
-  ],
-  "nets": [
-    { "name": "<string>", "netType": "signal"|"power"|"ground"|"bus", "segments": [
-      { "fromInstanceRefDes": "<string>", "fromPin": "<string>", "toInstanceRefDes": "<string>", "toPin": "<string>" }
-    ]}
-  ]
-}
-
-Rules:
-- Only use parts from the AVAILABLE PARTS list (reference by Part #id)
-- Assign IEEE reference designators (U1, R1, C1, J1, etc.)
-- Create nets for all electrical connections
-- In fromPin/toPin fields, use the pin ID (e.g., "pin1"), not the display name
-- Power nets should be named (VCC, GND, 3V3, etc.)
-- Position instances on a grid with ~200px spacing
-- Respond ONLY with valid JSON, no markdown fences or extra text`;
-}
 
 export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage): void {
   app.post(
@@ -68,7 +29,7 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
         return res.status(400).json({ message: 'Invalid request: ' + fromZodError(parsed.error).toString() });
       }
 
-      const { description, apiKey, model } = parsed.data;
+      const { description, apiKey } = parsed.data;
 
       const circuit = await storage.getCircuitDesign(circuitId);
       if (!circuit) {
@@ -80,6 +41,7 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
         return res.status(400).json({ message: 'No component parts available. Create parts first.' });
       }
 
+      const exactPartIntents = collectCircuitAiExactPartIntents(description, parts);
       const prompt = buildGeneratePrompt(description, parts);
 
       try {
@@ -89,8 +51,8 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
           config: {
             temperature: 0.1,
             maxOutputTokens: 8192,
-            apiKey: apiKey || undefined
-          }
+            apiKey: apiKey || undefined,
+          },
         });
 
         let text = response.text || '';
@@ -115,12 +77,17 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
         const createdInstanceIds: number[] = [];
         const createdNetIds: number[] = [];
         const createdWireIds: number[] = [];
+        const generatedInstances = generated.instances ?? [];
+        const trustSummary = summarizeGeneratedCircuitTrust(generatedInstances, parts);
 
         try {
           const refDesToInstanceId = new Map<string, number>();
-          for (const inst of generated.instances ?? []) {
+          for (const inst of generatedInstances) {
             const part = parts.find((p) => p.id === inst.partId);
-            if (!part) { continue; }
+            if (!part) {
+              continue;
+            }
+            const exactPartPolicy = buildExactPartAiPolicy(part);
 
             const created = await storage.createCircuitInstance({
               circuitId,
@@ -129,7 +96,21 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
               schematicX: inst.x ?? 0,
               schematicY: inst.y ?? 0,
               schematicRotation: 0,
-              properties: { aiGenerated: true },
+              properties: {
+                aiGenerated: true,
+                exactPartTrust: {
+                  authoritativeWiringAllowed: exactPartPolicy.authoritativeWiringAllowed,
+                  family: exactPartPolicy.family,
+                  level: exactPartPolicy.level,
+                  placementMode: exactPartPolicy.placementMode,
+                  requiresVerification: exactPartPolicy.requiresVerification,
+                  status: exactPartPolicy.status,
+                  summary: exactPartPolicy.summary,
+                  title: exactPartPolicy.title,
+                },
+                provisionalWiring:
+                  exactPartPolicy.requiresVerification && !exactPartPolicy.authoritativeWiringAllowed,
+              },
             });
             createdInstanceIds.push(created.id);
             refDesToInstanceId.set(inst.referenceDesignator, created.id);
@@ -140,12 +121,14 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
               circuitId,
               name: net.name,
               netType: net.netType ?? 'signal',
-              segments: (net.segments ?? []).map((seg: { fromInstanceRefDes: string; fromPin: string; toInstanceRefDes: string; toPin: string }) => ({
-                fromInstanceId: refDesToInstanceId.get(seg.fromInstanceRefDes) ?? 0,
-                fromPin: seg.fromPin,
-                toInstanceId: refDesToInstanceId.get(seg.toInstanceRefDes) ?? 0,
-                toPin: seg.toPin,
-              })),
+              segments: (net.segments ?? []).map(
+                (seg: { fromInstanceRefDes: string; fromPin: string; toInstanceRefDes: string; toPin: string }) => ({
+                  fromInstanceId: refDesToInstanceId.get(seg.fromInstanceRefDes) ?? 0,
+                  fromPin: seg.fromPin,
+                  toInstanceId: refDesToInstanceId.get(seg.toInstanceRefDes) ?? 0,
+                  toPin: seg.toPin,
+                }),
+              ),
             });
             createdNetIds.push(createdNet.id);
 
@@ -166,20 +149,60 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
           }
         } catch (createError: unknown) {
           // Compensating cleanup: delete all created records in reverse order
-          logger.warn(`[circuit-ai] Generation partially failed, cleaning up ${createdWireIds.length} wires, ${createdNetIds.length} nets, ${createdInstanceIds.length} instances`);
+          logger.warn(
+            `[circuit-ai] Generation partially failed, cleaning up ${createdWireIds.length} wires, ${createdNetIds.length} nets, ${createdInstanceIds.length} instances`,
+          );
           for (const wireId of createdWireIds) {
-            try { await storage.deleteCircuitWire(wireId); } catch { /* best-effort cleanup */ }
+            try {
+              await storage.deleteCircuitWire(wireId);
+            } catch {
+              /* best-effort cleanup */
+            }
           }
           for (const netId of createdNetIds) {
-            try { await storage.deleteCircuitNet(netId); } catch { /* best-effort cleanup */ }
+            try {
+              await storage.deleteCircuitNet(netId);
+            } catch {
+              /* best-effort cleanup */
+            }
           }
           for (const instId of createdInstanceIds) {
-            try { await storage.deleteCircuitInstance(instId); } catch { /* best-effort cleanup */ }
+            try {
+              await storage.deleteCircuitInstance(instId);
+            } catch {
+              /* best-effort cleanup */
+            }
           }
           throw createError;
         }
 
-        res.json({ success: true, message: 'Circuit generated successfully' });
+        const exactPartWarnings = exactPartIntents
+          .filter(
+            (intent) =>
+              intent.kind === 'candidate-match' ||
+              intent.kind === 'ambiguous-match' ||
+              intent.kind === 'needs-draft',
+          )
+          .map((intent) => intent.message);
+        const authoritativeWiringAllowed =
+          trustSummary.authoritativeWiringAllowed &&
+          exactPartIntents.every((intent) => intent.kind === 'verified-match');
+
+        res.json({
+          success: true,
+          message: authoritativeWiringAllowed
+            ? 'Circuit generated successfully'
+            : 'Circuit generated with provisional exact-part guidance',
+          exactPartWorkflow: {
+            authoritativeWiringAllowed,
+            requestedExactParts: exactPartIntents,
+            summary: authoritativeWiringAllowed
+              ? trustSummary.summary
+              : 'ProtoPulse generated the circuit, but at least one requested or placed exact board/module is still provisional.',
+            usedParts: trustSummary.usedParts,
+            warnings: [...exactPartWarnings, ...trustSummary.warnings],
+          },
+        });
       } catch (error: unknown) {
         const { userMessage } = categorizeError(error);
         logger.error(`[circuit-ai] Generation error: ${redactSecrets(String(error))}`);

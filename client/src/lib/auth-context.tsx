@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { apiRequest, queryClient } from '@/lib/queryClient';
+import { RecentProjectsManager } from '@/lib/recent-projects';
 
 interface User {
   id: number;
@@ -39,6 +40,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     navigator.onLine ? 'connected' : 'offline',
   );
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const previousScopeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const nextScope = sessionId && sessionId.trim().length > 0 ? sessionId : 'anonymous';
+    RecentProjectsManager.getInstance().setScope(nextScope);
+
+    if (previousScopeRef.current !== null && previousScopeRef.current !== nextScope) {
+      queryClient.clear();
+    }
+
+    previousScopeRef.current = nextScope;
+  }, [sessionId]);
 
   // Validate existing session on mount
   useEffect(() => {
@@ -60,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch('/api/auth/me', {
           headers: { 'X-Session-Id': sessionId! },
+          cache: 'no-store',
         });
         if (res.ok) {
           const data = (await res.json()) as User;
@@ -156,7 +170,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(true);
       } else if (stored && user !== null) {
         // Already have user — just re-check quietly
-        void fetch('/api/auth/me', { headers: { 'X-Session-Id': stored } })
+        void fetch('/api/auth/me', {
+          headers: { 'X-Session-Id': stored },
+          cache: 'no-store',
+        })
           .then((res) => {
             if (res.ok) {
               setConnectionStatus('connected');

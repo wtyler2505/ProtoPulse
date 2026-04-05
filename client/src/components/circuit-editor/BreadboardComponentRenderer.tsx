@@ -1,6 +1,8 @@
 import { memo, useMemo } from 'react';
+import { computeShapesBounds, renderPartShape } from '@/components/circuit-editor/PartSymbolRenderer';
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import { cn } from '@/lib/utils';
+import { getVerificationStatus, shouldPreferExactBreadboardView } from '@shared/component-trust';
 import { ResistorSvg, CapacitorSvg, LedSvg, IcSvg, DiodeSvg, TransistorSvg } from './breadboard-components';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 
@@ -134,16 +136,43 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
 
   if (!pos) return null;
 
-  const type = (part?.meta as Record<string, unknown>)?.type as string | undefined;
+  const meta = (part?.meta as Record<string, unknown> | undefined) ?? {};
+  const type = meta.type as string | undefined;
   const typeLower = type?.toLowerCase() || 'generic';
   const props = instance.properties as Record<string, unknown> | null;
   const color = (props?.color as string) || '#ff0000';
   const family = detectFamily(typeLower);
   const extType = detectExtendedType(typeLower);
   const valueLabel = family ? getCurrentValueLabel(instance, family) : null;
+  const exactShapes = (((part?.views as { breadboard?: { shapes?: unknown[] } } | undefined)?.breadboard?.shapes ?? []) as unknown[])
+    .filter((shape): shape is Parameters<typeof renderPartShape>[0] => shape != null && typeof shape === 'object');
+  const renderExactView = part != null && shouldPreferExactBreadboardView(meta, part.views) && exactShapes.length > 0;
+  const exactViewBounds = renderExactView ? computeShapesBounds(exactShapes) : null;
+  const exactViewTransform = exactViewBounds
+    ? `translate(${String(pos.x - (exactViewBounds.x + exactViewBounds.width / 2))} ${String(pos.y - (exactViewBounds.y + exactViewBounds.height / 2))})`
+    : undefined;
+  const exactViewRotation = instance.breadboardRotation != null && instance.breadboardRotation !== 0
+    ? `rotate(${String(instance.breadboardRotation)} ${String(pos.x)} ${String(pos.y)})`
+    : undefined;
+  const exactStatusLabel = getVerificationStatus(meta) === 'verified' ? 'Verified exact' : 'Candidate exact';
 
   // Component-specific photorealistic rendering
   const renderShape = () => {
+    if (renderExactView) {
+      return (
+        <g
+          className="cursor-pointer"
+          onClick={() => onClick?.(instance.id)}
+          transform={exactViewRotation}
+          data-testid={`bb-exact-view-${instance.id}`}
+        >
+          <g transform={exactViewTransform}>
+            {exactShapes.map((shape) => renderPartShape(shape))}
+          </g>
+        </g>
+      );
+    }
+
     switch (extType) {
       case 'led': {
         const brightness = isLive
@@ -230,6 +259,20 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
           data-testid={`bb-value-label-${instance.id}`}
         >
           {valueLabel}
+        </text>
+      )}
+      {selected && renderExactView && (
+        <text
+          x={pos.x}
+          y={pos.y + (valueLabel ? 20 : 14)}
+          textAnchor="middle"
+          dominantBaseline="hanging"
+          fontSize={4}
+          fill={getVerificationStatus(meta) === 'verified' ? '#86efac' : '#fde68a'}
+          className="font-mono select-none pointer-events-none"
+          data-testid={`bb-exact-status-${instance.id}`}
+        >
+          {exactStatusLabel}
         </text>
       )}
     </g>

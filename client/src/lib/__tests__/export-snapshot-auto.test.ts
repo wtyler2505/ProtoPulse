@@ -7,11 +7,12 @@ import {
 import type { ExportSnapshot } from '../export-snapshot';
 
 // ---------------------------------------------------------------------------
-// All 6 manufacturing format IDs (Gerber, Pick & Place, ODB++, IPC-2581,
-// Etchable PCB, STEP 3D) — the formats sent to fabrication/assembly houses.
+// All 7 manufacturing format IDs (Fab Package, Gerber, Pick & Place, ODB++,
+// IPC-2581, Etchable PCB, STEP 3D) — the formats sent to fabrication/assembly houses.
 // ---------------------------------------------------------------------------
 
 const MANUFACTURING_FORMAT_IDS = [
+  'fab-package',
   'gerber',
   'pick-place',
   'odb-plus-plus',
@@ -47,9 +48,9 @@ describe('shouldAutoSnapshot — manufacturing formats', () => {
     },
   );
 
-  it('returns true for all 6 manufacturing formats collectively', () => {
+  it('returns true for all manufacturing formats collectively', () => {
     const results = MANUFACTURING_FORMAT_IDS.map(shouldAutoSnapshot);
-    expect(results).toEqual([true, true, true, true, true, true]);
+    expect(results).toEqual([true, true, true, true, true, true, true]);
   });
 });
 
@@ -94,6 +95,12 @@ describe('shouldAutoSnapshot — non-manufacturing formats', () => {
 // ---------------------------------------------------------------------------
 
 describe('formatSnapshotLabel — new manufacturing format labels', () => {
+  it('formats fab-package as "Fab Package"', () => {
+    expect(formatSnapshotLabel('fab-package', fixedDate)).toBe(
+      'Sent to fab \u2014 Fab Package \u2014 2026-03-16',
+    );
+  });
+
   it('formats pick-place as "Pick & Place"', () => {
     expect(formatSnapshotLabel('pick-place', fixedDate)).toBe(
       'Sent to fab \u2014 Pick & Place \u2014 2026-03-16',
@@ -156,7 +163,7 @@ describe('createExportSnapshot — new manufacturing formats', () => {
     expect(snap.snapshotId).toBeNull();
   });
 
-  it('all 6 manufacturing formats produce distinct labels', () => {
+  it('all manufacturing formats produce distinct labels', () => {
     const labels = MANUFACTURING_FORMAT_IDS.map(
       (f) => createExportSnapshot(f, fixedDate).label,
     );
@@ -164,7 +171,7 @@ describe('createExportSnapshot — new manufacturing formats', () => {
     expect(unique.size).toBe(MANUFACTURING_FORMAT_IDS.length);
   });
 
-  it('all 6 manufacturing format snapshots have the same timestamp for same date', () => {
+  it('all manufacturing format snapshots have the same timestamp for same date', () => {
     const timestamps = MANUFACTURING_FORMAT_IDS.map(
       (f) => createExportSnapshot(f, fixedDate).timestamp,
     );
@@ -204,16 +211,16 @@ describe('createExportSnapshot — new manufacturing formats', () => {
 // ---------------------------------------------------------------------------
 
 describe('export auto-snapshot integration', () => {
-  it('exactly 6 formats from the full ExportPanel list trigger snapshots', () => {
+  it('exactly 7 formats from the full ExportPanel list trigger snapshots', () => {
     const allExportPanelFormats = [
       'kicad', 'eagle', 'spice', 'netlist-csv', 'netlist-kicad',
-      'gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb',
+      'fab-package', 'gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb',
       'bom-csv', 'fzz', 'pdf', 'fmea', 'step', 'firmware',
     ];
     const triggered = allExportPanelFormats.filter(shouldAutoSnapshot);
-    expect(triggered).toHaveLength(6);
+    expect(triggered).toHaveLength(7);
     expect(triggered).toEqual([
-      'gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb', 'step',
+      'fab-package', 'gerber', 'pick-place', 'odb-plus-plus', 'ipc2581', 'etchable-pcb', 'step',
     ]);
   });
 

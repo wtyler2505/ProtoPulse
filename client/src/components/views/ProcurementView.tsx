@@ -2,9 +2,7 @@ import { useState, useMemo, useCallback, useRef, memo, lazy, Suspense } from 're
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates, arrayMove } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
-import { useProjectId } from '@/lib/contexts/project-id-context';
-import { useBom } from '@/lib/contexts/bom-context';
-import { useOutput } from '@/lib/contexts/output-context';
+import { useBom, useOutput, useProjectId } from '@/lib/project-context';
 import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers, TrendingDown, History, CircuitBoard, Shield, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';

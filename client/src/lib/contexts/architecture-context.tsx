@@ -5,6 +5,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
 import type { ViewMode } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { projectMutationKeys, projectQueryKeys } from '@/lib/query-keys';
 
 /** API response shape for architecture nodes from the server. */
 interface NodeApiResponse {
@@ -82,10 +83,12 @@ export function ArchitectureProvider({
 }) {
   const queryClient = useQueryClient();
   const projectId = useProjectId();
+  const nodesQueryKey = projectQueryKeys.nodes(projectId);
+  const edgesQueryKey = projectQueryKeys.edges(projectId);
 
   // --- Queries ---
   const nodesQuery = useQuery({
-    queryKey: [`/api/projects/${projectId}/nodes`],
+    queryKey: nodesQueryKey,
     enabled: seeded,
     select: (response: { data: NodeApiResponse[]; total: number }) => response.data.map((n): Node => ({
       id: n.nodeId,
@@ -96,7 +99,7 @@ export function ArchitectureProvider({
   });
 
   const edgesQuery = useQuery({
-    queryKey: [`/api/projects/${projectId}/edges`],
+    queryKey: edgesQueryKey,
     enabled: seeded,
     select: (response: { data: EdgeApiResponse[]; total: number }) => response.data.map((e): Edge => ({
       id: e.edgeId,
@@ -116,6 +119,7 @@ export function ArchitectureProvider({
 
   // --- Mutations ---
   const saveNodesMutation = useMutation({
+    mutationKey: projectMutationKeys.nodes(projectId),
     mutationFn: async (nodes: Node[]) => {
       const body = nodes.map(node => ({
         nodeId: node.id,
@@ -128,16 +132,17 @@ export function ArchitectureProvider({
       await apiRequest('PUT', `/api/projects/${projectId}/nodes`, body);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/nodes`] });
+      void queryClient.invalidateQueries({ queryKey: nodesQueryKey });
     },
     onError: (error: Error) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/nodes`] });
+      void queryClient.invalidateQueries({ queryKey: nodesQueryKey });
       const reason = error.message.replace(/^\d{3}:\s*/, '') || 'An unexpected error occurred';
       toast({ variant: 'destructive', title: 'Failed to save nodes', description: `Changes may not have been saved. ${reason}` });
     },
   });
 
   const saveEdgesMutation = useMutation({
+    mutationKey: projectMutationKeys.edges(projectId),
     mutationFn: async (edges: Edge[]) => {
       const body = edges.map(edge => {
         const edgeData = edge.data as EdgeData | undefined;
@@ -157,10 +162,10 @@ export function ArchitectureProvider({
       await apiRequest('PUT', `/api/projects/${projectId}/edges`, body);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/edges`] });
+      void queryClient.invalidateQueries({ queryKey: edgesQueryKey });
     },
     onError: (error: Error) => {
-      queryClient.invalidateQueries({ queryKey: [`/api/projects/${projectId}/edges`] });
+      void queryClient.invalidateQueries({ queryKey: edgesQueryKey });
       const reason = error.message.replace(/^\d{3}:\s*/, '') || 'An unexpected error occurred';
       toast({ variant: 'destructive', title: 'Failed to save connections', description: `Changes may not have been saved. ${reason}` });
     },
@@ -179,11 +184,11 @@ export function ArchitectureProvider({
       data: { description: node.data.description },
     }));
     queryClient.setQueryData(
-      [`/api/projects/${projectId}/nodes`],
+      nodesQueryKey,
       { data: mapped, total: mapped.length },
     );
     saveNodesMutation.mutate(newNodes);
-  }, [queryClient, saveNodesMutation]);
+  }, [nodesQueryKey, queryClient, saveNodesMutation]);
 
   const setEdges = useCallback((newEdges: Edge[]) => {
     const mapped = newEdges.map(edge => {
@@ -202,11 +207,11 @@ export function ArchitectureProvider({
       };
     });
     queryClient.setQueryData(
-      [`/api/projects/${projectId}/edges`],
+      edgesQueryKey,
       { data: mapped, total: mapped.length },
     );
     saveEdgesMutation.mutate(newEdges);
-  }, [queryClient, saveEdgesMutation]);
+  }, [edgesQueryKey, queryClient, saveEdgesMutation]);
 
   // --- Selection & focus ---
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

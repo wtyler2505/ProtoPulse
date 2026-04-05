@@ -30,9 +30,9 @@ export interface ExportProfile {
 const FAB_READY: ExportProfile = {
   id: 'fab-ready',
   label: 'Fab Ready',
-  description: 'Manufacturing output: Gerber, drill, BOM, and pick-and-place files.',
+  description: 'Manufacturing output: complete fab package plus Gerber, BOM, and pick-and-place files.',
   iconHint: 'cpu',
-  formatIds: ['gerber', 'pick-place', 'bom-csv'] as const,
+  formatIds: ['fab-package', 'gerber', 'pick-place', 'bom-csv'] as const,
 };
 
 const SIM_BUNDLE: ExportProfile = {
@@ -62,6 +62,7 @@ const FULL_PACKAGE: ExportProfile = {
     'spice',
     'netlist-csv',
     'netlist-kicad',
+    'fab-package',
     'gerber',
     'pick-place',
     'odb-plus-plus',

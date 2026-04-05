@@ -6,7 +6,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useProjectMeta } from '@/lib/project-context';
 import { queueStarterCircuitLaunch } from '@/lib/starter-circuit-launch';
 import {
   Search,

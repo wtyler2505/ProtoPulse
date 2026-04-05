@@ -19,7 +19,7 @@ import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useValidation } from '@/lib/contexts/validation-context';
 import { useHistory } from '@/lib/contexts/history-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useProjectMeta } from '@/lib/project-context';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import WelcomeOverlay, { isOnboardingDismissed, dismissOnboarding } from './WelcomeOverlay';

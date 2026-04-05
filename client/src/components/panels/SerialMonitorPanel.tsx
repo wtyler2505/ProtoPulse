@@ -1,11 +1,15 @@
-import { useState, useRef, useEffect, useCallback, useSyncExternalStore, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect, useCallback, useSyncExternalStore, useMemo, lazy, Suspense } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useArduino } from '@/lib/contexts/arduino-context';
 import {
   useWebSerial,
   COMMON_BAUD_RATES,
   KNOWN_BOARD_FILTERS,
 } from '@/lib/web-serial';
+import { buildSerialTrustReceipt } from '@/lib/trust-receipts';
+import { assessSerialDevicePreflight } from '@/lib/arduino/serial-device-preflight';
 import type {
   LineEnding,
   SerialMonitorLine,
@@ -16,6 +20,7 @@ import { DeviceShadow } from '@/lib/digital-twin/device-shadow';
 import DeviceCommandSandbox from '@/components/arduino/DeviceCommandSandbox';
 import { detectEspException, parseEspException } from '@/lib/arduino/esp-exception-decoder';
 import { detectBaudMismatch, nonPrintableRatio } from '@/lib/arduino/baud-detector';
+import { buildHardwareCoDebugReadiness } from '@/lib/arduino/hardware-co-debug';
 import type { EspExceptionResult } from '@/lib/arduino/esp-exception-decoder';
 import type { BaudMismatchResult } from '@/lib/arduino/baud-detector';
 import type { SerialContext } from '@/lib/arduino/serial-troubleshooter';
@@ -32,6 +37,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import {
   Zap,
   ZapOff,
@@ -166,7 +172,16 @@ interface SerialMonitorPanelProps {
   projectId?: number;
 }
 
-export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialMonitorPanelProps) {
+function normalizeBoardFilterValue(value: string | null | undefined): string {
+  if (!value || value === 'any') {
+    return '';
+  }
+  return value;
+}
+
+export default function SerialMonitorPanel({ code = '', projectId }: SerialMonitorPanelProps) {
+  const contextProjectId = useProjectId();
+  const resolvedProjectId = projectId ?? contextProjectId;
   const {
     state,
     requestPort,
@@ -180,6 +195,7 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
     clearMonitor,
     isSupported,
   } = useWebSerial();
+  const { profiles } = useArduino();
 
   const [sendValue, setSendValue] = useState('');
   const [selectedBoardProfile, setSelectedBoardProfile] = useState<string>('');
@@ -210,17 +226,20 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
 
   // AI Hardware Copilot
   const [copilotResult, setCopilotResult] = useState<string | null>(null);
+  const coDebugReadiness = useMemo(
+    () => buildHardwareCoDebugReadiness({ code, monitor: state.monitor }),
+    [code, state.monitor],
+  );
   const copilotMutation = useMutation({
     mutationFn: async () => {
-      const recentLogs = state.monitor.slice(-50).map(l => l.data).join('\n');
-      const res = await apiRequest('POST', `/api/projects/${projectId}/arduino/co-debug`, {
-        code,
-        serialLogs: recentLogs || '(No recent logs)'
+      const res = await apiRequest('POST', `/api/projects/${resolvedProjectId}/arduino/co-debug`, {
+        code: coDebugReadiness.code,
+        serialLogs: coDebugReadiness.serialLogs,
       });
       const data = await res.json();
       return data.result as string;
     },
-    onSuccess: (data) => setCopilotResult(data)
+    onSuccess: (data) => setCopilotResult(data),
   });
 
   // Tab: 'monitor' | 'dashboard'
@@ -231,6 +250,11 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
   const [replayData, setReplayData] = useState<SerialMonitorLine[]>([]);
   const replayFileRef = useRef<HTMLInputElement>(null);
   const replayTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const normalizedBoardFilter = normalizeBoardFilterValue(selectedBoardProfile);
+  const defaultArduinoProfile = useMemo(
+    () => profiles.find((profile) => profile.isDefault) ?? profiles[0],
+    [profiles],
+  );
 
   // Telemetry store
   const telemetryStoreRef = useRef(TelemetryStore.getInstance());
@@ -453,16 +477,16 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
   useEffect(() => {
     const lastName = loadLastUsedPreset();
     if (lastName) {
-      const preset = presets.find((p) => p.name === lastName);
-      if (preset) {
-        setBaudRate(preset.baudRate);
-        setLineEnding(preset.lineEnding);
-        void setSignals({ dtr: preset.dtr, rts: preset.rts });
-        if (preset.boardProfile) {
-          setSelectedBoardProfile(preset.boardProfile);
+        const preset = presets.find((p) => p.name === lastName);
+        if (preset) {
+          setBaudRate(preset.baudRate);
+          setLineEnding(preset.lineEnding);
+          void setSignals({ dtr: preset.dtr, rts: preset.rts });
+          if (preset.boardProfile) {
+            setSelectedBoardProfile(normalizeBoardFilterValue(preset.boardProfile));
+          }
         }
       }
-    }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -475,13 +499,13 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
   }, [state.monitor.length, autoScroll]);
 
   const handleConnect = useCallback(async () => {
-    const boardFilter = KNOWN_BOARD_FILTERS.find((p) => p.label === selectedBoardProfile);
+    const boardFilter = KNOWN_BOARD_FILTERS.find((p) => p.label === normalizedBoardFilter);
     const filters = boardFilter ? [{ usbVendorId: boardFilter.usbVendorId, ...(boardFilter.usbProductId !== undefined ? { usbProductId: boardFilter.usbProductId } : {}) }] : undefined;
     const gotPort = await requestPort(filters);
     if (gotPort) {
       await connect({ baudRate: state.baudRate });
     }
-  }, [requestPort, connect, state.baudRate, selectedBoardProfile]);
+  }, [requestPort, connect, normalizedBoardFilter, state.baudRate]);
 
   const handleDisconnect = useCallback(async () => {
     await disconnect();
@@ -525,7 +549,7 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
       lineEnding: state.lineEnding,
       dtr: state.dtr,
       rts: state.rts,
-      boardProfile: selectedBoardProfile || undefined,
+      boardProfile: normalizedBoardFilter || undefined,
     };
     const updated = [...presets.filter((p) => p.name !== name), newPreset];
     setPresets(updated);
@@ -533,7 +557,7 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
     saveLastUsedPreset(name);
     setPresetName('');
     setShowPresetSave(false);
-  }, [presetName, state.baudRate, state.lineEnding, state.dtr, state.rts, selectedBoardProfile, presets]);
+  }, [normalizedBoardFilter, presetName, state.baudRate, state.lineEnding, state.dtr, state.rts, presets]);
 
   const handleLoadPreset = useCallback(
     (preset: SavedPreset) => {
@@ -541,7 +565,7 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
       setLineEnding(preset.lineEnding);
       void setSignals({ dtr: preset.dtr, rts: preset.rts });
       if (preset.boardProfile) {
-        setSelectedBoardProfile(preset.boardProfile);
+        setSelectedBoardProfile(normalizeBoardFilterValue(preset.boardProfile));
       }
       saveLastUsedPreset(preset.name);
     },
@@ -585,6 +609,45 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
   }, []);
 
   // Unsupported browser
+  const serialDevicePreflight = useMemo(
+    () =>
+      assessSerialDevicePreflight({
+        connectionState: state.connectionState,
+        normalizedBoardFilter,
+        portInfo: state.portInfo,
+        selectedProfile: defaultArduinoProfile,
+      }),
+    [defaultArduinoProfile, normalizedBoardFilter, state.connectionState, state.portInfo],
+  );
+
+  const serialTrustReceipt = useMemo(
+    () =>
+      buildSerialTrustReceipt({
+        baudRate: state.baudRate,
+        bytesReceived: state.bytesReceived,
+        bytesSent: state.bytesSent,
+        connectionState: state.connectionState,
+        devicePreflight: serialDevicePreflight,
+        error: state.error,
+        isSupported,
+        portInfo: state.portInfo,
+        selectedBoardProfile: normalizedBoardFilter,
+        showTroubleshootHint,
+      }),
+    [
+      isSupported,
+      normalizedBoardFilter,
+      serialDevicePreflight,
+      showTroubleshootHint,
+      state.baudRate,
+      state.bytesReceived,
+      state.bytesSent,
+      state.connectionState,
+      state.error,
+      state.portInfo,
+    ],
+  );
+
   if (!isSupported) {
     return (
       <div data-testid="serial-monitor-unsupported" className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
@@ -697,8 +760,8 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
           <div className="flex items-center gap-1.5">
             <Label className="text-xs text-muted-foreground whitespace-nowrap">Board:</Label>
             <Select
-              value={selectedBoardProfile}
-              onValueChange={setSelectedBoardProfile}
+              value={normalizedBoardFilter || 'any'}
+              onValueChange={(value) => setSelectedBoardProfile(normalizeBoardFilterValue(value))}
             >
               <SelectTrigger data-testid="serial-board-select" className="h-7 w-[160px] text-xs">
                 <SelectValue placeholder="Any device" />
@@ -906,6 +969,11 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
           </div>
         )}
 
+        <TrustReceiptCard
+          receipt={serialTrustReceipt}
+          data-testid="trust-receipt-serial"
+        />
+
         {/* Baud Mismatch Warning */}
         {baudMismatch?.detected && !baudWarningDismissed && (
           <div
@@ -1069,7 +1137,11 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
                       .map((l) => l.data)
                       .join(''),
                   ) > 0.3,
-                selectedBoard: selectedBoardProfile || undefined,
+                detectedDeviceLabel: serialDevicePreflight.detectedDeviceLabel,
+                arduinoProfileLabel: serialDevicePreflight.arduinoProfileLabel,
+                boardSafetyLabel: serialDevicePreflight.boardSafetyLabel,
+                boardBlockerReason: serialDevicePreflight.blockerReason,
+                selectedBoard: normalizedBoardFilter || undefined,
               } satisfies SerialContext}
               onClose={() => {
                 setShowTroubleshootWizard(false);
@@ -1313,9 +1385,9 @@ export default function SerialMonitorPanel({ code = '', projectId = 1 }: SerialM
           variant="secondary"
           size="sm"
           onClick={() => copilotMutation.mutate()}
-          disabled={copilotMutation.isPending}
+          disabled={copilotMutation.isPending || !coDebugReadiness.canRun}
           className="h-8 text-xs gap-1 bg-primary/10 text-primary hover:bg-primary/20"
-          title="AI Co-Debug (Analyzes code, layout, and logs)"
+          title={coDebugReadiness.blockedReason ?? coDebugReadiness.title}
         >
           {copilotMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Wand2 className="w-3 h-3" />}
           AI Copilot

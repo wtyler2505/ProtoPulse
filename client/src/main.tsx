@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import "./index.css";
 import { I18n } from "./lib/i18n";
 import { PwaManager } from "./lib/pwa-manager";
@@ -33,4 +34,8 @@ if (import.meta.env.PROD) {
   }).catch(() => {});
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+);

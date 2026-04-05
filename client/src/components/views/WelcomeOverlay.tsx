@@ -11,6 +11,9 @@ import {
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import RolePresetSelector from '@/components/ui/RolePresetSelector';
+import { useBeginnerMode } from '@/lib/beginner-mode';
+import { useRolePreset } from '@/lib/role-presets';
 import { cn } from '@/lib/utils';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -146,6 +149,9 @@ interface WelcomeOverlayProps {
 }
 
 export default function WelcomeOverlay({ onNavigate, onDismiss }: WelcomeOverlayProps) {
+  const { preset } = useRolePreset();
+  const { isEnabled: plainLabelsEnabled, toggle: togglePlainLabels } = useBeginnerMode();
+
   const handleQuickStart = (step: QuickStartStep) => {
     onNavigate(step.view);
   };
@@ -164,7 +170,7 @@ export default function WelcomeOverlay({ onNavigate, onDismiss }: WelcomeOverlay
             </div>
             <p className="text-sm text-muted-foreground max-w-xl leading-relaxed">
               AI-assisted electronic design automation. Build architecture diagrams, capture schematics,
-              manage your BOM, validate designs, and export to industry formats — all in your browser.
+              manage your BOM, validate designs, and export to industry formats — all in one workspace.
             </p>
           </div>
           <Button
@@ -177,6 +183,42 @@ export default function WelcomeOverlay({ onNavigate, onDismiss }: WelcomeOverlay
           >
             <X className="w-5 h-5" />
           </Button>
+        </div>
+
+        <div
+          data-testid="welcome-mode-panel"
+          className="rounded-2xl border border-primary/20 bg-primary/5 p-4 md:p-5"
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="max-w-xl">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary/80">
+                Choose Your Workspace Mode
+              </p>
+              <h3 className="mt-2 text-lg font-semibold text-foreground">
+                Start with the amount of guidance you want.
+              </h3>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Student keeps ProtoPulse simpler, Hobbyist balances guidance with power, and Pro unlocks the full workbench.
+              </p>
+            </div>
+            <button
+              data-testid="welcome-plain-labels-toggle"
+              type="button"
+              onClick={togglePlainLabels}
+              className={cn(
+                'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                plainLabelsEnabled
+                  ? 'border-primary/30 bg-primary/10 text-primary'
+                  : 'border-border bg-background/60 text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {plainLabelsEnabled ? 'Plain labels on' : 'Use plain labels'}
+            </button>
+          </div>
+          <RolePresetSelector className="mt-4 flex-wrap bg-background/50" />
+          <p data-testid="welcome-mode-description" className="mt-3 text-sm text-muted-foreground">
+            Current mode: <span className="font-medium text-foreground">{preset.label}</span>. {preset.description}
+          </p>
         </div>
 
         {/* Features grid */}

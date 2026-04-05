@@ -4,6 +4,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { toast } from '@/hooks/use-toast';
 import type { BomItem } from '@/lib/project-context';
 import { useProjectId } from '@/lib/contexts/project-id-context';
+import { projectMutationKeys, projectQueryKeys } from '@/lib/query-keys';
 
 /** Extract a human-readable reason from a mutation error. */
 function errorReason(error: Error): string {
@@ -43,7 +44,7 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
   }, []);
 
   const bomQuery = useQuery({
-    queryKey: [`/api/projects/${projectId}/bom`],
+    queryKey: projectQueryKeys.bom(projectId),
     enabled: seeded,
     select: (response: { data: Array<Omit<BomItem, 'id'> & { id: number | string; unitPrice: number | string; totalPrice: number | string }>; total: number }) => response.data.map((item): BomItem => ({
       ...item,
@@ -53,12 +54,13 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
     })),
   });
 
-  const bomQueryKey = [`/api/projects/${projectId}/bom`];
+  const bomQueryKey = projectQueryKeys.bom(projectId);
 
   type BomRawItem = Omit<BomItem, 'id'> & { id: number | string; unitPrice: number | string; totalPrice: number | string };
   type BomRawResponse = { data: BomRawItem[]; total: number };
 
   const addBomItemMutation = useMutation({
+    mutationKey: projectMutationKeys.bom(projectId),
     mutationFn: async (item: Omit<BomItem, 'id'>) => {
       await apiRequest('POST', `/api/projects/${projectId}/bom`, item);
     },
@@ -89,6 +91,7 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
   });
 
   const deleteBomItemMutation = useMutation({
+    mutationKey: projectMutationKeys.bom(projectId),
     mutationFn: async (id: number | string) => {
       await apiRequest('DELETE', `/api/projects/${projectId}/bom/${Number(id)}`);
     },
@@ -114,6 +117,7 @@ export function BomProvider({ seeded, children }: { seeded: boolean; children: R
   });
 
   const updateBomItemMutation = useMutation({
+    mutationKey: projectMutationKeys.bom(projectId),
     mutationFn: async ({ id, data }: { id: number | string; data: Partial<BomItem> }) => {
       await apiRequest('PATCH', `/api/projects/${projectId}/bom/${Number(id)}`, data);
     },

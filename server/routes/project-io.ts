@@ -6,7 +6,9 @@ import { storage } from '../storage';
 import { asyncHandler, HttpError, parseIdParam, payloadLimit } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { logger } from '../logger';
+import { validateSession } from '../auth';
 import {
+  projects,
   architectureNodes,
   architectureEdges,
   bomItems,
@@ -350,6 +352,16 @@ export function registerProjectIORoutes(app: Express): void {
     '/api/projects/import',
     payloadLimit(IMPORT_PAYLOAD_MAX),
     asyncHandler(async (req, res) => {
+      const sessionId = req.headers['x-session-id'] as string | undefined;
+      if (!sessionId) {
+        throw new HttpError('Authentication required', 401);
+      }
+
+      const session = await validateSession(sessionId);
+      if (!session) {
+        throw new HttpError('Invalid or expired session', 401);
+      }
+
       const parsed = importSchema.safeParse(req.body);
       if (!parsed.success) {
         throw new HttpError(fromZodError(parsed.error).toString(), 400);
@@ -363,10 +375,11 @@ export function registerProjectIORoutes(app: Express): void {
       const result = await db.transaction(async (tx) => {
         // 1. Create the project
         const [newProject] = await tx
-          .insert((await import('@shared/schema')).projects)
+          .insert(projects)
           .values({
             name: data.project.name,
             description: data.project.description,
+            ownerId: session.userId,
           })
           .returning();
 

@@ -13,6 +13,8 @@ import type {
   TerminalPosition,
   PartProperty,
 } from "@shared/component-types";
+import type { PartSourceEvidence } from '@shared/component-trust';
+import { inferPartFamily, markPartMetaAsCandidate } from '@shared/component-trust';
 import { LRUClientCache } from "./lib/lru-cache";
 import { redactSecrets } from "./ai";
 
@@ -52,6 +54,12 @@ const STRUCTURED_TEMPERATURE = 0.3;
 const CREATIVE_TEMPERATURE = 0.7;
 
 const MAX_OUTPUT_TOKENS = 8192;
+
+interface GeneratePartOptions {
+  communitySourceUrl?: string;
+  marketplaceSourceUrl?: string;
+  officialSourceUrl?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Shared schema description (embedded in prompts so the model knows the types)
@@ -384,6 +392,162 @@ function validatePartialMeta(data: unknown): Partial<PartMeta> {
   return result;
 }
 
+function createDraftAccuracyReports(partState: PartState): Pick<PartMeta, 'pinAccuracyReport' | 'visualAccuracyReport'> {
+  const breadboardShapes = partState.views.breadboard?.shapes ?? [];
+  const breadboardTextShapes = breadboardShapes.filter((shape) => shape.type === 'text');
+  const connectorCount = partState.connectors.length;
+  const breadboardAnchors = partState.connectors.filter((connector) => connector.terminalPositions?.breadboard != null).length;
+
+  return {
+    visualAccuracyReport: {
+      outline: breadboardShapes.length > 0 ? 'approximate' : 'unknown',
+      connectors: connectorCount > 0 ? 'approximate' : 'unknown',
+      silkscreen: breadboardTextShapes.length > 0 ? 'approximate' : 'unknown',
+      mountingHoles: 'unknown',
+    },
+    pinAccuracyReport: {
+      connectorNames: connectorCount > 0 ? 'approximate' : 'unknown',
+      electricalRoles: connectorCount > 0 ? 'approximate' : 'unknown',
+      breadboardAnchors:
+        connectorCount > 0 && breadboardAnchors === connectorCount
+          ? 'exact'
+          : connectorCount > 0
+            ? 'approximate'
+            : 'unknown',
+      unresolved: [],
+    },
+  };
+}
+
+function buildGenerationEvidence(
+  description: string,
+  imageBase64: string | undefined,
+  options: GeneratePartOptions | undefined,
+): PartSourceEvidence[] {
+  const evidence: PartSourceEvidence[] = [
+    {
+      type: 'text-request',
+      label: 'Natural-language exact-part request',
+      note: description.slice(0, 240),
+      supports: ['outline', 'pins'],
+      confidence: 'medium',
+      reviewStatus: 'pending',
+    },
+    {
+      type: 'ai-inference',
+      label: 'AI-generated candidate part model',
+      note: 'Generated from the request context and any attached visual reference.',
+      supports: ['outline', 'pins', 'labels', 'breadboard-fit'],
+      confidence: 'low',
+      reviewStatus: 'pending',
+    },
+  ];
+
+  if (options?.officialSourceUrl) {
+    evidence.push({
+      type: 'official-image',
+      label: 'Official source reference',
+      href: options.officialSourceUrl,
+      supports: ['outline', 'pins', 'labels', 'dimensions'],
+      confidence: 'high',
+      reviewStatus: 'pending',
+    });
+  }
+
+  if (options?.communitySourceUrl) {
+    evidence.push({
+      type: 'community-svg',
+      label: 'Community source reference',
+      href: options.communitySourceUrl,
+      supports: ['outline', 'labels'],
+      confidence: 'medium',
+      reviewStatus: 'pending',
+    });
+  }
+
+  if (options?.marketplaceSourceUrl) {
+    evidence.push({
+      type: 'marketplace-listing',
+      label: 'Marketplace listing reference',
+      href: options.marketplaceSourceUrl,
+      supports: ['outline', 'pins', 'labels', 'dimensions'],
+      confidence: 'medium',
+      reviewStatus: 'pending',
+    });
+  }
+
+  if (imageBase64) {
+    evidence.push({
+      type: 'user-photo',
+      label: 'Uploaded visual reference',
+      note: 'User-supplied image attached during exact-part drafting.',
+      supports: ['outline', 'pins', 'labels'],
+      confidence: 'medium',
+      reviewStatus: 'pending',
+    });
+  }
+
+  return evidence;
+}
+
+function markGeneratedPartAsCandidate(
+  partState: PartState,
+  description: string,
+  imageBase64: string | undefined,
+  options?: GeneratePartOptions,
+): PartState {
+  const draftReports = createDraftAccuracyReports(partState);
+  const meta = {
+    ...partState.meta,
+    partFamily: inferPartFamily(partState.meta),
+    ...draftReports,
+  } as Record<string, unknown>;
+
+  return {
+    ...partState,
+    meta: markPartMetaAsCandidate(meta, {
+      evidence: buildGenerationEvidence(description, imageBase64, options),
+      note: 'AI-created candidate exact part. Review source evidence and pin anchors before using it for authoritative wiring.',
+      modelQuality: partState.meta.breadboardModelQuality ?? 'ai_drafted',
+    }) as unknown as PartMeta,
+  };
+}
+
+function markModifiedPartAsCandidate(
+  partState: PartState,
+  currentPart: PartState,
+  instruction: string,
+): PartState {
+  const draftReports = createDraftAccuracyReports(partState);
+  const meta = {
+    ...partState.meta,
+    partFamily: inferPartFamily({
+      ...currentPart.meta,
+      ...partState.meta,
+    }),
+    sourceEvidence: currentPart.meta.sourceEvidence ?? [],
+    ...draftReports,
+  } as Record<string, unknown>;
+
+  return {
+    ...partState,
+    meta: markPartMetaAsCandidate(meta, {
+      evidence: [
+        {
+          type: 'ai-inference',
+          label: 'AI modification pass',
+          note: instruction.slice(0, 240),
+          supports: ['outline', 'pins', 'labels', 'breadboard-fit'],
+          confidence: 'low',
+          reviewStatus: 'pending',
+        },
+      ],
+      note: 'This part was modified by AI and should be re-reviewed before treating it as authoritative.',
+      modelQuality: currentPart.meta.breadboardModelQuality === 'verified' ? 'ai_drafted' : currentPart.meta.breadboardModelQuality,
+    }) as unknown as PartMeta,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // 1. generatePartFromDescription
 // ---------------------------------------------------------------------------
@@ -402,8 +566,14 @@ export async function generatePartFromDescription(
   description: string,
   imageBase64?: string,
   imageMimeType?: string,
+  options?: GeneratePartOptions,
 ): Promise<PartState> {
   const ai = getGenAIClient(apiKey);
+  const sourceLines = [
+    options?.officialSourceUrl ? `Official source URL: ${options.officialSourceUrl}` : null,
+    options?.communitySourceUrl ? `Community helper URL: ${options.communitySourceUrl}` : null,
+    options?.marketplaceSourceUrl ? `Marketplace listing URL: ${options.marketplaceSourceUrl}` : null,
+  ].filter((value): value is string => value != null);
 
   const systemInstruction = `You are an expert electronics component engineer specializing in EDA (Electronic Design Automation) part creation. Your task is to generate a complete component part definition as JSON.
 
@@ -438,7 +608,13 @@ ${PART_STATE_SCHEMA_DESCRIPTION}
 - Return ONLY the JSON object — no markdown, no explanation, just the PartState JSON.`;
 
   const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
-    { text: `Generate a complete PartState for the following component:\n\n${description}` },
+    {
+      text: `Generate a complete PartState for the following component:\n\n${description}${
+        sourceLines.length > 0
+          ? `\n\nSource references for exact variant identity:\n${sourceLines.map((line) => `- ${line}`).join('\n')}\n\nTreat marketplace URLs as assistive evidence, not authoritative truth. Do not invent connector names or placement details that are not supported by the description or attached image.`
+          : ''
+      }`,
+    },
   ];
 
   if (imageBase64 && imageMimeType) {
@@ -468,7 +644,12 @@ ${PART_STATE_SCHEMA_DESCRIPTION}
     }
 
     const parsed = extractJSON<unknown>(text);
-    return validatePartState(parsed);
+    return markGeneratedPartAsCandidate(
+      validatePartState(parsed),
+      description,
+      imageBase64,
+      options,
+    );
   } catch (error) {
     if (error instanceof ComponentAIError) throw error;
     const msg =
@@ -541,7 +722,7 @@ Return ONLY the complete modified PartState JSON — no markdown, no explanation
     }
 
     const parsed = extractJSON<unknown>(text);
-    return validatePartState(parsed);
+    return markModifiedPartAsCandidate(validatePartState(parsed), currentPart, instruction);
   } catch (error) {
     if (error instanceof ComponentAIError) throw error;
     const msg =

@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
 import { Bot, User, Copy, Check, RefreshCw, AlertTriangle, CheckCircle2, Wrench, XCircle, GitBranch, Settings2, Play, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import ConfidenceBadge from '@/components/ui/ConfidenceBadge';
 import ActionPreviewList from './ActionPreviewList';
@@ -11,11 +12,7 @@ import AnswerSourcePanel from './AnswerSourcePanel';
 import type { ConfidenceScore } from '@/components/ui/ConfidenceBadge';
 import { ACTION_LABELS, DESTRUCTIVE_ACTIONS } from './constants';
 import type { ChatMessage, ToolCallInfo } from '@/lib/project-context';
-
-interface AIAction {
-  type: string;
-  [key: string]: unknown;
-}
+import type { PendingActionReview } from './chat-types';
 
 /** Type guard — checks if unknown data contains a valid ConfidenceScore shape. */
 function isConfidenceScore(data: unknown): data is ConfidenceScore {
@@ -95,13 +92,15 @@ interface MessageBubbleProps {
   onBranch?: (messageId: string) => void;
   onOpenSettings?: () => void;
   isLast: boolean;
-  pendingActions: { actions: AIAction[]; messageId: string } | null;
+  pendingActions: PendingActionReview | null;
   onAcceptActions: () => void;
   onRejectActions: () => void;
   tokenInfo?: {input: number; output: number; cost: number} | null;
 }
 
 const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, onBranch, onOpenSettings, isLast, pendingActions, onAcceptActions, onRejectActions, tokenInfo }: MessageBubbleProps) {
+  const hasDestructivePendingActions = pendingActions?.actions.some((action) => DESTRUCTIVE_ACTIONS.includes(action.type)) ?? false;
+
   return (
     <div className={cn(
       "flex gap-3 text-sm animate-in fade-in slide-in-from-bottom-2 duration-300 group/msg",
@@ -166,8 +165,8 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
 
         {msg.toolCalls && msg.toolCalls.length > 0 && (
           <div className="flex flex-col gap-1 px-1">
-            {msg.toolCalls.map((tc) => (
-              <div key={tc.id} className={cn(
+            {msg.toolCalls.map((tc, index) => (
+              <div key={tc.id || `${tc.name}-${index}`} className={cn(
                 "flex items-center gap-1.5 px-2 py-1 text-[10px] border",
                 tc.result.success
                   ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-400"
@@ -205,25 +204,30 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
         {pendingActions && (
           <div className={cn(
             "border p-3 space-y-3 rounded-md shadow-sm",
-            pendingActions.actions.some(a => DESTRUCTIVE_ACTIONS.includes(a.type))
+            hasDestructivePendingActions
               ? "border-amber-500/40 bg-amber-500/5"
               : "border-primary/30 bg-primary/5"
           )}>
             <div className="flex items-center gap-2">
-              {pendingActions.actions.some(a => DESTRUCTIVE_ACTIONS.includes(a.type)) 
+              {hasDestructivePendingActions
                 ? <AlertTriangle className="w-4 h-4 text-amber-500" />
                 : <Bot className="w-4 h-4 text-primary" />
               }
               <span className={cn(
                 "text-[11px] font-bold uppercase tracking-tight",
-                pendingActions.actions.some(a => DESTRUCTIVE_ACTIONS.includes(a.type)) ? "text-amber-500" : "text-primary"
+                hasDestructivePendingActions ? "text-amber-500" : "text-primary"
               )}>
-                {pendingActions.actions.some(a => DESTRUCTIVE_ACTIONS.includes(a.type)) 
+                {hasDestructivePendingActions
                   ? "Confirm Destructive Actions" 
                   : "Review Proposed Changes"
                 }
               </span>
             </div>
+
+            <TrustReceiptCard
+              receipt={pendingActions.trustReceipt}
+              data-testid="trust-receipt-pending-actions"
+            />
 
             <ActionPreviewList actions={pendingActions.actions} />
 

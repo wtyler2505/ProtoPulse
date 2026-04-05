@@ -1,10 +1,12 @@
 import { useState, useCallback, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useArduino } from '@/lib/contexts/arduino-context';
+import { buildArduinoTrustReceipt } from '@/lib/trust-receipts';
 import { cn } from '@/lib/utils';
 import { FileJson, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import TrustReceiptCard from '@/components/ui/TrustReceiptCard';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +21,11 @@ import { apiRequest } from '@/lib/queryClient';
 import { parseCompileOutput } from '@/lib/arduino/cli-error-parser';
 import CodeEditor from '@/components/views/circuit-code/CodeEditor';
 import { formatArduinoCode } from '@/lib/arduino/code-formatter';
+import {
+  assessArduinoUploadTarget,
+  normalizeDetectedArduinoBoards,
+  type DetectedArduinoDevice,
+} from '@/lib/arduino/device-preflight';
 import { translateCompileOutput } from '@/lib/arduino/error-translator';
 import { linkErrorsToKnowledge } from '@/lib/arduino/error-knowledge-linker';
 import type { LinkedError } from '@/lib/arduino/error-knowledge-linker';
@@ -73,6 +80,7 @@ export default function ArduinoWorkbenchView() {
     searchLibraries,
     installLibrary,
     uninstallLibrary,
+    listBoards,
     searchCores,
     installCore,
     uninstallCore,
@@ -110,6 +118,8 @@ export default function ArduinoWorkbenchView() {
   const [flashProgress, setFlashProgress] = useState<FlashProgress | null>(null);
   const [flashDiagnostic, setFlashDiagnostic] = useState<FlashDiagnostic | null>(null);
   const flashProgressRef = useRef<FlashProgress | null>(null);
+  const [detectedBoards, setDetectedBoards] = useState<DetectedArduinoDevice[] | null>(null);
+  const [isCheckingUploadTarget, setIsCheckingUploadTarget] = useState(false);
 
   // Selected profile id
   const defaultProfile = useMemo(() => profiles.find(p => p.isDefault) ?? profiles[0], [profiles]);
@@ -125,6 +135,40 @@ export default function ArduinoWorkbenchView() {
     [profiles, selectedProfileId],
   );
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (health?.status !== 'ok' || !selectedProfile?.port?.trim()) {
+      setDetectedBoards(null);
+      setIsCheckingUploadTarget(false);
+      return;
+    }
+
+    setIsCheckingUploadTarget(true);
+    void listBoards()
+      .then((boards) => {
+        if (cancelled) {
+          return;
+        }
+        setDetectedBoards(normalizeDetectedArduinoBoards(boards));
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setDetectedBoards([]);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsCheckingUploadTarget(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [health?.status, listBoards, selectedProfile?.fqbn, selectedProfile?.port]);
+
   const activeFile = useMemo(
     () => files.find(f => f.relativePath === activeFilePath),
     [files, activeFilePath],
@@ -133,6 +177,11 @@ export default function ArduinoWorkbenchView() {
   const activeJob = useMemo(
     () => jobs.find(j => j.status === 'running' || j.status === 'pending'),
     [jobs],
+  );
+
+  const uploadTargetAssessment = useMemo(
+    () => assessArduinoUploadTarget({ detectedBoards, isChecking: isCheckingUploadTarget, selectedProfile }),
+    [detectedBoards, isCheckingUploadTarget, selectedProfile],
   );
 
   const lastCompletedCompile = useMemo(
@@ -352,6 +401,19 @@ export default function ArduinoWorkbenchView() {
       toast({ variant: 'destructive', title: 'No Port', description: 'Edit the profile and set a serial port.' });
       return;
     }
+    if (isCheckingUploadTarget) {
+      toast({ title: 'Checking board identity', description: 'Wait for ProtoPulse to confirm the connected device before uploading.' });
+      return;
+    }
+    if (uploadTargetAssessment.shouldBlockUpload) {
+      setProfileDialogOpen(true);
+      toast({
+        variant: 'destructive',
+        title: 'Upload blocked',
+        description: uploadTargetAssessment.blockerReason ?? 'ProtoPulse could not verify that the selected board and port match the connected hardware.',
+      });
+      return;
+    }
     if (isDirty) {
       await handleSave();
     }
@@ -361,7 +423,7 @@ export default function ArduinoWorkbenchView() {
     } catch (e: unknown) {
       toast({ variant: 'destructive', title: 'Upload failed', description: e instanceof Error ? e.message : String(e) });
     }
-  }, [workspace, selectedProfile, isDirty, handleSave, uploadJob, toast]);
+  }, [workspace, selectedProfile, isCheckingUploadTarget, uploadTargetAssessment, isDirty, handleSave, uploadJob, toast]);
 
   const handleCancelJob = useCallback(async () => {
     if (!activeJob) {
@@ -580,6 +642,19 @@ export default function ArduinoWorkbenchView() {
     return 'javascript';
   }, [activeFile]);
 
+  const readinessReceipt = useMemo(
+    () =>
+      buildArduinoTrustReceipt({
+        activeFilePath,
+        activeJob,
+        devicePreflight: uploadTargetAssessment,
+        healthStatus: health?.status,
+        selectedProfile,
+        workspace,
+      }),
+    [activeFilePath, activeJob, health?.status, selectedProfile, uploadTargetAssessment, workspace],
+  );
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
@@ -603,6 +678,11 @@ export default function ArduinoWorkbenchView() {
         activeJob={activeJob}
         onCompile={handleCompile}
         onUpload={handleUpload}
+        uploadBlockedReason={
+          isCheckingUploadTarget
+            ? 'Checking the connected board before upload.'
+            : (uploadTargetAssessment.shouldBlockUpload ? uploadTargetAssessment.blockerReason : null)
+        }
         onCancelJob={handleCancelJob}
         lastCompletedCompile={lastCompletedCompile}
         onDownloadArtifact={(jobId) => void handleDownloadArtifact(jobId)}
@@ -611,6 +691,12 @@ export default function ArduinoWorkbenchView() {
         onFlashRetry={handleFlashRetry}
         onFlashDismiss={handleFlashDismiss}
         projectId={_projectId}
+      />
+
+      <TrustReceiptCard
+        receipt={readinessReceipt}
+        className="mx-3 mt-3"
+        data-testid="trust-receipt-arduino"
       />
 
       <div className="flex-1 flex overflow-hidden">

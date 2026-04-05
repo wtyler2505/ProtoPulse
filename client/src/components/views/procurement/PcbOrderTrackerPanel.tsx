@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { useProjectId } from '@/lib/contexts/project-id-context';
+import { useProjectId } from '@/lib/project-context';
 import {
   usePcbOrderTracker,
   PCB_STATUS_PIPELINE,

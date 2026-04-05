@@ -125,15 +125,22 @@ function RecentProjectRow({ entry, onSelect, onTogglePin, onRemove }: RecentProj
 export interface RecentProjectsListProps {
   searchQuery: string;
   onSelectProject: (projectId: number) => void;
+  validProjectIds?: ReadonlySet<number>;
+  helperText?: string | null;
 }
 
-export function RecentProjectsList({ searchQuery, onSelectProject }: RecentProjectsListProps) {
+export function RecentProjectsList({ searchQuery, onSelectProject, validProjectIds, helperText }: RecentProjectsListProps) {
   const { query, togglePin, removeEntry, count } = useRecentProjects();
   const [sortMode, setSortMode] = useState<RecentSortMode>('recent');
 
-  const entries = useMemo(
+  const rawEntries = useMemo(
     () => query(searchQuery, sortMode),
     [query, searchQuery, sortMode],
+  );
+
+  const entries = useMemo(
+    () => rawEntries.filter((entry) => !validProjectIds || validProjectIds.has(entry.projectId)),
+    [rawEntries, validProjectIds],
   );
 
   const handleTogglePin = useCallback(
@@ -151,6 +158,10 @@ export function RecentProjectsList({ searchQuery, onSelectProject }: RecentProje
   );
 
   if (count === 0) {
+    return null;
+  }
+
+  if (entries.length === 0 && !searchQuery.trim()) {
     return null;
   }
 
@@ -177,6 +188,12 @@ export function RecentProjectsList({ searchQuery, onSelectProject }: RecentProje
           ))}
         </div>
       </div>
+
+      {helperText ? (
+        <p className="mb-2 text-xs text-muted-foreground/80" data-testid="recent-projects-helper-text">
+          {helperText}
+        </p>
+      ) : null}
 
       {/* Entry list */}
       <div className="space-y-0.5" data-testid="recent-entries">

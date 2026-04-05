@@ -79,13 +79,23 @@ export const reducer = (state: State, action: Action): State => {
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
       }
 
-    case "UPDATE_TOAST":
-      return {
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === action.toast.id ? { ...t, ...action.toast } : t
-        ),
-      }
+    case "UPDATE_TOAST": {
+      let changed = false;
+      const nextToasts = state.toasts.map((t) => {
+        if (t.id !== action.toast.id) {
+          return t;
+        }
+        changed = true;
+        return { ...t, ...action.toast };
+      });
+
+      return changed
+        ? {
+            ...state,
+            toasts: nextToasts,
+          }
+        : state;
+    }
 
     case "DISMISS_TOAST": {
       const { toastId } = action
@@ -100,24 +110,40 @@ export const reducer = (state: State, action: Action): State => {
         })
       }
 
-      return {
-        ...state,
-        toasts: state.toasts.map((t) =>
-          t.id === toastId || toastId === undefined
-            ? {
-                ...t,
-                open: false,
-              }
-            : t
-        ),
-      }
+      let changed = false;
+      const nextToasts = state.toasts.map((t) => {
+        if (t.id !== toastId && toastId !== undefined) {
+          return t;
+        }
+        if (t.open === false) {
+          return t;
+        }
+        changed = true;
+        return {
+          ...t,
+          open: false,
+        };
+      });
+
+      return changed
+        ? {
+            ...state,
+            toasts: nextToasts,
+          }
+        : state
     }
     case "REMOVE_TOAST":
       if (action.toastId === undefined) {
+        if (state.toasts.length === 0) {
+          return state;
+        }
         return {
           ...state,
           toasts: [],
         }
+      }
+      if (!state.toasts.some((t) => t.id === action.toastId)) {
+        return state;
       }
       return {
         ...state,
@@ -131,7 +157,11 @@ const listeners: Array<(state: State) => void> = []
 let memoryState: State = { toasts: [] }
 
 function dispatch(action: Action) {
-  memoryState = reducer(memoryState, action)
+  const nextState = reducer(memoryState, action)
+  if (nextState === memoryState) {
+    return
+  }
+  memoryState = nextState
   listeners.forEach((listener) => {
     listener(memoryState)
   })
@@ -139,7 +169,45 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
+function signatureValue(value: React.ReactNode | undefined): string | null {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value)
+  }
+  return null
+}
+
+function toastSignature(toastLike: Partial<ToasterToast>): string | null {
+  const title = signatureValue(toastLike.title)
+  const description = signatureValue(toastLike.description)
+  if (title === null && description === null) {
+    return null
+  }
+  return `${toastLike.variant ?? "default"}|${title ?? ""}|${description ?? ""}`
+}
+
 function toast({ ...props }: Toast) {
+  const nextSignature = toastSignature(props)
+  if (nextSignature !== null) {
+    const existingToast = memoryState.toasts.find((currentToast) => {
+      return currentToast.open !== false && toastSignature(currentToast) === nextSignature
+    })
+
+    if (existingToast) {
+      const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: existingToast.id })
+      const update = (updatedProps: ToasterToast) =>
+        dispatch({
+          type: "UPDATE_TOAST",
+          toast: { ...updatedProps, id: existingToast.id },
+        })
+
+      return {
+        id: existingToast.id,
+        dismiss,
+        update,
+      }
+    }
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -179,7 +247,7 @@ function useToast() {
         listeners.splice(index, 1)
       }
     }
-  }, [state])
+  }, [])
 
   return {
     ...state,

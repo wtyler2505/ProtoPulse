@@ -78,7 +78,19 @@ function createMockStorage(): IStorage {
     getCircuitNets: vi.fn().mockResolvedValue([]),
     getCircuitWires: vi.fn().mockResolvedValue([]),
     createComponentPart: vi.fn().mockResolvedValue({ id: 1 }),
-    getComponentPart: vi.fn().mockResolvedValue(null),
+    getComponentPart: vi.fn().mockResolvedValue({
+      id: 1,
+      meta: {
+        family: 'microcontroller',
+        mountingType: 'tht',
+        partFamily: 'board-module',
+        properties: [],
+        tags: ['arduino', 'module'],
+        title: 'Arduino Mega 2560 R3',
+        verificationLevel: 'official-backed',
+        verificationStatus: 'verified',
+      },
+    }),
     getComponentParts: vi.fn().mockResolvedValue([]),
     updateComponentPart: vi.fn().mockResolvedValue(true),
     deleteComponentPart: vi.fn().mockResolvedValue(true),
@@ -860,6 +872,54 @@ describe('Server-side execution — storage interactions', () => {
 
     expect(result.success).toBe(true);
     expect(mockStorage.createCircuitInstance).toHaveBeenCalledTimes(1);
+  });
+
+  it('place_component flags candidate exact parts as provisional', async () => {
+    mockStorage.getComponentPart = vi.fn().mockResolvedValue({
+      id: 21,
+      meta: {
+        family: 'motor driver',
+        mountingType: 'tht',
+        partFamily: 'driver',
+        properties: [],
+        tags: ['motor', 'driver', 'module'],
+        title: 'RioRand Motor Controller',
+        verificationLevel: 'mixed-source',
+        verificationStatus: 'candidate',
+      },
+    });
+
+    const result = await registry.execute(
+      'place_component',
+      { circuitId: 1, partId: 21, referenceDesignator: 'U2' },
+      ctx,
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('provisional exact part');
+    expect(mockStorage.createCircuitInstance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        properties: expect.objectContaining({
+          provisionalWiring: true,
+        }),
+      }),
+    );
+  });
+
+  it('place_component returns a verified exact message for reviewed board modules', async () => {
+    const result = await registry.execute(
+      'place_component',
+      { circuitId: 1, partId: 1, referenceDesignator: 'U1' },
+      ctx,
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.message).toContain('verified exact part');
+    expect(result.data).toMatchObject({
+      exactPartTrust: expect.objectContaining({
+        placementMode: 'verified-exact',
+      }),
+    });
   });
 
   it('draw_net calls storage.createCircuitNet', async () => {

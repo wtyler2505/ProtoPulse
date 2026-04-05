@@ -15,6 +15,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { getCurrentClientStateScope, getScopedStorageKey } from '@/lib/client-state-scope';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -57,9 +58,11 @@ export class RecentProjectsManager {
 
   private entries: RecentProjectEntry[];
   private listeners = new Set<Listener>();
+  private scope: string;
 
   constructor() {
     this.entries = [];
+    this.scope = getCurrentClientStateScope();
     this.load();
   }
 
@@ -74,6 +77,25 @@ export class RecentProjectsManager {
   /** Reset singleton — test-only. */
   static resetForTesting(): void {
     RecentProjectsManager.instance = null;
+  }
+
+  /**
+   * Switch localStorage scope (typically when the authenticated session changes).
+   * Re-loads entries from the new scope and notifies subscribers when changed.
+   */
+  setScope(scope: string | null | undefined): void {
+    const nextScope = scope && scope.trim().length > 0 ? scope : 'anonymous';
+    if (nextScope === this.scope) {
+      return;
+    }
+
+    this.scope = nextScope;
+    this.load();
+    this.notify();
+  }
+
+  getScope(): string {
+    return this.scope;
   }
 
   // -----------------------------------------------------------------------
@@ -102,11 +124,23 @@ export class RecentProjectsManager {
 
   private load(): void {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const scopedKey = getScopedStorageKey(STORAGE_KEY, this.scope);
+      const raw = localStorage.getItem(scopedKey);
       if (raw) {
         const parsed = JSON.parse(raw) as RecentProjectsData;
         if (Array.isArray(parsed.entries)) {
           this.entries = parsed.entries.slice(0, MAX_ENTRIES);
+          return;
+        }
+      }
+
+      const legacyRaw = localStorage.getItem(STORAGE_KEY);
+      if (legacyRaw) {
+        const parsed = JSON.parse(legacyRaw) as RecentProjectsData;
+        if (Array.isArray(parsed.entries)) {
+          this.entries = parsed.entries.slice(0, MAX_ENTRIES);
+          localStorage.setItem(scopedKey, JSON.stringify({ entries: this.entries }));
+          localStorage.removeItem(STORAGE_KEY);
           return;
         }
       }
@@ -119,7 +153,7 @@ export class RecentProjectsManager {
   private save(): void {
     try {
       const data: RecentProjectsData = { entries: this.entries };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(getScopedStorageKey(STORAGE_KEY, this.scope), JSON.stringify(data));
     } catch {
       // localStorage full or unavailable
     }

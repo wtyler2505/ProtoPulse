@@ -114,14 +114,14 @@ export class MiscStorage {
     }
   }
 
-  async deleteDesignPreference(id: number): Promise<boolean> {
+  async deleteDesignPreference(projectId: number, id: number): Promise<boolean> {
     try {
       const result = await this.db.delete(designPreferences)
-        .where(eq(designPreferences.id, id))
+        .where(and(eq(designPreferences.projectId, projectId), eq(designPreferences.id, id)))
         .returning();
       return result.length > 0;
     } catch (e) {
-      throw new StorageError('deleteDesignPreference', `design-preferences/${id}`, e);
+      throw new StorageError('deleteDesignPreference', `projects/${projectId}/preferences/${id}`, e);
     }
   }
 
@@ -203,14 +203,14 @@ export class MiscStorage {
     }
   }
 
-  async getComponentLifecycle(id: number): Promise<ComponentLifecycle | undefined> {
+  async getComponentLifecycle(projectId: number, id: number): Promise<ComponentLifecycle | undefined> {
     try {
       const [entry] = await this.db.select()
         .from(componentLifecycle)
-        .where(eq(componentLifecycle.id, id));
+        .where(and(eq(componentLifecycle.projectId, projectId), eq(componentLifecycle.id, id)));
       return entry;
     } catch (e) {
-      throw new StorageError('getComponentLifecycle', `component-lifecycle/${id}`, e);
+      throw new StorageError('getComponentLifecycle', `projects/${projectId}/lifecycle/${id}`, e);
     }
   }
 
@@ -238,14 +238,14 @@ export class MiscStorage {
     }
   }
 
-  async deleteComponentLifecycle(id: number): Promise<boolean> {
+  async deleteComponentLifecycle(projectId: number, id: number): Promise<boolean> {
     try {
       const result = await this.db.delete(componentLifecycle)
-        .where(eq(componentLifecycle.id, id))
+        .where(and(eq(componentLifecycle.projectId, projectId), eq(componentLifecycle.id, id)))
         .returning();
       return result.length > 0;
     } catch (e) {
-      throw new StorageError('deleteComponentLifecycle', `component-lifecycle/${id}`, e);
+      throw new StorageError('deleteComponentLifecycle', `projects/${projectId}/lifecycle/${id}`, e);
     }
   }
 
@@ -261,13 +261,13 @@ export class MiscStorage {
     }
   }
 
-  async getDesignSnapshot(id: number): Promise<DesignSnapshot | undefined> {
+  async getDesignSnapshot(projectId: number, id: number): Promise<DesignSnapshot | undefined> {
     try {
       const [snapshot] = await this.db.select().from(designSnapshots)
-        .where(eq(designSnapshots.id, id));
+        .where(and(eq(designSnapshots.projectId, projectId), eq(designSnapshots.id, id)));
       return snapshot;
     } catch (e) {
-      throw new StorageError('getDesignSnapshot', `design-snapshots/${id}`, e);
+      throw new StorageError('getDesignSnapshot', `projects/${projectId}/snapshots/${id}`, e);
     }
   }
 
@@ -282,14 +282,14 @@ export class MiscStorage {
     }
   }
 
-  async deleteDesignSnapshot(id: number): Promise<boolean> {
+  async deleteDesignSnapshot(projectId: number, id: number): Promise<boolean> {
     try {
       const [deleted] = await this.db.delete(designSnapshots)
-        .where(eq(designSnapshots.id, id))
+        .where(and(eq(designSnapshots.projectId, projectId), eq(designSnapshots.id, id)))
         .returning();
       return !!deleted;
     } catch (e) {
-      throw new StorageError('deleteDesignSnapshot', `design-snapshots/${id}`, e);
+      throw new StorageError('deleteDesignSnapshot', `projects/${projectId}/snapshots/${id}`, e);
     }
   }
 
@@ -318,14 +318,14 @@ export class MiscStorage {
     }
   }
 
-  async getComment(id: number): Promise<DesignComment | undefined> {
+  async getComment(projectId: number, id: number): Promise<DesignComment | undefined> {
     try {
       const [comment] = await this.db.select()
         .from(designComments)
-        .where(eq(designComments.id, id));
+        .where(and(eq(designComments.projectId, projectId), eq(designComments.id, id)));
       return comment;
     } catch (e) {
-      throw new StorageError('getComment', `comments/${id}`, e);
+      throw new StorageError('getComment', `projects/${projectId}/comments/${id}`, e);
     }
   }
 
@@ -340,19 +340,19 @@ export class MiscStorage {
     }
   }
 
-  async updateComment(id: number, data: { content?: string }): Promise<DesignComment | undefined> {
+  async updateComment(projectId: number, id: number, data: { content?: string }): Promise<DesignComment | undefined> {
     try {
       const [updated] = await this.db.update(designComments)
         .set({ ...data, updatedAt: new Date() })
-        .where(eq(designComments.id, id))
+        .where(and(eq(designComments.projectId, projectId), eq(designComments.id, id)))
         .returning();
       return updated;
     } catch (e) {
-      throw new StorageError('updateComment', `comments/${id}`, e);
+      throw new StorageError('updateComment', `projects/${projectId}/comments/${id}`, e);
     }
   }
 
-  async updateCommentStatus(id: number, status: string, updatedBy?: number): Promise<DesignComment | undefined> {
+  async updateCommentStatus(projectId: number, id: number, status: string, updatedBy?: number): Promise<DesignComment | undefined> {
     try {
       const [updated] = await this.db.update(designComments)
         .set({
@@ -361,22 +361,22 @@ export class MiscStorage {
           statusUpdatedAt: new Date(),
           updatedAt: new Date(),
         })
-        .where(eq(designComments.id, id))
+        .where(and(eq(designComments.projectId, projectId), eq(designComments.id, id)))
         .returning();
       return updated;
     } catch (e) {
-      throw new StorageError('updateCommentStatus', `comments/${id}`, e);
+      throw new StorageError('updateCommentStatus', `projects/${projectId}/comments/${id}`, e);
     }
   }
 
-  async deleteComment(id: number): Promise<boolean> {
+  async deleteComment(projectId: number, id: number): Promise<boolean> {
     try {
       const [deleted] = await this.db.delete(designComments)
-        .where(eq(designComments.id, id))
+        .where(and(eq(designComments.projectId, projectId), eq(designComments.id, id)))
         .returning();
       return !!deleted;
     } catch (e) {
-      throw new StorageError('deleteComment', `comments/${id}`, e);
+      throw new StorageError('deleteComment', `projects/${projectId}/comments/${id}`, e);
     }
   }
 }

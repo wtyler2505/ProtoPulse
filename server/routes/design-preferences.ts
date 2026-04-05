@@ -63,7 +63,7 @@ export function registerDesignPreferenceRoutes(app: Express): void {
       if (!existing) {
         return res.status(404).json({ message: 'Preference not found' });
       }
-      const deleted = await storage.deleteDesignPreference(prefId);
+      const deleted = await storage.deleteDesignPreference(projectId, prefId);
       if (!deleted) {
         return res.status(404).json({ message: 'Preference not found' });
       }

@@ -1,6 +1,6 @@
 import { useReducer, useCallback } from 'react';
 
-import type { AIAction } from '../chat-types';
+import type { PendingActionReview } from '../chat-types';
 
 interface TokenInfo {
   input: number;
@@ -8,17 +8,12 @@ interface TokenInfo {
   cost: number;
 }
 
-interface PendingActions {
-  actions: AIAction[];
-  messageId: string;
-}
-
 interface ChatMessagingState {
   input: string;
   chatSearch: string;
   lastUserMessage: string;
   streamingContent: string;
-  pendingActions: PendingActions | null;
+  pendingActions: PendingActionReview | null;
   copiedId: string | null;
   tokenInfo: TokenInfo | null;
 }
@@ -29,7 +24,7 @@ type ChatMessagingAction =
   | { type: 'SET_CHAT_SEARCH'; payload: string }
   | { type: 'SET_LAST_USER_MESSAGE'; payload: string }
   | { type: 'SET_STREAMING_CONTENT'; payload: string }
-  | { type: 'SET_PENDING_ACTIONS'; payload: PendingActions | null }
+  | { type: 'SET_PENDING_ACTIONS'; payload: PendingActionReview | null }
   | { type: 'SET_COPIED_ID'; payload: string | null }
   | { type: 'SET_TOKEN_INFO'; payload: TokenInfo | null }
   | { type: 'RESET_MESSAGING' };
@@ -81,7 +76,7 @@ export default function useChatMessaging() {
   const setChatSearch = useCallback((value: string) => dispatch({ type: 'SET_CHAT_SEARCH', payload: value }), []);
   const setLastUserMessage = useCallback((value: string) => dispatch({ type: 'SET_LAST_USER_MESSAGE', payload: value }), []);
   const setStreamingContent = useCallback((value: string) => dispatch({ type: 'SET_STREAMING_CONTENT', payload: value }), []);
-  const setPendingActions = useCallback((value: PendingActions | null) => dispatch({ type: 'SET_PENDING_ACTIONS', payload: value }), []);
+  const setPendingActions = useCallback((value: PendingActionReview | null) => dispatch({ type: 'SET_PENDING_ACTIONS', payload: value }), []);
   const setCopiedId = useCallback((value: string | null) => dispatch({ type: 'SET_COPIED_ID', payload: value }), []);
   const setTokenInfo = useCallback((value: TokenInfo | null) => dispatch({ type: 'SET_TOKEN_INFO', payload: value }), []);
   const resetMessaging = useCallback(() => dispatch({ type: 'RESET_MESSAGING' }), []);

@@ -45,6 +45,7 @@ interface ArduinoToolbarProps {
   activeJob: ArduinoJob | undefined;
   onCompile: () => void;
   onUpload: () => void;
+  uploadBlockedReason: string | null;
   onCancelJob: () => void;
   lastCompletedCompile: ArduinoJob | undefined;
   onDownloadArtifact: (jobId: number) => void;
@@ -73,6 +74,7 @@ export default function ArduinoToolbar({
   activeJob,
   onCompile,
   onUpload,
+  uploadBlockedReason,
   onCancelJob,
   lastCompletedCompile,
   onDownloadArtifact,
@@ -174,9 +176,10 @@ export default function ArduinoToolbar({
           <Button
             size="sm"
             className="h-8 gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
-            disabled={!workspace || !!activeJob || !selectedProfile}
+            disabled={!workspace || !!activeJob || !selectedProfile || Boolean(uploadBlockedReason)}
             onClick={onUpload}
             data-testid="button-arduino-upload"
+            title={uploadBlockedReason ?? 'Upload firmware to the selected device'}
           >
             {activeJob?.jobType === 'upload' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
             <span>Upload</span>

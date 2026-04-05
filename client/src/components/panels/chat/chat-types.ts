@@ -1,4 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
+import type { TrustReceipt } from '@/lib/feature-maturity';
 import type { ViewMode } from '@/lib/project-context';
 
 /** Data shape stored on architecture nodes in ProtoPulse. */
@@ -88,6 +89,13 @@ export interface AIAction {
   updates?: Record<string, unknown>;
   status?: string;
   [key: string]: unknown;
+}
+
+/** Review metadata for a pending AI-generated action bundle awaiting user approval. */
+export interface PendingActionReview {
+  actions: AIAction[];
+  messageId: string;
+  trustReceipt: TrustReceipt;
 }
 
 /** Shape for a generated architecture component inside an AIAction. */

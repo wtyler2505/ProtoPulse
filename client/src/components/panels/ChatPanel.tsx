@@ -1,14 +1,16 @@
 import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Bot, Sparkles, ArrowDown, Search } from 'lucide-react';
-import { useChat } from '@/lib/contexts/chat-context';
-import { useValidation } from '@/lib/contexts/validation-context';
-import { useArchitecture } from '@/lib/contexts/architecture-context';
-import { useBom } from '@/lib/contexts/bom-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
-import { useHistory } from '@/lib/contexts/history-context';
-import { useOutput } from '@/lib/contexts/output-context';
-import { useProjectId } from '@/lib/contexts/project-id-context';
+import {
+  useArchitecture,
+  useBom,
+  useChat,
+  useHistory,
+  useOutput,
+  useProjectId,
+  useProjectMeta,
+  useValidation,
+} from '@/lib/project-context';
 import { type ChatMessage, type ViewMode, type ToolCallInfo, type ToolSource, type ConfidenceScore } from '@/lib/project-context';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -30,6 +32,7 @@ import { useApiKeys } from '@/hooks/useApiKeys';
 import { queryClient } from '@/lib/queryClient';
 import ApiKeySetupDialog from './chat/ApiKeySetupDialog';
 import type { AIAction } from './chat/chat-types';
+import type { PendingActionReview } from './chat/chat-types';
 import { useActionExecutor } from './chat/hooks/useActionExecutor';
 import useChatPanelUI from './chat/hooks/useChatPanelUI';
 import useChatMessaging from './chat/hooks/useChatMessaging';
@@ -39,9 +42,11 @@ import { mapErrorToUserMessage, mapStreamErrorToUserMessage } from '@/lib/error-
 import { useMultimodalInput } from '@/lib/multimodal-input';
 import type { InputType } from '@/lib/multimodal-input';
 import DesignAgentPanel from './chat/DesignAgentPanel';
-import { AISafetyModeManager } from '@/lib/ai-safety-mode';
+import { AISafetyModeManager, useAISafetyMode } from '@/lib/ai-safety-mode';
+import { useReviewQueue } from '@/lib/ai-review-queue';
 import { ACTION_LABELS } from './chat/constants';
 import SafetyConfirmDialog from './SafetyConfirmDialog';
+import { buildChatActionTrustReceipt } from '@/lib/trust-receipts';
 
 /** Maximum number of SSE reconnection attempts on network failure. */
 const SSE_MAX_RETRIES = 3;
@@ -63,7 +68,7 @@ interface MessageListProps {
   handleRegenerate: () => void;
   handleRetry: (lastUserMessage: string) => void;
   lastUserMessage: string;
-  pendingActions: { actions: AIAction[]; messageId: string } | null;
+  pendingActions: PendingActionReview | null;
   acceptPendingActions: () => void;
   rejectPendingActions: () => void;
   tokenInfo: { input: number; output: number; cost: number } | null;
@@ -217,7 +222,7 @@ const MessageList = memo(function MessageList({
                     onBranch={(messageId) => { void createBranch(Number(messageId)); }}
                     onOpenSettings={onOpenSettings}
                     isLast={msg.id === lastMsgId}
-                    pendingActions={pendingActions?.messageId === msg.id ? pendingActions : null}
+                    pendingActions={pendingActions?.messageId === (msg.clientId ?? msg.id) ? pendingActions : null}
                     onAcceptActions={acceptPendingActions}
                     onRejectActions={rejectPendingActions}
                     tokenInfo={msg.role === 'assistant' && msg.id === lastMsgId ? tokenInfo : null}
@@ -309,6 +314,9 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   const { apiKey: aiApiKey, updateLocalKey: setApiKeyForProvider, clearApiKey: clearApiKeyForProvider } = useApiKeys();
   const setAiApiKey = useCallback((key: string) => { setApiKeyForProvider(aiProvider, key); }, [setApiKeyForProvider, aiProvider]);
   const [isListening, setIsListening] = useState(false);
+  const [designAgentSeed, setDesignAgentSeed] = useState<string | null>(null);
+  const { enabled: safetyModeEnabled } = useAISafetyMode();
+  const { stats: reviewStats, threshold: reviewThreshold } = useReviewQueue();
 
   // BL-0161: AI safety mode — intercepts caution/destructive actions for beginner confirmation
   const safetyManager = useMemo(() => AISafetyModeManager.getInstance(), []);
@@ -428,6 +436,34 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   // route through the same executeAIActions path the AI tool system uses.
   // ---------------------------------------------------------------------------
   const executeAIActions = useActionExecutor();
+
+  const buildPendingActionReview = useCallback((actions: AIAction[], messageId: string, confidence: ConfidenceScore | undefined, sources: ToolSource[]): PendingActionReview => {
+    const strongestSafetyClassification = actions.reduce<ReturnType<typeof safetyManager.classifyAction>>((strongest, action) => {
+      const next = safetyManager.classifyAction(action.type);
+      if (strongest === 'destructive' || next === strongest) {
+        return strongest;
+      }
+      if (next === 'destructive' || (next === 'caution' && strongest === 'safe')) {
+        return next;
+      }
+      return strongest;
+    }, 'safe');
+
+    return {
+      actions,
+      messageId,
+      trustReceipt: buildChatActionTrustReceipt({
+        actionCount: actions.length,
+        confidenceScore: confidence?.score,
+        previewAiChanges,
+        reviewPendingCount: reviewStats.pending,
+        reviewThreshold,
+        safetyModeEnabled,
+        sourceCount: sources.length,
+        strongestSafetyClassification,
+      }),
+    };
+  }, [previewAiChanges, reviewStats.pending, reviewThreshold, safetyManager, safetyModeEnabled]);
 
   // ---------------------------------------------------------------------------
   // CAPX-PERF-02: Ref that holds the latest values needed by handleSend.
@@ -553,8 +589,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           if (intent.actions.length > 0) {
             latest.executeAIActions(intent.actions);
           }
+          const responseId = crypto.randomUUID();
           latest.addMessage({
-            id: crypto.randomUUID(),
+            id: responseId,
+            clientId: responseId,
             role: 'assistant',
             content: intent.response ?? "Command executed.",
             timestamp: Date.now(),
@@ -735,9 +773,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const latest = sendStateRef.current;
 
       if (needsConfirmation) {
-        setPendingActions({ actions: finalActions, messageId: msgId });
+        setPendingActions(buildPendingActionReview(finalActions, msgId, finalConfidence, finalSources));
         latest.addMessage({
           id: msgId,
+          clientId: msgId,
           role: 'assistant',
           content: fullText,
           timestamp: Date.now(),
@@ -765,13 +804,14 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
             remainingActions: remaining,
             allActions: finalActions,
             msgId,
-            fullText,
-            toolCalls: finalToolCalls,
-            sources: finalSources,
-            confidence: finalConfidence,
-          });
+          fullText,
+          toolCalls: finalToolCalls,
+          sources: finalSources,
+          confidence: finalConfidence,
+        });
           latest.addMessage({
             id: msgId,
+            clientId: msgId,
             role: 'assistant',
             content: fullText,
             timestamp: Date.now(),
@@ -786,6 +826,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           }
           latest.addMessage({
             id: msgId,
+            clientId: msgId,
             role: 'assistant',
             content: fullText,
             timestamp: Date.now(),
@@ -801,8 +842,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       const latest = sendStateRef.current;
       if (err.name === 'AbortError') {
         const isTimeout = abortRef.current?.signal.reason === 'timeout';
+        const responseId = crypto.randomUUID();
         latest.addMessage({
-          id: crypto.randomUUID(),
+          id: responseId,
+          clientId: responseId,
           role: 'assistant',
           content: isTimeout
             ? 'AI response timed out after 150 seconds. Please try again.'
@@ -813,8 +856,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
       } else {
         const mapped = mapErrorToUserMessage(err);
         const isKeyError = /api.?key|authentication/i.test(mapped.title);
+        const responseId = crypto.randomUUID();
         latest.addMessage({
-          id: crypto.randomUUID(),
+          id: responseId,
+          clientId: responseId,
           role: 'assistant',
           content: `${mapped.title}: ${mapped.description}`,
           timestamp: Date.now(),
@@ -855,6 +900,23 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     window.addEventListener('protopulse:chat-send', handler);
     return () => window.removeEventListener('protopulse:chat-send', handler);
   }, [handleSend]);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const detail = (event as CustomEvent<{ designAgent?: boolean; prompt?: string }>).detail;
+      if (detail?.designAgent) {
+        setShowDesignAgent(true);
+        if (detail.prompt && detail.prompt.trim().length > 0) {
+          setDesignAgentSeed(detail.prompt);
+        }
+      } else {
+        setShowDesignAgent(false);
+      }
+    };
+
+    window.addEventListener('protopulse:open-chat-panel', handler);
+    return () => window.removeEventListener('protopulse:open-chat-panel', handler);
+  }, [setShowDesignAgent]);
 
   const exportChat = useCallback(() => {
     try {
@@ -1054,7 +1116,14 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
           />
 
           {showDesignAgent ? (
-            <DesignAgentPanel projectId={projectId} apiKey={aiApiKey} />
+            <DesignAgentPanel
+              projectId={projectId}
+              apiKey={aiApiKey}
+              apiKeyValid={apiKeyValid()}
+              previewAiChanges={previewAiChanges}
+              seedPrompt={designAgentSeed}
+              onConsumeSeed={() => setDesignAgentSeed(null)}
+            />
           ) : (
           <>
           {/* CAPX-PERF-10: Isolated MessageList — copiedId changes only re-render this sub-tree */}

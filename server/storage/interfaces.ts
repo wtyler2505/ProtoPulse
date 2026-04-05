@@ -182,7 +182,7 @@ export interface IStorage {
   // Design preferences
   getDesignPreferences(projectId: number): Promise<DesignPreference[]>;
   upsertDesignPreference(data: InsertDesignPreference): Promise<DesignPreference>;
-  deleteDesignPreference(id: number): Promise<boolean>;
+  deleteDesignPreference(projectId: number, id: number): Promise<boolean>;
 
   // SPICE model library
   getSpiceModels(opts?: { category?: string; search?: string; limit?: number; offset?: number }): Promise<{ models: SpiceModelRow[]; total: number }>;
@@ -192,28 +192,28 @@ export interface IStorage {
   // BOM snapshots
   createBomSnapshot(projectId: number, label: string): Promise<BomSnapshot>;
   getBomSnapshots(projectId: number): Promise<BomSnapshot[]>;
-  getBomSnapshot(id: number): Promise<BomSnapshot | undefined>;
-  deleteBomSnapshot(id: number): Promise<boolean>;
+  getBomSnapshot(projectId: number, id: number): Promise<BomSnapshot | undefined>;
+  deleteBomSnapshot(projectId: number, id: number): Promise<boolean>;
 
   // Component lifecycle
   getComponentLifecycles(projectId: number): Promise<ComponentLifecycle[]>;
-  getComponentLifecycle(id: number): Promise<ComponentLifecycle | undefined>;
+  getComponentLifecycle(projectId: number, id: number): Promise<ComponentLifecycle | undefined>;
   upsertComponentLifecycle(data: InsertComponentLifecycle): Promise<ComponentLifecycle>;
-  deleteComponentLifecycle(id: number): Promise<boolean>;
+  deleteComponentLifecycle(projectId: number, id: number): Promise<boolean>;
 
   // Design snapshots
   getDesignSnapshots(projectId: number): Promise<DesignSnapshot[]>;
-  getDesignSnapshot(id: number): Promise<DesignSnapshot | undefined>;
+  getDesignSnapshot(projectId: number, id: number): Promise<DesignSnapshot | undefined>;
   createDesignSnapshot(data: InsertDesignSnapshot): Promise<DesignSnapshot>;
-  deleteDesignSnapshot(id: number): Promise<boolean>;
+  deleteDesignSnapshot(projectId: number, id: number): Promise<boolean>;
 
   // Design comments
   getComments(projectId: number, filters?: { targetType?: string; targetId?: string; status?: string }): Promise<DesignComment[]>;
-  getComment(id: number): Promise<DesignComment | undefined>;
+  getComment(projectId: number, id: number): Promise<DesignComment | undefined>;
   createComment(data: InsertDesignComment): Promise<DesignComment>;
-  updateComment(id: number, data: { content?: string }): Promise<DesignComment | undefined>;
-  updateCommentStatus(id: number, status: string, updatedBy?: number): Promise<DesignComment | undefined>;
-  deleteComment(id: number): Promise<boolean>;
+  updateComment(projectId: number, id: number, data: { content?: string }): Promise<DesignComment | undefined>;
+  updateCommentStatus(projectId: number, id: number, status: string, updatedBy?: number): Promise<DesignComment | undefined>;
+  deleteComment(projectId: number, id: number): Promise<boolean>;
 
   // Arduino Workspace
   getArduinoWorkspaces(): Promise<ArduinoWorkspace[]>;

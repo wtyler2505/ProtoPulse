@@ -5,7 +5,7 @@ import { useDroppable, useDndMonitor } from '@dnd-kit/core';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useChat } from '@/lib/contexts/chat-context';
 import { useOutput } from '@/lib/contexts/output-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import { useProjectMeta } from '@/lib/project-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useDndState, type ComponentDragData } from '@/lib/dnd-context';
 import CustomNode from './CustomNode';

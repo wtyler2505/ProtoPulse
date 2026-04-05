@@ -1,25 +1,32 @@
 import { type Express } from "express";
-import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
 import fs from "fs";
-import path from "path";
 import { nanoid } from "nanoid";
+import path from "path";
+import { createLogger, createServer as createViteServer } from "vite";
+import viteConfig from "../vite.config";
 
 const viteLogger = createLogger();
 
-export async function setupVite(server: Server, app: Express) {
-  const serverOptions = {
-    middlewareMode: true,
+export function buildViteServerOptions(server: Server) {
+  return {
+    middlewareMode: true as const,
     hmr: {
       server,
-      protocol: "ws",
-      host: "localhost",
+      protocol: "ws" as const,
+      // Force the runtime fallback branch in Vite's client so the websocket
+      // uses the page hostname (127.0.0.1 vs localhost) instead of baking in a
+      // single host string that can break dev QA on alternate loopback names.
+      host: "",
       clientPort: 5000,
       path: "/vite-hmr",
     },
     allowedHosts: true as const,
   };
+}
+
+export async function setupVite(server: Server, app: Express) {
+  const serverOptions = buildViteServerOptions(server);
 
   const vite = await createViteServer({
     ...viteConfig,

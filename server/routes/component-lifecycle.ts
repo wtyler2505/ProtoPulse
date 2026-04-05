@@ -39,8 +39,8 @@ export function registerComponentLifecycleRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const entryId = parseIdParam(req.params.entryId);
-      const existing = await storage.getComponentLifecycle(entryId);
-      if (!existing || existing.projectId !== projectId) {
+      const existing = await storage.getComponentLifecycle(projectId, entryId);
+      if (!existing) {
         return res.status(404).json({ message: 'Lifecycle entry not found' });
       }
       const parsed = insertComponentLifecycleSchema.partial().safeParse(req.body);
@@ -64,11 +64,11 @@ export function registerComponentLifecycleRoutes(app: Express): void {
     asyncHandler(async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const entryId = parseIdParam(req.params.entryId);
-      const existing = await storage.getComponentLifecycle(entryId);
-      if (!existing || existing.projectId !== projectId) {
+      const existing = await storage.getComponentLifecycle(projectId, entryId);
+      if (!existing) {
         return res.status(404).json({ message: 'Lifecycle entry not found' });
       }
-      const deleted = await storage.deleteComponentLifecycle(entryId);
+      const deleted = await storage.deleteComponentLifecycle(projectId, entryId);
       if (!deleted) {
         return res.status(404).json({ message: 'Lifecycle entry not found' });
       }

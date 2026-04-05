@@ -1,3 +1,12 @@
+import type {
+  ExactPartFamily,
+  PartPinAccuracyReport,
+  PartSourceEvidence,
+  PartVerificationLevel,
+  PartVerificationStatus,
+  PartVisualAccuracyReport,
+} from './component-trust';
+
 export interface ShapeStyle {
   fill?: string;
   stroke?: string;
@@ -85,6 +94,7 @@ export interface PartProperty {
 
 export interface PartMeta {
   title: string;
+  aliases?: string[];
   family?: string;
   manufacturer?: string;
   mpn?: string;
@@ -95,6 +105,63 @@ export interface PartMeta {
   properties: PartProperty[];
   datasheetUrl?: string;
   version?: string;
+  /**
+   * Bench-fit guidance for the Breadboard Lab.
+   * - native: can drop straight into a breadboard
+   * - requires_jumpers: works well, but usually wants extra jumper routing
+   * - breakout_required: physically/electrically wants a breakout or carrier first
+   * - not_breadboard_friendly: should stay off the breadboard bench
+   */
+  breadboardFit?: 'native' | 'requires_jumpers' | 'breakout_required' | 'not_breadboard_friendly';
+  /**
+   * Confidence level for the physical breadboard artwork/pin mapping.
+   * Used to communicate whether a part is trusted for pin-accurate layout work.
+   */
+  breadboardModelQuality?: 'verified' | 'ai_drafted' | 'community' | 'basic';
+  /**
+   * Exact-part classification used by the verified board/module workflow.
+   */
+  partFamily?: ExactPartFamily;
+  /**
+   * Verification state for authoritative wiring and exact board rendering.
+   */
+  verificationStatus?: PartVerificationStatus;
+  /**
+   * Source quality level behind the current exact-part model.
+   */
+  verificationLevel?: PartVerificationLevel;
+  /**
+   * Evidence records that back this exact-part model.
+   */
+  sourceEvidence?: PartSourceEvidence[];
+  /**
+   * Human-readable review notes or caveats for this part.
+   */
+  verificationNotes?: string[];
+  /**
+   * Visual fidelity report for exact board/module rendering.
+   */
+  visualAccuracyReport?: PartVisualAccuracyReport;
+  /**
+   * Pin and anchor fidelity report for authoritative wiring work.
+   */
+  pinAccuracyReport?: PartPinAccuracyReport;
+  /**
+   * Reviewer metadata for the current verified state.
+   */
+  verifiedAt?: string;
+  verifiedBy?: string;
+  /**
+   * Optional shelf/category hint for the Breadboard Lab.
+   */
+  benchCategory?: string;
+  /**
+   * Inventory hints used by the owned-parts bench shelf.
+   */
+  inventoryHint?: {
+    defaultStorageLocation?: string;
+    ownedPreferred?: boolean;
+  };
   /** Optional SPICE subcircuit definition attached to this component. */
   spiceSubcircuit?: string;
 }
@@ -400,6 +467,10 @@ export function createDefaultPartMeta(): PartMeta {
     tags: [],
     mountingType: '',
     properties: [],
+    verificationStatus: 'candidate',
+    verificationLevel: 'community-only',
+    sourceEvidence: [],
+    verificationNotes: [],
   };
 }
 

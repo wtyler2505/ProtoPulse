@@ -15,6 +15,7 @@ import { validateSession } from "./auth";
 import { auditLogMiddleware } from "./audit-log";
 import { attachCollaborationServer } from "./collaboration";
 import { registerCollaborationServer } from "./shutdown";
+import { getRequestPath, isPublicApiPath, isSSERequest } from "./request-routing";
 import "./genkit"; // Initialize Genkit flows on startup
 
 declare global {
@@ -102,7 +103,14 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 
-app.use(compression());
+app.use(compression({
+  filter: (req, res) => {
+    if (isSSERequest(req)) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+}));
 
 // CORS allowlist — unified for dev and production.
 // In dev: always allow common localhost origins.
@@ -159,7 +167,7 @@ const apiLimiter = rateLimit({
   limit: 300,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: (req) => req.path === '/api/chat/ai/stream',
+  skip: isSSERequest,
 });
 app.use("/api", apiLimiter);
 
@@ -177,7 +185,7 @@ app.use(express.raw({ limit: "5mb", type: ['application/octet-stream', 'applicat
 app.use(express.text({ limit: "2mb", type: ['text/xml', 'application/xml', 'image/svg+xml', 'text/plain'] }));
 
 app.use((req: Request, res: Response, next: NextFunction) => {
-  if (req.path === '/api/chat/ai/stream') return next();
+  if (isSSERequest(req)) return next();
 
   const method = req.method.toUpperCase();
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return next();
@@ -205,7 +213,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use((req, res, next) => {
-  if (req.path === '/api/chat/ai/stream') return next();
+  if (isSSERequest(req)) return next();
   req.setTimeout(30000, () => {
     if (!res.headersSent) {
       res.status(408).json({ message: "Request timeout" });
@@ -214,10 +222,8 @@ app.use((req, res, next) => {
   next();
 });
 
-const PUBLIC_PATHS = ['/api/auth/', '/api/health', '/api/ready', '/api/docs', '/api/metrics', '/api/settings/chat'];
-
 app.use('/api', (req, res, next) => {
-  if (PUBLIC_PATHS.some(p => req.path.startsWith(p.replace('/api', '')))) {
+  if (isPublicApiPath(getRequestPath(req))) {
     return next();
   }
 
@@ -274,7 +280,7 @@ function redactSensitive(obj: unknown): unknown {
 
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
+  const path = getRequestPath(req);
   const requestId = req.id;
   let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
 

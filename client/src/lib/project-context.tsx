@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { apiRequest } from '@/lib/queryClient';
+import { clearLastProjectIds } from '@/lib/project-navigation-state';
 import { ProjectLoadingSkeleton } from '@/components/ui/ProjectLoadingSkeleton';
 
 // Domain context providers
@@ -59,6 +60,9 @@ export interface BomItem {
   leadTime?: string;
   esdSensitive?: boolean | null;
   assemblyCategory?: 'smt' | 'through_hole' | 'hand_solder' | 'mechanical' | null;
+  storageLocation?: string | null;
+  quantityOnHand?: number | null;
+  minimumStock?: number | null;
 }
 
 export interface ValidationIssue {
@@ -109,6 +113,7 @@ export interface ToolCallInfo {
 
 export interface ChatMessage {
   id: string;
+  clientId?: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
@@ -178,7 +183,7 @@ function ProjectBootstrapGate({
     if (!projectNotFound) {
       return;
     }
-    localStorage.removeItem('protopulse-last-project');
+    clearLastProjectIds();
     setLocation('/projects', { replace: true });
   }, [projectNotFound, setLocation]);
 
@@ -212,6 +217,7 @@ export function ProjectProvider({ projectId, children }: { projectId: number; ch
   useEffect(() => {
     const controller = new AbortController();
     const timeout = setTimeout(() => { controller.abort(); }, 5000);
+    setSeeded(false);
 
     apiRequest('POST', '/api/seed', undefined, controller.signal)
       .then(() => { setSeeded(true); })
@@ -222,7 +228,7 @@ export function ProjectProvider({ projectId, children }: { projectId: number; ch
       clearTimeout(timeout);
       controller.abort();
     };
-  }, []);
+  }, [projectId]);
 
   if (!seeded) {
     return <ProjectLoadingSkeleton />;

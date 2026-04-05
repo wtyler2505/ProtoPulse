@@ -307,6 +307,17 @@ describe('CollaborationServer', () => {
       expect(joinMsg.type).toBe('join');
       expect((joinMsg.payload.user as { userId: number }).userId).toBe(2);
     });
+
+    it('only includes locks for the current project in state-sync', async () => {
+      const wsProject2 = await simulateJoin(2, 'session-project-2', { userId: 1 });
+      sendMessage(wsProject2, makeMsg('lock-request', { entityType: 'node', entityId: 'n2', userId: 1, timeout: 30000 }, 1, 2));
+
+      const wsProject1 = await simulateJoin(1, 'session-project-1', { userId: 2, isOwner: false });
+      const sync = parseSent(wsProject1, 0);
+
+      expect(sync.type).toBe('state-sync');
+      expect(sync.payload.locks).not.toHaveProperty('2:node:n2');
+    });
   });
 
   /* ---------------------------------------------------------------- */
@@ -457,6 +468,20 @@ describe('CollaborationServer', () => {
       expect(locks.has('1:node:n1')).toBe(false);
     });
 
+    it('should only release locks for the disconnected project', async () => {
+      const wsProject1 = await simulateJoin(1, 'session-a', { userId: 1 });
+      const wsProject2 = await simulateJoin(2, 'session-b', { userId: 1 });
+
+      sendMessage(wsProject1, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 30000 }, 1, 1));
+      sendMessage(wsProject2, makeMsg('lock-request', { entityType: 'node', entityId: 'n2', userId: 1, timeout: 30000 }, 1, 2));
+
+      wsProject1.emit('close');
+
+      const locks = server.getLocks();
+      expect(locks.has('1:node:n1')).toBe(false);
+      expect(locks.has('2:node:n2')).toBe(true);
+    });
+
     it('should auto-expire locks after timeout', async () => {
       const ws = await simulateJoin(1, 'session-a', { userId: 1 });
 
@@ -465,6 +490,23 @@ describe('CollaborationServer', () => {
 
       vi.advanceTimersByTime(11_000); // Past lock timeout (5s) + cleanup interval (5s) + buffer
       expect(server.getLocks().has('1:node:n1')).toBe(false);
+    });
+
+    it('only broadcasts expired lock releases to the owning project room', async () => {
+      const wsProject1 = await simulateJoin(1, 'session-a', { userId: 1 });
+      const wsProject2 = await simulateJoin(2, 'session-b', { userId: 2 });
+
+      const project2MessagesBefore = wsProject2.sent.length;
+      sendMessage(wsProject1, makeMsg('lock-request', { entityType: 'node', entityId: 'n1', userId: 1, timeout: 5000 }, 1, 1));
+
+      vi.advanceTimersByTime(11_000);
+
+      const project2LockReleases = wsProject2.sent
+        .slice(project2MessagesBefore)
+        .map((s) => JSON.parse(s) as CollabMessage)
+        .filter((m) => m.type === 'lock-released');
+
+      expect(project2LockReleases).toHaveLength(0);
     });
 
     it('should cap lock timeout at DEFAULT_LOCK_TIMEOUT_MS', async () => {

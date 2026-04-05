@@ -1,16 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ComponentEditorProvider, useComponentEditor } from '@/lib/component-editor/ComponentEditorProvider';
-import { useComponentParts, useCreateComponentPart, useUpdateComponentPart, useDeleteComponentPart, usePublishToLibrary } from '@/lib/component-editor/hooks';
+import {
+  useComponentParts,
+  useCreateComponentPart,
+  useUpdateComponentPart,
+  usePublishToLibrary,
+  useVerifyComponentPart,
+} from '@/lib/component-editor/hooks';
 import { useQueryClient } from '@tanstack/react-query';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import type { EditorViewType, PartMeta, Connector, Bus, PartViews, Constraint } from '@shared/component-types';
+import {
+  getSourceEvidence,
+  getVerificationLevel,
+  getVerificationStatus,
+  summarizePartTrust,
+} from '@shared/component-trust';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
-import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield, Share2, Library, Plus, Sparkles, Camera, RefreshCw } from 'lucide-react';
+import { Undo2, Redo2, Save, Cpu, ShieldCheck, Loader2, Box, CircuitBoard, GitBranch, FileText, Download, Upload, FileImage, History, Shield, Share2, Library, Plus, Sparkles, Camera, RefreshCw, BadgeCheck, Wand2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ShapeCanvas from '@/components/views/component-editor/ShapeCanvas';
 import PinTable from '@/components/views/component-editor/PinTable';
@@ -19,6 +32,8 @@ import GeneratorModal from '@/components/views/component-editor/GeneratorModal';
 import ModifyModal from '@/components/views/component-editor/ModifyModal';
 import DatasheetExtractModal from '@/components/views/component-editor/DatasheetExtractModal';
 import PinExtractModal from '@/components/views/component-editor/PinExtractModal';
+import ExactPartDraftModal from '@/components/views/component-editor/ExactPartDraftModal';
+import ExactPartVerificationDialog from '@/components/views/component-editor/ExactPartVerificationDialog';
 import type { PartState } from '@shared/component-types';
 import ValidationModal from '@/components/views/component-editor/ValidationModal';
 import HistoryPanel from '@/components/views/component-editor/HistoryPanel';
@@ -33,6 +48,7 @@ import SpiceSubcircuitEditor from '@/components/views/component-editor/SpiceSubc
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { ComponentPart } from '@shared/schema';
+import { buildExactPartVerificationReadiness } from '@shared/exact-part-verification';
 
 const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'breadboard', label: 'Breadboard' },
@@ -42,6 +58,42 @@ const TABS: { id: EditorViewType; label: string }[] = [
   { id: 'pin-table', label: 'Pin Table' },
   { id: 'spice', label: 'SPICE' },
 ];
+
+function verificationBadgeClass(status: string): string {
+  switch (status) {
+    case 'verified':
+      return 'border-emerald-400/30 bg-emerald-400/10 text-emerald-200';
+    case 'deprecated':
+      return 'border-rose-400/30 bg-rose-400/10 text-rose-200';
+    case 'candidate':
+    default:
+      return 'border-amber-400/30 bg-amber-400/10 text-amber-100';
+  }
+}
+
+function verificationBadgeLabel(status: string): string {
+  switch (status) {
+    case 'verified':
+      return 'Verified exact part';
+    case 'deprecated':
+      return 'Deprecated exact part';
+    case 'candidate':
+    default:
+      return 'Candidate exact part';
+  }
+}
+
+function verificationLevelLabel(level: string): string {
+  switch (level) {
+    case 'official-backed':
+      return 'Official-backed';
+    case 'mixed-source':
+      return 'Mixed-source';
+    case 'community-only':
+    default:
+      return 'Community-only';
+  }
+}
 
 function MetadataForm() {
   const { state, dispatch } = useComponentEditor();
@@ -201,7 +253,7 @@ function CanvasPlaceholder({ view }: { view: string }) {
 
 function ComponentEditorContent() {
   const { state, dispatch, canUndo, canRedo, undo, redo } = useComponentEditor();
-  const { selectedNodeId, pendingComponentPartId, setPendingComponentPartId } = useArchitecture();
+  const { pendingComponentPartId, setPendingComponentPartId } = useArchitecture();
   const projectId = useProjectId();
   const activeView = state.ui.activeEditorView;
   const { toast } = useToast();
@@ -209,6 +261,7 @@ function ComponentEditorContent() {
   const [partId, setPartId] = useState<number | null>(null);
   const loadedRef = useRef(false);
   const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [exactDraftOpen, setExactDraftOpen] = useState(false);
   const [modifyOpen, setModifyOpen] = useState(false);
   const [datasheetExtractOpen, setDatasheetExtractOpen] = useState(false);
   const [pinExtractOpen, setPinExtractOpen] = useState(false);
@@ -224,6 +277,7 @@ function ComponentEditorContent() {
   const [showDrcOverlays, setShowDrcOverlays] = useState(true);
   const [drcRules, setDrcRules] = useState(() => getDefaultDRCRules());
   const [publishOpen, setPublishOpen] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [publishTags, setPublishTags] = useState('');
   const [publishIsPublic, setPublishIsPublic] = useState(true);
@@ -233,6 +287,16 @@ function ComponentEditorContent() {
   const createMutation = useCreateComponentPart();
   const updateMutation = useUpdateComponentPart();
   const publishMutation = usePublishToLibrary();
+  const verifyMutation = useVerifyComponentPart();
+  const trustSummary = summarizePartTrust(state.present.meta);
+  const verificationStatus = getVerificationStatus(state.present.meta);
+  const verificationLevel = getVerificationLevel(state.present.meta);
+  const sourceEvidence = getSourceEvidence(state.present.meta);
+  const verificationReadiness = buildExactPartVerificationReadiness(
+    state.present.meta,
+    state.present.connectors,
+    state.present.views,
+  );
 
   useEffect(() => {
     if (loadedRef.current || !parts) return;
@@ -379,6 +443,79 @@ function ComponentEditorContent() {
     toast({ title: 'Generated', description: `Created ${result.shapes.length} shapes and ${result.connectors.length} pins.` });
   }, [activeView, dispatch, toast]);
 
+  const handleExactPartCreated = useCallback((created: ComponentPart) => {
+    setPartId(created.id);
+    dispatch({
+      type: 'LOAD_PART',
+      payload: {
+        meta: created.meta as PartMeta,
+        connectors: created.connectors as Connector[] ?? [],
+        buses: created.buses as Bus[] ?? [],
+        views: created.views as PartViews,
+        constraints: created.constraints as Constraint[] ?? [],
+      },
+    });
+    loadedRef.current = true;
+    setExactDraftOpen(false);
+    setVerifyOpen(false);
+    toast({
+      title: 'Candidate exact part created',
+      description: 'ProtoPulse drafted the part and marked it as provisional until you review and verify it.',
+    });
+  }, [dispatch, toast]);
+
+  const handleOpenVerify = useCallback(() => {
+    setVerifyOpen(true);
+  }, []);
+
+  const handleConfirmVerify = useCallback(async (payload: {
+    evidence: unknown[];
+    note?: string;
+    pinAccuracyReport: unknown;
+    verificationLevel: string;
+    verifiedBy?: string;
+    visualAccuracyReport: unknown;
+  }) => {
+    if (!partId) {
+      return;
+    }
+    try {
+      const updated = await verifyMutation.mutateAsync({
+        id: partId,
+        projectId,
+        data: {
+          evidence: payload.evidence,
+          note: payload.note,
+          pinAccuracyReport: payload.pinAccuracyReport,
+          verificationLevel: payload.verificationLevel,
+          verifiedBy: payload.verifiedBy,
+          visualAccuracyReport: payload.visualAccuracyReport,
+        },
+      });
+      dispatch({
+        type: 'LOAD_PART',
+        payload: {
+          meta: updated.meta as PartMeta,
+          connectors: updated.connectors as Connector[] ?? [],
+          buses: updated.buses as Bus[] ?? [],
+          views: updated.views as PartViews,
+          constraints: updated.constraints as Constraint[] ?? [],
+        },
+      });
+      setVerifyOpen(false);
+      toast({
+        title: 'Exact part verified',
+        description: 'Authoritative wiring is now unlocked for this reviewed part.',
+      });
+    } catch {
+      toast({
+        title: 'Verification failed',
+        description: 'ProtoPulse could not promote this part to verified yet.',
+        variant: 'destructive',
+      });
+    }
+  }, [dispatch, partId, projectId, toast, verifyMutation]);
+
   const handleModifyApply = useCallback((newState: PartState) => {
     dispatch({
       type: 'SET_PART_STATE',
@@ -522,12 +659,20 @@ function ComponentEditorContent() {
       return;
     }
     setPublishTags(state.present.meta.tags?.join(', ') || '');
-    setPublishIsPublic(true);
+    setPublishIsPublic(trustSummary.authoritativeWiringAllowed || !trustSummary.requiresVerification);
     setPublishOpen(true);
-  }, [state.present, toast]);
+  }, [state.present, toast, trustSummary.authoritativeWiringAllowed, trustSummary.requiresVerification]);
 
   const handleConfirmPublish = useCallback(async () => {
     try {
+      if (publishIsPublic && trustSummary.requiresVerification && !trustSummary.authoritativeWiringAllowed) {
+        toast({
+          title: 'Verification required',
+          description: 'Candidate board/module parts must be verified before they can be published publicly.',
+          variant: 'destructive',
+        });
+        return;
+      }
       await publishMutation.mutateAsync({
         title: state.present.meta.title || 'Untitled',
         description: state.present.meta.description || undefined,
@@ -545,7 +690,15 @@ function ComponentEditorContent() {
     } catch {
       toast({ title: 'Publish failed', description: 'Could not publish component.', variant: 'destructive' });
     }
-  }, [state.present, publishTags, publishIsPublic, publishMutation, toast]);
+  }, [
+    state.present,
+    publishTags,
+    publishIsPublic,
+    publishMutation,
+    toast,
+    trustSummary.authoritativeWiringAllowed,
+    trustSummary.requiresVerification,
+  ]);
 
   const handleCreateNewPart = useCallback(async () => {
     if (state.ui.isDirty && partId) {
@@ -616,6 +769,16 @@ function ComponentEditorContent() {
           >
             <Cpu className="w-4 h-4" />
             <span className="text-xs">Generate</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="button-exact-part-draft"
+            onClick={() => setExactDraftOpen(true)}
+            className="h-8 gap-1 text-muted-foreground hover:text-foreground"
+          >
+            <Wand2 className="w-4 h-4" />
+            <span className="text-xs">Exact Draft</span>
           </Button>
           <Button
             variant="ghost"
@@ -817,6 +980,59 @@ function ComponentEditorContent() {
         </div>
       </div>
 
+      {partId && (
+        <div
+          className="flex flex-wrap items-center gap-2 border-b border-border/70 bg-card/35 px-4 py-2"
+          data-testid="exact-part-trust-strip"
+        >
+          <Badge
+            variant="outline"
+            className={verificationBadgeClass(verificationStatus)}
+            data-testid="badge-exact-part-status"
+          >
+            {verificationBadgeLabel(verificationStatus)}
+          </Badge>
+          <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary" data-testid="badge-exact-part-family">
+            {trustSummary.family}
+          </Badge>
+          <Badge variant="outline" className="border-border/70 bg-background/60 text-muted-foreground" data-testid="badge-exact-part-level">
+            {verificationLevelLabel(verificationLevel)}
+          </Badge>
+          <span className="text-xs text-muted-foreground" data-testid="text-exact-part-evidence">
+            {sourceEvidence.length} evidence source{sourceEvidence.length === 1 ? '' : 's'}
+          </span>
+          {trustSummary.requiresVerification && verificationStatus !== 'verified' && (
+            <span className="text-xs text-muted-foreground" data-testid="text-exact-part-readiness">
+              {verificationReadiness.canVerify
+                ? 'Ready for promotion review'
+                : `${verificationReadiness.blockers.length} verification blocker${verificationReadiness.blockers.length === 1 ? '' : 's'}`}
+            </span>
+          )}
+          <span
+            className={`text-xs ${trustSummary.authoritativeWiringAllowed ? 'text-emerald-300' : 'text-amber-100'}`}
+            data-testid="text-exact-part-wiring-mode"
+          >
+            {trustSummary.authoritativeWiringAllowed ? 'Authoritative wiring unlocked' : 'Authoritative wiring blocked until review'}
+          </span>
+          <p className="min-w-[280px] flex-1 text-xs text-muted-foreground" data-testid="text-exact-part-summary">
+            {trustSummary.summary}
+          </p>
+          {trustSummary.requiresVerification && verificationStatus !== 'verified' && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              data-testid="button-verify-exact-part"
+              onClick={handleOpenVerify}
+              disabled={verifyMutation.isPending}
+            >
+              {verifyMutation.isPending ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : <BadgeCheck className="mr-2 h-3.5 w-3.5" />}
+              Open verification workbench
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="flex-1 flex overflow-hidden">
         <div className="w-48 border-r border-border flex flex-col bg-card/50">
           <div className="p-2 flex items-center justify-between border-b border-border">
@@ -839,6 +1055,20 @@ function ComponentEditorContent() {
               >
                 <div className="font-medium truncate">{(part.meta as PartMeta)?.title || `Part #${part.id}`}</div>
                 <div className="text-xs opacity-60 truncate">{(part.meta as PartMeta)?.family || 'No family'}</div>
+                {(() => {
+                  const itemTrust = summarizePartTrust((part.meta as PartMeta) ?? {});
+                  if (!itemTrust.requiresVerification) {
+                    return null;
+                  }
+                  const itemStatus = getVerificationStatus((part.meta as PartMeta) ?? {});
+                  return (
+                    <div className="mt-1 text-[10px] uppercase tracking-[0.12em]">
+                      <span className={itemStatus === 'verified' ? 'text-emerald-300' : 'text-amber-200'}>
+                        {itemStatus === 'verified' ? 'Verified exact' : 'Candidate exact'}
+                      </span>
+                    </div>
+                  );
+                })()}
               </button>
             ))}
           </div>
@@ -902,6 +1132,13 @@ function ComponentEditorContent() {
         onClose={() => setGeneratorOpen(false)}
         onGenerate={handleGenerate}
       />
+      <ExactPartDraftModal
+        open={exactDraftOpen}
+        onOpenChange={setExactDraftOpen}
+        onCreated={handleExactPartCreated}
+        projectId={projectId}
+        initialSeed={undefined}
+      />
       {partId && (
         <>
           <ModifyModal
@@ -936,6 +1173,15 @@ function ComponentEditorContent() {
         issues={validationIssues}
         onNavigate={handleNavigateToIssue}
       />
+      <ExactPartVerificationDialog
+        open={verifyOpen}
+        onOpenChange={setVerifyOpen}
+        meta={state.present.meta}
+        connectors={state.present.connectors}
+        views={state.present.views}
+        pending={verifyMutation.isPending}
+        onConfirm={(payload) => void handleConfirmVerify(payload)}
+      />
       <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
         <DialogContent className="max-w-md bg-background border-border" data-testid="dialog-publish">
           <DialogHeader>
@@ -963,11 +1209,17 @@ function ComponentEditorContent() {
                 className="bg-card border-border opacity-60"
               />
             </div>
+            {trustSummary.requiresVerification && !trustSummary.authoritativeWiringAllowed && (
+              <div className="rounded-md border border-amber-400/25 bg-amber-400/8 px-3 py-2 text-xs text-amber-100" data-testid="publish-verification-warning">
+                Public publishing is blocked for this candidate exact board/module until you verify it.
+              </div>
+            )}
             <div className="flex items-center gap-2">
               <Checkbox
                 id="publish-public"
                 data-testid="checkbox-publish-public"
                 checked={publishIsPublic}
+                disabled={trustSummary.requiresVerification && !trustSummary.authoritativeWiringAllowed}
                 onCheckedChange={(checked) => setPublishIsPublic(checked === true)}
               />
               <Label htmlFor="publish-public" className="text-sm text-muted-foreground cursor-pointer">Make public</Label>

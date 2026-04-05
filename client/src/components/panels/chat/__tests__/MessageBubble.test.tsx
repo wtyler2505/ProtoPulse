@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import MessageBubble from '../MessageBubble';
 import type { ChatMessage } from '@/lib/project-context';
+import type { PendingActionReview } from '../chat-types';
 
 // Mock react-markdown and plugins to avoid ESM issues in tests
 vi.mock('react-markdown', () => ({
@@ -67,5 +68,32 @@ describe('MessageBubble', () => {
     );
     const tokenEl = screen.getByTestId('text-token-info');
     expect(tokenEl.textContent).toContain('150 tokens');
+  });
+
+  it('renders the AI action trust receipt inside pending review blocks', () => {
+    const pendingActions: PendingActionReview = {
+      messageId: baseMsg.id,
+      actions: [{ type: 'update_node', label: 'Rename controller' }],
+      trustReceipt: {
+        title: 'AI action review receipt',
+        status: 'ready',
+        label: 'Review-first',
+        summary: 'This proposal is staged for review before apply.',
+        facts: [{ label: 'Proposed actions', value: '1' }],
+        warnings: ['Grounded evidence attached.'],
+        nextStep: 'Review the action list, then apply if it matches your intent.',
+      },
+    };
+
+    render(
+      <MessageBubble
+        msg={{ ...baseMsg, actions: pendingActions.actions }}
+        {...defaultProps}
+        pendingActions={pendingActions}
+      />,
+    );
+
+    expect(screen.getByTestId('trust-receipt-pending-actions')).toHaveTextContent('AI action review receipt');
+    expect(screen.getByTestId('trust-receipt-pending-actions')).toHaveTextContent('Review-first');
   });
 });

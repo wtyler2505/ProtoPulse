@@ -469,7 +469,7 @@ function BreadboardGridInner({
             fill="#a1a1aa"
             fontFamily="system-ui, sans-serif"
           >
-            Add components to your schematic
+            Drag a starter or project part onto the board
           </text>
           <text
             x={width / 2}
@@ -480,7 +480,7 @@ function BreadboardGridInner({
             fill="#71717a"
             fontFamily="system-ui, sans-serif"
           >
-            to see them on the breadboard.
+            then route interactive wires between real pin rows.
           </text>
         </g>
       )}

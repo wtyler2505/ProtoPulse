@@ -24,6 +24,7 @@ vi.mock('@/lib/queryClient', async () => {
 import { apiRequest } from '@/lib/queryClient';
 import { ProjectIdProvider } from '@/lib/contexts/project-id-context';
 import { ArchitectureProvider, useArchitecture } from '@/lib/contexts/architecture-context';
+import { projectQueryKeys } from '@/lib/query-keys';
 
 const mockedApiRequest = vi.mocked(apiRequest);
 
@@ -257,7 +258,7 @@ describe('ArchitectureContext', () => {
 
     // Cache is updated synchronously via setQueryData — this is the
     // optimistic update, visible before the mutation round-trip completes.
-    const cached = queryClient.getQueryData(['/api/projects/1/nodes']) as { data: unknown[]; total: number };
+    const cached = queryClient.getQueryData(projectQueryKeys.nodes(1)) as { data: unknown[]; total: number };
     expect(cached).toEqual({
       data: [expect.objectContaining({ nodeId: 'n1', label: 'MCU' })],
       total: 1,

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitNetRow, CircuitWireRow, CircuitViaRow, HierarchicalPortRow, PcbZone, DesignComment, SimulationScenario } from '@shared/schema';
+import type { CircuitAiGenerateResponse } from '@shared/circuit-ai-types';
 
 // ===========================================================================
 // Circuit Designs
@@ -64,6 +65,27 @@ export function useDeleteCircuitDesign() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['circuit-designs', variables.projectId] });
+    },
+  });
+}
+
+export function useGenerateCircuitWithAi() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      circuitId: number;
+      description: string;
+      apiKey: string;
+      model?: string;
+    }) => {
+      const { circuitId, ...body } = data;
+      const res = await apiRequest('POST', `/api/circuits/${circuitId}/ai/generate`, body);
+      return res.json() as Promise<CircuitAiGenerateResponse>;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['circuit-instances', variables.circuitId] });
+      queryClient.invalidateQueries({ queryKey: ['circuit-nets', variables.circuitId] });
+      queryClient.invalidateQueries({ queryKey: ['circuit-wires', variables.circuitId] });
     },
   });
 }

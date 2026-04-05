@@ -1,11 +1,9 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
 import { Command } from 'cmdk';
-import { useProjectId } from '@/lib/contexts/project-id-context';
-import { useBom } from '@/lib/contexts/bom-context';
+import { useBom, useProjectId, useProjectMeta } from '@/lib/project-context';
 import { useCommunityLibrary } from '@/lib/community-library';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import { mapCommunityPartToBom } from '@/lib/community-bom-bridge';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
 import {
   Search,
   Package,

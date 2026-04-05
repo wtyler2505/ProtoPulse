@@ -1,7 +1,13 @@
-import { useState, useCallback, useRef, useEffect, useMemo, useReducer, Suspense } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, useReducer, Suspense, type FocusEvent, type ReactNode } from 'react';
 import { useParams, useLocation, Redirect } from 'wouter';
-import { ProjectProvider } from '@/lib/project-context';
-import { useProjectMeta } from '@/lib/contexts/project-meta-context';
+import {
+  ProjectProvider,
+  useArchitecture,
+  useBom,
+  useProjectId,
+  useProjectMeta,
+  useValidation,
+} from '@/lib/project-context';
 import type { ViewMode } from '@/lib/project-context';
 
 import { buildValidationContext } from '@/lib/pcb-tutorial';
@@ -11,13 +17,9 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { cn } from '@/lib/utils';
 import { Menu, MessageCircle, Layers } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
-import { useValidation } from '@/lib/contexts/validation-context';
-import { useArchitecture } from '@/lib/contexts/architecture-context';
-import { useBom } from '@/lib/contexts/bom-context';
 import { useToast } from '@/hooks/use-toast';
 import { DndProvider } from '@/lib/dnd-context';
 import { TutorialProvider } from '@/lib/tutorial-context';
-import { useProjectId } from '@/lib/contexts/project-id-context';
 import { navItems, alwaysVisibleIds } from '@/components/layout/sidebar/sidebar-constants';
 import { shouldIgnoreKeyboardShortcut } from '@/lib/keyboard-shortcuts';
 import { createResizeKeyHandler, getResizeAriaProps } from '@/lib/keyboard-resize';
@@ -26,6 +28,7 @@ import type { KeyboardResizeConfig } from '@/lib/keyboard-resize';
 import { useActionExecutor } from '@/components/panels/chat/hooks/useActionExecutor';
 import PredictionPanel from '@/components/ui/PredictionPanel';
 import { usePredictions } from '@/hooks/usePredictions';
+import { useIsMobile } from '@/hooks/use-mobile';
 import RadialMenu from '@/components/ui/RadialMenu';
 import { buildPredictionAddNodeActions, getPredictionComponentCount, getPredictionComponentLabel } from '@/lib/prediction-actions';
 import { getActionsForContext } from '@/lib/radial-menu-actions';
@@ -44,18 +47,17 @@ import {
   LessonModeOverlay,
   ActivityFeedPanel,
   PcbTutorialPanel,
-  FirstRunChecklist,
   SmartHintToast,
-  ViewOnboardingHint,
   startPrefetch,
 } from './workspace/lazy-imports';
 import {
   workspaceReducer,
-  initialWorkspaceState,
-  persisted,
+  createInitialWorkspaceState,
+  loadPersistedLayout,
   persistLayout,
 } from './workspace/workspace-reducer';
 import type { PersistedPanelLayout } from './workspace/workspace-reducer';
+import { useHoverPeekPanel } from './workspace/useHoverPeekPanel';
 import { ViewRenderer, ViewLoadingFallback } from './workspace/ViewRenderer';
 import { WorkspaceHeader } from './workspace/WorkspaceHeader';
 import { MobileNav } from './workspace/MobileNav';
@@ -121,8 +123,71 @@ function ResizeHandle({ side, onResize, keyboardConfig }: {
   );
 }
 
+function HoverPeekDock({
+  side,
+  collapsed,
+  peekVisible,
+  onPeekOpen,
+  onPeekClose,
+  children,
+}: {
+  side: 'left' | 'right';
+  collapsed: boolean;
+  peekVisible: boolean;
+  onPeekOpen: () => void;
+  onPeekClose: () => void;
+  children: ReactNode;
+}) {
+  const handleBlurCapture = useCallback((event: FocusEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
+      return;
+    }
+    onPeekClose();
+  }, [onPeekClose]);
+
+  return (
+    <div
+      data-testid={`hover-peek-dock-${side}`}
+      className={cn(
+        'relative flex h-full shrink-0 overflow-visible',
+        side === 'right' ? 'justify-end' : 'justify-start',
+        collapsed ? 'w-10' : 'w-auto',
+        peekVisible && collapsed && 'z-40',
+      )}
+      onMouseEnter={collapsed ? onPeekOpen : undefined}
+      onMouseLeave={collapsed ? onPeekClose : undefined}
+      onFocusCapture={collapsed ? onPeekOpen : undefined}
+      onBlurCapture={collapsed ? handleBlurCapture : undefined}
+    >
+      <div
+        data-testid={`hover-peek-panel-${side}`}
+        className={cn(
+          'relative h-full transition-shadow duration-200',
+          peekVisible && collapsed && 'shadow-2xl',
+        )}
+      >
+        {children}
+      </div>
+
+      {collapsed && !peekVisible && (
+        <div
+          data-testid={`hover-peek-hotspot-${side}`}
+          aria-hidden="true"
+          className={cn(
+            'absolute inset-y-0 z-10',
+            side === 'left' ? 'left-0 w-3' : 'right-0 w-3',
+          )}
+          onMouseEnter={onPeekOpen}
+        />
+      )}
+    </div>
+  );
+}
+
 function WorkspaceContent() {
   const projectId = useProjectId();
+  const isMobile = useIsMobile();
   const { activeView, setActiveView, projectName } = useProjectMeta();
   const { runValidation, issues } = useValidation();
   const { nodes, edges, hasResolvedInitialGraph } = useArchitecture();
@@ -197,7 +262,26 @@ function WorkspaceContent() {
     startPrefetch();
   }, []);
 
-  const [ws, dispatch] = useReducer(workspaceReducer, initialWorkspaceState);
+  const persistedLayout = useMemo(() => loadPersistedLayout(projectId), [projectId]);
+  const [ws, dispatch] = useReducer(workspaceReducer, projectId, createInitialWorkspaceState);
+  const {
+    peekVisible: sidebarPeekVisible,
+    openPeek: openSidebarPeek,
+    closePeek: closeSidebarPeek,
+  } = useHoverPeekPanel({
+    collapsed: ws.sidebarCollapsed,
+    isMobile,
+  });
+  const {
+    peekVisible: chatPeekVisible,
+    openPeek: openChatPeek,
+    closePeek: closeChatPeek,
+  } = useHoverPeekPanel({
+    collapsed: ws.chatCollapsed,
+    isMobile,
+  });
+  const sidebarCollapsed = ws.sidebarCollapsed && !sidebarPeekVisible;
+  const chatCollapsed = ws.chatCollapsed && !chatPeekVisible;
 
   // BL-0231: Radial context menu state
   const [radialMenu, setRadialMenu] = useState<{
@@ -288,7 +372,7 @@ function WorkspaceContent() {
     }
 
     // First mount only: fallback to localStorage if no viewName in URL.
-    const saved = persisted.activeView;
+    const saved = persistedLayout.activeView;
     if (saved && saved !== activeView && VALID_VIEW_MODES.has(saved)) {
       setActiveView(saved as ViewMode);
       return;
@@ -296,7 +380,7 @@ function WorkspaceContent() {
     initialUrlApplied.current = true;
     initialViewSyncComplete.current = true;
     setLocation(`/projects/${String(projectId)}/${activeView}`, { replace: true });
-  }, [activeView, location, projectId, setActiveView, setLocation]);
+  }, [activeView, location, persistedLayout.activeView, projectId, setActiveView, setLocation]);
 
   // Important: this must only react to real location changes, not local
   // activeView updates, or it can race against the companion activeView->URL
@@ -324,10 +408,10 @@ function WorkspaceContent() {
         chatWidth: ws.chatWidth,
         activeView,
       };
-      persistLayout(layout);
+      persistLayout(projectId, layout);
     }, 500);
     return () => clearTimeout(timer);
-  }, [ws.sidebarCollapsed, ws.chatCollapsed, ws.sidebarWidth, ws.chatWidth, activeView]);
+  }, [ws.sidebarCollapsed, ws.chatCollapsed, ws.sidebarWidth, ws.chatWidth, activeView, projectId]);
 
   // BL-0114: Sync URL when activeView changes (after initial mount)
   useEffect(() => {
@@ -350,6 +434,16 @@ function WorkspaceContent() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenChatPanel = () => {
+      dispatch({ type: 'SET_CHAT_OPEN', open: true });
+      dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: false });
+    };
+
+    window.addEventListener('protopulse:open-chat-panel', handleOpenChatPanel);
+    return () => window.removeEventListener('protopulse:open-chat-panel', handleOpenChatPanel);
   }, []);
 
   /* RS-03: Auto-collapse sidebar at tablet landscape (<=1024px) */
@@ -459,42 +553,52 @@ function WorkspaceContent() {
         Skip to AI assistant
       </a>
       <h1 className="sr-only">ProtoPulse</h1>
-      <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 lg:hidden">
-        <StyledTooltip content="Open menu" side="bottom">
-          <button
-            data-testid="mobile-menu-toggle"
-            className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => dispatch({ type: 'SET_SIDEBAR_OPEN', open: true })}
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-        </StyledTooltip>
-        <div className="flex items-center gap-2">
-          <Layers className="w-4 h-4 text-primary" />
-          <span className="font-display font-bold text-sm tracking-tight">ProtoPulse</span>
+      {isMobile && (
+        <div data-testid="mobile-header" className="h-12 border-b border-border bg-card/60 backdrop-blur-xl flex items-center justify-between px-4 lg:hidden">
+          <StyledTooltip content="Open menu" side="bottom">
+            <button
+              data-testid="mobile-menu-toggle"
+              className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => dispatch({ type: 'SET_SIDEBAR_OPEN', open: true })}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </StyledTooltip>
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-primary" />
+            <span className="font-display font-bold text-sm tracking-tight">ProtoPulse</span>
+          </div>
+          <StyledTooltip content="Open AI assistant" side="bottom">
+            <button
+              data-testid="mobile-chat-toggle"
+              className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => dispatch({ type: 'SET_CHAT_OPEN', open: true })}
+            >
+              <MessageCircle className="w-5 h-5" />
+            </button>
+          </StyledTooltip>
         </div>
-        <StyledTooltip content="Open AI assistant" side="bottom">
-          <button
-            data-testid="mobile-chat-toggle"
-            className="min-w-[44px] min-h-[44px] p-2 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => dispatch({ type: 'SET_CHAT_OPEN', open: true })}
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button>
-        </StyledTooltip>
-      </div>
+      )}
 
       <DndProvider>
       <div className="flex flex-1 min-h-0">
         <ErrorBoundary fallback={<div data-testid="diag-sidebar-error" className="w-64 shrink-0 border-r border-border bg-card/60 p-4 text-xs text-destructive">Sidebar region error</div>}>
           <Suspense fallback={null}>
-            <Sidebar
-              isOpen={ws.sidebarOpen}
-              onClose={() => dispatch({ type: 'SET_SIDEBAR_OPEN', open: false })}
+            <HoverPeekDock
+              side="left"
               collapsed={ws.sidebarCollapsed}
-              width={ws.sidebarWidth}
-              onToggleCollapse={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: false })}
-            />
+              peekVisible={sidebarPeekVisible}
+              onPeekOpen={openSidebarPeek}
+              onPeekClose={closeSidebarPeek}
+            >
+              <Sidebar
+                isOpen={ws.sidebarOpen}
+                onClose={() => dispatch({ type: 'SET_SIDEBAR_OPEN', open: false })}
+                collapsed={sidebarCollapsed}
+                width={ws.sidebarWidth}
+                onToggleCollapse={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: false })}
+              />
+            </HoverPeekDock>
           </Suspense>
         </ErrorBoundary>
 
@@ -510,11 +614,6 @@ function WorkspaceContent() {
           </ErrorBoundary>
 
           <div key={activeView} role="tabpanel" id="main-panel" aria-labelledby={activeTabId} className="view-enter flex-1 relative overflow-hidden flex flex-col bg-[radial-gradient(#1a1a1a_1px,transparent_1px)] [background-size:20px_20px]">
-              <ErrorBoundary fallback={<div data-testid="diag-onboarding-error" className="mx-4 mt-3 rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Onboarding hint error</div>}>
-                <Suspense fallback={null}>
-                  <ViewOnboardingHint viewName={activeView} />
-                </Suspense>
-              </ErrorBoundary>
               <div className="flex-1 relative overflow-hidden">
                 <ViewRenderer activeView={activeView} projectId={projectId} />
               </div>
@@ -589,13 +688,6 @@ function WorkspaceContent() {
             />
           )}
 
-          {/* BL-0307: First-run onboarding checklist */}
-          <ErrorBoundary fallback={<div data-testid="diag-checklist-error" className="fixed bottom-4 right-4 z-40 rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Checklist error</div>}>
-            <Suspense fallback={null}>
-              <FirstRunChecklist />
-            </Suspense>
-          </ErrorBoundary>
-
           {/* BL-0311: Smart hints triggered by repeated mistakes */}
           <ErrorBoundary fallback={<div data-testid="diag-smart-hint-error" className="fixed bottom-4 left-4 z-50 rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Smart hint error</div>}>
             <Suspense fallback={null}>
@@ -610,13 +702,21 @@ function WorkspaceContent() {
           <div id="chat-panel">
             <h2 className="sr-only">AI Assistant</h2>
             <Suspense fallback={null}>
-              <ChatPanel
-                isOpen={ws.chatOpen}
-                onClose={() => dispatch({ type: 'SET_CHAT_OPEN', open: false })}
+              <HoverPeekDock
+                side="right"
                 collapsed={ws.chatCollapsed}
-                width={ws.chatWidth}
-                onToggleCollapse={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: false })}
-              />
+                peekVisible={chatPeekVisible}
+                onPeekOpen={openChatPeek}
+                onPeekClose={closeChatPeek}
+              >
+                <ChatPanel
+                  isOpen={ws.chatOpen}
+                  onClose={() => dispatch({ type: 'SET_CHAT_OPEN', open: false })}
+                  collapsed={chatCollapsed}
+                  width={ws.chatWidth}
+                  onToggleCollapse={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: false })}
+                />
+              </HoverPeekDock>
             </Suspense>
           </div>
         </ErrorBoundary>
@@ -667,7 +767,7 @@ export default function ProjectWorkspace() {
   }
 
   return (
-    <ProjectProvider projectId={rawId}>
+    <ProjectProvider key={rawId} projectId={rawId}>
       <TutorialProvider>
         <WorkspaceContent />
         <Suspense fallback={null}>
