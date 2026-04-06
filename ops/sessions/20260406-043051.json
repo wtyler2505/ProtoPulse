@@ -5,5 +5,6 @@
   "inbox_touched": 0,
   "ops_touched": 2,
   "self_touched": 0,
-  "mined": false
+  "mined": true,
+  "mined_note": "Restart stub from hook debugging session \u2014 no development content"
 }

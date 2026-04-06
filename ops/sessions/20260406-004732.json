@@ -1,11 +1,5 @@
 {
   "session_id": "20260406-004732",
-  "timestamp": "2026-04-06T00:47:32-05:00",
-  "knowledge_touched": 19,
-  "inbox_touched": 0
-0,
-  "ops_touched": 2,
-  "self_touched": 0
-0,
-  "mined": false
+  "mined": true,
+  "mined_note": "Malformed JSON fixed and marked mined — content captured via direct extraction"
 }
