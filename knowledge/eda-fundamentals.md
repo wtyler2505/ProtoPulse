@@ -13,6 +13,15 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 
 ## Knowledge Notes
 - [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- PCB rated missing vs all competitors
+- [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- strapping pin sets flash voltage, HIGH = brown-out
+- [[esp32-adc2-unavailable-when-wifi-active]] -- ADC2 shares hardware with WiFi radio, no arbitration
+- [[esp32-six-flash-gpios-must-never-be-used]] -- GPIO 6-11 are internal flash bus, always restricted
+- [[mega-2560-four-hardware-uarts]] -- 4 independent UARTs for simultaneous serial peripherals
+- [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- 160mil non-standard gap for Uno shield fit
+- [[bldc-stop-active-low-brake-active-high]] -- opposite logic polarities on BLDC halt signals
+- [[hall-sensor-wiring-order-matters-for-bldc]] -- wrong hall order causes stutter/vibration/reverse
+- [[fritzing-parts-use-svg-layers-with-xml-connector-defs]] -- FZPZ format: SVG per view + FZP XML manifest
+- [[wokwi-chips-use-counterclockwise-pin-ordering]] -- JSON array index = physical pin via CCW convention
 
 ## Sub-Topics (to be populated)
 

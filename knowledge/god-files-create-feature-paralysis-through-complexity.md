@@ -16,8 +16,10 @@ Most of these god files have since been decomposed (routes.ts, ai-tools.ts, circ
 ---
 
 Relevant Notes:
-- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- the most damaging impact
-- [[dual-export-system-is-a-maintenance-trap]] -- another structural debt pattern
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- the most damaging impact: PCBLayoutView CCN=135 blocked the entire domain
+- [[dual-export-system-is-a-maintenance-trap]] -- another structural debt pattern spawned by monolithic files
+- [[monolithic-context-causes-quadratic-render-complexity]] -- the same pattern at the React state layer: one monolith cascading into paralysis
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- 9,667 CCN quantifies the aggregate complexity these god files created
 
 Topics:
 - [[architecture-decisions]]
