@@ -1,0 +1,80 @@
+# ops/config.yaml -- edit these to adjust your system
+# See ops/derivation.md for WHY each choice was made
+
+dimensions:
+  granularity: atomic
+  organization: flat
+  linking: explicit+implicit
+  processing: heavy
+  navigation: 3-tier
+  maintenance: condition-based
+  schema: dense
+  automation: full
+
+features:
+  semantic-search: true
+  processing-pipeline: true
+  self-space: true
+
+processing_tier: auto
+
+processing:
+  depth: deep
+  chaining: suggested
+  extraction:
+    selectivity: moderate
+    categories:
+      - name: claims
+        what_to_find: "Factual assertions from datasheets, docs, research"
+        output_type: claim
+      - name: architecture-decisions
+        what_to_find: "Why X over Y, trade-offs, constraints"
+        output_type: decision
+      - name: domain-knowledge
+        what_to_find: "EDA/electronics concepts, component specs, protocols"
+        output_type: concept
+      - name: competitive-insights
+        what_to_find: "How Fritzing/Wokwi/KiCad/TinkerCad work, gaps, strengths"
+        output_type: insight
+      - name: ux-patterns
+        what_to_find: "What makes features accessible to maker-beginners"
+        output_type: pattern
+      - name: technical-debt
+        what_to_find: "Why debt exists, what it blocks, fix priority"
+        output_type: debt-note
+      - name: implementation-patterns
+        what_to_find: "Code conventions, anti-patterns, proven approaches"
+        output_type: pattern
+      - name: user-needs
+        what_to_find: "What makers/hobbyists actually need from the tool"
+        output_type: need
+  verification:
+    description_test: true
+    schema_check: true
+    link_check: true
+  reweave:
+    scope: related
+    frequency: after_create
+
+provenance: full
+
+personality:
+  enabled: true
+  warmth: warm
+  opinionatedness: opinionated
+  formality: casual
+  emotional_awareness: task-focused
+
+maintenance:
+  conditions:
+    orphan_threshold: 10
+    tension_threshold: 5
+    stale_days: 30
+    inbox_overflow: 20
+    schema_violation_pct: 20
+
+research:
+  primary: web-search
+  fallback: web-search
+  last_resort: web-search
+  default_depth: moderate
