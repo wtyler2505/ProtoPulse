@@ -17,6 +17,7 @@ This is not just an accessibility gap — it is a missing interaction paradigm. 
 Relevant Notes:
 - [[exports-are-only-accessible-via-ai-chat]] -- another symptom of the same input gap
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- UX quality affects the bundle's appeal
+- [[all-procurement-data-is-ai-fabricated]] -- no structured input means users cannot manually correct fabricated BOM data
 
 Topics:
 - [[maker-ux]]
