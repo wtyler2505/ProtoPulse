@@ -556,7 +556,9 @@ function checkWireDensityHotspots(
   const THRESHOLD = 8;
   const flaggedBands = new Set<string>();
 
-  for (let start = minRow; start <= maxRow - WINDOW + 1; start++) {
+  // Ensure at least one window pass even when all data is in a single row
+  const windowEnd = Math.max(minRow, maxRow - WINDOW + 1);
+  for (let start = minRow; start <= windowEnd; start++) {
     let count = 0;
     const affectedIds = new Set<number>();
     for (let r = start; r < start + WINDOW; r++) {

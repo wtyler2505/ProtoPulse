@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import { auditBreadboard } from '@/lib/breadboard-board-audit';
 import type { BoardAuditInput, BoardAuditIssue, BoardAuditSummary } from '@/lib/breadboard-board-audit';
@@ -553,26 +553,27 @@ describe('auditBreadboard', () => {
 
   describe('wire density hotspots', () => {
     it('flags congested row bands with >8 wire endpoints', () => {
-      // Create instances in a tight band (rows 50-54)
+      // Create 6 instances all on the same breadboard row (row 50).
+      // Then create 5 nets connecting consecutive pairs, giving 10 endpoints
+      // all mapped to row 50 — well above the 8-endpoint threshold.
       const instances: CircuitInstanceRow[] = [];
-      const segments: Array<{ fromInstanceId: number; fromPin: string; toInstanceId: number; toPin: string }> = [];
-      for (let i = 0; i < 10; i++) {
-        const id = 10 + i;
+      for (let i = 0; i < 6; i++) {
         instances.push(makeInstance({
-          id,
-          breadboardX: 100 + i * 10,
-          breadboardY: 50 + (i % 3),
-          referenceDesignator: `R${String(i)}`,
+          id: 50 + i,
+          breadboardX: 100 + i * 15,
+          breadboardY: 50,
+          referenceDesignator: `J${String(i)}`,
         }));
-        // Create segments connecting consecutive instances
-        if (i > 0) {
-          segments.push({
-            fromInstanceId: 10 + i - 1,
-            fromPin: 'pin-1',
-            toInstanceId: id,
-            toPin: 'pin-2',
-          });
-        }
+      }
+
+      const segments: Array<{ fromInstanceId: number; fromPin: string; toInstanceId: number; toPin: string }> = [];
+      for (let i = 0; i < 5; i++) {
+        segments.push({
+          fromInstanceId: 50 + i,
+          fromPin: 'pin-1',
+          toInstanceId: 50 + i + 1,
+          toPin: 'pin-2',
+        });
       }
 
       const net = makeNet({ segments });
