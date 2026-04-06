@@ -18,6 +18,8 @@ The cross-phase analysis identified this as Impact Chain 5: prompt scaling preve
 Relevant Notes:
 - [[ai-is-the-moat-lean-into-it]] -- the AI strategy depends on sustainable costs
 - [[god-files-create-feature-paralysis-through-complexity]] -- the query function is itself a complexity hotspot
+- [[monolithic-context-causes-quadratic-render-complexity]] -- client-side equivalent: one monolith causes cascading cost on every state change
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- 57K LOC generates the project state that hits token limits
 
 Topics:
 - [[architecture-decisions]]
