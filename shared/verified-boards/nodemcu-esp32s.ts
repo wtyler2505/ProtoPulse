@@ -333,7 +333,7 @@ export const NODEMCU_ESP32S: VerifiedBoardDefinition = {
   headerLayout: HEADER_LAYOUT,
 
   operatingVoltage: 3.3,
-  inputVoltageRange: [7, 12],
+  inputVoltageRange: [4.5, 9],
   maxCurrentPerPin: 40,
   maxTotalCurrent: 1200,
 
