@@ -4,10 +4,10 @@
 # Writes a checkpoint to ops/sessions/ with current goals, active tasks, and
 # recent discoveries.
 
-set -euo pipefail
+set -uo pipefail
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
-[ -f ".arscontexta" ] || exit 0
+if [ ! -f ".arscontexta" ]; then echo '{}'; exit 0; fi
 
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 CHECKPOINT="ops/sessions/compact-${TIMESTAMP}.json"

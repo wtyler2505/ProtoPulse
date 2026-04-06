@@ -44,4 +44,5 @@ elif [ "$FILE_SIZE" -gt "$WARN_THRESHOLD" ]; then
   echo "Warning: Session transcript is ${SIZE_KB}KB. Context is getting large." >&2
 fi
 
+echo "{}"
 exit 0

@@ -9,7 +9,7 @@ set -euo pipefail
 INPUT=$(cat)
 COMMAND=$(echo "$INPUT" | python3 -c "import sys,json; print(json.load(sys.stdin).get('tool_input',{}).get('command',''))" 2>/dev/null || echo "")
 
-[ -z "$COMMAND" ] && exit 0
+[ -z "$COMMAND" ] && { echo "{}"; exit 0; }
 
 # Block destructive operations without explicit paths
 case "$COMMAND" in

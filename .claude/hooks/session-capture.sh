@@ -2,16 +2,16 @@
 # Ars Contexta -- Stop hook: capture session state
 # Saves session metadata to ops/sessions/ as JSON
 
-set -euo pipefail
+set -uo pipefail
 
 VAULT_MARKER=".arscontexta"
-[[ -f "$VAULT_MARKER" ]] || exit 0
+[[ -f "$VAULT_MARKER" ]] || { echo "{}"; exit 0; }
 
 SESSIONS_DIR="ops/sessions"
 
 # Check if session capture is enabled
 if grep -q 'session_capture: false' "$VAULT_MARKER" 2>/dev/null; then
-  exit 0
+  echo "{}"; exit 0
 fi
 
 mkdir -p "$SESSIONS_DIR"
@@ -25,10 +25,10 @@ if [[ -f "$SESSION_FILE" ]]; then
   SESSION_FILE="$SESSIONS_DIR/${SESSION_ID}-$(date +%H%M%S).json"
 fi
 # Count what happened this session (heuristic from recent git changes)
-knowledge_modified=$(git diff --name-only HEAD~1 2>/dev/null | grep -c '^knowledge/' || echo "0")
-inbox_modified=$(git diff --name-only HEAD~1 2>/dev/null | grep -c '^inbox/' || echo "0")
-ops_modified=$(git diff --name-only HEAD~1 2>/dev/null | grep -c '^ops/' || echo "0")
-self_modified=$(git diff --name-only HEAD~1 2>/dev/null | grep -c '^self/' || echo "0")
+knowledge_modified=$(git diff --name-only HEAD~1 2>/dev/null | grep -c '^knowledge/') || knowledge_modified=0
+inbox_modified=$(git diff --name-only HEAD~1 2>/dev/null | grep -c '^inbox/') || inbox_modified=0
+ops_modified=$(git diff --name-only HEAD~1 2>/dev/null | grep -c '^ops/') || ops_modified=0
+self_modified=$(git diff --name-only HEAD~1 2>/dev/null | grep -c '^self/') || self_modified=0
 
 cat > "$SESSION_FILE" << ENDJSON
 {
@@ -42,4 +42,5 @@ cat > "$SESSION_FILE" << ENDJSON
 }
 ENDJSON
 
+echo '{}'
 exit 0

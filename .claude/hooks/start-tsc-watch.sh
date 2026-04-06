@@ -10,4 +10,5 @@ fi
 tmux new-session -d -s tsc-watch \
   "cd /home/wtyler/Projects/ProtoPulse && npx tsc --noEmit --watch --pretty false 2>&1 | tee .claude/.tsc-errors.log" 2>/dev/null
 
+echo "{}"
 exit 0

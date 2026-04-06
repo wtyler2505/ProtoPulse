@@ -6,11 +6,11 @@ INPUT=$(cat)
 FILE_PATH=$(echo "$INPUT" | jq -r '.file_path // empty')
 
 if [ -z "$FILE_PATH" ]; then
-  exit 0
+  echo "{}"; exit 0
 fi
 
 if [ ! -f "$FILE_PATH" ]; then
-  exit 0
+  echo "{}"; exit 0
 fi
 
 # Get file modification time and current time in epoch seconds
@@ -18,7 +18,7 @@ FILE_MTIME=$(stat -c %Y "$FILE_PATH" 2>/dev/null)
 CURRENT_TIME=$(date +%s)
 
 if [ -z "$FILE_MTIME" ]; then
-  exit 0
+  echo "{}"; exit 0
 fi
 
 DIFF=$((CURRENT_TIME - FILE_MTIME))

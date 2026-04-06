@@ -33,8 +33,7 @@ fi
 if [ -n "$WARNINGS" ]; then
   printf '{"continue": true, "systemMessage": "Hook deps:%s"}' "$WARNINGS"
 else
-  # All good — no output needed, just exit clean
-  true
+  echo '{}'
 fi
 
 exit 0

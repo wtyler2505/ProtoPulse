@@ -7,7 +7,7 @@
 set -euo pipefail
 
 FILE_PATH="${CLAUDE_TOOL_INPUT_FILE_PATH:-}"
-[ -z "$FILE_PATH" ] && exit 0
+[ -z "$FILE_PATH" ] && { echo "{}"; exit 0; }
 
 # Only trigger on schema changes
 case "$FILE_PATH" in

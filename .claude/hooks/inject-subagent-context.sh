@@ -3,11 +3,11 @@
 # Injects vault state summary + active goals into subagent context
 # so spawned agents don't start completely cold.
 
-set -euo pipefail
+set -uo pipefail
 cd "$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 # Only run in ProtoPulse vault
-[ -f ".arscontexta" ] || exit 0
+[ -f ".arscontexta" ] || { echo "{}"; exit 0; }
 
 # Build context summary
 CONTEXT=""
@@ -25,7 +25,9 @@ CONTEXT="${CONTEXT}Knowledge vault: ${note_count} notes. "
 # Key guardrails
 CONTEXT="${CONTEXT}Rules: zero TS errors required, use agent-teams for parallel work, max 6 concurrent agents."
 
-# Output as systemMessage
+# Output as systemMessage (always output valid JSON)
 if [ -n "$CONTEXT" ]; then
   printf '{"systemMessage": "%s"}' "$(echo -e "$CONTEXT" | tr '\n' ' ' | sed 's/"/\\"/g')"
+else
+  echo '{}'
 fi

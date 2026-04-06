@@ -6,7 +6,7 @@ INPUT=$(cat)
 FILE_PATH=$(echo "$INPUT" | jq -r '.file_path // empty')
 
 if [ -z "$FILE_PATH" ]; then
-  exit 0
+  echo "{}"; exit 0
 fi
 
 # Get just the filename for pattern matching
