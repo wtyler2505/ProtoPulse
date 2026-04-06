@@ -6,6 +6,7 @@ model: sonnet
 category: general
 color: purple
 displayName: Research Expert
+maxTurns: 25
 ---
 
 # Research Expert

@@ -10,6 +10,7 @@ color: purple
 category: tools
 displayName: Code Search
 disableHooks: ['typecheck-project', 'lint-project', 'test-project', 'self-review']
+maxTurns: 25
 ---
 
 # Code Search Agent

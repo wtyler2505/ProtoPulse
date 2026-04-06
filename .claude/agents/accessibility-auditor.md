@@ -6,6 +6,7 @@ displayName: Accessibility Auditor
 category: general
 color: purple
 model: sonnet
+maxTurns: 25
 ---
 
 # Accessibility Auditor

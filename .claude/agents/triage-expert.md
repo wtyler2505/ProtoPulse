@@ -6,6 +6,8 @@ category: general
 displayName: Triage Expert
 color: orange
 disableHooks: ['typecheck-project', 'lint-project', 'test-project', 'self-review']
+maxTurns: 25
+effort: high
 ---
 
 # Triage Expert
