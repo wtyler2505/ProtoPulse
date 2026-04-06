@@ -47,7 +47,8 @@ case "$FILE_PATH" in
       fi
 
       # Validate confidence enum if present
-      confidence=$(grep '^confidence:' "$FILE_PATH" 2>/dev/null | head -1 | sed 's/^confidence: *//' | tr -d '"' | tr -d "'")      if [[ -n "$confidence" ]]; then
+      confidence=$(grep '^confidence:' "$FILE_PATH" 2>/dev/null | head -1 | sed 's/^confidence: *//' | tr -d '"' | tr -d "'")
+      if [[ -n "$confidence" ]]; then
         case "$confidence" in
           proven|likely|experimental|outdated) ;;
           *) echo "VALIDATION WARNING: $FILE_PATH has invalid confidence: '$confidence' (expected: proven, likely, experimental, outdated)" ;;

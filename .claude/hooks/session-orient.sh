@@ -48,7 +48,8 @@ if [[ "$inbox_count" -gt 20 ]]; then
 fi
 if [[ "$obs_count" -gt 10 ]]; then
   echo "WARNING: $obs_count pending observations. Consider running /rethink."
-fiif [[ "$tension_count" -gt 5 ]]; then
+fi
+if [[ "$tension_count" -gt 5 ]]; then
   echo "WARNING: $tension_count pending tensions. Consider running /rethink."
 fi
 if [[ "$queue_count" -gt 15 ]]; then
