@@ -12,6 +12,8 @@ import {
 } from '@shared/component-trust';
 import type { Connector, PartMeta } from '@shared/component-types';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
+import { findVerifiedBoardByAlias } from '@shared/verified-boards';
+import type { VerifiedBoardDefinition, VerifiedPin as VBPin } from '@shared/verified-boards';
 
 export type BreadboardPinMapConfidence = 'exact' | 'mixed' | 'heuristic';
 export type BreadboardPinRole =
@@ -45,6 +47,12 @@ export interface BreadboardPinMapEntry {
   side: 'left' | 'right' | 'center' | 'rail';
   role: BreadboardPinRole;
   isCritical: boolean;
+  /** Verified board pin warnings (e.g. 'Strapping pin', 'Input only'). */
+  verifiedWarnings?: string[];
+  /** Whether the verified board marks this pin as restricted (e.g. flash-connected). */
+  verifiedRestricted?: boolean;
+  /** Human-readable reason for restriction. */
+  verifiedRestrictionReason?: string;
 }
 
 export interface BreadboardSelectedPartModel {
@@ -80,6 +88,18 @@ export interface BreadboardSelectedPartModel {
   verificationStatus: PartVerificationStatus;
   coach: BreadboardBenchCoach;
   pins: BreadboardPinMapEntry[];
+
+  // --- Verified board intelligence (populated when a verified board pack match is found) ---
+  /** Whether this part matched a verified board definition in the board pack. */
+  verifiedBoard?: boolean;
+  /** Board-level safety warnings from the verified board definition. */
+  boardWarnings?: string[];
+  /** Boot/strapping pin design rules from the verified board definition. */
+  bootPinWarnings?: string[];
+  /** Whether any pin on this board has an ADC2 WiFi conflict note. */
+  adcWifiConflict?: boolean;
+  /** Pin IDs on ADC2 channels that conflict with WiFi. */
+  adcWifiConflictPinIds?: string[];
 }
 
 type LoosePartMeta = Partial<PartMeta> & Record<string, unknown>;

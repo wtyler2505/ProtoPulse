@@ -8,6 +8,8 @@ import {
 } from './component-trust';
 import type { PartMeta } from './component-types';
 import type { ComponentPart } from './schema';
+import { getAllVerifiedBoards } from './verified-boards';
+import { boardDefinitionToPartState } from './verified-boards/to-part-state';
 
 export type ExactPartResolutionKind =
   | 'empty'
@@ -375,6 +377,41 @@ function scoreMatch(query: string, tokens: string[], part: ComponentPart): Exact
   };
 }
 
+/**
+ * Build synthetic ComponentPart-like objects from verified board definitions.
+ * These can be scored alongside real project parts so verified boards are
+ * discoverable even before they've been seeded into a specific project.
+ */
+function getVerifiedBoardSyntheticParts(): ComponentPart[] {
+  const boards = getAllVerifiedBoards();
+  return boards.map((board, index): ComponentPart => {
+    const state = boardDefinitionToPartState(board);
+    return {
+      id: -(index + 1), // Negative IDs distinguish synthetic parts from real DB parts
+      projectId: 0,
+      nodeId: null,
+      meta: state.meta as unknown as Record<string, unknown>,
+      connectors: state.connectors as unknown as Record<string, unknown>[],
+      buses: state.buses as unknown as Record<string, unknown>[],
+      views: state.views as unknown as Record<string, unknown>,
+      constraints: [] as unknown as null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as ComponentPart;
+  });
+}
+
+/** Cache verified board synthetic parts to avoid rebuilding on every resolution call. */
+let verifiedBoardPartsCache: ComponentPart[] | null = null;
+
+function getCachedVerifiedBoardParts(): ComponentPart[] {
+  if (!verifiedBoardPartsCache) {
+    verifiedBoardPartsCache = getVerifiedBoardSyntheticParts();
+  }
+  return verifiedBoardPartsCache;
+}
+
 export function resolveExactPartRequest(query: string, parts: ComponentPart[]): ExactPartResolution {
   const trimmedQuery = query.trim();
   if (trimmedQuery.length === 0) {
@@ -394,15 +431,37 @@ export function resolveExactPartRequest(query: string, parts: ComponentPart[]): 
   const normalizedQuery = normalizeSearchText(trimmedQuery);
   const tokens = tokenizeSearchText(trimmedQuery);
   const playbook = findMatchingPlaybook(tokens);
-  const matches = parts
+
+  // Score project parts
+  const projectMatches = parts
     .map((part) => scoreMatch(normalizedQuery, tokens, part))
-    .filter((match): match is ExactPartResolutionMatch => match != null)
+    .filter((match): match is ExactPartResolutionMatch => match != null);
+
+  // Score verified board pack parts (synthetic — always available even before seeding)
+  const verifiedBoardParts = getCachedVerifiedBoardParts();
+  const verifiedMatches = verifiedBoardParts
+    .map((part) => scoreMatch(normalizedQuery, tokens, part))
+    .filter((match): match is ExactPartResolutionMatch => match != null);
+
+  // Merge: verified boards take priority. Deduplicate by MPN — if a project part
+  // matches the same MPN as a verified board, prefer the verified board match.
+  const verifiedMpns = new Set(verifiedMatches.map((m) => m.mpn).filter(Boolean));
+  const dedupedProjectMatches = projectMatches.filter(
+    (m) => !m.mpn || !verifiedMpns.has(m.mpn),
+  );
+
+  const matches = [...verifiedMatches, ...dedupedProjectMatches]
     .sort((left, right) => right.score - left.score)
     .slice(0, 4);
 
-  const draftSeed = playbook?.draftSeed ?? buildGenericDraftSeed(trimmedQuery);
+  // Skip playbook draft seed if a verified board already matches the query —
+  // the user doesn't need a draft workflow for boards we already have.
+  const hasVerifiedMatch = matches.some((m) => m.status === 'verified');
+  const effectivePlaybook = hasVerifiedMatch ? null : playbook;
+
+  const draftSeed = effectivePlaybook?.draftSeed ?? buildGenericDraftSeed(trimmedQuery);
   const recommendedDraftDescription = draftSeed.description;
-  const evidenceChecklist = playbook?.evidenceChecklist ?? [...GENERIC_EVIDENCE_CHECKLIST];
+  const evidenceChecklist = effectivePlaybook?.evidenceChecklist ?? [...GENERIC_EVIDENCE_CHECKLIST];
   const topMatch = matches[0] ?? null;
   const secondMatch = matches[1] ?? null;
 
@@ -413,7 +472,7 @@ export function resolveExactPartRequest(query: string, parts: ComponentPart[]): 
       kind: 'needs-draft',
       matches: [],
       message: 'No trustworthy exact part match exists in this project yet. Start a candidate exact draft before asking ProtoPulse for exact wiring guidance.',
-      playbook,
+      playbook: effectivePlaybook,
       query: trimmedQuery,
       recommendedDraftDescription,
       topMatch: null,
