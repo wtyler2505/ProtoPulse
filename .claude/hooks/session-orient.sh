@@ -1,21 +1,11 @@
 #!/usr/bin/env bash
 # Ars Contexta -- SessionStart hook: orient the agent with vault state
-# Reads self/ and ops/ at session start, checks condition thresholds
-# Only runs when .arscontexta vault marker exists
-#
-# IMPORTANT: All display output goes to stderr (>&2).
-# stdout is reserved for JSON output that Claude Code parses.
+# IMPORTANT: stdout = JSON for Claude Code. NO stderr (stderr = hook error).
 
 set -euo pipefail
 
 VAULT_MARKER=".arscontexta"
-
-# Skip if no vault
 [[ -f "$VAULT_MARKER" ]] || exit 0
-
-# Build the orient report (all to stderr)
-{
-echo "--- ProtoPulse Knowledge System: Orient ---"
 
 # Count knowledge notes
 note_count=0
@@ -29,72 +19,33 @@ if [[ -d "inbox" ]]; then
   inbox_count=$(find "inbox" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-# Count observations and tensions
-obs_count=0
-if [[ -d "ops/observations" ]]; then
-  obs_count=$(find "ops/observations" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
-fi
-
-tension_count=0
-if [[ -d "ops/tensions" ]]; then
-  tension_count=$(find "ops/tensions" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
-fi
-
 # Count queue items
 queue_count=0
 if [[ -d "ops/queue" ]]; then
   queue_count=$(find "ops/queue" -maxdepth 1 -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-echo "Vault: $note_count knowledge notes, $inbox_count inbox captures, $queue_count queued"
+# Build warnings
+WARNINGS=""
 
-# Condition-based maintenance triggers
-if [[ "$inbox_count" -gt 20 ]]; then
-  echo "WARNING: Inbox overflow ($inbox_count > 20). Run /extract or /pipeline to process captures."
+obs_count=0
+if [[ -d "ops/observations" ]]; then
+  obs_count=$(find "ops/observations" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 fi
-if [[ "$obs_count" -gt 10 ]]; then
-  echo "WARNING: $obs_count pending observations. Consider running /rethink."
-fi
-if [[ "$tension_count" -gt 5 ]]; then
-  echo "WARNING: $tension_count pending tensions. Consider running /rethink."
-fi
-if [[ "$queue_count" -gt 15 ]]; then
-  echo "WARNING: Processing queue depth ($queue_count > 15). Run /ralph to batch process."
+tension_count=0
+if [[ -d "ops/tensions" ]]; then
+  tension_count=$(find "ops/tensions" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-# Check for due reminders
+[[ "$inbox_count" -gt 20 ]] && WARNINGS="${WARNINGS} Inbox overflow (${inbox_count}>20)."
+[[ "$obs_count" -gt 10 ]] && WARNINGS="${WARNINGS} ${obs_count} pending observations."
+[[ "$tension_count" -gt 5 ]] && WARNINGS="${WARNINGS} ${tension_count} pending tensions."
+
+# Check due reminders
 if [[ -f "ops/reminders.md" ]]; then
   today=$(date +%Y-%m-%d)
-  due=$(grep -cE "^- \[ \] $today|^- \[ \] [0-9]{4}-[0-9]{2}-[0-9]{2}" "ops/reminders.md" 2>/dev/null) || due=0
-  if [[ "$due" -gt 0 ]]; then
-    echo "Reminders due: check ops/reminders.md"
-  fi
-fi
-
-# Check for stale tasks
-if [[ -f "ops/tasks.md" ]]; then
-  active=$(grep -c '^\- \[ \]' "ops/tasks.md" 2>/dev/null) || active=0
-  if [[ "$active" -gt 0 ]]; then
-    echo "Active tasks: $active (see ops/tasks.md)"
-  fi
-fi
-
-# Surface relevant knowledge for common development areas
-echo ""
-echo "Knowledge highlights:"
-for moc in knowledge/*.md; do
-  [[ -f "$moc" ]] || continue
-  grep -q '^type: moc' "$moc" 2>/dev/null || continue
-  name=$(basename "$moc" .md)
-  [[ "$name" == "index" || "$name" == "identity" || "$name" == "methodology" || "$name" == "goals" ]] && continue
-  count=$(grep -c '\[\[' "$moc" 2>/dev/null || echo "0")
-  [[ "$count" -gt 0 ]] && echo "  $name: $count notes"
-done
-
-# Show gaps radar summary
-if [[ -f "knowledge/gaps-and-opportunities.md" ]]; then
-  needs=$(grep -c '^\- \[\[' "knowledge/gaps-and-opportunities.md" 2>/dev/null || echo "0")
-  echo "  gaps-and-opportunities: $needs tracked gaps"
+  due=$(grep -cE "^- \[ \] $today" "ops/reminders.md" 2>/dev/null) || due=0
+  [[ "$due" -gt 0 ]] && WARNINGS="${WARNINGS} ${due} reminder(s) due today."
 fi
 
 # Count unmined sessions
@@ -104,15 +55,26 @@ if [[ -d "ops/sessions" ]]; then
     [[ -f "$s" ]] || continue
     grep -q '"mined": true' "$s" 2>/dev/null || unmined=$((unmined + 1))
   done
-  [[ "$unmined" -gt 3 ]] && echo "  $unmined unmined sessions — run /remember --mine-sessions"
+  [[ "$unmined" -gt 3 ]] && WARNINGS="${WARNINGS} ${unmined} unmined sessions."
 fi
 
-echo ""
-echo "Read: self/identity.md, self/goals.md, knowledge/gaps-and-opportunities.md"
-echo "Gap queries: bash ops/queries/gap-analysis.sh | idea-generator.sh | research-gaps.sh"
-echo "--- End Orient ---"
-} >&2
+# Build topic highlights
+HIGHLIGHTS=""
+for moc in knowledge/*.md; do
+  [[ -f "$moc" ]] || continue
+  grep -q '^type: moc' "$moc" 2>/dev/null || continue
+  name=$(basename "$moc" .md)
+  [[ "$name" == "index" || "$name" == "identity" || "$name" == "methodology" || "$name" == "goals" ]] && continue
+  count=$(grep -c '\[\[' "$moc" 2>/dev/null) || count=0
+  [[ "$count" -gt 0 ]] && HIGHLIGHTS="${HIGHLIGHTS} ${name}:${count}"
+done
 
-# stdout: valid JSON for Claude Code hook parser
-echo "{\"systemMessage\": \"Vault: ${note_count} notes, ${inbox_count} inbox, ${queue_count} queued. Read self/identity.md and self/goals.md for context.\"}"
+# Build the systemMessage
+MSG="Vault: ${note_count} notes, ${inbox_count} inbox, ${queue_count} queued."
+[[ -n "$WARNINGS" ]] && MSG="${MSG} Warnings:${WARNINGS}"
+[[ -n "$HIGHLIGHTS" ]] && MSG="${MSG} Topics:${HIGHLIGHTS}"
+MSG="${MSG} Read self/identity.md, self/goals.md, knowledge/gaps-and-opportunities.md."
+
+# Output ONLY valid JSON to stdout. No stderr.
+printf '{"continue": true, "suppressOutput": false, "systemMessage": "%s"}' "$(echo "$MSG" | sed 's/"/\\"/g')"
 exit 0
