@@ -20,6 +20,8 @@ Relevant Notes:
 - [[god-files-create-feature-paralysis-through-complexity]] -- the query function is itself a complexity hotspot
 - [[monolithic-context-causes-quadratic-render-complexity]] -- client-side equivalent: one monolith causes cascading cost on every state change
 - [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- 57K LOC generates the project state that hits token limits
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- token cost scaling directly threatens the quality of proactive AI coaching that beginners depend on
+- [[dual-ai-providers-prevent-single-vendor-lock-in]] -- multi-model routing is hampered because every provider gets the full context regardless of task complexity
 
 Topics:
 - [[architecture-decisions]]
