@@ -16,8 +16,9 @@ This was fixed in Wave E (CORS allowlist), but the finding illustrates a pattern
 ---
 
 Relevant Notes:
-- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- another hidden scaling risk
-- [[god-files-create-feature-paralysis-through-complexity]] -- dev shortcuts compound
+- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- another hidden scaling risk that is invisible under normal development
+- [[god-files-create-feature-paralysis-through-complexity]] -- dev shortcuts compound into structural problems
+- [[dual-export-system-is-a-maintenance-trap]] -- same pattern: a dev-time convenience that became a production liability
 
 Topics:
 - [[architecture-decisions]]
