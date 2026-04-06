@@ -19,6 +19,8 @@ Relevant Notes:
 - [[god-files-create-feature-paralysis-through-complexity]] -- 9,667 CCN across the codebase
 - [[ai-is-the-moat-lean-into-it]] -- 2 contributors producing $1.9M equivalent effort validates AI-assisted development as the strategy
 - [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- $1.9M effort against a $16B+ market shows the investment is proportionate
+- [[greatness-manifest-pushed-beyond-parity-into-innovation]] -- the Manifest's 11 C5 items pushed the codebase far beyond the original $1.9M estimate
+- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- 501 items across 154 waves is the execution evidence behind the COCOMO estimate
 
 Topics:
 - [[architecture-decisions]]

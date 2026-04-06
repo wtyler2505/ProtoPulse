@@ -27,6 +27,7 @@ Relevant Notes:
 - [[mega-2560-four-hardware-uarts]] -- the Mega's multi-serial rover config required juggling Arduino IDE, serial monitors, and datasheets simultaneously
 - [[architecture-first-bridges-intent-to-implementation]] -- architecture diagrams are the entry point that lets beginners stay in one tool from intent to implementation
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- architecture diagrams are the entry point that lets beginners stay in one tool from idea to Gerber
+- [[self-hosted-and-free-is-a-pricing-moat]] -- zero cost removes the last barrier to makers adopting one tool over free-but-fragmented alternatives
 
 Topics:
 - [[maker-ux]]

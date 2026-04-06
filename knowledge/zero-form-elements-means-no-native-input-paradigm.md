@@ -18,6 +18,8 @@ Relevant Notes:
 - [[exports-are-only-accessible-via-ai-chat]] -- another symptom of the same input gap
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- UX quality affects the bundle's appeal
 - [[all-procurement-data-is-ai-fabricated]] -- no structured input means users cannot manually correct fabricated BOM data
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- without form elements, beginners cannot input corrections even when AI surfaces mistakes
+- [[cross-tool-coherence-is-harder-than-building-features]] -- no native input paradigm compounds the coherence problem across 26 views
 
 Topics:
 - [[maker-ux]]

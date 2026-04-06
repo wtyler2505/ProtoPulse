@@ -19,6 +19,8 @@ Relevant Notes:
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the three-part value prop
 - [[all-procurement-data-is-ai-fabricated]] -- free means no revenue to fund real supplier API integrations
 - [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- zero cost captures the maker/education fraction of a $16B market
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- zero cost removes the last barrier to makers adopting one tool over free-but-fragmented alternatives
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- self-hosted native desktop strengthens the pricing moat by eliminating server costs
 
 Topics:
 - [[competitive-landscape]]
