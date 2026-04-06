@@ -413,24 +413,92 @@ When Tyler asks about Claude Code updates, new features, or "am I using everythi
 4. Propose specific additions: new hook events, new MCP capabilities, new settings options
 5. Extract any discoveries as knowledge notes in `knowledge/` linked to `[[dev-infrastructure]]`
 
-## Available AI Subagents (`.claude/agents/`)
+## Skill & Agent Routing — USE THE RIGHT TOOL
 
-| Domain | Agents |
-| ------ | ------ |
-| **React/Frontend** | react-expert, react-performance-expert, css-styling-expert, accessibility-expert, accessibility-auditor |
-| **TypeScript** | typescript/ directory (multiple experts) |
-| **Backend/Node** | nodejs-expert, nestjs-expert, loopback-expert |
-| **Database** | database-expert, postgres-expert, mongodb-expert |
-| **Build Tools** | vite-expert, webpack-expert |
-| **Testing** | testing/ directory, playwright-expert |
-| **DevOps** | devops-expert, docker-expert, github-actions-expert |
-| **Code Quality** | linting-expert, code-review-expert, refactoring-expert |
-| **EDA Domain** | eda-domain-reviewer |
-| **Git** | git-expert |
-| **Research** | research-expert, oracle, triage-expert, code-search, ai-sdk-expert, cli-expert |
-| **Documentation** | documentation-expert |
+### Planning & Design
+| Situation | Skill/Agent | Why |
+|-----------|------------|-----|
+| New feature or big change | `/superpowers:brainstorming` | Structured design before code |
+| Need implementation plan | `/superpowers:writing-plans` | Bite-sized tasks for any engineer |
+| Architecture decision | `/architecture` | C4 model, ADRs, patterns |
+| UI/UX design needed | `/frontend-design` or `/ui-styling` | Production-grade interfaces |
+| Product gap analysis | `/product-analysis` or `bash ops/queries/gap-analysis.sh` | Evidence-based feature gaps |
 
-**Always delegate to specialists when available. Default to parallel execution.**
+### Implementation
+| Situation | Skill/Agent | Why |
+|-----------|------------|-----|
+| Execute a written plan | `/superpowers:executing-plans` | Batch execution with review checkpoints |
+| Parallel independent tasks | `/agent-teams` or `/superpowers:dispatching-parallel-agents` | Multiple agents, shared task list |
+| Subagent per task | `/superpowers:subagent-driven-development` | Fresh context per task |
+| TDD workflow | `/superpowers:test-driven-development` | Red-green-refactor |
+| Deep focus on one area | `/focus` | Comprehensive audit + work on one feature |
+
+### Testing & Quality
+| Situation | Skill/Agent | Why |
+|-----------|------------|-----|
+| Before claiming done | `/superpowers:verification-before-completion` | Prove it works, don't just say it |
+| Code review needed | `/superpowers:requesting-code-review` | Dispatch code-review-expert |
+| Received review feedback | `/superpowers:receiving-code-review` | Act on feedback rigorously |
+| Visual UI audit | `/visual-audit` | 107-step Chrome DevTools audit |
+| Fix audit failures | `/fix-audit-failures` | Agent team for checklist items |
+
+### Debugging
+| Situation | Skill/Agent | Why |
+|-----------|------------|-----|
+| Any bug or failure | `/superpowers:systematic-debugging` | Hypothesis → test → fix |
+| Complex/nasty bug | `oracle` agent (has memory + high effort) | Deep reasoning, remembers past investigations |
+| Initial problem triage | `triage-expert` agent (has high effort) | Routes to right specialist |
+| Performance issue | `react-performance-expert` or `vite-expert` agent | Domain-specific profiling |
+
+### EDA Domain
+| Situation | Skill/Agent | Why |
+|-----------|------------|-----|
+| Circuit/component change | `eda-domain-reviewer` agent (has memory) | Pin labeling, DRC, format compliance |
+| Accessibility check | `accessibility-auditor` agent | WCAG 2.1 AA for ProtoPulse UI |
+
+### Git & Deployment
+| Situation | Skill/Agent | Why |
+|-----------|------------|-----|
+| Feature branch done | `/superpowers:finishing-a-development-branch` | Merge, PR, or cleanup options |
+| Need isolation | `/superpowers:using-git-worktrees` | Git worktree per feature |
+| Ship it | `/ship` | Type check → tests → commit → push |
+| Check project status | `/status` | Checklists, git, agents, dev server |
+
+### Knowledge System
+| Situation | Skill/Agent | Why |
+|-----------|------------|-----|
+| Extract from source | `/extract [file]` | Atomic notes from docs/datasheets |
+| Find connections | `/connect` | Wiki-link cross-references |
+| What's next? | `/next` | Intelligent next-action from task stack |
+| Find gaps | `bash ops/queries/gap-analysis.sh` | Claims vs debt contradictions |
+| System health | `/arscontexta:health` | 8-category vault diagnostics |
+| Research a topic | `/arscontexta:learn [topic]` | Web research → knowledge graph |
+
+### Infrastructure
+| Situation | Skill/Agent | Why |
+|-----------|------------|-----|
+| Hook issues | `/hook-debug` or `/hook-status` | List, validate, test hooks |
+| Create new hook | `/hook-create` | Natural language → hook |
+| MCP server setup | Use `mcp-server-mastery` skill | Configure MCP servers correctly |
+| CLAUDE.md improvements | `/claude-md-improver` | Audit and optimize context file |
+| Create new skill | `/skill-creator-v2` | Full skill authoring workflow |
+| Create slash command | `/cmd-create` | Natural language → command |
+| Audit commands | `/cmd-auditor` | Syntax, security, health scoring |
+
+### Available Custom Agents (`.claude/agents/`)
+| Agent | Has Memory | High Effort | Use For |
+|-------|-----------|-------------|---------|
+| `eda-domain-reviewer` | Yes | Yes | Circuit editor, component types, exports, AI tools |
+| `oracle` | Yes | Yes | Complex bugs, architecture, deep analysis |
+| `code-review-expert` | Yes | No | Post-implementation review |
+| `triage-expert` | No | Yes | Initial problem diagnosis |
+| `accessibility-auditor` | No | No | WCAG compliance after UI changes |
+| `research-expert` | No | No | Focused research with structured output |
+| `code-search` | No | No | Finding files/functions/patterns |
+| `ai-sdk-expert` | No | No | AI integration (Genkit, streaming) |
+| `cli-expert` | No | No | CLI tool development |
+
+**Default to the most specific skill available. Use agents for domain expertise. Use `/agent-teams` for parallel implementation.**
 
 ## Directory Structure
 
