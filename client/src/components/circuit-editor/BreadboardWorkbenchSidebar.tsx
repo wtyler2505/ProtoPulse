@@ -17,7 +17,7 @@ import type {
 interface BreadboardWorkbenchSidebarProps {
   benchInsights: Record<number, BreadboardBenchInsight>;
   benchSummary: BreadboardBenchSummary;
-  boardAudit: BoardAuditSummary | null;
+  boardAudit?: BoardAuditSummary | null;
   createPending: boolean;
   expandPending: boolean;
   hasCircuits: boolean;
@@ -33,7 +33,7 @@ interface BreadboardWorkbenchSidebarProps {
   onOpenComponentEditor: () => void;
   onOpenCommunity: () => void;
   onOpenSchematic: () => void;
-  onRunBoardAudit: () => void;
+  onRunBoardAudit?: () => void;
 }
 
 function StatChip({ label, value }: { label: string; value: string }) {
@@ -48,6 +48,7 @@ function StatChip({ label, value }: { label: string; value: string }) {
 export default function BreadboardWorkbenchSidebar({
   benchInsights,
   benchSummary,
+  boardAudit,
   createPending,
   expandPending,
   hasCircuits,
@@ -63,6 +64,7 @@ export default function BreadboardWorkbenchSidebar({
   onOpenComponentEditor,
   onOpenCommunity,
   onOpenSchematic,
+  onRunBoardAudit,
 }: BreadboardWorkbenchSidebarProps) {
   return (
     <aside
@@ -264,6 +266,22 @@ export default function BreadboardWorkbenchSidebar({
               </div>
             </div>
           </div>
+
+          {/* Board Health audit card */}
+          {onRunBoardAudit && (
+            <div className="rounded-xl border border-primary/20 bg-background/40 p-3" data-testid="breadboard-board-health-card">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+                  <HeartPulse className="h-3.5 w-3.5" />
+                </span>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/85">Board Health</p>
+              </div>
+              <BreadboardBoardAuditPanel
+                audit={boardAudit ?? null}
+                onRunAudit={onRunBoardAudit}
+              />
+            </div>
+          )}
         </div>
       </div>
 
