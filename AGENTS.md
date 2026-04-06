@@ -370,7 +370,29 @@ When Tyler asks "what's missing?", "find gaps", "what should we build next?", "a
 4. **Cross-reference with backlog**: Compare findings against `docs/MASTER_BACKLOG.md` to identify which gaps already have planned work vs which are truly new discoveries
 5. **Present ranked opportunities**: Combine vault evidence + web research + backlog state into a prioritized list with rationale
 
-The knowledge vault has 47+ notes covering competitive insights, architecture decisions, tech debt, and user needs. USE THEM — don't just brainstorm from scratch when the graph has evidence.
+The knowledge vault has 50+ notes covering competitive insights, architecture decisions, tech debt, and user needs. USE THEM — don't just brainstorm from scratch when the graph has evidence.
+
+## Knowledge Capture During Development
+
+**After every significant development session**, capture 1-3 knowledge notes from what was learned. This is NOT optional — it's how the vault stays useful.
+
+**What to capture:**
+- Hardware facts discovered during research (pin specs, protocol details, component behavior)
+- Architecture decisions made and WHY (trade-offs, constraints, what was rejected)
+- Bug patterns that reveal something non-obvious about the codebase
+- Competitive insights discovered while implementing (how Fritzing/Wokwi/KiCad handle similar features)
+- UX realizations (what made a feature confusing for beginners, what made it click)
+
+**How to capture:**
+- Write directly to `knowledge/` following `templates/knowledge-note.md` — prose-as-title, one insight per file
+- Use `/remember` for methodology corrections (agent behavior, workflow friction)
+- Link to at least one topic map in the `topics:` field
+- After creating notes, run `/connect` to find cross-links
+
+**When NOT to capture:**
+- Implementation details that live in the code itself (don't duplicate what git blame shows)
+- Temporary debugging state (that's session context, not knowledge)
+- Anything already in AGENTS.md or docs/ (don't duplicate existing documentation)
 
 ## Available AI Subagents (`.claude/agents/`)
 

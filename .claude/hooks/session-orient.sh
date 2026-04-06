@@ -72,5 +72,36 @@ if [[ -f "ops/tasks.md" ]]; then
   fi
 fi
 
-echo "Read: self/identity.md, self/goals.md"
+# Surface relevant knowledge for common development areas
+echo ""
+echo "Knowledge highlights:"
+# Count notes per topic map to show which areas are richest
+for moc in knowledge/*.md; do
+  [[ -f "$moc" ]] || continue
+  grep -q '^type: moc' "$moc" 2>/dev/null || continue
+  name=$(basename "$moc" .md)
+  [[ "$name" == "index" || "$name" == "identity" || "$name" == "methodology" || "$name" == "goals" ]] && continue
+  count=$(grep -c '\[\[' "$moc" 2>/dev/null || echo "0")
+  [[ "$count" -gt 0 ]] && echo "  $name: $count notes"
+done
+
+# Show gaps radar summary
+if [[ -f "knowledge/gaps-and-opportunities.md" ]]; then
+  needs=$(grep -c '^\- \[\[' "knowledge/gaps-and-opportunities.md" 2>/dev/null || echo "0")
+  echo "  gaps-and-opportunities: $needs tracked gaps"
+fi
+
+# Count unmined sessions
+unmined=0
+if [[ -d "ops/sessions" ]]; then
+  for s in ops/sessions/*.json; do
+    [[ -f "$s" ]] || continue
+    grep -q '"mined": true' "$s" 2>/dev/null || unmined=$((unmined + 1))
+  done
+  [[ "$unmined" -gt 3 ]] && echo "  $unmined unmined sessions — run /remember --mine-sessions"
+fi
+
+echo ""
+echo "Read: self/identity.md, self/goals.md, knowledge/gaps-and-opportunities.md"
+echo "Gap queries: bash ops/queries/gap-analysis.sh | idea-generator.sh | research-gaps.sh"
 echo "--- End Orient ---"
