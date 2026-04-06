@@ -17,6 +17,8 @@ The moat durability is rated "High" in the competitive analysis because it compo
 Relevant Notes:
 - [[flux-ai-is-the-primary-competitive-threat]] -- the competitor this moat defends against
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the three-part value prop
+- [[all-procurement-data-is-ai-fabricated]] -- free means no revenue to fund real supplier API integrations
+- [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- zero cost captures the maker/education fraction of a $16B market
 
 Topics:
 - [[competitive-landscape]]
