@@ -19,6 +19,11 @@ Knowledge about UX patterns, interaction design, and accessibility principles th
 - [[all-procurement-data-is-ai-fabricated]] -- simulated data more dangerous than missing data
 - [[exports-are-only-accessible-via-ai-chat]] -- features invisible without AI command knowledge
 - [[zero-form-elements-means-no-native-input-paradigm]] -- missing input mechanism
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- core user need
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- proactive AI as safety net
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- visual feedback over numbers
+- [[cross-tool-coherence-is-harder-than-building-features]] -- fulfilling the one-tool promise
+- [[project-provider-monolith-is-the-biggest-remaining-frontend-debt]] -- UX performance impact
 
 ## Core Principle
 **If a feature requires the user to already understand electronics to use it, it's not done yet.** Add AI guidance, tooltips, contextual explanations, or a learning mode.

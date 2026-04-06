@@ -57,6 +57,12 @@ Analysis of competing EDA tools — their strengths, gaps, and what ProtoPulse c
 - [[ai-is-the-moat-lean-into-it]] -- strategic direction from all 5 phases
 - [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- biggest competitive gap
 - [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- market context
+- [[dual-ai-providers-prevent-single-vendor-lock-in]] -- Claude + Gemini failover
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- desktop enables hardware access competitors have
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- visual feedback beats computation depth
+- [[competitive-audits-generated-more-work-than-internal-analysis]] -- 80+ items from Wave 64/66
+- [[greatness-manifest-pushed-beyond-parity-into-innovation]] -- features no competitor has
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- core competitive insight
 
 ## ProtoPulse's Differentiators
 1. **AI with 125 tools** that directly manipulate project state — no other tool does this

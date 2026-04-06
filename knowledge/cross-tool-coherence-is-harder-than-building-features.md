@@ -18,8 +18,10 @@ The cross-cutting work section lists five integration tracks that each touch 4-6
 ---
 
 Relevant Notes:
-- [[dual-export-system-is-a-maintenance-trap]] -- what happens without single source of truth
-- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- the unique starting point creates unique coherence challenges
+- [[dual-export-system-is-a-maintenance-trap]] -- what happens without single source of truth: two systems produce different output
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- the unique starting point creates unique coherence challenges across all 26 views
+- [[exports-are-only-accessible-via-ai-chat]] -- exports-only-via-chat is a symptom of cross-tool incoherence
+- [[six-epics-organize-the-remaining-strategic-work]] -- Epic C is entirely about solving this coherence problem
 
 Topics:
 - [[architecture-decisions]]

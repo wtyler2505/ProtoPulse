@@ -19,6 +19,7 @@ This matters for ProtoPulse's FZPZ import/export pipeline (`server/component-exp
 
 Relevant Notes:
 - [[wokwi-chips-use-counterclockwise-pin-ordering]] -- different simulator, different format, same interop challenge
+- [[dual-export-system-is-a-maintenance-trap]] -- FZPZ import/export is part of the export system that was duplicated
 
 Topics:
 - [[eda-fundamentals]]

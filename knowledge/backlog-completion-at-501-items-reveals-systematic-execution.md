@@ -22,8 +22,9 @@ The constraint is that 1,299 lines of markdown is the upper bound of what a huma
 ---
 
 Relevant Notes:
-- [[all-p0-and-p1-items-resolved-proves-security-first-discipline]] -- priority enforcement
-- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- the scale of what was built
+- [[all-p0-and-p1-items-resolved-proves-security-first-discipline]] -- priority enforcement within the wave system
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- the scale of what was built: $1.9M equivalent across 154 waves
+- [[six-epics-organize-the-remaining-strategic-work]] -- epics are the next-level structure that feeds waves with related work
 
 Topics:
 - [[goals]]

@@ -19,7 +19,8 @@ The constraint is Zod v3 lock-in. Drizzle-orm 0.45+ requires Zod v4, which would
 
 Relevant Notes:
 - [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- thin server lets ORM own the data layer
-- [[react-query-eliminates-the-need-for-client-state-libraries]] -- server state is single source of truth
+- [[react-query-eliminates-the-need-for-client-state-libraries]] -- server state is single source of truth, React Query fetches it
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- 36 tables with zero type drift across 501 items validates the schema-as-source-of-truth approach
 
 Topics:
 - [[architecture-decisions]]

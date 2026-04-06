@@ -18,8 +18,9 @@ This constraint matters for the bench coach because it affects how ProtoPulse re
 ---
 
 Relevant Notes:
-- [[mega-2560-too-wide-for-any-breadboard]] -- the Mega doesn't fit at all
-- [[esp32-six-flash-gpios-must-never-be-used]] -- pins are exposed but not usable
+- [[mega-2560-too-wide-for-any-breadboard]] -- the Mega doesn't fit at all; the ESP32 at least physically fits
+- [[esp32-six-flash-gpios-must-never-be-used]] -- pins are exposed but not usable, compounding the "barely fits" problem
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- ProtoPulse's bench coach can visually show the fit constraint that TinkerCAD ignores
 
 Topics:
 - [[breadboard-intelligence]]

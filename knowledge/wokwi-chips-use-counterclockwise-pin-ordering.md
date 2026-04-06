@@ -19,6 +19,7 @@ This is relevant to ProtoPulse because any future Wokwi import/export or simulat
 
 Relevant Notes:
 - [[fritzing-parts-use-svg-layers-with-xml-connector-defs]] -- Fritzing's approach to the same interop problem
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- interop with Wokwi format serves the same maker audience that benefits from architecture-first design
 
 Topics:
 - [[eda-fundamentals]]

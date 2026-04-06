@@ -18,8 +18,9 @@ The trade-off is real: no automatic code splitting, no streaming SSR for initial
 ---
 
 Relevant Notes:
-- [[monolithic-context-causes-quadratic-render-complexity]] -- the frontend bottleneck isn't SSR
-- [[god-files-create-feature-paralysis-through-complexity]] -- Express simplicity aided decomposition
+- [[monolithic-context-causes-quadratic-render-complexity]] -- the frontend bottleneck isn't SSR, it's the React context
+- [[god-files-create-feature-paralysis-through-complexity]] -- Express simplicity aided decomposition of server god files
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- the backend survived the Tauri pivot unchanged, validating the thin-server choice
 
 Topics:
 - [[architecture-decisions]]

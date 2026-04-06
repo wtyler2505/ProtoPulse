@@ -18,8 +18,10 @@ What made this work was the Codex audit producing a structured, prioritized back
 ---
 
 Relevant Notes:
-- [[cors-origin-reflection-was-a-critical-csrf-vector]] -- example of a P0 finding
-- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- the execution pattern
+- [[cors-origin-reflection-was-a-critical-csrf-vector]] -- example of a P0 finding that was found and fixed
+- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- the execution pattern that enabled prioritized security work
+- [[god-files-create-feature-paralysis-through-complexity]] -- IDOR on 30+ routes was enabled by god file complexity making review impossible
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- securing a $1.9M codebase requires the disciplined approach described here
 
 Topics:
 - [[architecture-decisions]]

@@ -18,8 +18,10 @@ The insight for product development: competitive audits should be done against s
 ---
 
 Relevant Notes:
-- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- the most impactful finding
-- [[flux-ai-is-the-primary-competitive-threat]] -- different type of competitor
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- the most impactful single finding from these audits
+- [[flux-ai-is-the-primary-competitive-threat]] -- different type of competitor (AI-first vs simulation-first)
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- competitive audits surfaced specific PCB gaps that internal analysis rated only as "Missing"
+- [[six-epics-organize-the-remaining-strategic-work]] -- audits generated the content for Epics A (simulation), B (Arduino), and F (learning)
 
 Topics:
 - [[competitive-landscape]]

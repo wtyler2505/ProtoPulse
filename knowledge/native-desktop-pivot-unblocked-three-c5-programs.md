@@ -18,8 +18,10 @@ The strategic insight is that ProtoPulse tried to be a browser-based tool first 
 ---
 
 Relevant Notes:
-- [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- backend survived the pivot unchanged
-- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- desktop doesn't change the value prop
+- [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- backend survived the pivot unchanged, validating the thin-server choice
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- desktop doesn't change the value prop; it enables the hardware access makers need
+- [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai is browser-only; native desktop differentiates on hardware access
+- [[six-epics-organize-the-remaining-strategic-work]] -- the pivot unblocked Epic B (Arduino Workbench) and the firmware compilation tracks
 
 Topics:
 - [[architecture-decisions]]

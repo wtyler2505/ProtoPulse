@@ -18,8 +18,10 @@ The strategic lesson is that maker tools are judged by visible feedback, not com
 ---
 
 Relevant Notes:
-- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- visual feedback is part of the bundle
-- [[architecture-first-bridges-intent-to-implementation]] -- beginners think in visuals
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- visual feedback is part of the bundle's appeal to makers
+- [[architecture-first-bridges-intent-to-implementation]] -- beginners think in visuals, not equations
+- [[competitive-audits-generated-more-work-than-internal-analysis]] -- this was the most impactful finding from the Wave 66 audit
+- [[ai-is-the-moat-lean-into-it]] -- AI can bridge the gap by explaining visual results, not just computing them
 
 Topics:
 - [[competitive-landscape]]

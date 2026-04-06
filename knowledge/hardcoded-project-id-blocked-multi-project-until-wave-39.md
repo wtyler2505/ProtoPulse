@@ -19,7 +19,8 @@ The lesson is about implicit assumptions in state management. The hardcoded ID w
 
 Relevant Notes:
 - [[project-provider-monolith-is-the-biggest-remaining-frontend-debt]] -- the context that hosted the hardcoded ID
-- [[monolithic-context-causes-quadratic-render-complexity]] -- related structural debt
+- [[monolithic-context-causes-quadratic-render-complexity]] -- related structural debt in the same component
+- [[react-query-eliminates-the-need-for-client-state-libraries]] -- React Query cache keys embedded the hardcoded ID, coupling the ORM layer to the assumption
 
 Topics:
 - [[architecture-decisions]]

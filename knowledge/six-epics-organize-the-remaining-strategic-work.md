@@ -20,8 +20,10 @@ Each epic's complexity rating (all C4 or C5) reflects that these are not feature
 ---
 
 Relevant Notes:
-- [[cross-tool-coherence-is-harder-than-building-features]] -- Epic C in detail
-- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- how epics feed waves
+- [[cross-tool-coherence-is-harder-than-building-features]] -- Epic C in detail: the hardest remaining architectural work
+- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- how the 154-wave system feeds from epic-level planning
+- [[competitive-audits-generated-more-work-than-internal-analysis]] -- audits populated Epics A, B, and F with specific competitor-driven specs
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- the pivot unblocked Epic B and firmware-related tracks
 
 Topics:
 - [[goals]]

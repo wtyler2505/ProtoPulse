@@ -18,8 +18,9 @@ The cost is the monolithic `ProjectProvider` context (40+ values), which is know
 ---
 
 Relevant Notes:
-- [[monolithic-context-causes-quadratic-render-complexity]] -- the real cost of the current approach
-- [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- the server owns truth
+- [[monolithic-context-causes-quadratic-render-complexity]] -- the real cost of wrapping React Query in one monolithic context
+- [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- the server owns truth; React Query just fetches it
+- [[project-provider-monolith-is-the-biggest-remaining-frontend-debt]] -- ProjectProvider wraps React Query into one context instead of per-domain providers
 
 Topics:
 - [[architecture-decisions]]

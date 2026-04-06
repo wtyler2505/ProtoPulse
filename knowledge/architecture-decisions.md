@@ -21,6 +21,19 @@ Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` fo
 - [[monolithic-context-causes-quadratic-render-complexity]] -- ProjectProvider re-render cascade
 - [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- codebase scale quantified
 - [[cors-origin-reflection-was-a-critical-csrf-vector]] -- highest-severity security finding
+- [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- no SSR needed for tool apps
+- [[react-query-eliminates-the-need-for-client-state-libraries]] -- server-derived state only
+- [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] -- schema-to-type-to-validation chain
+- [[dual-ai-providers-prevent-single-vendor-lock-in]] -- Claude + Gemini with circuit breaker
+- [[project-provider-monolith-is-the-biggest-remaining-frontend-debt]] -- 40+ values, re-render cascade
+- [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- implicit assumptions become structural
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- Tauri resolved browser sandbox limits
+- [[cross-tool-coherence-is-harder-than-building-features]] -- data ownership between views
+- [[all-p0-and-p1-items-resolved-proves-security-first-discipline]] -- zero P0/P1 remain
+- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- wave-based delivery
+- [[c5-items-are-programs-not-features]] -- 24 C5 items need ADRs not sprints
+- [[six-epics-organize-the-remaining-strategic-work]] -- A-F strategic layers
+- [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- 293 findings became 154 waves
 
 ## Core Stack Decisions
 

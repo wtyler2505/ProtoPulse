@@ -18,8 +18,10 @@ The fix is splitting ProjectProvider into domain-specific providers (Architectur
 ---
 
 Relevant Notes:
-- [[monolithic-context-causes-quadratic-render-complexity]] -- quantified impact
-- [[god-files-create-feature-paralysis-through-complexity]] -- same pattern, server side
+- [[monolithic-context-causes-quadratic-render-complexity]] -- quantified impact of the re-render cascade
+- [[god-files-create-feature-paralysis-through-complexity]] -- same pattern on the server side: monoliths block progress
+- [[react-query-eliminates-the-need-for-client-state-libraries]] -- React Query is the right pattern, but ProjectProvider wraps it into one context instead of domain-specific ones
+- [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- the hardcoded ID lived in this same file until Wave 39
 
 Topics:
 - [[architecture-decisions]]

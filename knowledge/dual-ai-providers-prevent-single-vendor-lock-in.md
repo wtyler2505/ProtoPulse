@@ -20,6 +20,8 @@ The cost is maintaining provider-specific streaming implementations and model ID
 Relevant Notes:
 - [[ai-is-the-moat-lean-into-it]] -- AI is the differentiator, so it must be reliable
 - [[protopulse-ai-breadth-is-6x-flux-ai]] -- tool breadth requires robust routing
+- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- multi-model routing is hampered because every provider gets the full context regardless of task complexity
+- [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai has only one AI provider; dual providers are a resilience advantage
 
 Topics:
 - [[architecture-decisions]]
