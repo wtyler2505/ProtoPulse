@@ -5,7 +5,7 @@ category: behavior
 source: session-mining
 session_source: c5fc7f99-1c39-4eb0-9cea-9a036e51dba9.jsonl
 created: 2026-04-06
-status: active
+status: promoted
 ---
 
 # Enforce a hard cap of 6 simultaneous agents and 8 background tasks

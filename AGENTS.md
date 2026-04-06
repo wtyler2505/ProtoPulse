@@ -318,6 +318,8 @@ See `docs/product-analysis-checklist.md` for full security findings (CAPX-SEC-*)
 ## Guardrails
 
 - **ALWAYS use `/agent-teams`** (real Claude Code agent teams with in-process teammates, Shift+Up/Down navigation, shared task list) for ALL parallel implementation work. NEVER use background `Agent` subagents for implementation. Subagents are ONLY for read-only research/exploration.
+- **Agent concurrency hard cap**: NEVER exceed 6 simultaneous agents or 8 total background tasks. Count active agents before spawning. If the cap would be exceeded, wait for completions. This is a safety rule — exceeding it froze the machine.
+- **Autonomous dev commands**: Run `npm run check`, `npm test`, `npm run dev`, `npm run build`, `npm run db:push`, and other standard dev scripts WITHOUT asking permission. Tyler expects these to be fully autonomous.
 - Never swap Wouter, Drizzle, shadcn/ui, @xyflow/react, or TanStack Query; these are core
 - Never add Redux/Zustand/MobX; use React Query + context
 - Never silently change API response shapes; update all callers

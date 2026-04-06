@@ -4,7 +4,7 @@
     {
       "id": "knowledge-index",
       "type": "extract",
-      "status": "pending",
+      "status": "done",
       "source": "knowledge/index.md",
       "file": "knowledge-index.md",
       "created": "2026-04-06T04:00:00Z",
@@ -25,7 +25,7 @@
       "id": "maint-002",
       "type": "maintenance",
       "priority": "session",
-      "status": "pending",
+      "status": "done",
       "condition_key": "dangling_links",
       "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) — targets don't exist in knowledge/",
       "action": "/seed or /extract to create initial topic maps",
