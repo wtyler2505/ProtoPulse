@@ -32,6 +32,14 @@ Raw material flows through four phases:
 ## Claim Numbering
 Claim files use globally unique IDs: `{source-basename}-{NNN}.md`. Numbers never repeat across batches. Computed from the maximum seen across both the queue and archive.
 
+## Notes
+
+- [[derivation-rationale]] -- why these specific dimension positions were chosen
+- [[enforce-hard-cap-on-concurrent-agents]] -- never exceed 6 agents / 8 background tasks simultaneously
+- [[use-agent-teams-not-raw-parallel-subagents-for-implementation]] -- /agent-teams for all parallel implementation, not raw subagents
+- [[run-standard-dev-commands-autonomously]] -- run db:push, check, test without asking permission
+- [[verify-wiki-links-before-completing-knowledge-work]] -- all [[links]] must resolve to real files before a task is done
+
 ## Graph Health Rules
 - Every file must link to at least one topic map
 - No dangling `[[links]]` — stubs are created immediately when links are referenced

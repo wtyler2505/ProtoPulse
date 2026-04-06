@@ -33,32 +33,12 @@ This topic map organizes what ProtoPulse DOESN'T have yet, what's broken, and wh
 - [[cors-origin-reflection-was-a-critical-csrf-vector]] -- fixed in Wave E
 - [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- fixed, but debt history matters
 
-### AI System Debt (from comprehensive audit)
-- [[genkit-125-flat-tools-is-an-outdated-anti-pattern-needs-multi-agent]] -- 125 flat tools cause context collapse; needs router agent
-- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- zero eval coverage for AI output quality
-- [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- z.any() defeats structured output at the LLM boundary
-- [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- zombie streams leak API quota silently
-- [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- Math.random() prices in production
-- [[ai-toolset-has-major-blindspots-in-history-variables-lifecycle-and-zones]] -- 6 API domains invisible to AI
-- [[voice-ai-is-disconnected-from-llm-using-hardcoded-command-matching]] -- voice input doesn't reach the LLM
-
-### Performance Debt (from comprehensive audit)
-- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- MNA/NR solver freezes UI
-- [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- O(N) stringify per render
-- [[build-system-prompt-has-on-m-edge-resolution-bottleneck]] -- O(N*M) scans per AI request
-- [[vite-manual-chunks-defeats-dynamic-import-and-tree-shaking]] -- bloated initial JS payload
-- [[jsonb-columns-lack-gin-indexes-forcing-sequential-scans]] -- sequential scans on JSONB queries
-- [[execsync-in-arduino-service-blocks-entire-express-event-loop]] -- sync shell calls freeze API
-
-### Security Debt (from comprehensive audit)
-- [[tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce]] -- XSS escalates to OS-level RCE
-- [[eval-in-circuit-code-view-plus-localstorage-session-enables-xss-hijack]] -- eval + localStorage = session hijack
-- [[scrypt-64mb-per-request-enables-oom-dos-before-rate-limiter]] -- OOM DoS via burst scrypt allocation
-- [[websocket-sessions-are-never-revalidated-after-initial-handshake]] -- revoked users keep access
-- [[setinterval-never-cleared-creates-memory-ratchet-in-server-routes]] -- memory ratchet until OOM
-
-### Desktop Pivot Debt
-- [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] -- app requires Node.js installed
+### Comprehensive Audit Sub-Maps (April 2026)
+- [[ai-system-debt]] -- validation vacuum, tool blindspots, architecture anti-patterns (9 notes)
+- [[performance-debt]] -- main-thread blocking, DB indexing, memory leaks, bundle bloat (6 notes)
+- [[security-debt]] -- Tauri RCE chain, XSS/eval exploits, DoS vectors, auth gaps (5 notes)
+- [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] -- desktop pivot: app requires Node.js installed
+- [[comprehensive-audit-reveals-zero-validation-at-any-layer]] -- synthesis: the audit's meta-finding
 
 ## Architecture Gaps
 
