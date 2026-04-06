@@ -2,6 +2,9 @@
 # Ars Contexta -- SessionStart hook: orient the agent with vault state
 # Reads self/ and ops/ at session start, checks condition thresholds
 # Only runs when .arscontexta vault marker exists
+#
+# IMPORTANT: All display output goes to stderr (>&2).
+# stdout is reserved for JSON output that Claude Code parses.
 
 set -euo pipefail
 
@@ -10,6 +13,8 @@ VAULT_MARKER=".arscontexta"
 # Skip if no vault
 [[ -f "$VAULT_MARKER" ]] || exit 0
 
+# Build the orient report (all to stderr)
+{
 echo "--- ProtoPulse Knowledge System: Orient ---"
 
 # Count knowledge notes
@@ -23,6 +28,7 @@ inbox_count=0
 if [[ -d "inbox" ]]; then
   inbox_count=$(find "inbox" -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 fi
+
 # Count observations and tensions
 obs_count=0
 if [[ -d "ops/observations" ]]; then
@@ -76,7 +82,6 @@ fi
 # Surface relevant knowledge for common development areas
 echo ""
 echo "Knowledge highlights:"
-# Count notes per topic map to show which areas are richest
 for moc in knowledge/*.md; do
   [[ -f "$moc" ]] || continue
   grep -q '^type: moc' "$moc" 2>/dev/null || continue
@@ -106,3 +111,8 @@ echo ""
 echo "Read: self/identity.md, self/goals.md, knowledge/gaps-and-opportunities.md"
 echo "Gap queries: bash ops/queries/gap-analysis.sh | idea-generator.sh | research-gaps.sh"
 echo "--- End Orient ---"
+} >&2
+
+# stdout: valid JSON for Claude Code hook parser
+echo "{\"systemMessage\": \"Vault: ${note_count} notes, ${inbox_count} inbox, ${queue_count} queued. Read self/identity.md and self/goals.md for context.\"}"
+exit 0

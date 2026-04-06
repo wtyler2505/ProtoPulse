@@ -1,28 +1,2 @@
-[2J[3J[H2:41:19 AM - Starting compilation in watch mode...
+[2J[3J[H3:35:26 AM - Starting compilation in watch mode...
 
-
-<--- Last few GCs --->
-
-[185792:0x20d58000]    80896 ms: Mark-Compact (reduce) 2046.1 (2083.7) -> 2045.1 (2082.0) MB, pooled: 0 MB, 2058.58 / 0.00 ms  (+ 156.7 ms in 0 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 2286 ms) (average mu = 0.336[185792:0x20d58000]    84724 ms: Mark-Compact 2046.2 (2082.0) -> 2045.6 (2085.2) MB, pooled: 0 MB, 3803.34 / 0.00 ms  (average mu = 0.154, current mu = 0.007) allocation failure; scavenge might not succeed
-
-
-<--- JS stacktrace --->
-
-FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
------ Native stack trace -----
-
- 1: 0xe40d24 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [node]
- 2: 0x1216be0 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]
- 3: 0x1216eb7 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]
- 4: 0x1444875  [node]
- 5: 0x145e109 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [node]
- 6: 0x14327b8 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
- 7: 0x14336e5 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
- 8: 0x140bade v8::internal::Factory::AllocateRaw(int, v8::internal::AllocationType, v8::internal::AllocationAlignment) [node]
- 9: 0x13fa13c v8::internal::FactoryBase<v8::internal::Factory>::AllocateRawArray(int, v8::internal::AllocationType) [node]
-10: 0x13fa296 v8::internal::FactoryBase<v8::internal::Factory>::NewFixedArrayWithFiller(v8::internal::Handle<v8::internal::Map>, int, v8::internal::Handle<v8::internal::HeapObject>, v8::internal::AllocationType) [node]
-11: 0x172d7f7 v8::internal::OrderedHashTable<v8::internal::OrderedHashMap, 2>::Allocate(v8::internal::Isolate*, int, v8::internal::AllocationType) [node]
-12: 0x172d882 v8::internal::OrderedHashTable<v8::internal::OrderedHashMap, 2>::Rehash(v8::internal::Isolate*, v8::internal::Handle<v8::internal::OrderedHashMap>, int) [node]
-13: 0x1862f26 v8::internal::Runtime_MapGrow(int, unsigned long*, v8::internal::Isolate*) [node]
-14: 0x74c50beac476 
-Aborted (core dumped)
