@@ -1,48 +1,40 @@
 #!/bin/bash
 # SessionStart hook: Verify hook dependencies are available
-# Always exits 0 — only warns, never blocks
+# stdout = JSON for Claude Code. Only use stderr for actual BLOCKING errors (exit 2).
 
-WARNINGS=0
+WARNINGS=""
 
 # Check claudekit-hooks
 if ! which claudekit-hooks >/dev/null 2>&1; then
-  echo "Warning: claudekit-hooks not found in PATH. Most hooks will not work." >&2
-  echo "  Install with: npm install -g claudekit" >&2
-  WARNINGS=$((WARNINGS + 1))
+  WARNINGS="${WARNINGS} claudekit-hooks not found (install: npm i -g claudekit)."
 fi
 
 # Check Node.js
 if ! which node >/dev/null 2>&1; then
-  echo "Warning: node not found in PATH." >&2
-  WARNINGS=$((WARNINGS + 1))
+  WARNINGS="${WARNINGS} node not found."
 else
   NODE_VERSION=$(node --version 2>/dev/null)
-  # Check for Node 18+ (minimum for modern features)
   MAJOR=$(echo "$NODE_VERSION" | sed 's/^v//' | cut -d. -f1)
   if [ "$MAJOR" -lt 18 ] 2>/dev/null; then
-    echo "Warning: Node.js $NODE_VERSION detected. Node 18+ recommended." >&2
-    WARNINGS=$((WARNINGS + 1))
+    WARNINGS="${WARNINGS} Node.js $NODE_VERSION (18+ recommended)."
   fi
 fi
 
 # Check tmux
 if ! which tmux >/dev/null 2>&1; then
-  echo "Warning: tmux not found. tsc-watch hook and TUI skills will not work." >&2
-  echo "  Install with: sudo apt install tmux" >&2
-  WARNINGS=$((WARNINGS + 1))
+  WARNINGS="${WARNINGS} tmux not found."
 fi
 
 # Check jq
 if ! which jq >/dev/null 2>&1; then
-  echo "Warning: jq not found. Some hooks that parse JSON input will not work." >&2
-  echo "  Install with: sudo apt install jq" >&2
-  WARNINGS=$((WARNINGS + 1))
+  WARNINGS="${WARNINGS} jq not found."
 fi
 
-if [ "$WARNINGS" -gt 0 ]; then
-  echo "Hook dependency check: $WARNINGS warning(s) found." >&2
+if [ -n "$WARNINGS" ]; then
+  printf '{"continue": true, "systemMessage": "Hook deps:%s"}' "$WARNINGS"
 else
-  echo "Hook dependency check: all dependencies available." >&2
+  # All good — no output needed, just exit clean
+  true
 fi
 
 exit 0
