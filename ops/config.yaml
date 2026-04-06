@@ -20,7 +20,8 @@ features:
   mocs: true
   processing_pipeline: true
   schema_validation: true
-  condition_maintenance: true  self_evolution: true
+  condition_maintenance: true
+  self_evolution: true
   self_space: true
   semantic_search: true
   graph_analysis: true
@@ -45,6 +46,7 @@ processing:
   queue_max_depth: 50
   auto_connect_on_extract: true
   auto_revisit_on_connect: false
+
 # --- Maintenance Thresholds ---
 maintenance:
   inbox_overflow_threshold: 20
@@ -69,7 +71,8 @@ vault:
   inbox_dir: inbox/
   archive_dir: archive/
   self_dir: self/
-  ops_dir: ops/  templates_dir: templates/
+  ops_dir: ops/
+  templates_dir: templates/
   manual_dir: manual/
   vault_marker: .arscontexta
 

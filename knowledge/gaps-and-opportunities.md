@@ -10,26 +10,26 @@ This topic map organizes what ProtoPulse DOESN'T have yet, what's broken, and wh
 ## Unmet User Needs
 
 - [[makers-need-one-tool-because-context-switching-kills-momentum]] -- core value prop, partially delivered
-- [[manufacturing-exports-only-accessible-via-ai-chat]] -- no direct UI for the most common export workflow
+- [[exports-are-only-accessible-via-ai-chat]] -- no direct UI for the most common export workflow
 - [[zero-form-elements-means-no-native-input-paradigm]] -- fundamental UX gap across the entire app
 - [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- proactive AI safety, partially delivered via coach
 
 ## Competitive Gaps
 
-- [[flux-ai-is-a-complete-eda-tool-with-ai-protopulse-is-ai-missing-eda]] -- the existential competitive framing
-- [[pcb-layout-was-weakest-across-all-five-analysis-phases]] -- biggest domain gap
+- [[flux-ai-is-the-primary-competitive-threat]] -- the existential competitive framing
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- biggest domain gap
 - [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- visual feedback beats computation for makers
 - [[competitive-audits-generated-more-work-than-internal-analysis]] -- external pressure drives more actionable insights
 
 ## Technical Debt Blocking Features
 
-- [[god-files-create-feature-paralysis]] -- complexity bottleneck, not talent
-- [[project-provider-monolith-is-biggest-frontend-debt]] -- couples unrelated domains, quadratic renders
-- [[dual-export-system-forces-every-fix-twice]] -- parallel implementations with divergent signatures
-- [[all-procurement-data-is-ai-simulated]] -- zero real supplier APIs
-- [[ai-prompt-rebuilds-full-state-on-every-request]] -- linear token cost scaling
-- [[monolithic-context-creates-quadratic-render-complexity]] -- unmemoized + monolithic = slow
-- [[cors-reflecting-origin-was-critical-csrf-vector]] -- fixed in Wave E
+- [[god-files-create-feature-paralysis-through-complexity]] -- complexity bottleneck, not talent
+- [[project-provider-monolith-is-the-biggest-remaining-frontend-debt]] -- couples unrelated domains, quadratic renders
+- [[dual-export-system-is-a-maintenance-trap]] -- parallel implementations with divergent signatures
+- [[all-procurement-data-is-ai-fabricated]] -- zero real supplier APIs
+- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- linear token cost scaling
+- [[monolithic-context-causes-quadratic-render-complexity]] -- unmemoized + monolithic = slow
+- [[cors-origin-reflection-was-a-critical-csrf-vector]] -- fixed in Wave E
 - [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- fixed, but debt history matters
 
 ## Architecture Gaps
@@ -39,11 +39,11 @@ This topic map organizes what ProtoPulse DOESN'T have yet, what's broken, and wh
 
 ## Strategic Opportunities
 
-- [[ai-is-the-competitive-moat-to-invest-in]] -- 6x more AI actions than Flux.ai
-- [[architecture-first-bridges-intent-and-implementation]] -- uncontested market position
+- [[ai-is-the-moat-lean-into-it]] -- 6x more AI actions than Flux.ai
+- [[architecture-first-bridges-intent-to-implementation]] -- uncontested market position
 - [[self-hosted-and-free-is-a-pricing-moat]] -- $0 vs Flux.ai's $20-158/month
 - [[greatness-manifest-pushed-beyond-parity-into-innovation]] -- 11 C5 items no competitor has
-- [[breadboard-plus-ai-plus-free-is-a-unique-maker-bundle]] -- Fritzing breadboard + AI + $0
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- Fritzing breadboard + AI + $0
 
 ## Developer Infrastructure Gaps
 

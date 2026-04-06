@@ -21,7 +21,8 @@ Machine-readable reference for skills, hooks, and automation.
 | reflect | connect | Processing phase: find relationships |
 | reweave | revisit | Processing phase: backward pass |
 | verify | verify | Processing phase: challenge claims |
-| validate | validate | Schema compliance check || rethink | rethink | System assumption challenge |
+| validate | validate | Schema compliance check |
+| rethink | rethink | System assumption challenge |
 | MOC | topic map | Navigation hub (Map of Content) |
 | description | description | Schema field: one-sentence context |
 | topics | topics | Schema field: wiki links to topic maps |
@@ -45,7 +46,8 @@ Machine-readable reference for skills, hooks, and automation.
 |----------|-------|
 | Platform | Claude Code |
 | Automation level | full |
-| Topology | single-agent / skills / fresh-context || Hook engine | .claude/settings.json |
+| Topology | single-agent / skills / fresh-context |
+| Hook engine | .claude/settings.json |
 | Skill engine | .claude/commands/ |
 
 ## Extraction Categories
