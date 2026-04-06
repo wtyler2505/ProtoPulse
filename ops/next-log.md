@@ -6,3 +6,10 @@
 **Recommended:** /remember --mine-sessions
 **Rationale:** 12 unmined sessions contain friction patterns and implementation decisions from Wave 38-50 work that are currently invisible to the knowledge graph.
 **Priority:** session
+
+## 2026-04-06 04:07
+
+**State:** Inbox: 0 | Notes: 1 | Orphans: 0 | Dangling: 8 | Stale: 0 | Obs: 0 | Tensions: 0 | Sessions unmined: 3 | Queue: 2 maintenance pending
+**Recommended:** /seed (create initial topic maps to resolve dangling links in index.md)
+**Rationale:** All 8 [[links]] in the index MOC point to notes that don't exist — the graph's only entry point is broken, making traversal impossible until topic maps are seeded.
+**Priority:** session

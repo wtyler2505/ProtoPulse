@@ -11,6 +11,16 @@ How the ProtoPulse knowledge system works, why it works that way, and how it evo
 
 - [[derivation-rationale]] -- why these specific dimension positions were chosen
 
+## Behavior
+
+- [[enforce-hard-cap-on-concurrent-agents]] -- never exceed 6 agents / 8 background tasks simultaneously
+- [[use-agent-teams-not-raw-parallel-subagents-for-implementation]] -- /agent-teams for all parallel implementation, not raw subagents
+- [[run-standard-dev-commands-autonomously]] -- run db:push, check, test without asking permission
+
+## Quality
+
+- [[verify-wiki-links-before-completing-knowledge-work]] -- all [[links]] must resolve to real files before a task is done
+
 ## Principles
 
 The system is built on four core principles:

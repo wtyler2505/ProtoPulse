@@ -7,7 +7,7 @@
       "priority": "session",
       "status": "pending",
       "condition_key": "unprocessed_sessions",
-      "target": "12 session files without mined: true in ops/sessions/",
+      "target": "3 session files without mined status in ops/sessions/",
       "action": "/remember --mine-sessions",
       "auto_generated": true,
       "created": "2026-04-06T03:52:00Z"
@@ -25,16 +25,49 @@
     }
   ],
   "maintenance_conditions": {
-    "orphan_notes": { "threshold": 0, "priority": "session" },
-    "dangling_links": { "threshold": 0, "priority": "session" },
-    "inbox_pressure": { "threshold": 20, "priority": "multi-session" },
-    "observation_accumulation": { "threshold": 10, "priority": "session" },
-    "tension_accumulation": { "threshold": 5, "priority": "session" },
-    "pipeline_stalled": { "threshold": 3, "priority": "multi-session" },
-    "unprocessed_sessions": { "threshold": 3, "priority": "session" },
-    "moc_oversize": { "threshold": 40, "priority": "slow" },
-    "stale_notes": { "threshold": 10, "priority": "slow" },
-    "low_link_density": { "threshold": 2.0, "priority": "slow" },
-    "methodology_drift": { "threshold": 0, "priority": "multi-session" }
+    "orphan_notes": {
+      "threshold": 0,
+      "priority": "session"
+    },
+    "dangling_links": {
+      "threshold": 0,
+      "priority": "session"
+    },
+    "inbox_pressure": {
+      "threshold": 20,
+      "priority": "multi-session"
+    },
+    "observation_accumulation": {
+      "threshold": 10,
+      "priority": "session"
+    },
+    "tension_accumulation": {
+      "threshold": 5,
+      "priority": "session"
+    },
+    "pipeline_stalled": {
+      "threshold": 3,
+      "priority": "multi-session"
+    },
+    "unprocessed_sessions": {
+      "threshold": 3,
+      "priority": "session"
+    },
+    "moc_oversize": {
+      "threshold": 40,
+      "priority": "slow"
+    },
+    "stale_notes": {
+      "threshold": 10,
+      "priority": "slow"
+    },
+    "low_link_density": {
+      "threshold": 2.0,
+      "priority": "slow"
+    },
+    "methodology_drift": {
+      "threshold": 0,
+      "priority": "multi-session"
+    }
   }
 }
