@@ -7,8 +7,8 @@
 CMD="${1:-}"
 [ -z "$CMD" ] && { echo '{}'; exit 0; }
 
-# Run the claudekit command, capture output
-OUTPUT=$(claudekit-hooks run "$CMD" 2>/dev/null) || true
+# Run the claudekit command with timeout (Stop hooks shouldn't block forever)
+OUTPUT=$(timeout 30 claudekit-hooks run "$CMD" 2>/dev/null) || true
 BYTES=$(echo -n "$OUTPUT" | wc -c)
 
 if [ "$BYTES" -gt 0 ]; then

@@ -167,15 +167,15 @@
           },
           {
             "type": "command",
-            "command": "claudekit-hooks run lint-project"
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/wrap-claudekit-stop.sh lint-project"
           },
           {
             "type": "command",
-            "command": "claudekit-hooks run test-project"
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/wrap-claudekit-stop.sh test-project"
           },
           {
             "type": "command",
-            "command": "claudekit-hooks run check-todos"
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/wrap-claudekit-stop.sh check-todos"
           },
           {
             "type": "prompt",
