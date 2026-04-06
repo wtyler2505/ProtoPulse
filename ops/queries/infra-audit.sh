@@ -157,10 +157,12 @@ else
       deduct 3 "$name syntax error"
       syntax_issues=$((syntax_issues + 1))
     fi
-    # Check for common script issues
-    if grep -qP 'fi[a-z]' "$script" 2>/dev/null; then
-      echo "  WARN: $name — possible missing newline (fiif/fifor pattern)"
-      deduct 1 "$name possible fiif/fifor concatenation"
+    # Check for common script issues: statements concatenated on same line
+    # Match "fi" or closing paren immediately followed by a keyword (if/for/while/case/done)
+    # Exclude legitimate patterns like "file", "find", "filter", "field", "finally"
+    if grep -nP '(fi|done|esac)\s*(if|for|while|case|do)\b' "$script" 2>/dev/null | grep -v '^\s*#' >/dev/null 2>&1; then
+      echo "  WARN: $name — statements concatenated on one line (missing newline)"
+      deduct 1 "$name line concatenation"
       syntax_issues=$((syntax_issues + 1))
     fi
   done
@@ -247,17 +249,32 @@ else
   # --- Check for overlapping skills ---
   echo ""
   echo "  --- Overlap Detection ---"
-  # Check for multiple commit/ship skills
-  commit_skills=$(ls -d "$SKILLS_DIR"/*/SKILL.md 2>/dev/null | xargs grep -liE 'commit|push|ship|deploy' 2>/dev/null | wc -l | tr -d ' ')
+  # Check skill descriptions for functional overlap (description line only, not full body)
+  commit_skills=0
+  validate_skills=0
+  for d in "$SKILLS_DIR"/*/; do
+    [ -d "$d" ] || continue
+    skill_md="$d/SKILL.md"
+    [ -f "$skill_md" ] || continue
+    desc_line=$(head -30 "$skill_md" | grep -E '^description:' | head -1)
+    if echo "$desc_line" | grep -qiE '\bcommit\b|\bpush\b|\bship\b|\bdeploy\b'; then
+      commit_skills=$((commit_skills + 1))
+    fi
+    if echo "$desc_line" | grep -qiE '\bvalidat|\bschema check|\bverif'; then
+      validate_skills=$((validate_skills + 1))
+    fi
+  done
   if [ "$commit_skills" -gt 1 ]; then
-    echo "  WARN: $commit_skills skills overlap on commit/ship/deploy"
+    echo "  WARN: $commit_skills skills have commit/ship/deploy in description — check for overlap"
     deduct 1 "Multiple commit/ship/deploy skills"
+  else
+    echo "  OK: No commit/ship/deploy overlap"
   fi
-  # Check for multiple validation skills
-  validate_skills=$(ls -d "$SKILLS_DIR"/*/SKILL.md 2>/dev/null | xargs grep -liE 'validat|schema check|verify' 2>/dev/null | wc -l | tr -d ' ')
   if [ "$validate_skills" -gt 2 ]; then
-    echo "  WARN: $validate_skills skills overlap on validation/verification"
+    echo "  WARN: $validate_skills skills have validation/verify in description — check for overlap"
     deduct 1 "Multiple validation skills"
+  else
+    echo "  OK: Validation/verify overlap within acceptable range ($validate_skills)"
   fi
 fi
 
