@@ -1,10 +1,10 @@
-[2J[3J[H2:24:59 PM - Starting compilation in watch mode...
+[2J[3J[H10:52:44 PM - Starting compilation in watch mode...
 
 
 <--- Last few GCs --->
 
-[697295:0x1a513000]   153792 ms: Scavenge (interleaved) 2044.1 (2082.9) -> 2043.8 (2087.9) MB, pooled: 0 MB, 36.05 / 0.00 ms  (average mu = 0.414, current mu = 0.216) allocation failure; 
-[697295:0x1a513000]   158380 ms: Mark-Compact (reduce) 2047.2 (2088.1) -> 2045.1 (2082.9) MB, pooled: 0 MB, 3514.30 / 0.00 ms  (+ 358.3 ms in 0 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 4156 ms) (average mu = 0.351
+[2516:0x3df33000]    93901 ms: Scavenge (interleaved) 2043.9 (2082.5) -> 2043.6 (2087.5) MB, pooled: 0 MB, 49.94 / 0.00 ms  (average mu = 0.491, current mu = 0.244) allocation failure; 
+[2516:0x3df33000]    96167 ms: Mark-Compact (reduce) 2046.9 (2087.5) -> 2044.3 (2082.7) MB, pooled: 0 MB, 1722.91 / 0.00 ms  (+ 264.4 ms in 0 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 2112 ms) (average mu = 0.393, 
 
 <--- JS stacktrace --->
 
@@ -20,5 +20,5 @@ FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memor
  7: 0x14336e5 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
  8: 0x140c3be v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [node]
  9: 0x186da1c v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [node]
-10: 0x7b699ee6c476 
+10: 0x70a4afeac476 
 Aborted (core dumped)

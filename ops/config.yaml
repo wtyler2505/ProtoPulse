@@ -1,6 +1,8 @@
-# ops/config.yaml -- edit these to adjust your system
-# See ops/derivation.md for WHY each choice was made
+# Ars Contexta -- ProtoPulse Knowledge System Configuration
+# Master config for all vault behaviors
+# Generated: 2026-04-05
 
+# --- Dimension Positions ---
 dimensions:
   granularity: atomic
   organization: flat
@@ -11,70 +13,74 @@ dimensions:
   schema: dense
   automation: full
 
+# --- Feature Flags ---
 features:
-  semantic-search: true
-  processing-pipeline: true
-  self-space: true
+  wiki_links: true
+  atomic_notes: true
+  mocs: true
+  processing_pipeline: true
+  schema_validation: true
+  condition_maintenance: true  self_evolution: true
+  self_space: true
+  semantic_search: true
+  graph_analysis: true
+  personality: true
+  session_rhythm: true
+  templates: true
+  ethical_guardrails: true
+  helper_functions: true
 
-processing_tier: auto
-
+# --- Processing Settings ---
 processing:
-  depth: deep
-  chaining: suggested
-  extraction:
-    selectivity: moderate
-    categories:
-      - name: claims
-        what_to_find: "Factual assertions from datasheets, docs, research"
-        output_type: claim
-      - name: architecture-decisions
-        what_to_find: "Why X over Y, trade-offs, constraints"
-        output_type: decision
-      - name: domain-knowledge
-        what_to_find: "EDA/electronics concepts, component specs, protocols"
-        output_type: concept
-      - name: competitive-insights
-        what_to_find: "How Fritzing/Wokwi/KiCad/TinkerCad work, gaps, strengths"
-        output_type: insight
-      - name: ux-patterns
-        what_to_find: "What makes features accessible to maker-beginners"
-        output_type: pattern
-      - name: technical-debt
-        what_to_find: "Why debt exists, what it blocks, fix priority"
-        output_type: debt-note
-      - name: implementation-patterns
-        what_to_find: "Code conventions, anti-patterns, proven approaches"
-        output_type: pattern
-      - name: user-needs
-        what_to_find: "What makers/hobbyists actually need from the tool"
-        output_type: need
-  verification:
-    description_test: true
-    schema_check: true
-    link_check: true
-  reweave:
-    scope: related
-    frequency: after_create
+  extraction_categories:
+    - claims
+    - architecture-decisions
+    - domain-knowledge
+    - competitive-insights
+    - ux-patterns
+    - technical-debt
+    - implementation-patterns
+    - user-needs
+  pipeline_batch_size: 5
+  queue_max_depth: 50
+  auto_connect_on_extract: true
+  auto_revisit_on_connect: false
+# --- Maintenance Thresholds ---
+maintenance:
+  inbox_overflow_threshold: 20
+  observation_backlog_threshold: 10
+  tension_backlog_threshold: 5
+  queue_depth_warning: 15
+  orphan_ratio_warning: 0.15
+  staleness_days: 30
+  connection_density_minimum: 2.0
+  topic_map_coverage_minimum: 0.80
 
-provenance: full
-
+# --- Personality ---
 personality:
-  enabled: true
   warmth: warm
   opinionatedness: opinionated
   formality: casual
   emotional_awareness: task-focused
 
-maintenance:
-  conditions:
-    orphan_threshold: 10
-    tension_threshold: 5
-    stale_days: 30
-    inbox_overflow: 20
-    schema_violation_pct: 20
+# --- Vault Structure ---
+vault:
+  knowledge_dir: knowledge/
+  inbox_dir: inbox/
+  archive_dir: archive/
+  self_dir: self/
+  ops_dir: ops/  templates_dir: templates/
+  manual_dir: manual/
+  vault_marker: .arscontexta
 
-research:
-  primary: web-search
-  fallback: web-search
-  last_resort: web-search
-  default_depth: moderate
+# --- Git Integration ---
+git:
+  auto_commit: true
+  commit_prefix: "vault"
+  no_verify: true
+
+# --- Session ---
+session:
+  capture_enabled: true
+  sessions_dir: ops/sessions/
+  orient_on_start: true
