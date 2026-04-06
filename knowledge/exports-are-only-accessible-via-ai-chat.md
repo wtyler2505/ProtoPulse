@@ -16,8 +16,10 @@ This represents a broader UX anti-pattern: features that only work if you alread
 ---
 
 Relevant Notes:
-- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the UX must be accessible without AI
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the UX must be accessible without AI knowledge
 - [[dual-export-system-is-a-maintenance-trap]] -- the backend complexity compounded the UX gap
+- [[zero-form-elements-means-no-native-input-paradigm]] -- same root cause: no structured UI for actions beyond AI chat
+- [[all-procurement-data-is-ai-fabricated]] -- same pattern: features that appear complete but fail under real use
 
 Topics:
 - [[maker-ux]]
