@@ -27,6 +27,16 @@
             "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/file-freshness.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/dangerous-bash-guard.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -91,7 +101,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claudekit-hooks run codebase-map-update"
+            "command": "claudekit-hooks run codebase-map-update",
+            "async": true
           }
         ]
       },
@@ -110,7 +121,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/read-tsc-errors.sh"
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/read-tsc-errors.sh",
+            "async": true
           }
         ]
       },
@@ -132,6 +144,16 @@
             "async": true
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/schema-change-verifier.sh",
+            "async": true
+          }
+        ]
       }
     ],
     "Stop": [
@@ -140,7 +162,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/blocking-typecheck.sh"
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/blocking-typecheck.sh",
+            "timeout": 120
           },
           {
             "type": "command",
@@ -155,8 +178,8 @@
             "command": "claudekit-hooks run check-todos"
           },
           {
-            "type": "command",
-            "command": "claudekit-hooks run self-review"
+            "type": "prompt",
+            "prompt": "Self-review before stopping: Did you finish what you started or leave work half-done? Did you introduce unnecessary complexity? Did you leave temporary workarounds? Should other parts of the codebase be updated to match your changes? Address any concerns."
           },
           {
             "type": "command",
@@ -173,12 +196,23 @@
         ]
       }
     ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/inject-subagent-context.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "A subagent just finished. Check: did it complete its assigned task? Did it leave any TypeScript errors or test failures? If it modified files, are all changes consistent with the codebase patterns? Send feedback if work is incomplete."
+            "prompt": "A subagent just finished. Check: did it complete its assigned task fully? Did it leave any TypeScript errors or test failures? If it modified files, are all changes consistent with codebase patterns? Report issues if work is incomplete."
           }
         ]
       }
@@ -199,6 +233,28 @@
           {
             "type": "prompt",
             "prompt": "This agent-teams teammate just went idle. Check: did they finish all assigned tasks? Did they leave TypeScript errors? Did they run tests on their changes? If work is incomplete or unverified, send feedback asking them to finish. If everything looks good, approve idle."
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/pre-compact-checkpoint.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/post-compact-memory-trim.sh",
+            "timeout": 10
           }
         ]
       }
