@@ -16,8 +16,9 @@ The report found 53 inline style objects creating new references every render, a
 ---
 
 Relevant Notes:
-- [[god-files-create-feature-paralysis-through-complexity]] -- the same pattern at the state layer
-- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- server-side equivalent problem
+- [[god-files-create-feature-paralysis-through-complexity]] -- the same pattern at the file layer: monoliths cascade into paralysis
+- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- server-side equivalent: one monolith (system prompt) causes linear cost scaling
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- 9,667 aggregate CCN quantifies why 40+ state values in one context is unsustainable
 
 Topics:
 - [[architecture-decisions]]

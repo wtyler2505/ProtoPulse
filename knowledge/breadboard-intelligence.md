@@ -32,13 +32,25 @@ Knowledge about breadboard layout, hardware debugging, and the "bench coach" con
 - Bypassing the voltage regulator → sensitive ICs damaged by 5V on 3.3V rail
 
 ## Verified Board Profiles
-ProtoPulse maintains profiles for common boards in `server/ai-tools/arduino.ts`:
+ProtoPulse maintains verified board definitions in `shared/verified-boards/`:
 - Arduino Uno (ATmega328P, 5V, 16MHz)
 - Arduino Mega 2560 (5V, 16MHz, 54 digital pins)
 - NodeMCU ESP8266 (3.3V, 80/160MHz, WiFi)
 - ESP32 DevKit (3.3V, 240MHz, WiFi+BT, dual-core)
 - Raspberry Pi Pico (RP2040, 3.3V, 133MHz, dual-core)
 - STM32 Blue Pill (STM32F103, 3.3V, 72MHz)
+- RioRand KJL-01 BLDC Controller (6-60V, 350W, hall sensor feedback)
+
+### Board-Specific Knowledge Notes
+- [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- most dangerous ESP32 strapping pin
+- [[esp32-adc2-unavailable-when-wifi-active]] -- design all analog sensing around ADC1 with WiFi
+- [[esp32-six-flash-gpios-must-never-be-used]] -- GPIO 6-11 are internal flash, hard error
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- 1 free tie point per side, needs workaround
+- [[mega-2560-four-hardware-uarts]] -- uniquely suited for multi-serial projects
+- [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- 160mil gap breaks uniform pitch assumption
+- [[mega-2560-too-wide-for-any-breadboard]] -- off-board component with wire-only connections
+- [[bldc-stop-active-low-brake-active-high]] -- inverted logic pair, common wiring mistake
+- [[hall-sensor-wiring-order-matters-for-bldc]] -- empirical verification needed, color codes unreliable
 
 ## Layout Quality Heuristics
 These are the rules the DRC and AI coach use to evaluate breadboard designs:
