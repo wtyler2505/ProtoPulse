@@ -17,7 +17,8 @@ This pattern is a maintenance trap because it violates the single-source-of-trut
 
 Relevant Notes:
 - [[god-files-create-feature-paralysis-through-complexity]] -- the monolith that spawned this
-- [[exports-are-only-accessible-via-ai-chat]] -- UX consequence
+- [[exports-are-only-accessible-via-ai-chat]] -- UX consequence of having two systems with no unified UI
+- [[cors-origin-reflection-was-a-critical-csrf-vector]] -- same anti-pattern: a dev-time shortcut that became a production liability
 
 Topics:
 - [[architecture-decisions]]
