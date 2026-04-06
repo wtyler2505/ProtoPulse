@@ -3,7 +3,7 @@
 # stdout = JSON for Claude Code. No stderr for informational messages.
 
 if tmux has-session -t tsc-watch 2>/dev/null; then
-  # Already running — no output needed
+  echo '{}'
   exit 0
 fi
 

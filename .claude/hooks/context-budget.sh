@@ -16,19 +16,19 @@ fi
 
 if [ ! -d "$TRANSCRIPT_DIR" ]; then
   # Can't find transcript directory, silently exit
-  exit 0
+  echo "{}"; exit 0
 fi
 
 # Find the most recently modified .jsonl file (current session transcript)
 LATEST_TRANSCRIPT=$(find "$TRANSCRIPT_DIR" -name "*.jsonl" -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
 
 if [ -z "$LATEST_TRANSCRIPT" ]; then
-  exit 0
+  echo "{}"; exit 0
 fi
 
 FILE_SIZE=$(stat -c%s "$LATEST_TRANSCRIPT" 2>/dev/null)
 if [ -z "$FILE_SIZE" ]; then
-  exit 0
+  echo "{}"; exit 0
 fi
 
 # Warn at 500KB
@@ -38,11 +38,11 @@ CRITICAL_THRESHOLD=1048576
 
 if [ "$FILE_SIZE" -gt "$CRITICAL_THRESHOLD" ]; then
   SIZE_MB=$(echo "scale=1; $FILE_SIZE / 1048576" | bc)
-  echo "CRITICAL: Session transcript is ${SIZE_MB}MB. Context window may be near capacity. Consider starting a new session." >&2
+  printf '{"systemMessage": "CRITICAL: Session transcript is %sMB. Context near capacity. Consider new session."}' "$SIZE_MB"
 elif [ "$FILE_SIZE" -gt "$WARN_THRESHOLD" ]; then
   SIZE_KB=$(echo "scale=0; $FILE_SIZE / 1024" | bc)
-  echo "Warning: Session transcript is ${SIZE_KB}KB. Context is getting large." >&2
+  printf '{"systemMessage": "Session transcript is %sKB. Context getting large."}' "$SIZE_KB"
+else
+  echo '{}'
 fi
-
-echo "{}"
 exit 0
