@@ -19,6 +19,7 @@ Relevant Notes:
 - [[protopulse-ai-breadth-is-6x-flux-ai]] -- AI tools manipulate architecture nodes directly
 - [[architecture-first-bridges-intent-to-implementation]] -- why this matters for learning
 - [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai lacks this capability
+- [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- architecture-first creates new customers in a growing market rather than competing for existing ones
 
 Topics:
 - [[competitive-landscape]]
