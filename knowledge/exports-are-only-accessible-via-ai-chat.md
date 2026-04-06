@@ -20,6 +20,8 @@ Relevant Notes:
 - [[dual-export-system-is-a-maintenance-trap]] -- the backend complexity compounded the UX gap
 - [[zero-form-elements-means-no-native-input-paradigm]] -- same root cause: no structured UI for actions beyond AI chat
 - [[all-procurement-data-is-ai-fabricated]] -- same pattern: features that appear complete but fail under real use
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- export-via-chat-only blocks beginners who need Gerber files but don't know the right command
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- if a user has to Google "how to export Gerbers from ProtoPulse," they've already left the tool
 
 Topics:
 - [[maker-ux]]

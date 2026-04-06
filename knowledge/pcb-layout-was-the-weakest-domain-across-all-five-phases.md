@@ -19,6 +19,8 @@ Relevant Notes:
 - [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai leads on PCB maturity, exploiting this gap
 - [[ai-is-the-moat-lean-into-it]] -- PCB weakness drove the strategic decision to leapfrog with AI rather than chase parity
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- architecture-first compensates by offering value competitors lack entirely
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- desktop enables native toolchain access for better PCB design automation
+- [[competitive-audits-generated-more-work-than-internal-analysis]] -- audits surfaced specific PCB gaps that internal analysis rated only as "Missing"
 
 Topics:
 - [[competitive-landscape]]

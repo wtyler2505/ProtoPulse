@@ -22,6 +22,14 @@ Relevant Notes:
 - [[all-procurement-data-is-ai-fabricated]] -- AI must be trustworthy or it is worse than nothing; fabricated data is the anti-pattern
 - [[architecture-first-bridges-intent-to-implementation]] -- beginners describe intent; AI must catch mistakes in the gap between intent and implementation
 - [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- visible feedback catches mistakes faster than error logs
+- [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- the GPIO12 boot trap is exactly the costly mistake proactive AI must catch
+- [[esp32-adc2-unavailable-when-wifi-active]] -- ADC2 silent failure with WiFi is the archetype of invisible errors AI must surface
+- [[esp32-six-flash-gpios-must-never-be-used]] -- flash GPIOs must be hard-error flagged before a beginner wires to them
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- physical fit constraints beginners cannot see without AI coaching
+- [[bldc-stop-active-low-brake-active-high]] -- inverted STOP/BRAKE logic is a costly wiring mistake AI should catch before motor damage
+- [[hall-sensor-wiring-order-matters-for-bldc]] -- hall sensor permutation debugging is exactly where AI guidance prevents hours of trial-and-error
+- [[protopulse-ai-breadth-is-6x-flux-ai]] -- the 125 AI tools are the mechanism by which proactive error catching is delivered
+- [[exports-are-only-accessible-via-ai-chat]] -- export-via-chat-only blocks beginners who need Gerber files but don't know the right AI command
 
 Topics:
 - [[maker-ux]]

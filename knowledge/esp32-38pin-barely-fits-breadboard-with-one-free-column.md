@@ -20,7 +20,10 @@ This constraint matters for the bench coach because it affects how ProtoPulse re
 Relevant Notes:
 - [[mega-2560-too-wide-for-any-breadboard]] -- the Mega doesn't fit at all; the ESP32 at least physically fits
 - [[esp32-six-flash-gpios-must-never-be-used]] -- pins are exposed but not usable, compounding the "barely fits" problem
+- [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- GPIO12 on a barely-fitting board compounds the deceptive complexity for beginners
 - [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- ProtoPulse's bench coach can visually show the fit constraint that TinkerCAD ignores
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- physical breadboard constraints are invisible to beginners without AI coaching
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the ESP32's tight fit is why AI-assisted breadboard layout is essential for the maker bundle
 
 Topics:
 - [[breadboard-intelligence]]

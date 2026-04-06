@@ -21,6 +21,8 @@ Relevant Notes:
 - [[project-provider-monolith-is-the-biggest-remaining-frontend-debt]] -- the context that hosted the hardcoded ID
 - [[monolithic-context-causes-quadratic-render-complexity]] -- related structural debt in the same component
 - [[react-query-eliminates-the-need-for-client-state-libraries]] -- React Query cache keys embedded the hardcoded ID, coupling the ORM layer to the assumption
+- [[cross-tool-coherence-is-harder-than-building-features]] -- the hardcoded ID was an early example of implicit coupling that broke coherence across views
+- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- fixing the hardcoded ID in Wave 39 was a prerequisite for the wave system to scale to 501 items
 
 Topics:
 - [[architecture-decisions]]

@@ -21,6 +21,8 @@ Relevant Notes:
 - [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- thin server lets ORM own the data layer
 - [[react-query-eliminates-the-need-for-client-state-libraries]] -- server state is single source of truth, React Query fetches it
 - [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- 36 tables with zero type drift across 501 items validates the schema-as-source-of-truth approach
+- [[cross-tool-coherence-is-harder-than-building-features]] -- Drizzle's schema-as-source-of-truth is the backend answer to the cross-view coherence problem
+- [[all-p0-and-p1-items-resolved-proves-security-first-discipline]] -- zero schema/type drift across 501 items was enabled by Drizzle's compile-time type safety
 
 Topics:
 - [[architecture-decisions]]

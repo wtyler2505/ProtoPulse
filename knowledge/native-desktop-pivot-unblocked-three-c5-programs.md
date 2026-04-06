@@ -22,6 +22,8 @@ Relevant Notes:
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- desktop doesn't change the value prop; it enables the hardware access makers need
 - [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai is browser-only; native desktop differentiates on hardware access
 - [[six-epics-organize-the-remaining-strategic-work]] -- the pivot unblocked Epic B (Arduino Workbench) and the firmware compilation tracks
+- [[greatness-manifest-pushed-beyond-parity-into-innovation]] -- native desktop enabled several Manifest features like OTA variable watch and voice bench sessions
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- desktop enables native toolchain access for better PCB design automation
 
 Topics:
 - [[architecture-decisions]]

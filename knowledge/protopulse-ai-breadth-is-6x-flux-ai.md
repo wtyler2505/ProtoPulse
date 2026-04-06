@@ -20,6 +20,8 @@ Relevant Notes:
 - [[ai-is-the-moat-lean-into-it]] -- strategic implication of this advantage
 - [[flux-ai-is-the-primary-competitive-threat]] -- the closest competitor on AI
 - [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- 125 tools create deep integration but also scale the context cost problem
+- [[competitive-audits-generated-more-work-than-internal-analysis]] -- audits quantified the 6x AI tool advantage gap over closest competitor
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- the 125 AI tools are the mechanism by which proactive error catching is delivered
 
 Topics:
 - [[competitive-landscape]]

@@ -20,6 +20,8 @@ Relevant Notes:
 - [[dual-export-system-is-a-maintenance-trap]] -- another structural debt pattern spawned by monolithic files
 - [[monolithic-context-causes-quadratic-render-complexity]] -- the same pattern at the React state layer: one monolith cascading into paralysis
 - [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- 9,667 CCN quantifies the aggregate complexity these god files created
+- [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- the audit surfaced 12 god files as structural blockers, driving decomposition waves
+- [[all-p0-and-p1-items-resolved-proves-security-first-discipline]] -- IDOR on 30+ routes was enabled by god file complexity making review impossible
 
 Topics:
 - [[architecture-decisions]]

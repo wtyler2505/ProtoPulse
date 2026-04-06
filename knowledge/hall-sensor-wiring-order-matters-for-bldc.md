@@ -22,6 +22,8 @@ Relevant Notes:
 - [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- another "wiring determines boot behavior" trap
 - [[architecture-first-bridges-intent-to-implementation]] -- the bench coach must warn about hall sensor ordering when a "BLDC motor" block appears
 - [[mega-2560-four-hardware-uarts]] -- the Mega's Serial3 is often used to monitor hall sensor state during debugging
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- hall sensor permutation debugging is exactly where AI guidance prevents hours of trial-and-error
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- debugging hall sensors required oscilloscope + serial monitor + datasheet -- the multi-tool pain that birthed ProtoPulse
 
 Topics:
 - [[eda-fundamentals]]

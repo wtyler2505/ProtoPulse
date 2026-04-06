@@ -20,6 +20,8 @@ Relevant Notes:
 - [[architecture-first-bridges-intent-to-implementation]] -- why this matters for learning
 - [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai lacks this capability
 - [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- architecture-first creates new customers in a growing market rather than competing for existing ones
+- [[greatness-manifest-pushed-beyond-parity-into-innovation]] -- architecture-first was the foundation the Manifest's novel features built upon
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- architecture diagrams are the entry point that lets beginners stay in one tool from idea to Gerber
 
 Topics:
 - [[competitive-landscape]]

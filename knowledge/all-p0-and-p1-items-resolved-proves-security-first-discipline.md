@@ -22,6 +22,8 @@ Relevant Notes:
 - [[backlog-completion-at-501-items-reveals-systematic-execution]] -- the execution pattern that enabled prioritized security work
 - [[god-files-create-feature-paralysis-through-complexity]] -- IDOR on 30+ routes was enabled by god file complexity making review impossible
 - [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- securing a $1.9M codebase requires the disciplined approach described here
+- [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] -- zero schema/type drift across 501 items was enabled by Drizzle's compile-time type safety
+- [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- the audit drove priority tiers that enforced security-first execution
 
 Topics:
 - [[architecture-decisions]]

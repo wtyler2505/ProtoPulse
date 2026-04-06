@@ -20,6 +20,11 @@ Relevant Notes:
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- beyond breadboard, architecture is unique too
 - [[architecture-first-bridges-intent-to-implementation]] -- architecture-first adds a fourth leg that strengthens the bundle for beginners
 - [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- the maker/education segment this bundle targets within the larger market
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- the ESP32's tight fit is why AI-assisted breadboard layout is essential for the maker bundle
+- [[mega-2560-too-wide-for-any-breadboard]] -- the Mega's off-board constraint proves breadboard AI must handle non-standard placements
+- [[fritzing-parts-use-svg-layers-with-xml-connector-defs]] -- Fritzing interop strengthens the breadboard leg of the bundle by enabling part migration
+- [[wokwi-chips-use-counterclockwise-pin-ordering]] -- Wokwi interop strengthens the simulation leg of the bundle
+- [[competitive-audits-generated-more-work-than-internal-analysis]] -- audits validated the bundle's uniqueness against every competitor
 
 Topics:
 - [[maker-ux]]

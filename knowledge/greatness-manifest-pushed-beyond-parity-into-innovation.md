@@ -22,6 +22,9 @@ Relevant Notes:
 - [[protopulse-ai-breadth-is-6x-flux-ai]] -- AI moat extended further into territory no competitor occupies
 - [[ai-is-the-moat-lean-into-it]] -- the Greatness Manifest is the logical conclusion of the "lean into AI" strategy
 - [[c5-items-are-programs-not-features]] -- all 11 Manifest items are C5 complexity, requiring full program treatment
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- native desktop enabled several Manifest features (OTA watch, voice bench, hardware integration)
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- architecture-first was the foundation the Manifest's novel features built upon
+- [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- the audit pipeline cleared P0-P3 debt first, opening the path to Manifest innovation
 
 Topics:
 - [[competitive-landscape]]

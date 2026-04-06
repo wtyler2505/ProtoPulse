@@ -22,6 +22,8 @@ Relevant Notes:
 - [[esp32-six-flash-gpios-must-never-be-used]] -- another class of "looks usable but isn't"
 - [[all-procurement-data-is-ai-fabricated]] -- same anti-pattern at the data layer: something appears available but silently fails
 - [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- physical fit + unusable pins compound the ESP32's deceptive complexity
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- ADC2 silent failure is the archetype of mistakes only proactive AI can catch before wasted debugging hours
+- [[mega-2560-four-hardware-uarts]] -- both boards have pin multiplexing gotchas a unified tool must surface (ADC/WiFi on ESP32, UART/interrupt sharing on Mega)
 
 Topics:
 - [[eda-fundamentals]]

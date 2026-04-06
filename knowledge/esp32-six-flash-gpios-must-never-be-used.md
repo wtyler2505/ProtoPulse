@@ -22,6 +22,7 @@ Relevant Notes:
 - [[esp32-adc2-unavailable-when-wifi-active]] -- conditional restriction vs. absolute restriction: a spectrum of pin usability
 - [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- 6 unusable pins on a board that barely fits compounds the deceptive complexity
 - [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- the bench coach should visually flag these pins as red/unusable, not just list warnings
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- flash GPIOs must be flagged as hard errors by the AI before a beginner connects anything to them
 
 Topics:
 - [[eda-fundamentals]]

@@ -19,6 +19,7 @@ Relevant Notes:
 - [[god-files-create-feature-paralysis-through-complexity]] -- the monolith that spawned this
 - [[exports-are-only-accessible-via-ai-chat]] -- UX consequence of having two systems with no unified UI
 - [[cors-origin-reflection-was-a-critical-csrf-vector]] -- same anti-pattern: a dev-time shortcut that became a production liability
+- [[cross-tool-coherence-is-harder-than-building-features]] -- dual exports are a symptom of the same data-ownership ambiguity between AI and REST surfaces
 
 Topics:
 - [[architecture-decisions]]

@@ -22,6 +22,8 @@ Relevant Notes:
 - [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- another Mega-specific layout quirk the bench coach must handle
 - [[bldc-stop-active-low-brake-active-high]] -- the Mega can drive the motor controller via a dedicated UART
 - [[hall-sensor-wiring-order-matters-for-bldc]] -- Serial3 is often used for debugging hall sensor state
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- the Mega's multi-serial rover config required juggling Arduino IDE, serial monitors, and datasheets simultaneously
+- [[esp32-adc2-unavailable-when-wifi-active]] -- both boards have pin multiplexing gotchas that a unified tool must surface (UART/interrupt sharing on Mega, ADC/WiFi on ESP32)
 
 Topics:
 - [[eda-fundamentals]]

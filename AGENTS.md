@@ -394,6 +394,18 @@ The knowledge vault has 50+ notes covering competitive insights, architecture de
 - Temporary debugging state (that's session context, not knowledge)
 - Anything already in AGENTS.md or docs/ (don't duplicate existing documentation)
 
+## Claude Code Infrastructure Self-Audit
+
+When Tyler asks about hooks, skills, agents, settings, plugins, configuration, or "what's broken in my setup":
+
+1. **Run the infra audit**: `bash ops/queries/infra-audit.sh` — comprehensive scan of all 23 skills, 11 hooks, 10 agents, 3 MCP servers, settings.json, and both CLAUDE.md files
+2. **Read the infrastructure topic map**: `knowledge/dev-infrastructure.md` — curated knowledge about what each component does, known issues, and dependencies
+3. **Cross-reference with methodology notes**: `ops/methodology/` — friction patterns that reveal infrastructure problems (hook timeouts, agent crashes, permission issues)
+4. **Check for conflicts**: Hook ordering matters. claudekit hooks and vault hooks both fire on Write/Edit — look for interference patterns
+5. **Propose fixes with evidence**: Don't guess — cite specific hook scripts, settings, and knowledge notes
+
+The infra audit script checks: hook file existence, script executability, matcher conflicts, skill overlap, agent redundancy, MCP server availability, CLAUDE.md consistency, and cross-file reference integrity.
+
 ## Available AI Subagents (`.claude/agents/`)
 
 | Domain | Agents |

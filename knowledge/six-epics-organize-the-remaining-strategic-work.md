@@ -24,6 +24,7 @@ Relevant Notes:
 - [[backlog-completion-at-501-items-reveals-systematic-execution]] -- how the 154-wave system feeds from epic-level planning
 - [[competitive-audits-generated-more-work-than-internal-analysis]] -- audits populated Epics A, B, and F with specific competitor-driven specs
 - [[native-desktop-pivot-unblocked-three-c5-programs]] -- the pivot unblocked Epic B and firmware-related tracks
+- [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- audit findings organized into the six-epic strategic structure
 
 Topics:
 - [[goals]]

@@ -22,6 +22,8 @@ Relevant Notes:
 - [[mega-2560-four-hardware-uarts]] -- the Mega can drive this controller via a dedicated UART
 - [[architecture-first-bridges-intent-to-implementation]] -- "motor controller" as an architecture block hides this polarity complexity that AI must surface
 - [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- another "opposite logic level" trap where pin state has non-obvious consequences
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- inverted STOP/BRAKE logic is a costly wiring mistake proactive AI should catch before motor damage
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- motor control wiring on the rover is the use case that proved one tool is needed for the full electronics journey
 
 Topics:
 - [[eda-fundamentals]]

@@ -22,6 +22,9 @@ Relevant Notes:
 - [[competitive-audits-generated-more-work-than-internal-analysis]] -- competitive audits complemented the Codex audit with external benchmarks
 - [[backlog-completion-at-501-items-reveals-systematic-execution]] -- the audit-to-backlog-to-wave pipeline enabled 501-item completion
 - [[cors-origin-reflection-was-a-critical-csrf-vector]] -- concrete example of a P0 finding the Codex audit surfaced
+- [[god-files-create-feature-paralysis-through-complexity]] -- the audit surfaced 12 god files as structural blockers, driving the decomposition waves
+- [[greatness-manifest-pushed-beyond-parity-into-innovation]] -- the audit pipeline cleared P0-P3 debt first, opening the path to Manifest innovation
+- [[six-epics-organize-the-remaining-strategic-work]] -- audit findings organized into the six-epic strategic structure
 
 Topics:
 - [[architecture-decisions]]

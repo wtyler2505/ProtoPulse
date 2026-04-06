@@ -22,6 +22,11 @@ Relevant Notes:
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the bundle that makes staying in one tool worthwhile
 - [[competitive-audits-generated-more-work-than-internal-analysis]] -- audits validated that every competitor forces users to leave for other domains
 - [[native-desktop-pivot-unblocked-three-c5-programs]] -- native desktop closes the firmware gap that forced leaving for Arduino IDE
+- [[bldc-stop-active-low-brake-active-high]] -- motor control wiring on the rover is the use case that proved one tool is needed
+- [[hall-sensor-wiring-order-matters-for-bldc]] -- debugging hall sensors required oscilloscope + serial monitor + datasheet across multiple tools
+- [[mega-2560-four-hardware-uarts]] -- the Mega's multi-serial rover config required juggling Arduino IDE, serial monitors, and datasheets simultaneously
+- [[architecture-first-bridges-intent-to-implementation]] -- architecture diagrams are the entry point that lets beginners stay in one tool from intent to implementation
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- architecture diagrams are the entry point that lets beginners stay in one tool from idea to Gerber
 
 Topics:
 - [[maker-ux]]

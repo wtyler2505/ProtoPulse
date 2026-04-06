@@ -18,6 +18,9 @@ Relevant Notes:
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- the uniqueness of this approach
 - [[ai-is-the-moat-lean-into-it]] -- AI makes the bridge possible
 - [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- architecture-first extends the maker bundle beyond breadboard into intent-level design
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- architecture diagrams are the entry point that lets beginners stay in one tool from intent to implementation
+- [[bldc-stop-active-low-brake-active-high]] -- "motor controller" as an architecture block hides the STOP/BRAKE polarity that AI must surface when the user drills down
+- [[hall-sensor-wiring-order-matters-for-bldc]] -- the bench coach must warn about hall sensor ordering when a "BLDC motor" block appears in the architecture
 
 Topics:
 - [[maker-ux]]

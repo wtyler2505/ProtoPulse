@@ -22,6 +22,7 @@ Relevant Notes:
 - [[mega-2560-too-wide-for-any-breadboard]] -- physical dimensions also affect layout; the gap compounds the off-board problem
 - [[fritzing-parts-use-svg-layers-with-xml-connector-defs]] -- the 160mil gap must be encoded in any Fritzing-compatible part definition
 - [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- another board with non-standard physical constraints for the layout engine
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- the 160mil gap is invisible in pinout lists but immediately obvious in visual breadboard rendering
 
 Topics:
 - [[eda-fundamentals]]

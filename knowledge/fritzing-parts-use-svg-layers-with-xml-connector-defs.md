@@ -20,6 +20,8 @@ This matters for ProtoPulse's FZPZ import/export pipeline (`server/component-exp
 Relevant Notes:
 - [[wokwi-chips-use-counterclockwise-pin-ordering]] -- different simulator, different format, same interop challenge
 - [[dual-export-system-is-a-maintenance-trap]] -- FZPZ import/export is part of the export system that was duplicated
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- Fritzing interop strengthens the breadboard leg of the maker bundle by enabling part migration
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- the ESP32's non-standard row spacing must be encoded correctly in Fritzing SVG at 9px multiples
 
 Topics:
 - [[eda-fundamentals]]

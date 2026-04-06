@@ -25,6 +25,8 @@ Relevant Notes:
 - [[all-p0-and-p1-items-resolved-proves-security-first-discipline]] -- priority enforcement within the wave system
 - [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- the scale of what was built: $1.9M equivalent across 154 waves
 - [[six-epics-organize-the-remaining-strategic-work]] -- epics are the next-level structure that feeds waves with related work
+- [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- fixing the hardcoded ID was a prerequisite for the wave system to scale
+- [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- the audit-to-backlog-to-wave pipeline enabled 501-item completion
 
 Topics:
 - [[goals]]

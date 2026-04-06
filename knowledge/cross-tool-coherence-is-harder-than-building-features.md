@@ -18,10 +18,12 @@ The cross-cutting work section lists five integration tracks that each touch 4-6
 ---
 
 Relevant Notes:
-- [[dual-export-system-is-a-maintenance-trap]] -- what happens without single source of truth: two systems produce different output
+- [[dual-export-system-is-a-maintenance-trap]] -- dual exports are a symptom of the data-ownership ambiguity between AI and REST surfaces
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- the unique starting point creates unique coherence challenges across all 26 views
 - [[exports-are-only-accessible-via-ai-chat]] -- exports-only-via-chat is a symptom of cross-tool incoherence
 - [[six-epics-organize-the-remaining-strategic-work]] -- Epic C is entirely about solving this coherence problem
+- [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- the hardcoded ID was an early example of implicit coupling that broke coherence across views
+- [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] -- Drizzle's schema-as-source-of-truth is the backend answer to the cross-view coherence problem
 
 Topics:
 - [[architecture-decisions]]

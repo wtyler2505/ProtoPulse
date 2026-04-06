@@ -20,6 +20,8 @@ This is relevant to ProtoPulse because any future Wokwi import/export or simulat
 Relevant Notes:
 - [[fritzing-parts-use-svg-layers-with-xml-connector-defs]] -- Fritzing's approach to the same interop problem
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- interop with Wokwi format serves the same maker audience that benefits from architecture-first design
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- Wokwi interop strengthens the simulation leg of the maker bundle
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- both Wokwi and TinkerCAD use visual-first simulation that ProtoPulse must match in its component rendering
 
 Topics:
 - [[eda-fundamentals]]

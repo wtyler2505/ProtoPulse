@@ -22,6 +22,10 @@ Relevant Notes:
 - [[architecture-first-bridges-intent-to-implementation]] -- beginners think in visuals, not equations
 - [[competitive-audits-generated-more-work-than-internal-analysis]] -- this was the most impactful finding from the Wave 66 audit
 - [[ai-is-the-moat-lean-into-it]] -- AI can bridge the gap by explaining visual results, not just computing them
+- [[wokwi-chips-use-counterclockwise-pin-ordering]] -- both Wokwi and TinkerCAD use visual-first simulation that ProtoPulse must match in component rendering
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- visual rendering of the ESP32's tight breadboard fit is where the perception gap matters most
+- [[esp32-six-flash-gpios-must-never-be-used]] -- visual red/unusable pin flagging is the bench coach's answer to the perception gap
+- [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- the 160mil gap is invisible in pinout lists but immediately obvious in visual breadboard rendering
 
 Topics:
 - [[competitive-landscape]]

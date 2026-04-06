@@ -22,6 +22,8 @@ Relevant Notes:
 - [[flux-ai-is-the-primary-competitive-threat]] -- different type of competitor (AI-first vs simulation-first)
 - [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- competitive audits surfaced specific PCB gaps that internal analysis rated only as "Missing"
 - [[six-epics-organize-the-remaining-strategic-work]] -- audits generated the content for Epics A (simulation), B (Arduino), and F (learning)
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- audits validated the bundle's uniqueness against every competitor
+- [[protopulse-ai-breadth-is-6x-flux-ai]] -- audits quantified the 6x AI tool advantage gap over closest competitor
 
 Topics:
 - [[competitive-landscape]]
