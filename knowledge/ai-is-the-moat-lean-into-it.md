@@ -18,6 +18,8 @@ Relevant Notes:
 - [[protopulse-ai-breadth-is-6x-flux-ai]] -- the quantifiable foundation
 - [[flux-ai-is-the-primary-competitive-threat]] -- why catch-up is risky
 - [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- the cost bottleneck
+- [[architecture-first-bridges-intent-to-implementation]] -- AI makes the architecture-first bridge possible; this is the moat in action
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- PCB weakness is why the strategy chose AI over traditional EDA catch-up
 
 Topics:
 - [[architecture-decisions]]
