@@ -125,6 +125,98 @@ const EMPTY_ROLE_COUNTS: Record<BreadboardPinRole, number> = {
   signal: 0,
 };
 
+// ---------------------------------------------------------------------------
+// Verified board intelligence helpers
+// ---------------------------------------------------------------------------
+
+/** Index of verified board pins keyed by pin name (silkscreen label). */
+type VerifiedPinIndex = Map<string, VBPin>;
+
+const ADC2_WIFI_PATTERN = /\bunavailable when wifi\b/i;
+
+/**
+ * Attempt to match a part's meta against the verified board pack.
+ * Returns the board definition if the part is verified and belongs to a
+ * board-module or driver family, otherwise undefined.
+ */
+function resolveVerifiedBoard(meta: LoosePartMeta): VerifiedBoardDefinition | undefined {
+  const status = typeof meta.verificationStatus === 'string' ? meta.verificationStatus : '';
+  const partFamily = typeof meta.partFamily === 'string' ? meta.partFamily : '';
+  if (status !== 'verified') {
+    return undefined;
+  }
+  if (partFamily !== 'board-module' && partFamily !== 'driver') {
+    return undefined;
+  }
+  const mpn = typeof meta.mpn === 'string' ? meta.mpn : '';
+  const title = typeof meta.title === 'string' ? meta.title : '';
+  return findVerifiedBoardByAlias(mpn) ?? findVerifiedBoardByAlias(title) ?? undefined;
+}
+
+/** Build a name-keyed index from a verified board's pin array. */
+function buildVerifiedPinIndex(board: VerifiedBoardDefinition): VerifiedPinIndex {
+  const index: VerifiedPinIndex = new Map();
+  for (const pin of board.pins) {
+    // Index by pin name (silkscreen) and pin id for broad matching
+    index.set(pin.name.toLowerCase(), pin);
+    index.set(pin.id.toLowerCase(), pin);
+  }
+  return index;
+}
+
+/** Look up a verified pin that corresponds to a connector label. */
+function matchVerifiedPin(
+  connector: Connector,
+  index: VerifiedPinIndex,
+): VBPin | undefined {
+  const name = (connector.name ?? '').toLowerCase().trim();
+  if (name.length === 0) {
+    return undefined;
+  }
+  return index.get(name);
+}
+
+/** Collect ADC2 WiFi conflict pin IDs from a verified board definition. */
+function collectAdcWifiConflictPinIds(board: VerifiedBoardDefinition): string[] {
+  const ids: string[] = [];
+  for (const pin of board.pins) {
+    for (const fn of pin.functions) {
+      if (fn.notes && ADC2_WIFI_PATTERN.test(fn.notes)) {
+        ids.push(pin.id);
+        break;
+      }
+    }
+  }
+  return ids;
+}
+
+/** Collect boot pin design rules as human-readable warnings. */
+function collectBootPinWarnings(board: VerifiedBoardDefinition): string[] {
+  if (!board.bootPins || board.bootPins.length === 0) {
+    return [];
+  }
+  return board.bootPins.map((bp) => {
+    const pin = board.pins.find((p) => p.id === bp.pinId);
+    const pinLabel = pin ? pin.name : bp.pinId;
+    return `${pinLabel} (${bp.pinId}): ${bp.designRule}`;
+  });
+}
+
+/** Build the optional verified board intelligence fields for the part model. */
+function buildVerifiedBoardFields(board: VerifiedBoardDefinition): Pick<
+  BreadboardSelectedPartModel,
+  'verifiedBoard' | 'boardWarnings' | 'bootPinWarnings' | 'adcWifiConflict' | 'adcWifiConflictPinIds'
+> {
+  const adcWifiConflictPinIds = collectAdcWifiConflictPinIds(board);
+  return {
+    verifiedBoard: true,
+    boardWarnings: [...board.warnings],
+    bootPinWarnings: collectBootPinWarnings(board),
+    adcWifiConflict: adcWifiConflictPinIds.length > 0,
+    adcWifiConflictPinIds,
+  };
+}
+
 function normalizePartMeta(part?: ComponentPart): LoosePartMeta {
   return (part?.meta as LoosePartMeta | null) ?? {};
 }
@@ -547,6 +639,12 @@ export function buildBreadboardSelectedPartModel(
   const verificationLevel = getVerificationLevel(meta);
   const requiresVerification = requiresVerifiedExactness(meta);
 
+  // --- Verified board intelligence lookup ---
+  const verifiedBoardDef = resolveVerifiedBoard(meta);
+  const vbPinIndex = verifiedBoardDef
+    ? buildVerifiedPinIndex(verifiedBoardDef)
+    : undefined;
+
   let exactCount = 0;
   const pins = connectors.map((connector, index) => {
     const exactPixel = resolveExactPinPixel(connector, instance);
@@ -560,6 +658,9 @@ export function buildBreadboardSelectedPartModel(
     if (useExactPin) {
       exactCount += 1;
     }
+    // Annotate with verified board pin data when available
+    const vbPin = vbPinIndex ? matchVerifiedPin(connector, vbPinIndex) : undefined;
+
     return {
       id: connector.id || `pin-${String(index + 1)}`,
       label: connector.name || `Pin ${String(index + 1)}`,
@@ -572,6 +673,9 @@ export function buildBreadboardSelectedPartModel(
       side: getCoordSide(coord),
       role,
       isCritical: isCriticalRole(role),
+      ...(vbPin?.warnings && vbPin.warnings.length > 0 ? { verifiedWarnings: vbPin.warnings } : {}),
+      ...(vbPin?.restricted === true ? { verifiedRestricted: true } : {}),
+      ...(vbPin?.restrictionReason ? { verifiedRestrictionReason: vbPin.restrictionReason } : {}),
     } satisfies BreadboardPinMapEntry;
   });
 
@@ -632,5 +736,8 @@ export function buildBreadboardSelectedPartModel(
     verificationStatus,
     coach,
     pins,
+
+    // Verified board intelligence (only present when a board pack match is found)
+    ...(verifiedBoardDef ? buildVerifiedBoardFields(verifiedBoardDef) : {}),
   } satisfies BreadboardSelectedPartModel;
 }

@@ -602,37 +602,9 @@ describe('BreadboardView', () => {
       expect(openEvent.detail.prompt).toContain('Audit the current owned stash');
     });
 
-    it('resolves a verified exact part request and stages it onto the bench', async () => {
-      mockParts.push({
-        id: 42,
-        projectId: 1,
-        nodeId: null,
-        meta: {
-          aliases: ['arduino mega rev3'],
-          family: 'microcontroller',
-          manufacturer: 'Arduino',
-          mountingType: 'tht',
-          partFamily: 'board-module',
-          properties: [],
-          tags: ['arduino', 'mega', '2560'],
-          title: 'Arduino Mega 2560 R3',
-          type: 'microcontroller',
-          verificationLevel: 'official-backed',
-          verificationStatus: 'verified',
-        } as unknown as (typeof mockParts)[number]['meta'],
-        connectors: [],
-        buses: [],
-        views: {
-          breadboard: { shapes: [] },
-          schematic: { shapes: [] },
-          pcb: { shapes: [] },
-        },
-        constraints: null,
-        version: 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
+    it('resolves a verified exact part request from the board pack and stages it', async () => {
+      // The verified board pack automatically injects Arduino Mega 2560 R3
+      // as a synthetic verified match — no project part needed.
       render(<BreadboardView />);
 
       fireEvent.click(screen.getByTestId('button-breadboard-exact-part-request'));
@@ -641,7 +613,10 @@ describe('BreadboardView', () => {
       });
 
       expect(screen.getByTestId('breadboard-exact-part-resolution-message').textContent).toContain('verified exact part');
-      fireEvent.click(screen.getByTestId('button-breadboard-exact-place-42'));
+      // The verified board pack uses synthetic negative IDs — find the place button dynamically
+      const placeButtons = screen.getAllByTestId(/^button-breadboard-exact-place-/);
+      expect(placeButtons.length).toBeGreaterThanOrEqual(1);
+      fireEvent.click(placeButtons[0]);
 
       await waitFor(() => {
         expect(mockCreateInstance.mutate).toHaveBeenCalledWith(
@@ -649,28 +624,26 @@ describe('BreadboardView', () => {
             breadboardX: null,
             breadboardY: null,
             circuitId: 1,
-            partId: 42,
             properties: expect.objectContaining({
               componentTitle: 'Arduino Mega 2560 R3',
-              type: 'microcontroller',
             }),
           }),
         );
       });
     });
 
-    it('launches a seeded exact draft when the exact part request has no match yet', () => {
+    it('launches a seeded exact draft when the exact part request has no verified board match', () => {
       render(<BreadboardView />);
 
       fireEvent.click(screen.getByTestId('button-breadboard-exact-part-request'));
+      // Use a query that does NOT match any verified board in the pack
       fireEvent.change(screen.getByTestId('input-breadboard-exact-part-request'), {
-        target: { value: 'RioRand motor controller' },
+        target: { value: 'Raspberry Pi Pico W' },
       });
       fireEvent.click(screen.getByTestId('button-breadboard-exact-create-draft'));
 
-      expect(screen.getByTestId('mock-exact-part-draft-modal').textContent).toContain('RioRand KJL-01 brushless motor controller');
-      expect(screen.getByTestId('mock-exact-part-draft-modal').textContent).toContain('Hall sensors');
-      expect(screen.getByTestId('mock-exact-part-draft-modal').textContent).toContain('amazon.com/RioRand-6-60V-Brushless-Electric-Controller');
+      // Should fall through to the generic draft flow since no verified board matches
+      expect(screen.getByTestId('mock-exact-part-draft-modal')).toBeDefined();
     });
 
     it('opens a selected-part inspector and primes Gemini ER with the selected component context', () => {

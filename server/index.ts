@@ -337,6 +337,49 @@ app.use((req, res, next) => {
     logger.warn('Failed to auto-seed standard library', { error: err instanceof Error ? err.message : String(err) });
   }
 
+  // Auto-seed verified board pack (upserts — safe to run every startup)
+  try {
+    const { getAllVerifiedBoards } = await import('@shared/verified-boards');
+    const { boardDefinitionToPartState } = await import('@shared/verified-boards/to-part-state');
+    const { componentLibrary } = await import('@shared/schema');
+    const { eq, and: andOp, count: countFn } = await import('drizzle-orm');
+    const { db: database } = await import('./db');
+
+    const boards = getAllVerifiedBoards();
+    let seededCount = 0;
+
+    for (const board of boards) {
+      const category = board.family === 'driver' ? 'Motor Controllers' : 'Microcontrollers';
+      const [existing] = await database
+        .select({ cnt: countFn() })
+        .from(componentLibrary)
+        .where(andOp(eq(componentLibrary.title, board.title), eq(componentLibrary.isPublic, true)));
+
+      if ((existing?.cnt ?? 0) === 0) {
+        const state = boardDefinitionToPartState(board);
+        await database.insert(componentLibrary).values({
+          title: board.title,
+          description: board.description,
+          category,
+          tags: board.aliases,
+          authorId: 'verified-board-pack',
+          isPublic: true,
+          meta: state.meta as unknown as Record<string, unknown>,
+          connectors: state.connectors as unknown as Record<string, unknown>[],
+          buses: state.buses as unknown as Record<string, unknown>[],
+          views: state.views as unknown as Record<string, unknown>,
+        });
+        seededCount++;
+      }
+    }
+
+    if (seededCount > 0) {
+      logger.info(`Verified board pack: ${String(seededCount)} boards seeded into component library`);
+    }
+  } catch (err) {
+    logger.warn('Failed to auto-seed verified board pack', { error: err instanceof Error ? err.message : String(err) });
+  }
+
   app.get("/api/health", async (_req, res) => {
     try {
       const { pool } = await import("./db");
