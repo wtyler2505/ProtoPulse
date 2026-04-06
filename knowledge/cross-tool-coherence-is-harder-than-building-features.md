@@ -24,6 +24,7 @@ Relevant Notes:
 - [[six-epics-organize-the-remaining-strategic-work]] -- Epic C is entirely about solving this coherence problem
 - [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- the hardcoded ID was an early example of implicit coupling that broke coherence across views
 - [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] -- Drizzle's schema-as-source-of-truth is the backend answer to the cross-view coherence problem
+- [[c5-items-are-programs-not-features]] -- cross-tool integration is itself a C5 program that changes downstream assumptions for every view
 
 Topics:
 - [[architecture-decisions]]

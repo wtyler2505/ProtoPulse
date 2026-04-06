@@ -406,6 +406,13 @@ When Tyler asks about hooks, skills, agents, settings, plugins, configuration, o
 
 The infra audit script checks: hook file existence, script executability, matcher conflicts, skill overlap, agent redundancy, MCP server availability, CLAUDE.md consistency, and cross-file reference integrity.
 
+When Tyler asks about Claude Code updates, new features, or "am I using everything":
+1. Run `bash ops/queries/claude-code-changelog-check.sh` — compare current setup against known Claude Code features
+2. WebSearch `"Claude Code changelog 2026"` and `"Claude Code new features"` for the latest releases
+3. Compare new features against our current hooks/skills/settings
+4. Propose specific additions: new hook events, new MCP capabilities, new settings options
+5. Extract any discoveries as knowledge notes in `knowledge/` linked to `[[dev-infrastructure]]`
+
 ## Available AI Subagents (`.claude/agents/`)
 
 | Domain | Agents |

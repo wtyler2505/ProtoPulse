@@ -22,6 +22,8 @@ Relevant Notes:
 - [[native-desktop-pivot-unblocked-three-c5-programs]] -- the pivot was itself a C5 decision that cleared three other C5 blockers
 - [[backlog-completion-at-501-items-reveals-systematic-execution]] -- wave-based execution required different treatment for C5 vs C1-C3 items
 - [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- C5 items drive the complexity that makes the codebase equivalent to $1.9M of effort
+- [[cross-tool-coherence-is-harder-than-building-features]] -- Epic C's cross-tool integration is itself a C5 program that changes downstream assumptions for every view
+- [[god-files-create-feature-paralysis-through-complexity]] -- god files were C4/C5 debt that blocked C5 programs from being implemented cleanly
 
 Topics:
 - [[architecture-decisions]]

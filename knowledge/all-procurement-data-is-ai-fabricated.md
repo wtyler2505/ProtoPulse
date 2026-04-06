@@ -20,6 +20,8 @@ Relevant Notes:
 - [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai has live supplier data
 - [[exports-are-only-accessible-via-ai-chat]] -- same pattern: features look present but are hollow underneath
 - [[zero-form-elements-means-no-native-input-paradigm]] -- no structured input means no way to correct fabricated data manually
+- [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- fabricated BOM data is the anti-pattern of trustworthy AI that beginners depend on
+- [[esp32-adc2-unavailable-when-wifi-active]] -- same anti-pattern: something appears available but silently fails, whether ADC pins or BOM prices
 
 Topics:
 - [[maker-ux]]
