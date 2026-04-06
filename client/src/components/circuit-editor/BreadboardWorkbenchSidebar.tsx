@@ -1,12 +1,14 @@
-import { ArrowRight, Bot, CircuitBoard, Cpu, Globe2, PenTool, Search, Sparkles, Wand2 } from 'lucide-react';
+import { ArrowRight, Bot, CircuitBoard, Cpu, Globe2, HeartPulse, PenTool, Search, Sparkles, Wand2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import ComponentPlacer from '@/components/circuit-editor/ComponentPlacer';
 import BreadboardStarterShelf from '@/components/circuit-editor/BreadboardStarterShelf';
+import BreadboardBoardAuditPanel from '@/components/circuit-editor/BreadboardBoardAuditPanel';
 import type {
   BreadboardBenchInsight,
   BreadboardBenchSummary,
 } from '@/lib/breadboard-bench';
+import type { BoardAuditSummary } from '@/lib/breadboard-board-audit';
 import type {
   BreadboardChatActionId,
   BreadboardPlannerActionId,
@@ -15,6 +17,7 @@ import type {
 interface BreadboardWorkbenchSidebarProps {
   benchInsights: Record<number, BreadboardBenchInsight>;
   benchSummary: BreadboardBenchSummary;
+  boardAudit: BoardAuditSummary | null;
   createPending: boolean;
   expandPending: boolean;
   hasCircuits: boolean;
@@ -30,6 +33,7 @@ interface BreadboardWorkbenchSidebarProps {
   onOpenComponentEditor: () => void;
   onOpenCommunity: () => void;
   onOpenSchematic: () => void;
+  onRunBoardAudit: () => void;
 }
 
 function StatChip({ label, value }: { label: string; value: string }) {
