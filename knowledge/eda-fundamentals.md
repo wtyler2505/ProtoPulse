@@ -22,6 +22,8 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[hall-sensor-wiring-order-matters-for-bldc]] -- wrong hall order causes stutter/vibration/reverse
 - [[fritzing-parts-use-svg-layers-with-xml-connector-defs]] -- FZPZ format: SVG per view + FZP XML manifest
 - [[wokwi-chips-use-counterclockwise-pin-ordering]] -- JSON array index = physical pin via CCW convention
+- [[kicad-exporter-deterministic-uuid-guarantees-collisions-in-large-projects]] -- fake UUID function in export pipeline
+- [[erc-pin-classification-uses-fragile-regex-that-fails-on-nonstandard-names]] -- hardcoded regex instead of parts DB lookup
 
 ## Sub-Topics (to be populated)
 
@@ -50,6 +52,7 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - Transient — BE/Trapezoidal integration, adaptive timestep
 - AC small-signal — frequency sweep, Bode plot
 - Monte Carlo — tolerance analysis, sensitivity
+- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- JS solver needs Wasm-ngspice migration
 
 ### Standards
 - IPC-2221 — PCB design standard

@@ -16,7 +16,9 @@ The core DRC/ERC engine traverses the node graph entirely in JavaScript. Leading
 ---
 
 Relevant Notes:
-- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- another engine that should be Wasm + Worker
+- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- both engines (ERC + sim) run JS on main thread and should migrate to Wasm + Worker
+- [[risk-analysis-tool-references-nonexistent-schema-columns]] -- both rely on heuristics (regex/static dictionaries) instead of the actual parts database
+- [[kicad-exporter-deterministic-uuid-guarantees-collisions-in-large-projects]] -- both are EDA pipeline fragility: regex-based classification + fake UUIDs
 
 Topics:
 - [[eda-fundamentals]]

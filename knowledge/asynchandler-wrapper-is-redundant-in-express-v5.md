@@ -17,6 +17,8 @@ Additionally, many older routes manually read from `req.body` without strict Zod
 
 Relevant Notes:
 - [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] -- Zod validation should be at the boundary, not inline
+- [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- Express 5 was chosen specifically for features like native async error handling
+- [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- both are validation boundary issues: asyncHandler is redundant, z.any() is harmful
 
 Topics:
 - [[architecture-decisions]]

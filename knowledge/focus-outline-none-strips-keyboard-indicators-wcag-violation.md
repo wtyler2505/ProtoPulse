@@ -3,7 +3,7 @@ description: "Multiple core components apply focus:outline-none without focus-vi
 type: debt-note
 source: "conductor/comprehensive-audit.md ยง25"
 confidence: proven
-topics: ["[[architecture-decisions]]"]
+topics: ["[[architecture-decisions]]", "[[maker-ux]]"]
 related_components: ["client/src/components/views/OutputView.tsx", "client/src/components/views/procurement/BomToolbar.tsx", "client/src/components/views/procurement/BomTable.tsx"]
 ---
 
@@ -19,6 +19,9 @@ The viewport `<meta>` tag also sets `maximum-scale=1`, disabling pinch-to-zoom โ
 
 Relevant Notes:
 - [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]] -- accessibility is part of the maker-friendly mission
+- [[makers-need-one-tool-because-context-switching-kills-momentum]] -- keyboard-only users are forced to context-switch to a different tool
+- [[zero-form-elements-means-no-native-input-paradigm]] -- no forms + no focus indicators = double UX failure for input
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- visual feedback (including focus rings) is the perception gap
 
 Topics:
 - [[architecture-decisions]]

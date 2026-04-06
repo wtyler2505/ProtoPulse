@@ -3,7 +3,7 @@ description: "pricingLookupTool returns Math.random()*10 and inStock:true in pro
 type: debt-note
 source: "conductor/comprehensive-audit.md §27"
 confidence: proven
-topics: ["[[architecture-decisions]]"]
+topics: ["[[architecture-decisions]]", "[[maker-ux]]"]
 related_components: ["server/genkit.ts"]
 ---
 
@@ -18,6 +18,9 @@ This directly degrades trust in the tool and compounds with the existing issue t
 Relevant Notes:
 - [[all-procurement-data-is-ai-fabricated]] -- this is the root cause of fabricated procurement data
 - [[ai-is-the-moat-lean-into-it]] -- trust erosion undermines the AI moat
+- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- evals would detect pricing hallucinations via golden dataset comparison
+- [[risk-analysis-tool-references-nonexistent-schema-columns]] -- both tools operate on fabricated data: one returns Math.random(), the other reads undefined columns
+- [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- z.any() lets the LLM confidently relay mock prices without schema enforcement
 
 Topics:
 - [[architecture-decisions]]

@@ -23,6 +23,10 @@ Combined with the `eval()` vulnerability in CircuitCodeView, a shared project co
 
 Relevant Notes:
 - [[cors-origin-reflection-was-a-critical-csrf-vector]] -- another security boundary failure
+- [[eval-in-circuit-code-view-plus-localstorage-session-enables-xss-hijack]] -- eval() provides the XSS entry point that CSP-disabled Tauri escalates to RCE
+- [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] -- three compounding Tauri configuration failures
+- [[websocket-sessions-are-never-revalidated-after-initial-handshake]] -- both are boundary failures: CSP at the browser level, session at the WebSocket level
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- the pivot introduced these Tauri-specific security risks that didn't exist in browser mode
 
 Topics:
 - [[architecture-decisions]]

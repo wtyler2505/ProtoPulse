@@ -3,7 +3,7 @@ description: "Passing 125 flat tools to a single monolithic model causes context
 type: debt-note
 source: "conductor/comprehensive-audit.md §24"
 confidence: proven
-topics: ["[[architecture-decisions]]"]
+topics: ["[[architecture-decisions]]", "[[competitive-landscape]]"]
 related_components: ["server/ai.ts", "server/ai-tools/index.ts"]
 ---
 
@@ -20,6 +20,9 @@ Additionally, the 2026 EDA trend is shifting from reactive chatbots to L4 Autono
 Relevant Notes:
 - [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- 125 tools × schema = massive token overhead
 - [[ai-is-the-moat-lean-into-it]] -- multi-agent is the evolution of the AI moat
+- [[ai-toolset-has-major-blindspots-in-history-variables-lifecycle-and-zones]] -- multi-agent would naturally organize tools by domain, eliminating the blindspot problem
+- [[build-system-prompt-has-on-m-edge-resolution-bottleneck]] -- multi-agent splits the O(N*M) prompt into focused per-agent prompts
+- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- multi-agent architecture enables per-agent evaluation rather than monolithic testing
 
 Topics:
 - [[architecture-decisions]]

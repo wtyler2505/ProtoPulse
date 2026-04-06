@@ -71,7 +71,16 @@ Analysis of competing EDA tools — their strengths, gaps, and what ProtoPulse c
 4. **Native desktop** — full hardware access (USB/serial), local filesystem, native toolchains
 5. **Circuit Design as Code** — DSL for programmatic circuit generation (Wave 50)
 
+## Differentiator Risks (from comprehensive audit)
+- [[genkit-125-flat-tools-is-an-outdated-anti-pattern-needs-multi-agent]] -- the 125-tool moat degrades with context collapse; competitors adopting multi-agent will surpass it
+- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- competitors using Wasm-ngspice achieve 90-95% native speed while ProtoPulse's JS solver caps at 15%
+- [[kicad-exporter-deterministic-uuid-guarantees-collisions-in-large-projects]] -- export quality gaps undermine the full-workflow differentiator
+- [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] -- native desktop differentiator is undermined if the app requires Node.js installed
+
 ---
+
+Agent Notes:
+- 2026-04-06: 4 differentiator risk notes added from audit. Key insight: ProtoPulse's competitive advantages (AI tools, full workflow, native desktop) each have quality undercuts that competitors could exploit. Multi-agent architecture is the most strategic fix — it addresses both the 125-tool context collapse and the evaluation gap simultaneously.
 
 Topics:
 - [[index]]

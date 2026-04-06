@@ -18,6 +18,8 @@ Modern Genkit patterns recommend passing the abort signal directly and/or migrat
 Relevant Notes:
 - [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- zombie streams compound the token cost problem
 - [[ai-is-the-moat-lean-into-it]] -- AI reliability is table stakes if it's the moat
+- [[setinterval-never-cleared-creates-memory-ratchet-in-server-routes]] -- both are resource leak vectors: zombie streams leak API quota, dangling intervals leak memory
+- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- no telemetry means zombie streams go undetected in production
 
 Topics:
 - [[architecture-decisions]]

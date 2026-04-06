@@ -35,6 +35,31 @@ Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` fo
 - [[six-epics-organize-the-remaining-strategic-work]] -- A-F strategic layers
 - [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- 293 findings became 154 waves
 
+### Comprehensive Audit Findings (2026-04-05)
+- [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- unhandled abort = zombie Gemini requests
+- [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- z.any() defeats structured output
+- [[genkit-125-flat-tools-is-an-outdated-anti-pattern-needs-multi-agent]] -- 125 flat tools cause context collapse
+- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- zero AI eval test coverage
+- [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- Math.random() prices in production
+- [[build-system-prompt-has-on-m-edge-resolution-bottleneck]] -- O(N*M) array scans per AI request
+- [[ai-toolset-has-major-blindspots-in-history-variables-lifecycle-and-zones]] -- 6 API domains invisible to AI
+- [[risk-analysis-tool-references-nonexistent-schema-columns]] -- broken risk scores from missing columns
+- [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- O(N) stringify per render cycle
+- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- MNA/NR/Gauss all sync main thread
+- [[jsonb-columns-lack-gin-indexes-forcing-sequential-scans]] -- no GIN indexes on JSONB columns
+- [[tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce]] -- XSS → RCE via disabled CSP + global API
+- [[eval-in-circuit-code-view-plus-localstorage-session-enables-xss-hijack]] -- eval + localStorage = full hijack
+- [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] -- desktop app needs Node.js installed
+- [[scrypt-64mb-per-request-enables-oom-dos-before-rate-limiter]] -- 10 requests = 640MB OOM
+- [[websocket-sessions-are-never-revalidated-after-initial-handshake]] -- revoked users keep access
+- [[setinterval-never-cleared-creates-memory-ratchet-in-server-routes]] -- dangling intervals leak memory
+- [[execsync-in-arduino-service-blocks-entire-express-event-loop]] -- sync shell calls freeze API
+- [[custom-lww-sync-should-be-replaced-with-yjs-crdts]] -- LWW causes destructive merges
+- [[voice-ai-is-disconnected-from-llm-using-hardcoded-command-matching]] -- voice is fake AI
+- [[focus-outline-none-strips-keyboard-indicators-wcag-violation]] -- WCAG AA keyboard focus broken
+- [[vite-manual-chunks-defeats-dynamic-import-and-tree-shaking]] -- bloated initial JS payload
+- [[asynchandler-wrapper-is-redundant-in-express-v5]] -- legacy wrapper, Express v5 handles async natively
+
 ## Core Stack Decisions
 
 ### Express 5 (not Next.js)
@@ -88,7 +113,15 @@ Rebuilds full project state on every AI request. Sequential DB queries. Performa
 - `PCBLayoutView.tsx` → decomposed (Wave 27)
 - `ShapeCanvas.tsx` → decomposed 1275→755 lines (Wave 26)
 
+## Tensions
+
+- [[ai-is-the-moat-lean-into-it]] depends on AI reliability, but [[genkit-tools-use-z-any-output-destroying-structured-validation]], [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]], and [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] reveal the moat has no quality foundation
+- [[native-desktop-pivot-unblocked-three-c5-programs]] gained hardware access but introduced [[tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce]] and [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] — the pivot created risks that didn't exist in browser mode
+
 ---
+
+Agent Notes:
+- 2026-04-06: comprehensive audit notes cluster into 5 tight groups: (1) AI quality chain (z.any → no evals → mock data → fabricated output), (2) security attack chain (eval XSS → localStorage → Tauri RCE), (3) main-thread blocking (sim + canvas + prompt + execSync), (4) resource leaks (zombie streams + setInterval + scrypt burst), (5) desktop pivot risks (CSP + sidecar + execSync). Navigation between groups via shared consequences: groups 1+6 share "fake data flowing through", groups 2+4 share "OOM/crash vectors", groups 3+5 share "offload to worker/native".
 
 Topics:
 - [[index]]

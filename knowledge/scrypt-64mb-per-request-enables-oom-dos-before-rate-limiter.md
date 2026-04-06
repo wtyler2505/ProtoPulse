@@ -17,6 +17,9 @@ Additionally, `server/routes/rag.ts` and `server/routes/embed.ts` use unbounded 
 
 Relevant Notes:
 - [[cors-origin-reflection-was-a-critical-csrf-vector]] -- multiple API security boundaries are weak
+- [[setinterval-never-cleared-creates-memory-ratchet-in-server-routes]] -- both are OOM vectors: scrypt via burst allocation, intervals via gradual leak
+- [[eval-in-circuit-code-view-plus-localstorage-session-enables-xss-hijack]] -- combined attack chain: XSS for session theft + scrypt DoS for service disruption
+- [[websocket-sessions-are-never-revalidated-after-initial-handshake]] -- auth boundary failures cluster: scrypt, WebSocket, CORS
 
 Topics:
 - [[architecture-decisions]]

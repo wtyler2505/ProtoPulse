@@ -14,7 +14,9 @@ The codebase contains numerous `setInterval` calls in `server/routes/arduino.ts`
 ---
 
 Relevant Notes:
-- [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- another resource leak vector
+- [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- both are resource leak vectors: intervals leak closures, zombie streams leak API quota
+- [[scrypt-64mb-per-request-enables-oom-dos-before-rate-limiter]] -- gradual leak + burst allocation = two OOM paths
+- [[execsync-in-arduino-service-blocks-entire-express-event-loop]] -- both degrade the Express server: intervals via memory, execSync via event loop blocking
 
 Topics:
 - [[architecture-decisions]]

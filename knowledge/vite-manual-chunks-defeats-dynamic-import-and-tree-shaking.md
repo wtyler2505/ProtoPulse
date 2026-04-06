@@ -16,7 +16,9 @@ This defeats Vite's native dynamic import and tree-shaking optimizations, result
 ---
 
 Relevant Notes:
-- [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- canvas + bundle both hurt initial load
+- [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- bloated initial load + O(N) per render = compounding perf degradation
+- [[monolithic-context-causes-quadratic-render-complexity]] -- monolithic context forces all views to load, manualChunks forces all code to load
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- slow initial load is the first perception a new user gets
 
 Topics:
 - [[architecture-decisions]]

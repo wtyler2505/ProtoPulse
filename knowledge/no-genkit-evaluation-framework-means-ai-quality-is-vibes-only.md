@@ -25,6 +25,9 @@ The E2E Playwright tests also only check "did the UI crash" — if the AI halluc
 Relevant Notes:
 - [[all-procurement-data-is-ai-fabricated]] -- no evals means fabricated data goes undetected
 - [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- pricing hallucinations are the symptom of missing evals
+- [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- z.any() at compile time + no eval at runtime = zero validation at any layer
+- [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- no telemetry means zombie streams also go unmeasured
+- [[genkit-125-flat-tools-is-an-outdated-anti-pattern-needs-multi-agent]] -- eval framework is a prerequisite for validating multi-agent migration
 
 Topics:
 - [[architecture-decisions]]

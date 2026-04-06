@@ -17,6 +17,8 @@ More broadly, the entire export pipeline (Gerber, KiCad 8) is built via thousand
 
 Relevant Notes:
 - [[dual-export-system-is-a-maintenance-trap]] -- string concatenation exports compound the maintenance burden
+- [[erc-pin-classification-uses-fragile-regex-that-fails-on-nonstandard-names]] -- both are EDA pipeline fragility: fake UUIDs + regex-based classification
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- export quality gaps contribute to the PCB domain weakness
 
 Topics:
 - [[eda-fundamentals]]

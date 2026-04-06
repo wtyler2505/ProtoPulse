@@ -24,6 +24,11 @@ Knowledge about UX patterns, interaction design, and accessibility principles th
 - [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- visual feedback over numbers
 - [[cross-tool-coherence-is-harder-than-building-features]] -- fulfilling the one-tool promise
 - [[project-provider-monolith-is-the-biggest-remaining-frontend-debt]] -- UX performance impact
+- [[focus-outline-none-strips-keyboard-indicators-wcag-violation]] -- keyboard-only navigation is broken (WCAG AA violation)
+- [[voice-ai-is-disconnected-from-llm-using-hardcoded-command-matching]] -- voice is the most natural input for beginners who don't know what to type
+- [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- fake pricing destroys trust in the one-tool promise
+- [[vite-manual-chunks-defeats-dynamic-import-and-tree-shaking]] -- slow initial load is the first impression for new users
+- [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- canvas stuttering breaks the "seeing" that makers need
 
 ## Core Principle
 **If a feature requires the user to already understand electronics to use it, it's not done yet.** Add AI guidance, tooltips, contextual explanations, or a learning mode.
@@ -77,6 +82,9 @@ Tyler building his OmniTrek Nexus rover (Arduino Mega, ESP32, motor controllers,
 - VS Code: command palette, keyboard shortcuts, extension model
 
 ---
+
+Agent Notes:
+- 2026-04-06: audit notes revealed 5 maker-impacting quality issues: (1) WCAG keyboard focus broken, (2) voice AI is fake, (3) mock pricing erodes trust, (4) slow initial load, (5) canvas stuttering. These undermine "one tool" promise more than missing features do.
 
 Topics:
 - [[index]]

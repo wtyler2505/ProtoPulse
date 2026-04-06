@@ -18,6 +18,8 @@ Similarly, the `analyze_bom_optimization` tool uses hardcoded static dictionarie
 Relevant Notes:
 - [[all-procurement-data-is-ai-fabricated]] -- risk + procurement data both broken
 - [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- pattern of tools operating on fake data
+- [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- both are type boundary failures: missing columns at the DB layer, z.any() at the LLM layer
+- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- evals would catch silently zeroed risk scores
 
 Topics:
 - [[architecture-decisions]]

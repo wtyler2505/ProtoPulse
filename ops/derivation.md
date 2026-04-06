@@ -94,6 +94,15 @@ engine_version: "1.0.0"
 7. implementation-patterns — code conventions, anti-patterns, proven approaches
 8. user-needs — what makers/hobbyists actually need from the tool
 
+## Evolution Log
+
+### 2026-04-06: Comprehensive audit ingested (25 notes)
+**Source:** `conductor/comprehensive-audit.md` (40 sections, 30 passes)
+**Action:** Extracted 25 atomic knowledge notes covering security (4), AI/Genkit (8), performance (6), architecture debt (5), EDA (2)
+**Connection pass:** 71 cross-references added, 5 topic maps updated (architecture-decisions, eda-fundamentals, gaps-and-opportunities, maker-ux, competitive-landscape)
+**Cluster structure:** Notes organize into 5 groups: (1) AI quality chain, (2) security attack chain, (3) main-thread blocking, (4) resource leaks, (5) desktop pivot risks
+**Impact:** Vault grew from 118 to 143 notes. architecture-decisions MOC approaching split threshold (37 notes).
+
 ## Generation Parameters
 - Folder names: knowledge/, inbox/, archive/, self/, ops/, templates/, manual/
 - Skills to generate: all 16 (vocabulary-transformed)

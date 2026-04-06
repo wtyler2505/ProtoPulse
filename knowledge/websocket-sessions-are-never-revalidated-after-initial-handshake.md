@@ -15,6 +15,9 @@ The `CollaborationServer` authenticates users strictly during the initial HTTP U
 
 Relevant Notes:
 - [[cors-origin-reflection-was-a-critical-csrf-vector]] -- auth boundary gaps compound
+- [[custom-lww-sync-should-be-replaced-with-yjs-crdts]] -- the same CollaborationServer has both session and merge vulnerabilities
+- [[eval-in-circuit-code-view-plus-localstorage-session-enables-xss-hijack]] -- stolen session token gives persistent WebSocket access via this gap
+- [[scrypt-64mb-per-request-enables-oom-dos-before-rate-limiter]] -- auth boundary failures cluster together
 
 Topics:
 - [[architecture-decisions]]

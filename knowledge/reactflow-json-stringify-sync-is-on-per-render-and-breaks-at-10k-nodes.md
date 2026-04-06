@@ -17,6 +17,9 @@ ReactFlow completely breaks down at the 10,000 node threshold due to DOM overhea
 
 Relevant Notes:
 - [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- canvas performance is the perception gap
+- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- both block the main thread: stringify per render, MNA per simulation
+- [[vite-manual-chunks-defeats-dynamic-import-and-tree-shaking]] -- combined: bloated initial load + O(N) per render = compounding perf degradation
+- [[monolithic-context-causes-quadratic-render-complexity]] -- the stringify runs inside the monolithic re-render cascade
 
 Topics:
 - [[architecture-decisions]]

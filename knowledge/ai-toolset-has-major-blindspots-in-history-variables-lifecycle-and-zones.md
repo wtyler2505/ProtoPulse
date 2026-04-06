@@ -26,6 +26,9 @@ Each of these has working backend endpoints that the AI simply doesn't know abou
 Relevant Notes:
 - [[ai-is-the-moat-lean-into-it]] -- blindspots directly undermine the moat strategy
 - [[all-procurement-data-is-ai-fabricated]] -- AI confidence without capability = hallucination
+- [[genkit-125-flat-tools-is-an-outdated-anti-pattern-needs-multi-agent]] -- multi-agent routing would naturally expose these domains to specialized agents
+- [[cross-tool-coherence-is-harder-than-building-features]] -- six blind domains are six incoherent views the AI cannot bridge
+- [[voice-ai-is-disconnected-from-llm-using-hardcoded-command-matching]] -- voice is another disconnect between capability and AI awareness
 
 Topics:
 - [[architecture-decisions]]

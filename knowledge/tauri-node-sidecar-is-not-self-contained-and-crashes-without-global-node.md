@@ -3,7 +3,7 @@ description: "Tauri app spawns Express backend via global 'node' command — cra
 type: debt-note
 source: "conductor/comprehensive-audit.md §5"
 confidence: proven
-topics: ["[[architecture-decisions]]"]
+topics: ["[[architecture-decisions]]", "[[competitive-landscape]]"]
 related_components: ["src-tauri/src/lib.rs"]
 ---
 
@@ -16,8 +16,9 @@ A properly bundled executable (via `pkg` or Tauri Sidecar Binaries) must be used
 ---
 
 Relevant Notes:
-- [[tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce]] -- Tauri has multiple configuration issues
-- [[execsync-in-arduino-service-blocks-entire-express-event-loop]] -- hardware ops should go native
+- [[tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce]] -- three compounding Tauri configuration failures undermine the desktop pivot
+- [[execsync-in-arduino-service-blocks-entire-express-event-loop]] -- hardware ops should migrate to native Rust Tauri plugins
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- the pivot requires a self-contained binary to deliver on its promise
 
 Topics:
 - [[architecture-decisions]]

@@ -17,6 +17,9 @@ Refactoring to an O(1) Map lookup (build a node-id → node Map once, then looku
 
 Relevant Notes:
 - [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- prompt construction latency compounds with token scaling
+- [[genkit-125-flat-tools-is-an-outdated-anti-pattern-needs-multi-agent]] -- multi-agent architecture would decompose the monolithic prompt into focused per-agent prompts
+- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- both block the main thread: prompt construction via O(N*M) scans, simulation via O(N^3) elimination
+- [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- the same pattern: O(N) synchronous work on the main thread
 
 Topics:
 - [[architecture-decisions]]

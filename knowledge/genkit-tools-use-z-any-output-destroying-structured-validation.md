@@ -17,6 +17,9 @@ Additionally, `inputSchema: toolDef.parameters as any` in the same file bypasses
 
 Relevant Notes:
 - [[all-procurement-data-is-ai-fabricated]] -- fabricated data compounds when output isn't validated
+- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- z.any() removes compile-time validation and no eval framework means runtime validation is also absent
+- [[risk-analysis-tool-references-nonexistent-schema-columns]] -- both are schema/type boundary failures: z.any() at the LLM boundary, missing columns at the DB boundary
+- [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- unvalidated output enables mock data to flow through unchecked
 
 Topics:
 - [[architecture-decisions]]

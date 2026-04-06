@@ -21,6 +21,8 @@ Fix: evaluate user code in a secure Web Worker sandbox (not the main thread), mi
 
 Relevant Notes:
 - [[tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce]] -- the escalation path from XSS to RCE
+- [[websocket-sessions-are-never-revalidated-after-initial-handshake]] -- hijacked session tokens give persistent WebSocket access
+- [[scrypt-64mb-per-request-enables-oom-dos-before-rate-limiter]] -- multiple auth boundary vulnerabilities compound: XSS steals tokens, scrypt enables DoS
 
 Topics:
 - [[architecture-decisions]]

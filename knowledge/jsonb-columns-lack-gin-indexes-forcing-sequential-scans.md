@@ -17,6 +17,8 @@ Drizzle ORM best practices dictate that frequently queried JSON keys (like compo
 
 Relevant Notes:
 - [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] -- Drizzle chosen for type safety but JSONB indexing not leveraged
+- [[build-system-prompt-has-on-m-edge-resolution-bottleneck]] -- JSONB sequential scans compound with O(N*M) prompt construction: slow DB + slow prompt = double latency
+- [[risk-analysis-tool-references-nonexistent-schema-columns]] -- both are schema design failures: JSONB buries data that should be indexed columns
 
 Topics:
 - [[architecture-decisions]]

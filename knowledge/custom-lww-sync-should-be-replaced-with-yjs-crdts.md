@@ -19,6 +19,8 @@ The 2026 standard is Yjs (or Automerge), which handles deterministic CRDT mergin
 
 Relevant Notes:
 - [[ai-is-the-moat-lean-into-it]] -- collaboration is a competitive feature gap
+- [[websocket-sessions-are-never-revalidated-after-initial-handshake]] -- the same CollaborationServer has both sync integrity and auth boundary issues
+- [[cross-tool-coherence-is-harder-than-building-features]] -- LWW breaks cross-view coherence when two users edit related data in different views
 
 Topics:
 - [[architecture-decisions]]

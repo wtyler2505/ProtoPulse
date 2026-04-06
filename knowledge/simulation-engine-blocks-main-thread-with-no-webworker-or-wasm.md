@@ -19,6 +19,9 @@ WebGPU compute shaders (WGSL) are the standard for parallelizing Monte Carlo spa
 
 Relevant Notes:
 - [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- canvas AND simulation both block the main thread
+- [[erc-pin-classification-uses-fragile-regex-that-fails-on-nonstandard-names]] -- ERC engine also runs JS on main thread, same Wasm migration path
+- [[build-system-prompt-has-on-m-edge-resolution-bottleneck]] -- three synchronous bottlenecks (sim, canvas, prompt) compound into user-visible freezes
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- Tauri enables native Wasm-ngspice sidecar instead of JS solver
 
 Topics:
 - [[architecture-decisions]]

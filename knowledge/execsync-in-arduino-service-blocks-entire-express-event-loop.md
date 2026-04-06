@@ -15,6 +15,9 @@ In `server/arduino-service.ts`, methods like `discoverBoards`, `searchLibraries`
 
 Relevant Notes:
 - [[arduino-cli-mcp-bridges-software-development-and-hardware-programming]] -- hardware ops need non-blocking paths
+- [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] -- both argue for native Rust Tauri plugins replacing Node.js shell spawning
+- [[setinterval-never-cleared-creates-memory-ratchet-in-server-routes]] -- both degrade Express: execSync blocks the event loop, dangling intervals leak memory
+- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- pattern: synchronous computation that should be offloaded (worker/wasm/native)
 
 Topics:
 - [[architecture-decisions]]
