@@ -45,6 +45,20 @@ This topic map organizes what ProtoPulse DOESN'T have yet, what's broken, and wh
 - [[greatness-manifest-pushed-beyond-parity-into-innovation]] -- 11 C5 items no competitor has
 - [[breadboard-plus-ai-plus-free-is-a-unique-maker-bundle]] -- Fritzing breadboard + AI + $0
 
+## Developer Infrastructure Gaps
+
+- [[session-orient-and-validate-note-have-syntax-bugs]] -- two hook scripts have bash syntax errors from concatenated lines
+- [[nine-posttooluse-groups-fire-on-every-write]] -- dense blocking pipeline adds latency to every edit
+- [[auto-commit-vault-is-the-only-async-hook]] -- 25 blocking hooks vs 1 async creates bottleneck
+- [[two-hook-groups-have-no-explicit-matcher]] -- fragile implicit defaults in settings.json
+- [[thirty-seven-agents-have-no-trigger-patterns]] -- agents cannot self-activate, must be manually invoked
+- [[six-agents-cover-technologies-not-in-protopulse-stack]] -- dead-weight agent definitions
+- [[postgres-mcp-has-inline-credentials-in-mcp-json]] -- hardcoded DB password in version control
+- [[combined-claude-md-exceeds-800-lines-creating-context-pressure]] -- ~8600 tokens consumed per session by instructions alone
+- [[claude-md-references-a-settings-skill-that-does-not-exist]] -- stale reference after skill removal
+- [[subagentsop-event-is-declared-but-has-no-hooks]] -- subagent quality gates missing
+- [[vault-skills-outnumber-project-skills-seven-to-one]] -- development workflow skills underserved
+
 ## Query Scripts
 
 Run these for live analysis:
@@ -54,6 +68,7 @@ Run these for live analysis:
 - `bash ops/queries/unmet-needs.sh` -- user needs cross-referenced with debt
 - `bash ops/queries/idea-generator.sh` -- feature opportunities from graph patterns
 - `bash ops/queries/backlog-vs-knowledge.sh` -- backlog items with vault evidence
+- `bash ops/queries/infra-audit.sh` -- comprehensive Claude Code infrastructure health audit
 
 ---
 

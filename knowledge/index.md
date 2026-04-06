@@ -20,6 +20,7 @@ Welcome to the ProtoPulse knowledge system. This is where claims, decisions, ins
 - [[breadboard-intelligence]] -- bench coach, verified boards, layout quality
 - [[maker-ux]] -- what makes features accessible to beginners
 - [[gaps-and-opportunities]] -- what's missing, broken, and where the biggest opportunities live
+- [[dev-infrastructure]] -- Claude Code hooks, skills, agents, MCP servers, and settings
 
 ## Getting Started
 1. Read self/identity.md to understand the agent's purpose
