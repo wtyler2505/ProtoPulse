@@ -53,6 +53,12 @@ interface BreadboardSelectionPromptContext {
     description?: string | null;
     confidence: 'exact' | 'heuristic';
   }>;
+  // Verified board intelligence (optional — only present for verified board pack matches)
+  verifiedBoard?: boolean;
+  boardWarnings?: string[];
+  bootPinWarnings?: string[];
+  adcWifiConflict?: boolean;
+  adcWifiConflictPinIds?: string[];
 }
 
 function buildSharedContext({ projectName, insights }: BreadboardPromptContext): string {
@@ -112,7 +118,7 @@ export function buildBreadboardSelectionPrompt(
     .map((pin) => `- ${pin.label} -> ${pin.coordLabel} (${pin.confidence}${pin.description ? `; ${pin.description}` : ''})`)
     .join('\n');
 
-  const shared = [
+  const lines = [
     `Project: ${context.projectName}`,
     'This request is coming from ProtoPulse Breadboard Lab.',
     `Selected part: ${context.partTitle} (${context.refDes})`,
@@ -137,7 +143,25 @@ export function buildBreadboardSelectionPrompt(
     `Bench cautions: ${context.coachCautions.join(' | ') || 'None captured yet'}`,
     'Current pin map:',
     pinDigest,
-  ].join('\n');
+  ];
+
+  // Inject verified board intelligence when available
+  if (context.verifiedBoard) {
+    lines.push('');
+    lines.push('VERIFIED BOARD INTELLIGENCE (from ProtoPulse Board Pack):');
+    if (context.boardWarnings && context.boardWarnings.length > 0) {
+      lines.push(`Board safety warnings: ${context.boardWarnings.join(' | ')}`);
+    }
+    if (context.bootPinWarnings && context.bootPinWarnings.length > 0) {
+      lines.push(`Boot/strapping pin rules: ${context.bootPinWarnings.join(' | ')}`);
+    }
+    if (context.adcWifiConflict && context.adcWifiConflictPinIds && context.adcWifiConflictPinIds.length > 0) {
+      lines.push(`ADC2 WiFi conflict: YES — pins ${context.adcWifiConflictPinIds.join(', ')} are UNAVAILABLE when WiFi is active. Use ADC1 channels instead.`);
+    }
+    lines.push('These warnings come from verified datasheet research. Treat them as authoritative safety guidance.');
+  }
+
+  const shared = lines.join('\n');
 
   switch (actionId) {
     case 'audit_selected_pinout':

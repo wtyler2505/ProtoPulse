@@ -1,4 +1,4 @@
-import { Bot, Lightbulb, MapPin, PackageCheck, Sparkles, Wand2 } from 'lucide-react';
+import { Bot, Lightbulb, MapPin, PackageCheck, ShieldCheck, Sparkles, Wand2 } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -351,6 +351,44 @@ export default function BreadboardPartInspector({
               </div>
             </div>
           </section>
+
+          {model.verifiedBoard && (
+            <section className="rounded-2xl border border-cyan-400/25 bg-cyan-400/6 p-3" data-testid="breadboard-part-inspector-verified-board">
+              <div className="flex items-start gap-2">
+                <ShieldCheck className="mt-0.5 h-4 w-4 text-cyan-400" />
+                <div>
+                  <p className="text-xs font-semibold text-cyan-300">Verified Board</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                    This part matched a verified board definition with pin-accurate data from official datasheets.
+                  </p>
+                </div>
+              </div>
+              {model.boardWarnings && model.boardWarnings.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-400/90">Safety Warnings</p>
+                  {model.boardWarnings.map((warning, i) => (
+                    <p key={i} className="text-[11px] leading-relaxed text-amber-200/80">{warning}</p>
+                  ))}
+                </div>
+              )}
+              {model.bootPinWarnings && model.bootPinWarnings.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-orange-400/90">Boot / Strapping Pins</p>
+                  {model.bootPinWarnings.map((warning, i) => (
+                    <p key={i} className="text-[11px] leading-relaxed text-orange-200/70">{warning}</p>
+                  ))}
+                </div>
+              )}
+              {model.adcWifiConflict && model.adcWifiConflictPinIds && model.adcWifiConflictPinIds.length > 0 && (
+                <div className="mt-3 rounded-xl border border-red-400/25 bg-red-400/8 px-3 py-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-red-400/90">ADC2 WiFi Conflict</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-red-200/80">
+                    Pins {model.adcWifiConflictPinIds.join(', ')} use ADC2 channels that are <strong>unavailable when WiFi is active</strong>. Use ADC1 channels (GPIO 32-39) instead.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
 
           <section className="rounded-2xl border border-border/60 bg-background/45 p-3" data-testid="breadboard-part-inspector-inventory">
             <div className="flex items-start gap-2">

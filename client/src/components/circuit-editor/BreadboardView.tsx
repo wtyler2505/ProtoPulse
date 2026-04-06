@@ -983,6 +983,11 @@ function BreadboardCanvas({
       verificationStatus: selectedInstanceModel.verificationStatus,
       coachNextMoves: selectedInstanceModel.coach.nextMoves,
       coachCautions: selectedInstanceModel.coach.cautions,
+      verifiedBoard: selectedInstanceModel.verifiedBoard,
+      boardWarnings: selectedInstanceModel.boardWarnings,
+      bootPinWarnings: selectedInstanceModel.bootPinWarnings,
+      adcWifiConflict: selectedInstanceModel.adcWifiConflict,
+      adcWifiConflictPinIds: selectedInstanceModel.adcWifiConflictPinIds,
       pins: selectedInstanceModel.pins.map((pin) => ({
         label: pin.label,
         coordLabel: pin.coordLabel,
