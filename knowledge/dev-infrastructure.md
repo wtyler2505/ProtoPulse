@@ -45,10 +45,15 @@ Hooks fire automatically on Claude Code lifecycle events. ProtoPulse uses 26 hoo
 
 ## MCP Servers
 
-3 MCP servers: playwright (browser automation), postgres (direct DB queries), desktop-commander (sensitive file ops).
+4 project MCP servers + Arduino CLI MCP globally. Each extends a distinct capability dimension.
 
+- [[four-mcp-servers-extend-four-distinct-capability-dimensions]] -- secrets, data, browser, search
+- [[five-mcp-capability-dimensions-map-to-five-development-needs]] -- the full capability pentagon including hardware
 - [[desktop-commander-is-required-for-reading-env-and-secrets]] -- Claude Code blocks .env access
 - [[postgres-mcp-has-inline-credentials-in-mcp-json]] -- connection string contains password
+- [[playwright-mcp-provides-browser-automation-but-chrome-devtools-mcp-provides-dom-inspection]] -- two browser tools, different purposes
+- [[qmd-mcp-enables-semantic-search-across-the-knowledge-vault]] -- semantic search over markdown
+- [[arduino-cli-mcp-bridges-software-development-and-hardware-programming]] -- 16 tools for firmware lifecycle
 
 ## Configuration
 
@@ -56,6 +61,25 @@ Hooks fire automatically on Claude Code lifecycle events. ProtoPulse uses 26 hoo
 - `.claudekit/config.json` -- timeout overrides for typecheck hooks (180s vs default 30s)
 - `.mcp.json` -- MCP server definitions and timeouts
 - `CLAUDE.md` -- 488 lines project instructions + 399 lines global instructions = 887 lines per session
+
+## Plugins
+
+32 plugins from 8 marketplaces. Most are user-scoped (load for all projects).
+
+- [[thirty-two-plugins-installed-but-fewer-than-twelve-actively-used-in-protopulse]] -- cognitive overhead
+- [[plugin-marketplaces-fragment-across-eight-registries-with-no-unified-catalog]] -- update drift and duplication
+- [[plugin-hooks-can-conflict-with-project-hooks-on-shared-events]] -- shared event bus, no conflict detection
+- [[context7-plugin-provides-real-time-library-docs-that-beat-stale-training-data]] -- real-time docs for modern libs
+
+## Meta-Layer
+
+The configuration that wires all components into a coherent system.
+
+- [[the-meta-layer-connects-hooks-skills-agents-and-mcp-into-a-coherent-system]] -- settings.json + CLAUDE.md + .mcp.json
+- [[claude-md-is-the-routing-table-that-maps-situations-to-skills]] -- routing coverage gaps
+- [[hooks-enforce-rules-automatically-but-skills-require-explicit-invocation]] -- the enforcement gap
+- [[context-compaction-erases-skill-routing-knowledge-causing-capability-amnesia]] -- long session degradation
+- [[infrastructure-maintenance-follows-audit-debug-create-improve-cycle]] -- the maintenance workflow
 
 ## Known Issues
 

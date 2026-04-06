@@ -11,10 +11,14 @@ The ecosystem has four layers, each with different ownership and update cadence.
 
 ## Layer 1: Plugin Skills (externally maintained)
 
-Plugins inject skills that appear alongside native ones. ProtoPulse has 6+ active plugins providing ~50 skill entry points.
+Plugins inject skills that appear alongside native ones. 32 plugins from 8 marketplaces provide ~142 skill entry points, but fewer than 12 are actively used.
 
 - [[superpowers-plugin-provides-the-core-development-lifecycle]] -- brainstorm, plan, execute, test, review, ship
 - [[ars-contexta-plugin-provides-ten-knowledge-system-operations]] -- setup through health, the vault backbone
+- [[context7-plugin-provides-real-time-library-docs-that-beat-stale-training-data]] -- compensates for stale training data on modern libs
+- [[thirty-two-plugins-installed-but-fewer-than-twelve-actively-used-in-protopulse]] -- cognitive overhead of unused plugins
+- [[plugin-marketplaces-fragment-across-eight-registries-with-no-unified-catalog]] -- update drift and duplication
+- [[plugin-hooks-can-conflict-with-project-hooks-on-shared-events]] -- shared lifecycle event bus with no conflict detection
 - [[three-separate-code-review-paths-create-routing-confusion]] -- requesting, receiving, and plugin code-review overlap
 - [[four-overlapping-task-management-systems-fragment-attention]] -- /tasks, /next, /ralph, taskmaster plugin
 
@@ -64,9 +68,26 @@ Some skills form explicit sequences. The most important chains:
 3. **Debugging escalation**: systematic-debugging -> when-stuck -> oracle
 4. **Code review**: requesting-code-review -> code-review-expert agent -> receiving-code-review
 5. **Spec workflow**: spec:create -> spec:validate -> spec:decompose -> spec:execute
+6. **Infrastructure maintenance**: infra-audit.sh -> hook-debug -> hook-create/fix -> claude-md-improver
 
+- [[the-full-quality-pipeline-is-brainstorm-plan-execute-test-review-verify-ship]] -- seven phases with stopping criteria
+- [[the-knowledge-capture-pipeline-is-seed-extract-connect-revisit-verify]] -- five phases with distinct cognitive functions
+- [[the-debugging-escalation-path-trades-speed-for-depth-across-four-levels]] -- four levels trading speed for depth
+- [[infrastructure-maintenance-follows-audit-debug-create-improve-cycle]] -- reactive and proactive maintenance
+- [[two-parallel-implementation-paths-exist-with-no-routing-guidance-between-them]] -- superpowers vs spec, no decision criteria
 - [[writing-plans-must-precede-executing-plans-as-contract]] -- the plan is the contract
 - [[extract-connect-revisit-verify-mirrors-academic-methodology]] -- reduce-reflect-reweave-verify
+
+## Meta-Layer (routing, enforcement, and system coherence)
+
+The meta-layer is the configuration that wires hooks, skills, agents, and MCP servers into a coherent system.
+
+- [[skills-organize-in-three-tiers-project-plugin-and-system]] -- 23 project + 142 plugin + built-in = 215+
+- [[the-skill-system-has-no-automatic-routing-the-agent-must-know-which-skill-to-invoke]] -- no middleware, all manual
+- [[claude-md-is-the-routing-table-that-maps-situations-to-skills]] -- ~40 situations routed, ~160 unrouted
+- [[hooks-enforce-rules-automatically-but-skills-require-explicit-invocation]] -- the enforcement gap
+- [[the-meta-layer-connects-hooks-skills-agents-and-mcp-into-a-coherent-system]] -- settings.json + CLAUDE.md + .mcp.json
+- [[context-compaction-erases-skill-routing-knowledge-causing-capability-amnesia]] -- long sessions lose skill associations
 
 ## Gaps
 
