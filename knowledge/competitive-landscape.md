@@ -48,6 +48,16 @@ Analysis of competing EDA tools — their strengths, gaps, and what ProtoPulse c
 **Gaps:** No PCB, no BOM, no project management. Very bare-bones UI.
 **Lesson:** The Falstad-style oscilloscope view is worth building into ProtoPulse's simulation panel.
 
+## Knowledge Notes
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- uncontested niche
+- [[protopulse-ai-breadth-is-6x-flux-ai]] -- quantifiable AI moat
+- [[flux-ai-is-the-primary-competitive-threat]] -- complete EDA tool vs AI-first tool
+- [[self-hosted-and-free-is-a-pricing-moat]] -- zero cost vs $20-$158/month
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the three-part value prop
+- [[ai-is-the-moat-lean-into-it]] -- strategic direction from all 5 phases
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- biggest competitive gap
+- [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- market context
+
 ## ProtoPulse's Differentiators
 1. **AI with 125 tools** that directly manipulate project state — no other tool does this
 2. **Full workflow** from schematic → BOM → PCB → Gerber without leaving the tool

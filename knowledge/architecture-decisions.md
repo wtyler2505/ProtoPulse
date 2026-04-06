@@ -11,6 +11,17 @@ topics:
 
 Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` for formal ADRs.
 
+## Knowledge Notes
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- architecture-first is unique
+- [[ai-is-the-moat-lean-into-it]] -- lean into AI over traditional EDA catch-up
+- [[architecture-first-bridges-intent-to-implementation]] -- why architecture-first matters
+- [[god-files-create-feature-paralysis-through-complexity]] -- 12 god files blocked feature domains
+- [[dual-export-system-is-a-maintenance-trap]] -- parallel implementations require double fixes
+- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- O(N) system prompt cost
+- [[monolithic-context-causes-quadratic-render-complexity]] -- ProjectProvider re-render cascade
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- codebase scale quantified
+- [[cors-origin-reflection-was-a-critical-csrf-vector]] -- highest-severity security finding
+
 ## Core Stack Decisions
 
 ### Express 5 (not Next.js)

@@ -11,6 +11,9 @@ topics:
 
 Core electronics and EDA knowledge. Claims here are verifiable facts about components, protocols, design rules, and simulation fundamentals.
 
+## Knowledge Notes
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- PCB rated missing vs all competitors
+
 ## Sub-Topics (to be populated)
 
 ### Component Knowledge

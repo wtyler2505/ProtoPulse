@@ -12,6 +12,14 @@ topics:
 
 Knowledge about UX patterns, interaction design, and accessibility principles that make ProtoPulse useful for makers, hobbyists, and learners — not just engineers.
 
+## Knowledge Notes
+- [[self-hosted-and-free-is-a-pricing-moat]] -- zero cost is decisive for makers
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the unique three-part value prop
+- [[architecture-first-bridges-intent-to-implementation]] -- beginners describe intent, not topology
+- [[all-procurement-data-is-ai-fabricated]] -- simulated data more dangerous than missing data
+- [[exports-are-only-accessible-via-ai-chat]] -- features invisible without AI command knowledge
+- [[zero-form-elements-means-no-native-input-paradigm]] -- missing input mechanism
+
 ## Core Principle
 **If a feature requires the user to already understand electronics to use it, it's not done yet.** Add AI guidance, tooltips, contextual explanations, or a learning mode.
 
