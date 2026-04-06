@@ -18,8 +18,10 @@ The test counts are non-trivial: 68-133 tests per Greatness Manifest item, with 
 ---
 
 Relevant Notes:
-- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- the system that enabled this
-- [[protopulse-ai-breadth-is-6x-flux-ai]] -- AI moat extended further
+- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- the systematic wave execution that cleared the path to visionary work
+- [[protopulse-ai-breadth-is-6x-flux-ai]] -- AI moat extended further into territory no competitor occupies
+- [[ai-is-the-moat-lean-into-it]] -- the Greatness Manifest is the logical conclusion of the "lean into AI" strategy
+- [[c5-items-are-programs-not-features]] -- all 11 Manifest items are C5 complexity, requiring full program treatment
 
 Topics:
 - [[competitive-landscape]]

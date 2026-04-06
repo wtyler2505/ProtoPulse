@@ -18,8 +18,10 @@ The bench coach should flag any wire connected to GPIO 6-11 as a hard error, not
 ---
 
 Relevant Notes:
-- [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- dangerous at boot but usable after
-- [[esp32-adc2-unavailable-when-wifi-active]] -- conditional restriction vs. absolute restriction
+- [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- dangerous at boot but usable after; these pins are never usable
+- [[esp32-adc2-unavailable-when-wifi-active]] -- conditional restriction vs. absolute restriction: a spectrum of pin usability
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- 6 unusable pins on a board that barely fits compounds the deceptive complexity
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- the bench coach should visually flag these pins as red/unusable, not just list warnings
 
 Topics:
 - [[eda-fundamentals]]

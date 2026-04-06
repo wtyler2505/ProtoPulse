@@ -18,8 +18,10 @@ From a microcontroller wiring perspective: an Arduino digital pin defaults to IN
 ---
 
 Relevant Notes:
-- [[hall-sensor-wiring-order-matters-for-bldc]] -- another BLDC wiring trap
+- [[hall-sensor-wiring-order-matters-for-bldc]] -- another BLDC wiring trap on the same controller
 - [[mega-2560-four-hardware-uarts]] -- the Mega can drive this controller via a dedicated UART
+- [[architecture-first-bridges-intent-to-implementation]] -- "motor controller" as an architecture block hides this polarity complexity that AI must surface
+- [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- another "opposite logic level" trap where pin state has non-obvious consequences
 
 Topics:
 - [[eda-fundamentals]]

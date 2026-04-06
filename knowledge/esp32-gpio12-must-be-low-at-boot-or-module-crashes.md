@@ -20,6 +20,8 @@ Practical mitigation: if you must use GPIO12, add a strong pull-down (4.7K or lo
 Relevant Notes:
 - [[esp32-adc2-unavailable-when-wifi-active]] -- another ESP32 pin restriction that surprises beginners
 - [[esp32-six-flash-gpios-must-never-be-used]] -- the even more absolute pin restriction
+- [[bldc-stop-active-low-brake-active-high]] -- another "opposite logic level" trap where pin state has non-obvious consequences
+- [[hall-sensor-wiring-order-matters-for-bldc]] -- another "wiring determines behavior" trap on the same rover project
 
 Topics:
 - [[eda-fundamentals]]

@@ -20,6 +20,8 @@ The color coding convention (Ha = yellow, Hb = green, Hc = blue, +5V = red, GND 
 Relevant Notes:
 - [[bldc-stop-active-low-brake-active-high]] -- control signal conventions for the same controller
 - [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- another "wiring determines boot behavior" trap
+- [[architecture-first-bridges-intent-to-implementation]] -- the bench coach must warn about hall sensor ordering when a "BLDC motor" block appears
+- [[mega-2560-four-hardware-uarts]] -- the Mega's Serial3 is often used to monitor hall sensor state during debugging
 
 Topics:
 - [[eda-fundamentals]]

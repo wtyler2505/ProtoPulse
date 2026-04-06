@@ -18,8 +18,10 @@ The backlog responds to this by requiring C5 preplanning artifacts. Two are expl
 ---
 
 Relevant Notes:
-- [[six-epics-organize-the-remaining-strategic-work]] -- epics wrap C5 programs
-- [[native-desktop-pivot-unblocked-three-c5-programs]] -- pivot was itself a C5 decision
+- [[six-epics-organize-the-remaining-strategic-work]] -- epics wrap C5 programs into strategic groupings
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- the pivot was itself a C5 decision that cleared three other C5 blockers
+- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- wave-based execution required different treatment for C5 vs C1-C3 items
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- C5 items drive the complexity that makes the codebase equivalent to $1.9M of effort
 
 Topics:
 - [[architecture-decisions]]

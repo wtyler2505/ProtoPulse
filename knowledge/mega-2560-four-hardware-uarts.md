@@ -18,8 +18,10 @@ An important gotcha: Serial1 pins 18/19 are also external interrupt pins (INT5/I
 ---
 
 Relevant Notes:
-- [[mega-2560-too-wide-for-any-breadboard]] -- physical constraint that complicates wiring
-- [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- another Mega-specific layout quirk
+- [[mega-2560-too-wide-for-any-breadboard]] -- physical constraint that complicates wiring to all four UARTs
+- [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- another Mega-specific layout quirk the bench coach must handle
+- [[bldc-stop-active-low-brake-active-high]] -- the Mega can drive the motor controller via a dedicated UART
+- [[hall-sensor-wiring-order-matters-for-bldc]] -- Serial3 is often used for debugging hall sensor state
 
 Topics:
 - [[eda-fundamentals]]

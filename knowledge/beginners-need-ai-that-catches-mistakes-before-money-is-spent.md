@@ -18,8 +18,10 @@ The proactive pattern matters more than the reactive one. BL-0457 (self-healing 
 ---
 
 Relevant Notes:
-- [[ai-is-the-moat-lean-into-it]] -- AI is the differentiator
-- [[all-procurement-data-is-ai-fabricated]] -- AI must be trustworthy or it is worse than nothing
+- [[ai-is-the-moat-lean-into-it]] -- AI is the differentiator, and proactive error catching is its highest-value expression for beginners
+- [[all-procurement-data-is-ai-fabricated]] -- AI must be trustworthy or it is worse than nothing; fabricated data is the anti-pattern
+- [[architecture-first-bridges-intent-to-implementation]] -- beginners describe intent; AI must catch mistakes in the gap between intent and implementation
+- [[tinkercad-perception-gap-is-about-seeing-not-computing]] -- visible feedback catches mistakes faster than error logs
 
 Topics:
 - [[maker-ux]]

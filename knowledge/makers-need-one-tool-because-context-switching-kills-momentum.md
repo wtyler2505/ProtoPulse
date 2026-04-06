@@ -18,8 +18,10 @@ The need is not "a better EDA tool." It is "a tool where I never have to leave."
 ---
 
 Relevant Notes:
-- [[cross-tool-coherence-is-harder-than-building-features]] -- the architectural cost
-- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- what the bundle enables
+- [[cross-tool-coherence-is-harder-than-building-features]] -- the architectural cost of "never leave the tool"
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the bundle that makes staying in one tool worthwhile
+- [[competitive-audits-generated-more-work-than-internal-analysis]] -- audits validated that every competitor forces users to leave for other domains
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- native desktop closes the firmware gap that forced leaving for Arduino IDE
 
 Topics:
 - [[maker-ux]]

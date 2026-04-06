@@ -18,8 +18,9 @@ The Mega's maximum total I/O current is also worth noting in this context: 200mA
 ---
 
 Relevant Notes:
-- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- the ESP32 at least physically fits, barely
-- [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- another physical layout consideration
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- the ESP32 at least physically fits, barely; the Mega cannot fit at all
+- [[mega-2560-pin-7-8-gap-for-shield-compatibility]] -- another physical layout consideration for the same board
+- [[mega-2560-four-hardware-uarts]] -- the 4 UARTs make the Mega a rover hub, but its size means all connections are off-board jumpers
 
 Topics:
 - [[breadboard-intelligence]]

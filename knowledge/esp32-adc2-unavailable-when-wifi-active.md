@@ -20,6 +20,8 @@ The practical rule: if your project uses WiFi (and most ESP32 projects do), desi
 Relevant Notes:
 - [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] -- GPIO12 is also an ADC2 pin, compounding the risk
 - [[esp32-six-flash-gpios-must-never-be-used]] -- another class of "looks usable but isn't"
+- [[all-procurement-data-is-ai-fabricated]] -- same anti-pattern at the data layer: something appears available but silently fails
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] -- physical fit + unusable pins compound the ESP32's deceptive complexity
 
 Topics:
 - [[eda-fundamentals]]

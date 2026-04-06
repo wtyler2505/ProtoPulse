@@ -18,8 +18,10 @@ The audit-to-backlog-to-wave pipeline works because each step adds structure: ra
 ---
 
 Relevant Notes:
-- [[all-p0-and-p1-items-resolved-proves-security-first-discipline]] -- audit drove priority
-- [[competitive-audits-generated-more-work-than-internal-analysis]] -- competitive audits added to the structure
+- [[all-p0-and-p1-items-resolved-proves-security-first-discipline]] -- the audit drove priority tiers that enforced security-first
+- [[competitive-audits-generated-more-work-than-internal-analysis]] -- competitive audits complemented the Codex audit with external benchmarks
+- [[backlog-completion-at-501-items-reveals-systematic-execution]] -- the audit-to-backlog-to-wave pipeline enabled 501-item completion
+- [[cors-origin-reflection-was-a-critical-csrf-vector]] -- concrete example of a P0 finding the Codex audit surfaced
 
 Topics:
 - [[architecture-decisions]]
