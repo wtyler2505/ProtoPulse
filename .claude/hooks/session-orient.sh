@@ -59,7 +59,7 @@ fi
 # Check for due reminders
 if [[ -f "ops/reminders.md" ]]; then
   today=$(date +%Y-%m-%d)
-  due=$(grep -cE "^- \[ \] $today|^- \[ \] [0-9]{4}-[0-9]{2}-[0-9]{2}" "ops/reminders.md" 2>/dev/null || echo "0")
+  due=$(grep -cE "^- \[ \] $today|^- \[ \] [0-9]{4}-[0-9]{2}-[0-9]{2}" "ops/reminders.md" 2>/dev/null) || due=0
   if [[ "$due" -gt 0 ]]; then
     echo "Reminders due: check ops/reminders.md"
   fi
@@ -67,7 +67,7 @@ fi
 
 # Check for stale tasks
 if [[ -f "ops/tasks.md" ]]; then
-  active=$(grep -c '^\- \[ \]' "ops/tasks.md" 2>/dev/null || echo "0")
+  active=$(grep -c '^\- \[ \]' "ops/tasks.md" 2>/dev/null) || active=0
   if [[ "$active" -gt 0 ]]; then
     echo "Active tasks: $active (see ops/tasks.md)"
   fi
