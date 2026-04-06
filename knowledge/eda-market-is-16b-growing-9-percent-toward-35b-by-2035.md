@@ -17,6 +17,9 @@ The maker/education/hobbyist segment that ProtoPulse targets is a fraction of th
 Relevant Notes:
 - [[flux-ai-is-the-primary-competitive-threat]] -- the nearest competitor in this market
 - [[self-hosted-and-free-is-a-pricing-moat]] -- pricing strategy for market entry
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- architecture-first creates new customers rather than competing for existing ones
+- [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- $1.9M effort is proportionate to the opportunity in a $16B+ market
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- the bundle targets the maker/education segment within this TAM
 
 Topics:
 - [[competitive-landscape]]
