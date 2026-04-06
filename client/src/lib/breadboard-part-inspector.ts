@@ -734,7 +734,18 @@ export function buildBreadboardSelectedPartModel(
     trustSummary: trust.summary,
     verificationLevel,
     verificationStatus,
-    coach,
+    coach: verifiedBoardDef
+      ? {
+          ...coach,
+          cautions: [
+            ...coach.cautions,
+            ...verifiedBoardDef.warnings.slice(0, 2),
+            ...(verifiedBoardDef.bootPins && verifiedBoardDef.bootPins.length > 0
+              ? [`${String(verifiedBoardDef.bootPins.length)} strapping/boot pins affect power-on behavior — see Verified Board section below.`]
+              : []),
+          ].slice(0, 6),
+        }
+      : coach,
     pins,
 
     // Verified board intelligence (only present when a board pack match is found)
