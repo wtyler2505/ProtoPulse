@@ -18,6 +18,8 @@ Relevant Notes:
 - [[self-hosted-and-free-is-a-pricing-moat]] -- the pricing leg
 - [[protopulse-ai-breadth-is-6x-flux-ai]] -- the AI leg
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- beyond breadboard, architecture is unique too
+- [[architecture-first-bridges-intent-to-implementation]] -- architecture-first adds a fourth leg that strengthens the bundle for beginners
+- [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- the maker/education segment this bundle targets within the larger market
 
 Topics:
 - [[maker-ux]]
