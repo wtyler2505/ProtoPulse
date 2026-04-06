@@ -17,7 +17,8 @@ The existential risk is asymmetric. If ProtoPulse only improves AI while neglect
 Relevant Notes:
 - [[protopulse-ai-breadth-is-6x-flux-ai]] -- where ProtoPulse leads
 - [[self-hosted-and-free-is-a-pricing-moat]] -- pricing advantage
-- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- the gap
+- [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- the gap that Flux.ai exploits
+- [[ai-is-the-moat-lean-into-it]] -- the strategic response: leapfrog with AI instead of chasing PCB parity
 
 Topics:
 - [[competitive-landscape]]
