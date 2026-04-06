@@ -10,6 +10,9 @@ tools: Bash
 category: general
 displayName: Oracle (GPT-5)
 color: purple
+memory: project
+effort: high
+maxTurns: 50
 ---
 
 # Oracle

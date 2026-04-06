@@ -6,6 +6,8 @@ displayName: Code Review Expert
 category: general
 color: blue
 model: sonnet
+memory: project
+maxTurns: 25
 ---
 
 # Code Review Expert

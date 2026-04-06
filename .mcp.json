@@ -13,13 +13,18 @@
       "args": [
         "-y",
         "@modelcontextprotocol/server-postgres",
-        "postgresql://protopulse:protopulse@localhost:5432/protopulse"
+        "${DATABASE_URL}"
       ],
       "timeout": 60000
     },
     "desktop-commander": {
       "command": "desktop-commander",
       "args": [],
+      "timeout": 30000
+    },
+    "qmd": {
+      "command": "qmd",
+      "args": ["mcp"],
       "timeout": 30000
     }
   }

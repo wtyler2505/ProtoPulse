@@ -6,6 +6,9 @@ displayName: EDA Domain Reviewer
 category: general
 color: green
 model: sonnet
+memory: project
+effort: high
+maxTurns: 30
 ---
 
 # EDA Domain Reviewer

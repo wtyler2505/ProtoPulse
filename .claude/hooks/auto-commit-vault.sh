@@ -22,7 +22,8 @@ case "$FILE_PATH" in
   knowledge/*|inbox/*|self/*|ops/*|templates/*|manual/*)
     dir=$(echo "$FILE_PATH" | cut -d'/' -f1)
     basename_file=$(basename "$FILE_PATH")
-    git add "$FILE_PATH" 2>/dev/null || exit 0    git commit -m "vault($dir): auto-commit $basename_file" --no-verify 2>/dev/null || exit 0
+    git add "$FILE_PATH" 2>/dev/null || exit 0
+    git commit -m "vault($dir): auto-commit $basename_file" --no-verify 2>/dev/null || exit 0
     ;;
   */knowledge/*|*/inbox/*|*/self/*|*/ops/*|*/templates/*|*/manual/*)
     dir=$(echo "$FILE_PATH" | grep -oE '(knowledge|inbox|self|ops|templates|manual)' | head -1)

@@ -44,7 +44,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claudekit-hooks run typecheck-changed"
+            "command": "claudekit-hooks run typecheck-changed",
+            "timeout": 120
           }
         ]
       },
@@ -62,7 +63,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claudekit-hooks run test-changed"
+            "command": "claudekit-hooks run test-changed",
+            "timeout": 180
           }
         ]
       },
@@ -98,7 +100,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/context-budget.sh"
+            "command": "/home/wtyler/Projects/ProtoPulse/.claude/hooks/context-budget.sh",
+            "async": true
           }
         ]
       },
@@ -170,7 +173,36 @@
         ]
       }
     ],
-    "SubagentStop": [],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "A subagent just finished. Check: did it complete its assigned task? Did it leave any TypeScript errors or test failures? If it modified files, are all changes consistent with the codebase patterns? Send feedback if work is incomplete."
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before marking this task complete: Were all TypeScript errors fixed? Did relevant tests pass? Were any new files properly integrated? Is the implementation actually done or just half-done? If anything was left incomplete, block completion with a specific reason."
+          }
+        ]
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "This agent-teams teammate just went idle. Check: did they finish all assigned tasks? Did they leave TypeScript errors? Did they run tests on their changes? If work is incomplete or unverified, send feedback asking them to finish. If everything looks good, approve idle."
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "*",
