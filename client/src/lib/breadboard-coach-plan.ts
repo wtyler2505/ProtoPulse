@@ -1,6 +1,46 @@
 import { type TiePoint, type ColumnLetter, type RailPoint, type RailId } from '@/lib/circuit-editor/breadboard-model';
 import type { BreadboardPinMapEntry, BreadboardSelectedPartModel } from '@/lib/breadboard-part-inspector';
 
+// ---------------------------------------------------------------------------
+// Verified pin safety helpers
+// ---------------------------------------------------------------------------
+
+/** Check if a pin is safe for hookup (not restricted, not a strapping pin). */
+function isPinSafeForHookup(pin: BreadboardPinMapEntry): boolean {
+  if (pin.verifiedRestricted) {
+    return false;
+  }
+  if (pin.verifiedWarnings?.some((w) => /strapping|boot/i.test(w))) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Pick the safest pin from a list for a rail hookup.
+ * Prefers non-restricted, non-strapping pins. Falls back to the first pin
+ * if all candidates are problematic (better to hook up with a warning than
+ * leave the part unconnected).
+ */
+function pickSafestHookupPin(pins: BreadboardPinMapEntry[]): BreadboardPinMapEntry | undefined {
+  const safe = pins.find((pin) => isPinSafeForHookup(pin));
+  return safe ?? pins[0];
+}
+
+/** Collect strapping pin IDs from a model's pin map. */
+function getStrappingPinIds(model: BreadboardSelectedPartModel): string[] {
+  return model.pins
+    .filter((pin) => pin.verifiedWarnings?.some((w) => /strapping|boot/i.test(w)))
+    .map((pin) => pin.id);
+}
+
+/** Collect restricted pin IDs from a model's pin map. */
+function getRestrictedPinIds(model: BreadboardSelectedPartModel): string[] {
+  return model.pins
+    .filter((pin) => pin.verifiedRestricted)
+    .map((pin) => pin.id);
+}
+
 export interface BreadboardCoachSuggestion {
   id: string;
   label: string;
@@ -50,6 +90,8 @@ export interface BreadboardCoachPlan {
   highlightedPinIds: string[];
   hookups: BreadboardCoachHookup[];
   suggestions: BreadboardCoachSuggestion[];
+  /** Cautions from verified board intelligence (strapping pins, restricted pins, etc.). */
+  verifiedBoardCautions: string[];
 }
 
 function clampRow(row: number, maxRow = 63): number {
