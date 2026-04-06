@@ -17,6 +17,7 @@ Architecture block diagrams solve this by letting the user describe the system a
 Relevant Notes:
 - [[no-other-eda-tool-starts-from-architecture-diagrams]] -- the uniqueness of this approach
 - [[ai-is-the-moat-lean-into-it]] -- AI makes the bridge possible
+- [[breadboard-plus-ai-plus-free-is-the-maker-bundle]] -- architecture-first extends the maker bundle beyond breadboard into intent-level design
 
 Topics:
 - [[maker-ux]]
