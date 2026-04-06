@@ -59,6 +59,18 @@ This topic map organizes what ProtoPulse DOESN'T have yet, what's broken, and wh
 - [[subagentsop-event-is-declared-but-has-no-hooks]] -- subagent quality gates missing
 - [[vault-skills-outnumber-project-skills-seven-to-one]] -- development workflow skills underserved
 
+## Skill Ecosystem Gaps
+
+See [[claude-code-skills]] for the full topic map.
+
+- [[three-separate-code-review-paths-create-routing-confusion]] -- requesting, receiving, and plugin code-review overlap
+- [[four-overlapping-task-management-systems-fragment-attention]] -- /tasks, /next, /ralph, taskmaster plugins
+- [[twelve-deprecated-skills-still-exist-alongside-their-replacements]] -- zombie skills inflate count and confuse routing
+- [[no-skill-routes-to-performance-profiling-despite-agent-existing]] -- react-performance-expert is orphaned
+- [[no-database-migration-skill-despite-drizzle-being-core]] -- schema changes rely on raw npm commands
+- [[infrastructure-skills-exist-but-are-not-referenced-in-any-workflow]] -- hook-debug, cmd-create are discoverable but invisible
+- [[no-deployment-pipeline-skill-beyond-basic-ship]] -- /ship is git push, not CI/CD
+
 ## Query Scripts
 
 Run these for live analysis:

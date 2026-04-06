@@ -21,19 +21,27 @@ Hooks fire automatically on Claude Code lifecycle events. ProtoPulse uses 26 hoo
 
 ## Skills
 
-23 skills split into vault (Ars Contexta knowledge system) and project (ProtoPulse development) categories.
+23 project skills + 142 global skills + ~50 plugin skills = 215+ total. See [[claude-code-skills]] for the dedicated topic map.
 
 - [[vault-skills-outnumber-project-skills-seven-to-one]] -- 20 vault vs 3 project
 - [[extract-is-the-largest-skill-at-1128-lines]] -- processing pipeline entry point
 - [[ship-and-verify-overlap-on-commit-validation-territory]] -- potential confusion on which to use
+- [[superpowers-plugin-provides-the-core-development-lifecycle]] -- brainstorm through ship
+- [[knowledge-pipeline-has-ten-skills-covering-the-full-lifecycle]] -- extract through verify
+- [[nineteen-mastery-skills-are-the-deepest-knowledge-layer]] -- encyclopedic domain expertise
+- [[twelve-deprecated-skills-still-exist-alongside-their-replacements]] -- zombie skill inflation
+- [[slash-commands-are-the-primary-user-interface-to-the-skill-system]] -- 58 command entry points
 
 ## Agents
 
-37 agent definitions across 17 directories, none with explicit trigger patterns.
+37 agent definitions across 17 directories, none with explicit trigger patterns. 3 have persistent memory.
 
 - [[thirty-seven-agents-have-no-trigger-patterns]] -- agents cannot self-activate, must be manually invoked
 - [[six-agents-cover-technologies-not-in-protopulse-stack]] -- kafka, loopback, nestjs, mongodb, jest, nextjs
 - [[agent-definitions-total-twenty-thousand-lines]] -- context cost if loaded, but rarely referenced
+- [[three-agents-have-persistent-project-memory]] -- oracle, eda-domain-reviewer, code-review-expert
+- [[oracle-agent-escalation-is-the-strongest-debugging-path]] -- memory + effort:high + GPT-5 fallback
+- [[agent-teams-skill-is-the-mandated-parallel-execution-mechanism]] -- the only sanctioned parallel approach
 
 ## MCP Servers
 
@@ -65,3 +73,4 @@ Run the gap analysis: `bash ops/queries/infra-gaps.sh`
 Topics:
 - [[index]]
 - [[gaps-and-opportunities]]
+- [[claude-code-skills]]

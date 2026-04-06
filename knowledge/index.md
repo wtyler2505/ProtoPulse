@@ -21,6 +21,7 @@ Welcome to the ProtoPulse knowledge system. This is where claims, decisions, ins
 - [[maker-ux]] -- what makes features accessible to beginners
 - [[gaps-and-opportunities]] -- what's missing, broken, and where the biggest opportunities live
 - [[dev-infrastructure]] -- Claude Code hooks, skills, agents, MCP servers, and settings
+- [[claude-code-skills]] -- the 250+ skill ecosystem: plugins, mastery skills, project skills, commands, and gaps
 
 ## Getting Started
 1. Read self/identity.md to understand the agent's purpose
