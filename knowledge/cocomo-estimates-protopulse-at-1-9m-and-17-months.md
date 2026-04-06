@@ -1,0 +1,22 @@
+---
+description: "57,265 LOC across 250 TypeScript files equates to $1.9M and 17.5 months by COCOMO organic model"
+type: claim
+source: "docs/product-analysis-report.md"
+confidence: proven
+topics: ["[[architecture-decisions]]"]
+---
+
+# COCOMO estimates ProtoPulse at 1.9 million dollars and 17.5 months of development effort
+
+At the time of the product analysis (February 2026), ProtoPulse comprised 57,265 lines of code across 250 TypeScript source files, with total cyclomatic complexity of 9,667. The COCOMO organic model estimates this at $1,893,995 development cost and 17.53 months schedule effort requiring 9.60 people. The codebase has grown substantially since then (493 backlog items, 172 done, with waves through 50+), so the current estimate would be significantly higher.
+
+This quantifies two things: first, the project is not a toy — it represents real engineering depth comparable to a well-funded startup's first year. Second, the AI-assisted development approach (2 contributors producing nearly $2M of estimated equivalent effort) demonstrates an extraordinary productivity multiplier that is itself worth studying.
+
+---
+
+Relevant Notes:
+- [[protopulse-ai-breadth-is-6x-flux-ai]] -- part of what drives the complexity count
+- [[god-files-create-feature-paralysis-through-complexity]] -- 9,667 CCN across the codebase
+
+Topics:
+- [[architecture-decisions]]
