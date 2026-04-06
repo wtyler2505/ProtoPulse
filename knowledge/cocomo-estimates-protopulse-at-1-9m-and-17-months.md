@@ -17,6 +17,8 @@ This quantifies two things: first, the project is not a toy — it represents re
 Relevant Notes:
 - [[protopulse-ai-breadth-is-6x-flux-ai]] -- part of what drives the complexity count
 - [[god-files-create-feature-paralysis-through-complexity]] -- 9,667 CCN across the codebase
+- [[ai-is-the-moat-lean-into-it]] -- 2 contributors producing $1.9M equivalent effort validates AI-assisted development as the strategy
+- [[eda-market-is-16b-growing-9-percent-toward-35b-by-2035]] -- $1.9M effort against a $16B+ market shows the investment is proportionate
 
 Topics:
 - [[architecture-decisions]]
