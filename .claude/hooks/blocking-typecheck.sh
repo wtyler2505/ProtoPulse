@@ -10,13 +10,11 @@ OUTPUT=$(NODE_OPTIONS="--max-old-space-size=4096" timeout 120 npm run check 2>&1
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then
-  echo "" >&2
-  echo "> npm run check" >&2
-  echo "" >&2
-  echo "$OUTPUT" >&2
-  # Warn but don't block — incremental typecheck-changed catches errors during work
+  # Output valid JSON for Claude Code hook parser
+  ERROR_LINES=$(echo "$OUTPUT" | grep "error TS" | head -5 | tr '\n' ' | ' | sed 's/"/\\"/g')
+  echo "{\"decision\": \"approve\", \"reason\": \"TypeScript errors found (non-blocking): ${ERROR_LINES}\"}"
   exit 0
 fi
 
-echo "TypeScript check passed." >&2
+echo '{"decision": "approve", "reason": "TypeScript check passed."}'
 exit 0
