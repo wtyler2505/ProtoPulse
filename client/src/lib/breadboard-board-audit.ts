@@ -320,7 +320,7 @@ function checkRestrictedPinUsage(
     const pinIndex = buildVerifiedPinIndex(board);
     const connectedPins = getConnectedPins(nets, inst.id);
 
-    for (const pinKey of connectedPins) {
+    for (const pinKey of Array.from(connectedPins)) {
       const vbPin = pinIndex.get(pinKey);
       if (vbPin?.restricted) {
         issues.push({
@@ -425,7 +425,7 @@ function checkAdcWifiConflict(
     }
 
     const connectedPins = getConnectedPins(nets, inst.id);
-    for (const pinKey of connectedPins) {
+    for (const pinKey of Array.from(connectedPins)) {
       if (adcWifiPinIds.has(pinKey)) {
         const matchingPin = board.pins.find(
           (p) => p.id.toLowerCase() === pinKey || p.name.toLowerCase() === pinKey,
@@ -563,7 +563,7 @@ function checkWireDensityHotspots(
       count += rowWireCount.get(r) ?? 0;
       const ids = rowInstanceIds.get(r);
       if (ids) {
-        for (const id of ids) {
+        for (const id of Array.from(ids)) {
           affectedIds.add(id);
         }
       }

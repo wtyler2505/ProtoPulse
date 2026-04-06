@@ -253,11 +253,14 @@ export function buildBreadboardCoachPlan(model: BreadboardSelectedPartModel): Br
   const bridges: BreadboardCoachRailBridge[] = [];
   const hookups: BreadboardCoachHookup[] = [];
   const suggestions: BreadboardCoachSuggestion[] = [];
+  const verifiedBoardCautions: string[] = [];
   const shouldBridgeRails = hasTerminalPinsOnBothSides(model);
   const bridgeRow = shouldBridgeRails ? getPreferredBridgeRow(model) : null;
 
-  const mainPowerPin = powerPins[0];
-  const mainGroundPin = groundPins[0];
+  // Use verified-pin-safe selection: prefer non-strapping, non-restricted pins for hookups
+  const mainPowerPin = pickSafestHookupPin(powerPins);
+  const mainGroundPin = pickSafestHookupPin(groundPins);
+
   if (mainPowerPin) {
     const powerHookup = buildRailHookup(mainPowerPin, 'power');
     if (powerHookup) {
@@ -293,7 +296,9 @@ export function buildBreadboardCoachPlan(model: BreadboardSelectedPartModel): Br
     }
   }
 
-  const controlPin = controlPins[0];
+  // For control pin pull resistor, also prefer non-strapping pins
+  const safeControlPins = controlPins.filter((pin) => isPinSafeForHookup(pin));
+  const controlPin = safeControlPins[0] ?? controlPins[0];
   if (controlPin) {
     const desiredAnchor = buildDesiredAnchor(controlPin, 'resistor');
     if (desiredAnchor) {
@@ -318,6 +323,37 @@ export function buildBreadboardCoachPlan(model: BreadboardSelectedPartModel): Br
     buildCorridorHint('analog-corridor', 'Keep analog lane quiet', analogPins, 'analog'),
   ].filter((hint): hint is BreadboardCoachCorridorHint => Boolean(hint));
 
+  // Verified board pin intelligence — generate cautions and extra corridor hints
+  if (model.verifiedBoard) {
+    const strappingPinIds = getStrappingPinIds(model);
+    const restrictedPinIds = getRestrictedPinIds(model);
+
+    if (strappingPinIds.length > 0) {
+      verifiedBoardCautions.push(
+        `${String(strappingPinIds.length)} strapping/boot pin${strappingPinIds.length > 1 ? 's' : ''} (${strappingPinIds.join(', ')}) affect power-on behavior. Avoid routing external loads to these pins unless you understand the boot implications.`,
+      );
+
+      // Add corridor hint for strapping pin zone
+      const strappingPins = model.pins.filter((pin) => strappingPinIds.includes(pin.id));
+      const strappingHint = buildCorridorHint('strapping-caution', 'Strapping pin danger zone', strappingPins, 'control');
+      if (strappingHint) {
+        corridorHints.push(strappingHint);
+      }
+    }
+
+    if (restrictedPinIds.length > 0) {
+      verifiedBoardCautions.push(
+        `${String(restrictedPinIds.length)} restricted pin${restrictedPinIds.length > 1 ? 's' : ''} (${restrictedPinIds.join(', ')}) must not be used — they are connected to internal hardware.`,
+      );
+    }
+
+    if (model.adcWifiConflict && model.adcWifiConflictPinIds && model.adcWifiConflictPinIds.length > 0) {
+      verifiedBoardCautions.push(
+        `ADC2 pins (${model.adcWifiConflictPinIds.join(', ')}) are unavailable when WiFi is active. Route analog reads to ADC1 channels instead.`,
+      );
+    }
+  }
+
   const highlightedPinIds = [
     ...suggestions.flatMap((suggestion) => suggestion.targetPinIds),
     ...hookups.map((hookup) => hookup.targetPinId),
@@ -330,5 +366,6 @@ export function buildBreadboardCoachPlan(model: BreadboardSelectedPartModel): Br
     highlightedPinIds,
     hookups,
     suggestions,
+    verifiedBoardCautions,
   };
 }
