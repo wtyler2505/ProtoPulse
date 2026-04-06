@@ -19,6 +19,7 @@ Welcome to the ProtoPulse knowledge system. This is where claims, decisions, ins
 - [[competitive-landscape]] -- how Fritzing, Wokwi, KiCad, TinkerCad compare
 - [[breadboard-intelligence]] -- bench coach, verified boards, layout quality
 - [[maker-ux]] -- what makes features accessible to beginners
+- [[gaps-and-opportunities]] -- what's missing, broken, and where the biggest opportunities live
 
 ## Getting Started
 1. Read self/identity.md to understand the agent's purpose

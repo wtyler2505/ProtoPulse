@@ -355,6 +355,23 @@ See `docs/product-analysis-checklist.md` for full security findings (CAPX-SEC-*)
 - Be direct and opinionated. Quantify technical debt impact. Flag issues early.
 - Always check audit checklists before starting work — kill two birds with one stone
 
+## Knowledge-Driven Gap Analysis
+
+When Tyler asks "what's missing?", "find gaps", "what should we build next?", "any ideas?", or similar:
+
+1. **Read the radar**: `knowledge/gaps-and-opportunities.md` — the curated index of what's missing, broken, and where opportunities live
+2. **Run graph queries**: Execute relevant scripts from `ops/queries/`:
+   - `gap-analysis.sh` — claims vs debt contradictions
+   - `competitive-gaps.sh [competitor]` — what competitors do better
+   - `idea-generator.sh` — feature opportunities from graph patterns
+   - `unmet-needs.sh` — user needs cross-referenced with debt
+   - `backlog-vs-knowledge.sh [keyword]` — backlog items with vault evidence
+3. **Web search for current intel**: Run `research-gaps.sh` to get pre-built search queries, then use WebSearch to check what competitors have shipped recently, what the community is asking for, and what technology trends affect ProtoPulse
+4. **Cross-reference with backlog**: Compare findings against `docs/MASTER_BACKLOG.md` to identify which gaps already have planned work vs which are truly new discoveries
+5. **Present ranked opportunities**: Combine vault evidence + web research + backlog state into a prioritized list with rationale
+
+The knowledge vault has 47+ notes covering competitive insights, architecture decisions, tech debt, and user needs. USE THEM — don't just brainstorm from scratch when the graph has evidence.
+
 ## Available AI Subagents (`.claude/agents/`)
 
 | Domain | Agents |
