@@ -15,8 +15,10 @@ This created an impact chain documented in the cross-phase analysis: complexity 
 ---
 
 Relevant Notes:
-- [[god-files-create-feature-paralysis-through-complexity]] -- the root cause pattern
-- [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai leads on PCB maturity
+- [[god-files-create-feature-paralysis-through-complexity]] -- the root cause: PCBLayoutView CCN=135 blocked all PCB feature development
+- [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai leads on PCB maturity, exploiting this gap
+- [[ai-is-the-moat-lean-into-it]] -- PCB weakness drove the strategic decision to leapfrog with AI rather than chase parity
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- architecture-first compensates by offering value competitors lack entirely
 
 Topics:
 - [[competitive-landscape]]

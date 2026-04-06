@@ -16,9 +16,10 @@ The moat durability is rated "High" because reproducing 125 well-integrated tool
 ---
 
 Relevant Notes:
-- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- AI tools work on architecture nodes
+- [[no-other-eda-tool-starts-from-architecture-diagrams]] -- AI tools work on architecture nodes directly
 - [[ai-is-the-moat-lean-into-it]] -- strategic implication of this advantage
 - [[flux-ai-is-the-primary-competitive-threat]] -- the closest competitor on AI
+- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- 125 tools create deep integration but also scale the context cost problem
 
 Topics:
 - [[competitive-landscape]]
