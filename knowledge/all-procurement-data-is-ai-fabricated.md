@@ -18,6 +18,8 @@ This is worse than showing no data at all, because it creates false confidence. 
 Relevant Notes:
 - [[self-hosted-and-free-is-a-pricing-moat]] -- free means no revenue to offset API costs
 - [[flux-ai-is-the-primary-competitive-threat]] -- Flux.ai has live supplier data
+- [[exports-are-only-accessible-via-ai-chat]] -- same pattern: features look present but are hollow underneath
+- [[zero-form-elements-means-no-native-input-paradigm]] -- no structured input means no way to correct fabricated data manually
 
 Topics:
 - [[maker-ux]]
