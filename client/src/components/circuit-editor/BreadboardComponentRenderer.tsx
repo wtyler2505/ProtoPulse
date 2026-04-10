@@ -71,7 +71,10 @@ const RESISTOR_VALUES = buildResistorValues();
 
 /** Detect component family from type string — extended for photorealistic rendering */
 export type ComponentFamily = 'resistor' | 'capacitor' | 'inductor' | 'led' | null;
-export type ExtendedComponentType = ComponentFamily | 'ic' | 'diode' | 'transistor';
+export type ExtendedComponentType = ComponentFamily | 'ic' | 'diode' | 'transistor'
+  | 'potentiometer' | 'button' | 'switch' | 'header' | 'regulator'
+  | 'crystal' | 'buzzer' | 'fuse' | 'sensor' | 'display' | 'relay'
+  | 'motor' | 'connector';
 
 export function detectFamily(type: string | undefined | null): ComponentFamily {
   if (!type) return null;
@@ -94,6 +97,19 @@ export function detectExtendedType(type: string | undefined | null): ExtendedCom
   if (lower === 'ic' || lower === 'mcu' || lower === 'microcontroller') return 'ic';
   if (lower === 'diode' || lower === 'd') return 'diode';
   if (lower === 'transistor' || lower === 'bjt' || lower === 'mosfet' || lower === 'q') return 'transistor';
+  if (lower === 'potentiometer' || lower === 'pot' || lower === 'trimmer') return 'potentiometer';
+  if (lower === 'button' || lower === 'pushbutton' || lower === 'tactile') return 'button';
+  if (lower === 'switch' || lower === 'toggle' || lower === 'spdt' || lower === 'spst') return 'switch';
+  if (lower === 'header' || lower === 'pinheader' || lower === 'pin_header') return 'header';
+  if (lower === 'regulator' || lower === 'vreg' || lower === 'ldo') return 'regulator';
+  if (lower === 'crystal' || lower === 'oscillator' || lower === 'xtal') return 'crystal';
+  if (lower === 'buzzer' || lower === 'piezo' || lower === 'speaker') return 'buzzer';
+  if (lower === 'fuse' || lower === 'polyfuse' || lower === 'ptc') return 'fuse';
+  if (lower === 'sensor' || lower === 'thermistor' || lower === 'photoresistor' || lower === 'ldr') return 'sensor';
+  if (lower === 'display' || lower === '7seg' || lower === 'seven_segment' || lower === 'segment') return 'display';
+  if (lower === 'relay') return 'relay';
+  if (lower === 'motor' || lower === 'dc_motor' || lower === 'servo') return 'motor';
+  if (lower === 'connector' || lower === 'terminal' || lower === 'barrel_jack' || lower === 'jst') return 'connector';
   return null;
 }
 
