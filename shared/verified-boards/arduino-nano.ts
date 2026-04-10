@@ -185,9 +185,9 @@ export const ARDUINO_NANO: VerifiedBoardDefinition = {
   buses: BUSES,
 
   evidence: [
-    { type: 'datasheet', url: 'https://docs.arduino.cc/resources/datasheets/A000005-datasheet.pdf', retrievedAt: '2026-04-10' },
-    { type: 'manufacturer', url: 'https://docs.arduino.cc/hardware/nano', retrievedAt: '2026-04-10' },
-    { type: 'manufacturer', url: 'https://store.arduino.cc/products/arduino-nano', retrievedAt: '2026-04-10' },
+    { type: 'datasheet', label: 'Arduino Nano Datasheet (A000005)', href: 'https://docs.arduino.cc/resources/datasheets/A000005-datasheet.pdf', supports: ['pins', 'dimensions', 'labels'], confidence: 'high', reviewStatus: 'accepted' },
+    { type: 'pinout', label: 'Arduino Nano Hardware Documentation', href: 'https://docs.arduino.cc/hardware/nano', supports: ['pins', 'labels', 'breadboard-fit'], confidence: 'high', reviewStatus: 'accepted' },
+    { type: 'marketplace-listing', label: 'Arduino Nano Product Page', href: 'https://store.arduino.cc/products/arduino-nano', supports: ['dimensions'], confidence: 'high', reviewStatus: 'accepted' },
   ],
   verificationNotes: [
     'Pin data cross-referenced with official Arduino Nano datasheet',

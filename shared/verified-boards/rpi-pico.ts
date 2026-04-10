@@ -305,9 +305,9 @@ export const RPI_PICO: VerifiedBoardDefinition = {
   buses: BUSES,
 
   evidence: [
-    { type: 'datasheet', url: 'https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf', retrievedAt: '2026-04-10' },
-    { type: 'manufacturer', url: 'https://datasheets.raspberrypi.com/pico/Pico-R3-A4-Pinout.pdf', retrievedAt: '2026-04-10' },
-    { type: 'manufacturer', url: 'https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html', retrievedAt: '2026-04-10' },
+    { type: 'datasheet', label: 'Raspberry Pi Pico Datasheet', href: 'https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf', supports: ['pins', 'dimensions', 'labels'], confidence: 'high', reviewStatus: 'accepted' },
+    { type: 'pinout', label: 'Pico R3 A4 Official Pinout PDF', href: 'https://datasheets.raspberrypi.com/pico/Pico-R3-A4-Pinout.pdf', supports: ['pins', 'labels'], confidence: 'high', reviewStatus: 'accepted' },
+    { type: 'datasheet', label: 'Raspberry Pi Pico Series Documentation', href: 'https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html', supports: ['pins', 'dimensions', 'breadboard-fit'], confidence: 'high', reviewStatus: 'accepted' },
   ],
   verificationNotes: [
     'Pin data cross-referenced with official Pico-R3-A4-Pinout.pdf',

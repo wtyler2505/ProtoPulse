@@ -187,9 +187,9 @@ export const ARDUINO_UNO_R3: VerifiedBoardDefinition = {
   buses: BUSES,
 
   evidence: [
-    { type: 'datasheet', url: 'https://docs.arduino.cc/resources/datasheets/A000066-datasheet.pdf', retrievedAt: '2026-04-10' },
-    { type: 'manufacturer', url: 'https://docs.arduino.cc/hardware/uno-rev3', retrievedAt: '2026-04-10' },
-    { type: 'manufacturer', url: 'https://content.arduino.cc/assets/Pinout-UNOrev3_latest.pdf', retrievedAt: '2026-04-10' },
+    { type: 'datasheet', label: 'Arduino UNO R3 Datasheet (A000066)', href: 'https://docs.arduino.cc/resources/datasheets/A000066-datasheet.pdf', supports: ['pins', 'dimensions', 'labels'], confidence: 'high', reviewStatus: 'accepted' },
+    { type: 'pinout', label: 'Arduino UNO R3 Official Pinout PDF', href: 'https://content.arduino.cc/assets/Pinout-UNOrev3_latest.pdf', supports: ['pins', 'labels'], confidence: 'high', reviewStatus: 'accepted' },
+    { type: 'datasheet', label: 'Arduino UNO R3 Hardware Docs', href: 'https://docs.arduino.cc/hardware/uno-rev3', supports: ['pins', 'dimensions', 'breadboard-fit'], confidence: 'high', reviewStatus: 'accepted' },
   ],
   verificationNotes: [
     'Pin data cross-referenced with official Arduino UNO R3 datasheet and pinout PDF',

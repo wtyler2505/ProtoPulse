@@ -181,8 +181,8 @@ export const STM32_NUCLEO_64: VerifiedBoardDefinition = {
   buses: BUSES,
 
   evidence: [
-    { type: 'manufacturer', url: 'https://www.st.com/en/evaluation-tools/nucleo-f401re.html', retrievedAt: '2026-04-10' },
-    { type: 'datasheet', url: 'https://www.st.com/resource/en/user_manual/um1724-stm32-nucleo64-boards-mb1136-stmicroelectronics.pdf', retrievedAt: '2026-04-10' },
+    { type: 'datasheet', label: 'STM32 Nucleo-64 Product Page', href: 'https://www.st.com/en/evaluation-tools/nucleo-f401re.html', supports: ['pins', 'dimensions'], confidence: 'high', reviewStatus: 'accepted' },
+    { type: 'datasheet', label: 'STM32 Nucleo-64 User Manual (UM1724)', href: 'https://www.st.com/resource/en/user_manual/um1724-stm32-nucleo64-boards-mb1136-stmicroelectronics.pdf', supports: ['pins', 'labels', 'dimensions', 'breadboard-fit'], confidence: 'high', reviewStatus: 'accepted' },
   ],
   verificationNotes: [
     'Arduino-compatible headers only — Morpho connector pins not included in this definition',

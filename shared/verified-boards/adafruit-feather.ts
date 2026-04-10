@@ -166,8 +166,8 @@ export const ADAFRUIT_FEATHER_M0: VerifiedBoardDefinition = {
   buses: BUSES,
 
   evidence: [
-    { type: 'manufacturer', url: 'https://learn.adafruit.com/adafruit-feather-m0-basic-proto/pinouts', retrievedAt: '2026-04-10' },
-    { type: 'manufacturer', url: 'https://www.adafruit.com/product/2772', retrievedAt: '2026-04-10' },
+    { type: 'pinout', label: 'Adafruit Feather M0 Pinouts Guide', href: 'https://learn.adafruit.com/adafruit-feather-m0-basic-proto/pinouts', supports: ['pins', 'labels'], confidence: 'high', reviewStatus: 'accepted' },
+    { type: 'marketplace-listing', label: 'Adafruit Feather M0 Product Page', href: 'https://www.adafruit.com/product/2772', supports: ['dimensions', 'pins'], confidence: 'high', reviewStatus: 'accepted' },
   ],
   verificationNotes: [
     'Pin data from Adafruit Learn guide pinouts page',

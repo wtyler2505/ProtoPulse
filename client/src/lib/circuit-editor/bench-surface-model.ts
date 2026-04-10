@@ -25,6 +25,29 @@ export interface BenchPosition {
   y: number;
 }
 
+/** A wire endpoint anchored to a breadboard hole. */
+export interface HoleEndpoint {
+  type: 'hole';
+  col: string;
+  row: number;
+}
+
+/** A wire endpoint anchored to a bench-placed component pin. */
+export interface BenchPinEndpoint {
+  type: 'bench-pin';
+  instanceId: number;
+  pinId: string;
+}
+
+/** Structured wire endpoint — either a breadboard hole or a bench component pin. */
+export type WireEndpoint = HoleEndpoint | BenchPinEndpoint;
+
+/** Structured endpoint metadata stored in circuitWires.endpointMeta JSONB. */
+export interface WireEndpointMeta {
+  start: WireEndpoint;
+  end: WireEndpoint;
+}
+
 export interface BenchSurfaceConfig {
   /** Total surface width in pixels. */
   surfaceWidth: number;
