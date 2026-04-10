@@ -76,6 +76,64 @@ export function validateFritzingGrid(
 }
 
 // ---------------------------------------------------------------------------
+// Connector ID matching validation
+// ---------------------------------------------------------------------------
+
+export interface ConnectorIdValidation {
+  /** True when every FZP svgId has a matching SVG element ID */
+  valid: boolean;
+  /** svgIds referenced in FZP XML but missing from the SVG */
+  missingInSvg: string[];
+  /** connector-pattern IDs in SVG that no FZP svgId references */
+  orphanedInSvg: string[];
+}
+
+/**
+ * Validate that every `svgId` attribute in FZP XML has a matching
+ * `id` attribute in the SVG content. Mismatches cause Fritzing to
+ * fail rendering the connector.
+ */
+export function validateConnectorIdMatching(fzpXml: string, svgContent: string): ConnectorIdValidation {
+  // Extract all svgId values from FZP XML
+  const svgIdRegex = /svgId="([^"]+)"/g;
+  const fzpSvgIds = new Set<string>();
+  let match: RegExpExecArray | null;
+  while ((match = svgIdRegex.exec(fzpXml)) !== null) {
+    fzpSvgIds.add(match[1]);
+  }
+
+  // Extract all id values from SVG content
+  const idRegex = /\bid="([^"]+)"/g;
+  const svgIds = new Set<string>();
+  while ((match = idRegex.exec(svgContent)) !== null) {
+    svgIds.add(match[1]);
+  }
+
+  // Check for FZP svgIds missing from SVG
+  const missingInSvg: string[] = [];
+  for (const svgId of fzpSvgIds) {
+    if (!svgIds.has(svgId)) {
+      missingInSvg.push(svgId);
+    }
+  }
+
+  // Check for connector-pattern IDs in SVG not referenced by FZP
+  const connectorPattern = /^connector\d+(pin|terminal)$/;
+  const orphanedInSvg: string[] = [];
+  for (const id of svgIds) {
+    if (connectorPattern.test(id) && !fzpSvgIds.has(id)) {
+      orphanedInSvg.push(id);
+    }
+  }
+
+  return {
+    valid: missingInSvg.length === 0,
+    missingInSvg,
+    orphanedInSvg,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // XML helpers
 // ---------------------------------------------------------------------------
 
