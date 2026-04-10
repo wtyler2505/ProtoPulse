@@ -1,0 +1,96 @@
+/**
+ * Breadboard tactile snap animations — S6-02
+ *
+ * Provides visual feedback for component placement, wire landing,
+ * cursor blinking, and wire drawing on the breadboard.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Keyframes
+ * ------------------------------------------------------------------------- */
+
+@keyframes breadboard-snap-pulse {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.05);
+    filter: brightness(1.2);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
+
+@keyframes breadboard-row-flash {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes breadboard-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes breadboard-wire-pulse {
+  0% {
+    stroke-dashoffset: 8;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Utility classes
+ * ------------------------------------------------------------------------- */
+
+/** Flash on component snap-to-grid placement */
+.bb-snap-pulse {
+  animation: breadboard-snap-pulse 120ms ease-out;
+  transform-origin: center;
+}
+
+/** Highlight the connected row when a wire lands */
+.bb-row-flash {
+  animation: breadboard-row-flash 200ms ease-out;
+  pointer-events: none;
+}
+
+/** Blinking cursor for keyboard navigation */
+.bb-cursor-blink {
+  animation: breadboard-cursor-blink 1s ease-in-out infinite;
+}
+
+/** Animated dashes on the wire being drawn */
+.bb-wire-draw {
+  stroke-dasharray: 4 4;
+  animation: breadboard-wire-pulse 300ms linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+ * Accessibility: respect reduced-motion preference
+ * ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-snap-pulse,
+  .bb-row-flash,
+  .bb-cursor-blink,
+  .bb-wire-draw {
+    animation: none;
+  }
+}
