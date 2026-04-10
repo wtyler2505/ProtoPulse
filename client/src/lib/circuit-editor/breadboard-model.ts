@@ -446,7 +446,7 @@ export function getOccupiedPoints(placement: ComponentPlacement): TiePoint[] {
 }
 
 /**
- * Check if a placement collides with existing placements.
+ * Check if a placement collides with existing placements (tie-point overlap).
  */
 export function checkCollision(
   newPlacement: ComponentPlacement,
@@ -458,5 +458,91 @@ export function checkCollision(
       if (newKeys.has(coordKey(pt))) return true;
     }
   }
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// Body-volume collision
+// ---------------------------------------------------------------------------
+
+/**
+ * Convert a ComponentPlacement to a positioned BodyBounds in board-local pixels.
+ * The body is centered on the component's occupied footprint.
+ */
+function placementToBodyBounds(
+  placement: ComponentPlacement,
+  componentType: string,
+  pinCount: number,
+  opts?: { subType?: string },
+): BodyBounds {
+  const baseBounds = getBodyBounds(componentType, pinCount, opts);
+
+  // Get the pixel position of the first occupied point to anchor the body
+  const firstPoint = getOccupiedPoints(placement)[0];
+  if (!firstPoint) {
+    return baseBounds; // degenerate — no occupied points
+  }
+  const origin = coordToPixel(firstPoint);
+
+  // Center the body bounds on the footprint span
+  const lastRow = placement.startRow + placement.rowSpan - 1;
+  const lastPoint: TiePoint = { type: 'terminal', col: placement.startCol, row: lastRow };
+  const end = coordToPixel(lastPoint);
+
+  const footprintCenterX = (origin.x + end.x) / 2;
+  const footprintCenterY = (origin.y + end.y) / 2;
+
+  return {
+    x: footprintCenterX - baseBounds.width / 2,
+    y: footprintCenterY - baseBounds.width / 2, // use width for Y extent (depth)
+    width: baseBounds.width,
+    height: baseBounds.height,
+  };
+}
+
+/**
+ * Check if a new placement's physical body volume collides with any existing
+ * placement. This complements `checkCollision` (tie-point overlap) by detecting
+ * cases where tall components block space even though pins don't conflict.
+ *
+ * Flat components (resistors, small caps) never trigger body collisions with
+ * each other — only when at least one component is tall.
+ *
+ * @param newPlacement   - The proposed new placement
+ * @param existing       - Already-placed components (with their types stored externally)
+ * @param componentType  - Type of the new component ('resistor', 'ic', etc.)
+ * @param pinCount       - Pin count of the new component
+ * @param opts           - Optional sub-type for variant selection
+ * @param existingTypes  - Optional parallel array of {type, pinCount, subType} for existing
+ *                         placements. If omitted, existing placements are assumed to be
+ *                         generic 2-pin components (conservative — flat profile).
+ */
+export function checkBodyCollision(
+  newPlacement: ComponentPlacement,
+  existing: ComponentPlacement[],
+  componentType: string,
+  pinCount: number,
+  opts?: { subType?: string },
+  existingTypes?: Array<{ type: string; pinCount: number; subType?: string }>,
+): boolean {
+  if (existing.length === 0) {
+    return false;
+  }
+
+  const newBounds = placementToBodyBounds(newPlacement, componentType, pinCount, opts);
+
+  for (let i = 0; i < existing.length; i++) {
+    const ext = existingTypes?.[i];
+    const extType = ext?.type ?? 'resistor';
+    const extPins = ext?.pinCount ?? 2;
+    const extOpts = ext?.subType ? { subType: ext.subType } : undefined;
+
+    const extBounds = placementToBodyBounds(existing[i], extType, extPins, extOpts);
+
+    if (checkBodyOverlap(newBounds, extBounds)) {
+      return true;
+    }
+  }
+
   return false;
 }

@@ -14,8 +14,6 @@
  *     `coordToPixel` from breadboard-model).
  */
 
-import { BB } from './breadboard-model';
-
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -48,8 +46,11 @@ interface BodyProfile {
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Pixels per millimeter at our board scale (PITCH = 10 px / 2.54 mm). */
-const SCALE = BB.PITCH / 2.54;
+/** Standard 0.1" pitch in pixels — matches BB.PITCH in breadboard-model.ts. */
+const PITCH_PX = 10;
+
+/** Pixels per millimeter at our board scale (10 px / 2.54 mm). */
+const SCALE = PITCH_PX / 2.54;
 
 /**
  * Height threshold in pixels. Components whose scaled height is below this
