@@ -41,6 +41,15 @@ function getRestrictedPinIds(model: BreadboardSelectedPartModel): string[] {
     .map((pin) => pin.id);
 }
 
+export interface CoachRemediation {
+  action: 'place-component' | 'rewire' | 'add-jumper';
+  componentType?: string;
+  componentValue?: string;
+  coords?: { col: string; row: number };
+  fromPinId?: string;
+  toPinId?: string;
+}
+
 export interface BreadboardCoachSuggestion {
   id: string;
   label: string;
@@ -51,6 +60,7 @@ export interface BreadboardCoachSuggestion {
   reason: string;
   targetPinIds: string[];
   desiredAnchor: TiePoint;
+  remediation?: CoachRemediation;
 }
 
 export interface BreadboardCoachCorridorHint {
@@ -292,6 +302,12 @@ export function buildBreadboardCoachPlan(model: BreadboardSelectedPartModel): Br
         reason: 'Keep a small decoupling capacitor close to the first power and ground pins so the rail stays stable during switching.',
         targetPinIds: [mainPowerPin.id, mainGroundPin.id],
         desiredAnchor,
+        remediation: {
+          action: 'place-component',
+          componentType: 'capacitor',
+          componentValue: '100nF',
+          coords: { col: desiredAnchor.col, row: desiredAnchor.row },
+        },
       });
     }
   }
@@ -312,6 +328,12 @@ export function buildBreadboardCoachPlan(model: BreadboardSelectedPartModel): Br
         reason: 'Anchor the most important control line with a pull resistor so reset or enable behavior stays deterministic on the bench.',
         targetPinIds: [controlPin.id],
         desiredAnchor,
+        remediation: {
+          action: 'place-component',
+          componentType: 'resistor',
+          componentValue: '10kΩ',
+          coords: { col: desiredAnchor.col, row: desiredAnchor.row },
+        },
       });
     }
   }

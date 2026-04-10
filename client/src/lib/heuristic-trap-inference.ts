@@ -151,6 +151,130 @@ function arm3v3Traps(): InferredTrap[] {
 }
 
 // ---------------------------------------------------------------------------
+// Motor / driver traps
+// ---------------------------------------------------------------------------
+
+/** Traps specific to BLDC motor controllers. */
+function bldcTraps(): InferredTrap[] {
+  return [
+    {
+      id: 'motor-brake-polarity',
+      severity: 'critical',
+      confidence: 'inferred',
+      category: 'safety',
+      title: 'STOP/BRAKE polarity inversion',
+      detail:
+        'Many BLDC controllers use inverted logic: STOP is active-LOW (ground to halt) while BRAKE is active-HIGH (5 V to engage dynamic braking). Swapping these leaves the motor running or permanently braked.',
+      trapId: 'motor-brake-polarity',
+    },
+    {
+      id: 'motor-hall-order',
+      severity: 'warning',
+      confidence: 'inferred',
+      category: 'signal',
+      title: 'Hall sensor wiring order matters',
+      detail:
+        'BLDC hall sensors (Ha, Hb, Hc) must be wired in the correct order. Wrong permutations cause the motor to stutter, vibrate, or spin backward. Verify empirically — do not trust wire colors from salvaged motors.',
+      trapId: 'motor-hall-order',
+    },
+  ];
+}
+
+/** Traps specific to H-bridge motor drivers. */
+function hBridgeTraps(): InferredTrap[] {
+  return [
+    {
+      id: 'motor-back-emf',
+      severity: 'warning',
+      confidence: 'inferred',
+      category: 'safety',
+      title: 'Back-EMF protection required',
+      detail:
+        'When a motor decelerates, it generates back-EMF that can damage the H-bridge driver. Ensure flyback (freewheeling) diodes are present across the motor terminals. Some drivers have built-in protection, but external diodes are safer.',
+      trapId: 'motor-back-emf',
+    },
+    {
+      id: 'motor-shoot-through',
+      severity: 'warning',
+      confidence: 'inferred',
+      category: 'safety',
+      title: 'Shoot-through dead-zone for complementary PWM',
+      detail:
+        'H-bridge drivers using complementary PWM on high/low side FETs need a dead-time gap between switching. Without it, both sides conduct simultaneously (shoot-through), causing a short circuit and potential driver failure.',
+      trapId: 'motor-shoot-through',
+    },
+  ];
+}
+
+/** PWM frequency advisory — applies to all motor drivers. */
+function motorPwmTrap(): InferredTrap {
+  return {
+    id: 'motor-pwm-frequency',
+    severity: 'info',
+    confidence: 'inferred',
+    category: 'signal',
+    title: 'PWM frequency range advisory',
+    detail:
+      'Motor driver PWM frequency affects audible noise and efficiency. Below 20 kHz you may hear whine. Above the driver\'s rated frequency, switching losses increase. Typical safe range: 20-25 kHz for DC brushed motors, 15-30 kHz for BLDC.',
+    trapId: 'motor-pwm-frequency',
+  };
+}
+
+/** Check if the title indicates a motor-related driver (vs LED driver, etc.) */
+function isMotorDriver(title: string): boolean {
+  const lower = title.toLowerCase();
+  return (
+    lower.includes('motor') ||
+    lower.includes('bldc') ||
+    lower.includes('h-bridge') ||
+    lower.includes('h bridge') ||
+    lower.includes('l298') ||
+    lower.includes('l293') ||
+    lower.includes('l9110') ||
+    lower.includes('tb6612') ||
+    lower.includes('drv8') ||
+    lower.includes('riorand') ||
+    lower.includes('bts7960')
+  );
+}
+
+function isBldcDriver(title: string): boolean {
+  const lower = title.toLowerCase();
+  return lower.includes('bldc') || lower.includes('riorand');
+}
+
+function isHBridgeDriver(title: string): boolean {
+  const lower = title.toLowerCase();
+  return (
+    lower.includes('h-bridge') ||
+    lower.includes('h bridge') ||
+    lower.includes('l298') ||
+    lower.includes('l293') ||
+    lower.includes('l9110') ||
+    lower.includes('tb6612') ||
+    lower.includes('drv8') ||
+    lower.includes('bts7960')
+  );
+}
+
+function motorDriverTraps(title: string): InferredTrap[] {
+  const traps: InferredTrap[] = [];
+
+  if (isBldcDriver(title)) {
+    traps.push(...bldcTraps());
+  }
+
+  if (isHBridgeDriver(title)) {
+    traps.push(...hBridgeTraps());
+  }
+
+  // All motor drivers get the PWM frequency advisory
+  traps.push(motorPwmTrap());
+
+  return traps;
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -183,7 +307,14 @@ export function inferTraps(input: InferTrapsInput): InferredTrap[] {
     return arm3v3Traps();
   }
 
-  // Motor drivers are handled by Task 3 — return empty for now
+  // Motor / driver family
+  if (family === 'driver') {
+    if (isMotorDriver(title)) {
+      return motorDriverTraps(title);
+    }
+    return [];
+  }
+
   // Unknown MCUs — no heuristic data
   return [];
 }

@@ -142,6 +142,65 @@ describe('heuristic-trap-inference', () => {
     });
   });
 
+  describe('motor controller traps', () => {
+    it('warns about STOP/BRAKE polarity inversion on BLDC drivers', () => {
+      const traps = inferTraps({ family: 'driver', title: 'RioRand BLDC Controller' });
+      const brakeTrap = traps.find((t) => t.id === 'motor-brake-polarity');
+      expect(brakeTrap).toBeDefined();
+      expect(brakeTrap!.severity).toBe('critical');
+      expect(brakeTrap!.category).toBe('safety');
+    });
+
+    it('warns about hall sensor wiring order on BLDC', () => {
+      const traps = inferTraps({ family: 'driver', title: 'BLDC Motor Controller 48V' });
+      expect(traps.find((t) => t.id === 'motor-hall-order')).toBeDefined();
+    });
+
+    it('warns about back-EMF protection for H-bridge', () => {
+      const traps = inferTraps({ family: 'driver', title: 'L298N H-Bridge' });
+      const emfTrap = traps.find((t) => t.id === 'motor-back-emf');
+      expect(emfTrap).toBeDefined();
+      expect(emfTrap!.severity).toBe('warning');
+    });
+
+    it('warns about PWM frequency range', () => {
+      const traps = inferTraps({ family: 'driver', title: 'TB6612FNG Motor Driver' });
+      const pwmTrap = traps.find((t) => t.id === 'motor-pwm-frequency');
+      expect(pwmTrap).toBeDefined();
+      expect(pwmTrap!.severity).toBe('info');
+    });
+
+    it('warns about shoot-through dead zone on H-bridge drivers', () => {
+      const traps = inferTraps({ family: 'driver', title: 'L9110S H-Bridge' });
+      expect(traps.find((t) => t.id === 'motor-shoot-through')).toBeDefined();
+    });
+
+    it('BLDC drivers get BLDC-specific traps (brake polarity, hall order)', () => {
+      const traps = inferTraps({ family: 'driver', title: 'RioRand KJL-01 BLDC' });
+      const ids = traps.map((t) => t.id);
+      expect(ids).toContain('motor-brake-polarity');
+      expect(ids).toContain('motor-hall-order');
+      expect(ids).toContain('motor-pwm-frequency');
+    });
+
+    it('H-bridge drivers get H-bridge-specific traps (back-EMF, shoot-through)', () => {
+      const traps = inferTraps({ family: 'driver', title: 'L298N Dual H-Bridge' });
+      const ids = traps.map((t) => t.id);
+      expect(ids).toContain('motor-back-emf');
+      expect(ids).toContain('motor-shoot-through');
+      expect(ids).toContain('motor-pwm-frequency');
+    });
+
+    it('generic motor driver gets PWM frequency trap', () => {
+      const traps = inferTraps({ family: 'driver', title: 'Motor Driver Board' });
+      expect(traps.find((t) => t.id === 'motor-pwm-frequency')).toBeDefined();
+    });
+
+    it('non-motor drivers return empty (e.g. LED driver)', () => {
+      expect(inferTraps({ family: 'driver', title: 'WS2812B LED Driver' })).toHaveLength(0);
+    });
+  });
+
   describe('InferredTrap structure', () => {
     it('every trap has required fields', () => {
       const traps = inferTraps({ family: 'mcu', title: 'ESP32-WROOM-32' });

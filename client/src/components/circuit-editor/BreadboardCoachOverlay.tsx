@@ -6,7 +6,7 @@
  * Pure extraction from BreadboardView.tsx — no behavior changes.
  */
 
-import type { BreadboardCoachPlan } from '@/lib/breadboard-coach-plan';
+import type { BreadboardCoachPlan, CoachRemediation } from '@/lib/breadboard-coach-plan';
 import type { BreadboardPinRole, BreadboardSelectedPartModel } from '@/lib/breadboard-part-inspector';
 import {
   coordToPixel,
@@ -147,6 +147,7 @@ interface BreadboardCoachPlanOverlayProps {
   preparedCoachBridges: ResolvedCoachBridge[];
   stagedCoachSuggestions: StagedCoachSuggestion[];
   resolvedCoachSuggestions: ResolvedCoachSuggestion[];
+  onApplyRemediation?: (suggestionId: string, remediation: CoachRemediation) => void;
 }
 
 export function BreadboardCoachPlanOverlay({
@@ -155,6 +156,7 @@ export function BreadboardCoachPlanOverlay({
   preparedCoachBridges,
   stagedCoachSuggestions,
   resolvedCoachSuggestions,
+  onApplyRemediation,
 }: BreadboardCoachPlanOverlayProps) {
   return (
     <g data-testid="breadboard-coach-plan-overlay" pointerEvents="none">
@@ -273,6 +275,53 @@ export function BreadboardCoachPlanOverlay({
       {resolvedCoachSuggestions.map((suggestion) => (
         <CoachSuggestionOverlay key={`pending-${suggestion.id}`} suggestion={suggestion} status="pending" />
       ))}
+
+      {/* Apply buttons — separate group with pointer events enabled */}
+      {onApplyRemediation && (
+        <g data-testid="coach-apply-buttons" pointerEvents="all">
+          {coachPlan.suggestions
+            .filter((s) => s.remediation)
+            .map((suggestion) => {
+              const resolved = resolvedCoachSuggestions.find((r) => r.id === suggestion.id);
+              if (!resolved) {
+                return null;
+              }
+              const btnX = resolved.pixel.x + 10;
+              const btnY = resolved.pixel.y + 6;
+              return (
+                <g
+                  key={`apply-${suggestion.id}`}
+                  data-testid={`coach-apply-${suggestion.id}`}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => {
+                    onApplyRemediation(suggestion.id, suggestion.remediation!);
+                  }}
+                >
+                  <rect
+                    x={btnX}
+                    y={btnY}
+                    width={36}
+                    height={12}
+                    rx={3}
+                    fill="rgba(0,240,255,0.15)"
+                    stroke="#00F0FF"
+                    strokeWidth={0.75}
+                  />
+                  <text
+                    x={btnX + 18}
+                    y={btnY + 8}
+                    fill="#00F0FF"
+                    fontSize={5}
+                    fontFamily="monospace"
+                    textAnchor="middle"
+                  >
+                    Apply
+                  </text>
+                </g>
+              );
+            })}
+        </g>
+      )}
     </g>
   );
 }

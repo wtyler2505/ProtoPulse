@@ -769,4 +769,88 @@ describe('auditBreadboard', () => {
       expect(result.stats.totalWires).toBe(3);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Motor controller audit checks
+  // -------------------------------------------------------------------------
+
+  describe('motor controller checks', () => {
+    function makeMotorDriverPart(id: number, title: string): ComponentPart {
+      return makePart({
+        id,
+        meta: { family: 'driver', title },
+        connectors: [
+          { id: 'EN', name: 'EN', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'PWM', name: 'PWM', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'VCC', name: 'VCC', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'GND', name: 'GND', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+    }
+
+    function makeBldcDriverPart(id: number): ComponentPart {
+      return makePart({
+        id,
+        meta: { family: 'driver', title: 'RioRand BLDC Controller' },
+        connectors: [
+          { id: 'STOP', name: 'STOP', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'BRAKE', name: 'BRAKE', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'PWM', name: 'PWM', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'HA', name: 'HA', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'HB', name: 'HB', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'HC', name: 'HC', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'VCC', name: 'VCC', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+          { id: 'GND', name: 'GND', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+    }
+
+    it('flags BLDC driver with STOP/BRAKE polarity advisory', () => {
+      const driverPart = makeBldcDriverPart(500);
+      const driver = makeInstance({ id: 600, partId: 500 });
+
+      const result = audit({ instances: [driver], parts: [driverPart] });
+      const motorIssue = result.issues.find((i) => i.id.includes('motor-bldc-polarity'));
+      expect(motorIssue).toBeDefined();
+      expect(motorIssue!.severity).toBe('warning');
+      expect(motorIssue!.category).toBe('safety');
+    });
+
+    it('flags H-bridge driver with back-EMF advisory', () => {
+      const driverPart = makeMotorDriverPart(510, 'L298N H-Bridge');
+      const driver = makeInstance({ id: 610, partId: 510 });
+
+      const result = audit({ instances: [driver], parts: [driverPart] });
+      const emfIssue = result.issues.find((i) => i.id.includes('motor-back-emf'));
+      expect(emfIssue).toBeDefined();
+      expect(emfIssue!.severity).toBe('warning');
+    });
+
+    it('does not flag non-motor drivers', () => {
+      const ledDriverPart = makePart({
+        id: 520,
+        meta: { family: 'driver', title: 'WS2812B LED Driver' },
+        connectors: [
+          { id: 'DIN', name: 'DIN', connectorType: 'pad', shapeIds: {}, terminalPositions: {} },
+        ],
+      });
+      const led = makeInstance({ id: 620, partId: 520 });
+
+      const result = audit({ instances: [led], parts: [ledDriverPart] });
+      const motorIssues = result.issues.filter((i) => i.id.includes('motor-'));
+      expect(motorIssues).toHaveLength(0);
+    });
+
+    it('does not flag passive components as motor drivers', () => {
+      const resPart = makePart({
+        id: 530,
+        meta: { family: 'resistor', title: '10k Resistor' },
+      });
+      const res = makeInstance({ id: 630, partId: 530 });
+
+      const result = audit({ instances: [res], parts: [resPart] });
+      const motorIssues = result.issues.filter((i) => i.id.includes('motor-'));
+      expect(motorIssues).toHaveLength(0);
+    });
+  });
 });

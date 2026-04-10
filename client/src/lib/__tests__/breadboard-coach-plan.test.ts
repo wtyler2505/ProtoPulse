@@ -193,6 +193,46 @@ describe('buildBreadboardCoachPlan', () => {
     expect(plan.corridorHints.map((hint) => hint.id)).toContain('comm-corridor');
   });
 
+  it('decoupling suggestion includes remediation with place-component action', () => {
+    const selected = buildBreadboardSelectedPartModel(instance, part, insight);
+    expect(selected).not.toBeNull();
+
+    const plan = buildBreadboardCoachPlan(selected!);
+    const decoupSuggestion = plan.suggestions.find((s) => s.type === 'capacitor');
+    expect(decoupSuggestion).toBeDefined();
+    expect(decoupSuggestion!.remediation).toBeDefined();
+    expect(decoupSuggestion!.remediation!.action).toBe('place-component');
+    expect(decoupSuggestion!.remediation!.componentType).toBe('capacitor');
+    expect(decoupSuggestion!.remediation!.componentValue).toBe('100nF');
+    expect(decoupSuggestion!.remediation!.coords).toBeDefined();
+  });
+
+  it('pull resistor suggestion includes remediation with place-component action', () => {
+    const selected = buildBreadboardSelectedPartModel(instance, part, insight);
+    expect(selected).not.toBeNull();
+
+    const plan = buildBreadboardCoachPlan(selected!);
+    const pullSuggestion = plan.suggestions.find((s) => s.type === 'resistor');
+    expect(pullSuggestion).toBeDefined();
+    expect(pullSuggestion!.remediation).toBeDefined();
+    expect(pullSuggestion!.remediation!.action).toBe('place-component');
+    expect(pullSuggestion!.remediation!.componentType).toBe('resistor');
+    expect(pullSuggestion!.remediation!.componentValue).toBe('10kΩ');
+  });
+
+  it('remediation coords have col and row fields', () => {
+    const selected = buildBreadboardSelectedPartModel(instance, part, insight);
+    expect(selected).not.toBeNull();
+
+    const plan = buildBreadboardCoachPlan(selected!);
+    const withRemediation = plan.suggestions.filter((s) => s.remediation?.coords);
+    expect(withRemediation.length).toBeGreaterThan(0);
+    for (const s of withRemediation) {
+      expect(s.remediation!.coords!.col).toEqual(expect.any(String));
+      expect(s.remediation!.coords!.row).toEqual(expect.any(Number));
+    }
+  });
+
   it('still plans decoupling when connector artwork pixels are off-grid', () => {
     const offGridPart = {
       ...part,

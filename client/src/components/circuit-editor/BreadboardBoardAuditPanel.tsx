@@ -6,6 +6,7 @@ import {
   ChevronRight,
   CircuitBoard,
   Info,
+  Rocket,
   RefreshCw,
   ShieldAlert,
   XCircle,
@@ -16,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { BoardAuditIssue, BoardAuditSummary } from '@/lib/breadboard-board-audit';
+import type { PreflightResult } from '@/lib/breadboard-preflight';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -169,16 +171,42 @@ function IssueRow({
 // Audit panel
 // ---------------------------------------------------------------------------
 
+function preflightStatusIcon(status: 'pass' | 'warn' | 'fail') {
+  switch (status) {
+    case 'pass':
+      return <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-400" />;
+    case 'warn':
+      return <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-yellow-400" />;
+    case 'fail':
+      return <XCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />;
+  }
+}
+
+function preflightStatusBadgeClass(status: 'pass' | 'warn' | 'fail'): string {
+  switch (status) {
+    case 'pass':
+      return 'border-green-500/30 bg-green-500/15 text-green-300';
+    case 'warn':
+      return 'border-yellow-500/30 bg-yellow-500/15 text-yellow-300';
+    case 'fail':
+      return 'border-red-500/30 bg-red-500/15 text-red-300';
+  }
+}
+
 interface BreadboardBoardAuditPanelProps {
   audit: BoardAuditSummary | null;
   onFocusIssue?: (issue: BoardAuditIssue) => void;
   onRunAudit: () => void;
+  onRunPreflight?: () => void;
+  preflightResult?: PreflightResult | null;
 }
 
 export default function BreadboardBoardAuditPanel({
   audit: auditResult,
   onFocusIssue,
   onRunAudit,
+  onRunPreflight,
+  preflightResult,
 }: BreadboardBoardAuditPanelProps) {
   const criticalCount = auditResult?.issues.filter((i) => i.severity === 'critical').length ?? 0;
   const warningCount = auditResult?.issues.filter((i) => i.severity === 'warning').length ?? 0;
@@ -269,6 +297,78 @@ export default function BreadboardBoardAuditPanel({
         >
           <CheckCircle2 className="h-4 w-4 text-green-400" />
           <p className="text-xs text-green-300">Board is healthy — no issues detected.</p>
+        </div>
+      )}
+
+      {/* Pre-flight section */}
+      {onRunPreflight && (
+        <div className="border-t border-border/40 pt-3" data-testid="preflight-section">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-medium text-foreground">Pre-flight Check</p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              data-testid="button-run-preflight"
+              onClick={onRunPreflight}
+              className="gap-1.5"
+            >
+              <Rocket className="h-3 w-3" />
+              Ready to Build?
+            </Button>
+          </div>
+
+          {/* Preflight results */}
+          {preflightResult && (
+            <div className="mt-2 flex flex-col gap-1.5" data-testid="preflight-results">
+              {/* Overall status */}
+              <div
+                className={cn(
+                  'flex items-center gap-2 rounded-lg border px-3 py-2',
+                  preflightResult.overallStatus === 'pass' && 'border-green-500/20 bg-green-500/10',
+                  preflightResult.overallStatus === 'warn' && 'border-yellow-500/20 bg-yellow-500/10',
+                  preflightResult.overallStatus === 'fail' && 'border-red-500/20 bg-red-500/10',
+                )}
+                data-testid="preflight-overall-status"
+              >
+                {preflightStatusIcon(preflightResult.overallStatus)}
+                <p
+                  className={cn(
+                    'text-xs font-medium',
+                    preflightResult.overallStatus === 'pass' && 'text-green-300',
+                    preflightResult.overallStatus === 'warn' && 'text-yellow-300',
+                    preflightResult.overallStatus === 'fail' && 'text-red-300',
+                  )}
+                >
+                  {preflightResult.overallStatus === 'pass' && 'All clear — ready to build!'}
+                  {preflightResult.overallStatus === 'warn' && 'Review warnings before building'}
+                  {preflightResult.overallStatus === 'fail' && 'Issues found — fix before building'}
+                </p>
+              </div>
+
+              {/* Individual check rows */}
+              {preflightResult.checks.map((check) => (
+                <div
+                  key={check.id}
+                  data-testid={`preflight-check-${check.id}`}
+                  className="flex items-start gap-2 rounded-md border border-border/30 bg-background/20 p-2"
+                >
+                  {preflightStatusIcon(check.status)}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-[11px] font-medium text-foreground">{check.label}</p>
+                      <Badge className={cn('px-1.5 py-0 text-[9px]', preflightStatusBadgeClass(check.status))}>
+                        {check.status}
+                      </Badge>
+                    </div>
+                    {check.status !== 'pass' && (
+                      <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">{check.detail}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

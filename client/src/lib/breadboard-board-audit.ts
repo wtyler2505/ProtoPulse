@@ -642,6 +642,88 @@ function checkUnconnectedPowerPins(
   return issues;
 }
 
+/** Check 8: Motor controller behavioral traps — BLDC polarity, H-bridge back-EMF. */
+function checkMotorDriverTraps(
+  instances: CircuitInstanceRow[],
+  partIndex: Map<number, ComponentPart>,
+): BoardAuditIssue[] {
+  const issues: BoardAuditIssue[] = [];
+  const breadboardInstances = instances.filter((inst) => inst.breadboardX != null && inst.breadboardY != null);
+
+  for (const inst of breadboardInstances) {
+    const part = inst.partId != null ? partIndex.get(inst.partId) : undefined;
+    if (!part) {
+      continue;
+    }
+    const meta = getMeta(part);
+    const family = getFamily(meta);
+    if (family !== 'driver') {
+      continue;
+    }
+
+    const title = (typeof meta.title === 'string' ? meta.title : '').toLowerCase();
+
+    // Only motor-related drivers (skip LED drivers, etc.)
+    const isMotor =
+      title.includes('motor') ||
+      title.includes('bldc') ||
+      title.includes('h-bridge') ||
+      title.includes('h bridge') ||
+      title.includes('l298') ||
+      title.includes('l293') ||
+      title.includes('l9110') ||
+      title.includes('tb6612') ||
+      title.includes('drv8') ||
+      title.includes('riorand') ||
+      title.includes('bts7960');
+
+    if (!isMotor) {
+      continue;
+    }
+
+    const isBldcType =
+      title.includes('bldc') || title.includes('riorand');
+
+    const isHBridgeType =
+      title.includes('h-bridge') ||
+      title.includes('h bridge') ||
+      title.includes('l298') ||
+      title.includes('l293') ||
+      title.includes('l9110') ||
+      title.includes('tb6612') ||
+      title.includes('drv8') ||
+      title.includes('bts7960');
+
+    if (isBldcType) {
+      issues.push({
+        id: `motor-bldc-polarity-${String(inst.id)}`,
+        severity: 'warning',
+        category: 'safety',
+        title: `STOP/BRAKE polarity inversion on ${inst.referenceDesignator}`,
+        detail:
+          'BLDC controllers often use inverted logic: STOP is active-LOW, BRAKE is active-HIGH. Swapping these leaves the motor running or permanently braked. Verify polarity against the datasheet before wiring.',
+        affectedInstanceIds: [inst.id],
+        affectedPinIds: [],
+      });
+    }
+
+    if (isHBridgeType) {
+      issues.push({
+        id: `motor-back-emf-${String(inst.id)}`,
+        severity: 'warning',
+        category: 'safety',
+        title: `Back-EMF protection needed on ${inst.referenceDesignator}`,
+        detail:
+          'H-bridge drivers require flyback diodes across motor terminals to absorb back-EMF during deceleration. Without protection, voltage spikes can destroy the driver IC.',
+        affectedInstanceIds: [inst.id],
+        affectedPinIds: [],
+      });
+    }
+  }
+
+  return issues;
+}
+
 // ---------------------------------------------------------------------------
 // Scoring
 // ---------------------------------------------------------------------------
@@ -711,6 +793,7 @@ export function auditBreadboard(params: BoardAuditInput): BoardAuditSummary {
   const groundIssues = checkMissingGroundReturn(instances, nets, partIndex);
   const densityIssues = checkWireDensityHotspots(instances, nets);
   const unconnectedPowerIssues = checkUnconnectedPowerPins(instances, nets, partIndex);
+  const motorDriverIssues = checkMotorDriverTraps(instances, partIndex);
 
   // Combine and sort by severity (critical first, then warning, then info).
   const severityOrder: Record<BoardAuditIssue['severity'], number> = {
@@ -726,6 +809,7 @@ export function auditBreadboard(params: BoardAuditInput): BoardAuditSummary {
     ...groundIssues,
     ...densityIssues,
     ...unconnectedPowerIssues,
+    ...motorDriverIssues,
   ].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
   // Compute stats.
