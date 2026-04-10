@@ -24,6 +24,14 @@ export interface DropPreviewState {
   collision: boolean;
 }
 
+/** Fit zone — a contiguous row range where a large component can be placed. */
+export interface FitZone {
+  startRow: number;
+  rowSpan: number;
+  crossesChannel: boolean;
+  startCol: string;
+}
+
 interface BreadboardGridProps {
   /** Callback when a tie-point is clicked */
   onTiePointClick?: (coord: BreadboardCoord, pixel: PixelPos) => void;
@@ -39,6 +47,8 @@ interface BreadboardGridProps {
   showEmptyGuidance?: boolean;
   /** Real-time drag drop preview — shows valid/collision indicator at snap target. */
   dropPreview?: DropPreviewState;
+  /** Available fit zones to highlight during drag of large components. */
+  fitZones?: FitZone[];
 }
 
 // ---------------------------------------------------------------------------
@@ -170,6 +180,7 @@ function BreadboardGridInner({
   hoveredCoord,
   showEmptyGuidance,
   dropPreview,
+  fitZones,
 }: BreadboardGridProps) {
   const { width, height } = useMemo(() => getBoardDimensions(), []);
   const hoveredKey = hoveredCoord ? coordKey(hoveredCoord) : null;
@@ -455,6 +466,43 @@ function BreadboardGridInner({
                 />
               );
             })}
+        </g>
+      )}
+
+      {/* Fit-zone overlay — highlights where large components can be placed */}
+      {fitZones && fitZones.length > 0 && (
+        <g data-testid="fit-zone-overlay" pointerEvents="none">
+          {fitZones.map((zone) => {
+            const topPx = coordToPixel({
+              type: 'terminal',
+              col: zone.crossesChannel ? 'e' : (zone.startCol as ColumnLetter),
+              row: zone.startRow,
+            });
+            const bottomPx = coordToPixel({
+              type: 'terminal',
+              col: zone.crossesChannel ? 'f' : (zone.startCol as ColumnLetter),
+              row: zone.startRow + zone.rowSpan - 1,
+            });
+            const x = zone.crossesChannel ? topPx.x - 4 : topPx.x - 4;
+            const w = zone.crossesChannel ? (bottomPx.x - topPx.x) + 8 : 8;
+            const y = topPx.y - 4;
+            const h = (bottomPx.y - topPx.y) + 8;
+            return (
+              <rect
+                key={`fz-${zone.startRow}-${zone.crossesChannel ? 'ch' : zone.startCol}`}
+                x={x}
+                y={y}
+                width={w}
+                height={h}
+                rx={3}
+                fill="rgba(163, 230, 53, 0.08)"
+                stroke="rgba(163, 230, 53, 0.3)"
+                strokeWidth={0.8}
+                strokeDasharray="3,2"
+                data-testid={`fit-zone-${zone.startRow}`}
+              />
+            );
+          })}
         </g>
       )}
 

@@ -17,6 +17,7 @@ import {
   getOccupiedPoints,
   checkCollision,
   checkBodyCollision,
+  getAvailableZones,
   getBoardDimensions,
   getDefaultColorForNet,
   getConnectedHoles,
@@ -842,5 +843,75 @@ describe('checkBodyCollision', () => {
       crossesChannel: false,
     };
     expect(checkBodyCollision(newPlacement, [], 'capacitor', 2, { subType: 'electrolytic' })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getAvailableZones
+// ---------------------------------------------------------------------------
+
+describe('getAvailableZones', () => {
+  it('returns full board range when no placements exist', () => {
+    const zones = getAvailableZones(4, true, []);
+    expect(zones.length).toBeGreaterThan(0);
+    // First zone should start at row 1
+    expect(zones[0].startRow).toBe(1);
+  });
+
+  it('returns zones for DIP IC that cross the channel', () => {
+    const zones = getAvailableZones(4, true, []);
+    for (const zone of zones) {
+      expect(zone.crossesChannel).toBe(true);
+      expect(zone.rowSpan).toBe(4);
+    }
+  });
+
+  it('returns zones for single-side components', () => {
+    const zones = getAvailableZones(2, false, []);
+    for (const zone of zones) {
+      expect(zone.crossesChannel).toBe(false);
+      expect(zone.rowSpan).toBe(2);
+    }
+  });
+
+  it('excludes rows occupied by existing placements', () => {
+    const existing: ComponentPlacement[] = [
+      { refDes: 'U1', startCol: 'e', startRow: 10, rowSpan: 4, crossesChannel: true },
+    ];
+    const zones = getAvailableZones(4, true, existing);
+    // No zone should overlap rows 10-13
+    for (const zone of zones) {
+      const zoneEnd = zone.startRow + zone.rowSpan - 1;
+      const occupied = zone.startRow <= 13 && zoneEnd >= 10;
+      expect(occupied).toBe(false);
+    }
+  });
+
+  it('returns empty array when board is fully occupied', () => {
+    // Place components on every row across the channel
+    const existing: ComponentPlacement[] = [];
+    for (let row = 1; row <= BB.ROWS; row += 4) {
+      existing.push({ refDes: `U${row}`, startCol: 'e', startRow: row, rowSpan: 4, crossesChannel: true });
+    }
+    const zones = getAvailableZones(4, true, existing);
+    expect(zones).toEqual([]);
+  });
+
+  it('finds gaps between occupied regions', () => {
+    const existing: ComponentPlacement[] = [
+      { refDes: 'U1', startCol: 'e', startRow: 1, rowSpan: 4, crossesChannel: true },
+      { refDes: 'U2', startCol: 'e', startRow: 10, rowSpan: 4, crossesChannel: true },
+    ];
+    // There should be a gap in rows 5-9 for a 4-row DIP
+    const zones = getAvailableZones(4, true, existing);
+    const gapZone = zones.find((z) => z.startRow >= 5 && z.startRow + z.rowSpan - 1 <= 9);
+    expect(gapZone).toBeDefined();
+  });
+
+  it('respects board row limit — no zone exceeds BB.ROWS', () => {
+    const zones = getAvailableZones(4, true, []);
+    for (const zone of zones) {
+      expect(zone.startRow + zone.rowSpan - 1).toBeLessThanOrEqual(BB.ROWS);
+    }
   });
 });

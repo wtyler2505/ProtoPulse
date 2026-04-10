@@ -546,3 +546,88 @@ export function checkBodyCollision(
 
   return false;
 }
+
+// ---------------------------------------------------------------------------
+// Fit-zone detection
+// ---------------------------------------------------------------------------
+
+/** A zone where a component of a given row span can be placed. */
+export interface AvailableZone {
+  /** First row of the zone. */
+  startRow: number;
+  /** Number of contiguous rows available. */
+  rowSpan: number;
+  /** Whether this zone crosses the center channel (DIP placement). */
+  crossesChannel: boolean;
+  /** Starting column — 'e' for channel-crossing, varies for single-side. */
+  startCol: ColumnLetter;
+}
+
+/**
+ * Find all contiguous row ranges on the board where a component of the given
+ * row span can fit without overlapping any existing placement.
+ *
+ * For channel-crossing placements (DIP ICs), rows are checked against columns
+ * e and f. For single-side placements, rows are checked against the left group
+ * (column a).
+ *
+ * @param rowSpan         - How many rows the component needs
+ * @param crossesChannel  - Whether the component straddles the center channel
+ * @param existing        - Already-placed components
+ * @returns Array of AvailableZone describing valid starting positions
+ */
+export function getAvailableZones(
+  rowSpan: number,
+  crossesChannel: boolean,
+  existing: ComponentPlacement[],
+): AvailableZone[] {
+  // Build a set of occupied rows for the relevant columns
+  const occupiedRows = new Set<number>();
+  for (const p of existing) {
+    // Only consider placements that share column space
+    if (crossesChannel && p.crossesChannel) {
+      // Both use the channel — rows conflict
+      for (let r = p.startRow; r < p.startRow + p.rowSpan; r++) {
+        occupiedRows.add(r);
+      }
+    } else if (crossesChannel) {
+      // New is channel-crossing, existing is single-side.
+      // Channel-crossing uses e and f; single-side might use e or f group
+      const ci = colIndex[p.startCol];
+      if (ci === colIndex['e'] || ci === colIndex['f']) {
+        for (let r = p.startRow; r < p.startRow + p.rowSpan; r++) {
+          occupiedRows.add(r);
+        }
+      }
+    } else if (p.crossesChannel) {
+      // New is single-side, existing crosses channel — conflicts on e/f rows
+      for (let r = p.startRow; r < p.startRow + p.rowSpan; r++) {
+        occupiedRows.add(r);
+      }
+    } else {
+      // Both single-side — conflict only if same column group
+      for (let r = p.startRow; r < p.startRow + p.rowSpan; r++) {
+        occupiedRows.add(r);
+      }
+    }
+  }
+
+  const zones: AvailableZone[] = [];
+  const maxStartRow = BB.ROWS - rowSpan + 1;
+  const startCol: ColumnLetter = crossesChannel ? 'e' : 'a';
+
+  for (let row = 1; row <= maxStartRow; row++) {
+    let fits = true;
+    for (let r = row; r < row + rowSpan; r++) {
+      if (occupiedRows.has(r)) {
+        fits = false;
+        break;
+      }
+    }
+    if (fits) {
+      zones.push({ startRow: row, rowSpan, crossesChannel, startCol });
+    }
+  }
+
+  return zones;
+}
