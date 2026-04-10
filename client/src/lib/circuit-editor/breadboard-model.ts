@@ -14,6 +14,8 @@
  *     strips and power rails by default.
  */
 
+import { getBodyBounds, checkBodyOverlap, type BodyBounds } from './body-bounds';
+
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
