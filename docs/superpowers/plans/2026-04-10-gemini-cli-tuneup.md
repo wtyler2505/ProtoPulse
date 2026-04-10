@@ -533,6 +533,345 @@ This plan covers a single logical subsystem (Gemini CLI installation + configura
 
 ---
 
+## Phase 2.5 — Reversion Prevention (STALE LOCAL INSTALLS)
+
+**Goal:** Eliminate every stale `@google/gemini-cli` install and every dependency declaration that could silently shadow or reinstate an older version. This phase is added because a follow-up audit on 2026-04-10 found 3 stale local installs pinned to versions behind v0.37.1.
+
+**The Problem (discovered 2026-04-10):**
+
+| Location | Version | Dependency pin | Disk | Risk |
+|----------|---------|----------------|------|------|
+| `/home/wtyler/.nvm/versions/node/v22.22.0/bin/gemini` (global, nvm) | **0.37.1** | — | — | ✅ OK — this is what `which gemini` resolves to |
+| `~/Projects/ProtoPulse/node_modules/@google/gemini-cli` | 0.37.1 | `^0.37.1` in ProtoPulse package.json | — | ✅ OK — matches global, legitimate local dev dep |
+| `~/node_modules/@google/gemini-cli` | **0.34.0** | `^0.34.0` in `~/package.json` | 1.4 GB | ⚠️ **STALE, FROZEN** — `npm install` in $HOME reinstates 0.34.x |
+| `~/Projects/node_modules/@google/gemini-cli` | **0.34.0** | `^0.34.0` in `~/Projects/package.json` | 509 MB | ⚠️ **STALE, FROZEN** — no script actually uses it |
+| `~/circuitmind-ai/node_modules/@google/gemini-cli` | **0.26.0** | `^0.26.0` in `~/circuitmind-ai/package.json` | 1.4 GB | ⚠️ **ANCIENT, 11 VERSIONS BEHIND** |
+| `~/.bun/install/cache/@google/gemini-cli` | 0.28.2 + 0.33.1 | — (bun cache) | — | ⚠️ Stale bun cache — would restore old versions if `bun install` runs anywhere using it |
+
+**Why the global install still wins today (good news):**
+- `$PATH` resolves `gemini` to the nvm bin before any local `node_modules/.bin`
+- No `node_modules/.bin` directories appear in `$PATH`
+- `direnv` is installed but no `.envrc` files exist in `~`, `~/Projects/`, or `~/circuitmind-ai/`
+- `~/.npm-global/bin/gemini` does NOT exist — no second global install
+- pnpm/bun/homebrew global bins do NOT contain gemini
+- `npx` cache contains zero `@google/gemini-cli` entries
+
+**Why the global install could still LOSE tomorrow (the real risk):**
+1. **`npm install` in $HOME** — the moment Tyler runs this anywhere under `~` that isn't a subdir with its own package.json, npm finds `~/package.json` and reinstalls `@google/gemini-cli@0.34.x` into `~/node_modules/`. The caret `^0.34.0` FREEZES it at 0.34.x forever (won't upgrade to 0.35+).
+2. **`npx gemini`** invoked from `~`, `~/Projects/`, or `~/circuitmind-ai/` — npx prefers the nearest local install over the global. This silently runs the stale 0.34.0/0.26.0.
+3. **`npm run <script>`** from any of those dirs — npm prepends `./node_modules/.bin` to PATH for the script's lifetime. If any script in those package.jsons calls `gemini`, it uses the stale version.
+4. **A future `npm install --save @google/gemini-cli` from $HOME** — would append it to `~/package.json` and lock Tyler into whatever version he passed.
+5. **Bun workflows** — if Tyler ever runs `bun install` in a dir that uses bun, the cache at `~/.bun/install/cache/@google/gemini-cli/` has 0.28.2 and 0.33.1 ready to be hydrated.
+6. **`~/Projects/` workspace orchestrator** — this is particularly risky because it's the entry point for Tyler's multi-repo management. Every time a cleanup script does `npm install` there, it pins 0.34.x in place.
+
+**Files:**
+- Modify: `~/package.json` (remove `@google/gemini-cli` dependency)
+- Modify: `~/Projects/package.json` (remove `@google/gemini-cli` dependency)
+- Modify: `~/circuitmind-ai/package.json` (decide: remove or bump to `^0.37.0`)
+- Modify: `~/Projects/ProtoPulse/package.json` (pin exact version OR leave as caret)
+- Delete: `~/node_modules/@google/` and `~/node_modules/.bin/gemini`
+- Delete: `~/Projects/node_modules/@google/` and `~/Projects/node_modules/.bin/gemini`
+- Delete: `~/circuitmind-ai/node_modules/@google/` and `~/circuitmind-ai/node_modules/.bin/gemini`
+- Delete: `~/.bun/install/cache/@google/gemini-cli/`
+- Create: `~/gemini-cli-audit/scripts/scan-stale-gemini.sh` (recurring health check)
+- Create: shell hook in `~/.bashrc` that warns on session start if stale installs reappear
+
+### Task 2.5.1 — Back up every affected file BEFORE modification
+
+- [ ] **Step 1:** Snapshot the four affected package.json files.
+
+  ```bash
+  TS=$(date +%Y%m%d-%H%M%S)
+  mkdir -p ~/gemini-cli-audit/backups/package-jsons-${TS}
+  for f in /home/wtyler/package.json /home/wtyler/Projects/package.json /home/wtyler/circuitmind-ai/package.json /home/wtyler/Projects/ProtoPulse/package.json; do
+    cp -v "$f" ~/gemini-cli-audit/backups/package-jsons-${TS}/"$(echo "$f" | tr / _)"
+  done
+  ```
+
+- [ ] **Step 2:** Snapshot the stale node_modules trees (just the manifest + bin, not the whole thing — too big).
+
+  ```bash
+  mkdir -p ~/gemini-cli-audit/backups/stale-gemini-${TS}
+  for d in /home/wtyler/node_modules/@google/gemini-cli /home/wtyler/Projects/node_modules/@google/gemini-cli /home/wtyler/circuitmind-ai/node_modules/@google/gemini-cli; do
+    if [ -d "$d" ]; then
+      name=$(echo "$d" | tr / _)
+      cp "$d/package.json" ~/gemini-cli-audit/backups/stale-gemini-${TS}/${name}_package.json 2>/dev/null
+    fi
+  done
+  ```
+
+- [ ] **Step 3:** Commit.
+
+### Task 2.5.2 — Determine whether the dependency is actually used
+
+- [ ] **Step 1:** For each package.json, grep its scripts, source files, and README for any mention of `gemini`. If no code or script actually calls `gemini`, the dep is orphaned and safe to remove.
+
+  ```bash
+  # Home dir
+  grep -rn "gemini" /home/wtyler/package.json /home/wtyler/.bashrc /home/wtyler/.bash_profile 2>/dev/null
+  # Projects workspace
+  grep -rn "gemini" /home/wtyler/Projects/package.json /home/wtyler/Projects/scripts/ 2>/dev/null
+  # circuitmind-ai
+  grep -rn "gemini" /home/wtyler/circuitmind-ai/package.json /home/wtyler/circuitmind-ai/scripts/ /home/wtyler/circuitmind-ai/README.md 2>/dev/null
+  ```
+
+- [ ] **Step 2:** Record findings. Expected result (from 2026-04-10 audit):
+  - `~/package.json`: scripts field is absent — dep is for ad-hoc `npx` only. **Orphaned.**
+  - `~/Projects/package.json`: scripts are all `./scripts/*.sh` or `npm run --prefix <subdir>` — none call gemini. **Orphaned.**
+  - `~/circuitmind-ai/package.json`: unknown — investigate. If not used, remove. If used, bump.
+
+- [ ] **Step 3:** Commit findings.
+
+### Task 2.5.3 — Remove `@google/gemini-cli` from `~/package.json`
+
+- [ ] **Step 1:** Use `npm uninstall` (the right way — updates both package.json and package-lock.json and removes from node_modules).
+
+  ```bash
+  cd /home/wtyler
+  npm uninstall @google/gemini-cli 2>&1 | tail
+  ```
+
+- [ ] **Step 2:** Verify the package.json no longer lists it.
+
+  ```bash
+  jq '.dependencies["@google/gemini-cli"]' /home/wtyler/package.json
+  # Expected: null
+  ```
+
+- [ ] **Step 3:** Verify the bin symlink is gone.
+
+  ```bash
+  ls /home/wtyler/node_modules/.bin/gemini 2>&1
+  # Expected: "No such file or directory"
+  ```
+
+- [ ] **Step 4:** Verify the global binary still resolves.
+
+  ```bash
+  which gemini
+  gemini --version
+  # Expected: .nvm path, 0.37.1
+  ```
+
+- [ ] **Step 5:** Commit.
+
+### Task 2.5.4 — Remove `@google/gemini-cli` from `~/Projects/package.json`
+
+- [ ] **Step 1:** Same approach.
+
+  ```bash
+  cd /home/wtyler/Projects
+  npm uninstall @google/gemini-cli 2>&1 | tail
+  ```
+
+- [ ] **Step 2:** Verify.
+
+  ```bash
+  jq '.dependencies["@google/gemini-cli"]' /home/wtyler/Projects/package.json
+  ls /home/wtyler/Projects/node_modules/.bin/gemini 2>&1
+  which gemini && gemini --version
+  ```
+
+- [ ] **Step 3:** Run the workspace's own scripts to confirm none broke.
+
+  ```bash
+  cd /home/wtyler/Projects && npm run sync --dry-run 2>&1 | head
+  ```
+
+- [ ] **Step 4:** Commit.
+
+### Task 2.5.5 — Decide and act on `~/circuitmind-ai/package.json`
+
+- [ ] **Step 1:** If the grep from Task 2.5.2 showed no actual use:
+
+  ```bash
+  cd /home/wtyler/circuitmind-ai
+  npm uninstall @google/gemini-cli
+  ```
+
+- [ ] **Step 2:** If it IS used, bump to the current version:
+
+  ```bash
+  cd /home/wtyler/circuitmind-ai
+  npm install --save @google/gemini-cli@^0.37.0
+  # verify
+  jq '.dependencies["@google/gemini-cli"]' package.json
+  ```
+
+- [ ] **Step 3:** Commit.
+
+### Task 2.5.6 — Pin ProtoPulse's local dep to prevent drift
+
+- [ ] **Step 1:** Decide: should ProtoPulse pin to exact `"0.37.1"` (no caret) to lock reproducibility, or keep `"^0.37.1"` to allow forward patch/minor bumps?
+
+  - **Exact pin (`"0.37.1"`)**: maximum reproducibility; manual bumps only.
+  - **Caret pin (`"^0.37.1"`)**: allows `0.38.x`, `0.99.x` (semver caret rules). Modern npm behavior is to upgrade within range on `npm install`, but won't go backward — so can't revert.
+
+- [ ] **Step 2:** Whichever Tyler chooses, run `npm install` in ProtoPulse to re-lock.
+
+  ```bash
+  cd /home/wtyler/Projects/ProtoPulse
+  npm install
+  jq '.dependencies["@google/gemini-cli"]' package.json
+  ls node_modules/.bin/gemini
+  ```
+
+- [ ] **Step 3:** Commit.
+
+### Task 2.5.7 — Clear bun's stale install cache
+
+- [ ] **Step 1:** Verify no active project uses bun for gemini-cli.
+
+  ```bash
+  find /home/wtyler -maxdepth 4 -name "bun.lockb" -o -name "bun.lock" 2>/dev/null | xargs -I {} grep -l "gemini-cli" {} 2>/dev/null
+  ```
+
+- [ ] **Step 2:** If clean, nuke the bun cache.
+
+  ```bash
+  rm -rf /home/wtyler/.bun/install/cache/@google/gemini-cli
+  # verify
+  ls /home/wtyler/.bun/install/cache/@google/ 2>/dev/null
+  ```
+
+- [ ] **Step 3:** Commit.
+
+### Task 2.5.8 — Install a "stale gemini scan" script
+
+- [ ] **Step 1:** Create `~/gemini-cli-audit/scripts/scan-stale-gemini.sh`:
+
+  ```bash
+  #!/usr/bin/env bash
+  # Scans for stale @google/gemini-cli installs that could shadow the global.
+  # Exits 0 if clean, 1 if stale installs found.
+  set -euo pipefail
+
+  GLOBAL_VER=$(gemini --version 2>/dev/null || echo "unknown")
+  echo "Global gemini: ${GLOBAL_VER}  ($(which gemini 2>/dev/null))"
+  echo
+
+  STALE=0
+  while IFS= read -r pkg; do
+    v=$(jq -r '.version' "$pkg" 2>/dev/null)
+    dir=$(dirname "$(dirname "$(dirname "$pkg")")")
+    # Skip global nvm install
+    if [[ "$pkg" == *"/.nvm/"* ]]; then
+      continue
+    fi
+    if [[ "$v" != "$GLOBAL_VER" ]]; then
+      echo "STALE: $v in $dir"
+      STALE=1
+    fi
+  done < <(find /home/wtyler -maxdepth 8 -path "*/@google/gemini-cli/package.json" 2>/dev/null | grep -v "/.nvm/")
+
+  # Check for dependency declarations
+  echo
+  echo "Dependency declarations:"
+  while IFS= read -r pkgjson; do
+    v=$(jq -r '.dependencies["@google/gemini-cli"] // .devDependencies["@google/gemini-cli"] // empty' "$pkgjson" 2>/dev/null)
+    if [[ -n "$v" ]]; then
+      echo "  $pkgjson → $v"
+    fi
+  done < <(find /home/wtyler -maxdepth 3 -name "package.json" -not -path "*/node_modules/*" 2>/dev/null)
+
+  # Bun cache
+  if ls /home/wtyler/.bun/install/cache/@google/gemini-cli 2>/dev/null; then
+    echo "BUN CACHE STALE: $(ls /home/wtyler/.bun/install/cache/@google/gemini-cli)"
+    STALE=1
+  fi
+
+  exit $STALE
+  ```
+
+- [ ] **Step 2:** Make it executable.
+
+  ```bash
+  chmod +x ~/gemini-cli-audit/scripts/scan-stale-gemini.sh
+  ```
+
+- [ ] **Step 3:** Run it right now to prove it works.
+
+  ```bash
+  ~/gemini-cli-audit/scripts/scan-stale-gemini.sh
+  # Expected: reports only the global install, no stale, no dependency declarations (or only ProtoPulse's)
+  ```
+
+- [ ] **Step 4:** Commit.
+
+### Task 2.5.9 — Add a session-start warning to ~/.bashrc
+
+- [ ] **Step 1:** Append a guard that runs the scan every 24h and warns Tyler if anything regressed.
+
+  ```bash
+  cat >> ~/.bashrc <<'EOF'
+
+  # Gemini CLI stale-install guard — warns once per day if a stale version reappears
+  _gemini_stale_guard() {
+    local stamp_file="${HOME}/.gemini-stale-scan-stamp"
+    local now=$(date +%s)
+    local last=0
+    [ -f "$stamp_file" ] && last=$(cat "$stamp_file" 2>/dev/null || echo 0)
+    if (( now - last > 86400 )); then
+      if [ -x "${HOME}/gemini-cli-audit/scripts/scan-stale-gemini.sh" ]; then
+        if ! "${HOME}/gemini-cli-audit/scripts/scan-stale-gemini.sh" >/dev/null 2>&1; then
+          echo "⚠️  Gemini CLI stale install detected — run ~/gemini-cli-audit/scripts/scan-stale-gemini.sh for details"
+        fi
+        echo "$now" > "$stamp_file"
+      fi
+    fi
+  }
+  _gemini_stale_guard
+  EOF
+  ```
+
+- [ ] **Step 2:** Source it and verify.
+
+  ```bash
+  source ~/.bashrc
+  # should be silent (no stale installs)
+  ```
+
+- [ ] **Step 3:** Commit.
+
+### Task 2.5.10 — Verify reversion-proof end state
+
+- [ ] **Step 1:** Run the scan — expect clean.
+
+  ```bash
+  ~/gemini-cli-audit/scripts/scan-stale-gemini.sh
+  ```
+
+- [ ] **Step 2:** Verify the global still resolves.
+
+  ```bash
+  which gemini
+  readlink -f $(which gemini)
+  gemini --version
+  ```
+
+- [ ] **Step 3:** Simulate the danger: `cd ~` and `npx --no gemini --version` should either fail (no local) or return the global version.
+
+  ```bash
+  cd ~
+  npx --no gemini --version 2>&1
+  cd ~/Projects
+  npx --no gemini --version 2>&1
+  cd ~/circuitmind-ai
+  npx --no gemini --version 2>&1
+  ```
+
+- [ ] **Step 4:** Disk reclamation check.
+
+  ```bash
+  du -sh /home/wtyler/node_modules /home/wtyler/Projects/node_modules /home/wtyler/circuitmind-ai/node_modules 2>/dev/null
+  ```
+
+- [ ] **Step 5:** Commit final verification.
+
+**Phase 2.5 gate:** No stale gemini-cli exists anywhere on disk outside the ProtoPulse local install (which matches global) and the nvm global. `~/package.json` and `~/Projects/package.json` no longer declare `@google/gemini-cli`. Bun cache is clean. A daily guard hook warns on regression.
+
+---
+
 ## Phase 3 — Hygiene & Cleanup (Destructive but Safe)
 
 **Goal:** Reclaim disk, remove orphaned enablement entries, prune stale references. All actions reversible via Phase 2 backup.
