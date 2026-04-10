@@ -22,3 +22,4 @@ FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memor
  8: 0x140c3be v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [node]
  9: 0x186da1c v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [node]
 10: 0x71b1c766c476 
+Aborted (core dumped)
