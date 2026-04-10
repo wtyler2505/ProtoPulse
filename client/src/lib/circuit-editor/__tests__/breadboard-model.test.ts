@@ -16,6 +16,7 @@ import {
   getConnectedPoints,
   getOccupiedPoints,
   checkCollision,
+  checkBodyCollision,
   getBoardDimensions,
   getDefaultColorForNet,
   getConnectedHoles,
@@ -767,5 +768,79 @@ describe('getConnectedHoles', () => {
   it('returns empty array for invalid column letter', () => {
     const holes = getConnectedHoles(1, 'z');
     expect(holes).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkBodyCollision
+// ---------------------------------------------------------------------------
+
+describe('checkBodyCollision', () => {
+  it('detects body collision between adjacent tall components', () => {
+    // Two electrolytic caps in adjacent rows on the same column
+    const existing: ComponentPlacement = {
+      refDes: 'C1',
+      startCol: 'a',
+      startRow: 10,
+      rowSpan: 2,
+      crossesChannel: false,
+    };
+    const newPlacement: ComponentPlacement = {
+      refDes: 'C2',
+      startCol: 'a',
+      startRow: 11,
+      rowSpan: 2,
+      crossesChannel: false,
+    };
+    // Overlapping rows with tall component type → body collision
+    expect(checkBodyCollision(newPlacement, [existing], 'capacitor', 2, { subType: 'electrolytic' })).toBe(true);
+  });
+
+  it('allows flat components in adjacent rows', () => {
+    const existing: ComponentPlacement = {
+      refDes: 'R1',
+      startCol: 'a',
+      startRow: 10,
+      rowSpan: 2,
+      crossesChannel: false,
+    };
+    const newPlacement: ComponentPlacement = {
+      refDes: 'R2',
+      startCol: 'a',
+      startRow: 11,
+      rowSpan: 2,
+      crossesChannel: false,
+    };
+    // Both resistors are flat — no body collision even though rows overlap
+    expect(checkBodyCollision(newPlacement, [existing], 'resistor', 2)).toBe(false);
+  });
+
+  it('returns false when placements are far apart', () => {
+    const existing: ComponentPlacement = {
+      refDes: 'U1',
+      startCol: 'a',
+      startRow: 1,
+      rowSpan: 4,
+      crossesChannel: true,
+    };
+    const newPlacement: ComponentPlacement = {
+      refDes: 'U2',
+      startCol: 'a',
+      startRow: 30,
+      rowSpan: 4,
+      crossesChannel: true,
+    };
+    expect(checkBodyCollision(newPlacement, [existing], 'ic', 8)).toBe(false);
+  });
+
+  it('returns false when no existing placements', () => {
+    const newPlacement: ComponentPlacement = {
+      refDes: 'C1',
+      startCol: 'a',
+      startRow: 10,
+      rowSpan: 2,
+      crossesChannel: false,
+    };
+    expect(checkBodyCollision(newPlacement, [], 'capacitor', 2, { subType: 'electrolytic' })).toBe(false);
   });
 });

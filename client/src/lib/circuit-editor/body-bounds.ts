@@ -55,8 +55,12 @@ const SCALE = BB.PITCH / 2.54;
  * Height threshold in pixels. Components whose scaled height is below this
  * value are considered "flat" — they sit flush with the board and cannot
  * physically collide with adjacent flat components.
+ *
+ * 3mm * SCALE ≈ 11.8 px. Components at or below ~3mm off the board
+ * (axial resistors, ceramic disc caps, small diodes) are flush enough
+ * that adjacent placement is safe.
  */
-const FLAT_THRESHOLD = 5;
+export const FLAT_THRESHOLD = 3 * SCALE; // ~11.8 px
 
 // ---------------------------------------------------------------------------
 // Component body profiles (physical dimensions in mm)

@@ -9,6 +9,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getBodyBounds,
   checkBodyOverlap,
+  FLAT_THRESHOLD,
   type BodyBounds,
 } from '../body-bounds';
 
@@ -24,7 +25,7 @@ describe('getBodyBounds', () => {
 
   it('returns flat bounds for axial resistor', () => {
     const bounds = getBodyBounds('resistor', 2);
-    expect(bounds.height).toBeLessThan(5); // flat profile
+    expect(bounds.height).toBeLessThan(FLAT_THRESHOLD); // flat profile — below body-collision threshold
   });
 
   it('returns wide bounds for DIP IC based on pin count', () => {

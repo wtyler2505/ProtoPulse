@@ -9,10 +9,12 @@ Your knowledge is too vast for one prompt. You have a dedicated skill folder wit
 1. **`@.agents/skills/claude-code-maestro/references/hooks-and-permissions.md`**: For lifecycle events (`PreToolUse`, `PostToolUse`), structured JSON output requirements, filtering (`matcher`, `if`), and sandboxing (`allowWrite`, `allowedDomains`).
 2. **`@.agents/skills/claude-code-maestro/references/agents-and-skills.md`**: For scaffolding subagents (with `isolation: worktree`, `memory: project`), Agent Teams, and Plugins (`plugin.json`, `userConfig`).
 3. **`@.agents/skills/claude-code-maestro/references/context-and-memory.md`**: For understanding `CLAUDE.md` limits, dynamic path-scoped rules (`.claude/rules/`), auto-compaction, the Agent SDK, and headless mode.
+4. **The Ultimate Encyclopedia (`.agents/skills/claude-code-maestro/references/raw_docs/`)**: This directory contains over 80 raw Markdown files fetched directly from the official Claude Code documentation index. If the summary files above don't contain the exact syntax or flag you need, use your `list_directory` and `read_file` tools to search this directory for the definitive answer.
 
 ## Your Toolkit
 You have pre-built tools at your disposal:
 *   **Validation Script:** Run `!bash .agents/skills/claude-code-maestro/scripts/validate-settings.sh` to ensure `.claude/settings.json` is perfectly formatted before and after making edits.
+*   **Update Script:** Run `!bash .agents/skills/claude-code-maestro/scripts/fetch_docs.sh` to refresh your `raw_docs/` encyclopedia with the latest changes.
 *   **Hook Template:** Use `@.agents/skills/claude-code-maestro/templates/hook-command.sh` as boilerplate when asked to write a bash script hook. It includes `jq` parsing and JSON response structure.
 *   **Agent Template:** Use `@.agents/skills/claude-code-maestro/templates/agent.md` when asked to scaffold a new domain expert.
 
@@ -30,7 +32,7 @@ When activated, perform an audit of the local workspace (if you haven't already)
 2. **Check Extensions**: Scan `.claude/skills/`, `.claude/agents/`, `.claude/rules/`, and plugins.
 
 ## 2. Interactive Execution
-*   **Respond to `{{args}}`**: If the user provided instructions, read your `references/`, use your `templates/`, and immediately draft the file or execute the fix. If throwing errors, **search the web first**.
+*   **Respond to `{{args}}`**: If the user provided instructions, read your `references/`, use your `templates/`, and immediately draft the file or execute the fix. If throwing errors or missing from docs, **search the web first**.
 *   **Proactive Dashboard**: If no args are provided, present a beautifully formatted "Claude Code CLI Dashboard". 
     - Show a summary of their setup (e.g., "3 active hooks, 2 subagents, 5 path-scoped rules").
     - Run `validate-settings.sh` and report the health of their configuration.

@@ -365,6 +365,7 @@ export function syncSchematicToBreadboard(
         view: 'breadboard',
         points: [fromPx, toPx],
         color: netColor(net),
+        provenance: 'synced',
       });
     }
 
@@ -506,6 +507,7 @@ export function syncBreadboardToSchematic(
       netId: wire.netId,
       view: 'schematic',
       points: [fromPx, toPx],
+      provenance: 'synced',
     });
   }
 
