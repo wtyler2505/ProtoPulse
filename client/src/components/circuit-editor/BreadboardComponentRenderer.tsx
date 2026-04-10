@@ -3,7 +3,12 @@ import { computeShapesBounds, renderPartShape } from '@/components/circuit-edito
 import { useSimulation } from '@/lib/contexts/simulation-context';
 import { cn } from '@/lib/utils';
 import { getVerificationStatus, shouldPreferExactBreadboardView } from '@shared/component-trust';
-import { ResistorSvg, CapacitorSvg, LedSvg, IcSvg, DiodeSvg, TransistorSvg } from './breadboard-components';
+import {
+  ResistorSvg, CapacitorSvg, LedSvg, IcSvg, DiodeSvg, TransistorSvg,
+  PotentiometerSvg, ButtonSvg, SwitchSvg, HeaderSvg, RegulatorSvg,
+  CrystalSvg, BuzzerSvg, FuseSvg, SensorSvg, DisplaySvg, RelaySvg,
+  MotorSvg, ConnectorSvg,
+} from './breadboard-components';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
