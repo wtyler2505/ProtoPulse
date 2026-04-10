@@ -5,6 +5,7 @@ import ComponentPlacer from '@/components/circuit-editor/ComponentPlacer';
 import BreadboardStarterShelf from '@/components/circuit-editor/BreadboardStarterShelf';
 import BreadboardBoardAuditPanel from '@/components/circuit-editor/BreadboardBoardAuditPanel';
 import BreadboardQuickIntake from '@/components/circuit-editor/BreadboardQuickIntake';
+import type { QuickIntakeItem } from '@/components/circuit-editor/BreadboardQuickIntake';
 import type {
   BreadboardBenchInsight,
   BreadboardBenchSummary,
@@ -35,6 +36,7 @@ interface BreadboardWorkbenchSidebarProps {
   onOpenComponentEditor: () => void;
   onOpenCommunity: () => void;
   onOpenSchematic: () => void;
+  onQuickAdd?: (item: QuickIntakeItem) => void;
   onFocusBoardIssue?: (issue: BoardAuditIssue) => void;
   onRunBoardAudit?: () => void;
 }
@@ -67,6 +69,7 @@ export default function BreadboardWorkbenchSidebar({
   onOpenComponentEditor,
   onOpenCommunity,
   onOpenSchematic,
+  onQuickAdd,
   onFocusBoardIssue,
   onRunBoardAudit,
 }: BreadboardWorkbenchSidebarProps) {
@@ -187,6 +190,13 @@ export default function BreadboardWorkbenchSidebar({
                 {String(wireCount)} live wires
               </div>
             </div>
+
+            {onQuickAdd && (
+              <div className="rounded-xl border border-border/60 bg-background/40 p-3" data-testid="breadboard-quick-intake-section">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Quick Intake</p>
+                <BreadboardQuickIntake onAdd={onQuickAdd} />
+              </div>
+            )}
 
             <div className="rounded-xl border border-primary/20 bg-background/40 p-3" data-testid="breadboard-bench-ai-card">
               <div className="flex items-start justify-between gap-3">
