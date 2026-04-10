@@ -25,6 +25,8 @@ function makeInstance(overrides: Partial<CircuitInstanceRow> = {}): CircuitInsta
     pcbRotation: 0,
     pcbSide: 'front',
     pcbLocked: false,
+    benchX: null,
+    benchY: null,
     properties: {},
     createdAt: new Date(),
     ...overrides,

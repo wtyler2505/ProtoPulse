@@ -5,6 +5,13 @@
 export { MEGA_2560_R3 } from './mega-2560-r3';
 export { NODEMCU_ESP32S } from './nodemcu-esp32s';
 export { RIORAND_KJL01 } from './riorand-kjl01';
+export { ARDUINO_UNO_R3 } from './arduino-uno-r3';
+export { ARDUINO_NANO } from './arduino-nano';
+export { RPI_PICO } from './rpi-pico';
+export { STM32_NUCLEO_64 } from './stm32-nucleo-64';
+export { ADAFRUIT_FEATHER_M0 } from './adafruit-feather';
+export { SPARKFUN_THING_PLUS } from './sparkfun-thing-plus';
+export { TEENSY_40 } from './teensy-40';
 
 export type {
   BootPinConfig,
@@ -23,12 +30,26 @@ export type {
 import { MEGA_2560_R3 } from './mega-2560-r3';
 import { NODEMCU_ESP32S } from './nodemcu-esp32s';
 import { RIORAND_KJL01 } from './riorand-kjl01';
+import { ARDUINO_UNO_R3 } from './arduino-uno-r3';
+import { ARDUINO_NANO } from './arduino-nano';
+import { RPI_PICO } from './rpi-pico';
+import { STM32_NUCLEO_64 } from './stm32-nucleo-64';
+import { ADAFRUIT_FEATHER_M0 } from './adafruit-feather';
+import { SPARKFUN_THING_PLUS } from './sparkfun-thing-plus';
+import { TEENSY_40 } from './teensy-40';
 import type { VerifiedBoardDefinition } from './types';
 
 const ALL_BOARDS: VerifiedBoardDefinition[] = [
   MEGA_2560_R3,
   NODEMCU_ESP32S,
   RIORAND_KJL01,
+  ARDUINO_UNO_R3,
+  ARDUINO_NANO,
+  RPI_PICO,
+  STM32_NUCLEO_64,
+  ADAFRUIT_FEATHER_M0,
+  SPARKFUN_THING_PLUS,
+  TEENSY_40,
 ];
 
 /** Get a verified board by its stable ID. */

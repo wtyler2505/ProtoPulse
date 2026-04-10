@@ -39,6 +39,8 @@ function makeInstance(
     pcbY: null,
     pcbRotation: null,
     pcbSide: null,
+    benchX: null,
+    benchY: null,
     properties: {},
     createdAt: new Date(),
   };

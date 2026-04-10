@@ -295,6 +295,8 @@ function makeSpiceInstance(overrides: Partial<CircuitInstanceRow> = {}): Circuit
     pcbY: null,
     pcbRotation: 0,
     pcbSide: 'front',
+    benchX: null,
+    benchY: null,
     properties: { value: '10K' },
     createdAt: new Date('2025-01-01T00:00:00Z'),
     ...overrides,

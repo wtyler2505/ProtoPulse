@@ -94,6 +94,8 @@ function makeInstance(
     pcbY: null,
     pcbRotation: 0,
     pcbSide: 'front',
+    benchX: null,
+    benchY: null,
     properties: {},
     createdAt: new Date(),
   } as unknown as CircuitInstanceRow;

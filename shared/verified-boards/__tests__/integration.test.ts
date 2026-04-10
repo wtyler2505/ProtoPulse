@@ -6,13 +6,20 @@ import {
 } from '../index';
 
 describe('Verified Board Pack integration', () => {
-  it('getAllVerifiedBoards returns all 3 boards', () => {
+  it('getAllVerifiedBoards returns all 10 boards', () => {
     const boards = getAllVerifiedBoards();
-    expect(boards).toHaveLength(3);
+    expect(boards).toHaveLength(10);
     const ids = boards.map((b) => b.id);
     expect(ids).toContain('arduino-mega-2560-r3');
     expect(ids).toContain('nodemcu-esp32s');
     expect(ids).toContain('riorand-kjl01');
+    expect(ids).toContain('arduino-uno-r3');
+    expect(ids).toContain('arduino-nano');
+    expect(ids).toContain('rpi-pico');
+    expect(ids).toContain('stm32-nucleo-64');
+    expect(ids).toContain('adafruit-feather-m0');
+    expect(ids).toContain('sparkfun-thing-plus-esp32');
+    expect(ids).toContain('teensy-40');
   });
 
   it('getVerifiedBoard looks up by ID', () => {
@@ -30,7 +37,7 @@ describe('Verified Board Pack integration', () => {
   });
 
   it('getVerifiedBoard returns undefined for unknown IDs', () => {
-    expect(getVerifiedBoard('arduino-nano')).toBeUndefined();
+    expect(getVerifiedBoard('arduino-due')).toBeUndefined();
     expect(getVerifiedBoard('')).toBeUndefined();
   });
 
@@ -62,8 +69,15 @@ describe('Verified Board Pack integration', () => {
     expect(findVerifiedBoardByAlias('RioRand')?.id).toBe('riorand-kjl01');
   });
 
+  it('findVerifiedBoardByAlias finds new boards', () => {
+    expect(findVerifiedBoardByAlias('Raspberry Pi Pico')?.id).toBe('rpi-pico');
+    expect(findVerifiedBoardByAlias('Teensy 4')?.id).toBe('teensy-40');
+    expect(findVerifiedBoardByAlias('Feather M0')?.id).toBe('adafruit-feather-m0');
+    expect(findVerifiedBoardByAlias('Nucleo-64')?.id).toBe('stm32-nucleo-64');
+  });
+
   it('findVerifiedBoardByAlias returns undefined for no match', () => {
-    expect(findVerifiedBoardByAlias('Raspberry Pi')).toBeUndefined();
+    expect(findVerifiedBoardByAlias('BeagleBone Black')).toBeUndefined();
     expect(findVerifiedBoardByAlias('')).toBeUndefined();
   });
 

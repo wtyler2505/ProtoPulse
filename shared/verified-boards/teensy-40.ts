@@ -119,28 +119,28 @@ const RIGHT_HEADER: VerifiedPin[] = [
     role: 'analog',
     functions: [
       { type: 'pwm', channel: 'FlexPWM1.1B' },
-      { type: 'adc', channel: 'A9', notes: '10-bit resolution' },
+      { type: 'adc', channel: 'A9', notes: '12-bit resolution' },
     ],
   }),
   digitalPin(22, 'right', 4, {
     role: 'analog',
     functions: [
       { type: 'pwm', channel: 'FlexPWM4.0A' },
-      { type: 'adc', channel: 'A8', notes: '10-bit resolution' },
+      { type: 'adc', channel: 'A8', notes: '12-bit resolution' },
     ],
   }),
   digitalPin(21, 'right', 5, {
     role: 'analog',
     functions: [
       { type: 'pwm', channel: 'FlexPWM3.3B' },
-      { type: 'adc', channel: 'A7', notes: '10-bit resolution' },
+      { type: 'adc', channel: 'A7', notes: '12-bit resolution' },
     ],
   }),
   digitalPin(20, 'right', 6, {
     role: 'analog',
     functions: [
       { type: 'pwm', channel: 'FlexPWM3.3A' },
-      { type: 'adc', channel: 'A6', notes: '10-bit resolution' },
+      { type: 'adc', channel: 'A6', notes: '12-bit resolution' },
     ],
   }),
   digitalPin(19, 'right', 7, {
@@ -161,28 +161,28 @@ const RIGHT_HEADER: VerifiedPin[] = [
     role: 'analog',
     functions: [
       { type: 'pwm', channel: 'FlexPWM3.1B' },
-      { type: 'adc', channel: 'A3', notes: '10-bit resolution' },
+      { type: 'adc', channel: 'A3', notes: '12-bit resolution' },
     ],
   }),
   digitalPin(16, 'right', 10, {
     role: 'analog',
     functions: [
       { type: 'pwm', channel: 'FlexPWM3.1A' },
-      { type: 'adc', channel: 'A2', notes: '10-bit resolution' },
+      { type: 'adc', channel: 'A2', notes: '12-bit resolution' },
     ],
   }),
   digitalPin(15, 'right', 11, {
     role: 'analog',
     functions: [
       { type: 'pwm', channel: 'FlexPWM3.0B' },
-      { type: 'adc', channel: 'A1', notes: '10-bit resolution' },
+      { type: 'adc', channel: 'A1', notes: '12-bit resolution' },
     ],
   }),
   digitalPin(14, 'right', 12, {
     role: 'analog',
     functions: [
       { type: 'pwm', channel: 'FlexPWM3.0A' },
-      { type: 'adc', channel: 'A0', notes: '10-bit resolution' },
+      { type: 'adc', channel: 'A0', notes: '12-bit resolution' },
     ],
   }),
   digitalPin(13, 'right', 13, {

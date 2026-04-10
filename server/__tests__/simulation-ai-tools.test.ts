@@ -54,6 +54,8 @@ function makeCircuitInstance(overrides: Partial<CircuitInstanceRow> = {}): Circu
     pcbY: null,
     pcbRotation: 0,
     pcbSide: 'front',
+    benchX: null,
+    benchY: null,
     properties: {},
     createdAt: now,
     ...overrides,

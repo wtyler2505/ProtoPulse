@@ -78,6 +78,8 @@ function makeInstance(overrides: Partial<CircuitInstanceRow> & {
     pcbY: null,
     pcbRotation: 0,
     pcbSide: 'front',
+    benchX: null,
+    benchY: null,
     properties: overrides.properties ?? {},
     createdAt: new Date(),
     ...overrides,

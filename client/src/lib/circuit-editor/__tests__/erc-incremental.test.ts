@@ -43,6 +43,8 @@ function makeInstance(id: number, partId: number, x = 0, y = 0): CircuitInstance
     pcbY: null,
     pcbRotation: null,
     pcbSide: null,
+    benchX: null,
+    benchY: null,
     properties: {},
     createdAt: new Date(),
   };

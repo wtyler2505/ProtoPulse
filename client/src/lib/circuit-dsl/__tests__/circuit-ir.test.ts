@@ -330,6 +330,8 @@ describe('circuitToIR', () => {
       pcbY: null,
       pcbRotation: null,
       pcbSide: null,
+      benchX: null,
+      benchY: null,
       properties: { irId: 'r1-uuid', irPartId: 'res-10k', value: '10k', pins: { '1': 'VCC', '2': 'GND' } },
       createdAt: new Date(),
       ...overrides,
@@ -519,6 +521,8 @@ describe('round-trip IR conversion', () => {
       pcbY: null,
       pcbRotation: null,
       pcbSide: null,
+      benchX: null,
+      benchY: null,
     })) as CircuitInstanceRow[];
 
     const dbNets: CircuitNetRow[] = insertNets.map((net, i) => ({
