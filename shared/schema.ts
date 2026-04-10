@@ -353,6 +353,8 @@ export const circuitInstances = pgTable("circuit_instances", {
   breadboardX: real("breadboard_x"),
   breadboardY: real("breadboard_y"),
   breadboardRotation: real("breadboard_rotation").default(0),
+  benchX: real("bench_x"),
+  benchY: real("bench_y"),
   pcbX: real("pcb_x"),
   pcbY: real("pcb_y"),
   pcbRotation: real("pcb_rotation").default(0),
