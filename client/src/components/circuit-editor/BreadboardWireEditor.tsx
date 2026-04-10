@@ -15,6 +15,7 @@ import {
   selectWireAtPoint,
   getWireEndpoints,
   hitTestEndpoint,
+  nearestPointOnWire,
   type BreadboardWire,
   type WireEndpoint,
 } from '@/lib/circuit-editor/breadboard-wire-editor';
@@ -36,6 +37,10 @@ export interface BreadboardWireEditorProps {
   onDeleteWire: (id: number) => void;
   /** Called when the user drags an endpoint to a new position. */
   onMoveEndpoint: (wireId: number, endpoint: WireEndpoint, newPos: PixelPos) => void;
+  /** Called when the user Alt+clicks on a wire to split it at a T-junction point. */
+  onSplitWire?: (wireId: number, splitPoint: PixelPos, segmentIndex: number) => void;
+  /** T-junction marker positions to render (branch points where wires meet). */
+  junctionPoints?: ReadonlyArray<PixelPos>;
   /** Current zoom level — needed to keep handle sizes constant on screen. */
   zoom: number;
   /** Whether the select tool is active (disables editor when false). */
@@ -61,6 +66,8 @@ export default function BreadboardWireEditor({
   onSelectWire,
   onDeleteWire,
   onMoveEndpoint,
+  onSplitWire,
+  junctionPoints,
   zoom,
   active,
 }: BreadboardWireEditorProps) {
@@ -85,7 +92,7 @@ export default function BreadboardWireEditor({
 
   const endpoints = selectedWire ? getWireEndpoints(selectedWire) : null;
 
-  // --- Click handler: select wire at point ---
+  // --- Click handler: select wire at point, or Alt+click to split ---
   const handleClick = useCallback(
     (e: React.MouseEvent<SVGGElement>) => {
       if (!active) { return; }
@@ -93,7 +100,6 @@ export default function BreadboardWireEditor({
       const svg = (e.target as SVGElement).ownerSVGElement;
       if (!svg) { return; }
 
-      const rect = svg.getBoundingClientRect();
       const g = svg.querySelector<SVGGElement>('[data-testid="breadboard-wire-editor-root"]');
       if (!g) { return; }
 
@@ -106,11 +112,23 @@ export default function BreadboardWireEditor({
       const boardPt = pt.matrixTransform(ctm.inverse());
 
       const hit = selectWireAtPoint(boardPt.x, boardPt.y, wires);
-      if (hit) {
-        onSelectWire(hit.wire.id);
+      if (!hit) { return; }
+
+      // Alt+click → T-junction split
+      if (e.altKey && onSplitWire) {
+        const proj = nearestPointOnWire(boardPt.x, boardPt.y, hit.wire);
+        if (proj) {
+          // Snap the split point to the nearest grid hole if possible
+          const coord = pixelToCoord(proj.point);
+          const snapped = coord ? coordToPixel(coord) : proj.point;
+          onSplitWire(hit.wire.id, snapped, proj.segmentIndex);
+        }
+        return;
       }
+
+      onSelectWire(hit.wire.id);
     },
-    [active, wires, onSelectWire],
+    [active, wires, onSelectWire, onSplitWire],
   );
 
   // --- Drag start on endpoint handle ---
@@ -341,6 +359,21 @@ export default function BreadboardWireEditor({
           />
         );
       })()}
+
+      {/* T-junction markers at wire branch points */}
+      {junctionPoints && junctionPoints.length > 0 && junctionPoints.map((jp, i) => (
+        <circle
+          key={`junction-${i}`}
+          cx={jp.x}
+          cy={jp.y}
+          r={3 / zoom}
+          fill="#00F0FF"
+          stroke="#ffffff"
+          strokeWidth={0.5 / zoom}
+          pointerEvents="none"
+          data-testid={`wire-junction-marker-${i}`}
+        />
+      ))}
     </g>
   );
 }

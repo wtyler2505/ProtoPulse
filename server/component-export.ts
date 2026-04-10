@@ -17,6 +17,68 @@ import type {
 } from '@shared/component-types';
 import { createDefaultPartMeta, createDefaultViewData, createDefaultPartState } from '@shared/component-types';
 
+// ---------------------------------------------------------------------------
+// Fritzing 9px grid utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Fritzing breadboard grid = 0.1" at 90 DPI = 9px per grid unit.
+ * All connector positions must land on exact 9px multiples for proper
+ * alignment in Fritzing's breadboard view.
+ */
+const FRITZING_GRID_PX = 9;
+
+/**
+ * Snap a coordinate to the nearest Fritzing 9px grid point.
+ */
+export function snapToFritzingGrid(value: number): number {
+  return Math.round(value / FRITZING_GRID_PX) * FRITZING_GRID_PX;
+}
+
+export interface FritzingGridViolation {
+  id: string;
+  originalX: number;
+  originalY: number;
+  snappedX: number;
+  snappedY: number;
+}
+
+export interface FritzingGridValidation {
+  valid: boolean;
+  violations: FritzingGridViolation[];
+}
+
+/**
+ * Validate that all connector positions fall on the Fritzing 9px grid.
+ * Returns a list of violations with the corrected (snapped) coordinates.
+ */
+export function validateFritzingGrid(
+  positions: Array<{ id: string; x: number; y: number }>,
+): FritzingGridValidation {
+  const violations: FritzingGridViolation[] = [];
+
+  for (const pos of positions) {
+    const snappedX = snapToFritzingGrid(pos.x);
+    const snappedY = snapToFritzingGrid(pos.y);
+
+    if (pos.x !== snappedX || pos.y !== snappedY) {
+      violations.push({
+        id: pos.id,
+        originalX: pos.x,
+        originalY: pos.y,
+        snappedX,
+        snappedY,
+      });
+    }
+  }
+
+  return { valid: violations.length === 0, violations };
+}
+
+// ---------------------------------------------------------------------------
+// XML helpers
+// ---------------------------------------------------------------------------
+
 function escapeXml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
@@ -90,10 +152,14 @@ function buildSvg(viewData: ViewData, connectors: Connector[], viewName: string)
 
   const shapesSvg = viewData.shapes.map(shapeToSvg).join('\n  ');
 
+  const isBreadboard = viewName === 'breadboard';
   const pinsSvg = connectors.map((c, i) => {
     const pos = c.terminalPositions?.[viewName];
     if (!pos) return '';
-    return `<circle id="connector${i}pin" cx="${pos.x}" cy="${pos.y}" r="3" fill="none" stroke="none"/>`;
+    // Snap to Fritzing 9px grid for breadboard view compatibility
+    const cx = isBreadboard ? snapToFritzingGrid(pos.x) : pos.x;
+    const cy = isBreadboard ? snapToFritzingGrid(pos.y) : pos.y;
+    return `<circle id="connector${i}pin" cx="${cx}" cy="${cy}" r="3" fill="none" stroke="none"/>`;
   }).filter(Boolean).join('\n  ');
 
   return `<?xml version="1.0" encoding="UTF-8"?>

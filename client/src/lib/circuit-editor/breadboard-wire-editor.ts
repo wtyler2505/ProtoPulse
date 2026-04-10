@@ -248,3 +248,145 @@ export function hitTestEndpoint(
 
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// T-junction helpers (S6-03)
+// ---------------------------------------------------------------------------
+
+/** Result of projecting a point onto a wire. */
+export interface WireProjection {
+  /** The nearest point on the wire's path. */
+  point: { x: number; y: number };
+  /** Index of the segment containing the nearest point (0-based). */
+  segmentIndex: number;
+  /** Distance from the query point to the projected point. */
+  distance: number;
+}
+
+/**
+ * Project a point onto the nearest position along a wire's path.
+ *
+ * Only considers breadboard-view wires with at least 2 points.
+ *
+ * @returns The projection result, or null if the wire is ineligible.
+ */
+export function nearestPointOnWire(
+  x: number,
+  y: number,
+  wire: BreadboardWire,
+): WireProjection | null {
+  if (wire.view !== 'breadboard') { return null; }
+  const pts = wire.points;
+  if (pts.length < 2) { return null; }
+
+  let bestDist = Infinity;
+  let bestPoint = { x: 0, y: 0 };
+  let bestSegment = 0;
+
+  for (let i = 0; i < pts.length - 1; i++) {
+    const ax = pts[i].x;
+    const ay = pts[i].y;
+    const bx = pts[i + 1].x;
+    const by = pts[i + 1].y;
+
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+
+    let projX: number;
+    let projY: number;
+
+    if (lenSq === 0) {
+      projX = ax;
+      projY = ay;
+    } else {
+      const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / lenSq));
+      projX = ax + t * dx;
+      projY = ay + t * dy;
+    }
+
+    const d = Math.hypot(x - projX, y - projY);
+    if (d < bestDist) {
+      bestDist = d;
+      bestPoint = { x: projX, y: projY };
+      bestSegment = i;
+    }
+  }
+
+  return {
+    point: bestPoint,
+    segmentIndex: bestSegment,
+    distance: bestDist,
+  };
+}
+
+/** Simple incrementing counter for generating split wire IDs. */
+let nextSplitId = Date.now();
+
+/**
+ * Split a wire into two at a given point along a specific segment.
+ *
+ * The original wire is replaced by two new wires:
+ *   1. From the original start through all points up to (and including)
+ *      the segment start, then the split point.
+ *   2. From the split point, then the segment end through all remaining
+ *      points to the original end.
+ *
+ * Other wires in the array are preserved unchanged.
+ *
+ * @param wireId       The ID of the wire to split.
+ * @param splitPoint   The point at which to split.
+ * @param segmentIndex Index of the segment containing the split point.
+ * @param wires        The full wire array.
+ * @returns A new array with the target wire replaced by two halves.
+ */
+export function splitWireAtPoint(
+  wireId: number,
+  splitPoint: { x: number; y: number },
+  segmentIndex: number,
+  wires: ReadonlyArray<BreadboardWire>,
+): BreadboardWire[] {
+  const target = wires.find(w => w.id === wireId);
+  if (!target) {
+    return [...wires];
+  }
+
+  const pts = target.points;
+
+  // First half: points[0..segmentIndex] + splitPoint
+  const firstHalfPoints = [
+    ...pts.slice(0, segmentIndex + 1).map(p => ({ ...p })),
+    { x: splitPoint.x, y: splitPoint.y },
+  ];
+
+  // Second half: splitPoint + points[segmentIndex+1..end]
+  const secondHalfPoints = [
+    { x: splitPoint.x, y: splitPoint.y },
+    ...pts.slice(segmentIndex + 1).map(p => ({ ...p })),
+  ];
+
+  const id1 = ++nextSplitId;
+  const id2 = ++nextSplitId;
+
+  const wire1: BreadboardWire = {
+    ...target,
+    id: id1,
+    points: firstHalfPoints,
+  };
+
+  const wire2: BreadboardWire = {
+    ...target,
+    id: id2,
+    points: secondHalfPoints,
+  };
+
+  const result: BreadboardWire[] = [];
+  for (const w of wires) {
+    if (w.id === wireId) {
+      result.push(wire1, wire2);
+    } else {
+      result.push(w);
+    }
+  }
+  return result;
+}

@@ -34,21 +34,23 @@ describe('snapToFritzingGrid', () => {
   });
 
   it('handles negative values', () => {
-    expect(snapToFritzingGrid(-1)).toBe(0);
+    // Math.round(-1/9) = -0, -0*9 = -0; use toEqual for -0/+0 equivalence
+    expect(snapToFritzingGrid(-1) === 0 || snapToFritzingGrid(-1) === -0).toBe(true);
     expect(snapToFritzingGrid(-5)).toBe(-9);
     expect(snapToFritzingGrid(-9)).toBe(-9);
   });
 
   it('handles large values', () => {
-    expect(snapToFritzingGrid(1000)).toBe(999); // 111 * 9 = 999
-    expect(snapToFritzingGrid(1001)).toBe(999);
-    expect(snapToFritzingGrid(1004)).toBe(999);
-    expect(snapToFritzingGrid(1005)).toBe(1008); // 112 * 9 = 1008
+    expect(snapToFritzingGrid(1000)).toBe(999);   // 1000/9=111.11 -> 111 -> 999
+    expect(snapToFritzingGrid(1001)).toBe(999);   // 1001/9=111.22 -> 111 -> 999
+    expect(snapToFritzingGrid(1004)).toBe(1008);  // 1004/9=111.56 -> 112 -> 1008
+    expect(snapToFritzingGrid(1005)).toBe(1008);  // 1005/9=111.67 -> 112 -> 1008
   });
 
   it('handles fractional values', () => {
-    expect(snapToFritzingGrid(4.5)).toBe(0);  // rounds to 0.5 grid units -> 0
-    expect(snapToFritzingGrid(8.9)).toBe(9);  // rounds to ~1 grid unit -> 9
+    // 4.5/9 = 0.5 -> Math.round(0.5) = 1 -> 9
+    expect(snapToFritzingGrid(4.5)).toBe(9);
+    expect(snapToFritzingGrid(8.9)).toBe(9);  // 8.9/9 = 0.989 -> 1 -> 9
   });
 });
 

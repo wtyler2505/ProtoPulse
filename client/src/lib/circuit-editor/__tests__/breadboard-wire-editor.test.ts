@@ -6,6 +6,8 @@ import {
   getWireHitBox,
   getWireEndpoints,
   hitTestEndpoint,
+  splitWireAtPoint,
+  nearestPointOnWire,
   type BreadboardWire,
 } from '../breadboard-wire-editor';
 
@@ -309,5 +311,133 @@ describe('hitTestEndpoint', () => {
     // 8px away — outside default radius of 5, within custom radius of 10
     expect(hitTestEndpoint(10, 18, wire, 5)).toBeNull();
     expect(hitTestEndpoint(10, 18, wire, 10)).toBe('start');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// nearestPointOnWire
+// ---------------------------------------------------------------------------
+
+describe('nearestPointOnWire', () => {
+  it('returns the nearest point on a horizontal wire', () => {
+    const wire = makeWire(1, [{ x: 0, y: 0 }, { x: 100, y: 0 }]);
+    const result = nearestPointOnWire(50, 5, wire);
+    expect(result).not.toBeNull();
+    expect(result!.point.x).toBeCloseTo(50, 0);
+    expect(result!.point.y).toBeCloseTo(0, 0);
+    expect(result!.segmentIndex).toBe(0);
+  });
+
+  it('returns the nearest point on a vertical wire', () => {
+    const wire = makeWire(1, [{ x: 10, y: 0 }, { x: 10, y: 100 }]);
+    const result = nearestPointOnWire(15, 50, wire);
+    expect(result).not.toBeNull();
+    expect(result!.point.x).toBeCloseTo(10, 0);
+    expect(result!.point.y).toBeCloseTo(50, 0);
+  });
+
+  it('snaps to the correct segment of a multi-segment wire', () => {
+    const wire = makeWire(1, [
+      { x: 0, y: 0 },
+      { x: 50, y: 0 },
+      { x: 50, y: 50 },
+    ]);
+    // Near the second segment
+    const result = nearestPointOnWire(48, 25, wire);
+    expect(result).not.toBeNull();
+    expect(result!.segmentIndex).toBe(1);
+    expect(result!.point.x).toBeCloseTo(50, 0);
+    expect(result!.point.y).toBeCloseTo(25, 0);
+  });
+
+  it('returns null for a wire with fewer than 2 points', () => {
+    const wire = makeWire(1, [{ x: 0, y: 0 }]);
+    expect(nearestPointOnWire(0, 0, wire)).toBeNull();
+  });
+
+  it('ignores non-breadboard wires', () => {
+    const wire = makeWire(1, [{ x: 0, y: 0 }, { x: 100, y: 0 }], { view: 'schematic' });
+    expect(nearestPointOnWire(50, 0, wire)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// splitWireAtPoint
+// ---------------------------------------------------------------------------
+
+describe('splitWireAtPoint', () => {
+  it('splits a two-point wire into two wires at the split point', () => {
+    const wire = makeWire(1, [{ x: 0, y: 0 }, { x: 100, y: 0 }]);
+    const result = splitWireAtPoint(1, { x: 50, y: 0 }, 0, [wire]);
+    expect(result).toHaveLength(2);
+    // First half: original start → split point
+    expect(result[0].points[0]).toEqual({ x: 0, y: 0 });
+    expect(result[0].points[result[0].points.length - 1]).toEqual({ x: 50, y: 0 });
+    // Second half: split point → original end
+    expect(result[1].points[0]).toEqual({ x: 50, y: 0 });
+    expect(result[1].points[result[1].points.length - 1]).toEqual({ x: 100, y: 0 });
+  });
+
+  it('preserves wire properties on both halves', () => {
+    const wire = makeWire(1, [{ x: 0, y: 0 }, { x: 100, y: 0 }], {
+      color: '#e74c3c',
+      width: 2,
+    });
+    const result = splitWireAtPoint(1, { x: 50, y: 0 }, 0, [wire]);
+    expect(result[0].color).toBe('#e74c3c');
+    expect(result[0].width).toBe(2);
+    expect(result[1].color).toBe('#e74c3c');
+    expect(result[1].width).toBe(2);
+  });
+
+  it('splits a multi-segment wire preserving intermediate points', () => {
+    const wire = makeWire(1, [
+      { x: 0, y: 0 },
+      { x: 50, y: 0 },
+      { x: 50, y: 50 },
+      { x: 100, y: 50 },
+    ]);
+    // Split on segment 1 (50,0)→(50,50) at point (50,25)
+    const result = splitWireAtPoint(1, { x: 50, y: 25 }, 1, [wire]);
+    expect(result).toHaveLength(2);
+    // First half: (0,0)→(50,0)→(50,25)
+    expect(result[0].points).toHaveLength(3);
+    expect(result[0].points[2]).toEqual({ x: 50, y: 25 });
+    // Second half: (50,25)→(50,50)→(100,50)
+    expect(result[1].points).toHaveLength(3);
+    expect(result[1].points[0]).toEqual({ x: 50, y: 25 });
+  });
+
+  it('assigns new IDs to both resulting wires', () => {
+    const wire = makeWire(1, [{ x: 0, y: 0 }, { x: 100, y: 0 }]);
+    const result = splitWireAtPoint(1, { x: 50, y: 0 }, 0, [wire]);
+    // Both should have IDs different from each other
+    expect(result[0].id).not.toBe(result[1].id);
+  });
+
+  it('preserves other wires in the array', () => {
+    const wires = [
+      makeWire(1, [{ x: 0, y: 0 }, { x: 100, y: 0 }]),
+      makeWire(2, [{ x: 0, y: 20 }, { x: 100, y: 20 }]),
+    ];
+    const result = splitWireAtPoint(1, { x: 50, y: 0 }, 0, wires);
+    // Wire 2 should still be in the list
+    expect(result.some(w => w.id === 2)).toBe(true);
+    // Total: 2 from split + 1 untouched = 3
+    expect(result).toHaveLength(3);
+  });
+
+  it('returns unmodified array if wire ID not found', () => {
+    const wires = [makeWire(1, [{ x: 0, y: 0 }, { x: 100, y: 0 }])];
+    const result = splitWireAtPoint(999, { x: 50, y: 0 }, 0, wires);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe(1);
+  });
+
+  it('both halves have view=breadboard', () => {
+    const wire = makeWire(1, [{ x: 0, y: 0 }, { x: 100, y: 0 }]);
+    const result = splitWireAtPoint(1, { x: 50, y: 0 }, 0, [wire]);
+    expect(result[0].view).toBe('breadboard');
+    expect(result[1].view).toBe('breadboard');
   });
 });
