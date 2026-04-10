@@ -103,7 +103,7 @@ import {
 } from '@/lib/circuit-editor/breadboard-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
-import { determinePlacementMode } from '@/lib/circuit-editor/bench-surface-model';
+import { determinePlacementMode, pixelToBench } from '@/lib/circuit-editor/bench-surface-model';
 import type { ExactPartDraftSeed } from '@shared/exact-part-resolver';
 import { formatSIValue } from '@/lib/simulation/visual-state';
 import type { WireVisualState } from '@/lib/simulation/visual-state';
@@ -1498,7 +1498,9 @@ function BreadboardCanvas({
       const refDes = generateRefDes(instances, part);
       const fit = partMeta.breadboardFit ?? 'native';
 
-      const placementResult = determinePlacementMode(boardPx, fit);
+      // Convert board-local pixel to bench-surface coords for placement decision
+      const benchPos = pixelToBench(boardPx);
+      const placementResult = determinePlacementMode(benchPos, fit);
 
       if (placementResult.mode === 'bench') {
         // Free-form bench placement — no grid snapping
