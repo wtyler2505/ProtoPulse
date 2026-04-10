@@ -111,7 +111,7 @@ export function validateConnectorIdMatching(fzpXml: string, svgContent: string):
 
   // Check for FZP svgIds missing from SVG
   const missingInSvg: string[] = [];
-  for (const svgId of fzpSvgIds) {
+  for (const svgId of Array.from(fzpSvgIds)) {
     if (!svgIds.has(svgId)) {
       missingInSvg.push(svgId);
     }
@@ -120,7 +120,7 @@ export function validateConnectorIdMatching(fzpXml: string, svgContent: string):
   // Check for connector-pattern IDs in SVG not referenced by FZP
   const connectorPattern = /^connector\d+(pin|terminal)$/;
   const orphanedInSvg: string[] = [];
-  for (const id of svgIds) {
+  for (const id of Array.from(svgIds)) {
     if (connectorPattern.test(id) && !fzpSvgIds.has(id)) {
       orphanedInSvg.push(id);
     }

@@ -11,6 +11,7 @@ import type {
   BreadboardBenchSummary,
 } from '@/lib/breadboard-bench';
 import type { BoardAuditSummary } from '@/lib/breadboard-board-audit';
+import type { PreflightResult } from '@/lib/breadboard-preflight';
 import type {
   BreadboardChatActionId,
   BreadboardPlannerActionId,
@@ -39,6 +40,9 @@ interface BreadboardWorkbenchSidebarProps {
   onQuickAdd?: (item: QuickIntakeItem) => void;
   onFocusBoardIssue?: (issue: BoardAuditIssue) => void;
   onRunBoardAudit?: () => void;
+  onRunPreflight?: () => void;
+  preflightResult?: PreflightResult | null;
+  onShopMissing?: () => void;
 }
 
 function StatChip({ label, value }: { label: string; value: string }) {
@@ -72,6 +76,9 @@ export default function BreadboardWorkbenchSidebar({
   onQuickAdd,
   onFocusBoardIssue,
   onRunBoardAudit,
+  onRunPreflight,
+  preflightResult,
+  onShopMissing,
 }: BreadboardWorkbenchSidebarProps) {
   return (
     <aside
@@ -294,6 +301,10 @@ export default function BreadboardWorkbenchSidebar({
                 audit={boardAudit ?? null}
                 onFocusIssue={onFocusBoardIssue}
                 onRunAudit={onRunBoardAudit}
+                onRunPreflight={onRunPreflight}
+                preflightResult={preflightResult}
+                benchInsights={Object.values(benchInsights)}
+                onShopMissing={onShopMissing}
               />
             </div>
           )}

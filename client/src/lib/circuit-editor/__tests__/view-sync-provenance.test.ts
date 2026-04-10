@@ -25,11 +25,19 @@ function makeInstance(overrides: Partial<CircuitInstanceRow>): CircuitInstanceRo
     breadboardY: 200,
     schematicX: 50,
     schematicY: 60,
-    rotation: 0,
+    schematicRotation: 0,
+    breadboardRotation: 0,
+    pcbX: null,
+    pcbY: null,
+    pcbRotation: 0,
+    pcbSide: 'front',
+    subDesignId: null,
+    benchX: null,
+    benchY: null,
     properties: null,
     createdAt: new Date(),
     ...(overrides as Record<string, unknown>),
-  } as CircuitInstanceRow;
+  } as unknown as CircuitInstanceRow;
 }
 
 function makeNet(overrides: Partial<CircuitNetRow> & { segments?: NetSegment[] }): CircuitNetRow {
@@ -67,7 +75,7 @@ function makeWire(overrides: Partial<CircuitWireRow>): CircuitWireRow {
     provenance: 'manual',
     createdAt: new Date(),
     ...(overrides as Record<string, unknown>),
-  } as CircuitWireRow;
+  } as unknown as CircuitWireRow;
 }
 
 function makePart(overrides: Partial<ComponentPart>): ComponentPart {
@@ -100,7 +108,7 @@ function makePart(overrides: Partial<ComponentPart>): ComponentPart {
     svgData: null,
     meta: null,
     createdAt: new Date(),
-  } as ComponentPart;
+  } as unknown as ComponentPart;
 }
 
 // ---------------------------------------------------------------------------

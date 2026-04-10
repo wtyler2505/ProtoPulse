@@ -11,6 +11,7 @@ import type { Connector, PartMeta } from '@shared/component-types';
 import type { CircuitInstanceRow, CircuitNetRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 import { findVerifiedBoardByAlias } from '@shared/verified-boards';
 import type { VerifiedBoardDefinition, VerifiedPin } from '@shared/verified-boards';
+import { inferTraps } from './heuristic-trap-inference';
 
 // ---------------------------------------------------------------------------
 // Public types
@@ -724,6 +725,55 @@ function checkMotorDriverTraps(
   return issues;
 }
 
+/**
+ * Run heuristic trap inference on unverified parts (S2-01 integration).
+ * Verified boards already surface traps via their pin maps; this adds
+ * pattern-matched warnings for parts without a verified profile.
+ */
+function checkHeuristicTraps(
+  instances: CircuitInstanceRow[],
+  partIndex: Map<number, ComponentPart>,
+): BoardAuditIssue[] {
+  const issues: BoardAuditIssue[] = [];
+
+  for (const inst of instances) {
+    if (inst.breadboardX == null || inst.breadboardY == null) continue;
+    if (inst.partId == null) continue;
+    const part = partIndex.get(inst.partId);
+    if (!part) continue;
+
+    // Skip if this part is already a verified board — those have exact trap data.
+    const meta = getMeta(part);
+    const status = typeof meta.verificationStatus === 'string' ? meta.verificationStatus : '';
+    if (status === 'verified') {
+      const mpn = typeof meta.mpn === 'string' ? meta.mpn : '';
+      const title = typeof meta.title === 'string' ? meta.title : '';
+      if (findVerifiedBoardByAlias(mpn) ?? findVerifiedBoardByAlias(title)) {
+        continue;
+      }
+    }
+
+    const family = getFamily(meta);
+    const title = typeof meta.title === 'string' ? meta.title : '';
+    if (!title) continue;
+    const inferred = inferTraps({ family, title });
+
+    for (const trap of inferred) {
+      issues.push({
+        id: `${trap.id}-${String(inst.id)}`,
+        severity: trap.severity,
+        category: trap.category,
+        title: `${trap.title} on ${inst.referenceDesignator}`,
+        detail: `${trap.detail} (inferred from part family/title — place a verified profile for exact data)`,
+        affectedInstanceIds: [inst.id],
+        affectedPinIds: [],
+      });
+    }
+  }
+
+  return issues;
+}
+
 // ---------------------------------------------------------------------------
 // Scoring
 // ---------------------------------------------------------------------------
@@ -794,6 +844,7 @@ export function auditBreadboard(params: BoardAuditInput): BoardAuditSummary {
   const densityIssues = checkWireDensityHotspots(instances, nets);
   const unconnectedPowerIssues = checkUnconnectedPowerPins(instances, nets, partIndex);
   const motorDriverIssues = checkMotorDriverTraps(instances, partIndex);
+  const heuristicIssues = checkHeuristicTraps(breadboardInstances, partIndex);
 
   // Combine and sort by severity (critical first, then warning, then info).
   const severityOrder: Record<BoardAuditIssue['severity'], number> = {
@@ -810,6 +861,7 @@ export function auditBreadboard(params: BoardAuditInput): BoardAuditSummary {
     ...densityIssues,
     ...unconnectedPowerIssues,
     ...motorDriverIssues,
+    ...heuristicIssues,
   ].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]);
 
   // Compute stats.

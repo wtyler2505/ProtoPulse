@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# doctor.sh: Placeholder health checker for {{SKILL_NAME}}
+echo "=== {{SKILL_NAME}} HEALTH REPORT ==="
+echo "✅ All systems nominal. Add actual domain-specific health checks here."
+echo "======================================"

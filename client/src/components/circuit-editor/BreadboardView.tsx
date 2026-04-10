@@ -3,6 +3,7 @@
  * wire drawing, and ratsnest overlay.
  */
 
+import './breadboard-animations.css';
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import {
@@ -27,6 +28,9 @@ import { BreadboardComponentOverlay, detectFamily, getFamilyValues, getCurrentVa
 import BendableLegRenderer from './BendableLegRenderer';
 import RatsnestOverlay, { type RatsnestNet, type RatsnestPin } from './RatsnestOverlay';
 import BreadboardConnectivityOverlay from './BreadboardConnectivityOverlay';
+import BreadboardConnectivityExplainer from './BreadboardConnectivityExplainer';
+import { useBreadboardCursor } from '@/lib/circuit-editor/useBreadboardCursor';
+import { computeMoveResult } from '@/lib/circuit-editor/breadboard-drag-move';
 import { syncSchematicToBreadboard } from '@/lib/circuit-editor/view-sync';
 import BreadboardDrcOverlay from './BreadboardDrcOverlay';
 import BreadboardInventoryDialog from './BreadboardInventoryDialog';
@@ -53,6 +57,7 @@ import {
   buildBreadboardSelectedPartModel,
 } from '@/lib/breadboard-part-inspector';
 import { auditBreadboard, type BoardAuditIssue, type BoardAuditSummary } from '@/lib/breadboard-board-audit';
+import { runPreflight, type PreflightResult } from '@/lib/breadboard-preflight';
 import {
   useBreadboardCoachPlan,
   normalizeCoachNetName,
@@ -83,6 +88,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Sparkles,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -267,6 +273,8 @@ export default function BreadboardView() {
     });
   }, [activeCircuit, breadboardWires, instances, nets, parts]);
   const boardAudit = boardAuditEnabled ? computedBoardAudit : null;
+  const [preflightResult, setPreflightResult] = useState<import('@/lib/breadboard-preflight').PreflightResult | null>(null);
+  const [shoppingListOpen, setShoppingListOpen] = useState(false);
 
   useEffect(() => {
     setFocusAuditIssue(null);
@@ -749,6 +757,9 @@ function BreadboardCanvas({
 
   const [tool, setTool] = useState<Tool>('select');
   const [showDrc, setShowDrc] = useState(false);
+  const [showConnectivityExplainer, setShowConnectivityExplainer] = useState(false);
+  const { cursor, handleKeyDown: handleCursorKeyDown } = useBreadboardCursor();
+  const [draggingInstanceId, setDraggingInstanceId] = useState<number | null>(null);
   const [zoom, setZoom] = useState(3);
   const [panOffset, setPanOffset] = useState<PixelPos>({ x: 20, y: 20 });
   const [hoveredCoord, setHoveredCoord] = useState<BreadboardCoord | null>(null);
@@ -806,6 +817,12 @@ function BreadboardCanvas({
   const breadboardWires = useMemo(
     () => (wires ?? []).filter((w: CircuitWireRow) => w.view === 'breadboard'),
     [wires],
+  );
+
+  // Bench-placed instances (benchX/benchY set, breadboardX null)
+  const benchInstances = useMemo(
+    () => (instances ?? []).filter((inst) => inst.benchX != null && inst.benchY != null && inst.breadboardX == null),
+    [instances],
   );
 
   // Build ComponentPlacement for each placed instance (used by collision + drag-to-place)
@@ -1416,7 +1433,30 @@ function BreadboardCanvas({
 
   const handleMouseUp = useCallback(() => {
     isPanning.current = false;
-  }, []);
+    // Commit drag-to-move on mouse up (S6-04)
+    if (draggingInstanceId != null && mouseBoardPos != null) {
+      const coord = pixelToCoord(mouseBoardPos);
+      if (coord && coord.type === 'terminal') {
+        const inst = (instances ?? []).find((i) => i.id === draggingInstanceId);
+        const part = inst?.partId != null ? partsMap.get(inst.partId) : undefined;
+        const partMeta = (part?.meta ?? {}) as Record<string, unknown>;
+        const compType = ((partMeta.type as string) ?? 'generic').toLowerCase();
+        const pinCount = (part?.connectors as unknown[])?.length ?? 2;
+        const existingPlacements = instancePlacements.map((p) => p.placement);
+        const instanceIds = instancePlacements.map((p) => p.instanceId);
+        const result = computeMoveResult(coord, compType, pinCount, existingPlacements, draggingInstanceId, instanceIds);
+        if (result.valid && result.snapPixel) {
+          updateInstanceMutation.mutate({
+            id: draggingInstanceId,
+            circuitId,
+            breadboardX: result.snapPixel.x,
+            breadboardY: result.snapPixel.y,
+          });
+        }
+      }
+      setDraggingInstanceId(null);
+    }
+  }, [draggingInstanceId, mouseBoardPos, instances, partsMap, instancePlacements, updateInstanceMutation, circuitId]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -1443,7 +1483,11 @@ function BreadboardCanvas({
       e.preventDefault();
       void undoStack.current.redo();
     }
-  }, [handleEscape, handleDeleteWire, announce]);
+    // Keyboard cursor navigation (S6-01)
+    if (e.key.startsWith('Arrow')) {
+      handleCursorKeyDown(e);
+    }
+  }, [handleEscape, handleDeleteWire, announce, handleCursorKeyDown]);
 
   // --- Drag-to-place from component palette ---
 
@@ -1539,6 +1583,18 @@ function BreadboardCanvas({
             type: partType,
           },
         });
+        const partLabel = (partMeta.title as string) ?? refDes;
+        if (fit === 'not_breadboard_friendly') {
+          toast({
+            title: `${partLabel} placed on the bench`,
+            description: "This board is too wide for the breadboard. Draw jumper wires to connect its pins.",
+          });
+        } else {
+          toast({
+            title: `${partLabel} placed on the bench`,
+            description: 'Draw jumper wires to connect to the breadboard.',
+          });
+        }
         return;
       }
 
@@ -1639,6 +1695,7 @@ function BreadboardCanvas({
         <ToolButton icon={RotateCcw} label="Reset view" onClick={() => { setZoom(3); setPanOffset({ x: 20, y: 20 }); }} testId="tool-reset-view" />
         <div className="w-px h-4 bg-border mx-1" />
         <ToolButton icon={ShieldAlert} label="DRC Check" active={showDrc} onClick={() => setShowDrc(d => !d)} testId="tool-drc-toggle" />
+        <ToolButton icon={HelpCircle} label="How a breadboard works" active={showConnectivityExplainer} onClick={() => setShowConnectivityExplainer(v => !v)} testId="tool-connectivity-explainer-toggle" />
         <Button
           type="button"
           size="sm"
@@ -1703,6 +1760,34 @@ function BreadboardCanvas({
               dropPreview={dropPreview ?? undefined}
             />
 
+            {/* Connectivity explainer overlay — S6-07 */}
+            <BreadboardConnectivityExplainer visible={showConnectivityExplainer} />
+
+            {/* Keyboard cursor indicator — S6-01 */}
+            {cursor.active && (() => {
+              const cursorPx = coordToPixel({ type: 'terminal', col: cursor.col, row: cursor.row });
+              return (
+                <g data-testid="breadboard-keyboard-cursor" className="bb-cursor-blink">
+                  <circle
+                    cx={cursorPx.x}
+                    cy={cursorPx.y}
+                    r={6}
+                    fill="none"
+                    stroke="#facc15"
+                    strokeWidth={1.5}
+                    opacity={0.9}
+                  />
+                  <circle
+                    cx={cursorPx.x}
+                    cy={cursorPx.y}
+                    r={2}
+                    fill="#facc15"
+                    opacity={0.9}
+                  />
+                </g>
+              );
+            })()}
+
             {/* Bendable component legs (BL-0593) — rendered behind component bodies */}
             <BendableLegRenderer
               instances={instances ?? []}
@@ -1716,6 +1801,48 @@ function BreadboardCanvas({
               selectedId={selectedInstanceId}
               onInstanceClick={(id) => setSelectedInstanceId(id)}
             />
+
+            {/* Bench-placed components — rendered outside the breadboard grid */}
+            {benchInstances.map((inst) => {
+              const part = inst.partId ? partsMap.get(inst.partId) : undefined;
+              const partMeta = (part?.meta ?? {}) as Record<string, unknown>;
+              const label = (partMeta.title as string) ?? inst.referenceDesignator;
+              const bx = inst.benchX ?? 0;
+              const by = inst.benchY ?? 0;
+              const isSelected = selectedInstanceId === inst.id;
+              return (
+                <g
+                  key={`bench-${String(inst.id)}`}
+                  data-testid={`bench-component-${String(inst.id)}`}
+                  transform={`translate(${String(bx)}, ${String(by)})`}
+                  onClick={() => setSelectedInstanceId(inst.id)}
+                  className="cursor-pointer"
+                >
+                  {/* Board outline */}
+                  <rect
+                    x={-30}
+                    y={-20}
+                    width={60}
+                    height={40}
+                    rx={4}
+                    fill="#1e293b"
+                    stroke={isSelected ? '#00F0FF' : '#475569'}
+                    strokeWidth={isSelected ? 1.5 : 1}
+                    strokeDasharray={isSelected ? undefined : '3 2'}
+                    opacity={0.9}
+                  />
+                  {/* "BENCH" badge */}
+                  <rect x={-22} y={-18} width={44} height={10} rx={2} fill="#334155" />
+                  <text x={0} y={-11} textAnchor="middle" fill="#94a3b8" fontSize={6} fontFamily="monospace">BENCH</text>
+                  {/* Component label */}
+                  <text x={0} y={2} textAnchor="middle" fill="#e2e8f0" fontSize={7} fontFamily="monospace">{inst.referenceDesignator}</text>
+                  <text x={0} y={12} textAnchor="middle" fill="#67e8f9" fontSize={5} fontFamily="monospace">{label.slice(0, 12)}</text>
+                  {/* Pin connection points (simplified — 2 dots for generic) */}
+                  <circle cx={-25} cy={0} r={2} fill="#00F0FF" opacity={0.7} />
+                  <circle cx={25} cy={0} r={2} fill="#00F0FF" opacity={0.7} />
+                </g>
+              );
+            })}
 
             {selectedInstanceModel && (
               <BreadboardPinAnchorOverlay
@@ -1741,6 +1868,9 @@ function BreadboardCanvas({
               const pts = (wire.points as Array<{ x: number; y: number }>) ?? [];
               if (pts.length < 2) return null;
               const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+              const isJumper = wire.provenance === 'jumper';
+              const isSynced = wire.provenance === 'synced';
+              const isCoach = wire.provenance === 'coach';
 
               // Look up simulation wire visual state
               const wireState: WireVisualState | undefined = isLive
@@ -1768,10 +1898,11 @@ function BreadboardCanvas({
                   )}
                   <path
                     d={pathD}
-                    stroke={isAnimated ? '#00F0FF' : (wire.color ?? '#3498db')}
-                    strokeWidth={wire.width ?? 1.5}
+                    stroke={isAnimated ? '#00F0FF' : isJumper ? '#f59e0b' : (wire.color ?? '#3498db')}
+                    strokeWidth={isJumper ? 3 : (wire.width ?? 1.5)}
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    strokeDasharray={isSynced ? '6 3' : isCoach ? '3 3' : undefined}
                     fill="none"
                     className={cn(
                       isAnimated ? 'sim-wire-animated' : 'transition-opacity cursor-pointer',
@@ -1786,6 +1917,13 @@ function BreadboardCanvas({
                     onContextMenu={(e) => handleWireContextMenu(e, wire.id)}
                     data-testid={isAnimated ? `wire-animated-${wire.id}` : `wire-${wire.id}`}
                   />
+                  {/* Jumper wire endpoint connectors */}
+                  {isJumper && pts.length >= 2 && (
+                    <>
+                      <circle cx={pts[0].x} cy={pts[0].y} r={3} fill="#f59e0b" stroke="#92400e" strokeWidth={0.5} />
+                      <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r={3} fill="#f59e0b" stroke="#92400e" strokeWidth={0.5} />
+                    </>
+                  )}
                   {/* Simulation current label at wire midpoint */}
                   {isAnimated && pts.length >= 2 && (() => {
                     const midIdx = Math.floor(pts.length / 2);

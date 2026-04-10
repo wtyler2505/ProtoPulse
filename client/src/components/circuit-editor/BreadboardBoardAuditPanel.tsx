@@ -18,6 +18,9 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { BoardAuditIssue, BoardAuditSummary } from '@/lib/breadboard-board-audit';
 import type { PreflightResult } from '@/lib/breadboard-preflight';
+import type { BreadboardBenchInsight } from '@/lib/breadboard-bench';
+import CoachLearnMoreCard, { getLearnMoreContent } from './CoachLearnMoreCard';
+import BreadboardReconciliationPanel from './BreadboardReconciliationPanel';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -84,6 +87,34 @@ function severityBadgeClass(severity: BoardAuditIssue['severity']): string {
     case 'info':
       return 'border-blue-500/30 bg-blue-500/15 text-blue-300';
   }
+}
+
+// ---------------------------------------------------------------------------
+// Trap ID extraction — strip instance-specific suffixes from audit issue IDs
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract the base trap ID from an audit issue ID for learning card lookup.
+ * Audit IDs have instance-specific suffixes (e.g. `missing-decoupling-5`,
+ * `motor-bldc-polarity-7`). We progressively strip trailing `-segment` parts
+ * until we find a match in the learning card map, or return the original.
+ */
+function extractTrapId(issueId: string): string {
+  // Direct match first
+  if (getLearnMoreContent(issueId)) {
+    return issueId;
+  }
+
+  // Strip trailing segments one by one
+  const parts = issueId.split('-');
+  for (let i = parts.length - 1; i >= 1; i--) {
+    const candidate = parts.slice(0, i).join('-');
+    if (getLearnMoreContent(candidate)) {
+      return candidate;
+    }
+  }
+
+  return issueId;
 }
 
 // ---------------------------------------------------------------------------
@@ -161,6 +192,7 @@ function IssueRow({
               </Button>
             </div>
           )}
+          <CoachLearnMoreCard trapId={extractTrapId(issue.id)} />
         </div>
       )}
     </div>
@@ -199,6 +231,8 @@ interface BreadboardBoardAuditPanelProps {
   onRunAudit: () => void;
   onRunPreflight?: () => void;
   preflightResult?: PreflightResult | null;
+  benchInsights?: BreadboardBenchInsight[];
+  onShopMissing?: () => void;
 }
 
 export default function BreadboardBoardAuditPanel({
@@ -207,6 +241,8 @@ export default function BreadboardBoardAuditPanel({
   onRunAudit,
   onRunPreflight,
   preflightResult,
+  benchInsights,
+  onShopMissing,
 }: BreadboardBoardAuditPanelProps) {
   const criticalCount = auditResult?.issues.filter((i) => i.severity === 'critical').length ?? 0;
   const warningCount = auditResult?.issues.filter((i) => i.severity === 'warning').length ?? 0;
@@ -364,11 +400,24 @@ export default function BreadboardBoardAuditPanel({
                     {check.status !== 'pass' && (
                       <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">{check.detail}</p>
                     )}
+                    {check.status !== 'pass' && (
+                      <CoachLearnMoreCard trapId={check.id} variant="compact" />
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Stash reconciliation panel (S4-03) — shows after preflight */}
+      {preflightResult && benchInsights && benchInsights.length > 0 && (
+        <div className="border-t border-border pt-3 mt-1">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">
+            Stash Reconciliation
+          </p>
+          <BreadboardReconciliationPanel insights={benchInsights} onShop={onShopMissing} />
         </div>
       )}
     </div>

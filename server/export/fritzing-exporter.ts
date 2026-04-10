@@ -71,7 +71,7 @@ function generateInstanceXml(
   const bbY = inst.breadboardY ?? 0;
   const schX = inst.schematicX ?? 0;
   const schY = inst.schematicY ?? 0;
-  const rotation = inst.rotation ?? 0;
+  const rotation = inst.schematicRotation ?? 0;
   const rotAttr = rotation !== 0 ? ` transform="rotate(${String(rotation)})"` : '';
 
   return [

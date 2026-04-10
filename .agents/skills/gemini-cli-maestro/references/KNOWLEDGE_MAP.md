@@ -1,0 +1,9 @@
+# gemini-cli-maestro KNOWLEDGE MAP
+
+This file serves as the semantic index for the `raw_docs/` folder. 
+
+When searching for answers, review this map first to determine which file in `raw_docs/` or `references/` holds the deep technical truth.
+
+## Example File: core-concepts.md
+  * Core Principle 1
+  * Core Principle 2
