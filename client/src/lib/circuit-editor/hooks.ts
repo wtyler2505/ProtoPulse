@@ -134,6 +134,8 @@ export function useCreateCircuitInstance() {
       pcbY?: number | null;
       pcbRotation?: number | null;
       pcbSide?: 'front' | 'back';
+      benchX?: number | null;
+      benchY?: number | null;
       properties?: Record<string, string>;
     }) => {
       const { circuitId, ...body } = data;

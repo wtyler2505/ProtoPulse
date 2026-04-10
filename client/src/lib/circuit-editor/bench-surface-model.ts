@@ -158,7 +158,7 @@ export function pixelToBench(
 // ---------------------------------------------------------------------------
 
 /** Fits that must always go to the bench, never on the breadboard grid. */
-const BENCH_ONLY_FITS: ReadonlySet<BreadboardFit> = new Set([
+const BENCH_ONLY_FITS: ReadonlySet<BreadboardFit> = new Set<BreadboardFit>([
   'not_breadboard_friendly',
   'breakout_required',
 ]);
