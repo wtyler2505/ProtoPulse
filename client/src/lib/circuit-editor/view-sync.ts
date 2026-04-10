@@ -23,6 +23,8 @@ export interface SyncResult {
     view: 'breadboard' | 'schematic' | 'pcb';
     points: { x: number; y: number }[];
     color?: string;
+    /** Origin of the wire: 'manual' (user-drawn), 'synced' (engine-generated), 'coach', 'jumper' */
+    provenance?: string;
   }>;
   /** Wire IDs to delete from the target view */
   wireIdsToDelete: number[];
