@@ -519,9 +519,120 @@ function parseFzp(xml: string): FzzPart {
   };
 }
 
+export interface FzzImportValidation {
+  /** Whether the import passes all validation checks */
+  valid: boolean;
+  /** Warnings from individual checks */
+  checks: Array<{
+    name: string;
+    passed: boolean;
+    details: string[];
+  }>;
+}
+
+/**
+ * Run structural validation on a parsed FZZ import result.
+ *
+ * Checks:
+ * 1. View presence — at least breadboard or schematic view exists
+ * 2. 9px grid compliance — breadboard positions are on the Fritzing grid
+ * 3. Connector ID consistency — parts have matching IDs across SVG and XML
+ */
+export function validateFzzImport(project: FzzProject): FzzImportValidation {
+  const checks: FzzImportValidation['checks'] = [];
+  const FRITZING_GRID = 9;
+
+  // Check 1: View presence
+  {
+    const details: string[] = [];
+    let hasBreadboard = false;
+    let hasSchematic = false;
+
+    for (const inst of project.instances) {
+      if (inst.views.breadboard) { hasBreadboard = true; }
+      if (inst.views.schematic) { hasSchematic = true; }
+    }
+
+    if (!hasBreadboard) { details.push('No instances have breadboard view placement'); }
+    if (!hasSchematic) { details.push('No instances have schematic view placement'); }
+
+    checks.push({
+      name: 'view-presence',
+      passed: hasBreadboard || hasSchematic,
+      details,
+    });
+  }
+
+  // Check 2: 9px grid compliance (breadboard positions)
+  {
+    const details: string[] = [];
+    for (const inst of project.instances) {
+      const bb = inst.views.breadboard;
+      if (!bb) { continue; }
+
+      const xSnapped = Math.round(bb.x / FRITZING_GRID) * FRITZING_GRID;
+      const ySnapped = Math.round(bb.y / FRITZING_GRID) * FRITZING_GRID;
+
+      if (bb.x !== xSnapped || bb.y !== ySnapped) {
+        details.push(
+          `Instance "${inst.referenceDesignator}" breadboard position (${String(bb.x)}, ${String(bb.y)}) ` +
+          `is off the 9px grid (nearest: ${String(xSnapped)}, ${String(ySnapped)})`,
+        );
+      }
+    }
+
+    checks.push({
+      name: 'grid-compliance',
+      passed: details.length === 0,
+      details,
+    });
+  }
+
+  // Check 3: Connector ID consistency across parts
+  {
+    const details: string[] = [];
+
+    for (const part of project.parts) {
+      if (!part.svgBreadboard) { continue; }
+
+      // Extract IDs from SVG
+      const svgIds = new Set<string>();
+      const idRegex = /\bid="([^"]+)"/g;
+      let match: RegExpExecArray | null;
+      while ((match = idRegex.exec(part.svgBreadboard)) !== null) {
+        svgIds.add(match[1]);
+      }
+
+      // Check each connector has a matching SVG element
+      for (let i = 0; i < part.connectors.length; i++) {
+        const expectedId = `connector${String(i)}pin`;
+        if (!svgIds.has(expectedId)) {
+          details.push(
+            `Part "${part.title}" connector ${part.connectors[i].id} ` +
+            `expects SVG element "${expectedId}" but it was not found`,
+          );
+        }
+      }
+    }
+
+    checks.push({
+      name: 'connector-id-matching',
+      passed: details.length === 0,
+      details,
+    });
+  }
+
+  return {
+    valid: checks.every((c) => c.passed),
+    checks,
+  };
+}
+
 export interface FzzImportResult {
   project: FzzProject;
   warnings: string[];
+  /** Structural validation results */
+  validation?: FzzImportValidation;
 }
 
 export async function importFzz(buffer: Buffer): Promise<FzzImportResult> {
@@ -686,14 +797,25 @@ export async function importFzz(buffer: Buffer): Promise<FzzImportResult> {
 
   const instances = Array.from(instanceMap.values());
 
-  return {
-    project: {
-      title: metadata.title || 'Imported Fritzing Project',
-      instances,
-      nets,
-      parts,
-      metadata,
-    },
-    warnings,
+  const project: FzzProject = {
+    title: metadata.title || 'Imported Fritzing Project',
+    instances,
+    nets,
+    parts,
+    metadata,
   };
+
+  // 7. Run structural validation on the imported project
+  const validation = validateFzzImport(project);
+
+  // Surface validation warnings into the warnings array
+  for (const check of validation.checks) {
+    if (!check.passed) {
+      for (const detail of check.details) {
+        warnings.push(`[${check.name}] ${detail}`);
+      }
+    }
+  }
+
+  return { project, warnings, validation };
 }
