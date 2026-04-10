@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import ComponentPlacer from '@/components/circuit-editor/ComponentPlacer';
 import BreadboardStarterShelf from '@/components/circuit-editor/BreadboardStarterShelf';
 import BreadboardBoardAuditPanel from '@/components/circuit-editor/BreadboardBoardAuditPanel';
+import BreadboardQuickIntake from '@/components/circuit-editor/BreadboardQuickIntake';
 import type {
   BreadboardBenchInsight,
   BreadboardBenchSummary,
