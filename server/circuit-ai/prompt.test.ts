@@ -72,11 +72,12 @@ describe('circuit AI prompt builder', () => {
     expect(prompt).toContain('Placement may be provisional');
   });
 
-  it('warns the model not to substitute missing exact board requests', () => {
+  it('includes verified board context when exact boards are in the registry', () => {
     const prompt = buildGeneratePrompt('Add an Arduino Mega 2560 R3 and a RioRand motor controller.', []);
 
-    expect(prompt).toContain('no trustworthy exact part is available yet');
-    expect(prompt).toContain('omit it from JSON instead of inventing connector names');
+    // Both Arduino Mega and RioRand are now in the verified board registry,
+    // so the prompt should reference verified matches instead of missing parts.
+    expect(prompt).toContain('verified exact part');
   });
 
   it('collects exact-part intents from the user description', () => {
@@ -95,6 +96,7 @@ describe('circuit AI prompt builder', () => {
 
     expect(intents).toHaveLength(2);
     expect(intents.find((intent) => intent.title === 'Arduino Mega 2560 R3')?.kind).toBe('verified-match');
-    expect(intents.find((intent) => intent.title === 'RioRand Motor Controller')?.kind).toBe('needs-draft');
+    // RioRand is now a verified board in the registry, so it resolves as verified
+    expect(intents.find((intent) => intent.title === 'RioRand Motor Controller')?.kind).toBe('verified-match');
   });
 });

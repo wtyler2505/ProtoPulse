@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertComponentLifecycleSchema } from '@shared/schema';
-import { asyncHandler, parseIdParam } from './utils';
+import { parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 
 export function registerComponentLifecycleRoutes(app: Express): void {
@@ -10,18 +10,18 @@ export function registerComponentLifecycleRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/lifecycle',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const entries = await storage.getComponentLifecycles(projectId);
       res.json({ data: entries, total: entries.length });
-    }),
+    },
   );
 
   // Create / upsert a lifecycle entry
   app.post(
     '/api/projects/:id/lifecycle',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = insertComponentLifecycleSchema.safeParse({ ...req.body, projectId });
       if (!parsed.success) {
@@ -29,14 +29,14 @@ export function registerComponentLifecycleRoutes(app: Express): void {
       }
       const entry = await storage.upsertComponentLifecycle(parsed.data);
       res.status(201).json(entry);
-    }),
+    },
   );
 
   // Update a lifecycle entry
   app.patch(
     '/api/projects/:id/lifecycle/:entryId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const entryId = parseIdParam(req.params.entryId);
       const existing = await storage.getComponentLifecycle(projectId, entryId);
@@ -54,14 +54,14 @@ export function registerComponentLifecycleRoutes(app: Express): void {
         partNumber: parsed.data.partNumber ?? existing.partNumber,
       });
       res.json(updated);
-    }),
+    },
   );
 
   // Delete a lifecycle entry
   app.delete(
     '/api/projects/:id/lifecycle/:entryId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const entryId = parseIdParam(req.params.entryId);
       const existing = await storage.getComponentLifecycle(projectId, entryId);
@@ -73,6 +73,6 @@ export function registerComponentLifecycleRoutes(app: Express): void {
         return res.status(404).json({ message: 'Lifecycle entry not found' });
       }
       res.status(204).end();
-    }),
+    },
   );
 }

@@ -3,7 +3,7 @@ import type { IStorage } from '../storage';
 import type { CircuitInstanceRow, CircuitWireRow } from '@shared/schema';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
-import { asyncHandler, HttpError, parseIdParam, payloadLimit } from './utils';
+import { HttpError, parseIdParam, payloadLimit } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 
 const autorouteSchema = z.object({
@@ -178,7 +178,7 @@ export function registerCircuitAutorouteRoutes(app: Express, storage: IStorage):
   // -------------------------------------------------------------------------
   // POST /api/circuits/:circuitId/autoroute — Manhattan-style server autoroute
   // -------------------------------------------------------------------------
-  app.post('/api/circuits/:circuitId/autoroute', requireCircuitOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/autoroute', requireCircuitOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = autorouteSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -307,12 +307,12 @@ export function registerCircuitAutorouteRoutes(app: Express, storage: IStorage):
       wireIds,
       message: `Auto-routed ${createdWires.length} wire${createdWires.length === 1 ? '' : 's'} (${unroutedCount} unrouted)`,
     });
-  }));
+  });
 
   // -------------------------------------------------------------------------
   // POST /api/circuits/:circuitId/suggest-layout — AI Layout Suggestion
   // -------------------------------------------------------------------------
-  app.post('/api/circuits/:circuitId/suggest-layout', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/suggest-layout', requireCircuitOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = layoutSuggestionSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -356,5 +356,5 @@ export function registerCircuitAutorouteRoutes(app: Express, storage: IStorage):
       netCount: nets.length,
       instanceCount: instances.length,
     });
-  }));
+  });
 }

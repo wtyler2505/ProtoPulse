@@ -6,7 +6,7 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import type { ComponentPart, CircuitInstanceRow, CircuitNetRow } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
-import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
+import { parseIdParam, payloadLimit } from '../routes/utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { circuitAiRateLimiter } from './rate-limiter';
 import { categorizeError, redactSecrets } from '../ai';
@@ -98,7 +98,7 @@ export function registerCircuitAiReviewRoute(app: Express, storage: IStorage): v
     requireCircuitOwnership,
     circuitAiRateLimiter,
     payloadLimit(64 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const circuitId = parseIdParam(req.params.circuitId);
       const parsed = reviewSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -154,6 +154,6 @@ export function registerCircuitAiReviewRoute(app: Express, storage: IStorage): v
         logger.error(`[circuit-ai] Review error: ${redactSecrets(String(error))}`);
         res.status(500).json({ message: userMessage });
       }
-    }),
+    },
   );
 }

@@ -7,8 +7,12 @@ const readdirMock = vi.fn();
 
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
-  execSync: vi.fn(() => Buffer.from('{"VersionString":"1.0.0"}')),
-  execFileSync: vi.fn(() => Buffer.from('[]')),
+  exec: Object.assign(vi.fn(), {
+    [Symbol.for('nodejs.util.promisify.custom')]: async () => ({ stdout: '{}', stderr: '' }),
+  }),
+  execFile: Object.assign(vi.fn(), {
+    [Symbol.for('nodejs.util.promisify.custom')]: async () => ({ stdout: '{"VersionString":"1.0.0"}', stderr: '' }),
+  }),
 }));
 
 vi.mock('fs/promises', () => ({

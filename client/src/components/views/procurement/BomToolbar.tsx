@@ -44,7 +44,7 @@ export function BomToolbar({
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             data-testid="input-search-bom"
-            className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus:outline-none focus:border-primary w-full sm:w-64 transition-all"
+            className="pl-9 pr-4 py-2 bg-muted/30 border border-border text-sm focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 w-full sm:w-64 transition-all"
           />
         </div>
         <StyledTooltip content="Configure BOM optimization settings" side="bottom">

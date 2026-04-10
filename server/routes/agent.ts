@@ -202,7 +202,8 @@ export function registerAgentRoutes(app: Express): void {
             maxOutputTokens: 8192,
             apiKey: apiKeyToUse
           },
-          context: toolContext
+          context: toolContext,
+          abortSignal: abortController.signal,
         });
 
         let fullText = '';

@@ -103,7 +103,7 @@ function SettingsPanel({
             data-testid="model-select"
             value={aiModel}
             onChange={(e) => setAiModel(e.target.value)}
-            className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus:outline-none focus:border-primary"
+            className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50"
           >
             {AI_MODELS.gemini.map((m: AIModel) => (
               <option key={m.id} value={m.id} className="bg-background text-foreground">{m.label}</option>
@@ -121,7 +121,7 @@ function SettingsPanel({
             data-testid="routing-strategy-select"
             value={routingStrategy}
             onChange={(e) => setRoutingStrategy(e.target.value as RoutingStrategy)}
-            className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus:outline-none focus:border-primary"
+            className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-8 appearance-none focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50"
           >
             <option value="user" className="bg-background text-foreground">Manual</option>
             <option value="auto" className="bg-background text-foreground">Auto</option>
@@ -151,7 +151,7 @@ function SettingsPanel({
             onChange={(e) => setLocalKey(e.target.value)}
             placeholder={"Enter your API key..."}
             className={cn(
-              "w-full bg-muted/30 border text-foreground text-sm p-2.5 pr-10 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40",
+              "w-full bg-muted/30 border text-foreground text-sm p-2.5 pr-10 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 placeholder:text-muted-foreground/40",
               localKey && localKey.length < 20 ? "border-destructive/70 ring-1 ring-destructive/30" : "border-border"
             )}
             aria-invalid={localKey && localKey.length < 20 ? "true" : "false"}
@@ -231,7 +231,7 @@ function SettingsPanel({
             value={localWorkspaceToken}
             onChange={(e) => setLocalWorkspaceToken(e.target.value)}
             placeholder="Enter an OAuth token for Docs/Sheets export..."
-            className="w-full bg-muted/30 border text-foreground text-sm p-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40 border-border"
+            className="w-full bg-muted/30 border text-foreground text-sm p-2.5 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 placeholder:text-muted-foreground/40 border-border"
           />
         </div>
         <p className="text-[10px] text-muted-foreground/60 mt-1.5">
@@ -287,7 +287,7 @@ function SettingsPanel({
           onChange={(e) => setCustomSystemPrompt(e.target.value)}
           placeholder="Add custom instructions for the AI..."
           rows={3}
-          className="w-full bg-muted/30 border border-border text-foreground text-xs p-2.5 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40 resize-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="w-full bg-muted/30 border border-border text-foreground text-xs p-2.5 focus-visible:outline-none focus-visible:border-primary placeholder:text-muted-foreground/40 resize-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
         />
         <p className="text-[10px] text-muted-foreground/60 mt-1">These instructions are appended to the AI's system prompt.</p>
       </div>

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertDesignPreferenceSchema } from '@shared/schema';
-import { asyncHandler, parseIdParam } from './utils';
+import { parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 
 export function registerDesignPreferenceRoutes(app: Express): void {
@@ -11,18 +11,18 @@ export function registerDesignPreferenceRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/preferences',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const prefs = await storage.getDesignPreferences(projectId);
       res.json({ data: prefs, total: prefs.length });
-    }),
+    },
   );
 
   // Upsert a design preference (insert or update on conflict)
   app.post(
     '/api/projects/:id/preferences',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = insertDesignPreferenceSchema.safeParse({ ...req.body, projectId });
       if (!parsed.success) {
@@ -30,14 +30,14 @@ export function registerDesignPreferenceRoutes(app: Express): void {
       }
       const pref = await storage.upsertDesignPreference(parsed.data);
       res.status(201).json(pref);
-    }),
+    },
   );
 
   // Bulk upsert preferences
   app.put(
     '/api/projects/:id/preferences',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const bodySchema = z.array(insertDesignPreferenceSchema.omit({ projectId: true }));
       const parsed = bodySchema.safeParse(req.body);
@@ -48,14 +48,14 @@ export function registerDesignPreferenceRoutes(app: Express): void {
         parsed.data.map((pref) => storage.upsertDesignPreference({ ...pref, projectId })),
       );
       res.json({ data: results, total: results.length });
-    }),
+    },
   );
 
   // Delete a specific preference
   app.delete(
     '/api/projects/:id/preferences/:prefId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const prefId = parseIdParam(req.params.prefId);
       const allPrefs = await storage.getDesignPreferences(projectId);
@@ -68,6 +68,6 @@ export function registerDesignPreferenceRoutes(app: Express): void {
         return res.status(404).json({ message: 'Preference not found' });
       }
       res.status(204).end();
-    }),
+    },
   );
 }

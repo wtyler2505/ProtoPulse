@@ -502,23 +502,28 @@ describe('Netlist generator snapshot tests', () => {
 // KiCad Exporter Snapshot Tests
 // =============================================================================
 
+/** Replace random UUIDs with a stable placeholder so snapshots don't change every run. */
+function normalizeUuids(content: string): string {
+  return content.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '00000000-0000-0000-0000-000000000000');
+}
+
 describe('KiCad exporter snapshot tests', () => {
   it('generateKicadSchematic matches snapshot', () => {
     const input = makeKicadInput();
     const output = generateKicadSchematic(input);
-    expect(output).toMatchSnapshot();
+    expect(normalizeUuids(output)).toMatchSnapshot();
   });
 
   it('generateKicadPcb matches snapshot', () => {
     const input = makeKicadInput();
     const output = generateKicadPcb(input);
-    expect(output).toMatchSnapshot();
+    expect(normalizeUuids(output)).toMatchSnapshot();
   });
 
   it('generateKicadProjectFile matches snapshot', () => {
     const input = makeKicadInput();
     const output = generateKicadProjectFile(input);
-    expect(output).toMatchSnapshot();
+    expect(normalizeUuids(output)).toMatchSnapshot();
   });
 });
 

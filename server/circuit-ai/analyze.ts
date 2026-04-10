@@ -6,7 +6,7 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import type { ComponentPart, CircuitInstanceRow, CircuitNetRow } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
-import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
+import { parseIdParam, payloadLimit } from '../routes/utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { circuitAiRateLimiter } from './rate-limiter';
 import { categorizeError, redactSecrets } from '../ai';
@@ -94,7 +94,7 @@ export function registerCircuitAiAnalyzeRoute(app: Express, storage: IStorage): 
     requireCircuitOwnership,
     circuitAiRateLimiter,
     payloadLimit(64 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const circuitId = parseIdParam(req.params.circuitId);
       const parsed = analyzeSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -150,6 +150,6 @@ export function registerCircuitAiAnalyzeRoute(app: Express, storage: IStorage): 
         logger.error(`[circuit-ai] Analysis error: ${redactSecrets(String(error))}`);
         res.status(500).json({ message: userMessage });
       }
-    }),
+    },
   );
 }

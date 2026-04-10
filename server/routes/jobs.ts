@@ -9,7 +9,7 @@
  */
 
 import { z } from 'zod';
-import { asyncHandler, HttpError } from './utils';
+import { HttpError } from './utils';
 import { jobQueue } from '../job-queue';
 import { validateSession } from '../auth';
 
@@ -56,7 +56,7 @@ export function registerJobRoutes(app: Express): void {
 
   app.post(
     '/api/jobs',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const userId = await requireAuth(req);
 
       const body = submitSchema.safeParse(req.body);
@@ -74,14 +74,14 @@ export function registerJobRoutes(app: Express): void {
       });
 
       res.status(202).json(job);
-    }),
+    },
   );
 
   // ---- GET /api/jobs — List jobs (scoped to authenticated user) ----
 
   app.get(
     '/api/jobs',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const userId = await requireAuth(req);
 
       const query = listQuerySchema.safeParse(req.query);
@@ -110,14 +110,14 @@ export function registerJobRoutes(app: Express): void {
         limit,
         offset,
       });
-    }),
+    },
   );
 
   // ---- GET /api/jobs/:id — Get job status (ownership enforced) ----
 
   app.get(
     '/api/jobs/:id',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const userId = await requireAuth(req);
 
       const id = String(req.params.id);
@@ -131,14 +131,14 @@ export function registerJobRoutes(app: Express): void {
       }
 
       res.json(job);
-    }),
+    },
   );
 
   // ---- POST /api/jobs/:id/cancel — Cancel a job (ownership enforced) ----
 
   app.post(
     '/api/jobs/:id/cancel',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const userId = await requireAuth(req);
 
       const id = String(req.params.id);
@@ -158,14 +158,14 @@ export function registerJobRoutes(app: Express): void {
       }
 
       res.json(job);
-    }),
+    },
   );
 
   // ---- DELETE /api/jobs/:id — Remove a completed/failed/cancelled job (ownership enforced) ----
 
   app.delete(
     '/api/jobs/:id',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const userId = await requireAuth(req);
 
       const id = String(req.params.id);
@@ -185,6 +185,6 @@ export function registerJobRoutes(app: Express): void {
       }
 
       res.status(204).end();
-    }),
+    },
   );
 }

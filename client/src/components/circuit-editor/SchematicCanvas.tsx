@@ -97,55 +97,62 @@ interface SchematicCanvasInnerProps {
   collaborationClient?: CollaborationClient | null;
 }
 
-function normalizeFlowValue(value: unknown): unknown {
-  if (typeof value === 'function' || value === undefined) {
-    return undefined;
+/**
+ * Lightweight fingerprint for a ReactFlow data/style object.
+ * Instead of deep-normalizing and JSON.stringify-ing the entire object tree,
+ * we hash only the sorted top-level keys and their primitive (or array-length)
+ * values.  Nested object changes are caught by stringifying only their key set
+ * and value count — enough to detect additions/removals/type changes without
+ * the O(depth × keys) cost of full recursive serialization.
+ */
+function shallowFingerprint(obj: unknown): string {
+  if (obj == null || typeof obj !== 'object') {
+    return String(obj ?? '');
   }
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeFlowValue(item));
+  if (typeof obj === 'function') {
+    return '';
   }
-  if (value && typeof value === 'object') {
-    return Object.keys(value as Record<string, unknown>)
-      .sort()
-      .reduce<Record<string, unknown>>((acc, key) => {
-        const normalized = normalizeFlowValue((value as Record<string, unknown>)[key]);
-        if (normalized !== undefined) {
-          acc[key] = normalized;
-        }
-        return acc;
-      }, {});
+  if (Array.isArray(obj)) {
+    return `[${String(obj.length)}]`;
   }
-  return value;
+  const rec = obj as Record<string, unknown>;
+  const keys = Object.keys(rec).sort();
+  const parts: string[] = [];
+  for (const k of keys) {
+    const v = rec[k];
+    if (typeof v === 'function' || v === undefined) {
+      continue;
+    }
+    if (v == null) {
+      parts.push(`${k}:null`);
+    } else if (typeof v === 'object') {
+      // One level deep: capture key count + array length to detect structural changes
+      parts.push(Array.isArray(v) ? `${k}:[${String(v.length)}]` : `${k}:{${String(Object.keys(v).length)}}`);
+    } else {
+      parts.push(`${k}:${String(v)}`);
+    }
+  }
+  return parts.join('|');
 }
 
 function flowNodeSyncSignature(nodes: Node[]): string {
-  return JSON.stringify(
-    nodes.map((node) => ({
-      id: node.id,
-      type: node.type,
-      position: node.position,
-      data: normalizeFlowValue(node.data),
-      hidden: node.hidden ?? false,
-      parentId: node.parentId ?? null,
-      zIndex: node.zIndex ?? null,
-    })),
-  );
+  const parts: string[] = [];
+  for (const node of nodes) {
+    parts.push(
+      `${node.id};${node.type ?? ''};${String(node.position.x)},${String(node.position.y)};${shallowFingerprint(node.data)};${node.hidden ? '1' : '0'};${node.parentId ?? ''};${String(node.zIndex ?? '')}`,
+    );
+  }
+  return parts.join('\n');
 }
 
 function flowEdgeSyncSignature(edges: Edge[]): string {
-  return JSON.stringify(
-    edges.map((edge) => ({
-      id: edge.id,
-      type: edge.type,
-      source: edge.source,
-      sourceHandle: edge.sourceHandle ?? null,
-      target: edge.target,
-      targetHandle: edge.targetHandle ?? null,
-      data: normalizeFlowValue(edge.data),
-      hidden: edge.hidden ?? false,
-      style: normalizeFlowValue(edge.style),
-    })),
-  );
+  const parts: string[] = [];
+  for (const edge of edges) {
+    parts.push(
+      `${edge.id};${edge.type ?? ''};${edge.source};${edge.sourceHandle ?? ''};${edge.target};${edge.targetHandle ?? ''};${shallowFingerprint(edge.data)};${edge.hidden ? '1' : '0'};${shallowFingerprint(edge.style)}`,
+    );
+  }
+  return parts.join('\n');
 }
 
 function SchematicCanvasInner({ circuitId, ercViolations, highlightedViolationId, onEnterSheet, collaborationClient = null }: SchematicCanvasInnerProps) {

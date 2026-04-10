@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
-import { asyncHandler, parseIdParam, payloadLimit, gatherCircuitData } from './utils';
+import { parseIdParam, payloadLimit, gatherCircuitData } from './utils';
 import { requireProjectOwnership } from '../routes/auth-middleware';
 
 const simulateSchema = z.object({
@@ -31,7 +31,7 @@ const simulateSchema = z.object({
 
 export function registerCircuitSimulationRoutes(app: Express, storage: IStorage): void {
   // POST /api/projects/:projectId/circuits/:circuitId/simulate
-  app.post('/api/projects/:projectId/circuits/:circuitId/simulate', requireProjectOwnership, payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/:circuitId/simulate', requireProjectOwnership, payloadLimit(64 * 1024), async (req, res) => {
     const _projectId = parseIdParam(req.params.projectId);
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = simulateSchema.safeParse(req.body);
@@ -108,10 +108,10 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
       netlistWarnings: spiceResult.warnings,
       error: result.error,
     });
-  }));
+  });
 
   // GET /api/projects/:projectId/circuits/:circuitId/simulations -- list stored results
-  app.get('/api/projects/:projectId/circuits/:circuitId/simulations', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/circuits/:circuitId/simulations', requireProjectOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const results = await storage.getSimulationResults(circuitId);
 
@@ -128,11 +128,11 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
     }));
 
     res.json({ data: summaries, total: summaries.length });
-  }));
+  });
 
   // GET /api/projects/:projectId/circuits/:circuitId/simulations/:simId -- get full result
   // BL-0639: Verify simulation result belongs to the circuit in the URL
-  app.get('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', requireProjectOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const simId = parseIdParam(req.params.simId);
     const result = await storage.getSimulationResult(simId);
@@ -140,11 +140,11 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
       return res.status(404).json({ message: 'Simulation result not found' });
     }
     res.json(result);
-  }));
+  });
 
   // DELETE /api/projects/:projectId/circuits/:circuitId/simulations/:simId -- delete result
   // BL-0639: Verify simulation result belongs to the circuit in the URL
-  app.delete('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.delete('/api/projects/:projectId/circuits/:circuitId/simulations/:simId', requireProjectOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const simId = parseIdParam(req.params.simId);
     const result = await storage.getSimulationResult(simId);
@@ -154,17 +154,17 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
     const deleted = await storage.deleteSimulationResult(simId);
     if (!deleted) { return res.status(404).json({ message: 'Simulation result not found' }); }
     res.status(204).end();
-  }));
+  });
 
   // GET /api/projects/:projectId/circuits/:circuitId/simulation/capabilities
-  app.get('/api/projects/:projectId/circuits/:circuitId/simulation/capabilities', requireProjectOwnership, asyncHandler(async (_req, res) => {
+  app.get('/api/projects/:projectId/circuits/:circuitId/simulation/capabilities', requireProjectOwnership, async (_req, res) => {
     const { getSimulationCapabilities } = await import('../simulation');
     const caps = await getSimulationCapabilities();
     res.json(caps);
-  }));
+  });
 
   // POST /api/projects/:projectId/export/spice -- SPICE netlist export
-  app.post('/api/projects/:projectId/export/spice', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/spice', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const circuits = await storage.getCircuitDesigns(projectId);
     if (circuits.length === 0) { return res.status(404).json({ message: 'No circuit designs found' }); }
@@ -198,10 +198,10 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.netlist);
-  }));
+  });
 
   // POST /api/projects/:projectId/circuits/:circuitId/analyze/power -- power estimation (13.10)
-  app.post('/api/projects/:projectId/circuits/:circuitId/analyze/power', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/:circuitId/analyze/power', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const circuit = await storage.getCircuitDesign(circuitId);
     if (!circuit) { return res.status(404).json({ message: 'Circuit design not found' }); }
@@ -299,10 +299,10 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
       engineUsed: simResult.engineUsed,
       warnings: spiceResult.warnings,
     });
-  }));
+  });
 
   // POST /api/projects/:projectId/circuits/:circuitId/analyze/signal-integrity (13.12)
-  app.post('/api/projects/:projectId/circuits/:circuitId/analyze/signal-integrity', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/:circuitId/analyze/signal-integrity', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const circuit = await storage.getCircuitDesign(circuitId);
     if (!circuit) { return res.status(404).json({ message: 'Circuit design not found' }); }
@@ -424,19 +424,19 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
       totalErrors: warnings.filter(w => w.severity === 'error').length,
       totalInfo: warnings.filter(w => w.severity === 'info').length,
     });
-  }));
+  });
 
   // --- Simulation Scenarios (BL-0124) ---
 
   // GET /api/projects/:projectId/circuits/:circuitId/scenarios
-  app.get('/api/projects/:projectId/circuits/:circuitId/scenarios', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/circuits/:circuitId/scenarios', requireProjectOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const scenarios = await storage.getSimulationScenarios(circuitId);
     res.json({ data: scenarios, total: scenarios.length });
-  }));
+  });
 
   // POST /api/projects/:projectId/circuits/:circuitId/scenarios
-  app.post('/api/projects/:projectId/circuits/:circuitId/scenarios', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/:circuitId/scenarios', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const circuitId = parseIdParam(req.params.circuitId);
     const { insertSimulationScenarioSchema } = await import('@shared/schema');
@@ -448,11 +448,11 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
 
     const created = await storage.createSimulationScenario(parsed.data);
     res.status(201).json(created);
-  }));
+  });
 
   // PATCH /api/projects/:projectId/scenarios/:scenarioId
   // BL-0639: Verify scenario belongs to the project in the URL
-  app.patch('/api/projects/:projectId/scenarios/:scenarioId', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.patch('/api/projects/:projectId/scenarios/:scenarioId', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const scenarioId = parseIdParam(req.params.scenarioId);
     const existing = await storage.getSimulationScenario(scenarioId);
@@ -464,11 +464,11 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
       return res.status(404).json({ message: 'Simulation scenario not found' });
     }
     res.json(updated);
-  }));
+  });
 
   // DELETE /api/projects/:projectId/scenarios/:scenarioId
   // BL-0639: Verify scenario belongs to the project in the URL
-  app.delete('/api/projects/:projectId/scenarios/:scenarioId', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.delete('/api/projects/:projectId/scenarios/:scenarioId', requireProjectOwnership, async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const scenarioId = parseIdParam(req.params.scenarioId);
     const existing = await storage.getSimulationScenario(scenarioId);
@@ -480,5 +480,5 @@ export function registerCircuitSimulationRoutes(app: Express, storage: IStorage)
       return res.status(404).json({ message: 'Simulation scenario not found' });
     }
     res.status(204).end();
-  }));
+  });
 }

@@ -111,7 +111,7 @@ function FilterDropdown({
         aria-label={`Filter by ${label}`}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none bg-muted/50 border border-border text-xs px-2 py-1 pr-6 text-foreground focus:outline-none focus:border-primary/50 transition-colors cursor-pointer"
+        className="appearance-none bg-muted/50 border border-border text-xs px-2 py-1 pr-6 text-foreground focus-visible:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors cursor-pointer"
       >
         <option value="">{`All ${label}s`}</option>
         {options.map((opt) => (
@@ -247,7 +247,7 @@ export default function ActivityFeedPanel() {
             aria-label="Search activity feed"
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 transition-colors"
+            className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors"
           />
         </div>
 

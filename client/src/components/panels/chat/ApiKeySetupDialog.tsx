@@ -150,7 +150,7 @@ export default function ApiKeySetupDialog({ open, onOpenChange, aiProvider, onAp
                     onChange={(e) => { setApiKey(e.target.value); reset(); }}
                     placeholder={config.placeholder}
                     autoFocus
-                    className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-10 focus:outline-none focus:border-primary placeholder:text-muted-foreground/40"
+                    className="w-full bg-muted/30 border border-border text-foreground text-sm p-2.5 pr-10 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 placeholder:text-muted-foreground/40"
                   />
                   <button
                     type="button"

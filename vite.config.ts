@@ -44,58 +44,14 @@ export default defineConfig({
       output: {
         manualChunks(id: string) {
           if (id.includes('node_modules')) {
-            // React core runtime (react, react-dom, scheduler)
+            // Only chunk truly universal dependencies needed on every page load.
+            // Everything else (xyflow, recharts, codemirror, markdown, etc.) is
+            // used in specific lazy-loaded views and should be split naturally by
+            // Vite's dynamic import analysis for proper tree-shaking.
             if (id.includes('/react-dom/') || id.includes('/react/') || id.includes('/scheduler/')) {
               return 'react-vendor';
             }
-            // @xyflow
-            if (id.includes('/@xyflow/')) {
-              return 'xyflow-vendor';
-            }
-            // TanStack Query (not virtual — virtual goes with ChatPanel)
-            if (id.includes('/@tanstack/react-query') || id.includes('/@tanstack/query-core')) {
-              return 'tanstack-vendor';
-            }
-            // Lucide icons
-            if (id.includes('/lucide-react/')) {
-              return 'ui-icons';
-            }
-            // Radix UI
-            if (id.includes('/@radix-ui/')) {
-              return 'radix-vendor';
-            }
-            // Markdown rendering
-            if (id.includes('/react-markdown/') || id.includes('/remark-') || id.includes('/rehype-')
-              || id.includes('/unified/') || id.includes('/unist-') || id.includes('/mdast-')
-              || id.includes('/hast-') || id.includes('/micromark') || id.includes('/vfile')) {
-              return 'markdown-vendor';
-            }
-            // Charts
-            if (id.includes('/recharts/') || id.includes('/d3-') || id.includes('/victory-')) {
-              return 'charts-vendor';
-            }
-            // Drag and drop
-            if (id.includes('/@dnd-kit/')) {
-              return 'dnd-vendor';
-            }
-            // Tailwind merge — large utility, isolate to own chunk
-            if (id.includes('/tailwind-merge/')) {
-              return 'tailwind-merge-vendor';
-            }
-            // cmdk — command palette dependency
-            if (id.includes('/cmdk/')) {
-              return 'cmdk-vendor';
-            }
-            // CodeMirror — Circuit Code editor (BL-0024)
-            if (id.includes('/@codemirror/') || id.includes('/codemirror/') || id.includes('/@lezer/')) {
-              return 'codemirror-vendor';
-            }
-            // Sucrase — JS transpiler for Circuit DSL sandbox (BL-0024)
-            if (id.includes('/sucrase/')) {
-              return 'sucrase-vendor';
-            }
           }
-          // Let Rollup handle everything else with automatic chunking
           return undefined;
         },
       },

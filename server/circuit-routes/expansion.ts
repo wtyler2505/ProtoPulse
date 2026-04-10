@@ -1,11 +1,11 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
-import { asyncHandler, parseIdParam, payloadLimit, nextRefDes } from './utils';
+import { parseIdParam, payloadLimit, nextRefDes } from './utils';
 import { requireProjectOwnership } from '../routes/auth-middleware';
 import { mapEdgePins, extractConnectors } from '../lib/semantic-pin-mapper';
 
 export function registerCircuitExpansionRoutes(app: Express, storage: IStorage): void {
-  app.post('/api/projects/:projectId/circuits/expand-architecture', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/expand-architecture', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const { circuitName } = req.body as { circuitName?: string };
 
@@ -147,5 +147,5 @@ export function registerCircuitExpansionRoutes(app: Express, storage: IStorage):
       netCount: nets.length,
       unmatchedNodes: archNodes.length - instances.length,
     });
-  }));
+  });
 }

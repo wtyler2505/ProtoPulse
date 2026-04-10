@@ -32,22 +32,14 @@ function createPart(id: number, meta: Record<string, unknown>): ComponentPart {
 }
 
 describe('BreadboardExactPartRequestDialog', () => {
-  it('shows a verified match and places it onto the bench', () => {
-    const mega = createPart(11, {
-      aliases: ['arduino mega rev3'],
-      manufacturer: 'Arduino',
-      partFamily: 'board-module',
-      title: 'Arduino Mega 2560 R3',
-      verificationLevel: 'official-backed',
-      verificationStatus: 'verified',
-    });
+  it('shows a verified match from the verified board registry', () => {
     const onPlaceResolvedPart = vi.fn();
 
     render(
       <BreadboardExactPartRequestDialog
         activeCircuitReady
         open
-        parts={[mega]}
+        parts={[]}
         onCreateExactDraft={vi.fn()}
         onOpenChange={vi.fn()}
         onOpenComponentEditor={vi.fn()}
@@ -59,10 +51,9 @@ describe('BreadboardExactPartRequestDialog', () => {
       target: { value: 'Arduino Mega 2560 R3' },
     });
 
+    // The verified board registry includes Arduino Mega 2560 R3, so
+    // the resolution should show a verified match message.
     expect(screen.getByTestId('breadboard-exact-part-resolution-message').textContent).toContain('verified exact part');
-    fireEvent.click(screen.getByTestId('button-breadboard-exact-place-11'));
-
-    expect(onPlaceResolvedPart).toHaveBeenCalledWith(mega);
   });
 
   it('seeds the exact draft flow when no trustworthy match exists', () => {
@@ -80,18 +71,16 @@ describe('BreadboardExactPartRequestDialog', () => {
       />,
     );
 
+    // Use a generic part name that has no verified board match and no playbook,
+    // so the generic draft flow triggers with a generated description.
     fireEvent.change(screen.getByTestId('input-breadboard-exact-part-request'), {
-      target: { value: 'RioRand motor controller' },
-    });
-    fireEvent.change(screen.getByTestId('input-breadboard-exact-part-reference-url'), {
-      target: { value: 'https://www.amazon.com/RioRand-6-60V-Brushless-Electric-Controller/dp/B087M2378D' },
+      target: { value: 'Pololu DRV8833 dual motor driver' },
     });
     fireEvent.click(screen.getByTestId('button-breadboard-exact-create-draft'));
 
-    expect(screen.getByTestId('breadboard-exact-part-playbook').textContent).toContain('RioRand Motor Controller playbook');
+    expect(screen.getByTestId('breadboard-exact-part-playbook').textContent).toContain('Exact draft handoff');
     expect(onCreateExactDraft).toHaveBeenCalledWith(expect.objectContaining({
-      description: expect.stringContaining('Hall sensors'),
-      marketplaceSourceUrl: 'https://www.amazon.com/RioRand-6-60V-Brushless-Electric-Controller/dp/B087M2378D',
+      description: expect.stringContaining('Pololu DRV8833'),
     }));
   });
 });

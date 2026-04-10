@@ -15,7 +15,38 @@ export function hashSessionToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 } as const;
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1, maxmem: 32 * 1024 * 1024 } as const;
+
+/**
+ * Concurrency semaphore for scrypt operations.
+ * Each scrypt call with N=16384, r=8 uses ~16 MB of memory.
+ * Limiting to 4 concurrent hashes caps peak usage at ~64 MB,
+ * preventing OOM under concurrent auth requests.
+ */
+const SCRYPT_MAX_CONCURRENT = 4;
+let scryptActive = 0;
+const scryptWaiters: Array<() => void> = [];
+
+function acquireScryptSlot(): Promise<void> {
+  if (scryptActive < SCRYPT_MAX_CONCURRENT) {
+    scryptActive++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    scryptWaiters.push(() => {
+      scryptActive++;
+      resolve();
+    });
+  });
+}
+
+function releaseScryptSlot(): void {
+  scryptActive--;
+  const next = scryptWaiters.shift();
+  if (next) {
+    next();
+  }
+}
 
 const ENCRYPTION_KEY_HEX_RE = /^[0-9a-fA-F]{64}$/;
 
@@ -44,27 +75,37 @@ const ENCRYPTION_KEY = (() => {
 
 export async function hashPassword(password: string): Promise<string> {
   const salt = crypto.randomBytes(16).toString('hex');
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(password, salt, 64, SCRYPT_PARAMS, (err, derivedKey) => {
-      if (err) { reject(err); return; }
-      resolve(`${salt}:${derivedKey.toString('hex')}`);
+  await acquireScryptSlot();
+  try {
+    return await new Promise<string>((resolve, reject) => {
+      crypto.scrypt(password, salt, 64, SCRYPT_PARAMS, (err, derivedKey) => {
+        if (err) { reject(err); return; }
+        resolve(`${salt}:${derivedKey.toString('hex')}`);
+      });
     });
-  });
+  } finally {
+    releaseScryptSlot();
+  }
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   const [salt, key] = hash.split(':');
-  return new Promise((resolve, reject) => {
-    crypto.scrypt(password, salt, 64, SCRYPT_PARAMS, (err, derivedKey) => {
-      if (err) { reject(err); return; }
-      const keyBuffer = Buffer.from(key, 'hex');
-      if (derivedKey.length !== keyBuffer.length) {
-        resolve(false);
-        return;
-      }
-      resolve(crypto.timingSafeEqual(derivedKey, keyBuffer));
+  await acquireScryptSlot();
+  try {
+    return await new Promise<boolean>((resolve, reject) => {
+      crypto.scrypt(password, salt, 64, SCRYPT_PARAMS, (err, derivedKey) => {
+        if (err) { reject(err); return; }
+        const keyBuffer = Buffer.from(key, 'hex');
+        if (derivedKey.length !== keyBuffer.length) {
+          resolve(false);
+          return;
+        }
+        resolve(crypto.timingSafeEqual(derivedKey, keyBuffer));
+      });
     });
-  });
+  } finally {
+    releaseScryptSlot();
+  }
 }
 
 export async function createSession(userId: number): Promise<string> {

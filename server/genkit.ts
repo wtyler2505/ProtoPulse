@@ -14,7 +14,22 @@ export const allGenkitTools = toolRegistry.getAll().map(toolDef =>
     name: toolDef.name,
     description: toolDef.description,
     inputSchema: toolDef.parameters as z.ZodTypeAny,
-    outputSchema: z.any() 
+    outputSchema: z.object({
+      success: z.boolean(),
+      message: z.string(),
+      data: z.unknown().optional(),
+      sources: z.array(z.object({
+        type: z.string(),
+        label: z.string(),
+        id: z.union([z.string(), z.number()]).optional(),
+        metadata: z.record(z.string(), z.unknown()).optional(),
+      })).optional(),
+      confidence: z.object({
+        score: z.number(),
+        explanation: z.string(),
+        factors: z.array(z.string()),
+      }).optional(),
+    })
   }, async (input) => {
     // Access context from Genkit's current execution context
     const ctx = ai.currentContext() as ToolContext;

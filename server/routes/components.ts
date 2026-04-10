@@ -21,7 +21,7 @@ import { runDRC, getDefaultDRCRules } from '@shared/drc-engine';
 import { exportToFzpz, importFromFzpz } from '../component-export';
 import { parseSvgToShapes } from '../svg-parser';
 import { getApiKey } from '../auth';
-import { asyncHandler, payloadLimit, parseIdParam, HttpError } from './utils';
+import { payloadLimit, parseIdParam, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { setCacheHeaders } from '../lib/cache-headers';
 
@@ -71,18 +71,18 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts',
     requireProjectOwnership,
     setCacheHeaders('project_data'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const parts = await storage.getComponentParts(projectId);
       res.json({ data: parts, total: parts.length });
-    }),
+    },
   );
 
   app.get(
     '/api/projects/:projectId/component-parts/by-node/:nodeId',
     requireProjectOwnership,
     setCacheHeaders('project_data'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const nodeId = Array.isArray(req.params.nodeId) ? req.params.nodeId[0] : req.params.nodeId;
       const part = await storage.getComponentPartByNodeId(projectId, nodeId);
@@ -90,14 +90,14 @@ export function registerComponentRoutes(app: Express): void {
         return res.status(404).json({ message: 'Component part not found' });
       }
       res.json(part);
-    }),
+    },
   );
 
   app.get(
     '/api/projects/:projectId/component-parts/:id',
     requireProjectOwnership,
     setCacheHeaders('project_data'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const part = await storage.getComponentPart(id, projectId);
@@ -105,14 +105,14 @@ export function registerComponentRoutes(app: Express): void {
         return res.status(404).json({ message: 'Component part not found' });
       }
       res.json(part);
-    }),
+    },
   );
 
   app.post(
     '/api/projects/:projectId/component-parts',
     requireProjectOwnership,
     payloadLimit(32 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const parsed = insertComponentPartSchema.omit({ projectId: true }).safeParse(req.body);
       if (!parsed.success) {
@@ -124,14 +124,14 @@ export function registerComponentRoutes(app: Express): void {
         meta: normalizeStoredPartMeta(parsed.data.meta),
       });
       res.status(201).json(part);
-    }),
+    },
   );
 
   app.patch(
     '/api/projects/:projectId/component-parts/:id',
     requireProjectOwnership,
     payloadLimit(32 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const parsed = insertComponentPartSchema.partial().omit({ projectId: true }).safeParse(req.body);
@@ -147,13 +147,13 @@ export function registerComponentRoutes(app: Express): void {
         return res.status(404).json({ message: 'Component part not found' });
       }
       res.json(updated);
-    }),
+    },
   );
 
   app.delete(
     '/api/projects/:projectId/component-parts/:id',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const deleted = await storage.deleteComponentPart(id, projectId);
@@ -161,7 +161,7 @@ export function registerComponentRoutes(app: Express): void {
         return res.status(404).json({ message: 'Component part not found' });
       }
       res.status(204).end();
-    }),
+    },
   );
 
   // --- FZPZ Export ---
@@ -169,7 +169,7 @@ export function registerComponentRoutes(app: Express): void {
   app.get(
     '/api/projects/:projectId/component-parts/:id/export/fzpz',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const part = await storage.getComponentPart(id, projectId);
@@ -191,7 +191,7 @@ export function registerComponentRoutes(app: Express): void {
         'Content-Disposition': `attachment; filename="${filename}.fzpz"`,
       });
       res.send(zipBuffer);
-    }),
+    },
   );
 
   // --- FZPZ Import ---
@@ -200,7 +200,7 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts/import/fzpz',
     requireProjectOwnership,
     payloadLimit(5 * 1024 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       let buffer: Buffer;
       if (Buffer.isBuffer(req.body)) {
         buffer = req.body;
@@ -253,7 +253,7 @@ export function registerComponentRoutes(app: Express): void {
         constraints: [],
       });
       res.status(201).json(part);
-    }),
+    },
   );
 
   // --- SVG Import ---
@@ -262,7 +262,7 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts/:id/import/svg',
     requireProjectOwnership,
     payloadLimit(2 * 1024 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const svgContent = typeof req.body === 'string' ? req.body : '';
 
       if (!svgContent || svgContent.trim().length === 0) {
@@ -276,7 +276,7 @@ export function registerComponentRoutes(app: Express): void {
         const message = err instanceof Error ? err.message : 'Invalid SVG content';
         res.status(400).json({ message });
       }
-    }),
+    },
   );
 
   // --- Component Library ---
@@ -284,32 +284,32 @@ export function registerComponentRoutes(app: Express): void {
   app.get(
     '/api/component-library',
     setCacheHeaders('component_library'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const search = typeof req.query.search === 'string' ? req.query.search : undefined;
       const category = typeof req.query.category === 'string' ? req.query.category : undefined;
       const page = parseInt(req.query.page as string) || 1;
       const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
       const result = await storage.getLibraryEntries({ search, category, page, limit });
       res.json(result);
-    }),
+    },
   );
 
   app.get(
     '/api/component-library/:id',
     setCacheHeaders('component_library'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const id = parseIdParam(req.params.id);
       const entry = await storage.getLibraryEntry(id);
       if (!entry) {
         return res.status(404).json({ message: 'Library entry not found' });
       }
       res.json(entry);
-    }),
+    },
   );
 
   app.post(
     '/api/component-library',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const parsed = insertComponentLibrarySchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).message });
@@ -326,24 +326,24 @@ export function registerComponentRoutes(app: Express): void {
         authorId: req.userId != null ? String(req.userId) : (parsed.data.authorId ?? null),
       });
       res.status(201).json(entry);
-    }),
+    },
   );
 
   app.delete(
     '/api/component-library/:id',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const id = parseIdParam(req.params.id);
       const deleted = await storage.deleteLibraryEntry(id);
       if (!deleted) {
         return res.status(404).json({ message: 'Library entry not found' });
       }
       res.status(204).end();
-    }),
+    },
   );
 
   app.post(
     '/api/component-library/:id/fork',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const id = parseIdParam(req.params.id);
       const forkSchema = z.object({ projectId: z.number().int().positive() });
       const parsed = forkSchema.safeParse(req.body);
@@ -365,7 +365,7 @@ export function registerComponentRoutes(app: Express): void {
       });
       await storage.incrementLibraryDownloads(id);
       res.status(201).json(part);
-    }),
+    },
   );
 
   // --- DRC Check ---
@@ -394,7 +394,7 @@ export function registerComponentRoutes(app: Express): void {
   app.post(
     '/api/projects/:projectId/component-parts/:id/drc',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const part = await storage.getComponentPart(id, projectId);
@@ -419,7 +419,7 @@ export function registerComponentRoutes(app: Express): void {
       const violations = runDRC(partState, rules, parsed.data.view);
 
       res.json({ violations, checkedAt: new Date().toISOString() });
-    }),
+    },
   );
 
   // --- Component AI Operations ---
@@ -438,7 +438,7 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts/ai/generate',
     requireProjectOwnership,
     payloadLimit(5 * 1024 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const parsed = generateBodySchema.safeParse(req.body);
       if (!parsed.success) {
@@ -476,7 +476,7 @@ export function registerComponentRoutes(app: Express): void {
         constraints: partState.constraints || [],
       });
       res.status(201).json(part);
-    }),
+    },
   );
 
   const modifyBodySchema = z.object({
@@ -489,7 +489,7 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts/:id/ai/modify',
     requireProjectOwnership,
     payloadLimit(64 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const parsed = modifyBodySchema.safeParse(req.body);
@@ -519,7 +519,7 @@ export function registerComponentRoutes(app: Express): void {
       const { modifyPartWithAI } = await import('../component-ai');
       const modified = await modifyPartWithAI(apiKey, partState, instruction.trim());
       res.json(modified);
-    }),
+    },
   );
 
   const sourceEvidenceSchema = z.object({
@@ -569,7 +569,7 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts/:id/verify',
     requireProjectOwnership,
     payloadLimit(32 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const parsed = verifyExactPartSchema.safeParse(req.body ?? {});
@@ -620,7 +620,7 @@ export function registerComponentRoutes(app: Express): void {
       }
 
       res.json(updated);
-    }),
+    },
   );
 
   const extractBodySchema = z.object({
@@ -633,7 +633,7 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts/:id/ai/extract',
     requireProjectOwnership,
     payloadLimit(10 * 1024 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const parsed = extractBodySchema.safeParse(req.body);
@@ -646,7 +646,7 @@ export function registerComponentRoutes(app: Express): void {
       const { extractMetadataFromDatasheet } = await import('../component-ai');
       const metadata = await extractMetadataFromDatasheet(apiKey, imageBase64, mimeType || 'image/png');
       res.json(metadata);
-    }),
+    },
   );
 
   const suggestBodySchema = z.object({
@@ -658,7 +658,7 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts/:id/ai/suggest',
     requireProjectOwnership,
     payloadLimit(16 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const parsed = suggestBodySchema.safeParse(req.body);
@@ -671,7 +671,7 @@ export function registerComponentRoutes(app: Express): void {
       const { suggestDescription } = await import('../component-ai');
       const description = await suggestDescription(apiKey, meta);
       res.json({ description });
-    }),
+    },
   );
 
   const extractPinsBodySchema = z.object({
@@ -685,7 +685,7 @@ export function registerComponentRoutes(app: Express): void {
     '/api/projects/:projectId/component-parts/:id/ai/extract-pins',
     requireProjectOwnership,
     payloadLimit(10 * 1024 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const id = parseIdParam(req.params.id);
       const parsed = extractPinsBodySchema.safeParse(req.body);
@@ -698,6 +698,6 @@ export function registerComponentRoutes(app: Express): void {
       const { extractPinsFromPhoto } = await import('../component-ai');
       const connectors = await extractPinsFromPhoto(apiKey, imageBase64, mimeType || 'image/png', existingMeta);
       res.json({ connectors });
-    }),
+    },
   );
 }

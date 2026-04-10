@@ -8,7 +8,7 @@
 
 import type { Express } from 'express';
 import { z } from 'zod';
-import { asyncHandler, HttpError } from './utils';
+import { HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { validateSession } from '../auth';
 import { storage } from '../storage';
@@ -73,13 +73,13 @@ export function registerBatchRoutes(app: Express): void {
 
   // ---- List available analysis types ----
 
-  app.get('/api/batch/catalog', asyncHandler(async (_req, res) => {
+  app.get('/api/batch/catalog', async (_req, res) => {
     res.json({ analyses: ANALYSIS_CATALOG });
-  }));
+  });
 
   // ---- Submit a batch analysis ----
 
-  app.post('/api/batch/submit', asyncHandler(async (req, res) => {
+  app.post('/api/batch/submit', async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-anthropic-key']);
     if (!apiKey) {
       throw new HttpError('Missing X-Anthropic-Key header', 401);
@@ -118,12 +118,12 @@ export function registerBatchRoutes(app: Express): void {
     });
 
     res.status(202).json(result);
-  }));
+  });
 
   // ---- Check batch status ----
   // BL-0642: Verify caller owns the project this batch belongs to
 
-  app.get('/api/batch/:batchId/status', asyncHandler(async (req, res) => {
+  app.get('/api/batch/:batchId/status', async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-anthropic-key']);
     if (!apiKey) {
       throw new HttpError('Missing X-Anthropic-Key header', 401);
@@ -137,12 +137,12 @@ export function registerBatchRoutes(app: Express): void {
     await verifyBatchOwnership(batchId, req.headers['x-session-id']);
     const status = await getBatchStatus(batchId, apiKey);
     res.json(status);
-  }));
+  });
 
   // ---- Retrieve batch results ----
   // BL-0642: Verify caller owns the project this batch belongs to
 
-  app.get('/api/batch/:batchId/results', asyncHandler(async (req, res) => {
+  app.get('/api/batch/:batchId/results', async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-anthropic-key']);
     if (!apiKey) {
       throw new HttpError('Missing X-Anthropic-Key header', 401);
@@ -174,12 +174,12 @@ export function registerBatchRoutes(app: Express): void {
       results,
       requestCounts: status.requestCounts,
     });
-  }));
+  });
 
   // ---- Cancel a batch ----
   // BL-0642: Verify caller owns the project this batch belongs to
 
-  app.post('/api/batch/:batchId/cancel', asyncHandler(async (req, res) => {
+  app.post('/api/batch/:batchId/cancel', async (req, res) => {
     const apiKey = extractApiKey(req.headers['x-anthropic-key']);
     if (!apiKey) {
       throw new HttpError('Missing X-Anthropic-Key header', 401);
@@ -194,11 +194,11 @@ export function registerBatchRoutes(app: Express): void {
     const status = await cancelBatch(batchId, apiKey);
     logger.info('batch:route:cancel', { batchId });
     res.json(status);
-  }));
+  });
 
   // ---- List batches for a project ----
 
-  app.get('/api/projects/:projectId/batches', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/batches', requireProjectOwnership, async (req, res) => {
     const projectId = Number(req.params.projectId);
     if (!Number.isFinite(projectId) || projectId <= 0) {
       throw new HttpError('Invalid projectId', 400);
@@ -206,5 +206,5 @@ export function registerBatchRoutes(app: Express): void {
 
     const batches = listProjectBatches(projectId);
     res.json({ batches });
-  }));
+  });
 }

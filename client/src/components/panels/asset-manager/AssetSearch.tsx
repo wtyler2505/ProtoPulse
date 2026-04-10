@@ -61,7 +61,7 @@ const AssetSearch = forwardRef<HTMLInputElement, AssetSearchProps>(({
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <input
               ref={ref}
-              className="w-full pl-8 pr-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors focus-ring"
+              className="w-full pl-8 pr-2 py-1.5 bg-muted/50 border border-border text-xs focus-visible:outline-none focus-visible:border-primary transition-colors focus-ring"
               placeholder="Search parts... ( / )"
               aria-label="Search parts"
               value={search}

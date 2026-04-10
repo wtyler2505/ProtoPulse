@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
-import { asyncHandler, payloadLimit, parseIdParam } from './utils';
+import { payloadLimit, parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { computeArchDiff } from '@shared/arch-diff';
 import type { ArchitectureNode, ArchitectureEdge } from '@shared/schema';
@@ -17,18 +17,18 @@ export function registerDesignHistoryRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/snapshots',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshots = await storage.getDesignSnapshots(projectId);
       res.json({ data: snapshots, total: snapshots.length });
-    }),
+    },
   );
 
   // Get a single design snapshot
   app.get(
     '/api/projects/:id/snapshots/:snapshotId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);
       const snapshot = await storage.getDesignSnapshot(projectId, snapshotId);
@@ -36,7 +36,7 @@ export function registerDesignHistoryRoutes(app: Express): void {
         return res.status(404).json({ message: 'Design snapshot not found' });
       }
       res.json(snapshot);
-    }),
+    },
   );
 
   // Create a design snapshot (captures current architecture nodes + edges)
@@ -44,7 +44,7 @@ export function registerDesignHistoryRoutes(app: Express): void {
     '/api/projects/:id/snapshots',
     requireProjectOwnership,
     payloadLimit(8 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = createSnapshotSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -65,14 +65,14 @@ export function registerDesignHistoryRoutes(app: Express): void {
         edgesJson: currentEdges,
       });
       res.status(201).json(snapshot);
-    }),
+    },
   );
 
   // Delete a design snapshot
   app.delete(
     '/api/projects/:id/snapshots/:snapshotId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);
       const snapshot = await storage.getDesignSnapshot(projectId, snapshotId);
@@ -84,14 +84,14 @@ export function registerDesignHistoryRoutes(app: Express): void {
         return res.status(404).json({ message: 'Design snapshot not found' });
       }
       res.status(204).end();
-    }),
+    },
   );
 
   // Compare a snapshot to the current architecture state
   app.post(
     '/api/projects/:id/snapshots/:snapshotId/diff',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);
 
@@ -113,6 +113,6 @@ export function registerDesignHistoryRoutes(app: Express): void {
         snapshot: { id: snapshot.id, name: snapshot.name, createdAt: snapshot.createdAt },
         diff,
       });
-    }),
+    },
   );
 }

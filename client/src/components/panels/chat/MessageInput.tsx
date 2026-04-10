@@ -113,7 +113,7 @@ export default function MessageInput({
           }}
           placeholder="Describe your system... (Shift+Enter for new line)"
           rows={1}
-          className="w-full bg-muted/30 border border-border focus:border-primary pr-[6.5rem] pl-10 py-3 shadow-inner resize-none text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none min-w-0"
+          className="w-full bg-muted/30 border border-border focus-visible:border-primary pr-[6.5rem] pl-10 py-3 shadow-inner resize-none text-sm text-foreground placeholder:text-muted-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 min-w-0"
           style={TEXTAREA_STYLE}
         />
         <div className="absolute left-3 top-3">

@@ -38,41 +38,84 @@ export function classifyPin(
   const name = pinName.toLowerCase();
   const family = partFamily.toLowerCase();
 
-  // Power pins
-  if (/^(vcc|vdd|vin|v\+|vsup|vpwr|vbat)$/i.test(name)) return 'power-in';
-  if (/^(vout|vreg)$/i.test(name)) return 'power-out';
-  if (/^(gnd|vss|vee|v-|agnd|dgnd|pgnd)$/i.test(name)) return 'power-in';
+  // ---------------------------------------------------------------------------
+  // Power supply pins (input)
+  // Covers: standard rail names, battery, bus power, system supply, signed rails
+  // ---------------------------------------------------------------------------
+  if (/^(vcc|vdd|vin|v\+|vsup|vpwr|vbat|vsys|vbus|pwr|supply|avcc|avdd|dvcc|dvdd|pvcc|pvdd|vcca|vccb|vddio|vdda|vddd)$/i.test(name)) {
+    return 'power-in';
+  }
+
+  // Power output pins (regulators, voltage references)
+  if (/^(vout|vreg|vref)$/i.test(name)) return 'power-out';
+
+  // Ground / return pins (treated as power-in for ERC: they are sinks)
+  // Covers: analog/digital/power ground, earth, negative rail, substrate
+  if (/^(gnd|vss|vee|v-|agnd|dgnd|pgnd|earth|gnda|gndd|gndp|epad|ep)$/i.test(name)) {
+    return 'power-in';
+  }
+
+  // ---------------------------------------------------------------------------
+  // Part-family-level classification (overrides pin-name heuristics)
+  // ---------------------------------------------------------------------------
 
   // Passive components — all pins are passive
-  if (/^(resistor|capacitor|inductor|ferrite|thermistor|varistor|potentiometer)$/.test(family)) {
+  if (/^(resistor|capacitor|inductor|ferrite|thermistor|varistor|potentiometer|fuse)$/.test(family)) {
     return 'passive';
   }
 
   // Crystal/oscillator — passive
-  if (/^(crystal|oscillator)$/.test(family)) return 'passive';
+  if (/^(crystal|oscillator|resonator)$/.test(family)) return 'passive';
 
-  // Connector pins are bidirectional
-  if (/^(connector|header)$/.test(family)) return 'bidirectional';
+  // Connector / header / terminal / test point pins are bidirectional
+  if (/^(connector|header|terminal|testpoint|jumper)$/.test(family)) return 'bidirectional';
 
-  // Diode/LED — anode is passive, cathode is passive
-  if (/^(diode|led)$/.test(family)) return 'passive';
+  // Diode/LED — anode/cathode are passive
+  if (/^(diode|led|zener|schottky|tvs)$/.test(family)) return 'passive';
 
-  // Transistor/MOSFET — gate is input, source/drain are bidirectional
-  if (/^(transistor|mosfet|bjt|jfet)$/.test(family)) {
+  // Transistor/MOSFET — gate/base is input, source/drain/collector/emitter are bidirectional
+  if (/^(transistor|mosfet|bjt|jfet|igbt)$/.test(family)) {
     if (/gate|base/i.test(name)) return 'input';
     return 'bidirectional';
   }
 
+  // Relay — coil pins are input, contact pins are passive
+  if (/^(relay)$/.test(family)) {
+    if (/coil/i.test(name)) return 'input';
+    return 'passive';
+  }
+
+  // Voltage regulator — input pin is power-in, output is power-out, others bidirectional
+  if (/^(regulator|ldo|dcdc|converter)$/.test(family)) {
+    if (/^(vin|in|input)$/i.test(name)) return 'power-in';
+    if (/^(vout|out|output|fb|adj)$/i.test(name)) return 'power-out';
+    return 'bidirectional';
+  }
+
+  // ---------------------------------------------------------------------------
   // IC-level heuristics by pin name patterns
-  if (/^(clk|clock|sck|scl)$/i.test(name)) return 'input';
-  if (/^(mosi|sda|sdi|din|rx|rxd)$/i.test(name)) return 'input';
-  if (/^(miso|sdo|dout|tx|txd)$/i.test(name)) return 'output';
-  if (/^(cs|ss|ce|en|enable|reset|rst|nrst)$/i.test(name)) return 'input';
-  if (/^(int|irq|alert)$/i.test(name)) return 'output';
-  if (/^(gpio|io|d\d+|p\d+|a\d+)$/i.test(name)) return 'bidirectional';
+  // ---------------------------------------------------------------------------
+
+  // Clock / timing inputs
+  if (/^(clk|clock|sck|scl|xtal|xin|osc_?in|tck|swclk)$/i.test(name)) return 'input';
+
+  // Data inputs — SPI MOSI, UART RX, ADC channels, serial data in, sense pins
+  if (/^(mosi|sdi|din|rx|rxd|adc\d*|ain\d*|sense|comp_?in|in\d*|sda_?in)$/i.test(name)) return 'input';
+
+  // Control / enable / chip-select inputs
+  if (/^(cs|ss|ce|en|enable|reset|rst|nrst|n?oe|n?we|n?rd|n?wr|n?cs|wp|hold|swdio_?in|tdi|tms|trst)$/i.test(name)) {
+    return 'input';
+  }
+
+  // Data outputs — SPI MISO, UART TX, DAC, serial data out, interrupt/alert
+  if (/^(miso|sdo|dout|tx|txd|dac\d*|aout\d*|out\d*|sda_?out|tdo|swo|swdio_?out)$/i.test(name)) return 'output';
+  if (/^(int|irq|alert|alarm|drdy|busy|fault|error|flag|status)$/i.test(name)) return 'output';
+
+  // Bidirectional — GPIO, I2C SDA, data bus lines, IO pins
+  if (/^(sda|gpio\d*|io\d*|data\d*|d\d+|p[a-d]?\d+|a\d+|dq\d*|bidi?\d*)$/i.test(name)) return 'bidirectional';
 
   // Default for ICs: bidirectional (conservative — avoids false positives)
-  if (/^(microcontroller|ic|opamp|regulator|sensor|module)$/.test(family)) {
+  if (/^(microcontroller|ic|opamp|sensor|module|fpga|cpld|mcu|soc|dsp|adc|dac|codec|driver|amplifier|comparator|mux|switch)$/.test(family)) {
     return 'bidirectional';
   }
 
@@ -302,8 +345,8 @@ export function runERC(input: ERCInput): ERCViolation[] {
       // Check if power pins come from different power rail names
       const powerNames = Array.from(new Set(powerPins.map((p: PinInfo) => p.pinName.toUpperCase())));
       // If VCC and GND are on the same net, that's a short
-      const hasSupply = powerNames.some((n: string) => /^(VCC|VDD|VIN|V\+|VOUT|VREG)$/i.test(n));
-      const hasGround = powerNames.some((n: string) => /^(GND|VSS|VEE|V-|AGND|DGND)$/i.test(n));
+      const hasSupply = powerNames.some((n: string) => /^(VCC|VDD|VIN|V\+|VOUT|VREG|VBAT|VSYS|VBUS|PWR|SUPPLY|AVCC|AVDD|DVCC|DVDD|PVCC|PVDD|VCCA|VCCB|VDDIO|VDDA|VDDD|VREF)$/i.test(n));
+      const hasGround = powerNames.some((n: string) => /^(GND|VSS|VEE|V-|AGND|DGND|PGND|EARTH|GNDA|GNDD|GNDP|EPAD|EP)$/i.test(n));
 
       if (hasSupply && hasGround) {
         const net = nets.find((n) => n.id === netId);

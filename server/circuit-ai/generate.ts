@@ -5,7 +5,7 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { buildExactPartAiPolicy, summarizeGeneratedCircuitTrust } from '@shared/exact-part-ai-policy';
-import { parseIdParam, payloadLimit, asyncHandler } from '../routes/utils';
+import { parseIdParam, payloadLimit } from '../routes/utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { circuitAiRateLimiter } from './rate-limiter';
 import { categorizeError, redactSecrets } from '../ai';
@@ -22,7 +22,7 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
     requireCircuitOwnership,
     circuitAiRateLimiter,
     payloadLimit(64 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const circuitId = parseIdParam(req.params.circuitId);
       const parsed = generateSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -208,6 +208,6 @@ export function registerCircuitAiGenerateRoute(app: Express, storage: IStorage):
         logger.error(`[circuit-ai] Generation error: ${redactSecrets(String(error))}`);
         res.status(500).json({ message: userMessage });
       }
-    }),
+    },
   );
 }

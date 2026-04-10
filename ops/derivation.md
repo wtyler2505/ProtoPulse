@@ -103,6 +103,22 @@ engine_version: "1.0.0"
 **Cluster structure:** Notes organize into 5 groups: (1) AI quality chain, (2) security attack chain, (3) main-thread blocking, (4) resource leaks, (5) desktop pivot risks
 **Impact:** Vault grew from 118 to 143 notes. architecture-decisions MOC approaching split threshold (37 notes).
 
+### 2026-04-06: /architect analysis — 4 recommendations implemented
+**Trigger:** Full-system architect analysis after audit ingestion
+**Health findings:** 0 FAIL, 3 WARN (3 MOCs over 40-note threshold: gaps-and-opportunities=62, architecture-decisions=50, dev-infrastructure=43), methodology MOC at 2 notes (below merge threshold)
+**Drift:** None — all 8 dimensions match derivation
+**Failure modes active:** MOC Sprawl (gaps-and-opportunities at 62 notes)
+**Research grounding:** failure-modes.md (MOC Sprawl #5), interaction-constraints.md (Volume Cascade), dimension-claim-map.md (navigational vertigo), evolution-lifecycle.md (Gall's Law)
+
+**Changes implemented:**
+1. **Split gaps-and-opportunities** — created 3 sub-topic maps: `security-debt.md`, `performance-debt.md`, `ai-system-debt.md`. Replaced 20 inline entries with 5 sub-map links. MOC dropped from 62 to ~47 entries.
+2. **Archive source note** — created `archive/comprehensive-audit-2026-04-05.md` with extraction manifest mapping all 25 notes to their source sections.
+3. **Promoted methodology MOC** — added 5 existing methodology notes to `## Notes` section (was counting only 2 due to subsection formatting).
+4. **Synthesis note** — created `comprehensive-audit-reveals-zero-validation-at-any-layer.md` (type: insight) capturing the 3 cross-cutting patterns: validation vacuum, desktop pivot security trade-off, synchronous computation bottleneck.
+5. **Deferred:** architecture-decisions split (50 notes, but structurally coherent via subsections). Revisit at 60 notes.
+
+**Vault state after:** 147 notes, 15 topic maps (was 12), 0 orphans, 0 dangling links.
+
 ## Generation Parameters
 - Folder names: knowledge/, inbox/, archive/, self/, ops/, templates/, manual/
 - Skills to generate: all 16 (vocabulary-transformed)

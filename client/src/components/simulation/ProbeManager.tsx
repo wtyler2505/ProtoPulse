@@ -56,7 +56,7 @@ export default function ProbeManager({
                 type="text"
                 value={probe.name}
                 onChange={(e) => updateProbe(probe.id, { name: e.target.value })}
-                className="flex-1 h-6 px-2 text-xs bg-transparent border-none focus:outline-none text-foreground placeholder:text-muted-foreground/50"
+                className="flex-1 h-6 px-2 text-xs bg-transparent border-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 text-foreground placeholder:text-muted-foreground/50"
                 placeholder="Probe name"
                 data-testid={`probe-name-${probe.id}`}
               />
@@ -75,7 +75,7 @@ export default function ProbeManager({
                 type="text"
                 value={probe.nodeOrComponent}
                 onChange={(e) => updateProbe(probe.id, { nodeOrComponent: e.target.value })}
-                className="w-28 h-6 px-2 text-xs bg-transparent border border-border focus:outline-none focus:border-primary/50 text-foreground placeholder:text-muted-foreground/50 font-mono"
+                className="w-28 h-6 px-2 text-xs bg-transparent border border-border focus-visible:outline-none focus-visible:border-primary/50 focus-visible:ring-2 focus-visible:ring-cyan-400/50 text-foreground placeholder:text-muted-foreground/50 font-mono"
                 placeholder="Node/Comp"
                 data-testid={`probe-node-${probe.id}`}
               />

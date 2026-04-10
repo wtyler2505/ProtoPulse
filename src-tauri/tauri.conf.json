@@ -8,7 +8,7 @@
     "frontendDist": "../dist/public"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "windows": [
       {
         "title": "ProtoPulse",
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://localhost:* https://*.googleapis.com https://*.anthropic.com; font-src 'self' data:; media-src 'self' blob:; worker-src 'self' blob:"
     }
   },
   "bundle": {

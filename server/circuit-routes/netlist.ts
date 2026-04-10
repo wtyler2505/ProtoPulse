@@ -3,12 +3,12 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import type { IStorage } from '../storage';
 import type { NetSegment } from './utils';
-import { asyncHandler, parseIdParam, payloadLimit } from './utils';
+import { parseIdParam, payloadLimit } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { computeNetlistDiff, type NetlistSnapshot, type NetSnapshot, type ComponentSnapshot } from '@shared/netlist-diff';
 
 export function registerCircuitNetlistRoutes(app: Express, storage: IStorage): void {
-  app.post('/api/circuits/:circuitId/netlist', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/netlist', requireCircuitOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const { format = 'generic' } = req.body as { format?: 'generic' | 'spice' | 'kicad' };
 
@@ -181,7 +181,7 @@ export function registerCircuitNetlistRoutes(app: Express, storage: IStorage): v
         netCount: nets.length,
       });
     }
-  }));
+  });
 
   // ---------------------------------------------------------------------------
   // Netlist Diff / ECO — compare two circuit netlists
@@ -191,7 +191,7 @@ export function registerCircuitNetlistRoutes(app: Express, storage: IStorage): v
     baselineCircuitId: z.number().int().positive(),
   });
 
-  app.post('/api/circuits/:circuitId/netlist-diff', requireCircuitOwnership, payloadLimit(8 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/netlist-diff', requireCircuitOwnership, payloadLimit(8 * 1024), async (req, res) => {
     const currentCircuitId = parseIdParam(req.params.circuitId);
     const parsed = diffSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -234,7 +234,7 @@ export function registerCircuitNetlistRoutes(app: Express, storage: IStorage): v
       current: { id: currentCircuitId, name: currentCircuit.name },
       diff,
     });
-  }));
+  });
 }
 
 // ---------------------------------------------------------------------------

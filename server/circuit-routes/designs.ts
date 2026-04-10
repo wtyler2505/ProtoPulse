@@ -4,7 +4,7 @@ import { VersionConflictError } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { insertCircuitDesignSchema } from '@shared/schema';
-import { asyncHandler, parseIdParam, payloadLimit } from './utils';
+import { parseIdParam, payloadLimit } from './utils';
 import { requireProjectOwnership } from '../routes/auth-middleware';
 
 const updateCircuitDesignSchema = z.object({
@@ -21,22 +21,22 @@ function parseIfMatch(header: string | undefined): number | undefined {
 }
 
 export function registerCircuitDesignRoutes(app: Express, storage: IStorage): void {
-  app.get('/api/projects/:projectId/circuits', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/circuits', requireProjectOwnership, async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const circuits = await storage.getCircuitDesigns(projectId);
     res.json({ data: circuits, total: circuits.length });
-  }));
+  });
 
-  app.get('/api/projects/:projectId/circuits/:id', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/projects/:projectId/circuits/:id', requireProjectOwnership, async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const id = parseIdParam(req.params.id);
     const circuit = await storage.getCircuitDesign(id);
     if (!circuit || circuit.projectId !== projectId) { return res.status(404).json({ message: 'Circuit design not found' }); }
     res.setHeader('ETag', `"${circuit.version}"`);
     res.json(circuit);
-  }));
+  });
 
-  app.post('/api/projects/:projectId/circuits', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const parsed = insertCircuitDesignSchema.safeParse({ ...req.body, projectId });
     if (!parsed.success) {
@@ -45,9 +45,9 @@ export function registerCircuitDesignRoutes(app: Express, storage: IStorage): vo
     const circuit = await storage.createCircuitDesign(parsed.data);
     res.setHeader('ETag', `"${circuit.version}"`);
     res.status(201).json(circuit);
-  }));
+  });
 
-  app.patch('/api/projects/:projectId/circuits/:id', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.patch('/api/projects/:projectId/circuits/:id', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const id = parseIdParam(req.params.id);
     const existing = await storage.getCircuitDesign(id);
@@ -74,9 +74,9 @@ export function registerCircuitDesignRoutes(app: Express, storage: IStorage): vo
       }
       throw e;
     }
-  }));
+  });
 
-  app.delete('/api/projects/:projectId/circuits/:id', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.delete('/api/projects/:projectId/circuits/:id', requireProjectOwnership, async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const id = parseIdParam(req.params.id);
     const existing = await storage.getCircuitDesign(id);
@@ -86,5 +86,5 @@ export function registerCircuitDesignRoutes(app: Express, storage: IStorage): vo
     const deleted = await storage.deleteCircuitDesign(id);
     if (!deleted) { return res.status(404).json({ message: 'Circuit design not found' }); }
     res.status(204).end();
-  }));
+  });
 }

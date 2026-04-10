@@ -7,7 +7,7 @@ import { z } from 'zod';
 
 import { db } from '../db';
 import { logger } from '../logger';
-import { asyncHandler, payloadLimit } from './utils';
+import { payloadLimit } from './utils';
 
 import type { Express } from 'express';
 
@@ -81,7 +81,7 @@ export function registerBackupRoutes(app: Express): void {
   app.post(
     '/api/admin/backup',
     backupRateLimiter,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       if (!requireAdminKey(req, res)) {
         return;
       }
@@ -181,7 +181,7 @@ export function registerBackupRoutes(app: Express): void {
           res.status(500).json({ error: 'Failed to spawn pg_dump', details: err.message });
         }
       });
-    }),
+    },
   );
 
   // --- POST /api/admin/restore — Execute a SQL dump ---
@@ -190,7 +190,7 @@ export function registerBackupRoutes(app: Express): void {
     '/api/admin/restore',
     backupRateLimiter,
     payloadLimit(100 * 1024 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       if (!requireAdminKey(req, res)) {
         return;
       }
@@ -290,7 +290,7 @@ export function registerBackupRoutes(app: Express): void {
           after: postCounts,
         },
       });
-    }),
+    },
   );
 
   // --- GET /api/admin/backup/status — Database stats ---
@@ -298,7 +298,7 @@ export function registerBackupRoutes(app: Express): void {
   app.get(
     '/api/admin/backup/status',
     backupRateLimiter,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       if (!requireAdminKey(req, res)) {
         return;
       }
@@ -324,6 +324,6 @@ export function registerBackupRoutes(app: Express): void {
         tables: tableCountsResult.rows,
         timestamp: new Date().toISOString(),
       });
-    }),
+    },
   );
 }

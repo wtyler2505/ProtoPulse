@@ -200,7 +200,7 @@ export function CustomRulesDialog({
                 data-testid="script-code-editor"
                 value={scriptCode}
                 onChange={(e) => { setScriptCode(e.target.value); }}
-                className="w-full h-40 bg-background border border-border rounded p-2 text-xs font-mono resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full h-40 bg-background border border-border rounded p-2 text-xs font-mono resize-y focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
                 placeholder="// Available: nodes, edges, bomItems, report(ruleId, message, severity, nodeIds, suggestion), warn(message), hasProperty(nodeId, key)"
                 spellCheck={false}
               />

@@ -15,3 +15,4 @@ e2e/.auth-state.json
 .qmd.db
 src-tauri/target/
 src-tauri/Cargo.lock
+.superpowers/

@@ -35,6 +35,12 @@ Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` fo
 - [[six-epics-organize-the-remaining-strategic-work]] -- A-F strategic layers
 - [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- 293 findings became 154 waves
 
+### Comprehensive Audit Synthesis
+- [[comprehensive-audit-reveals-zero-validation-at-any-layer]] -- the audit's meta-finding across all 40 sections
+- [[security-debt]] -- attack chain cluster (5 notes)
+- [[performance-debt]] -- main-thread blocking cluster (6 notes)
+- [[ai-system-debt]] -- validation vacuum cluster (9 notes)
+
 ### Comprehensive Audit Findings (2026-04-05)
 - [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- unhandled abort = zombie Gemini requests
 - [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- z.any() defeats structured output

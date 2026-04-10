@@ -285,7 +285,7 @@ export default function DesignAgentPanel({
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Describe your circuit: e.g. 'Arduino-based motor controller with H-bridge, power regulation, and serial debug'"
-        className="w-full min-h-[80px] max-h-[160px] bg-muted/30 border border-border text-sm p-3 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+        className="w-full min-h-[80px] max-h-[160px] bg-muted/30 border border-border text-sm p-3 placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 resize-y"
         disabled={isRunning}
       />
 

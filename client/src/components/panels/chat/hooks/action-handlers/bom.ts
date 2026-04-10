@@ -98,21 +98,11 @@ const optimizeBom: ActionHandler = (_action, ctx) => {
 };
 
 const pricingLookup: ActionHandler = (action, ctx) => {
-  const pricingItem = ctx.state.currentBom.find(
-    (b) => b.partNumber.toLowerCase().includes(action.partNumber!.toLowerCase()),
-  );
-  if (pricingItem) {
-    const distributors = [
-      { name: 'Digi-Key', price: pricingItem.unitPrice * (0.95 + Math.random() * 0.15), stock: Math.floor(Math.random() * 5000), leadTime: `${Math.floor(Math.random() * 4) + 1} weeks` },
-      { name: 'Mouser', price: pricingItem.unitPrice * (0.9 + Math.random() * 0.2), stock: Math.floor(Math.random() * 3000), leadTime: `${Math.floor(Math.random() * 3) + 1} weeks` },
-      { name: 'LCSC', price: pricingItem.unitPrice * (0.7 + Math.random() * 0.3), stock: Math.floor(Math.random() * 50000), leadTime: `${Math.floor(Math.random() * 6) + 2} weeks` },
-    ];
-    ctx.validation.addValidationIssue({
-      severity: 'info',
-      message: `Pricing for ${action.partNumber}: ${distributors.map((d) => `${d.name}: $${d.price.toFixed(2)} (${d.stock} in stock, ${d.leadTime})`).join(' | ')}`,
-      suggestion: `Best price: ${distributors.sort((a, b) => a.price - b.price)[0].name} at $${distributors.sort((a, b) => a.price - b.price)[0].price.toFixed(2)}`,
-    });
-  }
+  ctx.validation.addValidationIssue({
+    severity: 'info',
+    message: `Real-time pricing for ${action.partNumber} is not available — supplier API integration is not yet configured.`,
+    suggestion: 'Connect supplier APIs (Digi-Key, Mouser, LCSC) in project settings to enable live pricing and stock lookups.',
+  });
   ctx.arch.setActiveView('procurement');
   ctx.history.addToHistory(`Pricing lookup: ${action.partNumber}`, 'AI');
   ctx.output.addOutputLog(`[AI] Checked pricing for ${action.partNumber}`);

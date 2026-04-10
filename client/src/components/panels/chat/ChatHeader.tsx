@@ -47,7 +47,7 @@ function ChatHeader({
               data-testid="branch-selector"
               value={activeBranchId ?? ''}
               onChange={(e) => onBranchSelect(e.target.value || null)}
-              className="appearance-none bg-muted/50 border border-border text-xs pl-6 pr-6 py-1 cursor-pointer hover:bg-muted transition-colors text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="appearance-none bg-muted/50 border border-border text-xs pl-6 pr-6 py-1 cursor-pointer hover:bg-muted transition-colors text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
             >
               <option value="">Main</option>
               {branches.map((b) => (

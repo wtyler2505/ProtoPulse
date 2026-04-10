@@ -137,9 +137,9 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
   if (!pos) return null;
 
   const meta = (part?.meta as Record<string, unknown> | undefined) ?? {};
-  const type = meta.type as string | undefined;
-  const typeLower = type?.toLowerCase() || 'generic';
   const props = instance.properties as Record<string, unknown> | null;
+  const type = (meta.type as string | undefined) ?? (props?.type as string | undefined);
+  const typeLower = type?.toLowerCase() || 'generic';
   const color = (props?.color as string) || '#ff0000';
   const family = detectFamily(typeLower);
   const extType = detectExtendedType(typeLower);

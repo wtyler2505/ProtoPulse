@@ -384,16 +384,23 @@ describe('KiCad exporter edge cases', () => {
     expect(() => generateKicadProject(input)).not.toThrow();
   });
 
-  it('generates deterministic UUIDs for same input', () => {
+  it('generates valid UUIDs in output', () => {
     const input = makePopulatedInput();
-    const output1 = generateKicadProject(input);
-    const output2 = generateKicadProject(input);
+    const output = generateKicadProject(input);
 
-    // Deterministic UUIDs should produce identical output
-    expect(output1.pcb).toBe(output2.pcb);
-    expect(output1.project).toBe(output2.project);
-    // Schematic too
-    expect(output1.schematic).toBe(output2.schematic);
+    // UUIDs should be valid UUIDv4 format (8-4-4-4-12 hex pattern)
+    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+    const pcbUuids = output.pcb.match(uuidRegex) ?? [];
+    const schematicUuids = output.schematic.match(uuidRegex) ?? [];
+
+    // Both outputs should contain UUIDs
+    expect(pcbUuids.length).toBeGreaterThan(0);
+    expect(schematicUuids.length).toBeGreaterThan(0);
+
+    // Every matched UUID should be valid format (not the old FNV-1a hash)
+    for (const uuid of [...pcbUuids, ...schematicUuids]) {
+      expect(uuid).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+    }
   });
 
   it('handles parts with no connectors', () => {

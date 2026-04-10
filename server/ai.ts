@@ -667,11 +667,14 @@ function buildSystemPrompt(appState: AppState): string {
       : "  (none)")
     : buildNodesSummary(appState.nodes);
 
+  // Build a lookup map for O(1) node resolution instead of O(N) per edge
+  const nodeById = new Map(appState.nodes.map(n => [n.id, n]));
+
   const edgesDescription = (archActive || appState.edges.length <= 10)
     ? (appState.edges.length > 0
       ? appState.edges.map(e => {
-          const srcNode = appState.nodes.find(n => n.id === e.source);
-          const tgtNode = appState.nodes.find(n => n.id === e.target);
+          const srcNode = nodeById.get(e.source);
+          const tgtNode = nodeById.get(e.target);
           const meta = [
             e.signalType ? `signal: ${e.signalType}` : "",
             e.voltage ? `voltage: ${e.voltage}` : "",

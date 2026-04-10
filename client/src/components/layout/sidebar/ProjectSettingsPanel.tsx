@@ -154,7 +154,7 @@ const ProjectSettingsPanel = memo(function ProjectSettingsPanel({
             onChange={(e) => setSettingsName(e.target.value)}
             onBlur={saveSettings}
             onKeyDown={(e) => { if (e.key === 'Enter') { saveSettings(); } }}
-            className="w-full text-xs bg-muted/30 border border-border/50 px-2 py-1.5 text-foreground focus:outline-none focus:border-primary/50 transition-colors focus-ring"
+            className="w-full text-xs bg-muted/30 border border-border/50 px-2 py-1.5 text-foreground focus-visible:outline-none focus-visible:border-primary/50 transition-colors focus-ring"
           />
           <label htmlFor="project-settings-description" className="text-[10px] text-muted-foreground uppercase tracking-wider mt-2 block">Description</label>
           <textarea
@@ -164,7 +164,7 @@ const ProjectSettingsPanel = memo(function ProjectSettingsPanel({
             onChange={(e) => setSettingsDesc(e.target.value)}
             onBlur={saveSettings}
             rows={2}
-            className="w-full text-xs bg-muted/30 border border-border/50 px-2 py-1.5 text-foreground focus:outline-none focus:border-primary/50 transition-colors resize-none focus-ring"
+            className="w-full text-xs bg-muted/30 border border-border/50 px-2 py-1.5 text-foreground focus-visible:outline-none focus-visible:border-primary/50 transition-colors resize-none focus-ring"
           />
           {settingsDirty && (
             <button

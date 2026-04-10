@@ -108,7 +108,7 @@ export default function SpiceImportSection() {
           className={cn(
             'w-full px-3 py-2 text-xs font-mono bg-background border border-border text-foreground',
             'placeholder:text-muted-foreground/40 resize-y min-h-[120px]',
-            'focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/20',
+            'focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-cyan-400/50',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-colors',
           )}

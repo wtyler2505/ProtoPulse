@@ -106,7 +106,7 @@ function ParamField({
           className={cn(
             'flex-1 h-8 px-2.5 text-xs bg-background border border-border text-foreground',
             'placeholder:text-muted-foreground/50',
-            'focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/20',
+            'focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-cyan-400/50',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'transition-colors',
             unit ? 'rounded-l' : '',
@@ -383,7 +383,7 @@ export default function FrequencyAnalysisPanel() {
                 data-testid="topology-selector"
                 className={cn(
                   'h-9 px-3 text-xs bg-background border border-border text-foreground',
-                  'focus:outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/20',
+                  'focus-visible:outline-none focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-cyan-400/50',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                   'transition-colors appearance-none',
                 )}

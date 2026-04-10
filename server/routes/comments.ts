@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
-import { asyncHandler, payloadLimit, parseIdParam, HttpError } from './utils';
+import { payloadLimit, parseIdParam, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 
 const createCommentSchema = z.object({
@@ -24,7 +24,7 @@ export function registerCommentRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/comments',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
 
       const filters: { targetType?: string; targetId?: string; status?: string } = {};
@@ -40,7 +40,7 @@ export function registerCommentRoutes(app: Express): void {
 
       const comments = await storage.getComments(projectId, filters);
       res.json({ data: comments, total: comments.length });
-    }),
+    },
   );
 
   // Create a comment
@@ -48,7 +48,7 @@ export function registerCommentRoutes(app: Express): void {
     '/api/projects/:id/comments',
     requireProjectOwnership,
     payloadLimit(16 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = createCommentSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -80,7 +80,7 @@ export function registerCommentRoutes(app: Express): void {
         userId,
       });
       res.status(201).json(comment);
-    }),
+    },
   );
 
   // Update comment content
@@ -88,7 +88,7 @@ export function registerCommentRoutes(app: Express): void {
     '/api/projects/:id/comments/:commentId',
     requireProjectOwnership,
     payloadLimit(16 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
       const existing = await storage.getComment(projectId, commentId);
@@ -102,14 +102,14 @@ export function registerCommentRoutes(app: Express): void {
 
       const updated = await storage.updateComment(projectId, commentId, { content: parsed.data.content });
       res.json(updated);
-    }),
+    },
   );
 
   // Update comment status
   app.patch(
     '/api/projects/:id/comments/:commentId/status',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
       const existing = await storage.getComment(projectId, commentId);
@@ -125,14 +125,14 @@ export function registerCommentRoutes(app: Express): void {
 
       const updated = await storage.updateCommentStatus(projectId, commentId, status, updatedBy);
       res.json(updated);
-    }),
+    },
   );
 
   // Delete a comment (hard delete)
   app.delete(
     '/api/projects/:id/comments/:commentId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const commentId = parseIdParam(req.params.commentId);
       const existing = await storage.getComment(projectId, commentId);
@@ -141,6 +141,6 @@ export function registerCommentRoutes(app: Express): void {
       }
       await storage.deleteComment(projectId, commentId);
       res.status(204).end();
-    }),
+    },
   );
 }

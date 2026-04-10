@@ -349,7 +349,7 @@ exports[`KiCad exporter snapshot tests > generateKicadPcb matches snapshot 1`] =
   (net 1 "VCC")
 
   (footprint "PP:DIP_28_1" (layer "F.Cu") (at 25 30 0)
-    (uuid "ba6264e4-8481-9c0c-b650-e1fc0426fa0c")
+    (uuid "00000000-0000-0000-0000-000000000000")
     (fp_text reference "U1" (at 0 -3) (layer "F.SilkS")
       (effects (font (size 1 1) (thickness 0.15)))
     )
@@ -363,7 +363,7 @@ exports[`KiCad exporter snapshot tests > generateKicadPcb matches snapshot 1`] =
     (pad "pin3" thru_hole circle (at 1.5 2.04) (size 1.6 1.6) (drill 0.8) (layers "*.Cu" "*.Mask"))
   )
 
-  (segment (start 10 10) (end 25 30) (width 0.25) (layer "F.Cu") (net 1) (uuid "391137f8-8481-9c0c-b650-e1fc0426fa0c"))
+  (segment (start 10 10) (end 25 30) (width 0.25) (layer "F.Cu") (net 1) (uuid "00000000-0000-0000-0000-000000000000"))
 
   (gr_line (start 0 0) (end 60 0) (stroke (width 0.1) (type default)) (layer "Edge.Cuts"))
   (gr_line (start 60 0) (end 60 50) (stroke (width 0.1) (type default)) (layer "Edge.Cuts"))
@@ -473,7 +473,7 @@ exports[`KiCad exporter snapshot tests > generateKicadProjectFile matches snapsh
 
 exports[`KiCad exporter snapshot tests > generateKicadSchematic matches snapshot 1`] = `
 "(kicad_sch (version 20230121) (generator "ProtoPulse")
-  (uuid "fb69b604-6ca9-c22c-992e-ba9cb74c702c")
+  (uuid "00000000-0000-0000-0000-000000000000")
   (paper "A3")
 
   (title_block
@@ -500,13 +500,13 @@ exports[`KiCad exporter snapshot tests > generateKicadSchematic matches snapshot
   )
 
   (symbol (lib_id "PP:ATmega328P_1") (at 10 20 0)
-    (uuid "216c306d-6ca9-c22c-992e-ba9cb74c702c")
+    (uuid "00000000-0000-0000-0000-000000000000")
     (property "Reference" "U1" (at 10 22 0) (effects (font (size 1.27 1.27))))
     (property "Value" "ATmega328P" (at 10 18 0) (effects (font (size 1.27 1.27))))
     (property "Footprint" "DIP-28" (at 10 16 0) (effects (font (size 1.27 1.27)) hide))
     (instances
       (project "KiCad Snapshot Circuit"
-        (path "/216c306d-6ca9-c22c-992e-ba9cb74c702c" (reference "U1") (unit 1))
+        (path "/00000000-0000-0000-0000-000000000000" (reference "U1") (unit 1))
       )
     )
   )

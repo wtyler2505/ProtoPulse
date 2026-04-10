@@ -3,7 +3,7 @@ import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { insertCircuitViaSchema } from '@shared/schema';
-import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
+import { parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 
 const updateViaSchema = z.object({
@@ -19,7 +19,7 @@ const updateViaSchema = z.object({
 
 export function registerCircuitViaRoutes(app: Express, storage: IStorage): void {
   // BL-0638: All via routes now require circuit ownership
-  app.get('/api/circuits/:circuitId/vias', requireCircuitOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/vias', requireCircuitOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const pagination = circuitPaginationSchema.safeParse(req.query);
     if (!pagination.success) {
@@ -30,9 +30,9 @@ export function registerCircuitViaRoutes(app: Express, storage: IStorage): void 
     const sorted = sort === 'asc' ? all : [...all].reverse();
     const data = sorted.slice(offset, offset + limit);
     res.json({ data, total: all.length });
-  }));
+  });
 
-  app.post('/api/circuits/:circuitId/vias', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/vias', requireCircuitOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = insertCircuitViaSchema.safeParse({ ...req.body, circuitId });
     if (!parsed.success) {
@@ -40,9 +40,9 @@ export function registerCircuitViaRoutes(app: Express, storage: IStorage): void 
     }
     const via = await storage.createCircuitVia(parsed.data);
     res.status(201).json(via);
-  }));
+  });
 
-  app.post('/api/circuits/:circuitId/vias/bulk', requireCircuitOwnership, payloadLimit(512 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/vias/bulk', requireCircuitOwnership, payloadLimit(512 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = z.array(insertCircuitViaSchema.omit({ circuitId: true })).safeParse(req.body);
     if (!parsed.success) {
@@ -51,10 +51,10 @@ export function registerCircuitViaRoutes(app: Express, storage: IStorage): void 
     const viasToInsert = parsed.data.map(v => ({ ...v, circuitId }));
     const vias = await storage.createCircuitVias(viasToInsert);
     res.status(201).json({ count: vias.length, data: vias });
-  }));
+  });
 
   // BL-0638: Via PATCH/DELETE now scoped under circuit with ownership guard
-  app.patch('/api/circuits/:circuitId/vias/:id', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.patch('/api/circuits/:circuitId/vias/:id', requireCircuitOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
     const parsed = updateViaSchema.safeParse(req.body);
@@ -68,10 +68,10 @@ export function registerCircuitViaRoutes(app: Express, storage: IStorage): void 
     }
     const updated = await storage.updateCircuitVia(id, parsed.data);
     res.json(updated);
-  }));
+  });
 
   // BL-0638: Via DELETE now scoped under circuit with ownership guard
-  app.delete('/api/circuits/:circuitId/vias/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
+  app.delete('/api/circuits/:circuitId/vias/:id', requireCircuitOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
     // Verify via belongs to this circuit
@@ -82,5 +82,5 @@ export function registerCircuitViaRoutes(app: Express, storage: IStorage): void 
     const deleted = await storage.deleteCircuitVia(id);
     if (!deleted) { return res.status(404).json({ message: 'Via not found' }); }
     res.status(204).end();
-  }));
+  });
 }

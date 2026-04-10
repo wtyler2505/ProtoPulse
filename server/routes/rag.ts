@@ -1,7 +1,7 @@
 import type { Express } from 'express';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
-import { asyncHandler, payloadLimit, HttpError } from './utils';
+import { payloadLimit, HttpError } from './utils';
 
 // ---------------------------------------------------------------------------
 // In-memory document store (server-side RAG documents)
@@ -36,7 +36,7 @@ export function registerRAGRoutes(app: Express): void {
   app.post(
     '/api/rag/documents',
     payloadLimit(150 * 1024), // 150KB payload limit (100KB content + JSON overhead)
-    asyncHandler(async (_req, res) => {
+    async (_req, res) => {
       const parsed = createDocumentSchema.safeParse(_req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
@@ -53,13 +53,13 @@ export function registerRAGRoutes(app: Express): void {
 
       documents.set(id, doc);
       res.status(201).json(doc);
-    }),
+    },
   );
 
   // List all documents
   app.get(
     '/api/rag/documents',
-    asyncHandler(async (_req, res) => {
+    async (_req, res) => {
       const docs = Array.from(documents.values()).map((d) => ({
         id: d.id,
         title: d.title,
@@ -68,13 +68,13 @@ export function registerRAGRoutes(app: Express): void {
         contentLength: d.content.length,
       }));
       res.json({ data: docs, total: docs.length });
-    }),
+    },
   );
 
   // Delete a document
   app.delete(
     '/api/rag/documents/:id',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const docId = String(req.params.id);
       if (!documents.has(docId)) {
         throw new HttpError('Document not found', 404);
@@ -82,7 +82,7 @@ export function registerRAGRoutes(app: Express): void {
 
       documents.delete(docId);
       res.status(204).end();
-    }),
+    },
   );
 }
 

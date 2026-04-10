@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
-import { asyncHandler, payloadLimit, parseIdParam, HttpError } from './utils';
+import { payloadLimit, parseIdParam, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { gatherCircuitData, DEFAULT_BOARD_WIDTH, DEFAULT_BOARD_HEIGHT } from '../circuit-routes/utils';
 
@@ -38,18 +38,18 @@ export function registerOrderingRoutes(app: Express): void {
   app.get(
     '/api/projects/:projectId/orders',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orders = await storage.getOrders(projectId);
       res.json({ data: orders, total: orders.length });
-    }),
+    },
   );
 
   // Get single order
   app.get(
     '/api/projects/:projectId/orders/:orderId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orderId = parseIdParam(req.params.orderId);
       const order = await storage.getOrder(orderId);
@@ -57,7 +57,7 @@ export function registerOrderingRoutes(app: Express): void {
         throw new HttpError('Order not found', 404);
       }
       res.json(order);
-    }),
+    },
   );
 
   // Create new order
@@ -65,7 +65,7 @@ export function registerOrderingRoutes(app: Express): void {
     '/api/projects/:projectId/orders',
     requireProjectOwnership,
     payloadLimit(64 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const parsed = createOrderSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -85,7 +85,7 @@ export function registerOrderingRoutes(app: Express): void {
         notes: parsed.data.notes ?? null,
       });
       res.status(201).json(order);
-    }),
+    },
   );
 
   // Update order
@@ -93,7 +93,7 @@ export function registerOrderingRoutes(app: Express): void {
     '/api/projects/:projectId/orders/:orderId',
     requireProjectOwnership,
     payloadLimit(64 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orderId = parseIdParam(req.params.orderId);
 
@@ -113,14 +113,14 @@ export function registerOrderingRoutes(app: Express): void {
         throw new HttpError('Order not found', 404);
       }
       res.json(updated);
-    }),
+    },
   );
 
   // Submit order (transition status to 'submitted')
   app.post(
     '/api/projects/:projectId/orders/:orderId/submit',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orderId = parseIdParam(req.params.orderId);
 
@@ -141,14 +141,14 @@ export function registerOrderingRoutes(app: Express): void {
         throw new HttpError('Order not found', 404);
       }
       res.json(updated);
-    }),
+    },
   );
 
   // Generate Gerber files and attach to an order
   app.post(
     '/api/projects/:projectId/orders/:orderId/generate-gerbers',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orderId = parseIdParam(req.params.orderId);
 
@@ -247,14 +247,14 @@ export function registerOrderingRoutes(app: Express): void {
         layerCount: gerberOutput.layers.length,
         order: updated,
       });
-    }),
+    },
   );
 
   // Delete order
   app.delete(
     '/api/projects/:projectId/orders/:orderId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.projectId);
       const orderId = parseIdParam(req.params.orderId);
 
@@ -269,6 +269,6 @@ export function registerOrderingRoutes(app: Express): void {
         throw new HttpError('Order not found', 404);
       }
       res.status(204).end();
-    }),
+    },
   );
 }

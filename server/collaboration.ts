@@ -42,6 +42,7 @@ interface ClientEntry {
   user: CollabUser;
   alive: boolean;
   lastCursorBroadcast: number;
+  sessionId: string;
 }
 
 interface LockEntry {
@@ -62,6 +63,7 @@ export class CollaborationServer {
   private readonly stateVersions = new Map<number, number>();
   private readonly heartbeatTimer: ReturnType<typeof setInterval>;
   private readonly lockCleanupTimer: ReturnType<typeof setInterval>;
+  private readonly sessionRevalidationTimer: ReturnType<typeof setInterval>;
 
   /**
    * Per-room Lamport clock — monotonically increasing logical timestamp
@@ -111,6 +113,11 @@ export class CollaborationServer {
     this.lockCleanupTimer = setInterval(() => {
       this.cleanupExpiredLocks();
     }, 5_000);
+
+    // Revalidate WebSocket sessions every 30 seconds to disconnect revoked users
+    this.sessionRevalidationTimer = setInterval(() => {
+      void this.revalidateSessions();
+    }, 30_000);
   }
 
   /* ---------------------------------------------------------------- */
@@ -167,7 +174,7 @@ export class CollaborationServer {
       lastActivity: Date.now(),
     };
 
-    const entry: ClientEntry = { ws, user, alive: true, lastCursorBroadcast: 0 };
+    const entry: ClientEntry = { ws, user, alive: true, lastCursorBroadcast: 0, sessionId };
     room.set(userId, entry);
 
     // Wire up events
@@ -671,6 +678,33 @@ export class CollaborationServer {
   }
 
   /* ---------------------------------------------------------------- */
+  /*  Session revalidation                                             */
+  /* ---------------------------------------------------------------- */
+
+  /**
+   * Periodically revalidate all connected WebSocket sessions.
+   * If a session has been revoked or expired, disconnect the client.
+   */
+  private async revalidateSessions(): Promise<void> {
+    for (const [projectId, room] of Array.from(this.rooms)) {
+      for (const [userId, entry] of Array.from(room)) {
+        try {
+          const session = await validateSession(entry.sessionId);
+          if (!session) {
+            logger.info(`[Collaboration] Session revoked for user ${String(userId)} in project ${String(projectId)}, disconnecting`);
+            this.sendError(entry.ws, userId, projectId, 'Session expired or revoked');
+            entry.ws.close(4003, 'Session expired');
+            this.handleDisconnect(projectId, userId);
+          }
+        } catch {
+          // If validation fails due to a transient error, skip this cycle
+          // rather than disconnecting the user
+        }
+      }
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
   /*  Heartbeat                                                        */
   /* ---------------------------------------------------------------- */
 
@@ -763,6 +797,7 @@ export class CollaborationServer {
   shutdown(): void {
     clearInterval(this.heartbeatTimer);
     clearInterval(this.lockCleanupTimer);
+    clearInterval(this.sessionRevalidationTimer);
 
     for (const [, room] of Array.from(this.rooms)) {
       for (const [, entry] of Array.from(room)) {

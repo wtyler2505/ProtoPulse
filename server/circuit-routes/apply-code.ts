@@ -1,7 +1,7 @@
 import type { Express } from 'express';
 import { z } from 'zod';
 import { requireProjectOwnership } from '../routes/auth-middleware';
-import { asyncHandler, HttpError, parseIdParam, payloadLimit } from '../routes/utils';
+import { HttpError, parseIdParam, payloadLimit } from '../routes/utils';
 import type { IStorage } from '../storage';
 import type { InsertCircuitInstance } from '@shared/schema';
 
@@ -45,7 +45,7 @@ const SchematicLayoutSchema = z.object({
 });
 
 export function registerApplyCodeRoutes(app: Express, storage: IStorage): void {
-  app.post('/api/projects/:projectId/circuits/apply-code', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/circuits/apply-code', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const { circuitId: providedCircuitId, circuitName, layout } = req.body as { circuitId?: number; circuitName?: string; layout: z.infer<typeof SchematicLayoutSchema> };
 
@@ -83,7 +83,7 @@ export function registerApplyCodeRoutes(app: Express, storage: IStorage): void {
       let dbPartId: number | null = null;
       if (comp.partId) {
         // Try to find exact standard library match or similar name
-        const match = parts.find(p => ((p.meta as any)?.title || '').toLowerCase().includes(comp.partId!.toLowerCase()) || (p.meta as any)?.partNumber === comp.partId);
+        const match = parts.find(p => ((p.meta as Record<string, unknown>)?.title as string || '').toLowerCase().includes(comp.partId!.toLowerCase()) || (p.meta as Record<string, unknown>)?.partNumber === comp.partId);
         if (match) dbPartId = match.id;
       }
       
@@ -123,5 +123,5 @@ export function registerApplyCodeRoutes(app: Express, storage: IStorage): void {
     }
 
     res.json({ success: true, circuitId });
-  }));
+  });
 }

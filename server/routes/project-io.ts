@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { db } from '../db';
 import { storage } from '../storage';
-import { asyncHandler, HttpError, parseIdParam, payloadLimit } from './utils';
+import { HttpError, parseIdParam, payloadLimit } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { logger } from '../logger';
 import { validateSession } from '../auth';
@@ -166,7 +166,7 @@ export function registerProjectIORoutes(app: Express): void {
   app.get(
     '/api/projects/:id/export',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
 
       const project = await storage.getProject(projectId);
@@ -343,7 +343,7 @@ export function registerProjectIORoutes(app: Express): void {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="project-${safeName}.json"`);
       res.json(exportData);
-    }),
+    },
   );
 
   // ---- Import project from JSON ----
@@ -351,7 +351,7 @@ export function registerProjectIORoutes(app: Express): void {
   app.post(
     '/api/projects/import',
     payloadLimit(IMPORT_PAYLOAD_MAX),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const sessionId = req.headers['x-session-id'] as string | undefined;
       if (!sessionId) {
         throw new HttpError('Authentication required', 401);
@@ -587,6 +587,6 @@ export function registerProjectIORoutes(app: Express): void {
       logger.info('project-io:import:complete', { projectId: result.id, name: result.name });
 
       res.status(201).json({ projectId: result.id, name: result.name });
-    }),
+    },
   );
 }

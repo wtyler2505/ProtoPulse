@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
-import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
+import { parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 
 const createNetSchema = z.object({
@@ -26,7 +26,7 @@ const updateNetSchema = z.object({
 });
 
 export function registerCircuitNetRoutes(app: Express, storage: IStorage): void {
-  app.get('/api/circuits/:circuitId/nets', requireCircuitOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/nets', requireCircuitOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const pagination = circuitPaginationSchema.safeParse(req.query);
     if (!pagination.success) {
@@ -37,16 +37,16 @@ export function registerCircuitNetRoutes(app: Express, storage: IStorage): void 
     const sorted = sort === 'asc' ? all : [...all].reverse();
     const data = sorted.slice(offset, offset + limit);
     res.json({ data, total: all.length });
-  }));
+  });
 
-  app.get('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, async (req, res) => {
     const id = parseIdParam(req.params.id);
     const net = await storage.getCircuitNet(id);
     if (!net) { return res.status(404).json({ message: 'Circuit net not found' }); }
     res.json(net);
-  }));
+  });
 
-  app.post('/api/circuits/:circuitId/nets', requireCircuitOwnership, payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/nets', requireCircuitOwnership, payloadLimit(64 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = createNetSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -61,10 +61,10 @@ export function registerCircuitNetRoutes(app: Express, storage: IStorage): void 
     };
     const net = await storage.createCircuitNet(data);
     res.status(201).json(net);
-  }));
+  });
 
   // BL-0638: Verify net belongs to the circuit before mutating
-  app.patch('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, payloadLimit(64 * 1024), asyncHandler(async (req, res) => {
+  app.patch('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, payloadLimit(64 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
     const existing = await storage.getCircuitNet(id);
@@ -78,10 +78,10 @@ export function registerCircuitNetRoutes(app: Express, storage: IStorage): void 
     const updated = await storage.updateCircuitNet(id, parsed.data);
     if (!updated) { return res.status(404).json({ message: 'Circuit net not found' }); }
     res.json(updated);
-  }));
+  });
 
   // BL-0638: Verify net belongs to the circuit before deleting
-  app.delete('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
+  app.delete('/api/circuits/:circuitId/nets/:id', requireCircuitOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
     const existing = await storage.getCircuitNet(id);
@@ -91,5 +91,5 @@ export function registerCircuitNetRoutes(app: Express, storage: IStorage): void 
     const deleted = await storage.deleteCircuitNet(id);
     if (!deleted) { return res.status(404).json({ message: 'Circuit net not found' }); }
     res.status(204).end();
-  }));
+  });
 }

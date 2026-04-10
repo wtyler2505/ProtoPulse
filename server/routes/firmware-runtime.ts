@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
-import { asyncHandler, parseIdParam } from './utils';
+import { parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { SimavrRunner } from '../firmware-runtime/simavr-runner';
 import type { RuntimeEvent } from '../firmware-runtime/runtime-events';
@@ -30,7 +30,7 @@ export function registerFirmwareRuntimeRoutes(app: Express, storage: IStorage): 
   const svc = getRunner(storage);
 
   // --- Start simulation ---
-  app.post(prefix, requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.post(prefix, requireProjectOwnership, async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const parsed = simulateBodySchema.safeParse(req.body);
     if (!parsed.success) {
@@ -52,10 +52,10 @@ export function registerFirmwareRuntimeRoutes(app: Express, storage: IStorage): 
       logger.error(`[firmware-runtime] Start failed: ${message}`);
       return res.status(500).json({ message });
     }
-  }));
+  });
 
   // --- Stop simulation ---
-  app.post(`${prefix}/:sessionId/stop`, requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.post(`${prefix}/:sessionId/stop`, requireProjectOwnership, async (req, res) => {
     const sessionId = String(req.params.sessionId);
     if (!svc.hasSession(sessionId)) {
       return res.status(404).json({ message: 'Session not found' });
@@ -63,10 +63,10 @@ export function registerFirmwareRuntimeRoutes(app: Express, storage: IStorage): 
 
     await svc.stopSimulation(sessionId);
     res.status(204).end();
-  }));
+  });
 
   // --- Reset simulation ---
-  app.post(`${prefix}/:sessionId/reset`, requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.post(`${prefix}/:sessionId/reset`, requireProjectOwnership, async (req, res) => {
     const sessionId = String(req.params.sessionId);
     if (!svc.hasSession(sessionId)) {
       return res.status(404).json({ message: 'Session not found' });
@@ -74,10 +74,10 @@ export function registerFirmwareRuntimeRoutes(app: Express, storage: IStorage): 
 
     await svc.resetSimulation(sessionId);
     res.json({ success: true });
-  }));
+  });
 
   // --- SSE event stream ---
-  app.get(`${prefix}/:sessionId/events`, requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.get(`${prefix}/:sessionId/events`, requireProjectOwnership, async (req, res) => {
     const sessionId = String(req.params.sessionId);
     if (!svc.hasSession(sessionId)) {
       return res.status(404).json({ message: 'Session not found' });
@@ -140,10 +140,10 @@ export function registerFirmwareRuntimeRoutes(app: Express, storage: IStorage): 
 
     // Clean up if client disconnects
     req.on('close', cleanup);
-  }));
+  });
 
   // --- Get session status ---
-  app.get(`${prefix}/:sessionId/status`, requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.get(`${prefix}/:sessionId/status`, requireProjectOwnership, async (req, res) => {
     const sessionId = String(req.params.sessionId);
     if (!svc.hasSession(sessionId)) {
       return res.status(404).json({ message: 'Session not found' });
@@ -151,5 +151,5 @@ export function registerFirmwareRuntimeRoutes(app: Express, storage: IStorage): 
 
     const status = svc.getStatus(sessionId);
     res.json(status);
-  }));
+  });
 }

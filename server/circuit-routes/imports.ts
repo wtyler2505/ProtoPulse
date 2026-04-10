@@ -1,11 +1,11 @@
 import type { Express } from 'express';
 import type { IStorage } from '../storage';
-import { asyncHandler, parseIdParam, payloadLimit } from './utils';
+import { parseIdParam, payloadLimit } from './utils';
 import { requireProjectOwnership } from '../routes/auth-middleware';
 
 export function registerCircuitImportRoutes(app: Express, storage: IStorage): void {
   // Import FZZ (Fritzing full project)
-  app.post('/api/projects/:projectId/import/fzz', requireProjectOwnership, payloadLimit(10 * 1024 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/import/fzz', requireProjectOwnership, payloadLimit(10 * 1024 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
     // Expect raw binary buffer from multipart or base64 in body
@@ -112,10 +112,10 @@ export function registerCircuitImportRoutes(app: Express, storage: IStorage): vo
       partCount: project.parts.length,
       warnings,
     });
-  }));
+  });
 
   // Import KiCad project (accepts .kicad_sch content)
-  app.post('/api/projects/:projectId/import/kicad', requireProjectOwnership, payloadLimit(10 * 1024 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/import/kicad', requireProjectOwnership, payloadLimit(10 * 1024 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const { schematic, pcb, name } = req.body as { schematic?: string; pcb?: string; name?: string };
 
@@ -185,5 +185,5 @@ export function registerCircuitImportRoutes(app: Express, storage: IStorage): vo
       instanceCount,
       netCount,
     });
-  }));
+  });
 }

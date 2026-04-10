@@ -128,48 +128,14 @@ const MIN_SYMBOL_HALF_SIZE = 2.54;
 // ---------------------------------------------------------------------------
 
 /**
- * Generates a deterministic UUID-like string from one or more numeric IDs.
+ * Generates a unique UUID for KiCad file references.
  *
- * Uses a simple multiplicative hash (FNV-1a-inspired) to distribute bits,
- * then formats the result as a 32-hex-character UUID without dashes (KiCad
- * accepts both dashed and undashed UUIDs, but undashed is more compact).
- *
- * This avoids importing the `crypto` module — the output is not
- * cryptographically random but is deterministic and unique enough for
- * KiCad file references within a single export.
+ * Uses `crypto.randomUUID()` for guaranteed uniqueness — the previous
+ * FNV-1a-inspired hash was prone to collisions in large projects where
+ * different input ID combinations could produce the same 128-bit output.
  */
-function deterministicUuid(...ids: number[]): string {
-  // FNV-1a-inspired hash spread across 128 bits (4 x 32-bit words)
-  let h0 = 0x811c9dc5;
-  let h1 = 0x01000193;
-  let h2 = 0x0c6a4a79;
-  let h3 = 0x3b9aca07;
-
-  ids.forEach(function mixIdIntoHash(id) {
-    // Mix the id into each word differently
-    h0 = ((h0 ^ (id & 0xff)) * 0x01000193) >>> 0;
-    h1 = ((h1 ^ ((id >>> 8) & 0xff)) * 0x01000193) >>> 0;
-    h2 = ((h2 ^ ((id >>> 16) & 0xff)) * 0x01000193) >>> 0;
-    h3 = ((h3 ^ ((id >>> 24) & 0xff)) * 0x01000193) >>> 0;
-
-    // Second round with rotated bits
-    h0 = ((h0 ^ ((id >>> 4) & 0xff)) * 0x01000193) >>> 0;
-    h1 = ((h1 ^ ((id >>> 12) & 0xff)) * 0x01000193) >>> 0;
-    h2 = ((h2 ^ ((id >>> 20) & 0xff)) * 0x01000193) >>> 0;
-    h3 = ((h3 ^ ((id >>> 28) & 0xff)) * 0x01000193) >>> 0;
-  });
-
-  const hex = (n: number) => n.toString(16).padStart(8, '0');
-  const raw = hex(h0) + hex(h1) + hex(h2) + hex(h3);
-
-  // Format as 8-4-4-4-12 UUID
-  return (
-    raw.slice(0, 8) + '-' +
-    raw.slice(8, 12) + '-' +
-    raw.slice(12, 16) + '-' +
-    raw.slice(16, 20) + '-' +
-    raw.slice(20, 32)
-  );
+function deterministicUuid(..._ids: number[]): string {
+  return crypto.randomUUID();
 }
 
 // ---------------------------------------------------------------------------

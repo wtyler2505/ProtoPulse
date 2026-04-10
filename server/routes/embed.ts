@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
-import { asyncHandler, HttpError, payloadLimit } from './utils';
+import { HttpError, payloadLimit } from './utils';
 
 import type { Express } from 'express';
 
@@ -95,7 +95,7 @@ export function registerEmbedRoutes(app: Express): void {
     '/api/embeds',
     createLimiter,
     payloadLimit(MAX_DATA_SIZE + 1024), // extra room for JSON envelope
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const result = createEmbedSchema.safeParse(req.body);
       if (!result.success) {
         throw new HttpError(result.error.issues[0]?.message ?? 'Invalid request body', 400);
@@ -124,13 +124,13 @@ export function registerEmbedRoutes(app: Express): void {
         code,
         url: `${origin}/embed/s/${code}`,
       });
-    }),
+    },
   );
 
   // GET /api/embeds/:code — Retrieve circuit data by short code
   app.get(
     '/api/embeds/:code',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const code = String(req.params.code);
 
       if (!code || code.length !== CODE_LENGTH) {
@@ -149,7 +149,7 @@ export function registerEmbedRoutes(app: Express): void {
       }
 
       res.json({ data: entry.data });
-    }),
+    },
   );
 }
 

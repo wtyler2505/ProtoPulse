@@ -2,7 +2,7 @@ import type { IStorage } from '../storage';
 import { z } from 'zod';
 
 // Re-export shared utilities from routes/utils
-export { HttpError, asyncHandler, parseIdParam, payloadLimit } from '../routes/utils';
+export { HttpError, parseIdParam, payloadLimit } from '../routes/utils';
 
 export const circuitPaginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(50),

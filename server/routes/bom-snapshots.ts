@@ -2,7 +2,7 @@ import type { Express } from 'express';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
-import { asyncHandler, payloadLimit, parseIdParam } from './utils';
+import { payloadLimit, parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { computeBomDiff } from '@shared/bom-diff';
 import type { BomItem } from '@shared/schema';
@@ -21,7 +21,7 @@ export function registerBomSnapshotRoutes(app: Express): void {
     '/api/projects/:id/bom-snapshots',
     requireProjectOwnership,
     payloadLimit(8 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = createSnapshotSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -29,25 +29,25 @@ export function registerBomSnapshotRoutes(app: Express): void {
       }
       const snapshot = await storage.createBomSnapshot(projectId, parsed.data.label);
       res.status(201).json(snapshot);
-    }),
+    },
   );
 
   // List all snapshots for a project
   app.get(
     '/api/projects/:id/bom-snapshots',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshots = await storage.getBomSnapshots(projectId);
       res.json({ data: snapshots, total: snapshots.length });
-    }),
+    },
   );
 
   // Delete a snapshot
   app.delete(
     '/api/projects/:id/bom-snapshots/:snapshotId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const snapshotId = parseIdParam(req.params.snapshotId);
       const snapshot = await storage.getBomSnapshot(projectId, snapshotId);
@@ -59,7 +59,7 @@ export function registerBomSnapshotRoutes(app: Express): void {
         return res.status(404).json({ message: 'BOM snapshot not found' });
       }
       res.status(204).end();
-    }),
+    },
   );
 
   // Compute diff between a snapshot and the current BOM
@@ -67,7 +67,7 @@ export function registerBomSnapshotRoutes(app: Express): void {
     '/api/projects/:id/bom-diff',
     requireProjectOwnership,
     payloadLimit(8 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const parsed = diffRequestSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -87,6 +87,6 @@ export function registerBomSnapshotRoutes(app: Express): void {
 
       const diff = computeBomDiff(baselineItems, currentItems);
       res.json({ snapshot: { id: snapshot.id, label: snapshot.label, createdAt: snapshot.createdAt }, diff });
-    }),
+    },
   );
 }

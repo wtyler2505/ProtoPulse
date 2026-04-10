@@ -1,12 +1,12 @@
 import type { Express } from 'express';
-import { asyncHandler, parseIdParam } from './utils';
+import { parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { storage } from '../storage';
 import { generateStep } from '../export/step-generator';
 import type { StepInput } from '../export/step-generator';
 
 export function registerExportStepRoutes(app: Express): void {
-  app.post('/api/projects/:id/export/step', requireProjectOwnership, asyncHandler(async (req, res) => {
+  app.post('/api/projects/:id/export/step', requireProjectOwnership, async (req, res) => {
     const projectId = parseIdParam(req.params.id);
     const project = await storage.getProject(projectId);
     if (!project) {
@@ -55,5 +55,5 @@ export function registerExportStepRoutes(app: Express): void {
     res.setHeader('Content-Type', 'application/step');
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.content);
-  }));
+  });
 }

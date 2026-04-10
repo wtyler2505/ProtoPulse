@@ -3,7 +3,6 @@ import type { IStorage } from '../storage';
 import type { NetSegment } from './utils';
 import { fromZodError } from 'zod-validation-error';
 import {
-  asyncHandler,
   parseIdParam,
   payloadLimit,
   gatherCircuitData,
@@ -16,7 +15,7 @@ import { requireProjectOwnership } from '../routes/auth-middleware';
 
 export function registerCircuitExportRoutes(app: Express, storage: IStorage): void {
   // Export BOM
-  app.post('/api/projects/:projectId/export/bom', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/bom', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const parsed = exportFormatSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -35,10 +34,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="bom-${format}.csv"`);
     res.send(csv);
-  }));
+  });
 
   // Export Netlist (standalone -- supplements the existing inline netlist route)
-  app.post('/api/projects/:projectId/export/netlist', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/netlist', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const parsed = exportFormatSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -85,10 +84,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Content-Disposition', `attachment; filename="netlist.${ext}"`);
     res.send(content);
-  }));
+  });
 
   // Export Gerber + Drill (manufacturing package)
-  app.post('/api/projects/:projectId/export/gerber', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/gerber', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     
     // Approval Gate
@@ -214,10 +213,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
         content: gerberOutput.drillFile,
       },
     });
-  }));
+  });
 
   // Export Pick-and-Place
-  app.post('/api/projects/:projectId/export/pick-place', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/pick-place', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     
     // Approval Gate
@@ -269,10 +268,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="pick-and-place.csv"');
     res.send(csv.content);
-  }));
+  });
 
   // Export KiCad Project
-  app.post('/api/projects/:projectId/export/kicad', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/kicad', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const dims = boardDimensionsSchema.safeParse(req.body);
     const kicadBoardWidth = dims.success ? (dims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
@@ -329,10 +328,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
         { filename: `${data.circuit.name}.kicad_pro`, content: output.project },
       ],
     });
-  }));
+  });
 
   // Export Eagle Project
-  app.post('/api/projects/:projectId/export/eagle', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/eagle', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const eagleDims = boardDimensionsSchema.safeParse(req.body);
     const eagleBoardWidth = eagleDims.success ? (eagleDims.data.boardWidth ?? DEFAULT_BOARD_WIDTH) : DEFAULT_BOARD_WIDTH;
@@ -388,10 +387,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
         { filename: `${data.circuit.name}.brd`, content: output.board },
       ],
     });
-  }));
+  });
 
   // Export PDF/SVG view
-  app.post('/api/projects/:projectId/export/pdf', requireProjectOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/pdf', requireProjectOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const parsed = exportFormatSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -416,10 +415,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Content-Disposition', 'attachment; filename="export.svg"');
     res.send(result.svg);
-  }));
+  });
 
   // Export PDF Design Report
-  app.post('/api/projects/:projectId/export/report-pdf', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/report-pdf', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
     // Gather project data
@@ -493,10 +492,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', result.mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.buffer);
-  }));
+  });
 
   // Export FMEA Report (CSV)
-  app.post('/api/projects/:projectId/export/fmea', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/fmea', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
     const [project, nodes, edges, issues] = await Promise.all([
@@ -543,10 +542,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${result.filename}"`);
     res.send(result.content);
-  }));
+  });
 
   // Export FZZ (Fritzing full project)
-  app.post('/api/projects/:projectId/export/fzz', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/fzz', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const circuits = await storage.getCircuitDesigns(projectId);
     if (circuits.length === 0) {
@@ -593,10 +592,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${data.circuit.name}.fzz"`);
     res.send(buffer);
-  }));
+  });
 
   // Export ODB++ (manufacturing package ZIP)
-  app.post('/api/projects/:projectId/export/odb-plus-plus', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/odb-plus-plus', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     
     // Approval Gate
@@ -701,10 +700,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${project.name}.odb++.zip"`);
     res.send(result.buffer);
-  }));
+  });
 
   // Export IPC-2581 (XML manufacturing data)
-  app.post('/api/projects/:projectId/export/ipc2581', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/ipc2581', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
     // Approval Gate
@@ -804,10 +803,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Content-Disposition', `attachment; filename="${project.name}.ipc2581.xml"`);
     res.send(result.xml);
-  }));
+  });
 
   // Export Firmware Scaffold (Arduino/PlatformIO)
-  app.post('/api/projects/:projectId/export/firmware', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/firmware', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
 
     const [project, nodes, edges, circuits] = await Promise.all([
@@ -904,10 +903,10 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
       message: `Generated ${result.files.length} firmware scaffold files`,
       files: result.files,
     });
-  }));
+  });
 
   // Etchable PCB export (DIY toner transfer)
-  app.post('/api/projects/:projectId/export/etchable-pcb', requireProjectOwnership, payloadLimit(4 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/projects/:projectId/export/etchable-pcb', requireProjectOwnership, payloadLimit(4 * 1024), async (req, res) => {
     const projectId = parseIdParam(req.params.projectId);
     const { mirror = true, scale = 1.0, borderMm = 5, drillMarks = true, silkscreen = false, copperLayer = 'front' } = req.body as {
       mirror?: boolean;
@@ -939,5 +938,5 @@ export function registerCircuitExportRoutes(app: Express, storage: IStorage): vo
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Content-Disposition', `attachment; filename="etchable-pcb-${String(projectId)}.svg"`);
     res.send(svg);
-  }));
+  });
 }

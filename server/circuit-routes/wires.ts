@@ -3,7 +3,7 @@ import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { insertCircuitWireSchema } from '@shared/schema';
-import { asyncHandler, parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
+import { parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 
 const updateWireSchema = z.object({
@@ -15,7 +15,7 @@ const updateWireSchema = z.object({
 });
 
 export function registerCircuitWireRoutes(app: Express, storage: IStorage): void {
-  app.get('/api/circuits/:circuitId/wires', requireCircuitOwnership, asyncHandler(async (req, res) => {
+  app.get('/api/circuits/:circuitId/wires', requireCircuitOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const pagination = circuitPaginationSchema.safeParse(req.query);
     if (!pagination.success) {
@@ -26,9 +26,9 @@ export function registerCircuitWireRoutes(app: Express, storage: IStorage): void
     const sorted = sort === 'asc' ? all : [...all].reverse();
     const data = sorted.slice(offset, offset + limit);
     res.json({ data, total: all.length });
-  }));
+  });
 
-  app.post('/api/circuits/:circuitId/wires', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.post('/api/circuits/:circuitId/wires', requireCircuitOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const parsed = insertCircuitWireSchema.safeParse({ ...req.body, circuitId });
     if (!parsed.success) {
@@ -36,10 +36,10 @@ export function registerCircuitWireRoutes(app: Express, storage: IStorage): void
     }
     const wire = await storage.createCircuitWire(parsed.data);
     res.status(201).json(wire);
-  }));
+  });
 
   // BL-0638: Wire PATCH/DELETE now scoped under circuit with ownership guard
-  app.patch('/api/circuits/:circuitId/wires/:id', requireCircuitOwnership, payloadLimit(16 * 1024), asyncHandler(async (req, res) => {
+  app.patch('/api/circuits/:circuitId/wires/:id', requireCircuitOwnership, payloadLimit(16 * 1024), async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
     const parsed = updateWireSchema.safeParse(req.body);
@@ -54,10 +54,10 @@ export function registerCircuitWireRoutes(app: Express, storage: IStorage): void
     const updated = await storage.updateCircuitWire(id, parsed.data);
     if (!updated) { return res.status(404).json({ message: 'Wire not found' }); }
     res.json(updated);
-  }));
+  });
 
   // BL-0638: Wire DELETE now scoped under circuit with ownership guard
-  app.delete('/api/circuits/:circuitId/wires/:id', requireCircuitOwnership, asyncHandler(async (req, res) => {
+  app.delete('/api/circuits/:circuitId/wires/:id', requireCircuitOwnership, async (req, res) => {
     const circuitId = parseIdParam(req.params.circuitId);
     const id = parseIdParam(req.params.id);
     // Verify wire belongs to this circuit
@@ -68,5 +68,5 @@ export function registerCircuitWireRoutes(app: Express, storage: IStorage): void
     const deleted = await storage.deleteCircuitWire(id);
     if (!deleted) { return res.status(404).json({ message: 'Wire not found' }); }
     res.status(204).end();
-  }));
+  });
 }

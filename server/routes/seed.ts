@@ -14,7 +14,7 @@ import {
   componentParts,
   componentLibrary,
 } from '@shared/schema';
-import { asyncHandler, payloadLimit } from './utils';
+import { payloadLimit } from './utils';
 import { STANDARD_LIBRARY_COMPONENTS } from '@shared/standard-library';
 import { eq, and, count } from 'drizzle-orm';
 
@@ -364,7 +364,7 @@ export function registerSeedRoutes(app: Express): void {
   app.post(
     '/api/admin/seed-library',
     payloadLimit(16 * 1024),
-    asyncHandler(async (_req, res) => {
+    async (_req, res) => {
       if (process.env.NODE_ENV === 'production') {
         return res.status(404).json({ message: 'Not found' });
       }
@@ -376,13 +376,13 @@ export function registerSeedRoutes(app: Express): void {
         unchanged: result.unchanged,
         total: STANDARD_LIBRARY_COMPONENTS.length,
       });
-    }),
+    },
   );
 
   app.post(
     '/api/seed',
     payloadLimit(16 * 1024),
-    asyncHandler(async (_req, res) => {
+    async (_req, res) => {
       if (process.env.NODE_ENV === 'production') {
         return res.status(404).json({ message: 'Not found' });
       }
@@ -589,7 +589,7 @@ export function registerSeedRoutes(app: Express): void {
       });
 
       res.status(201).json({ message: 'Seeded successfully', project: result });
-    }),
+    },
   );
 
   // Seed verified board pack — creates component_parts and component_library entries
@@ -597,7 +597,7 @@ export function registerSeedRoutes(app: Express): void {
   app.post(
     '/api/admin/seed-verified-boards',
     payloadLimit(64 * 1024),
-    asyncHandler(async (_req, res) => {
+    async (_req, res) => {
       if (process.env.NODE_ENV === 'production') {
         return res.status(404).json({ message: 'Not found' });
       }
@@ -683,6 +683,6 @@ export function registerSeedRoutes(app: Express): void {
         skipped,
         total: boards.length,
       });
-    }),
+    },
   );
 }

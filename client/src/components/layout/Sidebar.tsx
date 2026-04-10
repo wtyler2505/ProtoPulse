@@ -362,7 +362,7 @@ function SidebarContent({
                 aria-label="Search blocks"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:border-primary/50 focus:bg-muted/60 transition-colors focus-ring"
+                className="w-full pl-7 pr-2 py-1.5 text-xs bg-muted/50 border border-border text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:border-primary/50 focus-visible:bg-muted/60 transition-colors focus-ring"
               />
             </div>
           </div>
@@ -383,7 +383,7 @@ function SidebarContent({
                     if (e.key === 'Escape') cancelInlineName();
                   }}
                   onBlur={saveInlineName}
-                  className="flex-1 min-w-0 text-sm bg-muted/30 border border-primary/50 px-1.5 py-0.5 text-foreground focus:outline-none focus-ring"
+                  className="flex-1 min-w-0 text-sm bg-muted/30 border border-primary/50 px-1.5 py-0.5 text-foreground focus-visible:outline-none focus-ring"
                 />
               ) : (
                 <span

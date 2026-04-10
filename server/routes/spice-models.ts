@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storage } from '../storage';
 import { insertSpiceModelSchema, type InsertSpiceModel } from '@shared/schema';
-import { asyncHandler, parseIdParam, payloadLimit } from './utils';
+import { parseIdParam, payloadLimit } from './utils';
 import { parseImportFile, validateImportFilename, validateImportSize, sanitizeSpiceDirective } from '../spice-import';
 
 const listQuerySchema = z.object({
@@ -17,7 +17,7 @@ export function registerSpiceModelRoutes(app: Express): void {
   // List SPICE models with optional filtering
   app.get(
     '/api/spice-models',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const parsed = listQuerySchema.safeParse(req.query);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
@@ -25,27 +25,27 @@ export function registerSpiceModelRoutes(app: Express): void {
       const { category, search, limit, offset } = parsed.data;
       const result = await storage.getSpiceModels({ category, search, limit, offset });
       res.json(result);
-    }),
+    },
   );
 
   // Get a single SPICE model by ID
   app.get(
     '/api/spice-models/:id',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const id = parseIdParam(req.params.id);
       const model = await storage.getSpiceModel(id);
       if (!model) {
         return res.status(404).json({ message: 'SPICE model not found' });
       }
       res.json(model);
-    }),
+    },
   );
 
   // Create a new SPICE model
   app.post(
     '/api/spice-models',
     payloadLimit(64 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const parsed = insertSpiceModelSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
@@ -65,16 +65,16 @@ export function registerSpiceModelRoutes(app: Express): void {
 
       const model = await storage.createSpiceModel(sanitizedData);
       res.status(201).json(model);
-    }),
+    },
   );
 
   // Seed standard SPICE models
   app.post(
     '/api/spice-models/seed',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const seeded = await seedStandardSpiceModels();
       res.status(201).json({ message: `Seeded ${seeded.length} SPICE models`, count: seeded.length });
-    }),
+    },
   );
 
   // Import SPICE (.lib/.mod) or IBIS (.ibs) model files
@@ -83,7 +83,7 @@ export function registerSpiceModelRoutes(app: Express): void {
   app.post(
     '/api/spice-models/import',
     payloadLimit(5 * 1024 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       // Extract filename from header or query
       const filename =
         (req.headers['x-filename'] as string | undefined) ??
@@ -153,7 +153,7 @@ export function registerSpiceModelRoutes(app: Express): void {
         models: imported,
         errors,
       });
-    }),
+    },
   );
 }
 

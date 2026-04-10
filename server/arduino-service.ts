@@ -1,10 +1,14 @@
-import { spawn, execFileSync, execSync } from 'child_process';
+import { spawn, execFile, exec } from 'child_process';
+import { promisify } from 'util';
 import { join, resolve, sep } from 'path';
 import { EventEmitter } from 'events';
 import fs from 'fs/promises';
 import { logger } from './logger';
 import type { IStorage } from './storage';
 import type { ArduinoJob, ArduinoWorkspace } from '@shared/schema';
+
+const execFileAsync = promisify(execFile);
+const execAsync = promisify(exec);
 
 // ---------------------------------------------------------------------------
 // SSE job stream types
@@ -74,11 +78,11 @@ export class ArduinoService {
   /** Get basic health and version info from the CLI. */
   async getHealth() {
     try {
-      const output = execSync(`${this.config.cliPath} version --format json`).toString();
-      const versionData = JSON.parse(output);
+      const { stdout } = await execFileAsync(this.config.cliPath, ['version', '--format', 'json']);
+      const versionData = JSON.parse(stdout) as Record<string, unknown>;
       return {
         status: 'ok',
-        version: versionData.VersionString || 'unknown',
+        version: (versionData.VersionString as string) || 'unknown',
         supported: true,
       };
     } catch (e) {
@@ -222,19 +226,19 @@ export class ArduinoService {
   /** List connected boards. */
   async discoverBoards() {
     try {
-      const output = execSync(`${this.config.cliPath} board list --format json`).toString();
-      return JSON.parse(output);
+      const { stdout } = await execFileAsync(this.config.cliPath, ['board', 'list', '--format', 'json']);
+      return JSON.parse(stdout) as unknown;
     } catch (e) {
       logger.error(`[arduino:discover] Failed to list boards: ${e instanceof Error ? e.message : String(e)}`);
       return [];
     }
   }
 
-  /** Search the library index. Uses execFileSync to avoid shell injection. */
+  /** Search the library index. */
   async searchLibraries(query: string) {
     try {
-      const output = execFileSync(this.config.cliPath, ['lib', 'search', query, '--format', 'json']).toString();
-      return JSON.parse(output);
+      const { stdout } = await execFileAsync(this.config.cliPath, ['lib', 'search', query, '--format', 'json']);
+      return JSON.parse(stdout) as unknown;
     } catch (e) {
       logger.error(`[arduino:lib-search] Failed to search libraries: ${e instanceof Error ? e.message : String(e)}`);
       return [];
@@ -244,8 +248,8 @@ export class ArduinoService {
   /** Install an Arduino library by name. */
   async installLibrary(name: string): Promise<{ success: boolean; output: string }> {
     try {
-      const output = execFileSync(this.config.cliPath, ['lib', 'install', name, '--format', 'text']).toString();
-      return { success: true, output };
+      const { stdout } = await execFileAsync(this.config.cliPath, ['lib', 'install', name, '--format', 'text']);
+      return { success: true, output: stdout };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       logger.error(`[arduino:lib-install] Failed to install library "${name}": ${message}`);
@@ -256,8 +260,8 @@ export class ArduinoService {
   /** Uninstall an Arduino library by name. */
   async uninstallLibrary(name: string): Promise<{ success: boolean; output: string }> {
     try {
-      const output = execFileSync(this.config.cliPath, ['lib', 'uninstall', name, '--format', 'text']).toString();
-      return { success: true, output };
+      const { stdout } = await execFileAsync(this.config.cliPath, ['lib', 'uninstall', name, '--format', 'text']);
+      return { success: true, output: stdout };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       logger.error(`[arduino:lib-uninstall] Failed to uninstall library "${name}": ${message}`);
@@ -268,8 +272,8 @@ export class ArduinoService {
   /** List installed Arduino libraries. */
   async listInstalledLibraries() {
     try {
-      const output = execFileSync(this.config.cliPath, ['lib', 'list', '--format', 'json']).toString();
-      return JSON.parse(output);
+      const { stdout } = await execFileAsync(this.config.cliPath, ['lib', 'list', '--format', 'json']);
+      return JSON.parse(stdout) as unknown;
     } catch (e) {
       logger.error(`[arduino:lib-list] Failed to list libraries: ${e instanceof Error ? e.message : String(e)}`);
       return [];
@@ -279,8 +283,8 @@ export class ArduinoService {
   /** List installed platform cores. */
   async listCores() {
     try {
-      const output = execFileSync(this.config.cliPath, ['core', 'list', '--format', 'json']).toString();
-      return JSON.parse(output);
+      const { stdout } = await execFileAsync(this.config.cliPath, ['core', 'list', '--format', 'json']);
+      return JSON.parse(stdout) as unknown;
     } catch (e) {
       logger.error(`[arduino:core-list] Failed to list cores: ${e instanceof Error ? e.message : String(e)}`);
       return [];
@@ -290,8 +294,8 @@ export class ArduinoService {
   /** Search available platform cores. */
   async searchCores(query: string) {
     try {
-      const output = execFileSync(this.config.cliPath, ['core', 'search', query, '--format', 'json']).toString();
-      return JSON.parse(output);
+      const { stdout } = await execFileAsync(this.config.cliPath, ['core', 'search', query, '--format', 'json']);
+      return JSON.parse(stdout) as unknown;
     } catch (e) {
       logger.error(`[arduino:core-search] Failed to search cores: ${e instanceof Error ? e.message : String(e)}`);
       return [];
@@ -301,8 +305,8 @@ export class ArduinoService {
   /** Install a platform core (e.g. "esp32:esp32"). */
   async installCore(platform: string): Promise<{ success: boolean; output: string }> {
     try {
-      const output = execFileSync(this.config.cliPath, ['core', 'install', platform, '--format', 'text']).toString();
-      return { success: true, output };
+      const { stdout } = await execFileAsync(this.config.cliPath, ['core', 'install', platform, '--format', 'text']);
+      return { success: true, output: stdout };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       logger.error(`[arduino:core-install] Failed to install core "${platform}": ${message}`);
@@ -313,8 +317,8 @@ export class ArduinoService {
   /** Uninstall a platform core. */
   async uninstallCore(platform: string): Promise<{ success: boolean; output: string }> {
     try {
-      const output = execFileSync(this.config.cliPath, ['core', 'uninstall', platform, '--format', 'text']).toString();
-      return { success: true, output };
+      const { stdout } = await execFileAsync(this.config.cliPath, ['core', 'uninstall', platform, '--format', 'text']);
+      return { success: true, output: stdout };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       logger.error(`[arduino:core-uninstall] Failed to uninstall core "${platform}": ${message}`);
@@ -498,19 +502,16 @@ export class ArduinoService {
       await fs.writeFile(targetFile, sourceCode, 'utf-8');
 
       // 4. Run syntax-only compilation
-      const { exec } = await import('child_process');
-      const { promisify } = await import('util');
-      const execAsync = promisify(exec);
-
       const cmd = `${this.config.cliPath} compile -b ${fqbn} --build-property "compiler.cpp.extra_flags=-fsyntax-only" ${checkDir}`;
       
       try {
         const { stderr } = await execAsync(cmd);
         return stderr;
-      } catch (err: any) {
+      } catch (err: unknown) {
         // arduino-cli returns non-zero exit code on syntax errors, throwing an exception.
         // We expect it to fail if there are syntax errors!
-        return err.stderr || err.stdout || err.message;
+        const execErr = err as { stderr?: string; stdout?: string; message?: string };
+        return execErr.stderr || execErr.stdout || execErr.message || '';
       } finally {
         // Cleanup temp check dir asynchronously
         fs.rm(resolve(join(workspace.rootPath, '.check-cache', checkId)), { recursive: true, force: true }).catch(() => {});

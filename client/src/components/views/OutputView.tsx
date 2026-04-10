@@ -106,7 +106,7 @@ function OutputView() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             data-testid="input-search-logs"
-            className="w-full pl-8 pr-3 py-1 bg-white/5 border border-white/10 text-xs text-foreground/80 focus:outline-none focus:border-primary/50 transition-colors font-mono placeholder:text-muted-foreground focus-ring"
+            className="w-full pl-8 pr-3 py-1 bg-white/5 border border-white/10 text-xs text-foreground/80 focus-visible:outline-none focus-visible:border-primary/50 transition-colors font-mono placeholder:text-muted-foreground focus-ring"
           />
         </div>
       </div>

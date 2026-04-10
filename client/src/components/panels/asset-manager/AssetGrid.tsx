@@ -329,14 +329,14 @@ const AssetGrid = memo(function AssetGrid({
           <div className="mt-2 p-2 border border-primary/30 bg-muted/20 space-y-2">
             <p className="text-[10px] font-medium text-primary">Add Custom Part</p>
             <input
-              className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors"
+              className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors"
               placeholder="Part name *"
               aria-label="Custom part name"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
             />
             <select
-              className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors"
+              className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors"
               aria-label="Custom part category"
               value={customType}
               onChange={(e) => setCustomType(e.target.value)}
@@ -346,7 +346,7 @@ const AssetGrid = memo(function AssetGrid({
               ))}
             </select>
             <textarea
-              className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus:outline-none focus:border-primary transition-colors resize-none"
+              className="w-full px-2 py-1.5 bg-muted/50 border border-border text-xs focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 transition-colors resize-none"
               placeholder="Description"
               aria-label="Custom part description"
               rows={2}

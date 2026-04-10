@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { storeApiKey, getApiKey, deleteApiKey, listApiKeyProviders } from '../auth';
 import { storage } from '../storage';
-import { asyncHandler, payloadLimit } from './utils';
+import { payloadLimit } from './utils';
 import { setCacheHeaders } from '../lib/cache-headers';
 
 const validateKeyLimiter = rateLimit({
@@ -23,19 +23,19 @@ export function registerSettingsRoutes(app: Express): void {
   app.get(
     '/api/settings/api-keys',
     setCacheHeaders('project_data'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       if (!req.userId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
       const providers = await listApiKeyProviders(req.userId);
       res.json({ providers });
-    }),
+    },
   );
 
   app.post(
     '/api/settings/api-keys',
     payloadLimit(4 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       if (!req.userId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
@@ -50,12 +50,12 @@ export function registerSettingsRoutes(app: Express): void {
 
       await storeApiKey(req.userId, parsed.data.provider, parsed.data.apiKey);
       res.json({ message: 'API key stored' });
-    }),
+    },
   );
 
   app.delete(
     '/api/settings/api-keys/:provider',
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       if (!req.userId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
@@ -68,7 +68,7 @@ export function registerSettingsRoutes(app: Express): void {
         return res.status(404).json({ message: 'No API key found for this provider' });
       }
       res.status(204).end();
-    }),
+    },
   );
 
   // --- API Key Validation ---
@@ -77,7 +77,7 @@ export function registerSettingsRoutes(app: Express): void {
     '/api/settings/api-keys/validate',
     validateKeyLimiter,
     payloadLimit(4 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const schema = z.object({
         provider: z.enum(['anthropic', 'gemini', 'jlcpcb', 'pcbway', 'oshpark']),
         apiKey: z.string().max(500).optional(),
@@ -133,7 +133,7 @@ export function registerSettingsRoutes(app: Express): void {
         const message = err instanceof Error ? err.message : 'Validation failed';
         res.json({ valid: false, error: message });
       }
-    }),
+    },
   );
 
   // --- Chat Settings ---
@@ -141,7 +141,7 @@ export function registerSettingsRoutes(app: Express): void {
   app.get(
     '/api/settings/chat',
     setCacheHeaders('api_list'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const defaults = {
         aiProvider: 'gemini',
         aiModel: 'gemini-3.1-pro-preview-customtools',
@@ -168,13 +168,13 @@ export function registerSettingsRoutes(app: Express): void {
         routingStrategy: settings.routingStrategy,
         previewAiChanges: settings.previewAiChanges,
       });
-    }),
+    },
   );
 
   app.patch(
     '/api/settings/chat',
     payloadLimit(16 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       if (!req.userId) {
         return res.status(401).json({ message: 'Authentication required' });
       }
@@ -200,6 +200,6 @@ export function registerSettingsRoutes(app: Express): void {
         routingStrategy: updated.routingStrategy,
         previewAiChanges: updated.previewAiChanges,
       });
-    }),
+    },
   );
 }

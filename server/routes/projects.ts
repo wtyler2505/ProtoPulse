@@ -5,7 +5,7 @@ import { storage, VersionConflictError } from '../storage';
 import { insertProjectSchema } from '@shared/schema';
 import { logger } from '../logger';
 import { findProjectListAnomalies } from '../lib/project-list-sanity';
-import { asyncHandler, payloadLimit, parseIdParam, paginationSchema } from './utils';
+import { payloadLimit, parseIdParam, paginationSchema } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { setCacheHeaders } from '../lib/cache-headers';
 
@@ -20,7 +20,7 @@ export function registerProjectRoutes(app: Express): void {
   app.get(
     '/api/projects',
     setCacheHeaders('api_list'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const opts = paginationSchema.safeParse(req.query);
       const pagination = opts.success ? opts.data : { limit: 50, offset: 0, sort: 'desc' as const };
       const result = await storage.getProjects(pagination);
@@ -32,27 +32,27 @@ export function registerProjectRoutes(app: Express): void {
         });
       }
       res.json({ data: result, total: result.length });
-    }),
+    },
   );
 
   app.get(
     '/api/projects/:id',
     requireProjectOwnership,
     setCacheHeaders('project_data'),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const project = await storage.getProject(parseIdParam(req.params.id));
       if (!project) {
         return res.status(404).json({ message: 'Project not found' });
       }
       res.setHeader('ETag', `"${project.version}"`);
       res.json(project);
-    }),
+    },
   );
 
   app.post(
     '/api/projects',
     payloadLimit(32 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const parsed = insertProjectSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ message: fromZodError(parsed.error).toString() });
@@ -71,14 +71,14 @@ export function registerProjectRoutes(app: Express): void {
       const project = await storage.createProject(parsed.data, ownerId);
       res.setHeader('ETag', `"${project.version}"`);
       res.status(201).json(project);
-    }),
+    },
   );
 
   app.patch(
     '/api/projects/:id',
     requireProjectOwnership,
     payloadLimit(32 * 1024),
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const id = parseIdParam(req.params.id);
       const parsed = insertProjectSchema.partial().safeParse(req.body);
       if (!parsed.success) {
@@ -105,26 +105,26 @@ export function registerProjectRoutes(app: Express): void {
         }
         throw e;
       }
-    }),
+    },
   );
 
   app.delete(
     '/api/projects/:id',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const id = parseIdParam(req.params.id);
       const deleted = await storage.deleteProject(id);
       if (!deleted) {
         return res.status(404).json({ message: 'Project not found' });
       }
       res.status(204).end();
-    }),
+    },
   );
 
   app.post(
     '/api/projects/:id/approve',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const id = parseIdParam(req.params.id);
       // Ensure the project exists
       const project = await storage.getProject(id);
@@ -147,7 +147,7 @@ export function registerProjectRoutes(app: Express): void {
       }
 
       res.json(updated);
-    }),
+    },
   );
 
   // --- Project Members API ---
@@ -155,7 +155,7 @@ export function registerProjectRoutes(app: Express): void {
   app.get(
     '/api/projects/:id/members',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const id = parseIdParam(req.params.id);
 
       const project = await storage.getProject(id);
@@ -163,13 +163,13 @@ export function registerProjectRoutes(app: Express): void {
       
       const members = await storage.getProjectMembers(id);
       res.json(members);
-    }),
+    },
   );
 
   app.post(
     '/api/projects/:id/members',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const { userId, role = 'viewer', status = 'pending' } = req.body;
       
@@ -184,13 +184,13 @@ export function registerProjectRoutes(app: Express): void {
       });
       
       res.status(201).json(member);
-    }),
+    },
   );
 
   app.patch(
     '/api/projects/:id/members/:userId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const userId = parseIdParam(req.params.userId);
       const { role, status } = req.body;
@@ -199,13 +199,13 @@ export function registerProjectRoutes(app: Express): void {
       if (!updated) return res.status(404).json({ message: 'Member not found' });
       
       res.json(updated);
-    }),
+    },
   );
 
   app.delete(
     '/api/projects/:id/members/:userId',
     requireProjectOwnership,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const projectId = parseIdParam(req.params.id);
       const userId = parseIdParam(req.params.userId);
       
@@ -213,6 +213,6 @@ export function registerProjectRoutes(app: Express): void {
       if (!success) return res.status(404).json({ message: 'Member not found' });
       
       res.status(204).end();
-    }),
+    },
   );
 }

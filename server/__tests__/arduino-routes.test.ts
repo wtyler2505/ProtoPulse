@@ -29,18 +29,43 @@ const {
   mockReaddir,
   mockUpsertArduinoSketchFile,
   mockLoggerWarn,
-} = vi.hoisted(() => ({
-  mockCreateArduinoWorkspace: vi.fn(),
-  mockGetArduinoBuildProfiles: vi.fn(),
-  mockGetArduinoJobs: vi.fn(),
-  mockGetArduinoSketchFiles: vi.fn(),
-  mockGetArduinoWorkspace: vi.fn(),
-  mockGetArduinoWorkspaces: vi.fn(),
-  mockMkdir: vi.fn(),
-  mockReaddir: vi.fn(),
-  mockUpsertArduinoSketchFile: vi.fn(),
-  mockLoggerWarn: vi.fn(),
-}));
+  mockExecFile,
+  mockExec,
+} = vi.hoisted(() => {
+  const execFilePromisified = async (_cliPath: string, args: string[]) => {
+    if (args[0] === 'version') {
+      return { stdout: '{"VersionString":"1.3.1"}', stderr: '' };
+    } else if (args[0] === 'core' && args[1] === 'list') {
+      return { stdout: '{"platforms":[]}', stderr: '' };
+    }
+    return { stdout: '[]', stderr: '' };
+  };
+
+  const execPromisified = async () => ({ stdout: '{}', stderr: '' });
+
+  // Build a mock execFile with the custom promisify symbol so promisify(execFile)
+  // returns our async version that resolves { stdout, stderr }
+  const mockExecFileFn = vi.fn();
+  (mockExecFileFn as unknown as Record<symbol, unknown>)[Symbol.for('nodejs.util.promisify.custom')] = execFilePromisified;
+
+  const mockExecFn = vi.fn();
+  (mockExecFn as unknown as Record<symbol, unknown>)[Symbol.for('nodejs.util.promisify.custom')] = execPromisified;
+
+  return {
+    mockCreateArduinoWorkspace: vi.fn(),
+    mockGetArduinoBuildProfiles: vi.fn(),
+    mockGetArduinoJobs: vi.fn(),
+    mockGetArduinoSketchFiles: vi.fn(),
+    mockGetArduinoWorkspace: vi.fn(),
+    mockGetArduinoWorkspaces: vi.fn(),
+    mockMkdir: vi.fn(),
+    mockReaddir: vi.fn(),
+    mockUpsertArduinoSketchFile: vi.fn(),
+    mockLoggerWarn: vi.fn(),
+    mockExecFile: mockExecFileFn,
+    mockExec: mockExecFn,
+  };
+});
 
 vi.mock('../routes/auth-middleware', () => ({
   requireProjectOwnership: (_req: express.Request, _res: express.Response, next: express.NextFunction) => next(),
@@ -48,13 +73,8 @@ vi.mock('../routes/auth-middleware', () => ({
 
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
-  execSync: vi.fn(() => Buffer.from('{"VersionString":"1.3.1"}')),
-  execFileSync: vi.fn((_cliPath: string, args: string[]) => {
-    if (args[0] === 'core' && args[1] === 'list') {
-      return Buffer.from('{"platforms":[]}');
-    }
-    return Buffer.from('[]');
-  }),
+  exec: mockExec,
+  execFile: mockExecFile,
 }));
 
 vi.mock('fs/promises', () => ({
@@ -202,7 +222,17 @@ beforeAll(async () => {
 afterAll(() => undefined);
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  // Reset storage/fs mocks but preserve child_process implementations
+  mockCreateArduinoWorkspace.mockReset();
+  mockGetArduinoBuildProfiles.mockReset();
+  mockGetArduinoJobs.mockReset();
+  mockGetArduinoSketchFiles.mockReset();
+  mockGetArduinoWorkspace.mockReset();
+  mockGetArduinoWorkspaces.mockReset();
+  mockUpsertArduinoSketchFile.mockReset();
+  mockLoggerWarn.mockReset();
+  mockMkdir.mockReset();
+  mockReaddir.mockReset();
   workspaceRecord = undefined;
 
   mockMkdir.mockResolvedValue(undefined);

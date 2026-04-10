@@ -70,6 +70,7 @@ export const architectureNodes = pgTable("architecture_nodes", {
   index("idx_arch_nodes_project").on(table.projectId),
   index("idx_arch_nodes_project_deleted").on(table.projectId, table.deletedAt),
   uniqueIndex("uq_arch_nodes_project_node").on(table.projectId, table.nodeId),
+  index("arch_nodes_data_gin_idx").using('gin', sql`${table.data} jsonb_path_ops`),
 ]);
 
 export const insertArchitectureNodeSchema = createInsertSchema(architectureNodes).omit({ id: true, version: true, updatedAt: true, deletedAt: true }).extend({
@@ -264,6 +265,8 @@ export const componentParts = pgTable("component_parts", {
 }, (table) => [
   index("idx_component_parts_project").on(table.projectId),
   index("idx_component_parts_node").on(table.nodeId),
+  index("component_parts_meta_gin_idx").using('gin', sql`${table.meta} jsonb_path_ops`),
+  index("component_parts_connectors_gin_idx").using('gin', sql`${table.connectors} jsonb_path_ops`),
 ]);
 
 export const insertComponentPartSchema = createInsertSchema(componentParts).omit({ id: true, version: true, createdAt: true, updatedAt: true });
@@ -359,6 +362,7 @@ export const circuitInstances = pgTable("circuit_instances", {
 }, (table) => [
   index("idx_circuit_instances_circuit").on(table.circuitId),
   index("idx_circuit_instances_part").on(table.partId),
+  index("circuit_instances_properties_gin_idx").using('gin', sql`${table.properties} jsonb_path_ops`),
 ]);
 
 export const insertCircuitInstanceSchema = createInsertSchema(circuitInstances).omit({ id: true, createdAt: true });

@@ -9,8 +9,6 @@ import { db } from '../db';
 import { getPolicies, runRetention, runSinglePolicy } from '../lib/data-retention';
 import { logger } from '../logger';
 import { getMetrics } from '../metrics';
-import { asyncHandler } from './utils';
-
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import type { Express } from 'express';
 
@@ -45,7 +43,7 @@ export function registerAdminRoutes(app: Express): void {
   app.get(
     '/api/admin/metrics',
     adminRateLimiter,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const adminKey = req.headers['x-admin-key'];
       const expectedKey = process.env.ADMIN_API_KEY;
 
@@ -54,7 +52,7 @@ export function registerAdminRoutes(app: Express): void {
       }
 
       res.json(getMetrics());
-    }),
+    },
   );
 
   // --- Admin: Purge soft-deleted records ---
@@ -62,7 +60,7 @@ export function registerAdminRoutes(app: Express): void {
   app.delete(
     '/api/admin/purge',
     adminRateLimiter,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       // --- Admin authorization ---
       const adminKey = req.headers['x-admin-key'];
       const expectedKey = process.env.ADMIN_API_KEY;
@@ -125,7 +123,7 @@ export function registerAdminRoutes(app: Express): void {
       await db.delete(projects).where(and(isNotNull(projects.deletedAt), lte(projects.deletedAt, cutoff)));
 
       res.json({ message: 'Purge complete', counts });
-    }),
+    },
   );
 
   // --- Admin: Data retention policies (list) ---
@@ -133,7 +131,7 @@ export function registerAdminRoutes(app: Express): void {
   app.get(
     '/api/admin/retention/policies',
     adminRateLimiter,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const adminKey = req.headers['x-admin-key'];
       const expectedKey = process.env.ADMIN_API_KEY;
 
@@ -142,7 +140,7 @@ export function registerAdminRoutes(app: Express): void {
       }
 
       res.json({ policies: getPolicies() });
-    }),
+    },
   );
 
   // --- Admin: Data retention preview (dry-run) ---
@@ -150,7 +148,7 @@ export function registerAdminRoutes(app: Express): void {
   app.get(
     '/api/admin/retention/preview',
     adminRateLimiter,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const adminKey = req.headers['x-admin-key'];
       const expectedKey = process.env.ADMIN_API_KEY;
 
@@ -184,7 +182,7 @@ export function registerAdminRoutes(app: Express): void {
         true,
       );
       res.json(result);
-    }),
+    },
   );
 
   // --- Admin: Data retention execute ---
@@ -192,7 +190,7 @@ export function registerAdminRoutes(app: Express): void {
   app.post(
     '/api/admin/retention/execute',
     adminRateLimiter,
-    asyncHandler(async (req, res) => {
+    async (req, res) => {
       const adminKey = req.headers['x-admin-key'];
       const expectedKey = process.env.ADMIN_API_KEY;
 
@@ -226,6 +224,6 @@ export function registerAdminRoutes(app: Express): void {
         false,
       );
       res.json(result);
-    }),
+    },
   );
 }
