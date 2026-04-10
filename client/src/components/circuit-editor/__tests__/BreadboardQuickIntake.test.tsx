@@ -66,4 +66,40 @@ describe('BreadboardQuickIntake', () => {
     await user.click(screen.getByTestId('quick-intake-submit'));
     expect(onAdd).not.toHaveBeenCalled();
   });
+
+  it('renders scan button', () => {
+    render(<BreadboardQuickIntake onAdd={vi.fn()} />);
+    expect(screen.getByTestId('quick-intake-scan')).toBeInTheDocument();
+  });
+
+  it('pre-fills form from scan result', async () => {
+    const user = userEvent.setup();
+    const onAdd = vi.fn();
+    const { rerender } = render(
+      <BreadboardQuickIntake
+        onAdd={onAdd}
+        scanResult={{ partName: 'ESP32', quantity: 2, storageLocation: 'Bin C4' }}
+      />,
+    );
+    // Scan result should pre-fill the form fields
+    expect(screen.getByPlaceholderText(/part name/i)).toHaveValue('ESP32');
+    expect(screen.getByTestId('quick-intake-quantity')).toHaveValue(2);
+    expect(screen.getByTestId('quick-intake-storage')).toHaveValue('Bin C4');
+
+    // User can still submit the pre-filled form
+    await user.click(screen.getByTestId('quick-intake-submit'));
+    expect(onAdd).toHaveBeenCalledWith({ partName: 'ESP32', quantity: 2, storageLocation: 'Bin C4' });
+  });
+
+  it('pre-fills only part name when scan has no quantity', () => {
+    render(
+      <BreadboardQuickIntake
+        onAdd={vi.fn()}
+        scanResult={{ partName: 'Arduino Mega', quantity: 1, storageLocation: null }}
+      />,
+    );
+    expect(screen.getByPlaceholderText(/part name/i)).toHaveValue('Arduino Mega');
+    expect(screen.getByTestId('quick-intake-quantity')).toHaveValue(1);
+    expect(screen.getByTestId('quick-intake-storage')).toHaveValue('');
+  });
 });

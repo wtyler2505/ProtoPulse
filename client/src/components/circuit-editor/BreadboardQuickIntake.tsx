@@ -1,5 +1,5 @@
-import { type FormEvent, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { type FormEvent, useEffect, useState } from 'react';
+import { Camera, Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +10,30 @@ export interface QuickIntakeItem {
   storageLocation: string | null;
 }
 
-interface BreadboardQuickIntakeProps {
-  onAdd: (item: QuickIntakeItem) => void;
+export interface QuickIntakeScanResult {
+  partName: string;
+  quantity: number;
+  storageLocation: string | null;
 }
 
-export default function BreadboardQuickIntake({ onAdd }: BreadboardQuickIntakeProps) {
+interface BreadboardQuickIntakeProps {
+  onAdd: (item: QuickIntakeItem) => void;
+  onScan?: () => void;
+  scanResult?: QuickIntakeScanResult;
+}
+
+export default function BreadboardQuickIntake({ onAdd, onScan, scanResult }: BreadboardQuickIntakeProps) {
   const [partName, setPartName] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [storageLocation, setStorageLocation] = useState('');
+
+  useEffect(() => {
+    if (scanResult) {
+      setPartName(scanResult.partName);
+      setQuantity(scanResult.quantity);
+      setStorageLocation(scanResult.storageLocation ?? '');
+    }
+  }, [scanResult]);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -41,12 +57,25 @@ export default function BreadboardQuickIntake({ onAdd }: BreadboardQuickIntakePr
       onSubmit={handleSubmit}
       className="space-y-2"
     >
-      <Input
-        placeholder="Part name"
-        value={partName}
-        onChange={(e) => { setPartName(e.target.value); }}
-        className="h-8 text-xs"
-      />
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Part name"
+          value={partName}
+          onChange={(e) => { setPartName(e.target.value); }}
+          className="h-8 flex-1 text-xs"
+        />
+        <Button
+          data-testid="quick-intake-scan"
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onScan}
+          className="h-8 gap-1 px-2"
+        >
+          <Camera className="h-3.5 w-3.5" />
+          Scan
+        </Button>
+      </div>
       <div className="flex items-center gap-2">
         <Input
           data-testid="quick-intake-quantity"
