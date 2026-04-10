@@ -401,6 +401,8 @@ export const circuitWires = pgTable("circuit_wires", {
   width: real("width").notNull().default(1.0),
   color: text("color"),
   wireType: text("wire_type").default("wire"),
+  endpointMeta: jsonb("endpoint_meta"),
+  provenance: text("provenance").default("manual"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_circuit_wires_circuit").on(table.circuitId),
