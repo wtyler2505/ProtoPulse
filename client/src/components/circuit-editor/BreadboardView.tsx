@@ -52,6 +52,7 @@ import {
 import {
   buildBreadboardSelectedPartModel,
 } from '@/lib/breadboard-part-inspector';
+import { auditBreadboard, type BoardAuditIssue, type BoardAuditSummary } from '@/lib/breadboard-board-audit';
 import {
   useBreadboardCoachPlan,
   normalizeCoachNetName,
@@ -226,10 +227,17 @@ export default function BreadboardView() {
   const activeCircuit = circuits?.find(c => c.id === activeCircuitId) ?? circuits?.[0] ?? null;
   const circuitId = activeCircuit?.id ?? 0;
   const { data: instances } = useCircuitInstances(circuitId);
+  const { data: nets } = useCircuitNets(circuitId);
   const { data: wires } = useCircuitWires(circuitId);
-  const breadboardWireCount = useMemo(
-    () => (wires ?? []).filter((wire) => wire.view === 'breadboard').length,
+  const [boardAuditEnabled, setBoardAuditEnabled] = useState(false);
+  const [focusAuditIssue, setFocusAuditIssue] = useState<BoardAuditIssue | null>(null);
+  const breadboardWires = useMemo(
+    () => (wires ?? []).filter((wire) => wire.view === 'breadboard'),
     [wires],
+  );
+  const breadboardWireCount = useMemo(
+    () => breadboardWires.length,
+    [breadboardWires],
   );
   const placedInstanceCount = useMemo(
     () => (instances ?? []).filter((instance) => instance.breadboardX != null && instance.breadboardY != null).length,
@@ -243,6 +251,23 @@ export default function BreadboardView() {
     () => indexBreadboardBenchInsights(benchSummary.insights),
     [benchSummary.insights],
   );
+  const computedBoardAudit = useMemo(() => {
+    if (!activeCircuit) {
+      return null;
+    }
+
+    return auditBreadboard({
+      instances: instances ?? [],
+      wires: breadboardWires,
+      nets: nets ?? [],
+      parts: parts ?? [],
+    });
+  }, [activeCircuit, breadboardWires, instances, nets, parts]);
+  const boardAudit = boardAuditEnabled ? computedBoardAudit : null;
+
+  useEffect(() => {
+    setFocusAuditIssue(null);
+  }, [circuitId]);
 
   const openChatPanel = useCallback((detail: { designAgent?: boolean; prompt?: string }) => {
     window.dispatchEvent(new CustomEvent('protopulse:open-chat-panel', { detail }));
@@ -386,6 +411,37 @@ export default function BreadboardView() {
     }
   }, [expandMutation, projectId, toast]);
 
+  const handleRunBoardAudit = useCallback(() => {
+    if (!computedBoardAudit) {
+      return;
+    }
+
+    setBoardAuditEnabled(true);
+    setWorkbenchOpen(true);
+
+    const criticalCount = computedBoardAudit.issues.filter((issue) => issue.severity === 'critical').length;
+    const warningCount = computedBoardAudit.issues.filter((issue) => issue.severity === 'warning').length;
+
+    toast({
+      title:
+        criticalCount > 0
+          ? 'Board health found critical issues'
+          : warningCount > 0
+            ? 'Board health found follow-up items'
+            : 'Board health looks clean',
+      description:
+        criticalCount > 0 || warningCount > 0
+          ? `${String(criticalCount)} critical, ${String(warningCount)} warning issues across ${String(computedBoardAudit.stats.totalInstances)} placed parts.`
+          : `No board-health issues detected across ${String(computedBoardAudit.stats.totalInstances)} placed parts.`,
+    });
+  }, [computedBoardAudit, toast]);
+
+  const handleFocusBoardIssue = useCallback((issue: BoardAuditIssue) => {
+    setBoardAuditEnabled(true);
+    setWorkbenchOpen(true);
+    setFocusAuditIssue(issue);
+  }, []);
+
   const handleLaunchExactDraft = useCallback((seed: ExactPartDraftSeed) => {
     setExactPartDialogOpen(false);
     setExactDraftSeed(seed);
@@ -444,9 +500,11 @@ export default function BreadboardView() {
         <BreadboardWorkbenchSidebar
           benchInsights={benchInsights}
           benchSummary={benchSummary}
+          boardAudit={boardAudit}
           createPending={createCircuitMutation.isPending}
           expandPending={expandMutation.isPending}
           hasCircuits={Boolean(circuits && circuits.length > 0)}
+          onFocusBoardIssue={handleFocusBoardIssue}
           placedInstanceCount={placedInstanceCount}
           projectPartCount={parts?.length ?? 0}
           wireCount={breadboardWireCount}
@@ -459,6 +517,7 @@ export default function BreadboardView() {
           onOpenComponentEditor={() => setActiveView('component_editor')}
           onOpenCommunity={() => setActiveView('community')}
           onOpenSchematic={() => setActiveView('schematic')}
+          onRunBoardAudit={handleRunBoardAudit}
         />
       )}
 
@@ -508,8 +567,12 @@ export default function BreadboardView() {
             />
             {activeCircuit ? (
               <BreadboardCanvas
+                boardAudit={boardAudit}
                 circuitId={circuitId}
                 benchInsights={benchInsights}
+                focusAuditIssue={focusAuditIssue}
+                onConsumeFocusAuditIssue={() => setFocusAuditIssue(null)}
+                onRunBoardAudit={handleRunBoardAudit}
                 projectName={projectName}
               />
             ) : null}
@@ -647,12 +710,20 @@ function BreadboardToolbar({
 // ---------------------------------------------------------------------------
 
 function BreadboardCanvas({
+  boardAudit,
   circuitId,
   benchInsights,
+  focusAuditIssue,
+  onConsumeFocusAuditIssue,
+  onRunBoardAudit,
   projectName,
 }: {
+  boardAudit: BoardAuditSummary | null;
   circuitId: number;
   benchInsights: Record<number, BreadboardBenchInsight>;
+  focusAuditIssue: BoardAuditIssue | null;
+  onConsumeFocusAuditIssue: () => void;
+  onRunBoardAudit: () => void;
   projectName: string;
 }) {
   const projectId = useProjectId();
@@ -697,6 +768,19 @@ function BreadboardCanvas({
     () => new Map((parts ?? []).map((part: ComponentPart) => [part.id, part])),
     [parts],
   );
+
+  const centerOnBoardPixel = useCallback((pixel: PixelPos) => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    setPanOffset({
+      x: rect.width / 2 - pixel.x * zoom,
+      y: rect.height / 2 - pixel.y * zoom,
+    });
+  }, [zoom]);
 
   // BB-01: Center the breadboard on mount
   useEffect(() => {
@@ -893,6 +977,39 @@ function BreadboardCanvas({
 
     return instances.find((candidate) => candidate.id === selectedInstanceId) ?? null;
   }, [instances, selectedInstanceId]);
+
+  useEffect(() => {
+    if (!focusAuditIssue || !instances) {
+      return;
+    }
+
+    const targetInstanceId = focusAuditIssue.affectedInstanceIds[0];
+    if (targetInstanceId == null) {
+      onConsumeFocusAuditIssue();
+      return;
+    }
+
+    const targetInstance = instances.find((candidate) => candidate.id === targetInstanceId);
+    if (!targetInstance) {
+      onConsumeFocusAuditIssue();
+      return;
+    }
+
+    setSelectedInstanceId(targetInstance.id);
+    setSelectedWireId(null);
+    setTool('select');
+
+    if (targetInstance.breadboardX != null && targetInstance.breadboardY != null) {
+      centerOnBoardPixel({ x: targetInstance.breadboardX, y: targetInstance.breadboardY });
+    }
+
+    toast({
+      title: 'Focused board-health issue',
+      description: `${targetInstance.referenceDesignator} is selected for "${focusAuditIssue.title}".`,
+    });
+
+    onConsumeFocusAuditIssue();
+  }, [centerOnBoardPixel, focusAuditIssue, instances, onConsumeFocusAuditIssue, toast]);
 
   // Coach plan resolution — extracted to useBreadboardCoachPlan hook
   const {
@@ -1438,6 +1555,23 @@ function BreadboardCanvas({
     });
   }, [clientToBoardPixel, createInstanceMutation, circuitId, instancePlacements, instances, partsMap]);
 
+  const auditCriticalCount = boardAudit?.issues.filter((issue) => issue.severity === 'critical').length ?? 0;
+  const auditWarningCount = boardAudit?.issues.filter((issue) => issue.severity === 'warning').length ?? 0;
+  const auditToolbarLabel = boardAudit == null
+    ? 'Run audit'
+    : auditCriticalCount > 0
+      ? `${String(auditCriticalCount)} critical`
+      : auditWarningCount > 0
+        ? `${String(auditWarningCount)} warning${auditWarningCount === 1 ? '' : 's'}`
+        : 'Healthy';
+  const auditToolbarTone = boardAudit == null
+    ? 'border-border text-muted-foreground'
+    : auditCriticalCount > 0
+      ? 'border-red-500/40 bg-red-500/10 text-red-300'
+      : auditWarningCount > 0
+        ? 'border-yellow-500/40 bg-yellow-500/10 text-yellow-300'
+        : 'border-green-500/40 bg-green-500/10 text-green-300';
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden" data-testid="breadboard-canvas-container">
       {/* Tool bar */}
@@ -1451,6 +1585,20 @@ function BreadboardCanvas({
         <ToolButton icon={RotateCcw} label="Reset view" onClick={() => { setZoom(3); setPanOffset({ x: 20, y: 20 }); }} testId="tool-reset-view" />
         <div className="w-px h-4 bg-border mx-1" />
         <ToolButton icon={ShieldAlert} label="DRC Check" active={showDrc} onClick={() => setShowDrc(d => !d)} testId="tool-drc-toggle" />
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          data-testid="button-run-audit-inline"
+          onClick={onRunBoardAudit}
+          className={cn('ml-1 h-6 gap-1.5 px-2 text-[10px] uppercase tracking-[0.14em]', auditToolbarTone)}
+        >
+          <ShieldAlert className="h-3 w-3" />
+          <span>{auditToolbarLabel}</span>
+          {boardAudit && (
+            <span className="tabular-nums opacity-90">{String(boardAudit.score)}</span>
+          )}
+        </Button>
         <div className="flex-1" />
         <span className="text-[10px] text-muted-foreground tabular-nums">
           {zoom.toFixed(1)}x

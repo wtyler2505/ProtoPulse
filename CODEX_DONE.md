@@ -1,5 +1,47 @@
 # Codex Completion Report
 
+**Task:** Build out Codex-native Breadboard and skill-authoring skills, wire Breadboard board-health into the live workbench, and verify the flow in browser
+**Status:** done
+
+## Changes Made
+- `.agents/skills/breadboard-lab/SKILL.md` - added a repo-scoped Breadboard Lab skill with workflow guidance, references, helper script, metadata, and assets focused on the full bench workflow.
+- `.agents/skills/codex-skill-builder/SKILL.md` - added a repo-scoped Codex skill-builder skill grounded in current OpenAI/Codex guidance, with reusable templates, audit/scaffold scripts, references, metadata, and assets.
+- `AGENTS.md` - updated repo routing guidance so Breadboard work uses `breadboard-lab` and Codex repo-skill work uses `codex-skill-builder`.
+- `client/src/components/circuit-editor/BreadboardView.tsx` - surfaced live board-health computation, inline audit execution, audit toasts, issue-focus handoff, and wiring-canvas audit state into the main Breadboard workbench.
+- `client/src/components/circuit-editor/BreadboardWorkbenchSidebar.tsx` - threaded board-issue focus callbacks from the workbench sidebar into the audit panel.
+- `client/src/components/circuit-editor/BreadboardBoardAuditPanel.tsx` - added per-issue focus actions so users can jump directly to affected parts from board-health findings.
+- `client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx` - added coverage for the surfaced board-health UI, audit execution, and issue-focus behavior.
+
+## Commands Run
+```bash
+npm run check
+npx vitest run client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx
+```
+
+## Next Steps
+- Fix starter-part placement/drop reliability so the populated-board path can be verified in browser instead of only the empty-board health case.
+- Expand board audit from the healthy/empty path into actionable populated-board findings such as power, resistor, and layout guidance.
+- Trace and harden the stale last-project redirect that still causes a brief `Project not found` toast when an unavailable project id is remembered.
+
+## Blockers (if any)
+- Dragging a starter part onto the live breadboard did not visibly place a component during browser verification, so the populated-board audit path is not verified yet.
+- The app can still briefly request a stale project id from prior navigation state, which triggers a transient destructive toast before the current project finishes loading.
+
+## Handoff Notes
+- Browser verification was completed against `http://127.0.0.1:5000/projects/26/breadboard`.
+- Verified live behaviors:
+  - Breadboard route opens successfully on the fresh `CODEX Breadboard Verify` project.
+  - `Create wiring canvas` works in-browser.
+  - Sidebar board-health surface updates after audit.
+  - Inline toolbar audit button updates from `RUN AUDIT` to `HEALTHY 100`.
+  - Console remained clean during the verified breadboard flow.
+- Root cause for the red error toast:
+  - the browser issued `GET /api/projects/21`
+  - server returned `404 {"message":"Project not found"}`
+  - this appears to be a stale remembered-project navigation issue, not a failure in the new Breadboard board-health code.
+
+# Codex Completion Report
+
 **Task:** Continue the ProtoPulse audit remediation program with the next Wave 6 implementation slice (`Performance / Observability / Route Confidence`)
 **Status:** partial
 

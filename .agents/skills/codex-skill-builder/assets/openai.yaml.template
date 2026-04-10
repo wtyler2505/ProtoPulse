@@ -1,0 +1,9 @@
+interface:
+  display_name: "{{DISPLAY_NAME}}"
+  short_description: "Short skill summary"
+  icon_small: "./assets/icon-small.svg"
+  brand_color: "#3B82F6"
+  default_prompt: "Optional prompt wrapper"
+
+policy:
+  allow_implicit_invocation: true

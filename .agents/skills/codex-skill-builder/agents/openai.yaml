@@ -1,0 +1,17 @@
+interface:
+  display_name: "Codex Skill Builder"
+  short_description: "Create, repair, validate, and package Codex skills with current OpenAI guidance."
+  icon_small: "./assets/icon-small.svg"
+  brand_color: "#10B981"
+  default_prompt: "Create or improve a Codex skill in this repository using current OpenAI Codex skill guidance, strong trigger descriptions, progressive disclosure, and deliberate metadata."
+
+policy:
+  allow_implicit_invocation: false
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "openaiDeveloperDocs"
+      description: "OpenAI Developer Docs MCP server for checking the latest Codex skill guidance."
+      transport: "streamable_http"
+      url: "https://developers.openai.com/mcp"

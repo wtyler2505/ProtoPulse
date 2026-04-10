@@ -88,7 +88,13 @@ function severityBadgeClass(severity: BoardAuditIssue['severity']): string {
 // Issue row
 // ---------------------------------------------------------------------------
 
-function IssueRow({ issue }: { issue: BoardAuditIssue }) {
+function IssueRow({
+  issue,
+  onFocusIssue,
+}: {
+  issue: BoardAuditIssue;
+  onFocusIssue?: (issue: BoardAuditIssue) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -137,6 +143,22 @@ function IssueRow({ issue }: { issue: BoardAuditIssue }) {
               ))}
             </div>
           )}
+          {onFocusIssue && issue.affectedInstanceIds.length > 0 && (
+            <div className="mt-2 flex justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                data-testid={`audit-focus-${issue.id}`}
+                onClick={() => {
+                  onFocusIssue(issue);
+                }}
+                className="h-7 px-2 text-[10px] uppercase tracking-[0.16em]"
+              >
+                Focus part
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -149,11 +171,13 @@ function IssueRow({ issue }: { issue: BoardAuditIssue }) {
 
 interface BreadboardBoardAuditPanelProps {
   audit: BoardAuditSummary | null;
+  onFocusIssue?: (issue: BoardAuditIssue) => void;
   onRunAudit: () => void;
 }
 
 export default function BreadboardBoardAuditPanel({
   audit: auditResult,
+  onFocusIssue,
   onRunAudit,
 }: BreadboardBoardAuditPanelProps) {
   const criticalCount = auditResult?.issues.filter((i) => i.severity === 'critical').length ?? 0;
@@ -232,7 +256,7 @@ export default function BreadboardBoardAuditPanel({
           data-testid="audit-issue-list"
         >
           {auditResult.issues.map((issue) => (
-            <IssueRow key={issue.id} issue={issue} />
+            <IssueRow key={issue.id} issue={issue} onFocusIssue={onFocusIssue} />
           ))}
         </div>
       )}

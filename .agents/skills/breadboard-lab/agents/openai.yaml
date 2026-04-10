@@ -1,0 +1,9 @@
+interface:
+  display_name: "Breadboard Lab"
+  short_description: "ProtoPulse Breadboard workbench workflow, board health, coach, trust, and verification guidance."
+  icon_small: "./assets/icon-small.svg"
+  brand_color: "#22D3EE"
+  default_prompt: "Improve the ProtoPulse Breadboard Lab workflow, keeping stash truth, exact-part trust, board health, coach guidance, and browser verification in scope."
+
+policy:
+  allow_implicit_invocation: true

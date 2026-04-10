@@ -300,6 +300,9 @@ vi.mock('@/components/ui/select', () => ({
 vi.mock('lucide-react', () => ({
   Bot: () => <svg data-testid="icon-bot" />,
   Loader2: () => <svg data-testid="icon-loader" />,
+  AlertTriangle: () => <svg data-testid="icon-alert-triangle" />,
+  CheckCircle2: () => <svg data-testid="icon-check-circle-2" />,
+  RefreshCw: () => <svg data-testid="icon-refresh-cw" />,
   CircuitBoard: () => <svg data-testid="icon-circuit-board" />,
   MousePointer2: () => <svg data-testid="icon-mouse-pointer" />,
   Pencil: () => <svg data-testid="icon-pencil" />,
@@ -311,10 +314,12 @@ vi.mock('lucide-react', () => ({
   Activity: () => <svg data-testid="icon-activity" />,
   Square: () => <svg data-testid="icon-square" />,
   ShieldAlert: () => <svg data-testid="icon-shield-alert" />,
+  XCircle: () => <svg data-testid="icon-x-circle" />,
   PanelLeftClose: () => <svg data-testid="icon-panel-left-close" />,
   PanelLeftOpen: () => <svg data-testid="icon-panel-left-open" />,
   Sparkles: () => <svg data-testid="icon-sparkles" />,
   Cpu: () => <svg data-testid="icon-cpu" />,
+  HeartPulse: () => <svg data-testid="icon-heart-pulse" />,
   X: () => <svg data-testid="icon-x" />,
   Lightbulb: () => <svg data-testid="icon-lightbulb" />,
   Radio: () => <svg data-testid="icon-radio" />,
@@ -463,6 +468,9 @@ describe('BreadboardView', () => {
       render(<BreadboardView />);
       expect(screen.getByTestId('breadboard-workbench')).toBeDefined();
       expect(screen.getByTestId('breadboard-starter-shelf')).toBeDefined();
+      expect(screen.getByTestId('breadboard-board-audit-panel')).toBeDefined();
+      expect(screen.getByTestId('button-run-audit')).toBeDefined();
+      expect(screen.getByTestId('button-run-audit-inline')).toBeDefined();
       expect(screen.getByTestId('component-placer')).toBeDefined();
       expect(screen.getByTestId('component-placer-filter-owned')).toBeDefined();
       expect(screen.getByTestId('button-breadboard-ai-stash-planner')).toBeDefined();
@@ -914,6 +922,56 @@ describe('BreadboardView', () => {
       expect(screen.getByTestId('breadboard-coach-suggestion-support-decoupler')).toBeDefined();
       expect(screen.getByTestId('breadboard-coach-suggestion-support-control-pull')).toBeDefined();
       expect(screen.getByTestId('button-breadboard-coach-preview-plan').textContent).toContain('Hide bench plan');
+    });
+  });
+
+  describe('board health', () => {
+    it('runs the board audit and surfaces issues for a placed MCU', async () => {
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+
+      render(<BreadboardView />);
+
+      fireEvent.click(screen.getByTestId('button-run-audit-inline'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('audit-score-badge')).toBeDefined();
+      });
+
+      expect(screen.getByTestId('audit-issue-list')).toBeDefined();
+      expect(screen.getByTestId('audit-issue-toggle-missing-decoupling-1')).toBeDefined();
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringMatching(/Board health/),
+        }),
+      );
+    });
+
+    it('focuses the affected part from a board-health issue', async () => {
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+
+      render(<BreadboardView />);
+
+      fireEvent.click(screen.getByTestId('button-run-audit-inline'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('audit-issue-toggle-missing-decoupling-1')).toBeDefined();
+      });
+
+      fireEvent.click(screen.getByTestId('audit-issue-toggle-missing-decoupling-1'));
+      fireEvent.click(screen.getByTestId('audit-focus-missing-decoupling-1'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('breadboard-part-inspector')).toBeDefined();
+      });
+
+      expect(screen.getByTestId('breadboard-part-inspector-plan').textContent).toContain('pending');
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Focused board-health issue',
+        }),
+      );
     });
   });
 

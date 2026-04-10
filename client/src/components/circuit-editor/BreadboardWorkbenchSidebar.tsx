@@ -13,6 +13,7 @@ import type {
   BreadboardChatActionId,
   BreadboardPlannerActionId,
 } from '@/lib/breadboard-ai-prompts';
+import type { BoardAuditIssue } from '@/lib/breadboard-board-audit';
 
 interface BreadboardWorkbenchSidebarProps {
   benchInsights: Record<number, BreadboardBenchInsight>;
@@ -33,6 +34,7 @@ interface BreadboardWorkbenchSidebarProps {
   onOpenComponentEditor: () => void;
   onOpenCommunity: () => void;
   onOpenSchematic: () => void;
+  onFocusBoardIssue?: (issue: BoardAuditIssue) => void;
   onRunBoardAudit?: () => void;
 }
 
@@ -64,6 +66,7 @@ export default function BreadboardWorkbenchSidebar({
   onOpenComponentEditor,
   onOpenCommunity,
   onOpenSchematic,
+  onFocusBoardIssue,
   onRunBoardAudit,
 }: BreadboardWorkbenchSidebarProps) {
   return (
@@ -278,6 +281,7 @@ export default function BreadboardWorkbenchSidebar({
               </div>
               <BreadboardBoardAuditPanel
                 audit={boardAudit ?? null}
+                onFocusIssue={onFocusBoardIssue}
                 onRunAudit={onRunBoardAudit}
               />
             </div>

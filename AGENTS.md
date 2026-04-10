@@ -453,6 +453,7 @@ When Tyler asks about Claude Code updates, new features, or "am I using everythi
 ### EDA Domain
 | Situation | Skill/Agent | Why |
 |-----------|------------|-----|
+| Breadboard Lab / bench workflow | `breadboard-lab` skill | Breadboard-specific routing for workbench UX, exact-part trust, board health, coach flows, sync, and browser verification |
 | Circuit/component change | `eda-domain-reviewer` agent (has memory) | Pin labeling, DRC, format compliance |
 | Accessibility check | `accessibility-auditor` agent | WCAG 2.1 AA for ProtoPulse UI |
 
@@ -481,7 +482,8 @@ When Tyler asks about Claude Code updates, new features, or "am I using everythi
 | Create new hook | `/hook-create` | Natural language → hook |
 | MCP server setup | Use `mcp-server-mastery` skill | Configure MCP servers correctly |
 | CLAUDE.md improvements | `/claude-md-improver` | Audit and optimize context file |
-| Create new skill | `/skill-creator-v2` | Full skill authoring workflow |
+| Create or improve Codex repo skills | `codex-skill-builder` skill | OpenAI-aligned `.agents/skills` authoring, metadata, validation, and packaging guidance |
+| Create new skill | `/skill-creator-v2` or `codex-skill-builder` | Full skill authoring workflow |
 | Create slash command | `/cmd-create` | Natural language → command |
 | Audit commands | `/cmd-auditor` | Syntax, security, health scoring |
 
