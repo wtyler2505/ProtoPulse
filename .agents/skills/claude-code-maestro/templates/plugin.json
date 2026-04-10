@@ -1,0 +1,13 @@
+{
+  "name": "my-claude-plugin",
+  "version": "1.0.0",
+  "description": "A custom Claude Code plugin packaging skills and hooks",
+  "author": "Your Name",
+  "userConfig": {
+    "API_KEY": {
+      "type": "string",
+      "description": "API key required for the plugin's MCP server",
+      "required": true
+    }
+  }
+}

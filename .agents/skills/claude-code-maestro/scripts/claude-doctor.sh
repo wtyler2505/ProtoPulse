@@ -36,3 +36,10 @@ if [ -f ".claude/settings.json" ]; then
 fi
 
 echo "=== REPORT COMPLETE ==="
+
+# 4. Dependency Check
+if ! command -v jq &> /dev/null; then
+    echo "❌ DEPENDENCY ERROR: 'jq' is not installed. Maestro scripts require jq."
+else
+    echo "✅ 'jq' is installed."
+fi

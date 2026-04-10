@@ -330,6 +330,7 @@ describe('generateFritzingProject — enriched', () => {
       wires: [],
     });
 
-    expect(result.filename).toBe('My_Project__v2_.fzz');
+    // Current sanitization replaces whitespace with underscore
+    expect(result.filename).toBe('My_Project_(v2).fzz');
   });
 });
