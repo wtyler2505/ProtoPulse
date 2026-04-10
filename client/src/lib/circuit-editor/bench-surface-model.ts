@@ -10,8 +10,11 @@
  *   - Coordinate transforms: bench ↔ board-local pixel space.
  */
 
-import { getBoardDimensions, pixelToCoord, BB } from './breadboard-model';
+import { getBoardDimensions, pixelToCoord, coordToPixel, BB } from './breadboard-model';
 import type { BreadboardCoord, PixelPos } from './breadboard-model';
+import type { PartMeta } from '@shared/component-types';
+
+type BreadboardFit = NonNullable<PartMeta['breadboardFit']>;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -125,4 +128,51 @@ export function pixelToBench(
     x: pixel.x + config.breadboardOrigin.x,
     y: pixel.y + config.breadboardOrigin.y,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Placement mode decision
+// ---------------------------------------------------------------------------
+
+/** Fits that must always go to the bench, never on the breadboard grid. */
+const BENCH_ONLY_FITS: ReadonlySet<BreadboardFit> = new Set([
+  'not_breadboard_friendly',
+  'breakout_required',
+]);
+
+export interface PlacementResult {
+  /** Where the component should be placed. */
+  mode: 'board' | 'bench';
+  /** Breadboard coordinate — set only when mode === 'board'. */
+  coord: BreadboardCoord | null;
+  /** Board-local pixel position of the snapped hole — set only when mode === 'board'. */
+  boardPixel: PixelPos | null;
+  /** Bench-surface position — set only when mode === 'bench'. */
+  benchPosition: BenchPosition | null;
+}
+
+/**
+ * Decide whether a component drop lands on the breadboard grid or the bench.
+ *
+ * Rules:
+ *   1. `not_breadboard_friendly` or `breakout_required` → always bench.
+ *   2. Within snap threshold and close to a hole → board (snap to hole).
+ *   3. Everything else → bench (free-form placement).
+ */
+export function determinePlacementMode(
+  dropPos: BenchPosition,
+  fit: BreadboardFit,
+  config: BenchSurfaceConfig = BENCH_DEFAULTS,
+): PlacementResult {
+  if (BENCH_ONLY_FITS.has(fit)) {
+    return { mode: 'bench', coord: null, boardPixel: null, benchPosition: dropPos };
+  }
+
+  const coord = snapToBreadboard(dropPos, config);
+  if (coord) {
+    const boardPixel = coordToPixel(coord);
+    return { mode: 'board', coord, boardPixel, benchPosition: null };
+  }
+
+  return { mode: 'bench', coord: null, boardPixel: null, benchPosition: dropPos };
 }

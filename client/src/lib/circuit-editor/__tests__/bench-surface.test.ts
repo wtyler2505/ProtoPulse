@@ -4,11 +4,13 @@ import {
   snapToBreadboard,
   benchToPixel,
   pixelToBench,
+  determinePlacementMode,
   BENCH_DEFAULTS,
   type BenchSurfaceConfig,
   type BenchPosition,
 } from '../bench-surface-model';
 import { getBoardDimensions, BB } from '../breadboard-model';
+import type { BreadboardFit } from '@/lib/breadboard-bench';
 
 describe('bench-surface-model', () => {
   describe('BENCH_DEFAULTS', () => {
@@ -160,6 +162,66 @@ describe('bench-surface-model', () => {
       const back = pixelToBench(pixel, custom);
       expect(back.x).toBe(150);
       expect(back.y).toBe(250);
+    });
+  });
+
+  describe('determinePlacementMode', () => {
+    const onBoardPos: BenchPosition = {
+      x: BENCH_DEFAULTS.breadboardOrigin.x + BB.ORIGIN_X + 2,
+      y: BENCH_DEFAULTS.breadboardOrigin.y + BB.ORIGIN_Y + 3,
+    };
+    const offBoardPos: BenchPosition = { x: 10, y: 10 };
+
+    it('returns "board" for a native fit dropped near a breadboard hole', () => {
+      const result = determinePlacementMode(onBoardPos, 'native' as BreadboardFit);
+      expect(result.mode).toBe('board');
+      expect(result.coord).not.toBeNull();
+    });
+
+    it('returns "bench" for a native fit dropped far from the breadboard', () => {
+      const result = determinePlacementMode(offBoardPos, 'native' as BreadboardFit);
+      expect(result.mode).toBe('bench');
+      expect(result.coord).toBeNull();
+    });
+
+    it('returns "bench" for not_breadboard_friendly regardless of position', () => {
+      const result = determinePlacementMode(onBoardPos, 'not_breadboard_friendly' as BreadboardFit);
+      expect(result.mode).toBe('bench');
+      expect(result.coord).toBeNull();
+    });
+
+    it('returns "bench" for breakout_required regardless of position', () => {
+      const result = determinePlacementMode(onBoardPos, 'breakout_required' as BreadboardFit);
+      expect(result.mode).toBe('bench');
+      expect(result.coord).toBeNull();
+    });
+
+    it('returns "board" for requires_jumpers when near a hole', () => {
+      const result = determinePlacementMode(onBoardPos, 'requires_jumpers' as BreadboardFit);
+      expect(result.mode).toBe('board');
+      expect(result.coord).not.toBeNull();
+    });
+
+    it('returns "bench" for requires_jumpers when far from board', () => {
+      const result = determinePlacementMode(offBoardPos, 'requires_jumpers' as BreadboardFit);
+      expect(result.mode).toBe('bench');
+      expect(result.coord).toBeNull();
+    });
+
+    it('returns benchPosition in bench mode', () => {
+      const result = determinePlacementMode(offBoardPos, 'native' as BreadboardFit);
+      expect(result.mode).toBe('bench');
+      expect(result.benchPosition).toEqual(offBoardPos);
+    });
+
+    it('returns boardPixel in board mode', () => {
+      const result = determinePlacementMode(onBoardPos, 'native' as BreadboardFit);
+      expect(result.mode).toBe('board');
+      expect(result.boardPixel).toBeDefined();
+      if (result.boardPixel) {
+        expect(result.boardPixel.x).toBeGreaterThanOrEqual(0);
+        expect(result.boardPixel.y).toBeGreaterThanOrEqual(0);
+      }
     });
   });
 });

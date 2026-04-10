@@ -245,6 +245,118 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
           </g>
         );
       }
+      case 'potentiometer': {
+        const potOhms = props?.value ? Number(props.value) : 10_000;
+        const potPos = props?.position ? Number(props.position) : 0.5;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <PotentiometerSvg cx={pos.x} cy={pos.y} ohms={potOhms} position={potPos} />
+          </g>
+        );
+      }
+      case 'button': {
+        const btnPressed = Boolean(props?.pressed);
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <ButtonSvg cx={pos.x} cy={pos.y} pressed={btnPressed} />
+          </g>
+        );
+      }
+      case 'switch': {
+        const swOn = Boolean(props?.on);
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <SwitchSvg cx={pos.x} cy={pos.y} on={swOn} />
+          </g>
+        );
+      }
+      case 'header': {
+        const headerPins = (part?.connectors as unknown[])?.length || 6;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <HeaderSvg cx={pos.x} cy={pos.y} pinCount={headerPins} />
+          </g>
+        );
+      }
+      case 'regulator': {
+        const regVoltage = props?.voltage ? Number(props.voltage) : 5;
+        const regPart = (props?.partNumber as string) || undefined;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <RegulatorSvg cx={pos.x} cy={pos.y} voltage={regVoltage} partNumber={regPart} />
+          </g>
+        );
+      }
+      case 'crystal': {
+        const freq = props?.frequency ? Number(props.frequency) : 16_000_000;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <CrystalSvg cx={pos.x} cy={pos.y} frequency={freq} />
+          </g>
+        );
+      }
+      case 'buzzer': {
+        const buzActive = Boolean(props?.active);
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <BuzzerSvg cx={pos.x} cy={pos.y} active={buzActive} />
+          </g>
+        );
+      }
+      case 'fuse': {
+        const fuseAmps = props?.value ? Number(props.value) : 1;
+        const fuseBlown = Boolean(props?.blown);
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <FuseSvg cx={pos.x} cy={pos.y} amps={fuseAmps} blown={fuseBlown} />
+          </g>
+        );
+      }
+      case 'sensor': {
+        const sType = (props?.sensorType as string) || 'generic';
+        const sensPins = (part?.connectors as unknown[])?.length || 3;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <SensorSvg cx={pos.x} cy={pos.y} sensorType={sType as 'generic'} pinCount={sensPins} />
+          </g>
+        );
+      }
+      case 'display': {
+        const dispDigit = props?.digit != null ? Number(props.digit) : undefined;
+        const dispColor = (props?.color as string) || '#ef4444';
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <DisplaySvg cx={pos.x} cy={pos.y} digit={dispDigit} color={dispColor} />
+          </g>
+        );
+      }
+      case 'relay': {
+        const relayOn = Boolean(props?.energized);
+        const relayV = props?.voltage ? Number(props.voltage) : 5;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <RelaySvg cx={pos.x} cy={pos.y} energized={relayOn} voltage={relayV} />
+          </g>
+        );
+      }
+      case 'motor': {
+        const motSpin = Boolean(props?.spinning);
+        const motV = props?.voltage ? Number(props.voltage) : 6;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <MotorSvg cx={pos.x} cy={pos.y} spinning={motSpin} voltage={motV} />
+          </g>
+        );
+      }
+      case 'connector': {
+        const connType = (props?.connectorType as string) || 'generic';
+        const connPins = (part?.connectors as unknown[])?.length || 2;
+        return (
+          <g className="cursor-pointer" onClick={() => onClick?.(instance.id)}>
+            <ConnectorSvg cx={pos.x} cy={pos.y} connectorType={connType as 'generic'} pinCount={connPins} />
+          </g>
+        );
+      }
       default: {
         return (
           <rect

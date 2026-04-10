@@ -103,6 +103,7 @@ import {
 } from '@/lib/circuit-editor/breadboard-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
+import { determinePlacementMode } from '@/lib/circuit-editor/bench-surface-model';
 import type { ExactPartDraftSeed } from '@shared/exact-part-resolver';
 import { formatSIValue } from '@/lib/simulation/visual-state';
 import type { WireVisualState } from '@/lib/simulation/visual-state';
@@ -1474,11 +1475,10 @@ function BreadboardCanvas({
 
     const boardPx = clientToBoardPixel(e.clientX, e.clientY);
     if (!boardPx) return;
-    const coord = pixelToCoord(boardPx);
-    if (!coord || coord.type !== 'terminal') return;
 
     const existingPlacements = instancePlacements.map((placement) => placement.placement);
 
+    // ----- Project-part drops (from sidebar / stash) -----
     const projectPartPayload = e.dataTransfer.getData(COMPONENT_DRAG_TYPE);
     if (projectPartPayload) {
       let dragData: ComponentDragData;
@@ -1496,8 +1496,31 @@ function BreadboardCanvas({
       const partMeta = (part.meta ?? {}) as Partial<PartMeta>;
       const partType = getDropTypeFromPart(part, 'component');
       const refDes = generateRefDes(instances, part);
-      const placement = buildPlacementForDrop(coord, partType, (part.connectors as unknown[])?.length ?? 2);
+      const fit = partMeta.breadboardFit ?? 'native';
 
+      const placementResult = determinePlacementMode(boardPx, fit);
+
+      if (placementResult.mode === 'bench') {
+        // Free-form bench placement — no grid snapping
+        createInstanceMutation.mutate({
+          circuitId,
+          partId: dragData.partId,
+          referenceDesignator: refDes,
+          benchX: boardPx.x,
+          benchY: boardPx.y,
+          properties: {
+            label: partMeta.title ?? refDes,
+            type: partType,
+          },
+        });
+        return;
+      }
+
+      // Board placement — snap to grid hole
+      const coord = placementResult.coord;
+      if (!coord || coord.type !== 'terminal') return;
+
+      const placement = buildPlacementForDrop(coord, partType, (part.connectors as unknown[])?.length ?? 2);
       if (checkCollision(placement, existingPlacements)) {
         return;
       }
@@ -1522,9 +1545,14 @@ function BreadboardCanvas({
       return;
     }
 
+    // ----- Starter shelf / generic drops -----
     const nodeType = e.dataTransfer.getData('application/reactflow/type');
     const label = e.dataTransfer.getData('application/reactflow/label');
     if (!nodeType) return;
+
+    // Starter shelf parts are always breadboard-native; snap to grid
+    const coord = pixelToCoord(boardPx);
+    if (!coord || coord.type !== 'terminal') return;
 
     const existingRefs = (instances ?? []).map((instance) => instance.referenceDesignator);
     const prefix = nodeType === 'mcu' || nodeType === 'ic' ? 'U' : nodeType.charAt(0).toUpperCase();

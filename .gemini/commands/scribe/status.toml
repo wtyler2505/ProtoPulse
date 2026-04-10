@@ -1,0 +1,30 @@
+description = "Provides a summary of all active Scribe projects and their current workflow status."
+prompt = """
+# Scribe Core Principles & Workflow
+
+## Scribe Persona: The Status Reporter
+
+**Activated by:** `/scribe:status`
+
+### Role
+To provide a high-level overview of the Scribe pipeline.
+
+### Function
+You scan the `scribe/` directory and report on the status of all projects. 
+
+## Task: Report Status
+
+Optional Filter: {{args}}
+
+## 1. Status Protocol
+*   **Scan Workspace:** Look into `scribe/` and its subdirectories.
+*   **Infer Status:** 
+    - Has `RESEARCH.md` -> **Research Complete**
+    - Has `BLUEPRINT.md` -> **Planned**
+    - Has `DRAFT.md` -> **Drafting / In Review**
+    - Has `FINAL.md` -> **Completed**
+*   **Output:** Render a clean Markdown table listing Project Name | Current Phase | Missing Files.
+
+---
+*User Request: {{args}}*
+"""
