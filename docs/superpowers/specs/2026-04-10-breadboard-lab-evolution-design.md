@@ -21,9 +21,42 @@ The breadboard view currently treats canvas = breadboard grid. Every component i
 
 **Smart snapping behavior:** Within a configurable proximity threshold of the breadboard bounds, placement snaps to holes. Beyond that threshold, placement is free-form on the bench surface. Visual cue: the breadboard zone glows subtly when a component is within snap range.
 
-**Schema impact:** The existing `breadboardX`/`breadboardY` fields on `circuit_instances` continue to store on-board positions. A new `benchX`/`benchY` pair (or a unified `placementMode: 'board' | 'bench'` with `posX`/`posY`) represents bench-surface positions. Wire endpoints gain a `target` discriminator: `{ type: 'hole', coord }` vs `{ type: 'bench-pin', instanceId, pinId }`.
+**Schema impact — circuit_instances:** The existing `breadboardX`/`breadboardY` nullable `real` columns continue to store on-board positions. Add two new nullable `real` columns: `benchX` and `benchY`. An instance is on-board when `breadboardX`/`breadboardY` are non-null (and `benchX`/`benchY` are null), and on-bench when `benchX`/`benchY` are non-null (and `breadboardX`/`breadboardY` are null). Both null = unplaced/staged. This avoids a breaking migration — existing data is unchanged.
+
+**Schema impact — circuit_wires:** The current `startX`/`startY`/`endX`/`endY` `real` columns are preserved for on-board wire endpoints. Add a new nullable `jsonb` column `endpointMeta` storing `{ start: WireEndpoint, end: WireEndpoint }` where `WireEndpoint = { type: 'hole', col: string, row: number } | { type: 'bench-pin', instanceId: number, pinId: string }`. When `endpointMeta` is non-null, it is authoritative; the `real` columns become derived/cached values for backward-compatible rendering. Add a `provenance` `text` column (`'manual' | 'synced' | 'coach' | 'jumper'`, default `'manual'`).
 
 **This decision is load-bearing.** Everything below assumes the bench surface model. Spec items are tagged with `[bench]` when they depend on or interact with this model.
+
+---
+
+## File Path Reference
+
+Short filenames used throughout this spec resolve to these root-relative paths:
+
+| Short Name | Full Path |
+|------------|-----------|
+| `BreadboardView.tsx` | `client/src/components/circuit-editor/BreadboardView.tsx` |
+| `BreadboardGrid.tsx` | `client/src/components/circuit-editor/BreadboardGrid.tsx` |
+| `BreadboardComponentRenderer.tsx` | `client/src/components/circuit-editor/BreadboardComponentRenderer.tsx` |
+| `BreadboardWireEditor.tsx` | `client/src/components/circuit-editor/BreadboardWireEditor.tsx` |
+| `BreadboardCoachOverlay.tsx` | `client/src/components/circuit-editor/BreadboardCoachOverlay.tsx` |
+| `BreadboardBoardAuditPanel.tsx` | `client/src/components/circuit-editor/BreadboardBoardAuditPanel.tsx` |
+| `BreadboardWorkbenchSidebar.tsx` | `client/src/components/circuit-editor/BreadboardWorkbenchSidebar.tsx` |
+| `BreadboardPartInspector.tsx` | `client/src/components/circuit-editor/BreadboardPartInspector.tsx` |
+| `breadboard-model.ts` | `client/src/lib/circuit-editor/breadboard-model.ts` |
+| `bendable-legs.ts` | `client/src/lib/circuit-editor/bendable-legs.ts` |
+| `view-sync.ts` | `client/src/lib/circuit-editor/view-sync.ts` |
+| `breadboard-board-audit.ts` | `client/src/lib/breadboard-board-audit.ts` |
+| `breadboard-coach-plan.ts` | `client/src/lib/breadboard-coach-plan.ts` |
+| `breadboard-layout-quality.ts` | `client/src/lib/breadboard-layout-quality.ts` |
+| `breadboard-part-inspector.ts` | `client/src/lib/breadboard-part-inspector.ts` |
+| `breadboard-ai-prompts.ts` | `client/src/lib/breadboard-ai-prompts.ts` |
+| `breadboard-bench.ts` | `client/src/lib/breadboard-bench.ts` |
+| `component-trust.ts` | `shared/component-trust.ts` |
+| `component-export.ts` | `server/component-export.ts` |
+| `fritzing-exporter.ts` | `server/export/fritzing-exporter.ts` |
+| `fzz-handler.ts` | `server/export/fzz-handler.ts` |
+| `undo-redo.ts` | `client/src/lib/undo-redo.ts` |
 
 ---
 
@@ -66,15 +99,15 @@ The breadboard view currently treats canvas = breadboard grid. Every component i
 
 ### S0-02: Dual placement mode (on-board vs. on-bench)
 
-**Files:** `BreadboardView.tsx` (handleDrop refactor), `breadboard-model.ts` (extend placement types), schema: add `placementMode` or `benchX`/`benchY` to circuit_instances
+**Files:** `client/src/components/circuit-editor/BreadboardView.tsx` (handleDrop refactor), `client/src/lib/circuit-editor/breadboard-model.ts` (extend placement types), `shared/schema.ts` (add `benchX real` + `benchY real` nullable columns to `circuit_instances`)
 **Accept:** Drop within snap threshold → grid-snapped, `breadboardX`/`breadboardY` set. Drop outside threshold → free-placed, `benchX`/`benchY` set. Visual distinction: on-board components have hole-connected legs, bench components show as standalone with labeled connection points.
 **Test:** Unit: placement mode correctly determined by distance from breadboard bounds. Integration: create instance at bench coords, verify renders outside grid.
 **Depends on:** S0-01
 
 ### S0-03: Bench-to-board jumper wires
 
-**Files:** `BreadboardView.tsx` (wire drawing), `breadboard-model.ts` (new wire endpoint type), `BreadboardWireEditor.tsx`
-**Accept:** User can draw a wire from a bench-placed component's pin to a breadboard hole (or to another bench component's pin). Wire renders as a jumper cable (thicker, colored, with visible connectors at both ends). Wire endpoint schema: `{ type: 'hole', coord }` or `{ type: 'bench-pin', instanceId, pinId }`.
+**Files:** `client/src/components/circuit-editor/BreadboardView.tsx` (wire drawing), `client/src/lib/circuit-editor/breadboard-model.ts` (new wire endpoint type), `client/src/components/circuit-editor/BreadboardWireEditor.tsx`, `shared/schema.ts` (add `endpointMeta jsonb` + `provenance text` to `circuit_wires`)
+**Accept:** User can draw a wire from a bench-placed component's pin to a breadboard hole (or to another bench component's pin). Wire renders as a jumper cable (thicker, colored, with visible connectors at both ends). Wire endpoint stored in `endpointMeta` JSONB column as `{ start: WireEndpoint, end: WireEndpoint }`. Existing `startX`/`startY`/`endX`/`endY` columns auto-populated as derived cache. Migration: add columns with defaults, no existing data modified.
 **Test:** Unit: wire with mixed endpoints (bench → board) serializes/deserializes correctly. Chrome: draw wire from bench-placed Mega pin to breadboard row, verify visual connection.
 **Depends on:** S0-02
 
@@ -307,7 +340,8 @@ Phases are ordered by dependency. Items within a phase can be parallelized.
 `S6-05` (undo/redo) → `S6-04` (drag-to-move)
 `S6-06` (starter circuits), `S6-07` (connectivity explainer)
 
-### Phase 3: Intelligence (depends on Phase 0 + Phase 1 board profiles)
+### Phase 3: Intelligence (depends on Phase 0 + Phase 1 board profiles + S6-05 for S2-04)
+> **Gate:** S6-05 (undo/redo) must be merged before S2-04 (one-click remediation) can begin.
 `S2-01` (heuristic traps) → `S2-02` (preflight scan)
 `S2-03` (motor traps)
 `S2-04` (one-click remediation) — depends on S6-05
@@ -329,7 +363,8 @@ Phases are ordered by dependency. Items within a phase can be parallelized.
 
 - **32 spec items** across 7 sections (S0-S6)
 - **Phase 0 (Foundation):** 4 items — the bench surface model
-- **Phase 1-2 (Visual + Interaction):** 14 items
+- **Phase 1-2 (Visual + Interaction):** 12 items (2 Phase 1 + 10 Phase 2)
 - **Phase 3-4 (Intelligence + Inventory):** 9 items
 - **Phase 5 (Sync + Interop):** 7 items (including 1 architecture-spec-only)
+- **Total:** 4 + 12 + 9 + 7 = 32 items
 - **Estimated effort:** Substantial multi-wave initiative. Phase 0 is the critical path.
