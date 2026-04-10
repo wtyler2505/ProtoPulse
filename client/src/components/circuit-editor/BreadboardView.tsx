@@ -105,6 +105,7 @@ import {
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
 import { determinePlacementMode, pixelToBench } from '@/lib/circuit-editor/bench-surface-model';
+import { UndoRedoStack } from '@/lib/undo-redo';
 import type { ExactPartDraftSeed } from '@shared/exact-part-resolver';
 import { formatSIValue } from '@/lib/simulation/visual-state';
 import type { WireVisualState } from '@/lib/simulation/visual-state';
@@ -765,6 +766,7 @@ function BreadboardCanvas({
   const isPanning = useRef(false);
   const lastMouse = useRef<PixelPos>({ x: 0, y: 0 });
   const autoPlacementRequests = useRef<Set<number>>(new Set());
+  const undoStack = useRef(new UndoRedoStack());
 
   const partsMap = useMemo(
     () => new Map((parts ?? []).map((part: ComponentPart) => [part.id, part])),
@@ -1433,6 +1435,14 @@ function BreadboardCanvas({
     if (e.key === '1') { setTool('select'); announce(getToolChangeAnnouncement('select', 'breadboard')); }
     if (e.key === '2') { setTool('wire'); announce(getToolChangeAnnouncement('wire', 'breadboard')); }
     if (e.key === '3') { setTool('delete'); announce(getToolChangeAnnouncement('delete', 'breadboard')); }
+    if (e.key === 'z' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+      e.preventDefault();
+      void undoStack.current.undo();
+    }
+    if (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
+      e.preventDefault();
+      void undoStack.current.redo();
+    }
   }, [handleEscape, handleDeleteWire, announce]);
 
   // --- Drag-to-place from component palette ---
