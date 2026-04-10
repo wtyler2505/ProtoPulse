@@ -1,14 +1,15 @@
-# Breadboard Lab Phase 0+1: Bench Surface Foundation & Visual Expansion
+# Breadboard Lab: Bench Surface Foundation + Visual Expansion
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
->
-> **For `/agent-teams`:** This plan has two independent tracks with zero file overlap. Run them as parallel teammates. See Agent Teams section below.
+> **Agent teams:** This plan is designed for `/agent-teams` with two parallel teams (see Team Execution section).
 
-**Goal:** Transform the breadboard canvas from a grid-only editor into a bench surface with smart on-board/on-bench dual placement, then expand the visual component library from 7 to 20+ families and verified board profiles from 3 to 10+.
+**Goal:** Transform the breadboard canvas from a grid-only editor into a bench surface with dual placement modes (on-board + on-bench), then expand visual realism with 13+ new SVG component families and 7+ verified board profiles.
 
-**Architecture:** Phase 0 refactors BreadboardView into a BenchSurface parent containing a BreadboardGrid child zone, adds `benchX`/`benchY` columns to `circuit_instances` and `endpointMeta`/`provenance` columns to `circuit_wires`, and extends the placement and wire-drawing flows for dual modes. Phase 1 creates new SVG component files and verified board profiles as independent additions.
+**Architecture:** Phase 0 introduces a `BenchSurface` wrapper around the existing `BreadboardGrid`, enabling free-form placement outside the breadboard zone with smart snapping near it. Schema adds `benchX`/`benchY` to `circuit_instances` and `endpointMeta`/`provenance` to `circuit_wires`. Phase 1 adds new SVG renderers in `breadboard-components/` and new verified board definitions in `shared/verified-boards/`, extending the existing `detectFamily()` routing and `findVerifiedBoardByAlias()` lookup.
 
-**Tech Stack:** React 19 + TypeScript 5.6 + Vite 7 + Tailwind v4 + shadcn/ui + Vitest 4 + happy-dom + Drizzle ORM + PostgreSQL
+**Tech Stack:** React 19 + TypeScript 5.6 + SVG + Drizzle ORM + Vitest + happy-dom
+
+**Spec:** `docs/superpowers/specs/2026-04-10-breadboard-lab-evolution-design.md` (S0-01 through S1-02)
 
 ---
 
@@ -16,234 +17,351 @@
 
 | Module | File | Status |
 |--------|------|--------|
-| Breadboard view | `client/src/components/circuit-editor/BreadboardView.tsx` | Production — 2000+ lines, handles placement/wiring/tools |
-| Breadboard grid | `client/src/components/circuit-editor/BreadboardGrid.tsx` | Production — SVG grid rendering, hover/highlight |
-| Breadboard model | `client/src/lib/circuit-editor/breadboard-model.ts` | Production — 830-point model, collision, coordinates |
-| Component renderer | `client/src/components/circuit-editor/BreadboardComponentRenderer.tsx` | Production — 7 families, value-driven |
-| SVG components | `client/src/components/circuit-editor/breadboard-components/` | Production — 7 files (Resistor, Cap, LED, IC, Diode, Transistor, Wire) |
-| Wire editor | `client/src/components/circuit-editor/BreadboardWireEditor.tsx` | Production — point-to-point drawing |
-| Bendable legs | `client/src/lib/circuit-editor/bendable-legs.ts` | Production — bezier curves, per-type colors |
-| Verified boards | `shared/verified-boards/` | Production — 3 boards (ESP32, Mega 2560, RioRand) |
-| Schema | `shared/schema.ts` | `circuit_instances`: breadboardX/Y nullable real. `circuit_wires`: points jsonb, view text, wireType text |
-| Bench insights | `client/src/lib/breadboard-bench.ts` | Production — fit classification, owned/missing tracking |
+| Breadboard grid | `client/src/components/circuit-editor/BreadboardGrid.tsx` | Production — 830-point SVG grid |
+| Breadboard view | `client/src/components/circuit-editor/BreadboardView.tsx` | Production — placement, wiring, pan/zoom |
+| Grid model | `client/src/lib/circuit-editor/breadboard-model.ts` | Production — coords, collision, connectivity |
+| Wire editor | `client/src/components/circuit-editor/BreadboardWireEditor.tsx` | Production — point-to-point wiring |
+| Component renderer | `client/src/components/circuit-editor/BreadboardComponentRenderer.tsx` | Production — 7 SVG families |
+| SVG components | `client/src/components/circuit-editor/breadboard-components/` | 7 files: Resistor, Capacitor, LED, IC, Diode, Transistor, Wire |
+| Verified boards | `shared/verified-boards/` | 3 boards: ESP32, Mega 2560, RioRand |
+| Board type system | `shared/verified-boards/types.ts` | BreadboardFit, VerifiedBoardDefinition |
+| Board converter | `shared/verified-boards/to-part-state.ts` | Verified board → part state |
+| Bench insights | `client/src/lib/breadboard-bench.ts` | BreadboardBenchInsight, fit classification |
+| Schema | `shared/schema.ts` | `circuitInstances` (breadboardX/Y nullable real), `circuitWires` (points jsonb) |
+| Starter shelf | `client/src/components/circuit-editor/BreadboardStarterShelf.tsx` | 7 starter parts |
+
+---
 
 ## Phase Overview
 
-| Phase | Track | Description | Tasks | Agent Team |
-|-------|-------|-------------|-------|------------|
-| **Phase 0** | A (sequential) | Bench surface spatial model | 1-4 | `bench-surface` teammate |
-| **Phase 1** | B (parallel) | SVG library + board profiles | 5-6 | `visual-expansion` teammate |
+| Phase | Description | Tasks | Team | Can Parallel? |
+|-------|-------------|-------|------|---------------|
+| **Phase 0** | Bench Surface Foundation | 1-8 (S0-01 to S0-04) | Team A: `bench-surface` | Sequential within phase |
+| **Phase 1** | Visual Expansion | 9-12 (S1-01 + S1-02) | Team B: `visual-expansion` | Parallel with Phase 0 |
 
-Phase 0 and Phase 1 have **zero file overlap** and run as parallel `/agent-teams` teammates.
+**Phase 0 and Phase 1 run in parallel** — zero file overlap between teams.
 
 ---
 
 ## `/agent-teams` Composition
 
-### Team Spawn Prompts
+### Team A: `bench-surface` (Phase 0)
 
-**Teammate: bench-surface**
+**File ownership (exclusive):**
+- `client/src/components/circuit-editor/BreadboardView.tsx`
+- `client/src/components/circuit-editor/BenchSurface.tsx` (NEW)
+- `client/src/components/circuit-editor/BreadboardWireEditor.tsx`
+- `client/src/lib/circuit-editor/breadboard-model.ts`
+- `shared/schema.ts` (only the `benchX`/`benchY` + `endpointMeta`/`provenance` additions)
+
+**Spawn prompt:**
 ```
 You are implementing the Bench Surface Foundation for ProtoPulse's Breadboard Lab.
-Your plan is at docs/superpowers/plans/2026-04-10-breadboard-bench-surface-and-visual-expansion.md — Tasks 1-4.
-Execute them sequentially (each depends on the previous).
+Read the plan at docs/superpowers/plans/2026-04-10-breadboard-bench-surface-and-visual-expansion.md — Tasks 1-8 (Phase 0).
+Read the spec at docs/superpowers/specs/2026-04-10-breadboard-lab-evolution-design.md — Section S0.
 
-YOUR FILES (exclusive ownership):
+Your exclusive files:
 - client/src/components/circuit-editor/BreadboardView.tsx
-- client/src/components/circuit-editor/BenchSurface.tsx (CREATE)
+- client/src/components/circuit-editor/BenchSurface.tsx (create)
 - client/src/components/circuit-editor/BreadboardWireEditor.tsx
 - client/src/lib/circuit-editor/breadboard-model.ts
-- shared/schema.ts (ONLY the benchX/benchY + endpointMeta/provenance additions)
-- client/src/lib/circuit-editor/__tests__/bench-surface.test.ts (CREATE)
+- shared/schema.ts (only benchX/benchY + endpointMeta/provenance columns)
 
-DO NOT TOUCH: breadboard-components/, verified-boards/, BreadboardComponentRenderer.tsx
-
-After each task: npm run check (must pass), npm test (must pass), commit.
+DO NOT touch any files in breadboard-components/ or shared/verified-boards/ — those belong to another team.
+Execute tasks sequentially: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8.
+TDD: write failing test → verify failure → implement → verify pass → commit.
+Run npm run check after every task. Zero TS errors allowed.
 ```
 
-**Teammate: visual-expansion**
+### Team B: `visual-expansion` (Phase 1)
+
+**File ownership (exclusive):**
+- `client/src/components/circuit-editor/breadboard-components/` (all new SVG files)
+- `client/src/components/circuit-editor/BreadboardComponentRenderer.tsx`
+- `shared/verified-boards/` (all new board profile files)
+- `shared/verified-boards/index.ts` (register new boards)
+
+**Spawn prompt:**
 ```
-You are expanding ProtoPulse's Breadboard Lab visual library.
-Your plan is at docs/superpowers/plans/2026-04-10-breadboard-bench-surface-and-visual-expansion.md — Tasks 5-6.
-These tasks are independent of each other and of the bench-surface teammate.
+You are expanding the Breadboard Lab's visual component library for ProtoPulse.
+Read the plan at docs/superpowers/plans/2026-04-10-breadboard-bench-surface-and-visual-expansion.md — Tasks 9-12 (Phase 1).
+Read the spec at docs/superpowers/specs/2026-04-10-breadboard-lab-evolution-design.md — Section S1-01 and S1-02.
 
-YOUR FILES (exclusive ownership):
-- client/src/components/circuit-editor/breadboard-components/ (NEW SVG files only)
-- client/src/components/circuit-editor/BreadboardComponentRenderer.tsx (detectFamily extension)
-- client/src/components/circuit-editor/__tests__/breadboard-components.test.tsx (extend)
-- shared/verified-boards/ (NEW board profile files only)
-- shared/verified-boards/__tests__/ (NEW test files)
-- shared/verified-boards/index.ts (add exports for new boards)
+Your exclusive files:
+- client/src/components/circuit-editor/breadboard-components/ (create new SVG files)
+- client/src/components/circuit-editor/BreadboardComponentRenderer.tsx (extend detectFamily)
+- shared/verified-boards/ (create new board profiles)
+- shared/verified-boards/index.ts (register new boards)
 
-DO NOT TOUCH: BreadboardView.tsx, breadboard-model.ts, BreadboardWireEditor.tsx, schema.ts
+DO NOT touch BreadboardView.tsx, BenchSurface.tsx, breadboard-model.ts, or BreadboardWireEditor.tsx — those belong to another team.
+Tasks 9 and 10 are independent and can be done in any order.
+Tasks 11 and 12 are independent and can be done in any order.
+TDD: write failing test → verify failure → implement → verify pass → commit.
+Run npm run check after every task. Zero TS errors allowed.
 
-After each task: npm run check (must pass), npm test (must pass), commit.
+For SVG components, follow the pattern in existing files:
+- ResistorSvg.tsx (value-driven rendering with color bands)
+- CapacitorSvg.tsx (polarized/non-polarized variants)
+- IcSvg.tsx (DIP package with pin labels)
+Each new SVG must render at BB.PITCH (10px per 0.1") scale.
+
+For verified boards, follow the pattern in:
+- shared/verified-boards/nodemcu-esp32s.ts (full pin map, traps, fit classification)
+- shared/verified-boards/mega-2560-r3.ts (not_breadboard_friendly example)
+All pin data MUST come from official datasheets — use Context7 or WebSearch to verify.
 ```
 
-### Team Execution Checklist
-- [ ] Context7 + WebSearch research before implementation (board datasheets, Fritzing SVG patterns)
-- [ ] `/agent-teams` spawn with prompts above
-- [ ] Plan approval from user before agents start
-- [ ] Each agent runs: implement → `npm run check` → `npm test` → commit
-- [ ] Lead reviews each commit before next task
-- [ ] Both agents complete → integration test (full breadboard flow in Chrome DevTools)
+---
+
+## Team Execution Checklist
+
+- [ ] **Research**: Context7 + WebSearch for any library/API questions before implementation
+- [ ] **Spawn teams**: `/agent-teams` with prompts above — 2 teams, parallel execution
+- [ ] **Plan approval**: Review this plan with the user before teams start
+- [ ] **Implement**: Teams execute their tasks with TDD
+- [ ] **Check**: `npm run check` passes with zero errors after every task
+- [ ] **Test**: `npm test` passes — verify no regressions
+- [ ] **Commit**: Each task gets its own commit
+- [ ] **Cleanup**: Remove any temporary files, verify no debug code left
 
 ---
 
 ## Phase 0: Bench Surface Foundation
 
-### Task 1: Schema — Add bench placement and wire endpoint columns (S0-01 + S0-02 partial)
+### Task 1: Schema — Add bench placement columns to circuit_instances
 
 **Files:**
-- Modify: `shared/schema.ts` (add columns to `circuit_instances` and `circuit_wires`)
-- Test: `server/__tests__/bench-schema.test.ts` (CREATE)
+- Modify: `shared/schema.ts` (add `benchX`, `benchY` columns to `circuitInstances`)
+- Test: `shared/__tests__/schema-bench-columns.test.ts` (NEW)
 
-**Context:** `circuit_instances` currently has nullable `breadboardX`/`breadboardY`/`breadboardRotation` for on-board placement. We add nullable `benchX`/`benchY` for on-bench placement. `circuit_wires` currently has `points` (jsonb), `view`, `wireType`. We add `endpointMeta` (jsonb) for typed endpoints and `provenance` (text) for wire origin tracking.
+**Context:** The `circuitInstances` table has nullable `breadboardX`/`breadboardY` for on-board placement. We add nullable `benchX`/`benchY` for on-bench placement. An instance is on-board when breadboard coords are set, on-bench when bench coords are set, unplaced when both are null.
 
-- [ ] **Step 1: Write the schema additions**
-
-In `shared/schema.ts`, add to `circuitInstances` table definition (after `breadboardRotation`):
-
-```typescript
-benchX: real("bench_x"),
-benchY: real("bench_y"),
-```
-
-In `circuitWires` table definition (after `wireType`):
-
-```typescript
-endpointMeta: jsonb("endpoint_meta"),
-provenance: text("provenance").default("manual"),
-```
-
-- [ ] **Step 2: Write the failing test**
-
-Create `server/__tests__/bench-schema.test.ts`:
+- [ ] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import { circuitInstances, circuitWires, insertCircuitInstanceSchema, insertCircuitWireSchema } from '@shared/schema';
+import { circuitInstances, insertCircuitInstanceSchema } from '@shared/schema';
 
-describe('bench surface schema additions', () => {
-  it('circuit_instances has benchX and benchY columns', () => {
-    expect(circuitInstances.benchX).toBeDefined();
-    expect(circuitInstances.benchY).toBeDefined();
+describe('circuit_instances bench columns', () => {
+  it('schema includes benchX and benchY columns', () => {
+    const columns = Object.keys(circuitInstances);
+    expect(columns).toContain('benchX');
+    expect(columns).toContain('benchY');
   });
 
-  it('circuit_wires has endpointMeta and provenance columns', () => {
-    expect(circuitWires.endpointMeta).toBeDefined();
-    expect(circuitWires.provenance).toBeDefined();
-  });
-
-  it('insertCircuitInstanceSchema accepts benchX/benchY', () => {
+  it('insert schema accepts benchX and benchY as optional', () => {
     const result = insertCircuitInstanceSchema.safeParse({
       circuitId: 1,
       referenceDesignator: 'U1',
-      benchX: 100,
-      benchY: 200,
+      schematicX: 0,
+      schematicY: 0,
+      benchX: 150.5,
+      benchY: 200.0,
     });
     expect(result.success).toBe(true);
   });
 
-  it('insertCircuitWireSchema accepts provenance', () => {
+  it('insert schema accepts null benchX/benchY (unplaced)', () => {
+    const result = insertCircuitInstanceSchema.safeParse({
+      circuitId: 1,
+      referenceDesignator: 'U1',
+      schematicX: 0,
+      schematicY: 0,
+      benchX: null,
+      benchY: null,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run shared/__tests__/schema-bench-columns.test.ts`
+Expected: FAIL — `benchX` and `benchY` not in schema
+
+- [ ] **Step 3: Add columns to schema**
+
+In `shared/schema.ts`, inside the `circuitInstances` table definition, after the `breadboardRotation` line:
+
+```typescript
+  benchX: real("bench_x"),
+  benchY: real("bench_y"),
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `npx vitest run shared/__tests__/schema-bench-columns.test.ts`
+Expected: PASS
+
+- [ ] **Step 5: Run full check**
+
+Run: `npm run check && npm test`
+Expected: Zero TS errors, all tests pass
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add shared/schema.ts shared/__tests__/schema-bench-columns.test.ts
+git commit -m "feat(schema): add benchX/benchY columns to circuit_instances for bench surface placement"
+```
+
+---
+
+### Task 2: Schema — Add endpointMeta and provenance to circuit_wires
+
+**Files:**
+- Modify: `shared/schema.ts` (add `endpointMeta` jsonb, `provenance` text to `circuitWires`)
+- Test: `shared/__tests__/schema-wire-provenance.test.ts` (NEW)
+
+**Context:** `circuit_wires` stores wire data as `points` JSONB array. We add `endpointMeta` (structured endpoint info for bench-to-board jumpers) and `provenance` (origin tracking: manual/synced/coach/jumper).
+
+- [ ] **Step 1: Write the failing test**
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { circuitWires, insertCircuitWireSchema } from '@shared/schema';
+
+describe('circuit_wires bench fields', () => {
+  it('schema includes endpointMeta and provenance columns', () => {
+    const columns = Object.keys(circuitWires);
+    expect(columns).toContain('endpointMeta');
+    expect(columns).toContain('provenance');
+  });
+
+  it('insert schema accepts provenance values', () => {
     const result = insertCircuitWireSchema.safeParse({
       circuitId: 1,
       netId: 1,
       view: 'breadboard',
-      provenance: 'coach',
+      points: [{ x: 0, y: 0 }, { x: 10, y: 10 }],
+      provenance: 'manual',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('insert schema accepts endpointMeta as jsonb', () => {
+    const meta = {
+      start: { type: 'hole', col: 'a', row: 1 },
+      end: { type: 'bench-pin', instanceId: 42, pinId: 'GPIO5' },
+    };
+    const result = insertCircuitWireSchema.safeParse({
+      circuitId: 1,
+      netId: 1,
+      view: 'breadboard',
+      points: [{ x: 0, y: 0 }, { x: 150, y: 200 }],
+      endpointMeta: meta,
+      provenance: 'jumper',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('provenance defaults to manual when omitted', () => {
+    const result = insertCircuitWireSchema.safeParse({
+      circuitId: 1,
+      netId: 1,
+      view: 'breadboard',
+      points: [],
     });
     expect(result.success).toBe(true);
   });
 });
 ```
 
-- [ ] **Step 3: Run test to verify it passes**
+- [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx vitest run server/__tests__/bench-schema.test.ts --project server`
-Expected: PASS (schema additions are immediate)
+Run: `npx vitest run shared/__tests__/schema-wire-provenance.test.ts`
+Expected: FAIL — `endpointMeta` and `provenance` not in schema
 
-- [ ] **Step 4: Push schema to database**
+- [ ] **Step 3: Add columns to schema**
 
-Run: `npm run db:push`
-Expected: New columns added to circuit_instances and circuit_wires tables.
+In `shared/schema.ts`, inside the `circuitWires` table definition, after the `wireType` line:
 
-- [ ] **Step 5: Run full type check and test suite**
+```typescript
+  endpointMeta: jsonb("endpoint_meta"),
+  provenance: text("provenance").default("manual"),
+```
 
-Run: `npm run check && npm test`
-Expected: Zero errors. Existing tests unaffected (new columns are nullable with defaults).
+- [ ] **Step 4: Run tests and check**
 
-- [ ] **Step 6: Commit**
+Run: `npx vitest run shared/__tests__/schema-wire-provenance.test.ts && npm run check`
+Expected: PASS, zero TS errors
+
+- [ ] **Step 5: Commit**
 
 ```bash
-git add shared/schema.ts server/__tests__/bench-schema.test.ts
-git commit -m "feat(breadboard): add benchX/benchY and endpointMeta/provenance schema columns
-
-Adds nullable bench placement columns to circuit_instances and wire
-endpoint metadata + provenance tracking to circuit_wires. Foundation
-for the bench surface spatial model (S0-01/S0-02)."
+git add shared/schema.ts shared/__tests__/schema-wire-provenance.test.ts
+git commit -m "feat(schema): add endpointMeta and provenance to circuit_wires for bench jumpers"
 ```
 
 ---
 
-### Task 2: BenchSurface container — extract breadboard grid as a zone (S0-01)
+### Task 3: BenchSurface wrapper component
 
 **Files:**
 - Create: `client/src/components/circuit-editor/BenchSurface.tsx`
-- Modify: `client/src/components/circuit-editor/BreadboardView.tsx` (wrap grid in BenchSurface)
-- Test: `client/src/lib/circuit-editor/__tests__/bench-surface.test.ts` (CREATE)
+- Test: `client/src/components/circuit-editor/__tests__/BenchSurface.test.tsx` (NEW)
 
-**Context:** BreadboardView.tsx currently renders a single SVG where the breadboard grid IS the canvas. We need to wrap the grid in a larger surface. BenchSurface renders the full workspace SVG. BreadboardGrid becomes a positioned child within it. The BenchSurface handles pan/zoom for the whole surface and defines the snap-proximity threshold.
+**Context:** `BenchSurface` wraps the existing `BreadboardGrid` as a child zone within a larger SVG canvas. It manages: overall surface dimensions, the breadboard zone position, pan/zoom for the whole surface, and the snap threshold (proximity to breadboard zone triggers grid snapping). Currently `BreadboardView.tsx` manages pan/zoom directly — that logic moves here.
 
-- [ ] **Step 1: Write the failing test for BenchSurface**
-
-Create `client/src/lib/circuit-editor/__tests__/bench-surface.test.ts`:
+- [ ] **Step 1: Write the failing test**
 
 ```typescript
 import { describe, it, expect } from 'vitest';
-import {
-  getBenchSurfaceDimensions,
-  getBreadboardZone,
-  isWithinSnapThreshold,
-  type BenchSurfaceConfig,
-} from '@/lib/circuit-editor/bench-surface-model';
+import { render, screen } from '@testing-library/react';
+import BenchSurface, {
+  BENCH_DEFAULTS,
+  isWithinBreadboardZone,
+  type BenchPosition,
+} from '../BenchSurface';
 
-describe('bench-surface-model', () => {
-  const config: BenchSurfaceConfig = {
-    boardWidth: 700,
-    boardHeight: 230,
-    benchPadding: 200,
-    snapThreshold: 40,
-  };
+describe('BenchSurface', () => {
+  describe('isWithinBreadboardZone', () => {
+    it('returns true for position inside breadboard bounds', () => {
+      const pos: BenchPosition = { x: 100, y: 100 };
+      expect(isWithinBreadboardZone(pos, BENCH_DEFAULTS)).toBe(true);
+    });
 
-  describe('getBenchSurfaceDimensions', () => {
-    it('returns surface larger than breadboard by padding', () => {
-      const dims = getBenchSurfaceDimensions(config);
-      expect(dims.width).toBe(700 + 200 * 2); // 1100
-      expect(dims.height).toBe(230 + 200 * 2); // 630
+    it('returns true for position within snap threshold of breadboard edge', () => {
+      // Just outside the board but within 20px threshold
+      const pos: BenchPosition = {
+        x: BENCH_DEFAULTS.breadboardOrigin.x - 15,
+        y: BENCH_DEFAULTS.breadboardOrigin.y + 50,
+      };
+      expect(isWithinBreadboardZone(pos, BENCH_DEFAULTS)).toBe(true);
+    });
+
+    it('returns false for position on bench surface outside snap range', () => {
+      const pos: BenchPosition = { x: -100, y: -100 };
+      expect(isWithinBreadboardZone(pos, BENCH_DEFAULTS)).toBe(false);
     });
   });
 
-  describe('getBreadboardZone', () => {
-    it('returns breadboard position centered in surface', () => {
-      const zone = getBreadboardZone(config);
-      expect(zone.x).toBe(200); // padding
-      expect(zone.y).toBe(200); // padding
-      expect(zone.width).toBe(700);
-      expect(zone.height).toBe(230);
+  describe('BENCH_DEFAULTS', () => {
+    it('defines breadboard origin and surface dimensions', () => {
+      expect(BENCH_DEFAULTS.surfaceWidth).toBeGreaterThan(0);
+      expect(BENCH_DEFAULTS.surfaceHeight).toBeGreaterThan(0);
+      expect(BENCH_DEFAULTS.breadboardOrigin.x).toBeGreaterThan(0);
+      expect(BENCH_DEFAULTS.breadboardOrigin.y).toBeGreaterThan(0);
+      expect(BENCH_DEFAULTS.snapThreshold).toBeGreaterThan(0);
+    });
+
+    it('surface is larger than breadboard', () => {
+      expect(BENCH_DEFAULTS.surfaceWidth).toBeGreaterThan(
+        BENCH_DEFAULTS.breadboardWidth + BENCH_DEFAULTS.breadboardOrigin.x
+      );
     });
   });
 
-  describe('isWithinSnapThreshold', () => {
-    it('returns true for point inside breadboard zone', () => {
-      expect(isWithinSnapThreshold(350, 315, config)).toBe(true);
+  describe('rendering', () => {
+    it('renders bench surface container with data-testid', () => {
+      render(<BenchSurface>{null}</BenchSurface>);
+      expect(screen.getByTestId('bench-surface')).toBeInTheDocument();
     });
 
-    it('returns true for point within threshold of zone edge', () => {
-      expect(isWithinSnapThreshold(165, 315, config)).toBe(true); // 35px from left edge
-    });
-
-    it('returns false for point beyond threshold', () => {
-      expect(isWithinSnapThreshold(50, 315, config)).toBe(false); // 150px from left edge
+    it('renders breadboard zone indicator', () => {
+      render(<BenchSurface>{null}</BenchSurface>);
+      expect(screen.getByTestId('breadboard-zone')).toBeInTheDocument();
     });
   });
 });
@@ -251,340 +369,332 @@ describe('bench-surface-model', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npx vitest run client/src/lib/circuit-editor/__tests__/bench-surface.test.ts --project client`
+Run: `npx vitest run client/src/components/circuit-editor/__tests__/BenchSurface.test.tsx`
 Expected: FAIL — module not found
 
-- [ ] **Step 3: Implement bench-surface-model.ts**
+- [ ] **Step 3: Implement BenchSurface**
 
-Create `client/src/lib/circuit-editor/bench-surface-model.ts`:
+Create `client/src/components/circuit-editor/BenchSurface.tsx`:
 
 ```typescript
-import { BB, getBoardDimensions } from './breadboard-model';
+import { memo, type ReactNode } from 'react';
+import { BB, getBoardDimensions } from '@/lib/circuit-editor/breadboard-model';
 
-export interface BenchSurfaceConfig {
-  boardWidth: number;
-  boardHeight: number;
-  benchPadding: number;
+export interface BenchPosition {
+  x: number;
+  y: number;
+}
+
+export interface BenchConfig {
+  surfaceWidth: number;
+  surfaceHeight: number;
+  breadboardOrigin: BenchPosition;
+  breadboardWidth: number;
+  breadboardHeight: number;
   snapThreshold: number;
 }
 
-export interface SurfaceDimensions {
-  width: number;
-  height: number;
-}
+const boardDims = getBoardDimensions();
 
-export interface BreadboardZone {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+export const BENCH_DEFAULTS: BenchConfig = {
+  surfaceWidth: boardDims.width + 400,   // 200px margin each side
+  surfaceHeight: boardDims.height + 300,  // 150px margin top/bottom
+  breadboardOrigin: { x: 200, y: 150 },
+  breadboardWidth: boardDims.width,
+  breadboardHeight: boardDims.height,
+  snapThreshold: 20,
+};
 
-export function getDefaultBenchConfig(): BenchSurfaceConfig {
-  const boardDims = getBoardDimensions();
-  return {
-    boardWidth: boardDims.width,
-    boardHeight: boardDims.height,
-    benchPadding: 200,
-    snapThreshold: 40,
-  };
-}
-
-export function getBenchSurfaceDimensions(config: BenchSurfaceConfig): SurfaceDimensions {
-  return {
-    width: config.boardWidth + config.benchPadding * 2,
-    height: config.boardHeight + config.benchPadding * 2,
-  };
-}
-
-export function getBreadboardZone(config: BenchSurfaceConfig): BreadboardZone {
-  return {
-    x: config.benchPadding,
-    y: config.benchPadding,
-    width: config.boardWidth,
-    height: config.boardHeight,
-  };
-}
-
-export function isWithinSnapThreshold(
-  surfaceX: number,
-  surfaceY: number,
-  config: BenchSurfaceConfig,
+export function isWithinBreadboardZone(
+  pos: BenchPosition,
+  config: BenchConfig = BENCH_DEFAULTS,
 ): boolean {
-  const zone = getBreadboardZone(config);
-  const expandedLeft = zone.x - config.snapThreshold;
-  const expandedTop = zone.y - config.snapThreshold;
-  const expandedRight = zone.x + zone.width + config.snapThreshold;
-  const expandedBottom = zone.y + zone.height + config.snapThreshold;
-
+  const { breadboardOrigin: o, breadboardWidth: w, breadboardHeight: h, snapThreshold: t } = config;
   return (
-    surfaceX >= expandedLeft &&
-    surfaceX <= expandedRight &&
-    surfaceY >= expandedTop &&
-    surfaceY <= expandedBottom
+    pos.x >= o.x - t &&
+    pos.x <= o.x + w + t &&
+    pos.y >= o.y - t &&
+    pos.y <= o.y + h + t
   );
 }
 
-export function surfaceToBoardCoords(
-  surfaceX: number,
-  surfaceY: number,
-  config: BenchSurfaceConfig,
-): { x: number; y: number } {
-  const zone = getBreadboardZone(config);
-  return {
-    x: surfaceX - zone.x,
-    y: surfaceY - zone.y,
-  };
+interface BenchSurfaceProps {
+  children: ReactNode;
+  config?: BenchConfig;
 }
 
-export function boardToSurfaceCoords(
-  boardX: number,
-  boardY: number,
-  config: BenchSurfaceConfig,
-): { x: number; y: number } {
-  const zone = getBreadboardZone(config);
-  return {
-    x: boardX + zone.x,
-    y: boardY + zone.y,
-  };
-}
+const BenchSurface = memo(function BenchSurface({
+  children,
+  config = BENCH_DEFAULTS,
+}: BenchSurfaceProps) {
+  return (
+    <g data-testid="bench-surface">
+      {/* Bench surface background */}
+      <rect
+        x={0}
+        y={0}
+        width={config.surfaceWidth}
+        height={config.surfaceHeight}
+        fill="#1a1a14"
+        rx={4}
+      />
+      {/* Breadboard zone indicator */}
+      <rect
+        data-testid="breadboard-zone"
+        x={config.breadboardOrigin.x - 4}
+        y={config.breadboardOrigin.y - 4}
+        width={config.breadboardWidth + 8}
+        height={config.breadboardHeight + 8}
+        fill="none"
+        stroke="#334155"
+        strokeWidth={1}
+        strokeDasharray="4 4"
+        opacity={0.5}
+        rx={2}
+      />
+      {/* Breadboard grid renders inside the zone via transform */}
+      <g transform={`translate(${String(config.breadboardOrigin.x)}, ${String(config.breadboardOrigin.y)})`}>
+        {children}
+      </g>
+    </g>
+  );
+});
+
+export default BenchSurface;
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run tests and check**
 
-Run: `npx vitest run client/src/lib/circuit-editor/__tests__/bench-surface.test.ts --project client`
-Expected: PASS
+Run: `npx vitest run client/src/components/circuit-editor/__tests__/BenchSurface.test.tsx && npm run check`
+Expected: PASS, zero TS errors
 
-- [ ] **Step 5: Run full check and test suite**
-
-Run: `npm run check && npm test`
-Expected: Zero errors, all tests pass.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add client/src/lib/circuit-editor/bench-surface-model.ts client/src/lib/circuit-editor/__tests__/bench-surface.test.ts
-git commit -m "feat(breadboard): add bench surface spatial model
-
-Pure-function model for the bench surface: dimensions, breadboard zone
-positioning, snap-threshold detection, coordinate transforms between
-surface and board space. Foundation for S0-01."
+git add client/src/components/circuit-editor/BenchSurface.tsx client/src/components/circuit-editor/__tests__/BenchSurface.test.tsx
+git commit -m "feat(breadboard): add BenchSurface wrapper component with zone detection"
 ```
 
 ---
 
-### Task 3: Dual placement mode — on-board vs. on-bench drop handling (S0-02)
+### Task 4: Integrate BenchSurface into BreadboardView
+
+**Files:**
+- Modify: `client/src/components/circuit-editor/BreadboardView.tsx`
+- Test: `client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx` (modify existing)
+
+**Context:** Wrap the existing BreadboardGrid and component rendering inside BenchSurface. Update the SVG viewBox to use the larger surface dimensions. Adjust pan/zoom to work on the surface level. The breadboard content shifts by `breadboardOrigin` offset.
+
+- [ ] **Step 1: Add test for bench surface rendering**
+
+Add to the existing `BreadboardView.test.tsx`:
+
+```typescript
+it('renders bench surface container', () => {
+  render(<BreadboardView />, { wrapper: TestWrapper });
+  expect(screen.getByTestId('bench-surface')).toBeInTheDocument();
+  expect(screen.getByTestId('breadboard-zone')).toBeInTheDocument();
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `npx vitest run client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx -t "renders bench surface"`
+Expected: FAIL — no bench-surface testid found
+
+- [ ] **Step 3: Integrate BenchSurface**
+
+In `BreadboardView.tsx`:
+1. Import `BenchSurface` and `BENCH_DEFAULTS`
+2. Update the main SVG `viewBox` to use `BENCH_DEFAULTS.surfaceWidth`/`surfaceHeight`
+3. Wrap `BreadboardGrid` and all overlay content inside `<BenchSurface>`
+4. Update `clientToBoardPixel` to account for the breadboard origin offset
+
+Key changes:
+- SVG viewBox: `0 0 ${BENCH_DEFAULTS.surfaceWidth} ${BENCH_DEFAULTS.surfaceHeight}`
+- All board-space coords offset by `BENCH_DEFAULTS.breadboardOrigin`
+- `clientToBoardPixel` subtracts the origin offset before converting
+
+- [ ] **Step 4: Run full test suite**
+
+Run: `npx vitest run client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx && npm run check`
+Expected: PASS (existing tests still pass since board content is just offset), zero TS errors
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add client/src/components/circuit-editor/BreadboardView.tsx client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx
+git commit -m "feat(breadboard): integrate BenchSurface wrapper into BreadboardView"
+```
+
+---
+
+### Task 5: Dual placement mode — on-board vs. on-bench
 
 **Files:**
 - Modify: `client/src/components/circuit-editor/BreadboardView.tsx` (handleDrop refactor)
-- Modify: `client/src/lib/circuit-editor/breadboard-model.ts` (extend placement types)
-- Test: `client/src/lib/circuit-editor/__tests__/bench-surface.test.ts` (extend)
+- Modify: `client/src/lib/circuit-editor/breadboard-model.ts` (new placement type)
+- Test: `client/src/lib/circuit-editor/__tests__/breadboard-model.test.ts` (extend)
 
-**Context:** Currently `handleDrop` in BreadboardView always snaps to a breadboard hole. With the bench surface, drops within the snap threshold snap to holes (existing behavior). Drops outside the threshold free-place on the bench surface, setting `benchX`/`benchY` instead of `breadboardX`/`breadboardY`. Components marked `not_breadboard_friendly` auto-route to bench placement.
+**Context:** Currently `handleDrop` always snaps to a breadboard hole and sets `breadboardX`/`breadboardY`. Now it checks `isWithinBreadboardZone()` — if inside, snap to grid and set breadboard coords. If outside, free-place and set `benchX`/`benchY`. The component renders differently in each mode.
 
-- [ ] **Step 1: Write tests for placement mode determination**
+- [ ] **Step 1: Add placement mode type and helper to breadboard-model.ts**
 
-Extend `bench-surface.test.ts`:
-
+Add test:
 ```typescript
-import {
-  determinePlacementMode,
-  type PlacementMode,
-} from '@/lib/circuit-editor/bench-surface-model';
-
-describe('determinePlacementMode', () => {
-  const config = {
-    boardWidth: 700,
-    boardHeight: 230,
-    benchPadding: 200,
-    snapThreshold: 40,
-  };
-
-  it('returns "board" for drop within snap threshold', () => {
-    expect(determinePlacementMode(350, 315, 'native', config)).toBe('board');
+describe('placement mode detection', () => {
+  it('returns board mode for position inside breadboard zone', () => {
+    expect(getPlacementMode({ x: 100, y: 100 })).toBe('board');
   });
 
-  it('returns "bench" for drop outside snap threshold', () => {
-    expect(determinePlacementMode(50, 50, 'native', config)).toBe('bench');
-  });
-
-  it('returns "bench" for not_breadboard_friendly regardless of position', () => {
-    expect(determinePlacementMode(350, 315, 'not_breadboard_friendly', config)).toBe('bench');
-  });
-
-  it('returns "board" for requires_jumpers within snap threshold', () => {
-    expect(determinePlacementMode(350, 315, 'requires_jumpers', config)).toBe('board');
+  it('returns bench mode for position outside breadboard zone', () => {
+    expect(getPlacementMode({ x: -50, y: -50 })).toBe('bench');
   });
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
-
-Run: `npx vitest run client/src/lib/circuit-editor/__tests__/bench-surface.test.ts --project client`
-Expected: FAIL — `determinePlacementMode` not found
-
-- [ ] **Step 3: Implement determinePlacementMode**
-
-Add to `bench-surface-model.ts`:
+- [ ] **Step 3: Implement `getPlacementMode` in breadboard-model.ts**
 
 ```typescript
+import { isWithinBreadboardZone, type BenchPosition } from '@/components/circuit-editor/BenchSurface';
+
 export type PlacementMode = 'board' | 'bench';
 
-type FitClassification = 'native' | 'requires_jumpers' | 'not_breadboard_friendly' | string;
-
-export function determinePlacementMode(
-  surfaceX: number,
-  surfaceY: number,
-  breadboardFit: FitClassification,
-  config: BenchSurfaceConfig,
-): PlacementMode {
-  if (breadboardFit === 'not_breadboard_friendly') {
-    return 'bench';
-  }
-  return isWithinSnapThreshold(surfaceX, surfaceY, config) ? 'board' : 'bench';
+export function getPlacementMode(surfacePos: BenchPosition): PlacementMode {
+  return isWithinBreadboardZone(surfacePos) ? 'board' : 'bench';
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 4: Run tests, verify pass**
+- [ ] **Step 5: Update handleDrop in BreadboardView.tsx**
 
-Run: `npx vitest run client/src/lib/circuit-editor/__tests__/bench-surface.test.ts --project client`
-Expected: PASS
+Refactor `handleDrop` to:
+1. Convert drop position to surface coordinates
+2. Call `getPlacementMode(surfacePos)`
+3. If `'board'`: existing logic (snap to grid, set `breadboardX`/`breadboardY`)
+4. If `'bench'`: set `benchX`/`benchY` with raw surface coords, skip collision check
 
-- [ ] **Step 5: Integrate into BreadboardView.tsx handleDrop**
-
-Refactor `handleDrop` in BreadboardView.tsx to use `determinePlacementMode()`. When mode is `'board'`, existing snap-to-hole logic runs and sets `breadboardX`/`breadboardY`. When mode is `'bench'`, set `benchX`/`benchY` to the surface coordinates. Add a toast for bench placement: "Placed on bench — draw jumper wires to connect."
-
-- [ ] **Step 6: Run full check and test suite**
+- [ ] **Step 6: Run full suite and commit**
 
 Run: `npm run check && npm test`
-Expected: Zero errors, all tests pass.
-
-- [ ] **Step 7: Commit**
 
 ```bash
-git add client/src/lib/circuit-editor/bench-surface-model.ts client/src/lib/circuit-editor/__tests__/bench-surface.test.ts client/src/components/circuit-editor/BreadboardView.tsx
-git commit -m "feat(breadboard): dual placement mode — on-board vs. on-bench
-
-Components dropped within snap threshold of the breadboard snap to
-holes (existing behavior). Components dropped on the bench surface or
-marked not_breadboard_friendly free-place with benchX/benchY. S0-02."
+git commit -m "feat(breadboard): implement dual placement mode (on-board vs. on-bench)"
 ```
 
 ---
 
-### Task 4: Bench-to-board jumper wires and auto-placement (S0-03 + S0-04)
+### Task 6: Render bench-placed components
 
 **Files:**
-- Modify: `client/src/components/circuit-editor/BreadboardView.tsx` (wire drawing for bench endpoints)
-- Modify: `client/src/components/circuit-editor/BreadboardWireEditor.tsx` (bench pin endpoints)
-- Modify: `client/src/lib/circuit-editor/breadboard-model.ts` (extend wire endpoint types)
-- Test: `client/src/lib/circuit-editor/__tests__/bench-surface.test.ts` (extend for wire endpoints)
+- Modify: `client/src/components/circuit-editor/BreadboardView.tsx` (component rendering loop)
+- Test: `client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx`
 
-**Context:** The wire editor currently only handles board-to-board wire drawing (both endpoints on breadboard holes). We need to support: board-to-bench (hole to component pin), bench-to-bench (pin to pin), and bench-to-board (pin to hole). Wire `endpointMeta` stores typed endpoint info. `circuit_wires.points` continues to store the visual path. When a Mega 2560 is dropped, it auto-places on the bench with connection point indicators.
+**Context:** Currently the rendering loop filters `instances.filter(i => i.breadboardX != null)`. Extend to also render instances with `benchX`/`benchY` set — render them at bench coordinates without bendable legs, with a different visual style (subtle outline indicating off-board status, labeled connection points instead of pin-in-hole legs).
 
-- [ ] **Step 1: Write tests for wire endpoint types**
-
-Add to `bench-surface.test.ts`:
+- [ ] **Step 1: Write test for bench component rendering**
 
 ```typescript
-import {
-  createHoleEndpoint,
-  createBenchPinEndpoint,
-  isJumperWire,
-  type WireEndpoint,
-} from '@/lib/circuit-editor/bench-surface-model';
-
-describe('wire endpoints', () => {
-  it('creates a hole endpoint', () => {
-    const ep = createHoleEndpoint('a', 5);
-    expect(ep.type).toBe('hole');
-    expect(ep.col).toBe('a');
-    expect(ep.row).toBe(5);
-  });
-
-  it('creates a bench pin endpoint', () => {
-    const ep = createBenchPinEndpoint(42, 'GPIO5');
-    expect(ep.type).toBe('bench-pin');
-    expect(ep.instanceId).toBe(42);
-    expect(ep.pinId).toBe('GPIO5');
-  });
-
-  it('identifies jumper wire (mixed endpoint types)', () => {
-    const hole = createHoleEndpoint('a', 5);
-    const pin = createBenchPinEndpoint(42, 'GPIO5');
-    expect(isJumperWire(hole, pin)).toBe(true);
-    expect(isJumperWire(hole, hole)).toBe(false);
-    expect(isJumperWire(pin, pin)).toBe(false);
-  });
+it('renders bench-placed components outside the breadboard zone', () => {
+  // Mock instance with benchX/benchY set, breadboardX/breadboardY null
+  // Verify it renders with data-testid="bench-component-{id}"
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 2-4: Implement and verify**
 
-Run: `npx vitest run client/src/lib/circuit-editor/__tests__/bench-surface.test.ts --project client`
-Expected: FAIL — functions not found
+Extend the component rendering section to:
+1. Collect both board-placed and bench-placed instances
+2. Render board-placed with existing SVG + bendable legs
+3. Render bench-placed with component SVG + labeled pin points (no legs)
+4. Different opacity/outline to visually distinguish
 
-- [ ] **Step 3: Implement wire endpoint types**
-
-Add to `bench-surface-model.ts`:
-
-```typescript
-export type WireEndpoint =
-  | { type: 'hole'; col: string; row: number }
-  | { type: 'bench-pin'; instanceId: number; pinId: string };
-
-export function createHoleEndpoint(col: string, row: number): WireEndpoint {
-  return { type: 'hole', col, row };
-}
-
-export function createBenchPinEndpoint(instanceId: number, pinId: string): WireEndpoint {
-  return { type: 'bench-pin', instanceId, pinId };
-}
-
-export function isJumperWire(start: WireEndpoint, end: WireEndpoint): boolean {
-  return start.type !== end.type;
-}
-```
-
-- [ ] **Step 4: Run tests to verify pass**
-
-Run: `npx vitest run client/src/lib/circuit-editor/__tests__/bench-surface.test.ts --project client`
-Expected: PASS
-
-- [ ] **Step 5: Wire BreadboardView.tsx rendering for bench-placed components**
-
-Add rendering logic: components with `benchX`/`benchY` (and null `breadboardX`/`breadboardY`) render at their bench surface coordinates outside the breadboard grid, with a distinct visual style (lighter border, "bench" badge). Connection points shown as small circles at pin positions.
-
-- [ ] **Step 6: Wire auto-placement for not_breadboard_friendly**
-
-When dropping a component whose `breadboardFit` is `not_breadboard_friendly`, auto-place on the bench surface to the left of the breadboard. Show toast: "[Board name] placed on the bench — it's too wide for the breadboard. Draw jumper wires to connect its pins."
-
-- [ ] **Step 7: Run full check and test suite**
-
-Run: `npm run check && npm test`
-Expected: Zero errors, all tests pass.
-
-- [ ] **Step 8: Verify in Chrome DevTools**
-
-Open breadboard tab. Drop a starter MCU → should snap to board. Verify an instance with `not_breadboard_friendly` renders on the bench area (mock by setting properties in dev console). Verify wire drawing still works for on-board components.
-
-- [ ] **Step 9: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add -A  # bench-surface-model.ts, BreadboardView.tsx, BreadboardWireEditor.tsx, tests
-git commit -m "feat(breadboard): bench-to-board jumper wires and auto-placement
-
-Bench-placed components render outside the breadboard grid with
-connection point indicators. Wire endpoints support hole and bench-pin
-types. Components marked not_breadboard_friendly auto-place on bench.
-Completes S0-03 and S0-04."
+git commit -m "feat(breadboard): render bench-placed components with visual distinction"
 ```
 
 ---
 
-## Phase 1: Visual Expansion (runs in parallel with Phase 0)
+### Task 7: Bench-to-board jumper wires
 
-### Task 5: Expand SVG component library — 13 new families (S1-01)
+**Files:**
+- Modify: `client/src/components/circuit-editor/BreadboardView.tsx` (wire drawing)
+- Modify: `client/src/components/circuit-editor/BreadboardWireEditor.tsx` (endpoint types)
+- Test: `client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx`
+
+**Context:** Enable drawing wires between bench-placed component pins and breadboard holes. The wire renders as a jumper cable (thicker stroke, rounded endpoints representing Dupont connectors). Wire creation stores `endpointMeta` JSONB and `provenance: 'jumper'`.
+
+- [ ] **Step 1: Write test for jumper wire rendering**
+
+```typescript
+it('renders jumper wire between bench component and breadboard hole', () => {
+  // Mock wire with endpointMeta having bench-pin start and hole end
+  // Verify jumper wire SVG renders with thicker stroke
+});
+```
+
+- [ ] **Step 2-4: Implement jumper wire drawing and rendering**
+
+Key implementation:
+1. When in wire mode and clicking a bench component's pin, start a jumper wire
+2. When the other end lands on a breadboard hole, create wire with `provenance: 'jumper'`
+3. Render jumper wires with 3px stroke, rounded linecap, colored connectors at endpoints
+4. Store `endpointMeta` with typed endpoint info
+
+- [ ] **Step 5: Commit**
+
+```bash
+git commit -m "feat(breadboard): implement bench-to-board jumper wires with endpoint metadata"
+```
+
+---
+
+### Task 8: Auto-placement for non-breadboard-friendly boards
+
+**Files:**
+- Modify: `client/src/components/circuit-editor/BreadboardView.tsx` (drop handler)
+- Modify: `client/src/lib/breadboard-bench.ts` (fit-based routing)
+- Test: `client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx`
+
+**Context:** When dropping a `not_breadboard_friendly` component (like Mega 2560), automatically place on bench surface with a toast notification. When dropping a `requires_jumpers` component (like ESP32), show a choice dialog: "Plug into breadboard (tight fit) or place on bench?"
+
+- [ ] **Step 1: Write test for auto-routing**
+
+```typescript
+it('auto-places not_breadboard_friendly parts on bench', () => {
+  // Mock drop of Mega 2560 part (breadboardFit: 'not_breadboard_friendly')
+  // Verify benchX/benchY set, breadboardX/breadboardY null
+  // Verify toast shown
+});
+
+it('shows choice dialog for requires_jumpers parts', () => {
+  // Mock drop of ESP32 part (breadboardFit: 'requires_jumpers')
+  // Verify dialog appears with two options
+});
+```
+
+- [ ] **Step 2-4: Implement auto-routing logic**
+
+In `handleDrop`, before placement:
+1. Look up the part's `breadboardFit` from meta or verified board pack
+2. If `not_breadboard_friendly`: force bench placement, show explanatory toast
+3. If `requires_jumpers`: show dialog with bench vs. board options
+4. If `native` or undefined: use normal placement mode detection
+
+- [ ] **Step 5: Commit**
+
+```bash
+git commit -m "feat(breadboard): auto-route non-breadboard-friendly parts to bench surface"
+```
+
+---
+
+## Phase 1: Visual Expansion
+
+### Task 9: Expand SVG component library — first batch (6 new families)
 
 **Files:**
 - Create: `client/src/components/circuit-editor/breadboard-components/PotentiometerSvg.tsx`
@@ -593,216 +703,153 @@ Completes S0-03 and S0-04."
 - Create: `client/src/components/circuit-editor/breadboard-components/HeaderSvg.tsx`
 - Create: `client/src/components/circuit-editor/breadboard-components/RegulatorSvg.tsx`
 - Create: `client/src/components/circuit-editor/breadboard-components/CrystalSvg.tsx`
-- Create: `client/src/components/circuit-editor/breadboard-components/BuzzerSvg.tsx`
-- Create: `client/src/components/circuit-editor/breadboard-components/FuseSvg.tsx`
-- Create: `client/src/components/circuit-editor/breadboard-components/SensorSvg.tsx`
-- Create: `client/src/components/circuit-editor/breadboard-components/DisplaySvg.tsx`
-- Create: `client/src/components/circuit-editor/breadboard-components/RelaySvg.tsx`
-- Create: `client/src/components/circuit-editor/breadboard-components/MotorSvg.tsx`
-- Create: `client/src/components/circuit-editor/breadboard-components/ConnectorSvg.tsx`
 - Modify: `client/src/components/circuit-editor/BreadboardComponentRenderer.tsx` (extend `detectFamily`)
-- Extend: `client/src/components/circuit-editor/__tests__/breadboard-components.test.tsx`
+- Test: `client/src/components/circuit-editor/__tests__/breadboard-components.test.tsx` (extend)
 
-**Context:** Follow the pattern established by `ResistorSvg.tsx` (photorealistic, value-driven, scaled to BB.PITCH = 10px per 0.1"). Each SVG is a `memo` React component accepting value props. The `detectFamily()` function in BreadboardComponentRenderer routes type strings to the correct renderer. Existing families: resistor, capacitor, inductor, led, ic, diode, transistor.
+**Context:** Follow the pattern from `ResistorSvg.tsx` (value-driven rendering) and `IcSvg.tsx` (DIP package). Each SVG must render at `BB.PITCH` (10px per 0.1") scale. All are `memo`-wrapped functional components.
 
-**Pattern to follow (from ResistorSvg.tsx):**
-1. Define value-driven rendering (e.g., potentiometer dial position, button pressed/released state)
-2. Scale to breadboard pitch (BB.PITCH = 10px)
-3. Use realistic colors and shapes
-4. Export as `memo` component
-5. Add type string(s) to `detectFamily()` routing
-
-- [ ] **Step 1: Write failing tests for new component families**
-
-Extend `breadboard-components.test.tsx` with tests for each new family. Pattern per family:
+**Pattern — each new SVG follows this TDD cycle:**
 
 ```typescript
-describe('PotentiometerSvg', () => {
-  it('renders without crashing', () => {
-    const { container } = render(<PotentiometerSvg value={10000} />);
-    expect(container.querySelector('svg')).not.toBeNull();
-  });
-
-  it('renders dial indicator for value', () => {
-    const { container } = render(<PotentiometerSvg value={5000} />);
-    // Dial element should exist
-    expect(container.querySelector('[data-testid="pot-dial"]')).not.toBeNull();
-  });
+// Test
+it('renders PotentiometerSvg with value label', () => {
+  const { container } = render(<PotentiometerSvg value="10k" />);
+  expect(container.querySelector('svg')).toBeInTheDocument();
+  // Check for dial indicator, 3 pins (wiper + 2 terminals)
 });
+
+// Implementation
+// 3-pin radial component with dial indicator showing wiper position
+// Pins: terminal 1, wiper, terminal 2
+// Body: circular with knob/arrow indicator
 ```
 
-- [ ] **Step 2: Implement each SVG component**
+- [ ] **Step 1-6: Implement PotentiometerSvg with full TDD cycle**
+- [ ] **Step 7-12: Implement ButtonSvg (tactile pushbutton, 4 pins, press state)**
+- [ ] **Step 13-18: Implement SwitchSvg (SPDT toggle, 3 pins, on/off state)**
+- [ ] **Step 19-24: Implement HeaderSvg (N-pin male/female header strip)**
+- [ ] **Step 25-30: Implement RegulatorSvg (TO-220 package, 3 pins, voltage label)**
+- [ ] **Step 31-36: Implement CrystalSvg (HC-49 package, 2 pins, frequency label)**
+- [ ] **Step 37: Extend detectFamily() to route new types**
 
-Create each file following the ResistorSvg pattern. Key details per family:
-
-| Family | Key Visual Feature | Pin Count | Pitch |
-|--------|-------------------|-----------|-------|
-| Potentiometer | Rotary dial with value indicator | 3 | Radial, 0.2" spacing |
-| Button | Tactile switch, pressed/released state | 4 (2 pairs) | 0.3" across channel |
-| Switch | Toggle position indicator | 2-3 | 0.2" spacing |
-| Header | Row of pins with housing color | 2-40 | 0.1" pitch |
-| Regulator | TO-220 package with voltage label | 3 | 0.1" pitch |
-| Crystal | Metal can with frequency label | 2 | 0.2" spacing |
-| Buzzer | Round body with polarity mark | 2 | 0.3" spacing |
-| Fuse | Glass body with rating label | 2 | Axial like resistor |
-| Sensor | Generic module with label | 3-4 | 0.1" pitch |
-| Display | LCD/OLED rectangle with digit area | 4-16 | 0.1" pitch |
-| Relay | Box body with coil/contact labels | 5-8 | DIP-like |
-| Motor | Circle body with shaft indicator | 2 | 0.3" spacing |
-| Connector | Barrel/terminal with wire indicators | 2-3 | 0.2" spacing |
-
-- [ ] **Step 3: Extend detectFamily() in BreadboardComponentRenderer.tsx**
-
-Add routing for all new type strings:
-
+Add to `detectFamily()` in `BreadboardComponentRenderer.tsx`:
 ```typescript
-export function detectExtendedFamily(type: string | undefined | null): ExtendedComponentType | null {
-  if (!type) return null;
-  const lower = type.toLowerCase();
-  // Existing families...
-  if (lower === 'potentiometer' || lower === 'pot' || lower === 'trimmer') return 'potentiometer';
-  if (lower === 'button' || lower === 'pushbutton' || lower === 'tactile') return 'button';
-  if (lower === 'switch' || lower === 'toggle' || lower === 'spdt' || lower === 'spst') return 'switch';
-  if (lower === 'header' || lower === 'pin_header' || lower === 'connector_header') return 'header';
-  if (lower === 'regulator' || lower === 'vreg' || lower === 'ldo') return 'regulator';
-  if (lower === 'crystal' || lower === 'oscillator' || lower === 'xtal') return 'crystal';
-  if (lower === 'buzzer' || lower === 'speaker' || lower === 'piezo') return 'buzzer';
-  if (lower === 'fuse') return 'fuse';
-  if (lower === 'sensor' || lower === 'thermistor' || lower === 'photoresistor') return 'sensor';
-  if (lower === 'display' || lower === 'lcd' || lower === 'oled' || lower === 'segment') return 'display';
-  if (lower === 'relay') return 'relay';
-  if (lower === 'motor' || lower === 'servo' || lower === 'stepper') return 'motor';
-  if (lower === 'connector' || lower === 'terminal' || lower === 'barrel_jack') return 'connector';
-  return null;
-}
+if (lower === 'potentiometer' || lower === 'pot' || lower === 'variable_resistor') return 'potentiometer';
+if (lower === 'button' || lower === 'pushbutton' || lower === 'tactile') return 'button';
+if (lower === 'switch' || lower === 'toggle' || lower === 'spdt') return 'switch';
+if (lower === 'header' || lower === 'pin_header' || lower === 'connector') return 'header';
+if (lower === 'regulator' || lower === 'vreg' || lower === 'ldo') return 'regulator';
+if (lower === 'crystal' || lower === 'xtal' || lower === 'oscillator') return 'crystal';
 ```
 
-- [ ] **Step 4: Run tests**
-
-Run: `npx vitest run client/src/components/circuit-editor/__tests__/breadboard-components.test.tsx --project client`
-Expected: PASS
-
-- [ ] **Step 5: Run full check and test suite**
-
-Run: `npm run check && npm test`
-Expected: Zero errors.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 38: Run full test suite, commit**
 
 ```bash
-git add client/src/components/circuit-editor/breadboard-components/ client/src/components/circuit-editor/BreadboardComponentRenderer.tsx client/src/components/circuit-editor/__tests__/breadboard-components.test.tsx
-git commit -m "feat(breadboard): expand SVG component library from 7 to 20 families
-
-Adds photorealistic SVG renderers for potentiometer, button, switch,
-header, regulator, crystal, buzzer, fuse, sensor, display, relay,
-motor, and connector. Each scaled to breadboard pitch with value-driven
-rendering. S1-01."
+git commit -m "feat(breadboard): add 6 new SVG component families (pot, button, switch, header, regulator, crystal)"
 ```
 
 ---
 
-### Task 6: Expand verified board profiles — 7 new dev boards (S1-02)
+### Task 10: Expand SVG component library — second batch (7 more families)
+
+**Files:**
+- Create: `BuzzerSvg.tsx`, `FuseSvg.tsx`, `RelaySvg.tsx`, `MotorSvg.tsx`, `SensorSvg.tsx`, `DisplaySvg.tsx`, `ConnectorSvg.tsx`
+- Modify: `BreadboardComponentRenderer.tsx` (extend `detectFamily`)
+- Test: `breadboard-components.test.tsx` (extend)
+
+Same pattern as Task 9. After this task, `detectFamily` routes 20+ type strings to photorealistic SVG renderers.
+
+- [ ] **Steps 1-42: TDD cycle for each SVG (same pattern as Task 9)**
+- [ ] **Step 43: Extend detectFamily for remaining types**
+- [ ] **Step 44: Run full test suite, commit**
+
+```bash
+git commit -m "feat(breadboard): add 7 more SVG component families (buzzer, fuse, relay, motor, sensor, display, connector)"
+```
+
+---
+
+### Task 11: Expand verified board profiles — Arduino + RPi Pico
 
 **Files:**
 - Create: `shared/verified-boards/arduino-uno-r3.ts`
 - Create: `shared/verified-boards/arduino-nano.ts`
 - Create: `shared/verified-boards/rpi-pico.ts`
-- Create: `shared/verified-boards/stm32-nucleo-64.ts`
-- Create: `shared/verified-boards/adafruit-feather.ts`
-- Create: `shared/verified-boards/sparkfun-thing-plus.ts`
-- Create: `shared/verified-boards/teensy-40.ts`
-- Modify: `shared/verified-boards/index.ts` (add exports)
-- Create: `shared/verified-boards/__tests__/arduino-uno-r3.test.ts` (and similar for each)
+- Modify: `shared/verified-boards/index.ts` (register new boards)
+- Test: `shared/verified-boards/__tests__/arduino-uno-r3.test.ts` (NEW)
+- Test: `shared/verified-boards/__tests__/arduino-nano.test.ts` (NEW)
+- Test: `shared/verified-boards/__tests__/rpi-pico.test.ts` (NEW)
 
-**Context:** Follow the pattern established by `shared/verified-boards/nodemcu-esp32s.ts`. Each board profile requires: physical dimensions, full pin map with electrical roles and restrictions, `breadboardFit` classification, hardware traps (strapping pins, restricted GPIOs, boot warnings), `breadboardNotes`. **MANDATORY: use Context7 and/or WebSearch to source all data from official datasheets.** Do not guess pin assignments.
+**Context:** Follow the pattern from `nodemcu-esp32s.ts`. Each board needs: physical dimensions, full pin map with electrical roles, `breadboardFit` classification, hardware traps, `breadboardNotes`. ALL data from official datasheets. Use Context7/WebSearch to verify pin assignments.
 
-**Research before implementation:**
-- [ ] Context7: Arduino Uno R3 pinout and dimensions
-- [ ] Context7: Raspberry Pi Pico pinout and dimensions
-- [ ] WebSearch: STM32 Nucleo-64 pinout reference (multiple Nucleo variants exist — use the F401RE as the canonical profile)
-- [ ] WebSearch: Adafruit Feather pinout (use the Feather M0 as canonical)
+**MANDATORY: Research before implementation.** Use Context7 to look up Arduino Uno R3 pinout, Nano pinout, and RPi Pico pinout from official documentation. Do NOT rely on training data alone.
 
-- [ ] **Step 1: Write failing tests for each board (pattern)**
-
-Create `shared/verified-boards/__tests__/arduino-uno-r3.test.ts`:
+**Pattern per board:**
 
 ```typescript
-import { describe, it, expect } from 'vitest';
-import { arduinoUnoR3 } from '../arduino-uno-r3';
-
+// Test
 describe('Arduino Uno R3 verified board', () => {
-  it('has correct board dimensions', () => {
-    expect(arduinoUnoR3.dimensions.widthMm).toBeCloseTo(68.6, 0);
-    expect(arduinoUnoR3.dimensions.heightMm).toBeCloseTo(53.4, 0);
-  });
-
   it('has correct pin count', () => {
-    expect(arduinoUnoR3.pins).toHaveLength(32); // 14 digital + 6 analog + power + ICSP
+    expect(arduinoUnoR3.pins).toHaveLength(32); // 14 digital + 6 analog + power + misc
   });
 
-  it('classifies breadboard fit correctly', () => {
+  it('has correct breadboard fit', () => {
     expect(arduinoUnoR3.breadboardFit).toBe('not_breadboard_friendly');
-    // Uno is too wide (53.4mm > standard breadboard width)
+    // Uno is 68.6mm x 53.4mm — too wide for standard breadboard
   });
 
-  it('identifies pins with restrictions', () => {
-    const pin0 = arduinoUnoR3.pins.find(p => p.name === 'D0');
-    expect(pin0?.warnings).toContain('Shared with USB serial (Serial/RX)');
+  it('flags restricted pins', () => {
+    const restricted = arduinoUnoR3.pins.filter(p => p.restricted);
+    expect(restricted.length).toBeGreaterThan(0);
+    // Pins 0/1 are Serial — should warn about conflicts with USB programming
   });
 
-  it('has family set to mcu', () => {
-    expect(arduinoUnoR3.family).toBe('mcu');
-  });
-
-  it('has evidence from official datasheet', () => {
-    expect(arduinoUnoR3.evidence.length).toBeGreaterThan(0);
+  it('is findable by alias', () => {
+    expect(findVerifiedBoardByAlias('Arduino Uno R3')).toBeDefined();
+    expect(findVerifiedBoardByAlias('ATmega328P')).toBeDefined();
   });
 });
 ```
 
-Repeat pattern for each board with board-specific assertions.
-
-- [ ] **Step 2: Implement each board profile**
-
-Follow `nodemcu-esp32s.ts` structure exactly. Key data per board:
-
-| Board | Fit | Pin Count | Key Traps |
-|-------|-----|-----------|-----------|
-| Arduino Uno R3 | not_breadboard_friendly (53.4mm wide) | 32 | D0/D1 shared with USB serial, 5V logic |
-| Arduino Nano | native (fits perfectly) | 30 | D0/D1 serial, 5V logic, no voltage regulation on Vin > 12V |
-| RPi Pico | native (fits with 1 free col per side) | 40 | GP0-GP28 = 3.3V logic ONLY, no 5V tolerance |
-| STM32 Nucleo-64 | not_breadboard_friendly (70mm wide) | 76 | Morpho+Arduino headers, 3.3V logic |
-| Adafruit Feather | native (narrow form factor) | 28 | 3.3V logic, battery pin |
-| SparkFun Thing Plus | native (Feather-compatible) | 28 | ESP32-based — inherits flash GPIO traps |
-| Teensy 4.0 | native (narrow, 0.6" wide) | 40 | 3.3V logic, 600MHz ARM, back-side pads |
-
-- [ ] **Step 3: Register in index.ts**
-
-Add exports and alias registration for each new board in `shared/verified-boards/index.ts`.
-
-- [ ] **Step 4: Run tests**
-
-Run: `npx vitest run shared/verified-boards/__tests__/ --project server`
-Expected: PASS for all board profiles.
-
-- [ ] **Step 5: Run full check and test suite**
-
-Run: `npm run check && npm test`
-Expected: Zero errors.
-
-- [ ] **Step 6: Commit**
+- [ ] **Steps 1-5: Arduino Uno R3 (TDD — research pinout first)**
+- [ ] **Steps 6-10: Arduino Nano (TDD — fits breadboard: `requires_jumpers` or `native`)**
+- [ ] **Steps 11-15: Raspberry Pi Pico (TDD — fits breadboard: `requires_jumpers`)**
+- [ ] **Step 16: Register all 3 in index.ts, run full suite, commit**
 
 ```bash
-git add shared/verified-boards/
-git commit -m "feat(breadboard): add 7 verified board profiles (Uno, Nano, Pico, Nucleo, Feather, Thing Plus, Teensy)
-
-Datasheet-sourced profiles with full pin maps, hardware traps,
-breadboard fit classifications, and dimension data. Expands verified
-board library from 3 to 10. S1-02."
+git commit -m "feat(verified-boards): add Arduino Uno R3, Nano, and RPi Pico profiles"
 ```
 
 ---
 
-## Deferred Phases
+### Task 12: Expand verified board profiles — STM32 + maker boards
 
-Phases 2-5 (interaction, intelligence, inventory, sync/interop) depend on Phase 0 being complete. Their detailed plans will be written after Phase 0 ships and assumptions are validated. See the full spec at `docs/superpowers/specs/2026-04-10-breadboard-lab-evolution-design.md` for the items covered by future plans.
+**Files:**
+- Create: `shared/verified-boards/stm32-nucleo-64.ts`
+- Create: `shared/verified-boards/adafruit-feather.ts`
+- Create: `shared/verified-boards/sparkfun-thing-plus.ts`
+- Create: `shared/verified-boards/teensy-40.ts`
+- Modify: `shared/verified-boards/index.ts`
+- Test: One test file per board
+
+Same pattern as Task 11. Research pinouts from official datasheets before implementation.
+
+- [ ] **Steps 1-5: STM32 Nucleo-64**
+- [ ] **Steps 6-10: Adafruit Feather (ESP32-S3 variant)**
+- [ ] **Steps 11-15: SparkFun Thing Plus**
+- [ ] **Steps 16-20: Teensy 4.0**
+- [ ] **Step 21: Register all in index.ts, run full suite, commit**
+
+```bash
+git commit -m "feat(verified-boards): add STM32 Nucleo, Adafruit Feather, SparkFun Thing Plus, Teensy 4.0 profiles"
+```
+
+---
+
+## Post-Implementation
+
+After Phase 0 + Phase 1 are complete:
+
+1. **Verify in browser**: Open Breadboard Lab, verify bench surface renders, drag component to bench area, draw jumper wire, place Mega 2560 (should auto-route to bench)
+2. **Run full suite**: `npm run check && npm test` — zero errors, zero failures
+3. **Plan next phases**: Phases 2-5 (interaction, intelligence, inventory, sync) depend on Phase 0 being done. Generate separate plans for each when ready.
