@@ -97,6 +97,7 @@ import {
   getOccupiedPoints,
   getConnectedPoints,
   checkCollision,
+  checkBodyCollision,
   getDefaultColorForNet,
   WIRE_COLOR_PRESETS as MODEL_WIRE_COLOR_PRESETS,
   type ComponentPlacement,
@@ -1447,7 +1448,10 @@ function BreadboardCanvas({
     };
   }, [panOffset, zoom]);
 
-  const [dropPreviewCoord, setDropPreviewCoord] = useState<BreadboardCoord | null>(null);
+  const [dropPreview, setDropPreview] = useState<{
+    coord: BreadboardCoord | null;
+    collision: boolean;
+  } | null>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     const hasType =
@@ -1457,21 +1461,31 @@ function BreadboardCanvas({
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
 
-    // Show a snap preview
     const boardPx = clientToBoardPixel(e.clientX, e.clientY);
     if (boardPx) {
       const coord = pixelToCoord(boardPx);
-      setDropPreviewCoord(coord);
+      if (coord && coord.type === 'terminal') {
+        const existingPlacements = instancePlacements.map((p) => p.placement);
+        // Conservative collision check with a generic 2-pin placement preview.
+        // During dragOver we cannot read the payload (browser security), so we
+        // assume a minimal footprint. The real type-aware check runs on drop.
+        const previewPlacement = buildPlacementForDrop(coord, 'resistor', 2);
+        const hasCollision = checkCollision(previewPlacement, existingPlacements)
+          || checkBodyCollision(previewPlacement, existingPlacements, 'resistor', 2);
+        setDropPreview({ coord, collision: hasCollision });
+      } else {
+        setDropPreview({ coord, collision: false });
+      }
     }
-  }, [clientToBoardPixel]);
+  }, [clientToBoardPixel, instancePlacements]);
 
   const handleDragLeave = useCallback(() => {
-    setDropPreviewCoord(null);
+    setDropPreview(null);
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setDropPreviewCoord(null);
+    setDropPreview(null);
 
     const boardPx = clientToBoardPixel(e.clientX, e.clientY);
     if (!boardPx) return;
@@ -1676,6 +1690,7 @@ function BreadboardCanvas({
               highlightedPoints={highlightedPoints}
               occupiedPoints={occupiedPoints}
               hoveredCoord={hoveredCoord}
+              dropPreview={dropPreview ?? undefined}
             />
 
             {/* Bendable component legs (BL-0593) — rendered behind component bodies */}
@@ -1837,26 +1852,7 @@ function BreadboardCanvas({
               </g>
             )}
 
-            {/* Drop preview indicator */}
-            {dropPreviewCoord && dropPreviewCoord.type === 'terminal' && (() => {
-              const px = coordToPixel(dropPreviewCoord);
-              const isCollision = occupiedPoints.has(coordKey(dropPreviewCoord));
-              return (
-                <g data-testid="drop-preview" pointerEvents="none">
-                  <rect
-                    x={px.x - 6}
-                    y={px.y - 6}
-                    width={12}
-                    height={12}
-                    rx={2}
-                    fill={isCollision ? 'rgba(239,68,68,0.3)' : 'rgba(0,240,255,0.3)'}
-                    stroke={isCollision ? '#ef4444' : '#00F0FF'}
-                    strokeWidth={1}
-                    strokeDasharray="2,1"
-                  />
-                </g>
-              );
-            })()}
+            {/* Drop preview indicator is now rendered inside BreadboardGrid via the dropPreview prop */}
 
             {/* Ratsnest overlay */}
             <RatsnestOverlay

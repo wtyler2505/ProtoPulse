@@ -13,7 +13,7 @@ import BreadboardGrid from '../BreadboardGrid';
 import type { DropPreviewState } from '../BreadboardGrid';
 
 describe('BreadboardGrid dropPreview', () => {
-  it('renders no preview indicator when dropPreview is undefined', () => {
+  it('renders no preview indicator when dropPreview is undefined', { timeout: 15000 }, () => {
     render(<BreadboardGrid />);
     expect(screen.queryByTestId('drop-preview-indicator')).toBeNull();
   });

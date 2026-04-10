@@ -16,6 +16,14 @@ import {
 // Types
 // ---------------------------------------------------------------------------
 
+/** Drop preview state passed from the drag handler to render collision feedback. */
+export interface DropPreviewState {
+  /** The breadboard coordinate the dragged component would snap to, or null. */
+  coord: BreadboardCoord | null;
+  /** True when the snap target would cause a collision (tie-point or body). */
+  collision: boolean;
+}
+
 interface BreadboardGridProps {
   /** Callback when a tie-point is clicked */
   onTiePointClick?: (coord: BreadboardCoord, pixel: PixelPos) => void;
@@ -29,6 +37,8 @@ interface BreadboardGridProps {
   hoveredCoord?: BreadboardCoord | null;
   /** When true, shows an empty-state guidance overlay on the board */
   showEmptyGuidance?: boolean;
+  /** Real-time drag drop preview — shows valid/collision indicator at snap target. */
+  dropPreview?: DropPreviewState;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,6 +169,7 @@ function BreadboardGridInner({
   occupiedPoints,
   hoveredCoord,
   showEmptyGuidance,
+  dropPreview,
 }: BreadboardGridProps) {
   const { width, height } = useMemo(() => getBoardDimensions(), []);
   const hoveredKey = hoveredCoord ? coordKey(hoveredCoord) : null;
@@ -445,6 +456,32 @@ function BreadboardGridInner({
               );
             })}
         </g>
+      )}
+
+      {/* Drop preview indicator — shows valid (cyan) or collision (red) during drag */}
+      {dropPreview?.coord && (
+        (() => {
+          const px = coordToPixel(dropPreview.coord);
+          const r = dropPreview.coord.type === 'terminal' ? HOLE_RADIUS + 4 : HOLE_RADIUS_RAIL + 4;
+          const color = dropPreview.collision
+            ? 'rgba(239, 68, 68, 0.7)'
+            : 'rgba(0, 240, 255, 0.7)';
+          const fillColor = dropPreview.collision
+            ? 'rgba(239, 68, 68, 0.15)'
+            : 'rgba(0, 240, 255, 0.15)';
+          return (
+            <circle
+              cx={px.x}
+              cy={px.y}
+              r={r}
+              fill={fillColor}
+              stroke={color}
+              strokeWidth={1.5}
+              pointerEvents="none"
+              data-testid="drop-preview-indicator"
+            />
+          );
+        })()
       )}
 
       {/* Empty state guidance */}
