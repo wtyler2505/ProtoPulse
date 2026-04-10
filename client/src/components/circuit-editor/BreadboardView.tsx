@@ -34,6 +34,8 @@ import { computeMoveResult } from '@/lib/circuit-editor/breadboard-drag-move';
 import { syncSchematicToBreadboard } from '@/lib/circuit-editor/view-sync';
 import BreadboardDrcOverlay from './BreadboardDrcOverlay';
 import BreadboardInventoryDialog from './BreadboardInventoryDialog';
+import BreadboardShoppingList, { type ShoppingListItem } from './BreadboardShoppingList';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import BreadboardExactPartRequestDialog from './BreadboardExactPartRequestDialog';
 import BreadboardPartInspector from './BreadboardPartInspector';
 import BreadboardWorkbenchSidebar from './BreadboardWorkbenchSidebar';
@@ -273,7 +275,7 @@ export default function BreadboardView() {
     });
   }, [activeCircuit, breadboardWires, instances, nets, parts]);
   const boardAudit = boardAuditEnabled ? computedBoardAudit : null;
-  const [preflightResult, setPreflightResult] = useState<import('@/lib/breadboard-preflight').PreflightResult | null>(null);
+  const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null);
   const [shoppingListOpen, setShoppingListOpen] = useState(false);
 
   useEffect(() => {
@@ -453,6 +455,32 @@ export default function BreadboardView() {
     setFocusAuditIssue(issue);
   }, []);
 
+  const handleRunPreflight = useCallback(() => {
+    const result = runPreflight({
+      instances: instances ?? [],
+      wires: breadboardWires,
+      nets: nets ?? [],
+      parts: parts ?? [],
+    });
+    setPreflightResult(result);
+    setWorkbenchOpen(true);
+    const failed = result.checks.filter((c) => c.status === 'fail').length;
+    const warned = result.checks.filter((c) => c.status === 'warn').length;
+    toast({
+      title:
+        failed > 0
+          ? 'Pre-flight found blocking issues'
+          : warned > 0
+            ? 'Pre-flight found warnings to review'
+            : 'Pre-flight clean — ready to build',
+      description: `${String(failed)} failed, ${String(warned)} warning${warned === 1 ? '' : 's'} across ${String(result.checks.length)} checks.`,
+    });
+  }, [instances, breadboardWires, nets, parts, toast]);
+
+  const handleShopMissing = useCallback(() => {
+    setShoppingListOpen(true);
+  }, []);
+
   const handleLaunchExactDraft = useCallback((seed: ExactPartDraftSeed) => {
     setExactPartDialogOpen(false);
     setExactDraftSeed(seed);
@@ -529,6 +557,9 @@ export default function BreadboardView() {
           onOpenCommunity={() => setActiveView('community')}
           onOpenSchematic={() => setActiveView('schematic')}
           onRunBoardAudit={handleRunBoardAudit}
+          onRunPreflight={handleRunPreflight}
+          preflightResult={preflightResult}
+          onShopMissing={handleShopMissing}
         />
       )}
 
@@ -565,6 +596,27 @@ export default function BreadboardView() {
         onTrackPart={handleTrackBenchPart}
         onUpdateTrackedPart={handleUpdateTrackedBenchPart}
       />
+
+      <Dialog open={shoppingListOpen} onOpenChange={setShoppingListOpen}>
+        <DialogContent data-testid="breadboard-shopping-list-dialog" className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Shopping List — Missing Parts</DialogTitle>
+            <DialogDescription>
+              Consolidated list of parts needed to build your circuit. Export as CSV or use supplier links.
+            </DialogDescription>
+          </DialogHeader>
+          <BreadboardShoppingList
+            missingParts={benchSummary.insights
+              .filter((i) => i.missingQuantity > 0)
+              .map<ShoppingListItem>((i) => ({
+                partName: i.title,
+                mpn: i.mpn ?? '',
+                quantityNeeded: i.missingQuantity,
+                bestPrice: null,
+              }))}
+          />
+        </DialogContent>
+      </Dialog>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {circuits && circuits.length > 0 ? (
