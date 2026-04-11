@@ -184,6 +184,11 @@
           {
             "type": "command",
             "command": "claudekit-hooks run create-checkpoint"
+          },
+          {
+            "type": "command",
+            "command": "/home/wtyler/.claude/scripts/auto-push-protopulse.sh --session-end &",
+            "timeout": 60
           }
         ]
       },
