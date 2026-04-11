@@ -83,7 +83,7 @@ export default function BreadboardWorkbenchSidebar({
   return (
     <aside
       data-testid="breadboard-workbench"
-      className="hidden w-[340px] shrink-0 border-r border-border/70 bg-[linear-gradient(180deg,rgba(10,14,20,0.95),rgba(8,10,16,0.92))] lg:flex lg:flex-col"
+      className="hidden w-[340px] shrink-0 overflow-y-auto border-r border-border/70 bg-[linear-gradient(180deg,rgba(10,14,20,0.95),rgba(8,10,16,0.92))] lg:flex lg:flex-col"
     >
       <div className="border-b border-border/60 p-4">
         <div className="rounded-2xl border border-primary/20 bg-[radial-gradient(circle_at_top_left,rgba(34,211,238,0.14),rgba(15,23,42,0.65)_55%,rgba(15,23,42,0.94))] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">

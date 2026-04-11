@@ -123,6 +123,9 @@ function ResizeHandle({ side, onResize, keyboardConfig }: {
   );
 }
 
+const HOVER_OPEN_DELAY_MS = 220;
+const HOVER_CLOSE_DELAY_MS = 110;
+
 function HoverPeekDock({
   side,
   collapsed,
@@ -138,13 +141,41 @@ function HoverPeekDock({
   onPeekClose: () => void;
   children: ReactNode;
 }) {
+  const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearTimers = useCallback(() => {
+    if (openTimer.current !== null) { clearTimeout(openTimer.current); openTimer.current = null; }
+    if (closeTimer.current !== null) { clearTimeout(closeTimer.current); closeTimer.current = null; }
+  }, []);
+
+  useEffect(() => () => { clearTimers(); }, [clearTimers]);
+
+  const scheduleOpen = useCallback(() => {
+    if (closeTimer.current !== null) { clearTimeout(closeTimer.current); closeTimer.current = null; }
+    if (openTimer.current !== null) { return; }
+    openTimer.current = setTimeout(() => {
+      openTimer.current = null;
+      onPeekOpen();
+    }, HOVER_OPEN_DELAY_MS);
+  }, [onPeekOpen]);
+
+  const scheduleClose = useCallback(() => {
+    if (openTimer.current !== null) { clearTimeout(openTimer.current); openTimer.current = null; }
+    if (closeTimer.current !== null) { return; }
+    closeTimer.current = setTimeout(() => {
+      closeTimer.current = null;
+      onPeekClose();
+    }, HOVER_CLOSE_DELAY_MS);
+  }, [onPeekClose]);
+
   const handleBlurCapture = useCallback((event: FocusEvent<HTMLDivElement>) => {
     const nextTarget = event.relatedTarget;
     if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) {
       return;
     }
-    onPeekClose();
-  }, [onPeekClose]);
+    scheduleClose();
+  }, [scheduleClose]);
 
   return (
     <div
@@ -155,9 +186,9 @@ function HoverPeekDock({
         collapsed ? 'w-10' : 'w-auto',
         peekVisible && collapsed && 'z-40',
       )}
-      onMouseEnter={collapsed ? onPeekOpen : undefined}
-      onMouseLeave={collapsed ? onPeekClose : undefined}
-      onFocusCapture={collapsed ? onPeekOpen : undefined}
+      onMouseEnter={collapsed ? scheduleOpen : undefined}
+      onMouseLeave={collapsed ? scheduleClose : undefined}
+      onFocusCapture={collapsed ? scheduleOpen : undefined}
       onBlurCapture={collapsed ? handleBlurCapture : undefined}
     >
       <div
@@ -178,7 +209,7 @@ function HoverPeekDock({
             'absolute inset-y-0 z-10',
             side === 'left' ? 'left-0 w-3' : 'right-0 w-3',
           )}
-          onMouseEnter={onPeekOpen}
+          onMouseEnter={scheduleOpen}
         />
       )}
     </div>

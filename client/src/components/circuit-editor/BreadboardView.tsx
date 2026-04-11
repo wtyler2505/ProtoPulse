@@ -916,6 +916,8 @@ function BreadboardCanvas({
 
     for (const inst of instances) {
       if (inst.breadboardX != null && inst.breadboardY != null) continue;
+      // Skip bench-placed instances — they live outside the breadboard grid
+      if (inst.benchX != null && inst.benchY != null) continue;
 
       const part = inst.partId ? partsMap.get(inst.partId) : undefined;
       const template = buildAutoPlacementTemplate(inst, part);

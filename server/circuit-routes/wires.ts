@@ -12,6 +12,8 @@ const updateWireSchema = z.object({
   width: z.number().positive().optional(),
   color: z.string().nullable().optional(),
   wireType: z.enum(['wire', 'jump']).optional(),
+  endpointMeta: z.unknown().optional(),
+  provenance: z.enum(['manual', 'synced', 'coach', 'jumper']).optional(),
 });
 
 export function registerCircuitWireRoutes(app: Express, storage: IStorage): void {
