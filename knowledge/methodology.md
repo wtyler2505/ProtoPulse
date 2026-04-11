@@ -32,13 +32,14 @@ Raw material flows through four phases:
 ## Claim Numbering
 Claim files use globally unique IDs: `{source-basename}-{NNN}.md`. Numbers never repeat across batches. Computed from the maximum seen across both the queue and archive.
 
-## Notes
+## Where Operational Methodology Lives
 
-- [[derivation-rationale]] -- why these specific dimension positions were chosen
-- [[enforce-hard-cap-on-concurrent-agents]] -- never exceed 6 agents / 8 background tasks simultaneously
-- [[use-agent-teams-not-raw-parallel-subagents-for-implementation]] -- /agent-teams for all parallel implementation, not raw subagents
-- [[run-standard-dev-commands-autonomously]] -- run db:push, check, test without asking permission
-- [[verify-wiki-links-before-completing-knowledge-work]] -- all [[links]] must resolve to real files before a task is done
+Agent behavior rules, processing principles, and mined operational learnings do not live in the `knowledge/` notes space. They live in two canonical locations outside this topic map:
+
+- `self/methodology.md` — agent methodology, personality, and the processing cycle (Extract → Connect → Revisit → Verify)
+- `ops/methodology/` — operational learnings mined from session transcripts via `/remember` (hard caps, autonomy rules, wiki-link quality gates)
+
+This section intentionally holds no wiki-links to `ops/methodology/` files because cross-space wiki-links violate the three-space boundary and render as broken in the notes space.
 
 ## Graph Health Rules
 - Every file must link to at least one topic map
