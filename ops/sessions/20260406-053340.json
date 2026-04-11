@@ -5,5 +5,7 @@
   "inbox_touched": 0,
   "ops_touched": 0,
   "self_touched": 0,
-  "mined": false
+  "mined": "transcript-unavailable",
+  "reconciled_at": "2026-04-11T20:18:48Z",
+  "reconciled_reason": "Claude Code retention cleanup deleted transcript before any mining run; stub keyed by timestamp (pre-fix hook) with no transcript correlation"
 }
