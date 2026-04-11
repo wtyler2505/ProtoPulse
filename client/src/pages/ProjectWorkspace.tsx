@@ -570,18 +570,32 @@ function WorkspaceContent() {
     }
   }, [nodes, edges, bom, validationErrorCount, toast]);
 
-  /* UI-18: Redirect hidden deep links by changing the URL first so route sync can converge. */
+  /* UI-18: Redirect hidden deep links by resetting activeView AND changing the URL.
+   * BL-0615: Must update activeView in the same commit as setLocation; otherwise the
+   * activeView<->URL sync effects race and bounce between the old (hidden) view and
+   * architecture, triggering "Maximum update depth exceeded". */
   useEffect(() => {
     if (!hasResolvedInitialGraph) {
       return;
     }
     if (!alwaysVisibleIds.has(activeView) && !hasDesignContent) {
       const fallbackPath = `/projects/${String(projectId)}/architecture`;
+      if (activeView !== 'architecture') {
+        setActiveView('architecture');
+      }
       if (location !== fallbackPath) {
         setLocation(fallbackPath, { replace: true });
       }
     }
-  }, [activeView, hasDesignContent, hasResolvedInitialGraph, location, projectId, setLocation]);
+  }, [
+    activeView,
+    hasDesignContent,
+    hasResolvedInitialGraph,
+    location,
+    projectId,
+    setActiveView,
+    setLocation,
+  ]);
 
   return (
     <div className="flex flex-col h-screen w-full bg-background overflow-hidden font-sans text-foreground">

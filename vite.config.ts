@@ -8,7 +8,26 @@ import { metaImagesPlugin } from "./vite-plugin-meta-images";
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
+    // Filter out errors that originate from user browser extensions
+    // (Grammarly, LanguageTool, Microsoft Editor, etc.) rather than our code.
+    runtimeErrorOverlay({
+      filter: (error) => {
+        const message = error.message ?? "";
+        const stack = error.stack ?? "";
+        const extensionSignals = [
+          "mce-autosize-textarea",
+          "A listener indicated an asynchronous response",
+          "message channel closed before a response",
+          "webcomponents-ce.js",
+          "overlay_bundle.js",
+          "chrome-extension://",
+          "moz-extension://",
+        ];
+        return !extensionSignals.some(
+          (signal) => message.includes(signal) || stack.includes(signal),
+        );
+      },
+    }),
     tailwindcss(),
     metaImagesPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
