@@ -179,7 +179,7 @@
           },
           {
             "type": "prompt",
-            "prompt": "Self-review before stopping: Did you finish what you started or leave work half-done? Did you introduce unnecessary complexity? Did you leave temporary workarounds? Should other parts of the codebase be updated to match your changes? Address any concerns."
+            "prompt": "Self-review before stopping. If this session produced code changes: verify TypeScript errors are fixed, relevant tests pass, and new files are integrated consistently with codebase patterns. If this session was read-only (status gathering like /resume or /status, research, analysis, /architect in plan mode, documentation): verify the deliverable actually answered the question and no speculative claims were left unverified. If this session was infrastructure or vault work: verify the target files were actually written and committed. In all cases: only raise concerns if there is a concrete issue you can name — do not produce generic 'cannot verify' responses when the criteria don't apply. If the work is complete for its type, say so and stop."
           },
           {
             "type": "command",
@@ -217,7 +217,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "A subagent just finished. Check: did it complete its assigned task fully? Did it leave any TypeScript errors or test failures? If it modified files, are all changes consistent with codebase patterns? Report issues if work is incomplete."
+            "prompt": "A subagent just finished. Check whether it completed its assigned task. If the subagent produced code changes: did it leave TypeScript errors or test failures? Are its file changes consistent with codebase patterns? If the subagent was read-only (exploration, research, analysis): did it actually return findings or just a trivial non-response? Flag work that is incomplete or trivially empty. Do not flag 'missing verification' when the subagent's task type doesn't warrant those checks."
           }
         ]
       }
@@ -227,7 +227,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "Before marking this task complete: Were all TypeScript errors fixed? Did relevant tests pass? Were any new files properly integrated? Is the implementation actually done or just half-done? If anything was left incomplete, block completion with a specific reason."
+            "prompt": "Before marking this task complete, run checks that match the task type. If the task produced code changes: verify TypeScript compiles clean, relevant tests pass, and new files are integrated consistently with codebase patterns. If the task was read-only or informational (status, research, analysis, planning): verify the deliverable answered the question and all claims are grounded. If the task was infrastructure or documentation work: verify the target files were actually written, saved, and committed where applicable. Do NOT block completion with a generic 'cannot verify' response when the criteria don't apply to this task type — that produces noise without catching real problems. Only block if there is a concrete issue you can name."
           }
         ]
       }
@@ -237,7 +237,7 @@
         "hooks": [
           {
             "type": "prompt",
-            "prompt": "This agent-teams teammate just went idle. Check: did they finish all assigned tasks? Did they leave TypeScript errors? Did they run tests on their changes? If work is incomplete or unverified, send feedback asking them to finish. If everything looks good, approve idle."
+            "prompt": "An agent-teams teammate just went idle. Check whether they finished all assigned tasks. If they produced code changes: did they leave TypeScript errors or untested changes? If their task was read-only or research: did they actually return findings? Send feedback if work is incomplete or trivially empty. Approve idle if the tasks are genuinely complete for their type. Do not ask for TypeScript/test verification when the teammate's work didn't touch code."
           }
         ]
       }

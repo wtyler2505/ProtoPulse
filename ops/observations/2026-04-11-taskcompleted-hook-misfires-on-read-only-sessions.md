@@ -2,8 +2,8 @@
 observed_date: 2026-04-11
 category: friction
 severity: medium
-resolved: false
-resolution: ""
+resolved: true
+resolution: "Rewrote all 4 implementation-biased hook prompts (Stop, TaskCompleted, SubagentStop, TeammateIdle) in .claude/settings.json to be context-aware: the new text explicitly branches on task type (code changes vs read-only vs infrastructure/docs) and instructs the hook reader to NOT produce generic 'cannot verify' responses when criteria don't apply. Fix is live immediately — no session restart needed because Claude Code re-reads settings.json prompts on each hook fire. Verified JSON validity post-edit."
 ---
 
 # TaskCompleted hook self-review criteria assume implementation work and misfire on read-only sessions causing ignorable noise and false blockers
