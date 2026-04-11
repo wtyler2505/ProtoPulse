@@ -1,5 +1,9 @@
 import { logger } from "./logger";
 
+export const featureFlags = {
+  partsCatalogV2: process.env.PARTS_CATALOG_V2 === "true",
+} as const;
+
 export function validateEnv(): void {
   if (!process.env.DATABASE_URL) {
     logger.error("FATAL: DATABASE_URL environment variable is required but not set.");

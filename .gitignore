@@ -16,3 +16,6 @@ e2e/.auth-state.json
 src-tauri/target/
 src-tauri/Cargo.lock
 .superpowers/
+
+# DB backups (pre-migration dumps)
+backups/
