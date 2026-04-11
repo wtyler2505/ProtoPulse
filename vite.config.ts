@@ -28,7 +28,22 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "client", "src"),
       "@shared": path.resolve(import.meta.dirname, "shared"),
       "@assets": path.resolve(import.meta.dirname, "attached_assets"),
+      // Patched Radix Slot to fix React 19 infinite-loop bug.
+      // See client/src/vendor/radix-slot-fixed.tsx for details.
+      "@radix-ui/react-slot": path.resolve(
+        import.meta.dirname,
+        "client",
+        "src",
+        "vendor",
+        "radix-slot-fixed.tsx",
+      ),
     },
+  },
+  optimizeDeps: {
+    // Force re-bundling so any cached pre-bundled chunks that still contain
+    // the original composeRefs path get rebuilt against the alias.
+    force: true,
+    exclude: ["@radix-ui/react-slot"],
   },
   css: {
     postcss: {
