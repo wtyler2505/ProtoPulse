@@ -16,8 +16,15 @@ fi
 
 mkdir -p "$SESSIONS_DIR"
 
-# Derive session ID
-SESSION_ID="${CLAUDE_CONVERSATION_ID:-$(date +%Y%m%d-%H%M%S)}"
+# Read Claude Code's Stop-hook JSON payload from stdin.
+# Per claudekit's ClaudePayload contract (cli/hooks/base.ts:13-25),
+# Claude Code delivers session_id + transcript_path via stdin JSON.
+# We prefer those fields, fall back to env vars (empty in practice),
+# and finally fall back to a timestamp as a last-resort safety net.
+HOOK_PAYLOAD="$(cat 2>/dev/null || true)"
+CLAUDE_ID_FROM_PAYLOAD="$(echo "$HOOK_PAYLOAD" | jq -r '.session_id // empty' 2>/dev/null || true)"
+TRANSCRIPT_PATH="$(echo "$HOOK_PAYLOAD" | jq -r '.transcript_path // empty' 2>/dev/null || true)"
+SESSION_ID="${CLAUDE_ID_FROM_PAYLOAD:-${CLAUDE_CONVERSATION_ID:-${CLAUDE_SESSION_ID:-$(date +%Y%m%d-%H%M%S)}}}"
 SESSION_FILE="$SESSIONS_DIR/${SESSION_ID}.json"
 
 # Don't overwrite existing session files -- append suffix
@@ -34,6 +41,7 @@ cat > "$SESSION_FILE" << ENDJSON
 {
   "session_id": "$SESSION_ID",
   "timestamp": "$(date -Iseconds)",
+  "transcript_path": "${TRANSCRIPT_PATH:-}",
   "knowledge_touched": $knowledge_modified,
   "inbox_touched": $inbox_modified,
   "ops_touched": $ops_modified,
