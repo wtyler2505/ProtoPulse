@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-04-11T02:28:20.851Z",
+  "persistedAt": "2026-04-11T02:29:20.851Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 23,
@@ -55,13 +55,15 @@
       ]
     },
     "POST /api/auth/register": {
-      "count": 1,
-      "totalDuration": 251,
+      "count": 3,
+      "totalDuration": 832,
       "errors": 0,
-      "min": 251,
-      "max": 251,
+      "min": 213,
+      "max": 368,
       "samples": [
-        251
+        213,
+        251,
+        368
       ]
     },
     "POST /api/projects": {
