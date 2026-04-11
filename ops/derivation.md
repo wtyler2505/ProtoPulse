@@ -150,6 +150,38 @@ engine_version: "1.0.0"
 
 **Remaining work:** 231 unmined session files still require a `/remember --mine-sessions` batch run. That work is deliberately out of scope for this /architect pass — this pass restored the detection/queue/observation machinery; the actual mining batch is its own session. The queue task is now accurate and the infrastructure is ready.
 
+### 2026-04-11: Session-mining pipeline rebuilt end-to-end
+**Trigger:** Follow-up to the /architect pass's R6 recommendation. The "231 unmined sessions" queue target from the prior plan was empirically invalidated during Phase 1 of the follow-up plan (`docs/plans/2026-04-11-session-mining-pipeline-rebuild.md`).
+
+**Root-cause findings (diagnostic observation `ops/observations/2026-04-11-capture-hook-session-id-bug.md`):**
+1. `.claude/hooks/session-capture.sh` never read stdin at all — used `${CLAUDE_CONVERSATION_ID:-$(date +%Y%m%d-%H%M%S)}`, which falls through to timestamp because the env var is empty in Stop-hook context. Claudekit's TypeScript source (`cli/hooks/base.ts:13-25`) is authoritative: Claude Code delivers session_id + transcript_path via stdin JSON payload, not via env vars.
+2. Only 10 real transcripts exist in `~/.claude/projects/-home-wtyler-Projects-ProtoPulse/` (Claude Code retention cleanup keeps recent sessions only — dates Apr 10-11). None correlate to any stub (stub IDs are timestamps, transcript IDs are UUIDs).
+3. Stubs have three format variants from successive hook rewrites: 10 old-UUID format (from 20260313-20260401 sessions, transcripts long-expired), 198 current timestamp format (no UUID), 25 `compact-*` checkpoint format (pre-compaction state snapshots, not real captures).
+4. 163 stubs had `mined: null`, 71 had `mined: true` (mostly `compact-*` checkpoints that aren't real captures + hand-cleanups).
+5. `/remember --mine-sessions` (spec at `~/.claude/plugins/cache/agenticnotetaking/arscontexta/0.8.0/platforms/shared/skill-blocks/remember.md:275`) expects `ops/sessions/*.md` with frontmatter and inline transcript. ProtoPulse writes `.json` touch-counter stubs. Format-incompatible at the skill level.
+
+**Changes implemented across 5 phases:**
+1. **Phase 1 — Diagnose.** Skipped empirical env-var probing in favor of inspecting claudekit's TypeScript source as the authoritative contract. Wrote the diagnostic observation note (`ops/observations/2026-04-11-capture-hook-session-id-bug.md` — second observation in the vault).
+2. **Phase 2 — Fix capture hook.** Patched `.claude/hooks/session-capture.sh` to read the Stop-hook stdin JSON payload via `cat | jq -r '.session_id'` and `.transcript_path`, with env-var fallback for non-standard invocations and timestamp as a safety net. Added `transcript_path` field to stub schema. Verified empirically via synthetic hook firings.
+3. **Phase 3 — Build ProtoPulse-local mining runner.** Created `ops/queries/mine-session.sh` (170 lines) that reads a `.jsonl` transcript via jq and emits a markdown friction-candidate report per the `/remember` taxonomy (6 pattern categories). Tested on two real transcripts.
+4. **Phase 4 — Initial mining batch + orphan reconciliation.** Created `ops/queries/reconcile-orphan-stubs.sh` and marked 163 orphan stubs as `mined: "transcript-unavailable"` with provenance. Ran the mining runner against the 9 non-current extant transcripts. Reviewed reports semantically and extracted 1 methodology note + 1 observation note from real friction signals; 7 transcripts surfaced only false positives or context-specific friction that didn't generalize.
+5. **Phase 5 — Queue + Evolution Log + health snapshot.** Marked `maint-001` as done with runbook-style notes. This log entry. New health snapshot (`ops/health/2026-04-11-post-mining-health.md`) superseding the pre-remediation baseline.
+
+**New notes produced by the mining batch:**
+- `ops/methodology/use-desktop-commander-when-bash-permission-denied-on-destructive-ops.md` — category: behavior, source: session 0364162b. Tyler's global CLAUDE.md already has the rule; the methodology note adds session-grounded evidence with a concrete failure example (agent handed off manual `rm -rf` commands to the user instead of switching to Desktop Commander).
+- `ops/observations/2026-04-11-taskcompleted-hook-misfires-on-read-only-sessions.md` — category: friction. Signal observed across 4 sessions (0364162b, 8b4d9360, 4fed4700, a84c75ab). The TaskCompleted hook's self-review prompt asks about TypeScript errors + test results + file integration even on `/resume`, `/status`, and plan-mode sessions where none of those apply. Not promoted to methodology — 1 observation from 4 sessions is insufficient for a behavioral rule. Needs accumulation.
+
+**Vault state after:**
+- Notes: 146 + 2 new (methodology + observation) = 148
+- Observations: 1 → 3 (pipeline-silently-broken + capture-hook-session-id-bug + taskcompleted-hook-misfires)
+- Methodology notes: 6 → 7 (added use-desktop-commander-when-bash-permission-denied-on-destructive-ops)
+- Session stubs: 233 → 163 `transcript-unavailable` + 71 pre-existing `true` + post-fix `false` (the currently-running session will get captured with transcript_path when this session ends via the fixed hook)
+- Queue: maint-001 done; no new maintenance tasks needed yet
+- Mining pipeline: operational end-to-end — capture hook reads stdin → stub has transcript_path → mining runner reads transcript → friction candidates → agent classifies → notes
+- New infrastructure files: `ops/queries/mine-session.sh`, `ops/queries/reconcile-orphan-stubs.sh` (both executable, both committed to the runbook)
+
+**Remaining work:** None in this plan's scope. The first post-fix capture will happen at the end of the currently-running session — its stub will be the first to include a valid UUID session_id and a populated transcript_path. Future mining runs can use that stub as the canonical example of correct shape.
+
 ## Generation Parameters
 - Folder names: knowledge/, inbox/, archive/, self/, ops/, templates/, manual/
 - Skills to generate: all 16 (vocabulary-transformed)

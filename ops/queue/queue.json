@@ -13,14 +13,15 @@
     {
       "id": "maint-001",
       "type": "maintenance",
-      "priority": "multi-session",
-      "status": "pending",
+      "priority": "slow",
+      "status": "done",
       "condition_key": "unprocessed_sessions",
-      "target": "231 session files without mined status in ops/sessions/",
-      "action": "/remember --mine-sessions",
-      "notes": "Session JSON files are touch-counter stubs only, not transcripts. Real transcripts live at ~/.claude/projects/-home-wtyler-Projects-ProtoPulse/*.jsonl. For batch mining: (1) prove the pipeline on ~20 random sessions first, (2) extract friction patterns to ops/observations/, (3) promote to ops/methodology/ only if the pattern repeats. Do not attempt all 231 in a single session.",
+      "target": "163 orphan stubs reconciled (transcript-unavailable) + 9 extant transcripts mined directly via ops/queries/mine-session.sh",
+      "action": "ops/queries/mine-session.sh + ops/queries/reconcile-orphan-stubs.sh (runbook for future routine mining)",
+      "notes": "Pipeline rebuilt 2026-04-11: the capture hook was never reading stdin and wrote timestamp IDs instead of transcript UUIDs; /remember --mine-sessions expects markdown session files, not ProtoPulse's JSON touch-counter stubs. Fixed in docs/plans/2026-04-11-session-mining-pipeline-rebuild.md. Future stubs from the fixed capture hook will include session_id (UUID) and transcript_path. For ongoing mining, run ops/queries/mine-session.sh directly against any transcript in ~/.claude/projects/-home-wtyler-Projects-ProtoPulse/*.jsonl. Initial batch produced 1 methodology note (use-desktop-commander-when-bash-permission-denied-on-destructive-ops) and 1 observation note (taskcompleted-hook-misfires-on-read-only-sessions).",
       "auto_generated": true,
       "last_updated": "2026-04-11",
+      "completed_at": "2026-04-11",
       "created": "2026-04-06T03:52:00Z"
     },
     {
