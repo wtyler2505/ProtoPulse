@@ -9,11 +9,10 @@
       "timeout": 60000
     },
     "postgres": {
-      "command": "npx",
+      "command": "bash",
       "args": [
-        "-y",
-        "@modelcontextprotocol/server-postgres",
-        "${DATABASE_URL}"
+        "-c",
+        "set -a && . /home/wtyler/Projects/ProtoPulse/.env && set +a && exec npx -y @modelcontextprotocol/server-postgres \"$DATABASE_URL\""
       ],
       "timeout": 60000
     },
@@ -23,8 +22,8 @@
       "timeout": 30000
     },
     "qmd": {
-      "command": "qmd",
-      "args": ["mcp"],
+      "command": "/home/wtyler/.local/share/pipx/venvs/qmd/bin/python",
+      "args": ["-m", "qmd.mcp.server"],
       "timeout": 30000
     }
   }
