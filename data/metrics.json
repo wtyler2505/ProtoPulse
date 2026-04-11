@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-04-11T05:30:29.119Z",
+  "persistedAt": "2026-04-11T15:05:29.265Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 41,
@@ -144,11 +144,11 @@
       ]
     },
     "GET /api/projects/:id": {
-      "count": 41,
-      "totalDuration": 723,
+      "count": 42,
+      "totalDuration": 1193,
       "errors": 2,
       "min": 3,
-      "max": 52,
+      "max": 470,
       "samples": [
         3,
         4,
@@ -190,7 +190,8 @@
         38,
         39,
         48,
-        52
+        52,
+        470
       ]
     },
     "GET /api/projects/:id/snapshots": {
@@ -569,8 +570,8 @@
       ]
     },
     "GET /api/projects/:id/validation": {
-      "count": 38,
-      "totalDuration": 3087,
+      "count": 39,
+      "totalDuration": 3127,
       "errors": 0,
       "min": 13,
       "max": 540,
@@ -591,6 +592,7 @@
         34,
         34,
         36,
+        40,
         48,
         50,
         55,
@@ -616,8 +618,8 @@
       ]
     },
     "GET /api/projects/:id/bom": {
-      "count": 41,
-      "totalDuration": 3144,
+      "count": 42,
+      "totalDuration": 3199,
       "errors": 0,
       "min": 6,
       "max": 470,
@@ -645,6 +647,7 @@
         46,
         52,
         55,
+        55,
         58,
         59,
         60,
@@ -666,8 +669,8 @@
       ]
     },
     "GET /api/projects/:id/history": {
-      "count": 37,
-      "totalDuration": 2385,
+      "count": 38,
+      "totalDuration": 2764,
       "errors": 0,
       "min": 20,
       "max": 465,
@@ -708,12 +711,13 @@
         94,
         131,
         132,
+        379,
         465
       ]
     },
     "GET /api/projects/:id/chat": {
-      "count": 37,
-      "totalDuration": 2420,
+      "count": 38,
+      "totalDuration": 2487,
       "errors": 0,
       "min": 13,
       "max": 460,
@@ -746,6 +750,7 @@
         63,
         66,
         66,
+        67,
         69,
         78,
         81,
@@ -758,8 +763,8 @@
       ]
     },
     "GET /api/projects/:id/chat/branches": {
-      "count": 37,
-      "totalDuration": 1998,
+      "count": 38,
+      "totalDuration": 2071,
       "errors": 0,
       "min": 11,
       "max": 437,
@@ -796,6 +801,7 @@
         66,
         66,
         71,
+        73,
         81,
         82,
         98,
