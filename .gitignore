@@ -11,39 +11,8 @@ vite.config.ts.*
 # Playwright
 e2e-results/
 e2e/.auth-state.json
-playwright-report/
 # qmd semantic search index (regenerated via: qmd update protopulse-vault)
 .qmd.db
 src-tauri/target/
 src-tauri/Cargo.lock
 .superpowers/
-
-# Test/coverage artifacts
-coverage/
-
-# Generated / temporary root-level artifacts — keep the working tree clean for /ultraplan teleport
-screen_*.jpg
-screen_*.png
-verify-*.png
-tmp-*.png
-tmp-*.jpg
-wave*_*.png
-wave*_*.jpg
-test_screen*.jpg
-schematic-after-login
-schematic-current-state
-schematic-initial-load
-schematic-stable-verified
-schematic-view-attempt
-schematic-view-loaded
-architecture-loaded
-dev.log
-obs_*.log
-obsidian_full_debug.log
-*.bak
-
-# One-off patch scripts (recreate from git history if needed again)
-patch-*.cjs
-
-# Codebase map (regenerated)
-.codebasemap
