@@ -141,33 +141,41 @@ function HoverPeekDock({
   onPeekClose: () => void;
   children: ReactNode;
 }) {
+  // Store the latest handlers in refs so scheduleOpen/scheduleClose can stay
+  // stable across renders. This prevents the event listener identity on the
+  // wrapper div from churning (which would re-attach on every parent render).
+  const onPeekOpenRef = useRef(onPeekOpen);
+  const onPeekCloseRef = useRef(onPeekClose);
+  useEffect(() => { onPeekOpenRef.current = onPeekOpen; }, [onPeekOpen]);
+  useEffect(() => { onPeekCloseRef.current = onPeekClose; }, [onPeekClose]);
+
   const openTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const clearTimers = useCallback(() => {
-    if (openTimer.current !== null) { clearTimeout(openTimer.current); openTimer.current = null; }
-    if (closeTimer.current !== null) { clearTimeout(closeTimer.current); closeTimer.current = null; }
-  }, []);
-
-  useEffect(() => () => { clearTimers(); }, [clearTimers]);
-
+  // Stable (empty deps) — reads from refs at fire time.
   const scheduleOpen = useCallback(() => {
     if (closeTimer.current !== null) { clearTimeout(closeTimer.current); closeTimer.current = null; }
     if (openTimer.current !== null) { return; }
     openTimer.current = setTimeout(() => {
       openTimer.current = null;
-      onPeekOpen();
+      onPeekOpenRef.current();
     }, HOVER_OPEN_DELAY_MS);
-  }, [onPeekOpen]);
+  }, []);
 
   const scheduleClose = useCallback(() => {
     if (openTimer.current !== null) { clearTimeout(openTimer.current); openTimer.current = null; }
     if (closeTimer.current !== null) { return; }
     closeTimer.current = setTimeout(() => {
       closeTimer.current = null;
-      onPeekClose();
+      onPeekCloseRef.current();
     }, HOVER_CLOSE_DELAY_MS);
-  }, [onPeekClose]);
+  }, []);
+
+  // Cleanup on unmount — stable closure over the timer refs.
+  useEffect(() => () => {
+    if (openTimer.current !== null) { clearTimeout(openTimer.current); openTimer.current = null; }
+    if (closeTimer.current !== null) { clearTimeout(closeTimer.current); closeTimer.current = null; }
+  }, []);
 
   const handleBlurCapture = useCallback((event: FocusEvent<HTMLDivElement>) => {
     const nextTarget = event.relatedTarget;
