@@ -4,7 +4,7 @@
 
 **Goal:** Fix 5 three-space boundary violations in `knowledge/methodology.md`, split 3 oversize topic maps (architecture-decisions 54→30, dev-infrastructure 43→~16, gaps-and-opportunities 48→30), collapse the `knowledge/methodology.md` MOC to a navigation stub, and restore the session-mining feedback loop (queue.json staleness + baseline observation note + ops/health/ directory).
 
-**Architecture:** Pure markdown editing and JSON updates inside the Ars Contexta knowledge vault. No ProtoPulse source code changes. Four strictly-sequential phases with validation gates and a single commit per phase for clean rollback. The plan addresses both symptoms (MOC Sprawl, boundary violations) and root cause (severed feedback loop — 228 unmined sessions, zero observations, no health reports).
+**Architecture:** Pure markdown editing and JSON updates inside the Ars Contexta knowledge vault. No ProtoPulse source code changes. Four strictly-sequential phases with validation gates and a single commit per phase for clean rollback. The plan addresses both symptoms (MOC Sprawl, boundary violations) and root cause (severed feedback loop — 231 unmined sessions, zero observations, no health reports).
 
 **Tech Stack:** Markdown (Obsidian wiki-links) + JSON (ops/queue/queue.json) + bash validation scripts in `ops/queries/` (dangling-links.sh, orphan-notes.sh, and ad-hoc grep counters).
 
@@ -16,7 +16,7 @@ The brainstorm at `/home/wtyler/.claude/plans/smooth-prancing-token-agent-a092d6
 
 1. **Dangling-link validation command.** The brainstorm repeatedly says "re-run dangling-link scan to confirm 0." Live test shows `ops/queries/dangling-links.sh` already resolves `ops/methodology/` as a valid target directory, so the 5 cross-space links are NOT currently flagged as dangling by the script. The violation is structural (three-space boundary), not script-detectable. Verification commands in this plan use a **specific grep for the 5 boundary-violating wiki-link targets** instead of the general dangling scan. The expected delta is 5→0 occurrences of those five specific links in `knowledge/methodology.md`.
 
-2. **Unmined session count.** The brainstorm says 227. Live scan shows **228** (one new session since /architect ran). All references updated.
+2. **Unmined session count.** The brainstorm says 227. Live scan shows **231** (one new session since /architect ran). All references updated.
 
 3. **R2 architecture-decisions target size.** The brainstorm claims "54 → ~22." The actual math — starting count 54, minus 3 duplicate Knowledge-Notes entries removed in Task 2.3 Step 1, minus 23 Comprehensive Audit Findings entries deleted in Task 2.3 Step 3, plus 2 new sub-map pointer entries added in Task 2.3 Step 2 — yields **30 entries**. Still well below the 40 threshold; target revised from 22 to 30 to reflect reality.
 
@@ -28,7 +28,7 @@ The brainstorm at `/home/wtyler/.claude/plans/smooth-prancing-token-agent-a092d6
 | Path | Phase | Change |
 |------|-------|--------|
 | `knowledge/methodology.md` | 1 + 3 | Phase 1 removes 5 boundary-violating wiki-links; Phase 3 collapses entire file to navigation stub |
-| `ops/queue/queue.json` | 1 | Update `maint-001` target count 3→228, priority → `multi-session`, add notes field |
+| `ops/queue/queue.json` | 1 | Update `maint-001` target count 3→231, priority → `multi-session`, add notes field |
 | `knowledge/architecture-decisions.md` | 2 | Remove 3 duplicate Knowledge-Notes entries + replace 23-entry Comprehensive Audit Findings section with 5-line sub-map pointer block |
 | `knowledge/dev-infrastructure.md` | 2 | Replace 4 inline sections (Hooks/Skills/Agents/MCP, 28 entries) with 4 pointer lines |
 | `knowledge/gaps-and-opportunities.md` | 3 | Delete Developer Infrastructure Gaps section (11 entries) and Skill Ecosystem Gaps entry list (7 entries — pointer already present) |
@@ -113,7 +113,7 @@ methodology                    7
 === boundary-violating links in knowledge/methodology.md ===
 5
 === unmined sessions ===
-228
+231
 === ops/health exists? ===
 NO
 === observations count ===
@@ -201,7 +201,7 @@ Expected output includes: `Agent behavior rules, processing principles...`
 **Files:**
 - Modify: `ops/queue/queue.json:14-23`
 
-**Context:** The `maint-001` task claims 3 unmined sessions; actual is 228 (76× stale). Update target, bump priority, and add a notes field documenting the mining strategy.
+**Context:** The `maint-001` task claims 3 unmined sessions; actual is 231 (77× stale). Update target, bump priority, and add a notes field documenting the mining strategy.
 
 - [ ] **Step 1: Read current task state**
 
@@ -238,9 +238,9 @@ Confirm `maint-001` currently has `"target": "3 session files without mined stat
       "priority": "multi-session",
       "status": "pending",
       "condition_key": "unprocessed_sessions",
-      "target": "228 session files without mined status in ops/sessions/",
+      "target": "231 session files without mined status in ops/sessions/",
       "action": "/remember --mine-sessions",
-      "notes": "Session JSON files are touch-counter stubs only, not transcripts. Real transcripts live at ~/.claude/projects/-home-wtyler-Projects-ProtoPulse/*.jsonl. For batch mining: (1) prove the pipeline on ~20 random sessions first, (2) extract friction patterns to ops/observations/, (3) promote to ops/methodology/ only if the pattern repeats. Do not attempt all 228 in a single session.",
+      "notes": "Session JSON files are touch-counter stubs only, not transcripts. Real transcripts live at ~/.claude/projects/-home-wtyler-Projects-ProtoPulse/*.jsonl. For batch mining: (1) prove the pipeline on ~20 random sessions first, (2) extract friction patterns to ops/observations/, (3) promote to ops/methodology/ only if the pattern repeats. Do not attempt all 231 in a single session.",
       "auto_generated": true,
       "last_updated": "2026-04-11",
       "created": "2026-04-06T03:52:00Z"
@@ -255,13 +255,13 @@ python3 -m json.tool ops/queue/queue.json > /dev/null && echo "JSON valid"
 
 Expected output: `JSON valid`
 
-- [ ] **Step 4: Verify target count is now 228**
+- [ ] **Step 4: Verify target count is now 231**
 
 ```bash
 grep '"target"' ops/queue/queue.json
 ```
 
-Expected includes: `"target": "228 session files without mined status in ops/sessions/",`
+Expected includes: `"target": "231 session files without mined status in ops/sessions/",`
 
 ---
 
@@ -285,11 +285,11 @@ resolved: false
 resolution: ""
 ---
 
-# Session mining pipeline stopped running after 2026-04-06 leaving 228 unprocessed sessions
+# Session mining pipeline stopped running after 2026-04-06 leaving 231 unprocessed sessions
 
 ## Context
 
-Detected during /architect full-system analysis on 2026-04-11. The vault health scan revealed 228 session stubs in `ops/sessions/` with `"mined": false`, while `ops/queue/queue.json` still claimed the maintenance task was for "3 session files." No observation notes had been captured since the vault was initialized on 2026-04-05 (observations directory was empty). No tensions recorded. No health reports generated.
+Detected during /architect full-system analysis on 2026-04-11. The vault health scan revealed 231 session stubs in `ops/sessions/` with `"mined": false`, while `ops/queue/queue.json` still claimed the maintenance task was for "3 session files." No observation notes had been captured since the vault was initialized on 2026-04-05 (observations directory was empty). No tensions recorded. No health reports generated.
 
 ## Signal
 
@@ -298,7 +298,7 @@ The condition-based maintenance loop — detect → surface → act — has sile
 1. **Capture works:** the SessionEnd hook writes a JSON stub for every session, correctly.
 2. **Mining does not run:** `/remember --mine-sessions` has not fired since 2026-04-06, even though the queue had a pending task for it.
 3. **Observations space is empty:** the mechanism that converts mined transcripts into `ops/observations/*.md` never runs.
-4. **Queue staleness:** the maint-001 counter was 76× stale (3 vs 228).
+4. **Queue staleness:** the maint-001 counter was 77× stale (3 vs 231).
 5. **No health history:** `ops/health/` directory does not exist, so the previous /architect pass left no baseline to compare against.
 
 All five symptoms point to the same root cause: the recursive improvement loop is severed. The system is producing telemetry (session capture) that nothing downstream reads.
@@ -314,7 +314,7 @@ Immediate (this /architect pass):
 
 Deferred (next work item, separate session):
 - Run `/remember --mine-sessions` on a sample of ~20 sessions to prove the mining pipeline still works end-to-end
-- If mining works: scale to the full 228
+- If mining works: scale to the full 231
 - If mining is broken: diagnose the break (hook? skill? transcript format?)
 
 Promotion target: if this pattern repeats after /remember is re-wired — i.e., observations accumulate but do not surface during /next or /architect — promote to `knowledge/dev-infrastructure.md` as a methodology note about "feedback loop monitoring."
@@ -410,7 +410,7 @@ Baseline snapshot captured during the /architect pass on 2026-04-11 (pre-remedia
 
 | Signal | Observed | Expected per spec |
 |---|---|---|
-| Unmined sessions | 228 | queue says 3 (76× stale — target of R6a) |
+| Unmined sessions | 231 | queue says 3 (77× stale — target of R6a) |
 | Observations pending | 0 | empty directory — target of R6b |
 | Tensions open | 0 | empty directory |
 | Inbox depth | 0 | empty directory |
@@ -433,7 +433,7 @@ Zero drift. All 8 configuration dimensions still match the 2026-04-05 derivation
 ## Failure Modes Active
 
 1. **MOC Sprawl (#5)** — 4 MOCs at or over the 40-entry threshold (architecture-decisions, gaps-and-opportunities, dev-infrastructure, claude-code-skills)
-2. **Over-Automation (#8)** — session capture hooks run but mining pipeline does not follow up; 228 unprocessed stubs accumulating silently
+2. **Over-Automation (#8)** — session capture hooks run but mining pipeline does not follow up; 231 unprocessed stubs accumulating silently
 3. **Productivity Porn (#9) — MITIGATED** — the 25% meta-work budget rule constrained this /architect pass to symptom + root cause only; no pre-emptive restructuring
 
 ## Link Density
@@ -452,7 +452,7 @@ See `ops/derivation.md` Evolution Log entry dated 2026-04-11 for the full change
 
 ---
 
-**Next health snapshot:** suggested on next /architect pass, or after the 228-session mining batch runs (whichever comes first).
+**Next health snapshot:** suggested on next /architect pass, or after the 231-session mining batch runs (whichever comes first).
 ```
 
 - [ ] **Step 3: Verify health report exists**
@@ -490,7 +490,7 @@ find ops/observations -name '*.md' 2>/dev/null | wc -l
 Expected deltas from baseline:
 - MOC sizes: **unchanged** (architecture-decisions 54, dev-infrastructure 43, gaps-and-opportunities 48, methodology 7 — `## Notes` was deleted but `^\- \[\[` count stays at 7 because no wiki-link `- [[` lines existed there; methodology count is from the Topics footer and other sections)
 - Boundary-violating links: 5 → **0**
-- Unmined sessions: **228** (unchanged — actual mining not in scope)
+- Unmined sessions: **231** (unchanged — actual mining not in scope)
 - ops/health exists: NO → **YES**
 - Observations count: 0 → **1**
 
@@ -529,7 +529,7 @@ vault: /architect phase 1 — fix boundary violations, restore feedback loop
 - Remove 5 cross-space wiki-links from knowledge/methodology.md
   (targets live in ops/methodology/, not knowledge/)
 - Replace with ## Where Operational Methodology Lives prose pointer
-- Update ops/queue/queue.json maint-001: 3 → 228 sessions,
+- Update ops/queue/queue.json maint-001: 3 → 231 sessions,
   priority session → multi-session, added mining strategy notes
 - Create first ops/observations/ note: session-mining-pipeline-silently-broken
 - Create ops/health/ directory + 2026-04-11 baseline snapshot
@@ -554,7 +554,7 @@ Expected: the commit message from Step 4, prefixed with a hash.
 - [ ] Zero boundary-violating wiki-links in `knowledge/methodology.md`
 - [ ] `ops/observations/` contains the diagnostic friction note
 - [ ] `ops/health/` directory exists with the 2026-04-11 baseline snapshot
-- [ ] `ops/queue/queue.json` maint-001 target = 228, priority = multi-session, JSON valid
+- [ ] `ops/queue/queue.json` maint-001 target = 231, priority = multi-session, JSON valid
 - [ ] Commit made, working tree clean (excluding unrelated auto-commit hook activity)
 
 ---
@@ -1502,7 +1502,7 @@ Use the Edit tool to insert after the last line of the 2026-04-06 entry and befo
 **Vault state after:** 147 notes, 15 topic maps (was 12), 0 orphans, 0 dangling links.
 
 ### 2026-04-11: /architect analysis — 6 recommendations across 4 phases
-**Trigger:** User-invoked /architect full run after 5-day gap. Health check revealed 5 three-space boundary violations, 4 MOCs at or over the 40-entry threshold, 228 unmined sessions (vs queue's claimed 3), empty observations + tensions directories, missing ops/health/ directory.
+**Trigger:** User-invoked /architect full run after 5-day gap. Health check revealed 5 three-space boundary violations, 4 MOCs at or over the 40-entry threshold, 231 unmined sessions (vs queue's claimed 3), empty observations + tensions directories, missing ops/health/ directory.
 
 **Health findings:** 1 WARN (three-space boundary violations), 4 WARN (MOC oversize), 1 WARN (stale queue), 1 WARN (Over-Automation silent failure). 0 FAIL on schema compliance, orphans, or stale notes.
 
@@ -1518,7 +1518,7 @@ Use the Edit tool to insert after the last line of the 2026-04-06 entry and befo
 3. **R3 — Split dev-infrastructure 43 → ~16.** Created knowledge/infrastructure-hooks.md, knowledge/infrastructure-agents.md, knowledge/infrastructure-mcp.md. Replaced 4 inline sections with pointer references. knowledge/claude-code-skills.md already existed from a prior pass.
 4. **R4 — De-duplicated gaps-and-opportunities 48 → 30.** Replaced Developer Infrastructure Gaps section (11 entries) with a pointer to dev-infrastructure. Deleted 7 redundant entries from Skill Ecosystem Gaps (the pointer to claude-code-skills already existed).
 5. **R5 — Collapsed knowledge/methodology.md to a navigation stub.** Methodology content now lives canonically in self/methodology.md (agent) and ops/methodology/ (operational). knowledge/methodology.md retained only for index.md → [[methodology]] link preservation plus graph-health-rules.
-6. **R6 — Restored the session-mining feedback loop.** Updated ops/queue/queue.json maint-001 (target 3 → 228, priority session → multi-session, added mining strategy notes). Populated ops/observations/ with 2026-04-11-session-mining-pipeline-silently-broken.md. Created ops/health/ directory with 2026-04-11-full-system-health.md baseline snapshot.
+6. **R6 — Restored the session-mining feedback loop.** Updated ops/queue/queue.json maint-001 (target 3 → 231, priority session → multi-session, added mining strategy notes). Populated ops/observations/ with 2026-04-11-session-mining-pipeline-silently-broken.md. Created ops/health/ directory with 2026-04-11-full-system-health.md baseline snapshot.
 
 **Vault state after:**
 - Notes: 146 (unchanged — no notes created or deleted; 5 new topic maps added)
@@ -1528,9 +1528,9 @@ Use the Edit tool to insert after the last line of the 2026-04-06 entry and befo
 - MOCs over threshold: 0 (architecture-decisions, dev-infrastructure, gaps-and-opportunities all under 40; claude-code-skills at 40 exactly — deferred)
 - Observations: 0 → 1
 - Health reports: 0 → 1
-- Queue staleness: fixed (maint-001 now reflects 228 unmined sessions)
+- Queue staleness: fixed (maint-001 now reflects 231 unmined sessions)
 
-**Remaining work:** 228 unmined session files still require a `/remember --mine-sessions` batch run. That work is deliberately out of scope for this /architect pass — this pass restored the detection/queue/observation machinery; the actual mining batch is its own session. The queue task is now accurate and the infrastructure is ready.
+**Remaining work:** 231 unmined session files still require a `/remember --mine-sessions` batch run. That work is deliberately out of scope for this /architect pass — this pass restored the detection/queue/observation machinery; the actual mining batch is its own session. The queue task is now accurate and the infrastructure is ready.
 
 ## Generation Parameters
 ```
@@ -1587,7 +1587,7 @@ Expected final state:
 | security-debt | 8 (unchanged) |
 | performance-debt | 10 (unchanged) |
 | Boundary violations | 0 |
-| Unmined sessions | 228 (unchanged — not in scope) |
+| Unmined sessions | 231 (unchanged — not in scope) |
 | Observations | 1 |
 | Health reports | 1 |
 | Orphans | 0 |
@@ -1629,10 +1629,10 @@ vault: /architect phase 4 — evolution log + final validation
   - 0 MOCs over threshold (was 4)
   - 5 new sub-maps with correct entry counts
   - 0 orphans
-  - queue.json valid with accurate 228-session maint-001 target
+  - queue.json valid with accurate 231-session maint-001 target
   - First observation note and first health report in place
 
-Remaining work: 228 unmined sessions — out of scope for /architect,
+Remaining work: 231 unmined sessions — out of scope for /architect,
 deferred to a dedicated /remember --mine-sessions batch session.
 
 Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
@@ -1682,7 +1682,7 @@ Worst-case failure mode during execution: a split produces an orphan (a note tha
 
 **This plan does NOT:**
 
-1. Mine the 228 unprocessed session stubs. That is `/remember --mine-sessions` territory, not /architect territory. R6 restores the detection/queue/observation machinery; the actual mining batch is a separate session.
+1. Mine the 231 unprocessed session stubs. That is `/remember --mine-sessions` territory, not /architect territory. R6 restores the detection/queue/observation machinery; the actual mining batch is a separate session.
 2. Rewrite the session capture hook to produce richer transcripts. The JSON touch-counter format is intentional. Real transcripts already exist at `~/.claude/projects/-home-wtyler-Projects-ProtoPulse/*.jsonl` — the mining pipeline just needs to read them. Rewriting the capture hook is out of scope.
 3. Run `/reseed`. None of the reseed triggers apply — zero dimension drift, no context-file contradictions, vocabulary matches user's language, three-space boundaries are mostly intact (1 violation patched by R1).
 4. Split `claude-code-skills.md`. Currently at exactly 40 (threshold), not over. Defer until 45+ per the `failure-modes.md` guidance against premature complexity.
