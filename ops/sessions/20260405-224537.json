@@ -5,5 +5,7 @@
   "inbox_touched": 0,
   "ops_touched": 2,
   "self_touched": 0,
-  "mined": true
+  "mined": "closed-out-no-content",
+  "reconciled_at": "2026-04-11T20:42:08Z",
+  "reconciled_reason": "uncategorized bucket-F stub: touch-counter only, no provenance annotation, no mined_note, no .id UUID; earliest vault-creation timestamps; treating as no-content terminal"
 }

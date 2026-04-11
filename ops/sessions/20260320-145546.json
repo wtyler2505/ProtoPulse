@@ -2,6 +2,8 @@
   "id": "4335d89e-6114-4656-8afb-7ea45f97b506",
   "started": "20260320-145546",
   "status": "active",
-  "mined": true,
-  "mined_note": "Content captured via direct knowledge extraction during April 5-6 session (118 notes, 15 scripts, 6 methodology notes)"
+  "mined": "partial-user-side-recovered",
+  "mined_note": "Content captured via direct knowledge extraction during April 5-6 session (118 notes, 15 scripts, 6 methodology notes)",
+  "reconciled_at": "2026-04-11T20:42:08Z",
+  "reconciled_reason": "Bucket E old-UUID stub; full transcript expired via Claude Code retention cleanup; user-side messages recovered from ~/.claude/history.jsonl indexed by sessionId; findings documented in ops/observations/2026-04-11-bucket-e-partial-recovery-mining-results.md"
 }

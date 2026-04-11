@@ -1,5 +1,8 @@
 {
   "session_id": "20260406-040811",
   "mined": true,
-  "mined_note": "Malformed JSON fixed and marked mined — content captured via direct extraction"
+  "mined_note": "Malformed JSON fixed and marked mined — content captured via direct extraction",
+  "terminal": "hand-cleanup-no-extraction",
+  "terminal_at": "2026-04-11T20:42:10Z",
+  "terminal_reason": "marked mined by manual cleanup to clear malformed-JSON errors; no friction was extracted to ops/observations/ or ops/methodology/"
 }

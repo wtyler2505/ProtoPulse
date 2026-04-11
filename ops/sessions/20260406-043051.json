@@ -6,5 +6,8 @@
   "ops_touched": 2,
   "self_touched": 0,
   "mined": true,
-  "mined_note": "Restart stub from hook debugging session \u2014 no development content"
+  "mined_note": "Restart stub from hook debugging session — no development content",
+  "terminal": "no-content-debug-restart",
+  "terminal_at": "2026-04-11T20:42:11Z",
+  "terminal_reason": "session was a debug restart with no development content (hook debugging); nothing to extract"
 }

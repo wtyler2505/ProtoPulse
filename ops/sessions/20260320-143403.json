@@ -2,5 +2,7 @@
   "id": "2799d836-711e-4471-ab1a-2ef4bbd1b3c7",
   "started": "20260320-143403",
   "status": "active",
-  "mined": true
+  "mined": "partial-user-side-recovered",
+  "reconciled_at": "2026-04-11T20:42:08Z",
+  "reconciled_reason": "Bucket E old-UUID stub; full transcript expired via Claude Code retention cleanup; user-side messages recovered from ~/.claude/history.jsonl indexed by sessionId; findings documented in ops/observations/2026-04-11-bucket-e-partial-recovery-mining-results.md"
 }
