@@ -17,10 +17,8 @@ Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` fo
 - [[architecture-first-bridges-intent-to-implementation]] -- why architecture-first matters
 - [[god-files-create-feature-paralysis-through-complexity]] -- 12 god files blocked feature domains
 - [[dual-export-system-is-a-maintenance-trap]] -- parallel implementations require double fixes
-- [[ai-prompt-scaling-is-linear-and-will-hit-token-limits]] -- O(N) system prompt cost
-- [[monolithic-context-causes-quadratic-render-complexity]] -- ProjectProvider re-render cascade
+- [[asynchandler-wrapper-is-redundant-in-express-v5]] -- legacy wrapper, Express v5 handles async natively
 - [[cocomo-estimates-protopulse-at-1-9m-and-17-months]] -- codebase scale quantified
-- [[cors-origin-reflection-was-a-critical-csrf-vector]] -- highest-severity security finding
 - [[express-5-chosen-because-spa-tools-dont-need-ssr]] -- no SSR needed for tool apps
 - [[react-query-eliminates-the-need-for-client-state-libraries]] -- server-derived state only
 - [[drizzle-orm-was-chosen-for-type-safe-zod-integration]] -- schema-to-type-to-validation chain
@@ -35,36 +33,13 @@ Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` fo
 - [[six-epics-organize-the-remaining-strategic-work]] -- A-F strategic layers
 - [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- 293 findings became 154 waves
 
-### Comprehensive Audit Synthesis
+### Comprehensive Audit Sub-Maps (April 2026)
 - [[comprehensive-audit-reveals-zero-validation-at-any-layer]] -- the audit's meta-finding across all 40 sections
+- [[ai-system-debt]] -- validation vacuum cluster (9 notes)
 - [[security-debt]] -- attack chain cluster (5 notes)
 - [[performance-debt]] -- main-thread blocking cluster (6 notes)
-- [[ai-system-debt]] -- validation vacuum cluster (9 notes)
-
-### Comprehensive Audit Findings (2026-04-05)
-- [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- unhandled abort = zombie Gemini requests
-- [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- z.any() defeats structured output
-- [[genkit-125-flat-tools-is-an-outdated-anti-pattern-needs-multi-agent]] -- 125 flat tools cause context collapse
-- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- zero AI eval test coverage
-- [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- Math.random() prices in production
-- [[build-system-prompt-has-on-m-edge-resolution-bottleneck]] -- O(N*M) array scans per AI request
-- [[ai-toolset-has-major-blindspots-in-history-variables-lifecycle-and-zones]] -- 6 API domains invisible to AI
-- [[risk-analysis-tool-references-nonexistent-schema-columns]] -- broken risk scores from missing columns
-- [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- O(N) stringify per render cycle
-- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- MNA/NR/Gauss all sync main thread
-- [[jsonb-columns-lack-gin-indexes-forcing-sequential-scans]] -- no GIN indexes on JSONB columns
-- [[tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce]] -- XSS → RCE via disabled CSP + global API
-- [[eval-in-circuit-code-view-plus-localstorage-session-enables-xss-hijack]] -- eval + localStorage = full hijack
-- [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] -- desktop app needs Node.js installed
-- [[scrypt-64mb-per-request-enables-oom-dos-before-rate-limiter]] -- 10 requests = 640MB OOM
-- [[websocket-sessions-are-never-revalidated-after-initial-handshake]] -- revoked users keep access
-- [[setinterval-never-cleared-creates-memory-ratchet-in-server-routes]] -- dangling intervals leak memory
-- [[execsync-in-arduino-service-blocks-entire-express-event-loop]] -- sync shell calls freeze API
-- [[custom-lww-sync-should-be-replaced-with-yjs-crdts]] -- LWW causes destructive merges
-- [[voice-ai-is-disconnected-from-llm-using-hardcoded-command-matching]] -- voice is fake AI
-- [[focus-outline-none-strips-keyboard-indicators-wcag-violation]] -- WCAG AA keyboard focus broken
-- [[vite-manual-chunks-defeats-dynamic-import-and-tree-shaking]] -- bloated initial JS payload
-- [[asynchandler-wrapper-is-redundant-in-express-v5]] -- legacy wrapper, Express v5 handles async natively
+- [[resource-leaks-debt]] -- zombie streams, memory ratchet, scrypt burst (3 notes)
+- [[desktop-pivot-debt]] -- Tauri CSP/RCE chain + sidecar dependency (3 notes)
 
 ## Core Stack Decisions
 

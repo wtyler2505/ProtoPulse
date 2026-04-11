@@ -9,51 +9,19 @@ The Claude Code developer infrastructure powering ProtoPulse sessions. This cove
 
 ## Hooks
 
-Hooks fire automatically on Claude Code lifecycle events. ProtoPulse uses 26 hooks across 6 events (15 claudekit, 11 custom).
-
-- [[twenty-six-hooks-create-a-dense-quality-pipeline]] -- the full pipeline and its implications
-- [[nine-posttooluse-groups-fire-on-every-write]] -- latency cost of the PostToolUse pipeline
-- [[session-orient-and-validate-note-have-syntax-bugs]] -- concatenated lines break bash parsing
-- [[blocking-typecheck-takes-33-to-44-seconds-on-protopulse]] -- known timeout issue, fixed via claudekit config
-- [[auto-commit-vault-is-the-only-async-hook]] -- 25 blocking vs 1 async creates bottleneck risk
-- [[two-hook-groups-have-no-explicit-matcher]] -- SessionStart and Stop groups fall through to default
-- [[claudekit-and-custom-hooks-share-the-posttooluse-pipeline]] -- ordering matters, no coordination
+26 Claude Code hooks across 6 events (15 claudekit + 11 custom). See [[infrastructure-hooks]] for the full pipeline, latency analysis, and known ordering issues.
 
 ## Skills
 
-23 project skills + 142 global skills + ~50 plugin skills = 215+ total. See [[claude-code-skills]] for the dedicated topic map.
-
-- [[vault-skills-outnumber-project-skills-seven-to-one]] -- 20 vault vs 3 project
-- [[extract-is-the-largest-skill-at-1128-lines]] -- processing pipeline entry point
-- [[ship-and-verify-overlap-on-commit-validation-territory]] -- potential confusion on which to use
-- [[superpowers-plugin-provides-the-core-development-lifecycle]] -- brainstorm through ship
-- [[knowledge-pipeline-has-ten-skills-covering-the-full-lifecycle]] -- extract through verify
-- [[nineteen-mastery-skills-are-the-deepest-knowledge-layer]] -- encyclopedic domain expertise
-- [[twelve-deprecated-skills-still-exist-alongside-their-replacements]] -- zombie skill inflation
-- [[slash-commands-are-the-primary-user-interface-to-the-skill-system]] -- 58 command entry points
+23 project skills + 142 global skills + ~50 plugin skills = 215+ total. See [[claude-code-skills]] for the dedicated topic map covering the full ecosystem.
 
 ## Agents
 
-37 agent definitions across 17 directories, none with explicit trigger patterns. 3 have persistent memory.
-
-- [[thirty-seven-agents-have-no-trigger-patterns]] -- agents cannot self-activate, must be manually invoked
-- [[six-agents-cover-technologies-not-in-protopulse-stack]] -- kafka, loopback, nestjs, mongodb, jest, nextjs
-- [[agent-definitions-total-twenty-thousand-lines]] -- context cost if loaded, but rarely referenced
-- [[three-agents-have-persistent-project-memory]] -- oracle, eda-domain-reviewer, code-review-expert
-- [[oracle-agent-escalation-is-the-strongest-debugging-path]] -- memory + effort:high + GPT-5 fallback
-- [[agent-teams-skill-is-the-mandated-parallel-execution-mechanism]] -- the only sanctioned parallel approach
+37 agent definitions across 17 directories — 3 with persistent project memory, none with self-triggering patterns. See [[infrastructure-agents]] for the full catalog and memory configuration.
 
 ## MCP Servers
 
-4 project MCP servers + Arduino CLI MCP globally. Each extends a distinct capability dimension.
-
-- [[four-mcp-servers-extend-four-distinct-capability-dimensions]] -- secrets, data, browser, search
-- [[five-mcp-capability-dimensions-map-to-five-development-needs]] -- the full capability pentagon including hardware
-- [[desktop-commander-is-required-for-reading-env-and-secrets]] -- Claude Code blocks .env access
-- [[postgres-mcp-has-inline-credentials-in-mcp-json]] -- connection string contains password
-- [[playwright-mcp-provides-browser-automation-but-chrome-devtools-mcp-provides-dom-inspection]] -- two browser tools, different purposes
-- [[qmd-mcp-enables-semantic-search-across-the-knowledge-vault]] -- semantic search over markdown
-- [[arduino-cli-mcp-bridges-software-development-and-hardware-programming]] -- 16 tools for firmware lifecycle
+4 project MCP servers + Arduino CLI globally. See [[infrastructure-mcp]] for the full capability pentagon (secrets, data, browser, search, hardware).
 
 ## Configuration
 
