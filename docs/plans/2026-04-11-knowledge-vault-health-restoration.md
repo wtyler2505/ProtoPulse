@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Fix 5 three-space boundary violations in `knowledge/methodology.md`, split 3 oversize topic maps (architecture-decisions 54→~27, dev-infrastructure 43→~16, gaps-and-opportunities 48→~31), collapse the `knowledge/methodology.md` MOC to a navigation stub, and restore the session-mining feedback loop (queue.json staleness + baseline observation note + ops/health/ directory).
+**Goal:** Fix 5 three-space boundary violations in `knowledge/methodology.md`, split 3 oversize topic maps (architecture-decisions 54→30, dev-infrastructure 43→~16, gaps-and-opportunities 48→30), collapse the `knowledge/methodology.md` MOC to a navigation stub, and restore the session-mining feedback loop (queue.json staleness + baseline observation note + ops/health/ directory).
 
 **Architecture:** Pure markdown editing and JSON updates inside the Ars Contexta knowledge vault. No ProtoPulse source code changes. Four strictly-sequential phases with validation gates and a single commit per phase for clean rollback. The plan addresses both symptoms (MOC Sprawl, boundary violations) and root cause (severed feedback loop — 228 unmined sessions, zero observations, no health reports).
 
@@ -18,7 +18,7 @@ The brainstorm at `/home/wtyler/.claude/plans/smooth-prancing-token-agent-a092d6
 
 2. **Unmined session count.** The brainstorm says 227. Live scan shows **228** (one new session since /architect ran). All references updated.
 
-3. **R2 architecture-decisions target size.** The brainstorm claims "54 → ~22." Counting what actually needs to stay (narrative sections + Tensions + non-debt Knowledge Notes + 5 sub-map pointers) yields **~27 entries**. Still well below the 40 threshold; target revised to reflect reality.
+3. **R2 architecture-decisions target size.** The brainstorm claims "54 → ~22." The actual math — starting count 54, minus 3 duplicate Knowledge-Notes entries removed in Task 2.3 Step 1, minus 23 Comprehensive Audit Findings entries deleted in Task 2.3 Step 3, plus 2 new sub-map pointer entries added in Task 2.3 Step 2 — yields **30 entries**. Still well below the 40 threshold; target revised from 22 to 30 to reflect reality.
 
 ---
 
@@ -728,7 +728,7 @@ Expected: frontmatter present + entry count ≥ 3
 2. **Replaces the entire Comprehensive Audit Findings section (23 entries)** with a 5-line pointer block linking to the 5 debt sub-maps (3 existing + 2 new from Tasks 2.1, 2.2).
 3. **Renames** the Comprehensive Audit Synthesis section to Comprehensive Audit Sub-Maps (keeps its 4 entries).
 
-Expected post-edit count: 54 − 3 (duplicates) − 23 (Findings section) + 2 (new sub-map pointers) = **30 entries**. Well under the 40 threshold.
+Expected post-edit count: 54 − 3 (duplicates) − 23 (Findings section) + 2 (new sub-map pointers) = **30 entries**. Well under the 40 threshold. All subsequent validation steps in this plan use 30 as the target.
 
 - [ ] **Step 1: Remove the 3 duplicate Knowledge Notes entries**
 
@@ -779,10 +779,12 @@ This removes the `cors-origin-reflection` line cleanly.
 
 - [ ] **Step 2: Rename the Comprehensive Audit Synthesis section and extend its entry list**
 
+Note: both the Synthesis header and the Findings header in the current file are H3 (`###`), not H2 (`##`). Preserve the H3 level in the edit.
+
 **old_string:**
 
 ```
-## Comprehensive Audit Synthesis
+### Comprehensive Audit Synthesis
 - [[comprehensive-audit-reveals-zero-validation-at-any-layer]] -- the audit's meta-finding across all 40 sections
 - [[security-debt]] -- attack chain cluster (5 notes)
 - [[performance-debt]] -- main-thread blocking cluster (6 notes)
@@ -792,7 +794,7 @@ This removes the `cors-origin-reflection` line cleanly.
 **new_string:**
 
 ```
-## Comprehensive Audit Sub-Maps (April 2026)
+### Comprehensive Audit Sub-Maps (April 2026)
 - [[comprehensive-audit-reveals-zero-validation-at-any-layer]] -- the audit's meta-finding across all 40 sections
 - [[ai-system-debt]] -- validation vacuum cluster (9 notes)
 - [[security-debt]] -- attack chain cluster (5 notes)
@@ -848,7 +850,7 @@ The entire 23-entry block including its `### Comprehensive Audit Findings (2026-
 grep -c '^\- \[\[' knowledge/architecture-decisions.md
 ```
 
-Expected output: `28` (54 − 3 duplicates − 23 findings + 0 section heading changes = 28). Anything ≤ 39 is acceptable. If the count is still ≥ 40, re-read and find what was missed.
+Expected output: `30` (54 − 3 duplicates − 23 findings + 2 new sub-map pointer entries added in Step 2 = 30). Anything ≤ 39 is acceptable. If the count is still ≥ 40, re-read and find what was missed.
 
 ---
 
@@ -868,7 +870,7 @@ grep -c '\[\[resource-leaks-debt\]\]\|\[\[desktop-pivot-debt\]\]' knowledge/arch
 ```
 
 Expected:
-- MOC size: ≤ 39 (target ~28)
+- MOC size: 30 (54 − 3 − 23 + 2); anything ≤ 39 passes the threshold
 - resource-leaks-debt: YES
 - desktop-pivot-debt: YES
 - Pointer count: 2
@@ -1152,7 +1154,7 @@ done
 ```
 
 Expected:
-- architecture-decisions: ≤ 39 (target ~28)
+- architecture-decisions: 30 (target); anything ≤ 39 passes the threshold
 - dev-infrastructure: ≤ 20 (target ~16)
 - gaps-and-opportunities: 48 (unchanged — Phase 3 target)
 - methodology: ≤ 7 (unchanged or lower post-R1)
@@ -1195,7 +1197,7 @@ git add knowledge/architecture-decisions.md knowledge/dev-infrastructure.md know
 git commit -m "$(cat <<'EOF'
 vault: /architect phase 2 — split architecture-decisions and dev-infrastructure MOCs
 
-R2 — architecture-decisions 54 → ~28:
+R2 — architecture-decisions 54 → 30:
 - Created knowledge/resource-leaks-debt.md (3 notes: setInterval, genkit-abort, scrypt)
 - Created knowledge/desktop-pivot-debt.md (3 notes: Tauri CSP, sidecar, pivot-unblocked)
 - Removed 3 duplicate Knowledge Notes entries that already live in sub-maps
@@ -1209,7 +1211,7 @@ R3 — dev-infrastructure 43 → ~16:
 - Created knowledge/infrastructure-agents.md (6 notes from Agents section)
 - Created knowledge/infrastructure-mcp.md (7 notes from MCP Servers section)
 - Replaced 4 inline sections in dev-infrastructure.md with pointer references
-  to the 4 sub-maps (hooks, agents, mcp, claude-code-skills already existed)
+  to the 3 new sub-maps (hooks, agents, mcp) plus the existing claude-code-skills pointer
 
 Both target MOCs now under the 40-entry threshold. Zero orphans introduced.
 
@@ -1512,7 +1514,7 @@ Use the Edit tool to insert after the last line of the 2026-04-06 entry and befo
 
 **Changes implemented:**
 1. **R1 — Fixed 5 three-space boundary violations** in knowledge/methodology.md. Removed cross-space wiki-links to ops/methodology/*.md and replaced with a prose paragraph redirecting to self/methodology.md and ops/methodology/.
-2. **R2 — Split architecture-decisions 54 → ~28.** Created knowledge/resource-leaks-debt.md and knowledge/desktop-pivot-debt.md as new sub-maps. Removed 3 duplicate entries already in existing debt sub-maps. Replaced the 23-entry Comprehensive Audit Findings section with a 5-line sub-map pointer block.
+2. **R2 — Split architecture-decisions 54 → 30.** Created knowledge/resource-leaks-debt.md and knowledge/desktop-pivot-debt.md as new sub-maps. Removed 3 duplicate entries already in existing debt sub-maps. Replaced the 23-entry Comprehensive Audit Findings section with a 5-line sub-map pointer block.
 3. **R3 — Split dev-infrastructure 43 → ~16.** Created knowledge/infrastructure-hooks.md, knowledge/infrastructure-agents.md, knowledge/infrastructure-mcp.md. Replaced 4 inline sections with pointer references. knowledge/claude-code-skills.md already existed from a prior pass.
 4. **R4 — De-duplicated gaps-and-opportunities 48 → 30.** Replaced Developer Infrastructure Gaps section (11 entries) with a pointer to dev-infrastructure. Deleted 7 redundant entries from Skill Ecosystem Gaps (the pointer to claude-code-skills already existed).
 5. **R5 — Collapsed knowledge/methodology.md to a navigation stub.** Methodology content now lives canonically in self/methodology.md (agent) and ops/methodology/ (operational). knowledge/methodology.md retained only for index.md → [[methodology]] link preservation plus graph-health-rules.
