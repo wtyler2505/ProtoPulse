@@ -55,29 +55,11 @@ This topic map organizes what ProtoPulse DOESN'T have yet, what's broken, and wh
 
 ## Developer Infrastructure Gaps
 
-- [[session-orient-and-validate-note-have-syntax-bugs]] -- two hook scripts have bash syntax errors from concatenated lines
-- [[nine-posttooluse-groups-fire-on-every-write]] -- dense blocking pipeline adds latency to every edit
-- [[auto-commit-vault-is-the-only-async-hook]] -- 25 blocking hooks vs 1 async creates bottleneck
-- [[two-hook-groups-have-no-explicit-matcher]] -- fragile implicit defaults in settings.json
-- [[thirty-seven-agents-have-no-trigger-patterns]] -- agents cannot self-activate, must be manually invoked
-- [[six-agents-cover-technologies-not-in-protopulse-stack]] -- dead-weight agent definitions
-- [[postgres-mcp-has-inline-credentials-in-mcp-json]] -- hardcoded DB password in version control
-- [[combined-claude-md-exceeds-800-lines-creating-context-pressure]] -- ~8600 tokens consumed per session by instructions alone
-- [[claude-md-references-a-settings-skill-that-does-not-exist]] -- stale reference after skill removal
-- [[subagentsop-event-is-declared-but-has-no-hooks]] -- subagent quality gates missing
-- [[vault-skills-outnumber-project-skills-seven-to-one]] -- development workflow skills underserved
+See [[dev-infrastructure]] for the full infrastructure topic map — hook latency, agent trigger gaps, MCP credential leaks, and CLAUDE.md context pressure all live there under their respective sections. The Known Issues subsection is the specific analog to this one.
 
 ## Skill Ecosystem Gaps
 
-See [[claude-code-skills]] for the full topic map.
-
-- [[three-separate-code-review-paths-create-routing-confusion]] -- requesting, receiving, and plugin code-review overlap
-- [[four-overlapping-task-management-systems-fragment-attention]] -- /tasks, /next, /ralph, taskmaster plugins
-- [[twelve-deprecated-skills-still-exist-alongside-their-replacements]] -- zombie skills inflate count and confuse routing
-- [[no-skill-routes-to-performance-profiling-despite-agent-existing]] -- react-performance-expert is orphaned
-- [[no-database-migration-skill-despite-drizzle-being-core]] -- schema changes rely on raw npm commands
-- [[infrastructure-skills-exist-but-are-not-referenced-in-any-workflow]] -- hook-debug, cmd-create are discoverable but invisible
-- [[no-deployment-pipeline-skill-beyond-basic-ship]] -- /ship is git push, not CI/CD
+See [[claude-code-skills]] for the full topic map — the Gaps subsection catalogs routing confusion, zombie skills, deployment pipeline gaps, and performance-profiling orphans.
 
 ## Query Scripts
 
