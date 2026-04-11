@@ -119,6 +119,37 @@ engine_version: "1.0.0"
 
 **Vault state after:** 147 notes, 15 topic maps (was 12), 0 orphans, 0 dangling links.
 
+### 2026-04-11: /architect analysis — 6 recommendations across 4 phases
+**Trigger:** User-invoked /architect full run after 5-day gap. Health check revealed 5 three-space boundary violations, 4 MOCs at or over the 40-entry threshold, 231 unmined sessions (vs queue's claimed 3), empty observations + tensions directories, missing ops/health/ directory.
+
+**Health findings:** 1 WARN (three-space boundary violations), 4 WARN (MOC oversize), 1 WARN (stale queue), 1 WARN (Over-Automation silent failure). 0 FAIL on schema compliance, orphans, or stale notes.
+
+**Drift:** None — all 8 configuration dimensions still match the 2026-04-05 derivation.
+
+**Failure modes active:** MOC Sprawl (#5, 4 MOCs), Over-Automation (#8, silent session-mining failure). Productivity Porn (#9) was the constraint — 25% meta-work budget kept this pass focused on root cause + symptom fixes rather than pre-emptive restructuring.
+
+**Research grounding:** `reference/failure-modes.md` (#3 Link Rot, #5 MOC Sprawl, #8 Over-Automation, #9 Productivity Porn), `reference/three-spaces.md` (boundary rules), `reference/evolution-lifecycle.md` (Drift Detection Type 1 Staleness, Recursive Improvement Loop), `reference/dimension-claim-map.md` (community detection for MOC split).
+
+**Changes implemented:**
+1. **R1 — Fixed 5 three-space boundary violations** in knowledge/methodology.md. Removed cross-space wiki-links to ops/methodology/*.md and replaced with a prose paragraph redirecting to self/methodology.md and ops/methodology/.
+2. **R2 — Split architecture-decisions 54 → 31.** Created knowledge/resource-leaks-debt.md and knowledge/desktop-pivot-debt.md as new sub-maps. Removed 3 duplicate entries already in existing debt sub-maps. Replaced the 23-entry Comprehensive Audit Findings section with a 6-line sub-map pointer block. Re-added `asynchandler-wrapper-is-redundant-in-express-v5` to Knowledge Notes (Task 2.3 Step 3's assumption that it had incoming prose links was wrong — verified via orphan scan; re-adding kept orphan count at 0).
+3. **R3 — Split dev-infrastructure 43 → 15.** Created knowledge/infrastructure-hooks.md, knowledge/infrastructure-agents.md, knowledge/infrastructure-mcp.md. Replaced 4 inline sections with pointer references. knowledge/claude-code-skills.md already existed from a prior pass.
+4. **R4 — De-duplicated gaps-and-opportunities 48 → 30.** Replaced Developer Infrastructure Gaps section (11 entries) with a pointer to dev-infrastructure. Deleted 7 redundant entries from Skill Ecosystem Gaps (the pointer to claude-code-skills already existed).
+5. **R5 — Collapsed knowledge/methodology.md to a navigation stub.** Methodology content now lives canonically in self/methodology.md (agent) and ops/methodology/ (operational). knowledge/methodology.md retained only for index.md → [[methodology]] link preservation plus graph-health-rules.
+6. **R6 — Restored the session-mining feedback loop.** Updated ops/queue/queue.json maint-001 (target 3 → 231, priority session → multi-session, added mining strategy notes). Populated ops/observations/ with 2026-04-11-session-mining-pipeline-silently-broken.md. Created ops/health/ directory with 2026-04-11-full-system-health.md baseline snapshot.
+
+**Vault state after:**
+- Notes: 146 (unchanged — no notes created or deleted; 5 new topic maps added)
+- Topic maps: 15 → 20 (+5: resource-leaks-debt, desktop-pivot-debt, infrastructure-hooks, infrastructure-agents, infrastructure-mcp)
+- Orphans: 0
+- Three-space boundary violations: 0 (was 1 cluster of 5 links)
+- MOCs over threshold: 0 (architecture-decisions 31, dev-infrastructure 15, gaps-and-opportunities 30 all under 40; claude-code-skills at 40 exactly — deferred)
+- Observations: 0 → 1
+- Health reports: 0 → 1
+- Queue staleness: fixed (maint-001 now reflects 231 unmined sessions)
+
+**Remaining work:** 231 unmined session files still require a `/remember --mine-sessions` batch run. That work is deliberately out of scope for this /architect pass — this pass restored the detection/queue/observation machinery; the actual mining batch is its own session. The queue task is now accurate and the infrastructure is ready.
+
 ## Generation Parameters
 - Folder names: knowledge/, inbox/, archive/, self/, ops/, templates/, manual/
 - Skills to generate: all 16 (vocabulary-transformed)
