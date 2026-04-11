@@ -347,6 +347,8 @@ vi.mock('lucide-react', () => ({
   Layers3: () => <svg data-testid="icon-layers-3" />,
   HelpCircle: () => <svg data-testid="icon-help-circle" />,
   Rocket: () => <svg data-testid="icon-rocket" />,
+  Camera: () => <svg data-testid="icon-camera" />,
+  Plus: () => <svg data-testid="icon-plus" />,
 }));
 
 vi.mock('../BreadboardComponentRenderer', () => ({

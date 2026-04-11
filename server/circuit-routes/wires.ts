@@ -12,7 +12,7 @@ const updateWireSchema = z.object({
   width: z.number().positive().optional(),
   color: z.string().nullable().optional(),
   wireType: z.enum(['wire', 'jump']).optional(),
-  endpointMeta: z.unknown().optional(),
+  endpointMeta: z.record(z.unknown()).nullable().optional(),
   provenance: z.enum(['manual', 'synced', 'coach', 'jumper']).optional(),
 });
 

@@ -359,6 +359,30 @@ export default function BreadboardView() {
     [addBomItem, benchInsights, parts, toast],
   );
 
+  const handleQuickIntake = useCallback(
+    (item: { partName: string; quantity: number; storageLocation: string | null }) => {
+      addBomItem({
+        partNumber: item.partName,
+        manufacturer: 'Unknown',
+        description: item.partName,
+        quantity: item.quantity,
+        unitPrice: 0,
+        totalPrice: 0,
+        supplier: 'Unknown',
+        stock: item.quantity,
+        status: item.quantity > 0 ? 'In Stock' : 'Out of Stock',
+        storageLocation: item.storageLocation,
+        quantityOnHand: item.quantity,
+        minimumStock: 1,
+      });
+      toast({
+        title: 'Part added to stash',
+        description: `${item.partName} × ${String(item.quantity)} tracked${item.storageLocation ? ` @ ${item.storageLocation}` : ''}.`,
+      });
+    },
+    [addBomItem, toast],
+  );
+
   const handleUpdateTrackedBenchPart = useCallback(
     (
       bomItemId: string,
@@ -560,6 +584,7 @@ export default function BreadboardView() {
           onRunPreflight={handleRunPreflight}
           preflightResult={preflightResult}
           onShopMissing={handleShopMissing}
+          onQuickAdd={handleQuickIntake}
         />
       )}
 

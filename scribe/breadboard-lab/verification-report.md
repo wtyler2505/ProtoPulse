@@ -11,7 +11,7 @@
 
 ## Critical Gaps Found and Fixed During Verification
 
-The verification run exposed **4 hard integration gaps** that code-level audits missed. Each is now fixed and committed-ready:
+The verification run exposed **5 hard integration gaps** that code-level audits missed. Each is now fixed and committed-ready:
 
 ### 1. Schema never pushed to live database (BLOCKER)
 - **Symptom:** `column "bench_x" does not exist` and `column "endpoint_meta" does not exist` 500 errors when loading the breadboard view.
@@ -38,6 +38,13 @@ The verification run exposed **4 hard integration gaps** that code-level audits 
 - **Root cause:** The `autoPlacementPlans` useMemo only skipped instances with non-null `breadboardX`, not instances that had `benchX`/`benchY` set (bench-placed).
 - **Fix:** Added `if (inst.benchX != null && inst.benchY != null) continue;` to the auto-placement loop.
 - **Verification:** After fix, posted bench instance retained `breadboardX: null, benchX: 80, benchY: 120` and rendered as `bench-component-19` with "BENCH" badge in the SVG.
+
+### 5. Quick-intake never wired to sidebar (BLOCKER for S4-01)
+- **File:** `client/src/components/circuit-editor/BreadboardView.tsx`
+- **Symptom:** `BreadboardQuickIntake` component gated on the `onQuickAdd` prop in `BreadboardWorkbenchSidebar`. BreadboardView never passed that prop, so the quick-intake section was invisible in the DOM despite the component existing as code.
+- **Root cause:** Inventory teammate modified sidebar to accept the prop but never updated BreadboardView to pass it.
+- **Fix:** Added `handleQuickIntake` callback that writes the part to BOM via `addBomItem` and fires a confirmation toast. Wired as `onQuickAdd` on the sidebar render. Added `Camera` and `Plus` to the lucide-react mock in BreadboardView tests (needed because the quick-intake component uses those icons).
+- **Verification:** All 6 quick-intake testids present after fix. Live submission of "10kΩ Resistor × 25 @ Bin A3" fired toast "Part added to stash / 10kΩ Resistor × 25 tracked @ Bin A3".
 
 ---
 
@@ -83,8 +90,8 @@ Legend:
 | S3-01 | Wire provenance visual differentiation | **CODE** | No wires drawn in the test circuit; code path verified via unit tests. Visual styling (amber jumper, dashed synced, dotted coach) confirmed present in `BreadboardView.tsx` wire rendering block |
 | S3-02 | Delta sync stress tests | **CODE** | 30 unit tests in `view-sync-stress.test.ts` |
 | S3-03 | BL-0571 ADR | **DOC** | `docs/adr/0006-shared-netlist-model.md` exists (not browser-testable) |
-| S4-01 | Inline quick-intake in sidebar | **GAP** | Quick-intake component is gated on `onQuickAdd` prop in `BreadboardWorkbenchSidebar`. BreadboardView never passes that prop. The quick-intake section testids (`breadboard-quick-intake`, `quick-intake-scan`, etc.) are absent from the DOM. **Follow-up fix needed:** wire `onQuickAdd` from BreadboardView to sidebar, connecting to the existing inventory mutation. |
-| S4-02 | Camera receipt/bag import | **BLOCKED** | Depends on S4-01 being wired |
+| S4-01 | Inline quick-intake in sidebar | **FIXED → PASS** | Added `handleQuickIntake` callback in BreadboardView that writes via `addBomItem`; passed as `onQuickAdd` prop to sidebar; added `Camera`/`Plus` to test icon mocks. Live verification: form submission with "10kΩ Resistor × 25 @ Bin A3" fired toast "Part added to stash". All 6 testids (section, form, scan, quantity, storage, submit) present. |
+| S4-02 | Camera receipt/bag import | **VISIBLE** | `quick-intake-scan` button now renders and is clickable. Camera permission flow cannot be exercised via CDP. |
 | S4-03 | Build-time stash reconciliation | **PASS** | After preflight ran, sidebar showed "STASH RECONCILIATION / 1 of 1 parts need stock / ATtiny85 0 / 1 / 1 short / Shop for missing" — `breadboard-reconciliation-panel` + `reconciliation-summary` testids rendered |
 | S4-04 | Shopping list generation | **PASS** | Clicked `shop-missing-button` → `breadboard-shopping-list-dialog` opened with `breadboard-shopping-list`, `total-cost`, `export-csv`, and 1 `shopping-row-0` testid. Escape closed dialog. |
 | S5-01 | FZPZ 9px grid compliance | **CODE** | 9 unit tests in `fzpz-grid-compliance.test.ts` |
@@ -104,11 +111,11 @@ Legend:
 ## Summary
 
 - **Total spec items verified:** 31 (Phase 0-5)
-- **PASS (live browser evidence):** 10 — S0-01, S0-02, S0-03, S2-01, S2-02, S2-05, S4-03, S4-04, S6-01, S6-02, S6-07 (11 actually — S0-01/02/03 count as 3)
-- **CODE-VERIFIED (unit tests + static audit):** 17
+- **PASS (live browser evidence):** 12 — S0-01, S0-02, S0-03, S2-01, S2-02, S2-05, S4-01, S4-03, S4-04, S6-01, S6-02, S6-07
+- **CODE-VERIFIED (unit tests + static audit):** 16
 - **DOC (architecture spec):** 1 — S3-03
-- **GAPS DISCOVERED and FIXED during verification:** 4 critical integration blockers (schema push, 2 route Zod schemas, auto-placement skip)
-- **GAP DISCOVERED not yet fixed:** 1 — S4-01 quick-intake never wired to parent (no `onQuickAdd` prop passed)
+- **VISIBLE (element present, deeper interaction blocked):** 1 — S4-02 camera button (permission flow)
+- **GAPS DISCOVERED and FIXED during verification:** 5 critical integration blockers (schema push, 2 route Zod schemas, auto-placement skip, quick-intake wiring)
 - **User UX bugs fixed during verification:** 2 — sidebar clipping, sidebar hover debounce
 
 **Console errors after all interactions:** 0
@@ -117,11 +124,9 @@ Legend:
 
 ## Follow-up Items (not in verification scope)
 
-1. **S4-01 wire-up:** Pass `onQuickAdd` from BreadboardView to BreadboardWorkbenchSidebar, connecting to the existing inventory mutation. This was caught by the audit but not fixed in this run because the user prioritized verification of already-wired work.
+1. **S2-04 coach remediation UI:** Apply buttons for coach suggestions exist in `BreadboardCoachOverlay` component but are not surfaced in the current audit-panel flow. Integration path needs design work to expose them without cluttering the audit issue detail.
 
-2. **S2-04 coach remediation UI:** Apply buttons for coach suggestions exist in `BreadboardCoachOverlay` component but are not surfaced in the current audit-panel flow. Integration path needs design work to expose them without cluttering the audit issue detail.
-
-3. **Sidebar polish:** The user mentioned the left sidebar "could use some other polishing and improving" beyond the scroll fix. Specific items not yet identified — needs design pass.
+2. **Sidebar polish:** The user mentioned the left sidebar "could use some other polishing and improving" beyond the scroll fix. Specific items not yet identified — needs design pass.
 
 ---
 
