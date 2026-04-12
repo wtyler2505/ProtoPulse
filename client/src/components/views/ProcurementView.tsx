@@ -370,6 +370,7 @@ function ProcurementView() {
           <TabsTrigger value="pcb-tracking" data-testid="tab-pcb-tracking"><CircuitBoard className="h-4 w-4 mr-1.5" />PCB Tracking</TabsTrigger>
           <TabsTrigger value="risk-scorecard" data-testid="tab-risk-scorecard"><Shield className="h-4 w-4 mr-1.5" />Risk Scorecard</TabsTrigger>
           <TabsTrigger value="avl-compliance" data-testid="tab-avl-compliance"><ShieldCheck className="h-4 w-4 mr-1.5" />AVL Compliance</TabsTrigger>
+          <TabsTrigger value="cross-project" data-testid="tab-cross-project"><AlertTriangle className="h-4 w-4 mr-1.5" />Cross-Project</TabsTrigger>
         </TabsList>
         {lifecycleWarnings.total > 0 && (
           <StyledTooltip
