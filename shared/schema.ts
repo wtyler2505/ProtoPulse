@@ -1093,6 +1093,88 @@ export const insertPartsIngressFailureSchema = createInsertSchema(partsIngressFa
 export type InsertPartsIngressFailure = z.infer<typeof insertPartsIngressFailureSchema>;
 export type PartsIngressFailure = typeof partsIngressFailures.$inferSelect;
 
+// ---------------------------------------------------------------------------
+// Supply chain alerts (Phase 7.5)
+// ---------------------------------------------------------------------------
+
+const SUPPLY_CHAIN_ALERT_TYPES = ['price_increase', 'price_decrease', 'out_of_stock', 'back_in_stock', 'obsolete', 'nrnd', 'lead_time_change', 'new_alternate'] as const;
+export type SupplyChainAlertType = (typeof SUPPLY_CHAIN_ALERT_TYPES)[number];
+export { SUPPLY_CHAIN_ALERT_TYPES };
+
+export const supplyChainAlerts = pgTable("supply_chain_alerts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  partId: uuid("part_id").notNull().references(() => parts.id, { onDelete: "cascade" }),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
+  alertType: text("alert_type", { enum: SUPPLY_CHAIN_ALERT_TYPES }).notNull(),
+  severity: text("severity", { enum: ['info', 'warning', 'critical'] as const }).notNull().default('info'),
+  message: text("message").notNull(),
+  previousValue: text("previous_value"),
+  currentValue: text("current_value"),
+  supplier: text("supplier"),
+  acknowledged: boolean("acknowledged").notNull().default(false),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_supply_chain_alerts_part").on(table.partId),
+  index("idx_supply_chain_alerts_project").on(table.projectId),
+  index("idx_supply_chain_alerts_unacknowledged").on(table.acknowledged, table.createdAt),
+]);
+
+export const insertSupplyChainAlertSchema = createInsertSchema(supplyChainAlerts).omit({
+  id: true,
+  acknowledged: true,
+  acknowledgedAt: true,
+  createdAt: true,
+});
+export type InsertSupplyChainAlert = z.infer<typeof insertSupplyChainAlertSchema>;
+export type SupplyChainAlert = typeof supplyChainAlerts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// BOM templates (Phase 7.6)
+// ---------------------------------------------------------------------------
+
+export const bomTemplates = pgTable("bom_templates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  description: text("description"),
+  tags: text("tags").array(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+}, (table) => [
+  index("idx_bom_templates_user").on(table.userId),
+  index("idx_bom_templates_deleted").on(table.deletedAt),
+]);
+
+export const bomTemplateItems = pgTable("bom_template_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  templateId: uuid("template_id").notNull().references(() => bomTemplates.id, { onDelete: "cascade" }),
+  partId: uuid("part_id").notNull().references(() => parts.id, { onDelete: "cascade" }),
+  quantityNeeded: integer("quantity_needed").notNull().default(1),
+  unitPrice: numeric("unit_price", { precision: 10, scale: 4 }),
+  supplier: text("supplier"),
+  notes: text("notes"),
+}, (table) => [
+  index("idx_bom_template_items_template").on(table.templateId),
+  uniqueIndex("uq_bom_template_items_template_part").on(table.templateId, table.partId),
+]);
+
+export const insertBomTemplateSchema = createInsertSchema(bomTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true,
+});
+export type InsertBomTemplate = z.infer<typeof insertBomTemplateSchema>;
+export type BomTemplate = typeof bomTemplates.$inferSelect;
+
+export const insertBomTemplateItemSchema = createInsertSchema(bomTemplateItems).omit({
+  id: true,
+});
+export type InsertBomTemplateItem = z.infer<typeof insertBomTemplateItemSchema>;
+export type BomTemplateItem = typeof bomTemplateItems.$inferSelect;
+
 // Re-export the public contract types from shared/parts for ergonomic imports.
 export type {
   PartRow,

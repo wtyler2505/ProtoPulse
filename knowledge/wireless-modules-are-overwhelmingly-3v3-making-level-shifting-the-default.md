@@ -19,7 +19,9 @@ related_components:
 
 # wireless modules are overwhelmingly 3.3V making level shifting the default
 
-Of the 11 parts in the communication category, 8 involve 3.3V logic: ESP8266, HC-05, HC-06, RC522 RFID, NEO-6M GPS, and the IR modules (which accept dual voltage but are native 3.3V). Only the Ethernet shield (W5100) and the Allen-Bradley terminal base are natively 5V.
+Of the 11 parts in the communication category, 8 involve 3.3V logic: ESP8266, HC-05, HC-06, RC522 RFID, NEO-6M GPS, and the IR modules. Only the Ethernet shield (W5100) and the Allen-Bradley terminal base are natively 5V.
+
+**Clarification on IR receivers:** The TSOP IC operates 2.7-5.5V and its output follows the supply domain (3.3V supply = 3.3V output logic, 5V supply = 5V output logic). This makes IR receivers one of the rare **truly dual-voltage** modules -- NOT "native 3.3V that tolerates 5V" but genuinely happy at either rail with output logic matching the supply. They need no level shifting regardless of MCU voltage.
 
 This means any project using a 5V MCU (Arduino Mega, Uno, Nano) with wireless peripherals should treat level shifting as the default wiring step, not an exception. The inventory already includes two level shifter solutions (TXS0108E auto-direction, HW-221 BSS138-based) specifically to address this mismatch.
 

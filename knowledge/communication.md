@@ -18,6 +18,9 @@ Wireless and wired communication protocols, module pairing, range/reliability tr
 - [[raspberry-pi-mini-uart-is-default-on-gpio14-15-and-getting-pl011-requires-disabling-bluetooth]] — RPi mini UART default, PL011 locked by Bluetooth
 - [[gigabit-ethernet-on-raspberry-pi-is-throttled-to-300mbps-because-it-shares-the-usb-2-bus]] — RPi Gigabit Ethernet throttled by USB 2.0 bus
 - [[raspberry-pi-has-networking-wifi-bluetooth-built-in-but-only-one-low-quality-uart]] — TENSION: RPi solves networking but creates UART bottleneck
+- [[ir-demodulator-output-is-active-low-which-inverts-the-mental-model-of-signal-received-equals-pin-high]] — active-LOW output inverts beginner expectations; configure FALLING edge interrupts
+- [[kit-ir-receiver-modules-from-different-manufacturers-are-functionally-identical-tsop-38khz-demodulators]] — KY-022, IR-01, OSEPP IRR-01 are all the same TSOP1738 IC; consolidate in BOM
+- [[fluorescent-lighting-interferes-with-38khz-ir-receivers-because-the-discharge-frequency-overlaps-the-demodulation-band]] — environmental gotcha: fluorescent lights cause false IR triggers
 
 ## Open Questions
 (populated by /extract)
