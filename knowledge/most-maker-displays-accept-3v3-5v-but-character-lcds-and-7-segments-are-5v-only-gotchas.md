@@ -27,7 +27,18 @@ Modern display modules marketed to makers (OLED, TFT, NeoPixel, LED matrix) incl
 - MAX7219-driven LED matrices/7-segments (MAX7219 handles the LED driving; you just send SPI commands)
 - WS2812B NeoPixels (5V power required; 3.3V data line is technically out of spec -- WS2812B requires logic HIGH > 0.7 * VDD = 3.5V at 5V supply, which exceeds ESP32's 3.3V output. Works intermittently but unreliable in noisy environments or with long wires. Solutions: 74HCT125/245 buffer for proper 3.3V→5V level shifting, or [[txs0108e-8-channel-bidirectional-level-shifter-auto-direction]] as a bidirectional alternative)
 
-**ProtoPulse implication:** When a 3.3V MCU (ESP32, ESP8266, Pi Pico) is in the project and the user adds an HD44780 or raw 7-segment display, the DRC should flag the voltage mismatch and suggest either a 5V MCU, a level shifter, or a MAX7219-based alternative.
+**The 3.3V problem extends to standalone LEDs by color:**
+
+| LED Color | Vf | Headroom at 3.3V | Result |
+|-----------|-----|-----------------|--------|
+| Red/Yellow | 1.8-2.2V | 1.1-1.5V | Workable with 56-75 ohm resistor |
+| Green | 2.0-2.4V | 0.9-1.3V | Workable with 47-68 ohm resistor |
+| 7-segment | 2.1V | 1.2V | Workable but dim (see above) |
+| Blue/White | 3.0-3.4V | 0-0.3V | Marginal to non-functional |
+
+Blue and white LEDs at 3.3V are a worse case than 7-segments: the Vf nearly equals the supply voltage, leaving no headroom for a current-limiting resistor. They can sometimes work with 10-33 ohm resistors or direct GPIO connection (relying on pin current limit as implicit protection), but this is not recommended. See [[blue-and-white-leds-are-marginal-at-3v3-because-forward-voltage-nearly-equals-supply-voltage]] for the full analysis.
+
+**ProtoPulse implication:** When a 3.3V MCU (ESP32, ESP8266, Pi Pico) is in the project and the user adds an HD44780, raw 7-segment display, or blue/white LED, the DRC should flag the voltage mismatch and suggest either a 5V MCU, a level shifter, a MAX7219-based alternative, or (for LEDs) substituting a red/green LED if color is not critical.
 
 ---
 

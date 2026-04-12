@@ -23,6 +23,19 @@ At 12mA, a standard red LED (20mA forward current) is technically over-limit wit
 
 The 50mA total is the real constraint. With 26 GPIO pins and 50mA total, you average under 2mA per pin if all are active. Any project with more than 3-4 LEDs needs an external LED driver (MAX7219, 74HC595 shift register) or careful current planning.
 
+**Concrete LED examples at 3.3V with Pico:**
+
+| LED Color | Vf (typ) | Resistor for 10mA | Actual Current | % of 12mA Pin Limit |
+|-----------|----------|-------------------|----------------|---------------------|
+| Red | 2.0V | 130 ohm | 10.0 mA | 83% |
+| Yellow | 2.0V | 130 ohm | 10.0 mA | 83% |
+| Green | 2.2V | 110 ohm | 10.0 mA | 83% |
+| Blue | 3.2V | 10 ohm | 10.0 mA | 83% (but marginal Vf headroom) |
+| White | 3.2V | 10 ohm | 10.0 mA | 83% (but marginal Vf headroom) |
+| RGB (all) | varies | per channel | 30 mA total | 60% of 50mA GPIO budget |
+
+Red/yellow LEDs at 3.3V with resistors sized for 10mA are already at 83% of the per-pin limit. An RGB LED at full white (3 channels x 10mA) consumes 60% of the Pico's entire 50mA GPIO budget on a single component. Blue/white LEDs are essentially unusable at 3.3V without external circuitry due to Vf headroom collapse (see [[blue-and-white-leds-are-marginal-at-3v3-because-forward-voltage-nearly-equals-supply-voltage]]).
+
 ---
 
 Relevant Notes:
