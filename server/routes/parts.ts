@@ -329,6 +329,22 @@ export function registerPartsRoutes(app: Express): void {
     }
   });
 
+  // GET /api/parts/:id/usage — cross-project usage report
+  app.get('/api/parts/:id/usage', async (req, res) => {
+    const id = String(req.params.id);
+    try {
+      const usage = await partsStorage.getUsageAcrossProjects(id);
+      res.json({ data: usage, total: usage.length });
+    } catch (err) {
+      if (err instanceof StorageError) {
+        logger.error('GET /api/parts/:id/usage failed', { message: err.message });
+        res.status(500).json({ message: 'Failed to get part usage' });
+        return;
+      }
+      throw err;
+    }
+  });
+
   // GET /api/parts/:id/lifecycle — obsolescence record
   app.get('/api/parts/:id/lifecycle', async (req, res) => {
     const id = String(req.params.id);

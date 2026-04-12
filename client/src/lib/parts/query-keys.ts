@@ -24,6 +24,9 @@ export const partsQueryKeys = {
 
   spice: (id: string) =>
     [`/api/parts/${id}/spice`, 'parts', 'spice', id] as const,
+
+  usage: (partId: string) =>
+    [`/api/parts/${partId}/usage`, 'parts', 'usage', partId] as const,
 };
 
 export const partsMutationKeys = {

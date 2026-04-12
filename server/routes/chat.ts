@@ -334,6 +334,15 @@ async function buildAppStateFromProject(
       unitPrice: Number(b.unitPrice),
       supplier: b.supplier,
       status: b.status,
+      // Canonical fields from parts + part_stock
+      mpn: b.partNumber || undefined,
+      datasheetUrl: b.datasheetUrl || undefined,
+      tolerance: b.tolerance || undefined,
+      esdSensitive: b.esdSensitive ?? undefined,
+      assemblyCategory: b.assemblyCategory || undefined,
+      storageLocation: b.storageLocation || undefined,
+      quantityOnHand: b.quantityOnHand ?? undefined,
+      minimumStock: b.minimumStock ?? undefined,
     })),
     validationIssues: validation.map((v) => ({
       id: String(v.id),

@@ -22,8 +22,6 @@ import {
   partLifecycle,
   partSpiceModels,
   partAlternates,
-  projects,
-  circuitDesigns,
   type Part,
   type InsertPart,
   type PartStock,
@@ -416,92 +414,6 @@ export class PartsStorage {
   }
 
   // -------------------------------------------------------------------------
-  // cross-project usage report
-  // -------------------------------------------------------------------------
-
-  /**
-   * For a given canonical part, returns every project that references it via
-   * `part_stock` together with the placement count from `part_placements`
-   * (resolved through `circuit_designs.project_id`).
-   */
-  async getUsageAcrossProjects(partId: string): Promise<Array<{
-    projectId: number;
-    projectName: string;
-    stockQuantityNeeded: number;
-    stockQuantityOnHand: number | null;
-    placementCount: number;
-  }>> {
-    try {
-      const cacheKey = `parts_usage:${partId}`;
-      const cached = this.cache.get<Array<{
-        projectId: number;
-        projectName: string;
-        stockQuantityNeeded: number;
-        stockQuantityOnHand: number | null;
-        placementCount: number;
-      }>>(cacheKey);
-      if (cached) { return cached; }
-
-      // 1. Stock rows joined with project names
-      const stockRows = await this.db
-        .select({
-          projectId: partStock.projectId,
-          projectName: projects.name,
-          quantityNeeded: partStock.quantityNeeded,
-          quantityOnHand: partStock.quantityOnHand,
-        })
-        .from(partStock)
-        .innerJoin(projects, eq(projects.id, partStock.projectId))
-        .where(
-          and(
-            eq(partStock.partId, partId),
-            isNull(partStock.deletedAt),
-            isNull(projects.deletedAt),
-          ),
-        );
-
-      // 2. Placement counts grouped by project (via circuit_designs container join)
-      const placementCounts = await this.db
-        .select({
-          projectId: circuitDesigns.projectId,
-          count: sql<number>`cast(count(*) as int)`,
-        })
-        .from(partPlacements)
-        .innerJoin(
-          circuitDesigns,
-          and(
-            eq(partPlacements.containerType, 'circuit'),
-            eq(partPlacements.containerId, circuitDesigns.id),
-          ),
-        )
-        .where(
-          and(
-            eq(partPlacements.partId, partId),
-            isNull(partPlacements.deletedAt),
-          ),
-        )
-        .groupBy(circuitDesigns.projectId);
-
-      const placementMap = new Map(placementCounts.map((r) => [r.projectId, r.count]));
-
-      // 3. Merge — every project that has stock gets a row; placement count is 0 if none exist.
-      const result = stockRows.map((row) => ({
-        projectId: row.projectId,
-        projectName: row.projectName,
-        stockQuantityNeeded: row.quantityNeeded,
-        stockQuantityOnHand: row.quantityOnHand,
-        placementCount: placementMap.get(row.projectId) ?? 0,
-      }));
-
-      this.cache.set(cacheKey, result);
-      return result;
-    } catch (e) {
-      if (e instanceof StorageError) { throw e; }
-      throw new StorageError('getUsageAcrossProjects', `parts_usage/${partId}`, e);
-    }
-  }
-
-  // -------------------------------------------------------------------------
   // part_placements (where-used)
   // -------------------------------------------------------------------------
 
@@ -545,6 +457,7 @@ export class PartsStorage {
     try {
       const [created] = await this.db.insert(partPlacements).values(data).returning();
       this.cache.invalidate(`parts_placements:part:${data.partId}`);
+      this.cache.invalidate(`parts_usage:${data.partId}`);
       return created;
     } catch (e) {
       throw new StorageError('createPlacement', 'parts_placements', e);
@@ -560,6 +473,7 @@ export class PartsStorage {
         .returning({ id: partPlacements.id, partId: partPlacements.partId });
       if (deleted) {
         this.cache.invalidate(`parts_placements:part:${deleted.partId}`);
+        this.cache.invalidate(`parts_usage:${deleted.partId}`);
       }
       return !!deleted;
     } catch (e) {

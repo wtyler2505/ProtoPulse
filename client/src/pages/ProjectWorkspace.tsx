@@ -40,8 +40,7 @@ import {
   ChatPanel,
   WorkflowBreadcrumb,
   ShortcutsOverlay,
-  CommandPalette,
-  UnifiedComponentSearch,
+  CommandPalette as NavCommandPalette,
   GlobalSearchDialog,
   TutorialOverlay,
   LessonModeOverlay,
@@ -50,6 +49,7 @@ import {
   SmartHintToast,
   startPrefetch,
 } from './workspace/lazy-imports';
+import PartsCommandPalette from '@/components/CommandPalette';
 import {
   workspaceReducer,
   createInitialWorkspaceState,
@@ -330,6 +330,9 @@ function WorkspaceContent() {
 
   const closeRadialMenu = useCallback(() => setRadialMenu(null), []);
 
+  // Parts catalog search palette (Ctrl+K)
+  const [partsSearchOpen, setPartsSearchOpen] = useState(false);
+
   /** Map activeView to the radial-menu context type (only views that support it). */
   const viewToContextType = useCallback((view: string): MenuContextType | null => {
     switch (view) {
@@ -473,6 +476,18 @@ function WorkspaceContent() {
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, []);
+
+  // Ctrl+K / Cmd+K: Open parts catalog search palette
+  useEffect(() => {
+    const handlePartsSearch = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setPartsSearchOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handlePartsSearch);
+    return () => window.removeEventListener('keydown', handlePartsSearch);
   }, []);
 
   useEffect(() => {
@@ -784,8 +799,8 @@ function WorkspaceContent() {
 
       <ErrorBoundary fallback={<div data-testid="diag-command-error" className="fixed inset-x-4 top-16 z-[100] rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">Command/search region error</div>}>
         <Suspense fallback={null}>
-          <UnifiedComponentSearch />
-          <CommandPalette
+          <PartsCommandPalette open={partsSearchOpen} onOpenChange={setPartsSearchOpen} />
+          <NavCommandPalette
             onNavigate={setActiveView}
             onToggleSidebar={() => dispatch({ type: 'SET_SIDEBAR_COLLAPSED', collapsed: !ws.sidebarCollapsed })}
             onToggleChat={() => dispatch({ type: 'SET_CHAT_COLLAPSED', collapsed: !ws.chatCollapsed })}

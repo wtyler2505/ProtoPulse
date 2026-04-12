@@ -1,0 +1,441 @@
+---
+description: "Small geared unipolar stepper motor (28BYJ-48) with a 1:64 gear reduction for high precision positioning. Requires a driver like the ULN2003 to control its four coils."
+topics: ["[[actuators]]", "[[motors]]"]
+status: identified
+quantity: 1
+voltage: [5]
+interfaces: [Digital]
+logic_level: "5V"
+manufacturer: "Generic"
+part_number: "28BYJ-48"
+compatible_with: ["[[uln2003apg-stepper-driver-board-for-28byj-48-at-5v]]", "[[arduino-uno-r3-is-a-14-io-5v-board-with-atmega328p-and-usb-b]]", "[[arduino-mega-2560-is-a-54-io-5v-board-with-4-hardware-uarts]]"]
+used_in: []
+warnings: ["Draws ~240mA — do NOT power from Arduino 5V pin directly, use external supply", "Gear reduction makes it slow (~15 RPM max) but precise", "Open loop control — no position feedback; external encoder required for high reliability"]
+datasheet_url: "N/A (Generic component; specifications derived from typical values)"
+---
+
+# 28BYJ-48 Unipolar Stepper Motor (Geared)
+
+The 28BYJ-48 is a small, low-cost geared stepper motor primarily used in hobbyist projects for precise positioning tasks. It is a unipolar stepper motor, identifiable by its five-wire configuration, which simplifies driving logic compared to bipolar steppers. The motor's most defining characteristic is its high reduction gear set (typically 1:64), which drastically increases its positional precision at the expense of speed and torque.
+
+## Detailed Technical Specifications
+
+| Parameter | Value | Note |
+|---|---|---|
+| Motor Type | Unipolar stepper | 5-wire configuration, 4 coils plus common center tap |
+| Operating Voltage | 5V DC | Typically operates at 5V; some variants are 12V |
+| Coil Resistance | ~50 Ω per coil | Resistance measured between center tap and coil end |
+| Current Draw | ~240mA total | ~60mA per coil when energized |
+| Base Step Angle | 5.625° per step | Full-step angle of the motor's internal rotor (ignoring gearing) |
+| Gear Ratio | 1:64 | Reduction ratio from internal motor shaft to output shaft |
+| Effective Step Angle (Full-Step) | 5.625° / 64 = 0.08789° | Output shaft angle per full step sequence |
+| Effective Step Angle (Half-Step) | 2.8125° / 64 = 0.0439° | Output shaft angle per half step sequence |
+| Effective Steps/Revolution | 360° / 0.08789° = 4096 steps | Total steps for one complete rotation of the output shaft (in half-step mode) |
+| Max Speed | ~15 RPM | Low speed due to high gear reduction |
+
+## Functional Analysis and Operating Principles
+
+### Unipolar Stepper Operation
+
+A unipolar stepper motor has two windings per phase, each with a center tap. This configuration allows for current to flow in only one direction through each coil (unipolar operation) by switching between VCC and ground. The motor has four phases (coils) in a typical five-wire configuration: four coil wires and one common center tap wire (VCC). Unlike bipolar motors where current direction must be reversed, unipolar operation simplifies the driver circuit, which only needs to sink current from the coils to ground.
+
+### Gear Reduction Principle (1:64)
+
+The 28BYJ-48 motor itself has a relatively large internal step angle of 5.625 degrees. This means the internal motor shaft requires 64 steps (360° / 5.625°) to complete one rotation. However, the internal gearing reduces the output shaft rotation by a factor of 64. The final output shaft only rotates by 1/64th of the internal motor's rotation. This results in an effective step angle of 0.08789° (5.625° / 64), providing high precision for positioning.
+
+### Drive Modes
+
+1.  **Full-Step Mode (Wave Drive):** Energizes a single coil at a time. The sequence is 1-0-0-0, then 0-1-0-0, then 0-0-1-0, then 0-0-0-1. This mode provides less torque and slightly choppier movement. Steps per revolution = 4096 / 2 = 2048.
+2.  **Full-Step Mode (Two-Phase):** Energizes two adjacent coils simultaneously (e.g., 1-1-0-0, 0-1-1-0, 0-0-1-1, 1-0-0-1). This mode provides maximum torque and slightly smoother operation compared to wave drive. Steps per revolution = 4096 / 2 = 2048.
+3.  **Half-Step Mode:** Alternates between single-coil and two-coil full steps. The sequence is 1-0-0-0, 1-1-0-0, 0-1-0-0, 0-1-1-0, 0-0-1-0, etc. This doubles the effective steps per revolution to 4096, resulting in higher positional accuracy and smoother movement, though with slightly reduced torque from a full two-phase step.
+
+## Pinout and I/O Description (ULN2003 Driver Pairing)
+
+The 28BYJ-48 motor requires a driver circuit to switch current through its coils. The standard pairing for this motor is the ULN2003 Darlington array board. The motor's five-pin connector plugs directly into the driver board.
+
+| Motor Wire (5-pin connector) | ULN2003 Board Pin (IN1-IN4) | Coil Function | Note |
+|---|---|---|---|
+| Red | VCC (Center Tap) | Common power connection for all four coils | **Connects to external 5V power supply** |
+| Blue | IN1 | Coil A (Phase 1) | |
+| Pink | IN2 | Coil B (Phase 2) | |
+| Yellow | IN3 | Coil C (Phase 3) | |
+| Orange | IN4 | Coil D (Phase 4) | |
+
+*Note: The pin-to-coil mapping in the motor's internal wiring can vary. The standard AccelStepper library sequence for half-stepping is based on the wiring of a common ULN2003 driver board, which may reorder the pins (e.g., 8, 10, 9, 11 for IN1, IN3, IN2, IN4 respectively).*
+
+## Application Context and Integration
+
+### Typical Applications
+
+*   **Precise Positioning:** Ideal for projects requiring precise, small movements, such as camera sliders, small robotic arms, or automated lens focusing mechanisms.
+*   **Rotary Dials/Indicators:** Used in custom gauges or control panels where a precise pointer position needs to be set.
+*   **Automated Mechanisms:** Driving small loads in low-speed applications, like opening/closing small valves or adjusting small components.
+
+### Integration Best Practices
+
+1.  **Power Supply (Critical Warning):** Never power the 28BYJ-48 directly from a standard microcontroller's 5V pin (e.g., Arduino Uno's 5V output) or a USB port alone. The motor's full current draw of ~240mA exceeds the safe continuous operating current for many onboard regulators. Use a dedicated 5V power supply that shares a common ground with the microcontroller.
+2.  **Driver Selection:** While the ULN2003 is the most common driver, a more advanced driver (like an A4988 or DRV8825 designed for bipolar motors) can be used to drive a unipolar motor by ignoring the center tap, but this provides no benefit and complicates wiring. The ULN2003 is purpose-built for unipolar motors.
+3.  **Non-Blocking Code:** Use libraries like `AccelStepper` rather than the standard `Stepper` library. `AccelStepper` allows for non-blocking operation (your code doesn't stop and wait for a step to finish), acceleration/deceleration profiles for smoother movement, and more precise control over step sequences.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** Motor spins in one direction but not the other, or stalls/vibrates constantly.
+    *   **Diagnosis:** This indicates an incorrect stepping sequence or a problem with one of the coil connections. The most likely cause is an error in the pin-to-coil mapping in your code (e.g., `AccelStepper` library requires a non-sequential pin order: IN1, IN3, IN2, IN4). Verify the pin order in your code against the required sequence for your specific motor variant.
+*   **Symptom:** Motor makes noise but fails to turn or skips steps.
+    *   **Diagnosis:** The load may be too high for the motor's available torque, or the power supply is inadequate. Ensure the motor is not obstructed and that the external 5V supply provides sufficient current (240mA minimum). Check for loose connections between the motor and driver board.
+*   **Symptom:** Motor runs hot after extended operation.
+    *   **Diagnosis:** The motor is constantly energized, even when idle, to maintain position. If using a high duty cycle or high speed, heat generation can increase. Consider de-energizing the coils when not in motion (by setting all driver inputs HIGH or LOW) if position feedback is not critical.
+
+## References/Sources
+
+*   ULN2003APG datasheet. (n.d.). Texas Instruments/TOSHIBA.
+*   Geeky-Theory. (2018). *28BYJ-48 Stepper Motor Tutorial*.
+*   AccelStepper Library Documentation. (n.d.).
+
+---
+
+### **Component 2 Analysis: Unknown Component (Part Number: 34-660-376301)**
+
+*   **Input Evaluation:** The user's input correctly identifies this component as unidentifiable based on the provided part number. The part number format (XX-XXX-XXXXXX) is noted as non-standard, suggesting a proprietary or distributor-specific code. The document appropriately sets the status as "unidentified" and outlines necessary steps for physical inspection and cross-referencing.
+*   **Verification and Augmentation:** As per the system protocol for "Handling Ambiguity and Confidence Scoring," a comprehensive document for an unidentifiable part must be created. The document below synthesizes the known information from the input document and provides detailed instructions on how an engineer would proceed with a "reverse engineering" identification process. No technical specifications can be provided as the component's function is unknown.
+
+```markdown
+---
+description: "Unidentified component based on proprietary part number 34-660-376301. Requires physical inspection and reverse engineering to determine function and specifications."
+topics: ["[[unidentified-parts]]"]
+status: unidentified
+quantity: 1
+voltage: []
+interfaces: []
+manufacturer: "Unknown"
+part_number: "34-660-376301"
+equivalent_parts: []
+used_in: []
+warnings: ["Unidentified component — do NOT use in circuit designs until specifications, voltage ratings, and polarity are confirmed. Potential safety hazard due to unknown characteristics."]
+datasheet_url: ""
+---
+
+# 34-660-376301 — Unknown Electronic Component
+
+This component cannot be identified using standard manufacturer part number databases. The numbering format "34-660-376301" is consistent with a proprietary catalog number used by an Original Equipment Manufacturer (OEM) or a major component distributor, rather than a JEDEC standard part number (e.g., 1N4001) or a manufacturer-specific identifier (e.g., ATmega328P). Without additional information or physical inspection, the component's function, specifications, and manufacturer cannot be determined.
+
+## Identification Status and Verification
+
+*   **Verification Status:** Unidentified.
+*   **Known Information:** Part number: 34-660-376301. No manufacturer or function confirmed.
+*   **Search Results Analysis:** Searches across standard component libraries and major distributor websites (Mouser, Digi-Key, Arrow) do not return results for this specific part number, indicating it is likely an internal or obsolete code.
+
+## Identification and Reverse Engineering Protocol
+
+The following steps are required to determine the characteristics of this component:
+
+### 1. Physical Inspection and Data Collection
+
+*   **Form Factor and Package:** Identify the physical type (e.g., through-hole, surface mount, connector, relay) and package size (e.g., DIP-16, TO-220, 0805, JST connector).
+*   **Markings:** Transcribe all markings on the component body, including manufacturer logos (e.g., ST, TI, Microchip), date codes, and any additional alphanumeric codes that might be secondary identifiers.
+*   **Pin Configuration:** Document the number of pins and their arrangement. If a component is part of a larger assembly, trace the connections to adjacent components to infer its function (e.g., if connected to a crystal oscillator, it is likely a microcontroller; if connected to high-current traces, it is likely a power component).
+
+### 2. Basic Electrical Testing
+
+*   **Continuity Check:** Test for continuity between pins to identify internal connections and potential shorts.
+*   **Diode Test Mode:** Use a multimeter's diode mode to check for P-N junctions between pins. This can help identify components like diodes, transistors, or ICs with input protection diodes.
+*   **Resistance Measurement:** Measure resistance between pins to identify resistors, fuses, or a coil (e.g., motor winding).
+
+### 3. Cross-Reference and Contextual Analysis
+
+*   **OEM Part Number Search:** If the component originated from a specific piece of equipment, identify the OEM and search their specific parts lists.
+*   **Image Search:** Search for images of the part number and package type to find similar components and potential applications.
+*   **Component Relationship Mapping:** If the component is part of a larger circuit, identify nearby components and use standard design practices to infer the component's role within the circuit.
+
+## Summary of Known Limitations
+
+Without successful identification, this component cannot be safely used in new circuit designs. Attempting to integrate it without understanding its specifications (voltage ratings, current limits, operating principles) risks catastrophic failure of both the component and the surrounding circuit.
+
+## References/Sources
+
+*   N/A (No confirmed sources available for an unidentified part number)
+
+---
+
+### **Component 3 Analysis: 74HC595 Shift Register**
+
+*   **Input Evaluation:** The user's input document accurately captures the function and pinout of the 74HC595 shift register. The description of its core purpose (I/O expansion) and daisy-chaining capability is correct. The warnings regarding output current limitation and proper pin configuration (OE and SRCLR) are essential best practices.
+*   **Verification and Augmentation:** The provided specifications (2-6V operating range, 8 outputs, 70mA max current) are standard for the 74HC595 logic family. Augmentation focuses on a deeper explanation of the serial-in, parallel-out principle, the timing requirements for the SRCLK and RCLK pins, and detailed circuit implementation guidance.
+
+```markdown
+---
+description: "8-bit serial-in, parallel-out shift register. Enables a microcontroller to control 8 digital outputs using only 3 data pins. Daisy-chainable for virtually unlimited output expansion."
+topics: ["[[ic-logic]]", "[[io-expansion]]"]
+status: identified
+quantity: 0
+voltage: [2, 3.3, 5]
+interfaces: [SPI-like]
+logic_level: "2V to 6V (VCC dependent)"
+manufacturer: "Various (Texas Instruments, NXP, STMicroelectronics)"
+part_number: "74HC595"
+compatible_with: ["[[arduino-uno-r3-is-a-14-io-5v-board-with-atmega328p-and-usb-b]]", "[[nodemcu-esp32s-is-a-dual-core-wifi-bt-mcu-with-34-gpio-at-3v3]]"]
+used_in: []
+warnings: ["Outputs can source/sink ~6mA per pin at 5V — enough for LEDs with resistors, NOT for high current loads. Use a ULN2003 or MOSFET for higher current", "Ensure output enable (OE) and clear (SRCLR) pins are correctly configured to prevent unexpected behavior"]
+datasheet_url: "https://www.ti.com/product/SN74HC595"
+---
+
+# 74HC595 8-Bit Serial-in, Parallel-out Shift Register (DIP-16)
+
+The 74HC595 is a standard CMOS logic IC that expands a microcontroller's output capability. It converts a serial data stream (input on one pin, one bit at a time) into 8 parallel outputs. This allows a microcontroller to control 8 digital outputs (e.g., LEDs, relays) while only dedicating 3 of its own GPIO pins. Multiple 74HC595 chips can be daisy-chained together to expand I/O indefinitely, with each additional chip adding 8 outputs using the same 3 control pins.
+
+## Detailed Technical Specifications
+
+| Parameter | Value | Note |
+|---|---|---|
+| Logic Family | HC (High-speed CMOS) | Wide operating voltage range, high-speed switching |
+| Supply Voltage (VCC) | 2V to 6V | Logic levels are relative to VCC |
+| Inputs | 3 data/control pins (SER, SRCLK, RCLK) | Serial Data Input, Shift Register Clock, Storage Register Clock (Latch) |
+| Outputs | 8 parallel outputs (QA-QH) | Non-inverting outputs |
+| Serial Output | 1 serial output (QH') | For daisy-chaining multiple chips |
+| Output Current (per pin) | ±6mA source/sink @ 5V | Limited current for general purpose I/O |
+| Total IC Current | 70mA maximum | Total current draw for all outputs combined |
+| Max Clock Frequency | 25 MHz @ 5V | High-speed data shifting capability |
+| Package Type | DIP-16 (through-hole) | Standard package |
+
+## Functional Analysis and Operating Principles
+
+### Serial-to-Parallel Conversion
+
+The 74HC595 internally consists of two registers:
+
+1.  **Shift Register:** An 8-bit register where data is loaded serially, bit by bit. Data is shifted on the rising edge of the **SRCLK** pin. New data enters the **SER** pin and propagates through the register.
+2.  **Storage Register (Latch):** An 8-bit latch that holds the data for the parallel outputs (QA-QH). The data in the shift register is copied to this latch on the rising edge of the **RCLK** (latch) pin. This two-step process ensures that the outputs only change when a new set of data is fully loaded and ready to be displayed, preventing outputs from glitching during the serial loading process.
+
+### Daisy-Chaining for Expansion
+
+To create a larger number of outputs, multiple 74HC595 ICs can be connected in series. The **QH'** pin (Pin 9, Serial Output) of one chip connects to the **SER** pin (Pin 14, Serial Input) of the next chip in the chain. The SRCLK and RCLK pins are connected in parallel across all chips. To load data, a microcontroller shifts data for all chips (e.g., 24 bits for 3 chips) into the chain. The RCLK pin is then pulsed once to simultaneously update all outputs in the entire chain.
+
+### Key Control Pins
+
+*   **SER (Pin 14):** Serial Data Input. The data pin from the microcontroller.
+*   **SRCLK (Pin 11):** Shift Register Clock. Each rising edge on this pin shifts one bit of data from SER into the shift register.
+*   **RCLK (Pin 12):** Storage Register Clock (Latch). A rising edge on this pin transfers the current contents of the shift register to the output latch (QA-QH).
+*   **OE (Pin 13):** Output Enable (Active LOW). When LOW, outputs are enabled. When HIGH, outputs are disabled (high impedance state). Tie to ground for continuous operation, or connect to a PWM pin on the microcontroller to control the brightness of connected LEDs.
+*   **SRCLR (Pin 10):** Shift Register Clear (Active LOW). When LOW, all data in the shift register is cleared. Tie to VCC for normal operation to avoid clearing the register.
+
+## Pinout and I/O Description (DIP-16 Package)
+
+| Pin No. | Label | Description | Connection Notes |
+|---|---|---|---|
+| 15 | QA | Parallel Output A (Bit 0) | Connects to load (e.g., LED + resistor) |
+| 1 | QB | Parallel Output B (Bit 1) | |
+| 2 | QC | Parallel Output C (Bit 2) | |
+| 3 | QD | Parallel Output D (Bit 3) | |
+| 4 | QE | Parallel Output E (Bit 4) | |
+| 5 | QF | Parallel Output F (Bit 5) | |
+| 6 | QG | Parallel Output G (Bit 6) | |
+| 7 | QH | Parallel Output H (Bit 7) | |
+| 9 | QH' | Serial Output | Connects to SER pin of next 74HC595 in daisy chain |
+| 10 | SRCLR | Shift Register Clear | Tie to VCC (5V) for normal operation |
+| 11 | SRCLK | Shift Register Clock | Connect to microcontroller's clock pin |
+| 12 | RCLK | Storage Register Latch | Connect to microcontroller's latch pin |
+| 13 | OE | Output Enable | Tie to GND for continuous output |
+| 14 | SER | Serial Input Data | Connect to microcontroller's data pin |
+| 16 | VCC | Supply Voltage (2-6V) | Connect to power supply |
+| 8 | GND | Ground Reference | Connect to ground |
+
+## Application Context and Integration
+
+### Typical Applications
+
+*   **LED Indicators:** Driving large arrays of status LEDs from a single microcontroller.
+*   **7-Segment Display Control:** Driving multiple 7-segment displays for counters or clocks by controlling the segments and multiplexing between digits.
+*   **GPIO Expansion:** Expanding the available output pins on microcontrollers with limited I/O, such as the Arduino Uno or ESP8266.
+*   **Digital Logic Control:** Providing control signals for relays, optocouplers, or small solenoids.
+
+### Integration Best Practices
+
+1.  **Current Limiting:** The outputs of the 74HC595 have a limited source/sink capability (~6mA @ 5V). When driving LEDs, use current limiting resistors on each output pin. Do not attempt to drive loads requiring more than 10mA without external buffers like transistors or MOSFETs. The total current draw of the chip should not exceed 70mA.
+2.  **Decoupling Capacitors:** A 100nF ceramic decoupling capacitor (0.1µF) placed as close as possible to the VCC and GND pins (Pin 16 and Pin 8) is critical. This capacitor stabilizes the power supply by suppressing high-frequency switching noise, preventing glitches and data corruption during operation.
+3.  **Code Implementation:** Use the built-in `shiftOut()` function in Arduino or similar microcontrollers, which abstracts the process of pulsing SRCLK and SER correctly. Remember to set RCLK LOW, call `shiftOut()`, then set RCLK HIGH to update the outputs.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** Outputs do not update correctly or show random data.
+    *   **Diagnosis:** This indicates a timing or pin configuration error. Ensure the `SRCLR` pin (Pin 10) is tied to VCC. Check the RCLK pulse duration and timing relative to SRCLK; a common mistake is clocking data with RCLK high. Verify the order of bits in the `shiftOut()` function (MSBFIRST or LSBFIRST).
+*   **Symptom:** Outputs flicker or glitch during data transfer.
+    *   **Diagnosis:** This usually indicates a lack of proper decoupling. Place a 100nF capacitor immediately across VCC and GND. Long wires between the microcontroller and shift register can also cause signal integrity issues; keep these connections as short as possible.
+*   **Symptom:** LEDs connected to the outputs are dim or do not light up.
+    *   **Diagnosis:** Check current limiting resistor values. If a single resistor is used for multiple LEDs, the total current draw might exceed the 70mA limit, causing voltage sag and dimming. Ensure individual resistors are used per output pin.
+
+## References/Sources
+
+*   Texas Instruments. (2019). *SN74HC595 8-bit shift register with 3-state outputs Datasheet*.
+*   NXP Semiconductors. (2017). *74HC595: 8-bit serial-in, parallel-out shift register Datasheet*.
+
+---
+
+### **Component 4 Analysis: 100nF Ceramic Capacitor (Decoupling)**
+
+*   **Input Evaluation:** The user's input provides an excellent summary of the decoupling capacitor's importance and function. It correctly identifies the component's marking ("104"), value (100nF), and proper application ("place as close to VCC/GND pins as possible"). The warning regarding potential random resets and noise is accurate.
+*   **Verification and Augmentation:** The core information is standard and accurate. Augmentation focuses on expanding the explanation of decoupling (high-frequency noise suppression) versus bulk capacitance (low-frequency ripple filtering), which clarifies its specific role in digital circuits.
+
+```markdown
+---
+description: "High-frequency decoupling/bypass capacitor. Used in digital circuits to stabilize the supply voltage near ICs by providing a local charge reservoir and suppressing high-speed current spikes."
+topics: ["[[passives]]", "[[power-supply]]"]
+status: identified
+quantity: 3
+voltage: [3.3, 5]
+interfaces: [Passive]
+logic_level: "N/A"
+manufacturer: "Generic"
+capacitance: "100nF (0.1µF)"
+dielectric: "X7R or Y5V"
+tolerance: "10-20%"
+voltage_rating: "50V"
+package: "Through-hole radial"
+compatible_with: ["[[atmega328p-mcu]]", "[[atmega2560-mcu]]", "[[74hc595-8-bit-shift-register-serial-to-parallel-dip16]]"]
+used_in: []
+warnings: ["Essential for every digital IC — place as close to VCC/GND pins as possible", "Improper placement (long leads) significantly reduces effectiveness", "Value is less critical for high-frequency decoupling than placement and low series inductance"]
+datasheet_url: "N/A (Generic component; specifications derived from typical values)"
+---
+
+# 100nF Ceramic Capacitor — Decoupling/Bypass (Marking 104)
+
+The 100nF (0.1µF) ceramic capacitor is the most common component used for decoupling or bypass filtering in digital electronic circuits. Its primary function is to provide a stable local power source for high-frequency current demands generated by switching logic gates within an integrated circuit (IC). By placing it directly across the VCC and GND pins of an IC, it creates a small reservoir of charge to supply these transient currents, preventing voltage dips that can cause logic errors, glitches, or microcontroller resets.
+
+## Detailed Technical Specifications
+
+| Parameter | Value | Note |
+|---|---|---|
+| Capacitance | 100nF (0.1µF) | Standard value for high-frequency decoupling |
+| Marking | "104" | Code represents 10 * 10^4 pF = 100,000 pF = 100 nF |
+| Dielectric Type | X7R or Y5V | Class 2 ceramic dielectric; sufficient for decoupling |
+| Tolerance | 10% to 20% | Value tolerance is less critical than placement |
+| Voltage Rating | 50V | Typical voltage rating, suitable for 3.3V and 5V circuits |
+| Equivalent Series Inductance (ESL) | Low | Key characteristic for effective high-frequency filtering |
+
+## Functional Analysis and Operating Principles
+
+### Decoupling (High-Frequency Noise Suppression)
+
+When digital logic gates within an IC switch states (from LOW to HIGH or vice versa), they draw a very fast, sharp spike of current from the power supply. If the power supply traces are long, their inherent inductance creates a voltage drop (V = L * dI/dt), causing the voltage at the IC's VCC pin to temporarily dip. This voltage dip (or "ground bounce") can cause spurious logic states or, in severe cases, trigger a brownout reset in a microcontroller.
+
+The decoupling capacitor acts as a local charge reservoir right next to the IC's pins. When the IC suddenly demands current, it draws from the capacitor, which can respond much faster than the distant power supply regulator. The capacitor's low Equivalent Series Inductance (ESL) allows it to effectively shunt high-frequency noise from the IC to ground.
+
+### Decoupling vs. Bulk Capacitance
+
+*   **Decoupling Capacitors (e.g., 100nF ceramic):** Used for **high-frequency noise** suppression and transient current supply at the IC level. Effective for frequencies typically above 100kHz.
+*   **Bulk Capacitors (e.g., 10µF, 100µF electrolytic):** Used for **low-frequency noise** and ripple filtering at the power supply input. They store larger amounts of energy to handle sustained current demands or to smooth ripple from AC/DC conversion.
+
+## Application Context and Integration
+
+### Typical Applications
+
+*   **Digital IC Decoupling:** Placed on every digital logic chip (microcontrollers, shift registers, FPGAs, processors) for stable operation.
+*   **Analog Circuit Filtering:** Used in analog signal paths (e.g., around operational amplifiers) to filter out high-frequency noise on power rails.
+*   **I2C/SPI Bus Stabilization:** Placing decoupling capacitors near sensors and peripherals on communication busses helps prevent data corruption due to power line noise.
+
+### Integration Best Practices
+
+1.  **Placement (The Golden Rule):** The effectiveness of a decoupling capacitor is highly dependent on its physical proximity to the IC's VCC and GND pins. The traces connecting the capacitor to the IC should be as short as possible to minimize additional stray inductance. On a PCB, the capacitor should be located directly next to the relevant pins. For through-hole components on a breadboard, ensure the leads are trimmed short.
+2.  **Number of Capacitors:** For microcontrollers, it is standard practice to place one 100nF capacitor on *every* VCC pin. For larger systems, a combination of multiple capacitor values (e.g., 100nF for high frequency, 1µF for mid frequency, 10µF for bulk) is often used for comprehensive noise suppression across different frequency ranges.
+3.  **Dielectric Type:** For decoupling, the X7R dielectric is generally preferred over Y5V/Z5U due to its better stability across temperature and voltage. However, for 100nF, the specific dielectric type is less critical than proper placement. For sensitive timing applications like crystal oscillators (see [[22pf-ceramic-capacitor-npo-50v-crystal-load-cap]]), NPO/C0G is required.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** Microcontroller performs random resets (crashes).
+    *   **Diagnosis:** This is the classic symptom of insufficient decoupling. During code execution, a sudden change in logic states causes a voltage dip at the IC, triggering the brownout detection circuit.
+    *   **Action:** Verify that a 100nF capacitor is present for every VCC pin. Shorten the capacitor leads on breadboard circuits.
+*   **Symptom:** Analog-to-Digital Converter (ADC) readings are unstable or noisy.
+    *   **Diagnosis:** Noise on the VCC supply rail directly translates into noise on the ADC readings.
+    *   **Action:** Add decoupling capacitors to clean up the power supply. Consider using a separate, isolated power plane or filtering for the analog components if possible.
+*   **Symptom:** Communication (I2C/SPI) with external peripherals fails intermittently.
+    *   **Diagnosis:** Power supply noise on the bus can corrupt data signals.
+    *   **Action:** Ensure both the host microcontroller and the peripheral device have adequate local decoupling.
+
+## References/Sources
+
+*   Microchip Technology. (2014). *AVR042: AVR Hardware Design Considerations*.
+*   STMicroelectronics. (2018). *Decoupling Capacitors in Embedded Systems Application Note*.
+
+---
+
+### **Component 5 Analysis: 470µF 200V Electrolytic Capacitor**
+
+*   **Input Evaluation:** The user's input accurately identifies the component's type (electrolytic), value (470µF), voltage rating (200V), and polarization. It correctly identifies its use in power supply filtering. The safety warning regarding stored energy is particularly important for high-voltage components.
+*   **Verification and Augmentation:** The core specifications are standard for a large electrolytic capacitor. Augmentation focuses on detailing its role in smoothing ripple current (ripple calculation) and providing advanced safety guidelines, including the specific risks of high-voltage capacitors in power supplies. The distinction between low-frequency bulk filtering and high-frequency decoupling is reiterated for clarity.
+
+```markdown
+---
+description: "High-voltage polarized aluminum electrolytic capacitor. Primarily used as a bulk energy storage and ripple filtering component in AC/DC power supplies."
+topics: ["[[passives]]", "[[power-supply]]"]
+status: identified
+quantity: 1
+voltage: [200]
+interfaces: [Passive]
+manufacturer: "Generic (Rubycon MXR series equivalent)"
+capacitance: "470µF"
+tolerance: "±20%"
+voltage_rating: "200V DC"
+type: "Aluminum Electrolytic"
+warnings: ["**POLARIZED** — observe polarity markings or it will fail catastrophically", "**HIGH VOLTAGE DANGER** — can store lethal amounts of energy (Joules = 0.5 * C * V^2) even after power is removed. Always discharge before handling.", "Do not expose to reverse voltage or excessive ripple current."]
+datasheet_url: "N/A (Generic component; specifications derived from typical values)"
+---
+
+# 470µF 200V Electrolytic Capacitor — High Voltage Bulk Filtering
+
+This component is a high-voltage, high-capacitance aluminum electrolytic capacitor. It is designed to store substantial amounts of electrical energy and is primarily used for **bulk filtering** in AC/DC power supply circuits, particularly switch-mode power supplies (SMPS) or audio amplifier power stages. Its high voltage rating (200V) makes it suitable for use after rectification of mains-level AC voltage.
+
+## Detailed Technical Specifications
+
+| Parameter | Value | Note |
+|---|---|---|
+| Capacitance | 470µF (Microfarads) | High capacitance for bulk energy storage |
+| Voltage Rating | 200V DC | Maximum continuous voltage rating |
+| Tolerance | ±20% | Standard for electrolytic capacitors |
+| Operating Temperature | -40°C to +105°C | Standard industrial range |
+| Polarity | **Polarized** | Negative terminal marked with a stripe |
+| Equivalent Series Resistance (ESR) | Low | Important characteristic for ripple current handling |
+| Lifespan | ~2000 hours at 105°C | Lifespan decreases exponentially with temperature |
+
+## Functional Analysis and Operating Principles
+
+### Ripple Filtering (Bulk Capacitance)
+
+The primary role of this capacitor in a power supply is to smooth the pulsating DC voltage resulting from a bridge rectifier. The rectified signal, while positive, contains large voltage variations (ripple). The capacitor charges up during the peak of the waveform and then discharges slowly during the troughs, filling in the gaps between pulses. This process transforms the pulsating DC into a much smoother voltage.
+
+**Ripple Voltage Calculation:** The size of the ripple voltage is inversely proportional to the capacitance and the load current (I_load) and proportional to the time between pulses (T). `V_ripple = I_load * T / C`. A larger capacitance (470µF) results in a smaller ripple voltage for a given load, providing a cleaner DC supply.
+
+### Energy Storage and Current Sourcing
+
+Unlike smaller decoupling capacitors (like the 100nF ceramic capacitor), a 470µF capacitor stores a significant amount of energy to handle sustained bursts of current from the load, rather than just high-frequency switching noise. The energy stored is given by the formula: `E = 0.5 * C * V^2`. For this capacitor at 200V, this amounts to: `E = 0.5 * 470µF * (200V)^2 = 9.4 Joules`. This large energy reserve is essential for applications like motor drives or audio amplifiers, which demand large, short-duration currents.
+
+### Polarization
+
+Aluminum electrolytic capacitors are **polarized**, meaning they have distinct positive and negative terminals. The dielectric layer (aluminum oxide) forms during manufacturing and allows current flow primarily in one direction (anode to cathode). Applying reverse voltage, even for a short duration, will cause the dielectric to fail, leading to internal heating, pressure buildup, and potential catastrophic failure. The negative terminal is clearly marked on the capacitor sleeve with a stripe or arrow.
+
+## Application Context and Integration
+
+### Typical Applications
+
+*   **Offline SMPS Input Filter:** Used immediately after the AC-DC bridge rectifier to smooth the high-voltage DC bus. The 200V rating supports up to 120V AC input, where the peak voltage is approximately 1.414 * 120V = 169.7V.
+*   **Audio Power Amplifier Power Supply:** Provides a reservoir of energy to supply the amplifier's output stage during high-power signal peaks (bass notes).
+*   **Motor Control:** Acts as a bulk capacitor in motor drive circuits to stabilize the DC supply rail during high inrush or regenerative currents.
+
+### Integration Best Practices
+
+1.  **Safety First:** Due to the high stored energy (9.4 Joules) and high voltage, **this capacitor poses a severe safety risk.** Always assume the capacitor is fully charged. Before handling, measure the voltage across its terminals with a multimeter and discharge it through a high-value (e.g., 1KΩ to 10KΩ) power resistor. Never short the terminals directly, as this creates a damaging current spike.
+2.  **Polarity Check:** Double-check the polarity before soldering or connecting. Reversed polarity will cause the capacitor to fail. The negative lead is marked on the sleeve.
+3.  **Surge Voltage:** In AC/DC circuits, the voltage can spike significantly higher than the nominal AC input. Select a capacitor voltage rating (VR) that is at least 1.414 times the AC RMS voltage, plus a safety margin (e.g., for 120VAC, VR should be >170V).
+4.  **Ripple Current Rating:** Check the capacitor's datasheet for its ripple current rating (I_ripple). If the actual ripple current exceeds this rating, the capacitor will overheat, reducing its lifespan.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** Audible hum (50Hz/60Hz) in audio applications, or large ripple on DC supply.
+    *   **Diagnosis:** The capacitor's filtering function is insufficient. The capacitance value may be too low for the current load.
+    *   **Action:** Verify capacitance value and ESR (Equivalent Series Resistance) with a component tester. Consider increasing capacitance by paralleling another capacitor or replacing it with a larger value.
+*   **Symptom:** Capacitor fails violently (e.g., bursts or swells).
+    *   **Diagnosis:** This indicates a catastrophic failure, most commonly caused by reversed polarity, exceeding the voltage rating, or exceeding the ripple current rating (overheating).
+    *   **Action:** Replace the capacitor and verify all voltage and current values in the circuit. Ensure adequate ventilation or heat sinking around the capacitor.
+
+## References/Sources
+
+*   Rubycon Corporation. (n.d.). *MXR Series Datasheet*.
+*   Vishay Intertechnology. (n.d.). *Aluminum Capacitors - Technical Information*.
