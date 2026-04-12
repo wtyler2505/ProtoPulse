@@ -20,7 +20,7 @@ fi
 # ─────────────────────────────────────────────
 # 2. Stage the written file
 # ─────────────────────────────────────────────
-WRITTEN_FILE="${TOOL_INPUT_PATH:-$CLAUDE_TOOL_INPUT_PATH}"
+WRITTEN_FILE="${TOOL_INPUT_PATH:-$GEMINI_TOOL_INPUT_PATH}"
 
 if [ -z "$WRITTEN_FILE" ] || [ ! -f "$WRITTEN_FILE" ]; then
   exit 0

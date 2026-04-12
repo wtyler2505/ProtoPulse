@@ -93,6 +93,9 @@ const prefetchQueue: Array<() => Promise<unknown>> = [
   () => import('@/components/views/GenerativeDesignView'),
   () => import('@/components/views/DigitalTwinView'),
   () => import('@/components/panels/CommentsPanel'),
+  () => import('@/components/views/SupplyChainAlertsPanel'),
+  () => import('@/components/views/BomTemplatesPanel'),
+  () => import('@/components/views/PersonalInventoryPanel'),
 ];
 
 let prefetchStarted = false;

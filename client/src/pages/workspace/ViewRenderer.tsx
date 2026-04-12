@@ -34,6 +34,9 @@ import {
   AuditTrailView,
   LabTemplatePanel,
   DesignTroubleshooterPanel,
+  SupplyChainAlertsPanel,
+  BomTemplatesPanel,
+  PersonalInventoryPanel,
 } from './lazy-imports';
 
 /* AS-01 / UX-103: Panel skeleton loading state for lazy-loaded views */

@@ -22,7 +22,7 @@ FILE="${TOOL_INPUT_PATH:-$1}"
 # space need schema enforcement.
 
 case "$FILE" in
-  {{NOTES_DIR:-notes}}/*|*thinking/*)
+  knowledge/*|*thinking/*)
     # This is a knowledge note — validate it
     ;;
   *)
@@ -36,7 +36,7 @@ esac
 # ─────────────────────────────────────────────
 if ! head -1 "$FILE" 2>/dev/null | grep -q "^---$"; then
   echo "SCHEMA WARN: Missing YAML frontmatter in $(basename "$FILE")"
-  echo "  Every {{DOMAIN:note}} needs frontmatter with at least description and topics."
+  echo "  Every note needs frontmatter with at least description and topics."
   exit 0
 fi
 
@@ -63,7 +63,7 @@ fi
 
 if [ "$HAS_TOPICS" = false ]; then
   echo "SCHEMA WARN: Missing 'topics' field in $(basename "$FILE")"
-  echo "  Every {{DOMAIN:note}} must belong to at least one {{DOMAIN:topic_map}}."
+  echo "  Every note must belong to at least one topic map."
   echo "  Add: topics: [\"[[index]]\"]"
 fi
 
@@ -96,11 +96,9 @@ fi
 # ─────────────────────────────────────────────
 # 6. Discovery Nudge (optional)
 # ─────────────────────────────────────────────
-# {{IF_DISCOVERY_NUDGE}}
 # Remind the agent to check for connections after creating a note.
 # This is a nudge, not enforcement — the pipeline handles it systematically.
 LINK_COUNT=$(grep -o '\[\[' "$FILE" 2>/dev/null | wc -l | tr -d ' ')
 if [ "$LINK_COUNT" -eq 0 ]; then
-  echo "NOTE: $(basename "$FILE") has no wiki links. Consider running /{DOMAIN:reflect} to find connections."
+  echo "NOTE: $(basename "$FILE") has no wiki links. Consider running /connect to find connections."
 fi
-# {{END_IF_DISCOVERY_NUDGE}}

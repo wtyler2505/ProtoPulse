@@ -89,7 +89,6 @@ echo ""
 # ─────────────────────────────────────────────
 # 5. Identity (self space — conditional)
 # ─────────────────────────────────────────────
-# {{IF_SELF_SPACE}}
 # If self/ space is enabled, load identity and methodology
 # so the agent remembers who it is across sessions.
 
@@ -104,7 +103,6 @@ if [ -f self/methodology.md ]; then
   cat self/methodology.md
   echo ""
 fi
-# {{END_IF_SELF_SPACE}}
 
 # ─────────────────────────────────────────────
 # 6. Condition-Based Maintenance Signals
@@ -117,13 +115,13 @@ SIGNALS=""
 
 # Observation accumulation threshold (default: 10)
 OBS_COUNT=$(grep -rl '^status: pending' ops/observations/ 2>/dev/null | wc -l | tr -d ' ')
-if [ "$OBS_COUNT" -ge {{OBS_THRESHOLD:-10}} ]; then
+if [ "$OBS_COUNT" -ge 10 ]; then
   SIGNALS="${SIGNALS}CONDITION: ${OBS_COUNT} pending observations. Consider /{DOMAIN:rethink}.\n"
 fi
 
 # Tension accumulation threshold (default: 5)
 TENS_COUNT=$(grep -rl '^status: pending\|^status: open' ops/tensions/ 2>/dev/null | wc -l | tr -d ' ')
-if [ "$TENS_COUNT" -ge {{TENSION_THRESHOLD:-5}} ]; then
+if [ "$TENS_COUNT" -ge 5 ]; then
   SIGNALS="${SIGNALS}CONDITION: ${TENS_COUNT} unresolved tensions. Consider /{DOMAIN:rethink}.\n"
 fi
 
@@ -134,13 +132,13 @@ if [ "$SESS_COUNT" -ge 5 ]; then
 fi
 
 # Inbox pressure (default: 3 items)
-INBOX_COUNT=$(find {{INBOX_DIR:-inbox}}/ -name "*.md" -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
+INBOX_COUNT=$(find inbox/ -name "*.md" -maxdepth 2 2>/dev/null | wc -l | tr -d ' ')
 if [ "$INBOX_COUNT" -ge 3 ]; then
-  SIGNALS="${SIGNALS}CONDITION: ${INBOX_COUNT} items in {{INBOX_DIR:-inbox}}/. Consider /{DOMAIN:reduce} or /pipeline.\n"
+  SIGNALS="${SIGNALS}CONDITION: ${INBOX_COUNT} items in inbox/. Consider /{DOMAIN:reduce} or /pipeline.\n"
 fi
 
 # Orphan notes (any is a signal)
-NOTES_DIR="{{NOTES_DIR:-notes}}"
+NOTES_DIR="knowledge"
 ORPHAN_COUNT=0
 if [ -d "$NOTES_DIR" ]; then
   for f in "$NOTES_DIR"/*.md; do
@@ -150,7 +148,7 @@ if [ -d "$NOTES_DIR" ]; then
     [ "$hits" -eq 0 ] && ORPHAN_COUNT=$((ORPHAN_COUNT + 1))
   done
   if [ "$ORPHAN_COUNT" -gt 0 ]; then
-    SIGNALS="${SIGNALS}CONDITION: ${ORPHAN_COUNT} orphan notes (no incoming links). Consider /{DOMAIN:reflect}.\n"
+    SIGNALS="${SIGNALS}CONDITION: ${ORPHAN_COUNT} orphan notes (no incoming links). Consider /connect.\n"
   fi
 fi
 

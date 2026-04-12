@@ -15,7 +15,7 @@ Modern display modules marketed to makers (OLED, TFT, NeoPixel, LED matrix) incl
 
 **The 5V-only gotchas:**
 
-1. **HD44780 16x2/20x4 character LCD** -- Designed for 5V TTL logic. At 3.3V, the display may show faint or garbled characters. The contrast potentiometer (V0 pin) won't reach proper range at 3.3V. The backlight is typically 5V as well. Using an I2C backpack (PCF8574) helps with logic but the LCD module itself still needs 5V power.
+1. **HD44780 16x2/20x4 character LCD** -- Designed for 5V TTL logic. At 3.3V, the display genuinely WILL NOT work — the contrast mechanism requires a 5V VDD-VSS span, and the V0 sweet spot is unreachable at 3.3V (not just faint — completely invisible). The backlight is typically 5V as well. Using an I2C backpack (PCF8574) helps with logic (some backpacks accept 3.3V I2C signals with 5V power, but results vary by manufacturer), but the LCD module itself absolutely requires 5V power for both logic and contrast.
 
 2. **Raw 7-segment LED displays** (5161AS, HS420561K) -- These are bare LED packages with ~2.1V forward voltage per segment. Each segment needs a current-limiting resistor calculated from the supply voltage (typically 330 ohm from 5V for ~8mA). At 3.3V the brightness drops significantly and the math changes. More importantly, driving 7 segments + DP from GPIO requires HIGH output to be well above the LED Vf -- a 3.3V MCU driving a 2.1V LED leaves only 1.2V across the resistor, halving expected current.
 

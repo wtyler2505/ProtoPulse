@@ -23,10 +23,10 @@ mkdir -p ops/sessions
 # Capture conversation ID and end timestamp.
 # The session file becomes a target for /remember --mine-sessions.
 
-if [ -n "$CLAUDE_CONVERSATION_ID" ]; then
+if [ -n "$GEMINI_SESSION_ID" ]; then
   cat > "ops/sessions/${TIMESTAMP}.json" << EOF
 {
-  "id": "${CLAUDE_CONVERSATION_ID}",
+  "id": "${GEMINI_SESSION_ID}",
   "ended": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "status": "completed"
 }
@@ -61,11 +61,11 @@ if git rev-parse --is-inside-work-tree &>/dev/null; then
   [ -f ops/goals.md ] && git add ops/goals.md 2>/dev/null
 
   # Stage notes and inbox changes
-  git add {{NOTES_DIR:-notes}}/ 2>/dev/null
-  git add {{INBOX_DIR:-inbox}}/ 2>/dev/null
+  git add knowledge/ 2>/dev/null
+  git add inbox/ 2>/dev/null
 
   # Stage any MOC updates
-  git add {{NOTES_DIR:-notes}}/index.md 2>/dev/null
+  git add knowledge/index.md 2>/dev/null
 
   # Commit with auto-generated message
   git commit -m "Session capture: ${TIMESTAMP}" --quiet --no-verify 2>/dev/null
