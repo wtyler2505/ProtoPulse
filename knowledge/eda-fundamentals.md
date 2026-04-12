@@ -50,6 +50,13 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[esp8266-gpio9-and-gpio10-are-flash-connected-and-crash-if-used-as-gpio]] -- flash-connected, unusable
 - [[esp8266-wifi-consumes-50kb-ram-leaving-only-30kb-for-user-code]] -- WiFi stack dominates 80KB SRAM
 - [[i2c-devices-on-esp8266-boot-pins-can-prevent-boot-silently]] -- I2C pull-ups on boot pins prevent boot
+- [[rp2040-pio-state-machines-implement-custom-protocols-at-hardware-speed]] -- PIO state machines for sub-microsecond protocol timing
+- [[pico-12ma-per-pin-50ma-total-is-strictest-gpio-budget-among-maker-mcus]] -- 12mA/50mA is strictest among maker MCUs
+- [[rp2040-peripheral-pin-mapping-eliminates-most-conflicts-because-all-peripherals-remap]] -- all peripherals remappable
+- [[pico-has-only-3-adc-channels-requiring-external-adc-for-analog-heavy-projects]] -- only 3 ADC channels
+- [[pico-uf2-drag-and-drop-bootloader-eliminates-external-programmers]] -- UF2 bootloader is beginner-proof
+- [[pico-vsys-accepts-1v8-to-5v5-enabling-direct-battery-operation]] -- buck-boost regulator accepts 1.8-5.5V
+- [[pico-3v3-en-pin-disables-regulator-for-external-sleep-control]] -- regulator disable for hardware sleep
 
 ## Sub-Topics (to be populated)
 

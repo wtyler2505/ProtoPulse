@@ -42,6 +42,15 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[i2c-devices-on-esp8266-boot-pins-can-prevent-boot-silently]] — I2C pull-ups on boot pins block boot
 - [[nodemcu-amica-23mm-spacing-fits-standard-breadboard-with-both-rails-accessible]] — NodeMCU Amica breadboard friendly
 - [[breadboard-bench-coach-should-flag-i2c-on-esp8266-boot-pins-as-wiring-error]] — DRC should catch I2C on boot pins
+- [[rp2040-pio-state-machines-implement-custom-protocols-at-hardware-speed]] — PIO implements custom protocols in hardware, unique to RP2040
+- [[pico-12ma-per-pin-50ma-total-is-strictest-gpio-budget-among-maker-mcus]] — strictest current limits among common MCUs
+- [[rp2040-peripheral-pin-mapping-eliminates-most-conflicts-because-all-peripherals-remap]] — all peripherals remappable, not just I2C
+- [[pico-has-only-3-adc-channels-requiring-external-adc-for-analog-heavy-projects]] — fewest ADC channels among common MCUs
+- [[pico-uf2-drag-and-drop-bootloader-eliminates-external-programmers]] — drag-and-drop firmware upload, unbrickable
+- [[circuitpython-filesystem-can-consume-half-of-pico-2mb-flash]] — environment choice affects flash budget
+- [[pico-lacks-wifi-bluetooth-requiring-pico-w-or-external-wireless]] — no wireless on base Pico; Pico W or ESP bridge
+- [[pico-vsys-accepts-1v8-to-5v5-enabling-direct-battery-operation]] — wide input voltage with Schottky backfeed protection
+- [[pico-3v3-en-pin-disables-regulator-for-external-sleep-control]] — hardware sleep via regulator disable
 
 ## Open Questions
 (populated by /extract)

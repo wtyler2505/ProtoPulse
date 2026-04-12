@@ -641,8 +641,14 @@ function buildEdgesSummary(edges: AppState['edges']): string {
 }
 
 function buildBomSummary(bom: AppState['bom']): string {
-  if (bom.length === 0) return "  (none)";
-  return `  ${bom.length} items (use tools to query details)`;
+  if (bom.length === 0) return '  (none)';
+  const withDatasheet = bom.filter((b) => b.datasheetUrl).length;
+  const totalConnectors = bom.reduce((sum, b) => sum + (b.connectors?.length ?? 0), 0);
+  const extras: string[] = [];
+  if (withDatasheet > 0) { extras.push(`${withDatasheet} with datasheets`); }
+  if (totalConnectors > 0) { extras.push(`${totalConnectors} total pins`); }
+  const suffix = extras.length > 0 ? ` (${extras.join(', ')})` : '';
+  return `  ${bom.length} items${suffix} (use tools to query details)`;
 }
 
 function buildValidationSummary(issues: AppState['validationIssues']): string {

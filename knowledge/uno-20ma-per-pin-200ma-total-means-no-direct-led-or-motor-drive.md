@@ -17,6 +17,8 @@ Motors are completely out of bounds for direct GPIO drive. Even a small hobby DC
 
 This same 20mA/200mA constraint applies to the Mega (ATmega2560) and Nano (same ATmega328P), but the Uno is where beginners encounter it first because it's the beginner board. The aggregate limit is especially sneaky with the Mega's 54 I/O pins -- 200mA divided across 54 pins averages under 4mA each.
 
+**Cross-platform comparison:** The Pi Pico (RP2040) is even stricter at 12mA per pin (16mA configurable max) with only 50mA total GPIO current. The ESP32 is the most generous at 40mA per pin with ~1.2A total capacity. This graduated scale (Pico 12/50 < Uno 20/200 < ESP32 40/1200) means GPIO current limits should be a DRC parameter indexed by board type, not a universal constant.
+
 **ProtoPulse DRC rule:** Flag any schematic net that connects an Uno GPIO directly to a motor, relay coil, or high-power LED without an intervening driver IC or MOSFET.
 
 ---

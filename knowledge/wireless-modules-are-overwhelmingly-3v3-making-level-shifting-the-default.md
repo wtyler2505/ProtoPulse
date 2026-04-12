@@ -23,7 +23,7 @@ Of the 11 parts in the communication category, 8 involve 3.3V logic: ESP8266, HC
 
 This means any project using a 5V MCU (Arduino Mega, Uno, Nano) with wireless peripherals should treat level shifting as the default wiring step, not an exception. The inventory already includes two level shifter solutions (TXS0108E auto-direction, HW-221 BSS138-based) specifically to address this mismatch.
 
-**Design rule:** When a 5V MCU appears in the BOM alongside any wireless communication module, the system should flag "level shifting required" as a DRC warning unless a level shifter or 3.3V-tolerant MCU is also present.
+**Design rule:** When a 5V MCU appears in the BOM alongside any wireless communication module, the system should flag "level shifting required" as a DRC warning unless a level shifter or 3.3V-tolerant MCU is also present. Conversely, 3.3V MCUs (ESP32, ESP8266, Pi Pico) connecting to other 3.3V wireless modules need NO level shifting -- this is a significant wiring simplification that favors all-3.3V designs for IoT projects.
 
 **Level shifting methods (ranked by use case):**
 
