@@ -22,6 +22,8 @@ Battery management, voltage regulation, power distribution architecture, fusing 
 - [[switching-buck-converters-waste-watts-not-volts-making-them-essential-for-large-voltage-differentials]] — linear regulators waste 31W at 36V->5V; switching wastes ~1W
 - [[parallel-power-rails-from-battery-are-more-reliable-than-cascaded-regulators]] — parallel topology isolates failure and noise between 12V and 5V rails
 - [[counterfeit-lm2596-chips-are-common-on-cheap-modules-and-fail-under-heavy-load]] — test at full current before deployment; $1 modules are frequently fake
+- [[linear-regulator-heat-dissipation-equals-voltage-drop-times-current-making-high-differential-applications-dangerous]] — P=(Vin-Vout)*I makes linear regs impractical above ~10V differential
+- [[78xx-regulators-require-input-and-output-capacitors-close-to-pins-for-stability]] — 0.33uF input + 0.1uF output within 10mm of pins
 
 ## Open Questions
 (populated by /extract)

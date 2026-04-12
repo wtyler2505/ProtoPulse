@@ -362,6 +362,9 @@ export class PartsStorage {
 
   async upsertStock(data: InsertPartStock): Promise<PartStock> {
     try {
+      if (data.projectId == null) {
+        throw new StorageError('upsertStock', 'parts_stock', new Error('projectId is required'));
+      }
       const existing = await this.getStock(data.projectId, data.partId);
       if (existing) {
         const [updated] = await this.db

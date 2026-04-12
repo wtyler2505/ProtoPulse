@@ -128,7 +128,9 @@ export function registerBomTemplateRoutes(app: Express): void {
 
     try {
       const session = (req as unknown as Record<string, unknown>).session as { userId: number };
-      const updated = await bomTemplateStorage.updateTemplate(templateId, session.userId, parsed.data);
+      const { description, ...rest } = parsed.data;
+      const updates = { ...rest, ...(description !== undefined ? { description: description ?? undefined } : {}) };
+      const updated = await bomTemplateStorage.updateTemplate(templateId, session.userId, updates);
       if (!updated) {
         res.status(404).json({ message: 'Template not found' });
         return;

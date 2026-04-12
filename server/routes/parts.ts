@@ -330,7 +330,7 @@ export function registerPartsRoutes(app: Express): void {
 
     try {
       // Verify project ownership
-      const session = (req as Record<string, unknown>).session as { userId: number };
+      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
       const isOwner = await storage.isProjectOwner(projectId, session.userId);
       if (!isOwner) {
         res.status(403).json({ message: 'Not authorized to modify this project' });
@@ -588,7 +588,7 @@ export function registerPartsRoutes(app: Express): void {
   // -------------------------------------------------------------------------
 
   // GET /api/parts/inventory/personal — list personal stock (no project)
-  app.get('/api/parts/inventory/personal', validateSession, async (req, res) => {
+  app.get('/api/parts/inventory/personal', validateSession, async (req: Request, res: Response) => {
     try {
       const stock = await partsStorage.listPersonalStock();
       res.json({ data: stock, total: stock.length });
@@ -603,7 +603,7 @@ export function registerPartsRoutes(app: Express): void {
   });
 
   // POST /api/parts/inventory/personal — add a part to personal stock
-  app.post('/api/parts/inventory/personal', validateSession, async (req, res) => {
+  app.post('/api/parts/inventory/personal', validateSession, async (req: Request, res: Response) => {
     const parsed = z.object({
       partId: z.string().uuid(),
       quantityOnHand: z.number().int().nonnegative().default(0),
