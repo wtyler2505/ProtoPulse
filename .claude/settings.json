@@ -37,6 +37,16 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/enforce-test-background.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PostToolUse": [
