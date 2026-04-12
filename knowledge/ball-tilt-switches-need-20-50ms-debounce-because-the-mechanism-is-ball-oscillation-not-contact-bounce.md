@@ -27,6 +27,7 @@ Different switch mechanisms have different bounce physics, requiring different d
 - Settling depends on: Reed stiffness, damping, magnetic field strength
 - Typical debounce: 5-10ms
 - Characteristic: Fast initial contact, brief ring-down
+- Hardware debounce recipe: 10k pull-up + 100nF cap across switch terminals → RC time constant ~1ms, filters contact ring-down without software. Preferred for high-frequency counting (RPM) where software debounce adds latency
 
 **Pushbutton / tactile switch:**
 - Mechanism: Metal dome or spring contact
