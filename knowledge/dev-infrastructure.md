@@ -1,6 +1,7 @@
 ---
 description: How the Claude Code infrastructure is configured, wired, and maintained -- hooks, skills, agents, MCP servers, and settings
 type: moc
+topics: []
 ---
 
 # dev-infrastructure

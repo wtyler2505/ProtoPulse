@@ -1,6 +1,7 @@
 ---
 description: What ProtoPulse is missing, what's broken, and where the biggest opportunities are — the radar for development priorities
 type: moc
+topics: []
 ---
 
 # gaps and opportunities

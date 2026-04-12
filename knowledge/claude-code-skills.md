@@ -1,6 +1,7 @@
 ---
 description: How 250+ Claude Code skills organize into workflows -- plugins, project skills, slash commands, mastery skills, thinking tools, and the gaps between them
 type: moc
+topics: []
 ---
 
 # claude-code-skills
