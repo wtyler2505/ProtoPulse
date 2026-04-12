@@ -24,6 +24,13 @@ Analog and digital input devices, debouncing strategies, matrix scanning, ADC ma
 - [[joystick-center-position-reads-approximately-512-but-varies-per-unit-requiring-per-unit-software-calibration]] — Spring settles at different points per unit; calibrate center at startup + dead zone
 - [[running-joystick-at-3v3-scales-analog-output-proportionally-so-code-expecting-0-1023-range-sees-0-675-maximum]] — VCC mismatch compresses ADC range; match supply to ADC reference voltage
 
+### Keypad
+- [[matrix-keypad-scanning-drives-one-row-low-at-a-time-and-reads-columns-with-pull-ups-to-detect-key-position]] — Row/column scanning algorithm; inverse of LED matrix multiplexing
+- [[4x4-matrix-keypad-consumes-8-gpio-pins-making-io-expander-mandatory-on-pin-constrained-mcus]] — 8 pins = 57% of Uno budget; PCF8574 reduces to 2 I2C pins
+- [[membrane-keypad-is-a-passive-switch-matrix-with-no-active-logic-so-it-operates-at-any-mcu-voltage-without-level-shifting]] — Zero active electronics; works at any logic voltage without adaptation
+- [[membrane-keypad-has-no-built-in-debouncing-requiring-software-scan-timing]] — Arduino Keypad library handles debounce via multi-scan consistency
+- [[membrane-switch-wear-limits-keypads-to-low-cycle-applications-unlike-mechanical-switches]] — 1M cycle rated life; fine for PIN entry, inadequate for gaming/industrial
+
 ## Open Questions
 (populated by /extract)
 

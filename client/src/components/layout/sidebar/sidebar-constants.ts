@@ -149,4 +149,6 @@ export const alwaysVisibleIds = new Set<ViewMode>([
   'supply_chain',
   'bom_templates',
   'personal_inventory',
+  'part_alternates',
+  'part_usage',
 ]);
