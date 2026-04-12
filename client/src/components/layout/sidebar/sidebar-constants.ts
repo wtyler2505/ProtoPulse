@@ -33,6 +33,8 @@ import {
   AlertTriangle,
   BookTemplate,
   Package,
+  ArrowRightLeft,
+  BarChart3,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -75,6 +77,8 @@ export const navItems: NavItem[] = [
   { icon: AlertTriangle, view: 'supply_chain', label: 'Supply Chain' },
   { icon: BookTemplate, view: 'bom_templates', label: 'BOM Templates' },
   { icon: Package, view: 'personal_inventory', label: 'My Parts' },
+  { icon: ArrowRightLeft, view: 'part_alternates', label: 'Alternates' },
+  { icon: BarChart3, view: 'part_usage', label: 'Part Usage' },
 ];
 
 

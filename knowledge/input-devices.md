@@ -18,6 +18,12 @@ Analog and digital input devices, debouncing strategies, matrix scanning, ADC ma
 - [[potentiometer-300-degree-rotation-range-with-mechanical-stops-means-software-must-handle-endpoint-dead-zones-in-adc-reading]] — Dead zones at mechanical stops require software map() trimming
 - [[potentiometer-20-percent-resistance-tolerance-is-irrelevant-in-voltage-divider-mode-because-output-depends-on-wiper-position-ratio-not-absolute-resistance]] — Tolerance cancels in divider mode
 
+### Joystick
+- [[joystick-module-is-two-potentiometers-on-a-spring-return-gimbal-consuming-two-analog-pins-plus-one-digital-pin]] — KY-023 composite device: 2 pots + pushbutton, entirely passive, spring-return centering
+- [[joystick-sw-pin-has-no-onboard-pull-up-requiring-input-pullup-or-external-resistor-to-avoid-floating-input]] — SW line floats without pull-up; INPUT_PULLUP or 10K to VCC required
+- [[joystick-center-position-reads-approximately-512-but-varies-per-unit-requiring-per-unit-software-calibration]] — Spring settles at different points per unit; calibrate center at startup + dead zone
+- [[running-joystick-at-3v3-scales-analog-output-proportionally-so-code-expecting-0-1023-range-sees-0-675-maximum]] — VCC mismatch compresses ADC range; match supply to ADC reference voltage
+
 ## Open Questions
 (populated by /extract)
 
