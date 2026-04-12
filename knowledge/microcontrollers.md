@@ -51,6 +51,8 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[pico-lacks-wifi-bluetooth-requiring-pico-w-or-external-wireless]] — no wireless on base Pico; Pico W or ESP bridge
 - [[pico-vsys-accepts-1v8-to-5v5-enabling-direct-battery-operation]] — wide input voltage with Schottky backfeed protection
 - [[pico-3v3-en-pin-disables-regulator-for-external-sleep-control]] — hardware sleep via regulator disable
+- [[arduino-nano-a6-and-a7-are-analog-input-only-pins-that-silently-fail-on-digitalread]] — A6/A7 ADC-only pins, digitalRead compiles but returns garbage
+- [[arduino-clone-bootloader-mismatch-causes-upload-failure-that-looks-like-hardware-fault]] — pre-Optiboot bootloader on clones causes avrdude sync error
 
 ## Open Questions
 (populated by /extract)
