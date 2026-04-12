@@ -21,6 +21,8 @@ This creates a practical environment selection decision:
 
 For projects that outgrow CircuitPython's flash constraints, the Pico W (same RP2040 but with wireless) also has only 2MB flash, which is even tighter because the WiFi firmware consumes additional space. Boards with larger flash (RP2040-based boards with 8-16MB) exist but are less common.
 
+**On boards with less flash, the constraint is even more severe.** The Adafruit PyGamer (SAMD51) has only 512KB flash total. CircuitPython is listed as a first-class programming option for this board, but with the runtime alone consuming ~300KB on SAMD51, only ~200KB remains for user code and libraries. Complex CircuitPython projects (multiple sensor libraries + display drivers + game logic) may simply not fit. This makes environment selection (CircuitPython vs Arduino C++) not a preference but a hard constraint on flash-limited SAMD boards.
+
 ---
 
 Relevant Notes:

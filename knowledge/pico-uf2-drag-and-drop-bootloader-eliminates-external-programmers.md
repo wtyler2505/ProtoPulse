@@ -22,6 +22,8 @@ The UF2 bootloader lives in ROM (not flash) so it cannot be accidentally erased.
 
 MicroPython and CircuitPython are both distributed as UF2 files -- installing a Python runtime is literally one file drag. The C/C++ SDK also produces UF2 output. Arduino IDE (with the arduino-pico board package) handles this transparently during upload.
 
+**UF2 is a cross-platform standard, not a Pico-specific feature.** The SAMD21 and SAMD51 families (Adafruit Feather M0/M4, PyGamer, ItsyBitsy) also use UF2 bootloaders -- double-tap the reset button to enter bootloader mode, and the board appears as a USB drive. This makes UF2 the emerging standard for ARM-based maker boards across both the RP2040 and SAMD families. The entry mechanism differs (BOOTSEL button on Pico vs double-tap reset on SAMD) but the user experience is identical: drag, drop, done.
+
 ---
 
 Relevant Notes:

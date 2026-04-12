@@ -32,6 +32,8 @@ Choosing a display for a microcontroller project is a dependency chain, not a fe
 
 **Why this matters for beginners:** A beginner might choose a TFT because "it looks better" without realizing it needs 9+ pins and an SPI bus, which may conflict with other SPI devices (SD card, MAX7219). Or they choose a parallel LCD consuming 16 GPIO pins when an I2C OLED uses 4. The AI bench coach should surface these tradeoffs when a display is added to the schematic.
 
+**Real-world SPI bus contention example:** The Adafruit PyGamer's ST7735R TFT display and microSD card slot share the same SPI bus. Both use SPI with separate chip-select lines, so they can't communicate simultaneously. If the display is refreshing and the SD card tries to read, one must wait. This is a concrete case of bus contention on a single commercial board -- not a theoretical warning, but a design constraint users will hit when trying to load game assets from SD while drawing to the screen.
+
 ---
 
 Topics:
