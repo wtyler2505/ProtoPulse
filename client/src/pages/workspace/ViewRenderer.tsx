@@ -266,6 +266,27 @@ export function ViewRenderer({ activeView, projectId }: ViewRendererProps) {
           </Suspense>
         </ErrorBoundary>
       )}
+      {activeView === 'supply_chain' && (
+        <ErrorBoundary>
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <SupplyChainAlertsPanel projectId={projectId} />
+          </Suspense>
+        </ErrorBoundary>
+      )}
+      {activeView === 'bom_templates' && (
+        <ErrorBoundary>
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <BomTemplatesPanel projectId={projectId} />
+          </Suspense>
+        </ErrorBoundary>
+      )}
+      {activeView === 'personal_inventory' && (
+        <ErrorBoundary>
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <PersonalInventoryPanel />
+          </Suspense>
+        </ErrorBoundary>
+      )}
     </>
   );
 }
