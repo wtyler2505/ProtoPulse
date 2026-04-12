@@ -23,7 +23,7 @@ Kit IR remotes (the small plastic TV-style remotes in Arduino starter kits) are 
 
 **ProtoPulse implications:**
 - The bench coach's first diagnostic question when IR isn't working should be: "Is the remote's battery alive? Point it at your phone camera -- you should see the IR LED flash purple on the camera screen when you press a button."
-- The phone-camera trick is the universal quick test for any IR transmitter (phone cameras can see near-IR that human eyes cannot)
+- The phone-camera trick is the universal quick test for ANY IR transmitter — handheld remotes, programmable LED modules (OSEPP IRF-01), and bare IR LEDs. Phone cameras can see near-IR (~850-950nm) that human eyes cannot. The bench coach should generalize: "Point any IR LED at your phone camera and look for the purple flash."
 - Design validation for IR projects should include a "transmitter verification" step before debugging receiver code
 
 ---

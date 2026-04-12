@@ -945,6 +945,7 @@ export const insertPartStockSchema = createInsertSchema(partStock).omit({
   updatedAt: true,
   deletedAt: true,
 }).extend({
+  projectId: z.number().int().positive().nullable().optional(),
   quantityNeeded: z.number().int().nonnegative().default(0),
   quantityOnHand: z.number().int().nonnegative().nullable().optional(),
   minimumStock: z.number().int().nonnegative().nullable().optional(),

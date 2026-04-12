@@ -27,6 +27,8 @@ The inventory contains 5 IR receiver modules across 3 product labels: KY-022 (x2
 
 **The transmitter side is equally generic:** The standard kit IR remote (small plastic TV-style, ~20 buttons, NEC protocol, CR2025 battery) is also interchangeable across kit brands. Any 38kHz NEC remote works with any TSOP 38kHz receiver — the entire IR communication system (remote + receiver) is brand-agnostic.
 
+**Two distinct IR transmitter categories exist in the inventory:** (1) Handheld remotes (human-initiated button presses, battery-powered, standalone), and (2) Programmable IR LED modules like the OSEPP IRF-01 (MCU-controlled, software-generated carrier, used for machine-to-machine IR or cloning remote signals). BOM consolidation should distinguish between these form factors — they're not interchangeable despite using the same protocol and frequency.
+
 **Detection heuristic for ProtoPulse:** When two BOM items share the same interface (GPIO), same voltage range, same primary IC family, and same function, prompt the user: "These appear to be the same component under different product names. Consolidate?"
 
 ---

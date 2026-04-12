@@ -23,6 +23,8 @@ Wireless and wired communication protocols, module pairing, range/reliability tr
 - [[fluorescent-lighting-interferes-with-38khz-ir-receivers-because-the-discharge-frequency-overlaps-the-demodulation-band]] — environmental gotcha: fluorescent lights cause false IR triggers
 - [[nec-ir-button-codes-are-manufacturer-specific-making-code-first-debugging-impossible-without-reading-your-own-remote]] — must discover YOUR remote's codes first; no universal NEC code table exists
 - [[dead-coin-cell-is-the-invisible-first-failure-mode-on-kit-ir-remotes]] — check battery before debugging code/wiring
+- [[ir-transmitter-requires-software-generated-38khz-carrier-while-receiver-demodulates-in-hardware-creating-a-complexity-asymmetry]] — transmitting needs PWM timer pin; receiving works on any GPIO
+- [[bare-ir-led-breakout-modules-have-1-2m-range-and-extending-range-requires-a-driver-transistor]] — GPIO current limits range; use PN2222A driver for 5-10m
 
 ## Open Questions
 (populated by /extract)
