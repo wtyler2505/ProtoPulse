@@ -20,7 +20,7 @@ Modern display modules marketed to makers (OLED, TFT, NeoPixel, LED matrix) incl
 2. **Raw 7-segment LED displays** (5161AS, HS420561K) -- These are bare LED packages with ~2.1V forward voltage per segment. Each segment needs a current-limiting resistor calculated from the supply voltage (typically 330 ohm from 5V for ~8mA). At 3.3V the brightness drops significantly and the math changes. More importantly, driving 7 segments + DP from GPIO requires HIGH output to be well above the LED Vf -- a 3.3V MCU driving a 2.1V LED leaves only 1.2V across the resistor, halving expected current.
 
 **Displays that work fine at 3.3V:**
-- SH1106/SSD1306 OLED (onboard regulator)
+- SH1106/SSD1306 OLED (onboard regulator accepts 3.3-5V on VCC, but logic pins are 3.3V native — safe for direct ESP32 connection; on 5V boards the module's onboard level shifting handles the mismatch)
 - ILI9341 TFT (the IC itself is a 3.3V device, but Arduino shield variants include onboard level shifting for 5V Uno/Mega compatibility — bare breakout modules accept 3.3V logic directly)
 - MAX7219-driven LED matrices/7-segments (MAX7219 handles the LED driving; you just send SPI commands)
 - WS2812B NeoPixels (3.3V data line works but 5V power preferred; first pixel may need level shifter)
