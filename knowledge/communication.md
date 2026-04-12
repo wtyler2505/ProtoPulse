@@ -31,6 +31,7 @@ Wireless and wired communication protocols, module pairing, range/reliability tr
 - [[spp-bluetooth-modules-act-as-transparent-uart-bridges-where-application-code-is-protocol-unaware]] — once paired, Serial.print() works identically over USB or Bluetooth; zero protocol knowledge required
 - [[w5100-hardware-tcp-ip-offload-means-the-mcu-never-touches-packet-framing-which-trades-socket-count-for-code-simplicity]] — hardware TCP/IP offload: zero RAM cost but 4-socket ceiling; opposite pattern to ESP software stacks
 - [[spi-bus-sharing-on-a-single-shield-requires-per-device-chip-select-discipline-where-unused-devices-must-be-explicitly-deselected]] — multiple SPI devices on one bus need explicit CS pin management; Ethernet shield has W5100 + SD card
+- [[l298n-ttl-input-thresholds-allow-3v3-mcu-control-despite-5v-logic-supply]] — TTL thresholds (2.3V HIGH) allow 3.3V MCUs to control L298N without level shifting
 
 ## Open Questions
 (populated by /extract)
