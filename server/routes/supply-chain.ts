@@ -8,7 +8,7 @@
  * POST /api/supply-chain/check           — trigger a supply chain check job
  */
 
-import type { Express } from 'express';
+import type { Express, Request, Response } from 'express';
 import { z } from 'zod';
 import { validateSession } from '../auth';
 import { supplyChainStorage, StorageError } from '../storage';
@@ -17,7 +17,7 @@ import { logger } from '../logger';
 
 export function registerSupplyChainRoutes(app: Express): void {
   // GET /api/supply-chain/alerts
-  app.get('/api/supply-chain/alerts', validateSession, async (req, res) => {
+  app.get('/api/supply-chain/alerts', validateSession, async (req: Request, res: Response) => {
     try {
       const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
       const partId = req.query.partId ? String(req.query.partId) : undefined;
@@ -44,7 +44,7 @@ export function registerSupplyChainRoutes(app: Express): void {
   });
 
   // GET /api/supply-chain/alerts/count
-  app.get('/api/supply-chain/alerts/count', validateSession, async (req, res) => {
+  app.get('/api/supply-chain/alerts/count', validateSession, async (req: Request, res: Response) => {
     try {
       const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
       const count = await supplyChainStorage.getUnacknowledgedCount(projectId);
@@ -60,7 +60,7 @@ export function registerSupplyChainRoutes(app: Express): void {
   });
 
   // POST /api/supply-chain/alerts/:id/ack
-  app.post('/api/supply-chain/alerts/:id/ack', validateSession, async (req, res) => {
+  app.post('/api/supply-chain/alerts/:id/ack', validateSession, async (req: Request, res: Response) => {
     const alertId = String(req.params.id);
     try {
       const acknowledged = await supplyChainStorage.acknowledgeAlert(alertId);
@@ -80,7 +80,7 @@ export function registerSupplyChainRoutes(app: Express): void {
   });
 
   // POST /api/supply-chain/alerts/ack-all
-  app.post('/api/supply-chain/alerts/ack-all', validateSession, async (req, res) => {
+  app.post('/api/supply-chain/alerts/ack-all', validateSession, async (req: Request, res: Response) => {
     try {
       const projectId = req.body?.projectId ? Number(req.body.projectId) : undefined;
       const count = await supplyChainStorage.acknowledgeAll(projectId);
@@ -96,7 +96,7 @@ export function registerSupplyChainRoutes(app: Express): void {
   });
 
   // POST /api/supply-chain/check — trigger a supply chain check
-  app.post('/api/supply-chain/check', validateSession, async (req, res) => {
+  app.post('/api/supply-chain/check', validateSession, async (req: Request, res: Response) => {
     const parsed = z.object({
       projectId: z.number().int().positive(),
     }).safeParse(req.body);
@@ -107,7 +107,7 @@ export function registerSupplyChainRoutes(app: Express): void {
     }
 
     try {
-      const session = (req as Record<string, unknown>).session as { userId: number };
+      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
       const jobId = await jobQueue.submit('supply_chain_check', {
         projectId: parsed.data.projectId,
         userId: session.userId,
