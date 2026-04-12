@@ -18,7 +18,7 @@ PIO can implement protocols requiring timing precision impossible in software on
 - **VGA/DVI video output** -- pixel-perfect timing for display generation
 - **Custom serial protocols** -- any baud rate, any framing, any voltage encoding
 - **Rotary encoder** -- hardware-level debouncing without CPU interrupts
-- **I2S audio** -- deterministic bit-clock generation
+- **I2S audio** -- deterministic bit-clock generation (e.g., SPH0645LM4H PDM microphone requires jitter-free BCK/WS clocking that PIO delivers without a dedicated I2S peripheral)
 
 No Arduino (AVR or ARM) and no ESP32 can do this. The closest equivalent on other platforms is bit-banging (CPU-dependent, jittery, blocks interrupts) or dedicated hardware peripherals (fixed-function, not programmable). PIO occupies a unique middle ground: it's programmable like software but executes with hardware determinism.
 

@@ -28,6 +28,7 @@ The failure mode is insidious because these pins work perfectly as GPIO after bo
 - SPI peripherals on D8 that drive CS HIGH when not selected
 - Pull-up resistors on D8 (GPIO15) for any reason
 - LED circuits on D4 (GPIO2) that pull the pin LOW through a current-limiting resistor
+- I2S microphones using GPIO2 as WS (word select / LRCLK) — if the I2S driver hasn't initialized yet, WS may idle LOW, violating the boot requirement. Add a 10k pull-up on GPIO2 and initialize I2S only after boot completes
 
 **Safe pattern:** Reserve D3, D4, and D8 for outputs only, verify they meet boot requirements with no load, and use D1/D2 for I2C instead. SPI on D5-D8 is generally safe because D8 (CS) has an external pull-down that satisfies boot, and the other SPI pins (D5/D6/D7) have no boot restrictions.
 

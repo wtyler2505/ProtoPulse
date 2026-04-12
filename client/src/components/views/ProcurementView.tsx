@@ -60,6 +60,7 @@ function ProcurementView() {
   const { toast } = useToast();
   const projectId = useProjectId();
   const { data: componentParts, isLoading: partsLoading } = useComponentParts(projectId);
+  const [crossProjectPartId, setCrossProjectPartId] = useState<string | null>(null);
 
   // ── Previous BOM cost (for cost delta indicator) ──
   // Read from localStorage — populated when user takes a BOM snapshot via the
@@ -481,6 +482,34 @@ function ProcurementView() {
         <Suspense fallback={<div className="flex items-center justify-center h-64 text-muted-foreground">Loading AVL compliance...</div>}>
           <AvlCompliancePanel bom={bom} />
         </Suspense>
+      </TabsContent>
+
+      <TabsContent value="cross-project" className="flex-1 overflow-auto mt-0 p-4 space-y-4">
+        {bom.length === 0 ? (
+          <div className="text-center py-8 text-sm text-muted-foreground">Add parts to BOM to see cross-project usage and alternates.</div>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2" data-testid="cross-project-part-selector">
+              {bom.map((item) => (
+                <Button
+                  key={item.id}
+                  variant={crossProjectPartId === item.id ? 'default' : 'outline'}
+                  size="sm"
+                  data-testid={`cross-project-part-btn-${item.id}`}
+                  onClick={() => { setCrossProjectPartId(crossProjectPartId === item.id ? null : item.id); }}
+                >
+                  {item.partNumber}
+                </Button>
+              ))}
+            </div>
+            {crossProjectPartId && (
+              <div className="space-y-3" data-testid="cross-project-detail">
+                <PartUsagePanel partId={crossProjectPartId} />
+                <PartAlternatesPanel partId={crossProjectPartId} projectId={projectId} partTitle={bom.find((b) => b.id === crossProjectPartId)?.partNumber ?? ''} />
+              </div>
+            )}
+          </>
+        )}
       </TabsContent>
 
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />
