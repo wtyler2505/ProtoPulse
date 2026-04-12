@@ -19,6 +19,9 @@ Battery management, voltage regulation, power distribution architecture, fusing 
 - [[salvaged-bms-has-unknown-thresholds-and-must-be-verified-before-trusting-with-project-safety]] — unknown overcurrent, undervoltage, thermal thresholds on salvaged BMS
 - [[lithium-ion-charging-requires-cc-cv-profile-and-a-raw-power-supply-will-overcharge-cells]] — bench PSU skips CC phase; use purpose-built 10S charger
 - [[nmc-vs-lifepo4-is-a-tradeoff-between-energy-density-and-cycle-life-safety]] — chemistry choice cascades into charger, BMS, motor performance, and safety
+- [[switching-buck-converters-waste-watts-not-volts-making-them-essential-for-large-voltage-differentials]] — linear regulators waste 31W at 36V->5V; switching wastes ~1W
+- [[parallel-power-rails-from-battery-are-more-reliable-than-cascaded-regulators]] — parallel topology isolates failure and noise between 12V and 5V rails
+- [[counterfeit-lm2596-chips-are-common-on-cheap-modules-and-fail-under-heavy-load]] — test at full current before deployment; $1 modules are frequently fake
 
 ## Open Questions
 (populated by /extract)
