@@ -15,6 +15,7 @@ import { ProjectMetaProvider, useProjectMeta } from '@/lib/contexts/project-meta
 import { ArchitectureProvider, useArchitecture } from '@/lib/contexts/architecture-context';
 import { ArduinoProvider, useArduino } from '@/lib/contexts/arduino-context';
 import { SimulationProvider, useSimulation } from '@/lib/contexts/simulation-context';
+import { PartsCatalogProvider } from '@/lib/parts';
 
 // Re-export domain hooks for direct use by consumers
 export { useProjectId } from '@/lib/contexts/project-id-context';
@@ -150,17 +151,19 @@ function SeededProviders({ children }: { children: React.ReactNode }) {
         <OutputProvider>
           <ChatProvider seeded>
             <HistoryProvider seeded>
-              <BomProvider seeded>
-                <ValidationProvider seeded>
-                  <ArduinoProvider projectId={pid}>
-                    <SimulationProvider>
-                      <ArchitectureBridge>
-                        {children}
-                      </ArchitectureBridge>
-                    </SimulationProvider>
-                  </ArduinoProvider>
-                </ValidationProvider>
-              </BomProvider>
+              <PartsCatalogProvider projectId={pid}>
+                <BomProvider seeded>
+                  <ValidationProvider seeded>
+                    <ArduinoProvider projectId={pid}>
+                      <SimulationProvider>
+                        <ArchitectureBridge>
+                          {children}
+                        </ArchitectureBridge>
+                      </SimulationProvider>
+                    </ArduinoProvider>
+                  </ValidationProvider>
+                </BomProvider>
+              </PartsCatalogProvider>
             </HistoryProvider>
           </ChatProvider>
         </OutputProvider>

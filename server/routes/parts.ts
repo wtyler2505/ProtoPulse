@@ -111,6 +111,8 @@ const searchQuerySchema = z.object({
   origin: z.enum(PART_ORIGINS).optional(),
   isPublic: z.coerce.boolean().optional(),
   hasMpn: z.coerce.boolean().optional(),
+  projectId: z.coerce.number().int().positive().optional(),
+  hasStock: z.coerce.boolean().optional(),
   tags: z.string().optional(), // comma-separated
   limit: z.coerce.number().int().positive().max(200).optional(),
   offset: z.coerce.number().int().nonnegative().optional(),
@@ -190,7 +192,7 @@ export function registerPartsRoutes(app: Express): void {
       res.status(400).json({ message: fromZodError(parsed.error).toString() });
       return;
     }
-    const { text, category, minTrustLevel, origin, isPublic, hasMpn, tags, limit, offset, sortBy, sortDir } = parsed.data;
+    const { text, category, minTrustLevel, origin, isPublic, hasMpn, projectId, hasStock, tags, limit, offset, sortBy, sortDir } = parsed.data;
     const filter: PartFilter = {
       text,
       category,
@@ -198,12 +200,22 @@ export function registerPartsRoutes(app: Express): void {
       origin,
       isPublic,
       hasMpn,
+      projectId,
+      hasStock,
       tags: tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
     };
     const pagination: PartPagination = { limit, offset, sortBy, sortDir };
     try {
-      const results = await partsStorage.search(filter, pagination);
-      res.json({ data: results, total: results.length });
+      if (projectId !== undefined) {
+        const results = await partsStorage.searchWithStock(
+          filter as PartFilter & { projectId: number },
+          pagination,
+        );
+        res.json({ data: results, total: results.length });
+      } else {
+        const results = await partsStorage.search(filter, pagination);
+        res.json({ data: results, total: results.length });
+      }
     } catch (err) {
       if (err instanceof StorageError) {
         logger.error('GET /api/parts failed', { message: err.message });
@@ -229,6 +241,56 @@ export function registerPartsRoutes(app: Express): void {
       if (err instanceof StorageError) {
         logger.error('GET /api/parts/:id failed', { message: err.message });
         res.status(500).json({ message: 'Failed to get part' });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // PATCH /api/parts/:id — update part-level fields (title, manufacturer, mpn, etc.)
+  app.patch('/api/parts/:id', requireAuth, payloadLimit(32 * 1024), async (req, res) => {
+    const id = String(req.params.id);
+    const parsed = z.object({
+      title: z.string().min(1).max(500).optional(),
+      description: z.string().nullable().optional(),
+      manufacturer: z.string().nullable().optional(),
+      mpn: z.string().nullable().optional(),
+      canonicalCategory: z.string().min(1).max(100).optional(),
+      packageType: z.string().nullable().optional(),
+      tolerance: z.string().nullable().optional(),
+      esdSensitive: z.boolean().nullable().optional(),
+      assemblyCategory: z.enum(ASSEMBLY_CATEGORIES).nullable().optional(),
+    }).safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ message: fromZodError(parsed.error).toString() });
+      return;
+    }
+    if (Object.keys(parsed.data).length === 0) {
+      res.status(400).json({ message: 'No fields to update' });
+      return;
+    }
+    const expectedVersion = (() => {
+      const header = req.headers['if-match'];
+      if (!header || typeof header !== 'string') { return undefined; }
+      const match = /^"?(\d+)"?$/.exec(header.trim());
+      return match ? Number(match[1]) : undefined;
+    })();
+    try {
+      const updated = await partsStorage.updatePart(id, parsed.data, expectedVersion);
+      if (!updated) {
+        res.status(404).json({ message: 'Part not found' });
+        return;
+      }
+      res.setHeader('ETag', `"${updated.version}"`);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof VersionConflictError) {
+        res.status(409).json({ error: 'Conflict', message: 'Part was modified by another request. Re-fetch and retry.', currentVersion: err.currentVersion });
+        return;
+      }
+      if (err instanceof StorageError) {
+        logger.error('PATCH /api/parts/:id failed', { message: err.message });
+        res.status(500).json({ message: 'Failed to update part' });
         return;
       }
       throw err;
@@ -370,6 +432,26 @@ export function registerPartsRoutes(app: Express): void {
       if (err instanceof StorageError) {
         logger.error('PATCH /api/projects/:pid/stock/:id failed', { message: err.message });
         res.status(500).json({ message: 'Failed to update stock' });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // DELETE /api/projects/:pid/stock/:id — soft-delete stock row
+  app.delete('/api/projects/:pid/stock/:id', requireAuth, async (req, res) => {
+    const stockId = String(req.params.id);
+    try {
+      const deleted = await partsStorage.deleteStock(stockId);
+      if (!deleted) {
+        res.status(404).json({ message: 'Stock row not found' });
+        return;
+      }
+      res.status(204).end();
+    } catch (err) {
+      if (err instanceof StorageError) {
+        logger.error('DELETE /api/projects/:pid/stock/:id failed', { message: err.message });
+        res.status(500).json({ message: 'Failed to delete stock' });
         return;
       }
       throw err;

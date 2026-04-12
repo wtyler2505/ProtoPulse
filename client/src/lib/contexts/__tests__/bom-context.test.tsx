@@ -103,7 +103,7 @@ describe('BomContext', () => {
     expect(result.current.bomSettings.batchSize).toBe(1000);
   });
 
-  // 4. addBomItem calls apiRequest with correct method, URL, and body
+  // 4. addBomItem calls ingress API with canonical payload
   it('addBomItem calls apiRequest with POST and the correct payload', async () => {
     const { result } = renderHook(() => useBom(), { wrapper: createWrapper() });
 
@@ -126,13 +126,35 @@ describe('BomContext', () => {
     await waitFor(() => {
       expect(mockedApiRequest).toHaveBeenCalledWith(
         'POST',
-        '/api/projects/1/bom',
-        newItem,
+        '/api/parts/ingress',
+        {
+          source: 'bom_create',
+          origin: 'user',
+          projectId: 1,
+          fields: {
+            title: '5V voltage regulator',
+            manufacturer: 'Texas Instruments',
+            mpn: 'LM7805',
+            canonicalCategory: 'component',
+            esdSensitive: null,
+            assemblyCategory: null,
+          },
+          stock: {
+            quantityNeeded: 10,
+            quantityOnHand: null,
+            minimumStock: null,
+            storageLocation: null,
+            unitPrice: 0.55,
+            supplier: 'Digi-Key',
+            leadTime: null,
+            status: 'In Stock',
+          },
+        },
       );
     });
   });
 
-  // 5. deleteBomItem calls apiRequest with correct DELETE url
+  // 5. deleteBomItem calls canonical stock DELETE endpoint
   it('deleteBomItem calls apiRequest with DELETE and the correct URL', async () => {
     const { result } = renderHook(() => useBom(), { wrapper: createWrapper() });
 
@@ -143,12 +165,12 @@ describe('BomContext', () => {
     await waitFor(() => {
       expect(mockedApiRequest).toHaveBeenCalledWith(
         'DELETE',
-        '/api/projects/1/bom/42',
+        '/api/projects/1/stock/42',
       );
     });
   });
 
-  // 6. Non-default projectId flows through to API calls
+  // 6. Non-default projectId flows through to ingress API calls
   it('uses projectId from context for API calls (non-default project)', async () => {
     const queryClient = createTestQueryClient();
     const Wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -178,13 +200,13 @@ describe('BomContext', () => {
     await waitFor(() => {
       expect(mockedApiRequest).toHaveBeenCalledWith(
         'POST',
-        '/api/projects/42/bom',
-        expect.any(Object),
+        '/api/parts/ingress',
+        expect.objectContaining({ projectId: 42 }),
       );
     });
   });
 
-  // 7. updateBomItem calls apiRequest with correct PATCH url and body
+  // 7. updateBomItem calls canonical stock PATCH endpoint with mapped fields
   it('updateBomItem calls apiRequest with PATCH and the correct URL/body', async () => {
     const { result } = renderHook(() => useBom(), { wrapper: createWrapper() });
 
@@ -197,8 +219,8 @@ describe('BomContext', () => {
     await waitFor(() => {
       expect(mockedApiRequest).toHaveBeenCalledWith(
         'PATCH',
-        '/api/projects/1/bom/7',
-        patchData,
+        '/api/projects/1/stock/7',
+        { quantityNeeded: 25, unitPrice: 1.1 },
       );
     });
   });

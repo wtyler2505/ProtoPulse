@@ -36,7 +36,7 @@ import {
   type InsertPartAlternate,
 } from '@shared/schema';
 import { TRUST_LEVELS, trustRank, type TrustLevel } from '@shared/parts/part-row';
-import type { PartFilter, PartPagination } from '@shared/parts/part-filter';
+import type { PartFilter, PartPagination, PartSortField } from '@shared/parts/part-filter';
 import { DEFAULT_PART_PAGINATION } from '@shared/parts/part-filter';
 import type { StorageDeps } from './types';
 import type { PaginationOptions } from './interfaces';
@@ -63,6 +63,56 @@ export class PartsStorage {
   // parts (canonical)
   // -------------------------------------------------------------------------
 
+  private buildSearchConditions(filter: PartFilter): unknown[] {
+    const conditions: unknown[] = [];
+    if (!filter.includeDeleted) {
+      conditions.push(isNull(parts.deletedAt));
+    }
+    if (filter.category) {
+      conditions.push(eq(parts.canonicalCategory, filter.category));
+    }
+    if (filter.origin) {
+      conditions.push(eq(parts.origin, filter.origin));
+    }
+    if (filter.isPublic !== undefined) {
+      conditions.push(eq(parts.isPublic, filter.isPublic));
+    }
+    if (filter.hasMpn === true) {
+      conditions.push(isNotNull(parts.mpn));
+    } else if (filter.hasMpn === false) {
+      conditions.push(isNull(parts.mpn));
+    }
+    if (filter.minTrustLevel) {
+      conditions.push(inArray(parts.trustLevel, trustLevelsAtOrAbove(filter.minTrustLevel)));
+    }
+    if (filter.text) {
+      const pattern = `%${escapeLikeWildcards(filter.text)}%`;
+      const textCondition = or(
+        ilike(parts.title, pattern),
+        ilike(parts.description, pattern),
+        ilike(parts.mpn, pattern),
+        ilike(parts.manufacturer, pattern),
+        ilike(parts.slug, pattern),
+      );
+      if (textCondition) { conditions.push(textCondition); }
+    }
+    if (filter.tags && filter.tags.length > 0) {
+      conditions.push(sql`${parts.meta} -> 'tags' @> ${JSON.stringify(filter.tags)}::jsonb`);
+    }
+    return conditions;
+  }
+
+  private resolveSortColumn(sortBy: PartSortField | undefined) {
+    switch (sortBy) {
+      case 'title': return parts.title;
+      case 'createdAt': return parts.createdAt;
+      case 'canonicalCategory': return parts.canonicalCategory;
+      case 'trustLevel': return parts.trustLevel;
+      case 'updatedAt':
+      default: return parts.updatedAt;
+    }
+  }
+
   async search(filter: PartFilter, pagination?: PartPagination): Promise<Part[]> {
     try {
       const pg = { ...DEFAULT_PART_PAGINATION, ...pagination };
@@ -70,56 +120,8 @@ export class PartsStorage {
       const cached = this.cache.get<Part[]>(cacheKey);
       if (cached) { return cached; }
 
-      const conditions = [] as unknown[];
-      if (!filter.includeDeleted) {
-        conditions.push(isNull(parts.deletedAt));
-      }
-      if (filter.category) {
-        conditions.push(eq(parts.canonicalCategory, filter.category));
-      }
-      if (filter.origin) {
-        conditions.push(eq(parts.origin, filter.origin));
-      }
-      if (filter.isPublic !== undefined) {
-        conditions.push(eq(parts.isPublic, filter.isPublic));
-      }
-      if (filter.hasMpn === true) {
-        conditions.push(isNotNull(parts.mpn));
-      } else if (filter.hasMpn === false) {
-        conditions.push(isNull(parts.mpn));
-      }
-      if (filter.minTrustLevel) {
-        const allowedLevels = trustLevelsAtOrAbove(filter.minTrustLevel);
-        conditions.push(inArray(parts.trustLevel, allowedLevels));
-      }
-      if (filter.text) {
-        const pattern = `%${escapeLikeWildcards(filter.text)}%`;
-        const textCondition = or(
-          ilike(parts.title, pattern),
-          ilike(parts.description, pattern),
-          ilike(parts.mpn, pattern),
-          ilike(parts.manufacturer, pattern),
-          ilike(parts.slug, pattern),
-        );
-        if (textCondition) { conditions.push(textCondition); }
-      }
-      if (filter.tags && filter.tags.length > 0) {
-        // meta.tags is a JSONB array inside the meta blob; use @> to match any of the tags.
-        conditions.push(sql`${parts.meta} -> 'tags' @> ${JSON.stringify(filter.tags)}::jsonb`);
-      }
-
-      // Sort column selection
-      const sortCol = (() => {
-        switch (pg.sortBy) {
-          case 'title': return parts.title;
-          case 'createdAt': return parts.createdAt;
-          case 'canonicalCategory': return parts.canonicalCategory;
-          case 'trustLevel': return parts.trustLevel;
-          case 'updatedAt':
-          default: return parts.updatedAt;
-        }
-      })();
-
+      const conditions = this.buildSearchConditions(filter);
+      const sortCol = this.resolveSortColumn(pg.sortBy);
       const whereClause = conditions.length > 0 ? and(...(conditions as Parameters<typeof and>)) : undefined;
       const query = whereClause
         ? this.db.select().from(parts).where(whereClause)
@@ -135,6 +137,56 @@ export class PartsStorage {
     } catch (e) {
       if (e instanceof StorageError) { throw e; }
       throw new StorageError('search', 'parts', e);
+    }
+  }
+
+  async searchWithStock(
+    filter: PartFilter & { projectId: number },
+    pagination?: PartPagination,
+  ): Promise<Array<Part & { stock: PartStock | null }>> {
+    try {
+      const pg = { ...DEFAULT_PART_PAGINATION, ...pagination };
+      const cacheKey = `parts:searchWithStock:${JSON.stringify(filter)}:${pg.limit}:${pg.offset}:${pg.sortBy}:${pg.sortDir}`;
+      const cached = this.cache.get<Array<Part & { stock: PartStock | null }>>(cacheKey);
+      if (cached) { return cached; }
+
+      const conditions = this.buildSearchConditions(filter);
+
+      if (filter.hasStock) {
+        conditions.push(isNotNull(partStock.id));
+      }
+
+      const sortCol = this.resolveSortColumn(pg.sortBy);
+      const whereClause = conditions.length > 0 ? and(...(conditions as Parameters<typeof and>)) : undefined;
+
+      const joinCondition = and(
+        eq(partStock.partId, parts.id),
+        eq(partStock.projectId, filter.projectId),
+        isNull(partStock.deletedAt),
+      );
+
+      const baseQuery = this.db
+        .select({ part: parts, stock: partStock })
+        .from(parts)
+        .leftJoin(partStock, joinCondition);
+
+      const queryWithWhere = whereClause ? baseQuery.where(whereClause) : baseQuery;
+
+      const rows = await queryWithWhere
+        .orderBy(pg.sortDir === 'asc' ? asc(sortCol) : desc(sortCol))
+        .limit(pg.limit)
+        .offset(pg.offset);
+
+      const result = rows.map((row) => {
+        const stockRow = row.stock?.id != null ? (row.stock as PartStock) : null;
+        return { ...row.part, stock: stockRow };
+      });
+
+      this.cache.set(cacheKey, result);
+      return result;
+    } catch (e) {
+      if (e instanceof StorageError) { throw e; }
+      throw new StorageError('searchWithStock', 'parts', e);
     }
   }
 

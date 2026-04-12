@@ -135,3 +135,11 @@ export interface PartPlacementRow {
   createdAt: Date;
   deletedAt: Date | null;
 }
+
+/**
+ * A canonical part row joined with its per-project stock overlay.
+ * Returned by `searchWithStock()` when a `projectId` filter is present.
+ */
+export interface PartWithStock extends PartRow {
+  stock: PartStockRow | null;
+}
