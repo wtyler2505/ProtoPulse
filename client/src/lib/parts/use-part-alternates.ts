@@ -2,10 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getQueryFn } from '@/lib/queryClient';
 import { apiRequest } from '@/lib/queryClient';
 import { partsQueryKeys } from './query-keys';
-import type { PartWithStock } from '@shared/parts/part-row';
+import type { PartRow } from '@shared/parts/part-row';
 
 interface AlternatesResponse {
-  data: PartWithStock[];
+  data: PartRow[];
   total: number;
 }
 

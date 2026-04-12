@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, ChevronRight, Loader2, RefreshCw, ArrowRightLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { usePartAlternates, useSubstitutePart } from '@/lib/parts/use-part-alternates';
-import type { PartWithStock } from '@shared/parts/part-row';
+import type { PartRow } from '@shared/parts/part-row';
 import { useToast } from '@/hooks/use-toast';
 
 interface PartAlternatesPanelProps {
@@ -20,7 +20,7 @@ function AlternateRow({
   onSubstitute,
   isSubstituting,
 }: {
-  alt: PartWithStock;
+  alt: PartRow;
   onSubstitute: (altId: string) => void;
   isSubstituting: boolean;
 }) {

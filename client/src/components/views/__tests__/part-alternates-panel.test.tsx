@@ -77,7 +77,6 @@ const ALTERNATES = [
     manufacturer: 'Yageo',
     mpn: 'RC0402FR-0710KL',
     canonicalCategory: 'resistor',
-    stock: null,
   },
   {
     id: 'alt-2',
@@ -86,7 +85,6 @@ const ALTERNATES = [
     manufacturer: 'Vishay',
     mpn: 'CRCW040210K0FKED',
     canonicalCategory: 'resistor',
-    stock: null,
   },
 ];
 

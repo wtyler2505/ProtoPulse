@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, Loader2, X } from 'lucide-react';
+import { Search, Loader2, X, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useCatalog } from '@/lib/parts/use-parts-catalog';
+import { useProjectId } from '@/lib/contexts/project-id-context';
 import type { PartWithStock } from '@shared/parts/part-row';
 import type { TrustLevel } from '@shared/parts/part-row';
+import PartUsagePanel from '@/components/views/PartUsagePanel';
+import PartAlternatesPanel from '@/components/views/PartAlternatesPanel';
 
 // ---------------------------------------------------------------------------
 // Trust level display config
@@ -37,8 +40,10 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [selectedPart, setSelectedPart] = useState<PartWithStock | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const projectId = useProjectId();
 
   // Debounce search query (300ms)
   useEffect(() => {
@@ -65,6 +70,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       setQuery('');
       setDebouncedQuery('');
       setActiveIndex(0);
+      setSelectedPart(null);
       // Focus input on next frame
       requestAnimationFrame(() => {
         inputRef.current?.focus();
@@ -90,17 +96,28 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
     onOpenChange(false);
   }, [onOpenChange]);
 
-  const handleSelect = useCallback((_part: PartWithStock) => {
-    // For now, just close the palette. Navigation comes later.
-    handleClose();
-  }, [handleClose]);
+  const handleSelect = useCallback((part: PartWithStock) => {
+    setSelectedPart(part);
+  }, []);
+
+  const handleBack = useCallback(() => {
+    setSelectedPart(null);
+    requestAnimationFrame(() => { inputRef.current?.focus(); });
+  }, []);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault();
-      handleClose();
+      if (selectedPart) {
+        handleBack();
+      } else {
+        handleClose();
+      }
       return;
     }
+
+    // Only handle list navigation when not in detail view
+    if (selectedPart) { return; }
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -121,7 +138,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
       }
       return;
     }
-  }, [parts, activeIndex, handleClose, handleSelect]);
+  }, [parts, activeIndex, handleClose, handleSelect, handleBack, selectedPart]);
 
   if (!open) {
     return null;
@@ -152,174 +169,235 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
         aria-modal="true"
         className="relative w-full max-w-xl rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl shadow-[#00F0FF]/5 overflow-hidden"
       >
-        {/* Search input */}
-        <div className="flex items-center gap-2 border-b border-zinc-700 px-4">
-          <Search className="h-4 w-4 shrink-0 text-zinc-400" />
-          <input
-            ref={inputRef}
-            data-testid="command-palette-input"
-            type="text"
-            placeholder="Search parts across all projects..."
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); }}
-            autoComplete="off"
-            spellCheck={false}
-            className={cn(
-              'flex-1 bg-transparent py-3 text-sm text-zinc-100 outline-none',
-              'placeholder:text-zinc-500',
-              'focus:ring-0',
-            )}
-          />
-          {query && (
-            <button
-              type="button"
-              aria-label="Clear search"
-              className="text-zinc-500 hover:text-zinc-300 transition-colors"
-              onClick={() => { setQuery(''); inputRef.current?.focus(); }}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-          <kbd className="text-[10px] font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 ml-1 shrink-0">
-            Ctrl+K
-          </kbd>
-        </div>
-
-        {/* Results area */}
-        <ScrollArea className="max-h-[360px]">
-          <div
-            ref={listRef}
-            data-testid="command-palette-results"
-            role="listbox"
-            aria-label="Search results"
-            className="p-2"
-          >
-            {/* Loading state */}
-            {isLoading && (
-              <div
-                data-testid="command-palette-loading"
-                className="flex items-center justify-center gap-2 py-8 text-sm text-zinc-400"
+        {/* Detail view — shown when a part is selected */}
+        {selectedPart ? (
+          <>
+            {/* Detail header */}
+            <div className="flex items-center gap-2 border-b border-zinc-700 px-4 py-2.5">
+              <button
+                type="button"
+                data-testid="command-palette-back"
+                onClick={handleBack}
+                className="text-zinc-400 hover:text-zinc-200 transition-colors"
+                aria-label="Back to results"
               >
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Searching parts...</span>
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium text-zinc-100 truncate">
+                  {selectedPart.title}
+                </span>
+                {selectedPart.mpn && (
+                  <span className="ml-2 text-[11px] font-mono text-zinc-500">
+                    {selectedPart.mpn}
+                  </span>
+                )}
               </div>
-            )}
-
-            {/* Empty hint (no query yet) */}
-            {showHint && (
-              <div
-                data-testid="command-palette-empty"
-                className="py-8 text-center text-sm text-zinc-500"
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-[10px] px-1.5 py-0 h-5 font-medium',
+                  TRUST_BADGE_CONFIG[selectedPart.trustLevel].className,
+                )}
               >
-                Type to search parts across all projects...
+                {TRUST_BADGE_CONFIG[selectedPart.trustLevel].label}
+              </Badge>
+            </div>
+
+            {/* Detail panels */}
+            <ScrollArea className="max-h-[400px]">
+              <div data-testid="command-palette-detail" className="p-3 space-y-3">
+                <PartUsagePanel partId={selectedPart.id} />
+                <PartAlternatesPanel
+                  partId={selectedPart.id}
+                  projectId={projectId}
+                  partTitle={selectedPart.title}
+                />
               </div>
-            )}
+            </ScrollArea>
 
-            {/* No results */}
-            {showEmpty && (
-              <div
-                data-testid="command-palette-empty"
-                className="py-8 text-center text-sm text-zinc-500"
-              >
-                No parts match your search
-              </div>
-            )}
-
-            {/* Results list */}
-            {showResults && parts.map((part, index) => {
-              const isActive = index === activeIndex;
-              const trustConfig = TRUST_BADGE_CONFIG[part.trustLevel];
-
-              return (
-                <div
-                  key={part.id}
-                  data-testid={`command-palette-result-${index}`}
-                  data-index={index}
-                  role="option"
-                  aria-selected={isActive}
-                  className={cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2.5 cursor-pointer transition-colors',
-                    isActive
-                      ? 'bg-[#00F0FF]/10 text-zinc-100'
-                      : 'text-zinc-300 hover:bg-zinc-800/60',
-                  )}
-                  onClick={() => { handleSelect(part); }}
-                  onMouseEnter={() => { setActiveIndex(index); }}
+            {/* Detail footer */}
+            <div className="border-t border-zinc-700 px-3 py-2 flex items-center text-[10px] text-zinc-500">
+              <span className="flex items-center gap-1">
+                <kbd className="font-mono bg-zinc-800 border border-zinc-700 rounded px-1 py-px">
+                  esc
+                </kbd>
+                back
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Search input */}
+            <div className="flex items-center gap-2 border-b border-zinc-700 px-4">
+              <Search className="h-4 w-4 shrink-0 text-zinc-400" />
+              <input
+                ref={inputRef}
+                data-testid="command-palette-input"
+                type="text"
+                placeholder="Search parts across all projects..."
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); }}
+                autoComplete="off"
+                spellCheck={false}
+                className={cn(
+                  'flex-1 bg-transparent py-3 text-sm text-zinc-100 outline-none',
+                  'placeholder:text-zinc-500',
+                  'focus:ring-0',
+                )}
+              />
+              {query && (
+                <button
+                  type="button"
+                  aria-label="Clear search"
+                  className="text-zinc-500 hover:text-zinc-300 transition-colors"
+                  onClick={() => { setQuery(''); inputRef.current?.focus(); }}
                 >
-                  {/* Part info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate font-medium text-sm">
-                        {part.title}
-                      </span>
-                      {part.mpn && (
-                        <span className="shrink-0 text-[11px] font-mono text-zinc-500">
-                          {part.mpn}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      {part.manufacturer && (
-                        <span className="truncate text-xs text-zinc-500">
-                          {part.manufacturer}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+              <kbd className="text-[10px] font-mono text-zinc-500 bg-zinc-800 border border-zinc-700 rounded px-1.5 py-0.5 ml-1 shrink-0">
+                Ctrl+K
+              </kbd>
+            </div>
 
-                  {/* Badges */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'text-[10px] px-1.5 py-0 h-5 font-medium',
-                        'bg-zinc-800/50 text-zinc-400 border-zinc-700',
-                      )}
-                    >
-                      {part.canonicalCategory}
-                    </Badge>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        'text-[10px] px-1.5 py-0 h-5 font-medium',
-                        trustConfig.className,
-                      )}
-                    >
-                      {trustConfig.label}
-                    </Badge>
+            {/* Results area */}
+            <ScrollArea className="max-h-[360px]">
+              <div
+                ref={listRef}
+                data-testid="command-palette-results"
+                role="listbox"
+                aria-label="Search results"
+                className="p-2"
+              >
+                {/* Loading state */}
+                {isLoading && (
+                  <div
+                    data-testid="command-palette-loading"
+                    className="flex items-center justify-center gap-2 py-8 text-sm text-zinc-400"
+                  >
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Searching parts...</span>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
+                )}
 
-        {/* Footer */}
-        <div className="border-t border-zinc-700 px-3 py-2 flex items-center justify-between text-[10px] text-zinc-500">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1">
-              <kbd className="font-mono bg-zinc-800 border border-zinc-700 rounded px-1 py-px">
-                &uarr;&darr;
-              </kbd>
-              navigate
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="font-mono bg-zinc-800 border border-zinc-700 rounded px-1 py-px">
-                &crarr;
-              </kbd>
-              select
-            </span>
-            <span className="flex items-center gap-1">
-              <kbd className="font-mono bg-zinc-800 border border-zinc-700 rounded px-1 py-px">
-                esc
-              </kbd>
-              close
-            </span>
-          </div>
-          {showResults && (
-            <span>{parts.length} result{parts.length !== 1 ? 's' : ''}</span>
-          )}
-        </div>
+                {/* Empty hint (no query yet) */}
+                {showHint && (
+                  <div
+                    data-testid="command-palette-empty"
+                    className="py-8 text-center text-sm text-zinc-500"
+                  >
+                    Type to search parts across all projects...
+                  </div>
+                )}
+
+                {/* No results */}
+                {showEmpty && (
+                  <div
+                    data-testid="command-palette-empty"
+                    className="py-8 text-center text-sm text-zinc-500"
+                  >
+                    No parts match your search
+                  </div>
+                )}
+
+                {/* Results list */}
+                {showResults && parts.map((part, index) => {
+                  const isActive = index === activeIndex;
+                  const trustConfig = TRUST_BADGE_CONFIG[part.trustLevel];
+
+                  return (
+                    <div
+                      key={part.id}
+                      data-testid={`command-palette-result-${index}`}
+                      data-index={index}
+                      role="option"
+                      aria-selected={isActive}
+                      className={cn(
+                        'flex items-center gap-3 rounded-md px-3 py-2.5 cursor-pointer transition-colors',
+                        isActive
+                          ? 'bg-[#00F0FF]/10 text-zinc-100'
+                          : 'text-zinc-300 hover:bg-zinc-800/60',
+                      )}
+                      onClick={() => { handleSelect(part); }}
+                      onMouseEnter={() => { setActiveIndex(index); }}
+                    >
+                      {/* Part info */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate font-medium text-sm">
+                            {part.title}
+                          </span>
+                          {part.mpn && (
+                            <span className="shrink-0 text-[11px] font-mono text-zinc-500">
+                              {part.mpn}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {part.manufacturer && (
+                            <span className="truncate text-xs text-zinc-500">
+                              {part.manufacturer}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Badges */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[10px] px-1.5 py-0 h-5 font-medium',
+                            'bg-zinc-800/50 text-zinc-400 border-zinc-700',
+                          )}
+                        >
+                          {part.canonicalCategory}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            'text-[10px] px-1.5 py-0 h-5 font-medium',
+                            trustConfig.className,
+                          )}
+                        >
+                          {trustConfig.label}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+
+            {/* Footer */}
+            <div className="border-t border-zinc-700 px-3 py-2 flex items-center justify-between text-[10px] text-zinc-500">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-zinc-800 border border-zinc-700 rounded px-1 py-px">
+                    &uarr;&darr;
+                  </kbd>
+                  navigate
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-zinc-800 border border-zinc-700 rounded px-1 py-px">
+                    &crarr;
+                  </kbd>
+                  select
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="font-mono bg-zinc-800 border border-zinc-700 rounded px-1 py-px">
+                    esc
+                  </kbd>
+                  close
+                </span>
+              </div>
+              {showResults && (
+                <span>{parts.length} result{parts.length !== 1 ? 's' : ''}</span>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
