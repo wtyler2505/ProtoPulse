@@ -18,6 +18,17 @@ Small ceramic capacitors (through-hole disc or MLCC) in the picofarad to nanofar
 3. **Color** -- No universal color coding exists for ceramic caps (unlike resistors); different manufacturers use different body colors for the same value
 4. **No polarity markings** -- Non-polarized, so there is no additional visual cue from orientation marks
 
+When markings ARE present, they use the three-digit code system (see [[three-digit-ceramic-capacitor-codes-encode-picofarads-as-two-significant-digits-times-a-power-of-ten-multiplier]]):
+
+| Marking | Value | Common Role |
+|---------|-------|-------------|
+| 220 | 22pF | Crystal load |
+| 104 | 100nF | Decoupling |
+| 103 | 10nF | Filtering |
+| 105 | 1uF | Bulk bypass |
+
+But many disc ceramics have NO marking at all, or only a manufacturer logo.
+
 **The failure mode:** Swapping a 22pF crystal load cap with a 100nF decoupling cap (or vice versa) produces no immediate visible error. The crystal will likely still oscillate (just at the wrong frequency), and the decoupled IC will likely still function (just with worse noise performance). These are silent, intermittent failures that manifest as communication errors, timing drift, or analog noise -- not as "it doesn't work at all."
 
 **Mitigation for parts inventory:**

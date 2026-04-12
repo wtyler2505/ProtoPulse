@@ -24,6 +24,14 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[led-polarity-has-four-physical-identification-methods-and-getting-it-wrong-is-a-silent-failure]] — Reversed polarity = zero light, zero damage, maximum confusion
 - [[rgb-common-cathode-leds-need-three-independent-resistors-and-three-pwm-pins-for-color-mixing]] — Different Vf per channel means different resistor per channel; consumes 3 PWM pins
 
+### Decoupling & Bypass
+- [[every-digital-ic-requires-a-100nf-ceramic-decoupling-capacitor-between-vcc-and-gnd-to-absorb-switching-transients]] — The universal rule: one 100nF per VCC pin, as close as possible
+- [[missing-decoupling-capacitors-produce-three-distinct-failure-modes]] — Brownout resets, ADC noise, and serial glitches from missing caps
+- [[analog-ics-need-decoupling-more-critically-than-digital-because-supply-noise-directly-contaminates-signal-measurements]] — ADCs/DACs/op-amps couple supply noise directly into signal path
+- [[multi-vcc-ics-need-one-decoupling-capacitor-per-vcc-pin-not-one-per-package]] — ATmega328P needs 2 caps (VCC + AVCC), not 1
+- [[dielectric-tolerance-is-irrelevant-for-decoupling-because-the-exact-capacitance-value-does-not-matter-for-transient-suppression]] — X7R/Y5V acceptable for decoupling; save NPO for timing
+- [[three-digit-ceramic-capacitor-codes-encode-picofarads-as-two-significant-digits-times-a-power-of-ten-multiplier]] — 104 = 100nF, 103 = 10nF, 220 = 22pF
+
 ### MOSFET Switching
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO without gate driver
 - [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during MCU reset

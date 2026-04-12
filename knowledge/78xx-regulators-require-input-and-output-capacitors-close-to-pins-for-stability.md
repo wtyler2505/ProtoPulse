@@ -33,6 +33,8 @@ Every 78xx-series linear regulator datasheet specifies bypass capacitors on both
 Relevant Notes:
 - [[linear-regulator-heat-dissipation-equals-voltage-drop-times-current-making-high-differential-applications-dangerous]] -- the regulator these caps stabilize
 - [[inductive-motor-loads-require-bypass-capacitor-to-absorb-voltage-spikes-above-supply-rail]] -- same principle (local bypass capacitance) for a different application (motor drivers vs regulators)
+- [[every-digital-ic-requires-a-100nf-ceramic-decoupling-capacitor-between-vcc-and-gnd-to-absorb-switching-transients]] -- the same 100nF output cap principle generalized to all ICs, not just regulators
+- [[dielectric-tolerance-is-irrelevant-for-decoupling-because-the-exact-capacitance-value-does-not-matter-for-transient-suppression]] -- why X7R is acceptable for these regulator caps
 
 Topics:
 - [[power-systems]]
