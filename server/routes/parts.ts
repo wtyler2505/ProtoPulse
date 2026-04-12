@@ -582,4 +582,62 @@ export function registerPartsRoutes(app: Express): void {
       }
     },
   );
+
+  // -------------------------------------------------------------------------
+  // Personal inventory (Phase 7.7) — part_stock with projectId = null
+  // -------------------------------------------------------------------------
+
+  // GET /api/parts/inventory/personal — list personal stock (no project)
+  app.get('/api/parts/inventory/personal', validateSession, async (req, res) => {
+    try {
+      const stock = await partsStorage.listPersonalStock();
+      res.json({ data: stock, total: stock.length });
+    } catch (err) {
+      if (err instanceof StorageError) {
+        logger.error('GET /api/parts/inventory/personal failed', { message: err.message });
+        res.status(500).json({ message: 'Failed to get personal inventory' });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // POST /api/parts/inventory/personal — add a part to personal stock
+  app.post('/api/parts/inventory/personal', validateSession, async (req, res) => {
+    const parsed = z.object({
+      partId: z.string().uuid(),
+      quantityOnHand: z.number().int().nonnegative().default(0),
+      storageLocation: z.string().nullable().optional(),
+      unitPrice: z.number().nonnegative().nullable().optional(),
+      supplier: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+    }).safeParse(req.body);
+
+    if (!parsed.success) {
+      res.status(400).json({ message: fromZodError(parsed.error).toString() });
+      return;
+    }
+
+    try {
+      const stock = await partsStorage.upsertStock({
+        projectId: null,
+        partId: parsed.data.partId,
+        quantityNeeded: 0,
+        quantityOnHand: parsed.data.quantityOnHand,
+        storageLocation: parsed.data.storageLocation ?? null,
+        unitPrice: parsed.data.unitPrice != null ? String(parsed.data.unitPrice) : null,
+        supplier: parsed.data.supplier ?? null,
+        notes: parsed.data.notes ?? null,
+        status: 'In Stock',
+      });
+      res.status(201).json(stock);
+    } catch (err) {
+      if (err instanceof StorageError) {
+        logger.error('POST /api/parts/inventory/personal failed', { message: err.message });
+        res.status(500).json({ message: 'Failed to add personal stock' });
+        return;
+      }
+      throw err;
+    }
+  });
 }

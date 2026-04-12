@@ -324,6 +324,23 @@ export class PartsStorage {
     }
   }
 
+  async listPersonalStock(): Promise<PartStock[]> {
+    try {
+      const cacheKey = 'parts_stock:personal';
+      const cached = this.cache.get<PartStock[]>(cacheKey);
+      if (cached) { return cached; }
+      const result = await this.db
+        .select()
+        .from(partStock)
+        .where(and(isNull(partStock.projectId), isNull(partStock.deletedAt)))
+        .orderBy(desc(partStock.updatedAt));
+      this.cache.set(cacheKey, result);
+      return result;
+    } catch (e) {
+      throw new StorageError('listPersonalStock', 'parts_stock/personal', e);
+    }
+  }
+
   async getStock(projectId: number, partId: string): Promise<PartStock | undefined> {
     try {
       const [row] = await this.db
