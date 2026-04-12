@@ -24,6 +24,13 @@ Analog and digital input devices, debouncing strategies, matrix scanning, ADC ma
 - [[joystick-center-position-reads-approximately-512-but-varies-per-unit-requiring-per-unit-software-calibration]] — Spring settles at different points per unit; calibrate center at startup + dead zone
 - [[running-joystick-at-3v3-scales-analog-output-proportionally-so-code-expecting-0-1023-range-sees-0-675-maximum]] — VCC mismatch compresses ADC range; match supply to ADC reference voltage
 
+### Rotary Encoder
+- [[quadrature-encoding-detects-rotation-direction-from-phase-lead-lag-between-two-square-wave-channels]] — A/B 90-degree offset encodes direction; count transitions for displacement
+- [[incremental-encoder-has-no-position-memory-across-power-cycles-making-it-a-relative-only-input-device]] — No absolute position; relative-only, requires continuous interrupt monitoring
+- [[mechanical-encoder-contact-bounce-requires-interrupt-driven-debounce-not-polling]] — 2-5ms bounce per detent; Stoffregen Encoder library with state machine ISR
+- [[rotary-encoder-with-pushbutton-provides-scroll-plus-select-in-one-component]] — KY-040 integrates scroll + confirm in single 3-pin component
+- [[ky040-module-includes-onboard-10k-pull-ups-on-all-signal-pins-unlike-bare-encoder-or-joystick-modules]] — Onboard 10K pull-ups = works out-of-box, contrast with joystick SW pin
+
 ### Keypad
 - [[matrix-keypad-scanning-drives-one-row-low-at-a-time-and-reads-columns-with-pull-ups-to-detect-key-position]] — Row/column scanning algorithm; inverse of LED matrix multiplexing
 - [[4x4-matrix-keypad-consumes-8-gpio-pins-making-io-expander-mandatory-on-pin-constrained-mcus]] — 8 pins = 57% of Uno budget; PCF8574 reduces to 2 I2C pins

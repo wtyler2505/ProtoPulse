@@ -55,6 +55,8 @@ export const DesignTroubleshooterPanel = lazy(() => import('@/components/panels/
 export const SupplyChainAlertsPanel = lazy(() => import('@/components/views/SupplyChainAlertsPanel'));
 export const BomTemplatesPanel = lazy(() => import('@/components/views/BomTemplatesPanel'));
 export const PersonalInventoryPanel = lazy(() => import('@/components/views/PersonalInventoryPanel'));
+export const PartAlternatesBrowserView = lazy(() => import('@/components/views/PartAlternatesBrowserView'));
+export const PartUsageBrowserView = lazy(() => import('@/components/views/PartUsageBrowserView'));
 
 // ─── Prefetch queue ────────────────────────────────────────────────────────
 /**
@@ -96,6 +98,8 @@ const prefetchQueue: Array<() => Promise<unknown>> = [
   () => import('@/components/views/SupplyChainAlertsPanel'),
   () => import('@/components/views/BomTemplatesPanel'),
   () => import('@/components/views/PersonalInventoryPanel'),
+  () => import('@/components/views/PartAlternatesBrowserView'),
+  () => import('@/components/views/PartUsageBrowserView'),
 ];
 
 let prefetchStarted = false;
