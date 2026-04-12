@@ -11,7 +11,7 @@ related_components: []
 
 # Mega SPI pins move from D10-D13 to D50-D53 breaking hardcoded Uno code silently
 
-The ATmega2560 maps its hardware SPI peripheral to D50 (MISO), D51 (MOSI), D52 (SCK), and D53 (SS) -- completely different from the Uno/Nano's D10-D13. The Arduino `SPI.h` library handles this transparently at compile time, so any library-based SPI communication works on either board without changes. The trap is code that hardcodes pin numbers: `digitalWrite(11, data)` for bit-banged SPI, or manually controlling D10 as SS. That code compiles, uploads, and does nothing useful -- D10-D13 on the Mega are plain digital pins with no SPI function.
+The ATmega2560 maps its hardware SPI peripheral to D50 (MISO), D51 (MOSI), D52 (SCK), and D53 (SS) -- completely different from the Uno/Nano's canonical mapping of D10 (SS), D11 (MOSI), D12 (MISO), D13 (SCK). The Arduino `SPI.h` library handles this transparently at compile time, so any library-based SPI communication works on either board without changes. The trap is code that hardcodes pin numbers: `digitalWrite(11, data)` for bit-banged SPI, or manually controlling D10 as SS. That code compiles, uploads, and does nothing useful -- D10-D13 on the Mega are plain digital pins with no SPI function.
 
 This is the single most common porting bug when moving Arduino code from Uno to Mega. The failure mode is particularly insidious because there's no compile error, no runtime error, and no visible symptom beyond "SPI device doesn't respond." A beginner who doesn't know that SPI pins are MCU-specific will spend hours debugging the wrong thing.
 

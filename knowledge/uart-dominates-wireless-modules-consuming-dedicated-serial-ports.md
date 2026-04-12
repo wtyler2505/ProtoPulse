@@ -20,7 +20,7 @@ Bluetooth (HC-05, HC-06), GPS (NEO-6M), and debug serial all require dedicated U
 
 A rover project with GPS navigation + Bluetooth telemetry + serial debug console needs 3 UARTs minimum. This is exactly why the Arduino Mega's 4 hardware UARTs (Serial, Serial1, Serial2, Serial3) matter -- it's the only common Arduino-form-factor board that can handle this without SoftwareSerial.
 
-**The SoftwareSerial trap:** On Uno/Nano (1 hardware UART shared with USB), adding any wireless UART module forces SoftwareSerial. SoftwareSerial is unreliable above 9600 baud, can't receive while transmitting, and blocks interrupts during bit-banging. For GPS (which streams NMEA at 9600 baud continuously) plus Bluetooth (which needs responsive bidirectional communication), SoftwareSerial is a hidden failure mode.
+**The SoftwareSerial trap:** On Uno/Nano (1 hardware UART shared with USB), adding any wireless UART module forces SoftwareSerial. SoftwareSerial's practical baud limit is approximately 57600 (reliable only at 9600-19200 for continuous data), it can't receive while transmitting, and it blocks interrupts during bit-banging. The Uno's single UART is also the upload/debug channel -- you literally cannot open Serial Monitor while D0/D1 have a peripheral attached, making development painful. For GPS (which streams NMEA at 9600 baud continuously) plus Bluetooth (which needs responsive bidirectional communication), SoftwareSerial is a hidden failure mode.
 
 **MCU selection rule:** Count UART devices in the BOM. If count >= 2 (not including USB debug), the project needs a Mega or ESP32 (3 hardware UARTs). This is a hard constraint, not a preference.
 

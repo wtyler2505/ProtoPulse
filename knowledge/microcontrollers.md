@@ -24,6 +24,12 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[esp32-has-14-safe-gpio-pins-with-no-boot-or-flash-restrictions]] — only 14 of 34 GPIOs are unrestricted
 - [[esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors]] — 4 pins lack output driver and pull resistors
 - [[esp32-dac-on-gpio25-26-provides-true-8bit-analog-output]] — rare true DAC among maker MCUs
+- [[uno-single-uart-shared-with-usb-forces-choose-one-between-debugging-and-peripherals]] — #1 Uno beginner wall: can't debug while serial peripheral connected
+- [[uno-20ma-per-pin-200ma-total-means-no-direct-led-or-motor-drive]] — ATmega328P GPIO current limits, no direct motor drive
+- [[uno-i2c-on-a4-a5-consumes-one-third-of-analog-inputs]] — I2C locks out 2 of 6 analog channels
+- [[uno-only-2-external-interrupts-on-d2-d3-is-a-hard-project-sizing-constraint]] — 2 interrupts limit project complexity
+- [[uno-defines-the-standard-arduino-shield-header-layout]] — Uno IS the reference form factor for shields
+- [[uno-d10-must-stay-output-for-hardware-spi-master-mode]] — D10 INPUT causes silent SPI master-to-slave switch
 
 ## Open Questions
 (populated by /extract)

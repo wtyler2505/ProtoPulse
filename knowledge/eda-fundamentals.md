@@ -36,6 +36,12 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[esp32-has-14-safe-gpio-pins-with-no-boot-or-flash-restrictions]] -- only 14 unrestricted GPIOs out of 34
 - [[esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors]] -- input-only pins need external pull resistors
 - [[esp32-dac-on-gpio25-26-provides-true-8bit-analog-output]] -- true analog output, rare among maker MCUs
+- [[uno-single-uart-shared-with-usb-forces-choose-one-between-debugging-and-peripherals]] -- single UART shared with USB is the #1 Uno beginner wall
+- [[uno-20ma-per-pin-200ma-total-means-no-direct-led-or-motor-drive]] -- ATmega328P GPIO current limits require external drivers
+- [[uno-i2c-on-a4-a5-consumes-one-third-of-analog-inputs]] -- I2C/analog pin conflict on AVR boards
+- [[uno-only-2-external-interrupts-on-d2-d3-is-a-hard-project-sizing-constraint]] -- only 2 interrupts limits project scope
+- [[uno-defines-the-standard-arduino-shield-header-layout]] -- Uno is the reference shield form factor
+- [[uno-d10-must-stay-output-for-hardware-spi-master-mode]] -- D10 as INPUT silently breaks SPI master mode
 
 ## Sub-Topics (to be populated)
 
