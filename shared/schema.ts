@@ -917,7 +917,7 @@ export type Part = typeof parts.$inferSelect;
 /** Per-project inventory overlay — one row per `(project_id, part_id)`. */
 export const partStock = pgTable("part_stock", {
   id: uuid("id").primaryKey().defaultRandom(),
-  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  projectId: integer("project_id").references(() => projects.id, { onDelete: "cascade" }),
   partId: uuid("part_id").notNull().references(() => parts.id, { onDelete: "cascade" }),
   quantityNeeded: integer("quantity_needed").notNull().default(0),
   quantityOnHand: integer("quantity_on_hand"),
@@ -936,6 +936,7 @@ export const partStock = pgTable("part_stock", {
   index("idx_part_stock_project").on(table.projectId),
   index("idx_part_stock_project_deleted").on(table.projectId, table.deletedAt),
   index("idx_part_stock_part").on(table.partId),
+  index("idx_part_stock_personal").on(table.partId, table.deletedAt),
 ]);
 
 export const insertPartStockSchema = createInsertSchema(partStock).omit({

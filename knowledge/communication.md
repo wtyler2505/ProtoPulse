@@ -21,6 +21,8 @@ Wireless and wired communication protocols, module pairing, range/reliability tr
 - [[ir-demodulator-output-is-active-low-which-inverts-the-mental-model-of-signal-received-equals-pin-high]] — active-LOW output inverts beginner expectations; configure FALLING edge interrupts
 - [[kit-ir-receiver-modules-from-different-manufacturers-are-functionally-identical-tsop-38khz-demodulators]] — KY-022, IR-01, OSEPP IRR-01 are all the same TSOP1738 IC; consolidate in BOM
 - [[fluorescent-lighting-interferes-with-38khz-ir-receivers-because-the-discharge-frequency-overlaps-the-demodulation-band]] — environmental gotcha: fluorescent lights cause false IR triggers
+- [[nec-ir-button-codes-are-manufacturer-specific-making-code-first-debugging-impossible-without-reading-your-own-remote]] — must discover YOUR remote's codes first; no universal NEC code table exists
+- [[dead-coin-cell-is-the-invisible-first-failure-mode-on-kit-ir-remotes]] — check battery before debugging code/wiring
 
 ## Open Questions
 (populated by /extract)

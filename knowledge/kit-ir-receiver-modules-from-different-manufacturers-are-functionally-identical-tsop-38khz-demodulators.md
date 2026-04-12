@@ -25,6 +25,8 @@ The inventory contains 5 IR receiver modules across 3 product labels: KY-022 (x2
 
 3. **Procurement pattern:** Chinese breakout boards with different silk prints are frequently identical circuits with identical ICs. This is a recurring pattern across the inventory (CH340 USB-serial boards, motor driver boards, relay modules) — the IC matters, the board branding doesn't.
 
+**The transmitter side is equally generic:** The standard kit IR remote (small plastic TV-style, ~20 buttons, NEC protocol, CR2025 battery) is also interchangeable across kit brands. Any 38kHz NEC remote works with any TSOP 38kHz receiver — the entire IR communication system (remote + receiver) is brand-agnostic.
+
 **Detection heuristic for ProtoPulse:** When two BOM items share the same interface (GPIO), same voltage range, same primary IC family, and same function, prompt the user: "These appear to be the same component under different product names. Consolidate?"
 
 ---

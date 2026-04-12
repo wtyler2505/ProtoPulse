@@ -22,7 +22,8 @@ export type JobType =
   | 'export_generation'
   | 'batch_drc'
   | 'report_generation'
-  | 'import_processing';
+  | 'import_processing'
+  | 'supply_chain_check';
 
 export type JobStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
