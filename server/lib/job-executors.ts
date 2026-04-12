@@ -13,6 +13,7 @@
  */
 
 import { z } from 'zod';
+import type { SupplyChainAlertType } from '@shared/schema';
 import { logger } from '../logger';
 import { storage } from '../storage';
 import { runDRC, getDefaultDRCRules } from '@shared/drc-engine';
