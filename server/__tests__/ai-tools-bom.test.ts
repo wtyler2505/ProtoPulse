@@ -1,4 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// Phase 2 introduced a `parts-ingress` dependency in ai-tools/bom.ts that
+// transitively pulls in server/db.ts, which throws at module load when
+// DATABASE_URL is unset. Mock it before any imports.
+vi.mock('../db', () => ({ db: {}, pool: {}, checkConnection: vi.fn() }));
+vi.mock('../parts-ingress', () => ({
+  mirrorIngressBestEffort: vi.fn().mockResolvedValue(null),
+}));
+vi.mock('../env', () => ({ featureFlags: { partsCatalogV2: false } }));
+
 import { ToolRegistry } from '../ai-tools/registry';
 import { registerBomTools } from '../ai-tools/bom';
 import type { ToolContext } from '../ai-tools/types';

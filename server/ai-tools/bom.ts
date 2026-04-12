@@ -17,6 +17,9 @@ import { z } from 'zod';
 import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
 import type { ToolResult } from './types';
+import { mirrorIngressBestEffort, type IngressRequest } from '../parts-ingress';
+import { featureFlags } from '../env';
+import { db } from '../db';
 
 /**
  * Register all BOM-category tools with the given registry.
@@ -100,7 +103,7 @@ export function registerBomTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
-      await ctx.storage.createBomItem({
+      const created = await ctx.storage.createBomItem({
         projectId: ctx.projectId,
         partNumber: params.partNumber,
         manufacturer: params.manufacturer,
@@ -111,6 +114,41 @@ export function registerBomTools(registry: ToolRegistry): void {
         status: params.status,
         stock: 0,
       });
+
+      // Phase 2 dual-write mirror.
+      if (featureFlags.partsCatalogV2) {
+        const ingressReq: IngressRequest = {
+          source: 'ai',
+          origin: 'ai_generated',
+          projectId: ctx.projectId,
+          fields: {
+            title: params.description,
+            description: params.description,
+            manufacturer: params.manufacturer,
+            mpn: params.partNumber,
+            canonicalCategory: 'other',
+            meta: {},
+            connectors: [],
+          },
+          stock: {
+            quantityNeeded: params.quantity,
+            unitPrice: params.unitPrice,
+            supplier: params.supplier,
+            status: params.status,
+          },
+        };
+        void mirrorIngressBestEffort(
+          ingressReq,
+          {
+            source: 'ai',
+            projectId: ctx.projectId,
+            legacyTable: 'bom_items',
+            legacyId: created.id,
+          },
+          db,
+        );
+      }
+
       return {
         success: true,
         message: `Added "${params.partNumber}" by ${params.manufacturer} to BOM`,

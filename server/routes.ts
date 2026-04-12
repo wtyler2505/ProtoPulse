@@ -30,6 +30,7 @@ import { registerExportStepRoutes } from './routes/export-step';
 import { registerPcbZoneRoutes } from './routes/pcb-zones';
 import { registerArduinoRoutes } from './routes/arduino';
 import { registerFirmwareRuntimeRoutes } from './routes/firmware-runtime';
+import { registerPartsRoutes } from './routes/parts';
 
 // Re-export shared utilities for backward compatibility
 // (consumed by circuit-routes.ts, circuit-ai.ts, and tests)
@@ -70,6 +71,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   registerPcbZoneRoutes(app);
   registerArduinoRoutes(app, storage);
   registerFirmwareRuntimeRoutes(app, storage);
+  registerPartsRoutes(app);
 
   // --- Circuit Schematic Routes ---
   const { registerCircuitRoutes } = await import('./circuit-routes');

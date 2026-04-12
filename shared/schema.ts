@@ -1051,6 +1051,45 @@ export const insertPartAlternateSchema = createInsertSchema(partAlternates).omit
 export type InsertPartAlternate = z.infer<typeof insertPartAlternateSchema>;
 export type PartAlternate = typeof partAlternates.$inferSelect;
 
+/**
+ * Audit log for failed dual-write mirrors during Phase 2 ingress.
+ * When an importer succeeds against the legacy table but the mirror write to
+ * `parts`/`part_stock`/`part_placements` fails, we record the failure here so
+ * Phase 4's backfill script can reconcile. Legacy remains the source of truth
+ * during Phases 2–5; this table is dropped in Phase 6 cleanup.
+ */
+export const partsIngressFailures = pgTable("parts_ingress_failures", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  source: text("source").notNull(),
+  projectId: integer("project_id"),
+  legacyTable: text("legacy_table").notNull(),
+  legacyId: integer("legacy_id"),
+  payload: jsonb("payload").notNull().default({}),
+  errorMessage: text("error_message").notNull(),
+  errorStack: text("error_stack"),
+  reconciled: boolean("reconciled").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  reconciledAt: timestamp("reconciled_at"),
+}, (table) => [
+  index("idx_parts_ingress_failures_reconciled").on(table.reconciled),
+  index("idx_parts_ingress_failures_legacy").on(table.legacyTable, table.legacyId),
+  index("idx_parts_ingress_failures_created").on(table.createdAt),
+]);
+
+export const insertPartsIngressFailureSchema = createInsertSchema(partsIngressFailures).omit({
+  id: true,
+  createdAt: true,
+  reconciled: true,
+  reconciledAt: true,
+}).extend({
+  source: z.string().min(1).max(50),
+  legacyTable: z.string().min(1).max(50),
+  errorMessage: z.string().min(1),
+  payload: z.record(z.unknown()).default({}),
+});
+export type InsertPartsIngressFailure = z.infer<typeof insertPartsIngressFailureSchema>;
+export type PartsIngressFailure = typeof partsIngressFailures.$inferSelect;
+
 // Re-export the public contract types from shared/parts for ergonomic imports.
 export type {
   PartRow,

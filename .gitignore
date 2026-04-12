@@ -19,3 +19,6 @@ src-tauri/Cargo.lock
 
 # DB backups (pre-migration dumps)
 backups/
+
+# Test run logs (persistent output for multi-agent context sharing)
+logs/

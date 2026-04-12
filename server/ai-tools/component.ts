@@ -22,6 +22,9 @@ import { inferPartFamily, markPartMetaAsCandidate } from '@shared/component-trus
 import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
 import type { ToolResult } from './types';
+import { mirrorIngressBestEffort, type IngressRequest } from '../parts-ingress';
+import { featureFlags } from '../env';
+import { db } from '../db';
 
 /**
  * Register all component-category tools with the given registry.
@@ -96,6 +99,35 @@ export function registerComponentTools(registry: ToolRegistry): void {
         views: {},
         constraints: [],
       });
+
+      // Phase 2 dual-write mirror — AI create_component_part path.
+      if (featureFlags.partsCatalogV2) {
+        const ingressReq: IngressRequest = {
+          source: 'ai',
+          origin: 'ai_generated',
+          projectId: ctx.projectId,
+          fields: {
+            title: params.title,
+            description: params.description ?? null,
+            manufacturer: params.manufacturer ?? null,
+            mpn: params.mpn ?? null,
+            canonicalCategory: params.family ?? params.category ?? 'other',
+            meta: (part.meta ?? {}) as Record<string, unknown>,
+            connectors: [],
+          },
+        };
+        void mirrorIngressBestEffort(
+          ingressReq,
+          {
+            source: 'ai',
+            projectId: ctx.projectId,
+            legacyTable: 'component_parts',
+            legacyId: part.id,
+          },
+          db,
+        );
+      }
+
       return { success: true, message: `Created component part "${params.title}" (id: ${part.id})` };
     },
   });

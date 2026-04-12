@@ -15,6 +15,7 @@ import {
 } from '@shared/component-trust';
 import { buildExactPartVerificationReadiness } from '@shared/exact-part-verification';
 import { storage } from '../storage';
+import { db } from '../db';
 import { insertComponentPartSchema, insertComponentLibrarySchema } from '@shared/schema';
 import type { PartMeta, Connector, PartViews, Bus, Constraint, PartState } from '@shared/component-types';
 import { runDRC, getDefaultDRCRules } from '@shared/drc-engine';
@@ -24,6 +25,63 @@ import { getApiKey } from '../auth';
 import { payloadLimit, parseIdParam, HttpError } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { setCacheHeaders } from '../lib/cache-headers';
+import { mirrorIngressBestEffort, type IngressRequest, type IngressSource } from '../parts-ingress';
+import { featureFlags } from '../env';
+import type { PartOrigin } from '@shared/parts/part-row';
+
+/**
+ * Extract a `CommonPartFields` shape from a legacy `component_parts` row's meta blob.
+ * Shared by the component-create and FZPZ-import dual-write hooks.
+ */
+function componentPartToIngressFields(meta: Record<string, unknown>, connectors: unknown[]): IngressRequest['fields'] {
+  const title =
+    (typeof meta['title'] === 'string' && meta['title']) ||
+    (typeof meta['label'] === 'string' && meta['label']) ||
+    'Untitled component';
+  const family = typeof meta['partFamily'] === 'string' ? meta['partFamily'] : typeof meta['family'] === 'string' ? meta['family'] : null;
+  return {
+    title,
+    description: typeof meta['description'] === 'string' ? meta['description'] : null,
+    manufacturer: typeof meta['manufacturer'] === 'string' ? meta['manufacturer'] : null,
+    mpn: typeof meta['mpn'] === 'string' ? meta['mpn'] : null,
+    canonicalCategory: (family || (typeof meta['category'] === 'string' ? meta['category'] : null) || 'other') as string,
+    packageType: typeof meta['packageType'] === 'string' ? meta['packageType'] : null,
+    tolerance: typeof meta['tolerance'] === 'string' ? meta['tolerance'] : null,
+    datasheetUrl: typeof meta['datasheetUrl'] === 'string' ? meta['datasheetUrl'] : null,
+    manufacturerUrl: typeof meta['manufacturerUrl'] === 'string' ? meta['manufacturerUrl'] : null,
+    meta,
+    connectors,
+  };
+}
+
+function mirrorComponentPartToIngress(params: {
+  partId: number;
+  projectId: number;
+  meta: Record<string, unknown>;
+  connectors: unknown[];
+  source: IngressSource;
+  origin: PartOrigin;
+}): void {
+  if (!featureFlags.partsCatalogV2) {
+    return;
+  }
+  const ingressReq: IngressRequest = {
+    source: params.source,
+    origin: params.origin,
+    projectId: params.projectId,
+    fields: componentPartToIngressFields(params.meta, params.connectors),
+  };
+  void mirrorIngressBestEffort(
+    ingressReq,
+    {
+      source: params.source,
+      projectId: params.projectId,
+      legacyTable: 'component_parts',
+      legacyId: params.partId,
+    },
+    db,
+  );
+}
 
 async function resolveGeminiApiKey(clientKey: string | undefined, userId: number | undefined): Promise<string> {
   if (clientKey && clientKey.length > 0) {
@@ -124,6 +182,16 @@ export function registerComponentRoutes(app: Express): void {
         meta: normalizeStoredPartMeta(parsed.data.meta),
       });
       res.status(201).json(part);
+
+      // Phase 2 dual-write mirror — component create path.
+      mirrorComponentPartToIngress({
+        partId: part.id,
+        projectId,
+        meta: (part.meta ?? {}) as Record<string, unknown>,
+        connectors: (part.connectors ?? []) as unknown[],
+        source: 'component_create',
+        origin: 'user',
+      });
     },
   );
 
@@ -253,6 +321,16 @@ export function registerComponentRoutes(app: Express): void {
         constraints: [],
       });
       res.status(201).json(part);
+
+      // Phase 2 dual-write mirror — FZPZ import path.
+      mirrorComponentPartToIngress({
+        partId: part.id,
+        projectId,
+        meta: (part.meta ?? {}) as Record<string, unknown>,
+        connectors: (part.connectors ?? []) as unknown[],
+        source: 'fzpz',
+        origin: 'community',
+      });
     },
   );
 

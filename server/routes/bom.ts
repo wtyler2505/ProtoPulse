@@ -1,10 +1,13 @@
 import type { Express } from 'express';
 import { fromZodError } from 'zod-validation-error';
 import { storage, VersionConflictError } from '../storage';
+import { db } from '../db';
 import { insertBomItemSchema } from '@shared/schema';
 import { payloadLimit, parseIdParam, paginationSchema } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { setCacheHeaders } from '../lib/cache-headers';
+import { mirrorIngressBestEffort, type IngressRequest } from '../parts-ingress';
+import { featureFlags } from '../env';
 
 /** Parse the If-Match header value into a version number, or undefined if absent/invalid. */
 function parseIfMatch(header: string | undefined): number | undefined {
@@ -77,6 +80,50 @@ export function registerBomRoutes(app: Express): void {
       const item = await storage.createBomItem({ ...parsed.data, projectId });
       res.setHeader('ETag', `"${item.version}"`);
       res.status(201).json(item);
+
+      // Phase 2 dual-write mirror. Best-effort — legacy is authoritative; mirror failures
+      // write to parts_ingress_failures for Phase 4 reconciliation. Flag-gated for safety.
+      if (featureFlags.partsCatalogV2) {
+        const ingressReq: IngressRequest = {
+          source: 'bom_create',
+          origin: 'user',
+          projectId,
+          fields: {
+            title: item.description,
+            description: item.description,
+            manufacturer: item.manufacturer,
+            mpn: item.partNumber,
+            canonicalCategory: item.assemblyCategory ?? 'other',
+            esdSensitive: item.esdSensitive,
+            assemblyCategory: null,
+            tolerance: item.tolerance,
+            datasheetUrl: item.datasheetUrl,
+            manufacturerUrl: item.manufacturerUrl,
+            meta: {},
+            connectors: [],
+          },
+          stock: {
+            quantityNeeded: item.quantity,
+            quantityOnHand: item.quantityOnHand,
+            minimumStock: item.minimumStock,
+            storageLocation: item.storageLocation,
+            unitPrice: item.unitPrice,
+            supplier: item.supplier,
+            leadTime: item.leadTime,
+            status: item.status,
+          },
+        };
+        void mirrorIngressBestEffort(
+          ingressReq,
+          {
+            source: 'bom_create',
+            projectId,
+            legacyTable: 'bom_items',
+            legacyId: item.id,
+          },
+          db,
+        );
+      }
     },
   );
 

@@ -303,6 +303,15 @@ vi.mock('../storage', () => ({
   VersionConflictError: storageState.VersionConflictError,
 }));
 
+// Phase 2 introduced a `parts-ingress` dependency in routes/bom.ts + routes/components.ts
+// that transitively pulls in server/db.ts, which throws at module load when DATABASE_URL
+// is unset. Mock it and parts-ingress before the route imports fire.
+vi.mock('../db', () => ({ db: {}, pool: {}, checkConnection: vi.fn() }));
+vi.mock('../parts-ingress', () => ({
+  mirrorIngressBestEffort: vi.fn().mockResolvedValue(null),
+}));
+vi.mock('../env', () => ({ featureFlags: { partsCatalogV2: false } }));
+
 import { registerArchitectureRoutes } from '../routes/architecture';
 import { registerAuthRoutes } from '../routes/auth';
 import { registerBomRoutes } from '../routes/bom';

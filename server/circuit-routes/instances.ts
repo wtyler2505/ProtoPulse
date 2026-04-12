@@ -7,6 +7,9 @@ import { fromZodError } from 'zod-validation-error';
 import { parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 import { getRefDesPrefix, nextRefdes } from '@shared/ref-des';
+import { mirrorIngressBestEffort, type IngressRequest } from '../parts-ingress';
+import { featureFlags } from '../env';
+import { db } from '../db';
 
 const createInstanceSchema = z.object({
   partId: z.number().int().positive().nullable().optional(),
@@ -108,6 +111,67 @@ export function registerCircuitInstanceRoutes(app: Express, storage: IStorage): 
     const data = { ...parsed.data, circuitId, referenceDesignator: refDes, properties: parsed.data.properties ?? {} };
     const instance = await storage.createCircuitInstance(data);
     res.status(201).json(instance);
+
+    // Phase 2 dual-write mirror: circuit instance → parts (via component_part lookup)
+    // + part_placements. Best-effort, fire-and-forget. Only fires when the instance has
+    // a concrete partId to mirror; instances with null partId rely on properties.componentTitle
+    // and are left for Phase 4 backfill.
+    if (featureFlags.partsCatalogV2 && parsed.data.partId) {
+      void (async () => {
+        try {
+          const design = await storage.getCircuitDesign(circuitId);
+          if (!design) { return; }
+          const part = await storage.getComponentPart(parsed.data.partId!, design.projectId);
+          if (!part) { return; }
+          const meta = (part.meta ?? {}) as Record<string, unknown>;
+          const title =
+            (typeof meta['title'] === 'string' && meta['title']) ||
+            (typeof meta['label'] === 'string' && meta['label']) ||
+            instance.referenceDesignator;
+          const canonicalCategory =
+            (typeof meta['partFamily'] === 'string' && meta['partFamily']) ||
+            (typeof meta['family'] === 'string' && meta['family']) ||
+            (typeof meta['category'] === 'string' && meta['category']) ||
+            'other';
+          const ingressReq: IngressRequest = {
+            source: 'circuit_instance',
+            origin: 'user',
+            projectId: design.projectId,
+            fields: {
+              title,
+              description: typeof meta['description'] === 'string' ? meta['description'] : null,
+              manufacturer: typeof meta['manufacturer'] === 'string' ? meta['manufacturer'] : null,
+              mpn: typeof meta['mpn'] === 'string' ? meta['mpn'] : null,
+              canonicalCategory,
+              packageType: typeof meta['packageType'] === 'string' ? meta['packageType'] : null,
+              meta,
+              connectors: (part.connectors ?? []) as unknown[],
+            },
+            placement: {
+              surface: 'schematic',
+              containerType: 'circuit',
+              containerId: circuitId,
+              referenceDesignator: instance.referenceDesignator,
+              x: parsed.data.schematicX ?? null,
+              y: parsed.data.schematicY ?? null,
+              rotation: parsed.data.schematicRotation ?? 0,
+            },
+          };
+          await mirrorIngressBestEffort(
+            ingressReq,
+            {
+              source: 'circuit_instance',
+              projectId: design.projectId,
+              legacyTable: 'circuit_instances',
+              legacyId: instance.id,
+            },
+            db,
+          );
+        } catch {
+          // Mirror is best-effort; swallow the error and let Phase 4 reconcile.
+        }
+      })();
+    }
   });
 
   // BL-0638: Verify instance belongs to the circuit before mutating
