@@ -34,6 +34,8 @@ import {
   type InsertPartSpiceModel,
   type PartAlternate,
   type InsertPartAlternate,
+  projects,
+  circuitDesigns,
 } from '@shared/schema';
 import { TRUST_LEVELS, trustRank, type TrustLevel } from '@shared/parts/part-row';
 import type { PartFilter, PartPagination, PartSortField } from '@shared/parts/part-filter';
@@ -414,6 +416,92 @@ export class PartsStorage {
   }
 
   // -------------------------------------------------------------------------
+  // cross-project usage report
+  // -------------------------------------------------------------------------
+
+  /**
+   * For a given canonical part, returns every project that references it via
+   * `part_stock` together with the placement count from `part_placements`
+   * (resolved through `circuit_designs.project_id`).
+   */
+  async getUsageAcrossProjects(partId: string): Promise<Array<{
+    projectId: number;
+    projectName: string;
+    stockQuantityNeeded: number;
+    stockQuantityOnHand: number | null;
+    placementCount: number;
+  }>> {
+    try {
+      const cacheKey = `parts_usage:${partId}`;
+      const cached = this.cache.get<Array<{
+        projectId: number;
+        projectName: string;
+        stockQuantityNeeded: number;
+        stockQuantityOnHand: number | null;
+        placementCount: number;
+      }>>(cacheKey);
+      if (cached) { return cached; }
+
+      // 1. Stock rows joined with project names
+      const stockRows = await this.db
+        .select({
+          projectId: partStock.projectId,
+          projectName: projects.name,
+          quantityNeeded: partStock.quantityNeeded,
+          quantityOnHand: partStock.quantityOnHand,
+        })
+        .from(partStock)
+        .innerJoin(projects, eq(projects.id, partStock.projectId))
+        .where(
+          and(
+            eq(partStock.partId, partId),
+            isNull(partStock.deletedAt),
+            isNull(projects.deletedAt),
+          ),
+        );
+
+      // 2. Placement counts grouped by project (via circuit_designs container join)
+      const placementCounts = await this.db
+        .select({
+          projectId: circuitDesigns.projectId,
+          count: sql<number>`cast(count(*) as int)`,
+        })
+        .from(partPlacements)
+        .innerJoin(
+          circuitDesigns,
+          and(
+            eq(partPlacements.containerType, 'circuit'),
+            eq(partPlacements.containerId, circuitDesigns.id),
+          ),
+        )
+        .where(
+          and(
+            eq(partPlacements.partId, partId),
+            isNull(partPlacements.deletedAt),
+          ),
+        )
+        .groupBy(circuitDesigns.projectId);
+
+      const placementMap = new Map(placementCounts.map((r) => [r.projectId, r.count]));
+
+      // 3. Merge — every project that has stock gets a row; placement count is 0 if none exist.
+      const result = stockRows.map((row) => ({
+        projectId: row.projectId,
+        projectName: row.projectName,
+        stockQuantityNeeded: row.quantityNeeded,
+        stockQuantityOnHand: row.quantityOnHand,
+        placementCount: placementMap.get(row.projectId) ?? 0,
+      }));
+
+      this.cache.set(cacheKey, result);
+      return result;
+    } catch (e) {
+      if (e instanceof StorageError) { throw e; }
+      throw new StorageError('getUsageAcrossProjects', `parts_usage/${partId}`, e);
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // part_placements (where-used)
   // -------------------------------------------------------------------------
 
@@ -580,6 +668,127 @@ export class PartsStorage {
       return created;
     } catch (e) {
       throw new StorageError('createAlternate', 'parts_alternates', e);
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // substitute (one-click part swap within a project)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Replaces every reference to `oldPartId` with `newPartId` within a project.
+   * Handles: part_stock (merge if target stock exists), part_placements (via circuit_designs).
+   * Returns a summary of what was changed.
+   */
+  async substitutePart(
+    projectId: number,
+    oldPartId: string,
+    newPartId: string,
+  ): Promise<{ stockMerged: boolean; placementsUpdated: number }> {
+    try {
+      return await this.db.transaction(async (tx) => {
+        // 1. Find existing stock rows for both parts in this project
+        const [oldStock] = await tx
+          .select()
+          .from(partStock)
+          .where(
+            and(
+              eq(partStock.projectId, projectId),
+              eq(partStock.partId, oldPartId),
+              isNull(partStock.deletedAt),
+            ),
+          );
+
+        const [existingNewStock] = await tx
+          .select()
+          .from(partStock)
+          .where(
+            and(
+              eq(partStock.projectId, projectId),
+              eq(partStock.partId, newPartId),
+              isNull(partStock.deletedAt),
+            ),
+          );
+
+        let stockMerged = false;
+
+        if (oldStock) {
+          if (existingNewStock) {
+            // Merge: add old quantities to existing new stock row, soft-delete old
+            await tx
+              .update(partStock)
+              .set({
+                quantityNeeded: existingNewStock.quantityNeeded + oldStock.quantityNeeded,
+                quantityOnHand:
+                  existingNewStock.quantityOnHand != null || oldStock.quantityOnHand != null
+                    ? (existingNewStock.quantityOnHand ?? 0) + (oldStock.quantityOnHand ?? 0)
+                    : null,
+                version: existingNewStock.version + 1,
+                updatedAt: new Date(),
+              })
+              .where(eq(partStock.id, existingNewStock.id));
+
+            await tx
+              .update(partStock)
+              .set({ deletedAt: new Date() })
+              .where(eq(partStock.id, oldStock.id));
+
+            stockMerged = true;
+          } else {
+            // No conflict — just reassign the stock row to the new part
+            await tx
+              .update(partStock)
+              .set({
+                partId: newPartId,
+                version: oldStock.version + 1,
+                updatedAt: new Date(),
+              })
+              .where(eq(partStock.id, oldStock.id));
+          }
+        }
+
+        // 2. Update placements: find all placements for oldPartId in this project's containers
+        const projectDesigns = await tx
+          .select({ id: circuitDesigns.id })
+          .from(circuitDesigns)
+          .where(eq(circuitDesigns.projectId, projectId));
+
+        const designIds = projectDesigns.map((d) => d.id);
+        let placementsUpdated = 0;
+
+        if (designIds.length > 0) {
+          const updated = await tx
+            .update(partPlacements)
+            .set({ partId: newPartId })
+            .where(
+              and(
+                eq(partPlacements.partId, oldPartId),
+                eq(partPlacements.containerType, 'circuit'),
+                inArray(partPlacements.containerId, designIds),
+                isNull(partPlacements.deletedAt),
+              ),
+            )
+            .returning({ id: partPlacements.id });
+
+          placementsUpdated = updated.length;
+        }
+
+        // 3. Invalidate caches
+        this.cache.invalidate(`parts_stock:project:${projectId}`);
+        this.cache.invalidate(`parts_placements:part:${oldPartId}`);
+        this.cache.invalidate(`parts_placements:part:${newPartId}`);
+        this.cache.invalidate(`parts_usage:${oldPartId}`);
+        this.cache.invalidate(`parts_usage:${newPartId}`);
+
+        return { stockMerged, placementsUpdated };
+      });
+    } catch (e) {
+      if (e instanceof StorageError) { throw e; }
+      throw new StorageError(
+        'substitutePart',
+        `parts_substitute/${projectId}/${oldPartId}→${newPartId}`,
+        e,
+      );
     }
   }
 

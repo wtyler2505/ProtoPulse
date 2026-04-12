@@ -313,6 +313,59 @@ export function registerPartsRoutes(app: Express): void {
     }
   });
 
+  // POST /api/parts/:id/substitute — one-click part replacement within a project
+  app.post('/api/parts/:id/substitute', validateSession, async (req: Request, res: Response) => {
+    const oldPartId = String(req.params.id);
+    const parsed = z.object({
+      substituteId: z.string().uuid(),
+      projectId: z.number().int().positive(),
+    }).safeParse(req.body);
+
+    if (!parsed.success) {
+      res.status(400).json({ message: fromZodError(parsed.error).toString() });
+      return;
+    }
+
+    const { substituteId, projectId } = parsed.data;
+
+    try {
+      // Verify project ownership
+      const session = (req as Record<string, unknown>).session as { userId: number };
+      const isOwner = await storage.isProjectOwner(projectId, session.userId);
+      if (!isOwner) {
+        res.status(403).json({ message: 'Not authorized to modify this project' });
+        return;
+      }
+
+      // Verify both parts exist
+      const [oldPart, newPart] = await Promise.all([
+        partsStorage.getById(oldPartId),
+        partsStorage.getById(substituteId),
+      ]);
+      if (!oldPart) {
+        res.status(404).json({ message: `Original part ${oldPartId} not found` });
+        return;
+      }
+      if (!newPart) {
+        res.status(404).json({ message: `Substitute part ${substituteId} not found` });
+        return;
+      }
+
+      const result = await partsStorage.substitutePart(projectId, oldPartId, substituteId);
+      res.json({
+        message: `Replaced "${oldPart.title}" with "${newPart.title}"`,
+        ...result,
+      });
+    } catch (err) {
+      if (err instanceof StorageError) {
+        logger.error('POST /api/parts/:id/substitute failed', { message: err.message });
+        res.status(500).json({ message: 'Failed to substitute part' });
+        return;
+      }
+      throw err;
+    }
+  });
+
   // GET /api/parts/:id/placements — where this part is used
   app.get('/api/parts/:id/placements', async (req, res) => {
     const id = String(req.params.id);
