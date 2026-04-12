@@ -5,15 +5,27 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import express from 'express';
 
-const mockGetTemplates = vi.fn();
-const mockGetTemplateWithItems = vi.fn();
-const mockCreateTemplate = vi.fn();
-const mockAddItems = vi.fn();
-const mockUpdateTemplate = vi.fn();
-const mockDeleteTemplate = vi.fn();
-const mockIsProjectOwner = vi.fn();
-const mockGetStock = vi.fn();
-const mockUpsertStock = vi.fn();
+const {
+  mockGetTemplates,
+  mockGetTemplateWithItems,
+  mockCreateTemplate,
+  mockAddItems,
+  mockUpdateTemplate,
+  mockDeleteTemplate,
+  mockIsProjectOwner,
+  mockGetStock,
+  mockUpsertStock,
+} = vi.hoisted(() => ({
+  mockGetTemplates: vi.fn(),
+  mockGetTemplateWithItems: vi.fn(),
+  mockCreateTemplate: vi.fn(),
+  mockAddItems: vi.fn(),
+  mockUpdateTemplate: vi.fn(),
+  mockDeleteTemplate: vi.fn(),
+  mockIsProjectOwner: vi.fn(),
+  mockGetStock: vi.fn(),
+  mockUpsertStock: vi.fn(),
+}));
 
 vi.mock('../storage', () => ({
   bomTemplateStorage: {

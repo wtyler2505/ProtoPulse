@@ -40,7 +40,6 @@ vi.mock('../auth', () => ({
   }),
 }));
 
-const mockSubmit = vi.fn().mockResolvedValue('job-123');
 vi.mock('../job-queue', () => ({
   jobQueue: { submit: mockSubmit },
 }));
