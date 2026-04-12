@@ -79,7 +79,7 @@ interface PartLike {
 }
 
 interface StockLike {
-  projectId: number;
+  projectId: number | null;
   quantityNeeded: number;
   quantityOnHand: number | null;
   minimumStock: number | null;

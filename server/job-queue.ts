@@ -95,6 +95,7 @@ const DEFAULT_MAX_RUN_TIME: Record<JobType, number> = {
   batch_drc: 300_000,
   report_generation: 600_000,
   import_processing: 300_000,
+  supply_chain_check: 120_000,
 };
 
 // ---------------------------------------------------------------------------
