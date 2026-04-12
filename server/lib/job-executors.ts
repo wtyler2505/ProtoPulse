@@ -589,8 +589,8 @@ const supplyChainCheckExecutor: JobExecutor = async (payload, ctx) => {
   const alerts: Array<{
     partId: string;
     projectId: number;
-    alertType: string;
-    severity: string;
+    alertType: SupplyChainAlertType;
+    severity: 'info' | 'warning' | 'critical';
     message: string;
     previousValue: string | null;
     currentValue: string | null;

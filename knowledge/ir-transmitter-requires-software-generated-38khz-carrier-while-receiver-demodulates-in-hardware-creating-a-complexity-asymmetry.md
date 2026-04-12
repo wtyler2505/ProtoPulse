@@ -20,7 +20,7 @@ Receiving IR is simple: the TSOP IC handles 38kHz demodulation internally and ou
 
 1. **Pin selection is non-trivial:** The IRremote library uses specific hardware timers to generate the carrier. On ATmega328P (Uno/Nano), `IrSender` defaults to Timer 2 / pin D3. On ATmega2560 (Mega), it's also pin D3 by default but can be reconfigured. The timer used for IR sending may conflict with other PWM-dependent features (servo control, tone generation).
 
-2. **Timer conflicts:** If the project uses Servo.h (Timer 1) AND IRremote sending (Timer 2), that's fine. But if a third feature needs a timer, conflicts arise. The Mega's 6 timers provide more headroom than the Uno's 3.
+2. **Timer conflicts:** If the project uses Servo.h (Timer 1) AND IRremote sending (Timer 2), that's fine. But `tone()` (passive buzzer) also uses Timer 2 -- the most common third-party Timer 2 consumer beginners encounter. A project with IR transmitting AND a passive buzzer on an Uno/Nano has an unresolvable Timer 2 conflict without switching to a Mega (6 timers) or using a software tone library. The Mega's 6 timers provide more headroom than the Uno's 3.
 
 3. **Beginners expect symmetry:** "If receiving works on any pin, why doesn't transmitting?" The answer is that receiving leverages the TSOP's dedicated demodulator hardware, while transmitting must create the carrier from scratch using MCU resources.
 

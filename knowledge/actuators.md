@@ -47,6 +47,11 @@ Motor control theory, driver IC comparison, PWM strategies, and output device se
 - [[l293d-dip-16-package-makes-it-the-only-motor-driver-ic-that-drops-directly-into-a-breadboard]] — DIP-16 straddles breadboard center channel; all alternatives need breakout boards
 - [[l293d-separates-speed-control-on-enable-pins-from-direction-control-on-input-pins]] — PWM on enable for speed, digital on inputs for direction
 
+- [[arduino-tone-uses-timer2-which-disables-pwm-on-pins-3-and-11-creating-invisible-resource-conflicts]] — tone() commandeers Timer2 silently breaking PWM on pins 3/11
+- [[esp32-replaces-tone-with-ledcwritetone-and-the-api-is-not-a-drop-in-substitution]] — ESP32 tone API requires channel management absent from AVR
+- [[dc-voltage-on-a-passive-buzzer-produces-only-a-click-because-there-is-no-internal-oscillator]] — DC on passive buzzer = silence; frequency-driven control required
+- [[passive-buzzer-polarity-markings-are-inconsistent-and-assuming-no-polarity-is-unsafe]] — some passive buzzers do have polarity despite convention saying otherwise
+
 ## Open Questions
 (populated by /extract)
 
