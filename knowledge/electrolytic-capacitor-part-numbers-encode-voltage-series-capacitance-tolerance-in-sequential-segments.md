@@ -32,7 +32,18 @@ Aluminum electrolytic capacitors use a multi-segment alphanumeric part number sy
 3. The series designation identifies the manufacturer's product line, which determines ESR, ripple current, lifespan, and temperature rating
 4. There is no universal encoding -- each manufacturer (Rubycon, Nichicon, Panasonic, Nippon Chemi-Con) uses different series naming conventions
 
-**Practical inventory use:** The part number printed on the sleeve is the most reliable identification. Physical size, lead spacing, and capacitor markings (printed on the sleeve) provide secondary confirmation. Unlike small ceramics, electrolytic caps are always labeled.
+**Second example: 381383 (Cornell Dubilier)**
+
+CDE uses a different encoding for their 381LX series:
+
+| Segment | Value | Meaning |
+|---------|-------|---------|
+| 381 | 381 | Product series (381LX high-voltage long-life) |
+| 383 | 383 | Catalog entry within series (maps to specific C/V combination) |
+
+Unlike Rubycon's human-readable encoding (voltage-series-capacitance), CDE uses a catalog index system where the trailing digits require a cross-reference lookup to determine the exact capacitance and voltage. This reinforces that **there is no universal electrolytic part number encoding** -- each manufacturer requires its own documentation.
+
+**Practical inventory use:** The part number printed on the sleeve is the most reliable identification. Physical size, lead spacing, and capacitor markings (printed on the sleeve) provide secondary confirmation. Unlike small ceramics, electrolytic caps are always labeled. When only a partial part number is readable, distributor cross-reference tools (Mouser, Digi-Key, Octopart) can often resolve the fragment to a full specification.
 
 ---
 

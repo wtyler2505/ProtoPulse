@@ -41,6 +41,12 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[high-voltage-capacitors-store-dangerous-energy-that-persists-after-circuit-power-off]] — 9.4J at 200V; discharge procedure mandatory
 - [[dielectric-absorption-causes-voltage-recovery-in-discharged-electrolytic-capacitors]] — Caps recover voltage after discharge; check twice
 - [[electrolytic-capacitor-part-numbers-encode-voltage-series-capacitance-tolerance-in-sequential-segments]] — 200MXR470M decoding; different from ceramic 3-digit codes
+- [[axial-electrolytic-form-factor-exits-leads-from-both-ends-and-is-common-in-vintage-equipment-but-rare-in-modern-pcb-designs]] — Axial vs radial mounting; breadboard awkwardness; vintage/surplus signal
+- [[industrial-grade-electrolytic-capacitors-are-rated-for-5000-plus-hours-versus-2000-hours-for-generic-parts-making-manufacturer-reputation-a-selection-criterion]] — CDE/Rubycon 5000h vs generic 2000h; quality gap amplified by temperature derating
+- [[axial-cylindrical-components-can-roll-off-a-workbench-and-must-be-secured-during-handling]] — Physical bench safety for cylindrical axial parts
+
+### Part Identification
+- [[systematic-part-identification-workflow-for-unidentified-inventory-read-markings-then-cross-reference-then-measure]] — Three-step procedure: markings, distributor lookup, instrument measurement
 
 ### MOSFET Switching
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO without gate driver

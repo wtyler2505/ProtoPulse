@@ -19,6 +19,17 @@ E = 0.5 x C x V^2
 
 For a 470uF cap at 200V: `0.5 x 0.00047 x 200^2 = 9.4 joules`
 
+**Stored energy across typical high-voltage electrolytic values** (CDE 381LX series examples):
+
+| Capacitance | Voltage | Stored Energy |
+|-------------|---------|---------------|
+| 100uF | 450V | 10.1 J |
+| 220uF | 350V | 13.5 J |
+| 470uF | 200V | 9.4 J |
+| 1000uF | 100V | 5.0 J |
+
+The table shows that stored energy does not scale linearly with either capacitance or voltage alone -- because energy scales with V^2, a smaller cap at higher voltage can store more energy than a larger cap at lower voltage (100uF/450V > 1000uF/100V).
+
 **Energy scale for human context:**
 - 1 joule across fingers: painful shock
 - 5 joules: can cause muscle contraction that prevents letting go
