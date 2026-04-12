@@ -52,6 +52,9 @@ export const SmartHintToast = lazy(() => import('@/components/ui/SmartHintToast'
 export const ViewOnboardingHint = lazy(() => import('@/components/ui/ViewOnboardingHint'));
 export const MilestonePanel = lazy(() => import('@/components/panels/MilestonePanel'));
 export const DesignTroubleshooterPanel = lazy(() => import('@/components/panels/DesignTroubleshooterPanel'));
+export const SupplyChainAlertsPanel = lazy(() => import('@/components/views/SupplyChainAlertsPanel'));
+export const BomTemplatesPanel = lazy(() => import('@/components/views/BomTemplatesPanel'));
+export const PersonalInventoryPanel = lazy(() => import('@/components/views/PersonalInventoryPanel'));
 
 // ─── Prefetch queue ────────────────────────────────────────────────────────
 /**
