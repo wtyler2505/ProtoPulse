@@ -29,6 +29,8 @@ Together, these board components consume 8-20mA — a factor of 400-1000x more t
 
 This pattern applies identically to ESP32 NodeMCU boards — the existing note on ESP32 deep sleep mentions the same caveat. The board-vs-chip current distinction is universal across all dev boards with always-on USB bridges and linear regulators.
 
+**Boards with integrated chargers add another always-on component.** The SparkFun Blynk Board includes an MCP73831 LiPo charger IC that has its own quiescent current (~50-100uA typical for MCP73831 in standby). While small compared to the USB-serial chip's 5-15mA, it stacks on top of everything else. The tradeoff is explicit: "easy battery deployment with slightly higher sleep current" vs "lower sleep current but you need an external charger module that you can power-gate." For battery projects where sleep current matters, boards with integrated charging may need a physical power switch rather than relying on deep sleep alone.
+
 ---
 
 Relevant Notes:

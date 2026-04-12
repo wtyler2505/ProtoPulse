@@ -21,6 +21,13 @@ Integrated development boards (PyGamer, M5Stack, Wio Terminal, Arduino Nano 33 I
 
 **Board selection principle:** Choose integrated boards when your project IS the integrated features (gaming, wearables, dashboards). Choose bare MCU boards (Pico, ESP32 DevKit, Uno) when your project needs its own sensors and actuators.
 
+**Spectrum of integration (from inventory examples):**
+- **Heavy integration (PyGamer):** TFT + microSD + buttons + speaker + accelerometer + NeoPixels + charger. Result: ~8 GPIO pads on the back.
+- **Moderate integration (Blynk Board):** WS2812 LED + user button + LiPo charger + I2C header pads on ESP8266 breakout. Result: ~8 usable GPIO, fewer than a full NodeMCU despite same MCU.
+- **Minimal integration (NodeMCU):** USB-serial + regulator + LED. Result: all 11 ESP8266 GPIO exposed.
+
+The principle scales linearly: each onboard peripheral consumes 1-4 GPIO pins that become unavailable for custom wiring.
+
 **Where this matters in ProtoPulse:** The AI bench coach should detect when a user adds an integrated board to their project and then tries to wire many external peripherals. The coach should warn about pin conflicts early -- before the user discovers that all SPI/I2C/GPIO pins are already committed to onboard hardware.
 
 ---
