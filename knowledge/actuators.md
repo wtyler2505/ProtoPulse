@@ -51,6 +51,9 @@ Motor control theory, driver IC comparison, PWM strategies, and output device se
 - [[esp32-replaces-tone-with-ledcwritetone-and-the-api-is-not-a-drop-in-substitution]] — ESP32 tone API requires channel management absent from AVR
 - [[dc-voltage-on-a-passive-buzzer-produces-only-a-click-because-there-is-no-internal-oscillator]] — DC on passive buzzer = silence; frequency-driven control required
 - [[passive-buzzer-polarity-markings-are-inconsistent-and-assuming-no-polarity-is-unsafe]] — some passive buzzers do have polarity despite convention saying otherwise
+- [[relay-coil-draws-70ma-which-exceeds-gpio-limits-on-every-common-mcu]] — bare relay coils need transistor/MOSFET driver, not direct GPIO
+- [[relay-coil-is-an-inductor-that-generates-destructive-back-emf-spikes-when-de-energized]] — flyback diode mandatory across coil terminals
+- [[relay-electrical-life-is-100x-shorter-than-mechanical-life-because-arcing-erodes-contacts]] — 100K electrical vs 10M mechanical cycles; SSR for high-frequency switching
 
 ## Open Questions
 (populated by /extract)
