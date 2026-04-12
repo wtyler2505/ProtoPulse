@@ -709,6 +709,7 @@ export function validateExecutorRegistration(queue = jobQueue): JobType[] {
     'batch_drc',
     'report_generation',
     'import_processing',
+    'supply_chain_check',
   ];
 
   const unregistered: JobType[] = [];
