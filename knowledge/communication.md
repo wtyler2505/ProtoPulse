@@ -25,6 +25,9 @@ Wireless and wired communication protocols, module pairing, range/reliability tr
 - [[dead-coin-cell-is-the-invisible-first-failure-mode-on-kit-ir-remotes]] — check battery before debugging code/wiring
 - [[ir-transmitter-requires-software-generated-38khz-carrier-while-receiver-demodulates-in-hardware-creating-a-complexity-asymmetry]] — transmitting needs PWM timer pin; receiving works on any GPIO
 - [[bare-ir-led-breakout-modules-have-1-2m-range-and-extending-range-requires-a-driver-transistor]] — GPIO current limits range; use PN2222A driver for 5-10m
+- [[hc-05-master-slave-capability-is-the-selection-criterion-over-hc-06-for-device-to-device-bluetooth]] — HC-05 = master/slave, HC-06 = slave only; topology determines selection
+- [[hc-05-bluetooth-4-box-label-is-marketing-fiction-covering-bluetooth-2-edr-with-spp-only]] — "Bluetooth 4.0" on the box is a lie; no BLE, no iOS, no low-power
+- [[hc-05-and-hc-06-at-command-interfaces-are-incompatible-despite-sharing-the-same-bluetooth-silicon]] — different baud rates, different syntax, different AT mode entry; mixing tutorials causes silent failures
 
 ## Open Questions
 (populated by /extract)
