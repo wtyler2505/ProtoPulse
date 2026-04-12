@@ -15,6 +15,8 @@ This is not a performance degradation or a priority conflict. ADC2 is physically
 
 The practical rule: if your project uses WiFi (and most ESP32 projects do), design all analog sensing around ADC1 channels only. ADC1 covers GPIO 32, 33, 34, 35, 36 (VP), and 39 (VN) — six usable channels (plus two more on GPIO 36/39 that double as the internal hall sensor). If you need more than six analog inputs with WiFi, use an external ADC (ADS1115, MCP3008) over I2C or SPI.
 
+**ADC configuration beyond WiFi:** Even when using ADC1, accuracy depends on the attenuation setting. The ESP32 ADC has four attenuation levels (0dB=0-1.1V, 2.5dB=0-1.5V, 6dB=0-2.2V, 11dB=0-3.3V) configured per-pin via `analogSetPinAttenuation()`. Default is 11dB (full range). The ADC is also nonlinear above ~2.5V at any attenuation -- for precision applications, use Espressif's `esp_adc_cal_characterize()` for per-chip calibration or an external ADS1115 for guaranteed linearity.
+
 ---
 
 Relevant Notes:

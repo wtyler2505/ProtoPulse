@@ -27,6 +27,15 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[mega-spi-pins-move-from-d10-d13-to-d50-d53-breaking-hardcoded-uno-code-silently]] -- SPI remapping is the #1 Uno-to-Mega porting trap
 - [[mega-5v-regulator-thermal-math-constrains-input-voltage-to-7-9v]] -- linear regulator thermal limits narrow the 7-12V spec to 7-9V practical
 - [[mega-3v3-output-limited-to-50ma-cannot-power-wifi-or-bluetooth-modules]] -- 3.3V header pin cannot power wireless modules
+- [[esp32-i2c-is-software-implemented-and-remappable-to-any-gpio-pair]] -- software I2C remappable to any GPIO, unlike AVR
+- [[vspi-is-the-safest-esp32-spi-bus-because-hspi-pins-have-boot-restrictions]] -- VSPI (GPIO18/19/23/5) has no boot conflicts
+- [[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc]] -- ADC nonlinearity above 2.5V requires calibration
+- [[esp32-adc-attenuation-setting-determines-input-voltage-range]] -- 4 attenuation levels from 0dB/1.1V to 11dB/3.3V
+- [[esp32-ams1117-regulator-limits-total-board-current-to-800ma]] -- AMS1117 thermal budget limits board current
+- [[esp32-deep-sleep-draws-only-10-microamps-enabling-battery-iot]] -- 10uA deep sleep for battery IoT
+- [[esp32-has-14-safe-gpio-pins-with-no-boot-or-flash-restrictions]] -- only 14 unrestricted GPIOs out of 34
+- [[esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors]] -- input-only pins need external pull resistors
+- [[esp32-dac-on-gpio25-26-provides-true-8bit-analog-output]] -- true analog output, rare among maker MCUs
 
 ## Sub-Topics (to be populated)
 

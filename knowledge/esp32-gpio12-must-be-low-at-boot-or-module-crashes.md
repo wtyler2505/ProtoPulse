@@ -15,6 +15,18 @@ This is the most dangerous strapping pin because it looks like any other GPIO af
 
 Practical mitigation: if you must use GPIO12, add a strong pull-down (4.7K or lower to GND) to guarantee it reads LOW at power-on. Alternatively, on ESP32 chips that support efuse programming, you can burn the VDD_SDIO efuse to permanently set 3.3V flash regardless of GPIO12 state — but that is a one-way operation.
 
+**Complete boot strapping pin table:** GPIO12 is the most dangerous but not the only boot-sensitive pin. The full set:
+
+| GPIO | Required State at Boot | Consequence if Wrong |
+|------|----------------------|---------------------|
+| GPIO0 | HIGH (has internal pull-up) | LOW enters download/flashing mode instead of normal boot |
+| GPIO2 | LOW or floating | Connected to onboard LED on many boards; usually safe |
+| GPIO5 | HIGH (default) | Controls SDIO slave timing; rarely problematic |
+| GPIO12 | **LOW** | Sets flash voltage to 1.8V, causing brown-out crash |
+| GPIO15 | HIGH | LOW suppresses boot log messages on UART0 |
+
+The safe general-purpose pins that avoid all boot restrictions are: GPIO 4, 5, 16, 17, 18, 19, 21, 22, 23, 25, 26, 27, 32, 33 -- only 14 out of 34 total GPIOs.
+
 ---
 
 Relevant Notes:
