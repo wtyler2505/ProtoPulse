@@ -2,6 +2,7 @@ export { PartsCatalogProvider, usePartsCatalog, useCatalog } from './parts-catal
 export { usePartStockMutations } from './use-part-stock';
 export { usePartIngress } from './use-part-ingress';
 export { usePartUsage } from './use-part-usage';
+export { usePartAlternates, useSubstitutePart } from './use-part-alternates';
 export { partsQueryKeys, partsMutationKeys } from './query-keys';
 
 export type { UseCatalogOptions } from './use-parts-catalog';
