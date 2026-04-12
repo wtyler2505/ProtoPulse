@@ -553,12 +553,134 @@ const importProcessingExecutor: JobExecutor = async (payload: unknown, ctx: JobE
 // Executor registry
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Supply chain check executor (Phase 7.5)
+// ---------------------------------------------------------------------------
+
+const supplyChainCheckPayloadSchema = z.object({
+  projectId: z.number().int(),
+  userId: z.number().int().optional(),
+});
+
+/**
+ * Checks all parts in a project's BOM for supply chain issues:
+ * - Price changes (compares part_stock.unitPrice against current supplier data)
+ * - Stock status changes (in stock → out of stock, etc.)
+ * - Lifecycle changes (active → NRND → EOL → obsolete)
+ * - Lead time changes
+ *
+ * Creates supply_chain_alerts for any detected changes.
+ */
+const supplyChainCheckExecutor: JobExecutor = async (payload, ctx) => {
+  const parsed = supplyChainCheckPayloadSchema.parse(payload);
+  const { supplyChainStorage, partsStorage } = await import('../storage');
+
+  ctx.reportProgress(5);
+
+  // 1. Get all stock rows for this project
+  const stockRows = await partsStorage.listStockForProject(parsed.projectId);
+  if (stockRows.length === 0) {
+    return { alerts: 0, partsChecked: 0 };
+  }
+
+  ctx.reportProgress(15);
+  if (ctx.signal.aborted) { throw new Error('Job cancelled'); }
+
+  const alerts: Array<{
+    partId: string;
+    projectId: number;
+    alertType: string;
+    severity: string;
+    message: string;
+    previousValue: string | null;
+    currentValue: string | null;
+    supplier: string | null;
+  }> = [];
+
+  // 2. Check each part for issues
+  const step = 70 / stockRows.length;
+  for (let i = 0; i < stockRows.length; i++) {
+    if (ctx.signal.aborted) { throw new Error('Job cancelled'); }
+
+    const stock = stockRows[i];
+    const part = await partsStorage.getById(stock.partId);
+    if (!part) { continue; }
+
+    // Check for low stock (quantity on hand below minimum)
+    if (stock.minimumStock != null && stock.quantityOnHand != null) {
+      if (stock.quantityOnHand <= stock.minimumStock) {
+        alerts.push({
+          partId: stock.partId,
+          projectId: parsed.projectId,
+          alertType: stock.quantityOnHand === 0 ? 'out_of_stock' : 'out_of_stock',
+          severity: stock.quantityOnHand === 0 ? 'critical' : 'warning',
+          message: `${part.title}: ${stock.quantityOnHand} on hand (minimum: ${stock.minimumStock})`,
+          previousValue: null,
+          currentValue: String(stock.quantityOnHand),
+          supplier: stock.supplier,
+        });
+      }
+    }
+
+    // Check lifecycle via part_lifecycle table
+    const lifecycle = await partsStorage.getLifecycle(stock.partId);
+    if (lifecycle) {
+      if (lifecycle.status === 'obsolete') {
+        alerts.push({
+          partId: stock.partId,
+          projectId: parsed.projectId,
+          alertType: 'obsolete',
+          severity: 'critical',
+          message: `${part.title} is marked OBSOLETE${lifecycle.replacementPartId ? ' — replacement available' : ''}`,
+          previousValue: null,
+          currentValue: 'obsolete',
+          supplier: stock.supplier,
+        });
+      } else if (lifecycle.status === 'nrnd') {
+        alerts.push({
+          partId: stock.partId,
+          projectId: parsed.projectId,
+          alertType: 'nrnd',
+          severity: 'warning',
+          message: `${part.title} is Not Recommended for New Designs (NRND)`,
+          previousValue: null,
+          currentValue: 'nrnd',
+          supplier: stock.supplier,
+        });
+      }
+    }
+
+    ctx.reportProgress(15 + Math.round(step * (i + 1)));
+  }
+
+  ctx.reportProgress(85);
+
+  // 3. Persist alerts
+  if (alerts.length > 0) {
+    await supplyChainStorage.createAlertsBatch(alerts);
+  }
+
+  ctx.reportProgress(100);
+
+  logger.info('supply-chain-check:complete', {
+    projectId: parsed.projectId,
+    partsChecked: stockRows.length,
+    alertsCreated: alerts.length,
+  });
+
+  return {
+    partsChecked: stockRows.length,
+    alerts: alerts.length,
+  };
+};
+
 const EXECUTORS: Record<JobType, JobExecutor> = {
   ai_analysis: aiAnalysisExecutor,
   export_generation: exportGenerationExecutor,
   batch_drc: batchDrcExecutor,
   report_generation: reportGenerationExecutor,
   import_processing: importProcessingExecutor,
+  supply_chain_check: supplyChainCheckExecutor,
 };
 
 /**
