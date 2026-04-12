@@ -297,8 +297,38 @@ export function registerPartsRoutes(app: Express): void {
     }
   });
 
+  // GET /api/parts/browse/alternates — all parts with alternates (browse view)
+  app.get('/api/parts/browse/alternates', async (req: Request, res: Response) => {
+    try {
+      const result = await partsStorage.listPartsWithAlternates();
+      res.json({ data: result, total: result.length });
+    } catch (err) {
+      if (err instanceof StorageError) {
+        logger.error('GET /api/parts/browse/alternates failed', { message: err.message });
+        res.status(500).json({ message: 'Failed to get alternates browse data' });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // GET /api/parts/browse/usage — cross-project usage summary (browse view)
+  app.get('/api/parts/browse/usage', async (req: Request, res: Response) => {
+    try {
+      const result = await partsStorage.listPartsUsageSummary();
+      res.json({ data: result, total: result.length });
+    } catch (err) {
+      if (err instanceof StorageError) {
+        logger.error('GET /api/parts/browse/usage failed', { message: err.message });
+        res.status(500).json({ message: 'Failed to get usage summary' });
+        return;
+      }
+      throw err;
+    }
+  });
+
   // GET /api/parts/:id/alternates — equivalent parts via part_alternates table
-  app.get('/api/parts/:id/alternates', async (req, res) => {
+  app.get('/api/parts/:id/alternates', async (req: Request, res: Response) => {
     const id = String(req.params.id);
     try {
       const alternates = await partsStorage.getAlternates(id);

@@ -32,6 +32,21 @@ Small ceramic capacitors use a three-digit numeric marking system where the base
 
 **Two-digit markings** (like "22" on a crystal cap) represent the literal picofarad value -- 22 pF. The three-digit code system only applies when three digits are present.
 
+**Film capacitor extension:** Polyester and polypropylene film capacitors use the SAME three-digit picofarad encoding, but add a trailing tolerance letter:
+
+| Marking | Capacitance | Tolerance | Voltage |
+|---------|-------------|-----------|---------|
+| 753J 400V | 75 x 10^3 pF = 75 nF | J = ±5% | 400V |
+| 104K 250V | 10 x 10^4 pF = 100 nF | K = ±10% | 250V |
+| 473M 630V | 47 x 10^3 pF = 47 nF | M = ±20% | 630V |
+
+**Tolerance letter codes (universal across ceramic and film):**
+- J = ±5%
+- K = ±10%
+- M = ±20%
+
+The voltage rating on film caps is printed separately (e.g., "400V" or "2A" where 2A = 100V). This combined marking (three-digit code + tolerance letter + voltage) is the standard identification format for film capacitors where the physical size prevents printing the full specification in human-readable form.
+
 ---
 
 Relevant Notes:

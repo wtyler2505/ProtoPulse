@@ -45,6 +45,13 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[industrial-grade-electrolytic-capacitors-are-rated-for-5000-plus-hours-versus-2000-hours-for-generic-parts-making-manufacturer-reputation-a-selection-criterion]] — CDE/Rubycon 5000h vs generic 2000h; quality gap amplified by temperature derating
 - [[axial-cylindrical-components-can-roll-off-a-workbench-and-must-be-secured-during-handling]] — Physical bench safety for cylindrical axial parts
 
+### Film Capacitors
+- [[film-capacitors-have-essentially-unlimited-lifespan-because-there-is-no-electrolyte-to-dry-out]] — No electrolyte = no degradation clock; practical 20-50+ year life
+- [[polyester-film-capacitors-self-repair-minor-dielectric-breakdowns-by-vaporizing-metallized-film-around-the-fault]] — Self-healing via metallized electrode vaporization at fault sites
+- [[polyester-film-capacitors-have-less-capacitance-drift-than-ceramic-and-no-piezoelectric-effect-making-them-superior-for-audio-and-timing]] — Film vs ceramic stability; no microphonics for audio
+- [[film-capacitors-across-relay-or-switch-contacts-suppress-contact-arcing-as-snubber-circuits]] — Snubber topology: cap across contacts quenches arc, distinct from flyback diode
+- [[high-voltage-rating-on-a-small-capacitor-does-not-imply-danger-because-stored-energy-depends-on-capacitance-times-voltage-squared]] — 75nF/400V = 6mJ vs 470uF/200V = 9.4J; safety should key on energy not voltage
+
 ### Part Identification
 - [[systematic-part-identification-workflow-for-unidentified-inventory-read-markings-then-cross-reference-then-measure]] — Three-step procedure: markings, distributor lookup, instrument measurement
 
