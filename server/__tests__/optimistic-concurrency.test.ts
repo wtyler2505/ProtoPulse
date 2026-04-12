@@ -419,17 +419,6 @@ describe('Optimistic concurrency — Edge version', () => {
   });
 });
 
-describe('Optimistic concurrency — BOM item version', () => {
-  const storage = new DatabaseStorage();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    selectResult = [];
-    updateResult = [];
-  });
-
-});
-
 describe('Optimistic concurrency — Circuit design version', () => {
   const storage = new DatabaseStorage();
 

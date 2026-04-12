@@ -1,9 +1,7 @@
 /**
- * Tests for the one-click part substitute feature.
+ * Tests for POST /api/parts/:id/substitute — one-click part replacement.
  *
- * Covers:
- *   - POST /api/parts/:id/substitute — HTTP-layer behavior (validation, auth, status codes)
- *   - PartsStorage.substitutePart — correct merge/reassign behavior
+ * Covers: validation, authorization, not-found, success, merge info.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -70,8 +68,8 @@ vi.mock('../storage', () => ({
 }));
 
 vi.mock('../auth', () => ({
-  validateSession: vi.fn().mockImplementation((_req: Record<string, unknown>, _res: Record<string, unknown>, next: () => void) => {
-    (_req as Record<string, unknown>).session = { userId: 1, sessionId: 'test-session' };
+  validateSession: vi.fn().mockImplementation((req: Record<string, unknown>, _res: Record<string, unknown>, next: () => void) => {
+    req.session = { userId: 1, sessionId: 'test-session' };
     next();
   }),
 }));
@@ -89,18 +87,27 @@ vi.mock('../logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-// ---------------------------------------------------------------------------
-// App setup
-// ---------------------------------------------------------------------------
-
 import { registerPartsRoutes } from '../routes/parts';
-import request from 'supertest';
 
-function createApp() {
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function makeApp() {
   const app = express();
   app.use(express.json());
   registerPartsRoutes(app);
   return app;
+}
+
+async function listen(app: ReturnType<typeof express>) {
+  return new Promise<{ url: string; close: () => void }>((resolve) => {
+    const server = app.listen(0, () => {
+      const address = server.address();
+      const port = typeof address === 'object' && address ? address.port : 0;
+      resolve({ url: `http://127.0.0.1:${port}`, close: () => server.close() });
+    });
+  });
 }
 
 const OLD_PART_ID = '11111111-1111-1111-1111-111111111111';
@@ -141,75 +148,97 @@ describe('POST /api/parts/:id/substitute', () => {
   });
 
   it('returns 200 on successful substitution', async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post(`/api/parts/${OLD_PART_ID}/substitute`)
-      .send({ substituteId: NEW_PART_ID, projectId: 1 });
-
-    expect(res.status).toBe(200);
-    expect(res.body.message).toMatch(/Replaced/);
-    expect(res.body.stockMerged).toBe(false);
-    expect(res.body.placementsUpdated).toBe(3);
-    expect(mockSubstitutePart).toHaveBeenCalledWith(1, OLD_PART_ID, NEW_PART_ID);
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/parts/${OLD_PART_ID}/substitute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ substituteId: NEW_PART_ID, projectId: 1 }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.message).toMatch(/Replaced/);
+      expect(body.stockMerged).toBe(false);
+      expect(body.placementsUpdated).toBe(3);
+      expect(mockSubstitutePart).toHaveBeenCalledWith(1, OLD_PART_ID, NEW_PART_ID);
+    } finally {
+      close();
+    }
   });
 
   it('returns merged info when stock rows were combined', async () => {
     mockSubstitutePart.mockResolvedValue({ stockMerged: true, placementsUpdated: 0 });
-    const app = createApp();
-    const res = await request(app)
-      .post(`/api/parts/${OLD_PART_ID}/substitute`)
-      .send({ substituteId: NEW_PART_ID, projectId: 1 });
-
-    expect(res.status).toBe(200);
-    expect(res.body.stockMerged).toBe(true);
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/parts/${OLD_PART_ID}/substitute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ substituteId: NEW_PART_ID, projectId: 1 }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.stockMerged).toBe(true);
+    } finally {
+      close();
+    }
   });
 
   it('returns 400 for missing substituteId', async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post(`/api/parts/${OLD_PART_ID}/substitute`)
-      .send({ projectId: 1 });
-
-    expect(res.status).toBe(400);
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/parts/${OLD_PART_ID}/substitute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: 1 }),
+      });
+      expect(res.status).toBe(400);
+    } finally {
+      close();
+    }
   });
 
   it('returns 400 for invalid UUID substituteId', async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post(`/api/parts/${OLD_PART_ID}/substitute`)
-      .send({ substituteId: 'not-a-uuid', projectId: 1 });
-
-    expect(res.status).toBe(400);
-  });
-
-  it('returns 400 for missing projectId', async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post(`/api/parts/${OLD_PART_ID}/substitute`)
-      .send({ substituteId: NEW_PART_ID });
-
-    expect(res.status).toBe(400);
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/parts/${OLD_PART_ID}/substitute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ substituteId: 'not-a-uuid', projectId: 1 }),
+      });
+      expect(res.status).toBe(400);
+    } finally {
+      close();
+    }
   });
 
   it('returns 403 when user is not project owner', async () => {
     mockIsProjectOwner.mockResolvedValue(false);
-    const app = createApp();
-    const res = await request(app)
-      .post(`/api/parts/${OLD_PART_ID}/substitute`)
-      .send({ substituteId: NEW_PART_ID, projectId: 1 });
-
-    expect(res.status).toBe(403);
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/parts/${OLD_PART_ID}/substitute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ substituteId: NEW_PART_ID, projectId: 1 }),
+      });
+      expect(res.status).toBe(403);
+    } finally {
+      close();
+    }
   });
 
   it('returns 404 when original part not found', async () => {
     mockGetById.mockResolvedValue(null);
-    const app = createApp();
-    const res = await request(app)
-      .post(`/api/parts/${OLD_PART_ID}/substitute`)
-      .send({ substituteId: NEW_PART_ID, projectId: 1 });
-
-    expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/not found/);
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/parts/${OLD_PART_ID}/substitute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ substituteId: NEW_PART_ID, projectId: 1 }),
+      });
+      expect(res.status).toBe(404);
+    } finally {
+      close();
+    }
   });
 
   it('returns 404 when substitute part not found', async () => {
@@ -217,12 +246,18 @@ describe('POST /api/parts/:id/substitute', () => {
       if (id === OLD_PART_ID) { return Promise.resolve(makePart(OLD_PART_ID, '10K Resistor')); }
       return Promise.resolve(null);
     });
-    const app = createApp();
-    const res = await request(app)
-      .post(`/api/parts/${OLD_PART_ID}/substitute`)
-      .send({ substituteId: NEW_PART_ID, projectId: 1 });
-
-    expect(res.status).toBe(404);
-    expect(res.body.message).toMatch(/Substitute/);
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/parts/${OLD_PART_ID}/substitute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ substituteId: NEW_PART_ID, projectId: 1 }),
+      });
+      expect(res.status).toBe(404);
+      const body = await res.json();
+      expect(body.message).toMatch(/Substitute/);
+    } finally {
+      close();
+    }
   });
 });

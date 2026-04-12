@@ -1063,18 +1063,6 @@ describe('Storage — replace operations (diff/upsert)', () => {
 // =============================================================================
 // ComputeTotalPrice (tested via createBomItem / updateBomItem)
 // =============================================================================
-
-describe('Storage — BOM totalPrice computation', () => {
-  let storage: DatabaseStorage;
-
-  beforeEach(() => {
-    storage = new DatabaseStorage();
-    resetMocks();
-  });
-
-});
-
-// =============================================================================
 // Component Part Version Increment
 // =============================================================================
 
