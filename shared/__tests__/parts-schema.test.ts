@@ -271,9 +271,9 @@ describe('insertPartStockSchema', () => {
     }
   });
 
-  it('rejects missing projectId', () => {
+  it('accepts missing projectId (personal inventory rows have null projectId)', () => {
     const result = insertPartStockSchema.safeParse({ partId: VALID_UUID });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
   it('rejects missing partId', () => {
