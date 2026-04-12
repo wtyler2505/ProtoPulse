@@ -154,6 +154,16 @@
             "async": true
           }
         ]
+      },
+      {
+        "matcher": "Bash|Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/never-idle-while-waiting.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [
