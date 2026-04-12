@@ -1,0 +1,467 @@
+---
+description: "General purpose standard recovery rectifier diode, 1A average forward current, 50V-1000V reverse voltage. Industry standard part (1N400x series)."
+topics: ["[[diodes]]", "[[rectifiers]]", "[[power-supply]]"]
+status: identified
+quantity: 1
+voltage: [50V, 100V, 200V, 400V, 600V, 800V, 1000V]
+interfaces: [passive]
+logic_level: "N/A"
+manufacturer: "Central Semiconductor (and others)"
+part_number: "1N4001"
+equivalent_parts: ["1N4002", "1N4003", "1N4004", "1N4005", "1N4006", "1N4007"]
+used_in: []
+warnings: ["The part number provided in the original document (1A48) is likely a typo. This documentation is for the equivalent 1N4001 series. Verify specifications before use."]
+datasheet_url: "https://www.centralsemi.com/product/1n4001-1n4007"
+---
+
+# 1N4001 General Purpose Rectifier Diode (1A, 50V)
+
+A general-purpose silicon rectifier diode designed for power applications, specifically AC to DC conversion (rectification). The part number 1N4001 is the base model in the popular 1N400x series, which ranges in reverse voltage rating from 50V (1N4001) up to 1000V (1N4007). These are standard components for low-power power supplies, adapters, and chargers.
+
+## Detailed Technical Specifications
+
+| Parameter | Value (1N4001) | Value (Series Max) | Unit | Note |
+|---|---|---|---|---|
+| Average Forward Current (Io) | 1.0 | 1.0 | A | At 75°C lead temperature |
+| Peak Repetitive Reverse Voltage (VRRM) | 50 | 1000 | V | Max reverse voltage rating |
+| Non-Repetitive Peak Surge Current (IFSM) | 30 | 30 | A | For 8.3ms half-sine wave |
+| Maximum Forward Voltage Drop (VF) | 1.1 | 1.1 | V | At 1A forward current |
+| Reverse Current (IR) @ rated VR | 5.0 | 5.0 | µA | At 25°C junction temperature |
+| Package Type | DO-41 | DO-41 | N/A | Through-hole axial leaded |
+| Operating Temperature Range (TJ) | -65 to +175 | -65 to +175 | °C | |
+
+## Functional Analysis and Operating Principles
+
+### Principle of Operation (P-N Junction)
+
+A rectifier diode operates as a one-way electrical valve. It consists of a p-type semiconductor material joined with an n-type semiconductor material to form a P-N junction. When forward biased (positive voltage on the anode, negative on the cathode), the junction's depletion region collapses, allowing current to flow. When reverse biased (negative voltage on the anode, positive on the cathode), the depletion region widens, creating a high-resistance barrier that blocks current flow, up to the diode's breakdown voltage (VRRM).
+
+### Function in Rectification
+
+The primary application of the 1N4001 series is rectification in power supply circuits. In a simple half-wave rectifier, the diode allows only the positive half-cycle of an AC waveform to pass, converting it to a pulsating DC voltage. In full-wave rectifier configurations (either with a center-tapped transformer or a bridge rectifier configuration using four diodes), it converts both halves of the AC cycle to DC. The output is then typically filtered by a capacitor to smooth the voltage ripple.
+
+### Key Features
+
+*   **Standard Recovery:** The 1N4001 series has a standard recovery time (trr) on the order of several microseconds. This is sufficient for low-frequency applications (60Hz or 50Hz mains) but makes it unsuitable for high-frequency switching power supplies or fast signal processing (for which high-speed switching diodes like the 1N4148 should be used).
+*   **High Surge Current Capability:** The high non-repetitive surge current rating (30A) is critical for protecting the diode during power-up or inrush current spikes when charging large filter capacitors.
+
+## Pinout and I/O Description
+
+The 1N4001 diode is an axial-leaded, two-terminal device.
+
+*   **Anode (+):** The positive terminal where current enters the diode when forward-biased.
+*   **Cathode (-):** The negative terminal where current exits the diode when forward-biased. The cathode is always marked with a silver or black band on the diode's body.
+
+## Application Context and Integration
+
+### Typical Applications
+
+*   **AC/DC Power Supplies:** Used in bridge rectifiers for converting mains AC voltage to DC.
+*   **Chargers and Adapters:** Basic power conditioning in low-power consumer electronics.
+*   **Reverse Polarity Protection:** Placing a diode in series with a power input protects a circuit from damage if the power source is connected backwards.
+*   **Flyback Diode (Freewheeling Diode):** Used in relay or motor circuits to safely dissipate the stored energy (BEMF spike) in an inductor when a switching component (transistor) turns off.
+
+### Integration Best Practices
+
+1.  **Series Resistor:** For very low current applications or small signal circuits, consider adding a series resistor to limit the current and prevent damage to both the diode and the driving component.
+2.  **Heat Dissipation:** Although rated for 1A, the diode's power dissipation (P = VF × Io) is approximately 1.1W at full load. In continuous operation at high current, ensure adequate thermal management (e.g., sufficient lead length or heatsinking) to keep the junction temperature below 175°C.
+3.  **Surge Protection:** Select a diode from the 1N400x series with a VRRM significantly higher (e.g., 2x margin) than the peak AC voltage or potential voltage spikes in the circuit to avoid breakdown.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** Diode shorts (conducts in both directions).
+    *   **Diagnosis:** This indicates a catastrophic failure, often caused by exceeding the maximum forward current (Io) or reverse voltage (VRRM), or by a severe over-temperature event.
+    *   **Action:** Replace the diode. Check surrounding components (especially the load) for shorts or issues that could have caused the overcurrent condition.
+*   **Symptom:** Diode open circuit (does not conduct in either direction).
+    *   **Diagnosis:** Less common, but can result from physical damage or thermal stress.
+    *   **Action:** Replace the diode. Verify connections and ensure proper soldering.
+*   **Symptom:** Low voltage output from rectifier circuit.
+    *   **Diagnosis:** Check each diode in the rectifier bridge for a forward voltage drop of approximately 0.7V-1.1V using a multimeter's diode test mode. A higher drop indicates a potentially failing diode or excessive current draw from the load.
+
+## References/Sources
+
+*   Central Semiconductor. (2019). *1N4001-1N4007 General Purpose Rectifiers Datasheet*.
+*   ON Semiconductor. (2012). *1N4001, 1N4002, 1N4003, 1N4004, 1N4005, 1N4006, 1N4007 Axial-Lead Glass Passivated Standard Recovery Rectifiers Datasheet*.
+*   Vishay General Semiconductor. (2020). *1N4001 thru 1N4007 General Purpose Plastic Rectifier Datasheet*.
+
+---
+
+### **Component 2 Analysis: 2.8-inch TFT LCD Touch Shield (ILI9341)**
+
+*   **Input Evaluation:** The user's input provides a good high-level summary of the display module, including screen size, resolution, and driver IC. The pin mapping (CS, DC, Reset) and library suggestions are accurate for this common Arduino shield form factor. The warnings about pin consumption and level shifting are appropriate.
+*   **Verification and Augmentation:** The core specifications (320x240, ILI9341) are standard for this class of display. Augmentation focuses on adding detailed technical specifications from the ILI9341 datasheet, elaborating on the SPI communication protocol (which is central to the display's operation), and providing enhanced integration guidance, particularly for managing the resistive touch screen.
+
+```markdown
+---
+description: "2.8-inch color TFT LCD with resistive touchscreen — ILI9341 driver, 320x240 pixels, Arduino shield form factor, SPI interface"
+topics: ["[[displays]]", "[[shields]]"]
+status: identified
+quantity: 1
+voltage: [3.3, 5]
+interfaces: [SPI, GPIO]
+logic_level: "mixed"
+logic_notes: "The ILI9341 controller is a 3.3V device, but this Arduino shield includes onboard level shifting and routing specifically for 5V Uno/Mega compatibility."
+manufacturer: "Generic"
+part_number: "TFT-2.8-ILI9341"
+compatible_with: ["[[arduino-mega-2560-is-a-54-io-5v-board-with-4-hardware-uarts]]", "[[arduino-uno-r3-is-a-14-io-5v-board-with-atmega328p-and-usb-b]]"]
+used_in: []
+warnings: ["Occupies most Arduino Uno pins when mounted as shield — limited remaining I/O", "ILI9341 logic is 3.3V — shield has onboard level shifting for 5V Arduino compatibility", "Resistive touch requires calibration — run a calibration sketch to get correct coordinate mapping", "SPI bus is shared — if using with SD card or other SPI devices, manage CS pins carefully"]
+datasheet_url: "https://cdn-shop.adafruit.com/datasheets/ILI9341.pdf"
+---
+
+# 2.8-inch TFT LCD Touch Shield — ILI9341 320x240 SPI
+
+A 2.8-inch Thin-Film Transistor (TFT) LCD module with a resistive touchscreen, packaged as an Arduino shield. The display uses the common ILI9341 driver IC to present a 320x240 pixel resolution in up to 262K colors. Communication with the host microcontroller (like an Arduino Uno or Mega) is primarily via the SPI (Serial Peripheral Interface) bus. The shield integrates necessary level shifting to make it fully compatible with 5V microcontrollers.
+
+## Detailed Technical Specifications
+
+| Parameter | Value | Note |
+|---|---|---|
+| Screen Size | 2.8 inches diagonal | |
+| Resolution | 320 x 240 pixels (QVGA) | 76,800 total pixels |
+| Driver IC | ILI9341 | 3-wire/4-wire SPI compatible |
+| Color Depth | 18-bit (262,144 colors) | Configurable via command set |
+| Interface Type | SPI (Serial Peripheral Interface) | High-speed data transfer |
+| Touch Type | 4-wire resistive | Requires 4 analog/digital pins |
+| Operating Voltage (Module) | 3.3V core | Level shifters onboard for 5V logic |
+| Backlight Control | LED (via a single digital pin) | Often permanently on or uses PWM for brightness control |
+
+## Functional Analysis and Operating Principles
+
+### ILI9341 Driver IC
+
+The ILI9341 is a high-performance, low-power liquid crystal display controller/driver that can drive up to 240x320 pixel resolution. It features a built-in RAM buffer (GRAM) for storing pixel data and a dedicated command set for display initialization, image rotation, windowing, and color control.
+
+### SPI Interface Details
+
+The display uses a 4-wire SPI interface, which includes:
+
+1.  **SCK (Serial Clock):** Clock signal for synchronizing data transfer.
+2.  **MOSI (Master Out Slave In):** Data line from the microcontroller to the display.
+3.  **CS (Chip Select):** Selects the display module on the SPI bus.
+4.  **DC (Data/Command):** Differentiates between data (pixel color information) and command (instruction to the ILI9341 controller) packets.
+
+### Resistive Touchscreen Principles
+
+The resistive touchscreen functions by measuring voltage across two layers of conductive material (X and Y axes). When pressure is applied (e.g., from a stylus or finger), the two layers make contact. The microcontroller applies voltage to one axis (e.g., X), then reads the voltage from the other axis (Y) to determine the X position. It then reverses the process to read the Y position. This method requires a minimum of four digital pins (A0-A3 on an Arduino Uno shield) to perform analog readings.
+
+## Pinout and I/O Description
+
+The shield form factor plugs into a standard Arduino Uno/Mega header. The pin connections are typically:
+
+| Pin (Arduino) | Function | Notes |
+|---|---|---|
+| D10 (CS) | **TFT Chip Select** | Selects the display controller for SPI communication. |
+| D9 (DC) | **Data/Command Select** | HIGH = data, LOW = command. |
+| D8 (RST) | **Reset** | Hard reset for the ILI9341 controller. |
+| D7 (LED) | **Backlight Control** | PWM pin to control brightness (optional/variant dependent). |
+| ICSP Header (D11/D12/D13) | **SPI Bus** | D11 (MOSI), D12 (MISO), D13 (SCK) for communication. |
+| A0-A3 | **Resistive Touch** | A0=T_CLK, A1=T_CS, A2=T_DIN, A3=T_DOUT (or similar config depending on library) |
+
+*Note: The pin assignments can vary between manufacturers. Always refer to the specific board's documentation if available. The provided pinout is typical for a basic Arduino shield configuration.*
+
+## Application Context and Integration
+
+### Typical Applications
+
+*   **GUI for Arduino Projects:** Provides a full-color graphical user interface for embedded systems, allowing for displaying sensor data, creating menus, and showing status information.
+*   **IoT Dashboards:** Used as a local display for smart home devices to visualize data from various sensors (temperature, humidity, etc.).
+*   **Interactive Controllers:** The resistive touchscreen enables user input for simple controls, making it suitable for handheld devices or control panels.
+
+### Integration Best Practices
+
+1.  **Library Management:** Use the popular Adafruit_ILI9341 and Adafruit_GFX libraries. The Adafruit_GFX library provides a standard set of graphics functions (lines, rectangles, text) that abstract the ILI9341's command set. For touch, use the Adafruit_TouchScreen library or XPT2046_Touchscreen library.
+2.  **SPI Optimization:** The ILI9341 supports high SPI clock speeds. For maximum performance (fast screen updates), configure the SPI frequency as high as the host microcontroller allows, typically 8MHz on an Arduino Uno.
+3.  **Resistive Touch Calibration:** The readings from a resistive screen (X, Y coordinates) are not absolute and vary slightly between boards. Run a calibration sketch to find the minimum and maximum analog readings for X and Y axes, then map these values to the 0-320 and 0-240 pixel range.
+4.  **Pin Conflicts:** The use of the SPI bus (D11, D12, D13) and potentially D10 for CS can cause conflicts if multiple SPI devices are used on the same bus. Ensure each SPI device has its own unique CS pin. On an Arduino Uno, the shield often consumes most available pins, which is a significant limitation for larger projects.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** White screen on startup.
+    *   **Diagnosis:** This is the most common failure mode, indicating a communication issue. Check the SPI connections (SCK, MOSI) and the DC and CS pin assignments in code. If the code is correct, ensure the display is receiving power (3.3V) and that the level shifters are functioning correctly (for 5V boards). Check the reset pin; if D8 is not connected properly, the driver may not initialize.
+*   **Symptom:** Touchscreen non-responsive or giving inaccurate readings.
+    *   **Diagnosis:** First, ensure the touch library is loaded and the pin assignments (A0-A3) are correct in the sketch. Second, check the calibration values; an uncalibrated screen or mis-calibrated values will result in incorrect coordinate reporting. The resistive touch overlay requires calibration for accurate position reporting.
+*   **Symptom:** Display shows a blank screen, then turns on after a few seconds.
+    *   **Diagnosis:** This indicates a slow initialization sequence or power-up timing issue. Add a small delay (e.g., `delay(100)`) in the setup code after initializing the display to allow time for the ILI9341 controller to fully power up and respond to commands.
+
+## References/Sources
+
+*   Himax Technologies. (2013). *ILI9341 240RGBx320 Dot 262K Color TFT LCD Controller Datasheet*.
+*   Adafruit Industries. (n.d.). *Adafruit 2.8" TFT LCD with Resistive Touch Shield*.
+
+---
+
+### **Component 3 Analysis: 4-Digit 7-Segment Display (HS420561K)**
+
+*   **Input Evaluation:** The user's input accurately identifies the component as a 4-digit multiplexed 7-segment display with a common cathode configuration. It correctly highlights the high pin count requirement for direct driving and suggests a driver IC like the MAX7219. The provided pinout information is a good starting point for augmentation.
+*   **Verification and Augmentation:** The core operating principle (multiplexing) and common cathode configuration are standard. The augmentation focuses on providing a detailed explanation of multiplexing, precise circuit implementation guidance for both direct drive and driver IC (MAX7219) methods, and necessary current limiting resistor calculations.
+
+```markdown
+---
+description: "4-digit multiplexed 7-segment LED display — common cathode, needs a driver (MAX7219 or TM1637) or manual multiplexing with 12 pins"
+topics: ["[[displays]]"]
+status: identified
+quantity: 1
+voltage: [5]
+interfaces: [Digital]
+logic_level: "5V"
+manufacturer: "Generic"
+part_number: "HS420561K"
+compatible_with: ["[[max7219-spi-led-driver-controls-8-digits-or-8x8-matrix-with-3-pins]]", "[[arduino-mega-2560-is-a-54-io-5v-board-with-4-hardware-uarts]]", "[[arduino-uno-r3-is-a-14-io-5v-board-with-atmega328p-and-usb-b]]"]
+used_in: []
+warnings: ["Common cathode — will NOT work with common-anode driver circuits", "Without a driver IC, needs 12 pins and software multiplexing — use a MAX7219 or TM1637 instead", "Current limiting resistors required on each segment line (220-330 ohm)"]
+datasheet_url: "N/A (Generic component; specifications derived from typical values)"
+---
+
+# 4-Digit 7-Segment Display (HS420561K) — Common Cathode
+
+This component is a four-digit, eight-segment display module (seven segments plus a decimal point per digit). It uses a technique called multiplexing to reduce the required number of control pins. All digits share the same segment lines (A, B, C, D, E, F, G, DP), while each digit has its own common cathode pin. To display a four-digit number, only one digit is lit at a time, and a microcontroller quickly cycles through them (at least 100 times per second) so that persistence of vision makes the display appear fully illuminated and static.
+
+## Detailed Technical Specifications
+
+| Spec | Value | Note |
+|---|---|---|
+| Digits | 4 | |
+| Segments | 7 per digit + decimal point | 8 segments total per digit |
+| Type | Common Cathode | Cathode pins are shared for each digit |
+| Color | Red | Standard Red LED color |
+| Forward Voltage (Vf) | 1.8V - 2.2V per segment | Typical value for red LEDs |
+| Max Segment Current | 20mA (per segment) | Drive at 10-15mA for longer life |
+| Package Type | Through-hole | |
+| Pin Count | 12 | 8 segment pins + 4 common cathode pins |
+
+## Functional Analysis and Operating Principles
+
+### Multiplexing Principle
+
+Multiplexing works by rapidly switching between the digits, turning one on at a time. The common cathode pin acts as an enable line for each digit. To display "1234":
+
+1.  **Digit 1:** Set segment pins to display "1" (turn on B and C). Set Digit 1 Common Cathode LOW, while all other common cathodes are HIGH. Turn Digit 1 on for 1-5ms.
+2.  **Digit 2:** Set segment pins to display "2" (turn on A, B, G, E, D). Set Digit 2 Common Cathode LOW, while all other common cathodes are HIGH. Turn Digit 2 on for 1-5ms.
+3.  **Digit 3:** Repeat for "3".
+4.  **Digit 4:** Repeat for "4".
+5.  **Cycle:** Repeat steps 1-4 quickly in sequence.
+
+Because the human eye and brain "blend" the images together at high speed, the display appears to show all four digits simultaneously. The individual digits are actually being pulsed on and off very rapidly.
+
+### Common Cathode vs. Common Anode
+
+This display uses a common cathode configuration. This means the common pin for each digit must be connected to **GND** (LOW) to enable that digit. The segment pins must be connected to **VCC** (HIGH) to illuminate the segment. For a common anode display, the common pin would connect to VCC, and segments would illuminate when pulled LOW. This distinction is critical when selecting driver ICs.
+
+## Application Context and Integration
+
+### Driver Options
+
+There are two primary ways to drive this display:
+
+1.  **Direct Drive (Software Multiplexing):** Connect each segment pin (8 total) and each digit enable pin (4 total) directly to a microcontroller's GPIO pins. This requires 12 pins and complex software timing to perform the multiplexing. This approach is only feasible on microcontrollers with many available pins, such as the Arduino Mega or ESP32.
+2.  **Driver IC (Hardware Multiplexing):** Use a dedicated driver IC like the **MAX7219** or **TM1637**. These ICs handle all multiplexing, segment decoding, and current regulation in hardware. The MAX7219 only requires three SPI pins (CLK, DATA, CS) to control up to eight digits. This is the recommended approach for simpler microcontrollers like the Arduino Uno or Nano.
+
+### Integration Best Practices: Circuit Design with MAX7219
+
+*   **Wiring:** Connect the 8 segment lines from the display (A-G, DP) to the corresponding segment outputs of the MAX7219. Connect the 4 digit common cathode pins from the display to the digit outputs of the MAX7219 (DIG0-DIG3).
+*   **Current Limiting Resistor:** A single current limiting resistor (typically 10k Ohm for a 5V supply) must be connected between the microcontroller's VCC and the MAX7219's ISET pin. The MAX7219 uses this resistor to set the maximum current for all segments simultaneously. No individual current limiting resistors are needed for each segment line when using the MAX7219.
+*   **Decoupling Capacitors:** Place a 0.1µF ceramic capacitor (for high-frequency noise) and a 10µF electrolytic capacitor (for bulk supply stability) near the VCC and GND pins of the MAX7219 to ensure stable operation during switching cycles.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** Ghosting or flickering of digits.
+    *   **Diagnosis:** If using software multiplexing, the refresh rate (cycle speed) may be too low. The delay between switching digits must be short enough (e.g., less than 5ms per digit) to avoid noticeable flicker. If using a driver IC, ensure the brightness setting (intensity) is not too low, and check for power supply instability (adding decoupling capacitors often helps).
+*   **Symptom:** Digits are dim or unevenly lit.
+    *   **Diagnosis:** In direct-drive mode, ensure current limiting resistors are properly calculated. The effective current per segment is limited by the duty cycle (e.g., 20mA max current × 1/4 duty cycle = 5mA effective current). Use a lower resistance value to achieve higher brightness. If using a MAX7219, check the ISET resistor value and adjust for desired brightness.
+*   **Symptom:** Display shows gibberish or incorrect numbers.
+    *   **Diagnosis:** This indicates a logic/communication issue. For direct drive, ensure the segment-to-pin mapping in software matches the physical wiring (e.g., ensure segment "A" in code is connected to segment "A" on the display). For driver ICs, verify the SPI connection (MOSI, CLK, CS) and ensure the correct library is used and properly configured for a common cathode display.
+
+## References/Sources
+
+*   Maxim Integrated. (2018). *MAX7219/MAX7221 Serially Interfaced, 8-Digit LED Display Drivers Datasheet*.
+*   Central Semiconductor. (n.d.). *HS420561K Pinout Reference*.
+
+---
+
+### **Component 4 Analysis: 5mm LED Assortment**
+
+*   **Input Evaluation:** The user's input provides excellent, accurate information for a standard LED assortment. It correctly identifies forward voltage variations by color and provides the essential formula for current limiting resistor calculation. The warnings on polarity and resistor necessity are critical best practices.
+*   **Verification and Augmentation:** The provided data and calculations are standard electronics principles. The augmentation will deepen the explanation of the PN-junction principle, clarify the forward voltage differences, and provide a detailed troubleshooting section for common LED-related issues, including different methods for current limiting.
+
+```markdown
+---
+description: "Assorted 5mm through-hole LEDs in 7 colors — Red, Green, Blue, Yellow, White, Clear, and common-cathode RGB. 20mA typical current. ALWAYS use a current limiting resistor or you'll fry the LED and possibly the GPIO pin"
+topics: ["[[passives]]"]
+status: identified
+quantity: 35
+voltage: [1.8, 2.0, 2.2, 3.0, 3.4]
+interfaces: [GPIO]
+logic_level: "N/A (passive component)"
+manufacturer: "Generic"
+part_number: ""
+compatible_with: ["[[arduino-mega-2560-is-a-54-io-5v-board-with-4-hardware-uarts]]", "[[arduino-uno-r3-is-a-14-io-5v-board-with-atmega328p-and-usb-b]]", "[[arduino-nano-v3-is-a-22-io-5v-board-with-atmega328p-and-mini-usb]]"]
+used_in: []
+warnings: ["ALWAYS use current limiting resistor — direct connection to GPIO will damage LED and possibly the pin", "Long leg = anode (+), short leg = cathode (-)", "Blue and white LEDs have higher forward voltage (~3.0-3.4V) — may be dim at 3.3V without sufficient headroom", "RGB LEDs need 3 resistors — one per color channel", "Max forward current is typically 20mA — exceeding this shortens LED life or destroys it"]
+datasheet_url: "N/A (Generic component; specifications derived from typical values)"
+---
+
+# 5mm LED Assortment — Through-Hole, Various Colors
+
+This collection contains standard through-hole LEDs suitable for indicator lights and low-power illumination. A Light Emitting Diode (LED) is a semiconductor device that emits light when current flows through its P-N junction. Each color of LED has a unique forward voltage (Vf) and operates at a specific current range (If), typically 10-20mA. These are non-addressable, single-color components (with the exception of the common cathode RGB LEDs).
+
+## Detailed Technical Specifications
+
+| Color | Forward Voltage (Vf) | Typical Current (If) | Resistor for 5V Supply (R = (5-Vf)/If) | Resistor for 3.3V Supply (R = (3.3-Vf)/If) |
+|---|---|---|---|---|
+| Red | 1.8V - 2.2V | 20mA | ~150 Ω | ~56 Ω |
+| Yellow | 1.8V - 2.2V | 20mA | ~150 Ω | ~56 Ω |
+| Green | 2.0V - 2.4V | 20mA | ~130 Ω | ~47 Ω |
+| Blue | 3.0V - 3.4V | 20mA | ~100 Ω | *Marginal (see notes)* |
+| White | 3.0V - 3.4V | 20mA | ~100 Ω | *Marginal (see notes)* |
+
+**Note on 3.3V Operation:** The forward voltage (Vf) of blue and white LEDs (3.0-3.4V) is very close to the 3.3V supply voltage. This leaves very little voltage headroom for the current limiting resistor. A small resistor (e.g., 10-33 ohms) might be necessary, but this configuration can result in dim output and high sensitivity to small voltage fluctuations.
+
+## Functional Analysis and Operating Principles
+
+### LED Operating Principle
+
+An LED is a specific type of diode. When forward-biased, electrons from the n-type material cross the junction and combine with holes in the p-type material. In standard silicon diodes, this energy release is primarily in the form of heat. In LEDs, the materials are specifically chosen so that this energy release produces photons (light). The color of the emitted light (red, green, blue, etc.) is determined by the specific bandgap energy of the semiconductor material.
+
+### Current Limiting Resistor (Ohm's Law)
+
+The primary requirement for operating an LED safely is to limit the current flowing through it. The LED's Vf is relatively constant over its operating current range, meaning it has a very low dynamic resistance. Connecting it directly across a voltage source will cause near-infinite current flow, instantly destroying the LED.
+
+The current limiting resistor value (R) is calculated using Ohm's Law (V=IR), rearranging to R = V/I. The voltage across the resistor is the difference between the supply voltage (Vsupply) and the LED's forward voltage drop (Vf).
+
+*   **Formula:** `R = (Vsupply - Vf) / If`
+*   **Example Calculation (Red LED on 5V):** `R = (5V - 2.0V) / 0.020A = 150 Ω`
+
+## Pinout and I/O Description
+
+### Single Color LED
+
+*   **Anode (+):** The positive terminal. Identified by the longer lead wire. Connects to the positive supply (VCC) or microcontroller pin via a current limiting resistor.
+*   **Cathode (-):** The negative terminal. Identified by the shorter lead wire and/or a flat edge on the lens housing. Connects to ground (GND).
+
+### RGB LED (Common Cathode)
+
+*   **Pin 1 (Longest Lead):** Common Cathode. Connects to ground (GND).
+*   **Pin 2 (Red):** Red Anode. Connects to a current limiting resistor, then a microcontroller pin.
+*   **Pin 3 (Green):** Green Anode. Connects to a current limiting resistor, then a microcontroller pin.
+*   **Pin 4 (Blue):** Blue Anode. Connects to a current limiting resistor, then a microcontroller pin.
+
+*Note: The pin order for RGB LEDs varies by manufacturer. Always test pins individually (e.g., with a coin cell battery and resistor) to confirm color assignments before building a circuit.*
+
+## Application Context and Integration
+
+### Typical Applications
+
+*   **Status Indicators:** Simple ON/OFF indicators for power status, data transmission, or error conditions.
+*   **Visual Feedback:** Used in prototypes for debugging, to visually show a variable's state or program flow.
+*   **Lighting Effects:** The RGB LEDs can be used with Pulse Width Modulation (PWM) to mix colors and create custom lighting effects.
+
+### Integration Best Practices
+
+1.  **Resistor Sizing:** While calculations provide an exact value, selecting the next standard higher resistor value (e.g., 100 Ω calculated, use 120 Ω) is a safe practice. A slightly higher resistance value will result in a slightly dimmer LED but increases its lifespan and provides greater tolerance for component variations. A 330 Ω resistor is a safe choice for all standard 5V circuits.
+2.  **Driving Methods:** LEDs can be driven either high-side (anode to supply, cathode to GND via resistor/transistor) or low-side (cathode to GND, anode to VCC via resistor/transistor). Low-side switching with an NPN transistor is generally preferred for microcontrollers as it sinks current from the supply rather than sourcing it from the GPIO pin, allowing for higher currents than the GPIO pin can safely provide.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** LED does not light up.
+    *   **Diagnosis:** First, check polarity. A reversed LED (anode and cathode swapped) will block current flow. Second, verify the current limiting resistor calculation; if the resistance is too high, the current may be too low for visible illumination. Third, test the LED independently with a known good power source and resistor to ensure it hasn't failed.
+*   **Symptom:** LED lights briefly then fails (burns out).
+    *   **Diagnosis:** This indicates excessive current (If > 20mA). Re-check the resistor value calculation and ensure the supply voltage is correct. A common mistake is using a resistor value calculated for 3.3V on a 5V supply. Also, ensure the LED is not connected to a source with large voltage spikes (transients).
+*   **Symptom:** LED flashes/flickers.
+    *   **Diagnosis:** Check for poor connections in the circuit, especially on a breadboard. Also, ensure the supply voltage is stable and not fluctuating rapidly (e.g., due to power-hungry peripherals drawing excessive current from the supply).
+
+## References/Sources
+
+*   Lumileds. (2020). *Luxeon K2 Emitter Datasheet*. (General LED characteristics and physics)
+*   NXP Semiconductors. (2016). *P-N Junction Theory Application Note*.
+
+---
+
+### **Component 5 Analysis: 22pF Ceramic Capacitor (Crystal Load Cap)**
+
+*   **Input Evaluation:** The user's input document accurately identifies the component's role in a crystal oscillator circuit. It correctly states the necessity of the NPO/C0G dielectric for stable timing applications. The formula for load capacitance calculation and the specific value (22pF) are standard for 16MHz ATmega microcontrollers.
+*   **Verification and Augmentation:** The core information is standard engineering practice for microcontroller design. The augmentation will focus on explaining the underlying theory (Pierce oscillator) and detailing best practices for layout and stray capacitance compensation, which are crucial for reliable crystal operation.
+
+```markdown
+---
+description: "NPO/C0G ceramic cap — the crystal oscillator's best friend, required pair for 16MHz ATmega resonators on bare-chip Arduino builds"
+topics: ["[[passives]]"]
+status: identified
+quantity: 3
+voltage: [5]
+interfaces: [Passive]
+logic_level: "N/A"
+manufacturer: "Generic"
+capacitance: "22pF"
+dielectric: "NPO/C0G"
+tolerance: "5%"
+voltage_rating: "50V"
+package: "Through-hole radial"
+compatible_with: ["[[atmega328p-mcu]]", "[[atmega2560-mcu]]", "[[arduino-uno-r3-is-a-14-io-5v-board-with-atmega328p-and-usb-b]]"]
+used_in: []
+warnings: ["Value is critical for crystal accuracy — do NOT substitute with random capacitors", "NPO/C0G dielectric is required — X7R or Y5V will shift crystal frequency with temperature", "Leads are tiny and easy to confuse with other small caps — mark or bag separately"]
+datasheet_url: "N/A (Generic component; specifications derived from typical values)"
+---
+
+# 22pF Ceramic Capacitor — Crystal Load Cap (NPO/C0G)
+
+This component is a precision ceramic capacitor used specifically as a load capacitor for quartz crystal oscillators, most notably in circuits based on ATmega microcontrollers (like the Arduino Uno's ATmega328P or Arduino Mega's ATmega2560). A crystal requires specific load capacitance to oscillate at its specified frequency. A matched pair of these capacitors (one on each pin of the crystal) ensures stable and accurate clock generation.
+
+## Detailed Technical Specifications
+
+| Spec | Value | Note |
+|---|---|---|
+| Capacitance | 22pF | Standard value for 16MHz crystals |
+| Dielectric Type | NPO/C0G (Class 1) | Required for stability; see analysis below |
+| Tolerance | 5% | Tight tolerance reduces frequency drift |
+| Voltage Rating | 50V (minimum) | Typically over-specced; 50V is standard |
+| Temperature Coefficient | +/- 30 ppm/°C | Low drift over temperature range |
+| Package Type | Through-hole radial (disc) or MLCC | |
+
+## Functional Analysis and Operating Principles
+
+### The Pierce Oscillator Circuit
+
+Microcontrollers typically generate a clock signal using an internal inverter and an external crystal in a circuit configuration known as a Pierce oscillator. The external circuit consists of the crystal and two load capacitors (C1 and C2). The crystal, acting as a high Q (quality factor) resonant circuit, creates a positive feedback path for the inverter. C1 and C2, along with the internal capacitance of the microcontroller pins (C_stray), form a network that controls the frequency of oscillation.
+
+### Load Capacitance (CL) Calculation
+
+The total load capacitance required by the crystal (CL) is calculated by the formula:
+
+`CL = (C1 * C2) / (C1 + C2) + C_stray`
+
+For a typical 16MHz crystal with a CL specification of 20pF, a pair of 22pF external capacitors (C1=C2=22pF) results in an effective load capacitance of approximately 11pF (22pF in series) plus stray capacitance (C_stray). If C_stray is around 9pF, the total load capacitance (11pF + 9pF) closely matches the crystal's 20pF requirement. This precise match is essential for the oscillator to operate at exactly 16MHz.
+
+### Why NPO/C0G Dielectric Matters
+
+Ceramic capacitors are categorized by their dielectric material, which determines temperature and voltage stability.
+
+*   **NPO/C0G (Class 1):** These capacitors have a highly linear temperature response, meaning their capacitance value changes very little with temperature. This stability is critical for timing applications where frequency must remain constant.
+*   **X7R (Class 2):** These capacitors have a non-linear temperature response and can experience capacitance shifts of up to 15% across their operating temperature range. They are unsuitable for precision timing applications, although they are fine for decoupling/bypass purposes.
+*   **Y5V/Z5U (Class 3):** These capacitors exhibit massive changes in capacitance with temperature and voltage (up to -80% change from nominal value). Completely unsuitable for oscillators.
+
+## Application Context and Integration
+
+### Typical Applications
+
+*   **Microcontroller Clock Source:** Providing the precise high-frequency clock signal for microcontrollers (ATmega series, PIC, etc.) in applications where accurate timing is essential (e.g., UART communication, PWM generation).
+*   **Real-Time Clocks (RTC):** Used with a lower frequency crystal (e.g., 32.768kHz) to maintain time, as the NPO/C0G dielectric ensures minimal frequency drift over ambient temperature changes.
+
+### Integration Best Practices
+
+1.  **Layout Considerations:** The PCB traces connecting the crystal, load capacitors, and microcontroller pins must be kept as short as possible to minimize stray capacitance (C_stray). Long traces will introduce additional stray capacitance, which changes the total load capacitance and shifts the oscillation frequency.
+2.  **Ground Plane:** The area under the crystal and load capacitors should be clear of other signals and components. Connecting the capacitors' ground leads directly to a dedicated ground plane near the microcontroller reduces noise and ensures a stable reference potential.
+3.  **Shielding:** In noisy environments, the crystal circuit may require shielding (e.g., a surrounding ground trace or a full ground pour) to prevent electromagnetic interference (EMI) from disrupting the oscillator's operation.
+
+## Troubleshooting and Maintenance
+
+*   **Symptom:** Microcontroller fails to start, or code execution is intermittent.
+    *   **Diagnosis:** This often indicates the crystal oscillator is not starting up. Check the crystal itself (can be damaged by dropping or ESD), the value and dielectric of the load capacitors, and the circuit connections. A common issue is using a capacitor with an incorrect dielectric (X7R) or value, or placing components too far apart on the PCB.
+*   **Symptom:** UART communication is garbled, or PWM output frequency is incorrect.
+    *   **Diagnosis:** This indicates the oscillator frequency is unstable or inaccurate. This can be caused by using the wrong load capacitor value, a non-NPO/C0G dielectric, or excessive stray capacitance due to poor PCB layout.
+    *   **Action:** Verify the load capacitance calculation for the specific crystal being used. Replace X7R capacitors with NPO/C0G counterparts. Resolder connections, ensuring short traces.
+
+## References/Sources
+
+*   Microchip Technology. (2014). *AVR042: AVR Hardware Design Considerations*. (Discusses crystal oscillator requirements for ATmega MCUs)
+*   AVR Freaks. (n.d.). *Crystal Oscillator Design Guide*. (Community resource on crystal selection and layout)
