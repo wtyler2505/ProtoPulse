@@ -623,9 +623,11 @@ const supplyChainCheckExecutor: JobExecutor = async (payload, ctx) => {
     }
 
     // Check lifecycle via part_lifecycle table
+    // partLifecycle has: obsoleteDate, replacementPartId, notes (no status column)
+    // Determine lifecycle state from obsoleteDate presence
     const lifecycle = await partsStorage.getLifecycle(stock.partId);
     if (lifecycle) {
-      if (lifecycle.status === 'obsolete') {
+      if (lifecycle.obsoleteDate && lifecycle.obsoleteDate <= new Date()) {
         alerts.push({
           partId: stock.partId,
           projectId: parsed.projectId,
@@ -636,13 +638,14 @@ const supplyChainCheckExecutor: JobExecutor = async (payload, ctx) => {
           currentValue: 'obsolete',
           supplier: stock.supplier,
         });
-      } else if (lifecycle.status === 'nrnd') {
+      } else if (lifecycle.obsoleteDate && lifecycle.obsoleteDate > new Date()) {
+        // Future obsolescence date = NRND (Not Recommended for New Designs)
         alerts.push({
           partId: stock.partId,
           projectId: parsed.projectId,
           alertType: 'nrnd',
           severity: 'warning',
-          message: `${part.title} is Not Recommended for New Designs (NRND)`,
+          message: `${part.title} is Not Recommended for New Designs (NRND) — obsolete date: ${lifecycle.obsoleteDate.toISOString().slice(0, 10)}`,
           previousValue: null,
           currentValue: 'nrnd',
           supplier: stock.supplier,
