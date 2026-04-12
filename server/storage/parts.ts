@@ -22,6 +22,8 @@ import {
   partLifecycle,
   partSpiceModels,
   partAlternates,
+  projects,
+  circuitDesigns,
   type Part,
   type InsertPart,
   type PartStock,
