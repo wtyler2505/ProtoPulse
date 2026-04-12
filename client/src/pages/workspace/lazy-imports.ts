@@ -18,6 +18,7 @@ export const LifecycleDashboard = lazy(() => import('@/components/views/Lifecycl
 export const WorkflowBreadcrumb = lazy(() => import('@/components/layout/WorkflowBreadcrumb'));
 export const ShortcutsOverlay = lazy(() => import('@/components/ui/ShortcutsOverlay'));
 export const CommandPalette = lazy(() => import('@/components/ui/command-palette'));
+export const PartsCommandPalette = lazy(() => import('@/components/CommandPalette'));
 export const UnifiedComponentSearch = lazy(() => import('@/components/ui/UnifiedComponentSearch'));
 export const GlobalSearchDialog = lazy(() => import('@/components/ui/GlobalSearchDialog'));
 export const TutorialOverlay = lazy(() => import('@/components/ui/TutorialOverlay'));

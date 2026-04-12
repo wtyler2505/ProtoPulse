@@ -41,6 +41,7 @@ import {
   WorkflowBreadcrumb,
   ShortcutsOverlay,
   CommandPalette as NavCommandPalette,
+  PartsCommandPalette,
   GlobalSearchDialog,
   TutorialOverlay,
   LessonModeOverlay,
@@ -49,7 +50,6 @@ import {
   SmartHintToast,
   startPrefetch,
 } from './workspace/lazy-imports';
-import PartsCommandPalette from '@/components/CommandPalette';
 import {
   workspaceReducer,
   createInitialWorkspaceState,
