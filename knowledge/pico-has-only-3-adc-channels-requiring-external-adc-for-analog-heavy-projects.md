@@ -20,6 +20,7 @@ The RP2040 provides just 3 external ADC channels on GP26, GP27, and GP28 (plus o
 | Arduino Mega | 16 | 10-bit | Most channels |
 | ESP32 | 18 (8 with WiFi) | 12-bit | ADC2 locked by WiFi |
 | ESP8266 | 1 | 10-bit | 0-1V range only |
+| Raspberry Pi | 0 | N/A | No ADC at all -- external required |
 
 For a project with a joystick (2 channels), a potentiometer (1 channel), and a light sensor (1 channel), the Pico already exceeds its analog capacity. The standard solution is an external I2C ADC like the ADS1115 (4 channels, 16-bit) or SPI ADC like the MCP3008 (8 channels, 10-bit).
 

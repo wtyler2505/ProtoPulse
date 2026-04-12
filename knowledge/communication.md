@@ -15,6 +15,9 @@ Wireless and wired communication protocols, module pairing, range/reliability tr
 - [[mpu6050-and-ds3231-share-i2c-address-0x68-requiring-ad0-pin-configuration]] — I2C bus conflict resolution
 - [[wireless-modules-are-overwhelmingly-3v3-making-level-shifting-the-default]] — 8/11 communication modules use 3.3V logic; level shifting is the default wiring concern for 5V MCU projects
 - [[uart-dominates-wireless-modules-consuming-dedicated-serial-ports]] — Bluetooth + GPS + debug each consume a dedicated UART; multi-wireless projects need Mega or ESP32
+- [[raspberry-pi-mini-uart-is-default-on-gpio14-15-and-getting-pl011-requires-disabling-bluetooth]] — RPi mini UART default, PL011 locked by Bluetooth
+- [[gigabit-ethernet-on-raspberry-pi-is-throttled-to-300mbps-because-it-shares-the-usb-2-bus]] — RPi Gigabit Ethernet throttled by USB 2.0 bus
+- [[raspberry-pi-has-networking-wifi-bluetooth-built-in-but-only-one-low-quality-uart]] — TENSION: RPi solves networking but creates UART bottleneck
 
 ## Open Questions
 (populated by /extract)

@@ -24,6 +24,8 @@ A rover project with GPS navigation + Bluetooth telemetry + serial debug console
 
 **MCU selection rule:** Count UART devices in the BOM. If count >= 2 (not including USB debug), the project needs a Mega or ESP32 (3 hardware UARTs). This is a hard constraint, not a preference.
 
+**Raspberry Pi exception:** The RPi 3B+ has only 1 UART on GPIO14/15, and it's the mini UART by default (inferior baud accuracy, no flow control). The PL011 (full-quality UART) is locked by the Bluetooth subsystem. Reclaiming PL011 requires `dtoverlay=disable-bt` which kills Bluetooth. Despite being the most powerful board in the inventory, the RPi is the worst for serial-heavy projects -- worse than even the Uno. For RPi projects with multiple serial peripherals, use USB-to-serial adapters or offload serial I/O to a companion MCU.
+
 ---
 
 Relevant Notes:

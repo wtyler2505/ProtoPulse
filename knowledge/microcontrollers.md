@@ -53,6 +53,15 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[pico-3v3-en-pin-disables-regulator-for-external-sleep-control]] — hardware sleep via regulator disable
 - [[arduino-nano-a6-and-a7-are-analog-input-only-pins-that-silently-fail-on-digitalread]] — A6/A7 ADC-only pins, digitalRead compiles but returns garbage
 - [[arduino-clone-bootloader-mismatch-causes-upload-failure-that-looks-like-hardware-fault]] — pre-Optiboot bootloader on clones causes avrdude sync error
+- [[an-sbc-runs-linux-and-replaces-a-microcontroller-when-you-need-os-filesystem-networking-or-multitasking]] — SBC vs MCU selection boundary
+- [[raspberry-pi-gpio-is-3v3-unprotected-with-no-clamping-diodes-and-5v-kills-the-soc-permanently]] — 5V on any GPIO pin permanently destroys the SoC
+- [[raspberry-pi-has-zero-built-in-adc-requiring-external-mcp3008-or-ads1115-for-any-analog-input]] — no analog input at all, external ADC required
+- [[linux-kernel-preemption-makes-gpio-timing-unpredictable-requiring-companion-mcu-for-real-time]] — Linux scheduling prevents real-time GPIO, need companion MCU
+- [[raspberry-pi-mini-uart-is-default-on-gpio14-15-and-getting-pl011-requires-disabling-bluetooth]] — mini UART default, PL011 locked by Bluetooth
+- [[underpowering-a-raspberry-pi-causes-crashes-and-sd-card-corruption]] — 5V/2.5A required, undervoltage corrupts SD card
+- [[gigabit-ethernet-on-raspberry-pi-is-throttled-to-300mbps-because-it-shares-the-usb-2-bus]] — spec vs reality: USB 2.0 bottleneck limits to ~300Mbps
+- [[sd-card-wear-from-heavy-writes-requires-ssd-via-usb-for-write-heavy-workloads]] — microSD write endurance limits, SSD for heavy workloads
+- [[raspberry-pi-has-networking-wifi-bluetooth-built-in-but-only-one-low-quality-uart]] — TENSION: networking solved but UART bottleneck created
 
 ## Open Questions
 (populated by /extract)
