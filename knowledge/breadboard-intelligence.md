@@ -23,7 +23,7 @@ Knowledge about breadboard layout, hardware debugging, and the "bench coach" con
 - ICs straddle the center channel — legs span both sides.
 - Keep signal paths short. Long wires = antennas.
 - Pull-ups and pull-downs as close to the input pin as possible.
-- Crystals and resonators: minimize trace/wire length, keep away from power.
+- Crystals and resonators: minimize trace/wire length, keep away from power. Each XTAL pin needs a matched load capacitor to GND (typically 22pF NPO/C0G for 16MHz crystals). The dielectric MUST be NPO/C0G -- X7R or Y5V capacitors cause frequency drift with temperature that produces intermittent communication failures. See [[crystal-load-capacitance-equals-the-series-combination-of-two-matched-caps-plus-stray-capacitance]] and [[npo-c0g-dielectric-is-mandatory-for-crystal-load-capacitors-because-temperature-driven-capacitance-drift-shifts-oscillator-frequency]].
 
 ### Common Mistakes (high teaching value)
 - Forgetting decoupling capacitors → unexplained resets and logic errors
