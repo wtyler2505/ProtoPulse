@@ -64,6 +64,11 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[s8050-vce-saturation-voltage-is-double-that-of-pn2222a-at-equivalent-current-making-it-dissipate-twice-the-switching-power]] — S8050 0.6V vs PN2222A 0.3V Vce(sat); gain-vs-efficiency trade-off
 - [[transistor-selection-trades-voltage-ceiling-for-gain-and-the-decision-boundary-is-load-voltage-plus-gpio-voltage]] — PN2222A vs S8050 decision tree: load voltage first, then GPIO voltage
 
+### Potentiometers
+- [[a-potentiometer-wired-as-voltage-divider-converts-mechanical-rotation-to-proportional-analog-voltage-for-mcu-analogread]] — VCC-wiper-GND pattern; self-contained divider, no external resistor needed
+- [[b-taper-linear-potentiometer-is-for-voltage-sensing-and-a-taper-logarithmic-is-for-audio-volume-and-confusing-them-is-a-silent-design-error]] — B vs A taper; wrong choice looks like a software bug
+- [[potentiometer-20-percent-resistance-tolerance-is-irrelevant-in-voltage-divider-mode-because-output-depends-on-wiper-position-ratio-not-absolute-resistance]] — 20% tolerance cancels in divider mode; ratio, not absolute value
+
 ### MOSFET Switching
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO without gate driver
 - [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during MCU reset
