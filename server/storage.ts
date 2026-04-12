@@ -11,6 +11,8 @@ import { ArduinoStorage } from './storage/arduino';
 import { MiscStorage } from './storage/misc';
 import { OrderingStorage } from './storage/ordering';
 import { PartsStorage } from './storage/parts';
+import { SupplyChainStorage } from './storage/supply-chain';
+import { BomTemplateStorage } from './storage/bom-templates';
 import type { StorageDeps } from './storage/types';
 
 // Re-export public API — callers continue importing from './storage'
