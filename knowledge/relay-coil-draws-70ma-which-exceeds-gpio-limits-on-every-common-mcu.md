@@ -23,7 +23,11 @@ Standard 5V relay coils (Songle SRD-05VDC-SL-C, the ubiquitous blue cube relay) 
 | Raspberry Pi Pico (RP2040) | 12mA per pin | 70mA | 5.8x over limit |
 | ESP8266 | 12mA per pin | 70mA | 5.8x over limit |
 
-**The required driver circuit:** An NPN transistor (2N2222, rated 800mA collector) or logic-level N-channel MOSFET (P30N06LE) between the GPIO and the relay coil. The GPIO drives the transistor base/gate, the transistor switches the coil current from the 5V supply. Current through the GPIO is limited to the base drive (~1-5mA for BJT, essentially zero for MOSFET gate).
+**The required driver circuit:** An NPN transistor (PN2222A, rated 600mA collector) or logic-level N-channel MOSFET (P30N06LE) between the GPIO and the relay coil. The GPIO drives the transistor base/gate, the transistor switches the coil current from the 5V supply. Current through the GPIO is limited to the base drive (~1-5mA for BJT, essentially zero for MOSFET gate).
+
+**Base resistor selection for 70mA relay coil (PN2222A, hFE_min=100):**
+- 5V GPIO: 1K-2.2K (gives 2-4.3mA base, 2-6x overdrive for 0.7mA minimum)
+- 3.3V GPIO: 1K (gives 2.6mA base, 3.7x overdrive -- adequate but less margin)
 
 **Why beginners wire it wrong:** Tutorials for relay "modules" (the pre-built PCBs with opto-isolated inputs) don't mention the driver transistor because it's already on the module board. When a beginner buys a bare relay and follows a module tutorial, they connect GPIO directly to the coil. It may appear to work briefly (the relay might click weakly) before the GPIO pin suffers cumulative damage.
 

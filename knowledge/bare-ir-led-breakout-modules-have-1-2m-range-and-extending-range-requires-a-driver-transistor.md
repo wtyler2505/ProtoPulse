@@ -22,7 +22,10 @@ The OSEPP IRF-01 and similar kit IR LED breakout modules achieve only ~1-2 meter
 
 **The fix — transistor driver circuit:**
 1. Use a PN2222A NPN transistor (already in many kit inventories, rated 600mA continuous)
-2. MCU GPIO pin drives the transistor base through a 1k resistor
+2. MCU GPIO pin drives the transistor base through a resistor sized for the load current:
+   - 4.7K for <100mA LED current (conservative)
+   - 1K-2.2K for 100-300mA LED current (good saturation margin)
+   - 470R-1K for 300-600mA (pushing PN2222A limits, verify thermal budget)
 3. Transistor collector drives the IR LED through a current-limiting resistor
 4. LED current can now be 100-200mA (set by resistor value), dramatically increasing range
 5. At 100mA with a TSAL6200-type IR LED, range extends to 5-10m depending on ambient light

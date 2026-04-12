@@ -28,6 +28,8 @@ When manually multiplexing multiple 7-segment digits, each digit's common cathod
 
 This is the same pattern as [[low-side-mosfet-switching-puts-load-between-supply-and-drain-with-source-at-ground]] but at lower current levels where a BJT is sufficient.
 
+**3.3V GPIO consideration:** For ESP32, Pico, and other 3.3V MCUs, the reduced base drive voltage (2.6V remaining after Vbe vs 4.3V at 5V) means the 1K base resistor gives only 2.6mA instead of 4.3mA. For 8 segments at 20mA = 160mA, this still provides adequate overdrive with hFE_min of 100 (need 1.6mA minimum). But for higher-current displays or multiple digits in parallel, use a 680R or 470R base resistor from 3.3V GPIO to maintain saturation margin.
+
 ---
 
 Topics:

@@ -55,6 +55,13 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 ### Part Identification
 - [[systematic-part-identification-workflow-for-unidentified-inventory-read-markings-then-cross-reference-then-measure]] — Three-step procedure: markings, distributor lookup, instrument measurement
 
+### BJT Switching
+- [[bjt-saturation-requires-base-current-above-collector-current-divided-by-minimum-hfe-making-base-resistor-calculation-a-forced-gain-problem]] — Ib > Ic/hFE_min; base resistor sizing is the fundamental BJT design step
+- [[to-92-package-limits-power-dissipation-to-625mw-and-requires-derating-above-25c-making-thermal-math-mandatory-for-high-current-switching]] — 625mW free-air limit; partial saturation dramatically increases dissipation
+- [[bjt-switching-tops-out-at-600ma-in-to-92-and-the-transition-to-mosfet-is-a-hard-architecture-boundary]] — Hard boundary: BJT for <600mA, MOSFET above; not a gradual preference
+- [[3v3-gpio-driving-a-bjt-base-loses-21-percent-of-supply-voltage-to-vbe-leaving-less-headroom-for-the-base-resistor]] — 2.6V headroom at 3.3V vs 4.3V at 5V; use lower R_base or higher-hFE transistor
+- [[drc-should-flag-direct-gpio-to-inductive-load-connections-and-suggest-driver-plus-flyback-subcircuit]] — DRC rule: inductive load needs driver transistor + flyback diode
+
 ### MOSFET Switching
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO without gate driver
 - [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during MCU reset
