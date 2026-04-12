@@ -42,6 +42,14 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[uno-only-2-external-interrupts-on-d2-d3-is-a-hard-project-sizing-constraint]] -- only 2 interrupts limits project scope
 - [[uno-defines-the-standard-arduino-shield-header-layout]] -- Uno is the reference shield form factor
 - [[uno-d10-must-stay-output-for-hardware-spi-master-mode]] -- D10 as INPUT silently breaks SPI master mode
+- [[esp8266-has-only-5-truly-safe-gpio-out-of-11-total-pins]] -- 5 safe GPIOs out of 11 total
+- [[esp8266-boot-pins-gpio0-gpio2-and-gpio15-must-be-in-specific-states-at-power-on]] -- 3 boot strapping pins
+- [[esp8266-a0-analog-input-has-0-1v-range-not-0-3v3]] -- 0-1V ADC range, not 0-3.3V
+- [[esp8266-gpio16-is-architecturally-unique-and-cannot-do-pwm-or-i2c]] -- GPIO16 on separate RTC domain
+- [[esp8266-pwm-is-software-implemented-at-1khz-unsuitable-for-servo-control]] -- 1kHz software PWM inadequate for servos
+- [[esp8266-gpio9-and-gpio10-are-flash-connected-and-crash-if-used-as-gpio]] -- flash-connected, unusable
+- [[esp8266-wifi-consumes-50kb-ram-leaving-only-30kb-for-user-code]] -- WiFi stack dominates 80KB SRAM
+- [[i2c-devices-on-esp8266-boot-pins-can-prevent-boot-silently]] -- I2C pull-ups on boot pins prevent boot
 
 ## Sub-Topics (to be populated)
 

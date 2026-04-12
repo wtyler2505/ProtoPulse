@@ -25,6 +25,12 @@ This means any project using a 5V MCU (Arduino Mega, Uno, Nano) with wireless pe
 
 **Design rule:** When a 5V MCU appears in the BOM alongside any wireless communication module, the system should flag "level shifting required" as a DRC warning unless a level shifter or 3.3V-tolerant MCU is also present.
 
+**Level shifting methods (ranked by use case):**
+
+1. **Bidirectional level shifter (BSS138-based, e.g., HW-221 4-channel)** — best for I2C and any signal that needs to go both directions. Uses N-channel MOSFETs with pull-ups on each side.
+2. **Voltage divider (10k + 20k resistors)** — cheapest unidirectional solution for 5V→3.3V signals. Not suitable for bidirectional protocols.
+3. **Direct connection 3.3V→5V** — most 5V Arduino boards read 3.3V as HIGH (V_IH threshold is typically 0.6×VCC = 3.0V for ATmega). The ESP→Arduino direction often works without shifting, but verify with your specific board's datasheet. The Arduino→ESP direction ALWAYS needs shifting (5V damages 3.3V inputs).
+
 **Pattern parallel:** This mirrors the display voltage landscape -- most maker displays accept 3.3-5V, but the communication modules are more uniformly 3.3V-only, making the mismatch more predictable and the mitigation more standardized.
 
 ---

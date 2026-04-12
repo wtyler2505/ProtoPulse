@@ -83,7 +83,27 @@ interface AppState {
   selectedNodeId?: string | null;
   nodes: Array<{ id: string; label: string; type: string; description?: string; positionX: number; positionY: number }>;
   edges: Array<{ id: string; source: string; target: string; label?: string; signalType?: string; voltage?: string; busWidth?: number; netName?: string }>;
-  bom: Array<{ id: string; partNumber: string; manufacturer: string; description: string; quantity: number; unitPrice: number; supplier: string; status: string }>;
+  bom: Array<{
+    id: string;
+    partNumber: string;
+    manufacturer: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    supplier: string;
+    status: string;
+    // Canonical fields (optional — absent for legacy data)
+    mpn?: string;
+    datasheetUrl?: string;
+    connectors?: unknown[];
+    tolerance?: string;
+    esdSensitive?: boolean;
+    assemblyCategory?: string;
+    trustLevel?: string;
+    storageLocation?: string;
+    quantityOnHand?: number;
+    minimumStock?: number;
+  }>;
   validationIssues: Array<{ id: string; severity: string; message: string; componentId?: string; suggestion?: string }>;
   schematicSheets: Array<{ id: string; name: string }>;
   activeSheetId: string;
@@ -689,7 +709,34 @@ function buildSystemPrompt(appState: AppState): string {
   // BOM — full for procurement view, summary otherwise
   const bomDescription = (bomActive || appState.bom.length <= 5)
     ? (appState.bom.length > 0
-      ? appState.bom.map(b => `  - ${b.partNumber} | ${b.manufacturer} | ${b.description} | qty: ${b.quantity} | $${b.unitPrice} | ${b.supplier} | ${b.status}`).join("\n")
+      ? appState.bom.map(b => {
+          const segments: string[] = [];
+          // Core identity — part number with optional MPN disambiguation
+          const label = b.mpn && b.mpn !== b.partNumber
+            ? `${b.partNumber} (MPN: ${b.mpn})`
+            : b.partNumber;
+          segments.push(label);
+          segments.push(b.manufacturer);
+          segments.push(b.description);
+          // Quantity cluster — needed, on-hand, minimum stock
+          const qtyParts: string[] = [`qty: ${b.quantity}`];
+          if (b.quantityOnHand != null) { qtyParts.push(`on-hand: ${b.quantityOnHand}`); }
+          if (b.minimumStock != null) { qtyParts.push(`min: ${b.minimumStock}`); }
+          segments.push(qtyParts.join(', '));
+          // Price, supplier, status
+          segments.push(`$${b.unitPrice}`);
+          segments.push(b.supplier);
+          segments.push(b.status);
+          // Optional canonical enrichment — only when present
+          if (b.trustLevel) { segments.push(`trust: ${b.trustLevel}`); }
+          if (b.connectors && b.connectors.length > 0) { segments.push(`${b.connectors.length} pins`); }
+          if (b.tolerance) { segments.push(`tol: ${b.tolerance}`); }
+          if (b.esdSensitive) { segments.push('ESD-sensitive'); }
+          if (b.assemblyCategory) { segments.push(`asm: ${b.assemblyCategory}`); }
+          if (b.storageLocation) { segments.push(b.storageLocation); }
+          if (b.datasheetUrl) { segments.push(`datasheet: ${b.datasheetUrl}`); }
+          return `  - ${segments.join(' | ')}`;
+        }).join("\n")
       : "  (none)")
     : buildBomSummary(appState.bom);
 

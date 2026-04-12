@@ -18,6 +18,8 @@ The failure mode is subtle: connecting an ESP module to the Mega's 3.3V pin does
 
 Even if you solve the level-shifting problem (5V Mega logic to 3.3V ESP inputs), you still need a separate 3.3V power supply for the ESP. Common solutions: a dedicated AMS1117-3.3 regulator fed from the 5V rail, or a buck converter from the battery input.
 
+**NodeMCU board power path:** The NodeMCU Amica (ESP8266) and ESP32 dev boards have their own onboard 3.3V regulators fed from the USB 5V input or Vin pin. When interfacing with an Arduino, the correct approach is to power the NodeMCU from its own USB cable or feed 5V into its Vin pin — never connect the Arduino's 3.3V header to the NodeMCU's 3.3V pin as a power source. The onboard regulator handles the 170mA WiFi TX spikes that the Arduino's 50mA-limited 3.3V output cannot. Critical: do NOT feed 5V into the NodeMCU's 3.3V pin — that bypasses the regulator and damages the ESP chip directly.
+
 **ProtoPulse implication:** When a 5V Arduino and a 3.3V wireless module appear in the same BOM, the DRC should flag two separate concerns: (1) level shifting on signal lines, and (2) dedicated 3.3V power supply for the wireless module. The Mega's 3.3V header pin is not a valid power source for these devices.
 
 ---

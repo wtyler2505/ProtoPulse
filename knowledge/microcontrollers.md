@@ -30,6 +30,18 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[uno-only-2-external-interrupts-on-d2-d3-is-a-hard-project-sizing-constraint]] — 2 interrupts limit project complexity
 - [[uno-defines-the-standard-arduino-shield-header-layout]] — Uno IS the reference form factor for shields
 - [[uno-d10-must-stay-output-for-hardware-spi-master-mode]] — D10 INPUT causes silent SPI master-to-slave switch
+- [[esp8266-has-only-5-truly-safe-gpio-out-of-11-total-pins]] — only 5 unrestricted GPIOs out of 11
+- [[esp8266-boot-pins-gpio0-gpio2-and-gpio15-must-be-in-specific-states-at-power-on]] — 3 boot strapping pins with strict requirements
+- [[esp8266-a0-analog-input-has-0-1v-range-not-0-3v3]] — ADC input range is 0-1V, not 0-3.3V
+- [[esp8266-gpio16-is-architecturally-unique-and-cannot-do-pwm-or-i2c]] — GPIO16 on separate RTC domain
+- [[esp8266-deep-sleep-requires-physical-wire-from-gpio16-to-rst]] — deep sleep wake needs GPIO16-RST bridge
+- [[nodemcu-board-draws-8-20ma-in-deep-sleep-defeating-chip-level-20ua-spec]] — dev board quiescent defeats chip sleep current
+- [[esp8266-pwm-is-software-implemented-at-1khz-unsuitable-for-servo-control]] — software PWM too slow for servos
+- [[esp8266-gpio9-and-gpio10-are-flash-connected-and-crash-if-used-as-gpio]] — GPIO9/10 connected to internal flash
+- [[esp8266-wifi-consumes-50kb-ram-leaving-only-30kb-for-user-code]] — WiFi stack takes most of 80KB SRAM
+- [[i2c-devices-on-esp8266-boot-pins-can-prevent-boot-silently]] — I2C pull-ups on boot pins block boot
+- [[nodemcu-amica-23mm-spacing-fits-standard-breadboard-with-both-rails-accessible]] — NodeMCU Amica breadboard friendly
+- [[breadboard-bench-coach-should-flag-i2c-on-esp8266-boot-pins-as-wiring-error]] — DRC should catch I2C on boot pins
 
 ## Open Questions
 (populated by /extract)
