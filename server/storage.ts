@@ -10,6 +10,7 @@ import { CircuitStorage } from './storage/circuit';
 import { ArduinoStorage } from './storage/arduino';
 import { MiscStorage } from './storage/misc';
 import { OrderingStorage } from './storage/ordering';
+import { PartsStorage } from './storage/parts';
 import type { StorageDeps } from './storage/types';
 
 // Re-export public API — callers continue importing from './storage'
@@ -215,3 +216,9 @@ export class DatabaseStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+// Standalone parts catalog singleton — exposed alongside `storage` for callers
+// that work directly with the canonical Phase 3 read/write surface without
+// going through DatabaseStorage's bound-method layer. See ADR 0010 and
+// docs/plans/2026-04-10-parts-catalog-consolidation.md Phase 3.
+export const partsStorage = new PartsStorage({ db, cache });

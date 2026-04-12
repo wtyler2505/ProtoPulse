@@ -33,6 +33,7 @@ import { registerManufacturingTools } from './manufacturing';
 import { registerTestbenchTools } from './testbench';
 import { registerBomOptimizationTools } from './bom-optimization';
 import { registerRiskAnalysisTools } from './risk-analysis';
+import { registerPartsTools } from './parts';
 
 function createRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
@@ -54,6 +55,7 @@ function createRegistry(): ToolRegistry {
   registerTestbenchTools(registry);
   registerBomOptimizationTools(registry);
   registerRiskAnalysisTools(registry);
+  registerPartsTools(registry);
   return registry;
 }
 
