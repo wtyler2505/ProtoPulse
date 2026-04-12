@@ -28,6 +28,7 @@ Wireless and wired communication protocols, module pairing, range/reliability tr
 - [[hc-05-master-slave-capability-is-the-selection-criterion-over-hc-06-for-device-to-device-bluetooth]] — HC-05 = master/slave, HC-06 = slave only; topology determines selection
 - [[hc-05-bluetooth-4-box-label-is-marketing-fiction-covering-bluetooth-2-edr-with-spp-only]] — "Bluetooth 4.0" on the box is a lie; no BLE, no iOS, no low-power
 - [[hc-05-and-hc-06-at-command-interfaces-are-incompatible-despite-sharing-the-same-bluetooth-silicon]] — different baud rates, different syntax, different AT mode entry; mixing tutorials causes silent failures
+- [[spp-bluetooth-modules-act-as-transparent-uart-bridges-where-application-code-is-protocol-unaware]] — once paired, Serial.print() works identically over USB or Bluetooth; zero protocol knowledge required
 
 ## Open Questions
 (populated by /extract)

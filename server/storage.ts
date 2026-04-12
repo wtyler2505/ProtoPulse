@@ -220,3 +220,5 @@ export const storage = new DatabaseStorage();
 // going through DatabaseStorage's bound-method layer. See ADR 0010 and
 // docs/plans/2026-04-10-parts-catalog-consolidation.md Phase 3.
 export const partsStorage = new PartsStorage({ db, cache });
+export const supplyChainStorage = new SupplyChainStorage({ db, cache });
+export const bomTemplateStorage = new BomTemplateStorage({ db, cache });

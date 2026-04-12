@@ -22,6 +22,7 @@ The HC-05 and HC-06 look almost identical, use the same Bluetooth 2.0+EDR silico
 | Line ending | CR+LF (NL+CR) | No line ending needed |
 | Name command | `AT+NAME=MyDevice` (with `=`) | `AT+NAMEMyDevice` (concatenated) |
 | PIN command | `AT+PSWD=1234` | `AT+PIN1234` |
+| Baud command | `AT+UART=9600,0,0` | `AT+BAUD4` (numeric code: 1=1200...8=115200) |
 | Response format | `OK` with CR+LF | `OKsetname` (concatenated) |
 | LED in AT mode | Slow blink (~2s) | Fast blink (unchanged from normal) |
 
