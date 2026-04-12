@@ -10,7 +10,10 @@ describe('DesignPatternsView', () => {
     SnippetLibrary.resetForTesting();
   });
 
-  it('creates a snippet, closes the dialog, and resets the form for the next create flow', async () => {
+  // Under full parallel test load (~29k tests), the React render + async waits can exceed the
+  // default 5s timeout even though the test completes in ~1.4s when run in isolation. Bumping
+  // to 15s removes the flakiness without masking a real bug.
+  it('creates a snippet, closes the dialog, and resets the form for the next create flow', { timeout: 15000 }, async () => {
     render(<DesignPatternsView />);
 
     fireEvent.mouseDown(screen.getByTestId('tab-snippets'), { button: 0 });

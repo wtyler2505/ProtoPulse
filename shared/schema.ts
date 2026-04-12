@@ -1,7 +1,19 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp, serial, numeric, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, real, boolean, jsonb, timestamp, serial, numeric, index, uniqueIndex, uuid, type AnyPgColumn } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import {
+  ASSEMBLY_CATEGORIES,
+  PART_ORIGINS,
+  PLACEMENT_CONTAINER_TYPES,
+  PLACEMENT_SURFACES,
+  TRUST_LEVELS,
+  type AssemblyCategory,
+  type PartOrigin,
+  type PlacementContainerType,
+  type PlacementSurface,
+  type TrustLevel,
+} from "./parts/part-row";
 
 const nonNegativeNumericInputSchema = z.union([z.string(), z.number()])
   .transform((value) => typeof value === 'string' ? value.trim() : String(value))
@@ -829,3 +841,225 @@ export type InsertArduinoBuildProfile = z.infer<typeof insertArduinoBuildProfile
 export type InsertArduinoJob = z.infer<typeof insertArduinoJobSchema>;
 export type InsertArduinoSerialSession = z.infer<typeof insertArduinoSerialSessionSchema>;
 export type InsertArduinoSketchFile = z.infer<typeof insertArduinoSketchFileSchema>;
+
+// ============================================================================
+// Unified Parts Catalog (ADR 0010, Phase 1 additive schema)
+// ============================================================================
+// These tables are the new canonical parts model. Legacy `componentLibrary`,
+// `componentParts`, `bomItems`, `componentLifecycle`, `spiceModels` remain
+// untouched in Phase 1 — they will be dropped in Phase 6 after cutover.
+// See docs/plans/2026-04-10-parts-catalog-consolidation.md for the full plan.
+
+/** Canonical parts catalog — single source of truth for every part's identity + spec. */
+export const parts = pgTable("parts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  manufacturer: text("manufacturer"),
+  mpn: text("mpn"),
+  canonicalCategory: text("canonical_category").notNull(),
+  packageType: text("package_type"),
+  tolerance: text("tolerance"),
+  esdSensitive: boolean("esd_sensitive"),
+  assemblyCategory: text("assembly_category", { enum: ASSEMBLY_CATEGORIES }),
+  meta: jsonb("meta").notNull().default({}),
+  connectors: jsonb("connectors").notNull().default([]),
+  datasheetUrl: text("datasheet_url"),
+  manufacturerUrl: text("manufacturer_url"),
+  origin: text("origin", { enum: PART_ORIGINS }).notNull(),
+  originRef: text("origin_ref"),
+  forkedFromId: uuid("forked_from_id").references((): AnyPgColumn => parts.id, { onDelete: "set null" }),
+  authorUserId: integer("author_user_id").references(() => users.id, { onDelete: "set null" }),
+  isPublic: boolean("is_public").notNull().default(false),
+  trustLevel: text("trust_level", { enum: TRUST_LEVELS }).notNull().default("user"),
+  version: integer("version").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+}, (table) => [
+  uniqueIndex("uq_parts_slug").on(table.slug),
+  // Partial unique index — enforces no duplicate (manufacturer, mpn) when both are set.
+  uniqueIndex("uq_parts_manufacturer_mpn")
+    .on(table.manufacturer, table.mpn)
+    .where(sql`${table.mpn} IS NOT NULL AND ${table.manufacturer} IS NOT NULL`),
+  index("idx_parts_canonical_category").on(table.canonicalCategory),
+  index("idx_parts_trust_level").on(table.trustLevel),
+  index("idx_parts_origin").on(table.origin),
+  index("idx_parts_is_public").on(table.isPublic),
+  index("idx_parts_deleted_at").on(table.deletedAt),
+  index("parts_meta_gin_idx").using("gin", sql`${table.meta} jsonb_path_ops`),
+  index("parts_connectors_gin_idx").using("gin", sql`${table.connectors} jsonb_path_ops`),
+]);
+
+export const insertPartSchema = createInsertSchema(parts).omit({
+  id: true,
+  version: true,
+  createdAt: true,
+  updatedAt: true,
+  deletedAt: true,
+}).extend({
+  slug: z.string().min(1).max(255),
+  title: z.string().min(1).max(500),
+  canonicalCategory: z.string().min(1).max(100),
+  origin: z.enum(PART_ORIGINS),
+  trustLevel: z.enum(TRUST_LEVELS).default("user"),
+  assemblyCategory: z.enum(ASSEMBLY_CATEGORIES).nullable().optional(),
+  meta: z.record(z.unknown()).default({}),
+  connectors: z.array(z.unknown()).default([]),
+});
+export type InsertPart = z.infer<typeof insertPartSchema>;
+export type Part = typeof parts.$inferSelect;
+
+/** Per-project inventory overlay — one row per `(project_id, part_id)`. */
+export const partStock = pgTable("part_stock", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  partId: uuid("part_id").notNull().references(() => parts.id, { onDelete: "cascade" }),
+  quantityNeeded: integer("quantity_needed").notNull().default(0),
+  quantityOnHand: integer("quantity_on_hand"),
+  minimumStock: integer("minimum_stock"),
+  storageLocation: text("storage_location"),
+  unitPrice: numeric("unit_price", { precision: 10, scale: 4 }),
+  supplier: text("supplier"),
+  leadTime: text("lead_time"),
+  status: text("status").notNull().default("In Stock"),
+  notes: text("notes"),
+  version: integer("version").notNull().default(1),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+}, (table) => [
+  uniqueIndex("uq_part_stock_project_part").on(table.projectId, table.partId),
+  index("idx_part_stock_project").on(table.projectId),
+  index("idx_part_stock_project_deleted").on(table.projectId, table.deletedAt),
+  index("idx_part_stock_part").on(table.partId),
+]);
+
+export const insertPartStockSchema = createInsertSchema(partStock).omit({
+  id: true,
+  version: true,
+  updatedAt: true,
+  deletedAt: true,
+}).extend({
+  quantityNeeded: z.number().int().nonnegative().default(0),
+  quantityOnHand: z.number().int().nonnegative().nullable().optional(),
+  minimumStock: z.number().int().nonnegative().nullable().optional(),
+  unitPrice: nonNegativeNumericInputSchema.nullable().optional(),
+  status: z.enum(["In Stock", "Low Stock", "Out of Stock", "On Order"]).default("In Stock"),
+});
+export type InsertPartStock = z.infer<typeof insertPartStockSchema>;
+export type PartStock = typeof partStock.$inferSelect;
+
+/** Where-used table — replaces `circuit_instances.partId` as the part-join point. */
+export const partPlacements = pgTable("part_placements", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  partId: uuid("part_id").notNull().references(() => parts.id, { onDelete: "restrict" }),
+  surface: text("surface", { enum: PLACEMENT_SURFACES }).notNull(),
+  containerType: text("container_type", { enum: PLACEMENT_CONTAINER_TYPES }).notNull(),
+  containerId: integer("container_id").notNull(),
+  referenceDesignator: text("reference_designator").notNull(),
+  x: real("x"),
+  y: real("y"),
+  rotation: real("rotation").notNull().default(0),
+  layer: text("layer"),
+  properties: jsonb("properties").notNull().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+}, (table) => [
+  index("idx_part_placements_part").on(table.partId),
+  index("idx_part_placements_container").on(table.containerType, table.containerId),
+  index("idx_part_placements_surface").on(table.surface),
+  index("idx_part_placements_deleted").on(table.deletedAt),
+  index("part_placements_properties_gin_idx").using("gin", sql`${table.properties} jsonb_path_ops`),
+]);
+
+export const insertPartPlacementSchema = createInsertSchema(partPlacements).omit({
+  id: true,
+  createdAt: true,
+  deletedAt: true,
+}).extend({
+  surface: z.enum(PLACEMENT_SURFACES),
+  containerType: z.enum(PLACEMENT_CONTAINER_TYPES),
+  referenceDesignator: z.string().min(1).max(50),
+  properties: z.record(z.unknown()).default({}),
+});
+export type InsertPartPlacement = z.infer<typeof insertPartPlacementSchema>;
+export type PartPlacement = typeof partPlacements.$inferSelect;
+
+/** Obsolescence / replacement tracking — replaces legacy `componentLifecycle`. */
+export const partLifecycle = pgTable("part_lifecycle", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  partId: uuid("part_id").notNull().references(() => parts.id, { onDelete: "cascade" }),
+  obsoleteDate: timestamp("obsolete_date"),
+  replacementPartId: uuid("replacement_part_id").references((): AnyPgColumn => parts.id, { onDelete: "set null" }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_part_lifecycle_part").on(table.partId),
+  index("idx_part_lifecycle_replacement").on(table.replacementPartId),
+]);
+
+export const insertPartLifecycleSchema = createInsertSchema(partLifecycle).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertPartLifecycle = z.infer<typeof insertPartLifecycleSchema>;
+export type PartLifecycle = typeof partLifecycle.$inferSelect;
+
+/** SPICE simulation models attached to canonical parts — replaces legacy `spiceModels`. */
+export const partSpiceModels = pgTable("part_spice_models", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  partId: uuid("part_id").notNull().references(() => parts.id, { onDelete: "cascade" }),
+  filename: text("filename").notNull(),
+  modelText: text("model_text").notNull(),
+  category: text("category"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_part_spice_models_part").on(table.partId),
+  uniqueIndex("uq_part_spice_models_part_filename").on(table.partId, table.filename),
+]);
+
+export const insertPartSpiceModelSchema = createInsertSchema(partSpiceModels).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  filename: z.string().min(1).max(255),
+  modelText: z.string().min(1),
+});
+export type InsertPartSpiceModel = z.infer<typeof insertPartSpiceModelSchema>;
+export type PartSpiceModel = typeof partSpiceModels.$inferSelect;
+
+/** Equivalence graph — materializes `shared/alternate-parts.ts` into the DB as bidirectional rows. */
+export const partAlternates = pgTable("part_alternates", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  partId: uuid("part_id").notNull().references(() => parts.id, { onDelete: "cascade" }),
+  altPartId: uuid("alt_part_id").notNull().references(() => parts.id, { onDelete: "cascade" }),
+  matchScore: real("match_score").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uq_part_alternates_pair").on(table.partId, table.altPartId),
+  index("idx_part_alternates_part").on(table.partId),
+  index("idx_part_alternates_alt").on(table.altPartId),
+]);
+
+export const insertPartAlternateSchema = createInsertSchema(partAlternates).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  matchScore: z.number().min(0).max(1),
+});
+export type InsertPartAlternate = z.infer<typeof insertPartAlternateSchema>;
+export type PartAlternate = typeof partAlternates.$inferSelect;
+
+// Re-export the public contract types from shared/parts for ergonomic imports.
+export type {
+  PartRow,
+  PartStockRow,
+  PartPlacementRow,
+  TrustLevel,
+  PartOrigin,
+  AssemblyCategory,
+  PlacementSurface,
+  PlacementContainerType,
+} from "./parts/part-row";
+export { TRUST_LEVELS, PART_ORIGINS, ASSEMBLY_CATEGORIES, PLACEMENT_SURFACES, PLACEMENT_CONTAINER_TYPES, trustRank } from "./parts/part-row";
