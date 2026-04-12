@@ -694,6 +694,103 @@ export class PartsStorage {
     }
   }
 
+  /**
+   * Lists all parts that have at least one alternate defined, with the count of
+   * alternates per part. Used by the standalone alternates browser view.
+   */
+  async listPartsWithAlternates(): Promise<Array<{
+    part: Part;
+    alternateCount: number;
+  }>> {
+    try {
+      const cacheKey = 'parts_alternates:browse';
+      const cached = this.cache.get<Array<{ part: Part; alternateCount: number }>>(cacheKey);
+      if (cached) { return cached; }
+
+      const rows = await this.db
+        .select({
+          part: parts,
+          alternateCount: sql<number>`cast(count(${partAlternates.id}) as int)`,
+        })
+        .from(parts)
+        .innerJoin(partAlternates, eq(partAlternates.partId, parts.id))
+        .where(isNull(parts.deletedAt))
+        .groupBy(parts.id)
+        .orderBy(desc(sql`count(${partAlternates.id})`));
+
+      this.cache.set(cacheKey, rows);
+      return rows;
+    } catch (e) {
+      throw new StorageError('listPartsWithAlternates', 'parts_alternates', e);
+    }
+  }
+
+  /**
+   * Lists all parts with their total usage count across projects (stock rows + placements).
+   * Used by the standalone cross-project usage browser view.
+   */
+  async listPartsUsageSummary(): Promise<Array<{
+    part: Part;
+    projectCount: number;
+    totalQuantityNeeded: number;
+    totalPlacements: number;
+  }>> {
+    try {
+      const cacheKey = 'parts_usage:browse';
+      const cached = this.cache.get<Array<{
+        part: Part; projectCount: number; totalQuantityNeeded: number; totalPlacements: number;
+      }>>(cacheKey);
+      if (cached) { return cached; }
+
+      // Subquery: stock aggregates per part
+      const stockAgg = this.db
+        .select({
+          partId: partStock.partId,
+          projectCount: sql<number>`cast(count(distinct ${partStock.projectId}) as int)`.as('project_count'),
+          totalQty: sql<number>`cast(coalesce(sum(${partStock.quantityNeeded}), 0) as int)`.as('total_qty'),
+        })
+        .from(partStock)
+        .where(and(isNull(partStock.deletedAt), isNotNull(partStock.projectId)))
+        .groupBy(partStock.partId)
+        .as('stock_agg');
+
+      // Subquery: placement counts per part
+      const placementAgg = this.db
+        .select({
+          partId: partPlacements.partId,
+          placementCount: sql<number>`cast(count(*) as int)`.as('placement_count'),
+        })
+        .from(partPlacements)
+        .where(isNull(partPlacements.deletedAt))
+        .groupBy(partPlacements.partId)
+        .as('placement_agg');
+
+      const rows = await this.db
+        .select({
+          part: parts,
+          projectCount: sql<number>`coalesce(${stockAgg.projectCount}, 0)`,
+          totalQuantityNeeded: sql<number>`coalesce(${stockAgg.totalQty}, 0)`,
+          totalPlacements: sql<number>`coalesce(${placementAgg.placementCount}, 0)`,
+        })
+        .from(parts)
+        .leftJoin(stockAgg, eq(stockAgg.partId, parts.id))
+        .leftJoin(placementAgg, eq(placementAgg.partId, parts.id))
+        .where(and(
+          isNull(parts.deletedAt),
+          or(
+            sql`${stockAgg.projectCount} > 0`,
+            sql`${placementAgg.placementCount} > 0`,
+          ),
+        ))
+        .orderBy(desc(sql`coalesce(${stockAgg.projectCount}, 0)`));
+
+      this.cache.set(cacheKey, rows);
+      return rows;
+    } catch (e) {
+      throw new StorageError('listPartsUsageSummary', 'parts_usage', e);
+    }
+  }
+
   // -------------------------------------------------------------------------
   // substitute (one-click part swap within a project)
   // -------------------------------------------------------------------------
