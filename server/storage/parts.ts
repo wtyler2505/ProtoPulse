@@ -505,13 +505,16 @@ export class PartsStorage {
       const placementMap = new Map(placementCounts.map((r) => [r.projectId, r.count]));
 
       // 3. Merge — every project that has stock gets a row; placement count is 0 if none exist.
-      const result = stockRows.map((row) => ({
-        projectId: row.projectId,
-        projectName: row.projectName,
-        stockQuantityNeeded: row.quantityNeeded,
-        stockQuantityOnHand: row.quantityOnHand,
-        placementCount: placementMap.get(row.projectId) ?? 0,
-      }));
+      // Filter out null projectIds (personal stock rows) — usage report is project-scoped.
+      const result = stockRows
+        .filter((row): row is typeof row & { projectId: number } => row.projectId != null)
+        .map((row) => ({
+          projectId: row.projectId,
+          projectName: row.projectName,
+          stockQuantityNeeded: row.quantityNeeded,
+          stockQuantityOnHand: row.quantityOnHand,
+          placementCount: placementMap.get(row.projectId) ?? 0,
+        }));
 
       this.cache.set(cacheKey, result);
       return result;
