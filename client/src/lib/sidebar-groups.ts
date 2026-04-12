@@ -80,6 +80,8 @@ export const SIDEBAR_GROUPS: readonly SidebarGroup[] = [
       'supply_chain',
       'bom_templates',
       'personal_inventory',
+      'part_alternates',
+      'part_usage',
     ],
   },
   {
