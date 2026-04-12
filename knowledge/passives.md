@@ -74,6 +74,14 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during MCU reset
 - [[low-side-mosfet-switching-puts-load-between-supply-and-drain-with-source-at-ground]] — standard N-channel topology for MCU-driven load switching
 
+### Shift Registers
+- [[74hc595-trades-3-gpio-pins-for-n-times-8-digital-outputs-via-serial-shift-and-parallel-latch]] — The canonical IO expansion: 3 pins → 8 outputs per chip, daisy-chainable to 80+
+- [[74hc595-output-current-is-6ma-per-pin-and-70ma-total-making-it-led-capable-but-not-actuator-capable]] — LED-driving budget constraints; need ULN2003/MOSFET above 6mA per output
+- [[74hc595-latch-separates-data-shifting-from-output-update-preventing-glitches-during-serial-load]] — Two-stage architecture prevents visual glitches during serial data load
+- [[74hc595-oe-pin-on-pwm-enables-hardware-brightness-control-of-all-outputs-simultaneously]] — OE pin on PWM = free global brightness control from one GPIO
+- [[74hc595-srclr-and-oe-are-active-low-control-pins-that-must-be-tied-correctly-or-outputs-fail-silently]] — Active-LOW gotcha: SRCLR→VCC, OE→GND, or silent failure
+- [[daisy-chained-74hc595s-share-clock-and-latch-lines-so-n-chips-update-simultaneously-from-one-latch-pulse]] — Cascading topology: QH'→SER, shared clock/latch, 3 pins for any chain length
+
 ## Open Questions
 (populated by /extract)
 

@@ -10,7 +10,7 @@ import { usePartUsage } from '@/lib/parts/use-part-usage';
 
 function UsageRow({ row }: { row: UsageBrowseRow }) {
   const [expanded, setExpanded] = useState(false);
-  const { data: projectUsage, isLoading } = usePartUsage(expanded ? row.part.id : '');
+  const { data: projectUsage, isLoading } = usePartUsage(expanded ? row.part.id : null);
 
   return (
     <Collapsible open={expanded} onOpenChange={setExpanded}>
