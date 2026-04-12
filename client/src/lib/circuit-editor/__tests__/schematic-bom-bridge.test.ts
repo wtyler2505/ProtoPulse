@@ -8,7 +8,8 @@ import type {
   DuplicateMatch,
   SyncPlan,
 } from '../schematic-bom-bridge';
-import type { CircuitInstanceRow, BomItem, ComponentPart } from '@shared/schema';
+import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 // ---------------------------------------------------------------------------
 // Test factories

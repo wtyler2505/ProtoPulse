@@ -6,7 +6,7 @@
  * BOM items to parameter specs for Monte Carlo simulation.
  */
 
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 import type { ToleranceSpec } from './monte-carlo';
 
 // ---------------------------------------------------------------------------

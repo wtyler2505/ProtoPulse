@@ -5,7 +5,7 @@
  * Supports JLCPCB, Mouser, Digi-Key, and generic CSV output.
  */
 
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 import {
   type BomItemData,
   type ComponentPartData,

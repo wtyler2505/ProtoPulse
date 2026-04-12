@@ -58,12 +58,8 @@ export class DatabaseStorage {
   replaceNodes = this._architecture.replaceNodes.bind(this._architecture);
   replaceEdges = this._architecture.replaceEdges.bind(this._architecture);
 
-  // --- BOM ---
+  // --- BOM (reads redirected to canonical parts + part_stock) ---
   getBomItems = this._bom.getBomItems.bind(this._bom);
-  getBomItem = this._bom.getBomItem.bind(this._bom);
-  createBomItem = this._bom.createBomItem.bind(this._bom);
-  updateBomItem = this._bom.updateBomItem.bind(this._bom);
-  deleteBomItem = this._bom.deleteBomItem.bind(this._bom);
   getLowStockItems = this._bom.getLowStockItems.bind(this._bom);
   getStorageLocations = this._bom.getStorageLocations.bind(this._bom);
   createBomSnapshot = this._bom.createBomSnapshot.bind(this._bom);

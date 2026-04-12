@@ -1,7 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect, memo } from 'react';
 import { sanitizeSvg } from '@/lib/svg-sanitize';
-import { useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
 import {
   ChevronDown,
   ChevronRight,
@@ -38,7 +36,8 @@ import { InventoryHealthAnalyzer } from '@/lib/inventory-health';
 import { useBarcodeScanner } from '@/lib/barcode-scanner';
 import { generateLabelSVG, generatePrintPage } from '@/lib/qr-labels';
 
-import type { BomItem } from '@shared/schema';
+import { useBom } from '@/lib/contexts/bom-context';
+import type { BomItem } from '@/lib/project-context';
 import type { HealthReport, HealthFactor, HealthIssue, HealthRecommendation } from '@/lib/inventory-health';
 import type { ScanResult } from '@/lib/barcode-scanner';
 import type { QRLabelItem, QRLabelOptions, PrintPageOptions } from '@/lib/qr-labels';
@@ -551,7 +550,7 @@ function PrintLabelsDialog({
   onOpenChange: (v: boolean) => void;
   bomItems: BomItem[];
 }) {
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [labelSize, setLabelSize] = useState<string>('200');
   const [columns, setColumns] = useState<string>('3');
   const [previewItem, setPreviewItem] = useState<BomItem | null>(null);
@@ -566,7 +565,7 @@ function PrintLabelsDialog({
     }
   }, [open]);
 
-  const toggleItem = useCallback((id: number) => {
+  const toggleItem = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -847,19 +846,13 @@ const LocationGroup = memo(function LocationGroup({ location, items, defaultOpen
  * - Barcode scanner dialog for scanning component labels
  * - Print labels dialog for generating and printing QR inventory labels
  */
-const StorageManagerPanel = memo(function StorageManagerPanel({ projectId, className }: StorageManagerPanelProps) {
+const StorageManagerPanel = memo(function StorageManagerPanel({ projectId: _projectId, className }: StorageManagerPanelProps) {
   const [search, setSearch] = useState('');
   const [scannerOpen, setScannerOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
 
-  const { data: bomItems = [], isLoading } = useQuery<BomItem[]>({
-    queryKey: ['/api/projects', projectId, 'bom'],
-    queryFn: async () => {
-      const res = await apiRequest('GET', `/api/projects/${String(projectId)}/bom`);
-      const json = (await res.json()) as { data: BomItem[] };
-      return json.data;
-    },
-  });
+  const { bom: bomItems } = useBom();
+  const isLoading = false;
 
   // Compute health report
   const healthReport = useMemo(() => {

@@ -3,7 +3,7 @@ import type { PgTable } from 'drizzle-orm/pg-core';
 import {
   projects, type Project, type InsertProject,
   projectMembers, type ProjectMember, type InsertProjectMember,
-  architectureNodes, architectureEdges, bomItems,
+  architectureNodes, architectureEdges, partStock,
 } from '@shared/schema';
 import { StorageError, VersionConflictError } from './errors';
 import type { StorageDeps } from './types';
@@ -147,7 +147,7 @@ export class ProjectStorage {
         if (!project) { return false; }
         await tx.update(architectureNodes).set({ deletedAt: now }).where(eq(architectureNodes.projectId, id));
         await tx.update(architectureEdges).set({ deletedAt: now }).where(eq(architectureEdges.projectId, id));
-        await tx.update(bomItems).set({ deletedAt: now }).where(eq(bomItems.projectId, id));
+        await tx.update(partStock).set({ deletedAt: now }).where(eq(partStock.projectId, id));
         return true;
       });
       if (result) {

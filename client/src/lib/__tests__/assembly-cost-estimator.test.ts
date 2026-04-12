@@ -20,7 +20,7 @@ import type {
   CostBreakdown,
 } from '../assembly-cost-estimator';
 
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 // ---------------------------------------------------------------------------
 // Test Helpers

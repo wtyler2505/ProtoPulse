@@ -8,7 +8,7 @@ import {
   type BomExportFormat,
   type BomExportOptions,
 } from '../export/bom-exporter';
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 // =============================================================================
 // Fixtures

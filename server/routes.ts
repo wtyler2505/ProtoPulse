@@ -4,7 +4,6 @@ import { registerAuthRoutes } from './routes/auth';
 import { registerSettingsRoutes } from './routes/settings';
 import { registerProjectRoutes } from './routes/projects';
 import { registerArchitectureRoutes } from './routes/architecture';
-import { registerBomRoutes } from './routes/bom';
 import { registerValidationRoutes } from './routes/validation';
 import { registerChatRoutes } from './routes/chat';
 import { registerHistoryRoutes } from './routes/history';
@@ -45,7 +44,6 @@ export async function registerRoutes(app: Express): Promise<void> {
   registerSettingsRoutes(app);
   registerProjectRoutes(app);
   registerArchitectureRoutes(app);
-  registerBomRoutes(app);
   registerValidationRoutes(app);
   registerChatRoutes(app);
   registerHistoryRoutes(app);

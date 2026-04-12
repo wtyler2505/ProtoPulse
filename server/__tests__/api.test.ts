@@ -314,7 +314,6 @@ vi.mock('../env', () => ({ featureFlags: { partsCatalogV2: false } }));
 
 import { registerArchitectureRoutes } from '../routes/architecture';
 import { registerAuthRoutes } from '../routes/auth';
-import { registerBomRoutes } from '../routes/bom';
 import { registerProjectRoutes } from '../routes/projects';
 import { registerValidationRoutes } from '../routes/validation';
 import { validateSession } from '../auth';
@@ -462,7 +461,6 @@ beforeAll(async () => {
   registerAuthRoutes(app);
   registerProjectRoutes(app);
   registerArchitectureRoutes(app);
-  registerBomRoutes(app);
   registerValidationRoutes(app);
 
   app.get('/api/health', (_req, res) => {
@@ -625,44 +623,6 @@ describe('Architecture nodes CRUD', () => {
     expect(res.status).toBe(200);
     expect(Array.isArray(res.json?.data)).toBe(true);
     expect(res.json!.total).toBeGreaterThanOrEqual(1);
-  });
-});
-
-describe('BOM CRUD', () => {
-  let bomId = 0;
-
-  it('creates a BOM item', async () => {
-    const res = await api<BomItemResponse>(baseUrl, 'POST', `/api/projects/${testProjectId}/bom`, {
-      partNumber: `RES-10K-${Date.now()}`,
-      manufacturer: 'TestCorp',
-      description: 'Test Resistor 10K Ohm',
-      quantity: 10,
-      unitPrice: '0.0500',
-      supplier: 'DigiKey',
-      stock: 100,
-      status: 'In Stock',
-    }, { 'X-Session-Id': sessionId });
-
-    expect(res.status).toBe(201);
-    bomId = res.json!.id;
-    expect(bomId).toBeTruthy();
-  });
-
-  it('lists BOM items with pagination metadata', async () => {
-    const res = await api<CollectionResponse<BomItemResponse>>(baseUrl, 'GET', `/api/projects/${testProjectId}/bom`, undefined, { 'X-Session-Id': sessionId });
-    expect(res.status).toBe(200);
-    expect(Array.isArray(res.json?.data)).toBe(true);
-  });
-
-  it('updates a BOM item', async () => {
-    const res = await api<BomItemResponse>(baseUrl, 'PATCH', `/api/projects/${testProjectId}/bom/${bomId}`, { quantity: 20 }, { 'X-Session-Id': sessionId });
-    expect(res.status).toBe(200);
-    expect(res.json?.quantity).toBe(20);
-  });
-
-  it('deletes a BOM item', async () => {
-    const res = await api(baseUrl, 'DELETE', `/api/projects/${testProjectId}/bom/${bomId}`, undefined, { 'X-Session-Id': sessionId });
-    expect(res.status).toBe(204);
   });
 });
 

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ToolRegistry } from './registry';
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 export function calculateBuildRiskScore(bomItems: BomItem[]) {
   let costRiskScore = 0;

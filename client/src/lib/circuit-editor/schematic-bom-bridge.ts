@@ -8,7 +8,8 @@
  * and produces a sync plan describing what needs to be added/updated.
  */
 
-import type { CircuitInstanceRow, BomItem, ComponentPart } from '@shared/schema';
+import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 import type { PartMeta } from '@shared/component-types';
 
 // ---------------------------------------------------------------------------

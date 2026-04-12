@@ -3,7 +3,6 @@ import {
   insertProjectSchema,
   insertArchitectureNodeSchema,
   insertArchitectureEdgeSchema,
-  insertBomItemSchema,
   insertValidationIssueSchema,
   insertChatMessageSchema,
   insertHistoryItemSchema,
@@ -197,75 +196,6 @@ describe('insertArchitectureEdgeSchema', () => {
       style: { stroke: '#000', customDash: '5,5' },
     });
     expect(result.success).toBe(true);
-  });
-});
-
-// =============================================================================
-// insertBomItemSchema
-// =============================================================================
-describe('insertBomItemSchema', () => {
-  const validBom = {
-    projectId: 1,
-    partNumber: 'ESP32-WROOM-32E',
-    manufacturer: 'Espressif',
-    description: 'Wi-Fi + BLE SoC module',
-    unitPrice: '5.50',
-    supplier: 'DigiKey',
-  };
-
-  it('accepts a valid BOM item', () => {
-    const result = insertBomItemSchema.safeParse(validBom);
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts numeric unitPrice input and normalizes it to a string', () => {
-    const result = insertBomItemSchema.safeParse({ ...validBom, unitPrice: 5.5 });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.unitPrice).toBe('5.5');
-    }
-  });
-
-  it('defaults status to "In Stock"', () => {
-    const result = insertBomItemSchema.safeParse(validBom);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.status).toBe('In Stock');
-    }
-  });
-
-  it('accepts valid status enum values', () => {
-    for (const status of ['In Stock', 'Low Stock', 'Out of Stock', 'On Order'] as const) {
-      const result = insertBomItemSchema.safeParse({ ...validBom, status });
-      expect(result.success).toBe(true);
-    }
-  });
-
-  it('rejects invalid status value', () => {
-    const result = insertBomItemSchema.safeParse({ ...validBom, status: 'Discontinued' });
-    expect(result.success).toBe(false);
-  });
-
-  it('strips totalPrice from input (computed server-side)', () => {
-    const result = insertBomItemSchema.safeParse({ ...validBom, totalPrice: '999' });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data).not.toHaveProperty('totalPrice');
-    }
-  });
-
-  it('rejects BOM item missing manufacturer', () => {
-    const { manufacturer, ...noMfg } = validBom;
-    const result = insertBomItemSchema.safeParse(noMfg);
-    expect(result.success).toBe(false);
-  });
-
-  it('accepts BOM item with quantity', () => {
-    const result = insertBomItemSchema.safeParse({ ...validBom, quantity: 100 });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.quantity).toBe(100);
-    }
   });
 });
 

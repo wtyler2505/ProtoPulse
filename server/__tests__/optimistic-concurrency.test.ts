@@ -3,9 +3,9 @@ import type {
   Project,
   ArchitectureNode,
   ArchitectureEdge,
-  BomItem,
   CircuitDesignRow,
 } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 // ---------------------------------------------------------------------------
 // Mocks — vi.hoisted() ensures these are available when vi.mock runs
@@ -428,73 +428,6 @@ describe('Optimistic concurrency — BOM item version', () => {
     updateResult = [];
   });
 
-  it('updateBomItem increments version (non-quantity path)', async () => {
-    const updated = makeBomItem({ version: 2, description: 'Updated desc' });
-    setupUpdateChain([updated]);
-
-    const result = await storage.updateBomItem(1, 1, { description: 'Updated desc' });
-    expect(result?.version).toBe(2);
-  });
-
-  it('updateBomItem with quantity change uses transaction and version check', async () => {
-    const existing = makeBomItem({ version: 1, quantity: 1, unitPrice: '3.50' });
-    const updated = makeBomItem({ version: 2, quantity: 10, totalPrice: '35.0000' });
-
-    const txMock = createTxMock();
-    selectResult = [existing];
-    updateResult = [updated];
-
-    mockDb.transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(txMock));
-
-    const result = await storage.updateBomItem(1, 1, { quantity: 10 }, 1);
-    expect(result?.version).toBe(2);
-  });
-
-  it('updateBomItem throws VersionConflictError in transaction on stale version', async () => {
-    const existing = makeBomItem({ version: 5 });
-
-    const txMock = createTxMock();
-    selectResult = [existing];
-
-    mockDb.transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(txMock));
-
-    await expect(storage.updateBomItem(1, 1, { quantity: 10 }, 2))
-      .rejects.toThrow(VersionConflictError);
-  });
-
-  it('updateBomItem throws VersionConflictError on non-quantity path', async () => {
-    setupUpdateChain([]);
-    setupSelectChain([{ id: 1, version: 3 }]);
-
-    await expect(storage.updateBomItem(1, 1, { description: 'Stale' }, 1))
-      .rejects.toThrow(VersionConflictError);
-  });
-
-  it('updateBomItem backward compat — no expectedVersion works normally', async () => {
-    const updated = makeBomItem({ version: 2, description: 'OK' });
-    setupUpdateChain([updated]);
-
-    const result = await storage.updateBomItem(1, 1, { description: 'OK' });
-    expect(result?.version).toBe(2);
-  });
-
-  it('updateBomItem returns undefined for non-existent item (not 409)', async () => {
-    setupUpdateChain([]);
-    setupSelectChain([]);
-
-    const result = await storage.updateBomItem(999, 1, { description: 'Ghost' }, 1);
-    expect(result).toBeUndefined();
-  });
-
-  it('updateBomItem returns undefined in transaction for non-existent item', async () => {
-    const txMock = createTxMock();
-    selectResult = [];
-
-    mockDb.transaction.mockImplementation(async (cb: (tx: unknown) => Promise<unknown>) => cb(txMock));
-
-    const result = await storage.updateBomItem(999, 1, { quantity: 10 });
-    expect(result).toBeUndefined();
-  });
 });
 
 describe('Optimistic concurrency — Circuit design version', () => {
@@ -584,16 +517,6 @@ describe('Optimistic concurrency — concurrent update simulation', () => {
       .rejects.toThrow(VersionConflictError);
   });
 
-  it('concurrent BOM updates — first wins, second gets 409', async () => {
-    const updated = makeBomItem({ version: 2, description: 'A' });
-    setupUpdateChain([updated]);
-    await storage.updateBomItem(1, 1, { description: 'A' }, 1);
-
-    setupUpdateChain([]);
-    setupSelectChain([{ id: 1, version: 2 }]);
-    await expect(storage.updateBomItem(1, 1, { description: 'B' }, 1))
-      .rejects.toThrow(VersionConflictError);
-  });
 });
 
 describe('Optimistic concurrency — type shape validation', () => {

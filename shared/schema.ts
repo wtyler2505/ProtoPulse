@@ -123,6 +123,9 @@ export const insertArchitectureEdgeSchema = createInsertSchema(architectureEdges
 export type InsertArchitectureEdge = z.infer<typeof insertArchitectureEdgeSchema>;
 export type ArchitectureEdge = typeof architectureEdges.$inferSelect;
 
+// Legacy BOM items table — reads redirected to canonical parts+part_stock in Phase 6.
+// Table definition kept for seed.ts and project-io.ts writers until Phase 7 migration.
+// Types are in shared/types/bom-compat.ts — do NOT use bomItems.$inferSelect for new code.
 export const bomItems = pgTable("bom_items", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
@@ -157,7 +160,7 @@ export const insertBomItemSchema = createInsertSchema(bomItems).omit({ id: true,
   status: z.enum(["In Stock", "Low Stock", "Out of Stock", "On Order"]).default("In Stock"),
 });
 export type InsertBomItem = z.infer<typeof insertBomItemSchema>;
-export type BomItem = typeof bomItems.$inferSelect;
+export type { BomItem } from './types/bom-compat';
 
 export const validationIssues = pgTable("validation_issues", {
   id: serial("id").primaryKey(),

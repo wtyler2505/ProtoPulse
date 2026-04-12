@@ -1,15 +1,13 @@
 import { eq, and, desc, asc, isNull, isNotNull, sql } from 'drizzle-orm';
 import {
-  bomItems, type BomItem, type InsertBomItem,
+  parts, partStock,
   bomSnapshots, type BomSnapshot,
 } from '@shared/schema';
-import { StorageError, VersionConflictError } from './errors';
+import type { BomItem } from '@shared/types/bom-compat';
+import { mapPartWithStockToBomItem } from '@shared/types/bom-compat';
+import { StorageError } from './errors';
 import type { StorageDeps } from './types';
 import type { PaginationOptions } from './interfaces';
-
-function computeTotalPrice(quantity: number, unitPrice: string | number): string {
-  return String((quantity * parseFloat(String(unitPrice))).toFixed(4));
-}
 
 export class BomStorage {
   constructor(private deps: StorageDeps) {}
@@ -23,11 +21,26 @@ export class BomStorage {
       const cacheKey = `bom:${projectId}:${limit}:${offset}:${sort}`;
       const cached = this.cache.get<BomItem[]>(cacheKey);
       if (cached) { return cached; }
-      const result = await this.db.select().from(bomItems)
-        .where(and(eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
-        .orderBy(sort === 'desc' ? desc(bomItems.id) : asc(bomItems.id))
+
+      const joinCondition = and(
+        eq(partStock.partId, parts.id),
+        eq(partStock.projectId, projectId),
+        isNull(partStock.deletedAt),
+      );
+
+      const rows = await this.db
+        .select({ part: parts, stock: partStock })
+        .from(parts)
+        .innerJoin(partStock, joinCondition)
+        .where(isNull(parts.deletedAt))
+        .orderBy(sort === 'desc' ? desc(partStock.id) : asc(partStock.id))
         .limit(limit)
         .offset(offset);
+
+      const result = rows.map((row) =>
+        mapPartWithStockToBomItem(row.part, row.stock, projectId),
+      );
+
       this.cache.set(cacheKey, result);
       return result;
     } catch (e) {
@@ -35,97 +48,29 @@ export class BomStorage {
     }
   }
 
-  async getBomItem(id: number, projectId: number): Promise<BomItem | undefined> {
-    try {
-      const [item] = await this.db.select().from(bomItems).where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)));
-      return item;
-    } catch (e) {
-      throw new StorageError('getBomItem', `bom/${id}`, e);
-    }
-  }
-
-  async createBomItem(item: InsertBomItem): Promise<BomItem> {
-    try {
-      const totalPrice = computeTotalPrice(item.quantity ?? 1, item.unitPrice ?? '0');
-      const [created] = await this.db.insert(bomItems).values({ ...item, totalPrice }).returning();
-      this.cache.invalidate(`bom:${item.projectId}`);
-      return created;
-    } catch (e) {
-      throw new StorageError('createBomItem', 'bom', e);
-    }
-  }
-
-  async updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>, expectedVersion?: number): Promise<BomItem | undefined> {
-    try {
-      const safeData = { ...item };
-      delete safeData.projectId;
-
-      const baseConditions = [eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)];
-      const versionConditions = expectedVersion !== undefined
-        ? [...baseConditions, eq(bomItems.version, expectedVersion)]
-        : baseConditions;
-
-      const versionBump = { version: sql`${bomItems.version} + 1` };
-
-      if (safeData.quantity !== undefined || safeData.unitPrice !== undefined) {
-        const updated = await this.db.transaction(async (tx) => {
-          const [existing] = await tx.select().from(bomItems).where(and(...baseConditions));
-          if (!existing) { return undefined; }
-          if (expectedVersion !== undefined && existing.version !== expectedVersion) {
-            throw new VersionConflictError('bom', id, existing.version);
-          }
-          const quantity = safeData.quantity ?? existing.quantity;
-          const unitPrice = safeData.unitPrice ?? existing.unitPrice;
-          const totalPrice = computeTotalPrice(quantity, unitPrice);
-          const [result] = await tx.update(bomItems)
-            .set({ ...safeData, totalPrice, ...versionBump, updatedAt: new Date() })
-            .where(and(...baseConditions))
-            .returning();
-          return result;
-        });
-        if (updated) { this.cache.invalidate(`bom:${projectId}`); }
-        return updated;
-      }
-
-      const [updated] = await this.db.update(bomItems)
-        .set({ ...safeData, ...versionBump, updatedAt: new Date() })
-        .where(and(...versionConditions))
-        .returning();
-      if (expectedVersion !== undefined && !updated) {
-        const [existing] = await this.db.select({ id: bomItems.id, version: bomItems.version })
-          .from(bomItems).where(and(...baseConditions));
-        if (existing) {
-          throw new VersionConflictError('bom', id, existing.version);
-        }
-      }
-      if (updated) { this.cache.invalidate(`bom:${projectId}`); }
-      return updated;
-    } catch (e) {
-      if (e instanceof StorageError) { throw e; }
-      throw new StorageError('updateBomItem', `bom/${id}`, e);
-    }
-  }
-
-  async deleteBomItem(id: number, projectId: number): Promise<boolean> {
-    const [result] = await this.db.update(bomItems)
-      .set({ deletedAt: new Date() })
-      .where(and(eq(bomItems.id, id), eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
-      .returning();
-    if (result) { this.cache.invalidate(`bom:${projectId}`); }
-    return !!result;
-  }
-
   async getLowStockItems(projectId: number): Promise<BomItem[]> {
     try {
-      return await this.db.select().from(bomItems)
+      const joinCondition = and(
+        eq(partStock.partId, parts.id),
+        eq(partStock.projectId, projectId),
+        isNull(partStock.deletedAt),
+      );
+
+      const rows = await this.db
+        .select({ part: parts, stock: partStock })
+        .from(parts)
+        .innerJoin(partStock, joinCondition)
         .where(and(
-          eq(bomItems.projectId, projectId),
-          isNull(bomItems.deletedAt),
-          isNotNull(bomItems.quantityOnHand),
-          isNotNull(bomItems.minimumStock),
-          sql`${bomItems.quantityOnHand} <= ${bomItems.minimumStock}`,
+          isNull(parts.deletedAt),
+          isNotNull(partStock.quantityOnHand),
+          isNotNull(partStock.minimumStock),
+          sql`${partStock.quantityOnHand} <= ${partStock.minimumStock}`,
         ))
-        .orderBy(asc(bomItems.quantityOnHand));
+        .orderBy(asc(partStock.quantityOnHand));
+
+      return rows.map((row) =>
+        mapPartWithStockToBomItem(row.part, row.stock, projectId),
+      );
     } catch (e) {
       throw new StorageError('getLowStockItems', `projects/${projectId}/bom/low-stock`, e);
     }
@@ -133,14 +78,14 @@ export class BomStorage {
 
   async getStorageLocations(projectId: number): Promise<string[]> {
     try {
-      const rows = await this.db.selectDistinct({ storageLocation: bomItems.storageLocation })
-        .from(bomItems)
+      const rows = await this.db.selectDistinct({ storageLocation: partStock.storageLocation })
+        .from(partStock)
         .where(and(
-          eq(bomItems.projectId, projectId),
-          isNull(bomItems.deletedAt),
-          isNotNull(bomItems.storageLocation),
+          eq(partStock.projectId, projectId),
+          isNull(partStock.deletedAt),
+          isNotNull(partStock.storageLocation),
         ))
-        .orderBy(asc(bomItems.storageLocation));
+        .orderBy(asc(partStock.storageLocation));
       return rows
         .map((r) => r.storageLocation)
         .filter((loc): loc is string => loc !== null);
@@ -153,9 +98,7 @@ export class BomStorage {
 
   async createBomSnapshot(projectId: number, label: string): Promise<BomSnapshot> {
     try {
-      const items = await this.db.select().from(bomItems)
-        .where(and(eq(bomItems.projectId, projectId), isNull(bomItems.deletedAt)))
-        .orderBy(asc(bomItems.id));
+      const items = await this.getBomItems(projectId, { limit: 10000, offset: 0, sort: 'asc' });
 
       const [snapshot] = await this.db.insert(bomSnapshots)
         .values({ projectId, label, snapshotData: items })

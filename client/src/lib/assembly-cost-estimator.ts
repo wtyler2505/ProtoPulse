@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 // ---------------------------------------------------------------------------
 // Types

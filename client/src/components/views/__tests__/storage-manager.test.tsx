@@ -53,6 +53,18 @@ vi.mock('@/components/ui/collapsible', () => ({
   CollapsibleContent: ({ children }: Record<string, unknown>) => <div>{children as React.ReactNode}</div>,
 }));
 
+let mockBomData: unknown[] = [];
+vi.mock('@/lib/contexts/bom-context', () => ({
+  useBom: () => ({
+    bom: mockBomData,
+    bomSettings: { maxCost: 50, batchSize: 1000, inStockOnly: true, manufacturingDate: new Date() },
+    setBomSettings: vi.fn(),
+    addBomItem: vi.fn(),
+    deleteBomItem: vi.fn(),
+    updateBomItem: vi.fn(),
+  }),
+}));
+
 // ----------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------
@@ -61,88 +73,68 @@ import StorageManagerPanel from '@/components/views/StorageManagerPanel';
 
 const mockBomItems = [
   {
-    id: 1,
-    projectId: 1,
+    id: '1',
     partNumber: 'ESP32-S3',
     manufacturer: 'Espressif',
     description: 'WiFi MCU module',
     quantity: 2,
-    unitPrice: '3.5000',
-    totalPrice: '7.0000',
-    supplier: 'Digi-Key',
+    unitPrice: 3.5,
+    totalPrice: 7,
+    supplier: 'Digi-Key' as const,
     stock: 500,
-    status: 'In Stock',
-    leadTime: null,
-    datasheetUrl: null,
-    manufacturerUrl: null,
+    status: 'In Stock' as const,
+    leadTime: undefined,
     storageLocation: 'Drawer A1',
     quantityOnHand: 10,
     minimumStock: 3,
-    updatedAt: new Date(),
-    deletedAt: null,
   },
   {
-    id: 2,
-    projectId: 1,
+    id: '2',
     partNumber: 'SHT40',
     manufacturer: 'Sensirion',
     description: 'Temp/humidity sensor',
     quantity: 1,
-    unitPrice: '2.0000',
-    totalPrice: '2.0000',
-    supplier: 'Mouser',
+    unitPrice: 2,
+    totalPrice: 2,
+    supplier: 'Mouser' as const,
     stock: 100,
-    status: 'Low Stock',
-    leadTime: null,
-    datasheetUrl: null,
-    manufacturerUrl: null,
+    status: 'Low Stock' as const,
+    leadTime: undefined,
     storageLocation: 'Drawer A1',
     quantityOnHand: 2,
     minimumStock: 5,
-    updatedAt: new Date(),
-    deletedAt: null,
   },
   {
-    id: 3,
-    projectId: 1,
+    id: '3',
     partNumber: 'LM7805',
     manufacturer: 'TI',
     description: '5V regulator',
     quantity: 3,
-    unitPrice: '0.5000',
-    totalPrice: '1.5000',
-    supplier: 'LCSC',
+    unitPrice: 0.5,
+    totalPrice: 1.5,
+    supplier: 'LCSC' as const,
     stock: 1000,
-    status: 'In Stock',
-    leadTime: null,
-    datasheetUrl: null,
-    manufacturerUrl: null,
+    status: 'In Stock' as const,
+    leadTime: undefined,
     storageLocation: 'Bin B2',
     quantityOnHand: 20,
     minimumStock: 5,
-    updatedAt: new Date(),
-    deletedAt: null,
   },
   {
-    id: 4,
-    projectId: 1,
+    id: '4',
     partNumber: 'R-10K',
     manufacturer: 'Yageo',
     description: '10K resistor',
     quantity: 10,
-    unitPrice: '0.0100',
-    totalPrice: '0.1000',
-    supplier: 'Digi-Key',
+    unitPrice: 0.01,
+    totalPrice: 0.1,
+    supplier: 'Digi-Key' as const,
     stock: 10000,
-    status: 'In Stock',
-    leadTime: null,
-    datasheetUrl: null,
-    manufacturerUrl: null,
+    status: 'In Stock' as const,
+    leadTime: undefined,
     storageLocation: null,
     quantityOnHand: null,
     minimumStock: null,
-    updatedAt: new Date(),
-    deletedAt: null,
   },
 ];
 
@@ -156,11 +148,7 @@ function createTestQueryClient() {
 }
 
 function renderStorageManager(items = mockBomItems) {
-  // Mock global fetch
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-    ok: true,
-    json: async () => ({ data: items }),
-  } as Response);
+  mockBomData = items;
 
   const qc = createTestQueryClient();
   return render(

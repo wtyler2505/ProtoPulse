@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 import type { ToleranceSpec } from '../monte-carlo';
 import {
   parseTolerance,

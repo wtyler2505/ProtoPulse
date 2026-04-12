@@ -1,8 +1,8 @@
+import type { BomItem } from '@shared/types/bom-compat';
 import type {
   Project, InsertProject,
   ArchitectureNode, InsertArchitectureNode,
   ArchitectureEdge, InsertArchitectureEdge,
-  BomItem, InsertBomItem,
   ValidationIssue, InsertValidationIssue,
   ChatMessage, InsertChatMessage,
   HistoryItem, InsertHistoryItem,
@@ -73,10 +73,6 @@ export interface IStorage {
   replaceValidationIssues(projectId: number, issues: InsertValidationIssue[]): Promise<ValidationIssue[]>;
 
   getBomItems(projectId: number, opts?: PaginationOptions): Promise<BomItem[]>;
-  getBomItem(id: number, projectId: number): Promise<BomItem | undefined>;
-  createBomItem(item: InsertBomItem): Promise<BomItem>;
-  updateBomItem(id: number, projectId: number, item: Partial<InsertBomItem>, expectedVersion?: number): Promise<BomItem | undefined>;
-  deleteBomItem(id: number, projectId: number): Promise<boolean>;
   getLowStockItems(projectId: number): Promise<BomItem[]>;
   getStorageLocations(projectId: number): Promise<string[]>;
 

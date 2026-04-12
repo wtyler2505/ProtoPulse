@@ -6,13 +6,13 @@ import type { IStorage } from '../storage';
 import type {
   ArchitectureNode,
   ArchitectureEdge,
-  BomItem,
   ValidationIssue,
   CircuitDesignRow,
   CircuitInstanceRow,
   CircuitNetRow,
   Project,
 } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 // ---------------------------------------------------------------------------
 // Helpers

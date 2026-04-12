@@ -6,7 +6,7 @@
  * field-level change detail and cost delta summary.
  */
 
-import type { BomItem } from './schema';
+import type { BomItem } from './types/bom-compat';
 
 // ---------------------------------------------------------------------------
 // Types

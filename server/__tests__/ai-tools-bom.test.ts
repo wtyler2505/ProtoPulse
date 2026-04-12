@@ -4,16 +4,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // transitively pulls in server/db.ts, which throws at module load when
 // DATABASE_URL is unset. Mock it before any imports.
 vi.mock('../db', () => ({ db: {}, pool: {}, checkConnection: vi.fn() }));
+const mockIngressPart = vi.fn().mockResolvedValue({ partId: 'p1', slug: 'test', created: true, reused: false, stockId: 's1', placementId: null });
 vi.mock('../parts-ingress', () => ({
+  ingressPart: mockIngressPart,
   mirrorIngressBestEffort: vi.fn().mockResolvedValue(null),
 }));
-vi.mock('../env', () => ({ featureFlags: { partsCatalogV2: false } }));
+vi.mock('../env', () => ({ featureFlags: { partsCatalogV2: true } }));
 
 import { ToolRegistry } from '../ai-tools/registry';
 import { registerBomTools } from '../ai-tools/bom';
 import type { ToolContext } from '../ai-tools/types';
 import type { IStorage } from '../storage';
-import type { BomItem, ArchitectureNode } from '@shared/schema';
+import type { ArchitectureNode } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,7 +80,6 @@ function createMockStorage(
   nodes: ArchitectureNode[] = [],
 ): IStorage {
   return {
-    createBomItem: vi.fn().mockResolvedValue(makeBomItem()),
     getBomItems: vi.fn().mockResolvedValue(bomItems),
     getNodes: vi.fn().mockResolvedValue(nodes),
   } as unknown as IStorage;
@@ -303,7 +305,8 @@ describe('BOM tools — add_bom_item execution', () => {
     ctx = createCtx(mockStorage);
   });
 
-  it('calls storage.createBomItem with correct params', async () => {
+  it('calls ingressPart with correct params', async () => {
+    mockIngressPart.mockClear();
     const result = await registry.execute(
       'add_bom_item',
       {
@@ -319,51 +322,18 @@ describe('BOM tools — add_bom_item execution', () => {
     );
 
     expect(result.success).toBe(true);
-    expect(mockStorage.createBomItem).toHaveBeenCalledTimes(1);
-
-    const callArgs = vi.mocked(mockStorage.createBomItem).mock.calls[0][0];
+    expect(mockIngressPart).toHaveBeenCalledTimes(1);
+    const callArgs = mockIngressPart.mock.calls[0][0];
     expect(callArgs.projectId).toBe(1);
-    expect(callArgs.partNumber).toBe('ESP32-S3-WROOM-1');
-    expect(callArgs.manufacturer).toBe('Espressif');
-    expect(callArgs.quantity).toBe(5);
-    expect(callArgs.unitPrice).toBe('3.5');
-    expect(callArgs.supplier).toBe('Digi-Key');
-    expect(callArgs.stock).toBe(0);
-  });
-
-  it('converts unitPrice to string for storage', async () => {
-    await registry.execute(
-      'add_bom_item',
-      {
-        partNumber: 'RES-10K',
-        manufacturer: 'Yageo',
-        description: '10K resistor',
-        unitPrice: 0.01,
-      },
-      ctx,
-    );
-
-    const callArgs = vi.mocked(mockStorage.createBomItem).mock.calls[0][0];
-    expect(typeof callArgs.unitPrice).toBe('string');
-    expect(callArgs.unitPrice).toBe('0.01');
-  });
-
-  it('uses default quantity=1 when not specified', async () => {
-    await registry.execute(
-      'add_bom_item',
-      {
-        partNumber: 'CAP-100NF',
-        manufacturer: 'Murata',
-        description: '100nF cap',
-      },
-      ctx,
-    );
-
-    const callArgs = vi.mocked(mockStorage.createBomItem).mock.calls[0][0];
-    expect(callArgs.quantity).toBe(1);
+    expect(callArgs.fields.mpn).toBe('ESP32-S3-WROOM-1');
+    expect(callArgs.fields.manufacturer).toBe('Espressif');
+    expect(callArgs.stock.quantityNeeded).toBe(5);
+    expect(callArgs.stock.unitPrice).toBe(3.5);
+    expect(callArgs.stock.supplier).toBe('Digi-Key');
   });
 
   it('returns success message with partNumber and manufacturer', async () => {
+    mockIngressPart.mockClear();
     const result = await registry.execute(
       'add_bom_item',
       {
@@ -379,7 +349,8 @@ describe('BOM tools — add_bom_item execution', () => {
     expect(result.message).toContain('Espressif');
   });
 
-  it('returns error for invalid params without calling storage', async () => {
+  it('returns error for invalid params without calling ingress', async () => {
+    mockIngressPart.mockClear();
     const result = await registry.execute(
       'add_bom_item',
       { partNumber: '' },
@@ -387,7 +358,7 @@ describe('BOM tools — add_bom_item execution', () => {
     );
 
     expect(result.success).toBe(false);
-    expect(mockStorage.createBomItem).not.toHaveBeenCalled();
+    expect(mockIngressPart).not.toHaveBeenCalled();
   });
 });
 

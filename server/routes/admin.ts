@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import { isNotNull, lte, and, count } from 'drizzle-orm';
 import rateLimit from 'express-rate-limit';
 
-import { architectureNodes, architectureEdges, bomItems, projects } from '@shared/schema';
+import { architectureNodes, architectureEdges, partStock, projects } from '@shared/schema';
 
 import { db } from '../db';
 import { getPolicies, runRetention, runSinglePolicy } from '../lib/data-retention';
@@ -83,8 +83,8 @@ export function registerAdminRoutes(app: Express): void {
         .where(and(isNotNull(architectureEdges.deletedAt), lte(architectureEdges.deletedAt, cutoff)));
       const [bomCount] = await db
         .select({ total: count() })
-        .from(bomItems)
-        .where(and(isNotNull(bomItems.deletedAt), lte(bomItems.deletedAt, cutoff)));
+        .from(partStock)
+        .where(and(isNotNull(partStock.deletedAt), lte(partStock.deletedAt, cutoff)));
       const [projectsCount] = await db
         .select({ total: count() })
         .from(projects)
@@ -119,7 +119,7 @@ export function registerAdminRoutes(app: Express): void {
       await db
         .delete(architectureEdges)
         .where(and(isNotNull(architectureEdges.deletedAt), lte(architectureEdges.deletedAt, cutoff)));
-      await db.delete(bomItems).where(and(isNotNull(bomItems.deletedAt), lte(bomItems.deletedAt, cutoff)));
+      await db.delete(partStock).where(and(isNotNull(partStock.deletedAt), lte(partStock.deletedAt, cutoff)));
       await db.delete(projects).where(and(isNotNull(projects.deletedAt), lte(projects.deletedAt, cutoff)));
 
       res.json({ message: 'Purge complete', counts });

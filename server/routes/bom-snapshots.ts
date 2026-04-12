@@ -5,7 +5,7 @@ import { storage } from '../storage';
 import { payloadLimit, parseIdParam } from './utils';
 import { requireProjectOwnership } from './auth-middleware';
 import { computeBomDiff } from '@shared/bom-diff';
-import type { BomItem } from '@shared/schema';
+import type { BomItem } from '@shared/types/bom-compat';
 
 const createSnapshotSchema = z.object({
   label: z.string().min(1).max(200),

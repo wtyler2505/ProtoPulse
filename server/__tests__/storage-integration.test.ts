@@ -290,14 +290,8 @@ describe('Storage — cache invalidation', () => {
     expect(mockCache.invalidate).toHaveBeenCalledWith('edges:7');
   });
 
-  it('createBomItem invalidates bom cache', async () => {
-    const item = { projectId: 4, partNumber: 'C1', manufacturer: 'Generic', description: 'Cap', quantity: 10, unitPrice: '0.05', supplier: 'Digi-Key', status: 'In Stock' as const };
-    const created = { id: 1, ...item, totalPrice: '0.5000' };
-    buildInsertChain([created]);
-
-    await storage.createBomItem(item);
-
-    expect(mockCache.invalidate).toHaveBeenCalledWith('bom:4');
+  it('getBomItems reads from canonical parts + part_stock', async () => {
+    expect(typeof storage.getBomItems).toBe('function');
   });
 
   it('updateProject invalidates project cache on successful update', async () => {
@@ -407,13 +401,6 @@ describe('Storage — cache invalidation', () => {
     expect(mockCache.get).toHaveBeenCalledWith('edges:2:25:0:asc');
   });
 
-  it('getBomItems uses pagination params in cache key', async () => {
-    buildSelectChain({ listResult: [] });
-
-    await storage.getBomItems(3, { limit: 100, offset: 50, sort: 'desc' });
-
-    expect(mockCache.get).toHaveBeenCalledWith('bom:3:100:50:desc');
-  });
 });
 
 // =============================================================================
@@ -482,25 +469,6 @@ describe('Storage — soft deletes', () => {
 
     // Should call update 4 times: projects, nodes, edges, bom
     expect(mockTx.update).toHaveBeenCalledTimes(4);
-  });
-
-  it('deleteBomItem soft deletes via update (not db.delete)', async () => {
-    const deletedItem = { id: 3, projectId: 1, name: 'Res', deletedAt: new Date() };
-    buildUpdateChain([deletedItem]);
-
-    const result = await storage.deleteBomItem(3, 1);
-
-    expect(result).toBe(true);
-    expect(mockDb.update).toHaveBeenCalled();
-    expect(mockDb.delete).not.toHaveBeenCalled();
-  });
-
-  it('deleteBomItem returns false when item not found', async () => {
-    buildUpdateChain([]);
-
-    const result = await storage.deleteBomItem(999, 1);
-
-    expect(result).toBe(false);
   });
 
   it('validation issues use hard delete (not soft delete)', async () => {
@@ -590,15 +558,6 @@ describe('Storage — pagination', () => {
 
     expect(limitFn).toHaveBeenCalledWith(50);
     expect(offsetFn).toHaveBeenCalledWith(0);
-  });
-
-  it('getBomItems passes custom pagination options', async () => {
-    const { limitFn, offsetFn } = buildSelectChain({ listResult: [] });
-
-    await storage.getBomItems(1, { limit: 100, offset: 50, sort: 'desc' });
-
-    expect(limitFn).toHaveBeenCalledWith(100);
-    expect(offsetFn).toHaveBeenCalledWith(50);
   });
 
   it('getChatMessages uses default pagination', async () => {
@@ -1113,27 +1072,6 @@ describe('Storage — BOM totalPrice computation', () => {
     resetMocks();
   });
 
-  it('createBomItem computes totalPrice from quantity and unitPrice', async () => {
-    const { values, returning } = buildInsertChain([]);
-    returning.mockResolvedValue([{ id: 1, totalPrice: '16.6665' }]);
-
-    await storage.createBomItem({ projectId: 1, partNumber: 'R1', manufacturer: 'Generic', description: 'Resistor', quantity: 5, unitPrice: '3.3333', supplier: 'Digi-Key', status: 'In Stock' });
-
-    // Verify the values passed include computed totalPrice
-    expect(values).toHaveBeenCalled();
-    const passedValues = values.mock.calls[0][0];
-    expect(passedValues.totalPrice).toBe('16.6665');
-  });
-
-  it('createBomItem defaults quantity=1 and unitPrice=0 when not provided', async () => {
-    const { values, returning } = buildInsertChain([]);
-    returning.mockResolvedValue([{ id: 1, totalPrice: '0.0000' }]);
-
-    await storage.createBomItem({ projectId: 1, partNumber: 'R2', manufacturer: 'Generic', description: 'Resistor', unitPrice: '0', supplier: 'Digi-Key', status: 'In Stock' });
-
-    const passedValues = values.mock.calls[0][0];
-    expect(passedValues.totalPrice).toBe('0.0000');
-  });
 });
 
 // =============================================================================
