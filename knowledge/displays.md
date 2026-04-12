@@ -46,6 +46,32 @@ Display protocols, driver ICs, multiplexing strategies, and visual feedback desi
 - [[pre-loaded-firmware-with-config-file-customization-enables-zero-code-hardware-deployment]] — works out of the box, customize without coding
 - [[nose-bridge-connector-enables-board-to-board-synchronization-for-matched-multi-display-animations]] — purpose-built inter-board connector for GPIO-exhausted boards
 
+### 7-Segment Displays
+- [[common-cathode-and-common-anode-7-segment-displays-are-electrically-incompatible-and-swapping-them-silently-breaks-firmware]] — polarity mismatch produces total failure, not partial
+- [[multiplexed-led-displays-need-100hz-minimum-refresh-rate-or-flicker-becomes-visible-due-to-persistence-of-vision-limits]] — the scan rate threshold and why driver ICs exist
+- [[direct-driving-a-4-digit-7-segment-display-consumes-12-gpio-pins-and-requires-constant-software-multiplexing]] — why raw 4-digit displays demand a driver IC
+- [[multiplexed-led-digit-selection-uses-transistors-because-gpio-cannot-sink-enough-current-for-all-segments-simultaneously]] — NPN transistors for manual cathode switching
+- [[pulsed-led-current-at-low-duty-cycle-allows-5x-the-continuous-rating-making-multiplexed-displays-brighter-than-dc-math-predicts]] — peak vs continuous current in multiplexed LEDs
+- [[seven-segment-digit-encoding-is-a-fixed-lookup-table-that-firmware-must-embed]] — no formula, just a byte array
+
+### LED Matrix
+- [[direct-driving-an-8x8-led-matrix-consumes-16-io-pins-and-locks-the-cpu-to-display-refresh]] — direct drive is a learning exercise, not production
+- [[1088as-pin-numbering-is-non-sequential-across-rows-and-columns-making-orientation-verification-mandatory]] — scrambled pin mapping, must test before coding
+
+### MAX7219 Driver IC
+- [[rset-resistor-sets-all-max7219-segment-current-globally-and-wrong-value-destroys-leds]] — the single component that controls LED brightness and survival
+- [[max7219-only-works-with-common-cathode-displays-because-dig-pins-are-current-sinks]] — hard polarity constraint, no workaround
+- [[both-max7219-gnd-pins-must-be-connected-because-they-are-not-internally-bridged]] — a wiring gotcha unique to this IC
+- [[max7219-requires-both-ceramic-and-electrolytic-decoupling-caps-or-spi-communication-becomes-unreliable]] — dual-cap decoupling is mandatory
+
+### Addressable LEDs (NeoPixel / WS2812B)
+- [[ws2812b-grab-and-pass-protocol-means-one-gpio-pin-controls-an-entire-led-chain]] — integrated controller cascade, 800kHz NZR timing
+- [[neopixel-data-line-needs-a-300-500-ohm-series-resistor-to-suppress-signal-reflections]] — signal integrity protection on the data wire
+- [[neopixel-rings-need-a-bulk-electrolytic-capacitor-across-power-to-absorb-inrush-current]] — 1000uF cap for power surge protection
+- [[neopixel-per-led-current-at-full-white-makes-ring-size-a-power-supply-design-decision]] — 50mA per LED means ring size is a power architecture choice
+- [[first-led-in-a-neopixel-chain-is-a-single-point-of-failure-that-kills-the-entire-downstream-chain]] — serial chain vulnerability
+- [[74hct-buffers-are-purpose-built-3v3-to-5v-level-shifters-for-timing-critical-signals]] — the correct level shifter for ESP32 → NeoPixel
+
 ## Open Questions
 - How generalizable is the "dedicated single-purpose inter-board connector" pattern beyond Adafruit's M4SK and Gizmo?
 

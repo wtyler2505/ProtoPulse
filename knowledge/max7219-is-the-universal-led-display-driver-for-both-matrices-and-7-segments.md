@@ -17,6 +17,15 @@ The MAX7219 appears in two display categories (8x8 LED matrix and multi-digit 7-
 - **One IC to learn:** Instead of learning separate driver ICs for matrices and 7-segment displays, the MAX7219 covers both. The SPI interface, wiring (DIN, CS, CLK + VCC/GND = 5 pins), and programming model are identical.
 - **Cascading:** Multiple MAX7219 chips can be daisy-chained (DOUT of chip N to DIN of chip N+1) for larger displays. A 4-module 8x8 matrix or an 8-digit 7-segment display use the same cascade approach.
 - **Libraries:** `LedControl` (for matrices) and `TM1637Display` (for the cheaper TM1637 alternative) are distinct, but MAX7219-based 7-segment modules also work with `LedControl` by treating each digit as a row.
+- **When to stop manual multiplexing:** For 4+ digits or any LED matrix, manual multiplexing (software-driven, GPIO-intensive) becomes unwieldy. The threshold is approximately 3 digits -- beyond that, a driver IC saves GPIO, CPU time, and debugging effort.
+
+**Key electrical specifications:**
+- Supply: 4.0 - 5.5V, 330mA max (all segments on), 150uA shutdown
+- SPI clock: 10MHz max
+- Brightness: 16-level hardware PWM
+- BCD decoder: built-in character set (0-9, H, E, L, P, -, blank)
+- RSET resistor (pin 18): sets segment current globally. 9.53k = 40mA (max), 20k = 20mA (standard), 40k = 10mA (dim). See [[rset-resistor-sets-all-max7219-segment-current-globally-and-wrong-value-destroys-leds]] for details.
+- Decoupling: requires 100nF ceramic + 10uF electrolytic close to chip. See [[max7219-requires-both-ceramic-and-electrolytic-decoupling-caps-or-spi-communication-becomes-unreliable]].
 
 **Comparison with TM1637 (the common alternative):**
 
