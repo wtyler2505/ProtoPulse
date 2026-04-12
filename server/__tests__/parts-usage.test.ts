@@ -207,7 +207,7 @@ describe('GET /api/parts/:id/usage', () => {
 
   it('returns 500 on StorageError', async () => {
     const { StorageError } = await import('../storage');
-    mockGetUsageAcrossProjects.mockRejectedValue(new StorageError('getUsageAcrossProjects failed'));
+    mockGetUsageAcrossProjects.mockRejectedValue(new StorageError('getUsageAcrossProjects', 'parts_usage'));
     const { url, close } = await listen(makeApp());
     try {
       const res = await fetch(`${url}/api/parts/${SAMPLE_PART_ID}/usage`);
