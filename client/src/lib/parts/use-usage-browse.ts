@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { PARTS_QUERY_KEYS } from './query-keys';
+import { partsQueryKeys } from './query-keys';
 
 export interface UsageBrowseRow {
   part: {
@@ -18,7 +18,7 @@ export interface UsageBrowseRow {
 
 export function useUsageBrowse() {
   return useQuery<UsageBrowseRow[]>({
-    queryKey: [...PARTS_QUERY_KEYS.base, 'browse', 'usage'],
+    queryKey: [...partsQueryKeys.all, 'browse', 'usage'],
     queryFn: async () => {
       const res = await fetch('/api/parts/browse/usage');
       if (!res.ok) { throw new Error('Failed to fetch usage summary'); }

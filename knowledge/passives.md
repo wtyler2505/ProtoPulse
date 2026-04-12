@@ -61,6 +61,8 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[bjt-switching-tops-out-at-600ma-in-to-92-and-the-transition-to-mosfet-is-a-hard-architecture-boundary]] — Hard boundary: BJT for <600mA, MOSFET above; not a gradual preference
 - [[3v3-gpio-driving-a-bjt-base-loses-21-percent-of-supply-voltage-to-vbe-leaving-less-headroom-for-the-base-resistor]] — 2.6V headroom at 3.3V vs 4.3V at 5V; use lower R_base or higher-hFE transistor
 - [[drc-should-flag-direct-gpio-to-inductive-load-connections-and-suggest-driver-plus-flyback-subcircuit]] — DRC rule: inductive load needs driver transistor + flyback diode
+- [[s8050-vce-saturation-voltage-is-double-that-of-pn2222a-at-equivalent-current-making-it-dissipate-twice-the-switching-power]] — S8050 0.6V vs PN2222A 0.3V Vce(sat); gain-vs-efficiency trade-off
+- [[transistor-selection-trades-voltage-ceiling-for-gain-and-the-decision-boundary-is-load-voltage-plus-gpio-voltage]] — PN2222A vs S8050 decision tree: load voltage first, then GPIO voltage
 
 ### MOSFET Switching
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO without gate driver

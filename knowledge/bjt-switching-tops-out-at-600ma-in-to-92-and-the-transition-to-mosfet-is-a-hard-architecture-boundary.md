@@ -20,6 +20,7 @@ For MCU-driven DC load switching, there are two device families: BJTs (current-d
 - Requires: base resistor (1K-10K), base current (1-10mA from GPIO)
 - Advantages: cheaper ($0.02-0.10), simpler schematic, no gate capacitance, instantly available in kits
 - Limitations: current-driven (consumes GPIO current), gain-dependent (hFE varies 3x), TO-92 thermal limit (625mW)
+- Vce(sat) varies by device: PN2222A ~0.3V, S8050 ~0.6V at rated current -- this 2x difference affects thermal calculations in the overlap zone (see [[s8050-vce-saturation-voltage-is-double-that-of-pn2222a-at-equivalent-current-making-it-dissipate-twice-the-switching-power]])
 
 **MOSFET region (600mA-30A+):**
 - P30N06LE: 30A max, 60V, Rds(on) 35mOhm, TO-220

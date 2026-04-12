@@ -41,6 +41,18 @@ This means the same base resistor provides less saturation overdrive at 3.3V. Fo
 
 **The 3.3V + high-hFE solution:** The S8050 (hFE up to 400) is a better choice for 3.3V GPIO because its higher gain compensates for the reduced base drive. With hFE_min = 40, a 1K resistor at 3.3V gives 2.6mA base current = 104mA saturation floor. With typical hFE of 200, the same base current supports 520mA.
 
+**Structured comparison for 3.3V selection:**
+
+| Factor | PN2222A | S8050 | Winner at 3.3V |
+|--------|---------|-------|----------------|
+| Max voltage | 40V | 25V | PN2222A |
+| Max current | 600mA | 500mA | PN2222A |
+| hFE (gain) | 100-300 | 40-400 (typ 200) | S8050 |
+| Availability | Global standard | Common in kits | PN2222A |
+| Vce(sat) | ~0.3V | ~0.6V | PN2222A |
+
+**Rule of thumb:** If load voltage is under 25V AND GPIO is 3.3V, use S8050. Otherwise, use PN2222A. See [[transistor-selection-trades-voltage-ceiling-for-gain-and-the-decision-boundary-is-load-voltage-plus-gpio-voltage]] for the full decision tree.
+
 **ProtoPulse DRC rule:** When a BJT is driven from a 3.3V GPIO (ESP32, Pico, etc.), verify the base resistor is sized for the reduced headroom. If the calculated overdrive ratio falls below 1.5x, flag as marginal and suggest either a lower base resistor or a higher-gain transistor.
 
 ---

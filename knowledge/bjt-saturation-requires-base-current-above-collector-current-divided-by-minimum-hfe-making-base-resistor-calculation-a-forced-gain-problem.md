@@ -38,6 +38,16 @@ For a 5V GPIO: `Ib = (5.0 - 0.7) / R_base = 4.3V / R_base`
 | 100-300mA | 1-3mA | 1K-2.2K | 2-4.3mA | ~1.5-2x (good) |
 | 300-600mA | 3-6mA | 470R-1K | 4.3-9.1mA | ~1.5x |
 
+**Graduated base resistor selection for S8050 (hFE_min = 40):**
+
+| Load Current (Ic) | Required Ib_min | Base Resistor (5V) | Base Resistor (3.3V) | Notes |
+|-------------------|----------------|-------------------|---------------------|-------|
+| <50mA | <1.25mA | 2.2K-3.3K | 1K-2.2K | Both comfortable |
+| 50-200mA | 1.25-5mA | 470R-1K | 330R-680R | 3.3V needs lower R |
+| 200-500mA | 5-12.5mA | 220R-470R | Not practical | GPIO current too high at 3.3V |
+
+**Key difference from PN2222A:** The S8050's hFE_min of 40 (versus 100) means the minimum required base current is 2.5x higher for the same load current. At 500mA load, Ib_min = 12.5mA, which at 3.3V would require R_base = 208R and pull nearly 13mA from the GPIO -- exceeding many 3.3V MCU pin limits. The S8050's advantage (high typical hFE for easy saturation) only helps if the actual hFE is well above the minimum.
+
 **Why overdrive matters:** Using hFE_min alone puts the transistor right at the saturation boundary. Temperature, component variation, and aging can push it out of saturation, increasing Vce and power dissipation. A 2-5x overdrive factor (Ib = 2-5x the minimum required) ensures robust saturation across all conditions.
 
 **The design procedure for any BJT switch:**
