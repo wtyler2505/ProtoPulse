@@ -10,7 +10,7 @@ import { usePartAlternates } from '@/lib/parts/use-part-alternates';
 
 function AlternateGroupRow({ row }: { row: AlternatesBrowseRow }) {
   const [expanded, setExpanded] = useState(false);
-  const { data: alternates, isLoading } = usePartAlternates(expanded ? row.part.id : '');
+  const { data: alternates, isLoading } = usePartAlternates(expanded ? row.part.id : null);
 
   return (
     <Collapsible open={expanded} onOpenChange={setExpanded}>
