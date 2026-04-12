@@ -27,7 +27,7 @@ For a motor running at 15A under normal load, a sudden reversal can produce inst
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
 
 Relevant Notes:
 - [[zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory]] -- no overcurrent protection means the current spike from reversal has no automatic limit

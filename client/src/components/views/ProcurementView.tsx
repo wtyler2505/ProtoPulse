@@ -377,6 +377,9 @@ function ProcurementView() {
           <TabsTrigger value="risk-scorecard" data-testid="tab-risk-scorecard"><Shield className="h-4 w-4 mr-1.5" />Risk Scorecard</TabsTrigger>
           <TabsTrigger value="avl-compliance" data-testid="tab-avl-compliance"><ShieldCheck className="h-4 w-4 mr-1.5" />AVL Compliance</TabsTrigger>
           <TabsTrigger value="cross-project" data-testid="tab-cross-project"><AlertTriangle className="h-4 w-4 mr-1.5" />Cross-Project</TabsTrigger>
+          <TabsTrigger value="supply-chain" data-testid="tab-supply-chain"><Bell className="h-4 w-4 mr-1.5" />Supply Chain</TabsTrigger>
+          <TabsTrigger value="templates" data-testid="tab-templates"><BookTemplate className="h-4 w-4 mr-1.5" />Templates</TabsTrigger>
+          <TabsTrigger value="personal-inventory" data-testid="tab-personal-inventory"><Warehouse className="h-4 w-4 mr-1.5" />My Inventory</TabsTrigger>
         </TabsList>
         {lifecycleWarnings.total > 0 && (
           <StyledTooltip
@@ -513,6 +516,18 @@ function ProcurementView() {
             )}
           </>
         )}
+      </TabsContent>
+
+      <TabsContent value="supply-chain" className="flex-1 overflow-auto mt-0 p-4">
+        <SupplyChainAlertsPanel projectId={projectId} />
+      </TabsContent>
+
+      <TabsContent value="templates" className="flex-1 overflow-auto mt-0 p-4">
+        <BomTemplatesPanel projectId={projectId} bom={bom} />
+      </TabsContent>
+
+      <TabsContent value="personal-inventory" className="flex-1 overflow-auto mt-0 p-4">
+        <PersonalInventoryPanel />
       </TabsContent>
 
       <DamageAssessmentPanel damageDialogItem={damageDialogItem} onClose={() => setDamageDialogItem(null)} damageComponentType={damageComponentType} onComponentTypeChange={setDamageComponentType} damageObservations={damageObservations} onObservationsChange={setDamageObservations} currentDamageReport={currentDamageReport} onRunAssessment={handleRunDamageAssessment} />

@@ -31,7 +31,7 @@ The ZS-X11H has an onboard 78L05 linear regulator that converts the motor supply
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
 
 Relevant Notes:
 - [[hall-sensor-open-collector-outputs-need-pull-up-resistors-and-produce-gray-code-not-binary-position]] -- the 78L05 provides the 5V for both the Hall sensor power and the pull-up resistors

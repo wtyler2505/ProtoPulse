@@ -27,7 +27,7 @@ Additionally, a 470uF 63V electrolytic capacitor across V+/V- at the controller 
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
 
 Relevant Notes:
 - [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]] -- the high-power tier (6-60V) where fusing and protection become critical

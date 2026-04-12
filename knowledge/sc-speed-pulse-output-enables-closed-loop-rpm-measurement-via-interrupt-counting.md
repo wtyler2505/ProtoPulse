@@ -36,7 +36,7 @@ RPM = 60 / (pulse_period_seconds * 90)
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
 
 Relevant Notes:
 - [[pole-pair-count-is-determined-empirically-by-counting-hall-state-transitions-per-wheel-revolution]] -- the pole pair count this RPM formula depends on

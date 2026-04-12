@@ -25,7 +25,7 @@ The ZS-X11H BLDC controller's EL (speed) input is the single most dangerous pin 
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
 
 Relevant Notes:
 - [[bldc-stop-active-low-brake-active-high]] -- the STOP/BRAKE polarity traps on the same controller family

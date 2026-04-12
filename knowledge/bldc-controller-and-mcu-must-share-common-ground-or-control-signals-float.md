@@ -23,7 +23,7 @@ This is the most insidious wiring bug on the ZS-X11H because it produces intermi
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
 
 Relevant Notes:
 - [[zs-x11h-el-speed-input-is-active-low-and-flips-polarity-between-pwm-and-analog-modes]] -- floating ground makes the active-LOW EL pin even more dangerous because the idle state is unpredictable
