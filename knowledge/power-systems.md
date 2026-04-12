@@ -25,6 +25,32 @@ Battery management, voltage regulation, power distribution architecture, fusing 
 - [[linear-regulator-heat-dissipation-equals-voltage-drop-times-current-making-high-differential-applications-dangerous]] — P=(Vin-Vout)*I makes linear regs impractical above ~10V differential
 - [[78xx-regulators-require-input-and-output-capacitors-close-to-pins-for-stability]] — 0.33uF input + 0.1uF output within 10mm of pins
 
+### Breadboard Power
+- [[independent-per-rail-voltage-selection-enables-mixed-voltage-breadboard-prototyping-without-isolation-circuits]] — MB V2 dual-voltage via independent jumpers per rail
+- [[breadboard-power-module-700ma-total-budget-excludes-servos-and-motors-requiring-separate-power]] — AMS1117 total budget excludes all actuators
+- [[wrong-jumper-voltage-on-breadboard-power-module-silently-destroys-3v3-components-with-no-warning]] — overvoltage from jumper misconfiguration is irreversible
+
+### Emergency Stop + Safety
+- [[emergency-stop-must-use-normally-closed-contacts-because-wire-failure-must-equal-safe-shutdown]] — NC contacts ensure any failure mode = power cut
+- [[two-stage-estop-separates-control-circuit-from-power-circuit-for-safe-high-current-interruption]] — 12/24V control circuit operates 36V/100A contactor
+- [[dc-contactor-must-have-magnetic-blowout-arc-suppression-or-contacts-will-weld-under-dc-load]] — DC arcs do not self-extinguish at zero-crossing
+- [[twist-to-release-estop-prevents-accidental-restart-after-emergency-shutdown]] — latching mechanism requires deliberate rotation to re-engage
+
+### Fusing + Main Disconnect
+- [[main-fuse-within-six-inches-of-battery-positive-is-nec-fire-prevention-requirement]] — unprotected wire between battery and fuse must be minimized
+- [[ac-switches-cannot-interrupt-dc-arcs-and-will-cause-fire-or-explosion-in-battery-systems]] — DC disconnect must have DC-specific interrupt rating
+- [[slow-blow-fuse-sizing-at-125-percent-peak-prevents-nuisance-trips-while-protecting-wiring]] — time-delay characteristics coordinate with motor inrush
+
+### Power Distribution
+- [[star-ground-at-distribution-board-prevents-ground-loops-in-multi-circuit-systems]] — all grounds return to single bus bar
+- [[individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system]] — per-circuit fuses enable graceful degradation
+- [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] — four-number ordering constraint
+
+### MOSFET Switching
+- [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO
+- [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during reset
+- [[low-side-mosfet-switching-puts-load-between-supply-and-drain-with-source-at-ground]] — standard topology for MCU-driven MOSFET switching
+
 ## Open Questions
 (populated by /extract)
 

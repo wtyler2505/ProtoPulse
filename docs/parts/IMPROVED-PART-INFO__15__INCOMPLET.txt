@@ -878,7 +878,7 @@ Text
 download
 content_copy
 expand_less
-┌───┐
+       ┌───┐
        │   │   S8050 NPN BJT (TO-92 Package)
        │ B │
        └─┬─┘
@@ -1018,9 +1018,10 @@ S8050 NPN transistor datasheet
 S8050 transistor specifications
 S8050 vs PN2222A comparison
 
+---
 
-
-
+:::::NOTE FOR NOTE FOR ME/YOU/MYSELF WHEN I/YOU? GET BACK. FFS:::::
+***SainSmart Mega Sensor Shield V2 — 3-Pin Breakout IS NEXT***
 
 
 

@@ -17,6 +17,7 @@ Knowledge about breadboard layout, hardware debugging, and the "bench coach" con
 - Red rail = VCC, Blue/Black rail = GND. Never cross them.
 - Decouple every IC: 100nF ceramic cap as close to VCC pin as possible.
 - Separate analog and digital ground returns when possible.
+- **Breadboard power modules** (MB V2 style) plug directly into the rails and provide selectable 3.3V or 5V per rail from USB or barrel jack. Independent jumpers allow mixed-voltage prototyping (3.3V ESP32 on one side, 5V Arduino on the other). Total output budget is ~700mA -- logic and sensors only, never actuators. See [[independent-per-rail-voltage-selection-enables-mixed-voltage-breadboard-prototyping-without-isolation-circuits]], [[breadboard-power-module-700ma-total-budget-excludes-servos-and-motors-requiring-separate-power]], [[wrong-jumper-voltage-on-breadboard-power-module-silently-destroys-3v3-components-with-no-warning]].
 
 ### Component Placement
 - ICs straddle the center channel — legs span both sides.

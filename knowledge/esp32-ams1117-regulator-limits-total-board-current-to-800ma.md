@@ -26,6 +26,8 @@ Relevant Notes:
 - [[mega-5v-regulator-thermal-math-constrains-input-voltage-to-7-9v]] -- same class of linear regulator thermal problem, different voltage tier
 - [[mega-3v3-output-limited-to-50ma-cannot-power-wifi-or-bluetooth-modules]] -- the Mega's 3.3V pin is even more limited; the ESP32's regulator at least handles WiFi on its own
 - [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]] -- ESP32 projects with motors need multi-rail power design
+- [[independent-per-rail-voltage-selection-enables-mixed-voltage-breadboard-prototyping-without-isolation-circuits]] -- MB V2 breadboard power module uses the same AMS1117 regulator family as a standalone module with same ~800mA thermal ceiling
+- [[breadboard-power-module-700ma-total-budget-excludes-servos-and-motors-requiring-separate-power]] -- the standalone AMS1117 module shares the same current budget as the ESP32's onboard regulator
 
 Topics:
 - [[microcontrollers]]

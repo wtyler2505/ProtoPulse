@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface BomTemplatesPanelProps {
   projectId: number;
-  bom: BomItem[];
+  bom?: BomItem[];
 }
 
 function TemplateRow({
@@ -92,7 +92,7 @@ export default function BomTemplatesPanel({ projectId, bom }: BomTemplatesPanelP
   const [newTemplateName, setNewTemplateName] = useState('');
 
   const handleSaveAsTemplate = () => {
-    if (!newTemplateName.trim() || bom.length === 0) { return; }
+    if (!newTemplateName.trim() || !bom || bom.length === 0) { return; }
 
     createMutation.mutate(
       {
@@ -177,7 +177,7 @@ export default function BomTemplatesPanel({ projectId, bom }: BomTemplatesPanelP
             variant="default"
             size="sm"
             data-testid="bom-templates-save-btn"
-            disabled={!newTemplateName.trim() || bom.length === 0 || createMutation.isPending}
+            disabled={!newTemplateName.trim() || !bom || bom.length === 0 || createMutation.isPending}
             onClick={handleSaveAsTemplate}
             className="h-8 text-xs gap-1 shrink-0"
           >

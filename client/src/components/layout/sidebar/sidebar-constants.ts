@@ -30,6 +30,9 @@ import {
   PenTool,
   Lightbulb,
   ClipboardList,
+  AlertTriangle,
+  BookTemplate,
+  Package,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -69,6 +72,9 @@ export const navItems: NavItem[] = [
   { icon: Wand2, view: 'generative_design', label: 'Generative' },
   { icon: Radio, view: 'digital_twin', label: 'Digital Twin' },
   { icon: FileOutput, view: 'output', label: 'Exports' },
+  { icon: AlertTriangle, view: 'supply_chain', label: 'Supply Chain' },
+  { icon: BookTemplate, view: 'bom_templates', label: 'BOM Templates' },
+  { icon: Package, view: 'personal_inventory', label: 'My Parts' },
 ];
 
 
@@ -102,6 +108,9 @@ export const tabDescriptions: Record<string, string> = {
   digital_twin: 'Live hardware digital twin with IoT telemetry and sim comparison',
   starter_circuits: 'Pre-built circuits with complete Arduino code for instant beginner gratification',
   labs: 'Guided lab assignments with objectives, steps, and grading criteria',
+  supply_chain: 'Monitor supply chain risks, obsolescence, and stock alerts',
+  bom_templates: 'Save and apply reusable bill of materials templates',
+  personal_inventory: 'Track your physical parts bin independent of any project',
 };
 
 export const alwaysVisibleIds = new Set<ViewMode>([

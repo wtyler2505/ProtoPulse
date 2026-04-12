@@ -43,6 +43,7 @@ This is distinct from the official Mega thermal math documented in [[mega-5v-reg
 Relevant Notes:
 - [[mega-5v-regulator-thermal-math-constrains-input-voltage-to-7-9v]] -- official Mega thermal budget; clone boards may be worse
 - [[esp32-ams1117-regulator-limits-total-board-current-to-800ma]] -- ESP32 regulator constraint, but with a known datasheet
+- [[wrong-jumper-voltage-on-breadboard-power-module-silently-destroys-3v3-components-with-no-warning]] -- breadboard power modules are another clone-quality vector; poor labeling on cheap modules amplifies voltage selection risk
 
 Topics:
 - [[microcontrollers]]
