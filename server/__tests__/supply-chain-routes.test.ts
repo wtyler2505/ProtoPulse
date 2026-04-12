@@ -9,10 +9,19 @@ import express from 'express';
 // Mock storage & dependencies
 // ---------------------------------------------------------------------------
 
-const mockGetAlerts = vi.fn();
-const mockGetUnacknowledgedCount = vi.fn();
-const mockAcknowledgeAlert = vi.fn();
-const mockAcknowledgeAll = vi.fn();
+const {
+  mockGetAlerts,
+  mockGetUnacknowledgedCount,
+  mockAcknowledgeAlert,
+  mockAcknowledgeAll,
+  mockSubmit,
+} = vi.hoisted(() => ({
+  mockGetAlerts: vi.fn(),
+  mockGetUnacknowledgedCount: vi.fn(),
+  mockAcknowledgeAlert: vi.fn(),
+  mockAcknowledgeAll: vi.fn(),
+  mockSubmit: vi.fn().mockResolvedValue('job-123'),
+}));
 
 vi.mock('../storage', () => ({
   supplyChainStorage: {

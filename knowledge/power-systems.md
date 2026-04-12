@@ -12,6 +12,7 @@ Battery management, voltage regulation, power distribution architecture, fusing 
 
 ## Knowledge Notes
 - [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]] — four voltage tiers with different supply, regulation, and isolation requirements
+- [[l298n-saturation-voltage-drop-loses-up-to-5v-making-it-inefficient-at-high-current]] — Darlington architecture wastes up to 40% of supply voltage as heat; MOSFET drivers solve this
 
 ## Open Questions
 (populated by /extract)
