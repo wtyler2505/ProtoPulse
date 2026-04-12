@@ -64,6 +64,7 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[raspberry-pi-has-networking-wifi-bluetooth-built-in-but-only-one-low-quality-uart]] — TENSION: networking solved but UART bottleneck created
 - [[ch340-usb-serial-driver-support-varies-by-os-and-most-modern-systems-include-it-natively]] — CH340 driver platform compatibility matrix
 - [[arduino-ide-board-selection-targets-the-mcu-not-the-usb-serial-chip-so-clones-use-same-menu-entry]] — IDE targets MCU, not USB bridge; clones use same board menu
+- [[clone-arduino-voltage-regulators-can-overheat-silently-because-there-is-no-thermal-feedback]] — clone regulators may lack thermal shutdown; silent overheating risk
 
 ## Open Questions
 (populated by /extract)

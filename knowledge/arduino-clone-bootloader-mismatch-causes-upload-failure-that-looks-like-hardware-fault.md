@@ -15,7 +15,7 @@ related_components:
 
 # Arduino clone bootloader mismatch causes upload failure that looks like a hardware fault
 
-Arduino clones (DCCduino Nano, Elegoo Mega, OSEPP Uno, generic "Nano V3.0" boards) frequently ship with the pre-Optiboot bootloader -- the older, larger (2KB vs 0.5KB) bootloader that uses a different serial handshake protocol. The Arduino IDE's default processor setting ("ATmega328P") assumes Optiboot and sends the newer handshake. When the board has the old bootloader, avrdude gets no valid response:
+Arduino clones (DCCduino Nano, Elegoo Mega, OSEPP Uno, generic "Nano V3.0" boards) frequently ship with the pre-Optiboot bootloader -- the older, larger (2KB vs 0.5KB) bootloader that uses a different serial handshake protocol. **Important:** the bootloader varies by batch and manufacturer -- some clones ship with Optiboot (new), some with the old bootloader, and there is no way to determine which without testing. The correct advice is "try both processor settings" rather than "always switch to old bootloader." The Arduino IDE's default processor setting ("ATmega328P") assumes Optiboot and sends the newer handshake. When the board has the old bootloader, avrdude gets no valid response:
 
 ```
 avrdude: stk500_getsync(): not in sync: resp=0x00

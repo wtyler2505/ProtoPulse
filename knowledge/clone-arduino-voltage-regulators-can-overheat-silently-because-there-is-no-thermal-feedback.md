@@ -28,6 +28,8 @@ An official board's regulator has thermal shutdown around 150C -- it reduces out
 
 This is distinct from the official Mega thermal math documented in [[mega-5v-regulator-thermal-math-constrains-input-voltage-to-7-9v]], which covers the spec-compliant thermal budget of a known-good regulator. The clone problem is about **unknown quality** regulators with **no spec sheet** and potentially **no thermal protection**.
 
+**Clone quality gradient:** Not all clones are equal. Branded education clones (OSEPP, Elegoo, SparkFun RedBoard) typically use legitimate components and are generally reliable. Generic no-name clones (aliexpress "Nano V3.0" with no brand marking) are where the regulator risk is highest. The risk correlates with price: $3 generic Nano vs $15 Elegoo vs $25 official Arduino.
+
 **Practical mitigation:**
 - Prefer USB power over Vin for clone boards (USB provides regulated 5V, bypassing the onboard regulator entirely)
 - If using Vin, keep input voltage at 7-9V (minimizes regulator heat)
