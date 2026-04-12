@@ -42,6 +42,9 @@ const ALL_VIEW_MODES: ViewMode[] = [
   'starter_circuits',
   'audit_trail',
   'labs',
+  'supply_chain',
+  'bom_templates',
+  'personal_inventory',
 ];
 
 describe('PANEL_EXPLANATIONS', () => {

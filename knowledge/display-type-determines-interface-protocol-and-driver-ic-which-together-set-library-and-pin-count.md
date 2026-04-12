@@ -29,6 +29,7 @@ Choosing a display for a microcontroller project is a dependency chain, not a fe
 | HD44780 16x2 LCD | Parallel or I2C | 6 (4-bit parallel: RS, E, D4-D7) or 4 (I2C backpack: SDA, SCL, VCC, GND) | HD44780 | LiquidCrystal / LiquidCrystal_I2C | I2C backpack reduces 6 data pins to 2; 4-bit mode sends nibbles |
 | 7-segment (single digit) | Direct GPIO | 10 (7 segments + DP + common) | None | Manual multiplex | No driver IC = you handle multiplexing |
 | 8x8 LED matrix | SPI | 5 | MAX7219 | LedControl | MAX7219 cascades for larger displays |
+| RPi 7" touchscreen | DSI | 0 (dedicated ribbon cable, no GPIO consumed) | None (Pi GPU firmware) | None (auto-detected by Pi OS) | Zero pin cost, but Pi-only — no cross-platform portability |
 
 **Why this matters for beginners:** A beginner might choose a TFT because "it looks better" without realizing it needs 9+ pins and an SPI bus, which may conflict with other SPI devices (SD card, MAX7219). Or they choose a parallel LCD consuming 16 GPIO pins when an I2C OLED uses 4. The AI bench coach should surface these tradeoffs when a display is added to the schematic.
 

@@ -12,7 +12,7 @@ related_components:
 
 # Underpowering a Raspberry Pi causes crashes and SD card corruption
 
-The Raspberry Pi 3B+ requires a 5V / 2.5A power supply via micro-USB. The power budget is real: WiFi active draws ~200mA, CPU under load draws ~700mA, USB peripherals draw up to 1.2A total. Peak current easily exceeds 2A during boot or under combined CPU + WiFi + USB load.
+The Raspberry Pi 3B+ requires a 5V / 2.5A power supply via micro-USB. The power budget is real: WiFi active draws ~200mA, CPU under load draws ~700mA, USB peripherals draw up to 1.2A total, and the official DSI 7-inch touchscreen adds ~400mA. Peak current easily exceeds 2A during boot or under combined CPU + WiFi + USB + display load.
 
 Powering from a computer USB 2.0 port (500mA max) or a cheap phone charger (often 500mA-1A despite label claims) triggers cascading failures:
 

@@ -488,6 +488,51 @@ export const PANEL_EXPLANATIONS: Record<ViewMode, PanelExplanation> = {
       { view: 'knowledge', label: 'Knowledge Hub' },
     ],
   },
+  supply_chain: {
+    title: 'Supply Chain Alerts',
+    description:
+      'Monitor supply chain risks across your project. Alerts surface when parts go obsolete, fall below minimum stock, or experience price changes from suppliers.',
+    tips: [
+      'Acknowledge alerts to clear them from the active list.',
+      'Run a manual supply chain check to scan all parts immediately.',
+      'Critical alerts indicate parts that are obsolete or out of stock.',
+    ],
+    relatedViews: [
+      { view: 'procurement', label: 'Procurement' },
+      { view: 'lifecycle', label: 'Lifecycle' },
+      { view: 'storage', label: 'Inventory' },
+    ],
+  },
+  bom_templates: {
+    title: 'BOM Templates',
+    description:
+      'Save reusable bill of materials templates and apply them to new projects. Templates capture a set of parts with quantities and supplier info for quick project setup.',
+    tips: [
+      'Create a template from your current BOM to reuse common part sets.',
+      'Apply a template to instantly populate a new project with standard parts.',
+      'Tag templates for easy organization and search.',
+    ],
+    relatedViews: [
+      { view: 'procurement', label: 'Procurement' },
+      { view: 'storage', label: 'Inventory' },
+      { view: 'personal_inventory', label: 'My Parts' },
+    ],
+  },
+  personal_inventory: {
+    title: 'My Parts',
+    description:
+      'Track your physical parts bin independent of any project. Personal inventory represents what you actually have on your bench or in storage, visible across all projects.',
+    tips: [
+      'Add parts from the catalog to your personal stock to track what you own.',
+      'Storage locations help you find parts on your physical bench.',
+      'Personal inventory is shared across all projects for accurate availability.',
+    ],
+    relatedViews: [
+      { view: 'storage', label: 'Inventory' },
+      { view: 'procurement', label: 'Procurement' },
+      { view: 'bom_templates', label: 'BOM Templates' },
+    ],
+  },
 };
 
 /**
