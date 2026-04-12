@@ -115,6 +115,8 @@ export const tabDescriptions: Record<string, string> = {
   supply_chain: 'Monitor supply chain risks, obsolescence, and stock alerts',
   bom_templates: 'Save and apply reusable bill of materials templates',
   personal_inventory: 'Track your physical parts bin independent of any project',
+  part_alternates: 'Browse all parts with defined substitutes and equivalence groups',
+  part_usage: 'Cross-project parts utilization sorted by usage count',
 };
 
 export const alwaysVisibleIds = new Set<ViewMode>([
