@@ -22,6 +22,7 @@ Integrated development boards (PyGamer, M5Stack, Wio Terminal, Arduino Nano 33 I
 **Board selection principle:** Choose integrated boards when your project IS the integrated features (gaming, wearables, dashboards). Choose bare MCU boards (Pico, ESP32 DevKit, Uno) when your project needs its own sensors and actuators.
 
 **Spectrum of integration (from inventory examples):**
+- **Extreme integration (Monster M4SK):** 2x TFT displays + accelerometer + PDM mic + light sensor + NeoPixel + speaker amp + charger. Result: only 3 GPIO pads + STEMMA QT I2C. So GPIO-exhausted that expansion uses a purpose-built "nose bridge" connector for board-to-board synchronization rather than general-purpose GPIO.
 - **Heavy integration (PyGamer):** TFT + microSD + buttons + speaker + accelerometer + NeoPixels + charger. Result: ~8 GPIO pads on the back.
 - **Moderate integration (Blynk Board):** WS2812 LED + user button + LiPo charger + I2C header pads on ESP8266 breakout. Result: ~8 usable GPIO, fewer than a full NodeMCU despite same MCU.
 - **Minimal integration (NodeMCU):** USB-serial + regulator + LED. Result: all 11 ESP8266 GPIO exposed.

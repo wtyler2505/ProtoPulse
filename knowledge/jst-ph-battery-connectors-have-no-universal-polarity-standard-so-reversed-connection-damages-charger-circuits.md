@@ -26,7 +26,7 @@ The JST PH 2-pin connector (2.0mm pitch) is the most common LiPo battery connect
 - Potentially the MCU itself if the regulator fails open
 
 **Prevention:**
-1. Always check polarity markings on the PCB silkscreen before connecting a new battery
+1. Always check polarity markings on the PCB silkscreen before connecting a new battery — the Monster M4SK documentation explicitly warns "Battery connector polarity — check against silkscreen before connecting"
 2. Use a multimeter to verify battery connector polarity before first connection
 3. If buying loose LiPo cells, verify the JST PH wiring matches your board
 4. Some boards (newer Adafruit designs) include a protection diode or MOSFET -- most don't
