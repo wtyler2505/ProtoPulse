@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Search, Loader2, X } from 'lucide-react';
+import { Search, Loader2, X, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { useCatalog } from '@/lib/parts/use-parts-catalog';
+import { useProjectId } from '@/lib/contexts/project-id-context';
 import type { PartWithStock } from '@shared/parts/part-row';
 import type { TrustLevel } from '@shared/parts/part-row';
+import PartUsagePanel from '@/components/views/PartUsagePanel';
+import PartAlternatesPanel from '@/components/views/PartAlternatesPanel';
 
 // ---------------------------------------------------------------------------
 // Trust level display config

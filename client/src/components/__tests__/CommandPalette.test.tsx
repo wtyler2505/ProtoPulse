@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import CommandPalette from '../CommandPalette';
 import type { PartWithStock } from '@shared/parts/part-row';
 
@@ -17,6 +16,7 @@ vi.mock('lucide-react', () => {
     Search: icon('search'),
     Loader2: icon('loader2'),
     X: icon('x'),
+    ArrowLeft: icon('arrow-left'),
   };
 });
 
@@ -34,6 +34,20 @@ vi.mock('@/components/ui/scroll-area', () => ({
   ScrollBar: ({ children, ...props }: Record<string, unknown>) => (
     <div {...props}>{children as React.ReactNode}</div>
   ),
+}));
+
+// Mock useProjectId (imported by component via hook enhancement)
+vi.mock('@/lib/contexts/project-id-context', () => ({
+  useProjectId: () => 1,
+}));
+
+// Mock detail panels (imported by component via hook enhancement)
+vi.mock('@/components/views/PartUsagePanel', () => ({
+  default: ({ partId }: { partId: string }) => <div data-testid="mock-part-usage-panel">{partId}</div>,
+}));
+
+vi.mock('@/components/views/PartAlternatesPanel', () => ({
+  default: ({ partId }: { partId: string }) => <div data-testid="mock-part-alternates-panel">{partId}</div>,
 }));
 
 // Mock useCatalog
@@ -171,21 +185,19 @@ describe('CommandPalette', () => {
       <CommandPalette open={true} onOpenChange={mockOnOpenChange} />,
     );
 
-    // The backdrop is the aria-hidden div
     const backdrop = screen.getByTestId('command-palette-overlay').querySelector('[aria-hidden="true"]');
     expect(backdrop).toBeInTheDocument();
     fireEvent.click(backdrop!);
     expect(mockOnOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('displays loading indicator while fetching', async () => {
+  it('displays loading indicator while fetching', () => {
     mockIsLoading = true;
 
     render(
       <CommandPalette open={true} onOpenChange={mockOnOpenChange} />,
     );
 
-    // Type a query and wait for debounce
     const input = screen.getByTestId('command-palette-input');
     fireEvent.change(input, { target: { value: 'atmega' } });
 
@@ -195,7 +207,7 @@ describe('CommandPalette', () => {
     expect(screen.getByText('Searching parts...')).toBeInTheDocument();
   });
 
-  it('displays search results with part details', async () => {
+  it('displays search results with part details', () => {
     mockParts = SAMPLE_PARTS;
 
     render(
@@ -207,21 +219,16 @@ describe('CommandPalette', () => {
 
     act(() => { vi.advanceTimersByTime(350); });
 
-    // Check result rows exist
     expect(screen.getByTestId('command-palette-result-0')).toBeInTheDocument();
     expect(screen.getByTestId('command-palette-result-1')).toBeInTheDocument();
     expect(screen.getByTestId('command-palette-result-2')).toBeInTheDocument();
 
-    // Check part details
     expect(screen.getByText('ATmega328P')).toBeInTheDocument();
     expect(screen.getByText('ATMEGA328P-AU')).toBeInTheDocument();
     expect(screen.getByText('Microchip')).toBeInTheDocument();
     expect(screen.getByText('Microcontroller')).toBeInTheDocument();
 
-    // Check MPN for second result
     expect(screen.getByText('RC0805FR-0710KL')).toBeInTheDocument();
-
-    // Check third result without MPN still renders
     expect(screen.getByText('ESP32-WROOM-32')).toBeInTheDocument();
   });
 
@@ -287,23 +294,18 @@ describe('CommandPalette', () => {
 
     const overlay = screen.getByTestId('command-palette-overlay');
 
-    // Initially first item is active
     expect(screen.getByTestId('command-palette-result-0')).toHaveAttribute('aria-selected', 'true');
 
-    // Arrow down selects next
     fireEvent.keyDown(overlay, { key: 'ArrowDown' });
     expect(screen.getByTestId('command-palette-result-1')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('command-palette-result-0')).toHaveAttribute('aria-selected', 'false');
 
-    // Arrow down again
     fireEvent.keyDown(overlay, { key: 'ArrowDown' });
     expect(screen.getByTestId('command-palette-result-2')).toHaveAttribute('aria-selected', 'true');
 
-    // Arrow down wraps to first
     fireEvent.keyDown(overlay, { key: 'ArrowDown' });
     expect(screen.getByTestId('command-palette-result-0')).toHaveAttribute('aria-selected', 'true');
 
-    // Arrow up wraps to last
     fireEvent.keyDown(overlay, { key: 'ArrowUp' });
     expect(screen.getByTestId('command-palette-result-2')).toHaveAttribute('aria-selected', 'true');
   });
@@ -354,7 +356,6 @@ describe('CommandPalette', () => {
 
     act(() => { vi.advanceTimersByTime(350); });
 
-    // Hover over second result
     fireEvent.mouseEnter(screen.getByTestId('command-palette-result-1'));
     expect(screen.getByTestId('command-palette-result-1')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('command-palette-result-0')).toHaveAttribute('aria-selected', 'false');
@@ -397,19 +398,14 @@ describe('CommandPalette', () => {
 
     const input = screen.getByTestId('command-palette-input');
 
-    // Type quickly
     fireEvent.change(input, { target: { value: 'a' } });
     fireEvent.change(input, { target: { value: 'at' } });
     fireEvent.change(input, { target: { value: 'atm' } });
 
-    // Before debounce fires, should still show the hint
     expect(screen.getByText('Type to search parts across all projects...')).toBeInTheDocument();
 
-    // After debounce
     act(() => { vi.advanceTimersByTime(350); });
 
-    // Now debouncedQuery is set, so hint disappears
-    // (with empty results and not loading, shows "No parts match your search")
     expect(screen.getByText('No parts match your search')).toBeInTheDocument();
   });
 });
