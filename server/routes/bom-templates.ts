@@ -45,7 +45,7 @@ export function registerBomTemplateRoutes(app: Express): void {
   // GET /api/bom-templates
   app.get('/api/bom-templates', validateSession, async (req: Request, res: Response) => {
     try {
-      const session = (req as Record<string, unknown>).session as { userId: number };
+      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
       const templates = await bomTemplateStorage.getTemplates(session.userId);
       res.json({ data: templates, total: templates.length });
     } catch (err) {
@@ -67,7 +67,7 @@ export function registerBomTemplateRoutes(app: Express): void {
     }
 
     try {
-      const session = (req as Record<string, unknown>).session as { userId: number };
+      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
       const { items, ...templateData } = parsed.data;
 
       const template = await bomTemplateStorage.createTemplate({
@@ -127,7 +127,7 @@ export function registerBomTemplateRoutes(app: Express): void {
     }
 
     try {
-      const session = (req as Record<string, unknown>).session as { userId: number };
+      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
       const updated = await bomTemplateStorage.updateTemplate(templateId, session.userId, parsed.data);
       if (!updated) {
         res.status(404).json({ message: 'Template not found' });
@@ -148,7 +148,7 @@ export function registerBomTemplateRoutes(app: Express): void {
   app.delete('/api/bom-templates/:id', validateSession, async (req: Request, res: Response) => {
     const templateId = String(req.params.id);
     try {
-      const session = (req as Record<string, unknown>).session as { userId: number };
+      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
       const deleted = await bomTemplateStorage.deleteTemplate(templateId, session.userId);
       if (!deleted) {
         res.status(404).json({ message: 'Template not found' });
@@ -175,7 +175,7 @@ export function registerBomTemplateRoutes(app: Express): void {
     }
 
     try {
-      const session = (req as Record<string, unknown>).session as { userId: number };
+      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
       const isOwner = await storage.isProjectOwner(parsed.data.projectId, session.userId);
       if (!isOwner) {
         res.status(403).json({ message: 'Not authorized to modify this project' });
