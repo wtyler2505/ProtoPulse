@@ -17,6 +17,11 @@ Espressif provides `esp_adc_cal_characterize()` in the ESP-IDF to apply per-chip
 
 For many maker applications (rough potentiometer position, light-level thresholds, basic voltage monitoring), the built-in ADC is adequate without calibration. The danger is when someone builds a precision voltmeter or calibrated sensor system trusting the raw ADC values at higher voltages.
 
+**Practical noise mitigation for resistive sensors (LDRs, thermistors, FSRs):**
+- Use `analogReadMilliVolts()` (available on ESP-IDF 4.4+ / Arduino ESP32 core 2.0+) which applies factory calibration automatically, returning millivolts instead of raw ADC counts
+- Average multiple samples to reduce noise: 16-64 samples with 1-5ms spacing is typical for sensors like LDRs where the physical quantity changes slowly
+- Both techniques combined give adequate precision for threshold-based decisions without an external ADC
+
 ---
 
 Relevant Notes:
