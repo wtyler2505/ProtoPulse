@@ -1,0 +1,39 @@
+---
+description: "Display selection is a dependency chain: display type -> interface protocol (I2C/SPI/parallel) -> driver IC -> Arduino library -> pin count. Each decision constrains the next."
+type: knowledge-note
+source: "docs/parts/displays.md"
+topics:
+  - "[[displays]]"
+  - "[[eda-fundamentals]]"
+confidence: high
+verified: false
+---
+
+# display type determines interface protocol and driver IC which together set library and pin count
+
+Choosing a display for a microcontroller project is a dependency chain, not a feature comparison. The display type constrains everything downstream:
+
+**The dependency chain:**
+1. **Display type** (OLED, TFT, character LCD, 7-segment, LED matrix) -- determined by what you need to show
+2. **Interface protocol** (I2C, SPI, parallel, direct digital) -- determined by display type and driver IC
+3. **Driver IC** (SSD1306, ILI9341, HD44780, MAX7219, none) -- determined by display type
+4. **Arduino library** -- determined by driver IC
+5. **Pin count** -- determined by interface protocol
+
+**Concrete examples from the inventory:**
+
+| Display | Interface | Pins Needed | Driver | Library | Tradeoff |
+|---------|-----------|-------------|--------|---------|----------|
+| SH1106 OLED 128x64 | I2C | 4 (SDA, SCL, VCC, GND) | SSD1306-compatible | Adafruit_SSD1306 | Fewest pins, slowest refresh |
+| ILI9341 TFT 320x240 | SPI | 9+ (MOSI, MISO, SCK, CS, DC, RST, etc.) | ILI9341 | Adafruit_ILI9341 | Most pins, fastest for color graphics |
+| HD44780 16x2 LCD | Parallel or I2C | 16 (parallel) or 4 (I2C backpack) | HD44780 | LiquidCrystal | I2C backpack reduces 16 pins to 4 |
+| 7-segment (single digit) | Direct GPIO | 10 (7 segments + DP + common) | None | Manual multiplex | No driver IC = you handle multiplexing |
+| 8x8 LED matrix | SPI | 5 | MAX7219 | LedControl | MAX7219 cascades for larger displays |
+
+**Why this matters for beginners:** A beginner might choose a TFT because "it looks better" without realizing it needs 9+ pins and an SPI bus, which may conflict with other SPI devices (SD card, MAX7219). Or they choose a parallel LCD consuming 16 GPIO pins when an I2C OLED uses 4. The AI bench coach should surface these tradeoffs when a display is added to the schematic.
+
+---
+
+Topics:
+- [[displays]]
+- [[eda-fundamentals]]
