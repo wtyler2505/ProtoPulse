@@ -64,6 +64,14 @@ Display protocols, driver ICs, multiplexing strategies, and visual feedback desi
 - [[both-max7219-gnd-pins-must-be-connected-because-they-are-not-internally-bridged]] — a wiring gotcha unique to this IC
 - [[max7219-requires-both-ceramic-and-electrolytic-decoupling-caps-or-spi-communication-becomes-unreliable]] — dual-cap decoupling is mandatory
 
+### TFT-LCD Power Management
+- [[tft-lcd-panels-require-four-distinct-voltage-rails-serving-different-panel-subsystems]] — AVDD, VGH, VGL, VCOM: each serves a different physical subsystem
+- [[lcd-panel-power-rail-sequencing-on-power-up-and-power-down-prevents-latch-up-damage]] — Wrong sequencing triggers parasitic latch-up; can permanently destroy the panel
+- [[vcom-voltage-is-panel-specific-and-requires-the-lcd-panels-own-datasheet-to-calibrate]] — VCOM varies per panel model; no universal default exists
+- [[multi-rail-pmics-still-require-external-inductors-capacitors-and-diodes-per-rail-and-are-not-standalone-solutions]] — "Integrated PMIC" still needs 15-25 external components
+- [[step-up-converters-combined-with-charge-pumps-generate-both-positive-and-negative-rails-from-a-single-positive-input]] — Boost + charge pump topology for positive + negative LCD rails
+- [[salvaged-lcd-driver-boards-are-practical-pmic-sources-for-driving-recovered-tft-panels]] — Keep the driver board intact; avoids TQFN soldering and layout headaches
+
 ### Addressable LEDs (NeoPixel / WS2812B)
 - [[ws2812b-grab-and-pass-protocol-means-one-gpio-pin-controls-an-entire-led-chain]] — integrated controller cascade, 800kHz NZR timing
 - [[neopixel-data-line-needs-a-300-500-ohm-series-resistor-to-suppress-signal-reflections]] — signal integrity protection on the data wire

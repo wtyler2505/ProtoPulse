@@ -32,6 +32,16 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[dielectric-tolerance-is-irrelevant-for-decoupling-because-the-exact-capacitance-value-does-not-matter-for-transient-suppression]] — X7R/Y5V acceptable for decoupling; save NPO for timing
 - [[three-digit-ceramic-capacitor-codes-encode-picofarads-as-two-significant-digits-times-a-power-of-ten-multiplier]] — 104 = 100nF, 103 = 10nF, 220 = 22pF
 
+### Bulk Filtering & Electrolytic Safety
+- [[electrolytic-capacitor-voltage-derating-to-80-percent-of-rated-voltage-is-mandatory-for-reliability]] — 80% max operating voltage is the standard derating rule
+- [[ripple-current-rating-is-the-hidden-selection-constraint-for-electrolytic-capacitors-in-power-supply-filtering]] — The spec beginners skip; exceeding it kills caps faster than voltage
+- [[every-10c-above-rated-temperature-halves-aluminum-electrolytic-capacitor-lifespan]] — Arrhenius rule: keep caps away from heat sources
+- [[dormant-aluminum-electrolytics-require-reforming-before-full-voltage-application]] — Shelf life is finite; reform before using old stock
+- [[reversed-polarity-on-aluminum-electrolytic-capacitors-causes-violent-catastrophic-failure]] — Unlike LEDs, reversed electrolytics explode
+- [[high-voltage-capacitors-store-dangerous-energy-that-persists-after-circuit-power-off]] — 9.4J at 200V; discharge procedure mandatory
+- [[dielectric-absorption-causes-voltage-recovery-in-discharged-electrolytic-capacitors]] — Caps recover voltage after discharge; check twice
+- [[electrolytic-capacitor-part-numbers-encode-voltage-series-capacitance-tolerance-in-sequential-segments]] — 200MXR470M decoding; different from ceramic 3-digit codes
+
 ### MOSFET Switching
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO without gate driver
 - [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during MCU reset

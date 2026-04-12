@@ -46,6 +46,22 @@ Battery management, voltage regulation, power distribution architecture, fusing 
 - [[individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system]] — per-circuit fuses enable graceful degradation
 - [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] — four-number ordering constraint
 
+### LCD Panel Power
+- [[tft-lcd-panels-require-four-distinct-voltage-rails-serving-different-panel-subsystems]] — AVDD, VGH, VGL, VCOM each serve a different panel subsystem
+- [[lcd-panel-power-rail-sequencing-on-power-up-and-power-down-prevents-latch-up-damage]] — Wrong order triggers destructive latch-up
+- [[vcom-voltage-is-panel-specific-and-requires-the-lcd-panels-own-datasheet-to-calibrate]] — No universal VCOM default; requires per-panel calibration
+- [[step-up-converters-combined-with-charge-pumps-generate-both-positive-and-negative-rails-from-a-single-positive-input]] — Boost + charge pump generates full rail set from single input
+- [[multi-rail-pmics-still-require-external-inductors-capacitors-and-diodes-per-rail-and-are-not-standalone-solutions]] — "Integrated" PMICs need 15-25 external components
+- [[salvaged-lcd-driver-boards-are-practical-pmic-sources-for-driving-recovered-tft-panels]] — Salvage shortcut avoids TQFN soldering
+
+### Capacitor Reliability
+- [[electrolytic-capacitor-voltage-derating-to-80-percent-of-rated-voltage-is-mandatory-for-reliability]] — 80% max operating voltage for lifespan
+- [[every-10c-above-rated-temperature-halves-aluminum-electrolytic-capacitor-lifespan]] — Arrhenius rule; placement near heat is a primary killer
+- [[ripple-current-rating-is-the-hidden-selection-constraint-for-electrolytic-capacitors-in-power-supply-filtering]] — The spec beginners ignore; exceeds voltage in lifespan impact
+- [[high-voltage-capacitors-store-dangerous-energy-that-persists-after-circuit-power-off]] — 9.4J at 200V; active discharge mandatory
+- [[dielectric-absorption-causes-voltage-recovery-in-discharged-electrolytic-capacitors]] — Voltage recovery after discharge; check twice
+- [[dormant-aluminum-electrolytics-require-reforming-before-full-voltage-application]] — Shelf life finite; reform old stock before use
+
 ### MOSFET Switching
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO
 - [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during reset
