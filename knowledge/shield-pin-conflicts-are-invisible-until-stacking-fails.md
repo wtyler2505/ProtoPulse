@@ -14,7 +14,7 @@ related_components:
 
 # shield pin conflicts are invisible until stacking fails
 
-The shield inventory reveals significant pin overlap that has no built-in detection mechanism. The HW-130 motor shield uses D3, D4, D5, D6, D8, D11, D12. The Ethernet W5100 uses SPI (ICSP) + D10 + D4. The TFT LCD shield uses SPI + analog + D8-D10. Attempting to stack the motor shield with either the Ethernet or TFT shield creates hard conflicts on D4 (motor + Ethernet) and D8 (motor + TFT) that manifest as silent malfunction, not an error message.
+The shield inventory reveals significant pin overlap that has no built-in detection mechanism. The HW-130 motor shield uses D3, D4, D5, D6, D8, D11, D12. The Ethernet W5100 uses SPI (ICSP) + D10 + D4. The TFT LCD shield uses SPI (ICSP) + D8 (reset) + D9 (DC) + D10 (CS) + A0-A3 (resistive touch XP, XM, YP, YM). Attempting to stack the motor shield with either the Ethernet or TFT shield creates hard conflicts on D4 (motor + Ethernet) and D8 (motor + TFT) that manifest as silent malfunction, not an error message.
 
 The shields.md MOC includes a "Pin Conflict Warnings" section that's currently empty -- this is itself evidence that pin conflicts are tracked as an afterthought rather than a first-class concern.
 

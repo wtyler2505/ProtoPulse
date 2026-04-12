@@ -21,7 +21,7 @@ Modern display modules marketed to makers (OLED, TFT, NeoPixel, LED matrix) incl
 
 **Displays that work fine at 3.3V:**
 - SH1106/SSD1306 OLED (onboard regulator)
-- ILI9341 TFT (onboard regulator, accepts 3.3V logic directly)
+- ILI9341 TFT (the IC itself is a 3.3V device, but Arduino shield variants include onboard level shifting for 5V Uno/Mega compatibility — bare breakout modules accept 3.3V logic directly)
 - MAX7219-driven LED matrices/7-segments (MAX7219 handles the LED driving; you just send SPI commands)
 - WS2812B NeoPixels (3.3V data line works but 5V power preferred; first pixel may need level shifter)
 

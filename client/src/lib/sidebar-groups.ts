@@ -77,6 +77,9 @@ export const SIDEBAR_GROUPS: readonly SidebarGroup[] = [
       'ordering',
       'lifecycle',
       'output',
+      'supply_chain',
+      'bom_templates',
+      'personal_inventory',
     ],
   },
   {

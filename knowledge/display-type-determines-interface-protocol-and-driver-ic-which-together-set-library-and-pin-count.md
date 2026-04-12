@@ -25,7 +25,7 @@ Choosing a display for a microcontroller project is a dependency chain, not a fe
 | Display | Interface | Pins Needed | Driver | Library | Tradeoff |
 |---------|-----------|-------------|--------|---------|----------|
 | SH1106 OLED 128x64 | I2C | 4 (SDA, SCL, VCC, GND) | SSD1306-compatible | Adafruit_SSD1306 | Fewest pins, slowest refresh |
-| ILI9341 TFT 320x240 | SPI | 9+ (MOSI, MISO, SCK, CS, DC, RST, etc.) | ILI9341 | Adafruit_ILI9341 | Most pins, fastest for color graphics |
+| ILI9341 TFT 320x240 | SPI | 9+ display (MOSI, MISO, SCK, CS, DC, RST) + 4 touch (A0-A3 for resistive) = 13+ total | ILI9341 | Adafruit_ILI9341 + Adafruit_TouchScreen | Most pins, fastest for color graphics; touch adds analog pin cost |
 | HD44780 16x2 LCD | Parallel or I2C | 16 (parallel) or 4 (I2C backpack) | HD44780 | LiquidCrystal | I2C backpack reduces 16 pins to 4 |
 | 7-segment (single digit) | Direct GPIO | 10 (7 segments + DP + common) | None | Manual multiplex | No driver IC = you handle multiplexing |
 | 8x8 LED matrix | SPI | 5 | MAX7219 | LedControl | MAX7219 cascades for larger displays |

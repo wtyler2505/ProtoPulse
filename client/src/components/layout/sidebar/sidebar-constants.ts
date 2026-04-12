@@ -140,4 +140,7 @@ export const alwaysVisibleIds = new Set<ViewMode>([
   'labs',
   // Inventory tracking works standalone — not dependent on circuit design content.
   'storage',
+  'supply_chain',
+  'bom_templates',
+  'personal_inventory',
 ]);
