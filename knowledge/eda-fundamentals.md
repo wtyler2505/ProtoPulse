@@ -24,6 +24,9 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 - [[wokwi-chips-use-counterclockwise-pin-ordering]] -- JSON array index = physical pin via CCW convention
 - [[kicad-exporter-deterministic-uuid-guarantees-collisions-in-large-projects]] -- fake UUID function in export pipeline
 - [[erc-pin-classification-uses-fragile-regex-that-fails-on-nonstandard-names]] -- hardcoded regex instead of parts DB lookup
+- [[mega-spi-pins-move-from-d10-d13-to-d50-d53-breaking-hardcoded-uno-code-silently]] -- SPI remapping is the #1 Uno-to-Mega porting trap
+- [[mega-5v-regulator-thermal-math-constrains-input-voltage-to-7-9v]] -- linear regulator thermal limits narrow the 7-12V spec to 7-9V practical
+- [[mega-3v3-output-limited-to-50ma-cannot-power-wifi-or-bluetooth-modules]] -- 3.3V header pin cannot power wireless modules
 
 ## Sub-Topics (to be populated)
 

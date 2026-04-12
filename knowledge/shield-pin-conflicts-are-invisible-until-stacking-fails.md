@@ -20,7 +20,9 @@ The shields.md MOC includes a "Pin Conflict Warnings" section that's currently e
 
 **Maker impact:** A beginner stacking shields will get mysterious behavior (motor not responding, SPI communication failing) with no clear diagnostic path. The failure mode is "works individually, fails together" which is particularly confusing.
 
-**ProtoPulse implication:** A shield stacking DRC that cross-references pin usage tables from the BOM would catch these conflicts at design time rather than after assembly. The shields MOC already has the data (Pins Used column) -- it just needs automated cross-referencing.
+**The ICSP header as portable SPI path:** On the Arduino Mega, SPI pins move from D10-D13 to D50-D53 -- but the ICSP 6-pin header carries SPI in the same physical position on both Uno and Mega. Shields that route SPI through ICSP (like the Ethernet shield) work on either board without modification. Shields that hardwire D10-D13 for SPI will not work on a Mega. This creates a concrete resolution strategy: when evaluating shield compatibility, check whether SPI is routed via ICSP (portable) or via pin numbers (board-specific).
+
+**ProtoPulse implication:** A shield stacking DRC that cross-references pin usage tables from the BOM would catch these conflicts at design time rather than after assembly. The shields MOC already has the data (Pins Used column) -- it just needs automated cross-referencing. The DRC should also distinguish ICSP-routed SPI (Mega-safe) from pin-routed SPI (Mega-incompatible).
 
 ---
 

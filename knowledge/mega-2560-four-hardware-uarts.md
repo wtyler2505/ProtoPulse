@@ -13,6 +13,8 @@ The ATmega2560 provides four independent hardware UART peripherals (Serial, Seri
 
 This makes the Mega uniquely suited for projects that need to talk to multiple serial peripherals simultaneously — GPS module on Serial1, Bluetooth on Serial2, motor controller on Serial3, all while maintaining USB debugging on Serial0. No other classic Arduino board offers more than one hardware UART (the Uno and Nano have only Serial0, so any additional serial communication requires the SoftwareSerial library, which is unreliable above 19200 baud and blocks interrupts).
 
+**Typical allocation pattern:** Serial (UART0) for debugging via Serial Monitor, Serial1 for GPS (NMEA output), Serial2 for Bluetooth (HC-05/06), Serial3 as spare or MIDI. UART2 and UART3 are "clean" -- no pin conflicts with any other peripheral. UART1 shares pins 18/19 with INT5/INT4, so you cannot use external interrupts and serial communication on those pins simultaneously.
+
 An important gotcha: Serial1 pins 18/19 are also external interrupt pins (INT5/INT4), and all three auxiliary UARTs share the comm header with the I2C pins (20 SDA/21 SCL). Projects using both I2C and multiple UARTs need careful pin planning, especially since pins 20/21 have non-removable 10K pull-up resistors.
 
 ---
@@ -24,6 +26,7 @@ Relevant Notes:
 - [[hall-sensor-wiring-order-matters-for-bldc]] -- Serial3 is often used for debugging hall sensor state
 - [[makers-need-one-tool-because-context-switching-kills-momentum]] -- the Mega's multi-serial rover config required juggling Arduino IDE, serial monitors, and datasheets simultaneously
 - [[esp32-adc2-unavailable-when-wifi-active]] -- both boards have pin multiplexing gotchas that a unified tool must surface (UART/interrupt sharing on Mega, ADC/WiFi on ESP32)
+- [[mega-spi-pins-move-from-d10-d13-to-d50-d53-breaking-hardcoded-uno-code-silently]] -- another Mega peripheral mapping difference from the Uno
 
 Topics:
 - [[eda-fundamentals]]

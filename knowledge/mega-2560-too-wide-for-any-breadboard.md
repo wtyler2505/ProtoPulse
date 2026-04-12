@@ -13,7 +13,7 @@ The Arduino Mega 2560 R3 measures 101.6mm long by 53.34mm wide — roughly twice
 
 The verified board definition marks this as `breadboardFit: 'not_breadboard_friendly'`. The practical approach is to place the Mega adjacent to the breadboard and run jumper wires from its female headers to the breadboard's tie points. This is fundamentally different from how DIP ICs or narrower boards (like the Nano) are placed, and ProtoPulse's breadboard layout engine must treat the Mega as an off-board component with wire-only connections rather than attempting to render it straddling the channel.
 
-The Mega's maximum total I/O current is also worth noting in this context: 200mA across all pins combined. With 54 digital I/O pins, that averages under 4mA per pin if all are active — well below the 40mA per-pin max. Projects driving many LEDs or peripherals simultaneously need external drivers.
+The Mega's maximum total I/O current is also worth noting in this context: 200mA across all pins combined. With 54 digital I/O pins, that averages under 4mA per pin if all are active — well below the 40mA per-pin max. Projects driving many LEDs or peripherals simultaneously need external drivers. Baseline power draw is 50-75mA with no peripherals (70-72mA USB-connected), leaving roughly 125mA of headroom for attached devices before hitting the 200mA I/O ceiling.
 
 ---
 
