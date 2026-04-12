@@ -9,7 +9,7 @@ related_components: ["shared/verified-boards/mega-2560-r3.ts"]
 
 # Arduino Mega 2560 has 4 hardware UARTs enabling simultaneous serial communication
 
-The ATmega2560 provides four independent hardware UART peripherals (Serial, Serial1, Serial2, Serial3), each with dedicated TX and RX pins. Serial0 on pins 0/1 is shared with the USB-to-serial converter (ATmega16U2) and is used for programming and the Serial Monitor. Serial1 (pins 18 TX/19 RX), Serial2 (pins 16 TX/17 RX), and Serial3 (pins 14 TX/15 RX) are fully independent and available for external devices.
+The ATmega2560 provides four independent hardware UART peripherals (Serial, Serial1, Serial2, Serial3), each with dedicated TX and RX pins. Serial0 on pins 0/1 is shared with the USB-to-serial converter (ATmega16U2 on official boards, CH340 on clones like the Elegoo Mega) and is used for programming and the Serial Monitor. Note: the ATmega16U2 can be reprogrammed to act as a USB HID device (keyboard, mouse, MIDI controller), while the CH340 cannot -- it is a fixed-function USB-serial bridge. This matters for projects that use the Arduino as a USB input device. Serial1 (pins 18 TX/19 RX), Serial2 (pins 16 TX/17 RX), and Serial3 (pins 14 TX/15 RX) are fully independent and available for external devices.
 
 This makes the Mega uniquely suited for projects that need to talk to multiple serial peripherals simultaneously — GPS module on Serial1, Bluetooth on Serial2, motor controller on Serial3, all while maintaining USB debugging on Serial0. No other classic Arduino board offers more than one hardware UART (the Uno and Nano have only Serial0, so any additional serial communication requires the SoftwareSerial library, which is unreliable above 19200 baud and blocks interrupts).
 

@@ -62,6 +62,8 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[gigabit-ethernet-on-raspberry-pi-is-throttled-to-300mbps-because-it-shares-the-usb-2-bus]] — spec vs reality: USB 2.0 bottleneck limits to ~300Mbps
 - [[sd-card-wear-from-heavy-writes-requires-ssd-via-usb-for-write-heavy-workloads]] — microSD write endurance limits, SSD for heavy workloads
 - [[raspberry-pi-has-networking-wifi-bluetooth-built-in-but-only-one-low-quality-uart]] — TENSION: networking solved but UART bottleneck created
+- [[ch340-usb-serial-driver-support-varies-by-os-and-most-modern-systems-include-it-natively]] — CH340 driver platform compatibility matrix
+- [[arduino-ide-board-selection-targets-the-mcu-not-the-usb-serial-chip-so-clones-use-same-menu-entry]] — IDE targets MCU, not USB bridge; clones use same board menu
 
 ## Open Questions
 (populated by /extract)

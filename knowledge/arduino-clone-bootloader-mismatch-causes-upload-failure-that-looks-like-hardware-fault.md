@@ -33,7 +33,9 @@ This is the single most common first-experience failure for anyone buying a clon
 
 **Cross-platform note:** This bootloader mismatch applies to all ATmega328P-based clones regardless of form factor (Nano, Uno, Pro Mini). Mega 2560 clones have a different but related issue: the ATmega16U2 vs CH340 USB-serial chip difference, which is a driver problem rather than a bootloader problem.
 
-**ProtoPulse implication:** The Arduino IDE integration should detect clone boards (via CH340 USB VID/PID) and automatically suggest the "Old Bootloader" processor setting, or at minimum surface this as the first troubleshooting step when upload fails with a sync error.
+**Distinguishing bootloader mismatch from driver absence:** If the board's COM port appears in the OS but upload fails with "not in sync," it's a bootloader mismatch (fix: change Processor setting). If no COM port appears at all, it's a CH340 driver issue (fix: install driver). See [[ch340-usb-serial-driver-support-varies-by-os-and-most-modern-systems-include-it-natively]] for the driver platform matrix. These are the two most common first-experience failures with clones, and they require different fixes despite both presenting as "upload failed."
+
+**ProtoPulse implication:** The Arduino IDE integration should detect clone boards (via CH340 USB VID 0x1A86 / PID 0x7523) and automatically suggest the "Old Bootloader" processor setting, or at minimum surface this as the first troubleshooting step when upload fails with a sync error.
 
 ---
 
