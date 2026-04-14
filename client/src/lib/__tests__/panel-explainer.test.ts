@@ -45,6 +45,8 @@ const ALL_VIEW_MODES: ViewMode[] = [
   'supply_chain',
   'bom_templates',
   'personal_inventory',
+  'part_alternates',
+  'part_usage',
 ];
 
 describe('PANEL_EXPLANATIONS', () => {

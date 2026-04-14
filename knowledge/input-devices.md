@@ -38,6 +38,13 @@ Analog and digital input devices, debouncing strategies, matrix scanning, ADC ma
 - [[membrane-keypad-has-no-built-in-debouncing-requiring-software-scan-timing]] — Arduino Keypad library handles debounce via multi-scan consistency
 - [[membrane-switch-wear-limits-keypads-to-low-cycle-applications-unlike-mechanical-switches]] — 1M cycle rated life; fine for PIN entry, inadequate for gaming/industrial
 
+### Switches (Multi-Position)
+- [[self-locking-radio-button-switch-provides-hardware-mutual-exclusion-eliminating-software-mode-conflict-logic]] — Mechanical interlock = exactly one mode active, guaranteed by physics
+- [[multi-pole-switch-pinout-must-be-mapped-by-continuity-testing-because-pin-assignments-are-not-standardized]] — 18-pin dense arrays need multimeter verification before wiring
+- [[six-pole-switch-consumes-6-gpio-pins-but-priority-encoder-can-reduce-to-3-for-one-hot-state]] — Direct 6-pin vs 74HC148 priority encoder vs resistor ladder trade-off
+- [[mechanical-latching-switch-still-requires-software-debounce-because-contact-bounce-is-independent-of-latch-mechanism]] — Latch solves mutual exclusion but contacts still bounce 10-50ms
+- [[radio-button-hardware-switch-trades-fixed-mode-count-for-zero-state-management-versus-encoder-with-unlimited-software-modes]] — Hardware certainty vs software flexibility decision boundary
+
 ## Open Questions
 (populated by /extract)
 

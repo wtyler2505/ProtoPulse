@@ -37,6 +37,8 @@ import {
   SupplyChainAlertsPanel,
   BomTemplatesPanel,
   PersonalInventoryPanel,
+  PartAlternatesBrowserView,
+  PartUsageBrowserView,
 } from './lazy-imports';
 
 /* AS-01 / UX-103: Panel skeleton loading state for lazy-loaded views */
@@ -284,6 +286,20 @@ export function ViewRenderer({ activeView, projectId }: ViewRendererProps) {
         <ErrorBoundary>
           <Suspense fallback={<ViewLoadingFallback />}>
             <PersonalInventoryPanel />
+          </Suspense>
+        </ErrorBoundary>
+      )}
+      {activeView === 'part_alternates' && (
+        <ErrorBoundary>
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <PartAlternatesBrowserView />
+          </Suspense>
+        </ErrorBoundary>
+      )}
+      {activeView === 'part_usage' && (
+        <ErrorBoundary>
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <PartUsageBrowserView />
           </Suspense>
         </ErrorBoundary>
       )}

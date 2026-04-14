@@ -25,6 +25,7 @@ This "entirely passive" pattern also applies to:
 - Bare tactile buttons
 - DIP switches
 - Reed switches
+- Multi-pole latching switches (Toneluck 6-way: purely mechanical contacts)
 
 The contrast is with active input devices like:
 - Rotary encoders (some modules include RC debounce networks)

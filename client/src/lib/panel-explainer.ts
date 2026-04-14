@@ -518,6 +518,36 @@ export const PANEL_EXPLANATIONS: Record<ViewMode, PanelExplanation> = {
       { view: 'personal_inventory', label: 'My Parts' },
     ],
   },
+  part_alternates: {
+    title: 'Part Alternates',
+    description:
+      'Browse all parts with defined substitutes. Each row shows an equivalence group — expand to see the full list of interchangeable parts and their specs.',
+    tips: [
+      'Parts are sorted by number of alternates — most substitutable first.',
+      'Expand a part to see its full equivalence group.',
+      'Use one-click substitute from CommandPalette to swap a part across a project.',
+    ],
+    relatedViews: [
+      { view: 'procurement', label: 'Procurement' },
+      { view: 'supply_chain', label: 'Supply Chain' },
+      { view: 'part_usage', label: 'Part Usage' },
+    ],
+  },
+  part_usage: {
+    title: 'Cross-Project Usage',
+    description:
+      'See which parts are used across multiple projects, sorted by usage count. Expand any part to see per-project breakdown with quantities needed, on hand, and placement counts.',
+    tips: [
+      'Parts used in many projects are standardization candidates.',
+      'Expand a row to see per-project stock and placement details.',
+      'Parts with high placement counts but low stock may need reordering.',
+    ],
+    relatedViews: [
+      { view: 'procurement', label: 'Procurement' },
+      { view: 'storage', label: 'Inventory' },
+      { view: 'part_alternates', label: 'Alternates' },
+    ],
+  },
   personal_inventory: {
     title: 'My Parts',
     description:
