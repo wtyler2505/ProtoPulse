@@ -12,6 +12,7 @@
 import path from 'node:path';
 import { VaultSearchIndex } from './vault-search';
 import { logger } from '../logger';
+import { recordEvent, type VaultTelemetryEvent } from './vault-telemetry';
 
 // Allow env override (future: support reloading on vault-changed events)
 const DEFAULT_VAULT_ROOT = path.resolve(process.cwd(), 'knowledge');
