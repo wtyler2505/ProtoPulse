@@ -39,13 +39,40 @@ Therefore: adding more low-value notes produces diminishing returns. Building th
 ### Phase 6a STATUS 2026-04-14: IMPLEMENTED
 
 Vault consumption layer shipped and tested:
-- `server/lib/vault-search.ts` — Fuse.js-backed index, 470+ notes, 17 tests pass
+- `server/lib/vault-search.ts` — Fuse.js-backed index, 17 tests pass
 - `server/lib/vault-context.ts` — lazy singleton + per-message grounding, 8 tests pass
-- `server/ai.ts` — `processAIMessage` and `streamAIMessage` now inject vault context into every AI request (appended to cached system prompt; empty-string fallback on vault failure keeps AI working if vault breaks)
+- `server/ai.ts` — `processAIMessage` and `streamAIMessage` inject vault context into every AI request (appended to cached system prompt; empty-string fallback on vault failure keeps AI working if vault breaks)
 - `server/ai-tools/knowledge-vault.ts` — `search_knowledge_vault` tool exposed to AI agent for deep queries, 6 tests pass, sources wired for BL-0160 Source Panel with `type='knowledge_base'`
+- `server/routes/knowledge-vault.ts` — HTTP endpoints `GET /api/vault/search`, `GET /api/vault/note/:slug`, `GET /api/vault/mocs` for client-side access. Rate-limited (60/min). Registered in `server/routes.ts`.
 - Full TypeScript check (`npm run check`): exit 0, clean
 
-Every future AI request gets automatic top-K vault grounding derived from the user message. The AI agent can also explicitly call `search_knowledge_vault` for deeper lookups.
+Every future AI request gets automatic top-K vault grounding derived from the user message. The AI agent can explicitly call `search_knowledge_vault` for deeper lookups. Client-side code can query the vault via HTTP for UI integrations.
+
+### Extraction Progress 2026-04-14
+
+| Wave | Status | Notes created | Enrichments | Tensions | Commit verification |
+|---|---|---|---|---|---|
+| Wave 0 | ✅ Complete | — | — | — | 10 hardware MOCs exist, populated (76/76/90/80/92/55/31/43/41/23 lines) |
+| Wave A (MOC/index) | ✅ Complete | prior session | — | — | verified |
+| Wave B (MCUs) | ✅ Complete | prior session | — | — | verified |
+| Wave C (sensors+comm) | ✅ Complete | prior session | — | — | verified |
+| Wave D (actuators+power) | ✅ Complete | prior session | — | 1 | BLDC brake polarity tension filed |
+| Wave E1-E5 | ✅ Complete | prior session | — | — | verified |
+| Wave E6 | ✅ Complete | 17 | 14 | 1 | mosfet-driver efficiency vs voltage tension |
+| Wave E7-E9 | ⏸ SKIPPED | — | — | — | low-value per revised scope |
+| Wave F1 (4 wiring) | ✅ Complete | 30 | 25 | 1 | brake polarity tension extended |
+| Wave F2 (3 wiring) | 🔄 Running | ~16 so far | TBD | TBD | in progress |
+| Wave G (unidentified) | ⏸ SKIPPED | — | — | — | no extractable claims |
+| Wave H selective | ⏳ Pending | — | — | — | 8 novel Document Sets targeted |
+| Polish teammates | ⏳ Pending | — | — | — | 3 teammates with file ownership |
+
+**Vault size:** 496 notes (up from 465 at campaign start 2026-04-14, up from ~320 at 2026-04-10).
+
+**Queue state:** 55 pending (auto-managed, cap raised 50→200 in ops/config.yaml to support F2).
+
+**Known issues surfaced:**
+- qmd MCP vector search non-functional — extraction skill degrades to keyword grep Tier-3 cleanly
+- `shared/__tests__/exact-part-resolver.test.ts` has 3 failures due to verified-boards pack expansion 4 days ago — outside vault-integration scope, flagged for Tyler's parts-consolidation branch review
 
 ---
 

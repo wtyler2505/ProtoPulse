@@ -45,9 +45,12 @@ Daisy-chain alternative (wrong): Left GND → Right GND → Arduino GND → Batt
 
 **ProtoPulse implication:** The power distribution schematic should enforce star ground topology and flag any daisy-chained ground returns. The DRC should check that all ground returns terminate at a common bus, not at each other. This rule applies at every scale — from a 2-device dual-motor build up to a full 4WD rover — not just at the 4-motor boundary.
 
+**Single-end shield grounding for long signal runs** (from [[wiring-nodemcu-esp32-to-4x-zs-x11h-for-4wd-rover]]): when shielded signal cable is used for long runs — like 1-2 meter signal bundles from the ESP32 to rear motor controllers alongside 36V motor phase wires — the shield must connect to ground at exactly one end, typically the MCU/distribution end. Grounding the shield at both ends creates a ground loop: any voltage difference between the two ground points drives current through the shield, which defeats the shielding and can inject noise into the signals it was supposed to protect. The single-end connection still drains capacitively-coupled interference to ground (which is all EMI shields actually do) without providing a current path between grounds. The star-ground topology makes picking the "correct end" easy: the shield terminates at the same bus bar where every other ground converges, so there is literally one right place to put it.
+
 ---
 
 Enriched from: [[wiring-dual-zs-x11h-for-hoverboard-robot]]
+Enriched from: [[wiring-nodemcu-esp32-to-4x-zs-x11h-for-4wd-rover]]
 
 Relevant Notes:
 - [[individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system]] -- positive-side isolation complements ground-side star topology

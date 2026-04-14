@@ -31,8 +31,13 @@ The 74HCT logic family (HCT = High-speed CMOS with TTL-compatible inputs) has a 
 
 The WS2812B data line is strictly unidirectional (MCU → LED), making the 74HCT the correct choice by design.
 
+**16-channel bulk shifting at 4WD rover scale** (from [[wiring-nodemcu-esp32-to-4x-zs-x11h-for-4wd-rover]]): a 4-motor ESP32 rover needs 16 unidirectional control signals shifted from 3V3 to 5V (EL, Z/F, CT, STOP × 4 controllers). Two 74HCT245 octal buffers cover this entirely — one handles MC1+MC2, the other handles MC3+MC4. The part count is minimal (two 20-pin DIPs), the topology is bulletproof (shared direction, shared enable, all 16 channels running the same direction), and the 74HCT245's 3V3-tolerant HCT input stage absorbs the level shifting without needing a separate bidirectional shifter. When three of those 16 channels happen to originate from ESP32 strapping pins, the same 74HCT245 also provides the boot-time isolation that [[74hc14-schmitt-trigger-buffer-isolates-esp32-strapping-pins-from-external-loads-during-boot]] describes, eliminating the need for a separate 74HC14. See [[74hc14-inverting-and-74hct245-non-inverting-buffers-trade-firmware-complexity-against-level-shifting-integration]] for the decision framework.
+
 ---
+
+Enriched from: [[wiring-nodemcu-esp32-to-4x-zs-x11h-for-4wd-rover]]
 
 Topics:
 - [[displays]]
 - [[eda-fundamentals]]
+- [[wiring-integration]]

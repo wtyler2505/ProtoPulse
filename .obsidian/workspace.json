@@ -198,6 +198,10 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "knowledge/74hc14-inverting-and-74hct245-non-inverting-buffers-trade-firmware-complexity-against-level-shifting-integration.md",
+    "knowledge/boot-time-setup-must-set-strapping-pins-to-the-safe-motor-state-before-any-other-initialization.md",
+    "knowledge/emergency-stop-via-stop-pin-low-disables-bldc-controllers-entirely-and-is-safer-than-regenerative-braking-for-fault-conditions.md",
+    "knowledge/esp32-4wd-rover-consumes-20-of-34-gpios-for-motor-control-forcing-use-of-strapping-and-input-only-pins.md",
     "knowledge/signal-inversion-through-a-hex-inverting-buffer-requires-firmware-to-flip-every-driven-pins-logic-to-compensate.md",
     "knowledge/74hc14-schmitt-trigger-buffer-isolates-esp32-strapping-pins-from-external-loads-during-boot.md",
     "knowledge/100uf-capacitor-on-arduino-5v-input-absorbs-motor-switching-emi-that-causes-mcu-resets.md",
@@ -229,10 +233,6 @@
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-049.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-048.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-047.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-046.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-045.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-044.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-043.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-042.md"
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-046.md"
   ]
 }
