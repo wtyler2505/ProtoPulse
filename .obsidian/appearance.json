@@ -3,5 +3,6 @@
   "textFontFamily": "EnvyCodeR Nerd Font Propo",
   "monospaceFontFamily": "EnvyCodeR Nerd Font Mono",
   "baseFontSizeAction": true,
-  "accentColor": "#003326"
+  "accentColor": "#003326",
+  "cssTheme": "ITS Theme"
 }
