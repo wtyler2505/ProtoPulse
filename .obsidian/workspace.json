@@ -197,6 +197,8 @@
   },
   "active": "557180fa13ed8008",
   "lastOpenFiles": [
+    "knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md",
+    "knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md.tmp.6811.1776152119300",
     "server/ai-tools/knowledge-vault.ts.tmp.6811.1776152116443",
     "knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md",
     "knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md.tmp.6811.1776152098225",
@@ -208,8 +210,6 @@
     "server/ai-tools/index.ts.tmp.6811.1776151782252",
     "server/ai-tools/knowledge-vault.ts",
     "server/ai-tools/knowledge-vault.ts.tmp.6811.1776151622655",
-    "server/ai.ts.tmp.6811.1776151218140",
-    "server/ai.ts.tmp.6811.1776151083077",
-    "debug-vault.mjs"
+    "server/ai.ts.tmp.6811.1776151218140"
   ]
 }
