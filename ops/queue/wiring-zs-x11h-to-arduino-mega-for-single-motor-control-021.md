@@ -20,7 +20,8 @@ Semantic neighbor: [[bldc-stop-active-low-brake-active-high]] — DISTINCT becau
 ---
 
 ## Create
-(to be filled by create phase)
+
+Created `knowledge/stop-is-the-correct-emergency-kill-and-ct-brake-is-for-controlled-deceleration-because-only-stop-removes-the-controller-power-path-entirely.md`. Frontmatter: type=claim, topics=[actuators, eda-fundamentals]. Body distinguishes the mechanisms (STOP disables gate drivers → rotor coasts; CT shorts phases → back-EMF heats FETs), provides a 5-row decision table (planned decel / end of trajectory / emergency / E-stop mushroom / fault detected), and flags the beginner mistake of routing emergency-stop to CT. Wiki-linked to `[[motor-speed-must-be-ramped...]]`, `[[dynamic-brake-must-be-pulsed-not-held...]]`, `[[bldc-stop-active-low-brake-active-high]]`, `[[estop-auxiliary-contact...]]`, `[[emergency-stop-via-stop-pin-low...]]`. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)
