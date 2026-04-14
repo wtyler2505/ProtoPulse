@@ -24,6 +24,8 @@ Shield comparison, pin conflict avoidance, level shifter selection, and expansio
 - [[74hc595-in-motor-shields-trades-gpio-savings-for-direction-change-latency-that-matters-at-high-switching-frequencies]] — shift-register direction control saves 5 pins on HW-130 but inserts microsecond-scale latency that matters for microstepping
 - [[hw-130-shield-consumes-both-timer0-and-timer2-leaving-only-timer1-free-for-other-libraries]] — four-channel motor PWM on HW-130 eliminates tone() and IRremote compatibility, leaving only Servo (Timer1) usable
 - [[counterfeit-l293d-chips-on-clone-motor-shields-deliver-lower-than-rated-current-with-no-external-indication]] — cheap HW-130 batches may have sub-600mA chips that mimic "motor too big" symptoms while actually being counterfeit drivers
+- [[combo-motor-and-servo-shields-trade-per-function-efficiency-for-single-board-convenience]] — OSEPP Motor/Servo V1 pattern: integrating servo headers onto an L298N motor shield compromises both functions; pick only when the coupling itself is the requirement
+- [[shield-servo-headers-share-arduino-5v-creating-hidden-brownout-path-that-only-trace-cutting-fixes]] — servo header VCC connects to Arduino on-board regulator; only SG90-class micro servos are safe; trace cut + external 5V is the correct fix for anything larger
 
 ## Open Questions
 (populated by /extract)

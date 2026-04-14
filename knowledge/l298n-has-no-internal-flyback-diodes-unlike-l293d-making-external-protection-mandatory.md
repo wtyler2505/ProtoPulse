@@ -18,6 +18,8 @@ The L293D (the L298N's lower-current sibling at 600mA) includes internal clamp d
 
 **Why this is a dangerous beginner trap:** Most L298N tutorials omit the flyback diodes entirely, showing bare motor connections. Pre-assembled L298N modules (the red PCBs from Amazon/AliExpress) sometimes include onboard diodes and sometimes do not -- there is no consistency. A motor that runs fine at low current may destroy the driver when stalled or reversed under load because the back-EMF spike scales with current.
 
+**The same inconsistency plagues L298N-based shields.** The OSEPP Motor/Servo Shield V1 instructions explicitly tell users to "add fast-recovery diodes (1N4148 or Schottky) across each motor terminal" — meaning the shield itself does NOT include them. Other L298N shields may or may not. The only reliable rule: probe your specific shield with a multimeter in diode-test mode from each motor output to VM and GND before trusting the board under load. Adding external diodes on breakout wires is cheap insurance even when onboard protection is present.
+
 Since [[inductive-motor-loads-require-bypass-capacitor-to-absorb-voltage-spikes-above-supply-rail]], bypass capacitors complement but do not replace flyback diodes -- the cap absorbs high-frequency noise while the diodes clamp the large inductive spikes.
 
 ---

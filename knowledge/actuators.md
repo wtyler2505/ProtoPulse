@@ -50,6 +50,8 @@ Motor control theory, driver IC comparison, PWM strategies, and output device se
 - [[74hc595-in-motor-shields-trades-gpio-savings-for-direction-change-latency-that-matters-at-high-switching-frequencies]] — shift-register direction saves pins but inserts serial-shift latency that matters for steppers
 - [[hw-130-shield-consumes-both-timer0-and-timer2-leaving-only-timer1-free-for-other-libraries]] — four-channel motor PWM locks Timer0 and Timer2; only Servo (Timer1) remains compatible
 - [[counterfeit-l293d-chips-on-clone-motor-shields-deliver-lower-than-rated-current-with-no-external-indication]] — cheap HW-130 batches may have sub-600mA counterfeit chips that mimic undersized-driver symptoms
+- [[combo-motor-and-servo-shields-trade-per-function-efficiency-for-single-board-convenience]] — combo boards like OSEPP Motor/Servo V1 inherit L298N inefficiency AND the shared 5V servo rail compromise
+- [[shield-servo-headers-share-arduino-5v-creating-hidden-brownout-path-that-only-trace-cutting-fixes]] — motor shield servo headers route Arduino 5V, safe only for SG90 micro servos; full-size servos need external power via trace cut
 
 - [[arduino-tone-uses-timer2-which-disables-pwm-on-pins-3-and-11-creating-invisible-resource-conflicts]] — tone() commandeers Timer2 silently breaking PWM on pins 3/11
 - [[esp32-replaces-tone-with-ledcwritetone-and-the-api-is-not-a-drop-in-substitution]] — ESP32 tone API requires channel management absent from AVR

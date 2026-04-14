@@ -2,9 +2,41 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Complete the remaining Ars Contexta knowledge extraction campaign (Waves E7, E8, E9, F, G, H) and the post-extraction Connect/Verify phases, using `/agent-teams` parallelization where shared-state safety allows.
+**Goal:** Complete the remaining Ars Contexta knowledge extraction campaign AND integrate the vault into ProtoPulse runtime AI layer so vault content actively grounds AI-assisted EDA work.
 
-**Architecture:** Phased execution with strict state-safety boundaries. Phases 1-6 are **sequential** extraction (single subagent at a time, shared queue/dedup state). Phase 7 is **parallel** MOC polish via 6 teammates with non-overlapping file ownership. Phase 8 is **parallel** verification via 4 teammates with read-only boundaries. Phase 9 is final checkpoint and plan closeout.
+**Architecture:** Phased execution with strict state-safety boundaries. High-leverage extraction only (Wave F wiring guides + Wave H selective novel parts), followed by runtime integration layer (vault search backend + AI prompt injection), followed by parallel MOC polish via `/agent-teams` with non-overlapping file ownership, followed by verification.
+
+---
+
+## SCOPE REVISION 2026-04-14
+
+**Original plan scope (below Phase 9) is SUPERSEDED by this revision.** Tyler directive: trim low-value extraction, add runtime integration so the vault actually gets consumed.
+
+### Revised phase list
+
+| Phase | Original | Revised | Status |
+|---|---|---|---|
+| 1 | Wave E7 (shields) | **SKIPPED** — E6 covered shield fundamentals; remaining E7 files (ili9341 touch shield, proto shield, ethernet shield, sensor shields) score low for agentic context value | SKIP |
+| 2 | Wave E8 (breadboards) | **SKIPPED** — 95% dedup expected against existing breadboard-intelligence MOC | SKIP |
+| 3 | Wave E9 (industrial/salvage) | **SKIPPED** — out of scope for ProtoPulse's maker-tier focus | SKIP |
+| 4 | Wave F (wiring guides) | **EXECUTE IN FULL** — highest-leverage integrative content | DO |
+| 5 | Wave G (unidentified) | **SKIPPED** — mystery parts have nothing verifiable to extract | SKIP |
+| 6 | Wave H selective | **TRIMMED to 8 sets** — only truly novel: AC X2 cap, Arduino Leonardo, Cytron MD25HV, Von Weise AC gearmotor, TDY 50, Cybex treadmill, AXIS Q1755, OSEPP BTH-B1 | DO TRIMMED |
+| 6a (NEW) | — | **Vault Consumption Layer** — server-side `vault-search.ts` + `/api/vault/search` + AI prompt injection + client hook | DO |
+| 7 | MOC polish (6 teammates) | **TRIMMED to 3 teammates** — MCU+communication, actuators+power+shields, sensors+displays+passives+input+wiring+index+tensions | DO TRIMMED |
+| 8 | Verification (4 teammates) | **KEPT** — orphan, dangling link, density, campaign closeout | DO |
+| 9 | Closeout | **KEPT + expanded** — includes integration verification (AI grounded response test) | DO |
+
+### Evidence grounding the scope cut
+
+Verified 2026-04-14 via grep across `client/`, `server/`, `shared/`:
+- Zero ProtoPulse code reads from `/home/wtyler/Projects/ProtoPulse/knowledge/` or `docs/parts/`
+- `client/src/lib/electronics-knowledge.ts` is a separate hardcoded TypeScript article database, disjoint from Ars Contexta vault
+- ProtoPulse AI layer (`server/ai.ts`) has sophisticated routing + tool registry but no vault awareness
+
+Therefore: adding more low-value notes produces diminishing returns. Building the consumption layer converts existing 465+ notes from dormant inventory into active AI grounding.
+
+---
 
 **Tech Stack:** Ars Contexta knowledge vault methodology (`/arscontexta:extract`, `/arscontexta:connect`, `/arscontexta:health`, `/arscontexta:revisit`), ProtoPulse Obsidian-style MOC (Map of Content) system, `/agent-teams` skill for parallel non-conflicting work, semantic dedup via `mcp__qmd__vector_search`.
 

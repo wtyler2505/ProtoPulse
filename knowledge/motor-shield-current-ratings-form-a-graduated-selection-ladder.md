@@ -36,6 +36,7 @@ The gap between 2A (OSEPP Motor/Servo) and 16A (ZS-X11H) is notable -- there's n
 Relevant Notes:
 - [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]] -- Current ladder maps to voltage tiers
 - [[driver-ic-selection-follows-from-actuator-type-not-power-rating-alone]] -- Driver selection also depends on motor type (DC vs BLDC vs stepper)
+- [[combo-motor-and-servo-shields-trade-per-function-efficiency-for-single-board-convenience]] -- the 2A tier (OSEPP Motor/Servo) is the combo tier, and its L298N choice is partly dictated by needing the heat-budget to support servo integration
 
 Topics:
 - [[shields]]
