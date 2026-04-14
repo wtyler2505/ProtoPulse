@@ -199,6 +199,7 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "knowledge/stop-is-the-correct-emergency-kill-and-ct-brake-is-for-controlled-deceleration-because-only-stop-removes-the-controller-power-path-entirely.md",
     "knowledge/motor-speed-must-be-ramped-below-50-percent-before-activating-the-brake-because-high-speed-regenerative-braking-stresses-the-controller.md",
     "knowledge/motor-power-wiring-below-14awg-overheats-at-15a-and-creates-fire-risk-so-gauge-is-chosen-by-steady-state-current-not-voltage.md",
     "knowledge/powering-the-mcu-from-the-zs-x11h-5v-output-causes-resets-because-motor-switching-noise-on-the-shared-rail-corrupts-the-logic-supply.md",
@@ -224,7 +225,6 @@
     "knowledge/rs-485-differential-signaling-survives-long-cable-runs-and-electrical-noise-where-single-ended-serial-would-fail.md",
     "knowledge/poe-802-3af-delivers-power-and-data-over-one-ethernet-cable-eliminating-a-separate-power-run-at-the-cost-of-a-poe-capable-switch.md",
     "ops/temp/docs-and-data-set-3.md",
-    "knowledge/ac-line-emi-filters-are-bidirectional-protecting-the-device-from-grid-noise-and-preventing-device-noise-from-entering-the-grid.md",
     "ops/sessions/96bc6388-1323-4a4e-985a-8d98da8ef882-042739.json",
     "client/src/hooks/useVaultSearch.ts",
     "ops/temp",

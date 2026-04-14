@@ -20,7 +20,8 @@ Semantic neighbor: [[four-motor-bldc-systems-exceed-standard-hoverboard-bms-rati
 ---
 
 ## Create
-(to be filled by create phase)
+
+Created `knowledge/bms-overcurrent-protection-tripping-on-acceleration-is-a-software-problem-solved-by-ramp-rate-limiting-not-a-hardware-fault.md`. Frontmatter: type=claim, topics=[actuators, power-systems, microcontrollers]. Body derives the 180A step-response inrush math (36V/0.2ohm), presents the characteristic motor-spins-then-cuts-out pattern, provides a ramp function with setTargetSpeed/updateRamp code, and contrasts with the multi-motor steady-state rule. Wiki-linked to `[[four-motor-bldc-systems-exceed...]]`, `[[staggered-motor-startup-by-100ms...]]`, `[[zs-x11h-el-speed-input...]]`, `[[bldc-direction-reversal-under-load...]]`. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)
