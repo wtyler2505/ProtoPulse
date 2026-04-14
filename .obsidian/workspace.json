@@ -220,6 +220,10 @@
   },
   "active": "332237b28d338d3d",
   "lastOpenFiles": [
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-032.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-032.md.tmp.6811.1776153508185",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-031.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-031.md.tmp.6811.1776153497708",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-030.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-029.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-028.md",
@@ -251,10 +255,6 @@
     "knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md",
     "knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md.tmp.6811.1776152138863",
     "knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md",
-    "knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md.tmp.6811.1776152119300",
-    "server/ai-tools/knowledge-vault.ts.tmp.6811.1776152116443",
-    "knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md",
-    "knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md.tmp.6811.1776152098225",
-    "knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors.md"
+    "knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md.tmp.6811.1776152119300"
   ]
 }
