@@ -220,6 +220,8 @@
   },
   "active": "332237b28d338d3d",
   "lastOpenFiles": [
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-043.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-043.md.tmp.6811.1776153657056",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-042.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-042.md.tmp.6811.1776153646850",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-041.md",
@@ -252,9 +254,7 @@
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-020.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-019.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-018.md",
-    "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-017.md",
     "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-003.md.tmp.6811.1776152267543",
-    "knowledge/anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc.md.tmp.6811.1776152248261",
-    "knowledge/linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve.md.tmp.6811.1776152222291"
+    "knowledge/anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc.md.tmp.6811.1776152248261"
   ]
 }
