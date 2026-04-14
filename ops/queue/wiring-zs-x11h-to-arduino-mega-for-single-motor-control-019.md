@@ -20,7 +20,8 @@ Semantic neighbor: None. Distinct from existing fusing, voltage-divider, and bat
 ---
 
 ## Create
-(to be filled by create phase)
+
+Created `knowledge/motor-power-wiring-below-14awg-overheats-at-15a-and-creates-fire-risk-so-gauge-is-chosen-by-steady-state-current-not-voltage.md`. Frontmatter: type=claim, topics=[power-systems, eda-fundamentals, actuators]. Body presents I²R reasoning, AWG ampacity table for 22/18/16/14/12, the 6.4x dissipation ratio between 22AWG and 14AWG at 15A, and three wiring classes (phase/main-bus/signal). Wiki-linked to `[[power-budget-hierarchy...]]`, `[[anl-marine-fuse-class...]]`, `[[four-motor-bldc-systems-exceed...]]`, `[[beginners-need-ai-that-catches-mistakes...]]`. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)
