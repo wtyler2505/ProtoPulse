@@ -15,6 +15,27 @@ The ZS-X11H BLDC controller's EL (speed) input is the single most dangerous pin 
 
 **First trap: PWM is active-LOW.** In PWM mode (50Hz-20kHz), the LOW portion of each cycle is the active time. A 0% duty cycle (constant HIGH) means the motor is stopped. A signal that is mostly LOW means the motor runs fast. This is backwards from every other common motor controller (L298N, TB6612, ESC) where higher duty cycle means more speed. The inversion formula for Arduino is `analogWrite(EL_PIN, 255 - desiredSpeed)` where desiredSpeed ranges from 0 (stop) to 255 (full speed).
 
+The three reference points of this mapping make the relationship unambiguous:
+
+| `analogWrite(EL, x)` value | EL pin duty cycle | Motor speed | Intuition |
+|----------------------------|-------------------|-------------|-----------|
+| `analogWrite(EL, 0)` | 0% (constant LOW) | **FULL SPEED** | EL is always active → max drive |
+| `analogWrite(EL, 127)` | 50% | ~50% speed | EL active half the time |
+| `analogWrite(EL, 255)` | 100% (constant HIGH) | **STOPPED** | EL is never active → no drive |
+
+The ready-to-use wrapper hides the inversion from the rest of the firmware so application code can think in normal "0=stop, 255=full" terms:
+
+```cpp
+// PIN_SPEED is connected to ZS-X11H EL (active-LOW PWM)
+void setMotorSpeed(int desiredSpeed) {
+  // desiredSpeed: 0 = stopped, 255 = full speed
+  // Invert for the active-LOW EL input
+  analogWrite(PIN_SPEED, 255 - constrain(desiredSpeed, 0, 255));
+}
+```
+
+Using this wrapper throughout the codebase means the inversion lives in exactly one place; any future firmware that wants to read like a normal-polarity motor controller just calls `setMotorSpeed(0..255)` and is isolated from the ZS-X11H quirk.
+
 **Second trap: analogWrite(255) is NOT stop.** Because Arduino's `analogWrite(pin, 255)` outputs a constant LOW (not a 100% duty cycle HIGH), the controller reads it as "always active" and runs at full speed. And `analogWrite(pin, 0)` outputs a constant HIGH, which the controller reads as "never active" and stops. This is a subtle platform interaction where the Arduino PWM implementation and the controller's active-LOW logic conspire to produce behavior opposite to what the code appears to say.
 
 **Third trap: analog mode inverts the convention.** If you feed a DC voltage (0-5V) to EL instead of PWM, the mapping is normal: 0V = stop, 5V = full speed. This is the opposite of PWM mode's LOW=fast convention. A beginner who learns the analog behavior and then switches to PWM (or vice versa) will get the motor running at full speed unexpectedly.

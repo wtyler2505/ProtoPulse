@@ -19,7 +19,8 @@ Rationale: The existing note argues WHY the polarity inverts but presents the in
 ---
 
 ## Enrich
-(to be filled by enrich phase)
+
+Added 3-row analogWrite→duty→speed mapping table (0/127/255) and the `setMotorSpeed()` wrapper code block to target insight `knowledge/zs-x11h-el-speed-input-is-active-low-and-flips-polarity-between-pwm-and-analog-modes.md` under "First trap" subsection. Table provides visual scaffolding for the inversion; wrapper isolates the inversion to one place. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)

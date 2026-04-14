@@ -23,7 +23,8 @@ Resolution path: During reflect phase, verify the ZS-X11H part datasheet, verify
 ---
 
 ## Create
-(to be filled by create phase)
+
+Created `knowledge/ct-brake-polarity-on-the-zs-x11h-is-active-low-contradicting-the-kjl-01-claim-that-brake-is-active-high-suggesting-the-polarity-is-vendor-specific-not-a-bldc-convention.md`. Frontmatter: type=tension, confidence=open (preserves OPEN classification). Body documents the two conflicting data points (ZS-X11H active-LOW per source doc + Arduino code, KJL-01 active-HIGH per existing note), describes the three asymmetric failure modes of cross-applying the rules, proposes three resolution options (split / demote / flag), and states the interim operational rule that brake polarity is untrusted until per-controller verification. Wiki-linked to `[[bldc-stop-active-low-brake-active-high]]` (the contested note), `[[stop-is-the-correct-emergency-kill...]]`, `[[safe-bldc-startup-sequence...]]`, `[[multi-pole-switch-pinout-must-be-mapped...]]`. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)
