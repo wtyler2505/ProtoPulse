@@ -1671,3 +1671,6 @@
 "event_logs:embedding:started": {"key":"embedding:started","ct":24,"first_at":1776153014454,"last_at":1776163163538,"class_name":"EventLog","event_sources":{"process_embed_queue":24}},
 "event_logs:item:embedded": {"key":"item:embedded","ct":658,"first_at":1776153017427,"last_at":1776163176820,"class_name":"EventLog"},
 "event_logs:embedding:progress": {"key":"embedding:progress","ct":103,"first_at":1776153017431,"last_at":1776163174574,"class_name":"EventLog","event_sources":{"process_embed_queue":103}},
+"event_logs:sources:reimport_progress": {"key":"sources:reimport_progress","ct":243,"first_at":1776153008348,"last_at":1776163162458,"class_name":"EventLog","event_sources":{"run_re_import":243}},
+"event_logs:embedding:started": {"key":"embedding:started","ct":24,"first_at":1776153014454,"last_at":1776163163538,"class_name":"EventLog","event_sources":{"process_embed_queue":24}},
+"event_logs:item:embedded": {"key":"item:embedded","ct":659,"first_at":1776153017427,"last_at":1776163179629,"class_name":"EventLog"},
