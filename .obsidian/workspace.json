@@ -197,6 +197,8 @@
   },
   "active": "557180fa13ed8008",
   "lastOpenFiles": [
+    "knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal.md",
+    "knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal.md.tmp.6811.1776152159716",
     "knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md",
     "knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md.tmp.6811.1776152138863",
     "knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md",
@@ -210,7 +212,6 @@
     "knowledge/130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin.md.tmp.6811.1776152056898",
     "server/ai-tools/knowledge-vault.ts.tmp.6811.1776151976670",
     "server/ai-tools/index.ts.tmp.6811.1776151782252",
-    "server/ai-tools/knowledge-vault.ts",
-    "server/ai-tools/knowledge-vault.ts.tmp.6811.1776151622655"
+    "server/ai-tools/knowledge-vault.ts"
   ]
 }
