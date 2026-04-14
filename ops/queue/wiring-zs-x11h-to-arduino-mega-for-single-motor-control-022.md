@@ -20,7 +20,8 @@ Semantic neighbor: None at this specificity. [[zs-x11h-el-speed-input-is-active-
 ---
 
 ## Create
-(to be filled by create phase)
+
+Created `knowledge/safe-bldc-startup-sequence-initializes-el-stopped-then-brake-engaged-then-enable-low-before-setting-any-active-state.md`. Frontmatter: type=claim, topics=[actuators, microcontrollers]. Body presents signal active/passive state table, full setup() code block with numbered comments, four rules (STOP first, brake before enable, interrupts last, never arm in setup), and generalizes to servos/steppers. Wiki-linked to `[[el-pin-floating-at-mcu-boot...]]`, `[[zs-x11h-el-speed-input...]]`, `[[bldc-stop-active-low-brake-active-high]]`, `[[stop-is-the-correct-emergency-kill...]]`. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)
