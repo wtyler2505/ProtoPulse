@@ -26,6 +26,8 @@ The shields.md MOC includes a "Pin Conflict Warnings" section that's currently e
 
 **Power budget compounds stacking risk:** The Ethernet shield alone draws ~150mA from the 5V rail. USB power supplies ~450mA usable to shields after board overhead. Stacking a motor shield or servo shield alongside the Ethernet shield can exceed USB power capacity, causing brownouts that manifest as network disconnects or SD card corruption — not obvious power symptoms.
 
+**Same-shield stacking is blocked by the same mechanism:** Even stacking two HW-130 motor shields to control 8 motors is impractical -- both shields hardcode the same PWM pins (D3, D5, D6, D11), the same shift-register control lines (D4, D8, D12), and the same 74HC595 address space. Without cutting traces and rewiring one shield to a different pin group, the two boards fight for every control line. This is why the expansion pattern "just stack another of the same shield" never works -- shield designs assume they are the only instance on the stack, and identity of pin usage makes same-shield stacking strictly worse than stacking two different shields that merely share a few pins.
+
 **ProtoPulse implication:** A shield stacking DRC that cross-references pin usage tables from the BOM would catch these conflicts at design time rather than after assembly. The shields MOC already has the data (Pins Used column) -- it just needs automated cross-referencing. The DRC should also distinguish ICSP-routed SPI (Mega-safe) from pin-routed SPI (Mega-incompatible). A power budget checker should sum shield current draws and warn when total exceeds USB supply headroom.
 
 ---

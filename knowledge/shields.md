@@ -20,6 +20,10 @@ Shield comparison, pin conflict avoidance, level shifter selection, and expansio
 - [[txs0108e-oe-pin-is-active-high-and-floating-by-default-silently-disabling-all-outputs]] — opposite OE polarity from 74HC595 creates a specific silent-failure class for level shifters
 - [[active-level-shifters-draw-continuous-quiescent-current-unlike-passive-bss138-shifters-with-near-zero-idle-draw]] — TXS0108E's ~100uA idle draw destroys deep-sleep battery budgets unless the shifter rail is gated
 - [[bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus]] — controllers regenerate raw Hall signals as push-pull, forcing active-shifter selection despite the raw sensor being open-collector
+- [[hw-130-motor-shield-is-an-adafruit-motor-shield-v1-clone-that-uses-the-afmotor-library-unchanged]] — HW-130 inherits AFMotor V1 library support via pin-for-pin clone fidelity; Adafruit V2 library is NOT compatible
+- [[74hc595-in-motor-shields-trades-gpio-savings-for-direction-change-latency-that-matters-at-high-switching-frequencies]] — shift-register direction control saves 5 pins on HW-130 but inserts microsecond-scale latency that matters for microstepping
+- [[hw-130-shield-consumes-both-timer0-and-timer2-leaving-only-timer1-free-for-other-libraries]] — four-channel motor PWM on HW-130 eliminates tone() and IRremote compatibility, leaving only Servo (Timer1) usable
+- [[counterfeit-l293d-chips-on-clone-motor-shields-deliver-lower-than-rated-current-with-no-external-indication]] — cheap HW-130 batches may have sub-600mA chips that mimic "motor too big" symptoms while actually being counterfeit drivers
 
 ## Open Questions
 (populated by /extract)

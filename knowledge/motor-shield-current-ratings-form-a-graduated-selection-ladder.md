@@ -29,6 +29,8 @@ This isn't a compatibility puzzle -- it's a graduated selection where the actuat
 
 The gap between 2A (OSEPP Motor/Servo) and 16A (ZS-X11H) is notable -- there's no mid-tier option in the inventory for motors drawing 3-10A continuous. This gap corresponds to medium-duty DC gearmotors and smaller steppers that would need an external driver board rather than a shield-form-factor solution.
 
+**Why the bottom rung is narrower than it looks:** The 600mA HW-130 tier is not a general-purpose "small DC motor" tier -- most geared DC hobby motors have stall currents of 1-2A at 6V (higher at true stall), which already exceed the L293D's 600mA continuous rating. The HW-130 tier is really a "very small hobby motors + 28BYJ-48 stepper" tier, and it requires verifying stall current before wiring. The ladder is graduated but not linearly forgiving -- selecting the bottom rung demands more engineering discipline than the higher rungs, because the consequences of undersizing at 600mA are thermal shutdown or outright driver destruction, whereas undersizing at 2A typically just means suboptimal top speed.
+
 ---
 
 Relevant Notes:

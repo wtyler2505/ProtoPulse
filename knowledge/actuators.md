@@ -46,6 +46,10 @@ Motor control theory, driver IC comparison, PWM strategies, and output device se
 - [[the-d-suffix-on-l293d-denotes-built-in-clamp-diodes-and-the-non-d-variant-is-a-destructive-substitution]] — L293 vs L293D part number distinction; non-D variant silently destroys under load
 - [[l293d-dip-16-package-makes-it-the-only-motor-driver-ic-that-drops-directly-into-a-breadboard]] — DIP-16 straddles breadboard center channel; all alternatives need breakout boards
 - [[l293d-separates-speed-control-on-enable-pins-from-direction-control-on-input-pins]] — PWM on enable for speed, digital on inputs for direction
+- [[hw-130-motor-shield-is-an-adafruit-motor-shield-v1-clone-that-uses-the-afmotor-library-unchanged]] — HW-130 is pin-for-pin Adafruit Motor Shield V1 clone; AFMotor library works unmodified
+- [[74hc595-in-motor-shields-trades-gpio-savings-for-direction-change-latency-that-matters-at-high-switching-frequencies]] — shift-register direction saves pins but inserts serial-shift latency that matters for steppers
+- [[hw-130-shield-consumes-both-timer0-and-timer2-leaving-only-timer1-free-for-other-libraries]] — four-channel motor PWM locks Timer0 and Timer2; only Servo (Timer1) remains compatible
+- [[counterfeit-l293d-chips-on-clone-motor-shields-deliver-lower-than-rated-current-with-no-external-indication]] — cheap HW-130 batches may have sub-600mA counterfeit chips that mimic undersized-driver symptoms
 
 - [[arduino-tone-uses-timer2-which-disables-pwm-on-pins-3-and-11-creating-invisible-resource-conflicts]] — tone() commandeers Timer2 silently breaking PWM on pins 3/11
 - [[esp32-replaces-tone-with-ledcwritetone-and-the-api-is-not-a-drop-in-substitution]] — ESP32 tone API requires channel management absent from AVR
