@@ -199,6 +199,7 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "docs/superpowers/plans/2026-04-14-arscontexta-waves-completion-closeout.md",
     "knowledge/ct-brake-polarity-on-the-zs-x11h-is-active-low-contradicting-the-kjl-01-claim-that-brake-is-active-high-suggesting-the-polarity-is-vendor-specific-not-a-bldc-convention.md",
     "knowledge/bms-overcurrent-protection-tripping-on-acceleration-is-a-software-problem-solved-by-ramp-rate-limiting-not-a-hardware-fault.md",
     "knowledge/safe-bldc-startup-sequence-initializes-el-stopped-then-brake-engaged-then-enable-low-before-setting-any-active-state.md",
@@ -224,7 +225,6 @@
     "knowledge/native-usb-arduino-boards-can-brick-usb-with-a-bad-sketch-requiring-a-double-tap-reset-to-catch-the-bootloader-window.md",
     "knowledge/arduino-leonardo-atmega32u4-native-usb-enables-hid-keyboard-mouse-emulation-that-arduino-uno-cannot-do-without-hacking.md",
     "ops/temp/docs-and-data-set-6.md",
-    "knowledge/industrial-devices-accept-both-ac-and-dc-input-on-the-same-terminal-block-because-an-internal-bridge-rectifier-makes-polarity-irrelevant.md",
     "ops/sessions/96bc6388-1323-4a4e-985a-8d98da8ef882-042739.json",
     "client/src/hooks/useVaultSearch.ts",
     "ops/temp",
