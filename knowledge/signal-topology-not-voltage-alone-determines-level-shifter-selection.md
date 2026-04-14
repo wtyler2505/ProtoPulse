@@ -25,6 +25,7 @@ Beginners approach level shifting as a voltage-matching problem: "my MCU is 3.3V
 | Drive type | push-pull / open-drain | Determines whether an auto-direction chip will work or fail |
 | Speed | <400kHz / <1MHz / >1MHz | Determines whether BSS138 RC limits are tolerable |
 | Edge sensitivity | continuous clock / async / strict setup-hold | Determines whether propagation jitter breaks the protocol |
+| Idle current | negligible / ~100uA active logic | Determines whether the shifter destroys deep-sleep battery life |
 
 **Each combination selects a different shifter:**
 
@@ -33,7 +34,10 @@ Beginners approach level shifting as a voltage-matching problem: "my MCU is 3.3V
 - **SPI MISO in bidirectional SPI with >1MHz clock:** TXS0108E. BSS138's body-diode path is the bottleneck — see [[bss138-switching-speed-caps-at-400khz-making-it-unsuitable-for-fast-spi-and-high-speed-push-pull-signals]].
 - **UART (unidirectional per wire, push-pull, <1MHz):** voltage divider for TX→RX, direct connection or buffer for RX→TX. Doesn't need a full shifter.
 - **NeoPixel data (unidirectional, push-pull, strict timing at 800kHz):** 74HCT125 or 74HCT245. BSS138 edge rates corrupt timing; TXS0108E auto-detect adds jitter.
+- **BLDC controller Hall outputs (bidirectional, push-pull, low-kHz commutation, 5V→3.3V):** TXS0108E. Controllers buffer raw Hall signals into push-pull outputs — see [[bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus]]. BSS138 degrades push-pull edges; 74HCT buffer is unidirectional and loses closed-loop capability.
 - **I2S (bidirectional continuous clock, push-pull, 1-3MHz):** none — see [[i2s-timing-requirements-make-level-shifting-a-non-solution-for-voltage-incompatible-mcus]]. Must use voltage-native peripherals.
+
+**The fifth axis — idle current — only matters for battery:** BSS138 shifters draw near-zero quiescent current because they are passive MOSFETs. TXS0108E-class active shifters draw roughly 100uA continuously because their edge-detection logic never sleeps. On a deep-sleep ESP32 project at 10uA baseline, adding a TXS raises idle by 10x and collapses battery life from months to weeks — see [[active-level-shifters-draw-continuous-quiescent-current-unlike-passive-bss138-shifters-with-near-zero-idle-draw]]. This axis is invisible on always-powered boards but dominates on battery, and it can force the selection toward BSS138 for slow signals or toward a GPIO-switchable shifter supply for fast signals.
 
 **The voltage constraint is a filter, not a selector:** any shifter with appropriate LV/HV rails can pass the voltage check. The BSS138 works 1.8-5V, TXS0108E works 1.2-3.6V/1.65-5.5V, 74HCT requires 4.5-5.5V supply. These constraints eliminate candidates but do not select among them.
 
@@ -47,6 +51,9 @@ Relevant Notes:
 - [[bss138-body-diode-makes-level-shifting-bidirectional-without-direction-control]] — mechanism of the pull-up-based option
 - [[open-drain-protocols-require-pull-up-based-level-shifters-because-auto-direction-sensors-cannot-distinguish-driver-from-pull-up]] — why topology matters for I2C specifically
 - [[bss138-switching-speed-caps-at-400khz-making-it-unsuitable-for-fast-spi-and-high-speed-push-pull-signals]] — speed axis for the BSS138 case
+- [[active-level-shifters-use-one-shot-edge-accelerators-to-drive-rising-edges-breaking-the-bss138-rc-ceiling]] — mechanism of the active-shifter option on the other side of the speed axis
+- [[active-level-shifters-draw-continuous-quiescent-current-unlike-passive-bss138-shifters-with-near-zero-idle-draw]] — the fifth axis (idle current) that only matters for battery projects
+- [[bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus]] — specific case where buffered sensor topology forces the active-shifter choice
 - [[74hct-buffers-are-purpose-built-3v3-to-5v-level-shifters-for-timing-critical-signals]] — the unidirectional buffered option
 - [[i2s-timing-requirements-make-level-shifting-a-non-solution-for-voltage-incompatible-mcus]] — the case where no shifter works
 - [[wireless-modules-are-overwhelmingly-3v3-making-level-shifting-the-default]] — the broader level-shifting landscape

@@ -15,6 +15,11 @@ Shield comparison, pin conflict avoidance, level shifter selection, and expansio
 - [[motor-shield-current-ratings-form-a-graduated-selection-ladder]] — four motor shields form a 600mA→16A ladder that maps to actuator voltage tiers
 - [[spi-bus-sharing-on-a-single-shield-requires-per-device-chip-select-discipline-where-unused-devices-must-be-explicitly-deselected]] — W5100 + SD card on Ethernet shield share SPI; CS discipline prevents bus contention
 - [[mixed-protocol-boards-require-one-level-shifter-per-signal-class-not-one-shifter-for-all-signals]] — a single BSS138 module cannot serve I2C + fast SPI + NeoPixel; partition by topology and speed
+- [[active-level-shifters-use-one-shot-edge-accelerators-to-drive-rising-edges-breaking-the-bss138-rc-ceiling]] — TXS0108E achieves 110Mbps push-pull by actively driving edges instead of waiting for RC charge
+- [[txs0108e-vcca-must-be-the-lower-voltage-rail-because-the-chip-enforces-asymmetric-supply-roles]] — swapping VCCA and VCCB violates the chip spec even when both voltages are legal individually
+- [[txs0108e-oe-pin-is-active-high-and-floating-by-default-silently-disabling-all-outputs]] — opposite OE polarity from 74HC595 creates a specific silent-failure class for level shifters
+- [[active-level-shifters-draw-continuous-quiescent-current-unlike-passive-bss138-shifters-with-near-zero-idle-draw]] — TXS0108E's ~100uA idle draw destroys deep-sleep battery budgets unless the shifter rail is gated
+- [[bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus]] — controllers regenerate raw Hall signals as push-pull, forcing active-shifter selection despite the raw sensor being open-collector
 
 ## Open Questions
 (populated by /extract)

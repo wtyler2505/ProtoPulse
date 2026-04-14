@@ -27,11 +27,14 @@ Many ICs have multiple power supply pins, and each one requires its own decoupli
 
 **BOM implication:** The "one cap per IC" rule underestimates the capacitor count. A design with 5 ICs might need 8-12 decoupling capacitors, not 5. ProtoPulse's DRC should count VCC pins, not IC packages, when checking decoupling completeness.
 
+**The cross-voltage-domain case (level shifters):** the rule also applies to ICs where the multiple VCC pins intentionally sit on DIFFERENT supply domains, not just duplicated rails. The TXS0108E auto-direction level shifter has VCCA (1.2-3.6V) and VCCB (1.65-5.5V) on two physically separate rails — one per voltage side. The spec requires a 100nF ceramic decoupling cap on EACH rail, placed as close to its pin as possible. Omitting either cap degrades signal integrity on the corresponding side, and the failure is asymmetric — losing the VCCB cap corrupts high-side edges but leaves low-side clean, which makes the bug hard to bisect. The DRC rule generalizes: for any IC, count each distinct supply domain as a separate decoupling requirement, regardless of whether the domains are redundant rails or cross-voltage translation rails.
+
 ---
 
 Relevant Notes:
 - [[every-digital-ic-requires-a-100nf-ceramic-decoupling-capacitor-between-vcc-and-gnd-to-absorb-switching-transients]] -- The per-IC rule that this note refines to per-pin
 - [[analog-ics-need-decoupling-more-critically-than-digital-because-supply-noise-directly-contaminates-signal-measurements]] -- AVCC decoupling is especially critical for analog accuracy
+- [[txs0108e-vcca-must-be-the-lower-voltage-rail-because-the-chip-enforces-asymmetric-supply-roles]] -- the cross-voltage-domain case that also requires per-rail decoupling
 
 Topics:
 - [[passives]]
