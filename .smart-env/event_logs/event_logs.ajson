@@ -103,3 +103,4 @@
 "event_logs:embedding:progress": {"key":"embedding:progress","ct":6,"first_at":1776153017431,"last_at":1776153587200,"class_name":"EventLog","event_sources":{"process_embed_queue":6}},
 "event_logs:sources:created": {"key":"sources:created","ct":22,"first_at":1776152971926,"last_at":1776153596340,"class_name":"EventLog","event_sources":{"obsidian:vault.create":22}},
 "event_logs:embedding:completed": {"key":"embedding:completed","ct":2,"first_at":1776153029881,"last_at":1776153595583,"class_name":"EventLog","event_sources":{"process_embed_queue":2}},
+"event_logs:sources:created": {"key":"sources:created","ct":23,"first_at":1776152971926,"last_at":1776153599073,"class_name":"EventLog","event_sources":{"obsidian:vault.create":23}},

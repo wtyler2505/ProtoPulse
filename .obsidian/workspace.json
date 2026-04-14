@@ -220,6 +220,7 @@
   },
   "active": "332237b28d338d3d",
   "lastOpenFiles": [
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-037.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-036.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-035.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-034.md",
@@ -250,7 +251,6 @@
     "knowledge/anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc.md.tmp.6811.1776152248261",
     "knowledge/linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve.md",
     "knowledge/linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve.md.tmp.6811.1776152222291",
-    "knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md",
     "knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md.tmp.6811.1776152201666",
     "knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requires-external-lvd-because-no-integrated-bms-exists.md.tmp.6811.1776152179577",
     "knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal.md.tmp.6811.1776152159716",
