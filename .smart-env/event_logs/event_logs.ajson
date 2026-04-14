@@ -671,3 +671,4 @@
 "event_logs:sources:created": {"key":"sources:created","ct":82,"first_at":1776152971926,"last_at":1776156954217,"class_name":"EventLog","event_sources":{"obsidian:vault.create":82}},
 "event_logs:item:embedded": {"key":"item:embedded","ct":398,"first_at":1776153017427,"last_at":1776157029244,"class_name":"EventLog"},
 "event_logs:embedding:progress": {"key":"embedding:progress","ct":62,"first_at":1776153017431,"last_at":1776157011747,"class_name":"EventLog","event_sources":{"process_embed_queue":62}},
+"event_logs:sources:reimport_completed": {"key":"sources:reimport_completed","ct":39,"first_at":1776153045177,"last_at":1776156859584,"class_name":"EventLog","event_sources":{"run_re_import":39}},
