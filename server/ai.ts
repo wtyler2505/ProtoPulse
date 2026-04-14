@@ -1176,6 +1176,14 @@ async function executeStreamForProvider(
   // Track streaming tool requests so we can pair them with results later
   const streamingToolRequests = new Map<string, { name: string; input: Record<string, unknown> }>();
 
+  // AI-AUDIT #191: Thread AbortSignal into ToolContext so tools can propagate
+  // cancellation into downstream fetch/model calls. We only add signal when a
+  // toolContext already exists — Genkit tools that call `ai.currentContext()`
+  // expect either a full ToolContext or nothing.
+  const ctxWithSignal: ToolContext | undefined = toolContext
+    ? { ...toolContext, signal }
+    : undefined;
+
   try {
     const { response, stream } = ai.generateStream({
       model: `googleai/${model}`,
@@ -1188,7 +1196,7 @@ async function executeStreamForProvider(
         maxOutputTokens: maxTokens,
         apiVersion: 'v1beta'
       },
-      context: toolContext,
+      context: ctxWithSignal,
       abortSignal: signal,
     });
 
@@ -1280,8 +1288,15 @@ async function executeStreamForProvider(
         tools: Array.from(streamingToolRequests.values()).map(t => t.name),
       });
       for (const [id, { name, input }] of Array.from(streamingToolRequests.entries())) {
+        // AI-AUDIT #191: Stop fallback execution if the upstream request was
+        // aborted (client disconnected, stream timed out). Prevents orphaned
+        // DB writes and wasted work after the user has navigated away.
+        if (signal?.aborted) {
+          logger.info('ai:tool-fallback-aborted', { remaining: streamingToolRequests.size });
+          break;
+        }
         const toolDef = toolRegistry.get(name);
-        if (toolDef && toolContext) {
+        if (toolDef && ctxWithSignal) {
           // Guard: never re-execute destructive tools — Genkit already ran them
           // during generateStream. Re-executing would cause duplicate DB writes.
           if (DESTRUCTIVE_TOOLS.includes(name)) {
@@ -1289,9 +1304,15 @@ async function executeStreamForProvider(
             continue;
           }
           try {
-            const result = await toolDef.execute(input, toolContext);
+            const result = await toolDef.execute(input, ctxWithSignal);
             allToolCalls.push({ id, name, input, result });
           } catch (execErr: unknown) {
+            // AbortError is an expected path when the request is cancelled —
+            // don't log it as an error.
+            if (execErr instanceof Error && execErr.name === 'AbortError') {
+              logger.info('ai:tool-fallback-aborted-execute', { tool: name });
+              continue;
+            }
             logger.warn('ai:tool-fallback-execute-failed', {
               tool: name,
               error: execErr instanceof Error ? execErr.message : String(execErr),

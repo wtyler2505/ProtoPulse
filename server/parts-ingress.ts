@@ -18,7 +18,7 @@
  * See docs/plans/2026-04-10-parts-catalog-consolidation.md Phase 2 for the full spec.
  */
 
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, ilike, isNull, sql } from 'drizzle-orm';
 import { logger } from './logger';
 import {
   parts,
@@ -32,6 +32,7 @@ import {
 } from '@shared/schema';
 import { generateSlug, appendCollisionSuffix, type SlugInput } from '@shared/parts/part-slug';
 import type { PartOrigin, TrustLevel, PlacementSurface, PlacementContainerType, AssemblyCategory } from '@shared/parts/part-row';
+import { normalizeMpn, normalizeManufacturer, mpnComparisonKey } from '@shared/parts/mpn';
 
 /**
  * The database client type. Imported type-only to avoid the eager `import './db'`
