@@ -198,6 +198,8 @@
   },
   "active": "557180fa13ed8008",
   "lastOpenFiles": [
+    "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-003.md",
+    "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-003.md.tmp.6811.1776152267543",
     "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-002.md",
     "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-001.md",
     "knowledge/anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc.md",
@@ -218,7 +220,6 @@
     "knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md",
     "knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md.tmp.6811.1776152098225",
     "knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors.md",
-    "knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors.md.tmp.6811.1776152077731",
     "knowledge/130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin.md"
   ]
 }
