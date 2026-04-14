@@ -20,7 +20,8 @@ Semantic neighbor: None at this specificity. The [[78l05-regulator-failure-kills
 ---
 
 ## Create
-(to be filled by create phase)
+
+Created `knowledge/powering-the-mcu-from-the-zs-x11h-5v-output-causes-resets-because-motor-switching-noise-on-the-shared-rail-corrupts-the-logic-supply.md`. Frontmatter: type=claim, source=wiring-zs-x11h-to-arduino-mega, topics=[actuators, power-systems, microcontrollers]. Body explains the 78L05 sharing with commutation logic, 100mA current limit, the two characteristic symptoms (brownout resets + ADC jitter), and the LM2596 architectural fix. Wiki-linked to `[[78l05-regulator-failure...]]`, `[[bldc-controller-and-mcu-must-share-common-ground...]]`, `[[10uf-ceramic-on-esp32-vin...]]`, `[[100uf-capacitor-on-arduino-5v-input...]]`, `[[lm2596-adjustable-buck-converter...]]`. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)
