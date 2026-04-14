@@ -220,6 +220,8 @@
   },
   "active": "332237b28d338d3d",
   "lastOpenFiles": [
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-041.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-041.md.tmp.6811.1776153636244",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-040.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-040.md.tmp.6811.1776153625872",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-039.md",
@@ -251,10 +253,8 @@
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-017.md",
     "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-003.md",
     "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-003.md.tmp.6811.1776152267543",
-    "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-002.md",
     "knowledge/anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc.md.tmp.6811.1776152248261",
     "knowledge/linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve.md.tmp.6811.1776152222291",
-    "knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md.tmp.6811.1776152201666",
-    "knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requires-external-lvd-because-no-integrated-bms-exists.md.tmp.6811.1776152179577"
+    "knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md.tmp.6811.1776152201666"
   ]
 }
