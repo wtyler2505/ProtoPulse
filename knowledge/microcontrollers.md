@@ -1,5 +1,5 @@
 ---
-description: "Microcontroller knowledge -- specs, GPIO gotchas, peripheral mapping, clone differences, and selection criteria for Arduino, ESP32, RPi, and others"
+description: "Microcontroller and SBC knowledge — GPIO current budgets, strapping/boot-pin traps, peripheral remapping rules, clone/bootloader gotchas, sleep-current realities, and Uno-to-Mega/ARM portability landmines across ATmega, ESP8266, ESP32, RP2040, SAMD, and Raspberry Pi"
 type: moc
 topics:
   - "[[eda-fundamentals]]"
@@ -8,28 +8,57 @@ topics:
 
 # microcontrollers
 
-Specs, gotchas, and selection criteria for microcontrollers and single-board computers in the inventory. Covers pin mapping, voltage levels, peripheral availability, clone compatibility, and platform-specific traps.
+Specs, gotchas, and selection criteria for microcontrollers and single-board computers in the inventory. Covers pin mapping, voltage levels, peripheral availability, clone compatibility, bootloader/USB quirks, and platform-specific traps that silently break naive ports.
 
 ## Knowledge Notes
-- [[most-maker-displays-accept-3v3-5v-but-character-lcds-and-7-segments-are-5v-only-gotchas]] — 5V display gotchas for 3.3V MCU users (ESP32, Pi Pico)
-- [[mega-spi-pins-move-from-d10-d13-to-d50-d53-breaking-hardcoded-uno-code-silently]] — #1 Uno-to-Mega porting gotcha, silent SPI failure
-- [[mega-5v-regulator-thermal-math-constrains-input-voltage-to-7-9v]] — linear regulator heat limits practical Vin to 7-9V
-- [[mega-3v3-output-limited-to-50ma-cannot-power-wifi-or-bluetooth-modules]] — 3.3V pin too weak for ESP/BT modules
-- [[esp32-i2c-is-software-implemented-and-remappable-to-any-gpio-pair]] — I2C on any pin pair, not hardware-bound like AVR
-- [[vspi-is-the-safest-esp32-spi-bus-because-hspi-pins-have-boot-restrictions]] — HSPI GPIO12/15 are boot-sensitive; use VSPI first
-- [[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc]] — 12-bit ADC accuracy degrades at upper voltage range
-- [[esp32-adc-attenuation-setting-determines-input-voltage-range]] — 4 attenuation levels trade range for resolution
-- [[esp32-ams1117-regulator-limits-total-board-current-to-800ma]] — WiFi draws 240mA peak, leaving ~560mA headroom
-- [[esp32-deep-sleep-draws-only-10-microamps-enabling-battery-iot]] — 10uA sleep enables months on coin cell
-- [[esp32-has-14-safe-gpio-pins-with-no-boot-or-flash-restrictions]] — only 14 of 34 GPIOs are unrestricted
-- [[esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors]] — 4 pins lack output driver and pull resistors
-- [[esp32-dac-on-gpio25-26-provides-true-8bit-analog-output]] — rare true DAC among maker MCUs
+
+### ATmega Uno (ATmega328P)
 - [[uno-single-uart-shared-with-usb-forces-choose-one-between-debugging-and-peripherals]] — #1 Uno beginner wall: can't debug while serial peripheral connected
 - [[uno-20ma-per-pin-200ma-total-means-no-direct-led-or-motor-drive]] — ATmega328P GPIO current limits, no direct motor drive
 - [[uno-i2c-on-a4-a5-consumes-one-third-of-analog-inputs]] — I2C locks out 2 of 6 analog channels
 - [[uno-only-2-external-interrupts-on-d2-d3-is-a-hard-project-sizing-constraint]] — 2 interrupts limit project complexity
 - [[uno-defines-the-standard-arduino-shield-header-layout]] — Uno IS the reference form factor for shields
 - [[uno-d10-must-stay-output-for-hardware-spi-master-mode]] — D10 INPUT causes silent SPI master-to-slave switch
+- [[arduino-nano-a6-and-a7-are-analog-input-only-pins-that-silently-fail-on-digitalread]] — Nano A6/A7 ADC-only pins, digitalRead compiles but returns garbage
+- [[arduino-tone-uses-timer2-which-disables-pwm-on-pins-3-and-11-creating-invisible-resource-conflicts]] — tone() silently kills PWM on D3/D11 via Timer2 capture
+
+### ATmega Mega 2560
+- [[mega-spi-pins-move-from-d10-d13-to-d50-d53-breaking-hardcoded-uno-code-silently]] — #1 Uno-to-Mega porting gotcha, silent SPI failure
+- [[mega-2560-four-hardware-uarts]] — 4 UARTs make Mega the default choice for multi-wireless projects
+- [[mega-2560-pin-7-8-gap-for-shield-compatibility]] — header gap preserves Uno shield footprint compatibility
+- [[mega-2560-too-wide-for-any-breadboard]] — physical footprint forbids breadboard prototyping
+- [[mega-5v-regulator-thermal-math-constrains-input-voltage-to-7-9v]] — linear regulator heat limits practical Vin to 7-9V
+- [[mega-3v3-output-limited-to-50ma-cannot-power-wifi-or-bluetooth-modules]] — 3.3V pin too weak for ESP/BT modules
+
+### Arduino Leonardo / native-USB AVR
+- [[arduino-leonardo-atmega32u4-native-usb-enables-hid-keyboard-mouse-emulation-that-arduino-uno-cannot-do-without-hacking]] — ATmega32U4 built-in USB = native HID keyboard/mouse without DFU hacks
+- [[arduino-leonardo-pin-multiplexing-a6-through-a11-doubles-digital-pins-as-adc-channels-unlike-the-uno-where-a0-a5-are-dedicated]] — 12 ADC channels but 6 are multiplexed with digital pins; breaks naive Uno shield assumptions
+- [[native-usb-arduino-boards-can-brick-usb-with-a-bad-sketch-requiring-a-double-tap-reset-to-catch-the-bootloader-window]] — bad sketch on Leonardo/Zero can brick USB; recovery requires double-tap reset timing
+
+### ARM Arduino (SAMD, etc.)
+- [[samd51-and-other-arm-arduino-boards-break-atmega-library-compatibility-silently]] — AVR-only libraries compile but misbehave on ARM cores
+- [[native-usb-on-arm-mcus-eliminates-serial-bridge-enabling-direct-hid-and-midi-device-emulation]] — ARM MCUs with USB peripheral skip CH340/FTDI bridge entirely
+
+### ESP32
+- [[esp32-i2c-is-software-implemented-and-remappable-to-any-gpio-pair]] — I2C on any pin pair, not hardware-bound like AVR
+- [[vspi-is-the-safest-esp32-spi-bus-because-hspi-pins-have-boot-restrictions]] — HSPI GPIO12/15 are boot-sensitive; use VSPI first
+- [[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc]] — 12-bit ADC accuracy degrades at upper voltage range
+- [[esp32-adc-attenuation-setting-determines-input-voltage-range]] — 4 attenuation levels trade range for resolution
+- [[esp32-adc2-unavailable-when-wifi-active]] — WiFi claims ADC2, silently breaking pins GPIO0/2/4/12-15/25-27 for analog
+- [[esp32-ams1117-regulator-limits-total-board-current-to-800ma]] — WiFi draws 240mA peak, leaving ~560mA headroom
+- [[esp32-deep-sleep-draws-only-10-microamps-enabling-battery-iot]] — 10uA sleep enables months on coin cell
+- [[esp32-has-14-safe-gpio-pins-with-no-boot-or-flash-restrictions]] — only 14 of 34 GPIOs are unrestricted
+- [[esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors]] — 4 pins lack output driver and pull resistors
+- [[esp32-gpio5-is-a-strapping-pin-for-boot-message-printing-and-should-not-be-treated-as-unconditionally-safe]] — GPIO5 is a strapping pin; pull state at boot affects debug output
+- [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] — GPIO12 MTDI strapping pin selects flash voltage; HIGH at boot = crash
+- [[esp32-six-flash-gpios-must-never-be-used]] — GPIO6-11 wired to SPI flash; touching them = reset/corruption
+- [[esp32-dac-on-gpio25-26-provides-true-8bit-analog-output]] — rare true DAC among maker MCUs
+- [[esp32-gpio25-26-are-both-dac-outputs-and-recommended-i2s-pins-creating-peripheral-exclusion]] — DAC vs I2S peripheral conflict on same pins
+- [[esp32-replaces-tone-with-ledcwritetone-and-the-api-is-not-a-drop-in-substitution]] — Arduino tone() library absent; ledcWriteTone() requires channel setup
+- [[esp32-38pin-barely-fits-breadboard-with-one-free-column]] — 38-pin DevKitC leaves one breadboard column free per side
+- [[esp32-4wd-rover-consumes-20-of-34-gpios-for-motor-control-forcing-use-of-strapping-and-input-only-pins]] — real-world 4-motor project overruns safe GPIO pool
+
+### ESP8266 / NodeMCU
 - [[esp8266-has-only-5-truly-safe-gpio-out-of-11-total-pins]] — only 5 unrestricted GPIOs out of 11
 - [[esp8266-boot-pins-gpio0-gpio2-and-gpio15-must-be-in-specific-states-at-power-on]] — 3 boot strapping pins with strict requirements
 - [[esp8266-a0-analog-input-has-0-1v-range-not-0-3v3]] — ADC input range is 0-1V, not 0-3.3V
@@ -39,9 +68,12 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[esp8266-pwm-is-software-implemented-at-1khz-unsuitable-for-servo-control]] — software PWM too slow for servos
 - [[esp8266-gpio9-and-gpio10-are-flash-connected-and-crash-if-used-as-gpio]] — GPIO9/10 connected to internal flash
 - [[esp8266-wifi-consumes-50kb-ram-leaving-only-30kb-for-user-code]] — WiFi stack takes most of 80KB SRAM
+- [[esp8266-i2s-is-receive-only-with-fixed-pins-and-a-boot-pin-conflict-on-gpio2]] — I2S hardware is RX-only and steps on GPIO2 boot pin
 - [[i2c-devices-on-esp8266-boot-pins-can-prevent-boot-silently]] — I2C pull-ups on boot pins block boot
 - [[nodemcu-amica-23mm-spacing-fits-standard-breadboard-with-both-rails-accessible]] — NodeMCU Amica breadboard friendly
 - [[breadboard-bench-coach-should-flag-i2c-on-esp8266-boot-pins-as-wiring-error]] — DRC should catch I2C on boot pins
+
+### RP2040 / Raspberry Pi Pico
 - [[rp2040-pio-state-machines-implement-custom-protocols-at-hardware-speed]] — PIO implements custom protocols in hardware, unique to RP2040
 - [[pico-12ma-per-pin-50ma-total-is-strictest-gpio-budget-among-maker-mcus]] — strictest current limits among common MCUs
 - [[rp2040-peripheral-pin-mapping-eliminates-most-conflicts-because-all-peripherals-remap]] — all peripherals remappable, not just I2C
@@ -51,8 +83,8 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[pico-lacks-wifi-bluetooth-requiring-pico-w-or-external-wireless]] — no wireless on base Pico; Pico W or ESP bridge
 - [[pico-vsys-accepts-1v8-to-5v5-enabling-direct-battery-operation]] — wide input voltage with Schottky backfeed protection
 - [[pico-3v3-en-pin-disables-regulator-for-external-sleep-control]] — hardware sleep via regulator disable
-- [[arduino-nano-a6-and-a7-are-analog-input-only-pins-that-silently-fail-on-digitalread]] — A6/A7 ADC-only pins, digitalRead compiles but returns garbage
-- [[arduino-clone-bootloader-mismatch-causes-upload-failure-that-looks-like-hardware-fault]] — pre-Optiboot bootloader on clones causes avrdude sync error
+
+### Raspberry Pi (SBC)
 - [[an-sbc-runs-linux-and-replaces-a-microcontroller-when-you-need-os-filesystem-networking-or-multitasking]] — SBC vs MCU selection boundary
 - [[raspberry-pi-gpio-is-3v3-unprotected-with-no-clamping-diodes-and-5v-kills-the-soc-permanently]] — 5V on any GPIO pin permanently destroys the SoC
 - [[raspberry-pi-has-zero-built-in-adc-requiring-external-mcp3008-or-ads1115-for-any-analog-input]] — no analog input at all, external ADC required
@@ -62,9 +94,14 @@ Specs, gotchas, and selection criteria for microcontrollers and single-board com
 - [[gigabit-ethernet-on-raspberry-pi-is-throttled-to-300mbps-because-it-shares-the-usb-2-bus]] — spec vs reality: USB 2.0 bottleneck limits to ~300Mbps
 - [[sd-card-wear-from-heavy-writes-requires-ssd-via-usb-for-write-heavy-workloads]] — microSD write endurance limits, SSD for heavy workloads
 - [[raspberry-pi-has-networking-wifi-bluetooth-built-in-but-only-one-low-quality-uart]] — TENSION: networking solved but UART bottleneck created
+
+### Cross-platform / cross-cutting
+- [[most-maker-displays-accept-3v3-5v-but-character-lcds-and-7-segments-are-5v-only-gotchas]] — 5V display gotchas for 3.3V MCU users (ESP32, Pi Pico)
 - [[ch340-usb-serial-driver-support-varies-by-os-and-most-modern-systems-include-it-natively]] — CH340 driver platform compatibility matrix
 - [[arduino-ide-board-selection-targets-the-mcu-not-the-usb-serial-chip-so-clones-use-same-menu-entry]] — IDE targets MCU, not USB bridge; clones use same board menu
+- [[arduino-clone-bootloader-mismatch-causes-upload-failure-that-looks-like-hardware-fault]] — pre-Optiboot bootloader on clones causes avrdude sync error
 - [[clone-arduino-voltage-regulators-can-overheat-silently-because-there-is-no-thermal-feedback]] — clone regulators may lack thermal shutdown; silent overheating risk
+- [[cloud-dependent-iot-boards-outlive-their-cloud-service-making-reflash-literacy-essential]] — Blynk/Particle/SmartThings boards brick when cloud dies; reflash literacy is the recovery path
 
 ## Open Questions
 (populated by /extract)
