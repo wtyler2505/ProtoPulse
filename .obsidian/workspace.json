@@ -4,33 +4,20 @@
     "type": "split",
     "children": [
       {
-        "id": "ced2cd65cba57f44",
+        "id": "ec2cd5972c25f205",
         "type": "tabs",
         "children": [
           {
-            "id": "557180fa13ed8008",
+            "id": "b641fe23de61abb2",
             "type": "leaf",
             "state": {
-              "type": "release-notes",
-              "state": {
-                "currentVersion": "1.12.7"
-              },
-              "icon": "lucide-book-up",
-              "title": "Release Notes 1.12.7"
-            }
-          },
-          {
-            "id": "332237b28d338d3d",
-            "type": "leaf",
-            "state": {
-              "type": "smart-templates-release-notes-view",
+              "type": "graph",
               "state": {},
-              "icon": "file-text",
-              "title": "Release Notes"
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -184,9 +171,11 @@
           {
             "id": "0337a19af8c13ddf",
             "type": "leaf",
+            "pinned": true,
             "state": {
               "type": "vault-terminal",
               "state": {},
+              "pinned": true,
               "icon": "bot",
               "title": "Claude"
             }
@@ -196,7 +185,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 428.5
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -218,8 +207,14 @@
       "smart-templates:Smart Templates: Open template context": false
     }
   },
-  "active": "332237b28d338d3d",
+  "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "ops/sessions/a8340eed-b499-4467-b4ca-ee077be62430.json",
+    "doc/cmake-js.md",
+    "doc/boolean.md",
+    "doc",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-055.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-055.md.tmp.6811.1776154364387",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-054.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-054.md.tmp.6811.1776154338636",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md",
@@ -237,9 +232,7 @@
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-047.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-047.md.tmp.6811.1776154183364",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-046.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-046.md.tmp.6811.1776154158013",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-045.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-045.md.tmp.6811.1776154136178",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-044.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-043.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-042.md",
@@ -251,10 +244,6 @@
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-036.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-035.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-034.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-033.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-032.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-031.md",
-    "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-030.md",
-    "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-029.md"
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-033.md"
   ]
 }

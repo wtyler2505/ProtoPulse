@@ -43,7 +43,7 @@ processing:
     - implementation-patterns
     - user-needs
   pipeline_batch_size: 5
-  queue_max_depth: 50
+  queue_max_depth: 200
   auto_connect_on_extract: true
   auto_revisit_on_connect: false
 

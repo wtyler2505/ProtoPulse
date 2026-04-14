@@ -48,6 +48,7 @@ esp_deep_sleep_start(); // 10uA total system current
 Relevant Notes:
 - [[esp32-deep-sleep-draws-only-10-microamps-enabling-battery-iot]] -- The MCU sleep context this complements
 - [[binary-tilt-detection-trades-precision-for-simplicity-and-zero-quiescent-power]] -- Why passive binary sensors are the right choice for many applications
+- [[membrane-keypad-is-a-passive-switch-matrix-with-no-active-logic-so-it-operates-at-any-mcu-voltage-without-level-shifting]] -- extends the passive-switch zero-current principle from a single switch to a full row/column matrix
 
 Topics:
 - [[sensors]]

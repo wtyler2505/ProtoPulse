@@ -15,8 +15,8 @@ A membrane keypad contains zero active electronics — no IC, no logic, no compa
 - Pressed key → row's LOW appears on column (simple wire connection)
 
 **Implications:**
-- No level shifting needed when moving between 3.3V and 5V MCUs
-- No power rail connection to the keypad (it draws zero quiescent current)
+- No level shifting needed when moving between 3.3V and 5V MCUs — this is the degenerate case of [[signal-topology-not-voltage-alone-determines-level-shifter-selection]], where the signal topology has literally no driver, so both topology and voltage axes collapse.
+- No power rail connection to the keypad (it draws zero quiescent current) — the same passive-wake power property captured in [[passive-mechanical-switches-draw-zero-quiescent-current-making-them-ideal-battery-wake-triggers]], extended from a single switch to a full matrix.
 - No initialization sequence, no communication protocol
 - Works identically with any digital GPIO regardless of logic family
 
@@ -38,6 +38,8 @@ Topics:
 - [[input-devices]]
 
 Related:
-- [[matrix-keypad-scanning-drives-one-row-low-at-a-time-and-reads-columns-with-pull-ups-to-detect-key-position]]
-- [[joystick-module-is-two-potentiometers-on-a-spring-return-gimbal-consuming-two-analog-pins-plus-one-digital-pin]]
-- [[4x4-matrix-keypad-consumes-8-gpio-pins-making-io-expander-mandatory-on-pin-constrained-mcus]]
+- [[matrix-keypad-scanning-drives-one-row-low-at-a-time-and-reads-columns-with-pull-ups-to-detect-key-position]] — the scanning algorithm that exploits this passivity, driving row voltage from the MCU side
+- [[joystick-module-is-two-potentiometers-on-a-spring-return-gimbal-consuming-two-analog-pins-plus-one-digital-pin]] — exemplifies the same "entirely passive" class in analog form
+- [[4x4-matrix-keypad-consumes-8-gpio-pins-making-io-expander-mandatory-on-pin-constrained-mcus]] — extends the GPIO-cost consequence of the passive matrix to pin-budget decisions
+- [[passive-mechanical-switches-draw-zero-quiescent-current-making-them-ideal-battery-wake-triggers]] — grounds: the zero-quiescent-current claim generalized across the passive-switch family (buttons, reed, tilt)
+- [[signal-topology-not-voltage-alone-determines-level-shifter-selection]] — exemplifies the degenerate endpoint of the topology framework: no signal to shift means no shifter needed regardless of voltage

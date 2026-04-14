@@ -48,6 +48,15 @@ Analog and digital input devices, debouncing strategies, matrix scanning, ADC ma
 ## Open Questions
 (populated by /extract)
 
+## Synthesis Opportunities
+
+- **Passive-vs-active power tradeoff is a cross-class meta-pattern.** The same zero-quiescent-current vs ~100uA-active distinction appears in switches ([[passive-mechanical-switches-draw-zero-quiescent-current-making-them-ideal-battery-wake-triggers]]), level shifters ([[active-level-shifters-draw-continuous-quiescent-current-unlike-passive-bss138-shifters-with-near-zero-idle-draw]]), and now keypad matrices ([[membrane-keypad-is-a-passive-switch-matrix-with-no-active-logic-so-it-operates-at-any-mcu-voltage-without-level-shifting]]). Not yet named as a principle. Candidate claim: "passive component classes (switches, MOSFET shifters, mechanical matrices) add zero to sleep budgets while their active counterparts add ~100uA floor — the distinction is architectural, not incidental." Would sit under [[eda-fundamentals]] as a design heuristic.
+
+---
+
+Agent Notes:
+- 2026-04-14: /connect pass on [[membrane-keypad-is-a-passive-switch-matrix-with-no-active-logic-so-it-operates-at-any-mcu-voltage-without-level-shifting]]. qmd index stale (57/480), fell back to grep-only discovery. Found that membrane-keypad's zero-quiescent-current bullet rhymes exactly with the passive-mechanical-switches wake-trigger note — the keypad generalizes single-switch passivity to a matrix. Also connects sideways to the level-shifter topology framework as the degenerate case (no signal = no shifter regardless of voltage). Bidirectional link added to passive-switches note; skipped reverse on signal-topology because passive counter-examples would dilute its active-signal focus.
+
 ---
 
 Topics:
