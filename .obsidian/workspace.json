@@ -188,11 +188,18 @@
       "bases:Create new base": false,
       "audio-recorder:Start/stop recording": false,
       "markdown-importer:Open format converter": false,
-      "random-note:Open random note": false
+      "random-note:Open random note": false,
+      "zk-prefixer:Create new unique note": false,
+      "workspaces:Manage workspace layouts": false,
+      "templater-obsidian:Templater": false
     }
   },
   "active": "557180fa13ed8008",
   "lastOpenFiles": [
+    "server/ai-tools/knowledge-vault.ts.tmp.6811.1776151976670",
+    "server/ai-tools/index.ts.tmp.6811.1776151782252",
+    "server/ai-tools/knowledge-vault.ts",
+    "server/ai-tools/knowledge-vault.ts.tmp.6811.1776151622655",
     "server/ai.ts.tmp.6811.1776151218140",
     "server/ai.ts.tmp.6811.1776151083077",
     "debug-vault.mjs"

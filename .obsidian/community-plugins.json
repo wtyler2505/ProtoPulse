@@ -1,3 +1,7 @@
 [
-  "templater-obsidian"
+  "templater-obsidian",
+  "dataview",
+  "obsidian-tasks-plugin",
+  "open-in-terminal",
+  "obsidian42-brat"
 ]

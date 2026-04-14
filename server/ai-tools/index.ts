@@ -34,6 +34,7 @@ import { registerTestbenchTools } from './testbench';
 import { registerBomOptimizationTools } from './bom-optimization';
 import { registerRiskAnalysisTools } from './risk-analysis';
 import { registerPartsTools } from './parts';
+import { registerKnowledgeVaultTools } from './knowledge-vault';
 
 function createRegistry(): ToolRegistry {
   const registry = new ToolRegistry();
@@ -56,6 +57,7 @@ function createRegistry(): ToolRegistry {
   registerBomOptimizationTools(registry);
   registerRiskAnalysisTools(registry);
   registerPartsTools(registry);
+  registerKnowledgeVaultTools(registry);
   return registry;
 }
 

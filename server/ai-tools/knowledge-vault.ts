@@ -24,7 +24,7 @@ export function registerKnowledgeVaultTools(registry: ToolRegistry): void {
       'The vault contains Tyler\'s verified inventory knowledge (microcontrollers, sensors, motor drivers, shields, passives, wiring guides, and design tensions). ' +
       'Use this when you need deeper or more specific domain claims than what is auto-injected into the system prompt. ' +
       'Returns up to 10 matching notes with slug, title, description, and type (moc / atomic).',
-    category: 'general',
+    category: 'component',
     permissionTier: 'read',
     modelPreference: 'fast',
     parameters: z.object({
