@@ -198,6 +198,7 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "ops/temp/docs-and-data-set-1.md",
     "ops/temp",
     "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-062.md",
     "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-061.md",
@@ -232,7 +233,6 @@
     "doc/boolean.md",
     "doc",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-055.md.tmp.6811.1776154364387",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-054.md.tmp.6811.1776154338636",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md.tmp.6811.1776154314242"
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-054.md.tmp.6811.1776154338636"
   ]
 }
