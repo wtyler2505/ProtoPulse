@@ -209,6 +209,7 @@
   },
   "active": "0337a19af8c13ddf",
   "lastOpenFiles": [
+    "server/__tests__/knowledge-vault-routes.test.ts",
     "ops/sessions/a8340eed-b499-4467-b4ca-ee077be62430-033932.json",
     "ops/sessions/a8340eed-b499-4467-b4ca-ee077be62430-033526.json",
     "server/routes/knowledge-vault.ts",
@@ -227,7 +228,6 @@
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md.tmp.6811.1776154261363",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-050.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-050.md.tmp.6811.1776154241754",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-049.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-048.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-047.md",
