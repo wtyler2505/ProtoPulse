@@ -20,7 +20,8 @@ Semantic neighbor: [[zs-x11h-el-speed-input-is-active-low-and-flips-polarity-bet
 ---
 
 ## Create
-(to be filled by create phase)
+
+Created `knowledge/el-pin-floating-at-mcu-boot-defaults-the-motor-to-full-speed-so-explicit-high-initialization-is-mandatory-before-stop-is-enabled.md`. Frontmatter: type=claim, source=wiring-zs-x11h-to-arduino-mega source doc, confidence=proven, topics=[actuators, microcontrollers], related_components=[riorand-zs-x11h, arduino-mega-2560]. Body covers the boot-window mechanism (50-200ms on Mega, 1-2s on ESP32), the active-LOW-means-full-speed consequence, correct `setup()` ordering with code block, and the 10K pull-up hardware mitigation. Wiki-linked to `[[zs-x11h-el-speed-input-is-active-low...]]`, `[[safe-bldc-startup-sequence...]]`, `[[bldc-stop-active-low-brake-active-high]]`, `[[esp32-six-flash-gpios-must-never-be-used]]`. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)
