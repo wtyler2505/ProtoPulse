@@ -74,7 +74,8 @@ export function registerKnowledgeVaultRoutes(app: Express): void {
     searchLimiter,
     setCacheHeaders('project_data'),
     async (req, res) => {
-      const slug = req.params.slug;
+      const rawSlug = req.params.slug;
+      const slug = typeof rawSlug === 'string' ? rawSlug : Array.isArray(rawSlug) ? rawSlug[0] : '';
       if (!slug || slug.length > 240) {
         return res.status(400).json({ error: 'Invalid slug' });
       }
