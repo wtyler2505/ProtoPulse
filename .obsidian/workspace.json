@@ -18,8 +18,19 @@
               "icon": "lucide-book-up",
               "title": "Release Notes 1.12.7"
             }
+          },
+          {
+            "id": "332237b28d338d3d",
+            "type": "leaf",
+            "state": {
+              "type": "smart-templates-release-notes-view",
+              "state": {},
+              "icon": "file-text",
+              "title": "Release Notes"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -203,11 +214,13 @@
       "workspaces:Manage workspace layouts": false,
       "templater-obsidian:Templater": false,
       "obsidian42-brat:BRAT": false,
-      "claude-sidebar:New Claude Tab": false
+      "claude-sidebar:New Claude Tab": false,
+      "smart-templates:Smart Templates: Open template context": false
     }
   },
-  "active": "557180fa13ed8008",
+  "active": "332237b28d338d3d",
   "lastOpenFiles": [
+    "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-030.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-029.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-028.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-027.md",
@@ -242,7 +255,6 @@
     "server/ai-tools/knowledge-vault.ts.tmp.6811.1776152116443",
     "knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md",
     "knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md.tmp.6811.1776152098225",
-    "knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors.md",
-    "knowledge/130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin.md"
+    "knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors.md"
   ]
 }

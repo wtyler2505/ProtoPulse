@@ -60,5 +60,10 @@
   },
   "embedding_models": {
     "default_model_key": "transformers#1776152913896"
+  },
+  "smart_templates": {
+    "template_folder": "",
+    "template_name": "",
+    "template_headings": ""
   }
 }
