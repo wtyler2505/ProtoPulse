@@ -72,6 +72,18 @@ export function registerKnowledgeVaultTools(registry: ToolRegistry): void {
               snippets: r.matchedSnippets,
             })),
           },
+          // Wire into BL-0160 Source Panel so users can trace AI claims back
+          // to the vault notes that grounded them.
+          sources: results.map((r) => ({
+            type: 'knowledge_base' as const,
+            label: r.note.title,
+            id: r.note.slug,
+            metadata: {
+              path: r.note.path,
+              noteType: r.note.type,
+              score: Number(r.score.toFixed(3)),
+            },
+          })),
         };
       } catch (err) {
         return {
