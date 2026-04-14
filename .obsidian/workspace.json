@@ -198,6 +198,7 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "knowledge/staggered-motor-startup-by-100ms-prevents-combined-inrush-from-tripping-shared-bms-overcurrent-protection.md",
     "knowledge/pin-double-duty-between-static-digital-output-and-interrupt-input-works-because-enable-is-steady-state-and-interrupt-reads-incoming-pulses.md",
     "knowledge/opposite-facing-chassis-motors-require-software-or-phase-wire-inversion-to-make-forward-produce-same-direction-wheel-motion.md",
     "knowledge/tank-steering-replaces-mechanical-steering-with-differential-wheel-speed-control.md",
@@ -232,7 +233,6 @@
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-039.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-038.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-037.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-036.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-035.md"
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-036.md"
   ]
 }
