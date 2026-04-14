@@ -38,6 +38,7 @@ import {
   circuitDesigns,
 } from '@shared/schema';
 import { TRUST_LEVELS, trustRank, type TrustLevel } from '@shared/parts/part-row';
+import { normalizeMpn, normalizeManufacturer, mpnComparisonKey } from '@shared/parts/mpn';
 import type { PartFilter, PartPagination, PartSortField } from '@shared/parts/part-filter';
 import { DEFAULT_PART_PAGINATION } from '@shared/parts/part-filter';
 import type { StorageDeps } from './types';
@@ -226,20 +227,61 @@ export class PartsStorage {
     }
   }
 
+  /**
+   * Look up a canonical part by `(manufacturer, mpn)` with case-insensitive,
+   * whitespace-collapsing, packaging-suffix-aware matching.
+   *
+   * This is the canonical dedup probe used by storage consumers (AI tools,
+   * HTTP routes, components flow). Mirrors the logic in
+   * {@link ../parts-ingress.ts findByMpn}: first pass uses `ilike` for the
+   * trimmed/normalized input (covers case variants), second pass scans
+   * manufacturer-scoped candidates and compares via the canonical MPN
+   * comparison key (catches `LM317T/NOPB` ≡ `LM317T`).
+   *
+   * The stored `mpn` field is **not** mutated — original casing is preserved
+   * for display — but duplicates that differ only by normalization are found
+   * instead of inserted.
+   */
   async getByMpn(manufacturer: string, mpn: string): Promise<Part | undefined> {
     try {
-      const [row] = await this.db
+      const normalizedManufacturer = normalizeManufacturer(manufacturer);
+      const normalizedMpn = normalizeMpn(mpn);
+      if (normalizedManufacturer === '' || normalizedMpn === '') {
+        return undefined;
+      }
+
+      // First pass: case-insensitive exact normalized match.
+      const [exact] = await this.db
         .select()
         .from(parts)
         .where(
           and(
-            eq(parts.manufacturer, manufacturer),
-            eq(parts.mpn, mpn),
+            ilike(parts.manufacturer, normalizedManufacturer),
+            ilike(parts.mpn, normalizedMpn),
             isNull(parts.deletedAt),
           ),
         )
         .limit(1);
-      return row;
+      if (exact) { return exact; }
+
+      // Second pass: manufacturer-scoped scan + in-memory comparison-key match.
+      const candidates = await this.db
+        .select()
+        .from(parts)
+        .where(
+          and(
+            ilike(parts.manufacturer, normalizedManufacturer),
+            isNull(parts.deletedAt),
+          ),
+        )
+        .limit(50);
+      const key = mpnComparisonKey(mpn);
+      for (const row of candidates) {
+        if (mpnComparisonKey(row.mpn) === key) {
+          return row;
+        }
+      }
+      return undefined;
     } catch (e) {
       throw new StorageError('getByMpn', `parts/mpn/${manufacturer}/${mpn}`, e);
     }

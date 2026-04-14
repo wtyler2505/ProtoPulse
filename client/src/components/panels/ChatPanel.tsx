@@ -551,6 +551,20 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     setStreamingContent('');
   }, [setIsGenerating]);
 
+  // AI-AUDIT #191: Abort any in-flight stream on unmount / route change.
+  // Prevents orphaned tool calls and wasted tokens when the user navigates
+  // away mid-stream. The ref is captured only for the cleanup closure — we
+  // intentionally leave the deps array empty so this runs only on unmount.
+  useEffect(() => {
+    const ref = abortRef;
+    return () => {
+      if (ref.current) {
+        ref.current.abort('unmount');
+        ref.current = null;
+      }
+    };
+  }, []);
+
   // CAPX-PERF-02: handleSend reads from sendStateRef at call time to avoid
   // a 23-item dependency array. Only setters and the ref itself are deps.
   const handleSend = useCallback(async (messageOverride?: string) => {

@@ -36,15 +36,21 @@ ProtoPulse's AI system is architecturally ambitious — 125 server-side tools, a
 
 ## CRITICAL Findings (7)
 
-| ID | Source | Finding | Impact |
-|----|--------|---------|--------|
-| AI-RT-01 | Routes | **Zero auth on circuit-AI endpoints** (`/api/circuits/:circuitId/ai/generate\|review\|analyze`) | Any user can access any circuit. IDOR/BOLA vulnerability. |
-| AI-RT-02 | Routes | **`/api/genkit-test` exposed in production** with no auth, no validation, no rate limit | Direct Gemini API access at operator's expense. |
-| AI-RT-03 | Routes | **Agent auto-confirms destructive operations** — hardcodes `confirmed: true` | Destructive tools (delete nodes, clear BOM) execute without user consent in agent mode. |
-| AI-RT-04 | Routes | **Genkit tools bypass ownership** — `queryBomItemsTool`, `queryNodesTool`, `queryEdgesTool` accept model-controlled `projectId` | Cross-tenant data exfiltration via prompt injection. |
-| AI-RT-05 | Routes | **No transaction in circuit generation** — instances/nets/wires created without wrapping | Partial failures leave orphaned/corrupt data. |
-| CORE-01 | Core | **Dynamic import of internal Genkit module** (`../node_modules/@genkit-ai/google-genai/lib/common/converters.js`) | Will break on any Genkit upgrade. |
-| TOOLS-01 | Tools | **`suggest_trace_path` returns hardcoded stub** `[{x:50,y:50},{x:70,y:70}]` | Tool appears functional but returns fake data. |
+> **2026-04-14 update:** AI-RT-01 through AI-RT-05 were resolved in commit `e199faad`
+> (2026-03-27, *"Fix 5 P0 security issues from AI deep audit"*). Regression tests for
+> AI-RT-01 and AI-RT-02 added in `server/__tests__/ai-endpoint-auth.test.ts` on 2026-04-14.
+> See `docs/audits/ai-audit-2026-04-14-fixes.md` for evidence. AI-RT-03 and AI-RT-04 still
+> need regression tests; CORE-01 and TOOLS-01 remain open.
+
+| ID | Source | Finding | Impact | Status |
+|----|--------|---------|--------|--------|
+| AI-RT-01 | Routes | **Zero auth on circuit-AI endpoints** (`/api/circuits/:circuitId/ai/generate\|review\|analyze`) | Any user can access any circuit. IDOR/BOLA vulnerability. | **RESOLVED** `e199faad` + tests 2026-04-14 |
+| AI-RT-02 | Routes | **`/api/genkit-test` exposed in production** with no auth, no validation, no rate limit | Direct Gemini API access at operator's expense. | **RESOLVED** `e199faad` + tests 2026-04-14 |
+| AI-RT-03 | Routes | **Agent auto-confirms destructive operations** — hardcodes `confirmed: true` | Destructive tools (delete nodes, clear BOM) execute without user consent in agent mode. | **RESOLVED** `e199faad` (needs regression test) |
+| AI-RT-04 | Routes | **Genkit tools bypass ownership** — `queryBomItemsTool`, `queryNodesTool`, `queryEdgesTool` accept model-controlled `projectId` | Cross-tenant data exfiltration via prompt injection. | **RESOLVED** `e199faad` (needs regression test) |
+| AI-RT-05 | Routes | **No transaction in circuit generation** — instances/nets/wires created without wrapping | Partial failures leave orphaned/corrupt data. | **RESOLVED** `e199faad` (compensating txn) |
+| CORE-01 | Core | **Dynamic import of internal Genkit module** (`../node_modules/@genkit-ai/google-genai/lib/common/converters.js`) | Will break on any Genkit upgrade. | Open |
+| TOOLS-01 | Tools | **`suggest_trace_path` returns hardcoded stub** `[{x:50,y:50},{x:70,y:70}]` | Tool appears functional but returns fake data. | Open |
 
 ---
 

@@ -255,9 +255,14 @@ export async function ingressPart(req: IngressRequest, db: DbClient): Promise<In
   const { source, origin, projectId, fields, stock, placement } = req;
 
   // Step 1: find-or-create the canonical `parts` row.
+  // Skip the MPN lookup if either side is empty after normalization — saves
+  // two wasted selects and matches the documented dedup-priority order.
   let existing: Part | null = null;
-  if (fields.manufacturer && fields.mpn) {
-    existing = await findByMpn(db, fields.manufacturer, fields.mpn);
+  if (
+    normalizeManufacturer(fields.manufacturer ?? null) !== '' &&
+    normalizeMpn(fields.mpn ?? null) !== ''
+  ) {
+    existing = await findByMpn(db, fields.manufacturer as string, fields.mpn as string);
   }
 
   let part: Part;

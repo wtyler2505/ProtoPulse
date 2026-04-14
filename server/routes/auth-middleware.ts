@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { validateSession } from '../auth';
 import { storage } from '../storage';
+import type { IStorage } from '../storage';
 import { HttpError } from './utils';
 
 /**
@@ -128,4 +129,73 @@ export function requireCircuitOwnership(req: Request, res: Response, next: NextF
       next(err);
     }
   })();
+}
+
+// ---------------------------------------------------------------------------
+// Non-middleware helpers — for routes that receive projectId as a query/body
+// parameter (not URL param) and for AI tool executors that mutate circuit
+// state using caller/model-supplied IDs.
+//
+// These are throwable (HttpError) async assertions. They enforce the same
+// ownership model as the middlewares, but are callable from handler bodies.
+// ---------------------------------------------------------------------------
+
+/**
+ * Assert that `userId` owns `projectId`, throwing HttpError on failure.
+ *
+ * Returns the resolved project on success. Backward-compat: projects with
+ * `ownerId === null` pass through for any authenticated user, matching
+ * `requireProjectOwnership` semantics.
+ *
+ * @throws HttpError(404) if the project does not exist, or if the user does
+ *   not own it (using 404 rather than 403 for enumeration protection — same
+ *   policy as the middleware).
+ */
+export async function assertProjectOwnership(
+  projectId: number,
+  userId: number,
+  storageImpl: IStorage = storage,
+): Promise<void> {
+  if (!Number.isFinite(projectId) || projectId <= 0) {
+    throw new HttpError('Invalid project id', 400);
+  }
+  const project = await storageImpl.getProject(projectId);
+  if (!project) {
+    throw new HttpError('Project not found', 404);
+  }
+  if (project.ownerId !== null && project.ownerId !== userId) {
+    // Use 404 to avoid leaking project existence to non-owners
+    throw new HttpError('Project not found', 404);
+  }
+}
+
+/**
+ * Assert that a circuit design belongs to the given project. Used by AI tool
+ * executors (and any route) that accept `circuitId` from caller-supplied
+ * params and must verify it was not spoofed from another project.
+ *
+ * This does not re-check project ownership — callers are expected to have
+ * obtained `projectId` from an already-authorized context (e.g. `ToolContext`
+ * populated from a route that passed `requireProjectOwnership`, or from a
+ * prior `assertProjectOwnership` call).
+ *
+ * @throws HttpError(404) when the circuit does not exist or belongs to a
+ *   different project.
+ */
+export async function assertCircuitBelongsToProject(
+  circuitId: number,
+  projectId: number,
+  storageImpl: IStorage = storage,
+): Promise<void> {
+  if (!Number.isFinite(circuitId) || circuitId <= 0) {
+    throw new HttpError('Invalid circuit id', 400);
+  }
+  const design = await storageImpl.getCircuitDesign(circuitId);
+  if (!design) {
+    throw new HttpError('Circuit design not found', 404);
+  }
+  if (design.projectId !== projectId) {
+    // Use 404 (not 403) to avoid leaking cross-project circuit existence
+    throw new HttpError('Circuit design not found', 404);
+  }
 }

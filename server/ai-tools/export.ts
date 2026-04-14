@@ -353,6 +353,14 @@ async function resolveCircuitId(
   circuitId?: number,
 ): Promise<number | null> {
   if (circuitId) {
+    // SECURITY (WS-01, BE-06 audit P0 #2):
+    // Caller/model-supplied circuitId must be verified to belong to the active
+    // project. Otherwise an AI tool call could export circuits from another
+    // project by guessing/knowing IDs.
+    const design = await storage.getCircuitDesign(circuitId);
+    if (!design || design.projectId !== projectId) {
+      return null;
+    }
     return circuitId;
   }
   const designs = await storage.getCircuitDesigns(projectId);

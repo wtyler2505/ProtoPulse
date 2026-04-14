@@ -22,7 +22,9 @@ The consequence: any protection event becomes a hard power-off from the MCU's pe
 
 The design implication: anything that must survive a BMS trip must be non-volatile. Mission-critical state belongs in flash, not RAM. Sensor calibrations, position estimates, mission checkpoints -- if it can't be reconstructed from stored state plus a fresh boot, it will be lost. This is the same reasoning as [[persistent-state-must-tolerate-power-loss-at-any-instruction]] but enforced by battery hardware rather than software choice.
 
-A second-order consequence: the MCU cannot detect "clean BMS trip" vs "battery disconnected" vs "loose main fuse." All three look identical from the firmware side: power was there, now it isn't. Diagnostic distinctions require a separate backup supply (coin cell RTC, supercap) to keep a minimal microcontroller alive long enough to log the event. Most rover designs don't bother -- but the limitation is worth knowing before debugging mysterious unexplained resets.
+A second-order consequence: the MCU cannot detect "clean BMS trip" vs "battery disconnected" vs "loose main fuse." All three look identical from the firmware side: power was there, now it isn't. Diagnostic distinctions require a separate backup supply (coin cell RTC, supercap) to keep a minimal microcontroller alive long enough to log the event. Most rover designs don't bother -- but the limitation is worth knowing before debugging mysterious unexplained resets. The asymmetry is useful: a deliberate operator shutdown can be made observable through [[estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal]], but a BMS-initiated shutdown cannot, because the BMS has no spare signal path and no obligation to warn the load before disconnecting.
+
+Upstream mitigation matters more than downstream recovery. Since a BMS trip is unrecoverable, the design priority is preventing overcurrent from reaching the BMS threshold in the first place. [[per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main]] serves this role: a single stalled motor drawing 25A blows its 10A branch fuse before the combined draw triggers the BMS overcurrent limit. Per-branch fuses do nothing to help once the BMS trips, but they reduce the rate at which BMS trips happen.
 
 ---
 
@@ -32,6 +34,8 @@ Relevant Notes:
 - [[salvaged-bms-has-unknown-thresholds-and-must-be-verified-before-trusting-with-project-safety]] -- compounds the problem: unknown trip points mean unpredictable kill events
 - [[four-motor-bldc-systems-exceed-standard-hoverboard-bms-ratings-requiring-firmware-current-limiting]] -- firmware limiting prevents BMS trips that would kill the firmware itself
 - [[parallel-power-rails-from-battery-are-more-reliable-than-cascaded-regulators]] -- parallel topology does not help here because the common point is upstream of any regulator
+- [[per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main]] -- upstream mitigation: branch fuses reduce the rate of BMS trips by isolating motor faults before combined current reaches the BMS threshold
+- [[estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal]] -- reciprocal: the aux-contact path is the only way to get the graceful shutdown that a BMS trip denies
 
 Topics:
 - [[power-systems]]

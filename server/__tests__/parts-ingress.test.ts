@@ -220,6 +220,175 @@ describe('ingressPart — dedup by (manufacturer, mpn)', () => {
   });
 });
 
+// ===========================================================================
+// BL-0473: MPN normalization dedup
+// ===========================================================================
+
+describe('ingressPart — BL-0473 MPN normalization dedup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('reuses an existing part when incoming MPN differs only by case', async () => {
+    // Existing row is stored as uppercase — incoming request is lowercase.
+    // Must not create a new part row; must reuse.
+    const existing = makePartRow({
+      id: 'case-match-uuid',
+      manufacturer: 'Yageo',
+      mpn: 'RC0402FR-0710KL',
+    });
+    const db = makeMockDb({ selectResults: [[existing]] });
+    const req = baseRequest({
+      fields: {
+        title: '10k resistor lowercase import',
+        manufacturer: 'yageo',
+        mpn: 'rc0402fr-0710kl',
+        canonicalCategory: 'resistor',
+        meta: {},
+        connectors: [],
+      },
+    });
+    const result = await ingressPart(req, db);
+    expect(result.reused).toBe(true);
+    expect(result.created).toBe(false);
+    expect(result.partId).toBe('case-match-uuid');
+    expect(db.insert).not.toHaveBeenCalled();
+  });
+
+  it('reuses an existing part when incoming MPN has leading/trailing whitespace', async () => {
+    const existing = makePartRow({ id: 'ws-match-uuid', mpn: 'RC0402FR-0710KL' });
+    const db = makeMockDb({ selectResults: [[existing]] });
+    const req = baseRequest({
+      fields: {
+        title: 'Whitespace-padded import',
+        manufacturer: 'Yageo',
+        mpn: '  RC0402FR-0710KL  ',
+        canonicalCategory: 'resistor',
+        meta: {},
+        connectors: [],
+      },
+    });
+    const result = await ingressPart(req, db);
+    expect(result.reused).toBe(true);
+    expect(result.partId).toBe('ws-match-uuid');
+  });
+
+  it('bumps stock quantity instead of duplicating a BOM row when MPN differs only by case', async () => {
+    const existingPart = makePartRow({ id: 'part-1', mpn: 'STM32F103C8T6' });
+    const existingStock = makeStockRow({ partId: 'part-1', quantityNeeded: 3 });
+    const updatedStock = makeStockRow({ partId: 'part-1', quantityNeeded: 5 });
+    const db = makeMockDb({
+      selectResults: [
+        [existingPart],  // findByMpn: case-insensitive hit
+        [existingStock], // stock lookup: existing row
+      ],
+      updateReturning: [[updatedStock]],
+    });
+    // Second add: same MPN in lowercase + whitespace, should merge into existing stock.
+    const result = await ingressPart(
+      baseRequest({
+        projectId: 10,
+        fields: {
+          title: 'STM32 duplicate import',
+          manufacturer: 'ST Microelectronics',
+          mpn: ' stm32f103c8t6 ',
+          canonicalCategory: 'ic',
+          meta: {},
+          connectors: [],
+        },
+        stock: { quantityNeeded: 5 },
+      }),
+      db,
+    );
+    expect(result.reused).toBe(true);
+    expect(result.stock?.quantityNeeded).toBe(5); // updated, not inserted new
+    expect(db.update).toHaveBeenCalled();
+    expect(db.insert).not.toHaveBeenCalled(); // no new part row, no new stock row
+  });
+
+  it('falls back to a manufacturer-scoped scan when exact ilike misses but packaging suffix differs', async () => {
+    // Existing row has /NOPB suffix; incoming has bare MPN.
+    // First select (exact ilike on "LM317T" vs stored "LM317T/NOPB") misses.
+    // Second select (manufacturer scan) returns the stored row; in-memory
+    // comparison-key check finds the match.
+    const existingWithSuffix = makePartRow({
+      id: 'suffix-uuid',
+      manufacturer: 'Texas Instruments',
+      mpn: 'LM317T/NOPB',
+    });
+    const db = makeMockDb({
+      selectResults: [
+        [],                      // first ilike exact: no match on "LM317T"
+        [existingWithSuffix],    // second manufacturer scan: returns the suffix row
+      ],
+    });
+    const req = baseRequest({
+      fields: {
+        title: 'LM317T bare import',
+        manufacturer: 'Texas Instruments',
+        mpn: 'LM317T',
+        canonicalCategory: 'ic',
+        meta: {},
+        connectors: [],
+      },
+    });
+    const result = await ingressPart(req, db);
+    expect(result.reused).toBe(true);
+    expect(result.partId).toBe('suffix-uuid');
+  });
+
+  it('creates a new part when MPN is genuinely different (not a normalization variant)', async () => {
+    const fresh = makePartRow({ id: 'truly-new' });
+    const db = makeMockDb({
+      selectResults: [
+        [], // first ilike exact: miss
+        [], // manufacturer scan: no rows at all
+        [], // slug lookup: miss
+      ],
+      insertReturning: [[fresh]],
+    });
+    const req = baseRequest({
+      fields: {
+        title: 'Different part',
+        manufacturer: 'Yageo',
+        mpn: 'RC0402FR-0722KL', // different value from the base fixture
+        canonicalCategory: 'resistor',
+        meta: {},
+        connectors: [],
+      },
+    });
+    const result = await ingressPart(req, db);
+    expect(result.created).toBe(true);
+    expect(result.partId).toBe('truly-new');
+  });
+
+  it('returns null from findByMpn when manufacturer is empty/whitespace-only', async () => {
+    // When manufacturer normalizes to empty, dedup skips mpn lookup
+    // and falls through to slug-based dedup.
+    const fresh = makePartRow({ id: 'slug-created' });
+    const db = makeMockDb({
+      selectResults: [
+        [], // slug lookup miss (no mpn lookup issued because manufacturer empty)
+      ],
+      insertReturning: [[fresh]],
+    });
+    const req = baseRequest({
+      fields: {
+        title: 'No-manufacturer part',
+        manufacturer: '   ',
+        mpn: 'ANY-MPN-VALUE',
+        canonicalCategory: 'other',
+        meta: {},
+        connectors: [],
+      },
+    });
+    const result = await ingressPart(req, db);
+    expect(result.created).toBe(true);
+    // Only one select (slug lookup), not two (mpn+slug)
+    expect(db.select).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('ingressPart — dedup by slug (when mpn missing or mismatched)', () => {
   beforeEach(() => {
     vi.clearAllMocks();

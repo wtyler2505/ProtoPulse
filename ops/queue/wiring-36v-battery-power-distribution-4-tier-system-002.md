@@ -37,7 +37,24 @@ Insight exists at `knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bm
 **Agent note:** This claim acts as a hub — it grounds the persistent-state claim and the estop-aux-contact claim by establishing that graceful shutdown is impossible under the single-path BMS architecture. Future synthesis opportunity: a claim about "battery-hardware-imposed firmware design constraints" that combines this note with persistent-state and estop-aux.
 
 ## Revisit
-(to be filled by revisit phase)
+
+**Reweave evaluation:** Note was created 2026-04-14 — same day as siblings. Claim is sharp, mechanism-explaining, and specific. No sharpening, splitting, or challenge warranted.
+
+**Connections added (2):**
+
+1. **Inline prose + footer:** [[estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal]] — reciprocal link. The estop-aux note already cites this one; connect phase confirmed the bidirectional implicit link but the target's own prose did not reference the aux-contact mechanism even though it explicitly describes the "no graceful shutdown" limitation that aux contacts solve for *operator-initiated* shutdowns. The asymmetry is worth articulating: aux-signaled e-stop is observable; BMS-signaled trip is not.
+
+2. **Inline prose + footer:** [[per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main]] — upstream mitigation logic. Since a BMS trip is unrecoverable, design effort belongs in preventing BMS trips. Per-branch fusing isolates motor faults before combined current crosses the BMS overcurrent threshold. Agent traversal value: "how do we avoid BMS trips?" now has a concrete answer reachable from this note.
+
+**Siblings evaluated and rejected:**
+- `10uf-ceramic-on-esp32-vin` — buck regulator brownouts, different failure mode. No agent value.
+- `lvd-hysteresis` — already backlinks here; reciprocal cite would muddle the 10S Li-Ion scope of this note (LVD hysteresis is about external LVD + lead-acid).
+- `lead-acid-36v-pack-requires-external-lvd` — contrastive topology, risks scope creep.
+- `lifepo4-12s-pack`, `linear-voltage-to-percentage`, `130k-to-10k-voltage-divider`, `anl-marine-fuse-class` — unrelated to BMS architecture claim.
+
+**Claim status:** unchanged
+**Network effect:** 2 new traversal edges (this note → estop-aux, this note → per-branch-fusing). Now forms a tighter triangle with estop-aux (bidirectional) and per-branch-fusing (outbound; inbound also exists because per-branch-fusing cites four-motor-bldc which cites this note).
+**MOC updates:** none — [[power-systems]] entry already captures single-path BMS claim.
 
 ## Verify
 (to be filled by verify phase)
