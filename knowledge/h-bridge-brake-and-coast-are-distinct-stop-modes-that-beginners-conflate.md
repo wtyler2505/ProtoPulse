@@ -32,6 +32,8 @@ The L298N H-bridge truth table reveals four motor states, but beginners typicall
 
 Since [[dynamic-brake-must-be-pulsed-not-held-because-stationary-phase-shorting-overheats-mosfets]] applies to BLDC motors, the same thermal concern exists for brushed DC motors during sustained brake: holding brake while the motor is spinning fast dumps significant energy as heat. For the L298N specifically, since [[l298n-saturation-voltage-drop-loses-up-to-5v-making-it-inefficient-at-high-current]], brake mode at high current adds even more thermal stress to an already thermally challenged driver.
 
+**The TB6612 adds a fifth state beyond the four in this table:** pulling STBY LOW enters a true sleep mode (< 1uA quiescent) that is distinct from coast — coast holds outputs LOW with the driver still powered, while standby powers down the entire IC. See [[tb6612-standby-pin-adds-a-fifth-motor-state-below-brake-and-coast-with-sub-microamp-quiescent-current]] for the extended state hierarchy. The L298N has no equivalent state because Darlington bias circuits cannot be meaningfully quiesced.
+
 **ProtoPulse implication:** The AI bench coach should explain brake vs coast when a user connects motor stop logic, and the code generation tool should offer both modes with comments explaining the tradeoff.
 
 ---

@@ -52,6 +52,11 @@ Motor control theory, driver IC comparison, PWM strategies, and output device se
 - [[counterfeit-l293d-chips-on-clone-motor-shields-deliver-lower-than-rated-current-with-no-external-indication]] — cheap HW-130 batches may have sub-600mA counterfeit chips that mimic undersized-driver symptoms
 - [[combo-motor-and-servo-shields-trade-per-function-efficiency-for-single-board-convenience]] — combo boards like OSEPP Motor/Servo V1 inherit L298N inefficiency AND the shared 5V servo rail compromise
 - [[shield-servo-headers-share-arduino-5v-creating-hidden-brownout-path-that-only-trace-cutting-fixes]] — motor shield servo headers route Arduino 5V, safe only for SG90 micro servos; full-size servos need external power via trace cut
+- [[tb6612-mosfet-h-bridge-drops-0-5v-versus-darlington-1-8-to-4-9v-because-rds-on-resistance-beats-saturation-voltage]] — MOSFET architecture is the root reason the TB6612 runs cool and efficient where L293D/L298N cannot
+- [[tb6612-pwm-ceiling-of-100khz-is-4x-the-l298n-and-20x-the-l293d-because-mosfet-switching-has-no-storage-time]] — MOSFET carrier storage is zero, so PWM ceiling is ultrasonic; eliminates motor whine the L293D/L298N produce
+- [[tb6612-motor-supply-ceiling-of-13-5v-is-a-hard-selection-boundary-against-l298n-for-24v-and-36v-motor-systems]] — TB6612 is structurally eliminated above 13.5V regardless of other advantages
+- [[tb6612-standby-pin-adds-a-fifth-motor-state-below-brake-and-coast-with-sub-microamp-quiescent-current]] — STBY LOW enters sub-uA sleep, a battery-friendly fifth state L298N cannot replicate
+- [[tb6612-internal-flyback-diodes-eliminate-the-external-protection-burden-that-l298n-requires]] — MOSFET body diodes clamp back-EMF internally, matching L293D and unlike L298N
 
 - [[arduino-tone-uses-timer2-which-disables-pwm-on-pins-3-and-11-creating-invisible-resource-conflicts]] — tone() commandeers Timer2 silently breaking PWM on pins 3/11
 - [[esp32-replaces-tone-with-ledcwritetone-and-the-api-is-not-a-drop-in-substitution]] — ESP32 tone API requires channel management absent from AVR

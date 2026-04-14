@@ -30,6 +30,8 @@ At 2A on both channels simultaneously, the IC dissipates nearly 20W -- close to 
 
 Since [[l298n-saturation-voltage-drop-loses-up-to-5v-making-it-inefficient-at-high-current]], the thermal problem and the efficiency problem are the same root cause -- the Darlington transistor architecture. MOSFET-based drivers solve both simultaneously.
 
+**The direct contrast:** The OSEPP TB6612 motor shield in the inventory, rated to 1.2A continuous per channel, requires NO heatsink at rated current. Its MOSFET-based H-bridge dissipates ~0.6W per channel at 1.2A (compared to the L298N's 3.6W at 1.0A). This is not because the TB6612 handles less power — it is because MOSFETs waste vastly less energy as heat. A bare TB6612 shield can be bolted to any substrate, routed on a breadboard, or held in the palm of a hand during sustained operation without thermal concern. The L298N cannot. The contrast is not incremental; it is architectural, and it flips the heat-management burden entirely.
+
 ---
 
 Source: [[l298n-dual-h-bridge-motor-driver-drives-2-dc-motors-or-1-stepper-up-to-46v-2a]]

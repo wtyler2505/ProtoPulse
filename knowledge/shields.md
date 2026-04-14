@@ -26,6 +26,10 @@ Shield comparison, pin conflict avoidance, level shifter selection, and expansio
 - [[counterfeit-l293d-chips-on-clone-motor-shields-deliver-lower-than-rated-current-with-no-external-indication]] — cheap HW-130 batches may have sub-600mA chips that mimic "motor too big" symptoms while actually being counterfeit drivers
 - [[combo-motor-and-servo-shields-trade-per-function-efficiency-for-single-board-convenience]] — OSEPP Motor/Servo V1 pattern: integrating servo headers onto an L298N motor shield compromises both functions; pick only when the coupling itself is the requirement
 - [[shield-servo-headers-share-arduino-5v-creating-hidden-brownout-path-that-only-trace-cutting-fixes]] — servo header VCC connects to Arduino on-board regulator; only SG90-class micro servos are safe; trace cut + external 5V is the correct fix for anything larger
+- [[tb6612-mosfet-h-bridge-drops-0-5v-versus-darlington-1-8-to-4-9v-because-rds-on-resistance-beats-saturation-voltage]] — MOSFET architecture explains why TB6612 shields run cool and efficient while L293D/L298N shields lose 15-40% of motor supply as heat
+- [[tb6612-pwm-ceiling-of-100khz-is-4x-the-l298n-and-20x-the-l293d-because-mosfet-switching-has-no-storage-time]] — MOSFETs have no carrier storage time, enabling ultrasonic PWM that eliminates audible motor whine on shields like the OSEPP TB6612
+- [[tb6612-motor-supply-ceiling-of-13-5v-is-a-hard-selection-boundary-against-l298n-for-24v-and-36v-motor-systems]] — the TB6612 is eliminated above 13.5V regardless of efficiency, forcing L298N for 24V and higher motor supplies
+- [[tb6612-internal-flyback-diodes-eliminate-the-external-protection-burden-that-l298n-requires]] — TB6612 shields need no external flyback diodes because MOSFET body diodes clamp back-EMF internally
 
 ## Open Questions
 (populated by /extract)

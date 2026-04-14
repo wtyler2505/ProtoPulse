@@ -18,12 +18,14 @@ related_components:
 
 The inventory contains four motor drive options that form an unambiguous current ladder:
 
-| Shield/Controller | Driver IC | Current/Channel | Voltage | Target Load |
-|-------------------|-----------|-----------------|---------|-------------|
-| HW-130 | L293D | 600mA | 4.5-36V | Small hobby motors, 28BYJ-48 |
-| OSEPP TB6612 | TB6612FNG | 1.2A | 4.5-13.5V | Medium DC motors, robotics |
-| OSEPP Motor/Servo | L298N (MOSFET-enhanced) | 2A | 4.5-46V | Larger DC motors + servos |
-| RioRand ZS-X11H | Custom BLDC | 16A | 6-60V | Hoverboard/BLDC motors |
+| Shield/Controller | Driver IC | Architecture | Current/Channel | Voltage | V-drop (total path) | Target Load |
+|-------------------|-----------|--------------|-----------------|---------|---------------------|-------------|
+| HW-130 | L293D | Bipolar Darlington | 600mA | 4.5-36V | ~2.8V | Small hobby motors, 28BYJ-48 |
+| OSEPP TB6612 | TB6612FNG | MOSFET | 1.2A | 4.5-13.5V | ~0.5V | Medium DC motors, robotics |
+| OSEPP Motor/Servo | L298N (MOSFET-enhanced) | Bipolar Darlington | 2A | 4.5-46V | ~4.9V at 2A | Larger DC motors + servos |
+| RioRand ZS-X11H | Custom BLDC | MOSFET | 16A | 6-60V | ~0.1V | Hoverboard/BLDC motors |
+
+The architecture column exposes a crucial second dimension the current ladder alone hides: the TB6612 is MOSFET-based while the L293D and L298N use bipolar Darlington transistors. Same current ladder position does NOT mean same efficiency — see [[tb6612-mosfet-h-bridge-drops-0-5v-versus-darlington-1-8-to-4-9v-because-rds-on-resistance-beats-saturation-voltage]] for why this matters. Within overlapping current ranges (e.g., 0.8A on either TB6612 or L298N), the MOSFET choice runs cooler, faster, and with better battery life despite both options appearing valid on the current axis.
 
 This isn't a compatibility puzzle -- it's a graduated selection where the actuator's stall current determines which tier you need. The rule is simple: pick the shield whose per-channel current rating exceeds your motor's stall current by at least 20%.
 
