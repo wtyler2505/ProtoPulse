@@ -86,10 +86,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-003.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -101,10 +102,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-004.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {

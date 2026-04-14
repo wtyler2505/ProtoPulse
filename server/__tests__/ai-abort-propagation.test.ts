@@ -34,25 +34,51 @@ vi.mock('../genkit', () => ({
 }));
 
 import { processAIMessage, streamAIMessage } from '../ai';
-import type { AppState } from '../ai';
 import type { ToolContext } from '../ai-tools/index';
 
-// Minimal valid AppState to satisfy the type
-const makeAppState = (): AppState => ({
+// Minimal valid AppState shape (the internal type is not exported from ai.ts).
+// Use `unknown` double-cast at call sites to bridge the parameter type.
+type AppStateLike = {
+  projectName: string;
+  projectDescription: string;
+  activeView: string;
+  nodes: unknown[];
+  edges: unknown[];
+  bom: unknown[];
+  validationIssues: unknown[];
+  schematicSheets: unknown[];
+  activeSheetId: string;
+  chatHistory: unknown[];
+  componentParts: unknown[];
+  circuitDesigns: unknown[];
+  historyItems: unknown[];
+  bomMetadata: { totalCost: number; itemCount: number; outOfStockCount: number; lowStockCount: number };
+  designPreferences: unknown[];
+};
+
+const makeAppState = (): AppStateLike => ({
   projectName: 'Test',
   projectDescription: '',
   activeView: 'architecture',
   nodes: [],
   edges: [],
-  bomItems: [],
+  bom: [],
   validationIssues: [],
+  schematicSheets: [],
+  activeSheetId: '',
   chatHistory: [],
-  totalConnections: 0,
-  totalComponents: 0,
   componentParts: [],
   circuitDesigns: [],
   historyItems: [],
-} as unknown as AppState);
+  bomMetadata: { totalCost: 0, itemCount: 0, outOfStockCount: 0, lowStockCount: 0 },
+  designPreferences: [],
+});
+
+// Narrow helper: convince processAIMessage/streamAIMessage signatures without `any`.
+type ProcessParams = Parameters<typeof processAIMessage>[0];
+type StreamParams = Parameters<typeof streamAIMessage>[0];
+const appStateAsProcess = (s: AppStateLike) => s as unknown as ProcessParams['appState'];
+const appStateAsStream = (s: AppStateLike) => s as unknown as StreamParams['appState'];
 
 describe('AI abort signal propagation (AI-AUDIT #191)', () => {
   beforeEach(() => {
@@ -68,7 +94,7 @@ describe('AI abort signal propagation (AI-AUDIT #191)', () => {
       provider: 'gemini',
       model: 'gemini-2.5-flash',
       apiKey: 'fake-key',
-      appState: makeAppState(),
+      appState: appStateAsProcess(makeAppState()),
       signal: controller.signal,
     });
 
@@ -87,7 +113,7 @@ describe('AI abort signal propagation (AI-AUDIT #191)', () => {
         provider: 'gemini',
         model: 'gemini-2.5-flash',
         apiKey: 'fake-key',
-        appState: makeAppState(),
+        appState: appStateAsStream(makeAppState()),
       },
       (event) => {
         events.push(event);

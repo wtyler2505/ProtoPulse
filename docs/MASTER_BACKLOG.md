@@ -91,6 +91,7 @@
 
 ## Change Log
 
+- **2026-04-14:** Wave 150 — closed `BL-0473` (MPN normalization and dedup in BOM). Added `shared/parts/mpn.ts` normalizer (trim, whitespace collapse, packaging-suffix strip for `/NOPB`, `#PBF`, `-TR*`, `-7`, `+`) with case-preserving + case-insensitive comparison helpers. Wired into `server/parts-ingress.ts findByMpn()` and `server/storage/parts.ts PartsStorage.getByMpn()` — case-insensitive `ilike` match plus manufacturer-scoped comparison-key fallback so `RC0402FR-0710KL`, `rc0402fr-0710kl`, and `LM317T/NOPB ≡ LM317T` all dedup. Stock upsert at existing `(projectId, partId)` already bumps quantity instead of duplicating — now reached reliably. Tests: 37 unit tests for the normalizer + 6 regression tests for ingress dedup (case variant, whitespace variant, stock-qty bump, suffix fallback, genuinely different MPN, empty-manufacturer skip). P2 open count: 4 → 3.
 - **2026-04-14:** Refreshed `Next Up` — all 10 prior candidates were already DONE (verified Wave 106 / 107). Replaced the stale table with the 3 remaining `PARTIAL` P2 items (`BL-0126`, `BL-0150`, `BL-0473`); `BL-0524` remains `BLOCKED on BL-0486` and is excluded. Recounted Quick Stats directly from P0–P3 sections (508 rows total: 4 open, 504 done) and removed the outdated "BACKLOG COMPLETE" note.
 - **2026-03-13:** Wave 80 — marked 5 P0 security items DONE (BL-0636/0637/0638/0639/0642). Updated blockers, decisions, ADR requirements, and discovery spikes as resolved by Pure-Local Desktop App pivot (ADR 0007/0008). Firmware/debugger/platform items now unblocked.
 - **2026-03-13:** Added 15 missing backlog items from a repo-wide gap audit, covering authz/tenant-scoping gaps, RAG durability, async job execution, supplier realism, Kanban persistence, Circuit Code materialization, generative candidate adoption, and other cross-tool integration misses.
@@ -145,9 +146,9 @@
 
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0473` | **MPN normalization and dedup in BOM** (P2, `PARTIAL`) — finish normalizing manufacturer part numbers and collapsing duplicate rows so BOM/supplier/fab workflows stop double-counting the same part. Highest user trust impact of the three remaining items; unblocks cleaner manufacturing handoff. | M | `C3` | High |
-| 2 | `BL-0150` | **Inventory tracking tied to BOM consumption** (P2, `PARTIAL`) — close the loop so placing parts in a design decrements real inventory and flags shortfalls before export. Directly supports the "one tool, zero context switching" promise (Epic C) and the Inventory ↔ ProtoPulse shared-source plan. | M | `C4` | High |
-| 3 | `BL-0126` | **Shared unit/scale contract across sim + DRC engines** (P2, `PARTIAL`) — agree one canonical unit/scale model so simulation results and DRC verdicts stop disagreeing on the same net. Prevents silent numerical drift between engines; unblocks downstream simulation/DRC trust work. | M | `C4` | Medium |
+| 1 | `BL-0150` | **Inventory tracking tied to BOM consumption** (P2, `PARTIAL`) — close the loop so placing parts in a design decrements real inventory and flags shortfalls before export. Directly supports the "one tool, zero context switching" promise (Epic C) and the Inventory ↔ ProtoPulse shared-source plan. | M | `C4` | High |
+| 2 | `BL-0126` | **Shared unit/scale contract across sim + DRC engines** (P2, `PARTIAL`) — agree one canonical unit/scale model so simulation results and DRC verdicts stop disagreeing on the same net. Prevents silent numerical drift between engines; unblocks downstream simulation/DRC trust work. | M | `C4` | Medium |
+| ~~1~~ | ~~`BL-0473`~~ | ~~MPN normalization and dedup in BOM~~ — **CLOSED Wave 150** (see Change Log). | — | — | — |
 
 ## Complexity Radar (Highest-Complexity Open Items)
 
@@ -423,11 +424,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80). |
 | P1 | 0 | 73 | All resolved (Waves 54-67). |
-| P2 | **4** | **279** | 3 `PARTIAL` (`BL-0126`, `BL-0150`, `BL-0473`) + 1 `BLOCKED` (`BL-0524` waiting on `BL-0486`). Waves 61-149. |
+| P2 | **3** | **280** | 2 `PARTIAL` (`BL-0126`, `BL-0150`) + 1 `BLOCKED` (`BL-0524` waiting on `BL-0486`). Waves 61-150. |
 | P3 | 0 | 133 | All resolved (Waves 105-154). |
-| **Total** | **4** | **504** | **508 items tracked** (counted directly from P0–P3 sections 2026-04-14). |
+| **Total** | **3** | **505** | **508 items tracked** (counted directly from P0–P3 sections 2026-04-14). |
 
-*Snapshot updated: 2026-04-14 — `Next Up` refresh. 3 remaining `PARTIAL` items + 1 `BLOCKED` item are the only non-DONE work in the backlog.*
+*Snapshot updated: 2026-04-14 — `BL-0473` closed in Wave 150. 2 remaining `PARTIAL` items + 1 `BLOCKED` item are the only non-DONE work in the backlog.*
 
 ---
 
@@ -837,7 +838,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0470 | Manufacturing package validator before download | DONE (Wave 108) | C3 | MF-135 |
 | BL-0471 | Build-time risk score (cost + supply + assembly) | DONE (Wave 138) | C4 | MF-137, IFX-031 |
 | BL-0472 | Quote and order history per project | DONE (Wave 109) | C3 | MF-140 |
-| BL-0473 | MPN normalization and dedup in BOM | PARTIAL | C3 | MF-129 |
+| BL-0473 | MPN normalization and dedup in BOM | DONE (Wave 150) - `shared/parts/mpn.ts` normalizer + `parts-ingress.findByMpn` / `PartsStorage.getByMpn` case-insensitive dedup with packaging-suffix fallback; stock upsert bumps quantity on existing row instead of duplicating. Tests: 37 MPN unit tests + 6 parts-ingress regression tests. | C3 | MF-129 |
 | BL-0474 | AML/approved-vendor-list enforcement | DONE (Wave 110) | C3 | MF-138 |
 | BL-0475 | Assembly risk heatmap | DONE (Wave 109) | C3 | IFX-034 |
 | BL-0476 | One-click manufacturing package wizard | DONE (Wave 138) - Integrated with Google Drive | C4 | UX-060, IFX-036 |

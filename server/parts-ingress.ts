@@ -18,7 +18,7 @@
  * See docs/plans/2026-04-10-parts-catalog-consolidation.md Phase 2 for the full spec.
  */
 
-import { and, eq, ilike, isNull, sql } from 'drizzle-orm';
+import { and, eq, ilike, isNull } from 'drizzle-orm';
 import { logger } from './logger';
 import {
   parts,

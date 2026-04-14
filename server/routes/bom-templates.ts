@@ -101,8 +101,16 @@ export function registerBomTemplateRoutes(app: Express): void {
   app.get('/api/bom-templates/:id', validateSession, async (req: Request, res: Response) => {
     const templateId = String(req.params.id);
     try {
+      const session = (req as unknown as Record<string, unknown>).session as { userId: number };
       const template = await bomTemplateStorage.getTemplateWithItems(templateId);
       if (!template) {
+        res.status(404).json({ message: 'Template not found' });
+        return;
+      }
+      // SECURITY (WS-01): enforce userId-scoped access. The storage method
+      // looks up by id only, so we must check ownership at the route layer
+      // (use 404 to avoid leaking template existence across users).
+      if (template.userId !== session.userId) {
         res.status(404).json({ message: 'Template not found' });
         return;
       }
@@ -186,6 +194,11 @@ export function registerBomTemplateRoutes(app: Express): void {
 
       const template = await bomTemplateStorage.getTemplateWithItems(templateId);
       if (!template) {
+        res.status(404).json({ message: 'Template not found' });
+        return;
+      }
+      // SECURITY (WS-01): template ownership is user-scoped.
+      if (template.userId !== session.userId) {
         res.status(404).json({ message: 'Template not found' });
         return;
       }

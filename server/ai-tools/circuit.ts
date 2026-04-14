@@ -18,6 +18,34 @@ import { z } from 'zod';
 import { buildExactPartAiPolicy } from '@shared/exact-part-ai-policy';
 import type { ToolRegistry } from './registry';
 import { clientAction } from './registry';
+import type { ToolContext, ToolResult } from './types';
+
+/**
+ * Verify a caller-supplied circuit ID belongs to the active project context.
+ *
+ * Returns `null` when the circuit is valid. Returns a failure {@link ToolResult}
+ * to be returned directly from the tool when the circuit doesn't exist or
+ * belongs to another project. Message is intentionally identical for both
+ * cases so cross-project existence is not leaked (same enumeration-protection
+ * policy as `requireCircuitOwnership`).
+ *
+ * SECURITY (WS-01, BE-06 audit P0 #1): Without this guard, any AI tool call
+ * that accepts `circuitId` as a parameter can read/mutate circuit data from
+ * a different project by supplying an ID.
+ */
+async function guardCircuitInProject(
+  circuitId: number,
+  ctx: ToolContext,
+): Promise<ToolResult | null> {
+  const design = await ctx.storage.getCircuitDesign(circuitId);
+  if (!design || design.projectId !== ctx.projectId) {
+    return {
+      success: false,
+      message: `Circuit ${String(circuitId)} not found in this project.`,
+    };
+  }
+  return null;
+}
 
 // ---------------------------------------------------------------------------
 // Local interfaces for JSONB shapes used in teardrop / net analysis tools
@@ -142,6 +170,8 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const guard = await guardCircuitInProject(params.circuitId, ctx);
+      if (guard) return guard;
       const part = await ctx.storage.getComponentPart(params.partId, ctx.projectId);
       if (!part) {
         return { success: false, message: `Component part ${String(params.partId)} not found` };
@@ -251,6 +281,8 @@ export function registerCircuitTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const guard = await guardCircuitInProject(params.circuitId, ctx);
+      if (guard) return guard;
       const net = await ctx.storage.createCircuitNet({
         circuitId: params.circuitId,
         name: params.name,
@@ -418,6 +450,8 @@ export function registerPcbTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const guard = await guardCircuitInProject(params.circuitId, ctx);
+      if (guard) return guard;
       const wire = await ctx.storage.createCircuitWire({
         circuitId: params.circuitId,
         netId: params.netId,
@@ -481,6 +515,8 @@ export function registerPcbTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const guard = await guardCircuitInProject(params.circuitId, ctx);
+      if (guard) return guard;
       const wire = await ctx.storage.createCircuitWire({
         circuitId: params.circuitId,
         netId: params.netId,
@@ -790,6 +826,8 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const guard = await guardCircuitInProject(params.circuitId, ctx);
+      if (guard) return guard;
       const zone = await ctx.storage.getPcbZone(params.zoneId);
       if (!zone) {
         return { success: false, message: `Zone ${params.zoneId} not found.` };
@@ -872,6 +910,8 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const guard = await guardCircuitInProject(params.circuitId, ctx);
+      if (guard) return guard;
       // 1. Fetch all data
       const [wires, vias, instances, existingZones] = await Promise.all([
         ctx.storage.getCircuitWires(params.circuitId),
@@ -1031,6 +1071,8 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const guard = await guardCircuitInProject(params.circuitId, ctx);
+      if (guard) return guard;
       const [nets, instances, parts] = await Promise.all([
         ctx.storage.getCircuitNets(params.circuitId),
         ctx.storage.getCircuitInstances(params.circuitId),
@@ -1109,6 +1151,8 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
     }),
     requiresConfirmation: false,
     execute: async (params, ctx) => {
+      const guard = await guardCircuitInProject(params.circuitId, ctx);
+      if (guard) return guard;
       // For now, return a simple direct path with 45-degree segments
       const [net, instances, wires] = await Promise.all([
         ctx.storage.getCircuitNet(params.netId),

@@ -14,6 +14,8 @@ import { validateSession } from '../auth';
 import { supplyChainStorage, StorageError } from '../storage';
 import { jobQueue } from '../job-queue';
 import { logger } from '../logger';
+import { assertProjectOwnership } from './auth-middleware';
+import { HttpError } from './utils';
 
 export function registerSupplyChainRoutes(app: Express): void {
   // GET /api/supply-chain/alerts
@@ -24,6 +26,20 @@ export function registerSupplyChainRoutes(app: Express): void {
       const unacknowledgedOnly = req.query.unacknowledgedOnly === 'true';
       const limit = req.query.limit ? Number(req.query.limit) : 50;
       const offset = req.query.offset ? Number(req.query.offset) : 0;
+
+      // SECURITY (WS-01): when filtering by projectId, enforce ownership.
+      if (projectId !== undefined) {
+        const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+        try {
+          await assertProjectOwnership(projectId, session.userId);
+        } catch (e) {
+          if (e instanceof HttpError) {
+            res.status(e.status).json({ message: e.message });
+            return;
+          }
+          throw e;
+        }
+      }
 
       const result = await supplyChainStorage.getAlerts({
         projectId,
@@ -47,6 +63,18 @@ export function registerSupplyChainRoutes(app: Express): void {
   app.get('/api/supply-chain/alerts/count', validateSession, async (req: Request, res: Response) => {
     try {
       const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
+      if (projectId !== undefined) {
+        const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+        try {
+          await assertProjectOwnership(projectId, session.userId);
+        } catch (e) {
+          if (e instanceof HttpError) {
+            res.status(e.status).json({ message: e.message });
+            return;
+          }
+          throw e;
+        }
+      }
       const count = await supplyChainStorage.getUnacknowledgedCount(projectId);
       res.json({ count });
     } catch (err) {
@@ -83,6 +111,18 @@ export function registerSupplyChainRoutes(app: Express): void {
   app.post('/api/supply-chain/alerts/ack-all', validateSession, async (req: Request, res: Response) => {
     try {
       const projectId = req.body?.projectId ? Number(req.body.projectId) : undefined;
+      if (projectId !== undefined) {
+        const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+        try {
+          await assertProjectOwnership(projectId, session.userId);
+        } catch (e) {
+          if (e instanceof HttpError) {
+            res.status(e.status).json({ message: e.message });
+            return;
+          }
+          throw e;
+        }
+      }
       const count = await supplyChainStorage.acknowledgeAll(projectId);
       res.json({ acknowledged: count });
     } catch (err) {
@@ -108,6 +148,16 @@ export function registerSupplyChainRoutes(app: Express): void {
 
     try {
       const session = (req as unknown as Record<string, unknown>).session as { userId: number };
+      // SECURITY (WS-01): ensure user owns the project before queueing a job.
+      try {
+        await assertProjectOwnership(parsed.data.projectId, session.userId);
+      } catch (e) {
+        if (e instanceof HttpError) {
+          res.status(e.status).json({ message: e.message });
+          return;
+        }
+        throw e;
+      }
       const jobId = await jobQueue.submit('supply_chain_check', {
         projectId: parsed.data.projectId,
         userId: session.userId,

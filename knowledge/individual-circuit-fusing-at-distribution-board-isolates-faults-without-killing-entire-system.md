@@ -34,6 +34,7 @@ A power distribution board with per-circuit fuses creates a hierarchy of protect
 ---
 
 Relevant Notes:
+- [[per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main]] -- motor-specific instance of this pattern: focuses on the limp-home behavioral outcome and the 10A branch sizing math
 - [[main-fuse-within-six-inches-of-battery-positive-is-nec-fire-prevention-requirement]] -- the upstream main fuse this per-circuit fusing coordinates with
 - [[star-ground-at-distribution-board-prevents-ground-loops-in-multi-circuit-systems]] -- ground topology that complements this positive-side fusing
 - [[zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory]] -- per-controller fuse is the only protection for the ZS-X11H

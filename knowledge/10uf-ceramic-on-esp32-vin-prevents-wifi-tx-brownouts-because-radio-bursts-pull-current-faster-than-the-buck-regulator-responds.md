@@ -25,6 +25,8 @@ This is an extension of the same principle as [[every-digital-ic-requires-a-100n
 
 The physical placement matters. A 10uF cap with 5cm of trace between it and the Vin pin is nearly useless for transient response -- the trace inductance limits how fast charge can flow. Keep the cap within 1cm of the pin, with fat ground return, or the cap is just a decorative component on the schematic.
 
+This cap is only effective on top of a clean supply. If the MCU is [[powering-the-mcu-from-the-zs-x11h-5v-output-causes-resets-because-motor-switching-noise-on-the-shared-rail-corrupts-the-logic-supply|sharing a rail with motor switching noise]], the 10uF becomes a futile attempt to filter a compromised supply — the architectural fix is a separate LM2596 from the main battery, with this cap riding on that clean rail as a burst-response reservoir rather than a noise filter.
+
 ---
 
 Source: [[wiring-36v-battery-power-distribution-4-tier-system]]
@@ -33,6 +35,8 @@ Relevant Notes:
 - [[every-digital-ic-requires-a-100nf-ceramic-decoupling-capacitor-between-vcc-and-gnd-to-absorb-switching-transients]] -- same principle at a different frequency band
 - [[switching-buck-converters-waste-watts-not-volts-making-them-essential-for-large-voltage-differentials]] -- the regulator that cannot keep up with radio bursts
 - [[inductive-motor-loads-require-bypass-capacitor-to-absorb-voltage-spikes-above-supply-rail]] -- parallel concept: local caps for load transients
+- [[powering-the-mcu-from-the-zs-x11h-5v-output-causes-resets-because-motor-switching-noise-on-the-shared-rail-corrupts-the-logic-supply]] -- architectural prerequisite: this cap only works on top of an isolated clean rail, not a shared motor supply
+- [[100uf-capacitor-on-arduino-5v-input-absorbs-motor-switching-emi-that-causes-mcu-resets]] -- symmetric failure mode: same mitigation (bulk cap near MCU) for source-injected transients rather than load-pulled transients
 
 Topics:
 - [[microcontrollers]]

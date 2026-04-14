@@ -37,4 +37,25 @@ Insight exists at `knowledge/per-branch-motor-fusing-enables-graceful-degradatio
 **Agent note:** Per-branch fusing extends the residential-circuit-breaker pattern to rover design. Pairs tightly with slow-blow-fuse-sizing (size), power-budget-hierarchy (ordering), and four-motor-BMS (firmware complement).
 
 ## Revisit
+
+**Claim status:** unchanged (proven, sharp). The limp-home framing differentiates this from the adjacent distribution-board note.
+
+**Reweave rationale:** /connect already verified the 4 inline downstream links but flagged the ANL-marine sibling as "skip" and missed [[individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system]] and [[zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory]] entirely. These are stronger connections than the ones already recorded:
+
+1. **[[individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system]]** — covers the same architectural pattern from the distribution-board perspective (adds the 12V buck branch and the 32V/58V blade-fuse voltage rating gotcha). This is a near-merge candidate but both notes earn their keep: the existing note is the board-level topology, this note is the behavioral outcome (limp-home). Bidirectional link added with articulation.
+2. **[[anl-marine-fuse-class...]]** — /connect rejected this as "different topology layer." That was wrong. The hierarchy (ANL main + blade branch) is precisely what makes graceful degradation work. Branch fuses blow before the main because they are both smaller AND because the main ANL is rated for interrupt capacity the blade branch fuses lack. The tier distinction is the mechanism, not a reason to skip the link.
+3. **[[zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory]]** — the controller-specific justification. The per-branch fuse is not redundant overcurrent protection; it is the ONLY overcurrent protection the ZS-X11H has. This elevates the load-bearing status of the branch fuse and deserves explicit prose reference.
+
+**Files modified:**
+- `knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md` — added 2 new inline prose paragraphs citing [[individual-circuit-fusing...]], [[anl-marine-fuse-class...]], [[zs-x11h-has-no-reverse-polarity...]]; added 3 new footer relevant-notes with articulation
+- `knowledge/individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system.md` — added reverse link to target note in Relevant Notes
+
+**MOC effect:** No edit required. `power-systems.md` line 72 ("individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system") remains the canonical entry for the pattern. The target note is properly nested under the same topic and links laterally.
+
+**Network effect:** Outgoing links 3 -> 6 (plus 3 new inline prose citations). This note now bridges [[power-systems]] fusing subsection with the ZS-X11H controller-specific knowledge in [[actuators]] territory.
+
+**Not changed:**
+- Title/description — claim is sharp (graceful degradation via branch fusing is an arguable topology decision) and accurate.
+- Hall sensor reference — kept; it grounds the dead-wheel detection loop the trade-off paragraph mentions.
+
 ## Verify
