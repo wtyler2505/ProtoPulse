@@ -30,7 +30,7 @@
       "priority": "session",
       "status": "done",
       "condition_key": "dangling_links",
-      "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) \u2014 targets don't exist in knowledge/",
+      "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) — targets don't exist in knowledge/",
       "action": "/seed or /extract to create initial topic maps",
       "auto_generated": true,
       "created": "2026-04-06T03:52:00Z"
@@ -54,10 +54,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-001.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -750,7 +751,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "txs0108e-oe-pin-is-active-high-and-floating-by-default-silently-disabling-all-outputs",
-      "source_detail": "Add Hall-sensor wiring as worked example \u2014 OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
+      "source_detail": "Add Hall-sensor wiring as worked example — OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md",
       "created": "2026-04-14T08:13:01Z",
@@ -762,7 +763,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors",
-      "source_detail": "Add positive-case allocation rationale \u2014 ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
+      "source_detail": "Add positive-case allocation rationale — ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md",
       "created": "2026-04-14T08:13:01Z",
@@ -774,7 +775,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus",
-      "source_detail": "Add concrete RioRand\u2192TXS0108E\u2192ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
+      "source_detail": "Add concrete RioRand→TXS0108E→ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md",
       "created": "2026-04-14T08:13:01Z",

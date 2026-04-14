@@ -1059,9 +1059,15 @@ export async function processAIMessage(params: {
   fallback?: FallbackProviderConfig;
   projectId?: number;
   userId?: number;
+  /** AI-AUDIT #191: optional abort signal for non-streaming AI requests. */
+  signal?: AbortSignal;
 }): Promise<{ message: string; actions: AIAction[]; provider?: 'anthropic' | 'gemini' }> {
   try {
-    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, imageContent, fallback, projectId, userId } = params;
+    const { message, provider, model, apiKey, appState, temperature = 0.7, maxTokens, imageContent, fallback, projectId, userId, signal } = params;
+
+    if (signal?.aborted) {
+      return { message: '', actions: [] };
+    }
 
     if (!apiKey || apiKey.trim().length === 0) {
       return {

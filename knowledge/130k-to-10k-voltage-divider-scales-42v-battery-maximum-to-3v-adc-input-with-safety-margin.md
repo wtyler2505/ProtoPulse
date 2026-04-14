@@ -24,6 +24,10 @@ The 140K total impedance also matters for ADC accuracy. The ESP32 ADC input requ
 
 Since [[esp32-adc-attenuation-setting-determines-input-voltage-range]], the ADC must be configured for 11dB attenuation (0-3.3V input range) to read this divider correctly. Default configurations at lower attenuation will clip the upper end of the battery range.
 
+The divider's output is consumed by firmware that maps measured voltage to a battery percentage, and [[linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve]] establishes that the linear `(V - 30) / 12 * 100` map is good enough because the decisions it drives (continue vs return, warning vs critical) all sit at the low end of the curve where linear and real agree. The measurement chain is: divider -> ADC (attenuated, calibrated) -> linear percent -> decision threshold. Each stage has acceptable error in isolation and the errors do not compound in the region that matters.
+
+**Where to wire it:** the divider output should land on an ADC1 channel because WiFi locks out ADC2 during transmission. [[esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors]] are all ADC1 and ideal for this role -- they cannot be accidentally driven as outputs, and battery monitoring never needs to drive the pin. The 100nF bypass on the 10K leg also solves the floating-input problem those pins have for digital use; for analog sensing the divider output is low-impedance enough that no additional pull resistor is needed.
+
 ---
 
 Source: [[wiring-36v-battery-power-distribution-4-tier-system]]
@@ -32,6 +36,8 @@ Relevant Notes:
 - [[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc]] -- explains why 2.5V ceiling matters for this divider design
 - [[esp32-adc-attenuation-setting-determines-input-voltage-range]] -- the divider requires 11dB attenuation configuration
 - [[10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect]] -- the battery range that drives the divider math
+- [[linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve]] -- the downstream firmware consumer of this divider's measurement
+- [[esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors]] -- the recommended ADC1 landing pins for the divider output
 
 Topics:
 - [[power-systems]]

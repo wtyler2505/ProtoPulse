@@ -153,20 +153,64 @@ function buildSlugInput(fields: CommonPartFields): SlugInput {
   };
 }
 
-/** Try to find an existing part via `(manufacturer, mpn)` exact match. */
+/**
+ * Try to find an existing part via `(manufacturer, mpn)` match.
+ *
+ * Normalizes both inputs through {@link normalizeMpn} / {@link normalizeManufacturer}
+ * and compares case-insensitively using `ilike`. This means BOM ingestion paths
+ * that receive `'stm32f103c8t6'`, `' STM32F103C8T6 '`, or `'STM32F103C8T6'` all
+ * collapse to the same existing row instead of creating duplicates.
+ *
+ * The stored MPN/manufacturer is preserved in its original casing so the
+ * display remains faithful to whatever the first writer supplied.
+ *
+ * Fallback: if `ilike` returns no exact casefold match but the normalized
+ * form matched a row whose stored MPN has a packaging suffix (e.g., `/NOPB`),
+ * the comparison-key loop picks it up in-memory. This handles the
+ * `LM317T/NOPB` ≡ `LM317T` equivalence that `ilike` alone cannot express.
+ */
 async function findByMpn(db: DbClient, manufacturer: string, mpn: string): Promise<Part | null> {
-  const rows = await db
+  const normalizedManufacturer = normalizeManufacturer(manufacturer);
+  const normalizedMpn = normalizeMpn(mpn);
+  if (normalizedManufacturer === '' || normalizedMpn === '') {
+    return null;
+  }
+
+  // First pass: case-insensitive exact match on the normalized forms.
+  // Uses `ilike` without wildcards so Postgres uses the existing index prefix.
+  const exactRows = await db
     .select()
     .from(parts)
     .where(
       and(
-        eq(parts.manufacturer, manufacturer),
-        eq(parts.mpn, mpn),
+        ilike(parts.manufacturer, normalizedManufacturer),
+        ilike(parts.mpn, normalizedMpn),
         isNull(parts.deletedAt),
       ),
     )
     .limit(1);
-  return rows[0] ?? null;
+  if (exactRows[0]) { return exactRows[0]; }
+
+  // Second pass: manufacturer-scoped scan + in-memory comparison-key match.
+  // This catches packaging-suffix equivalences (`LM317T/NOPB` ≡ `LM317T`) and
+  // internal-whitespace variants that `ilike` does not normalize.
+  const candidateRows = await db
+    .select()
+    .from(parts)
+    .where(
+      and(
+        ilike(parts.manufacturer, normalizedManufacturer),
+        isNull(parts.deletedAt),
+      ),
+    )
+    .limit(50);
+  const incomingKey = mpnComparisonKey(mpn);
+  for (const row of candidateRows) {
+    if (mpnComparisonKey(row.mpn) === incomingKey) {
+      return row;
+    }
+  }
+  return null;
 }
 
 /** Try to find an existing part via slug exact match. */
