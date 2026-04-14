@@ -41,7 +41,7 @@ Reading this table, the 470uF on ZS-X11H is not an isolated rule — it is the s
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
 
 Relevant Notes:
 - [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]] -- the high-power tier (6-60V) where fusing and protection become critical

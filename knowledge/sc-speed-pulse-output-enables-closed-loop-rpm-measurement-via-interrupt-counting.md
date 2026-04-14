@@ -49,7 +49,7 @@ The feedback loop closes the gap — slow motor gets a duty-cycle bump, fast mot
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
 Enriched from: [[wiring-dual-zs-x11h-for-hoverboard-robot]]
 
 Relevant Notes:

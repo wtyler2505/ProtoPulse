@@ -102,15 +102,18 @@ export class VaultSearchIndex {
   private constructor(notes: VaultNote[]) {
     this.notes = notes;
     this.bySlug = new Map(notes.map(n => [n.slug, n]));
+    // Body excluded from Fuse keys: at vault scales > 500 notes, tokenizing
+    // 500+ bodies (avg 500 chars) per search cost ~20s. Title, description,
+    // and slug carry sufficient signal for retrieval; body content is still
+    // surfaced via extractSnippets() on the returned top-K only.
     this.fuse = new Fuse(notes, {
       keys: [
-        { name: 'title', weight: 0.35 },
+        { name: 'title', weight: 0.5 },
         { name: 'description', weight: 0.3 },
         { name: 'slug', weight: 0.2 },
-        { name: 'body', weight: 0.15 },
       ],
       includeScore: true,
-      includeMatches: true,
+      includeMatches: false,
       threshold: 0.4,
       ignoreLocation: true,
       minMatchCharLength: 3,

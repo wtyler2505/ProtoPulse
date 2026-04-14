@@ -26,7 +26,7 @@ The ZS-X11H is notable because it has NO onboard capacitance adequate for the vo
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
 
 Relevant Notes:
 - [[zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory]] -- the cap is part of the same "protection the board doesn't provide" category

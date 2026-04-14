@@ -46,7 +46,7 @@ Using this wrapper throughout the codebase means the inversion lives in exactly 
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
 
 Relevant Notes:
 - [[bldc-stop-active-low-brake-active-high]] -- the STOP/BRAKE polarity traps on the same controller family

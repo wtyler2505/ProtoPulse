@@ -26,7 +26,7 @@ This is distinct from the STOP function, which simply de-energizes the phases an
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
 
 Relevant Notes:
 - [[bldc-stop-active-low-brake-active-high]] -- the existing note on STOP vs BRAKE logic levels, which this note extends with the thermal failure mode

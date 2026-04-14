@@ -25,7 +25,7 @@ This is the most insidious wiring bug on the ZS-X11H because it produces intermi
 
 ---
 
-Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
+Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input]]
 Enriched from: [[wiring-dual-zs-x11h-for-hoverboard-robot]]
 
 Relevant Notes:
