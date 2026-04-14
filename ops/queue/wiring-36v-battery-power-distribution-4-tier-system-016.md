@@ -19,6 +19,9 @@ Rationale: The ampacity constraint in the hierarchy becomes actionable when you 
 ---
 
 ## Enrich
+
+Added wire-gauge reference table to target insight `knowledge/power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity.md`. Table covers 7 circuit classes (battery-to-bus, bus-to-MC, phase wires, buck feed, buck output, signal wires, ground return) with minimum and recommended gauges. Notes ground-return gauge equals battery-positive because it carries same total current. Wiki-linked to `[[star-ground-at-distribution-board...]]` and forward-reference to `[[motor-power-wiring-below-14awg...]]` (claim-019 target, pending create). Ralph lead 2026-04-14.
+
 ## Connect
 ## Revisit
 ## Verify

@@ -20,7 +20,8 @@ Semantic neighbor: esp32-adc-is-nonlinear-above-2v5 covers the ADC limitation ge
 ---
 
 ## Create
-(to be filled by create phase)
+
+Insight exists at `knowledge/130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced. Content verified: YAML frontmatter complete (description, type, source, confidence, topics, related_components), body shows divider math with connective reasoning across nominal/cutoff/max states, wiki-linked to `[[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc]]`, `[[esp32-adc-attenuation-setting-determines-input-voltage-range]]`, `[[10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect]]`. Footer has Source, Relevant Notes, Topics sections.
 
 ## Connect
 (to be filled by connect phase)

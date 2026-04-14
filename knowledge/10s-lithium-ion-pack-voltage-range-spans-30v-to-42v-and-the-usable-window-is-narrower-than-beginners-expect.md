@@ -31,6 +31,20 @@ A "36V" lithium-ion battery pack (10 cells in series) is only at 36V for a brief
 
 **ProtoPulse implications:** The power analysis tools should model battery voltage as a range, not a single number. BOM power budgets calculated at nominal voltage understate the regulator input range and overstate the motor performance at low battery.
 
+**Firmware monitoring — ADC readings through the standard 130K/10K divider:**
+
+When the pack is monitored by a 3.3V ESP32 ADC through a [[130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin|130K/10K divider]], the expected ADC pin voltages across the operating range are:
+
+| Pack voltage | Divider ratio | ADC pin voltage | ADC count (12-bit, 3.3V full-scale) |
+|--------------|---------------|-----------------|-------------------------------------|
+| 42.0V (full) | 10 / 140 | 3.00V | ~3724 |
+| 37.0V (nominal) | 10 / 140 | 2.64V | ~3279 |
+| 36.0V | 10 / 140 | 2.57V | ~3191 |
+| 33.0V (performance drops) | 10 / 140 | 2.36V | ~2930 |
+| 30.0V (BMS cutoff) | 10 / 140 | 2.14V | ~2660 |
+
+Firmware that sanity-checks its ADC plumbing should confirm readings fall in the 2.1V-3.0V window under normal conditions. Readings above 3.0V indicate the battery is overcharged or the divider has drifted; readings below 2.1V mean the BMS has already tripped and the MCU should begin shutdown while capacitor reserves last. Because ESP32 ADC nonlinearity above 2.5V distorts readings, pack voltage inferred from ADC counts in the upper range requires [[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc|factory calibration or an external ADS1115]] for precision.
+
 ---
 
 Relevant Notes:

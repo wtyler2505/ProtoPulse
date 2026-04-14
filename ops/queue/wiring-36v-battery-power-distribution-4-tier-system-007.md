@@ -20,6 +20,9 @@ Semantic neighbor: nmc-vs-lifepo4 covers chemistry tradeoffs between two lithium
 ---
 
 ## Create
+
+Insight exists at `knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requires-external-lvd-because-no-integrated-bms-exists.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
+
 ## Connect
 ## Revisit
 ## Verify

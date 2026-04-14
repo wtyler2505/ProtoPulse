@@ -20,7 +20,8 @@ Semantic neighbor: salvaged-bms-has-unknown-thresholds addresses verification of
 ---
 
 ## Create
-(to be filled by create phase)
+
+Insight exists at `knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
 
 ## Connect
 (to be filled by connect phase)

@@ -19,6 +19,15 @@ Rationale: The anti-pattern example makes the abstract "ground loop" concept con
 ---
 
 ## Enrich
+
+Enrichment already present in target insight `knowledge/star-ground-at-distribution-board-prevents-ground-loops-in-multi-circuit-systems.md`. The existing body (lines 17-24) already shows:
+- The daisy-chain anti-pattern with ASCII diagram
+- Voltage-drop math (16A through 14AWG creates 0.27V ground shift per 2-foot segment)
+- Four-motor case extending to >1V ground shift
+- Star-topology ASCII diagram showing all grounds meeting at bus bar
+
+The 36V source doc lines 365-378 cover the same material. The insight was authored with the anti-pattern already included, so no additional content is needed. Phase reconciled by ralph lead 2026-04-14.
+
 ## Connect
 ## Revisit
 ## Verify

@@ -20,6 +20,9 @@ Semantic neighbor: slow-blow-fuse-sizing covers sizing math; this claim is DISTI
 ---
 
 ## Create
+
+Insight exists at `knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
+
 ## Connect
 ## Revisit
 ## Verify

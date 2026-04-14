@@ -19,6 +19,9 @@ Rationale: Naming specific parts with their ratings makes the note actionable fo
 ---
 
 ## Enrich
+
+Added "Hardware mitigation parts" subsection to target insight `knowledge/four-motor-bldc-systems-exceed-standard-hoverboard-bms-ratings-requiring-firmware-current-limiting.md`. New content names ANL 100A slow-blow fuse (sized at 125-150% of peak, links to `[[anl-marine-fuse-class...]]`) and Albright SW200 contactor (200A continuous, 36-48V DC, links to `[[estop-auxiliary-contact-to-mcu...]]`). Explains three-layer protection stack: firmware throttling + SW200 interruption + ANL fuse. Ralph lead 2026-04-14.
+
 ## Connect
 ## Revisit
 ## Verify

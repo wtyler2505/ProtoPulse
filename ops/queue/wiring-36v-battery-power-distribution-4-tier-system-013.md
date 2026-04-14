@@ -19,6 +19,9 @@ Rationale: Numbers turn abstract ranges into actionable calibration targets. A f
 ---
 
 ## Enrich
+
+Added ADC-reading table to target insight `knowledge/10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect.md` under new "Firmware monitoring" subsection. Table shows pack voltage → divider ADC pin voltage → ADC count (12-bit) for full/nominal/cutoff states, linked to `[[130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin]]` and `[[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc]]`. Ralph lead 2026-04-14.
+
 ## Connect
 ## Revisit
 ## Verify

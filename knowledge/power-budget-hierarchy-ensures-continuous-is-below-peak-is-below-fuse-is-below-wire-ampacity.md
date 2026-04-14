@@ -32,6 +32,24 @@ Continuous load (69A) < Peak load (85A) < Fuse rating (100A) < Wire ampacity (~9
 
 **ProtoPulse implication:** The power budget calculator should enforce this 4-number hierarchy and flag violations. When a user adds a motor to the BOM, the tool should automatically recalculate continuous/peak loads and verify they remain below the fuse and wire ratings.
 
+**Wire gauge reference — making the ampacity row concrete:**
+
+The hierarchy is abstract until you can look up a specific circuit and know what gauge to use. For a 36V rover with 4x 16A BLDC controllers, the system decomposes into seven wire classes:
+
+| Circuit | Voltage | Current (typical) | Minimum gauge | Recommended gauge |
+|---------|---------|-------------------|---------------|-------------------|
+| Battery positive to bus bar (main bus) | 36V | 60-85A peak | #6 AWG | #4 AWG (headroom + voltage-drop) |
+| Bus bar to motor controller V+ | 36V | 15-20A per branch | #14 AWG | #12 AWG |
+| Motor controller phase wires (U/V/W) | 36V | 15A continuous | #14 AWG | #12 AWG |
+| Battery to LM2596 input (12V buck feed) | 36V | 1-2A | #20 AWG | #18 AWG |
+| LM2596 output to ESP32 / logic rail | 5-12V | 0.5-1A | #22 AWG | #20 AWG |
+| Signal wires (PWM, Hall, level-shifted) | 3.3-5V | <100mA | #24 AWG | #22 AWG |
+| GND bus return | — | sum of all loads | #6 AWG | #4 AWG (match battery positive) |
+
+The ground return matches the battery positive gauge because it carries the same total current, not merely the current of the single largest load. A #4 battery positive paired with a #14 ground would violate the hierarchy at the wire-ampacity row on the return path, which is exactly the failure mode [[star-ground-at-distribution-board-prevents-ground-loops-in-multi-circuit-systems|star-ground topology]] assumes is already avoided.
+
+Motor phase wiring is #14 AWG minimum because [[motor-power-wiring-below-14awg-overheats-at-15a-and-creates-fire-risk-so-gauge-is-chosen-by-steady-state-current-not-voltage|gauge follows steady-state current, not voltage]] — a common beginner mistake is using signal-weight wire for phase connections because "the voltage is the same as the logic rail."
+
 ---
 
 Relevant Notes:

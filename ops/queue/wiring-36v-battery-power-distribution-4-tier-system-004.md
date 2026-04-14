@@ -20,6 +20,9 @@ Semantic neighbor: every-digital-ic-requires-100nf covers general decoupling; th
 ---
 
 ## Create
+
+Insight exists at `knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
+
 ## Connect
 ## Revisit
 ## Verify

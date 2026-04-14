@@ -23,6 +23,20 @@ The RioRand ZS-X11H BLDC controller has zero onboard protection of any kind. Thi
 
 Additionally, a 470uF 63V electrolytic capacitor across V+/V- at the controller absorbs inductive voltage spikes from the motor. Without this cap, flyback spikes from the motor's inductance can exceed the 60V maximum input voltage even on a 36V system, damaging the controller from the inside.
 
+The ZS-X11H's 470uF is one element of a systemic decoupling strategy across a 36V rover power tree. The full placement table shows where capacitance belongs at each tier, and the ZS-X11H row is properly read in that context:
+
+| Location | Value | Rating | Purpose |
+|----------|-------|--------|---------|
+| Battery output (main bus) | 1000uF | 63V | Bulk reservoir for motor inrush, smooths battery impedance |
+| **ZS-X11H V+/V-** (each controller) | **470uF** | **63V** | **Absorbs motor flyback spikes that can exceed 60V Vmax** |
+| LM2596 input (36V → 12V) | 220uF | 50V | Stabilizes buck input against load transients |
+| LM2596 output (12V rail) | 220uF | 25V | Output filtering, reduces switching ripple |
+| AMS1117/buck output (5V rail) | 100uF | 16V | Local bulk for logic circuits |
+| ESP32 Vin | 10uF ceramic | 10V | [[10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds\|WiFi TX burst response]] |
+| Every digital IC VCC pin | 100nF ceramic | 10V | [[every-digital-ic-requires-a-100nf-ceramic-decoupling-capacitor-between-vcc-and-gnd-to-absorb-switching-transients\|switching transient absorption]] |
+
+Reading this table, the 470uF on ZS-X11H is not an isolated rule — it is the specific motor-side flyback absorber that lives between a bulk-reservoir tier above and a regulator-input tier below. Omitting it leaves the controller exposed to its own motor's inductive kick in a way that omitting the battery-bus bulk cap does not.
+
 **ProtoPulse implication:** When a ZS-X11H appears in a schematic, the DRC should require: (1) an inline fuse on the V+ line, (2) a bypass capacitor across V+/V-, and (3) a warning about reverse polarity with no automated protection. Since [[beginners-need-ai-that-catches-mistakes-before-money-is-spent]], these protections should be auto-suggested, not left to the user to discover after burning a $12 controller.
 
 ---

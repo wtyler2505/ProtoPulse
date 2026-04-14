@@ -20,6 +20,9 @@ Semantic neighbor: none directly -- the pattern is general threshold-control eng
 ---
 
 ## Create
+
+Insight exists at `knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
+
 ## Connect
 ## Revisit
 ## Verify

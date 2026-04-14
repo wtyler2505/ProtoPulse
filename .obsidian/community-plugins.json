@@ -9,5 +9,6 @@
   "mcp-tools",
   "obsidian-style-settings",
   "css-editor",
-  "text-snippets-obsidian"
+  "text-snippets-obsidian",
+  "obsidian-local-rest-api"
 ]

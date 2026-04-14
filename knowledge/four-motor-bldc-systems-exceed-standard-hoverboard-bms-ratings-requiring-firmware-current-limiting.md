@@ -33,6 +33,15 @@ The key insight is that most nuisance trips come from inrush during simultaneous
 
 This is a system-level constraint that emerges only when you scale beyond the original hoverboard's 2-motor design. The BOM and architecture tools should flag it when a user adds more than 2 BLDC motors to a 36V system with a single battery pack.
 
+**Hardware mitigation parts — the protection stack that complements firmware limiting:**
+
+Firmware current limiting is the software layer; the matching hardware layer at the 60A+ scale uses two specific parts:
+
+- **ANL 100A slow-blow fuse** ([[anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc|why ANL class for this bus]]): Sized at roughly 125-150% of expected peak (60A peak → 100A fuse) so nuisance trips do not occur during motor acceleration while still protecting wiring against a dead short. ATC/Maxi automotive blade fuses cannot safely interrupt this level of DC fault current — their rated interrupt capacity is for 32V automotive systems, not a 42V rover bus.
+- **Albright SW200 contactor** (200A continuous, 36-48V DC coil): The high-current-capable e-stop replacement for panel-mount pushbuttons. Panel e-stops in the 16-22mm pushbutton form factor top out around 10A and cannot break 60A+ DC without welding the contacts. The SW200's 200A continuous rating provides ~3x margin above peak draw and is specifically designed for DC inductive loads (forklifts, mobility scooters, rover bases). The firmware-aware [[estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal|auxiliary contact pattern]] applies directly: a small signal contact on the SW200 drives the MCU input while the main contacts interrupt the motor bus.
+
+Together these form a three-layer stack: firmware throttles before BMS trips (graceful degradation), SW200 breaks the main bus on an e-stop (commanded interruption), and the ANL fuse is the last line of defense against a short circuit the contactor cannot react to fast enough.
+
 ---
 
 Source: [[hoverboard-bldc-hub-motor-250w-36v-with-hall-sensors]]

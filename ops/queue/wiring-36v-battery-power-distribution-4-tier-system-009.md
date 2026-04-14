@@ -20,6 +20,9 @@ Semantic neighbor: 10s-lithium-ion-pack-voltage-range covers the voltage range; 
 ---
 
 ## Create
+
+Insight exists at `knowledge/linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
+
 ## Connect
 ## Revisit
 ## Verify

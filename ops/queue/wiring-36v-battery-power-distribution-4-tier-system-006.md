@@ -20,6 +20,9 @@ Semantic neighbor: two-stage-estop covers control vs power circuits (2 circuits)
 ---
 
 ## Create
+
+Insight exists at `knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal.md` (note: slugified as `estop` not `e-stop`). Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
+
 ## Connect
 ## Revisit
 ## Verify

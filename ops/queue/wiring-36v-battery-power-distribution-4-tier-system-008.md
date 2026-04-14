@@ -22,6 +22,9 @@ Semantic neighbor: nmc-vs-lifepo4 covers the decision at the chemistry level; th
 ---
 
 ## Create
+
+Insight exists at `knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
+
 ## Connect
 ## Revisit
 ## Verify

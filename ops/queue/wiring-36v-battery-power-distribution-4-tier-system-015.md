@@ -19,6 +19,9 @@ Rationale: The existing note already mentions 470uF, but the enrichment places i
 ---
 
 ## Enrich
+
+Added complete capacitor-placement table to target insight `knowledge/zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory.md`. Table tabulates 7 specific placements across battery bus, ZS-X11H V+/V-, LM2596 input/output, 5V rail, ESP32 Vin, and per-IC VCC. Wiki-linked to `[[10uf-ceramic-on-esp32-vin...]]` and `[[every-digital-ic-requires-a-100nf...]]`. Places the 470uF in systemic context rather than as an isolated rule. Ralph lead 2026-04-14.
+
 ## Connect
 ## Revisit
 ## Verify

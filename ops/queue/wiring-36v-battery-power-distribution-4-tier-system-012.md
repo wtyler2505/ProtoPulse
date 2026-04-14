@@ -19,6 +19,9 @@ Rationale: Named, searchable parts and APIs are more actionable than generic str
 ---
 
 ## Enrich
+
+Enrichment already present in target insight `knowledge/esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc.md`. The existing description (line 2) and body (line 16) both name `esp_adc_cal_characterize()` and ADS1115 (16-bit linear I2C ADC) explicitly. Phase reconciled by ralph lead 2026-04-14.
+
 ## Connect
 ## Revisit
 ## Verify

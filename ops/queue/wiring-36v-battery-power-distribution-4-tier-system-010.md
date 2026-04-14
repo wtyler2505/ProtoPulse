@@ -20,6 +20,9 @@ Semantic neighbor: slow-blow-fuse-sizing addresses the sizing math; this claim i
 ---
 
 ## Create
+
+Insight exists at `knowledge/anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
+
 ## Connect
 ## Revisit
 ## Verify
