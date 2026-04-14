@@ -220,6 +220,10 @@
   },
   "active": "332237b28d338d3d",
   "lastOpenFiles": [
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-036.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-035.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-034.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-033.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-032.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-032.md.tmp.6811.1776153508185",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-031.md",
@@ -248,13 +252,9 @@
     "knowledge/linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve.md.tmp.6811.1776152222291",
     "knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md",
     "knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md.tmp.6811.1776152201666",
-    "knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requires-external-lvd-because-no-integrated-bms-exists.md",
     "knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requires-external-lvd-because-no-integrated-bms-exists.md.tmp.6811.1776152179577",
-    "knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal.md",
     "knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal.md.tmp.6811.1776152159716",
-    "knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md",
     "knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md.tmp.6811.1776152138863",
-    "knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md",
     "knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md.tmp.6811.1776152119300"
   ]
 }
