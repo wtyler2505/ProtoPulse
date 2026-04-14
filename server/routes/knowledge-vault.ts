@@ -14,6 +14,7 @@ import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { getVaultIndex } from '../lib/vault-context';
+import { getStats as getVaultTelemetryStats } from '../lib/vault-telemetry';
 import { setCacheHeaders } from '../lib/cache-headers';
 
 const searchLimiter = rateLimit({
@@ -97,6 +98,24 @@ export function registerKnowledgeVaultRoutes(app: Express): void {
       } catch (err) {
         res.status(500).json({
           error: 'Vault lookup failed',
+          detail: err instanceof Error ? err.message : String(err),
+        });
+      }
+    },
+  );
+
+  app.get(
+    '/api/vault/stats',
+    searchLimiter,
+    // Telemetry is an aggregation of the last 1000 events — 30s cache is
+    // plenty fresh for ops dashboards and keeps the endpoint cheap under load.
+    setCacheHeaders({ maxAge: 30, isPrivate: true }),
+    (_req, res) => {
+      try {
+        res.json(getVaultTelemetryStats());
+      } catch (err) {
+        res.status(500).json({
+          error: 'Vault telemetry stats failed',
           detail: err instanceof Error ? err.message : String(err),
         });
       }

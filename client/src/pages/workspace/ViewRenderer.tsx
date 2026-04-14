@@ -39,6 +39,7 @@ import {
   PersonalInventoryPanel,
   PartAlternatesBrowserView,
   PartUsageBrowserView,
+  VaultBrowserView,
 } from './lazy-imports';
 
 /* AS-01 / UX-103: Panel skeleton loading state for lazy-loaded views */
@@ -300,6 +301,13 @@ export function ViewRenderer({ activeView, projectId }: ViewRendererProps) {
         <ErrorBoundary>
           <Suspense fallback={<ViewLoadingFallback />}>
             <PartUsageBrowserView />
+          </Suspense>
+        </ErrorBoundary>
+      )}
+      {activeView === 'vault_browser' && (
+        <ErrorBoundary>
+          <Suspense fallback={<ViewLoadingFallback />}>
+            <VaultBrowserView />
           </Suspense>
         </ErrorBoundary>
       )}

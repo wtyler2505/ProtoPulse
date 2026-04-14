@@ -136,7 +136,7 @@ export interface ProjectHistoryItem {
   user: 'User' | 'AI';
 }
 
-export type ViewMode = 'dashboard' | 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'schematic' | 'breadboard' | 'pcb' | 'procurement' | 'validation' | 'simulation' | 'design_history' | 'lifecycle' | 'comments' | 'calculators' | 'design_patterns' | 'storage' | 'kanban' | 'knowledge' | 'viewer_3d' | 'community' | 'ordering' | 'serial_monitor' | 'circuit_code' | 'generative_design' | 'digital_twin' | 'arduino' | 'starter_circuits' | 'audit_trail' | 'labs' | 'supply_chain' | 'bom_templates' | 'personal_inventory' | 'part_alternates' | 'part_usage';
+export type ViewMode = 'dashboard' | 'project_explorer' | 'output' | 'architecture' | 'component_editor' | 'schematic' | 'breadboard' | 'pcb' | 'procurement' | 'validation' | 'simulation' | 'design_history' | 'lifecycle' | 'comments' | 'calculators' | 'design_patterns' | 'storage' | 'kanban' | 'knowledge' | 'viewer_3d' | 'community' | 'ordering' | 'serial_monitor' | 'circuit_code' | 'generative_design' | 'digital_twin' | 'arduino' | 'starter_circuits' | 'audit_trail' | 'labs' | 'supply_chain' | 'bom_templates' | 'personal_inventory' | 'part_alternates' | 'part_usage' | 'vault_browser';
 
 /**
  * Inner provider that nests all domain providers once seeded state is ready.
