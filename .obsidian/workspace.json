@@ -191,11 +191,14 @@
       "random-note:Open random note": false,
       "zk-prefixer:Create new unique note": false,
       "workspaces:Manage workspace layouts": false,
-      "templater-obsidian:Templater": false
+      "templater-obsidian:Templater": false,
+      "obsidian42-brat:BRAT": false
     }
   },
   "active": "557180fa13ed8008",
   "lastOpenFiles": [
+    "knowledge/130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin.md",
+    "knowledge/130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin.md.tmp.6811.1776152056898",
     "server/ai-tools/knowledge-vault.ts.tmp.6811.1776151976670",
     "server/ai-tools/index.ts.tmp.6811.1776151782252",
     "server/ai-tools/knowledge-vault.ts",
