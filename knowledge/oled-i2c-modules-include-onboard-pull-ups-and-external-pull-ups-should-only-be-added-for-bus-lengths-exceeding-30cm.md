@@ -15,6 +15,20 @@ Most I2C OLED breakout modules (SH1106, SSD1306) include onboard pull-up resisto
 
 **The parallel resistance trap:** Pull-up resistors in parallel have a combined resistance of 1/(1/R1 + 1/R2 + ...). Three modules with 10K pull-ups each produce 3.3K effective pull-up. Five modules produce 2K. As the effective resistance drops, the pull-up current increases, and at some point the open-drain drivers on the I2C bus cannot pull SDA/SCL LOW against the pull-up current. The I2C specification requires the pull-up to be weak enough for the bus driver to overcome — typically no lower than ~1K ohm for standard mode.
 
+**The hard numerical floor (per I2C spec):** The I2C specification caps sink current at **3mA at 5V logic** (6mA at 3.3V for Fast-mode+, but 3mA is the safe design floor). Minimum effective pull-up resistance is therefore `V_bus / I_sink_max = 5V / 3mA ≈ 1.67K`. Below this, the open-drain driver cannot assert LOW against the accumulated pull-up current, and the bus fails in the worst-possible way — looks like intermittent wiring faults that are actually fundamental design-rule violations.
+
+Worked parallel examples against the 1.67K floor:
+
+| Modules w/ 10K onboard | Effective pull-up | Sink current at 5V | Status |
+|---|---|---|---|
+| 3 | 3.3K | 1.5 mA | Safe |
+| 4 | 2.5K | 2.0 mA | Safe |
+| 5 | 2.0K | 2.5 mA | Borderline |
+| 6 | 1.67K | 3.0 mA | Spec limit |
+| 7+ | <1.67K | >3.0 mA | **Violates I2C spec** — desolder onboard pull-ups |
+
+This transforms "typically no lower than ~1K" from a qualitative rule into a checkable DRC calculation: `sum(1/R_i) < 1/1.67K` is the constraint a tool can verify on a netlist.
+
 **The inverse gotcha:** The vault already captures "I2C without pull-ups causes bus stuck low" in breadboard debugging notes. This is the inverse: I2C with too many pull-ups can cause communication errors because the drivers cannot assert LOW against the excessive pull-up current. Symptoms include intermittent communication failures, ACK/NACK errors, and data corruption — all of which look like wiring problems.
 
 **When to add external pull-ups:**

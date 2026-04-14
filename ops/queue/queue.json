@@ -30,7 +30,7 @@
       "priority": "session",
       "status": "done",
       "condition_key": "dangling_links",
-      "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) — targets don't exist in knowledge/",
+      "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) \u2014 targets don't exist in knowledge/",
       "action": "/seed or /extract to create initial topic maps",
       "auto_generated": true,
       "created": "2026-04-06T03:52:00Z"
@@ -750,7 +750,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "txs0108e-oe-pin-is-active-high-and-floating-by-default-silently-disabling-all-outputs",
-      "source_detail": "Add Hall-sensor wiring as worked example — OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
+      "source_detail": "Add Hall-sensor wiring as worked example \u2014 OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md",
       "created": "2026-04-14T08:13:01Z",
@@ -762,7 +762,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors",
-      "source_detail": "Add positive-case allocation rationale — ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
+      "source_detail": "Add positive-case allocation rationale \u2014 ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md",
       "created": "2026-04-14T08:13:01Z",
@@ -774,7 +774,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus",
-      "source_detail": "Add concrete RioRand→TXS0108E→ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
+      "source_detail": "Add concrete RioRand\u2192TXS0108E\u2192ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md",
       "created": "2026-04-14T08:13:01Z",
@@ -818,86 +818,100 @@
     {
       "id": "claim-056",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "BNO055 built-in magnetometer eliminates the need for a dedicated compass module on the same I2C bus",
       "classification": "closed",
       "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
       "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-056.md",
       "created": "2026-04-14T09:01:31Z",
-      "current_phase": "create",
-      "completed_phases": []
+      "current_phase": "reflect",
+      "completed_phases": [
+        "create"
+      ]
     },
     {
       "id": "claim-057",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "INA219 A0/A1 address pins expose 16 configurable addresses letting one I2C bus host up to 16 current sensors for per-rail power monitoring",
       "classification": "closed",
       "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
       "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-057.md",
       "created": "2026-04-14T09:01:31Z",
-      "current_phase": "create",
-      "completed_phases": []
+      "current_phase": "reflect",
+      "completed_phases": [
+        "create"
+      ]
     },
     {
       "id": "claim-058",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "I2C bus capacitance budget of 400pF caps practical total wire length at roughly one meter in 400kHz fast mode",
       "classification": "closed",
       "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
       "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-058.md",
       "created": "2026-04-14T09:01:31Z",
-      "current_phase": "create",
-      "completed_phases": []
+      "current_phase": "reflect",
+      "completed_phases": [
+        "create"
+      ]
     },
     {
       "id": "claim-059",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "BSS138 level shifter channels add approximately 5pF each to the I2C bus capacitance budget which constrains level-shifted I2C topologies to fewer devices or shorter wires",
       "classification": "closed",
       "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
       "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-059.md",
       "created": "2026-04-14T09:01:31Z",
-      "current_phase": "create",
-      "completed_phases": []
+      "current_phase": "reflect",
+      "completed_phases": [
+        "create"
+      ]
     },
     {
       "id": "claim-060",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Running an I2C scanner sketch is the mandatory first debug step after wiring a multi-device bus because it catches address conflicts wiring errors and missing pull-ups before driver libraries mask the root cause",
       "classification": "closed",
       "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
       "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-060.md",
       "created": "2026-04-14T09:01:31Z",
-      "current_phase": "create",
-      "completed_phases": []
+      "current_phase": "reflect",
+      "completed_phases": [
+        "create"
+      ]
     },
     {
       "id": "claim-061",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "BNO055 ADR pin floats to 0x28 default and ties HIGH for 0x29 enabling two fusion IMUs on a single I2C bus",
       "classification": "closed",
       "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
       "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-061.md",
       "created": "2026-04-14T09:01:31Z",
-      "current_phase": "create",
-      "completed_phases": []
+      "current_phase": "reflect",
+      "completed_phases": [
+        "create"
+      ]
     },
     {
       "id": "enrich-062",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "oled-i2c-modules-include-onboard-pull-ups-and-external-pull-ups-should-only-be-added-for-bus-lengths-exceeding-30cm",
       "source_detail": "Add the I2C sink-current specification (3mA max at 5V) and the resulting minimum effective pull-up formula (5V / 3mA = 1.67K) as the hard numerical floor below which open-drain drivers cannot assert LOW against the pull-up current",
       "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
       "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-062.md",
       "created": "2026-04-14T09:01:31Z",
-      "current_phase": "enrich",
-      "completed_phases": []
+      "current_phase": "reflect",
+      "completed_phases": [
+        "create"
+      ]
     }
   ],
   "maintenance_conditions": {
