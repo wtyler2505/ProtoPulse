@@ -220,6 +220,8 @@
   },
   "active": "332237b28d338d3d",
   "lastOpenFiles": [
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md.tmp.6811.1776154314242",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md.tmp.6811.1776154281745",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md",
@@ -238,7 +240,6 @@
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-045.md.tmp.6811.1776154136178",
     "docs/superpowers/plans/2026-04-14-arscontexta-waves-completion.md.tmp.6811.1776153922006",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-044.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-044.md.tmp.6811.1776153668943",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-043.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-042.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-041.md",
@@ -254,7 +255,6 @@
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-031.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-030.md",
     "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-029.md",
-    "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-028.md",
-    "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-027.md"
+    "ops/queue/wiring-zs-x11h-to-arduino-mega-for-single-motor-control-028.md"
   ]
 }
