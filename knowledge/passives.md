@@ -86,7 +86,7 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 ### Part Identification Workflow
 - [[systematic-part-identification-workflow-for-unidentified-inventory-read-markings-then-cross-reference-then-measure]] — Three-step procedure: markings, distributor lookup, instrument measurement
 - [[salvaged-generic-components-have-no-datasheets-so-specs-must-be-determined-empirically]] — salvaged parts require empirical characterization (no datasheets)
-- [[axial-cylindrical-components-can-roll-off-a-workbench-and-must-be-secured-during-handling]] — physical bench safety for axial cylindrical parts
+- [[unmarked-small-ceramic-capacitors-are-a-practical-inventory-hazard-requiring-physical-separation-or-labeling]] — visually identical parts force physical separation workflow
 
 ### Shift Registers
 - [[74hc595-trades-3-gpio-pins-for-n-times-8-digital-outputs-via-serial-shift-and-parallel-latch]] — The canonical IO expansion: 3 pins → 8 outputs per chip, daisy-chainable to 80+

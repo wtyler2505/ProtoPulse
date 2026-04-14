@@ -44,6 +44,12 @@ Analog and digital input devices, debouncing strategies, matrix scanning, ADC ma
 - [[six-pole-switch-consumes-6-gpio-pins-but-priority-encoder-can-reduce-to-3-for-one-hot-state]] — Direct 6-pin vs 74HC148 priority encoder vs resistor ladder trade-off
 - [[mechanical-latching-switch-still-requires-software-debounce-because-contact-bounce-is-independent-of-latch-mechanism]] — Latch solves mutual exclusion but contacts still bounce 10-50ms
 - [[radio-button-hardware-switch-trades-fixed-mode-count-for-zero-state-management-versus-encoder-with-unlimited-software-modes]] — Hardware certainty vs software flexibility decision boundary
+- [[passive-mechanical-switches-draw-zero-quiescent-current-making-them-ideal-battery-wake-triggers]] — zero quiescent current makes mechanical switches ideal for battery wake
+
+### IR Remote (as Input)
+- [[nec-ir-button-codes-are-manufacturer-specific-making-code-first-debugging-impossible-without-reading-your-own-remote]] — NEC codes are remote-specific; dump your own remote first
+- [[dead-coin-cell-is-the-invisible-first-failure-mode-on-kit-ir-remotes]] — CR2025 failure is the #1 "remote doesn't work" false alarm
+- [[kit-ir-receiver-modules-from-different-manufacturers-are-functionally-identical-tsop-38khz-demodulators]] — cross-vendor IR receiver interchangeability
 
 ## Open Questions
 (populated by /extract)
