@@ -35,6 +35,7 @@ import {
   Package,
   ArrowRightLeft,
   BarChart3,
+  BookOpenText,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/project-context';
 
@@ -58,6 +59,7 @@ export const navItems: NavItem[] = [
   { icon: Zap, view: 'simulation', label: 'Simulation' },
   { icon: KanbanSquare, view: 'kanban', label: 'Tasks' },
   { icon: BookMarked, view: 'knowledge', label: 'Learn' },
+  { icon: BookOpenText, view: 'vault_browser', label: 'Vault' },
   { icon: Box, view: 'viewer_3d', label: '3D View' },
   { icon: Globe, view: 'community', label: 'Community' },
   { icon: ShoppingBag, view: 'ordering', label: 'Order PCB' },
@@ -101,6 +103,7 @@ export const tabDescriptions: Record<string, string> = {
   storage: 'Inventory tracking and storage location management',
   kanban: 'Track design tasks with a kanban board',
   knowledge: 'Electronics reference articles and learning resources',
+  vault_browser: 'Ars Contexta knowledge vault — browse atomic notes, topic maps, and linked knowledge',
   viewer_3d: '3D PCB board visualization and mechanical fit check',
   community: 'Browse and share community component library',
   ordering: 'Order PCBs from fabricators with DFM checks',
@@ -130,6 +133,7 @@ export const alwaysVisibleIds = new Set<ViewMode>([
   'design_patterns',
   'kanban',
   'knowledge',
+  'vault_browser',
   'community',
   'ordering',
   'simulation',

@@ -82,6 +82,15 @@ export interface ToolContext {
   confirmed?: boolean;
   /** Optional Google Workspace OAuth token or Service Account string */
   googleWorkspaceToken?: string;
+  /**
+   * Optional AbortSignal from the upstream request (SSE stream, HTTP request).
+   * Tools performing long-running I/O (network calls, model generation) should
+   * pass this through to `fetch({ signal })` or `ai.generate({ abortSignal })`
+   * so aborted requests don't waste quota or leave orphaned side-effects.
+   *
+   * Related: AI audit finding #191 (HIGH) — missing AbortController on AI tool path.
+   */
+  signal?: AbortSignal;
 }
 
 /**

@@ -91,6 +91,7 @@
 
 ## Change Log
 
+- **2026-04-14:** Refreshed `Next Up` — all 10 prior candidates were already DONE (verified Wave 106 / 107). Replaced the stale table with the 3 remaining `PARTIAL` P2 items (`BL-0126`, `BL-0150`, `BL-0473`); `BL-0524` remains `BLOCKED on BL-0486` and is excluded. Recounted Quick Stats directly from P0–P3 sections (508 rows total: 4 open, 504 done) and removed the outdated "BACKLOG COMPLETE" note.
 - **2026-03-13:** Wave 80 — marked 5 P0 security items DONE (BL-0636/0637/0638/0639/0642). Updated blockers, decisions, ADR requirements, and discovery spikes as resolved by Pure-Local Desktop App pivot (ADR 0007/0008). Firmware/debugger/platform items now unblocked.
 - **2026-03-13:** Added 15 missing backlog items from a repo-wide gap audit, covering authz/tenant-scoping gaps, RAG durability, async job execution, supplier realism, Kanban persistence, Circuit Code materialization, generative candidate adoption, and other cross-tool integration misses.
 - **2026-03-13:** Added durable preplanning artifacts for the two biggest near-term C5 programs: firmware runtime/debugger and collaboration foundation/RBAC/branching.
@@ -140,18 +141,13 @@
 
 ## Next Up (Proposed Top 10 Actionable Items)
 
+> **2026-04-14:** Only 3 unblocked open items remain in the entire backlog — all are `PARTIAL` P2 rows where some implementation exists but the end-to-end workflow is incomplete. `BL-0524` is excluded because it is `BLOCKED on BL-0486`. When these 3 land, the next planning cycle should seed new work from epics or the competitive-audit pipeline rather than from this table.
+
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0541` | In-app "What's new" changelog panel — show new features after updates. | S | `C2` | High |
-| 2 | `BL-0537` | ViewMode section grouping in sidebar — reduce visual noise for 26+ views. | S | `C2` | High |
-| 3 | `BL-0538` | Standard library auto-suggest during architecture design. | S | `C2` | Medium |
-| 4 | `BL-0543` | Breadboard wire editing — select, delete, move individual wires. | S | `C2` | High |
-| 5 | `BL-0540` | Alternate parts shown in Schematic BOM sidebar popover. | S | `C2` | Medium |
-| 6 | `BL-0548` | Circuit Code DSL: seed persistence to localStorage. | XS | `C1` | Low |
-| 7 | `BL-0539` | Snippet placement as atomic undo unit. | S | `C2` | Medium |
-| 8 | `BL-0250` | DRC rule presets by project type (Arduino, power, sensor). | S | `C2` | Medium |
-| 9 | `BL-0275` | `backdrop-blur-xl` GPU jank on low-end devices. | S | `C2` | Medium |
-| 10 | `BL-0312` | "Explain this panel" button everywhere. | S | `C2` | High |
+| 1 | `BL-0473` | **MPN normalization and dedup in BOM** (P2, `PARTIAL`) — finish normalizing manufacturer part numbers and collapsing duplicate rows so BOM/supplier/fab workflows stop double-counting the same part. Highest user trust impact of the three remaining items; unblocks cleaner manufacturing handoff. | M | `C3` | High |
+| 2 | `BL-0150` | **Inventory tracking tied to BOM consumption** (P2, `PARTIAL`) — close the loop so placing parts in a design decrements real inventory and flags shortfalls before export. Directly supports the "one tool, zero context switching" promise (Epic C) and the Inventory ↔ ProtoPulse shared-source plan. | M | `C4` | High |
+| 3 | `BL-0126` | **Shared unit/scale contract across sim + DRC engines** (P2, `PARTIAL`) — agree one canonical unit/scale model so simulation results and DRC verdicts stop disagreeing on the same net. Prevents silent numerical drift between engines; unblocks downstream simulation/DRC trust work. | M | `C4` | Medium |
 
 ## Complexity Radar (Highest-Complexity Open Items)
 
@@ -425,13 +421,13 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | Priority | Open | Done | Description |
 |----------|------|------|-------------|
-| P0 | 0 | 19 | All resolved (Waves 52-60, 80) |
-| P1 | 0 | 73 | All resolved (Waves 54-67) |
-| P2 | **0** | **278** | **100%** — Waves 61-149 |
-| P3 | **0** | **131** | **100%** — Waves 105-154 |
-| **Total** | **0** | **501** | **501 items tracked** |
+| P0 | 0 | 19 | All resolved (Waves 52-60, 80). |
+| P1 | 0 | 73 | All resolved (Waves 54-67). |
+| P2 | **4** | **279** | 3 `PARTIAL` (`BL-0126`, `BL-0150`, `BL-0473`) + 1 `BLOCKED` (`BL-0524` waiting on `BL-0486`). Waves 61-149. |
+| P3 | 0 | 133 | All resolved (Waves 105-154). |
+| **Total** | **4** | **504** | **508 items tracked** (counted directly from P0–P3 sections 2026-04-14). |
 
-*Snapshot updated: Wave 154 — BACKLOG COMPLETE (2026-03-22)*
+*Snapshot updated: 2026-04-14 — `Next Up` refresh. 3 remaining `PARTIAL` items + 1 `BLOCKED` item are the only non-DONE work in the backlog.*
 
 ---
 

@@ -7,7 +7,7 @@ import { toolRegistry, DESTRUCTIVE_TOOLS, type ToolResult, type ToolContext } fr
 import { buildVaultContext } from "./lib/vault-context";
 
 export type AIAction =
-  | { type: "switch_view"; view: "dashboard" | "architecture" | "schematic" | "breadboard" | "pcb" | "component_editor" | "procurement" | "validation" | "simulation" | "output" | "design_history" | "lifecycle" | "comments" | "calculators" | "design_patterns" | "storage" | "kanban" | "knowledge" | "viewer_3d" | "community" | "ordering" | "serial_monitor" | "circuit_code" | "generative_design" | "digital_twin" | "arduino" | "starter_circuits" | "audit_trail" | "labs" | "project_explorer" }
+  | { type: "switch_view"; view: "dashboard" | "architecture" | "schematic" | "breadboard" | "pcb" | "component_editor" | "procurement" | "validation" | "simulation" | "output" | "design_history" | "lifecycle" | "comments" | "calculators" | "design_patterns" | "storage" | "kanban" | "knowledge" | "viewer_3d" | "community" | "ordering" | "serial_monitor" | "circuit_code" | "generative_design" | "digital_twin" | "arduino" | "starter_circuits" | "audit_trail" | "labs" | "project_explorer" | "vault_browser" }
   | { type: "switch_schematic_sheet"; sheetId: string }
   | { type: "add_node"; nodeType: string; label: string; description?: string; positionX?: number; positionY?: number }
   | { type: "remove_node"; nodeLabel: string }
@@ -859,6 +859,7 @@ ProtoPulse has these views (use switch_view to navigate):
 
 **Learning & Community:**
 - **knowledge** — Electronics knowledge hub and reference articles
+- **vault_browser** — Ars Contexta knowledge vault browser with full-text search, topic maps (MOCs), and note linking
 - **design_patterns** — Reusable design pattern library and snippets
 - **community** — Community component library with ratings
 - **starter_circuits** — Beginner-friendly starter circuit templates
