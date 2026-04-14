@@ -83,19 +83,69 @@ export async function buildVaultContext(
   activeView: string,
   topK: number = 5,
 ): Promise<string> {
+  // Captured for telemetry at every exit path (early-return + error).
+  // Kept broad — a telemetry failure must never break AI responses.
+  const startTrimmed = message.trim().slice(0, 60);
+  let vaultSize = 0;
+  let topResults: Array<{ slug: string; score: number }> = [];
+  let contextOut = '';
+
   try {
     const query = buildQuery(message, activeView);
-    if (!query) return '';
+    if (!query) {
+      emitTelemetry(startTrimmed, activeView, vaultSize, topResults, contextOut);
+      return '';
+    }
 
     const index = await getVaultIndex();
+    vaultSize = index.size();
     const results = index.search(query, topK);
-    if (results.length === 0) return '';
+    topResults = results.slice(0, 3).map((r) => ({
+      slug: r.note.slug,
+      score: Number(r.score.toFixed(3)),
+    }));
+
+    if (results.length === 0) {
+      emitTelemetry(startTrimmed, activeView, vaultSize, topResults, contextOut);
+      return '';
+    }
 
     // Fuse's own `threshold: 0.4` config already filters weak matches at
     // search time. Any result that makes it through is worth surfacing.
-    return index.formatForPrompt(results);
+    contextOut = index.formatForPrompt(results);
+    emitTelemetry(startTrimmed, activeView, vaultSize, topResults, contextOut);
+    return contextOut;
   } catch {
     // Never let vault failures break AI requests — return no grounding instead.
+    emitTelemetry(startTrimmed, activeView, vaultSize, topResults, contextOut);
     return '';
+  }
+}
+
+/**
+ * Emit a structured log line AND record into the in-memory ring buffer.
+ * Wrapped in a defensive try/catch — telemetry must be fire-and-forget.
+ */
+function emitTelemetry(
+  query: string,
+  activeView: string,
+  vaultSize: number,
+  topResults: Array<{ slug: string; score: number }>,
+  contextOut: string,
+): void {
+  try {
+    const event: VaultTelemetryEvent = {
+      timestamp: new Date().toISOString(),
+      query,
+      activeView,
+      vaultSize,
+      topResults,
+      contextChars: contextOut.length,
+      empty: contextOut.length === 0,
+    };
+    logger.info('[vault-grounding]', { ...event });
+    recordEvent(event);
+  } catch {
+    // Swallow — telemetry must never bubble into the AI path.
   }
 }

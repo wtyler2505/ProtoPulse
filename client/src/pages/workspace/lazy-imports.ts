@@ -57,6 +57,7 @@ export const BomTemplatesPanel = lazy(() => import('@/components/views/BomTempla
 export const PersonalInventoryPanel = lazy(() => import('@/components/views/PersonalInventoryPanel'));
 export const PartAlternatesBrowserView = lazy(() => import('@/components/views/PartAlternatesBrowserView'));
 export const PartUsageBrowserView = lazy(() => import('@/components/views/PartUsageBrowserView'));
+export const VaultBrowserView = lazy(() => import('@/components/views/VaultBrowserView'));
 
 // ─── Prefetch queue ────────────────────────────────────────────────────────
 /**
@@ -100,6 +101,7 @@ const prefetchQueue: Array<() => Promise<unknown>> = [
   () => import('@/components/views/PersonalInventoryPanel'),
   () => import('@/components/views/PartAlternatesBrowserView'),
   () => import('@/components/views/PartUsageBrowserView'),
+  () => import('@/components/views/VaultBrowserView'),
 ];
 
 let prefetchStarted = false;

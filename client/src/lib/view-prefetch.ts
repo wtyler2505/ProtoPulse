@@ -166,6 +166,7 @@ export const VIEW_LOADERS: Partial<Record<ViewMode, () => Promise<unknown>>> = {
   audit_trail: () => import('@/components/views/AuditTrailView'),
   labs: () => import('@/components/panels/LabTemplatePanel'),
   comments: () => import('@/components/panels/CommentsPanel'),
+  vault_browser: () => import('@/components/views/VaultBrowserView'),
 };
 
 // ---------------------------------------------------------------------------
