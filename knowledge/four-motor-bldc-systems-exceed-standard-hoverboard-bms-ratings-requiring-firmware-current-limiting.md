@@ -22,21 +22,26 @@ When building a 4WD rover with four hoverboard hub motors (like OmniTrek), the t
 
 A standard hoverboard BMS is designed for a 2-motor system and typically trips at 30-40A total. Using its battery pack to drive 4 motors means the BMS will trip under peak load conditions (hill climbing, acceleration from stop, hitting obstacles), causing sudden power loss -- a dangerous condition for a rover carrying expensive electronics.
 
-The solutions form a hierarchy:
+The solutions form a hierarchy, from free-and-software-only to full-architecture-change:
 
-1. **Firmware current limiting** (cheapest, least hardware change): Program the MCU to monitor total system current and throttle PWM duty cycle before the BMS trip point. Requires current sensing on the battery bus.
-2. **BMS upgrade** (moderate): Replace the hoverboard BMS with a higher-rated unit (60A+ continuous) designed for the actual 4-motor load. Requires matching the battery cell configuration (10S for 36V).
-3. **Dual battery packs** (most headroom): Two hoverboard battery packs, each driving two motors through its own BMS. Doubles capacity and halves per-BMS current draw.
+1. **Staggered motor startup (free, timing-only)**: Offset each motor's start command by 100ms so inrush peaks do not stack. Eliminates trips on the launch transient without touching hardware or sensing. See [[staggered-motor-startup-by-100ms-prevents-combined-inrush-from-tripping-shared-bms-overcurrent-protection]]. Often combined with a per-motor ramp-up that spreads the individual inrush peak itself.
+2. **Firmware current limiting** (cheap, needs sensor): Program the MCU to monitor total system current and throttle PWM duty cycle before the BMS trip point. Requires current sensing on the battery bus (e.g., ACS712 or INA219). Addresses sustained-load trips, not just inrush.
+3. **BMS upgrade** (moderate): Replace the hoverboard BMS with a higher-rated unit (60A+ continuous) designed for the actual 4-motor load. Requires matching the battery cell configuration (10S for 36V).
+4. **Dual battery packs** (most headroom): Two hoverboard battery packs, each driving two motors through its own BMS. Doubles capacity and halves per-BMS current draw.
+
+The key insight is that most nuisance trips come from inrush during simultaneous start commands, not from sustained overload. Staggered startup alone resolves most cases without requiring current sensing hardware. Firmware current limiting becomes necessary only when sustained load (not just launch transients) approaches the BMS threshold, which usually means the pack is genuinely undersized for the drive profile and a hardware upgrade is the right long-term fix.
 
 This is a system-level constraint that emerges only when you scale beyond the original hoverboard's 2-motor design. The BOM and architecture tools should flag it when a user adds more than 2 BLDC motors to a 36V system with a single battery pack.
 
 ---
 
 Source: [[hoverboard-bldc-hub-motor-250w-36v-with-hall-sensors]]
+Enriched from: [[wiring-dual-zs-x11h-for-hoverboard-robot]]
 
 Relevant Notes:
 - [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]] -- this is the high-power tier (6-60V) where BMS sizing becomes critical
 - [[motor-shield-current-ratings-form-a-graduated-selection-ladder]] -- the 16A ZS-X11H is per-motor; system-level current is the sum
+- [[staggered-motor-startup-by-100ms-prevents-combined-inrush-from-tripping-shared-bms-overcurrent-protection]] -- the cheapest mitigation, applicable to 2-motor and 4-motor systems alike
 
 Topics:
 - [[actuators]]

@@ -198,6 +198,8 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "knowledge/100uf-capacitor-on-arduino-5v-input-absorbs-motor-switching-emi-that-causes-mcu-resets.md",
+    "knowledge/swapped-hall-cables-between-dual-controllers-cause-both-motors-to-vibrate-instead-of-just-one-misbehaving.md",
     "knowledge/speed-must-be-reduced-before-braking-at-high-voltage-because-back-emf-dissipation-in-mosfets-scales-with-rpm.md",
     "knowledge/asymmetric-braking-enables-tighter-turns-during-deceleration-by-braking-the-inner-wheel-while-coasting-the-outer.md",
     "knowledge/staggered-motor-startup-by-100ms-prevents-combined-inrush-from-tripping-shared-bms-overcurrent-protection.md",
@@ -231,8 +233,6 @@
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-043.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-042.md",
     "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-041.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-040.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-039.md",
-    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-038.md"
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-040.md"
   ]
 }

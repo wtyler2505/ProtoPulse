@@ -35,14 +35,25 @@ Buck 5V GND ─→ GND BUS BAR
 
 Every circuit returns directly to a single, heavy copper bus bar. Motor current flows from MC1 directly to the bus bar and back to the battery without passing through any other circuit's ground path. The bus bar itself has negligible resistance due to its massive cross-section.
 
-**ProtoPulse implication:** The power distribution schematic should enforce star ground topology and flag any daisy-chained ground returns. The DRC should check that all ground returns terminate at a common bus, not at each other.
+**Simpler-scale example — dual-motor rover:** The same topology applies at smaller scale. A two-motor hoverboard rover with one Arduino, two ZS-X11H controllers, and one battery needs exactly three ground wires to converge at one bus point (a small copper bus bar or terminal strip is enough):
+```
+Arduino GND    ────→ BUS POINT ←──── Battery (-)
+Left ZS-X11H   ────→ BUS POINT
+Right ZS-X11H  ────→ BUS POINT
+```
+Daisy-chain alternative (wrong): Left GND → Right GND → Arduino GND → Battery. Under 16A-per-motor load, this puts the Arduino's ground reference several hundred millivolts above the battery negative, which is enough to shift TTL logic thresholds on the ZS-X11H's control inputs — the exact failure mode described in [[bldc-controller-and-mcu-must-share-common-ground-or-control-signals-float]]. The star topology is not a large-build luxury; it is the correct topology any time more than two devices share a power system, whether that is four motor controllers on a rover or three devices on a desk robot.
+
+**ProtoPulse implication:** The power distribution schematic should enforce star ground topology and flag any daisy-chained ground returns. The DRC should check that all ground returns terminate at a common bus, not at each other. This rule applies at every scale — from a 2-device dual-motor build up to a full 4WD rover — not just at the 4-motor boundary.
 
 ---
+
+Enriched from: [[wiring-dual-zs-x11h-for-hoverboard-robot]]
 
 Relevant Notes:
 - [[individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system]] -- positive-side isolation complements ground-side star topology
 - [[parallel-power-rails-from-battery-are-more-reliable-than-cascaded-regulators]] -- parallel topology extends to ground returns, not just power
 - [[main-fuse-within-six-inches-of-battery-positive-is-nec-fire-prevention-requirement]] -- the upstream protection that feeds this distribution point
+- [[bldc-controller-and-mcu-must-share-common-ground-or-control-signals-float]] -- the failure mode this topology prevents at every scale
 
 Topics:
 - [[power-systems]]

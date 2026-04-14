@@ -34,14 +34,29 @@ RPM = 60 / (pulse_period_seconds * 90)
 
 **Why SC matters for ProtoPulse:** Closed-loop speed control -- where firmware adjusts PWM based on actual vs. desired RPM -- transforms the motor from an open-loop "send PWM and hope" system to a controlled actuator. The bench coach should guide users toward interrupt-based SC measurement whenever a ZS-X11H appears in the schematic, since [[pole-pair-count-is-determined-empirically-by-counting-hall-state-transitions-per-wheel-revolution]] provides the pole pair count needed for the RPM formula.
 
+**The dual-motor use case that makes SC feedback essential, not optional.** On a single-motor application, open-loop PWM often suffices — if the motor runs a little slow or fast, nothing cares. On a dual-motor tank-steered rover (see [[tank-steering-replaces-mechanical-steering-with-differential-wheel-speed-control]]), open-loop control fails at the first asymmetric load: one wheel on carpet and the other on hardwood, or one motor with slightly higher friction, or battery sag hitting one ZS-X11H a few millivolts harder than the other. The motors spin at different RPMs despite identical PWM commands. The robot veers to the slower side. The veer accumulates over distance and the robot cannot drive straight.
+
+SC-based PID speed matching solves this:
+```
+1. Count left SC pulses and right SC pulses independently
+2. Compute left RPM and right RPM from each count
+3. Compute error = left_rpm - right_rpm
+4. Apply small PWM correction to the slower motor (reduce the inverted value, since EL is active-low)
+5. Repeat every 50-100ms
+```
+
+The feedback loop closes the gap — slow motor gets a duty-cycle bump, fast motor stays level, measured RPMs converge. Without SC feedback this is impossible; the firmware has no way to know which motor is lagging. With SC on both motors and a modest PID (Kp=1, Ki=0.1, Kd=0 is often enough), the robot drives straight across mixed terrain without manual trim. This is the headline use case for closed-loop speed control on multi-motor rovers, and it justifies the interrupt pin cost per motor that single-motor systems might skip.
+
 ---
 
 Source: [[riorand-zs-x11h-bldc-controller-6-60v-16a-with-hall-sensor-input.md]]
+Enriched from: [[wiring-dual-zs-x11h-for-hoverboard-robot]]
 
 Relevant Notes:
 - [[pole-pair-count-is-determined-empirically-by-counting-hall-state-transitions-per-wheel-revolution]] -- the pole pair count this RPM formula depends on
 - [[hall-sensor-open-collector-outputs-need-pull-up-resistors-and-produce-gray-code-not-binary-position]] -- SC is a consolidated version of the underlying 6-state Gray code
 - [[reed-switch-on-rotating-shaft-enables-contactless-rpm-measurement-via-pulse-counting]] -- an alternative RPM measurement technique for motors without Hall feedback
+- [[tank-steering-replaces-mechanical-steering-with-differential-wheel-speed-control]] -- the control paradigm that makes dual-motor PID speed matching necessary rather than optional
 
 Topics:
 - [[actuators]]

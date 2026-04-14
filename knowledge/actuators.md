@@ -57,6 +57,12 @@ Motor control theory, driver IC comparison, PWM strategies, and output device se
 - [[tb6612-motor-supply-ceiling-of-13-5v-is-a-hard-selection-boundary-against-l298n-for-24v-and-36v-motor-systems]] — TB6612 is structurally eliminated above 13.5V regardless of other advantages
 - [[tb6612-standby-pin-adds-a-fifth-motor-state-below-brake-and-coast-with-sub-microamp-quiescent-current]] — STBY LOW enters sub-uA sleep, a battery-friendly fifth state L298N cannot replicate
 - [[tb6612-internal-flyback-diodes-eliminate-the-external-protection-burden-that-l298n-requires]] — MOSFET body diodes clamp back-EMF internally, matching L293D and unlike L298N
+- [[tank-steering-replaces-mechanical-steering-with-differential-wheel-speed-control]] — dual-motor differential-drive paradigm eliminates steering linkage entirely
+- [[opposite-facing-chassis-motors-require-software-or-phase-wire-inversion-to-make-forward-produce-same-direction-wheel-motion]] — mirrored motor mounting requires direction compensation; software inversion vs phase-wire swap trade-off
+- [[staggered-motor-startup-by-100ms-prevents-combined-inrush-from-tripping-shared-bms-overcurrent-protection]] — cheapest BMS-trip mitigation: timing-only, no current sensing required
+- [[asymmetric-braking-enables-tighter-turns-during-deceleration-by-braking-the-inner-wheel-while-coasting-the-outer]] — dual-motor-specific braking strategy that tightens turn radius during stops
+- [[speed-must-be-reduced-before-braking-at-high-voltage-because-back-emf-dissipation-in-mosfets-scales-with-rpm]] — ramp PWM to zero before engaging brake; at 36V/15A the full-speed brake transient can exceed MOSFET thermal envelope
+- [[swapped-hall-cables-between-dual-controllers-cause-both-motors-to-vibrate-instead-of-just-one-misbehaving]] — symmetric failure mode from asymmetric cause in multi-controller systems
 
 - [[arduino-tone-uses-timer2-which-disables-pwm-on-pins-3-and-11-creating-invisible-resource-conflicts]] — tone() commandeers Timer2 silently breaking PWM on pins 3/11
 - [[esp32-replaces-tone-with-ledcwritetone-and-the-api-is-not-a-drop-in-substitution]] — ESP32 tone API requires channel management absent from AVR
