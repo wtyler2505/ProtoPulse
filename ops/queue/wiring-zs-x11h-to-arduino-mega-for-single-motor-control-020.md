@@ -20,7 +20,8 @@ Semantic neighbor: [[dynamic-brake-must-be-pulsed-not-held-because-stationary-ph
 ---
 
 ## Create
-(to be filled by create phase)
+
+Created `knowledge/motor-speed-must-be-ramped-below-50-percent-before-activating-the-brake-because-high-speed-regenerative-braking-stresses-the-controller.md`. Frontmatter: type=claim, topics=[actuators, eda-fundamentals]. Body derives the back-EMF short-circuit current (~150A at full speed vs 75A at half speed through 0.2ohm phase winding), provides a brakeToStop() code pattern, and explains proxies for firmware without speed sensing. Wiki-linked to `[[dynamic-brake-must-be-pulsed-not-held...]]`, `[[stop-is-the-correct-emergency-kill...]]`, `[[bldc-direction-reversal-under-load...]]`, `[[zs-x11h-has-no-reverse-polarity...]]`. Ralph lead 2026-04-14.
 
 ## Connect
 (to be filled by connect phase)

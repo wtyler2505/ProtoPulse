@@ -199,6 +199,7 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "knowledge/powering-the-mcu-from-the-zs-x11h-5v-output-causes-resets-because-motor-switching-noise-on-the-shared-rail-corrupts-the-logic-supply.md",
     "knowledge/el-pin-floating-at-mcu-boot-defaults-the-motor-to-full-speed-so-explicit-high-initialization-is-mandatory-before-stop-is-enabled.md",
     "knowledge/logic-level-selector-switch-on-a-shield-lets-one-board-work-with-both-3v3-and-5v-arduinos-but-misconfigured-switch-produces-silent-data-corruption.md",
     "knowledge/bluetooth-shield-consumes-arduino-hardware-uart-rx-tx-pins-0-and-1-creating-a-conflict-with-usb-serial-upload-and-debug-print.md",
@@ -224,7 +225,6 @@
     "knowledge/ac-line-emi-filters-are-bidirectional-protecting-the-device-from-grid-noise-and-preventing-device-noise-from-entering-the-grid.md",
     "knowledge/ac-line-emi-filter-capacitors-degrade-silently-by-losing-capacitance-so-periodic-measurement-is-the-only-way-to-catch-a-worn-filter.md",
     "knowledge/metallized-polypropylene-mkp-is-the-standard-x2-dielectric-because-it-combines-self-healing-with-high-pulse-voltage-tolerance.md",
-    "knowledge/x2-capacitor-rated-275v-ac-targets-230v-mains-with-headroom-for-peak-voltage-and-transients-not-just-rms.md",
     "ops/sessions/96bc6388-1323-4a4e-985a-8d98da8ef882-042739.json",
     "client/src/hooks/useVaultSearch.ts",
     "ops/temp",
