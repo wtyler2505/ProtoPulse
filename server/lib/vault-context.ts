@@ -34,39 +34,43 @@ export async function getVaultIndex(root: string = DEFAULT_VAULT_ROOT): Promise<
   return singletonPromise;
 }
 
+// English stopwords that add noise to vault search without contributing signal.
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'of', 'to', 'in', 'on', 'at', 'for', 'with', 'by', 'from',
+  'is', 'are', 'was', 'were', 'be', 'been', 'being', 'do', 'does', 'did', 'done',
+  'have', 'has', 'had', 'having', 'can', 'could', 'should', 'would', 'will',
+  'may', 'might', 'must', 'shall', 'i', 'me', 'my', 'you', 'your', 'we', 'our',
+  'it', 'its', 'this', 'that', 'these', 'those', 'and', 'or', 'but', 'if',
+  'not', 'no', 'so', 'as', 'how', 'what', 'when', 'where', 'why', 'which',
+  'who', 'tell', 'please', 'help', 'show', 'give', 'add', 'use', 'using',
+  'need', 'want', 'safely', 'properly',
+]);
+
 /**
  * Extract a search query from the user message plus a view-specific hint.
  * Very short messages (< 6 chars after trimming) return empty.
+ * Strips stopwords and caps to 6 meaningful terms for clean Fuse scoring.
  */
 function buildQuery(message: string, activeView: string): string {
   const trimmed = message.trim();
   if (trimmed.length < 6) return '';
 
-  // Drop common AI-directive phrases that dilute search signal
-  const cleaned = trimmed
-    .replace(/^(please |can you |could you |how do i |how should i |what is |what are |tell me )/i, '')
-    .replace(/[?!.]+$/g, '')
-    .slice(0, 240);
+  const terms = trimmed
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 2 && !STOPWORDS.has(w))
+    .slice(0, 6);
 
-  // View hints help cases like "add this component" benefit from view context
-  const viewHint = viewToQueryHint(activeView);
-  return viewHint ? `${cleaned} ${viewHint}` : cleaned;
-}
+  if (terms.length === 0) return '';
 
-function viewToQueryHint(view: string): string {
-  // Cheap heuristic: add domain keywords for certain views
-  switch (view) {
-    case 'schematic': return 'schematic wiring pinout';
-    case 'pcb': return 'pcb layout trace';
-    case 'breadboard': return 'breadboard rail';
-    case 'simulation': return 'simulation spice';
-    case 'validation': return 'drc erc validation';
-    case 'arduino': case 'circuit_code': return 'arduino code firmware';
-    case 'serial_monitor': return 'uart serial debug';
-    case 'procurement': case 'ordering': return 'bom sourcing';
-    case 'knowledge': return 'electronics fundamentals';
-    default: return '';
-  }
+  // View hint intentionally NOT appended to the query string. Multi-term Fuse
+  // scoring degrades when extra tokens don't individually match many notes, so
+  // adding generic view keywords ("schematic wiring pinout") hurts recall on
+  // specific queries. View context is preserved via `activeView` parameter for
+  // future scoring-weight strategies if needed.
+  void activeView;
+  return terms.join(' ');
 }
 
 /**
@@ -86,12 +90,9 @@ export async function buildVaultContext(
     const results = index.search(query, topK);
     if (results.length === 0) return '';
 
-    // Require at least one decent match (Fuse inverted-score ≥ 0.3) to avoid
-    // injecting noise from weak matches.
-    const good = results.filter(r => r.score >= 0.3);
-    if (good.length === 0) return '';
-
-    return index.formatForPrompt(good);
+    // Fuse's own `threshold: 0.4` config already filters weak matches at
+    // search time. Any result that makes it through is worth surfacing.
+    return index.formatForPrompt(results);
   } catch {
     // Never let vault failures break AI requests — return no grounding instead.
     return '';

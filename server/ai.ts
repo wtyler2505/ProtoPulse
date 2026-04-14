@@ -4,6 +4,7 @@ import type { MessageData } from "@genkit-ai/ai/model";
 import { LRUClientCache } from "./lib/lru-cache";
 import { logger } from "./logger";
 import { toolRegistry, DESTRUCTIVE_TOOLS, type ToolResult, type ToolContext } from "./ai-tools";
+import { buildVaultContext } from "./lib/vault-context";
 
 export type AIAction =
   | { type: "switch_view"; view: "dashboard" | "architecture" | "schematic" | "breadboard" | "pcb" | "component_editor" | "procurement" | "validation" | "simulation" | "output" | "design_history" | "lifecycle" | "comments" | "calculators" | "design_patterns" | "storage" | "kanban" | "knowledge" | "viewer_3d" | "community" | "ordering" | "serial_monitor" | "circuit_code" | "generative_design" | "digital_twin" | "arduino" | "starter_circuits" | "audit_trail" | "labs" | "project_explorer" }
@@ -1077,11 +1078,14 @@ export async function processAIMessage(params: {
 
     const stateHash = hashAppState(appState, userId);
     const cachedPrompt = promptCache.get(stateHash);
-    const systemPrompt = cachedPrompt ?? (() => {
+    const basePrompt = cachedPrompt ?? (() => {
       const built = buildSystemPrompt(appState);
       promptCache.set(stateHash, built);
       return built;
     })();
+    // Ars Contexta vault grounding: per-message, not cached (depends on user query).
+    const vaultContext = await buildVaultContext(message, appState.activeView);
+    const systemPrompt = vaultContext ? `${basePrompt}\n\n${vaultContext}` : basePrompt;
     const recentHistory = fitMessagesToContext(
       appState.chatHistory,
       estimateTokens(systemPrompt),
@@ -1352,13 +1356,17 @@ export async function streamAIMessage(
     return;
   }
 
-  const systemPrompt = await (async () => {
+  const basePrompt = await (async () => {
     const stateHash = hashAppState(appState, userId);
     if (promptCache.get(stateHash) !== undefined) return promptCache.get(stateHash)!;
     const built = buildSystemPrompt(appState);
     promptCache.set(stateHash, built);
     return built;
   })();
+
+  // Ars Contexta vault grounding: per-message, not cached (depends on user query).
+  const vaultContext = await buildVaultContext(message, appState.activeView);
+  const systemPrompt = vaultContext ? `${basePrompt}\n\n${vaultContext}` : basePrompt;
 
   const recentHistory = fitMessagesToContext(
     appState.chatHistory,

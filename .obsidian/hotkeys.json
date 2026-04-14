@@ -1,0 +1,37 @@
+{
+  "slides:start": [
+    {
+      "modifiers": [
+        "Alt",
+        "Meta"
+      ],
+      "key": "P"
+    }
+  ],
+  "audio-recorder:start": [
+    {
+      "modifiers": [
+        "Alt",
+        "Meta"
+      ],
+      "key": "I"
+    }
+  ],
+  "audio-recorder:stop": [
+    {
+      "modifiers": [
+        "Alt"
+      ],
+      "key": "I"
+    }
+  ],
+  "templater-obsidian:insert-templater": [
+    {
+      "modifiers": [
+        "Alt",
+        "Meta"
+      ],
+      "key": "T"
+    }
+  ]
+}
