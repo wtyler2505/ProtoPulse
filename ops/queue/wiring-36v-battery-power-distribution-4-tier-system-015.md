@@ -23,5 +23,17 @@ Rationale: The existing note already mentions 470uF, but the enrichment places i
 Added complete capacitor-placement table to target insight `knowledge/zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory.md`. Table tabulates 7 specific placements across battery bus, ZS-X11H V+/V-, LM2596 input/output, 5V rail, ESP32 Vin, and per-IC VCC. Wiki-linked to `[[10uf-ceramic-on-esp32-vin...]]` and `[[every-digital-ic-requires-a-100nf...]]`. Places the 470uF in systemic context rather than as an isolated rule. Ralph lead 2026-04-14.
 
 ## Connect
+
+**Discovery Trace:**
+- Topic maps — target note has [[power-systems]] as topic; also should appear in an actuator/motor-driver MOC.
+- Target note inline links verified: 11 wikilinks including 10uF-ESP32-cap (claim-004), every-digital-IC-100nF, four-motor-BMS (enrich-014), zs-x11h component datasheet, driver-IC-selection, motor-shield-ladder.
+- Sibling candidates: claim-004 (10uF ESP32) cited here; bidirectional link exists. [[four-motor-bldc-systems...]] (enrich-014) cited here; bidirectional link exists.
+
+**Connections verified:** 11 inline prose links + 2+ topics. Articulation test PASS. Strong hub node spanning actuators and power distribution.
+
+**MOC updates:** Target note sits at the power/actuators boundary. [[power-systems]] MOC should cross-link to an actuators MOC (if exists) for this note. Flagged for future MOC polish.
+
+**Agent note:** This note answers "why does the bare ZS-X11H need external protection the datasheet doesn't call out?" — a gap-filling claim that covers a failure mode beginners discover the expensive way. High incoming potential as the "ZS-X11H reliability" canonical reference.
+
 ## Revisit
 ## Verify

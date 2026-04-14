@@ -24,7 +24,20 @@ Semantic neighbor: [[zs-x11h-el-speed-input-is-active-low-and-flips-polarity-bet
 Created `knowledge/el-pin-floating-at-mcu-boot-defaults-the-motor-to-full-speed-so-explicit-high-initialization-is-mandatory-before-stop-is-enabled.md`. Frontmatter: type=claim, source=wiring-zs-x11h-to-arduino-mega source doc, confidence=proven, topics=[actuators, microcontrollers], related_components=[riorand-zs-x11h, arduino-mega-2560]. Body covers the boot-window mechanism (50-200ms on Mega, 1-2s on ESP32), the active-LOW-means-full-speed consequence, correct `setup()` ordering with code block, and the 10K pull-up hardware mitigation. Wiki-linked to `[[zs-x11h-el-speed-input-is-active-low...]]`, `[[safe-bldc-startup-sequence...]]`, `[[bldc-stop-active-low-brake-active-high]]`, `[[esp32-six-flash-gpios-must-never-be-used]]`. Ralph lead 2026-04-14.
 
 ## Connect
-(to be filled by connect phase)
+
+**Discovery Trace:**
+- Topic maps — target note has [[actuators]] and [[microcontrollers]] as topics. [[actuators]] MOC has 85 entries; verify this note is included.
+- Target note inline links verified: [[zs-x11h-el-speed-input-is-active-low...]], [[safe-bldc-startup-sequence...]], [[bldc-stop-active-low-brake-active-high]], [[esp32-six-flash-gpios-must-never-be-used]]
+- Batch 2 sibling candidates: [[safe-bldc-startup-sequence...]] already cited. [[powering-the-mcu-from-the-zs-x11h-5v-output-causes-resets...]] (claim-018) — adjacent system concern (boot-time reliability) but different mechanism; not a strong article-test pass without forcing. Skip.
+
+**Connections verified:** 4 inline prose links + 2 topics. Articulation test PASS (active-low polarity grounds why floating=active; safe-startup grounds correct init sequence; stop/brake note grounds the paired signal; esp32-flash-gpios grounds the pin-selection constraint).
+
+**MOC updates:** Verify [[actuators]] MOC lists this note — if absent, flag for MOC polish wave.
+
+**Agent note:** Boot-window hazards are a whole class of BLDC init bugs. This note pairs tightly with safe-bldc-startup-sequence to form the "power-on behavior contract" for BLDC motor drivers. Together they answer "what pin states does the driver see in the first 200ms of boot?" — a question beginners rarely ask but always need the answer to.
+
+## Revisit
+(to be filled by revisit phase)
 
 ## Revisit
 (to be filled by revisit phase)

@@ -24,5 +24,16 @@ Semantic neighbor: nmc-vs-lifepo4 covers chemistry tradeoffs between two lithium
 Insight exists at `knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requires-external-lvd-because-no-integrated-bms-exists.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
 
 ## Connect
+
+**Discovery Trace:**
+- Topic map [[power-systems]] — note listed at line 45 under "Batteries + BMS" with phrase "lead-acid chemistry has no native BMS; LVD is mandatory"
+- Inline body links verified: [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors]], [[lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary]], [[nmc-vs-lifepo4-is-a-tradeoff-between-energy-density-and-cycle-life-safety]]
+
+**Connections verified:** 3 inline prose links + 2 topics. Articulation test PASS (BMS-discharge-port grounds WHY external LVD matters — the absent BMS would otherwise fill this role; LVD-hysteresis grounds the implementation; nmc-vs-lifepo4 grounds the chemistry trade-off that makes lead-acid a considered alternative).
+
+**MOC updates:** [[power-systems]] entry verified — no change.
+
+**Agent note:** Lead-acid vs lithium is often treated as a cost/weight comparison. This note adds the protection-architecture dimension: lithium packs ship with integrated BMS, lead-acid doesn't. That's a real design burden that flips the "lead-acid is simpler" intuition on its head.
+
 ## Revisit
 ## Verify

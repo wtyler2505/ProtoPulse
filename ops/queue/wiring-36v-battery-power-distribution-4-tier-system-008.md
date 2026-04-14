@@ -26,5 +26,17 @@ Semantic neighbor: nmc-vs-lifepo4 covers the decision at the chemistry level; th
 Insight exists at `knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
 
 ## Connect
+
+**Discovery Trace:**
+- Topic map [[power-systems]] — note not yet listed. Candidate addition.
+- Inline body links verified: [[130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin]], [[counterfeit-lm2596-chips-are-common-on-cheap-modules-and-fail-under-heavy-load]], [[nmc-vs-lifepo4-is-a-tradeoff-between-energy-density-and-cycle-life-safety]]
+- Sibling candidates evaluated: [[lead-acid-36v-pack...]] — sister claim about alternative chemistry; not required inline because nmc-vs-lifepo4 already covers the decision layer.
+
+**Connections verified:** 3 inline prose links + 2 topics. Articulation test PASS (voltage-divider grounds the ADC-compatibility verification; counterfeit-lm2596 grounds the buck-converter verification; nmc-vs-lifepo4 grounds the chemistry swap reasoning).
+
+**MOC updates:** [[power-systems]] gap — this specific LiFePO4 12S voltage note is not explicitly cataloged under "Batteries + BMS" although nmc-vs-lifepo4 is. Flagged as potential MOC addition during a later curation pass — body prose already chains into the MOC via nmc-vs-lifepo4.
+
+**Agent note:** This is an OPEN claim (see frontmatter). The voltage compatibility verification remains a live TODO against specific downstream datasheets (LM2596 40V, ZS-X11H 60V). Future revisit pass should track whether these verifications were completed.
+
 ## Revisit
 ## Verify

@@ -24,7 +24,17 @@ Semantic neighbor: salvaged-bms-has-unknown-thresholds addresses verification of
 Insight exists at `knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
 
 ## Connect
-(to be filled by connect phase)
+
+**Discovery Trace:**
+- Topic map [[power-systems]] — note listed at line 43 under "Batteries + BMS" with phrase "single-path BMS output means any trip cuts logic supply"
+- Inline body links verified: [[persistent-state-must-tolerate-power-loss-at-any-instruction]], [[salvaged-bms-has-unknown-thresholds-and-must-be-verified-before-trusting-with-project-safety]], [[four-motor-bldc-systems-exceed-standard-hoverboard-bms-ratings-requiring-firmware-current-limiting]], [[parallel-power-rails-from-battery-are-more-reliable-than-cascaded-regulators]]
+- Sibling candidates evaluated: [[estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal]] — bidirectional link already exists (estop note explicitly cites this claim as the reason aux signaling is needed). No edit required.
+
+**Connections verified:** 4 inline prose links + 2 topic wikilinks. Articulation test PASS.
+
+**MOC updates:** [[power-systems]] entry verified — no change.
+
+**Agent note:** This claim acts as a hub — it grounds the persistent-state claim and the estop-aux-contact claim by establishing that graceful shutdown is impossible under the single-path BMS architecture. Future synthesis opportunity: a claim about "battery-hardware-imposed firmware design constraints" that combines this note with persistent-state and estop-aux.
 
 ## Revisit
 (to be filled by revisit phase)

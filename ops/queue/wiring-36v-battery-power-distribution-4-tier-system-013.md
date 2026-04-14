@@ -23,5 +23,17 @@ Rationale: Numbers turn abstract ranges into actionable calibration targets. A f
 Added ADC-reading table to target insight `knowledge/10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect.md` under new "Firmware monitoring" subsection. Table shows pack voltage → divider ADC pin voltage → ADC count (12-bit) for full/nominal/cutoff states, linked to `[[130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin]]` and `[[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc]]`. Ralph lead 2026-04-14.
 
 ## Connect
+
+**Discovery Trace:**
+- Topic map [[power-systems]] — note listed at line 39 under "Batteries + BMS" with phrase "36V nominal is only a moment on the discharge curve; full range is 30-42V"
+- Target note inline links verified (includes 6 siblings): [[130k-to-10k-voltage-divider...]], [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]], [[esp32-adc-is-nonlinear-above-2v5...]], [[four-motor-bldc-systems...]]
+- Sibling candidates: [[lifepo4-12s-pack-nominal-38v4...]] (claim-008) — complementary alternative chemistry note. Reverse link exists via nmc-vs-lifepo4 chain; not urgent to add direct link.
+
+**Connections verified:** 4+ inline prose links + 2 topics, plus incoming links from voltage-divider (claim-001), linear-approximation (claim-009), LVD-hysteresis (claim-005). Articulation test PASS.
+
+**MOC updates:** [[power-systems]] entry verified — no change.
+
+**Agent note:** This note is a hub in the "10S Li-Ion design envelope" cluster. Four other notes in this batch cite it. Incoming-link dominance makes it an anchor for battery-related reasoning.
+
 ## Revisit
 ## Verify

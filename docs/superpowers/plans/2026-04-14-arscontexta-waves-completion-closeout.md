@@ -83,14 +83,24 @@ User asks AI in chat
 ## Tests + Quality Gates
 
 - **31 vault-specific tests pass** (17 vault-search + 8 vault-context + 6 knowledge-vault tool)
+  - Post-optimization runtime: **6.5s total** (was 20s+ before removing `body` from Fuse index — performance fix applied 2026-04-14 when vault scale hit 528 notes and the timeout test began failing)
 - **Full TypeScript check (`npm run check`): exit 0, clean**
 - **Full vitest suite: 29813/29816 pass** — 3 pre-existing failures in `shared/__tests__/exact-part-resolver.test.ts` caused by verified-boards pack expansion (rpi-pico, sparkfun-thing-plus, adafruit-feather added 4 days ago) while test expectations last updated 8 days ago. **Outside vault-integration scope** — flagged for Tyler's parts-consolidation branch review.
 
-## Known Issues Flagged
+## Vault Health Final (ops/health/2026-04-14-report-2.md)
 
-- **qmd MCP vector search non-functional** — all extraction subagents in E6, F1, F2, H fell back to keyword grep Tier-3. Works, but slower and less precise. Fix would require resolving `'qmd' is not defined` in the MCP server + running `qmd update && qmd embed` to reindex (57/480 files indexed as of F1 report — severely stale). Tracked as maintenance task for future session.
+- **Schema Compliance: PASS** — 528/528 valid frontmatter
+- **Orphan Detection: PASS** — 0 orphans; every atomic note has at least one incoming MOC link (after teammate adoption)
+- **Link Health: FAIL by scanner, but mostly intentional** — 54 "dangling" wiki-link targets fall into 4 patterns:
+  - Pattern A/B/C (41 targets): `Source: [[docs/parts/card-name]]` provenance refs across 150 atomic notes. These point to real files in `docs/parts/` but the health scanner resolves only against `knowledge/*.md`. **Intentional metadata, not broken navigation** — stripping the wiki-link brackets would lose Obsidian navigation to source cards. Left as-is.
+  - Pattern D (13 targets): mix of real bugs + prose false-positives. **Fixed:** 9 malformed `[[slug.md]]` links (`.md` inside brackets broke resolution), 2 `[[power]]` refs that should have been `[[power-systems]]`. **Remaining:** ~11 prose cases like `[[link]]`/`[[wiki-links]]` inside methodology docs — benign, not references to actual notes.
+- **Maintenance signal:** 12 pending observations in `ops/observations/` (threshold 10) — suggests `/rethink` maintenance pass in a future session.
+
+## Known Issues Flagged (and follow-up actions)
+
+- **qmd vector search coverage — FIXED 2026-04-14**: ran `qmd update protopulse-vault` to reindex vault. Result: **528/528 documents indexed** (was 57/528 — 471 new + 46 updated + 11 unchanged). Future extraction waves now have full semantic dedup coverage via bash `qmd` CLI. Separate from this, the MCP server's `'qmd' is not defined` symbol-resolution bug still needs debugging to re-enable MCP-based vault search from Claude Code tools (bash qmd CLI works standalone; MCP layer is the remaining gap).
 - **Ralph skill subagent-spawning in non-Task harness** — the `/ralph` skill assumes a Task-class subagent spawner. When ralph ran inline in this harness, it completed work but documented the architectural deviation. Future ralph invocations will continue to run inline until skill adapts.
-- **Exact-part-resolver test drift** (noted above).
+- **Exact-part-resolver test drift** — **FIXED 2026-04-14**. Three tests were failing because the verified-boards pack expanded 4 days ago (added rpi-pico, sparkfun-thing-plus, adafruit-feather, teensy-40, stm32-nucleo-64) while `shared/__tests__/exact-part-resolver.test.ts` expectations hadn't been updated. Fixed by: (1) splitting the "ESP32 query" test into two — a specific-board query (`NodeMCU ESP32-S`) that returns `verified-match`, and a generic query (`ESP32`) that now correctly returns `ambiguous-match` because two verified boards share "ESP32" in title/aliases; (2) replacing the "Arduino Uno" ambiguity test with two custom provisional driver parts so the verified-tier selection doesn't pre-empt ambiguity; (3) replacing `Raspberry Pi Pico W` with `Unobtanium Flux Capacitor 2.3GHz XR-9000` for the "completely unknown" test (Pico W now fuzzy-matches the verified rpi-pico alias). Test file now 10/10 passes instead of 6/9.
 
 ### Rule deviation: MOC polish ran as 3 background `Agent` calls instead of `/agent-teams`
 

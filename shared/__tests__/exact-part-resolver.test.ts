@@ -47,12 +47,25 @@ describe('resolveExactPartRequest', () => {
     expect(result.topMatch?.part.id).toBeLessThan(0);
   });
 
-  it('returns verified-match for ESP32 queries', () => {
-    const result = resolveExactPartRequest('ESP32', []);
+  it('returns verified-match for specific ESP32 board query', () => {
+    // The verified-boards pack now includes both NodeMCU ESP32-S and
+    // SparkFun Thing Plus ESP32 WROOM, so a bare "ESP32" query returns
+    // ambiguous-match. Specific board-name queries resolve cleanly.
+    const result = resolveExactPartRequest('NodeMCU ESP32-S', []);
 
     expect(result.kind).toBe('verified-match');
     expect(result.topMatch?.title).toBe('NodeMCU ESP32-S');
     expect(result.topMatch?.status).toBe('verified');
+  });
+
+  it('surfaces ambiguity for generic "ESP32" query matching multiple verified boards', () => {
+    // Both NodeMCU ESP32-S and SparkFun Thing Plus ESP32 WROOM match "ESP32".
+    // This documents the expected multi-match behavior after the 2026-04-10
+    // verified-boards pack expansion.
+    const result = resolveExactPartRequest('ESP32', []);
+
+    expect(result.kind).toBe('ambiguous-match');
+    expect(result.matches.length).toBeGreaterThanOrEqual(2);
   });
 
   it('returns verified-match for RioRand queries', () => {
@@ -109,34 +122,39 @@ describe('resolveExactPartRequest', () => {
     expect(result.message).toContain('candidate exact part');
   });
 
-  it('surfaces ambiguity when multiple strong matches are close', () => {
-    const unoR3 = createPart(31, {
-      aliases: ['arduino uno rev3'],
-      manufacturer: 'Arduino',
-      partFamily: 'board-module',
-      title: 'Arduino Uno R3',
-      verificationStatus: 'verified',
+  it('surfaces ambiguity when multiple strong provisional matches are close', () => {
+    // Use non-verified-pack parts so the verified tier doesn't pre-empt the
+    // ambiguity test. Two custom provisional drivers with near-identical names.
+    const customV2 = createPart(31, {
+      aliases: ['custom driver v2'],
+      manufacturer: 'Custom',
+      partFamily: 'driver',
+      title: 'Custom Motor Driver V2',
+      verificationStatus: 'candidate',
     });
-    const unoWifi = createPart(32, {
-      aliases: ['arduino uno wifi rev2'],
-      manufacturer: 'Arduino',
-      partFamily: 'board-module',
-      title: 'Arduino Uno WiFi Rev2',
-      verificationStatus: 'verified',
+    const customV3 = createPart(32, {
+      aliases: ['custom driver v3'],
+      manufacturer: 'Custom',
+      partFamily: 'driver',
+      title: 'Custom Motor Driver V3',
+      verificationStatus: 'candidate',
     });
 
-    const result = resolveExactPartRequest('Arduino Uno', [unoR3, unoWifi]);
+    const result = resolveExactPartRequest('Custom Motor Driver', [customV2, customV3]);
 
-    // Both Uno variants are close in score. The verified Mega board pack
-    // also partially matches "Arduino" but should score lower than exact Uno matches.
+    // Two provisional parts with near-identical titles should trigger the
+    // ambiguity path rather than silently picking one.
     expect(result.kind).toBe('ambiguous-match');
     expect(result.matches.length).toBeGreaterThanOrEqual(2);
     expect(result.message).toContain('Multiple exact parts');
   });
 
   it('returns needs-draft for completely unknown parts', () => {
-    // Query for something not in the verified board pack and not in project parts
-    const result = resolveExactPartRequest('Raspberry Pi Pico W', []);
+    // Query for something not in the verified board pack and not in project
+    // parts. Must avoid fuzzy matches against the expanded pack (which now
+    // includes Raspberry Pi Pico, SparkFun Thing Plus, Teensy 4.0, STM32
+    // Nucleo-64, Adafruit Feather) by using a made-up part name.
+    const result = resolveExactPartRequest('Unobtanium Flux Capacitor 2.3GHz XR-9000', []);
 
     expect(result.kind).toBe('needs-draft');
     expect(result.topMatch).toBeNull();

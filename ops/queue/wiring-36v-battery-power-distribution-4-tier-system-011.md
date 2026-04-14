@@ -29,5 +29,17 @@ Enrichment already present in target insight `knowledge/star-ground-at-distribut
 The 36V source doc lines 365-378 cover the same material. The insight was authored with the anti-pattern already included, so no additional content is needed. Phase reconciled by ralph lead 2026-04-14.
 
 ## Connect
+
+**Discovery Trace:**
+- Topic map [[power-systems]] — note listed at line 71 under "Power distribution" with phrase "all grounds return to single bus bar"
+- Target note inline links: [[bldc-controller-and-mcu-must-share-common-ground...]], [[individual-circuit-fusing-at-distribution-board...]], [[main-fuse-within-six-inches...]], [[parallel-power-rails-from-battery...]]
+- Sibling candidates evaluated: [[power-budget-hierarchy...]] (enrich-016) already links FROM power-budget → star-ground. Reverse link from star-ground → power-budget is not strictly needed since the hierarchy implication flows one direction (hierarchy imposes wire-ampacity; star-ground topology is orthogonal).
+
+**Connections verified:** 4+ inline prose links + 2 topics. Articulation test PASS. Note is already a well-connected hub in the grounding/distribution cluster.
+
+**MOC updates:** [[power-systems]] entry verified — no change.
+
+**Agent note:** Star-ground is often taught as "one of many valid topologies." This note takes a stronger position: star is mandatory for multi-current-rail systems, because daisy-chain voltage drops corrupt ground references. The enrichment adds the arithmetic that makes the stronger position defensible.
+
 ## Revisit
 ## Verify

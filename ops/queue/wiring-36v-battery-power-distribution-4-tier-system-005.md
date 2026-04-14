@@ -24,5 +24,17 @@ Semantic neighbor: none directly -- the pattern is general threshold-control eng
 Insight exists at `knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md`. Phase reconciled by ralph lead 2026-04-14 — insight was authored out-of-band before queue was advanced.
 
 ## Connect
+
+**Discovery Trace:**
+- Topic map [[power-systems]] — note listed at line 46 under "Batteries + BMS" with phrase "hysteresis window prevents chattering at the disconnect threshold"
+- Inline body links verified: [[10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect]], [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors]]
+- Sibling candidates evaluated: [[lead-acid-36v-pack...]] — reverse link EXISTS (lead-acid note links here as the hysteresis mechanism required by its LVD). Bidirectional link already complete.
+
+**Connections verified:** 2 inline prose links + 2 topics. Articulation test PASS. Note is a narrower connection graph because hysteresis is a general threshold-control pattern applied to a specific domain (LVD).
+
+**MOC updates:** [[power-systems]] entry verified — no change.
+
+**Agent note:** Hysteresis is a general engineering pattern (Schmitt triggers, thermostats, hydraulic cutoffs) that appears narrowly here. Worth watching for a future synthesis claim "threshold-control systems need hysteresis windows to prevent oscillation" that would pull in examples from non-battery domains.
+
 ## Revisit
 ## Verify

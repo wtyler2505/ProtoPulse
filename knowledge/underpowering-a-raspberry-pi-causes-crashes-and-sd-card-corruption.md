@@ -5,7 +5,7 @@ source: "docs/parts/raspberry-pi-3b-plus-is-a-quad-core-sbc-with-wifi-bt-etherne
 confidence: proven
 topics:
   - "[[microcontrollers]]"
-  - "[[power]]"
+  - "[[power-systems]]"
 related_components:
   - "raspberry-pi-3b-plus"
 ---
@@ -42,4 +42,4 @@ Relevant Notes:
 
 Topics:
 - [[microcontrollers]]
-- [[power]]
+- [[power-systems]]

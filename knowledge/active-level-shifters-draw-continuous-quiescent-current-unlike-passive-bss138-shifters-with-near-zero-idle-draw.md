@@ -5,7 +5,7 @@ source: "docs/parts/txs0108e-8-channel-bidirectional-level-shifter-auto-directio
 confidence: proven
 topics:
   - "[[shields]]"
-  - "[[power]]"
+  - "[[power-systems]]"
   - "[[eda-fundamentals]]"
 related_components:
   - "txs0108e-level-shifter"
@@ -46,5 +46,5 @@ Relevant Notes:
 
 Topics:
 - [[shields]]
-- [[power]]
+- [[power-systems]]
 - [[eda-fundamentals]]
