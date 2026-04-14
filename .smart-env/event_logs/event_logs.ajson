@@ -48,3 +48,8 @@
 "event_logs:sources:imported": {"key":"sources:imported","ct":61906,"first_at":1776152913875,"last_at":1776153051487,"class_name":"EventLog"},
 "event_logs:sources:import_progress": {"key":"sources:import_progress","ct":618,"first_at":1776152919075,"last_at":1776153051434,"class_name":"EventLog","event_sources":{"process_source_import_queue":618}},
 "event_logs:sources:created": {"key":"sources:created","ct":9,"first_at":1776152971926,"last_at":1776153051747,"class_name":"EventLog","event_sources":{"obsidian:vault.create":9}},
+"event_logs:sources:imported": {"key":"sources:imported","ct":64506,"first_at":1776152913875,"last_at":1776153060999,"class_name":"EventLog"},
+"event_logs:sources:import_progress": {"key":"sources:import_progress","ct":644,"first_at":1776152919075,"last_at":1776153060956,"class_name":"EventLog","event_sources":{"process_source_import_queue":644}},
+"event_logs:sources:created": {"key":"sources:created","ct":10,"first_at":1776152971926,"last_at":1776153061459,"class_name":"EventLog","event_sources":{"obsidian:vault.create":10}},
+"event_logs:sources:imported": {"key":"sources:imported","ct":64706,"first_at":1776152913875,"last_at":1776153064214,"class_name":"EventLog"},
+"event_logs:sources:import_progress": {"key":"sources:import_progress","ct":646,"first_at":1776152919075,"last_at":1776153064190,"class_name":"EventLog","event_sources":{"process_source_import_queue":646}},

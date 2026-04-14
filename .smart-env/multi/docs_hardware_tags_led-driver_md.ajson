@@ -1,0 +1,2 @@
+
+"smart_sources:docs/hardware/tags/led-driver.md": {"path":"docs/hardware/tags/led-driver.md","last_embed":{"hash":null},"embeddings":{},"last_read":{"hash":"xzr8s0","at":1776152955266},"class_name":"SmartSource","last_import":{"mtime":1760237808664,"size":134,"at":1776152955362,"hash":"xzr8s0"},"blocks":{"#Tag: led-driver":[1,4],"#Tag: led-driver#{1}":[3,4]},"outlinks":[{"title":"MAX7219 LED Driver Module (INV-MAX7219--MGN1IMA4)","target":"../items/INV-MAX7219--MGN1IMA4_max7219-led-driver-module.md","line":3}],"task_lines":[],"tasks":{},"codeblock_ranges":[]},

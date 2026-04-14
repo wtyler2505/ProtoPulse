@@ -1,0 +1,2 @@
+
+"smart_sources:docs/hardware/tags/pir.md": {"path":"docs/hardware/tags/pir.md","last_embed":{"hash":null},"embeddings":{},"last_read":{"hash":"a34l1g","at":1776152955266},"class_name":"SmartSource","last_import":{"mtime":1760237808674,"size":129,"at":1776152955363,"hash":"a34l1g"},"blocks":{"#Tag: pir":[1,4],"#Tag: pir#{1}":[3,4]},"outlinks":[{"title":"HC-SR501 PIR Motion Sensor (INV-HC-SR501-MGN1IHFT)","target":"../items/INV-HC-SR501-MGN1IHFT_hc-sr501-pir-motion-sensor.md","line":3}],"task_lines":[],"tasks":{},"codeblock_ranges":[]},

@@ -1,0 +1,2 @@
+
+"smart_sources:docs/hardware/tags/gyroscope.md": {"path":"docs/hardware/tags/gyroscope.md","last_embed":{"hash":null},"embeddings":{},"last_read":{"hash":"kvfmj8","at":1776152954198},"class_name":"SmartSource","last_import":{"mtime":1760237808659,"size":129,"at":1776152954257,"hash":"kvfmj8"},"blocks":{"#Tag: gyroscope":[1,4],"#Tag: gyroscope#{1}":[3,4]},"outlinks":[{"title":"GY-521 MPU6050 6DOF IMU (INV-GY-521-M-MGN2G8NR)","target":"../items/INV-GY-521-M-MGN2G8NR_gy-521-mpu6050-6dof-imu.md","line":3}],"task_lines":[],"tasks":{},"codeblock_ranges":[]},

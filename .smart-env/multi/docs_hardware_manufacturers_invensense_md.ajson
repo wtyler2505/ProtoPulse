@@ -1,0 +1,2 @@
+
+"smart_sources:docs/hardware/manufacturers/invensense.md": {"path":"docs/hardware/manufacturers/invensense.md","last_embed":{"hash":null},"embeddings":{},"last_read":{"hash":"sg30ea","at":1776152954198},"class_name":"SmartSource","last_import":{"mtime":1760237808700,"size":126,"at":1776152954254,"hash":"sg30ea"},"blocks":{"#Manufacturer: Invensense":[1,4],"#Manufacturer: Invensense#{1}":[3,4]},"outlinks":[{"title":"MPU6050 6DOF IMU (INV-MPU6050-010)","target":"../items/INV-MPU6050-010_mpu6050-6dof-imu.md","line":3}],"task_lines":[],"tasks":{},"codeblock_ranges":[]},

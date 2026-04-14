@@ -1,0 +1,2 @@
+
+"smart_sources:docs/hardware/tags/devkit.md": {"path":"docs/hardware/tags/devkit.md","last_embed":{"hash":null},"embeddings":{},"last_read":{"hash":"iqyq7l","at":1776152954198},"class_name":"SmartSource","last_import":{"mtime":1760237808653,"size":124,"at":1776152954256,"hash":"iqyq7l"},"blocks":{"#Tag: devkit":[1,4],"#Tag: devkit#{1}":[3,4]},"outlinks":[{"title":"NodeMCU Amica (ESP8266) (INV-NODEMCU--MGN3S3MD)","target":"../items/INV-NODEMCU--MGN3S3MD_nodemcu-amica-esp8266.md","line":3}],"task_lines":[],"tasks":{},"codeblock_ranges":[]},
