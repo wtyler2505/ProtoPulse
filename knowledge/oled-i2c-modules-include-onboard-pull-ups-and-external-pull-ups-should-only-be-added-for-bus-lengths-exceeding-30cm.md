@@ -22,6 +22,8 @@ Most I2C OLED breakout modules (SH1106, SSD1306) include onboard pull-up resisto
 - Only one device on the bus has no onboard pull-ups
 - The I2C bus operates at 400kHz and signal integrity is marginal
 
+**Level shifters add to the parallel-resistance math:** a BSS138-based shifter (e.g., HW-221) includes 10K pull-ups on each channel on BOTH the LV and HV sides — that is the mechanism by which the shifter works, not an optional feature ([[bss138-body-diode-makes-level-shifting-bidirectional-without-direction-control]]). When such a shifter bridges to a bus full of modules with their own onboard pull-ups, the shifter's 10K contributes another parallel resistor on each side. Two sensor modules (10K each) plus an HW-221 channel produces ~3.3K effective pull-up on the bus side facing the sensors — below the comfortable range but still workable. Four modules plus the shifter drops the effective pull-up below 2K and can push open-drain drivers out of spec. The fix is the same as for multi-module buses without a shifter: desolder onboard pull-ups on all but one or two devices, or desolder the shifter's side-specific pull-ups if the bus already has adequate external ones.
+
 **When to remove onboard pull-ups:**
 - More than 3-4 I2C devices with onboard pull-ups share the bus
 - Desolder or cut the pull-up resistors on all but one module
@@ -34,6 +36,8 @@ Source: [[sh1106-1p3-inch-oled-128x64-display-module-runs-on-3v3-or-5v-via-i2c-o
 Relevant Notes:
 - [[esp32-i2c-is-software-implemented-and-remappable-to-any-gpio-pair]] — ESP32 I2C is software-based, so pull-up sizing affects it differently than hardware I2C
 - [[i2c-devices-on-esp8266-boot-pins-can-prevent-boot-silently]] — another I2C gotcha category
+- [[bss138-body-diode-makes-level-shifting-bidirectional-without-direction-control]] — level shifters contribute additional pull-ups to the parallel-resistance math
+- [[bss138-switching-speed-caps-at-400khz-making-it-unsuitable-for-fast-spi-and-high-speed-push-pull-signals]] — the pull-up RC behavior that makes this sizing matter
 
 Topics:
 - [[displays]]
