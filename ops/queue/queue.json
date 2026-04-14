@@ -734,6 +734,100 @@
       "created": "2026-04-14T08:13:01Z",
       "current_phase": "enrich",
       "completed_phases": []
+    },
+    {
+      "id": "extract-wiring-i2c-multi-device",
+      "type": "extract",
+      "status": "done",
+      "source": "docs/parts/wiring-i2c-multi-device-bus-compass-imu-current-sensor.md",
+      "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
+      "created": "2026-04-14T09:01:31Z",
+      "completed": "2026-04-14T09:01:31Z",
+      "next_claim_start": 63
+    },
+    {
+      "id": "claim-056",
+      "type": "claim",
+      "status": "pending",
+      "target": "BNO055 built-in magnetometer eliminates the need for a dedicated compass module on the same I2C bus",
+      "classification": "closed",
+      "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
+      "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-056.md",
+      "created": "2026-04-14T09:01:31Z",
+      "current_phase": "create",
+      "completed_phases": []
+    },
+    {
+      "id": "claim-057",
+      "type": "claim",
+      "status": "pending",
+      "target": "INA219 A0/A1 address pins expose 16 configurable addresses letting one I2C bus host up to 16 current sensors for per-rail power monitoring",
+      "classification": "closed",
+      "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
+      "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-057.md",
+      "created": "2026-04-14T09:01:31Z",
+      "current_phase": "create",
+      "completed_phases": []
+    },
+    {
+      "id": "claim-058",
+      "type": "claim",
+      "status": "pending",
+      "target": "I2C bus capacitance budget of 400pF caps practical total wire length at roughly one meter in 400kHz fast mode",
+      "classification": "closed",
+      "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
+      "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-058.md",
+      "created": "2026-04-14T09:01:31Z",
+      "current_phase": "create",
+      "completed_phases": []
+    },
+    {
+      "id": "claim-059",
+      "type": "claim",
+      "status": "pending",
+      "target": "BSS138 level shifter channels add approximately 5pF each to the I2C bus capacitance budget which constrains level-shifted I2C topologies to fewer devices or shorter wires",
+      "classification": "closed",
+      "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
+      "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-059.md",
+      "created": "2026-04-14T09:01:31Z",
+      "current_phase": "create",
+      "completed_phases": []
+    },
+    {
+      "id": "claim-060",
+      "type": "claim",
+      "status": "pending",
+      "target": "Running an I2C scanner sketch is the mandatory first debug step after wiring a multi-device bus because it catches address conflicts wiring errors and missing pull-ups before driver libraries mask the root cause",
+      "classification": "closed",
+      "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
+      "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-060.md",
+      "created": "2026-04-14T09:01:31Z",
+      "current_phase": "create",
+      "completed_phases": []
+    },
+    {
+      "id": "claim-061",
+      "type": "claim",
+      "status": "pending",
+      "target": "BNO055 ADR pin floats to 0x28 default and ties HIGH for 0x29 enabling two fusion IMUs on a single I2C bus",
+      "classification": "closed",
+      "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
+      "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-061.md",
+      "created": "2026-04-14T09:01:31Z",
+      "current_phase": "create",
+      "completed_phases": []
+    },
+    {
+      "id": "enrich-062",
+      "type": "enrichment",
+      "status": "pending",
+      "target": "oled-i2c-modules-include-onboard-pull-ups-and-external-pull-ups-should-only-be-added-for-bus-lengths-exceeding-30cm",
+      "source_detail": "Add the I2C sink-current specification (3mA max at 5V) and the resulting minimum effective pull-up formula (5V / 3mA = 1.67K) as the hard numerical floor below which open-drain drivers cannot assert LOW against the pull-up current",
+      "batch": "wiring-i2c-multi-device-bus-compass-imu-current-sensor",
+      "file": "wiring-i2c-multi-device-bus-compass-imu-current-sensor-062.md",
+      "created": "2026-04-14T09:01:31Z",
+      "current_phase": "enrich",
+      "completed_phases": []
     }
   ],
   "maintenance_conditions": {

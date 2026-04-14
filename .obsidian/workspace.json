@@ -198,6 +198,16 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "ops/temp",
+    "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-062.md",
+    "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-061.md",
+    "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-060.md",
+    "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-059.md",
+    "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-058.md",
+    "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-057.md",
+    "ops/queue/wiring-i2c-multi-device-bus-compass-imu-current-sensor-056.md",
+    "ops/sessions/96bc6388-1323-4a4e-985a-8d98da8ef882-035846.json",
+    "knowledge/wire-bundles-past-twenty-conductors-make-connector-labeling-mandatory-rather-than-optional.md",
     "knowledge/esp32-gpio5-is-a-strapping-pin-for-boot-message-printing-and-should-not-be-treated-as-unconditionally-safe.md",
     "knowledge/74hc14-inverting-and-74hct245-non-inverting-buffers-trade-firmware-complexity-against-level-shifting-integration.md",
     "knowledge/boot-time-setup-must-set-strapping-pins-to-the-safe-motor-state-before-any-other-initialization.md",
@@ -221,18 +231,8 @@
     "doc/cmake-js.md",
     "doc/boolean.md",
     "doc",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-055.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-055.md.tmp.6811.1776154364387",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-054.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-054.md.tmp.6811.1776154338636",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md.tmp.6811.1776154314242",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md.tmp.6811.1776154281745",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-050.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-049.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-048.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-047.md"
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md.tmp.6811.1776154314242"
   ]
 }
