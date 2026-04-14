@@ -47,5 +47,18 @@
     "native_notice_error": true,
     "native_notice_attention": false,
     "native_notice_milestone": true
+  },
+  "lookup_lists": {
+    "results_collection_key": "smart_blocks",
+    "score_algo_key": "similarity",
+    "results_limit": 20
+  },
+  "smart_contexts": {
+    "template_preset": "xml_structured",
+    "template_before": "<context>\n{{FILE_TREE}}",
+    "template_after": "</context>"
+  },
+  "embedding_models": {
+    "default_model_key": "transformers#1776152913896"
   }
 }

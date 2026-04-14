@@ -169,13 +169,23 @@
               "icon": "lucide-file-signature",
               "title": "Footnotes"
             }
+          },
+          {
+            "id": "0337a19af8c13ddf",
+            "type": "leaf",
+            "state": {
+              "type": "vault-terminal",
+              "state": {},
+              "icon": "bot",
+              "title": "Claude"
+            }
           }
-        ]
+        ],
+        "currentTab": 6
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -196,7 +206,7 @@
       "claude-sidebar:New Claude Tab": false
     }
   },
-  "active": "557180fa13ed8008",
+  "active": "0337a19af8c13ddf",
   "lastOpenFiles": [
     "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-003.md",
     "ops/queue/wiring-36v-battery-power-distribution-4-tier-system-003.md.tmp.6811.1776152267543",
