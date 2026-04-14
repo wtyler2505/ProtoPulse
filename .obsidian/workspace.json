@@ -1,0 +1,238 @@
+{
+  "main": {
+    "id": "7e8886ae9b19f1a0",
+    "type": "split",
+    "children": [
+      {
+        "id": "ec2cd5972c25f205",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b641fe23de61abb2",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph view"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "8df57072ba4423d0",
+    "type": "split",
+    "children": [
+      {
+        "id": "2cdf11854426867c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9dbd83bb0a0ee55d",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "4348dc0490dd2c76",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "b981aa8b596f2fac",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "b772b7d7e81bb791",
+    "type": "split",
+    "children": [
+      {
+        "id": "13933842efd3f122",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d134f37daa3ba775",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "c025089f515ce368",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "c790c467fcf27578",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "be8beb563e4c9338",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "0098e5df3c5865fb",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          },
+          {
+            "id": "205b50f610db5a40",
+            "type": "leaf",
+            "state": {
+              "type": "footnotes",
+              "state": {},
+              "icon": "lucide-file-signature",
+              "title": "Footnotes"
+            }
+          }
+        ],
+        "currentTab": 5
+      }
+    ],
+    "direction": "horizontal",
+    "width": 428.5,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "audio-recorder:Start/stop recording": false,
+      "markdown-importer:Open format converter": false,
+      "random-note:Open random note": false,
+      "zk-prefixer:Create new unique note": false,
+      "workspaces:Manage workspace layouts": false,
+      "templater-obsidian:Templater": false,
+      "obsidian42-brat:BRAT": false,
+      "claude-sidebar:New Claude Tab": false,
+      "smart-templates:Smart Templates: Open template context": false
+    }
+  },
+  "active": "b641fe23de61abb2",
+  "lastOpenFiles": [
+    "knowledge/pin-double-duty-between-static-digital-output-and-interrupt-input-works-because-enable-is-steady-state-and-interrupt-reads-incoming-pulses.md",
+    "knowledge/opposite-facing-chassis-motors-require-software-or-phase-wire-inversion-to-make-forward-produce-same-direction-wheel-motion.md",
+    "knowledge/tank-steering-replaces-mechanical-steering-with-differential-wheel-speed-control.md",
+    "server/__tests__/knowledge-vault-routes.test.ts",
+    "ops/sessions/a8340eed-b499-4467-b4ca-ee077be62430-033932.json",
+    "ops/sessions/a8340eed-b499-4467-b4ca-ee077be62430-033526.json",
+    "server/routes/knowledge-vault.ts",
+    "ops/sessions/a8340eed-b499-4467-b4ca-ee077be62430.json",
+    "doc/cmake-js.md",
+    "doc/boolean.md",
+    "doc",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-055.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-055.md.tmp.6811.1776154364387",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-054.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-054.md.tmp.6811.1776154338636",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md.tmp.6811.1776154314242",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md.tmp.6811.1776154281745",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-050.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-049.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-048.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-047.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-046.md",
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-045.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-044.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-043.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-042.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-041.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-040.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-039.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-038.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-037.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-036.md",
+    "ops/queue/wiring-zs-x11h-to-esp32-with-level-shifter-035.md"
+  ]
+}
