@@ -52,8 +52,11 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[film-capacitors-across-relay-or-switch-contacts-suppress-contact-arcing-as-snubber-circuits]] — Snubber topology: cap across contacts quenches arc, distinct from flyback diode
 - [[high-voltage-rating-on-a-small-capacitor-does-not-imply-danger-because-stored-energy-depends-on-capacitance-times-voltage-squared]] — 75nF/400V = 6mJ vs 470uF/200V = 9.4J; safety should key on energy not voltage
 
-### Part Identification
-- [[systematic-part-identification-workflow-for-unidentified-inventory-read-markings-then-cross-reference-then-measure]] — Three-step procedure: markings, distributor lookup, instrument measurement
+### AC Mains / X-Class / Y-Class Capacitors
+- [[class-x2-capacitors-connect-across-live-and-neutral-where-short-circuit-failure-only-trips-a-fuse-not-shocks-a-user]] — X2 class safety rating: fail-short to fuse, not to shock
+- [[x-class-capacitors-filter-line-to-line-while-y-class-filter-line-to-ground-and-swapping-them-is-a-certification-violation]] — X vs Y topology: line-to-line vs line-to-ground; swap = certification violation
+- [[x2-capacitor-rated-275v-ac-targets-230v-mains-with-headroom-for-peak-voltage-and-transients-not-just-rms]] — 275V AC rating targets 230V mains peak + transient headroom
+- [[capacitor-climatic-category-encodes-min-temp-max-temp-and-humidity-duration-as-three-slash-separated-numbers]] — three-slash climatic code: min/max/humidity duration
 
 ### BJT Switching
 - [[bjt-saturation-requires-base-current-above-collector-current-divided-by-minimum-hfe-making-base-resistor-calculation-a-forced-gain-problem]] — Ib > Ic/hFE_min; base resistor sizing is the fundamental BJT design step
@@ -73,6 +76,17 @@ Capacitor selection (ceramic vs electrolytic vs film), transistor switching circ
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO without gate driver
 - [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during MCU reset
 - [[low-side-mosfet-switching-puts-load-between-supply-and-drain-with-source-at-ground]] — standard N-channel topology for MCU-driven load switching
+- [[bss138-body-diode-makes-level-shifting-bidirectional-without-direction-control]] — BSS138 body-diode enables passive bidirectional level shifting
+- [[bss138-switching-speed-caps-at-400khz-making-it-unsuitable-for-fast-spi-and-high-speed-push-pull-signals]] — 400kHz ceiling forces TXS/74HCT for faster signals
+
+### Diodes & Protection
+- [[relay-coil-is-an-inductor-that-generates-destructive-back-emf-spikes-when-de-energized]] — relay de-energization spike; flyback diode is the canonical mitigation
+- [[inductive-motor-loads-require-bypass-capacitor-to-absorb-voltage-spikes-above-supply-rail]] — bypass cap across motor terminals absorbs back-EMF
+
+### Part Identification Workflow
+- [[systematic-part-identification-workflow-for-unidentified-inventory-read-markings-then-cross-reference-then-measure]] — Three-step procedure: markings, distributor lookup, instrument measurement
+- [[salvaged-generic-components-have-no-datasheets-so-specs-must-be-determined-empirically]] — salvaged parts require empirical characterization (no datasheets)
+- [[axial-cylindrical-components-can-roll-off-a-workbench-and-must-be-secured-during-handling]] — physical bench safety for axial cylindrical parts
 
 ### Shift Registers
 - [[74hc595-trades-3-gpio-pins-for-n-times-8-digital-outputs-via-serial-shift-and-parallel-latch]] — The canonical IO expansion: 3 pins → 8 outputs per chip, daisy-chainable to 80+
