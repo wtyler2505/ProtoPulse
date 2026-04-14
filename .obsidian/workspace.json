@@ -198,6 +198,7 @@
   },
   "active": "b641fe23de61abb2",
   "lastOpenFiles": [
+    "knowledge/esp32-gpio5-is-a-strapping-pin-for-boot-message-printing-and-should-not-be-treated-as-unconditionally-safe.md",
     "knowledge/74hc14-inverting-and-74hct245-non-inverting-buffers-trade-firmware-complexity-against-level-shifting-integration.md",
     "knowledge/boot-time-setup-must-set-strapping-pins-to-the-safe-motor-state-before-any-other-initialization.md",
     "knowledge/emergency-stop-via-stop-pin-low-disables-bldc-controllers-entirely-and-is-safer-than-regenerative-braking-for-fault-conditions.md",
@@ -232,7 +233,6 @@
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-050.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-049.md",
     "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-048.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-047.md",
-    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-046.md"
+    "ops/queue/wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-047.md"
   ]
 }
