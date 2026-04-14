@@ -36,6 +36,17 @@ Verified 2026-04-14 via grep across `client/`, `server/`, `shared/`:
 
 Therefore: adding more low-value notes produces diminishing returns. Building the consumption layer converts existing 465+ notes from dormant inventory into active AI grounding.
 
+### Phase 6a STATUS 2026-04-14: IMPLEMENTED
+
+Vault consumption layer shipped and tested:
+- `server/lib/vault-search.ts` — Fuse.js-backed index, 470+ notes, 17 tests pass
+- `server/lib/vault-context.ts` — lazy singleton + per-message grounding, 8 tests pass
+- `server/ai.ts` — `processAIMessage` and `streamAIMessage` now inject vault context into every AI request (appended to cached system prompt; empty-string fallback on vault failure keeps AI working if vault breaks)
+- `server/ai-tools/knowledge-vault.ts` — `search_knowledge_vault` tool exposed to AI agent for deep queries, 6 tests pass, sources wired for BL-0160 Source Panel with `type='knowledge_base'`
+- Full TypeScript check (`npm run check`): exit 0, clean
+
+Every future AI request gets automatic top-K vault grounding derived from the user message. The AI agent can also explicitly call `search_knowledge_vault` for deeper lookups.
+
 ---
 
 **Tech Stack:** Ars Contexta knowledge vault methodology (`/arscontexta:extract`, `/arscontexta:connect`, `/arscontexta:health`, `/arscontexta:revisit`), ProtoPulse Obsidian-style MOC (Map of Content) system, `/agent-teams` skill for parallel non-conflicting work, semantic dedup via `mcp__qmd__vector_search`.
