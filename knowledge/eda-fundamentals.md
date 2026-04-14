@@ -1,5 +1,5 @@
 ---
-description: Electronics design concepts, component specs, protocols, and EDA domain knowledge
+description: "Core EDA domain hub -- MCU pin constraints, protocol fundamentals, simulation algorithms, PCB design rules, and standards; cross-links to all hardware topic maps"
 type: moc
 topics:
   - "[[index]]"
@@ -10,6 +10,18 @@ topics:
 # eda-fundamentals
 
 Core electronics and EDA knowledge. Claims here are verifiable facts about components, protocols, design rules, and simulation fundamentals.
+
+## Hardware Topic Maps
+- [[microcontrollers]] -- MCU-specific pin maps and peripheral constraints
+- [[actuators]] -- motors, H-bridges, brake logic
+- [[sensors]] -- measurement, calibration, interface gotchas
+- [[displays]] -- display protocols and driver ICs
+- [[power-systems]] -- regulators, batteries, protection
+- [[passives]] -- discrete components and biasing
+- [[communication]] -- wired and wireless protocols
+- [[shields]] -- Arduino shield ecosystem
+- [[input-devices]] -- human-to-MCU interfaces
+- [[wiring-integration]] -- multi-component system wiring
 
 ## Knowledge Notes
 - [[pcb-layout-was-the-weakest-domain-across-all-five-phases]] -- PCB rated missing vs all competitors

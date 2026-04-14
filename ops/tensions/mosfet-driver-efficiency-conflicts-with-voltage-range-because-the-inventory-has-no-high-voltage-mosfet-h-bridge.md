@@ -55,6 +55,16 @@ The tension shapes driver selection logic in the BOM validator:
 - [[actuator-voltage-tiers-map-to-distinct-power-supply-strategies]] — voltage tiers are the axis the tension operates along
 - [[combo-motor-and-servo-shields-trade-per-function-efficiency-for-single-board-convenience]] — different efficiency-vs-integration tension at the shield level
 
+## Status: Resolved (2026-04-14)
+
+Wave H extraction added the Cytron MD25HV (58V / 25A continuous MOSFET H-bridge) to the inventory, closing the high-voltage MOSFET gap that created this tension:
+
+- [[cytron-md25hv-completes-the-brushed-dc-driver-voltage-ladder-tb6612-at-13v-l298n-at-46v-md25hv-at-58v-with-25a-continuous]]
+
+The brushed DC driver ladder is now complete across the common voltage regimes: TB6612 for ≤13.5V / ≤1.2A, L298N for ≤46V / ≤2A (retained for its breadboard-friendly form factor at low current), and MD25HV for ≤58V / ≤25A continuous. The efficiency-vs-voltage tension no longer has a coverage gap — above 13.5V the choice is now MD25HV (MOSFET efficiency) rather than L298N (Darlington inefficiency accepted by default).
+
+The bench coach driver-selection logic described under "Practical Applications" should be updated: for 13.5V-58V / >1A loads, recommend MD25HV instead of L298N. L298N remains the correct choice only at low current (<2A) where MD25HV's 25A rating is oversized.
+
 ---
 
 Topics:

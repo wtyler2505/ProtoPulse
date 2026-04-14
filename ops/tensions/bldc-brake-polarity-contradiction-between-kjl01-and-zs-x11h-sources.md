@@ -22,3 +22,13 @@ These are direct contradictions. Either:
 Resolution requires checking the KJL-01 source file and/or physical testing. If the KJL-01 truly uses opposite brake polarity from the ZS-X11H, this is a critical platform-level insight: **not all RioRand controllers share the same control logic**, and the bench coach cannot assume one polarity convention.
 
 The existing note title "STOP is active-low and BRAKE is active-high" may need to be scoped to the KJL-01 specifically, or corrected entirely.
+
+## Status: Corroborated (2026-04-14)
+
+Wave F extraction added an atomic claim note that explicitly documents both sides of this contradiction from primary sources:
+
+- [[ct-brake-polarity-on-the-zs-x11h-is-active-low-contradicting-the-kjl-01-claim-that-brake-is-active-high-suggesting-the-polarity-is-vendor-specific-not-a-bldc-convention]]
+
+The new note confirms the contradiction is real and not a source error — the ZS-X11H datasheet and its Arduino wiring recipe both document CT brake as active-LOW, while the KJL-01 is documented as active-HIGH. Resolution: brake polarity is **vendor/controller-specific, not a BLDC convention** — per-controller verification is mandatory before trusting any generic brake rule. The existing [[bldc-stop-active-low-brake-active-high]] claim should be scoped to the KJL-01 specifically.
+
+This tension is kept open as a productive tension (preserving the multi-source contradiction) rather than resolved, because the underlying claim — that brake polarity is stable across BLDC controllers — has been falsified, not reconciled.
