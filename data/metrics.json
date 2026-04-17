@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-04-17T23:08:21.023Z",
+  "persistedAt": "2026-04-17T23:21:22.546Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 5,
@@ -87,15 +87,19 @@
       ]
     },
     "GET /api/projects/:id/snapshots": {
-      "count": 4,
-      "totalDuration": 283,
+      "count": 8,
+      "totalDuration": 485,
       "errors": 0,
       "min": 11,
       "max": 205,
       "samples": [
         11,
         20,
+        21,
         47,
+        54,
+        55,
+        72,
         205
       ]
     },
@@ -247,25 +251,29 @@
       ]
     },
     "GET /api/settings/api-keys": {
-      "count": 3,
-      "totalDuration": 24,
+      "count": 5,
+      "totalDuration": 151,
       "errors": 0,
       "min": 4,
-      "max": 10,
+      "max": 120,
       "samples": [
         4,
+        7,
         10,
-        10
+        10,
+        120
       ]
     },
     "GET /api/settings/chat": {
-      "count": 2,
-      "totalDuration": 20,
+      "count": 4,
+      "totalDuration": 36,
       "errors": 0,
-      "min": 6,
+      "min": 2,
       "max": 14,
       "samples": [
+        2,
         6,
+        14,
         14
       ]
     },
