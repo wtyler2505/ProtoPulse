@@ -402,6 +402,24 @@ export class PartsStorage {
     }
   }
 
+  /**
+   * Look up a stock row by primary key. Returns `undefined` if not found or
+   * soft-deleted. Callers are responsible for checking `projectId` against the
+   * authenticated-user's access-scope (see WS-01 in `parts.ts` route layer).
+   */
+  async getStockById(id: string): Promise<PartStock | undefined> {
+    try {
+      const [row] = await this.db
+        .select()
+        .from(partStock)
+        .where(and(eq(partStock.id, id), isNull(partStock.deletedAt)))
+        .limit(1);
+      return row;
+    } catch (e) {
+      throw new StorageError('getStockById', `parts_stock/${id}`, e);
+    }
+  }
+
   async upsertStock(data: InsertPartStock): Promise<PartStock> {
     try {
       if (data.projectId == null) {

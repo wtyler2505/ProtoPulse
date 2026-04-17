@@ -34,6 +34,7 @@ export type CollabMessageType =
   | 'lock-denied'
   | 'role-change'
   | 'chat'
+  | 'conflict-detected'
   | 'error';
 
 export interface CollabMessage {
