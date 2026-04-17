@@ -7,10 +7,14 @@ import { insertCircuitDesignSchema } from '@shared/schema';
 import { parseIdParam, payloadLimit } from './utils';
 import { requireProjectOwnership } from '../routes/auth-middleware';
 
+// `settings` is stored as `jsonb` in Drizzle — opaque structured blob owned
+// by the client-side design tooling. Using `z.unknown()` (not `z.any()`)
+// keeps the shape permissive at the route boundary but forces consumers to
+// narrow before use, preventing `any` propagation into handler code.
 const updateCircuitDesignSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  settings: z.any().optional(),
+  settings: z.unknown().optional(),
 });
 
 /** Parse the If-Match header value into a version number, or undefined if absent/invalid. */
