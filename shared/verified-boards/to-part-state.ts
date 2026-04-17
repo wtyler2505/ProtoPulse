@@ -110,29 +110,78 @@ function computeBreadboardPositions(
   board: VerifiedBoardDefinition,
 ): Map<string, { x: number; y: number }> {
   const positions = new Map<string, { x: number; y: number }>();
+  const scale = 2.2;
+  const pinPitchPx = Math.max(5, board.pinSpacing * scale);
+  const widthPx = Math.max(84, Math.round(board.dimensions.width * scale));
+  const heightPx = Math.max(42, Math.round(board.dimensions.height * scale));
+  const edgeInset = Math.max(7, Math.round(pinPitchPx * 0.7));
+  const groupGap = Math.max(10, Math.round(pinPitchPx * 1.2));
 
-  if (board.breadboardFit === 'not_breadboard_friendly') {
-    return positions;
-  }
+  const sideGroups = {
+    left: board.headerLayout.filter((header) => header.side === 'left'),
+    right: board.headerLayout.filter((header) => header.side === 'right'),
+    top: board.headerLayout.filter((header) => header.side === 'top'),
+    bottom: board.headerLayout.filter((header) => header.side === 'bottom'),
+  } as const;
 
-  // For dual-header boards (like ESP32), place left header on left side,
-  // right header on right side of the breadboard channel
-  const PIN_PITCH_PX = 10; // Breadboard artwork pixel pitch
-  const LEFT_X = 0;
-  const RIGHT_X = 90; // ~22.86mm at breadboard scale
+  const sideOrigins = new Map<string, number>();
+
+  const distributeAlongSide = (
+    headers: typeof board.headerLayout,
+    availableSpan: number,
+  ) => {
+    if (headers.length === 0) {
+      return;
+    }
+    const spans = headers.map((header) => Math.max(0, (header.pinCount - 1) * pinPitchPx));
+    const totalSpan = spans.reduce((sum, span) => sum + span, 0) + groupGap * Math.max(0, headers.length - 1);
+    let cursor = Math.max(edgeInset, Math.round((availableSpan - totalSpan) / 2));
+
+    headers.forEach((header, index) => {
+      sideOrigins.set(header.id, cursor);
+      cursor += spans[index] + groupGap;
+    });
+  };
+
+  distributeAlongSide(sideGroups.left, heightPx);
+  distributeAlongSide(sideGroups.right, heightPx);
+  distributeAlongSide(sideGroups.top, widthPx);
+  distributeAlongSide(sideGroups.bottom, widthPx);
 
   for (const header of board.headerLayout) {
-    const baseX = header.side === 'left' ? LEFT_X : RIGHT_X;
-
+    const start = sideOrigins.get(header.id) ?? edgeInset;
     for (let i = 0; i < header.pinIds.length; i++) {
       const pinId = header.pinIds[i];
       if (!pinId) {
         continue;
       }
-      positions.set(pinId, {
-        x: baseX,
-        y: i * PIN_PITCH_PX,
-      });
+
+      switch (header.side) {
+        case 'left':
+          positions.set(pinId, {
+            x: edgeInset,
+            y: start + i * pinPitchPx,
+          });
+          break;
+        case 'right':
+          positions.set(pinId, {
+            x: widthPx - edgeInset,
+            y: start + i * pinPitchPx,
+          });
+          break;
+        case 'top':
+          positions.set(pinId, {
+            x: start + i * pinPitchPx,
+            y: edgeInset,
+          });
+          break;
+        case 'bottom':
+          positions.set(pinId, {
+            x: start + i * pinPitchPx,
+            y: heightPx - edgeInset,
+          });
+          break;
+      }
     }
   }
 
@@ -150,6 +199,10 @@ function computeBreadboardPositions(
 export function boardDefinitionToPartState(board: VerifiedBoardDefinition): PartState {
   const schematicPositions = computeSchematicPositions(board);
   const breadboardPositions = computeBreadboardPositions(board);
+  const scale = 2.2;
+  const widthPx = Math.max(84, Math.round(board.dimensions.width * scale));
+  const heightPx = Math.max(42, Math.round(board.dimensions.height * scale));
+  const edgeInset = Math.max(7, Math.round(board.pinSpacing * scale * 0.7));
 
   // Build connectors from pins
   const connectors: Connector[] = board.pins.map((pin): Connector => {
@@ -168,9 +221,10 @@ export function boardDefinitionToPartState(board: VerifiedBoardDefinition): Part
       id: connId,
       name: pin.name,
       description: pinRoleDescription(pin),
-      connectorType: 'pad',
+      connectorType: 'female',
       shapeIds: {
         schematic: [`${connId}-sch`],
+        breadboard: [`${connId}-bb`],
       },
       terminalPositions,
       padSpec: {
@@ -218,21 +272,157 @@ export function boardDefinitionToPartState(board: VerifiedBoardDefinition): Part
     },
   ];
 
-  // Build breadboard view shapes (board outline only for breadboard-compatible boards)
-  const breadboardShapes = board.breadboardFit !== 'not_breadboard_friendly'
-    ? [
-        {
-          id: 'bb-body',
-          type: 'rect' as const,
-          x: 0,
-          y: 0,
-          width: Math.round(board.dimensions.width / board.pinSpacing * 10),
-          height: Math.round(board.dimensions.height / board.pinSpacing * 10),
-          rotation: 0,
-          style: { fill: '#0d1117', stroke: '#30363d', strokeWidth: 1 },
-        },
-      ]
-    : [];
+  const headerStripShapes = board.headerLayout.map((header) => {
+    const headerPins = header.pinIds
+      .map((pinId) => breadboardPositions.get(pinId))
+      .filter((position): position is { x: number; y: number } => Boolean(position));
+    if (headerPins.length === 0) {
+      return null;
+    }
+
+    const xs = headerPins.map((position) => position.x);
+    const ys = headerPins.map((position) => position.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const horizontal = header.side === 'top' || header.side === 'bottom';
+
+    return {
+      id: `header-${header.id}`,
+      type: 'rect' as const,
+      x: horizontal ? minX - 5 : minX - 3,
+      y: horizontal ? minY - 3 : minY - 5,
+      width: horizontal ? Math.max(12, maxX - minX + 10) : 6,
+      height: horizontal ? 6 : Math.max(12, maxY - minY + 10),
+      rotation: 0,
+      rx: 2,
+      style: { fill: '#111827', stroke: '#475569', strokeWidth: 0.8, opacity: 0.95 },
+    };
+  }).filter((shape): shape is NonNullable<typeof shape> => shape != null);
+
+  const pinShapes = board.pins.map((pin) => {
+    const position = breadboardPositions.get(pin.id);
+    if (!position) {
+      return null;
+    }
+
+    return {
+      id: `${pinToConnectorId(pin)}-bb`,
+      type: 'circle' as const,
+      x: position.x - 2.2,
+      y: position.y - 2.2,
+      width: 4.4,
+      height: 4.4,
+      cx: position.x,
+      cy: position.y,
+      rotation: 0,
+      style: {
+        fill: pin.role === 'power'
+          ? '#ef4444'
+          : pin.role === 'ground'
+            ? '#38bdf8'
+            : pin.role === 'communication'
+              ? '#22d3ee'
+              : pin.role === 'analog'
+                ? '#84cc16'
+                : '#cbd5e1',
+        stroke: '#020617',
+        strokeWidth: 0.6,
+      },
+    };
+  }).filter((shape): shape is NonNullable<typeof shape> => shape != null);
+
+  const featureShapes = [
+    {
+      id: 'bb-body',
+      type: 'rect' as const,
+      x: 0,
+      y: 0,
+      width: widthPx,
+      height: heightPx,
+      rotation: 0,
+      rx: 8,
+      style: { fill: '#0f172a', stroke: '#334155', strokeWidth: 1.2 },
+    },
+    {
+      id: 'bb-silkscreen',
+      type: 'rect' as const,
+      x: edgeInset + 4,
+      y: edgeInset + 4,
+      width: Math.max(26, widthPx - (edgeInset + 4) * 2),
+      height: Math.max(14, heightPx - (edgeInset + 4) * 2),
+      rotation: 0,
+      rx: 6,
+      style: { fill: '#0b1220', stroke: '#1e293b', strokeWidth: 0.6, opacity: 0.35 },
+    },
+    {
+      id: 'title-label',
+      type: 'text' as const,
+      x: 10,
+      y: 8,
+      width: widthPx - 20,
+      height: 12,
+      rotation: 0,
+      text: board.title,
+      style: { fill: '#cbd5e1', fontSize: 8, fontFamily: 'monospace', textAnchor: 'start' },
+    },
+    {
+      id: 'manufacturer-label',
+      type: 'text' as const,
+      x: 10,
+      y: heightPx - 18,
+      width: widthPx - 20,
+      height: 10,
+      rotation: 0,
+      text: `${board.manufacturer} • ${board.operatingVoltage}V`,
+      style: { fill: '#67e8f9', fontSize: 6, fontFamily: 'monospace', textAnchor: 'start' },
+    },
+  ];
+
+  if (board.aliases.some((alias) => /uno|mega|arduino/i.test(alias)) || /arduino/i.test(board.title)) {
+    featureShapes.push(
+      {
+        id: 'feature-usb',
+        type: 'rect' as const,
+        x: 0,
+        y: 10,
+        width: 12,
+        height: 18,
+        rotation: 0,
+        rx: 2,
+        style: { fill: '#94a3b8', stroke: '#cbd5e1', strokeWidth: 0.8 },
+      },
+      {
+        id: 'feature-power-jack',
+        type: 'circle' as const,
+        x: widthPx - 16,
+        y: 10,
+        width: 10,
+        height: 10,
+        cx: widthPx - 11,
+        cy: 15,
+        rotation: 0,
+        style: { fill: '#0f172a', stroke: '#94a3b8', strokeWidth: 0.8 },
+      },
+    );
+  }
+
+  if (/esp32|nodemcu|feather|thing plus|pico|teensy/i.test(board.title)) {
+    featureShapes.push({
+      id: 'feature-usb-c',
+      type: 'rect' as const,
+      x: Math.max(8, widthPx / 2 - 8),
+      y: 0,
+      width: 16,
+      height: 8,
+      rotation: 0,
+      rx: 2,
+      style: { fill: '#94a3b8', stroke: '#cbd5e1', strokeWidth: 0.8 },
+    });
+  }
+
+  const breadboardShapes = [...featureShapes, ...headerStripShapes, ...pinShapes];
 
   const views: PartViews = {
     breadboard: { shapes: breadboardShapes },

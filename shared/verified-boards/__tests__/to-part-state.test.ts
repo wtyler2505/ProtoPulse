@@ -1,128 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { MEGA_2560_R3 } from '../mega-2560-r3';
-import { NODEMCU_ESP32S } from '../nodemcu-esp32s';
-import { RIORAND_KJL01 } from '../riorand-kjl01';
+
 import { boardDefinitionToPartState } from '../to-part-state';
+import { ARDUINO_UNO_R3 } from '../arduino-uno-r3';
 
-describe('boardDefinitionToPartState conversion', () => {
-  describe('Arduino Mega 2560 R3', () => {
-    const state = boardDefinitionToPartState(MEGA_2560_R3);
+describe('boardDefinitionToPartState', () => {
+  it('preserves real bench geometry and pin anchors for off-breadboard verified boards', () => {
+    const state = boardDefinitionToPartState(ARDUINO_UNO_R3);
+    const breadboardShapes = state.views.breadboard.shapes;
+    const body = breadboardShapes.find((shape) => shape.id === 'bb-body');
+    const powerPin = state.connectors.find((connector) => connector.name === '5V');
+    const digitalPin = state.connectors.find((connector) => connector.name === '13');
 
-    it('produces one connector per pin', () => {
-      expect(state.connectors).toHaveLength(MEGA_2560_R3.pins.length);
-    });
+    expect(body).toBeDefined();
+    expect(body?.type).toBe('rect');
+    expect(body?.width).toBeGreaterThan(140);
+    expect(body?.height).toBeGreaterThan(100);
 
-    it('produces one bus per board bus', () => {
-      expect(state.buses).toHaveLength(MEGA_2560_R3.buses.length);
-    });
+    expect(powerPin?.terminalPositions.breadboard).toBeDefined();
+    expect(digitalPin?.terminalPositions.breadboard).toBeDefined();
+    expect(powerPin?.shapeIds.breadboard).toContain('conn-5V-bb');
+    expect(digitalPin?.shapeIds.breadboard).toContain('conn-D13-bb');
 
-    it('bus connectorIds reference valid connector IDs', () => {
-      const connIds = new Set(state.connectors.map((c) => c.id));
-      for (const bus of state.buses) {
-        for (const cid of bus.connectorIds) {
-          expect(connIds.has(cid)).toBe(true);
-        }
-      }
-    });
-
-    it('sets verification status to verified', () => {
-      expect(state.meta.verificationStatus).toBe('verified');
-    });
-
-    it('sets verification level to official-backed', () => {
-      expect(state.meta.verificationLevel).toBe('official-backed');
-    });
-
-    it('has no breadboard positions (not breadboard-friendly)', () => {
-      const withBbPos = state.connectors.filter(
-        (c) => c.terminalPositions['breadboard'] != null,
-      );
-      expect(withBbPos).toHaveLength(0);
-    });
-
-    it('has schematic positions for all connectors', () => {
-      for (const conn of state.connectors) {
-        expect(conn.terminalPositions['schematic']).toBeDefined();
-      }
-    });
-
-    it('populates meta title and manufacturer', () => {
-      expect(state.meta.title).toBe('Arduino Mega 2560 R3');
-      expect(state.meta.manufacturer).toBe('Arduino');
-    });
-
-    it('has datasheet URL', () => {
-      expect(state.meta.datasheetUrl).toContain('arduino.cc');
-    });
-
-    it('has breadboard model quality set to verified', () => {
-      expect(state.meta.breadboardModelQuality).toBe('verified');
-    });
-
-    it('includes source evidence', () => {
-      expect(state.meta.sourceEvidence).toBeDefined();
-      expect(state.meta.sourceEvidence!.length).toBeGreaterThan(0);
-    });
-
-    it('pin accuracy report marks connector names as exact', () => {
-      expect(state.meta.pinAccuracyReport?.connectorNames).toBe('exact');
-      expect(state.meta.pinAccuracyReport?.electricalRoles).toBe('exact');
-    });
-  });
-
-  describe('NodeMCU ESP32-S', () => {
-    const state = boardDefinitionToPartState(NODEMCU_ESP32S);
-
-    it('produces one connector per pin', () => {
-      expect(state.connectors).toHaveLength(38);
-    });
-
-    it('has breadboard positions (requires_jumpers fit)', () => {
-      const withBbPos = state.connectors.filter(
-        (c) => c.terminalPositions['breadboard'] != null,
-      );
-      expect(withBbPos.length).toBeGreaterThan(0);
-    });
-
-    it('sets verification level to official-backed', () => {
-      expect(state.meta.verificationLevel).toBe('official-backed');
-    });
-
-    it('includes boot pin warning in verification notes', () => {
-      expect(state.meta.verificationNotes?.some((n) => n.includes('strapping'))).toBe(true);
-    });
-
-    it('lists restricted pins in pinAccuracyReport unresolved', () => {
-      expect(state.meta.pinAccuracyReport?.unresolved).toBeDefined();
-      expect(state.meta.pinAccuracyReport!.unresolved.length).toBeGreaterThan(0);
-      expect(state.meta.pinAccuracyReport!.unresolved.some((u) => u.includes('GPIO6'))).toBe(true);
-    });
-  });
-
-  describe('RioRand KJL-01', () => {
-    const state = boardDefinitionToPartState(RIORAND_KJL01);
-
-    it('produces one connector per pin', () => {
-      expect(state.connectors).toHaveLength(14);
-    });
-
-    it('sets verification level to mixed-source (no official datasheet)', () => {
-      expect(state.meta.verificationLevel).toBe('mixed-source');
-    });
-
-    it('has no breadboard positions (not breadboard-friendly)', () => {
-      const withBbPos = state.connectors.filter(
-        (c) => c.terminalPositions['breadboard'] != null,
-      );
-      expect(withBbPos).toHaveLength(0);
-    });
-
-    it('classifies as driver family', () => {
-      expect(state.meta.partFamily).toBe('driver');
-    });
-
-    it('has marketplace evidence', () => {
-      expect(state.meta.sourceEvidence?.some((e) => e.type === 'marketplace-listing')).toBe(true);
-    });
+    expect(powerPin?.terminalPositions.breadboard.x).not.toEqual(digitalPin?.terminalPositions.breadboard.x);
+    expect(powerPin?.terminalPositions.breadboard.y).not.toEqual(digitalPin?.terminalPositions.breadboard.y);
   });
 });

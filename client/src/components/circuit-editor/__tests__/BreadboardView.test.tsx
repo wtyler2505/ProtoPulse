@@ -157,6 +157,24 @@ const mockUpdateInstance = { mutate: vi.fn() };
 const mockUpdateWire = { mutate: vi.fn() };
 const mockAddBomItem = vi.fn();
 const mockUpdateBomItem = vi.fn();
+const baseMockBom = [
+  {
+    id: 'bom-1',
+    partNumber: 'ATmega328P-PU',
+    manufacturer: 'Microchip',
+    description: 'ATmega328P DIP microcontroller',
+    quantity: 1,
+    unitPrice: 2.4,
+    totalPrice: 2.4,
+    supplier: 'Digi-Key' as const,
+    stock: 100,
+    status: 'In Stock',
+    quantityOnHand: 2,
+    minimumStock: 1,
+    storageLocation: 'Drawer A1',
+  },
+];
+const mockBom = baseMockBom.map((item) => ({ ...item }));
 const mockCreateCircuitDesign = { mutateAsync: vi.fn().mockResolvedValue({ id: 3, name: 'Breadboard Wiring Canvas' }) };
 const mockExpandArchitecture = { mutateAsync: vi.fn().mockResolvedValue({ circuit: { id: 4, name: 'Expanded Circuit' }, instanceCount: 3, netCount: 2 }) };
 const mockSetActiveView = vi.fn();
@@ -204,23 +222,7 @@ vi.mock('@/lib/project-context', () => ({
   }),
   useBom: () => ({
     addBomItem: mockAddBomItem,
-    bom: [
-      {
-        id: 'bom-1',
-        partNumber: 'ATmega328P-PU',
-        manufacturer: 'Microchip',
-        description: 'ATmega328P DIP microcontroller',
-        quantity: 1,
-        unitPrice: 2.4,
-        totalPrice: 2.4,
-        supplier: 'Digi-Key',
-        stock: 100,
-        status: 'In Stock',
-        quantityOnHand: 2,
-        minimumStock: 1,
-        storageLocation: 'Drawer A1',
-      },
-    ],
+    bom: mockBom,
     updateBomItem: mockUpdateBomItem,
   }),
 }));
@@ -228,6 +230,36 @@ vi.mock('@/lib/project-context', () => ({
 vi.mock('@/hooks/use-toast', () => ({
   useToast: () => ({
     toast: mockToast,
+  }),
+}));
+
+vi.mock('@/lib/supplier-api', () => ({
+  useSupplierApi: () => ({
+    quoteBom: vi.fn(() => ({
+      items: [
+        {
+          mpn: 'ATmega328P-PU',
+          quantity: 1,
+          bestPrice: {
+            distributor: 'digikey',
+            unitPrice: 2.4,
+            totalPrice: 2.4,
+            sku: 'ATMEGA328P-PU-ND',
+          },
+          allOffers: [],
+          inStock: true,
+          warnings: [],
+        },
+      ],
+      totalCost: 2.4,
+      currency: 'USD',
+      itemsFound: 1,
+      itemsMissing: 0,
+      timestamp: 0,
+    })),
+    searchPart: vi.fn(() => []),
+    distributors: [],
+    currency: 'USD',
   }),
 }));
 
@@ -349,6 +381,7 @@ vi.mock('lucide-react', () => ({
   Rocket: () => <svg data-testid="icon-rocket" />,
   Camera: () => <svg data-testid="icon-camera" />,
   Plus: () => <svg data-testid="icon-plus" />,
+  Download: () => <svg data-testid="icon-download" />,
 }));
 
 vi.mock('../BreadboardComponentRenderer', () => ({
@@ -446,6 +479,7 @@ describe('BreadboardView', () => {
         points: wire.points.map((point) => ({ ...point })),
       })),
     );
+    mockBom.splice(0, mockBom.length, ...baseMockBom.map((item) => ({ ...item })));
     mockInstances[0].breadboardX = null;
     mockInstances[0].breadboardY = null;
     mockInstances[0].partId = 17;
@@ -798,6 +832,68 @@ describe('BreadboardView', () => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Bench coach support staged',
+        }),
+      );
+    });
+
+    it('applies a single coach remediation directly from the overlay', async () => {
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+
+      render(<BreadboardView />);
+
+      fireEvent.click(screen.getByTestId('mock-instance-1'));
+      fireEvent.click(screen.getByTestId('button-breadboard-coach-preview-plan'));
+      fireEvent.click(screen.getByTestId('coach-apply-support-decoupler'));
+
+      await waitFor(() => {
+        expect(mockCreateInstance.mutate).toHaveBeenCalled();
+      });
+
+      expect(mockCreateInstance.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          circuitId: 1,
+          partId: null,
+          properties: expect.objectContaining({
+            coachPlanFor: 'U1',
+            coachPlanKey: 'support-decoupler',
+            type: 'capacitor',
+          }),
+        }),
+      );
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Coach support staged',
+        }),
+      );
+    });
+
+    it('opens shopping with enriched pricing for missing parts', async () => {
+      mockParts[0].meta.mpn = 'ATmega328P-PU';
+      mockInstances[0].breadboardX = 70;
+      mockInstances[0].breadboardY = 50;
+      mockBom[0].quantityOnHand = 0;
+      mockBom[0].stock = 0;
+      mockBom[0].status = 'Out of Stock';
+
+      render(<BreadboardView />);
+
+      fireEvent.click(screen.getByTestId('button-shop-missing-parts'));
+
+      expect(screen.getByTestId('breadboard-shopping-list-dialog')).toBeDefined();
+      expect(screen.getByTestId('total-cost').textContent).toContain('2.40');
+      expect(screen.getByText(/digikey/i)).toBeInTheDocument();
+    });
+
+    it('routes quick intake scan to storage tools', () => {
+      render(<BreadboardView />);
+
+      fireEvent.click(screen.getByTestId('quick-intake-scan'));
+
+      expect(mockSetActiveView).toHaveBeenCalledWith('storage');
+      expect(mockToast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Opened storage tools',
         }),
       );
     });

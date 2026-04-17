@@ -38,6 +38,7 @@ interface BreadboardWorkbenchSidebarProps {
   onOpenCommunity: () => void;
   onOpenSchematic: () => void;
   onQuickAdd?: (item: QuickIntakeItem) => void;
+  onQuickScan?: () => void;
   onFocusBoardIssue?: (issue: BoardAuditIssue) => void;
   onRunBoardAudit?: () => void;
   onRunPreflight?: () => void;
@@ -74,6 +75,7 @@ export default function BreadboardWorkbenchSidebar({
   onOpenCommunity,
   onOpenSchematic,
   onQuickAdd,
+  onQuickScan,
   onFocusBoardIssue,
   onRunBoardAudit,
   onRunPreflight,
@@ -196,12 +198,25 @@ export default function BreadboardWorkbenchSidebar({
               <div className="inline-flex items-center rounded-full border border-border/70 bg-background/40 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 {String(wireCount)} live wires
               </div>
+              {benchSummary.totals.missingCount > 0 && onShopMissing && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  data-testid="button-shop-missing-parts"
+                  onClick={onShopMissing}
+                  className="gap-2"
+                >
+                  <Search className="h-3.5 w-3.5" />
+                  Shop missing parts
+                </Button>
+              )}
             </div>
 
             {onQuickAdd && (
               <div className="rounded-xl border border-border/60 bg-background/40 p-3" data-testid="breadboard-quick-intake-section">
                 <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Quick Intake</p>
-                <BreadboardQuickIntake onAdd={onQuickAdd} />
+                <BreadboardQuickIntake onAdd={onQuickAdd} onScan={onQuickScan} />
               </div>
             )}
 

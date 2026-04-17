@@ -40,6 +40,7 @@ import BreadboardExactPartRequestDialog from './BreadboardExactPartRequestDialog
 import BreadboardPartInspector from './BreadboardPartInspector';
 import BreadboardWorkbenchSidebar from './BreadboardWorkbenchSidebar';
 import BreadboardWireEditor from './BreadboardWireEditor';
+import BreadboardBenchPartRenderer from './BreadboardBenchPartRenderer';
 import { COMPONENT_DRAG_TYPE } from './ComponentPlacer';
 import type { ComponentDragData } from './ComponentPlacer';
 import {
@@ -95,6 +96,7 @@ import {
 import { cn } from '@/lib/utils';
 import {
   BB,
+  type ColumnLetter,
   type BreadboardCoord,
   type PixelPos,
   type TiePoint,
@@ -119,6 +121,7 @@ import { formatSIValue } from '@/lib/simulation/visual-state';
 import type { WireVisualState } from '@/lib/simulation/visual-state';
 import { useCanvasAnnouncer } from '@/lib/use-canvas-announcer';
 import { getCanvasAriaLabel, getActionAnnouncement, getToolChangeAnnouncement, getZoomAnnouncement } from '@/lib/canvas-accessibility';
+import { useSupplierApi } from '@/lib/supplier-api';
 import './simulation-overlays.css';
 
 // ---------------------------------------------------------------------------
@@ -222,6 +225,7 @@ export default function BreadboardView() {
   const projectId = useProjectId();
   const { projectName, setActiveView } = useProjectMeta();
   const { addBomItem, bom, updateBomItem } = useBom();
+  const { quoteBom, searchPart } = useSupplierApi();
   const { toast } = useToast();
   const { data: circuits, isLoading: loadingCircuits } = useCircuitDesigns(projectId);
   const { data: parts } = useComponentParts(projectId);
@@ -277,6 +281,43 @@ export default function BreadboardView() {
   const boardAudit = boardAuditEnabled ? computedBoardAudit : null;
   const [preflightResult, setPreflightResult] = useState<PreflightResult | null>(null);
   const [shoppingListOpen, setShoppingListOpen] = useState(false);
+  const shoppingListItems = useMemo(() => {
+    const missingInsights = benchSummary.insights.filter((insight) => insight.missingQuantity > 0);
+    if (missingInsights.length === 0) {
+      return [] as ShoppingListItem[];
+    }
+
+    const quotedItems = missingInsights
+      .filter((insight) => insight.mpn && insight.mpn.trim().length > 0)
+      .map((insight) => ({
+        mpn: insight.mpn!,
+        quantity: insight.missingQuantity,
+      }));
+    const quote = quotedItems.length > 0 ? quoteBom(quotedItems) : null;
+    const quoteMap = new Map((quote?.items ?? []).map((item) => [item.mpn.toLowerCase(), item.bestPrice]));
+
+    return missingInsights.map<ShoppingListItem>((insight) => {
+      const exactMpn = insight.mpn?.trim() ?? '';
+      const fallbackSearch = exactMpn.length === 0 ? searchPart(insight.title, { maxResults: 1 })[0] : null;
+      const bestPrice = exactMpn.length > 0
+        ? quoteMap.get(exactMpn.toLowerCase()) ?? null
+        : fallbackSearch?.offers?.[0]
+          ? {
+              distributor: fallbackSearch.offers[0].distributorId,
+              unitPrice: fallbackSearch.offers[0].pricing[0]?.unitPrice ?? 0,
+              totalPrice: (fallbackSearch.offers[0].pricing[0]?.unitPrice ?? 0) * insight.missingQuantity,
+              sku: fallbackSearch.offers[0].sku,
+            }
+          : null;
+
+      return {
+        partName: insight.title,
+        mpn: exactMpn || fallbackSearch?.mpn || '',
+        quantityNeeded: insight.missingQuantity,
+        bestPrice,
+      };
+    });
+  }, [benchSummary.insights, quoteBom, searchPart]);
 
   useEffect(() => {
     setFocusAuditIssue(null);
@@ -382,6 +423,14 @@ export default function BreadboardView() {
     },
     [addBomItem, toast],
   );
+
+  const handleQuickIntakeScan = useCallback(() => {
+    setActiveView('storage');
+    toast({
+      title: 'Opened storage tools',
+      description: 'Use the barcode scanner in Storage to capture part labels, then return here to finish intake.',
+    });
+  }, [setActiveView, toast]);
 
   const handleUpdateTrackedBenchPart = useCallback(
     (
@@ -585,6 +634,7 @@ export default function BreadboardView() {
           preflightResult={preflightResult}
           onShopMissing={handleShopMissing}
           onQuickAdd={handleQuickIntake}
+          onQuickScan={handleQuickIntakeScan}
         />
       )}
 
@@ -631,14 +681,7 @@ export default function BreadboardView() {
             </DialogDescription>
           </DialogHeader>
           <BreadboardShoppingList
-            missingParts={benchSummary.insights
-              .filter((i) => i.missingQuantity > 0)
-              .map<ShoppingListItem>((i) => ({
-                partName: i.title,
-                mpn: i.mpn ?? '',
-                quantityNeeded: i.missingQuantity,
-                bestPrice: null,
-              }))}
+            missingParts={shoppingListItems}
           />
         </DialogContent>
       </Dialog>
@@ -1219,6 +1262,61 @@ function BreadboardCanvas({
       }),
     );
   }, [benchLayoutQuality, coachActionItems, projectName, selectedInstanceModel]);
+
+  const handleApplyCoachRemediation = useCallback((suggestionId: string) => {
+    if (!instances || !selectedInstanceModel) {
+      return;
+    }
+
+    const suggestion = resolvedCoachSuggestions.find((candidate) => candidate.id === suggestionId);
+    if (!suggestion || !suggestion.remediation) {
+      toast({
+        title: 'Coach action unavailable',
+        description: 'That bench coach suggestion is no longer actionable.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (suggestion.remediation.action !== 'place-component') {
+      toast({
+        title: 'Coach action not implemented yet',
+        description: `${suggestion.label} still needs a manual bench pass.`,
+      });
+      return;
+    }
+
+    const reservedRefdes = instances.map((instance) => instance.referenceDesignator);
+    const prefix = getStarterRefDesPrefix(suggestion.remediation.componentType ?? suggestion.type);
+    const refDes = nextRefdes(prefix, reservedRefdes);
+    const anchorCoord = suggestion.remediation.coords
+      ? coordToPixel({
+          type: 'terminal',
+          col: suggestion.remediation.coords.col as ColumnLetter,
+          row: suggestion.remediation.coords.row,
+        })
+      : suggestion.pixel;
+
+    createInstanceMutation.mutate({
+      circuitId,
+      partId: null,
+      referenceDesignator: refDes,
+      breadboardX: anchorCoord.x,
+      breadboardY: anchorCoord.y,
+      properties: {
+        coachPlanFor: selectedInstanceModel.refDes,
+        coachPlanKey: suggestion.id,
+        label: suggestion.label,
+        type: suggestion.remediation.componentType ?? suggestion.type,
+        value: suggestion.value,
+      },
+    });
+
+    toast({
+      title: 'Coach support staged',
+      description: `${suggestion.label} was placed for ${selectedInstanceModel.refDes}.`,
+    });
+  }, [circuitId, createInstanceMutation, instances, resolvedCoachSuggestions, selectedInstanceModel, toast]);
 
   const handleApplyCoachPlan = useCallback(async () => {
     if (!instances || !selectedInstanceModel || coachActionCount === 0) {
@@ -1884,42 +1982,14 @@ function BreadboardCanvas({
             {/* Bench-placed components — rendered outside the breadboard grid */}
             {benchInstances.map((inst) => {
               const part = inst.partId ? partsMap.get(inst.partId) : undefined;
-              const partMeta = (part?.meta ?? {}) as Record<string, unknown>;
-              const label = (partMeta.title as string) ?? inst.referenceDesignator;
-              const bx = inst.benchX ?? 0;
-              const by = inst.benchY ?? 0;
-              const isSelected = selectedInstanceId === inst.id;
               return (
-                <g
+                <BreadboardBenchPartRenderer
                   key={`bench-${String(inst.id)}`}
-                  data-testid={`bench-component-${String(inst.id)}`}
-                  transform={`translate(${String(bx)}, ${String(by)})`}
-                  onClick={() => setSelectedInstanceId(inst.id)}
-                  className="cursor-pointer"
-                >
-                  {/* Board outline */}
-                  <rect
-                    x={-30}
-                    y={-20}
-                    width={60}
-                    height={40}
-                    rx={4}
-                    fill="#1e293b"
-                    stroke={isSelected ? 'var(--color-editor-accent)' : '#475569'}
-                    strokeWidth={isSelected ? 1.5 : 1}
-                    strokeDasharray={isSelected ? undefined : '3 2'}
-                    opacity={0.9}
-                  />
-                  {/* "BENCH" badge */}
-                  <rect x={-22} y={-18} width={44} height={10} rx={2} fill="#334155" />
-                  <text x={0} y={-11} textAnchor="middle" fill="#94a3b8" fontSize={6} fontFamily="monospace">BENCH</text>
-                  {/* Component label */}
-                  <text x={0} y={2} textAnchor="middle" fill="#e2e8f0" fontSize={7} fontFamily="monospace">{inst.referenceDesignator}</text>
-                  <text x={0} y={12} textAnchor="middle" fill="#67e8f9" fontSize={5} fontFamily="monospace">{label.slice(0, 12)}</text>
-                  {/* Pin connection points (simplified — 2 dots for generic) */}
-                  <circle cx={-25} cy={0} r={2} fill="var(--color-editor-accent)" opacity={0.7} />
-                  <circle cx={25} cy={0} r={2} fill="var(--color-editor-accent)" opacity={0.7} />
-                </g>
+                  instance={inst}
+                  part={part}
+                  selected={selectedInstanceId === inst.id}
+                  onClick={setSelectedInstanceId}
+                />
               );
             })}
 
@@ -1939,6 +2009,7 @@ function BreadboardCanvas({
                 preparedCoachBridges={preparedCoachBridges}
                 stagedCoachSuggestions={stagedCoachSuggestions}
                 resolvedCoachSuggestions={resolvedCoachSuggestions}
+                onApplyRemediation={(suggestionId) => handleApplyCoachRemediation(suggestionId)}
               />
             )}
 
