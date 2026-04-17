@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-04-17T23:28:23.726Z",
+  "persistedAt": "2026-04-17T23:30:23.726Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 5,

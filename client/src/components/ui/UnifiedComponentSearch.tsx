@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
 import { Command } from 'cmdk';
-import { useBom, useProjectId, useProjectMeta } from '@/lib/project-context';
-import { useCommunityLibrary } from '@/lib/community-library';
+import { useBom, useProjectId, useProjectMeta, type BomItem } from '@/lib/project-context';
+import { useCommunityLibrary, type CommunityComponent } from '@/lib/community-library';
 import { useComponentParts } from '@/lib/component-editor/hooks';
 import { mapCommunityPartToBom } from '@/lib/community-bom-bridge';
 import {
@@ -15,6 +15,7 @@ import {
 import { cn } from '@/lib/utils';
 import Fuse from 'fuse.js';
 import type { IFuseOptions } from 'fuse.js';
+import type { PartMeta } from '@shared/component-types';
 
 interface SearchResult {
   id: string;
@@ -23,8 +24,8 @@ interface SearchResult {
   category: 'Standard Library' | 'Community Library' | 'BOM Items';
   icon: React.ComponentType<{ className?: string }>;
   partId?: number; // For placing from Standard Library
-  communityPart?: any; // For placing/adding from Community Library
-  bomItem?: any;
+  communityPart?: CommunityComponent; // For placing/adding from Community Library
+  bomItem?: BomItem;
 }
 
 const FUSE_OPTIONS: IFuseOptions<SearchResult> = {
@@ -73,10 +74,11 @@ export default function UnifiedComponentSearch() {
     // 1. Standard Library
     if (standardParts) {
       for (const part of standardParts) {
+        const meta = (part.meta ?? {}) as Partial<PartMeta>;
         items.push({
           id: `std-${part.id}`,
-          label: (part.meta as any)?.title || `Part ${part.id}`,
-          description: (part.meta as any)?.description || `Standard Library Component`,
+          label: meta.title || `Part ${part.id}`,
+          description: meta.description || `Standard Library Component`,
           category: 'Standard Library',
           icon: Cpu,
           partId: part.id,
@@ -139,7 +141,7 @@ export default function UnifiedComponentSearch() {
         const mapped = mapCommunityPartToBom(result.communityPart);
         addBomItem(mapped);
       } else if (result.bomItem) {
-         // Place existing BOM item by inferring its related standard part if possible, 
+         // Place existing BOM item by inferring its related standard part if possible,
          // but for now we just dispatch a generic placement request (might need actual mapping).
          window.dispatchEvent(new CustomEvent('protopulse:place-component-instance', { detail: { refDesPrefix: result.bomItem.partNumber || 'U' } }));
       }
@@ -243,7 +245,7 @@ export default function UnifiedComponentSearch() {
                       <div className="truncate font-medium">{item.label}</div>
                       <div className="truncate text-xs text-muted-foreground">{item.description}</div>
                     </div>
-                    
+
                     {/* Action Buttons */}
                     <div className="opacity-0 group-hover:opacity-100 flex items-center gap-2 pr-2 transition-opacity">
                       {(item.category === 'Standard Library' || item.category === 'BOM Items') && (
