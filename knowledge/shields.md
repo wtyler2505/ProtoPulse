@@ -54,5 +54,5 @@ Shield comparison, pin conflict avoidance, level shifter selection, and expansio
 ---
 
 Topics:
-- [[eda-fundamentals]]
-- [[index]]
+- [[eda-fundamentals]] — Core EDA domain hub -- MCU pin constraints, protocol fundamentals, simulation algorithms, PCB design rules, and standards; cross-links to all hardware topic maps
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring

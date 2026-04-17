@@ -33,6 +33,6 @@ The agent exists to help anyone — from a complete beginner to an experienced m
 ---
 
 Topics:
-- [[index]]
-- [[methodology]]
-- [[goals]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
+- [[methodology]] — Navigation hub pointing to the two canonical methodology locations — self/methodology.md (agent) and ops/methodology/ (operational)
+- [[goals]] — Current active threads, priorities, and open questions in ProtoPulse development

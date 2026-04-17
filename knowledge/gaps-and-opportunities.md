@@ -79,4 +79,4 @@ Agent Notes:
 - 2026-04-06: 25 comprehensive audit notes added across 5 new subsections. The audit revealed that ProtoPulse's biggest gaps are no longer feature gaps (backlog complete) but quality/reliability gaps: AI output is unvalidated, security boundaries are porous, and synchronous bottlenecks block the main thread. The next strategic phase should be hardening over features.
 
 Topics:
-- [[index]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring

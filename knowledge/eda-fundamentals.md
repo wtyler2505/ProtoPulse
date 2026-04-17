@@ -114,6 +114,6 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 ---
 
 Topics:
-- [[index]]
-- [[breadboard-intelligence]]
-- [[architecture-decisions]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
+- [[breadboard-intelligence]] — Bench coach logic, verified breadboard layouts, layout quality rules, and hardware debugging patterns
+- [[architecture-decisions]] — Why ProtoPulse is built the way it is — trade-offs, constraints, and key architectural choices

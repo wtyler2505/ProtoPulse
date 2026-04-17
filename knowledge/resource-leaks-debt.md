@@ -35,5 +35,5 @@ Request / event
 ---
 
 Topics:
-- [[gaps-and-opportunities]]
-- [[architecture-decisions]]
+- [[gaps-and-opportunities]] — What ProtoPulse is missing, what's broken, and where the biggest opportunities are — the radar for development priorities
+- [[architecture-decisions]] — Why ProtoPulse is built the way it is — trade-offs, constraints, and key architectural choices

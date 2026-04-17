@@ -105,6 +105,6 @@ Count active skills: `ls ~/.claude/skills/ | wc -l` (global) + `ls .claude/skill
 ---
 
 Topics:
-- [[index]]
-- [[dev-infrastructure]]
-- [[gaps-and-opportunities]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
+- [[dev-infrastructure]] — How the Claude Code infrastructure is configured, wired, and maintained -- hooks, skills, agents, MCP servers, and settings
+- [[gaps-and-opportunities]] — What ProtoPulse is missing, what's broken, and where the biggest opportunities are — the radar for development priorities

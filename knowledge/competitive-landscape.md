@@ -83,6 +83,6 @@ Agent Notes:
 - 2026-04-06: 4 differentiator risk notes added from audit. Key insight: ProtoPulse's competitive advantages (AI tools, full workflow, native desktop) each have quality undercuts that competitors could exploit. Multi-agent architecture is the most strategic fix — it addresses both the 125-tool context collapse and the evaluation gap simultaneously.
 
 Topics:
-- [[index]]
-- [[maker-ux]]
-- [[goals]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
+- [[maker-ux]] — What makes EDA features accessible to beginners — UX patterns, progressive disclosure, and maker-first design principles
+- [[goals]] — Current active threads, priorities, and open questions in ProtoPulse development

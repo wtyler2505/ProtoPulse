@@ -1153,27 +1153,47 @@ export function registerCircuitCodeTools(registry: ToolRegistry): void {
     execute: async (params, ctx) => {
       const guard = await guardCircuitInProject(params.circuitId, ctx);
       if (guard) return guard;
-      // For now, return a simple direct path with 45-degree segments
-      const [net, instances, wires] = await Promise.all([
+
+      const [net, instances] = await Promise.all([
         ctx.storage.getCircuitNet(params.netId),
         ctx.storage.getCircuitInstances(params.circuitId),
-        ctx.storage.getCircuitWires(params.circuitId),
       ]);
 
       if (!net) return { success: false, message: 'Net not found.' };
+      if (net.circuitId !== params.circuitId) {
+        return { success: false, message: `Net ${String(params.netId)} does not belong to circuit ${String(params.circuitId)}.` };
+      }
 
-      // Simplified: just find the centers of the two most distant pads in the net
-      // In a real implementation, this would use a proper autorouter algorithm
-      
+      // Honest implementation: autorouter is not implemented server-side yet.
+      // If the net already has segments (e.g., user hand-routed or upstream
+      // tool placed them), return those as the current path. If not, return
+      // an explicit not-implemented error instead of hardcoded fake points —
+      // surfacing the real state to the AI agent and the user.
+      const existingSegments = Array.isArray(net.segments) ? net.segments : [];
+      if (existingSegments.length === 0) {
+        return {
+          success: false,
+          message:
+            `Autorouter not yet implemented. Net "${net.name}" has no existing segments. ` +
+            `Use the PCB layout view to route manually, or invoke auto_route for client-side routing.`,
+          data: {
+            type: 'trace_path_unavailable',
+            netId: net.id,
+            layer: params.layer,
+            reason: 'autorouter-not-implemented',
+            connectedInstanceCount: instances.length,
+          },
+        };
+      }
+
       return {
         success: true,
-        message: `Suggested routing path for net "${net.name}".`,
+        message: `Existing routing path for net "${net.name}" (${existingSegments.length} segment${existingSegments.length === 1 ? '' : 's'}).`,
         data: {
-          type: 'trace_path_suggestion',
+          type: 'trace_path_existing',
           netId: net.id,
           layer: params.layer,
-          // Placeholder points — in production this would be a calculated path
-          points: [{x: 50, y: 50}, {x: 70, y: 70}], 
+          segments: existingSegments,
         },
         sources: [
           { type: 'net', label: net.name, id: net.id },

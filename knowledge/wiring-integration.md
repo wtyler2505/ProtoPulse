@@ -114,6 +114,6 @@ System-level wiring patterns, multi-voltage integration, common ground disciplin
 ---
 
 Topics:
-- [[eda-fundamentals]]
-- [[breadboard-intelligence]]
-- [[index]]
+- [[eda-fundamentals]] — Core EDA domain hub -- MCU pin constraints, protocol fundamentals, simulation algorithms, PCB design rules, and standards; cross-links to all hardware topic maps
+- [[breadboard-intelligence]] — Bench coach logic, verified breadboard layouts, layout quality rules, and hardware debugging patterns
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring

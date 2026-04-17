@@ -64,6 +64,6 @@ Run the gap analysis: `bash ops/queries/infra-gaps.sh`
 ---
 
 Topics:
-- [[index]]
-- [[gaps-and-opportunities]]
-- [[claude-code-skills]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
+- [[gaps-and-opportunities]] — What ProtoPulse is missing, what's broken, and where the biggest opportunities are — the radar for development priorities
+- [[claude-code-skills]] — How 250+ Claude Code skills organize into workflows -- plugins, project skills, slash commands, mastery skills, thinking tools, and the gaps between them

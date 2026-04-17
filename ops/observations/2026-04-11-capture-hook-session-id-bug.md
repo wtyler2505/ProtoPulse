@@ -2,8 +2,9 @@
 observed_date: 2026-04-11
 category: system-drift
 severity: high
-resolved: false
-resolution: ""
+resolved: true
+resolution: "Implemented: Fix already applied to session-capture.sh"
+status: implemented
 ---
 
 # Session-capture hook writes timestamp IDs instead of transcript UUIDs breaking mining correlation and three stub-format variants exist from successive hook rewrites

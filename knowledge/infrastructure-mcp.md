@@ -22,4 +22,4 @@ MCP (Model Context Protocol) servers extend Claude Code with capabilities beyond
 ---
 
 Topics:
-- [[dev-infrastructure]]
+- [[dev-infrastructure]] — How the Claude Code infrastructure is configured, wired, and maintained -- hooks, skills, agents, MCP servers, and settings

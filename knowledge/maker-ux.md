@@ -87,7 +87,7 @@ Agent Notes:
 - 2026-04-06: audit notes revealed 5 maker-impacting quality issues: (1) WCAG keyboard focus broken, (2) voice AI is fake, (3) mock pricing erodes trust, (4) slow initial load, (5) canvas stuttering. These undermine "one tool" promise more than missing features do.
 
 Topics:
-- [[index]]
-- [[competitive-landscape]]
-- [[breadboard-intelligence]]
-- [[goals]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
+- [[competitive-landscape]] — How Fritzing, Wokwi, KiCad, TinkerCad, and other EDA tools compare to ProtoPulse
+- [[breadboard-intelligence]] — Bench coach logic, verified breadboard layouts, layout quality rules, and hardware debugging patterns
+- [[goals]] — Current active threads, priorities, and open questions in ProtoPulse development

@@ -539,3 +539,118 @@ export function spiceToSiNumber(spiceValue: string | number): number {
 export function siToSpiceString(siValue: number): string {
   return formatSpiceValueCompact(siValue);
 }
+
+// ---------------------------------------------------------------------------
+// Length domain — cross-engine boundary (BL-0126 length extension)
+// ---------------------------------------------------------------------------
+//
+// DRC engine (shared/drc-engine.ts) + board stackup (client/src/lib/board-stackup.ts)
+// store all lengths in **mils** (1 mil = 1/1000 inch).
+//
+// Simulation layer (client/src/lib/simulation/transmission-line.ts,
+// pcb-geometry-bridge.ts, pdn-analysis.ts) consumes lengths in **mm** (and
+// internally converts to meters for SI physics).
+//
+// The drift point is the DRC↔sim bridge (pcb-geometry-bridge.ts): prior to
+// BL-0126 this file had inline `* 0.0254` magic numbers with "mils to mm"
+// comments. Now those call-sites call `milToMm` / `mmToMil` / `mmToMeter`.
+//
+// Branded types are **opt-in phantom tags** with zero runtime cost. Existing
+// `number` call-sites keep working unmodified; migrated boundary code opts in
+// by constructing `asMm(n)` / `asMil(n)` and receiving branded parameters.
+//
+// The type-level invariant "cannot pass mil where mm is expected" is
+// **enforced at the sim↔DRC boundary, advisory elsewhere** — migration is
+// incremental. New code at the boundary MUST use branded types; interior code
+// that already agrees on a unit (e.g. DRC is all mils) does not need to
+// migrate until it crosses a boundary.
+// ---------------------------------------------------------------------------
+
+/** Canonical length conversion constants — single source of truth. */
+export const MM_PER_INCH = 25.4;
+export const MIL_PER_INCH = 1000;
+/** 1 mil = 25.4 / 1000 = 0.0254 mm. Exact by definition. */
+export const MM_PER_MIL = MM_PER_INCH / MIL_PER_INCH;
+export const METER_PER_MM = 1e-3;
+
+/**
+ * Branded phantom types for length units. These add a compile-time tag without
+ * any runtime cost — at runtime they are plain `number`s. Opting in at a
+ * function signature makes unit mistakes a type error.
+ *
+ * Example:
+ *   function thermalResistance(traceLen: Length_mm): number { ... }
+ *   thermalResistance(asMm(10));       // OK
+ *   thermalResistance(asMil(10));      // TS error — wrong unit
+ *   thermalResistance(10);             // TS error — no brand
+ */
+export type Length_mm = number & { readonly __unit: 'mm' };
+export type Length_mil = number & { readonly __unit: 'mil' };
+export type Length_meter = number & { readonly __unit: 'm' };
+export type Length_inch = number & { readonly __unit: 'in' };
+
+/** Brand a plain number as a millimetre length. Zero runtime cost. */
+export function asMm(n: number): Length_mm { return n as Length_mm; }
+/** Brand a plain number as a mil length (1/1000 inch). Zero runtime cost. */
+export function asMil(n: number): Length_mil { return n as Length_mil; }
+/** Brand a plain number as a metre length. Zero runtime cost. */
+export function asMeter(n: number): Length_meter { return n as Length_meter; }
+/** Brand a plain number as an inch length. Zero runtime cost. */
+export function asInch(n: number): Length_inch { return n as Length_inch; }
+
+/**
+ * Convert mils (1/1000 inch) to millimetres.
+ *
+ * Accepts either a branded `Length_mil` (preferred at migrated boundaries) or
+ * a plain `number` (for backward compat with un-migrated call sites).
+ *
+ * Pure. NaN/Infinity pass through. Negative input returns a negative mm value.
+ */
+export function milToMm(mils: Length_mil | number): Length_mm {
+  return ((mils as number) * MM_PER_MIL) as Length_mm;
+}
+
+/** Convert millimetres to mils (1/1000 inch). Pure. */
+export function mmToMil(mm: Length_mm | number): Length_mil {
+  return ((mm as number) / MM_PER_MIL) as Length_mil;
+}
+
+/** Convert millimetres to metres. Pure. */
+export function mmToMeter(mm: Length_mm | number): Length_meter {
+  return ((mm as number) * METER_PER_MM) as Length_meter;
+}
+
+/** Convert metres to millimetres. Pure. */
+export function meterToMm(m: Length_meter | number): Length_mm {
+  return ((m as number) / METER_PER_MM) as Length_mm;
+}
+
+/** Convert mils directly to metres. Pure. */
+export function milToMeter(mils: Length_mil | number): Length_meter {
+  return ((mils as number) * MM_PER_MIL * METER_PER_MM) as Length_meter;
+}
+
+/** Convert metres directly to mils. Pure. */
+export function meterToMil(m: Length_meter | number): Length_mil {
+  return ((m as number) / METER_PER_MM / MM_PER_MIL) as Length_mil;
+}
+
+/** Convert inches to millimetres. Pure. */
+export function inchToMm(inches: Length_inch | number): Length_mm {
+  return ((inches as number) * MM_PER_INCH) as Length_mm;
+}
+
+/** Convert millimetres to inches. Pure. */
+export function mmToInch(mm: Length_mm | number): Length_inch {
+  return ((mm as number) / MM_PER_INCH) as Length_inch;
+}
+
+/** Convert inches to mils. Pure. Exact integer arithmetic for whole inches. */
+export function inchToMil(inches: Length_inch | number): Length_mil {
+  return ((inches as number) * MIL_PER_INCH) as Length_mil;
+}
+
+/** Convert mils to inches. Pure. */
+export function milToInch(mils: Length_mil | number): Length_inch {
+  return ((mils as number) / MIL_PER_INCH) as Length_inch;
+}

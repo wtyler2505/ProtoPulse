@@ -16,6 +16,26 @@ import { ArduinoService } from '../arduino-service';
 import type { JobStreamEvent } from '../arduino-service';
 import { logger } from '../logger';
 
+/**
+ * Shape of `ArduinoJob.args` (stored as jsonb) for compile/upload jobs.
+ * Drizzle types `args` as `unknown`; this is the contract our service writes.
+ */
+interface ArduinoJobArgs {
+  fqbn?: string;
+  sketchPath?: string;
+  [key: string]: unknown;
+}
+
+function getJobArgs(job: { args: unknown }): ArduinoJobArgs {
+  return (job.args && typeof job.args === 'object' ? job.args : {}) as ArduinoJobArgs;
+}
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  try { return JSON.stringify(err); } catch { return String(err); }
+}
+
 let arduinoService: ArduinoService | null = null;
 
 function getArduinoService(storage: IStorage): ArduinoService {
@@ -310,8 +330,9 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
     const execAsync = promisify(exec);
     
     // We need the .elf file specifically
-    const fqbn = (job.args as any)?.fqbn?.replace(/:/g, '.') || '';
-    const sketchPath = (job.args as any)?.sketchPath || '.';
+    const jobArgs = getJobArgs(job);
+    const fqbn = jobArgs.fqbn?.replace(/:/g, '.') || '';
+    const sketchPath = jobArgs.sketchPath || '.';
     const { join, resolve } = await import('path');
     const buildDir = resolve(join(sketchPath, 'build', fqbn));
     

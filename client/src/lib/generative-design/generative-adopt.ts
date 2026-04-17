@@ -9,6 +9,7 @@
  * @module generative-design/generative-adopt
  */
 
+import type { Node, Edge } from '@xyflow/react';
 import type { CircuitIR, IRComponent, IRNet } from '@/lib/circuit-dsl/circuit-ir';
 import type { CandidateEntry } from './generative-engine';
 import type { FitnessResult } from './fitness-scorer';

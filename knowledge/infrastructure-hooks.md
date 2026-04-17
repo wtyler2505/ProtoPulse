@@ -22,4 +22,4 @@ ProtoPulse runs 26 Claude Code hooks across 6 events (15 claudekit + 11 custom).
 ---
 
 Topics:
-- [[dev-infrastructure]]
+- [[dev-infrastructure]] — How the Claude Code infrastructure is configured, wired, and maintained -- hooks, skills, agents, MCP servers, and settings

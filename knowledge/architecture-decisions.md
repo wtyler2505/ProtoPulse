@@ -105,6 +105,6 @@ Agent Notes:
 - 2026-04-06: comprehensive audit notes cluster into 5 tight groups: (1) AI quality chain (z.any → no evals → mock data → fabricated output), (2) security attack chain (eval XSS → localStorage → Tauri RCE), (3) main-thread blocking (sim + canvas + prompt + execSync), (4) resource leaks (zombie streams + setInterval + scrypt burst), (5) desktop pivot risks (CSP + sidecar + execSync). Navigation between groups via shared consequences: groups 1+6 share "fake data flowing through", groups 2+4 share "OOM/crash vectors", groups 3+5 share "offload to worker/native".
 
 Topics:
-- [[index]]
-- [[goals]]
-- [[eda-fundamentals]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
+- [[goals]] — Current active threads, priorities, and open questions in ProtoPulse development
+- [[eda-fundamentals]] — Core EDA domain hub -- MCU pin constraints, protocol fundamentals, simulation algorithms, PCB design rules, and standards; cross-links to all hardware topic maps

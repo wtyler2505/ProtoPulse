@@ -27,5 +27,5 @@ These rules govern the `knowledge/` space specifically and are durable enough to
 ---
 
 Topics:
-- [[index]]
-- [[identity]]
+- [[index]] — Entry point to the ProtoPulse knowledge vault -- 528 atomic notes across 11 hardware topic maps covering microcontrollers, actuators, sensors, displays, power, communication, shields, passives, input devices, and system wiring
+- [[identity]] — Who the ProtoPulse knowledge agent is and how it approaches its work

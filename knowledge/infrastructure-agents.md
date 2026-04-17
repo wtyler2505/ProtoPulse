@@ -21,4 +21,4 @@ ProtoPulse has 37 Claude Code agent definitions — specialists summoned by the 
 ---
 
 Topics:
-- [[dev-infrastructure]]
+- [[dev-infrastructure]] — How the Claude Code infrastructure is configured, wired, and maintained -- hooks, skills, agents, MCP servers, and settings
