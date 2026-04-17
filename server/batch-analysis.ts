@@ -83,7 +83,9 @@ async function gatherProjectSnapshot(projectId: number) {
   };
 }
 
-function buildAnalysisPrompt(kind: AnalysisKind, snapshot: any): string {
+type ProjectSnapshot = Awaited<ReturnType<typeof gatherProjectSnapshot>>;
+
+function buildAnalysisPrompt(kind: AnalysisKind, snapshot: ProjectSnapshot): string {
   const base = `Analyze the following hardware project data.\nProject: ${snapshot.projectName}\n\nData:\n` + JSON.stringify(snapshot, null, 2);
   switch (kind) {
     case 'architecture_review': return base + '\n\nPerform a comprehensive architecture review. Identify single points of failure, missing pull-ups, and structural flaws.';

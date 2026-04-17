@@ -137,6 +137,7 @@ export type AIStreamEvent =
   | { type: 'tool_call'; id: string; name: string; input: Record<string, unknown> }
   | { type: 'tool_result'; id: string; name: string; result: ToolResult }
   | { type: 'provider_info'; provider: 'gemini'; model: string; isFallback: boolean }
+  | { type: 'usage'; model: string; inputTokens: number; outputTokens: number }
   | { type: 'done'; message: string; actions: AIAction[]; toolCalls: ToolCallRecord[]; actionGroupId?: string }
   | { type: 'error'; message: string };
 

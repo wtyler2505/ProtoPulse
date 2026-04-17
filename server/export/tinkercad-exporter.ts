@@ -31,8 +31,8 @@ export async function generateTinkercadProject(opts: TinkerCadExportOptions) {
     project: projectName,
     components: instances.map((inst) => {
       const part = parts.find(p => p.id === inst.partId);
-      const meta = (part?.meta ?? {}) as any;
-      
+      const meta = (part?.meta ?? {}) as Partial<PartMeta> & { type?: string };
+
       return {
         id: inst.referenceDesignator,
         type: meta.type || 'generic',
@@ -46,8 +46,8 @@ export async function generateTinkercadProject(opts: TinkerCadExportOptions) {
       };
     }),
     wires: nets.flatMap((net) => {
-      const segments = (net.segments as any[]) || [];
-      const style = (net.style ?? {}) as any;
+      const segments = (Array.isArray(net.segments) ? net.segments : []) as NetSegment[];
+      const style = (net.style ?? {}) as NetStyle;
       return segments.map((seg, i) => ({
         id: `wire_${net.id}_${i}`,
         from: { component: `instance-${seg.fromInstanceId}`, pin: seg.fromPin },

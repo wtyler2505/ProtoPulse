@@ -31,6 +31,7 @@ import { useApiKeyStatus } from '@/hooks/useApiKeyStatus';
 import { useApiKeys } from '@/hooks/useApiKeys';
 import { useGoogleWorkspaceToken } from '@/hooks/useGoogleWorkspaceToken';
 import { queryClient } from '@/lib/queryClient';
+import { invalidateAfterToolCalls } from '@/lib/chat-cache-invalidation';
 import ApiKeySetupDialog from './chat/ApiKeySetupDialog';
 import type { AIAction } from './chat/chat-types';
 import type { PendingActionReview } from './chat/chat-types';
@@ -777,9 +778,12 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
       setStreamingContent('');
 
-      // Invalidate caches if server executed tools (data may have changed in DB)
+      // Invalidate caches if server executed tools (data may have changed in DB).
+      // Narrow invalidation by tool name — see client/src/lib/chat-cache-invalidation.ts.
+      // Falls back to a full invalidate for scorched-earth tools (clear_canvas,
+      // generate_architecture) or unknown tool names (fail-safe).
       if (hasServerToolCalls) {
-        queryClient.invalidateQueries();
+        invalidateAfterToolCalls(queryClient, projectId, finalToolCalls);
       }
 
       const hasDestructive = finalActions.some((a) => DESTRUCTIVE_ACTIONS.includes(a.type));

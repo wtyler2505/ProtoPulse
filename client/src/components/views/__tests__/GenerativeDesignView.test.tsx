@@ -85,6 +85,8 @@ import GenerativeDesignView from '../GenerativeDesignView';
 describe('GenerativeDesignView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockArchitectureNodes = [];
+    mockArchitectureEdges = [];
     mockHookReturn = {
       state: 'idle',
       results: [],
@@ -271,5 +273,51 @@ describe('GenerativeDesignView', () => {
     render(<GenerativeDesignView />);
     const btn = screen.getByTestId('generate-button') as HTMLButtonElement;
     expect(btn.disabled).toBe(true);
+  });
+
+  it('[C-1] Compare diffs against the real architecture, not the defaultBaseCircuit stub', () => {
+    // Simulate a user project that contains U1 (mcu) and R2 (resistor).
+    // The candidate replaces R2 with a capacitor. Expected: the inline
+    // comparison panel shows U1 as REMOVED (since the candidate doesn't have
+    // it) — this could only happen if currentIR comes from the live
+    // architecture, not from the hardcoded R1 seed. If the bug were still
+    // present, U1 would appear as "added" (from the candidate's side only)
+    // and R1 would appear as "removed".
+    mockArchitectureNodes = [
+      { id: 'n-u1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'U1', type: 'mcu' } },
+      { id: 'n-r2', type: 'custom', position: { x: 200, y: 0 }, data: { label: 'R2', type: 'resistor' } },
+    ];
+    mockHookReturn.results = [
+      {
+        generation: 0,
+        bestFitness: 0.9,
+        averageFitness: 0.8,
+        candidates: [
+          {
+            id: 'cand-ci',
+            ir: {
+              meta: { name: 'variant' },
+              components: [
+                { id: 'c1', refdes: 'C1', partId: 'capacitor' },
+              ],
+            },
+            fitness: { overall: 0.9, breakdown: {} },
+          },
+        ],
+      },
+    ];
+
+    render(<GenerativeDesignView />);
+    fireEvent.click(screen.getByTestId('compare-button-cand-ci'));
+
+    const panel = screen.getByTestId('comparison-panel-cand-ci');
+    // U1 from the real project must be flagged as removed relative to the candidate.
+    expect(panel.textContent).toContain('U1');
+    expect(panel.textContent).toContain('removed');
+    // C1 from the candidate must be flagged as added.
+    expect(panel.textContent).toContain('C1');
+    expect(panel.textContent).toContain('added');
+    // Bug fingerprint: R1 (from the old defaultBaseCircuit stub) must NOT appear.
+    expect(panel.textContent).not.toContain('R1');
   });
 });
