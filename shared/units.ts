@@ -141,7 +141,8 @@ export const SPICE_PREFIX_ORDER: readonly string[] = Object.freeze([
 /** Maps a trailing unit-string (lowercase) to a canonical {@link SiUnit}. */
 export const UNIT_SUFFIX_MAP: Readonly<Record<string, SiUnit>> = Object.freeze({
   '': 'none',
-  '\u2126': 'ohm', // Ω
+  '\u2126': 'ohm', // Ω (U+2126 Ohm sign)
+  '\u03A9': 'ohm', // Ω (U+03A9 Greek capital omega — what keyboards / most editors produce)
   ohm: 'ohm',
   ohms: 'ohm',
   r: 'ohm',
@@ -191,7 +192,7 @@ export interface ParsedValue {
 // ---------------------------------------------------------------------------
 
 const SI_PARSE_RE =
-  /^\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*([a-zA-Z\u00B5\u03BC\u2126°]*)\s*$/;
+  /^\s*([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\s*([a-zA-Z\u00B5\u03BC\u2126\u03A9°]*)\s*$/;
 
 /**
  * Parse a strict-SI value string.

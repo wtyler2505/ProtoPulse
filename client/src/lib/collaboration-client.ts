@@ -221,6 +221,9 @@ export class CollaborationClient {
       case 'role-change':
         this.handleRoleChange(message.payload);
         break;
+      case 'conflict-detected':
+        this.handleConflicts(message.payload);
+        break;
       case 'error':
         this.emit('error', new Error(String(message.payload.error)));
         break;
@@ -316,6 +319,67 @@ export class CollaborationClient {
     }
 
     this.emit('role-changed', { userId: targetUserId, role });
+  }
+
+  /* ---------------------------------------------------------------- */
+  /*  BL-0524: Conflict tracking                                        */
+  /* ---------------------------------------------------------------- */
+
+  private handleConflicts(payload: Record<string, unknown>): void {
+    const raw = payload.conflicts;
+    if (!Array.isArray(raw)) { return; }
+    const incoming = raw as Conflict[];
+    if (incoming.length === 0) { return; }
+    this.pendingConflicts = [...this.pendingConflicts, ...incoming];
+    this.emit('conflicts-change', this.pendingConflicts);
+  }
+
+  /** Returns the current list of unresolved conflicts for this client. */
+  getPendingConflicts(): Conflict[] {
+    return this.pendingConflicts;
+  }
+
+  /**
+   * Resolve a conflict with a chosen value. The client re-emits a
+   * state-update that will be merged normally on the server, receiving
+   * a fresh Lamport timestamp that beats the previously winning op.
+   *
+   * - `acceptMine`  — re-apply `yourOp` (insert retries; update/delete re-send).
+   * - `acceptTheirs` — no-op (authoritative state already matches).
+   * - `merge`       — submit `customValue` as an update at the same path/key.
+   */
+  resolveConflict(
+    conflictId: string,
+    action: 'mine' | 'theirs' | 'merge',
+    customValue?: unknown,
+  ): void {
+    const idx = this.pendingConflicts.findIndex((c) => c.id === conflictId);
+    if (idx < 0) { return; }
+    const conflict = this.pendingConflicts[idx];
+
+    if (action === 'mine') {
+      // Re-emit the losing op without its server-assigned timestamp so the
+      // server re-tags it with a newer Lamport clock.
+      const { timestamp: _ts, clientId: _cid, ...op } = conflict.yourOp;
+      void _ts; void _cid;
+      this.sendStateUpdate([op as CRDTOperation]);
+    } else if (action === 'merge') {
+      this.sendStateUpdate([{
+        op: 'update',
+        path: conflict.path,
+        key: conflict.key,
+        value: customValue,
+      }]);
+    }
+    // `theirs` — no server call; state already matches.
+
+    this.pendingConflicts = this.pendingConflicts.filter((_, i) => i !== idx);
+    this.emit('conflicts-change', this.pendingConflicts);
+  }
+
+  /** Dismiss a conflict without taking action (treated as accept-theirs). */
+  dismissConflict(conflictId: string): void {
+    this.resolveConflict(conflictId, 'theirs');
   }
 
   /* ---------------------------------------------------------------- */

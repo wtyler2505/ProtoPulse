@@ -121,83 +121,13 @@ export interface SimulationResult {
 
 // ---------------------------------------------------------------------------
 // SPICE value multiplier suffixes
+//
+// BL-0126: value parsing is now the canonical implementation in
+// `shared/units.ts`. This module re-exports the shared parser so existing
+// callers keep working.
 // ---------------------------------------------------------------------------
 
-/**
- * Parse a SPICE engineering-notation value string into a number.
- *
- * Supports:
- *   - Plain numbers: "100", "3.14", "1e3", "2.2e-6"
- *   - SI multiplier suffixes: T, G, MEG, K, M, U, N, P, F
- *   - Alternative forms: "u" and "\u00B5" (micro sign) both map to 1e-6
- *   - Trailing unit letters are stripped: "10kOhm", "100nF", "4.7uH"
- *
- * SPICE convention: "M" = milli (1e-3), "MEG" = mega (1e6).
- */
-export function parseSpiceValue(valueStr: string): number {
-  if (!valueStr || valueStr.trim() === '') {
-    return NaN;
-  }
-
-  const cleaned = valueStr.trim();
-
-  // Try direct numeric parse first
-  const direct = Number(cleaned);
-  if (!Number.isNaN(direct)) {
-    return direct;
-  }
-
-  // Match: optional sign, digits (with optional decimal and exponent), then suffix
-  const match = /^([+-]?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)\s*([a-zA-Z\u00B5]+)$/.exec(cleaned);
-  if (!match) {
-    return NaN;
-  }
-
-  const num = Number(match[1]);
-  if (Number.isNaN(num)) {
-    return NaN;
-  }
-
-  const suffixRaw = match[2];
-
-  // Try to find the multiplier by checking prefixes of the suffix string.
-  // Order matters: check "MEG" before "M".
-  const multiplier = resolveMultiplier(suffixRaw);
-  if (multiplier === undefined) {
-    return NaN;
-  }
-
-  return num * multiplier;
-}
-
-/** SPICE suffix multiplier table. Checked in order from longest to shortest. */
-const SUFFIX_TABLE: Array<{ pattern: string; value: number }> = [
-  { pattern: 'MEG', value: 1e6 },
-  { pattern: 'MIL', value: 25.4e-6 },
-  { pattern: 'T', value: 1e12 },
-  { pattern: 'G', value: 1e9 },
-  { pattern: 'K', value: 1e3 },
-  { pattern: 'M', value: 1e-3 },
-  { pattern: 'U', value: 1e-6 },
-  { pattern: '\u00B5', value: 1e-6 },
-  { pattern: 'N', value: 1e-9 },
-  { pattern: 'P', value: 1e-12 },
-  { pattern: 'F', value: 1e-15 },
-];
-
-function resolveMultiplier(suffix: string): number | undefined {
-  const upper = suffix.toUpperCase();
-  for (const entry of SUFFIX_TABLE) {
-    if (upper.startsWith(entry.pattern.toUpperCase())) {
-      return entry.value;
-    }
-  }
-  // If it starts with a known unit letter (V, A, H, F, OHM, etc.) with no multiplier, return 1.
-  if (/^[VAHSFW\u03A9]|^OHM/i.test(upper)) {
-    return 1;
-  }
-  return undefined;
-}
+export { parseSpiceValue } from '@shared/units';
 
 // ---------------------------------------------------------------------------
 // Source spec parsing (PULSE, SIN, AC, DC)

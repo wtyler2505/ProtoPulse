@@ -72,7 +72,7 @@ describe('sanitizeSvg — script injection', () => {
     expect(out).not.toContain('alert(1)');
   });
 
-  it.fails(
+  it(
     'VULN: self-closing <script src="evil.js"/> passes through regex (requires </script>)',
     () => {
       const input = '<svg><script src="https://evil.example/x.js"/></svg>';
@@ -82,7 +82,7 @@ describe('sanitizeSvg — script injection', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: mutation XSS — nested <script> reforms after single-pass regex',
     () => {
       // After stripping the inner <script></script>, the outer tag reforms into
@@ -205,7 +205,7 @@ describe('sanitizeSvg — event handler attributes', () => {
     expect(out).not.toContain('c()');
   });
 
-  it.fails(
+  it(
     'VULN: no-whitespace event handler via slash: <svg/onload="alert(1)">',
     () => {
       // HTML parsers accept /attr as an attribute delimiter. The regex requires \s+.
@@ -252,7 +252,7 @@ describe('sanitizeSvg — URL-based injection', () => {
     expect(out).not.toContain('alert(1)');
   });
 
-  it.fails(
+  it(
     'VULN: data:text/html URI in href is NOT stripped',
     () => {
       const input = '<svg><a href="data:text/html,<script>alert(1)</script>"><text>x</text></a></svg>';
@@ -262,7 +262,7 @@ describe('sanitizeSvg — URL-based injection', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: base64-encoded javascript: URI is NOT detected (data:application/javascript;base64,...)',
     () => {
       // atob('alert(1)') ≈ YWxlcnQoMSk=
@@ -272,7 +272,7 @@ describe('sanitizeSvg — URL-based injection', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: vbscript: URI is NOT detected',
     () => {
       // Legacy IE, but still a risk if SVG is piped to embedded browsers.
@@ -284,7 +284,7 @@ describe('sanitizeSvg — URL-based injection', () => {
 });
 
 describe('sanitizeSvg — animation elements', () => {
-  it.fails(
+  it(
     'VULN: <animate attributeName="href" values="javascript:..."> is NOT stripped',
     () => {
       const input = '<svg><a><animate attributeName="href" values="javascript:alert(1)"/><text>x</text></a></svg>';
@@ -293,7 +293,7 @@ describe('sanitizeSvg — animation elements', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: <set attributeName="onclick" to="alert(1)"> is NOT stripped',
     () => {
       const input = '<svg><rect><set attributeName="onclick" to="alert(1)"/></rect></svg>';
@@ -302,7 +302,7 @@ describe('sanitizeSvg — animation elements', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: <animateTransform> with dangerous values is NOT stripped',
     () => {
       const input = '<svg><animateTransform attributeName="href" values="javascript:alert(1)"/></svg>';
@@ -313,15 +313,18 @@ describe('sanitizeSvg — animation elements', () => {
 });
 
 describe('sanitizeSvg — CDATA / XML tricks', () => {
-  it('strips <script> inside CDATA', () => {
-    // The regex for <script>...</script> matches across CDATA boundaries.
+  it('strips <script> inside CDATA (encoded as entities, cannot execute)', () => {
+    // DOMPurify HTML-encodes the <script> tags inside CDATA as &lt;script&gt;.
+    // Encoded entities are text — they cannot execute. The literal substring
+    // "alert(1)" survives as harmless text content.
     const input = '<svg><![CDATA[<script>alert(1)</script>]]></svg>';
     const out = sanitizeSvg(input);
     expect(out).not.toContain('<script');
-    expect(out).not.toContain('alert(1)');
+    // The raw <script> tag must not survive; entity-encoded version is safe.
+    expect(out).toMatch(/&lt;script|&lt;\/script|alert\(1\)/);
   });
 
-  it.fails(
+  it(
     'VULN: billion-laughs XML entity expansion is NOT detected',
     () => {
       const input = `<?xml version="1.0"?>
@@ -336,7 +339,7 @@ describe('sanitizeSvg — CDATA / XML tricks', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: external entity reference (XXE) is NOT detected',
     () => {
       const input = `<?xml version="1.0"?>
@@ -365,7 +368,7 @@ describe('sanitizeSvg — HTML-in-SVG', () => {
     // <image> element itself is allowed (it's a legit SVG element).
   });
 
-  it.fails(
+  it(
     'VULN: bare <iframe> outside <foreignObject> is NOT stripped',
     () => {
       const input = '<svg><iframe src="https://evil.example"></iframe></svg>';
@@ -374,7 +377,7 @@ describe('sanitizeSvg — HTML-in-SVG', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: <embed> element is NOT stripped',
     () => {
       const input = '<svg><embed src="https://evil.example/x.swf"/></svg>';
@@ -383,7 +386,7 @@ describe('sanitizeSvg — HTML-in-SVG', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: <object data="..."> element is NOT stripped',
     () => {
       const input = '<svg><object data="https://evil.example/x.html"></object></svg>';
@@ -394,7 +397,7 @@ describe('sanitizeSvg — HTML-in-SVG', () => {
 });
 
 describe('sanitizeSvg — style-based injection', () => {
-  it.fails(
+  it(
     'VULN: <style> block with url(javascript:...) is NOT stripped',
     () => {
       const input = '<svg><style>svg { background: url(javascript:alert(1)); }</style></svg>';
@@ -404,7 +407,7 @@ describe('sanitizeSvg — style-based injection', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: <style> with @import of remote CSS is NOT stripped',
     () => {
       const input = '<svg><style>@import url("https://evil.example/x.css");</style></svg>';
@@ -413,7 +416,7 @@ describe('sanitizeSvg — style-based injection', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: inline style="behavior:url(...)" (legacy IE) is NOT stripped',
     () => {
       const input = '<svg><rect style="behavior:url(evil.htc)" width="10"/></svg>';
@@ -422,7 +425,7 @@ describe('sanitizeSvg — style-based injection', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: inline style with expression(...) (legacy IE) is NOT stripped',
     () => {
       const input = '<svg><rect style="width:expression(alert(1))"/></svg>';
@@ -433,7 +436,7 @@ describe('sanitizeSvg — style-based injection', () => {
 });
 
 describe('sanitizeSvg — meta/import', () => {
-  it.fails(
+  it(
     'VULN: <meta http-equiv="refresh" content="0;url=javascript:..."> is NOT stripped',
     () => {
       const input = '<svg><meta http-equiv="refresh" content="0;url=javascript:alert(1)"/></svg>';
@@ -443,7 +446,7 @@ describe('sanitizeSvg — meta/import', () => {
     }
   );
 
-  it.fails(
+  it(
     'VULN: <link rel="import"> is NOT stripped',
     () => {
       const input = '<svg><link rel="import" href="https://evil.example/x.html"/></svg>';
@@ -453,45 +456,101 @@ describe('sanitizeSvg — meta/import', () => {
   );
 });
 
+// Note: DOMPurify serializes self-closing tags as `<rect></rect>` rather than
+// `<rect/>`, so we use structural assertions instead of byte-equality.
 describe('sanitizeSvg — benign content passthrough', () => {
   it('passes through plain circle', () => {
-    const input = '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="25" fill="red"/></svg>';
-    expect(sanitizeSvg(input)).toBe(input);
+    const input =
+      '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="25" fill="red"/></svg>';
+    const out = sanitizeSvg(input);
+    expect(out).toContain('<svg');
+    expect(out).toContain('<circle');
+    expect(out).toContain('cx="50"');
+    expect(out).toContain('cy="50"');
+    expect(out).toContain('r="25"');
+    expect(out).toContain('fill="red"');
   });
 
   it('passes through plain rect', () => {
-    const input = '<svg viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" fill="#00f"/></svg>';
-    expect(sanitizeSvg(input)).toBe(input);
+    const input =
+      '<svg viewBox="0 0 100 100"><rect x="10" y="10" width="80" height="80" fill="#00f"/></svg>';
+    const out = sanitizeSvg(input);
+    expect(out).toContain('viewBox="0 0 100 100"');
+    expect(out).toContain('<rect');
+    expect(out).toContain('x="10"');
+    expect(out).toContain('y="10"');
+    expect(out).toContain('width="80"');
+    expect(out).toContain('height="80"');
+    expect(out).toContain('fill="#00f"');
   });
 
   it('passes through plain path', () => {
     const input = '<svg><path d="M10 10 L90 90 Z" stroke="black" fill="none"/></svg>';
-    expect(sanitizeSvg(input)).toBe(input);
+    const out = sanitizeSvg(input);
+    expect(out).toContain('<path');
+    expect(out).toContain('d="M10 10 L90 90 Z"');
+    expect(out).toContain('stroke="black"');
+    expect(out).toContain('fill="none"');
   });
 
   it('passes through grouped elements <g>', () => {
-    const input = '<svg><g transform="translate(10,10)"><rect width="20" height="20"/><circle r="5"/></g></svg>';
-    expect(sanitizeSvg(input)).toBe(input);
+    const input =
+      '<svg><g transform="translate(10,10)"><rect width="20" height="20"/><circle r="5"/></g></svg>';
+    const out = sanitizeSvg(input);
+    expect(out).toContain('<g');
+    expect(out).toContain('transform="translate(10,10)"');
+    expect(out).toContain('<rect');
+    expect(out).toContain('width="20"');
+    expect(out).toContain('height="20"');
+    expect(out).toContain('<circle');
+    expect(out).toContain('r="5"');
   });
 
   it('passes through text with attributes', () => {
-    const input = '<svg><text x="10" y="20" font-family="Arial" font-size="14">Hello</text></svg>';
-    expect(sanitizeSvg(input)).toBe(input);
+    const input =
+      '<svg><text x="10" y="20" font-family="Arial" font-size="14">Hello</text></svg>';
+    const out = sanitizeSvg(input);
+    expect(out).toContain('<text');
+    expect(out).toContain('x="10"');
+    expect(out).toContain('y="20"');
+    expect(out).toContain('font-family="Arial"');
+    expect(out).toContain('font-size="14"');
+    expect(out).toContain('Hello');
   });
 
   it('passes through defs/gradients', () => {
-    const input = '<svg><defs><linearGradient id="g"><stop offset="0%" stop-color="red"/><stop offset="100%" stop-color="blue"/></linearGradient></defs><rect fill="url(#g)" width="100" height="100"/></svg>';
-    expect(sanitizeSvg(input)).toBe(input);
+    const input =
+      '<svg><defs><linearGradient id="g"><stop offset="0%" stop-color="red"/><stop offset="100%" stop-color="blue"/></linearGradient></defs><rect fill="url(#g)" width="100" height="100"/></svg>';
+    const out = sanitizeSvg(input);
+    expect(out).toContain('<defs');
+    expect(out).toContain('<linearGradient');
+    expect(out).toContain('id="g"');
+    expect(out).toContain('<stop');
+    expect(out).toContain('offset="0%"');
+    expect(out).toContain('stop-color="red"');
+    expect(out).toContain('offset="100%"');
+    expect(out).toContain('stop-color="blue"');
+    expect(out).toContain('fill="url(#g)"');
   });
 
   it('passes through viewBox and xmlns attributes', () => {
-    const input = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><rect width="200" height="200" fill="white"/></svg>';
-    expect(sanitizeSvg(input)).toBe(input);
+    const input =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200"><rect width="200" height="200" fill="white"/></svg>';
+    const out = sanitizeSvg(input);
+    expect(out).toContain('xmlns="http://www.w3.org/2000/svg"');
+    expect(out).toContain('viewBox="0 0 200 200"');
+    expect(out).toContain('width="200"');
+    expect(out).toContain('height="200"');
+    expect(out).toContain('fill="white"');
   });
 
   it('passes through class and id attributes (not event handlers)', () => {
     const input = '<svg><rect class="my-rect" id="rect-1" width="10" height="10"/></svg>';
-    expect(sanitizeSvg(input)).toBe(input);
+    const out = sanitizeSvg(input);
+    expect(out).toContain('class="my-rect"');
+    expect(out).toContain('id="rect-1"');
+    expect(out).toContain('width="10"');
+    expect(out).toContain('height="10"');
   });
 
   it('does NOT strip attributes that start with "on" but are not handlers — e.g. "one"', () => {
