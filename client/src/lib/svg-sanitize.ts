@@ -63,8 +63,27 @@ const FORBID_ATTR = [
 // data URIs. Blocks javascript:, vbscript:, data:text/*, data:application/*.
 const ALLOWED_URI_REGEXP = /^(?:(?:#|https?:)|(?:data:image\/(?:png|jpeg|gif|svg\+xml|webp);base64,))/i;
 
+/**
+ * Maximum input size (pre-sanitization). Larger inputs are rejected to avoid
+ * pathologically slow DOMPurify runs — our benchmark showed 1 MB taking ~134s
+ * in happy-dom. 512 KB is generous for any realistic user-uploaded SVG.
+ */
+const MAX_INPUT_BYTES = 512 * 1024;
+
+export class SvgTooLargeError extends Error {
+  constructor(public size: number, public limit: number = MAX_INPUT_BYTES) {
+    super(`SVG input of ${size} bytes exceeds sanitizer limit of ${limit} bytes`);
+    this.name = 'SvgTooLargeError';
+  }
+}
+
 export function sanitizeSvg(svgString: string): string {
   if (!svgString) return '';
+  // Use string length as a proxy for byte size — Unicode expansion is
+  // bounded to ~4x for UTF-8, so 512 KB chars ≈ ≤ 2 MB bytes worst case.
+  if (svgString.length > MAX_INPUT_BYTES) {
+    throw new SvgTooLargeError(svgString.length);
+  }
   return DOMPurify.sanitize(svgString, {
     USE_PROFILES: { svg: true, svgFilters: true },
     FORBID_TAGS: [...FORBID_TAGS],
