@@ -20,6 +20,7 @@ import { validateSession } from '../auth';
 import { storage, partsStorage, StorageError, VersionConflictError } from '../storage';
 import { db } from '../db';
 import { HttpError, parseIdParam, payloadLimit } from './utils';
+import { requireProjectOwnership } from './auth-middleware';
 import { ingressPart, type IngressRequest, type IngressSource } from '../parts-ingress';
 import { PART_ORIGINS, ASSEMBLY_CATEGORIES, TRUST_LEVELS, PLACEMENT_SURFACES, PLACEMENT_CONTAINER_TYPES } from '@shared/parts/part-row';
 import type { PartFilter, PartPagination } from '@shared/parts/part-filter';
@@ -468,9 +469,10 @@ export function registerPartsRoutes(app: Express): void {
     }
   });
 
-  // GET /api/projects/:pid/stock — per-project stock overlay
-  app.get('/api/projects/:pid/stock', requireAuth, async (req, res) => {
-    const projectId = parseInt32(req.params.pid, -1);
+  // GET /api/projects/:projectId/stock — per-project stock overlay
+  // WS-01: requireProjectOwnership enforces session auth + 404 on non-owner.
+  app.get('/api/projects/:projectId/stock', requireProjectOwnership, async (req, res) => {
+    const projectId = parseInt32(req.params.projectId, -1);
     if (projectId < 1) {
       res.status(400).json({ message: 'Invalid project ID' });
       return;
@@ -491,8 +493,11 @@ export function registerPartsRoutes(app: Express): void {
     }
   });
 
-  // PATCH /api/projects/:pid/stock/:id — update stock row (quantities, price, location)
-  app.patch('/api/projects/:pid/stock/:id', requireAuth, payloadLimit(32 * 1024), async (req, res) => {
+  // PATCH /api/projects/:projectId/stock/:id — update stock row (quantities, price, location)
+  // WS-01: requireProjectOwnership enforces session auth + 404 on non-owner.
+  // Additionally verify stock row belongs to projectId (cross-project BOLA).
+  app.patch('/api/projects/:projectId/stock/:id', requireProjectOwnership, payloadLimit(32 * 1024), async (req, res) => {
+    const projectId = parseInt32(req.params.projectId, -1);
     const stockId = String(req.params.id);
     const parsed = updateStockSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -506,6 +511,13 @@ export function registerPartsRoutes(app: Express): void {
       return match ? Number(match[1]) : undefined;
     })();
     try {
+      // WS-01: enforce stock row tenant scoping. getStockById returns undefined
+      // if the row doesn't exist OR doesn't belong to this project.
+      const existing = await partsStorage.getStockById(stockId);
+      if (!existing || existing.projectId !== projectId) {
+        res.status(404).json({ message: 'Stock row not found' });
+        return;
+      }
       const coerced = {
         ...parsed.data,
         unitPrice: parsed.data.unitPrice !== undefined
@@ -529,7 +541,7 @@ export function registerPartsRoutes(app: Express): void {
         return;
       }
       if (err instanceof StorageError) {
-        logger.error('PATCH /api/projects/:pid/stock/:id failed', { message: err.message });
+        logger.error('PATCH /api/projects/:projectId/stock/:id failed', { message: err.message });
         res.status(500).json({ message: 'Failed to update stock' });
         return;
       }
@@ -537,10 +549,18 @@ export function registerPartsRoutes(app: Express): void {
     }
   });
 
-  // DELETE /api/projects/:pid/stock/:id — soft-delete stock row
-  app.delete('/api/projects/:pid/stock/:id', requireAuth, async (req, res) => {
+  // DELETE /api/projects/:projectId/stock/:id — soft-delete stock row
+  // WS-01: requireProjectOwnership enforces session auth + 404 on non-owner.
+  app.delete('/api/projects/:projectId/stock/:id', requireProjectOwnership, async (req, res) => {
+    const projectId = parseInt32(req.params.projectId, -1);
     const stockId = String(req.params.id);
     try {
+      // WS-01: enforce stock row tenant scoping.
+      const existing = await partsStorage.getStockById(stockId);
+      if (!existing || existing.projectId !== projectId) {
+        res.status(404).json({ message: 'Stock row not found' });
+        return;
+      }
       const deleted = await partsStorage.deleteStock(stockId);
       if (!deleted) {
         res.status(404).json({ message: 'Stock row not found' });
@@ -549,7 +569,7 @@ export function registerPartsRoutes(app: Express): void {
       res.status(204).end();
     } catch (err) {
       if (err instanceof StorageError) {
-        logger.error('DELETE /api/projects/:pid/stock/:id failed', { message: err.message });
+        logger.error('DELETE /api/projects/:projectId/stock/:id failed', { message: err.message });
         res.status(500).json({ message: 'Failed to delete stock' });
         return;
       }
