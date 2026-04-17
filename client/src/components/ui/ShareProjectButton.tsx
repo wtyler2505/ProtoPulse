@@ -7,10 +7,11 @@
  * Designed for the workspace header.
  */
 
-import { useState, useMemo, useCallback } from 'react';
-import { Share2 } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Share2, AlertTriangle } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ShareProjectDialog } from '@/components/dialogs/ShareProjectDialog';
+import { ConflictResolutionDialog } from '@/components/collaboration/ConflictResolutionDialog';
 import { useCollaboration } from '@/lib/collaboration-client';
 import { useAuth } from '@/lib/auth-context';
 import { getInitials, computeAvatarOverflow } from '@/lib/collaboration-share';

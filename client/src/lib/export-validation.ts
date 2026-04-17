@@ -46,6 +46,16 @@ export interface ProjectExportData {
 
   /** Whether BOM items have failure-mode data for FMEA. */
   readonly bomItemsWithFailureData: number;
+
+  /**
+   * BL-0150 — total units short across all BOM lines for this project.
+   * Sum of `max(0, quantityNeeded - quantityOnHand)` across `part_stock`.
+   * Optional: callers that haven't wired inventory data pass `undefined`
+   * and the export precheck treats the signal as unknown (no warning).
+   */
+  readonly bomShortfallUnits?: number;
+  /** BL-0150 — number of distinct BOM lines with a shortfall. */
+  readonly bomShortfallLineCount?: number;
 }
 
 // ---------------------------------------------------------------------------
