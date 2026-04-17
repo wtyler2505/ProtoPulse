@@ -507,8 +507,41 @@ function extractErrorInfo(error: unknown): { message: string; status: number | u
 }
 
 /** Strip API keys from error messages to prevent leaking secrets in responses. */
+/**
+ * Redact known secret patterns from arbitrary text before logging.
+ *
+ * Covers prefix-delimited keys from the major providers + bearer tokens.
+ * Regex list derived from observed key prefixes as of 2026-04-17 — extend
+ * when new providers appear. Keep minimum prefix length ≥3 to avoid
+ * catching innocuous strings (e.g. "sk-" alone is a common word fragment
+ * in scientific prose).
+ */
 export function redactSecrets(text: string): string {
-  return text.replace(/sk-[a-zA-Z0-9]+/g, '[REDACTED]').replace(/AIza[a-zA-Z0-9_-]+/g, '[REDACTED]');
+  return text
+    // Anthropic: sk-ant-<...>, sk-ant-api03-<...>
+    .replace(/sk-ant-[a-zA-Z0-9_-]{16,}/g, '[REDACTED]')
+    // OpenAI legacy: sk-<alphanumeric>
+    .replace(/\bsk-[a-zA-Z0-9]{20,}\b/g, '[REDACTED]')
+    // OpenAI project keys: sk-proj-<...>
+    .replace(/\bsk-proj-[a-zA-Z0-9_-]{20,}\b/g, '[REDACTED]')
+    // Google API: AIza<39 chars>
+    .replace(/\bAIza[a-zA-Z0-9_-]{35}\b/g, '[REDACTED]')
+    // Groq: gsk_<...>
+    .replace(/\bgsk_[a-zA-Z0-9]{20,}\b/g, '[REDACTED]')
+    // xAI: xai-<...>
+    .replace(/\bxai-[a-zA-Z0-9]{20,}\b/g, '[REDACTED]')
+    // GitHub: ghp_<...> / gho_<...> / ghu_<...> / ghr_<...> / ghs_<...>
+    .replace(/\bgh[pousr]_[a-zA-Z0-9]{36}\b/g, '[REDACTED]')
+    // Bearer/Authorization headers with an inline token
+    .replace(/(?:Bearer|Token|Authorization:\s*Bearer)\s+[A-Za-z0-9._\-+/=]{16,}/gi, '$&'.replace(/\s.*/, ' [REDACTED]'))
+    // AWS access key IDs
+    .replace(/\bAKIA[0-9A-Z]{16}\b/g, '[REDACTED]')
+    // AWS secret access keys (40 base64-ish chars) — high false-positive risk, gate to Secret/AWS context
+    .replace(/(?:aws_secret_access_key|AWS_SECRET_ACCESS_KEY)\s*=\s*["']?[A-Za-z0-9/+=]{40}["']?/g, (m) => m.split('=')[0] + '=[REDACTED]')
+    // Slack tokens: xox[abpsr]-<...>
+    .replace(/\bxox[abpsr]-[a-zA-Z0-9-]{10,}\b/g, '[REDACTED]')
+    // Stripe: sk_live_<...> / pk_live_<...>
+    .replace(/\b(?:sk|pk)_(?:live|test)_[a-zA-Z0-9]{24,}\b/g, '[REDACTED]');
 }
 
 export function categorizeError(error: unknown): { code: AIErrorCode; userMessage: string } {
