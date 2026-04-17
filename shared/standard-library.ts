@@ -321,7 +321,7 @@ const MCUS: StandardComponentDef[] = [
   mcu('ATmega328P', '8-bit AVR MCU, 32KB flash, 2KB SRAM, 28-pin DIP — Arduino Uno brain', ['MCU', 'AVR', 'Arduino', 'DIP-28', 'ATmega'], { manufacturer: 'Microchip', mpn: 'ATMEGA328P-PU', mountingType: 'tht', packageType: 'DIP-28' }, '328P'),
   mcu('ATmega2560', '8-bit AVR MCU, 256KB flash, 8KB SRAM, 100-pin TQFP — Arduino Mega brain', ['MCU', 'AVR', 'Arduino', 'TQFP-100', 'ATmega'], { manufacturer: 'Microchip', mpn: 'ATMEGA2560-16AU', mountingType: 'smd', packageType: 'TQFP-100' }, '2560'),
   mcu('ESP8266 (ESP-12F)', 'Wi-Fi SoC, 80MHz, 4MB flash, 80KB SRAM', ['MCU', 'Wi-Fi', 'ESP8266', 'IoT'], { manufacturer: 'Espressif', mpn: 'ESP-12F', dimensions: {'length':24,'width':16,'height':3}, mountingType: 'smd' }, 'ESP12'),
-  mcu('ESP32-WROOM-32', 'Dual-core Wi-Fi/BLE SoC, 240MHz, 4MB flash, 520KB SRAM', ['MCU', 'Wi-Fi', 'Bluetooth', 'ESP32', 'IoT'], { manufacturer: 'Espressif', mpn: 'ESP32-WROOM-32E', mountingType: 'smd' }, 'ESP32'),
+  mcu('ESP32-WROOM-32', 'Dual-core Wi-Fi/BLE SoC, 240MHz, 4MB flash, 520KB SRAM', ['MCU', 'Wi-Fi', 'Bluetooth', 'ESP32', 'IoT'], { manufacturer: 'Espressif', mpn: 'ESP32-WROOM-32E', mountingType: 'smd', dimensions: {'length':18,'width':25.5,'height':3.1} }, 'ESP32'),
   mcu('ATtiny85', '8-bit AVR MCU, 8KB flash, 512B SRAM, 8-pin DIP — compact and versatile', ['MCU', 'AVR', 'DIP-8', 'ATtiny'], { manufacturer: 'Microchip', mpn: 'ATTINY85-20PU', mountingType: 'tht', packageType: 'DIP-8', dimensions: {'length':9.8,'width':6.4,'height':3.3} }, 'tiny85'),
   mcu('STM32F103C8T6 (Blue Pill)', 'ARM Cortex-M3, 72MHz, 64KB flash, 20KB SRAM, 48-pin LQFP', ['MCU', 'ARM', 'STM32', 'Cortex-M3', 'LQFP-48'], { manufacturer: 'STMicroelectronics', mpn: 'STM32F103C8T6', mountingType: 'smd', packageType: 'LQFP-48', dimensions: {'length':7,'width':7,'height':1.4} }, 'STM32'),
 ];
@@ -421,23 +421,23 @@ const DISPLAYS: StandardComponentDef[] = [
 // Sensors (8)
 // ---------------------------------------------------------------------------
 const SENSORS: StandardComponentDef[] = [
-  sensor('DHT11 — Temperature & Humidity Sensor', 'Digital temperature (0\u201350\u00B0C) and humidity (20\u201380%) sensor, single-wire', ['sensor', 'temperature', 'humidity', 'DHT11', 'digital'], { manufacturer: 'Aosong', mpn: 'DHT11', dimensions: {'length':15.5,'width':12,'height':5.5}, interface: 'single-wire', accuracy: '\u00B12\u00B0C, \u00B15%RH' }, 'DHT11'),
+  sensor('DHT11 — Temperature & Humidity Sensor', 'Digital temperature (0\u201350\u00B0C) and humidity (20\u201380%) sensor, single-wire', ['sensor', 'temperature', 'humidity', 'DHT11', 'digital'], { manufacturer: 'Aosong', mpn: 'DHT11', dimensions: {'length':38,'width':15.5,'height':15}, interface: 'single-wire', accuracy: '\u00B12\u00B0C, \u00B15%RH' }, 'DHT11'),
   sensor('DHT22 — Temperature & Humidity Sensor', 'Digital temperature (-40\u201380\u00B0C) and humidity (0\u2013100%) sensor, single-wire', ['sensor', 'temperature', 'humidity', 'DHT22', 'digital'], { manufacturer: 'Aosong', mpn: 'DHT22/AM2302', dimensions: {'length':25.1,'width':15.1,'height':7.7}, interface: 'single-wire', accuracy: '\u00B10.5\u00B0C, \u00B12%RH' }, 'DHT22'),
   sensor('DS18B20 — 1-Wire Temperature Sensor', 'Digital 1-Wire temperature sensor, -55 to +125\u00B0C, \u00B10.5\u00B0C accuracy, TO-92', ['sensor', 'temperature', '1-Wire', 'DS18B20', 'digital'], { manufacturer: 'Maxim', mpn: 'DS18B20', interface: '1-Wire', mountingType: 'tht', packageType: 'TO-92', dimensions: {'length':4.8,'width':3.8,'height':4.8} }, '18B20'),
   sensor('HC-SR04 — Ultrasonic Distance Sensor', 'Ultrasonic ranging module, 2cm\u20134m range, 3mm resolution', ['sensor', 'ultrasonic', 'distance', 'HC-SR04'], { manufacturer: 'Generic', mpn: 'HC-SR04', dimensions: {'length':45,'width':20,'height':15}, interface: 'trigger/echo' }, 'SR04'),
-  sensor('PIR Motion Sensor (HC-SR501)', 'Passive infrared motion sensor module, adjustable sensitivity and delay', ['sensor', 'PIR', 'motion', 'HC-SR501', 'infrared'], { manufacturer: 'Generic', mpn: 'HC-SR501', dimensions: {'length':32,'width':24,'height':24} }, 'PIR'),
+  sensor('PIR Motion Sensor (HC-SR501)', 'Passive infrared motion sensor module, adjustable sensitivity and delay', ['sensor', 'PIR', 'motion', 'HC-SR501', 'infrared'], { manufacturer: 'Generic', mpn: 'HC-SR501', dimensions: {'length':32,'width':24,'height':18} }, 'PIR'),
   sensor('LDR — Light Dependent Resistor', 'Photoresistor (LDR), 1k\u03A9\u201310M\u03A9 range depending on illumination', ['sensor', 'light', 'LDR', 'photoresistor', 'analog'], { manufacturer: 'Generic', type: 'photoresistor' }, 'LDR'),
   sensor('NTC Thermistor 10k\u03A9', '10k\u03A9 NTC thermistor, B=3950, -40 to +125\u00B0C', ['sensor', 'thermistor', 'NTC', '10k\u03A9', 'temperature', 'analog'], { manufacturer: 'Murata', mpn: 'NCP15XH103F03RC', value: '10k\u03A9', beta: 3950 }, 'NTC'),
-  sensor('MPU-6050 — 6-Axis IMU', '6-axis accelerometer + gyroscope, I2C', ['sensor', 'IMU', 'accelerometer', 'gyroscope', 'I2C', 'MPU-6050'], { manufacturer: 'TDK InvenSense', mpn: 'MPU-6050', dimensions: {'length':20,'width':15,'height':1.2}, interface: 'I2C' }, 'MPU'),
+  sensor('MPU-6050 — 6-Axis IMU', '6-axis accelerometer + gyroscope, I2C', ['sensor', 'IMU', 'accelerometer', 'gyroscope', 'I2C', 'MPU-6050'], { manufacturer: 'TDK InvenSense', mpn: 'MPU-6050', dimensions: {'length':21.2,'width':16.4,'height':3.3}, interface: 'I2C' }, 'MPU'),
 ];
 
 // ---------------------------------------------------------------------------
 // Communication Modules (4)
 // ---------------------------------------------------------------------------
 const COMM_MODULES: StandardComponentDef[] = [
-  comm('NRF24L01 — 2.4GHz Transceiver', '2.4GHz wireless transceiver module, SPI, 250kbps\u20132Mbps, 100m range', ['wireless', 'RF', '2.4GHz', 'NRF24L01', 'SPI'], { manufacturer: 'Nordic Semiconductor', mpn: 'NRF24L01+', interface: 'SPI', frequency: '2.4GHz' }, 'NRF24'),
-  comm('HC-05 — Bluetooth Module', 'Bluetooth 2.0 SPP module, UART, master/slave, 10m range', ['Bluetooth', 'UART', 'HC-05', 'SPP', 'wireless'], { manufacturer: 'Generic', mpn: 'HC-05', dimensions: {'length':37.3,'width':15.2,'height':6}, interface: 'UART', btVersion: '2.0' }, 'HC-05'),
-  comm('SIM800L — GSM/GPRS Module', 'Quad-band GSM/GPRS module, UART, SMS/voice/data', ['GSM', 'GPRS', 'cellular', 'SIM800L', 'UART'], { manufacturer: 'SIMCom', mpn: 'SIM800L', dimensions: {'length':25,'width':23,'height':5}, interface: 'UART', bands: '850/900/1800/1900MHz' }, 'SIM800'),
+  comm('NRF24L01 — 2.4GHz Transceiver', '2.4GHz wireless transceiver module, SPI, 250kbps\u20132Mbps, 100m range', ['wireless', 'RF', '2.4GHz', 'NRF24L01', 'SPI'], { manufacturer: 'Nordic Semiconductor', mpn: 'NRF24L01+', dimensions: {'length':28.5,'width':15.2,'height':12}, interface: 'SPI', frequency: '2.4GHz' }, 'NRF24'),
+  comm('HC-05 — Bluetooth Module', 'Bluetooth 2.0 SPP module, UART, master/slave, 10m range', ['Bluetooth', 'UART', 'HC-05', 'SPP', 'wireless'], { manufacturer: 'Generic', mpn: 'HC-05', dimensions: {'length':37.5,'width':15.5,'height':5.6}, interface: 'UART', btVersion: '2.0' }, 'HC-05'),
+  comm('SIM800L — GSM/GPRS Module', 'Quad-band GSM/GPRS module, UART, SMS/voice/data', ['GSM', 'GPRS', 'cellular', 'SIM800L', 'UART'], { manufacturer: 'SIMCom', mpn: 'SIM800L', dimensions: {'length':25,'width':23,'height':3.5}, interface: 'UART', bands: '850/900/1800/1900MHz' }, 'SIM800'),
   comm('RFM95 — LoRa Transceiver', 'Long-range LoRa transceiver, 868/915MHz, SPI, up to 15km range', ['LoRa', 'wireless', 'long-range', 'RFM95', 'SPI'], { manufacturer: 'HopeRF', mpn: 'RFM95W', dimensions: {'length':16,'width':16,'height':2}, interface: 'SPI', frequency: '868/915MHz' }, 'RFM95'),
 ];
 

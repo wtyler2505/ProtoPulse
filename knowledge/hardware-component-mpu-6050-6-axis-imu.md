@@ -21,9 +21,9 @@ tags: [component, hardware, sensors]
 
 
 ## Exact Physical Dimensions
-- **Length:** 20 mm
-- **Width:** 15 mm
-- **Height:** 1.2 mm
+- **Length:** 21.2 mm
+- **Width:** 16.4 mm
+- **Height:** 3.3 mm
 - **Pitch:** N/A mm
 
 ## Connectors & Interfaces

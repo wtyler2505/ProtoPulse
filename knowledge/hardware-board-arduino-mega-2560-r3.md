@@ -22,7 +22,7 @@ This note is the canonical Ars Contexta source of truth for the Arduino Mega 256
 ## Exact Physical Dimensions
 - **Width:** 101.6 mm
 - **Height:** 53.34 mm
-- **Thickness:** 1.6 mm
+- **Thickness:** 15.3 mm
 - **Pin Pitch:** 2.54 mm
 
 ## Visual Characteristics

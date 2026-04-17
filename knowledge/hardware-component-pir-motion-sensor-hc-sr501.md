@@ -23,7 +23,7 @@ Passive infrared motion sensor module, adjustable sensitivity and delay
 ## Exact Physical Dimensions
 - **Length:** 32 mm
 - **Width:** 24 mm
-- **Height:** 24 mm
+- **Height:** 18 mm
 - **Pitch:** N/A mm
 
 ## Connectors & Interfaces

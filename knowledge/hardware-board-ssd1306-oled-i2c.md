@@ -20,9 +20,9 @@ This note is the canonical Ars Contexta source of truth for the SSD1306 0.96" OL
 - **Breadboard Notes:** 4-pin header easily fits into a breadboard.
 
 ## Exact Physical Dimensions
-- **Width:** 27 mm
-- **Height:** 27 mm
-- **Thickness:** 1.6 mm
+- **Width:** 27.3 mm
+- **Height:** 27.8 mm
+- **Thickness:** 4 mm
 - **Pin Pitch:** 2.54 mm
 
 ## Visual Characteristics

@@ -21,7 +21,10 @@ Dual-core Wi-Fi/BLE SoC, 240MHz, 4MB flash, 520KB SRAM
 
 
 ## Exact Physical Dimensions
-*(Dimensions not explicitly modeled in standard library)*
+- **Length:** 18 mm
+- **Width:** 25.5 mm
+- **Height:** 3.1 mm
+- **Pitch:** N/A mm
 
 ## Connectors & Interfaces
 - **1** (pin1): Pin 1 — 1 (io)

@@ -22,7 +22,7 @@ This note is the canonical Ars Contexta source of truth for the HC-SR04 Ultrason
 ## Exact Physical Dimensions
 - **Width:** 45 mm
 - **Height:** 20 mm
-- **Thickness:** 1.6 mm
+- **Thickness:** 15 mm
 - **Pin Pitch:** 2.54 mm
 
 ## Visual Characteristics
@@ -32,8 +32,8 @@ This note is the canonical Ars Contexta source of truth for the HC-SR04 Ultrason
 ## Electrical Constraints
 - **Operating Voltage:** 5V
 - **Input Voltage Range:** 4.5V - 5.5V
-- **Max Current Per Pin:** 15 mA
-- **Max Total Current:** 15 mA
+- **Max Current Per Pin:** 20 mA
+- **Max Total Current:** 20 mA
 
 ## Headers & Pinout
 ### main Header (bottom side, 4 pins)

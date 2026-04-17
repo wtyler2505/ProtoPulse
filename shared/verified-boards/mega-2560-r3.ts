@@ -360,7 +360,7 @@ export const MEGA_2560_R3: VerifiedBoardDefinition = {
   family: 'board-module',
   description: 'Arduino Mega 2560 R3 — ATmega2560-based microcontroller board with 54 digital I/O pins (15 PWM), 16 analog inputs, 4 hardware UARTs, SPI, I2C, and 256 KB flash. The most pin-rich board in the classic Arduino line.',
 
-  dimensions: { width: 101.6, height: 53.34, thickness: 1.6 },
+  dimensions: { width: 101.6, height: 53.34, thickness: 15.3 },
   breadboardFit: 'not_breadboard_friendly',
   breadboardNotes: 'At 101.6mm x 53.34mm, the Mega is far too wide for any standard breadboard. Use jumper wires from the female headers to a breadboard, or mount on a dedicated prototyping baseplate.',
   pinSpacing: 2.54,

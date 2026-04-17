@@ -21,9 +21,9 @@ Digital temperature (0–50°C) and humidity (20–80%) sensor, single-wire
 
 
 ## Exact Physical Dimensions
-- **Length:** 15.5 mm
-- **Width:** 12 mm
-- **Height:** 5.5 mm
+- **Length:** 38 mm
+- **Width:** 15.5 mm
+- **Height:** 15 mm
 - **Pitch:** N/A mm
 
 ## Connectors & Interfaces

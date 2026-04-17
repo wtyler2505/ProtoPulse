@@ -290,7 +290,7 @@ export const RPI_PICO: VerifiedBoardDefinition = {
   family: 'board-module',
   description: 'RP2040-based board with dual-core Cortex-M0+ at 133MHz, 264KB SRAM, 2MB flash, 26 GPIO, 3 ADC, 2 UART, 2 SPI, 2 I2C, 16 PWM channels. DIP form factor with castellated pads.',
 
-  dimensions: { width: 21, height: 51, thickness: 3.9 },
+  dimensions: { width: 21, height: 51, thickness: 3.8 },
   breadboardFit: 'native',
   breadboardNotes: 'DIP form factor (21mm wide) fits across the center channel of a standard breadboard. 20 pins per side at 0.1" pitch. Castellated pads allow soldering as a module.',
   pinSpacing: 2.54,

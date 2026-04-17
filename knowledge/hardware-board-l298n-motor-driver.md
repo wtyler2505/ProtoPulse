@@ -22,7 +22,7 @@ This note is the canonical Ars Contexta source of truth for the L298N Dual Motor
 ## Exact Physical Dimensions
 - **Width:** 43 mm
 - **Height:** 43 mm
-- **Thickness:** 1.6 mm
+- **Thickness:** 27 mm
 - **Pin Pitch:** 2.54 mm
 
 ## Visual Characteristics
@@ -39,7 +39,7 @@ This note is the canonical Ars Contexta source of truth for the L298N Dual Motor
 ### power Header (bottom side, 3 pins)
 - **12V** (power, 12V): Main motor power input. Technically accepts up to 35V, but typically labeled 12V. Remove 5V-EN jumper if supplying >12V to avoid burning the onboard regulator.
 - **GND** (ground, 0V): Common ground. Must be connected to the microcontroller ground.
-- **5V** (power, 5V): If 5V-EN jumper is present, this is a 5V OUTPUT from the onboard regulator. If jumper is removed, this is a 5V INPUT to power the logic logic.
+- **5V** (power, 5V): If 5V-EN jumper is present, this is a 5V OUTPUT from the onboard regulator. If jumper is removed, this is a 5V INPUT to power the logic.
 
 ### motor_a Header (left side, 2 pins)
 - **OUT1** (power, 12V): Motor A output 1

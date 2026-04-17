@@ -14,8 +14,8 @@ describe('Teensy 4.0 board definition', () => {
   });
 
   it('has correct physical dimensions', () => {
-    expect(TEENSY_40.dimensions.width).toBe(17.8);
-    expect(TEENSY_40.dimensions.height).toBe(35.6);
+    expect(TEENSY_40.dimensions.width).toBe(17.78);
+    expect(TEENSY_40.dimensions.height).toBe(35.56);
     expect(TEENSY_40.breadboardFit).toBe('native');
     expect(TEENSY_40.pinSpacing).toBe(2.54);
   });

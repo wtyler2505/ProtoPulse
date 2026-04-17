@@ -21,7 +21,10 @@ tags: [component, hardware, communication]
 
 
 ## Exact Physical Dimensions
-*(Dimensions not explicitly modeled in standard library)*
+- **Length:** 28.5 mm
+- **Width:** 15.2 mm
+- **Height:** 12 mm
+- **Pitch:** N/A mm
 
 ## Connectors & Interfaces
 - **1** (pin1): Pin 1 — 1 (io)

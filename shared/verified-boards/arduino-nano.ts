@@ -170,7 +170,7 @@ export const ARDUINO_NANO: VerifiedBoardDefinition = {
   family: 'board-module',
   description: 'Compact ATmega328P board (45×18mm) with 14 digital I/O (6 PWM), 8 analog inputs, and Mini-B USB. Breadboard-friendly DIP form factor.',
 
-  dimensions: { width: 18, height: 45, thickness: 8 },
+  dimensions: { width: 18, height: 45, thickness: 19 },
   breadboardFit: 'native',
   breadboardNotes: 'DIP form factor fits directly across the center channel of a standard breadboard. 15 pins per side at 0.1" pitch. One of the most breadboard-friendly Arduino boards.',
   pinSpacing: 2.54,

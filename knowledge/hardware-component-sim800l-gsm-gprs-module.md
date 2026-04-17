@@ -23,7 +23,7 @@ Quad-band GSM/GPRS module, UART, SMS/voice/data
 ## Exact Physical Dimensions
 - **Length:** 25 mm
 - **Width:** 23 mm
-- **Height:** 5 mm
+- **Height:** 3.5 mm
 - **Pitch:** N/A mm
 
 ## Connectors & Interfaces

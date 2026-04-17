@@ -326,7 +326,7 @@ export const NODEMCU_ESP32S: VerifiedBoardDefinition = {
   family: 'board-module',
   description: 'NodeMCU ESP32-S — 38-pin development board based on Espressif ESP-WROOM-32 module. Dual-core 240 MHz Xtensa LX6, 520 KB SRAM, WiFi 802.11 b/g/n, Bluetooth 4.2/BLE, 34 GPIO (25 usable), 18 ADC channels, 2 DAC, 10 touch sensors, 4 SPI, 2 I2C, 3 UART, CAN, I2S.',
 
-  dimensions: { width: 25.4, height: 54, thickness: 1.6 },
+  dimensions: { width: 25.4, height: 51.4, thickness: 11.5 },
   breadboardFit: 'requires_jumpers',
   breadboardNotes: 'At 22.86mm row spacing, the 38-pin NodeMCU ESP32-S barely fits on a standard 830-point breadboard — only 1 free column remains on each side. Many makers use two breadboards side-by-side or a dedicated ESP32 breakout expansion board.',
   pinSpacing: 2.54,

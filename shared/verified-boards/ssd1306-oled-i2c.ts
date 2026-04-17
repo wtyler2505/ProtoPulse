@@ -21,7 +21,7 @@ export const SSD1306_OLED_I2C: VerifiedBoardDefinition = {
   aliases: ['0.96 oled', 'i2c oled', 'ssd1306 display'],
   family: 'board-module',
   description: '0.96-inch monochrome OLED display with 128x64 resolution, driven by the SSD1306 controller over I2C.',
-  dimensions: { width: 27, height: 27, thickness: 1.6 },
+  dimensions: { width: 27.3, height: 27.8, thickness: 4.0 },
   breadboardFit: 'native',
   breadboardNotes: '4-pin header easily fits into a breadboard.',
   pinSpacing: 2.54,

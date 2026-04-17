@@ -36,7 +36,7 @@ const POWER_PINS: VerifiedPin[] = [
     role: 'power',
     direction: 'bidirectional',
     voltage: 5,
-    warnings: ['If 5V-EN jumper is present, this is a 5V OUTPUT from the onboard regulator. If jumper is removed, this is a 5V INPUT to power the logic logic.'],
+    warnings: ['If 5V-EN jumper is present, this is a 5V OUTPUT from the onboard regulator. If jumper is removed, this is a 5V INPUT to power the logic.'],
   },
 ];
 
@@ -67,7 +67,7 @@ export const L298N_MOTOR_DRIVER: VerifiedBoardDefinition = {
   aliases: ['l298n module', 'h-bridge module', 'dual motor driver'],
   family: 'board-module',
   description: 'Classic L298N dual H-bridge motor driver module. Controls two DC motors or one bipolar stepper motor. Includes an onboard 5V regulator.',
-  dimensions: { width: 43, height: 43, thickness: 1.6 },
+  dimensions: { width: 43, height: 43, thickness: 27 },
   breadboardFit: 'not_breadboard_friendly',
   breadboardNotes: 'Module has screw terminals and male headers, designed for jumper wire connections, not direct breadboard insertion.',
   pinSpacing: 2.54,

@@ -13,6 +13,7 @@
  */
 
 import type { StackupLayer } from '@/lib/board-stackup';
+import { milToMm, mmToMeter } from '@shared/units';
 import type { PowerNet, PowerVia } from './pdn-analysis';
 import type { TraceInfo, StackupLayerInfo } from './si-advisor';
 
@@ -329,7 +330,9 @@ function findStackupLayerInfo(layerName: string, stackup: StackupLayer[]): Stack
     // Look for nearest ground/power plane
     for (let i = matchedIdx + 1; i < sorted.length; i++) {
       if (sorted[i].type === 'ground' || sorted[i].type === 'power') {
-        height = sorted[i].thickness * 0.0254; // mils to mm
+        // stackup.thickness is in mils (see client/src/lib/board-stackup.ts);
+        // simulation consumes mm. Use shared units contract (BL-0126).
+        height = milToMm(sorted[i].thickness);
         break;
       }
     }
@@ -375,12 +378,13 @@ function estimateLayerSeparation(stackup: StackupLayer[]): number {
     return 0.4; // default ~0.4mm
   }
 
-  // Sum all layer thicknesses (in mils) and convert
+  // Sum all layer thicknesses (in mils) and convert to mm via shared
+  // unit contract (BL-0126) — formerly an inline `* 0.0254` magic number.
   let totalThicknessMils = 0;
   for (const layer of stackup) {
     totalThicknessMils += layer.thickness;
   }
-  const totalMm = totalThicknessMils * 0.0254;
+  const totalMm = milToMm(totalThicknessMils);
   return totalMm / Math.max(1, stackup.length - 1);
 }
 

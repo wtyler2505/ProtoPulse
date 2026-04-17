@@ -21,8 +21,8 @@ This note is the canonical Ars Contexta source of truth for the NodeMCU ESP32-S,
 
 ## Exact Physical Dimensions
 - **Width:** 25.4 mm
-- **Height:** 54 mm
-- **Thickness:** 1.6 mm
+- **Height:** 51.4 mm
+- **Thickness:** 11.5 mm
 - **Pin Pitch:** 2.54 mm
 
 ## Visual Characteristics

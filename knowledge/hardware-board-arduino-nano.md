@@ -22,7 +22,7 @@ This note is the canonical Ars Contexta source of truth for the Arduino Nano, us
 ## Exact Physical Dimensions
 - **Width:** 18 mm
 - **Height:** 45 mm
-- **Thickness:** 8 mm
+- **Thickness:** 19 mm
 - **Pin Pitch:** 2.54 mm
 
 ## Visual Characteristics

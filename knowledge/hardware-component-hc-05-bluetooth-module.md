@@ -21,9 +21,9 @@ Bluetooth 2.0 SPP module, UART, master/slave, 10m range
 
 
 ## Exact Physical Dimensions
-- **Length:** 37.3 mm
-- **Width:** 15.2 mm
-- **Height:** 6 mm
+- **Length:** 37.5 mm
+- **Width:** 15.5 mm
+- **Height:** 5.6 mm
 - **Pitch:** N/A mm
 
 ## Connectors & Interfaces

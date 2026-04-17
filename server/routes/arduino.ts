@@ -371,8 +371,8 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
         elfPath,
         symbols 
       });
-    } catch (e: any) {
-      res.status(500).json({ message: 'Failed to analyze memory: ' + e.message });
+    } catch (e: unknown) {
+      res.status(500).json({ message: 'Failed to analyze memory: ' + errorMessage(e) });
     }
   }));
 
@@ -531,8 +531,8 @@ export function registerArduinoRoutes(app: Express, storage: IStorage): void {
       const { hardwareCoDebugFlow } = await import('../genkit');
       const result = await hardwareCoDebugFlow({ projectId, code, serialLogs });
       res.json({ result });
-    } catch (err: any) {
-      res.status(500).json({ message: `Co-Debug failed: ${err.message}` });
+    } catch (err: unknown) {
+      res.status(500).json({ message: `Co-Debug failed: ${errorMessage(err)}` });
     }
   }));
 }

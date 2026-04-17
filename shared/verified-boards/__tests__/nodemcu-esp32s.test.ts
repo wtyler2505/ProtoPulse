@@ -16,7 +16,7 @@ describe('NodeMCU ESP32-S board definition', () => {
 
   it('has correct physical dimensions', () => {
     expect(NODEMCU_ESP32S.dimensions.width).toBe(25.4);
-    expect(NODEMCU_ESP32S.dimensions.height).toBe(54);
+    expect(NODEMCU_ESP32S.dimensions.height).toBe(51.4);
     expect(NODEMCU_ESP32S.breadboardFit).toBe('requires_jumpers');
     expect(NODEMCU_ESP32S.pinSpacing).toBe(2.54);
   });

@@ -161,7 +161,7 @@ const MODEL_TIERS: Record<string, { fast: string; standard: string; premium: str
     premium: 'claude-opus-4-5-20250514',
   },
   gemini: {
-    fast: 'gemini-2.5-flash',
+    fast: 'gemini-2.5-flash-lite',
     standard: 'gemini-2.5-flash',
     premium: 'gemini-2.5-pro',
   },
@@ -401,6 +401,7 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
   // Gemini
   'gemini-2.5-pro': 1_000_000,
   'gemini-2.5-flash': 1_000_000,
+  'gemini-2.5-flash-lite': 1_000_000,
   'gemini-1.5-pro': 2_000_000,
   'gemini-1.5-flash': 1_000_000,
 };

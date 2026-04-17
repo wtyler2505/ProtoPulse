@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-04-17T22:36:19.072Z",
+  "persistedAt": "2026-04-17T22:49:19.077Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 5,
@@ -270,14 +270,15 @@
       ]
     },
     "GET /api/projects/:id/circuits": {
-      "count": 10,
-      "totalDuration": 151,
+      "count": 12,
+      "totalDuration": 198,
       "errors": 0,
       "min": 7,
-      "max": 35,
+      "max": 38,
       "samples": [
         7,
         8,
+        9,
         11,
         12,
         12,
@@ -285,12 +286,13 @@
         15,
         18,
         19,
-        35
+        35,
+        38
       ]
     },
     "GET /api/projects/:id/component-parts": {
-      "count": 9,
-      "totalDuration": 247,
+      "count": 11,
+      "totalDuration": 334,
       "errors": 0,
       "min": 10,
       "max": 68,
@@ -300,9 +302,11 @@
         17,
         19,
         24,
+        24,
         25,
         29,
         43,
+        63,
         68
       ]
     },
@@ -317,11 +321,11 @@
       ]
     },
     "GET /api/circuits/:circuitId/instances": {
-      "count": 9,
-      "totalDuration": 280,
+      "count": 11,
+      "totalDuration": 599,
       "errors": 0,
       "min": 19,
-      "max": 42,
+      "max": 204,
       "samples": [
         19,
         26,
@@ -331,15 +335,17 @@
         33,
         34,
         39,
-        42
+        42,
+        115,
+        204
       ]
     },
     "GET /api/circuits/:circuitId/wires": {
-      "count": 9,
-      "totalDuration": 206,
+      "count": 11,
+      "totalDuration": 324,
       "errors": 0,
       "min": 12,
-      "max": 51,
+      "max": 92,
       "samples": [
         12,
         14,
@@ -348,16 +354,18 @@
         20,
         24,
         24,
+        26,
         27,
-        51
+        51,
+        92
       ]
     },
     "GET /api/circuits/:circuitId/nets": {
-      "count": 9,
-      "totalDuration": 229,
+      "count": 11,
+      "totalDuration": 781,
       "errors": 0,
       "min": 16,
-      "max": 40,
+      "max": 525,
       "samples": [
         16,
         17,
@@ -365,9 +373,11 @@
         21,
         25,
         27,
+        27,
         29,
         33,
-        40
+        40,
+        525
       ]
     },
     "POST /api/projects/:id/chat": {

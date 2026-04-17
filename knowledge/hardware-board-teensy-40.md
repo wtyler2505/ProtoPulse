@@ -20,9 +20,9 @@ This note is the canonical Ars Contexta source of truth for the Teensy 4.0, used
 - **Breadboard Notes:** DIP form factor (17.8mm wide) fits across the center channel of a standard breadboard. 14 pins per side at 0.1" pitch. Castellated pads on bottom for additional I/O.
 
 ## Exact Physical Dimensions
-- **Width:** 17.8 mm
-- **Height:** 35.6 mm
-- **Thickness:** 5 mm
+- **Width:** 17.78 mm
+- **Height:** 35.56 mm
+- **Thickness:** 4.6 mm
 - **Pin Pitch:** 2.54 mm
 
 ## Visual Characteristics

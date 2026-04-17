@@ -229,7 +229,7 @@ export const TEENSY_40: VerifiedBoardDefinition = {
   family: 'board-module',
   description: 'NXP iMXRT1062 ARM Cortex-M7 at 600MHz with 1MB RAM, 2MB flash. DIP form factor (35.6×17.8mm), same size as Teensy 3.2. USB native, 40 digital I/O, 14 analog, multiple serial/SPI/I2C.',
 
-  dimensions: { width: 17.8, height: 35.6, thickness: 5 },
+  dimensions: { width: 17.78, height: 35.56, thickness: 4.6 },
   breadboardFit: 'native',
   breadboardNotes: 'DIP form factor (17.8mm wide) fits across the center channel of a standard breadboard. 14 pins per side at 0.1" pitch. Castellated pads on bottom for additional I/O.',
   pinSpacing: 2.54,

@@ -21,14 +21,14 @@ export const HC_SR04_ULTRASONIC: VerifiedBoardDefinition = {
   aliases: ['ultrasonic sensor', 'hcsr04', 'distance sensor'],
   family: 'sensor-module',
   description: 'A 5V ultrasonic distance measuring module providing 2cm-400cm non-contact measurement functionality.',
-  dimensions: { width: 45, height: 20, thickness: 1.6 },
+  dimensions: { width: 45, height: 20, thickness: 15 },
   breadboardFit: 'native',
   breadboardNotes: '4-pin header can be inserted directly into a breadboard.',
   pinSpacing: 2.54,
   operatingVoltage: 5,
   inputVoltageRange: [4.5, 5.5],
-  maxCurrentPerPin: 15,
-  maxTotalCurrent: 15,
+  maxCurrentPerPin: 20,
+  maxTotalCurrent: 20,
   visual: {
     pcbColor: '#1d4ed8', // blue PCB
     silkscreenColor: '#1e3a8a',

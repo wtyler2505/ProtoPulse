@@ -22,7 +22,7 @@ This note is the canonical Ars Contexta source of truth for the Raspberry Pi Pic
 ## Exact Physical Dimensions
 - **Width:** 21 mm
 - **Height:** 51 mm
-- **Thickness:** 3.9 mm
+- **Thickness:** 3.8 mm
 - **Pin Pitch:** 2.54 mm
 
 ## Visual Characteristics
