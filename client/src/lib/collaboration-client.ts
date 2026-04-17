@@ -11,6 +11,7 @@ import type {
   CollabUser,
   CollabRole,
   CRDTOperation,
+  Conflict,
 } from '@shared/collaboration';
 import {
   CURSOR_THROTTLE_MS,
@@ -34,6 +35,7 @@ export interface CollabEventMap {
   'lock-denied': { entityKey: string; heldBy: number };
   'lock-released': { entityKey: string };
   'role-changed': { userId: number; role: CollabRole };
+  'conflicts-change': Conflict[];
   'error': Error;
 }
 
@@ -61,6 +63,9 @@ export class CollaborationClient {
   // Cursor throttle
   private cursorThrottleTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingCursorUpdate: { x: number; y: number; view: string } | null = null;
+
+  // BL-0524: Pending conflicts awaiting user review
+  private pendingConflicts: Conflict[] = [];
 
   // Lock tracking
   private activeLocks = new Map<string, number>(); // entityKey -> userId

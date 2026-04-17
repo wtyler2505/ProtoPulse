@@ -121,68 +121,38 @@ function resolveNode(
 }
 
 // ---------------------------------------------------------------------------
-// Value parser — handles engineering notation (10k, 4.7u, 100n, etc.)
+// Value parser / formatter — handles engineering notation (10k, 4.7u, 100n, etc.)
+//
+// BL-0126: these were previously duplicated in four files with subtle divergences.
+// They now delegate to the canonical implementation in `shared/units.ts`.
 // ---------------------------------------------------------------------------
 
-const SUFFIX_MULTIPLIERS: Record<string, number> = {
-  T: 1e12, G: 1e9, MEG: 1e6, K: 1e3,
-  M: 1e-3, U: 1e-6, N: 1e-9, P: 1e-12, F: 1e-15,
-};
+import {
+  parseSpiceValue as sharedParseSpiceValue,
+  formatSpiceValueFixed,
+} from '@shared/units';
 
 /**
  * Parse a component value string into a number.
- * Supports: "10k", "4.7u", "100nF", "1Meg", "0.01", "47", "2.2uH"
+ * Supports: "10k", "4.7u", "100nF", "1Meg", "0.01", "47", "2.2uH".
+ *
+ * Legacy behaviour preserved: unparseable input returns `0` (not `NaN`) so
+ * downstream SPICE emitters never propagate NaN into netlists.
  */
 export function parseSpiceValue(valueStr: string): number {
   if (!valueStr) return 0;
-
-  const cleaned = valueStr.trim().toUpperCase();
-
-  // Try direct numeric parse first
-  const direct = parseFloat(cleaned);
-  if (!isNaN(direct) && /^[\d.eE+-]+$/.test(cleaned)) {
-    return direct;
-  }
-
-  // Extract numeric part and suffix
-  const match = /^([\d.eE+-]+)\s*([A-Z]+)/.exec(cleaned);
-  if (!match) return parseFloat(cleaned) || 0;
-
-  const num = parseFloat(match[1]);
-  let suffix = match[2];
-
-  // Strip unit letters from suffix (F for Farads, H for Henries, etc.)
-  // Only strip if the suffix is longer than a known multiplier
-  if (suffix.length > 3) suffix = suffix.slice(0, 3);
-  if (suffix.length > 1 && !SUFFIX_MULTIPLIERS[suffix]) {
-    // Try shorter suffixes
-    if (SUFFIX_MULTIPLIERS[suffix.slice(0, 1)]) {
-      suffix = suffix.slice(0, 1);
-    }
-  }
-
-  const multiplier = SUFFIX_MULTIPLIERS[suffix] ?? 1;
-  return num * multiplier;
+  const parsed = sharedParseSpiceValue(valueStr);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 /**
- * Format a number in SPICE-compatible engineering notation.
+ * Format a number in SPICE-compatible engineering notation (precision 4).
+ *
+ * Delegates to `formatSpiceValueFixed` which preserves trailing zeros for
+ * netlist readability (e.g. `1e-6` → `"1.000U"`).
  */
 export function formatSpiceValue(value: number): string {
-  if (value === 0) return '0';
-  const abs = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  if (abs >= 1e12) return `${sign}${(abs / 1e12).toPrecision(4)}T`;
-  if (abs >= 1e9)  return `${sign}${(abs / 1e9).toPrecision(4)}G`;
-  if (abs >= 1e6)  return `${sign}${(abs / 1e6).toPrecision(4)}MEG`;
-  if (abs >= 1e3)  return `${sign}${(abs / 1e3).toPrecision(4)}K`;
-  if (abs >= 1)    return `${sign}${abs.toPrecision(4)}`;
-  if (abs >= 1e-3) return `${sign}${(abs / 1e-3).toPrecision(4)}M`;
-  if (abs >= 1e-6) return `${sign}${(abs / 1e-6).toPrecision(4)}U`;
-  if (abs >= 1e-9) return `${sign}${(abs / 1e-9).toPrecision(4)}N`;
-  if (abs >= 1e-12) return `${sign}${(abs / 1e-12).toPrecision(4)}P`;
-  return `${sign}${abs.toExponential(3)}`;
+  return formatSpiceValueFixed(value);
 }
 
 // ---------------------------------------------------------------------------

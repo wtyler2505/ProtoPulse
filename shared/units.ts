@@ -235,11 +235,30 @@ export function parseSiValue(input: string | number): ParsedValue | null {
  *
  * Returns `scale: null` if the suffix cannot be resolved under strict SI rules.
  */
+/**
+ * Normalize a unit string for lookup. `.toLowerCase()` would turn `Ω`
+ * (U+2126 Ohm sign) into `ω` (U+03C9 Greek small omega) which is a
+ * DIFFERENT codepoint and would not match our UNIT_SUFFIX_MAP keys.
+ * We keep the Ohm sign verbatim and only lowercase ASCII.
+ */
+function normalizeUnitKey(s: string): string {
+  let out = '';
+  for (const ch of s) {
+    const code = ch.charCodeAt(0);
+    if (code >= 65 && code <= 90) {
+      out += String.fromCharCode(code + 32);
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
 function splitSiSuffix(suffix: string): { scale: number | null; unit: SiUnit } {
   if (!suffix) return { scale: 1, unit: 'none' };
 
   // Case A: suffix is purely a unit (no prefix) — e.g. "F", "Ω", "Hz", "V"
-  const whole = UNIT_SUFFIX_MAP[suffix.toLowerCase()];
+  const whole = UNIT_SUFFIX_MAP[normalizeUnitKey(suffix)];
   if (whole !== undefined) return { scale: 1, unit: whole };
 
   // Case B: first char is an SI prefix (case-sensitive), remainder is a unit.
@@ -248,7 +267,7 @@ function splitSiSuffix(suffix: string): { scale: number | null; unit: SiUnit } {
   const prefixScale = SI_PREFIXES[firstChar];
   if (prefixScale !== undefined) {
     const rest = suffix.slice(1);
-    const restUnit = UNIT_SUFFIX_MAP[rest.toLowerCase()];
+    const restUnit = UNIT_SUFFIX_MAP[normalizeUnitKey(rest)];
     if (restUnit !== undefined) return { scale: prefixScale, unit: restUnit };
     // Empty remainder means caller wrote just the prefix ("10k") — allowed.
     if (rest === '') return { scale: prefixScale, unit: 'none' };
@@ -257,7 +276,7 @@ function splitSiSuffix(suffix: string): { scale: number | null; unit: SiUnit } {
   // Case C: "da" (deca) two-character prefix, then unit.
   if (suffix.startsWith('da')) {
     const rest = suffix.slice(2);
-    const restUnit = UNIT_SUFFIX_MAP[rest.toLowerCase()];
+    const restUnit = UNIT_SUFFIX_MAP[normalizeUnitKey(rest)];
     if (restUnit !== undefined) return { scale: 1e1, unit: restUnit };
     if (rest === '') return { scale: 1e1, unit: 'none' };
   }
