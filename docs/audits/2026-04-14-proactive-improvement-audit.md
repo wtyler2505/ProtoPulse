@@ -3,6 +3,19 @@
 Scope: ProtoPulse (`/home/wtyler/Projects/ProtoPulse`) — React/Vite + Express EDA platform.
 Goal: Overwhelm Tyler with concrete, pickable improvement opportunities. No curation, no filtering. Volume over precision.
 
+## ⚠️ Known false-positive patterns in this audit (append to heuristic refinement task #46)
+
+During 2026-04-17 triage, these audit findings were reclassified as false positives. Future audit scripts should skip the same patterns:
+
+1. **#250 (sketch-secrets-scanner `console.*`)** — the `console.warn(...)` hit is inside a JSDoc code fence (`* console.warn(...)`), not a live statement. Heuristic fix: ignore lines where the grep match is preceded by `*` or starts with `//`/`*`.
+2. **#63 (server/auth.ts `console.log`)** — the `console.log` hit is inside an ERROR-MESSAGE STRING LITERAL giving users a CLI snippet (`'... Generate one with: node -e "console.log(require(\'crypto\')...)"'`). Heuristic fix: quote-aware parsing; ignore matches inside string literals.
+3. **#232 (shared/ has no tests dir)** — FALSE. `shared/__tests__/` exists with drc-engine, collaboration-crdt, component-trust, design-variables, error-taxonomy tests. Heuristic fix: check for `__tests__` directory before declaring absence.
+4. **#48 (time-machine.ts 12 any types)** — FALSE. The 2 "any" hits are in prose ("any previous recording"/"any timestamp"). File has zero `: any` type annotations + 92 existing tests. Heuristic fix: only match `: any`, `<any>`, or `as any` — not the English word "any".
+5. **#64 (9+ img without alt)** — FALSE. JSX multi-line tags where `alt=` is on a later line were incorrectly flagged. Each affected file has 1:1 ratio of `<img` to `alt=` when counted separately.
+6. **#38 (duplicate procurement test files)** — PARTIAL FALSE. `ProcurementView.test.tsx` vs `procurement-view.test.tsx` are NOT duplicates — they test different things (view integration vs sub-components). Renamed kebab-case file to `procurement-sub-components.test.tsx` for clarity.
+
+**Audit heuristic improvement for next pass:** line-aware regex (skip comments + string literals), JSX-multi-line aware for `<img`/`<button`, symbol-only for `any`/`unknown` (not English prose), directory-existence before flagging missing test dirs.
+
 ## Methodology
 
 Parallel scans across `client/src`, `server/`, `shared/`, `docs/` for:

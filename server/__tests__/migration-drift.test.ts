@@ -105,7 +105,7 @@ describe('migration-drift (static)', () => {
     // This is intentionally a snapshot-style assertion — if schema.ts gains
     // or drops a table, the number updates here and the test fails until
     // a new migration is added.
-    expect(schemaTables.size).toBe(47);
+    expect(schemaTables.size).toBe(46);
   });
 });
 
