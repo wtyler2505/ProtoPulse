@@ -167,6 +167,132 @@ export function structuralMerge(
   return 'accept';
 }
 
+/* ------------------------------------------------------------------ */
+/*  BL-0524: Conflict detection for UI                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Kind of conflict raised when CRDT merge drops a losing operation.
+ * - `lww-update`       — simultaneous field edit; incoming update lost LWW to recent update
+ * - `insert-superseded` — concurrent insert of same id; incoming lost LWW
+ * - `delete-rejected`   — concurrent insert targeted the entity the user tried to delete
+ */
+export type ConflictKind = 'lww-update' | 'insert-superseded' | 'delete-rejected';
+
+/**
+ * Conflict record emitted from server to the losing client so the user
+ * can review their dropped edit against the winning edit and decide
+ * whether to re-apply, accept the remote version, or merge manually.
+ *
+ * Resolution is performed by sending a fresh `state-update` with the
+ * user's chosen value — no dedicated "resolve" route is needed because
+ * the authoritative state already converged on `theirOp`.
+ */
+export interface Conflict {
+  id: string;
+  projectId: number;
+  kind: ConflictKind;
+  /** Path of the operation (e.g. `['nodes']`, `['bomItems']`). */
+  path: string[];
+  /** Entity key (id) for update/delete; empty string for inserts without id. */
+  key: string;
+  /** The operation the losing client tried to apply (server-tagged). */
+  yourOp: CRDTOperation;
+  /** The operation currently in the authoritative state. */
+  theirOp: CRDTOperation;
+  /** Server timestamp of detection (Lamport clock at the drop point). */
+  detectedAt: number;
+}
+
+/**
+ * Determine whether an incoming operation `incoming` (already tagged with
+ * its Lamport timestamp + clientId) conflicts with the most recent
+ * accepted operation from the sliding window for the same entity.
+ *
+ * Returns the `Conflict` record (minus id/projectId/detectedAt — caller
+ * fills those) when the incoming op would lose, otherwise `null`.
+ *
+ * Call this *before* `structuralMerge`/LWW drop the op; the return value
+ * describes what the user would be told.
+ */
+export function detectConflict(
+  incoming: CRDTOperation,
+  recent: ReadonlyArray<{ op: CRDTOperation; serverTs: number; clientId: number }>,
+): { kind: ConflictKind; path: string[]; key: string; yourOp: CRDTOperation; theirOp: CRDTOperation } | null {
+  const incomingTs = incoming.timestamp ?? 0;
+  const incomingClient = incoming.clientId ?? 0;
+
+  if (incoming.op === 'update') {
+    const opKey = `${incoming.path.join('.')}:${incoming.key}`;
+    // Find the most recent concurrent update on the same key that would beat us.
+    for (let i = recent.length - 1; i >= 0; i--) {
+      const r = recent[i];
+      if (r.op.op !== 'update') { continue; }
+      const rKey = `${r.op.path.join('.')}:${r.op.key}`;
+      if (rKey !== opKey) { continue; }
+      // If incoming cannot win LWW, this is a conflict.
+      if (!lwwWins(r.serverTs, r.clientId, incomingTs, incomingClient)) {
+        return {
+          kind: 'lww-update',
+          path: incoming.path,
+          key: incoming.key,
+          yourOp: incoming,
+          theirOp: r.op,
+        };
+      }
+      // Incoming would win — no conflict for this key.
+      return null;
+    }
+    return null;
+  }
+
+  if (incoming.op === 'insert') {
+    const iv = incoming.value as Record<string, unknown> | null;
+    const iid = iv && typeof iv === 'object' ? String(iv.id ?? iv.key ?? '') : '';
+    if (!iid) { return null; }
+    for (let i = recent.length - 1; i >= 0; i--) {
+      const r = recent[i];
+      if (r.op.op !== 'insert') { continue; }
+      const rv = r.op.value as Record<string, unknown> | null;
+      const rid = rv && typeof rv === 'object' ? String(rv.id ?? rv.key ?? '') : '';
+      if (rid !== iid) { continue; }
+      if (!lwwWins(r.serverTs, r.clientId, incomingTs, incomingClient)) {
+        return {
+          kind: 'insert-superseded',
+          path: incoming.path,
+          key: iid,
+          yourOp: incoming,
+          theirOp: r.op,
+        };
+      }
+      return null;
+    }
+    return null;
+  }
+
+  if (incoming.op === 'delete') {
+    // A delete is rejected when a concurrent insert targets the same key.
+    for (let i = recent.length - 1; i >= 0; i--) {
+      const r = recent[i];
+      if (r.op.op !== 'insert') { continue; }
+      const rv = r.op.value as Record<string, unknown> | null;
+      const rid = rv && typeof rv === 'object' ? String(rv.id ?? rv.key ?? '') : '';
+      if (rid === incoming.key) {
+        return {
+          kind: 'delete-rejected',
+          path: incoming.path,
+          key: incoming.key,
+          yourOp: incoming,
+          theirOp: r.op,
+        };
+      }
+    }
+    return null;
+  }
+
+  return null;
+}
+
 export interface LockRequest {
   entityType: 'node' | 'edge' | 'bom-item' | 'wire' | 'instance';
   entityId: string;

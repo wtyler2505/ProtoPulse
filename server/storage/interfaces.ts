@@ -74,6 +74,7 @@ export interface IStorage {
 
   getBomItems(projectId: number, opts?: PaginationOptions): Promise<BomItem[]>;
   getLowStockItems(projectId: number): Promise<BomItem[]>;
+  getShortfalls(projectId: number): Promise<import('@shared/parts/shortfall').BomShortfall[]>;
   getStorageLocations(projectId: number): Promise<string[]>;
 
   getValidationIssues(projectId: number, opts?: PaginationOptions): Promise<ValidationIssue[]>;

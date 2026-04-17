@@ -63,6 +63,7 @@ export class DatabaseStorage {
   // --- BOM (reads redirected to canonical parts + part_stock) ---
   getBomItems = this._bom.getBomItems.bind(this._bom);
   getLowStockItems = this._bom.getLowStockItems.bind(this._bom);
+  getShortfalls = this._bom.getShortfalls.bind(this._bom);
   getStorageLocations = this._bom.getStorageLocations.bind(this._bom);
   createBomSnapshot = this._bom.createBomSnapshot.bind(this._bom);
   getBomSnapshots = this._bom.getBomSnapshots.bind(this._bom);

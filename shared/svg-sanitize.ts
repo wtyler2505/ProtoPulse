@@ -34,6 +34,8 @@ const FORBID_ATTR = [
   'srcdoc',
   'formaction',
   'action',
+  // Inline CSS — blocks legacy-IE behavior:url() and expression() vectors.
+  'style',
   'onerror',
   'onload',
   'onclick',
@@ -43,12 +45,14 @@ const FORBID_ATTR = [
   'onpointerdown',
 ] as const;
 
-// Only allow safe URI schemes: fragments (#id), https/http, and inline image
-// data URIs. Blocks javascript:, vbscript:, data:text/*, data:application/*.
-const ALLOWED_URI_REGEXP =
-  /^(?:(?:#|https?:)|(?:data:image\/(?:png|jpeg|gif|svg\+xml|webp);base64,))/i;
+// We rely on DOMPurify's DEFAULT ALLOWED_URI_REGEXP. A prior iteration
+// locked it to `^(#|https?:|data:image/...)` — but DOMPurify applies
+// ALLOWED_URI_REGEXP to every URI-bearing attribute (including `fill`,
+// which accepts `url(#grad)`), so plain values like "red"/"50" failed
+// and DOMPurify stripped attrs. The default regex already blocks
+// javascript:, vbscript:, and dangerous data: URIs — zero security lost.
 
-const MAX_INPUT_BYTES = 512 * 1024;
+export const MAX_INPUT_BYTES = 512 * 1024;
 
 export class SvgTooLargeError extends Error {
   constructor(
@@ -70,7 +74,6 @@ export function sanitizeSvg(svgString: string): string {
     FORBID_TAGS: [...FORBID_TAGS],
     FORBID_ATTR: [...FORBID_ATTR],
     WHOLE_DOCUMENT: false,
-    ALLOWED_URI_REGEXP,
     ALLOW_DATA_ATTR: false,
     KEEP_CONTENT: false,
   });

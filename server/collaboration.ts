@@ -27,7 +27,10 @@ import {
   operationEntityKey,
   lwwWins,
   structuralMerge,
+  detectConflict,
 } from '@shared/collaboration';
+import type { Conflict, ConflictKind } from '@shared/collaboration';
+import { randomUUID } from 'crypto';
 import { validateSession, getUserById } from './auth';
 import { storage } from './storage';
 import { logger } from './logger';
@@ -496,6 +499,7 @@ export class CollaborationServer {
     const recent = this.recentOps.get(projectId) ?? [];
 
     const survivingOps: CRDTOperation[] = [];
+    const conflicts: Conflict[] = [];
 
     for (const op of ops) {
       clock++;
@@ -503,11 +507,23 @@ export class CollaborationServer {
       // Tag the operation with server timestamp and clientId
       const taggedOp: CRDTOperation = { ...op, timestamp: clock, clientId: userId };
 
+      // BL-0524: Detect conflicts BEFORE the drop decision so we can
+      // surface the losing value to the client.
+      const conflictHit = detectConflict(taggedOp, recent);
+
       // Structural merge for insert/delete
       if (op.op === 'insert' || op.op === 'delete') {
         const recentCrdtOps = recent.map((r) => r.op);
         const verdict: MergeVerdict = structuralMerge(taggedOp, recentCrdtOps);
         if (verdict === 'reject' || verdict === 'superseded') {
+          if (conflictHit) {
+            conflicts.push({
+              id: randomUUID(),
+              projectId,
+              detectedAt: clock,
+              ...conflictHit,
+            });
+          }
           continue; // Drop this operation
         }
       }
@@ -520,11 +536,40 @@ export class CollaborationServer {
           const rKey = `${r.op.path.join('.')}:${r.op.key}`;
           return rKey === opKey && !lwwWins(r.serverTs, r.clientId, clock, userId);
         });
-        if (newerExists) { continue; }
+        if (newerExists) {
+          if (conflictHit) {
+            conflicts.push({
+              id: randomUUID(),
+              projectId,
+              detectedAt: clock,
+              ...conflictHit,
+            });
+          }
+          continue;
+        }
       }
 
       survivingOps.push(taggedOp);
       recent.push({ op: taggedOp, serverTs: clock, clientId: userId });
+    }
+
+    // BL-0524: Surface conflicts to the losing client only — the room's
+    // authoritative state has already converged on `theirOp`, so other
+    // users don't need a dialog. "Accept mine" on the client is a fresh
+    // state-update with a new Lamport timestamp, which reuses the existing
+    // merge path; no dedicated resolve route is required.
+    if (conflicts.length > 0) {
+      const room = this.rooms.get(projectId);
+      const entry = room?.get(userId);
+      if (entry) {
+        this.sendToClient(entry.ws, {
+          type: 'conflict-detected',
+          userId,
+          projectId,
+          timestamp: Date.now(),
+          payload: { conflicts: conflicts as unknown as Record<string, unknown>[] },
+        });
+      }
     }
 
     this.lamportClocks.set(projectId, clock);

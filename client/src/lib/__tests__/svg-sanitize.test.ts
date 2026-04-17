@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 /**
  * Comprehensive XSS tests for sanitizeSvg.
  *
