@@ -24,6 +24,11 @@
  */
 
 import { z } from 'zod';
+import {
+  EXACT_PART_FAMILIES,
+  PART_VERIFICATION_STATUSES,
+  PART_VERIFICATION_LEVELS,
+} from './component-trust';
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -204,9 +209,12 @@ export const partMetaSchema = z.object({
     'not_breadboard_friendly',
   ]).optional(),
   breadboardModelQuality: z.enum(['verified', 'ai_drafted', 'community', 'basic']).optional(),
-  partFamily: z.string().optional(),
-  verificationStatus: z.string().optional(),
-  verificationLevel: z.string().optional(),
+  // Narrow enums — source of truth is shared/component-trust.ts. Keeping
+  // these as plain z.string() would widen the type and break callers that
+  // expect the canonical enum literal type.
+  partFamily: z.enum(EXACT_PART_FAMILIES).optional(),
+  verificationStatus: z.enum(PART_VERIFICATION_STATUSES).optional(),
+  verificationLevel: z.enum(PART_VERIFICATION_LEVELS).optional(),
   verificationNotes: z.array(z.string()).optional(),
   verifiedAt: z.string().optional(),
   verifiedBy: z.string().optional(),

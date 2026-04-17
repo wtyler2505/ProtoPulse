@@ -29,6 +29,7 @@ import MessageInput from './chat/MessageInput';
 import { useChatSettings } from '@/hooks/useChatSettings';
 import { useApiKeyStatus } from '@/hooks/useApiKeyStatus';
 import { useApiKeys } from '@/hooks/useApiKeys';
+import { useGoogleWorkspaceToken } from '@/hooks/useGoogleWorkspaceToken';
 import { queryClient } from '@/lib/queryClient';
 import ApiKeySetupDialog from './chat/ApiKeySetupDialog';
 import type { AIAction } from './chat/chat-types';
@@ -307,8 +308,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     customSystemPrompt, setCustomSystemPrompt,
     routingStrategy, setRoutingStrategy,
     previewAiChanges, setPreviewAiChanges,
-    googleWorkspaceToken, setGoogleWorkspaceToken,
   } = useChatSettings();
+  // BL-audit-#60: Google Workspace OAuth token is encrypted server-side (AES-256-GCM via
+  // api_keys); sessionStorage scratch for pre-auth. Never round-trips through request bodies.
+  const { token: googleWorkspaceToken, setToken: setGoogleWorkspaceToken } = useGoogleWorkspaceToken();
   const { status: keyStatus, errorMessage: keyErrorMessage, validate: validateKey, reset: resetKeyStatus } = useApiKeyStatus();
   // BL-0005: API keys managed by useApiKeys — server-side when authenticated, localStorage fallback
   const { apiKey: aiApiKey, updateLocalKey: setApiKeyForProvider, clearApiKey: clearApiKeyForProvider } = useApiKeys();
@@ -478,7 +481,6 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
     aiTemperature: number;
     customSystemPrompt: string;
     routingStrategy: string;
-    googleWorkspaceToken: string;
     activeView: ViewMode;
     activeSheetId: string | null;
     selectedNodeId: string | null;
@@ -499,7 +501,7 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
   }>(null!);
   sendStateRef.current = {
     input, aiApiKey, aiProvider, aiModel, aiTemperature, customSystemPrompt,
-    routingStrategy, googleWorkspaceToken, activeView, activeSheetId, selectedNodeId, projectId,
+    routingStrategy, activeView, activeSheetId, selectedNodeId, projectId,
     attachedImage, nodes, edges, bom, issues, projectName, projectDescription,
     addMessage, setIsGenerating, executeAIActions, getChangeDiff, captureSnapshot,
     isGenerating,
@@ -626,6 +628,10 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
 
       // CAPX-API-05: SSE fetch with exponential backoff on network errors
       // BL-0003: Don't send API key in plaintext when server-stored key is available
+      // Audit #60 (2026-04-17): Google Workspace OAuth token used to be sent in
+      // this body — REMOVED. Server now resolves the token from the user's
+      // encrypted api_keys row (see server/ai.ts tool-context builder). Token
+      // never round-trips through the client after initial paste.
       const hasSession = !!localStorage.getItem('protopulse-session-id');
       const fetchRequestBody = JSON.stringify({
         message: msgText,
@@ -640,7 +646,6 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
         selectedNodeId: s.selectedNodeId,
         changeDiff,
         routingStrategy: s.routingStrategy,
-        googleWorkspaceToken: s.googleWorkspaceToken,
         ...(currentImage ? {
           imageBase64: currentImage.base64,
           imageMimeType: currentImage.mimeType,

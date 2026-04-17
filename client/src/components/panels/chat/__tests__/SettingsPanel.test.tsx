@@ -91,4 +91,46 @@ describe('SettingsPanel', () => {
     fireEvent.click(screen.getByTestId('save-settings'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  // Audit finding #60: Google Workspace OAuth token must never be overwritten with
+  // the UI sentinel — that would clobber the server-encrypted token with '********'.
+  it('does not call setGoogleWorkspaceToken when the value is the stored sentinel', () => {
+    const setGoogleWorkspaceToken = vi.fn();
+    render(
+      <SettingsPanel
+        {...defaultProps}
+        googleWorkspaceToken="********"
+        setGoogleWorkspaceToken={setGoogleWorkspaceToken}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('save-settings'));
+    expect(setGoogleWorkspaceToken).not.toHaveBeenCalled();
+  });
+
+  it('calls setGoogleWorkspaceToken when a real token is entered', () => {
+    const setGoogleWorkspaceToken = vi.fn();
+    render(
+      <SettingsPanel
+        {...defaultProps}
+        setGoogleWorkspaceToken={setGoogleWorkspaceToken}
+      />,
+    );
+    const input = screen.getByTestId('google-workspace-token-input') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'ya29.real-oauth-token-value' } });
+    fireEvent.click(screen.getByTestId('save-settings'));
+    expect(setGoogleWorkspaceToken).toHaveBeenCalledWith('ya29.real-oauth-token-value');
+  });
+
+  it('clear-stored-token button zeroes the token', () => {
+    const setGoogleWorkspaceToken = vi.fn();
+    render(
+      <SettingsPanel
+        {...defaultProps}
+        googleWorkspaceToken="********"
+        setGoogleWorkspaceToken={setGoogleWorkspaceToken}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('clear-google-workspace-token'));
+    expect(setGoogleWorkspaceToken).toHaveBeenCalledWith('');
+  });
 });

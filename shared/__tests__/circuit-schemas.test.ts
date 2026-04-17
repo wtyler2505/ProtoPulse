@@ -366,7 +366,13 @@ describe('partStateSchema', () => {
         padSpec: { type: 'smd' as const, shape: 'rect' as const, width: 1.6, height: 0.8 },
       }],
     });
-    expect(result.connectors[0].padSpec?.type).toBe('smd');
+    // Zod's passthrough output widens the nested shape's inferred type;
+    // assert via Record access instead of dotted path.
+    const padSpec = (result.connectors[0] as Record<string, unknown>).padSpec as
+      | { type: string; shape: string }
+      | undefined;
+    expect(padSpec?.type).toBe('smd');
+    expect(padSpec?.shape).toBe('rect');
   });
 
   it('passes through connector/bus forward-compat fields', () => {

@@ -54,9 +54,19 @@ function SettingsPanel({
   const [localKey, setLocalKey] = useState(aiApiKey || '');
   const [localWorkspaceToken, setLocalWorkspaceToken] = useState(googleWorkspaceToken || '');
 
+  // Sync when the upstream token resolves (server providers query finishes after mount,
+  // or after a save completes and hasServerToken flips to true → sentinel).
+  useEffect(() => {
+    setLocalWorkspaceToken(googleWorkspaceToken || '');
+  }, [googleWorkspaceToken]);
+
   const handleSaveAndClose = useCallback(() => {
     setAiApiKey(localKey);
-    setGoogleWorkspaceToken(localWorkspaceToken);
+    // Sentinel means "stored server-side, don't touch" — useGoogleWorkspaceToken also
+    // guards this but gating here avoids an unnecessary mutation round-trip.
+    if (localWorkspaceToken !== STORED_KEY_SENTINEL) {
+      setGoogleWorkspaceToken(localWorkspaceToken);
+    }
     onClose();
     toast({ title: 'Settings saved', description: 'Your AI settings have been updated.' });
   }, [onClose, setAiApiKey, localKey, setGoogleWorkspaceToken, localWorkspaceToken]);
@@ -227,15 +237,34 @@ function SettingsPanel({
         <div className="relative">
           <input
             id="settings-workspace-token"
+            data-testid="google-workspace-token-input"
             type="password"
             value={localWorkspaceToken}
             onChange={(e) => setLocalWorkspaceToken(e.target.value)}
-            placeholder="Enter an OAuth token for Docs/Sheets export..."
+            placeholder={
+              localWorkspaceToken === STORED_KEY_SENTINEL
+                ? 'Token stored securely'
+                : 'Enter an OAuth token for Docs/Sheets export...'
+            }
             className="w-full bg-muted/30 border text-foreground text-sm p-2.5 focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50 placeholder:text-muted-foreground/40 border-border"
           />
         </div>
+        {localWorkspaceToken && (
+          <button
+            data-testid="clear-google-workspace-token"
+            type="button"
+            onClick={() => {
+              setLocalWorkspaceToken('');
+              setGoogleWorkspaceToken('');
+            }}
+            className="flex items-center gap-1.5 text-[11px] text-destructive/70 hover:text-destructive mt-1.5 transition-colors"
+          >
+            <Trash2 className="w-3 h-3" />
+            Clear stored token
+          </button>
+        )}
         <p className="text-[10px] text-muted-foreground/60 mt-1.5">
-          Required for Google Sheets BOM sync and Google Docs reports.
+          Required for Google Sheets BOM sync and Google Docs reports. Stored encrypted server-side after save.
         </p>
       </div>
 
