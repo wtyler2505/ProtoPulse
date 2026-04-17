@@ -32,7 +32,7 @@ If you're developing on a Leonardo-class board and iterating quickly on code tha
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[arduino-leonardo-atmega32u4-native-usb-enables-hid-keyboard-mouse-emulation-that-arduino-uno-cannot-do-without-hacking]] — the architectural reason this failure mode exists

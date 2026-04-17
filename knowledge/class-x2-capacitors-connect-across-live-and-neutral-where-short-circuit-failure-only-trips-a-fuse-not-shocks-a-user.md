@@ -22,7 +22,7 @@ X2 specifically allows pulse voltages from typical household mains transients (2
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[polyester-film-capacitors-self-repair-minor-dielectric-breakdowns-by-vaporizing-metallized-film-around-the-fault]] — the self-healing mechanism that makes X2 failure modes graceful

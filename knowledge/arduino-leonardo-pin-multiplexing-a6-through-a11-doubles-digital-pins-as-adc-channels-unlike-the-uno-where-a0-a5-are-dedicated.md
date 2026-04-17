@@ -36,7 +36,7 @@ The ATmega32u4 has more internal ADC channels than package pins, so Arduino rout
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[arduino-leonardo-atmega32u4-native-usb-enables-hid-keyboard-mouse-emulation-that-arduino-uno-cannot-do-without-hacking]] — the broader architectural distinction

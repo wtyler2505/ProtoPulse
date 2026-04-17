@@ -36,7 +36,7 @@ The name comes from RC cars and planes — historically, the receiver ran on its
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[cytron-md25hv-completes-the-brushed-dc-driver-voltage-ladder-tb6612-at-13v-l298n-at-46v-md25hv-at-58v-with-25a-continuous]] — the specific driver this is about

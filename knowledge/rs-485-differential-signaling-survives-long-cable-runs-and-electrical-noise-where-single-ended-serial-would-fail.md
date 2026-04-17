@@ -29,7 +29,7 @@ Classic applications:
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[differential-twisted-pair-rejects-common-mode-noise-that-single-ended-wiring-picks-up]] — the underlying electrical principle

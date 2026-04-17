@@ -24,7 +24,7 @@ Design implication: if you're removing or undersizing the input filter to save B
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[x-class-capacitors-filter-line-to-line-while-y-class-filter-line-to-ground-and-swapping-them-is-a-certification-violation]] — the topology that implements this bidirectional filtering

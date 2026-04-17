@@ -26,7 +26,7 @@ The damp-heat duration matters for humid-environment applications (outdoor, mari
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[three-digit-ceramic-capacitor-codes-encode-picofarads-as-two-significant-digits-times-a-power-of-ten-multiplier]] — same genre of part-identification rule

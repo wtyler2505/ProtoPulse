@@ -22,7 +22,7 @@ Compare to DC electrolytic aging (dry-out, gradual ESR rise) — different mecha
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[every-10c-above-rated-temperature-halves-aluminum-electrolytic-capacitor-lifespan]] — same silent-aging pattern in DC caps

@@ -103,6 +103,7 @@ export const SIDEBAR_GROUPS: readonly SidebarGroup[] = [
     icon: BookOpen,
     views: [
       'knowledge',
+      'vault_browser',
       'community',
       'labs',
     ],

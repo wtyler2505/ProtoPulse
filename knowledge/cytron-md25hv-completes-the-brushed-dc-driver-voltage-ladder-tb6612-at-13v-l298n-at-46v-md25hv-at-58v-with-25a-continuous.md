@@ -37,7 +37,7 @@ Earlier vault notes compared L298N (efficient for 2A but useless above 3A) again
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[l298n-is-a-beginner-trap-because-it-dissipates-more-power-than-the-motor-at-typical-robotics-currents]] — the L298N limitation that MD25HV resolves at higher voltages

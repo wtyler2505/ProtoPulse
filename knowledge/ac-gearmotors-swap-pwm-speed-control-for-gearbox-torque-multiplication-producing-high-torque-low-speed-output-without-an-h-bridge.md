@@ -43,7 +43,7 @@ Nameplates list output as "10.5 IN/MIN @ 600 LBS" (Von Weise) or "Torque: 450 in
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[permanent-split-capacitor-psc-motor-uses-an-always-in-circuit-run-capacitor-to-generate-the-rotating-field-that-single-phase-ac-cannot-produce-natively]] — the AC motor electrical foundation

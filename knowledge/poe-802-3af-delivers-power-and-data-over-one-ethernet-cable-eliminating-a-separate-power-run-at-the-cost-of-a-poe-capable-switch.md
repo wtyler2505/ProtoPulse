@@ -26,7 +26,7 @@ Integration requirement: the switch/injector MUST support the standard. A "passi
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[rs-485-differential-signaling-survives-long-cable-runs-and-electrical-noise-where-single-ended-serial-would-fail]] — another deployment pattern for long-distance device networks

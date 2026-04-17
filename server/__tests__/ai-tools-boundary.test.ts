@@ -70,6 +70,7 @@ function createMockStorage(): IStorage {
     getProject: vi.fn().mockResolvedValue({ id: 1, name: 'Test', description: '' }),
     updateProject: vi.fn().mockResolvedValue({ id: 1, name: 'Renamed' }),
     createCircuitDesign: vi.fn().mockResolvedValue({ id: 1, name: 'Test Circuit' }),
+    getCircuitDesign: vi.fn().mockResolvedValue({ id: 1, name: 'Test Circuit', projectId: 1 }),
     getCircuitDesigns: vi.fn().mockResolvedValue([]),
     createCircuitInstance: vi.fn().mockResolvedValue({ id: 1 }),
     deleteCircuitInstance: vi.fn().mockResolvedValue(true),

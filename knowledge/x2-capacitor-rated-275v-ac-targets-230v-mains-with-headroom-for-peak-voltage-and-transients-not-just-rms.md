@@ -25,7 +25,7 @@ This parallels the 80% derate rule for DC electrolytics but with an additional A
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[electrolytic-capacitor-voltage-derating-to-80-percent-of-rated-voltage-is-mandatory-for-reliability]] — the DC analog of this AC rule

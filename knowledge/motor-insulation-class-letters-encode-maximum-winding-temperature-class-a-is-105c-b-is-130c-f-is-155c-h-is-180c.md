@@ -45,7 +45,7 @@ A motor running hot but not tripping thermal protection may be operating within 
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[every-10c-above-rated-temperature-halves-aluminum-electrolytic-capacitor-lifespan]] — same Arrhenius aging math in a different component

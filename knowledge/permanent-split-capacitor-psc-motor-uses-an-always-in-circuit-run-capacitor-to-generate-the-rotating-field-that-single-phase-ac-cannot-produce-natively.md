@@ -39,7 +39,7 @@ The cap rating is critical — too small and torque is weak; too large and the m
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[class-x2-capacitors-connect-across-live-and-neutral-where-short-circuit-failure-only-trips-a-fuse-not-shocks-a-user]] — different category of mains capacitor (filter vs run cap)

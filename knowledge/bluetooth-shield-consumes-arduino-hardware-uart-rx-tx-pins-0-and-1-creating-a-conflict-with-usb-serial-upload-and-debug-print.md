@@ -38,7 +38,7 @@ Hardware UART is faster and more reliable than SoftwareSerial. BT modules typica
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[arduino-leonardo-atmega32u4-native-usb-enables-hid-keyboard-mouse-emulation-that-arduino-uno-cannot-do-without-hacking]] — the Leonardo's architectural advantage for this case

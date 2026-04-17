@@ -21,7 +21,7 @@ In real filter topologies X and Y caps appear together — common-mode chokes an
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[class-x2-capacitors-connect-across-live-and-neutral-where-short-circuit-failure-only-trips-a-fuse-not-shocks-a-user]] — companion note on the X-class position specifically

@@ -742,7 +742,7 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
             fontSize: 12,
             background: '#1a1a2e',
             color: 'var(--color-editor-accent)',
-            border: '1px solid #00F0FF',
+            border: '1px solid var(--color-editor-accent)',
             borderRadius: 4,
             cursor: 'pointer',
           }}

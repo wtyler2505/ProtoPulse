@@ -26,7 +26,7 @@ Recognize the pattern at bench check: if the device spec says "dual AC/DC input,
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[polarity-protection-diode-trades-one-volt-of-headroom-for-dead-short-absorption-during-reversed-power]] — alternative protection strategy for DC-only devices

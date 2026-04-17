@@ -44,7 +44,7 @@ Any project claim of "Arduino keyboard" or "Arduino mouse" is implicitly a Leona
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[arduino-uno-ch340-clone-boards-require-different-driver-install-than-original-ftdi-boards]] — the Uno's USB bridge is the architectural thing missing from the Leonardo

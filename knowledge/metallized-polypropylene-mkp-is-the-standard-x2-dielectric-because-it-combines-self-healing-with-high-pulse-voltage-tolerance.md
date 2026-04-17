@@ -22,7 +22,7 @@ This refines the generic "metallized film caps self-heal" principle: the self-he
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[polyester-film-capacitors-self-repair-minor-dielectric-breakdowns-by-vaporizing-metallized-film-around-the-fault]] — the self-healing mechanism common to both dielectrics

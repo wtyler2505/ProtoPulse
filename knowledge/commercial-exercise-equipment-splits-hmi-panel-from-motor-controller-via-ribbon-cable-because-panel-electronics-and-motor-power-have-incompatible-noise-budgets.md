@@ -52,7 +52,7 @@ This same split is the right architecture for ANY project mixing an MCU with a h
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[100uf-capacitor-on-arduino-5v-input-absorbs-motor-switching-emi-that-causes-mcu-resets]] — the EMI mechanism this architecture avoids

@@ -226,17 +226,14 @@ export const partMetaSchema = z.object({
 }).passthrough();
 
 // ---------------------------------------------------------------------------
-// Minimal PartState (for currentPart / existingMeta in AI route bodies)
+// Connector / Bus / ViewData (mirror shared/component-types.ts:59-87, 169-178)
 // ---------------------------------------------------------------------------
 //
-// The AI modify/extract-pins routes accept an optional existing-part snapshot.
-// We only need to know it's structurally shaped like PartState to forward it
-// to the AI prompt safely; full validation of every nested sub-shape is out
-// of scope for the route boundary (handled deeper in the component-editor
-// code path).
+// These carry real structured data that consumers depend on. Earlier versions
+// of this schema under-specified these shapes with just `{id: string}` — that
+// left a validation hole where a client could send connectors missing every
+// required field. Now validates the full shape.
 
-// Connector / Bus shapes mirror shared/component-types.ts:73-87 fully —
-// under-specifying these was a validation hole (task #45 regression).
 const terminalPositionSchema = z.object({
   x: z.number(),
   y: z.number(),
@@ -251,6 +248,8 @@ const padSpecSchema = z.object({
   height: z.number().optional(),
 }).passthrough();
 
+// Connector / Bus shapes mirror shared/component-types.ts:73-87 fully —
+// under-specifying these was a validation hole (task #45 regression).
 const connectorSchema = z.object({
   id: z.string().min(1),
   name: z.string(),

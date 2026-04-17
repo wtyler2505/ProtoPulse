@@ -49,7 +49,7 @@ When a project needs MCU control of an AC motor (synchronous timer, gearmotor, f
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[ac-synchronous-motor-locks-rotor-speed-to-line-frequency-making-it-the-standard-choice-for-wall-clock-precision-timing-without-feedback]] — a specific AC motor this interface serves

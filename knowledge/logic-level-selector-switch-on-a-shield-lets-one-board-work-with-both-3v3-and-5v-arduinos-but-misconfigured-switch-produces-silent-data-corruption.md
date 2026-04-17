@@ -43,7 +43,7 @@ Modern Arduino-compatible shields increasingly include a logic-level selector sw
 
 ---
 
-Source: [[docs_and_data]]
+Source: docs_and_data
 
 Relevant Notes:
 - [[74hc-buffers-are-purpose-built-3v3-to-5v-level-shifters-for-timing-critical-signals]] — level shifting mechanism
