@@ -2,7 +2,7 @@ import { useRef, useMemo, useState, useCallback, memo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Pencil, Check, X, ShoppingCart, Trash2, Shield, Zap, CheckCircle2, AlertCircle, XCircle, RefreshCw, Clock } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, GripVertical, Pencil, Check, X, ShoppingCart, Trash2, Shield, Zap, CheckCircle2, AlertCircle, XCircle, RefreshCw, Clock, PackageX } from 'lucide-react';
 import { StyledTooltip } from '@/components/ui/styled-tooltip';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { LifecycleBadge } from '@/components/ui/LifecycleBadge';
@@ -13,6 +13,7 @@ import { getSupplierSearchUrl } from '@/lib/constants';
 import type { useToast } from '@/hooks/use-toast';
 import type { BomItem } from '@/lib/project-context';
 import type { EnrichedBomItem, EditValues } from './types';
+import type { BomShortfall } from '@shared/parts/shortfall';
 
 const BOM_ROW_HEIGHT = 48;
 
@@ -59,10 +60,12 @@ export interface BomTableProps {
   handleHighlightItem: (id: number) => void;
   onAssessDamage: (item: BomItem) => void;
   onFindAlternates?: (partNumber: string) => void;
+  /** BL-0150 — shortfalls indexed by `partNumber` (MPN/slug). Optional; absent map → no badges. */
+  shortfallsByPartNumber?: ReadonlyMap<string, BomShortfall>;
 }
 
 export function BomTable({
-  filteredBom, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlightedItemId, handleHighlightItem, onAssessDamage, onFindAlternates,
+  filteredBom, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlightedItemId, handleHighlightItem, onAssessDamage, onFindAlternates, shortfallsByPartNumber,
 }: BomTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -149,7 +152,7 @@ export function BomTable({
                 {virtualizer.getVirtualItems().map((virtualRow) => {
                   const item = sortedBom[virtualRow.index];
                   return (
-                    <SortableBomRow key={item.id} item={item} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlighted={highlightedItemId === Number(item.id)} onHighlight={handleHighlightItem} onAssessDamage={onAssessDamage} isDuplicate={duplicatePartNumbers.has(item.partNumber.toLowerCase().trim())} onFindAlternates={onFindAlternates} />
+                    <SortableBomRow key={item.id} item={item} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlighted={highlightedItemId === Number(item.id)} onHighlight={handleHighlightItem} onAssessDamage={onAssessDamage} isDuplicate={duplicatePartNumbers.has(item.partNumber.toLowerCase().trim())} onFindAlternates={onFindAlternates} shortfall={shortfallsByPartNumber?.get(item.partNumber) ?? null} />
                   );
                 })}
               </tbody>
@@ -161,7 +164,7 @@ export function BomTable({
   );
 }
 
-const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlighted, onHighlight, onAssessDamage, isDuplicate, onFindAlternates }: {
+const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValues, setEditValues, handleEditKeyDown, saveEdit, cancelEdit, startEdit, deleteBomItem, addOutputLog, toast, highlighted, onHighlight, onAssessDamage, isDuplicate, onFindAlternates, shortfall }: {
   item: EnrichedBomItem;
   editingId: number | null;
   editValues: EditValues;
@@ -178,6 +181,7 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
   onAssessDamage: (item: BomItem) => void;
   isDuplicate?: boolean;
   onFindAlternates?: (partNumber: string) => void;
+  shortfall?: BomShortfall | null;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: Number(item.id) });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };

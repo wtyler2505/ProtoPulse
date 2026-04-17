@@ -559,11 +559,14 @@ export function useCollaboration(projectId: number, sessionId: string): {
   releaseLock: (entityType: string, entityId: string) => void;
   isLocked: (entityType: string, entityId: string) => { locked: boolean; byUserId?: number };
   myRole: CollabRole;
+  pendingConflicts: Conflict[];
+  resolveConflict: (conflictId: string, action: 'mine' | 'theirs' | 'merge', customValue?: unknown) => void;
 } {
   const clientRef = useRef<CollaborationClient | null>(null);
   const [connectionState, setConnectionState] = useState<CollabConnectionState>('disconnected');
   const [activeUsers, setActiveUsers] = useState<CollabUser[]>([]);
   const [myRole, setMyRole] = useState<CollabRole>('viewer');
+  const [pendingConflicts, setPendingConflicts] = useState<Conflict[]>([]);
 
   useEffect(() => {
     if (!projectId || !sessionId) { return; }
@@ -573,9 +576,10 @@ export function useCollaboration(projectId: number, sessionId: string): {
 
     const unsubConnection = client.on('connection-change', setConnectionState);
     const unsubUsers = client.on('users-change', setActiveUsers);
-    const unsubRole = client.on('role-changed', (data) => {
+    const unsubRole = client.on('role-changed', (_data) => {
       setMyRole(client.getMyRole());
     });
+    const unsubConflicts = client.on('conflicts-change', setPendingConflicts);
 
     client.connect();
 
@@ -583,6 +587,7 @@ export function useCollaboration(projectId: number, sessionId: string): {
       unsubConnection();
       unsubUsers();
       unsubRole();
+      unsubConflicts();
       client.disconnect();
       clientRef.current = null;
     };
@@ -608,6 +613,13 @@ export function useCollaboration(projectId: number, sessionId: string): {
     return clientRef.current?.isLocked(entityType, entityId) ?? { locked: false };
   }, []);
 
+  const resolveConflictFn = useCallback(
+    (conflictId: string, action: 'mine' | 'theirs' | 'merge', customValue?: unknown) => {
+      clientRef.current?.resolveConflict(conflictId, action, customValue);
+    },
+    [],
+  );
+
   return {
     connectionState,
     activeUsers,
@@ -617,5 +629,7 @@ export function useCollaboration(projectId: number, sessionId: string): {
     releaseLock: releaseLockFn,
     isLocked: isLockedFn,
     myRole,
+    pendingConflicts,
+    resolveConflict: resolveConflictFn,
   };
 }
