@@ -8,11 +8,11 @@ topics:
 
 # microcontrollers
 
-Specs, gotchas, and selection criteria for microcontrollers and single-board computers in the inventory. Covers pin mapping, voltage levels, peripheral availability, clone compatibility, bootloader/USB quirks, and platform-specific traps that silently break naive ports.
+Specs, gotchas, and selection criteria for microcontrollers and single-board computers in the inventory (see [[hardware-components]] for physical limits). Covers pin mapping, voltage levels, peripheral availability, clone compatibility, bootloader/USB quirks, and platform-specific traps that silently break naive ports.
 
 ## Knowledge Notes
 
-### ATmega Uno (ATmega328P)
+### ATmega Uno ([[hardware-component-atmega328p|ATmega328P]])
 - [[uno-single-uart-shared-with-usb-forces-choose-one-between-debugging-and-peripherals]] — #1 Uno beginner wall: can't debug while serial peripheral connected
 - [[uno-20ma-per-pin-200ma-total-means-no-direct-led-or-motor-drive]] — ATmega328P GPIO current limits, no direct motor drive
 - [[uno-i2c-on-a4-a5-consumes-one-third-of-analog-inputs]] — I2C locks out 2 of 6 analog channels

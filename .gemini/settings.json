@@ -34,6 +34,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|replace",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "HARDWARE ENFORCEMENT: If you are modifying or creating a hardware component (e.g. in shared/verified-boards/ or standard-library), you MUST FIRST run a search across the `knowledge/` directory to discover its exact physical dimensions, pinout, and color. Do not guess these values. The Ars Contexta vault is the source of truth."
+          }
+        ]
+      }
     ]
   }
 }

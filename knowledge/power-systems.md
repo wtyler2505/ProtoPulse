@@ -8,7 +8,7 @@ topics:
 
 # power-systems
 
-Battery management, voltage regulation, power distribution architecture, fusing strategy, AC-mains safety components, and safety systems for the inventory. Covers LiPo/Li-ion/lead-acid + BMS/LVD, linear vs switching regulation, MOSFETs, E-stop + DC contactor circuits, X/Y mains safety capacitors, and multi-tier power distribution from battery through rails to MCU.
+Battery management, voltage regulation, power distribution architecture, fusing strategy, AC-mains safety components, and safety systems for the inventory (see [[hardware-components]] for physical specs). Covers LiPo/Li-ion/lead-acid + BMS/LVD, linear vs switching regulation, MOSFETs, E-stop + DC contactor circuits, X/Y mains safety capacitors, and multi-tier power distribution from battery through rails to MCU.
 
 ## Knowledge Notes
 

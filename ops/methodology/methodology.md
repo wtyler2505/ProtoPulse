@@ -21,6 +21,11 @@ How the ProtoPulse knowledge system works, why it works that way, and how it evo
 
 - [[verify-wiki-links-before-completing-knowledge-work]] -- all [[links]] must resolve to real files before a task is done
 
+## Processing
+
+- [[use-url-parse-or-polyfill-to-avoid-url-is-not-a-constructor]] -- Ensure robust URL parsing by using polyfills or dedicated libraries instead of relying on the global URL constructor
+- [[enforce-physical-constraints-on-breadboardfit-logic]] -- Always validate component dimensions and pin alignment against standard breadboard grid spacing 
+
 ## Principles
 
 The system is built on four core principles:

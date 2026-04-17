@@ -265,7 +265,7 @@ const ADJ_REG_PINS: [PinDef, PinDef, PinDef] = [{ name: 'IN', type: 'input' }, {
 // 74xx Logic ICs (11)
 // ---------------------------------------------------------------------------
 const LOGIC_ICS: StandardComponentDef[] = [
-  ic('7400 — Quad 2-Input NAND', 'Quad 2-input NAND gate, 14-pin DIP', ['74xx', 'NAND', 'gate', 'DIP-14', 'logic'], { manufacturer: 'Texas Instruments', mpn: 'SN74HC00N', mountingType: 'tht', packageType: 'DIP-14' }, '7400'),
+  ic('7400 — Quad 2-Input NAND', 'Quad 2-input NAND gate, 14-pin DIP', ['74xx', 'NAND', 'gate', 'DIP-14', 'logic'], { manufacturer: 'Texas Instruments', mpn: 'SN74HC00N', mountingType: 'tht', packageType: 'DIP-14', dimensions: {'length':19.3,'width':6.4,'height':3.3} }, '7400'),
   ic('7402 — Quad 2-Input NOR', 'Quad 2-input NOR gate, 14-pin DIP', ['74xx', 'NOR', 'gate', 'DIP-14', 'logic'], { manufacturer: 'Texas Instruments', mpn: 'SN74HC02N' }, '7402'),
   ic('7404 — Hex Inverter', 'Hex inverter (NOT gate), 14-pin DIP', ['74xx', 'NOT', 'inverter', 'DIP-14', 'logic'], { manufacturer: 'Texas Instruments', mpn: 'SN74HC04N' }, '7404'),
   ic('7408 — Quad 2-Input AND', 'Quad 2-input AND gate, 14-pin DIP', ['74xx', 'AND', 'gate', 'DIP-14', 'logic'], { manufacturer: 'Texas Instruments', mpn: 'SN74HC08N' }, '7408'),
@@ -320,62 +320,62 @@ const INDUCTORS: StandardComponentDef[] = [
 const MCUS: StandardComponentDef[] = [
   mcu('ATmega328P', '8-bit AVR MCU, 32KB flash, 2KB SRAM, 28-pin DIP — Arduino Uno brain', ['MCU', 'AVR', 'Arduino', 'DIP-28', 'ATmega'], { manufacturer: 'Microchip', mpn: 'ATMEGA328P-PU', mountingType: 'tht', packageType: 'DIP-28' }, '328P'),
   mcu('ATmega2560', '8-bit AVR MCU, 256KB flash, 8KB SRAM, 100-pin TQFP — Arduino Mega brain', ['MCU', 'AVR', 'Arduino', 'TQFP-100', 'ATmega'], { manufacturer: 'Microchip', mpn: 'ATMEGA2560-16AU', mountingType: 'smd', packageType: 'TQFP-100' }, '2560'),
-  mcu('ESP8266 (ESP-12F)', 'Wi-Fi SoC, 80MHz, 4MB flash, 80KB SRAM', ['MCU', 'Wi-Fi', 'ESP8266', 'IoT'], { manufacturer: 'Espressif', mpn: 'ESP-12F', mountingType: 'smd' }, 'ESP12'),
+  mcu('ESP8266 (ESP-12F)', 'Wi-Fi SoC, 80MHz, 4MB flash, 80KB SRAM', ['MCU', 'Wi-Fi', 'ESP8266', 'IoT'], { manufacturer: 'Espressif', mpn: 'ESP-12F', dimensions: {'length':24,'width':16,'height':3}, mountingType: 'smd' }, 'ESP12'),
   mcu('ESP32-WROOM-32', 'Dual-core Wi-Fi/BLE SoC, 240MHz, 4MB flash, 520KB SRAM', ['MCU', 'Wi-Fi', 'Bluetooth', 'ESP32', 'IoT'], { manufacturer: 'Espressif', mpn: 'ESP32-WROOM-32E', mountingType: 'smd' }, 'ESP32'),
-  mcu('ATtiny85', '8-bit AVR MCU, 8KB flash, 512B SRAM, 8-pin DIP — compact and versatile', ['MCU', 'AVR', 'DIP-8', 'ATtiny'], { manufacturer: 'Microchip', mpn: 'ATTINY85-20PU', mountingType: 'tht', packageType: 'DIP-8' }, 'tiny85'),
-  mcu('STM32F103C8T6 (Blue Pill)', 'ARM Cortex-M3, 72MHz, 64KB flash, 20KB SRAM, 48-pin LQFP', ['MCU', 'ARM', 'STM32', 'Cortex-M3', 'LQFP-48'], { manufacturer: 'STMicroelectronics', mpn: 'STM32F103C8T6', mountingType: 'smd', packageType: 'LQFP-48' }, 'STM32'),
+  mcu('ATtiny85', '8-bit AVR MCU, 8KB flash, 512B SRAM, 8-pin DIP — compact and versatile', ['MCU', 'AVR', 'DIP-8', 'ATtiny'], { manufacturer: 'Microchip', mpn: 'ATTINY85-20PU', mountingType: 'tht', packageType: 'DIP-8', dimensions: {'length':9.8,'width':6.4,'height':3.3} }, 'tiny85'),
+  mcu('STM32F103C8T6 (Blue Pill)', 'ARM Cortex-M3, 72MHz, 64KB flash, 20KB SRAM, 48-pin LQFP', ['MCU', 'ARM', 'STM32', 'Cortex-M3', 'LQFP-48'], { manufacturer: 'STMicroelectronics', mpn: 'STM32F103C8T6', mountingType: 'smd', packageType: 'LQFP-48', dimensions: {'length':7,'width':7,'height':1.4} }, 'STM32'),
 ];
 
 // ---------------------------------------------------------------------------
 // Power ICs (6)
 // ---------------------------------------------------------------------------
 const POWER_ICS: StandardComponentDef[] = [
-  power('LM7805 — 5V Linear Regulator', '5V 1A positive voltage regulator, TO-220', ['voltage regulator', 'linear', '5V', 'TO-220', 'power'], { manufacturer: 'Texas Instruments', mpn: 'LM7805CT', mountingType: 'tht', packageType: 'TO-220' }, REG_PINS, '7805'),
-  power('LM7812 — 12V Linear Regulator', '12V 1A positive voltage regulator, TO-220', ['voltage regulator', 'linear', '12V', 'TO-220', 'power'], { manufacturer: 'Texas Instruments', mpn: 'LM7812CT', mountingType: 'tht', packageType: 'TO-220' }, REG_PINS, '7812'),
-  power('LM317 — Adjustable Positive Regulator', 'Adjustable 1.2\u201337V, 1.5A positive voltage regulator, TO-220', ['voltage regulator', 'adjustable', 'TO-220', 'power'], { manufacturer: 'Texas Instruments', mpn: 'LM317T', mountingType: 'tht', packageType: 'TO-220' }, ADJ_REG_PINS, 'LM317'),
-  power('LM337 — Adjustable Negative Regulator', 'Adjustable -1.2 to -37V, 1.5A negative voltage regulator, TO-220', ['voltage regulator', 'negative', 'adjustable', 'TO-220', 'power'], { manufacturer: 'Texas Instruments', mpn: 'LM337T', mountingType: 'tht', packageType: 'TO-220' }, ADJ_REG_PINS, 'LM337'),
-  power('AMS1117-3.3 — 3.3V LDO Regulator', '3.3V 1A low-dropout regulator, SOT-223', ['LDO', 'regulator', '3.3V', 'SOT-223', 'power'], { manufacturer: 'Advanced Monolithic Systems', mpn: 'AMS1117-3.3', mountingType: 'smd', packageType: 'SOT-223' }, REG_PINS, '1117'),
-  { ...(() => { const v = buildTwoTerminalView('MP1584'); return { title: 'MP1584 — 3A Step-Down Converter', description: '3A adjustable step-down (buck) converter, 4.5\u201328V input', category: 'Power', tags: ['buck', 'converter', 'switching', 'power', 'step-down'], meta: { manufacturer: 'Monolithic Power Systems', mpn: 'MP1584EN', mountingType: 'smd', packageType: 'SOIC-8' }, connectors: v.connectors, buses: [], views: v.views, constraints: [] }; })() },
+  power('LM7805 — 5V Linear Regulator', '5V 1A positive voltage regulator, TO-220', ['voltage regulator', 'linear', '5V', 'TO-220', 'power'], { manufacturer: 'Texas Instruments', mpn: 'LM7805CT', mountingType: 'tht', packageType: 'TO-220', dimensions: {'length':10.4,'width':4.6,'height':9.15} }, REG_PINS, '7805'),
+  power('LM7812 — 12V Linear Regulator', '12V 1A positive voltage regulator, TO-220', ['voltage regulator', 'linear', '12V', 'TO-220', 'power'], { manufacturer: 'Texas Instruments', mpn: 'LM7812CT', mountingType: 'tht', packageType: 'TO-220', dimensions: {'length':10.4,'width':4.6,'height':9.15} }, REG_PINS, '7812'),
+  power('LM317 — Adjustable Positive Regulator', 'Adjustable 1.2\u201337V, 1.5A positive voltage regulator, TO-220', ['voltage regulator', 'adjustable', 'TO-220', 'power'], { manufacturer: 'Texas Instruments', mpn: 'LM317T', mountingType: 'tht', packageType: 'TO-220', dimensions: {'length':10.4,'width':4.6,'height':9.15} }, ADJ_REG_PINS, 'LM317'),
+  power('LM337 — Adjustable Negative Regulator', 'Adjustable -1.2 to -37V, 1.5A negative voltage regulator, TO-220', ['voltage regulator', 'negative', 'adjustable', 'TO-220', 'power'], { manufacturer: 'Texas Instruments', mpn: 'LM337T', mountingType: 'tht', packageType: 'TO-220', dimensions: {'length':10.4,'width':4.6,'height':9.15} }, ADJ_REG_PINS, 'LM337'),
+  power('AMS1117-3.3 — 3.3V LDO Regulator', '3.3V 1A low-dropout regulator, SOT-223', ['LDO', 'regulator', '3.3V', 'SOT-223', 'power'], { manufacturer: 'Advanced Monolithic Systems', mpn: 'AMS1117-3.3', mountingType: 'smd', packageType: 'SOT-223', dimensions: {'length':6.5,'width':3.5,'height':1.6} }, REG_PINS, '1117'),
+  { ...(() => { const v = buildTwoTerminalView('MP1584'); return { title: 'MP1584 — 3A Step-Down Converter', description: '3A adjustable step-down (buck) converter, 4.5\u201328V input', category: 'Power', tags: ['buck', 'converter', 'switching', 'power', 'step-down'], meta: { manufacturer: 'Monolithic Power Systems', mpn: 'MP1584EN', mountingType: 'smd', packageType: 'SOIC-8', dimensions: {'length':4.9,'width':3.9,'height':1.75} }, connectors: v.connectors, buses: [], views: v.views, constraints: [] }; })() },
 ];
 
 // ---------------------------------------------------------------------------
 // Op-Amps & Comparators (6)
 // ---------------------------------------------------------------------------
 const OPAMPS: StandardComponentDef[] = [
-  opamp('LM358 — Dual Op-Amp', 'Dual low-power operational amplifier, 8-pin DIP', ['op-amp', 'dual', 'DIP-8', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'LM358P', mountingType: 'tht', packageType: 'DIP-8' }, 'LM358'),
-  opamp('LM741 — General Purpose Op-Amp', 'General-purpose single op-amp, 8-pin DIP', ['op-amp', 'single', 'DIP-8', 'analog', 'classic'], { manufacturer: 'Texas Instruments', mpn: 'LM741CN', mountingType: 'tht', packageType: 'DIP-8' }, '741'),
-  opamp('TL071 — Low-Noise JFET Op-Amp', 'Low-noise JFET-input single op-amp, 8-pin DIP', ['op-amp', 'JFET', 'low-noise', 'DIP-8', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'TL071CP', mountingType: 'tht', packageType: 'DIP-8' }, 'TL071'),
-  opamp('TL072 — Dual Low-Noise JFET Op-Amp', 'Dual low-noise JFET-input op-amp, 8-pin DIP', ['op-amp', 'JFET', 'dual', 'low-noise', 'DIP-8', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'TL072CP', mountingType: 'tht', packageType: 'DIP-8' }, 'TL072'),
-  opamp('LM393 — Dual Comparator', 'Dual differential comparator, open-collector output, 8-pin DIP', ['comparator', 'dual', 'DIP-8', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'LM393P', mountingType: 'tht', packageType: 'DIP-8' }, 'LM393'),
-  opamp('LM324 — Quad Op-Amp', 'Quad low-power operational amplifier, 14-pin DIP', ['op-amp', 'quad', 'DIP-14', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'LM324N', mountingType: 'tht', packageType: 'DIP-14' }, 'LM324'),
+  opamp('LM358 — Dual Op-Amp', 'Dual low-power operational amplifier, 8-pin DIP', ['op-amp', 'dual', 'DIP-8', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'LM358P', mountingType: 'tht', packageType: 'DIP-8', dimensions: {'length':9.8,'width':6.4,'height':3.3} }, 'LM358'),
+  opamp('LM741 — General Purpose Op-Amp', 'General-purpose single op-amp, 8-pin DIP', ['op-amp', 'single', 'DIP-8', 'analog', 'classic'], { manufacturer: 'Texas Instruments', mpn: 'LM741CN', mountingType: 'tht', packageType: 'DIP-8', dimensions: {'length':9.8,'width':6.4,'height':3.3} }, '741'),
+  opamp('TL071 — Low-Noise JFET Op-Amp', 'Low-noise JFET-input single op-amp, 8-pin DIP', ['op-amp', 'JFET', 'low-noise', 'DIP-8', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'TL071CP', mountingType: 'tht', packageType: 'DIP-8', dimensions: {'length':9.8,'width':6.4,'height':3.3} }, 'TL071'),
+  opamp('TL072 — Dual Low-Noise JFET Op-Amp', 'Dual low-noise JFET-input op-amp, 8-pin DIP', ['op-amp', 'JFET', 'dual', 'low-noise', 'DIP-8', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'TL072CP', mountingType: 'tht', packageType: 'DIP-8', dimensions: {'length':9.8,'width':6.4,'height':3.3} }, 'TL072'),
+  opamp('LM393 — Dual Comparator', 'Dual differential comparator, open-collector output, 8-pin DIP', ['comparator', 'dual', 'DIP-8', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'LM393P', mountingType: 'tht', packageType: 'DIP-8', dimensions: {'length':9.8,'width':6.4,'height':3.3} }, 'LM393'),
+  opamp('LM324 — Quad Op-Amp', 'Quad low-power operational amplifier, 14-pin DIP', ['op-amp', 'quad', 'DIP-14', 'analog'], { manufacturer: 'Texas Instruments', mpn: 'LM324N', mountingType: 'tht', packageType: 'DIP-14', dimensions: {'length':19.3,'width':6.4,'height':3.3} }, 'LM324'),
 ];
 
 // ---------------------------------------------------------------------------
 // Transistors (8)
 // ---------------------------------------------------------------------------
 const TRANSISTORS: StandardComponentDef[] = [
-  transistor('2N2222 — NPN Transistor', 'NPN general-purpose transistor, 800mA, 40V, TO-92', ['NPN', 'transistor', 'BJT', 'TO-92'], { manufacturer: 'ON Semiconductor', mpn: 'P2N2222AG', mountingType: 'tht', packageType: 'TO-92' }, NPN_PINS, '2222'),
-  transistor('2N3904 — NPN Transistor', 'NPN general-purpose transistor, 200mA, 40V, TO-92', ['NPN', 'transistor', 'BJT', 'TO-92'], { manufacturer: 'ON Semiconductor', mpn: '2N3904', mountingType: 'tht', packageType: 'TO-92' }, NPN_PINS, '3904'),
-  transistor('2N3906 — PNP Transistor', 'PNP general-purpose transistor, 200mA, 40V, TO-92', ['PNP', 'transistor', 'BJT', 'TO-92'], { manufacturer: 'ON Semiconductor', mpn: '2N3906', mountingType: 'tht', packageType: 'TO-92' }, PNP_PINS, '3906'),
-  transistor('BC547 — NPN Transistor', 'NPN small-signal transistor, 100mA, 45V, TO-92', ['NPN', 'transistor', 'BJT', 'TO-92', 'small-signal'], { manufacturer: 'ON Semiconductor', mpn: 'BC547BTA', mountingType: 'tht', packageType: 'TO-92' }, NPN_PINS, 'BC547'),
-  transistor('BC557 — PNP Transistor', 'PNP small-signal transistor, 100mA, 45V, TO-92', ['PNP', 'transistor', 'BJT', 'TO-92', 'small-signal'], { manufacturer: 'ON Semiconductor', mpn: 'BC557BTA', mountingType: 'tht', packageType: 'TO-92' }, PNP_PINS, 'BC557'),
-  transistor('2N7000 — N-Channel MOSFET', 'N-channel enhancement MOSFET, 200mA, 60V, TO-92', ['MOSFET', 'N-channel', 'TO-92', 'logic-level'], { manufacturer: 'ON Semiconductor', mpn: '2N7000', mountingType: 'tht', packageType: 'TO-92' }, FET_PINS, '2N7K'),
-  transistor('IRF540N — N-Channel Power MOSFET', 'N-channel power MOSFET, 33A, 100V, TO-220', ['MOSFET', 'N-channel', 'power', 'TO-220'], { manufacturer: 'Infineon', mpn: 'IRF540NPBF', mountingType: 'tht', packageType: 'TO-220' }, FET_PINS, 'IRF540'),
-  transistor('IRLZ44N — Logic-Level N-Channel MOSFET', 'Logic-level N-channel MOSFET, 47A, 55V, TO-220', ['MOSFET', 'N-channel', 'logic-level', 'power', 'TO-220'], { manufacturer: 'Infineon', mpn: 'IRLZ44NPBF', mountingType: 'tht', packageType: 'TO-220' }, FET_PINS, 'IRLZ44'),
+  transistor('2N2222 — NPN Transistor', 'NPN general-purpose transistor, 800mA, 40V, TO-92', ['NPN', 'transistor', 'BJT', 'TO-92'], { manufacturer: 'ON Semiconductor', mpn: 'P2N2222AG', mountingType: 'tht', packageType: 'TO-92', dimensions: {'length':4.8,'width':3.8,'height':4.8} }, NPN_PINS, '2222'),
+  transistor('2N3904 — NPN Transistor', 'NPN general-purpose transistor, 200mA, 40V, TO-92', ['NPN', 'transistor', 'BJT', 'TO-92'], { manufacturer: 'ON Semiconductor', mpn: '2N3904', mountingType: 'tht', packageType: 'TO-92', dimensions: {'length':4.8,'width':3.8,'height':4.8} }, NPN_PINS, '3904'),
+  transistor('2N3906 — PNP Transistor', 'PNP general-purpose transistor, 200mA, 40V, TO-92', ['PNP', 'transistor', 'BJT', 'TO-92'], { manufacturer: 'ON Semiconductor', mpn: '2N3906', mountingType: 'tht', packageType: 'TO-92', dimensions: {'length':4.8,'width':3.8,'height':4.8} }, PNP_PINS, '3906'),
+  transistor('BC547 — NPN Transistor', 'NPN small-signal transistor, 100mA, 45V, TO-92', ['NPN', 'transistor', 'BJT', 'TO-92', 'small-signal'], { manufacturer: 'ON Semiconductor', mpn: 'BC547BTA', mountingType: 'tht', packageType: 'TO-92', dimensions: {'length':4.8,'width':3.8,'height':4.8} }, NPN_PINS, 'BC547'),
+  transistor('BC557 — PNP Transistor', 'PNP small-signal transistor, 100mA, 45V, TO-92', ['PNP', 'transistor', 'BJT', 'TO-92', 'small-signal'], { manufacturer: 'ON Semiconductor', mpn: 'BC557BTA', mountingType: 'tht', packageType: 'TO-92', dimensions: {'length':4.8,'width':3.8,'height':4.8} }, PNP_PINS, 'BC557'),
+  transistor('2N7000 — N-Channel MOSFET', 'N-channel enhancement MOSFET, 200mA, 60V, TO-92', ['MOSFET', 'N-channel', 'TO-92', 'logic-level'], { manufacturer: 'ON Semiconductor', mpn: '2N7000', mountingType: 'tht', packageType: 'TO-92', dimensions: {'length':4.8,'width':3.8,'height':4.8} }, FET_PINS, '2N7K'),
+  transistor('IRF540N — N-Channel Power MOSFET', 'N-channel power MOSFET, 33A, 100V, TO-220', ['MOSFET', 'N-channel', 'power', 'TO-220'], { manufacturer: 'Infineon', mpn: 'IRF540NPBF', mountingType: 'tht', packageType: 'TO-220', dimensions: {'length':10.4,'width':4.6,'height':9.15} }, FET_PINS, 'IRF540'),
+  transistor('IRLZ44N — Logic-Level N-Channel MOSFET', 'Logic-level N-channel MOSFET, 47A, 55V, TO-220', ['MOSFET', 'N-channel', 'logic-level', 'power', 'TO-220'], { manufacturer: 'Infineon', mpn: 'IRLZ44NPBF', mountingType: 'tht', packageType: 'TO-220', dimensions: {'length':10.4,'width':4.6,'height':9.15} }, FET_PINS, 'IRLZ44'),
 ];
 
 // ---------------------------------------------------------------------------
 // Diodes (8)
 // ---------------------------------------------------------------------------
 const DIODES: StandardComponentDef[] = [
-  diode('1N4148 — Small Signal Diode', 'Fast-switching small signal diode, 100V, 200mA, DO-35', ['diode', 'signal', 'switching', 'DO-35'], { manufacturer: 'Vishay', mpn: '1N4148', mountingType: 'tht', packageType: 'DO-35' }, '4148'),
+  diode('1N4148 — Small Signal Diode', 'Fast-switching small signal diode, 100V, 200mA, DO-35', ['diode', 'signal', 'switching', 'DO-35'], { manufacturer: 'Vishay', mpn: '1N4148', mountingType: 'tht', packageType: 'DO-35', dimensions: {'length':5.08,'width':2,'height':2} }, '4148'),
   diode('1N4007 — Rectifier Diode', 'General-purpose rectifier, 1000V, 1A, DO-41', ['diode', 'rectifier', 'DO-41'], { manufacturer: 'ON Semiconductor', mpn: '1N4007', mountingType: 'tht', packageType: 'DO-41' }, '4007'),
   diode('1N5819 — Schottky Diode', 'Schottky barrier diode, 40V, 1A, DO-41 — low forward voltage drop', ['diode', 'Schottky', 'DO-41'], { manufacturer: 'ON Semiconductor', mpn: '1N5819', mountingType: 'tht', packageType: 'DO-41' }, '5819'),
   diode('1N5408 — Power Rectifier Diode', 'Power rectifier, 1000V, 3A, DO-201', ['diode', 'rectifier', 'power', 'DO-201'], { manufacturer: 'ON Semiconductor', mpn: '1N5408', mountingType: 'tht', packageType: 'DO-201' }, '5408'),
-  diode('Zener Diode 3.3V', '3.3V Zener diode, 500mW, DO-35', ['diode', 'Zener', '3.3V', 'DO-35'], { manufacturer: 'ON Semiconductor', mpn: '1N5226B', mountingType: 'tht', packageType: 'DO-35', value: '3.3V' }, 'Z3.3V'),
-  diode('Zener Diode 5.1V', '5.1V Zener diode, 500mW, DO-35', ['diode', 'Zener', '5.1V', 'DO-35'], { manufacturer: 'ON Semiconductor', mpn: '1N5231B', mountingType: 'tht', packageType: 'DO-35', value: '5.1V' }, 'Z5.1V'),
-  diode('Zener Diode 12V', '12V Zener diode, 500mW, DO-35', ['diode', 'Zener', '12V', 'DO-35'], { manufacturer: 'ON Semiconductor', mpn: '1N5242B', mountingType: 'tht', packageType: 'DO-35', value: '12V' }, 'Z12V'),
-  diode('BAT85 — Schottky Diode', 'Small signal Schottky diode, 30V, 200mA, DO-35', ['diode', 'Schottky', 'signal', 'DO-35'], { manufacturer: 'NXP', mpn: 'BAT85', mountingType: 'tht', packageType: 'DO-35' }, 'BAT85'),
+  diode('Zener Diode 3.3V', '3.3V Zener diode, 500mW, DO-35', ['diode', 'Zener', '3.3V', 'DO-35'], { manufacturer: 'ON Semiconductor', mpn: '1N5226B', mountingType: 'tht', packageType: 'DO-35', dimensions: {'length':5.08,'width':2,'height':2}, value: '3.3V' }, 'Z3.3V'),
+  diode('Zener Diode 5.1V', '5.1V Zener diode, 500mW, DO-35', ['diode', 'Zener', '5.1V', 'DO-35'], { manufacturer: 'ON Semiconductor', mpn: '1N5231B', mountingType: 'tht', packageType: 'DO-35', dimensions: {'length':5.08,'width':2,'height':2}, value: '5.1V' }, 'Z5.1V'),
+  diode('Zener Diode 12V', '12V Zener diode, 500mW, DO-35', ['diode', 'Zener', '12V', 'DO-35'], { manufacturer: 'ON Semiconductor', mpn: '1N5242B', mountingType: 'tht', packageType: 'DO-35', dimensions: {'length':5.08,'width':2,'height':2}, value: '12V' }, 'Z12V'),
+  diode('BAT85 — Schottky Diode', 'Small signal Schottky diode, 30V, 200mA, DO-35', ['diode', 'Schottky', 'signal', 'DO-35'], { manufacturer: 'NXP', mpn: 'BAT85', mountingType: 'tht', packageType: 'DO-35', dimensions: {'length':5.08,'width':2,'height':2} }, 'BAT85'),
 ];
 
 // ---------------------------------------------------------------------------
@@ -421,14 +421,14 @@ const DISPLAYS: StandardComponentDef[] = [
 // Sensors (8)
 // ---------------------------------------------------------------------------
 const SENSORS: StandardComponentDef[] = [
-  sensor('DHT11 — Temperature & Humidity Sensor', 'Digital temperature (0\u201350\u00B0C) and humidity (20\u201380%) sensor, single-wire', ['sensor', 'temperature', 'humidity', 'DHT11', 'digital'], { manufacturer: 'Aosong', mpn: 'DHT11', interface: 'single-wire', accuracy: '\u00B12\u00B0C, \u00B15%RH' }, 'DHT11'),
-  sensor('DHT22 — Temperature & Humidity Sensor', 'Digital temperature (-40\u201380\u00B0C) and humidity (0\u2013100%) sensor, single-wire', ['sensor', 'temperature', 'humidity', 'DHT22', 'digital'], { manufacturer: 'Aosong', mpn: 'DHT22/AM2302', interface: 'single-wire', accuracy: '\u00B10.5\u00B0C, \u00B12%RH' }, 'DHT22'),
-  sensor('DS18B20 — 1-Wire Temperature Sensor', 'Digital 1-Wire temperature sensor, -55 to +125\u00B0C, \u00B10.5\u00B0C accuracy, TO-92', ['sensor', 'temperature', '1-Wire', 'DS18B20', 'digital'], { manufacturer: 'Maxim', mpn: 'DS18B20', interface: '1-Wire', mountingType: 'tht', packageType: 'TO-92' }, '18B20'),
-  sensor('HC-SR04 — Ultrasonic Distance Sensor', 'Ultrasonic ranging module, 2cm\u20134m range, 3mm resolution', ['sensor', 'ultrasonic', 'distance', 'HC-SR04'], { manufacturer: 'Generic', mpn: 'HC-SR04', interface: 'trigger/echo' }, 'SR04'),
-  sensor('PIR Motion Sensor (HC-SR501)', 'Passive infrared motion sensor module, adjustable sensitivity and delay', ['sensor', 'PIR', 'motion', 'HC-SR501', 'infrared'], { manufacturer: 'Generic', mpn: 'HC-SR501' }, 'PIR'),
+  sensor('DHT11 — Temperature & Humidity Sensor', 'Digital temperature (0\u201350\u00B0C) and humidity (20\u201380%) sensor, single-wire', ['sensor', 'temperature', 'humidity', 'DHT11', 'digital'], { manufacturer: 'Aosong', mpn: 'DHT11', dimensions: {'length':15.5,'width':12,'height':5.5}, interface: 'single-wire', accuracy: '\u00B12\u00B0C, \u00B15%RH' }, 'DHT11'),
+  sensor('DHT22 — Temperature & Humidity Sensor', 'Digital temperature (-40\u201380\u00B0C) and humidity (0\u2013100%) sensor, single-wire', ['sensor', 'temperature', 'humidity', 'DHT22', 'digital'], { manufacturer: 'Aosong', mpn: 'DHT22/AM2302', dimensions: {'length':25.1,'width':15.1,'height':7.7}, interface: 'single-wire', accuracy: '\u00B10.5\u00B0C, \u00B12%RH' }, 'DHT22'),
+  sensor('DS18B20 — 1-Wire Temperature Sensor', 'Digital 1-Wire temperature sensor, -55 to +125\u00B0C, \u00B10.5\u00B0C accuracy, TO-92', ['sensor', 'temperature', '1-Wire', 'DS18B20', 'digital'], { manufacturer: 'Maxim', mpn: 'DS18B20', interface: '1-Wire', mountingType: 'tht', packageType: 'TO-92', dimensions: {'length':4.8,'width':3.8,'height':4.8} }, '18B20'),
+  sensor('HC-SR04 — Ultrasonic Distance Sensor', 'Ultrasonic ranging module, 2cm\u20134m range, 3mm resolution', ['sensor', 'ultrasonic', 'distance', 'HC-SR04'], { manufacturer: 'Generic', mpn: 'HC-SR04', dimensions: {'length':45,'width':20,'height':15}, interface: 'trigger/echo' }, 'SR04'),
+  sensor('PIR Motion Sensor (HC-SR501)', 'Passive infrared motion sensor module, adjustable sensitivity and delay', ['sensor', 'PIR', 'motion', 'HC-SR501', 'infrared'], { manufacturer: 'Generic', mpn: 'HC-SR501', dimensions: {'length':32,'width':24,'height':24} }, 'PIR'),
   sensor('LDR — Light Dependent Resistor', 'Photoresistor (LDR), 1k\u03A9\u201310M\u03A9 range depending on illumination', ['sensor', 'light', 'LDR', 'photoresistor', 'analog'], { manufacturer: 'Generic', type: 'photoresistor' }, 'LDR'),
   sensor('NTC Thermistor 10k\u03A9', '10k\u03A9 NTC thermistor, B=3950, -40 to +125\u00B0C', ['sensor', 'thermistor', 'NTC', '10k\u03A9', 'temperature', 'analog'], { manufacturer: 'Murata', mpn: 'NCP15XH103F03RC', value: '10k\u03A9', beta: 3950 }, 'NTC'),
-  sensor('MPU-6050 — 6-Axis IMU', '6-axis accelerometer + gyroscope, I2C', ['sensor', 'IMU', 'accelerometer', 'gyroscope', 'I2C', 'MPU-6050'], { manufacturer: 'TDK InvenSense', mpn: 'MPU-6050', interface: 'I2C' }, 'MPU'),
+  sensor('MPU-6050 — 6-Axis IMU', '6-axis accelerometer + gyroscope, I2C', ['sensor', 'IMU', 'accelerometer', 'gyroscope', 'I2C', 'MPU-6050'], { manufacturer: 'TDK InvenSense', mpn: 'MPU-6050', dimensions: {'length':20,'width':15,'height':1.2}, interface: 'I2C' }, 'MPU'),
 ];
 
 // ---------------------------------------------------------------------------
@@ -436,9 +436,9 @@ const SENSORS: StandardComponentDef[] = [
 // ---------------------------------------------------------------------------
 const COMM_MODULES: StandardComponentDef[] = [
   comm('NRF24L01 — 2.4GHz Transceiver', '2.4GHz wireless transceiver module, SPI, 250kbps\u20132Mbps, 100m range', ['wireless', 'RF', '2.4GHz', 'NRF24L01', 'SPI'], { manufacturer: 'Nordic Semiconductor', mpn: 'NRF24L01+', interface: 'SPI', frequency: '2.4GHz' }, 'NRF24'),
-  comm('HC-05 — Bluetooth Module', 'Bluetooth 2.0 SPP module, UART, master/slave, 10m range', ['Bluetooth', 'UART', 'HC-05', 'SPP', 'wireless'], { manufacturer: 'Generic', mpn: 'HC-05', interface: 'UART', btVersion: '2.0' }, 'HC-05'),
-  comm('SIM800L — GSM/GPRS Module', 'Quad-band GSM/GPRS module, UART, SMS/voice/data', ['GSM', 'GPRS', 'cellular', 'SIM800L', 'UART'], { manufacturer: 'SIMCom', mpn: 'SIM800L', interface: 'UART', bands: '850/900/1800/1900MHz' }, 'SIM800'),
-  comm('RFM95 — LoRa Transceiver', 'Long-range LoRa transceiver, 868/915MHz, SPI, up to 15km range', ['LoRa', 'wireless', 'long-range', 'RFM95', 'SPI'], { manufacturer: 'HopeRF', mpn: 'RFM95W', interface: 'SPI', frequency: '868/915MHz' }, 'RFM95'),
+  comm('HC-05 — Bluetooth Module', 'Bluetooth 2.0 SPP module, UART, master/slave, 10m range', ['Bluetooth', 'UART', 'HC-05', 'SPP', 'wireless'], { manufacturer: 'Generic', mpn: 'HC-05', dimensions: {'length':37.3,'width':15.2,'height':6}, interface: 'UART', btVersion: '2.0' }, 'HC-05'),
+  comm('SIM800L — GSM/GPRS Module', 'Quad-band GSM/GPRS module, UART, SMS/voice/data', ['GSM', 'GPRS', 'cellular', 'SIM800L', 'UART'], { manufacturer: 'SIMCom', mpn: 'SIM800L', dimensions: {'length':25,'width':23,'height':5}, interface: 'UART', bands: '850/900/1800/1900MHz' }, 'SIM800'),
+  comm('RFM95 — LoRa Transceiver', 'Long-range LoRa transceiver, 868/915MHz, SPI, up to 15km range', ['LoRa', 'wireless', 'long-range', 'RFM95', 'SPI'], { manufacturer: 'HopeRF', mpn: 'RFM95W', dimensions: {'length':16,'width':16,'height':2}, interface: 'SPI', frequency: '868/915MHz' }, 'RFM95'),
 ];
 
 // ---------------------------------------------------------------------------

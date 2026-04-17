@@ -8,7 +8,7 @@ topics:
 
 # communication
 
-Wireless and wired communication protocols, module pairing, range/reliability trade-offs, and connectivity module selection for the inventory. Covers Bluetooth HC-05/HC-06, IR NEC protocol, W5100 Ethernet, RS-485, PoE, RFID, and WiFi MCU integration gotchas.
+Wireless and wired communication protocols, module pairing, range/reliability trade-offs, and connectivity module selection for the inventory (see [[hardware-components]] for physical specs). Covers Bluetooth HC-05/HC-06, IR NEC protocol, W5100 Ethernet, RS-485, PoE, RFID, and WiFi MCU integration gotchas.
 
 ## Knowledge Notes
 

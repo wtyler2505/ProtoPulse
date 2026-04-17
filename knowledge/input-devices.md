@@ -8,7 +8,7 @@ topics:
 
 # input-devices
 
-Analog and digital input devices, debouncing strategies, matrix scanning, ADC mapping, and human interface patterns for the inventory. Covers joysticks, keypads, rotary encoders, and push-button switches.
+Analog and digital input devices, debouncing strategies, matrix scanning, ADC mapping, and human interface patterns for the inventory (see [[hardware-components]] for physical specs). Covers joysticks, keypads, rotary encoders, and push-button switches.
 
 ## Knowledge Notes
 

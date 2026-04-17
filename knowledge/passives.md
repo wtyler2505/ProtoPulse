@@ -8,7 +8,7 @@ topics:
 
 # passives
 
-Capacitor selection (ceramic vs electrolytic vs film), transistor switching circuits, potentiometer circuits, shift register cascading, and discrete component design patterns for the inventory. Covers decoupling, bulk filtering, BJT switching, and IO expansion.
+Capacitor selection (ceramic vs electrolytic vs film), transistor switching circuits, potentiometer circuits, shift register cascading, and discrete component design patterns for the inventory (see [[hardware-components]] for physical specs). Covers decoupling, bulk filtering, BJT switching, and IO expansion.
 
 ## Knowledge Notes
 

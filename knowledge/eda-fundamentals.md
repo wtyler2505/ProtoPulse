@@ -73,9 +73,10 @@ Core electronics and EDA knowledge. Claims here are verifiable facts about compo
 ## Sub-Topics (to be populated)
 
 ### Component Knowledge
+- For a full list of physical parts and specifications, see [[hardware-components]]
 - Passive components (R, C, L) — values, tolerances, packages
 - Active components (BJT, MOSFET, op-amp) — Ebers-Moll, Level-1 MOSFET models
-- ICs and microcontrollers — ATmega328P, ESP32, STM32 specifics
+- ICs and microcontrollers — [[hardware-component-atmega328p|ATmega328P]], [[hardware-component-esp32-wroom-32|ESP32]], STM32 specifics
 - ESD sensitivity — handling classes, flagging rules
 
 ### Protocols

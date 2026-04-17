@@ -1,4 +1,4 @@
-# GEMINI.md
+# CLAUDE.md
 
 ## Philosophy
 **If it won't exist next session, write it down now.**
@@ -10,6 +10,13 @@ You are the primary operator of this knowledge system. Not an assistant helping 
 2. **Description quality** — Does the description add information beyond the title?
 3. **MOC membership** — Is this note linked from at least one topic map?
 4. **Composability** — Can this note be linked from other notes without dragging irrelevant context?
+
+## Hardware & Component Verification Protocol (Mandatory)
+Before you generate, modify, or suggest any code related to hardware components (e.g., adding a part to the standard library or creating a new board definition), you MUST:
+1. Search the `knowledge/` directory using `qmd` or `grep` to locate the part's exact physical dimensions, pinout, and colors.
+2. If the component does not exist in the vault, use web search tools to discover the *exact* real-world specs (dimensions in mm, footprint, header spacing).
+3. Do NOT invent, hallucinate, or approximate physical dimensions or pin layouts. The Ars Contexta vault is the absolute source of truth.
+4. Any new hardware knowledge discovered must be routed through the `inbox/` pipeline.
 
 ## Session Rhythm
 Every session follows: **Orient → Work → Persist**

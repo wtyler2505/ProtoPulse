@@ -8,7 +8,7 @@ topics:
 
 # shields
 
-Shield comparison, pin conflict avoidance, level shifter selection, and expansion board stacking strategies for the inventory. Covers the Arduino shield form factor, motor shields (HW-130 AFMotor V1 clone, OSEPP Motor/Servo V1 combo, TB6612 MOSFET boards), bidirectional level shifters (BSS138 passive, TXS0108E + 74HCT245 active), sensor/proto/bluetooth shields, and Ethernet/SPI bus-sharing discipline.
+Shield comparison, pin conflict avoidance, level shifter selection, and expansion board stacking strategies for the inventory (see [[hardware-components]] for physical boards). Covers the Arduino shield form factor, motor shields (HW-130 AFMotor V1 clone, OSEPP Motor/Servo V1 combo, TB6612 MOSFET boards), bidirectional level shifters (BSS138 passive, TXS0108E + 74HCT245 active), sensor/proto/bluetooth shields, and Ethernet/SPI bus-sharing discipline.
 
 ## Knowledge Notes
 

@@ -8,7 +8,7 @@ topics:
 
 # sensors
 
-Measurement principles, calibration requirements, protocol details, and wiring gotchas for sensors in the inventory. Covers IR, Hall, reed, tilt, light/photoresistor, temperature, RTC, compass/IMU, RFID, and sound/PDM microphone sensors.
+Sensor characteristics, filtering requirements, calibration traps, and protocol quirks for the inventory (see [[hardware-components]] for physical parts list). Covers optical, magnetic, environmental, inertial, and touch sensors, with an emphasis on separating physical phenomena from digital artifacts.
 
 ## Knowledge Notes
 

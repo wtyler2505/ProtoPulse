@@ -8,7 +8,7 @@ topics:
 
 # displays
 
-Display protocols, driver ICs, multiplexing strategies, and visual feedback design for the inventory. Covers TFT SPI, I2C OLED, parallel character LCD, 7-segment, LED matrices, NeoPixels, and touchscreens.
+Display protocols, driver ICs, multiplexing strategies, and visual feedback design for the inventory (see [[hardware-components]] for physical specs). Covers TFT SPI, I2C OLED, parallel character LCD, 7-segment, LED matrices, NeoPixels, and touchscreens.
 
 ## Knowledge Notes
 - [[display-type-determines-interface-protocol-and-driver-ic-which-together-set-library-and-pin-count]] — display selection is a dependency chain, not a feature comparison

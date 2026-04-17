@@ -10,6 +10,7 @@ Welcome to the ProtoPulse knowledge vault. 528 atomic notes across 11 hardware-d
 
 ## Hardware Topic Maps
 
+- [[hardware-components]] -- master topic map for all physical hardware components and boards
 - [[eda-fundamentals]] -- core EDA concepts, MCU pin constraints, protocol basics, simulation, and PCB design rules
 - [[microcontrollers]] -- ATmega328P, ESP32, ESP8266, RP2040, SAMD51, STM32 pin maps, boot gotchas, and peripheral constraints
 - [[actuators]] -- DC, stepper, servo, BLDC, AC motors; H-bridges; brake/coast logic; mechanical advantage

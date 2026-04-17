@@ -8,7 +8,7 @@ topics:
 
 # actuators
 
-Motor control theory, driver IC comparison across the brushed-DC voltage ladder (TB6612 13V → L298N 46V → Cytron MD25HV 58V), PWM strategies, commutation tables, brake/coast/stop state machines, and output device selection for the inventory. Covers BLDC hub motors, brushed DC, steppers, servos, **AC synchronous and AC gearmotors**, buzzers, relays, and their driver boards.
+Motor control theory, driver IC comparison across the brushed-DC voltage ladder (TB6612 13V → L298N 46V → Cytron MD25HV 58V), PWM strategies, commutation tables, brake/coast/stop state machines, and output device selection for the inventory (see [[hardware-components]] for physical specs). Covers BLDC hub motors, brushed DC, steppers, servos, **AC synchronous and AC gearmotors**, buzzers, relays, and their driver boards.
 
 ## Driver voltage ladder (resolved tension)
 
