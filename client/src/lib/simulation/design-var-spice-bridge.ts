@@ -19,46 +19,22 @@ import { VariableStore } from '@shared/design-variables';
 
 // ---------------------------------------------------------------------------
 // SPICE value formatting
+//
+// BL-0126: The format + parse implementations are now canonical in
+// `shared/units.ts`. This bridge uses the compact-style formatter (no
+// trailing zeros) because `.param` directives are read by humans.
 // ---------------------------------------------------------------------------
 
-/** SPICE-compatible SI suffix map (subset — SPICE does not support all SI prefixes). */
-const SPICE_SUFFIX_MAP: ReadonlyArray<{ threshold: number; divisor: number; suffix: string }> = [
-  { threshold: 1e12, divisor: 1e12, suffix: 'T' },
-  { threshold: 1e9, divisor: 1e9, suffix: 'G' },
-  { threshold: 1e6, divisor: 1e6, suffix: 'MEG' },
-  { threshold: 1e3, divisor: 1e3, suffix: 'K' },
-  { threshold: 1, divisor: 1, suffix: '' },
-  { threshold: 1e-3, divisor: 1e-3, suffix: 'M' },
-  { threshold: 1e-6, divisor: 1e-6, suffix: 'U' },
-  { threshold: 1e-9, divisor: 1e-9, suffix: 'N' },
-  { threshold: 1e-12, divisor: 1e-12, suffix: 'P' },
-  { threshold: 1e-15, divisor: 1e-15, suffix: 'F' },
-];
+import { formatSpiceValueCompact, parseSpiceValue as sharedParseSpiceValue } from '@shared/units';
 
 /**
  * Format a numeric value using SPICE-compatible SI suffixes.
  * Zero is returned as "0". Values too small for 'F' suffix use
- * scientific notation.
+ * scientific notation. Trailing zeros are stripped for readability in
+ * `.param` directives.
  */
 export function formatSpiceValue(value: number): string {
-  if (value === 0) {
-    return '0';
-  }
-
-  const abs = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-
-  for (const { threshold, divisor, suffix } of SPICE_SUFFIX_MAP) {
-    if (abs >= threshold) {
-      const scaled = abs / divisor;
-      // Use up to 6 significant digits, strip trailing zeros
-      const formatted = parseFloat(scaled.toPrecision(6)).toString();
-      return `${sign}${formatted}${suffix}`;
-    }
-  }
-
-  // Fallback: scientific notation for extremely small values
-  return value.toExponential(6);
+  return formatSpiceValueCompact(value);
 }
 
 // ---------------------------------------------------------------------------
@@ -128,48 +104,21 @@ export function exportDesignVarsToSpice(vars: DesignVariable[]): string {
 /** Regex for `.param name = value` or `.param name = {expression}`. */
 const PARAM_RE = /^\.param\s+([a-zA-Z_]\w*)\s*=\s*(.+)$/i;
 
-/** Regex for SPICE SI suffixed number: e.g. 10K, 4.7MEG, 100N */
-const SPICE_NUMBER_RE = /^([+-]?\d+\.?\d*(?:[eE][+-]?\d+)?)\s*(T|G|MEG|K|M|U|N|P|F)?$/i;
-
-/** Map SPICE suffixes (case-insensitive) to multipliers. */
-const SPICE_SUFFIX_TO_MULTIPLIER: ReadonlyMap<string, number> = new Map([
-  ['T', 1e12],
-  ['G', 1e9],
-  ['MEG', 1e6],
-  ['K', 1e3],
-  ['M', 1e-3],
-  ['U', 1e-6],
-  ['N', 1e-9],
-  ['P', 1e-12],
-  ['F', 1e-15],
-]);
-
 /**
  * Parse a SPICE value string (e.g. "10K", "4.7MEG", "100N", "3.3") to a number.
- * Returns NaN if the string cannot be parsed.
+ *
+ * Legacy behaviour preserved: unparseable-but-numeric-looking input (e.g. an
+ * empty or malformed `.param` value) falls back to `Number(trimmed)` so the
+ * old `NaN` contract is maintained for downstream `.param` error reporting.
+ *
+ * BL-0126: delegates to the canonical parser in `shared/units.ts`.
  */
 export function parseSpiceValue(raw: string): number {
   const trimmed = raw.trim();
-  const match = SPICE_NUMBER_RE.exec(trimmed);
-  if (!match) {
-    // Try plain number
-    const num = Number(trimmed);
-    return num;
-  }
-
-  const numPart = Number(match[1]);
-  const suffix = match[2];
-
-  if (!suffix) {
-    return numPart;
-  }
-
-  const multiplier = SPICE_SUFFIX_TO_MULTIPLIER.get(suffix.toUpperCase());
-  if (multiplier === undefined) {
-    return numPart;
-  }
-
-  return numPart * multiplier;
+  const parsed = sharedParseSpiceValue(trimmed);
+  if (Number.isFinite(parsed)) return parsed;
+  // Legacy fallback: Number("") === 0, Number("abc") === NaN, etc.
+  return Number(trimmed);
 }
 
 /**

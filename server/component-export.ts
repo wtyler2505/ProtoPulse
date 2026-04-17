@@ -16,6 +16,7 @@ import type {
   GroupShape,
 } from '@shared/component-types';
 import { createDefaultPartMeta, createDefaultViewData, createDefaultPartState } from '@shared/component-types';
+import { sanitizeSvg as sharedSanitizeSvg } from '@shared/svg-sanitize';
 
 // ---------------------------------------------------------------------------
 // Fritzing 9px grid utilities
@@ -363,35 +364,15 @@ function parseRotation(tag: string): number {
 /**
  * Sanitizes SVG content by stripping dangerous elements and attributes
  * that could be used for XSS attacks in imported FZPZ component files.
+ *
+ * Backed by isomorphic-dompurify (see shared/svg-sanitize.ts). The prior
+ * regex implementation had 20+ known XSS bypasses (self-closing script,
+ * mutation XSS via nested tags, data:text/html, vbscript:, <animate>,
+ * <iframe>/<embed>/<object>, <style>, <meta>, <link>, billion-laughs,
+ * XXE, etc.) all documented in client/src/lib/__tests__/svg-sanitize.test.ts.
  */
 function sanitizeSvgContent(svgString: string): string {
-  // Strip <script>...</script> tags and content
-  let sanitized = svgString.replace(/<script[\s\S]*?<\/script>/gi, '');
-  // Strip self-closing <script .../> tags
-  sanitized = sanitized.replace(/<script[^>]*\/>/gi, '');
-
-  // Strip <foreignObject>...</foreignObject> tags and content
-  sanitized = sanitized.replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '');
-  // Strip self-closing <foreignObject .../> tags
-  sanitized = sanitized.replace(/<foreignObject[^>]*\/>/gi, '');
-
-  // Remove all on* event handler attributes (onclick, onload, onerror, etc.)
-  sanitized = sanitized.replace(/\s+on\w+\s*=\s*"[^"]*"/gi, '');
-  sanitized = sanitized.replace(/\s+on\w+\s*=\s*'[^']*'/gi, '');
-
-  // Strip javascript: URIs from href and xlink:href attributes
-  sanitized = sanitized.replace(/(href\s*=\s*")javascript:[^"]*"/gi, '$1"');
-  sanitized = sanitized.replace(/(href\s*=\s*')javascript:[^']*'/gi, "$1'");
-  sanitized = sanitized.replace(/(xlink:href\s*=\s*")javascript:[^"]*"/gi, '$1"');
-  sanitized = sanitized.replace(/(xlink:href\s*=\s*')javascript:[^']*'/gi, "$1'");
-
-  // Strip data:text/html URIs from href and xlink:href attributes
-  sanitized = sanitized.replace(/(href\s*=\s*")data:text\/html[^"]*"/gi, '$1"');
-  sanitized = sanitized.replace(/(href\s*=\s*')data:text\/html[^']*'/gi, "$1'");
-  sanitized = sanitized.replace(/(xlink:href\s*=\s*")data:text\/html[^"]*"/gi, '$1"');
-  sanitized = sanitized.replace(/(xlink:href\s*=\s*')data:text\/html[^']*'/gi, "$1'");
-
-  return sanitized;
+  return sharedSanitizeSvg(svgString);
 }
 
 function parseSvgShapes(svgContent: string): Shape[] {

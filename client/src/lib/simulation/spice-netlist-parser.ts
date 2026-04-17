@@ -123,11 +123,12 @@ export interface SimulationResult {
 // SPICE value multiplier suffixes
 //
 // BL-0126: value parsing is now the canonical implementation in
-// `shared/units.ts`. This module re-exports the shared parser so existing
-// callers keep working.
+// `shared/units.ts`. This module imports and re-exports the shared parser so
+// existing callers (both internal and external) keep working.
 // ---------------------------------------------------------------------------
 
-export { parseSpiceValue } from '@shared/units';
+import { parseSpiceValue } from '@shared/units';
+export { parseSpiceValue };
 
 // ---------------------------------------------------------------------------
 // Source spec parsing (PULSE, SIN, AC, DC)

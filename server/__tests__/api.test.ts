@@ -193,6 +193,7 @@ const storageState = vi.hoisted(() => {
 
   const getBomItems = vi.fn(async (projectId: number) => bomItems.get(projectId) ?? []);
   const getLowStockItems = vi.fn(async () => []);
+  const getShortfalls = vi.fn(async () => []);
   const getStorageLocations = vi.fn(async () => []);
   const getBomItem = vi.fn(async (bomId: number, projectId: number) => {
     return (bomItems.get(projectId) ?? []).find((item) => item.id === bomId) ?? null;
@@ -271,6 +272,7 @@ const storageState = vi.hoisted(() => {
       replaceEdges: vi.fn(async () => []),
       getBomItems,
       getLowStockItems,
+      getShortfalls,
       getStorageLocations,
       getBomItem,
       createBomItem,

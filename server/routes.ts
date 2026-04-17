@@ -15,6 +15,7 @@ import { registerProjectIORoutes } from './routes/project-io';
 import { registerChatBranchRoutes } from './routes/chat-branches';
 import { registerSpiceModelRoutes } from './routes/spice-models';
 import { registerBomSnapshotRoutes } from './routes/bom-snapshots';
+import { registerBomShortfallRoutes } from './routes/bom-shortfalls';
 import { registerDesignPreferenceRoutes } from './routes/design-preferences';
 import { registerComponentLifecycleRoutes } from './routes/component-lifecycle';
 import { registerDesignHistoryRoutes } from './routes/design-history';
@@ -58,6 +59,7 @@ export async function registerRoutes(app: Express): Promise<void> {
   registerChatBranchRoutes(app);
   registerSpiceModelRoutes(app);
   registerBomSnapshotRoutes(app);
+  registerBomShortfallRoutes(app);
   registerDesignPreferenceRoutes(app);
   registerComponentLifecycleRoutes(app);
   registerDesignHistoryRoutes(app);

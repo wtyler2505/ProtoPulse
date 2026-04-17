@@ -1,9 +1,12 @@
-# ADR-006: Soft-Delete vs Hard-Delete Policy
+# ADR-0006a: Soft-Delete vs Hard-Delete Policy (SUPERSEDED)
 
-**Status:** Accepted
+**Status:** Superseded by [ADR-0011 — Global Delete Lifecycle Policy](./0011-delete-lifecycle-policy.md)
+**Superseded:** 2026-03-19
 **Date:** 2026-03-02
 **Deciders:** Tyler
 **Tracking:** CAPX-DATA-01
+
+> **Note (2026-04-17):** Renamed from `006-delete-policy.md` to align with 4-digit numbering convention. Retained as historical context — ADR-0011 is the current authoritative delete policy. The `a` suffix avoids collision with ADR-0006 (Shared Netlist Model).
 
 ## Context
 

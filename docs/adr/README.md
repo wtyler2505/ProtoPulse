@@ -11,9 +11,13 @@ This directory contains Architecture Decision Records (ADRs) documenting key tec
 | [0003](0003-dual-ai-providers.md) | Dual AI Providers (Claude + Gemini) | Accepted |
 | [0004](0004-drizzle-orm.md) | Drizzle ORM with Zod Schema Integration | Accepted |
 | [0005](0005-shadcn-ui-dark-theme.md) | shadcn/ui with Dark Neon Cyan Theme | Accepted |
-| [006](006-delete-policy.md) | Soft-Delete vs Hard-Delete Policy | Accepted |
+| [0006](0006-shared-netlist-model.md) | Shared Netlist Model | Accepted |
+| [0006a](0006a-delete-policy-superseded.md) | Soft-Delete vs Hard-Delete Policy | Superseded by 0011 |
 | [0007](0007-firmware-runtime-architecture.md) | Firmware Runtime Architecture — Pure-Local Native Execution | Accepted |
 | [0008](0008-multi-platform-scope.md) | Multi-Platform Embedded Scope — Beyond Arduino | Accepted |
+| [0009](0009-tauri-over-electron.md) | Tauri v2 over Electron for Native Desktop Shell | Accepted |
+| [0010](0010-unified-parts-catalog.md) | Unified Parts Catalog | Accepted |
+| [0011](0011-delete-lifecycle-policy.md) | Global Delete Lifecycle Policy (Soft vs Hard Deletes) | Accepted |
 
 ## Template
 

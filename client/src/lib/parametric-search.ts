@@ -99,20 +99,21 @@ export type SortDirection = 'asc' | 'desc';
 
 const STORAGE_KEY = 'protopulse-parametric-search';
 
-/** SI prefix multipliers */
+/**
+ * SI prefix multipliers.
+ *
+ * BL-0126: The canonical prefix table lives in `shared/units.ts`. We pull it
+ * in verbatim and extend with the `K` uppercase-kilo alias (used by the
+ * extractor regexes in this file for historical reasons — upstream parsers
+ * normalise to lowercase `k` before lookup). `''` → 1 is also extended here
+ * because the extractor regexes can leave a non-matching prefix group empty.
+ */
+import { SI_PREFIXES as SHARED_SI_PREFIXES } from '@shared/units';
+
 const SI_PREFIXES: Record<string, number> = {
-  p: 1e-12,
-  n: 1e-9,
-  u: 1e-6,
-  '\u00B5': 1e-6, // µ
-  '\u03BC': 1e-6, // μ (Greek mu)
-  m: 1e-3,
+  ...SHARED_SI_PREFIXES,
+  K: 1e3, // legacy uppercase-kilo used by extractor regexes
   '': 1,
-  k: 1e3,
-  K: 1e3,
-  M: 1e6,
-  G: 1e9,
-  T: 1e12,
 };
 
 /** Maps unit suffixes to ParameterUnit */

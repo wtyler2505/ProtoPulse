@@ -25,6 +25,8 @@ const {
   mockGetSpiceModel,
   mockListStockForProject,
   mockUpdateStock,
+  mockDeleteStock,
+  mockGetStockById,
   mockGetProject,
   mockIsProjectOwner,
 } = vi.hoisted(() => ({
@@ -36,6 +38,8 @@ const {
   mockGetSpiceModel: vi.fn(),
   mockListStockForProject: vi.fn(),
   mockUpdateStock: vi.fn(),
+  mockDeleteStock: vi.fn(),
+  mockGetStockById: vi.fn(),
   mockGetProject: vi.fn(),
   mockIsProjectOwner: vi.fn(),
 }));
@@ -50,6 +54,8 @@ vi.mock('../storage', () => ({
     getSpiceModel: mockGetSpiceModel,
     listStockForProject: mockListStockForProject,
     updateStock: mockUpdateStock,
+    deleteStock: mockDeleteStock,
+    getStockById: mockGetStockById,
   },
   storage: {
     getProject: mockGetProject,
@@ -433,7 +439,11 @@ describe('GET /api/parts/:id/spice', () => {
 // ===========================================================================
 
 describe('GET /api/projects/:pid/stock', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // WS-01: requireProjectOwnership reads getProject
+    mockGetProject.mockResolvedValue({ id: 10, ownerId: 1, name: 'P10' });
+  });
 
   it('returns { data, total } with stock rows (authenticated)', async () => {
     mockListStockForProject.mockResolvedValue([SAMPLE_STOCK]);
@@ -479,6 +489,30 @@ describe('GET /api/projects/:pid/stock', () => {
       expect(res.status).toBe(400);
     } finally { close(); }
   });
+
+  it('WS-01: returns 404 when user is not project owner', async () => {
+    mockGetProject.mockResolvedValue({ id: 10, ownerId: 999, name: 'Other' });
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/projects/10/stock`, {
+        headers: { 'X-Session-Id': 'test-session' },
+      });
+      expect(res.status).toBe(404);
+      // listStockForProject must not be called for non-owners
+      expect(mockListStockForProject).not.toHaveBeenCalled();
+    } finally { close(); }
+  });
+
+  it('WS-01: returns 404 when project does not exist', async () => {
+    mockGetProject.mockResolvedValue(null);
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/projects/10/stock`, {
+        headers: { 'X-Session-Id': 'test-session' },
+      });
+      expect(res.status).toBe(404);
+    } finally { close(); }
+  });
 });
 
 // ===========================================================================
@@ -486,7 +520,12 @@ describe('GET /api/projects/:pid/stock', () => {
 // ===========================================================================
 
 describe('PATCH /api/projects/:pid/stock/:id', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // WS-01: requireProjectOwnership + tenant-scoping lookup defaults
+    mockGetProject.mockResolvedValue({ id: 10, ownerId: 1, name: 'P10' });
+    mockGetStockById.mockResolvedValue(SAMPLE_STOCK);
+  });
 
   it('updates stock row and returns it with ETag', async () => {
     const updated = { ...SAMPLE_STOCK, quantityNeeded: 10, version: 2 };

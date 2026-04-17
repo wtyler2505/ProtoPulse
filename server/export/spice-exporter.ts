@@ -47,46 +47,25 @@ export interface SpiceExportOutput {
 
 // ---------------------------------------------------------------------------
 // Value formatting
+//
+// BL-0126: Both formatter and parser delegate to the canonical
+// implementation in `shared/units.ts` so server-side export produces
+// identical output to the client-side simulation engine.
 // ---------------------------------------------------------------------------
 
-function formatSpiceValue(value: number): string {
-  if (value === 0) return '0';
-  const abs = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
+import {
+  formatSpiceValueFixed,
+  parseSpiceValue as sharedParseSpiceValue,
+} from '@shared/units';
 
-  if (abs >= 1e12) return `${sign}${(abs / 1e12).toPrecision(4)}T`;
-  if (abs >= 1e9)  return `${sign}${(abs / 1e9).toPrecision(4)}G`;
-  if (abs >= 1e6)  return `${sign}${(abs / 1e6).toPrecision(4)}MEG`;
-  if (abs >= 1e3)  return `${sign}${(abs / 1e3).toPrecision(4)}K`;
-  if (abs >= 1)    return `${sign}${abs.toPrecision(4)}`;
-  if (abs >= 1e-3) return `${sign}${(abs / 1e-3).toPrecision(4)}M`;
-  if (abs >= 1e-6) return `${sign}${(abs / 1e-6).toPrecision(4)}U`;
-  if (abs >= 1e-9) return `${sign}${(abs / 1e-9).toPrecision(4)}N`;
-  if (abs >= 1e-12) return `${sign}${(abs / 1e-12).toPrecision(4)}P`;
-  return `${sign}${abs.toExponential(3)}`;
+function formatSpiceValue(value: number): string {
+  return formatSpiceValueFixed(value);
 }
 
 function parseValueStr(s: string): number {
   if (!s) return 0;
-  const cleaned = s.trim().toUpperCase();
-  const direct = parseFloat(cleaned);
-  if (!isNaN(direct) && /^[\d.eE+-]+$/.test(cleaned)) return direct;
-
-  const match = /^([\d.eE+-]+)\s*([A-Z]+)/.exec(cleaned);
-  if (!match) return parseFloat(cleaned) || 0;
-
-  const num = parseFloat(match[1]);
-  const suffixes: Record<string, number> = {
-    T: 1e12, G: 1e9, MEG: 1e6, K: 1e3, M: 1e-3, U: 1e-6, N: 1e-9, P: 1e-12, F: 1e-15,
-  };
-
-  let suffix = match[2];
-  if (suffix.length > 3) suffix = suffix.slice(0, 3);
-  if (suffix.length > 1 && !suffixes[suffix]) {
-    if (suffixes[suffix.slice(0, 1)]) suffix = suffix.slice(0, 1);
-  }
-
-  return num * (suffixes[suffix] ?? 1);
+  const parsed = sharedParseSpiceValue(s);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 // ---------------------------------------------------------------------------
