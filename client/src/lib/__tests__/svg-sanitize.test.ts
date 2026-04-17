@@ -291,11 +291,18 @@ describe('sanitizeSvg — animation elements', () => {
 });
 
 describe('sanitizeSvg — CDATA / XML tricks', () => {
-  it('strips <script> inside CDATA', () => {
+  it('neutralizes <script> inside CDATA by HTML-encoding (not executable)', () => {
+    // HTML parsers don't understand <![CDATA[...]]> — DOMPurify entity-encodes
+    // the content as `&lt;script&gt;alert(1)&lt;/script&gt;`. The literal text
+    // "alert(1)" survives as harmless text content because it cannot execute
+    // (encoded entities are not parsed as tags). The critical invariant is
+    // that no real <script> tag reaches the DOM.
     const input = '<svg><![CDATA[<script>alert(1)</script>]]></svg>';
     const out = sanitizeSvg(input);
     expect(out).not.toContain('<script');
-    expect(out).not.toContain('alert(1)');
+    expect(out).not.toContain('</script>');
+    // Encoded form is present and safe:
+    expect(out).toContain('&lt;script&gt;');
   });
 
   it('blocks billion-laughs XML entity expansion (previously VULN in regex sanitizer)', () => {

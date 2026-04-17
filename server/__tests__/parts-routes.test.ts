@@ -545,6 +545,7 @@ describe('PATCH /api/projects/:pid/stock/:id', () => {
   });
 
   it('returns 404 when stock row not found', async () => {
+    mockGetStockById.mockResolvedValue(undefined);
     mockUpdateStock.mockResolvedValue(undefined);
     const { url, close } = await listen(makeApp());
     try {
@@ -554,6 +555,97 @@ describe('PATCH /api/projects/:pid/stock/:id', () => {
         body: JSON.stringify({ quantityNeeded: 5 }),
       });
       expect(res.status).toBe(404);
+    } finally { close(); }
+  });
+
+  it('WS-01: returns 404 when user is not project owner', async () => {
+    mockGetProject.mockResolvedValue({ id: 10, ownerId: 999, name: 'Other' });
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/projects/10/stock/${SAMPLE_STOCK.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session' },
+        body: JSON.stringify({ quantityNeeded: 5 }),
+      });
+      expect(res.status).toBe(404);
+      // Must never reach the storage write
+      expect(mockUpdateStock).not.toHaveBeenCalled();
+    } finally { close(); }
+  });
+
+  it('WS-01: returns 404 when stock row belongs to a different project (cross-tenant)', async () => {
+    // Stock row exists but belongs to project 99, not 10
+    mockGetStockById.mockResolvedValue({ ...SAMPLE_STOCK, projectId: 99 });
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/projects/10/stock/${SAMPLE_STOCK.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'X-Session-Id': 'test-session' },
+        body: JSON.stringify({ quantityNeeded: 5 }),
+      });
+      expect(res.status).toBe(404);
+      expect(mockUpdateStock).not.toHaveBeenCalled();
+    } finally { close(); }
+  });
+});
+
+// ===========================================================================
+// DELETE /api/projects/:projectId/stock/:id (WS-01)
+// ===========================================================================
+
+describe('DELETE /api/projects/:projectId/stock/:id', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetProject.mockResolvedValue({ id: 10, ownerId: 1, name: 'P10' });
+    mockGetStockById.mockResolvedValue(SAMPLE_STOCK);
+    mockDeleteStock.mockResolvedValue(true);
+  });
+
+  it('soft-deletes stock row and returns 204 for owner', async () => {
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/projects/10/stock/${SAMPLE_STOCK.id}`, {
+        method: 'DELETE',
+        headers: { 'X-Session-Id': 'test-session' },
+      });
+      expect(res.status).toBe(204);
+      expect(mockDeleteStock).toHaveBeenCalledWith(SAMPLE_STOCK.id);
+    } finally { close(); }
+  });
+
+  it('returns 401 without session', async () => {
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/projects/10/stock/${SAMPLE_STOCK.id}`, {
+        method: 'DELETE',
+      });
+      expect(res.status).toBe(401);
+    } finally { close(); }
+  });
+
+  it('WS-01: returns 404 when user is not project owner', async () => {
+    mockGetProject.mockResolvedValue({ id: 10, ownerId: 999, name: 'Other' });
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/projects/10/stock/${SAMPLE_STOCK.id}`, {
+        method: 'DELETE',
+        headers: { 'X-Session-Id': 'test-session' },
+      });
+      expect(res.status).toBe(404);
+      expect(mockDeleteStock).not.toHaveBeenCalled();
+    } finally { close(); }
+  });
+
+  it('WS-01: returns 404 for cross-tenant stock row', async () => {
+    mockGetStockById.mockResolvedValue({ ...SAMPLE_STOCK, projectId: 99 });
+    const { url, close } = await listen(makeApp());
+    try {
+      const res = await fetch(`${url}/api/projects/10/stock/${SAMPLE_STOCK.id}`, {
+        method: 'DELETE',
+        headers: { 'X-Session-Id': 'test-session' },
+      });
+      expect(res.status).toBe(404);
+      expect(mockDeleteStock).not.toHaveBeenCalled();
     } finally { close(); }
   });
 
