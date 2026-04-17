@@ -1,31 +1,28 @@
 # Codex Completion Report
 
-**Task:** Execute the next Breadboard Lab iteration with real bench-pin wiring, endpoint metadata, and deeper fidelity/provenance behavior
+**Task:** Execute the next Breadboard Lab iteration with drag-time endpoint snap previews for real bench-pin wiring
 **Status:** done
 
 ## Changes Made
-- `client/src/lib/circuit-editor/breadboard-bench-connectors.ts` - added a shared bench-anchor projection utility so exact bench rendering and wire interactions agree on real connector positions, including rotation
-- `client/src/components/circuit-editor/BreadboardBenchPartRenderer.tsx` - exposed real connector hit targets on bench parts and made them usable as wire-start / wire-end interaction points
-- `client/src/components/circuit-editor/BreadboardView.tsx` - added bench-pin endpoint resolution, persisted `endpointMeta`, promoted bench-linked manual wires to `provenance: 'jumper'`, and marked coach-staged jumpers with `provenance: 'coach'`
-- `client/src/lib/circuit-editor/hooks.ts` - extended create/update wire mutations to carry `endpointMeta` and `provenance`
-- `client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx` - added coverage for creating a jumper directly from exact bench connector anchors with structured endpoint metadata
+- `client/src/components/circuit-editor/BreadboardWireEditor.tsx` - added drag-time target resolution so endpoint handles preview at their snapped hole or bench-pin location instead of only snapping on mouseup
+- `client/src/components/circuit-editor/BreadboardWireEditor.tsx` - added a visible snap halo when the raw drag point differs from the resolved physical target
+- `client/src/components/circuit-editor/BreadboardView.tsx` - passed the bench-aware endpoint resolver into the wire editor so drag previews and drop behavior use the same physical target logic
+- `client/src/components/circuit-editor/__tests__/BreadboardWireEditor.test.tsx` - added focused coverage proving snapped preview rendering and snapped endpoint commit behavior
 
 ## Commands Run
 ```bash
-npm test -- client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx shared/verified-boards/__tests__/to-part-state.test.ts
-npm test -- client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx client/src/components/circuit-editor/__tests__/BreadboardShoppingList.test.tsx shared/verified-boards/__tests__/to-part-state.test.ts
+npm test -- client/src/components/circuit-editor/__tests__/BreadboardWireEditor.test.tsx client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx shared/verified-boards/__tests__/to-part-state.test.ts
 git status --short
-git diff -- client/src/components/circuit-editor/BreadboardView.tsx client/src/components/circuit-editor/BreadboardBenchPartRenderer.tsx client/src/lib/circuit-editor/breadboard-bench-connectors.ts client/src/lib/circuit-editor/hooks.ts client/src/components/circuit-editor/__tests__/BreadboardView.test.tsx
+git diff -- client/src/components/circuit-editor/BreadboardWireEditor.tsx client/src/components/circuit-editor/BreadboardView.tsx client/src/components/circuit-editor/__tests__/BreadboardWireEditor.test.tsx
 ```
 
 ## Next Steps
 - Expand exact, source-backed geometry from boards into modules where physical fit matters most: ESP32 devkits, motor drivers, display modules, relay boards, and common sensor breakouts
-- Teach the wire editor drag path to preview bench-pin snapping during drag, not only on drop
-- Add a live browser validation pass for bench-pin wiring, impossible-fit rejection, and off-board-only module behavior
+- Add explicit impossible-fit and off-board-only acceptance tests in the live browser flow
+- Harden `BreadboardShoppingList` CSV export tests so the happy-dom `URL is not a constructor` warning goes away cleanly
 
 ## Blockers (if any)
-- No code blockers in this loop
-- The existing `BreadboardShoppingList` happy-dom test still logs `TypeError: URL is not a constructor` during CSV export, but the suite passes and this loop did not change that path
+- No implementation blockers in this loop
 
 ## Handoff Notes
-This loop keeps unrelated workspace changes untouched (`data/metrics.json`, session logs, and the deleted lockfile). The bench surface now has a real interaction contract: exact connector anchors are no longer cosmetic, wires created from those anchors store structured endpoint metadata, and coach-created jumpers now carry explicit provenance for downstream UI treatment.
+This loop keeps unrelated workspace changes untouched (`data/metrics.json`, session logs, and the deleted lockfile). The wire editor now behaves like the physical model matters continuously: when dragging a wire end, the preview line and handle follow the resolved bench pin or breadboard hole rather than snapping only after the drop.

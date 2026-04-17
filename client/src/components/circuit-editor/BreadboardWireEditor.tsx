@@ -41,6 +41,8 @@ export interface BreadboardWireEditorProps {
   onSplitWire?: (wireId: number, splitPoint: PixelPos, segmentIndex: number) => void;
   /** T-junction marker positions to render (branch points where wires meet). */
   junctionPoints?: ReadonlyArray<PixelPos>;
+  /** Resolve drag positions to the nearest valid target (hole or bench pin). */
+  resolveEndpointTarget?: (pos: PixelPos) => PixelPos;
   /** Current zoom level — needed to keep handle sizes constant on screen. */
   zoom: number;
   /** Whether the select tool is active (disables editor when false). */
@@ -68,6 +70,7 @@ export default function BreadboardWireEditor({
   onMoveEndpoint,
   onSplitWire,
   junctionPoints,
+  resolveEndpointTarget,
   zoom,
   active,
 }: BreadboardWireEditorProps) {
@@ -75,6 +78,7 @@ export default function BreadboardWireEditor({
     wireId: number;
     endpoint: WireEndpoint;
     current: PixelPos;
+    snapped: PixelPos;
   } | null>(null);
 
   const dragRef = useRef(dragging);
@@ -134,9 +138,10 @@ export default function BreadboardWireEditor({
   // --- Drag start on endpoint handle ---
   const handleDragStart = useCallback(
     (wireId: number, endpoint: WireEndpoint, startPos: PixelPos) => {
-      setDragging({ wireId, endpoint, current: startPos });
+      const snapped = resolveEndpointTarget?.(startPos) ?? startPos;
+      setDragging({ wireId, endpoint, current: startPos, snapped });
     },
-    [],
+    [resolveEndpointTarget],
   );
 
   // --- Global mousemove / mouseup for dragging ---
@@ -157,7 +162,9 @@ export default function BreadboardWireEditor({
       pt.x = e.clientX;
       pt.y = e.clientY;
       const boardPt = pt.matrixTransform(ctm.inverse());
-      setDragging({ ...d, current: { x: boardPt.x, y: boardPt.y } });
+      const current = { x: boardPt.x, y: boardPt.y };
+      const snapped = resolveEndpointTarget?.(current) ?? current;
+      setDragging({ ...d, current, snapped });
     };
 
     const handleMouseUp = (e: MouseEvent) => {
@@ -174,8 +181,10 @@ export default function BreadboardWireEditor({
           pt.x = e.clientX;
           pt.y = e.clientY;
           const boardPt = pt.matrixTransform(ctm.inverse());
-          const coord = pixelToCoord({ x: boardPt.x, y: boardPt.y });
-          const snapped = coord ? coordToPixel(coord) : { x: boardPt.x, y: boardPt.y };
+          const raw = { x: boardPt.x, y: boardPt.y };
+          const coord = pixelToCoord(raw);
+          const fallbackSnapped = coord ? coordToPixel(coord) : raw;
+          const snapped = resolveEndpointTarget?.(raw) ?? fallbackSnapped;
           onMoveEndpoint(d.wireId, d.endpoint, snapped);
         }
       }
@@ -189,7 +198,7 @@ export default function BreadboardWireEditor({
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [dragging, onMoveEndpoint]);
+  }, [dragging, onMoveEndpoint, resolveEndpointTarget]);
 
   // --- Keyboard: Delete / Backspace ---
   useEffect(() => {
@@ -225,10 +234,10 @@ export default function BreadboardWireEditor({
   const displayEndpoints = endpoints
     ? {
         start: dragging?.endpoint === 'start'
-          ? dragging.current
+          ? dragging.snapped
           : endpoints.start,
         end: dragging?.endpoint === 'end'
-          ? dragging.current
+          ? dragging.snapped
           : endpoints.end,
       }
     : null;
@@ -339,24 +348,39 @@ export default function BreadboardWireEditor({
       {/* Drag preview: dashed line showing wire with moved endpoint */}
       {dragging && selectedWire && selectedWire.points.length >= 2 && (() => {
         const pts = selectedWire.points.map((p, i) => {
-          if (dragging.endpoint === 'start' && i === 0) { return dragging.current; }
-          if (dragging.endpoint === 'end' && i === selectedWire.points.length - 1) { return dragging.current; }
+          if (dragging.endpoint === 'start' && i === 0) { return dragging.snapped; }
+          if (dragging.endpoint === 'end' && i === selectedWire.points.length - 1) { return dragging.snapped; }
           return p;
         });
         const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
         return (
-          <path
-            d={pathD}
-            stroke="#facc15"
-            strokeWidth={(selectedWire.width ?? 1.5)}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            fill="none"
-            strokeDasharray={`${3 / zoom},${2 / zoom}`}
-            opacity={0.7}
-            pointerEvents="none"
-            data-testid="wire-drag-preview"
-          />
+          <>
+            <path
+              d={pathD}
+              stroke="#facc15"
+              strokeWidth={(selectedWire.width ?? 1.5)}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+              strokeDasharray={`${3 / zoom},${2 / zoom}`}
+              opacity={0.7}
+              pointerEvents="none"
+              data-testid="wire-drag-preview"
+            />
+            {(Math.abs(dragging.current.x - dragging.snapped.x) > 0.01 || Math.abs(dragging.current.y - dragging.snapped.y) > 0.01) && (
+              <circle
+                cx={dragging.snapped.x}
+                cy={dragging.snapped.y}
+                r={4.5 / zoom}
+                fill="none"
+                stroke="#38bdf8"
+                strokeWidth={1 / zoom}
+                opacity={0.9}
+                pointerEvents="none"
+                data-testid="wire-snap-preview"
+              />
+            )}
+          </>
         );
       })()}
 

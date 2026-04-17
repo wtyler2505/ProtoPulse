@@ -2284,6 +2284,7 @@ function BreadboardCanvas({
               onSelectWire={setSelectedWireId}
               onDeleteWire={handleDeleteWireById}
               onMoveEndpoint={handleMoveEndpoint}
+              resolveEndpointTarget={(point) => resolveInteractiveWireTarget(point).pixel}
               zoom={zoom}
               active={tool === 'select'}
             />
