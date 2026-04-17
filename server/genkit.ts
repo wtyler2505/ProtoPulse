@@ -111,7 +111,7 @@ export const queryBomItemsTool = ai.defineTool({
   name: 'queryBomItems',
   description: 'Fetch all items in the Bill of Materials to analyze costs, availability, or specifications.',
   inputSchema: z.object({}),
-  outputSchema: z.array(z.unknown())
+  outputSchema: z.array(bomItemOutputSchema)
 }, async () => {
   const ctx = ai.currentContext() as ToolContext;
   if (!ctx?.projectId) {
