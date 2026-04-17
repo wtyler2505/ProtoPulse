@@ -64,6 +64,11 @@ function ProcurementView() {
   const { toast } = useToast();
   const projectId = useProjectId();
   const { data: componentParts, isLoading: partsLoading } = useComponentParts(projectId);
+  const { data: shortfallsResp } = useBomShortfalls(projectId);
+  const shortfallsByPartNumber = useMemo(
+    () => indexShortfallsByPartNumber(shortfallsResp?.data),
+    [shortfallsResp?.data],
+  );
   const [crossProjectPartId, setCrossProjectPartId] = useState<string | null>(null);
 
   // ── Previous BOM cost (for cost delta indicator) ──
@@ -428,7 +433,7 @@ function ProcurementView() {
           {showAssemblyGroups && enrichedBom.length > 0 && <AssemblyGroups assemblyGroups={assemblyGroups} />}
           <BomCards filteredBom={filteredBom} deleteBomItem={deleteBomItem} toast={toast} />
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis]}>
-            <BomTable filteredBom={filteredBom} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlightedItemId={highlightedItemId} handleHighlightItem={handleHighlightItem} onAssessDamage={handleOpenDamageDialog} onFindAlternates={handleFindAlternates} />
+            <BomTable filteredBom={filteredBom} editingId={editingId} editValues={editValues} setEditValues={setEditValues} handleEditKeyDown={handleEditKeyDown} saveEdit={saveEdit} cancelEdit={cancelEdit} startEdit={startEdit} deleteBomItem={deleteBomItem} addOutputLog={addOutputLog} toast={toast} highlightedItemId={highlightedItemId} handleHighlightItem={handleHighlightItem} onAssessDamage={handleOpenDamageDialog} onFindAlternates={handleFindAlternates} shortfallsByPartNumber={shortfallsByPartNumber} />
           </DndContext>
           {filteredBom.length === 0 && <BomEmptyState searchTerm={searchTerm} onClearSearch={() => setSearchTerm('')} onAddItem={resetAndShowAddDialog} />}
           <ComponentReference showComponentRef={showComponentRef} onToggleComponentRef={() => setShowComponentRef(!showComponentRef)} componentParts={componentParts} partsLoading={partsLoading} />
