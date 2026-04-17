@@ -138,7 +138,7 @@ export default function LessonModeOverlay() {
           backgroundColor: 'rgba(0, 240, 255, 0.15)',
           borderBottom: '1px solid rgba(0, 240, 255, 0.3)',
           backdropFilter: 'blur(8px)',
-          color: '#00F0FF',
+          color: 'var(--color-editor-accent)',
           fontSize: '14px',
           fontWeight: 500,
           pointerEvents: 'auto',
@@ -156,7 +156,7 @@ export default function LessonModeOverlay() {
           aria-label="Exit lesson mode"
           style={{
             marginLeft: 'auto',
-            color: '#00F0FF',
+            color: 'var(--color-editor-accent)',
             border: '1px solid rgba(0, 240, 255, 0.3)',
           }}
         >

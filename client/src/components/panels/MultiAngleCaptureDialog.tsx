@@ -269,7 +269,7 @@ export function MultiAngleCaptureDialog({
               data-testid="angle-instruction"
             >
               <div className="flex items-center gap-2 mb-2">
-                <ChevronRight className="h-4 w-4 text-[#00F0FF]" />
+                <ChevronRight className="h-4 w-4 text-[var(--color-editor-accent)]" />
                 <span className="text-sm font-medium text-zinc-200">
                   {getAngleInfo(currentSuggestion.angle).label}
                 </span>
@@ -282,7 +282,7 @@ export function MultiAngleCaptureDialog({
               </p>
               <Button
                 onClick={() => void startCamera()}
-                className="mt-3 bg-[#00F0FF] text-zinc-900 hover:bg-[#00D4E0]"
+                className="mt-3 bg-[var(--color-editor-accent)] text-zinc-900 hover:bg-[#00D4E0]"
                 size="sm"
                 data-testid="button-start-angle-capture"
               >
@@ -307,7 +307,7 @@ export function MultiAngleCaptureDialog({
               </div>
               <Button
                 onClick={captureFrame}
-                className="bg-[#00F0FF] text-zinc-900 hover:bg-[#00D4E0]"
+                className="bg-[var(--color-editor-accent)] text-zinc-900 hover:bg-[#00D4E0]"
                 size="sm"
                 data-testid="button-angle-capture"
               >
@@ -344,7 +344,7 @@ export function MultiAngleCaptureDialog({
                   size="sm"
                   onClick={() => void identifyCapture()}
                   disabled={isIdentifying}
-                  className="flex-1 bg-[#00F0FF] text-zinc-900 hover:bg-[#00D4E0]"
+                  className="flex-1 bg-[var(--color-editor-accent)] text-zinc-900 hover:bg-[#00D4E0]"
                   data-testid="button-angle-identify"
                 >
                   {isIdentifying ? (
@@ -411,7 +411,7 @@ export function MultiAngleCaptureDialog({
             <Button
               onClick={handleAccept}
               size="sm"
-              className="bg-[#00F0FF] text-zinc-900 hover:bg-[#00D4E0]"
+              className="bg-[var(--color-editor-accent)] text-zinc-900 hover:bg-[#00D4E0]"
               data-testid="button-multi-angle-accept"
             >
               <CheckCircle2 className="mr-1 h-3 w-3" />

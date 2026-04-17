@@ -278,14 +278,14 @@ export function CameraComponentId({ onIdentify, onAddToBom, className }: CameraC
         <Card className="border-zinc-800 bg-zinc-900" data-testid="camera-idle-card">
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <div className="rounded-full bg-zinc-800 p-4" data-testid="camera-icon-container">
-              <Camera className="h-8 w-8 text-[#00F0FF]" />
+              <Camera className="h-8 w-8 text-[var(--color-editor-accent)]" />
             </div>
             <p className="text-center text-sm text-zinc-400" data-testid="camera-idle-description">
               Take a photo of an electronic component to identify it using AI vision analysis.
             </p>
             <Button
               onClick={() => void startCamera()}
-              className="bg-[#00F0FF] text-zinc-900 hover:bg-[#00D4E0]"
+              className="bg-[var(--color-editor-accent)] text-zinc-900 hover:bg-[#00D4E0]"
               data-testid="button-start-camera"
             >
               <Camera className="mr-2 h-4 w-4" />
@@ -300,7 +300,7 @@ export function CameraComponentId({ onIdentify, onAddToBom, className }: CameraC
         <Card className="border-zinc-800 bg-zinc-900" data-testid="camera-requesting-card">
           <CardContent className="flex flex-col items-center gap-4 p-8">
             <Loader2
-              className="h-8 w-8 animate-spin text-[#00F0FF]"
+              className="h-8 w-8 animate-spin text-[var(--color-editor-accent)]"
               data-testid="requesting-spinner"
             />
             <p className="text-center text-sm text-zinc-400" data-testid="requesting-message">
@@ -325,7 +325,7 @@ export function CameraComponentId({ onIdentify, onAddToBom, className }: CameraC
           </div>
           <Button
             onClick={captureImage}
-            className="bg-[#00F0FF] text-zinc-900 hover:bg-[#00D4E0]"
+            className="bg-[var(--color-editor-accent)] text-zinc-900 hover:bg-[#00D4E0]"
             data-testid="button-capture"
           >
             <Camera className="mr-2 h-4 w-4" />
@@ -359,7 +359,7 @@ export function CameraComponentId({ onIdentify, onAddToBom, className }: CameraC
             <Button
               onClick={() => void identifyComponent()}
               disabled={cameraState === 'identifying' || !onIdentify}
-              className="flex-1 bg-[#00F0FF] text-zinc-900 hover:bg-[#00D4E0]"
+              className="flex-1 bg-[var(--color-editor-accent)] text-zinc-900 hover:bg-[#00D4E0]"
               data-testid="button-identify"
             >
               {cameraState === 'identifying' ? (
@@ -471,7 +471,7 @@ export function CameraComponentId({ onIdentify, onAddToBom, className }: CameraC
                   <Button
                     onClick={handleAddToBom}
                     size="sm"
-                    className="bg-[#00F0FF] text-zinc-900 hover:bg-[#00D4E0]"
+                    className="bg-[var(--color-editor-accent)] text-zinc-900 hover:bg-[#00D4E0]"
                     data-testid="button-add-to-bom"
                   >
                     <Plus className="mr-1 h-3 w-3" />

@@ -196,7 +196,7 @@ export default function PredictionCard({ prediction, onAccept, onDismiss }: Pred
             onClick={() => { onAccept(prediction.id); }}
             className={cn(
               'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-              'bg-[#00F0FF]/10 text-[#00F0FF] hover:bg-[#00F0FF]/20',
+              'bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/20',
             )}
           >
             Apply

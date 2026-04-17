@@ -669,7 +669,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
       <div className="border-b border-border bg-card/60 p-3 space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-[#00F0FF]" />
+            <Zap className="w-4 h-4 text-[var(--color-editor-accent)]" />
             <h2 className="text-sm font-semibold text-foreground">Serial Monitor</h2>
             <span
               data-testid="serial-connection-status"
@@ -731,7 +731,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
             className={cn(
               'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors',
               activeTab === 'monitor'
-                ? 'bg-[#00F0FF]/15 text-[#00F0FF]'
+                ? 'bg-[var(--color-editor-accent)]/15 text-[var(--color-editor-accent)]'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/30',
             )}
             onClick={() => setActiveTab('monitor')}
@@ -744,7 +744,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
             className={cn(
               'flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors',
               activeTab === 'dashboard'
-                ? 'bg-[#00F0FF]/15 text-[#00F0FF]'
+                ? 'bg-[var(--color-editor-accent)]/15 text-[var(--color-editor-accent)]'
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted/30',
             )}
             onClick={() => setActiveTab('dashboard')}
@@ -1056,7 +1056,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
                               className="flex items-center gap-2 text-[11px] px-1 py-0.5 rounded hover:bg-muted/20"
                             >
                               <span className="text-muted-foreground w-4 text-right select-none">#{String(i)}</span>
-                              <span className="text-[#00F0FF]">{frame.address}</span>
+                              <span className="text-[var(--color-editor-accent)]">{frame.address}</span>
                               {frame.function && <span className="text-foreground">{frame.function}</span>}
                               {frame.file && (
                                 <span className="text-muted-foreground">
@@ -1097,7 +1097,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
         {showTroubleshootHint && !showTroubleshootWizard && (
           <div
             data-testid="troubleshoot-hint-banner"
-            className="flex items-center gap-2 text-xs text-[#00F0FF] bg-[#00F0FF]/5 border border-[#00F0FF]/20 rounded px-2 py-1.5"
+            className="flex items-center gap-2 text-xs text-[var(--color-editor-accent)] bg-[var(--color-editor-accent)]/5 border border-[var(--color-editor-accent)]/20 rounded px-2 py-1.5"
           >
             <HelpCircle className="w-3 h-3 shrink-0" />
             <span className="flex-1">No data received for 10 seconds.</span>
@@ -1105,14 +1105,14 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
               data-testid="troubleshoot-open-btn"
               variant="outline"
               size="sm"
-              className="h-5 text-[10px] px-2 border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/10"
+              className="h-5 text-[10px] px-2 border-[var(--color-editor-accent)]/30 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/10"
               onClick={() => setShowTroubleshootWizard(true)}
             >
               Troubleshoot
             </Button>
             <button
               data-testid="troubleshoot-hint-dismiss"
-              className="p-0.5 text-[#00F0FF]/50 hover:text-[#00F0FF] transition-colors"
+              className="p-0.5 text-[var(--color-editor-accent)]/50 hover:text-[var(--color-editor-accent)] transition-colors"
               onClick={() => setShowTroubleshootHint(false)}
               aria-label="Dismiss troubleshoot hint"
             >
@@ -1202,7 +1202,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
                   key={`${String(line.timestamp)}-${String(i)}`}
                   className={cn(
                     'flex gap-2 py-0.5 hover:bg-muted/30 rounded-sm px-1',
-                    line.direction === 'tx' && 'text-[#00F0FF]',
+                    line.direction === 'tx' && 'text-[var(--color-editor-accent)]',
                     line.direction === 'rx' && 'text-emerald-300',
                   )}
                 >
@@ -1275,7 +1275,7 @@ export default function SerialMonitorPanel({ code = '', projectId }: SerialMonit
               data-testid="serial-download-recording-btn"
               variant="ghost"
               size="sm"
-              className="h-5 text-[10px] gap-1 px-1.5 text-[#00F0FF] hover:text-[#00F0FF]/80"
+              className="h-5 text-[10px] gap-1 px-1.5 text-[var(--color-editor-accent)] hover:text-[var(--color-editor-accent)]/80"
               onClick={handleDownloadRecording}
               title="Download recorded serial output"
             >

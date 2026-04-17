@@ -146,7 +146,7 @@ function CommentItem({
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs text-zinc-400 hover:text-[#00F0FF]"
+            className="h-6 px-2 text-xs text-zinc-400 hover:text-[var(--color-editor-accent)]"
             onClick={() => { onReply(comment.id); }}
             data-testid={`comment-reply-btn-${comment.id}`}
           >
@@ -343,7 +343,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
         <div className="flex items-center gap-2">
-          <MessageSquare className="h-4 w-4 text-[#00F0FF]" />
+          <MessageSquare className="h-4 w-4 text-[var(--color-editor-accent)]" />
           <h2 className="text-sm font-semibold text-zinc-100" data-testid="comments-panel-title">
             Design Review
           </h2>
@@ -356,7 +356,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
           size="sm"
           className={cn(
             'h-7 px-2 text-xs',
-            showFilters ? 'text-[#00F0FF]' : 'text-zinc-400',
+            showFilters ? 'text-[var(--color-editor-accent)]' : 'text-zinc-400',
           )}
           onClick={() => { setShowFilters((prev) => !prev); }}
           data-testid="comments-filter-toggle"
@@ -379,7 +379,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
                 size="sm"
                 className={cn(
                   'h-6 px-2 text-[10px] capitalize shrink-0',
-                  resolvedFilter === f ? 'text-[#00F0FF] bg-zinc-800' : 'text-zinc-400',
+                  resolvedFilter === f ? 'text-[var(--color-editor-accent)] bg-zinc-800' : 'text-zinc-400',
                 )}
                 onClick={() => { setResolvedFilter(f); }}
                 data-testid={`comments-filter-status-${f}`}
@@ -401,7 +401,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
                 size="sm"
                 className={cn(
                   'h-6 px-2 text-[10px] capitalize',
-                  targetFilter === f ? 'text-[#00F0FF] bg-zinc-800' : 'text-zinc-400',
+                  targetFilter === f ? 'text-[var(--color-editor-accent)] bg-zinc-800' : 'text-zinc-400',
                 )}
                 onClick={() => { setTargetFilter(f); }}
                 data-testid={`comments-filter-target-${f}`}
@@ -471,7 +471,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
           <Textarea
             placeholder={replyToId ? 'Write a reply...' : 'Add a comment...'}
             aria-label={replyToId ? 'Write a reply' : 'Add a comment'}
-            className="min-h-[60px] max-h-[120px] resize-none bg-zinc-900 border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:ring-[#00F0FF]/30"
+            className="min-h-[60px] max-h-[120px] resize-none bg-zinc-900 border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-400 focus-visible:ring-[var(--color-editor-accent)]/30"
             value={newContent}
             onChange={(e) => { setNewContent(e.target.value); }}
             onKeyDown={(e) => {
@@ -483,7 +483,7 @@ export function CommentsPanel({ projectId }: CommentsPanelProps) {
           />
           <Button
             size="sm"
-            className="h-auto self-end bg-[#00F0FF]/10 text-[#00F0FF] hover:bg-[#00F0FF]/20 border border-[#00F0FF]/30"
+            className="h-auto self-end bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/20 border border-[var(--color-editor-accent)]/30"
             disabled={!newContent.trim() || createMutation.isPending}
             onClick={handleSubmit}
             data-testid="comments-submit-btn"

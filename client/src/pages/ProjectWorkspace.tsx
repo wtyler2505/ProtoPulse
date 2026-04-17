@@ -707,7 +707,7 @@ function WorkspaceContent() {
                 onClick={() => dispatch({ type: 'TOGGLE_PREDICTION_PANEL' })}
                 className="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-lg border border-border/60 bg-card/90 px-3 py-2 text-xs font-medium text-foreground shadow-lg backdrop-blur-xl hover:bg-card transition-colors"
               >
-                <span className="text-[#00F0FF]">{predictions.length}</span>
+                <span className="text-[var(--color-editor-accent)]">{predictions.length}</span>
                 <span>Design Suggestions</span>
               </button>
             )

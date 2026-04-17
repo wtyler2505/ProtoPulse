@@ -55,7 +55,7 @@ function RecentProjectRow({ entry, onSelect, onTogglePin, onRemove }: RecentProj
       className={cn(
         'flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors',
         'hover:bg-muted/50 group',
-        entry.pinned && 'bg-[var(--accent-primary,#00F0FF)]/5',
+        entry.pinned && 'bg-[var(--color-editor-accent)]/5',
       )}
       data-testid={`recent-project-${String(entry.projectId)}`}
       onClick={() => { onSelect(entry.projectId); }}
@@ -73,7 +73,7 @@ function RecentProjectRow({ entry, onSelect, onTogglePin, onRemove }: RecentProj
         className={cn(
           'flex-shrink-0 p-1 rounded transition-colors',
           entry.pinned
-            ? 'text-[var(--accent-primary,#00F0FF)]'
+            ? 'text-[var(--color-editor-accent)]'
             : 'text-muted-foreground opacity-0 group-hover:opacity-100',
           'hover:bg-muted',
         )}
@@ -90,7 +90,7 @@ function RecentProjectRow({ entry, onSelect, onTogglePin, onRemove }: RecentProj
 
       {/* Project info */}
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-foreground truncate group-hover:text-[var(--accent-primary,#00F0FF)] transition-colors">
+        <div className="text-sm font-medium text-foreground truncate group-hover:text-[var(--color-editor-accent)] transition-colors">
           {entry.name}
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

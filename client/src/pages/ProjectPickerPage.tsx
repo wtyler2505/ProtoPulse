@@ -146,7 +146,7 @@ function getProjectStatusBadges(facets: ReadonlySet<ProjectFacet>): ProjectStatu
     badges.push({
       key: 'recent',
       label: 'Recent',
-      className: 'bg-[var(--accent-primary,#00F0FF)]/10 text-[var(--accent-primary,#00F0FF)] border-[var(--accent-primary,#00F0FF)]/30',
+      className: 'bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30',
     });
   }
   if (facets.has('sample')) {
@@ -231,7 +231,7 @@ function ProjectCard({ project, onSelect, onToggleArchived, isArchived = false, 
     <Card
       className={cn(
         'border-border bg-card cursor-pointer transition-all duration-200',
-        'hover:border-[var(--accent-primary,#00F0FF)]/50 hover:shadow-[0_0_12px_rgba(0,240,255,0.1)]',
+        'hover:border-[var(--color-editor-accent)]/50 hover:shadow-[0_0_12px_rgba(0,240,255,0.1)]',
         'group',
       )}
       data-testid={`project-card-${String(project.id)}`}
@@ -248,7 +248,7 @@ function ProjectCard({ project, onSelect, onToggleArchived, isArchived = false, 
 
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold text-foreground group-hover:text-[var(--accent-primary,#00F0FF)] transition-colors">
+          <CardTitle className="text-base font-semibold text-foreground group-hover:text-[var(--color-editor-accent)] transition-colors">
             {project.name}
           </CardTitle>
           <div className="flex items-center gap-1">
@@ -314,8 +314,8 @@ function EmptyState({ onCreateClick }: { onCreateClick: () => void }) {
       className="flex flex-col items-center justify-center py-16 px-4 text-center"
       data-testid="empty-state"
     >
-      <div className="w-16 h-16 rounded-full bg-[var(--accent-primary,#00F0FF)]/10 flex items-center justify-center mb-4">
-        <FolderOpen className="w-8 h-8 text-[var(--accent-primary,#00F0FF)]" />
+      <div className="w-16 h-16 rounded-full bg-[var(--color-editor-accent)]/10 flex items-center justify-center mb-4">
+        <FolderOpen className="w-8 h-8 text-[var(--color-editor-accent)]" />
       </div>
       <h2 className="text-xl font-semibold text-foreground mb-2">No projects yet</h2>
       <p className="text-sm text-muted-foreground max-w-sm mb-6">
@@ -324,7 +324,7 @@ function EmptyState({ onCreateClick }: { onCreateClick: () => void }) {
       <Button
         onClick={onCreateClick}
         data-testid="button-create-first-project"
-        className="bg-[var(--accent-primary,#00F0FF)] text-black hover:bg-[var(--accent-primary,#00F0FF)]/90"
+        className="bg-[var(--color-editor-accent)] text-black hover:bg-[var(--color-editor-accent)]/90"
       >
         <Plus className="w-4 h-4 mr-2" />
         Create Your First Project
@@ -686,7 +686,7 @@ export default function ProjectPickerPage() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center" data-testid="project-picker-page">
         <div className="text-center" data-testid="auto-redirect-notice">
-          <Loader2 className="w-6 h-6 text-[var(--accent-primary,#00F0FF)] animate-spin mx-auto mb-3" />
+          <Loader2 className="w-6 h-6 text-[var(--color-editor-accent)] animate-spin mx-auto mb-3" />
           <p className="text-sm text-muted-foreground mb-2">
             Resuming your last project...
           </p>
@@ -716,7 +716,7 @@ export default function ProjectPickerPage() {
             <Button
               onClick={handleOpenCreateDialog}
               data-testid="button-create-project"
-              className="bg-[var(--accent-primary,#00F0FF)] text-black hover:bg-[var(--accent-primary,#00F0FF)]/90"
+              className="bg-[var(--color-editor-accent)] text-black hover:bg-[var(--color-editor-accent)]/90"
             >
               <Plus className="w-4 h-4 mr-2" />
               New Project
@@ -757,12 +757,12 @@ export default function ProjectPickerPage() {
                     onClick={() => { setActiveFacet(facet); }}
                     className={cn(
                       'rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors',
-                      isActive && 'border-[var(--accent-primary,#00F0FF)]/50 bg-[var(--accent-primary,#00F0FF)]/5',
+                      isActive && 'border-[var(--color-editor-accent)]/50 bg-[var(--color-editor-accent)]/5',
                     )}
                     data-testid={`facet-card-${facet}`}
                   >
                     <div className="mb-2 flex items-center justify-between">
-                      <Icon className="w-4 h-4 text-[var(--accent-primary,#00F0FF)]" />
+                      <Icon className="w-4 h-4 text-[var(--color-editor-accent)]" />
                       <span className="text-lg font-semibold text-foreground">{facetCounts[facet]}</span>
                     </div>
                     <div className="text-sm font-medium text-foreground">{meta.label}</div>
@@ -890,7 +890,7 @@ export default function ProjectPickerPage() {
                   onClick={handleProceedToTemplate}
                   disabled={!newProjectName.trim()}
                   data-testid="button-confirm-create"
-                  className="bg-[var(--accent-primary,#00F0FF)] text-black hover:bg-[var(--accent-primary,#00F0FF)]/90"
+                  className="bg-[var(--color-editor-accent)] text-black hover:bg-[var(--color-editor-accent)]/90"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Next: Choose Template

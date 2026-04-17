@@ -132,7 +132,7 @@ function SensorSliderRow({ sensor, manager }: SensorSliderRowProps) {
       {/* Header row: icon, label, value badge, reset */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <Icon className="w-3.5 h-3.5 text-[#00F0FF]/70" />
+          <Icon className="w-3.5 h-3.5 text-[var(--color-editor-accent)]/70" />
           <span className="text-xs font-medium text-muted-foreground" data-testid={`sensor-label-${sensor.id}`}>
             {sensor.id} — {sensor.type.name}
           </span>
@@ -142,7 +142,7 @@ function SensorSliderRow({ sensor, manager }: SensorSliderRowProps) {
             variant={isModified ? 'default' : 'secondary'}
             className={cn(
               'font-mono text-[10px] px-1.5 py-0',
-              isModified ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30' : '',
+              isModified ? 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30' : '',
             )}
             data-testid={`sensor-value-${sensor.id}`}
           >
@@ -171,7 +171,7 @@ function SensorSliderRow({ sensor, manager }: SensorSliderRowProps) {
         step={step}
         value={[sensor.currentValue]}
         onValueChange={handleValueChange}
-        className="[&_[data-slot=range]]:bg-[#00F0FF] [&_[data-slot=thumb]]:border-[#00F0FF]/50"
+        className="[&_[data-slot=range]]:bg-[var(--color-editor-accent)] [&_[data-slot=thumb]]:border-[var(--color-editor-accent)]/50"
         aria-label={`${sensor.type.name} slider for ${sensor.id}`}
         data-testid={`sensor-slider-input-${sensor.id}`}
       />
@@ -252,7 +252,7 @@ export default function SensorSliderPanel({ instances }: SensorSliderPanelProps)
           {sensors.length}
         </Badge>
         {hasModified && (
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#00F0FF]" />
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-editor-accent)]" />
         )}
       </button>
 

@@ -206,7 +206,7 @@ export default function TelemetryDashboard() {
       {/* Toolbar */}
       <div className="flex items-center justify-between border-b border-border bg-card/40 px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <Activity className="w-3.5 h-3.5 text-[#00F0FF]" />
+          <Activity className="w-3.5 h-3.5 text-[var(--color-editor-accent)]" />
           <span className="text-xs font-semibold text-foreground">Telemetry</span>
           <span className="text-[10px] text-muted-foreground">
             {String(snapshot.channels.length)} ch &middot; {String(snapshot.totalSamples)} samples

@@ -218,7 +218,7 @@ export default function TroubleshootWizard({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <HelpCircle className="w-4 h-4 text-[#00F0FF]" />
+          <HelpCircle className="w-4 h-4 text-[var(--color-editor-accent)]" />
           <h3 className="text-sm font-semibold text-foreground">
             Troubleshoot: No Data
           </h3>
@@ -241,7 +241,7 @@ export default function TroubleshootWizard({
           className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden"
         >
           <div
-            className="h-full bg-[#00F0FF] rounded-full transition-all duration-300"
+            className="h-full bg-[var(--color-editor-accent)] rounded-full transition-all duration-300"
             style={{ width: `${Math.round(progress * 100)}%` }}
           />
         </div>

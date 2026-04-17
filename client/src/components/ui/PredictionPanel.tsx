@@ -63,13 +63,13 @@ export default function PredictionPanel({
             'transition-colors hover:opacity-80',
           )}
         >
-          <Brain className="h-4 w-4 text-[#00F0FF]" />
+          <Brain className="h-4 w-4 text-[var(--color-editor-accent)]" />
           <span className="text-sm font-medium text-zinc-200">Design Suggestions</span>
 
           {count > 0 && (
             <span
               data-testid="prediction-panel-count"
-              className="rounded-full bg-[#00F0FF]/15 px-1.5 py-0.5 text-xs font-medium text-[#00F0FF]"
+              className="rounded-full bg-[var(--color-editor-accent)]/15 px-1.5 py-0.5 text-xs font-medium text-[var(--color-editor-accent)]"
             >
               {count}
             </span>

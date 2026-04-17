@@ -153,7 +153,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
         role="dialog"
         aria-label="Part search"
         aria-modal="true"
-        className="relative w-full max-w-xl rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl shadow-[#00F0FF]/5 overflow-hidden"
+        className="relative w-full max-w-xl rounded-lg border border-zinc-700 bg-zinc-900 shadow-2xl shadow-[var(--color-editor-accent)]/5 overflow-hidden"
       >
         {/* Search input */}
         <div className="flex items-center gap-2 border-b border-zinc-700 px-4">
@@ -243,7 +243,7 @@ export default function CommandPalette({ open, onOpenChange }: CommandPalettePro
                   className={cn(
                     'flex items-center gap-3 rounded-md px-3 py-2.5 cursor-pointer transition-colors',
                     isActive
-                      ? 'bg-[#00F0FF]/10 text-zinc-100'
+                      ? 'bg-[var(--color-editor-accent)]/10 text-zinc-100'
                       : 'text-zinc-300 hover:bg-zinc-800/60',
                   )}
                   onClick={() => { handleSelect(part); }}

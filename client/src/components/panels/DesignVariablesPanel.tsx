@@ -439,7 +439,7 @@ export function DesignVariablesPanel({ open, onOpenChange }: DesignVariablesPane
                               {error}
                             </span>
                           ) : (
-                            <span className="text-sm font-mono font-bold text-[#00F0FF]" data-testid={`text-var-value-${v.name}`}>
+                            <span className="text-sm font-mono font-bold text-[var(--color-editor-accent)]" data-testid={`text-var-value-${v.name}`}>
                               {formatValue(v)}{v.unit ? ` ${v.unit}` : ''}
                             </span>
                           )}

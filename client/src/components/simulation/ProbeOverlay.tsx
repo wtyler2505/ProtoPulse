@@ -347,7 +347,7 @@ function GhostProbe({ type, x, y, scaleFactor }: GhostProbeProps) {
       <g transform={`translate(${x}, ${y})`} pointerEvents="none" opacity={0.5}>
         <polygon
           points={voltageProbePoints(probeSize)}
-          fill="#00F0FF"
+          fill="var(--color-editor-accent)"
           stroke="rgba(255,255,255,0.5)"
           strokeWidth={1 / scaleFactor}
         />
@@ -366,7 +366,7 @@ function GhostProbe({ type, x, y, scaleFactor }: GhostProbeProps) {
         cy={0}
         r={r}
         fill="rgba(0, 240, 255, 0.2)"
-        stroke="#00F0FF"
+        stroke="var(--color-editor-accent)"
         strokeWidth={strokeW}
       />
       <line
@@ -374,12 +374,12 @@ function GhostProbe({ type, x, y, scaleFactor }: GhostProbeProps) {
         y1={0}
         x2={arrowLen / 2}
         y2={0}
-        stroke="#00F0FF"
+        stroke="var(--color-editor-accent)"
         strokeWidth={strokeW}
       />
       <polygon
         points={`${arrowLen / 2},0 ${arrowLen / 2 - 3 / scaleFactor},${-2.5 / scaleFactor} ${arrowLen / 2 - 3 / scaleFactor},${2.5 / scaleFactor}`}
-        fill="#00F0FF"
+        fill="var(--color-editor-accent)"
       />
     </g>
   );
@@ -691,7 +691,7 @@ const ProbeOverlay = memo(function ProbeOverlay({
           data-testid="probe-tool-label"
           x={20 / scaleFactor}
           y={20 / scaleFactor}
-          fill="#00F0FF"
+          fill="var(--color-editor-accent)"
           fontSize={12 / scaleFactor}
           fontFamily="monospace"
           fontWeight={600}

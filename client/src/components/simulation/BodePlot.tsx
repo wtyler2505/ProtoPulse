@@ -32,7 +32,7 @@ export interface BodePlotProps {
 // Constants
 // ---------------------------------------------------------------------------
 
-const COLOR_MAGNITUDE = '#00F0FF'; // Neon cyan (project primary)
+const COLOR_MAGNITUDE = 'var(--color-editor-accent)'; // Neon cyan (project primary)
 const COLOR_PHASE = '#F472B6';     // Pink-400
 const COLOR_GRID = '#27272a';      // Zinc-800
 const COLOR_AXIS = '#a1a1aa';      // Zinc-400

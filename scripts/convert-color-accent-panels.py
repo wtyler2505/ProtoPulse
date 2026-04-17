@@ -26,7 +26,15 @@ OWNED_DIRS = [
     ROOT / "components" / "dialogs",
     ROOT / "hooks",
     ROOT / "components" / "ui",
+    ROOT / "components" / "arduino",
+    ROOT / "components" / "simulation",
 ]
+# Top-level components/ files (not subdirs — those split by ownership)
+TOP_LEVEL_COMPONENT_FILES = [
+    ROOT / "components" / "CommandPalette.tsx",
+]
+# Root client/src files (non-lib)
+ROOT_LEVEL_DIRS: list[Path] = []
 
 # Only .tsx files in this phase (lib/.ts held pending team-lead guidance)
 EXTENSIONS = {".tsx"}
@@ -81,20 +89,27 @@ def process_file(path: Path) -> int:
 def main() -> int:
     grand_total = 0
     files_changed = 0
+    def handle(path: Path) -> None:
+        nonlocal grand_total, files_changed
+        if path.suffix not in EXTENSIONS:
+            return
+        if "__tests__" in path.parts:
+            return
+        n = process_file(path)
+        if n > 0:
+            rel = path.relative_to(ROOT.parent.parent)
+            print(f"{rel}: {n} replacement(s)")
+            grand_total += n
+            files_changed += 1
+
     for base in OWNED_DIRS:
         if not base.exists():
             continue
         for path in base.rglob("*"):
-            if path.suffix not in EXTENSIONS:
-                continue
-            if "__tests__" in path.parts:
-                continue
-            n = process_file(path)
-            if n > 0:
-                rel = path.relative_to(ROOT.parent.parent)
-                print(f"{rel}: {n} replacement(s)")
-                grand_total += n
-                files_changed += 1
+            handle(path)
+    for path in TOP_LEVEL_COMPONENT_FILES:
+        if path.exists():
+            handle(path)
     print(f"\nTotal: {grand_total} replacements across {files_changed} file(s).")
     return 0
 
