@@ -1,2 +1,24 @@
 [2J[3J[H10:57:40 AM - Starting compilation in watch mode...
 
+
+<--- Last few GCs --->
+
+[519130:0x2b925000]   114866 ms: Scavenge (interleaved) 2044.3 (2082.7) -> 2043.8 (2087.7) MB, pooled: 0 MB, 20.71 / 0.00 ms  (average mu = 0.472, current mu = 0.251) allocation failure; 
+[519130:0x2b925000]   120099 ms: Mark-Compact (reduce) 2048.0 (2088.4) -> 2045.6 (2083.7) MB, pooled: 0 MB, 4139.07 / 0.00 ms  (+ 519.6 ms in 0 steps since start of marking, biggest step 0.0 ms, walltime since start of marking 5068 ms) (average mu = 0.376
+
+<--- JS stacktrace --->
+
+FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 0xe40d24 node::OOMErrorHandler(char const*, v8::OOMDetails const&) [node]
+ 2: 0x1216be0 v8::Utils::ReportOOMFailure(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]
+ 3: 0x1216eb7 v8::internal::V8::FatalProcessOutOfMemory(v8::internal::Isolate*, char const*, v8::OOMDetails const&) [node]
+ 4: 0x1444875  [node]
+ 5: 0x145e109 v8::internal::Heap::CollectGarbage(v8::internal::AllocationSpace, v8::internal::GarbageCollectionReason, v8::GCCallbackFlags) [node]
+ 6: 0x14327b8 v8::internal::HeapAllocator::AllocateRawWithLightRetrySlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
+ 7: 0x14336e5 v8::internal::HeapAllocator::AllocateRawWithRetryOrFailSlowPath(int, v8::internal::AllocationType, v8::internal::AllocationOrigin, v8::internal::AllocationAlignment) [node]
+ 8: 0x140c3be v8::internal::Factory::NewFillerObject(int, v8::internal::AllocationAlignment, v8::internal::AllocationType, v8::internal::AllocationOrigin) [node]
+ 9: 0x186da1c v8::internal::Runtime_AllocateInYoungGeneration(int, unsigned long*, v8::internal::Isolate*) [node]
+10: 0x7a3e3feac476 
+Aborted (core dumped)

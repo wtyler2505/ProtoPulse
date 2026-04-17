@@ -263,9 +263,9 @@ function TestConsumer() {
       <span data-testid="blur-enabled">{String(info.useBackdropBlur)}</span>
       <span data-testid="blur-class">{blurClass('backdrop-blur-sm')}</span>
       <span data-testid="override">{String(info.userOverride)}</span>
-      <button data-testid="disable-blur" onClick={() => setBlurOverride(false)}>Disable</button>
-      <button data-testid="enable-blur" onClick={() => setBlurOverride(true)}>Enable</button>
-      <button data-testid="reset-blur" onClick={() => setBlurOverride(null)}>Reset</button>
+      <button type="button" data-testid="disable-blur" onClick={() => setBlurOverride(false)}>Disable</button>
+      <button type="button" data-testid="enable-blur" onClick={() => setBlurOverride(true)}>Enable</button>
+      <button type="button" data-testid="reset-blur" onClick={() => setBlurOverride(null)}>Reset</button>
     </div>
   );
 }
@@ -708,7 +708,7 @@ describe('useOptimizedBlur', () => {
         <div>
           <span data-testid="dyn-enabled">{String(isBlurEnabled)}</span>
           <span data-testid="dyn-reason">{reason ?? 'none'}</span>
-          <button data-testid="dyn-disable" onClick={() => setBlurOverride(false)}>Off</button>
+          <button type="button" data-testid="dyn-disable" onClick={() => setBlurOverride(false)}>Off</button>
         </div>
       );
     }
@@ -739,7 +739,7 @@ describe('useOptimizedBlur', () => {
       return (
         <div>
           <span data-testid="dyn2-enabled">{String(isBlurEnabled)}</span>
-          <button data-testid="dyn2-enable" onClick={() => setBlurOverride(true)}>On</button>
+          <button type="button" data-testid="dyn2-enable" onClick={() => setBlurOverride(true)}>On</button>
         </div>
       );
     }

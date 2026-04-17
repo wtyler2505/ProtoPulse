@@ -251,7 +251,7 @@ vi.mock('../ToolButton', () => ({
     onClick: () => void;
     testId: string;
   }) => (
-    <button
+    <button type="button"
       data-testid={testId}
       data-active={String(active ?? false)}
       title={label}
@@ -290,7 +290,7 @@ vi.mock('@/components/ui/select', () => ({
     </div>
   ),
   SelectTrigger: ({ children, ...props }: { children: ReactNode; 'data-testid'?: string }) => (
-    <button data-testid={props['data-testid'] ?? 'select-trigger'}>{children}</button>
+    <button type="button" data-testid={props['data-testid'] ?? 'select-trigger'}>{children}</button>
   ),
   SelectValue: ({ placeholder }: { placeholder: string }) => <span>{placeholder}</span>,
   SelectContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,

@@ -23,7 +23,7 @@ export default function ChatSearchBar({ value, onChange, visible }: ChatSearchBa
         autoFocus
       />
       {value && (
-        <button data-testid="chat-search-clear" onClick={() => onChange('')} aria-label="Clear search" className="text-muted-foreground hover:text-foreground">
+        <button type="button" data-testid="chat-search-clear" onClick={() => onChange('')} aria-label="Clear search" className="text-muted-foreground hover:text-foreground">
           <X className="w-3.5 h-3.5" />
         </button>
       )}

@@ -119,7 +119,7 @@ vi.mock('@/components/ui/context-menu', () => ({
   ContextMenuTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ContextMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   ContextMenuItem: ({ children, onSelect }: { children: React.ReactNode; onSelect?: () => void }) => (
-    <button onClick={onSelect}>{children}</button>
+    <button type="button" onClick={onSelect}>{children}</button>
   ),
   ContextMenuSeparator: () => <hr />,
 }));
@@ -134,9 +134,9 @@ vi.mock('@/components/ui/alert-dialog', () => ({
   AlertDialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
   AlertDialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   AlertDialogAction: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
-    <button data-testid="alert-dialog-action" onClick={onClick}>{children}</button>
+    <button type="button" data-testid="alert-dialog-action" onClick={onClick}>{children}</button>
   ),
-  AlertDialogCancel: ({ children }: { children: React.ReactNode }) => <button>{children}</button>,
+  AlertDialogCancel: ({ children }: { children: React.ReactNode }) => <button type="button">{children}</button>,
 }));
 
 vi.mock('@/components/ui/confirm-dialog', () => ({
@@ -144,7 +144,7 @@ vi.mock('@/components/ui/confirm-dialog', () => ({
 }));
 
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props}>{children}</button>,
   buttonVariants: () => '',
 }));
 

@@ -8,7 +8,7 @@ vi.mock('@/components/ui/button', () => ({
   Button: ({
     children,
     ...props
-  }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props}>{children}</button>,
 }));
 
 function buildContext(overrides: Partial<SerialContext> = {}): SerialContext {

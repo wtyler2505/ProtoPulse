@@ -199,7 +199,7 @@ export const VirtualizedIssueList = memo(function VirtualizedIssueList({
                       </div>
                       <div className="md:w-32">
                         <StyledTooltip content="Mark this issue as resolved" side="left">
-                          <button data-testid={`button-resolve-${row.issue.id}`} aria-label={`Mark resolved: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(row.issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${row.issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
+                          <button type="button" data-testid={`button-resolve-${row.issue.id}`} aria-label={`Mark resolved: ${row.issue.message}`} onClick={(e) => { e.stopPropagation(); deleteValidationIssue(row.issue.id); addOutputLog(`[RESOLVED] Marked resolved: ${row.issue.message}`); }} className="md:opacity-0 group-hover:opacity-100 transition-opacity text-xs border border-border bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary px-3 py-1.5 w-full">
                             Mark Resolved
                           </button>
                         </StyledTooltip>

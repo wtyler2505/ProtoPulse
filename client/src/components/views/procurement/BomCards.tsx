@@ -85,7 +85,7 @@ const BomCardItem = memo(function BomCardItem({ item, deleteBomItem, toast }: Bo
         <div className="flex-1" />
         <ConfirmDialog
           trigger={
-            <button aria-label="Delete item" className="min-w-[44px] min-h-[44px] p-2.5 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors" data-testid={`card-button-delete-${item.id}`}>
+            <button type="button" aria-label="Delete item" className="min-w-[44px] min-h-[44px] p-2.5 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors" data-testid={`card-button-delete-${item.id}`}>
               <Trash2 className="w-4 h-4" />
             </button>
           }

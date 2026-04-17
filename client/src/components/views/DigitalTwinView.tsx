@@ -327,7 +327,7 @@ function FirmwareDialog({
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-card p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-bold">Generate Firmware</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground" data-testid="close-firmware-dialog">
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground" data-testid="close-firmware-dialog">
             X
           </button>
         </div>

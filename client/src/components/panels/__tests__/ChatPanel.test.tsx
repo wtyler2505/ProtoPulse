@@ -191,10 +191,10 @@ vi.mock('@/components/panels/chat/ChatHeader', () => ({
     onExport: () => void;
   }) => (
     <div data-testid="chat-header">
-      <button data-testid="chat-search-toggle" onClick={onSearch}>Search</button>
-      <button data-testid="settings-button" onClick={onSettings}>Settings</button>
-      <button data-testid="chat-close" onClick={onClose}>Close</button>
-      <button data-testid="chat-export" onClick={onExport}>Export</button>
+      <button type="button" data-testid="chat-search-toggle" onClick={onSearch}>Search</button>
+      <button type="button" data-testid="settings-button" onClick={onSettings}>Settings</button>
+      <button type="button" data-testid="chat-close" onClick={onClose}>Close</button>
+      <button type="button" data-testid="chat-export" onClick={onExport}>Export</button>
     </div>
   ),
 }));
@@ -221,7 +221,7 @@ vi.mock('@/components/panels/chat/ChatSearchBar', () => ({
 vi.mock('@/components/panels/chat/StreamingIndicator', () => ({
   default: ({ onCancel }: { onCancel: () => void }) => (
     <div data-testid="streaming-indicator">
-      <button data-testid="cancel-request" onClick={onCancel}>Cancel</button>
+      <button type="button" data-testid="cancel-request" onClick={onCancel}>Cancel</button>
     </div>
   ),
 }));
@@ -236,7 +236,7 @@ vi.mock('@/components/panels/chat/FollowUpSuggestions', () => ({
   }) => (
     <div data-testid="follow-up-suggestions">
       {suggestions.map((s: string) => (
-        <button key={s} data-testid={`suggestion-${s.toLowerCase().replace(/\s+/g, '-')}`} onClick={() => onSuggest(s)}>
+        <button type="button" key={s} data-testid={`suggestion-${s.toLowerCase().replace(/\s+/g, '-')}`} onClick={() => onSuggest(s)}>
           {s}
         </button>
       ))}
@@ -278,11 +278,11 @@ vi.mock('@/components/panels/chat/MessageInput', () => ({
           }
         }}
       />
-      <button data-testid="send-button" onClick={onSend} disabled={isGen || !input.trim()}>
+      <button type="button" data-testid="send-button" onClick={onSend} disabled={isGen || !input.trim()}>
         Send
       </button>
       {onOpenSettings && (
-        <button data-testid="configure-api-key-link" onClick={onOpenSettings}>
+        <button type="button" data-testid="configure-api-key-link" onClick={onOpenSettings}>
           Configure
         </button>
       )}
@@ -293,7 +293,7 @@ vi.mock('@/components/panels/chat/MessageInput', () => ({
 vi.mock('@/components/panels/chat/SettingsPanel', () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="settings-panel">
-      <button data-testid="close-settings" onClick={onClose}>Close</button>
+      <button type="button" data-testid="close-settings" onClick={onClose}>Close</button>
     </div>
   ),
 }));

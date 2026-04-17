@@ -88,7 +88,7 @@ vi.mock('@/components/ui/context-menu', () => ({
   ContextMenuTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   ContextMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   ContextMenuItem: ({ children, onSelect }: { children: React.ReactNode; onSelect?: () => void }) => (
-    <button onClick={onSelect}>{children}</button>
+    <button type="button" onClick={onSelect}>{children}</button>
   ),
   ContextMenuSeparator: () => <hr />,
 }));
@@ -101,7 +101,7 @@ vi.mock('@/components/ui/confirm-dialog', () => ({
 
 // Mock all shadcn UI primitives to simple HTML
 vi.mock('@/components/ui/button', () => ({
-  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props}>{children}</button>,
 }));
 
 vi.mock('@/components/ui/slider', () => ({
@@ -177,7 +177,7 @@ vi.mock('@dnd-kit/modifiers', () => ({
 vi.mock('@/components/ui/tabs', () => ({
   Tabs: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
   TabsList: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => <div {...props}>{children}</div>,
-  TabsTrigger: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button {...props}>{children}</button>,
+  TabsTrigger: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => <button type="button" {...props}>{children}</button>,
   TabsContent: ({ children, value, ...props }: React.HTMLAttributes<HTMLDivElement> & { value?: string }) =>
     value === 'management' ? <div data-value={value} {...props}>{children}</div> : null,
 }));

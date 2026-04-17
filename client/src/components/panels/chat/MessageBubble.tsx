@@ -259,6 +259,7 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
           <div className="flex gap-0.5 opacity-0 group-hover/msg:opacity-100 transition-opacity">
             <StyledTooltip content="Copy" side="top">
                 <button
+                  type="button"
                   onClick={() => onCopy(msg.id, msg.content)}
                   data-testid={`copy-msg-${msg.id}`}
                   aria-label="Copy message"
@@ -269,14 +270,14 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
             </StyledTooltip>
             {onRegenerate && isLast && (
               <StyledTooltip content="Regenerate" side="top">
-                  <button onClick={onRegenerate} data-testid="regenerate-msg" aria-label="Regenerate response" className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                  <button type="button" onClick={onRegenerate} data-testid="regenerate-msg" aria-label="Regenerate response" className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
                     <RefreshCw className="w-3 h-3" />
                   </button>
               </StyledTooltip>
             )}
             {onRetry && (
               <StyledTooltip content="Retry" side="top">
-                  <button onClick={onRetry} data-testid="retry-msg" aria-label="Retry message" className="p-1 hover:bg-muted text-destructive/70 hover:text-destructive transition-colors">
+                  <button type="button" onClick={onRetry} data-testid="retry-msg" aria-label="Retry message" className="p-1 hover:bg-muted text-destructive/70 hover:text-destructive transition-colors">
                     <RefreshCw className="w-3 h-3" />
                   </button>
               </StyledTooltip>

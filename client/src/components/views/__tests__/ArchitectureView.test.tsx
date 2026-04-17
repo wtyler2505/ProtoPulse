@@ -117,7 +117,7 @@ vi.mock('@/components/ui/context-menu', () => ({
     onSelect,
     ...props
   }: { children: React.ReactNode; onSelect?: () => void } & Record<string, unknown>) => (
-    <button onClick={onSelect} {...props}>{children}</button>
+    <button type="button" onClick={onSelect} {...props}>{children}</button>
   ),
   ContextMenuSeparator: () => <hr />,
   ContextMenuSub: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -129,7 +129,7 @@ vi.mock('@/components/ui/context-menu', () => ({
 vi.mock('@/components/panels/AssetManager', () => ({
   default: ({ onClose }: { onClose?: () => void }) => (
     <div data-testid="asset-manager">
-      <button data-testid="asset-manager-close" onClick={onClose}>Close</button>
+      <button type="button" data-testid="asset-manager-close" onClick={onClose}>Close</button>
     </div>
   ),
 }));

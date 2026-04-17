@@ -63,17 +63,18 @@ function ChatHeader({
       </div>
       <div className="flex gap-1 items-center">
         <StyledTooltip content="Search chat" side="bottom">
-            <button data-testid="chat-search-toggle" onClick={onSearch} aria-label="Search chat" className={cn("w-9 h-9 flex items-center justify-center hover:bg-muted transition-colors", showSearch && "text-primary bg-primary/10")}>
+            <button type="button" data-testid="chat-search-toggle" onClick={onSearch} aria-label="Search chat" className={cn("w-9 h-9 flex items-center justify-center hover:bg-muted transition-colors", showSearch && "text-primary bg-primary/10")}>
               <Search className="w-[18px] h-[18px]" />
             </button>
         </StyledTooltip>
         <StyledTooltip content="Export chat" side="bottom">
-            <button data-testid="chat-export" onClick={onExport} aria-label="Export chat" className="w-9 h-9 flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+            <button type="button" data-testid="chat-export" onClick={onExport} aria-label="Export chat" className="w-9 h-9 flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
               <Download className="w-[18px] h-[18px]" />
             </button>
         </StyledTooltip>
         <StyledTooltip content="AI Settings" side="bottom">
             <button
+              type="button"
               data-testid="settings-button"
               aria-label="Chat settings"
               className={cn("w-9 h-9 flex items-center justify-center hover:bg-muted transition-colors", showSettings && "text-primary bg-primary/10")}
@@ -83,7 +84,7 @@ function ChatHeader({
             </button>
         </StyledTooltip>
         <StyledTooltip content="Close (Esc)" side="bottom">
-            <button data-testid="chat-close" aria-label="Close chat" className="w-9 h-9 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1 md:hidden" onClick={onClose}>
+            <button type="button" data-testid="chat-close" aria-label="Close chat" className="w-9 h-9 flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors ml-1 md:hidden" onClick={onClose}>
               <X className="w-[18px] h-[18px]" />
             </button>
         </StyledTooltip>

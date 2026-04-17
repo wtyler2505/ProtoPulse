@@ -64,8 +64,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "claudekit-hooks run typecheck-changed",
-            "timeout": 120
+            "command": "NODE_OPTIONS='--max-old-space-size=16384' claudekit-hooks run typecheck-changed",
+            "timeout": 600
           }
         ]
       },

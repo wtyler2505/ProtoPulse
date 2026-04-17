@@ -86,9 +86,16 @@ const HistoryItem = memo(function HistoryItem({ item, isExpanded, isLastInGroup,
       )}
       <div
         role="button"
+        tabIndex={0}
         aria-label={`View details: ${item.action}`}
         className="relative pl-6 py-1.5 group/item cursor-pointer"
         onClick={() => onToggleExpand(item.id)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onToggleExpand(item.id);
+          }
+        }}
         data-testid={`timeline-item-${item.id}`}
       >
         <div className="absolute left-0 top-[6px] z-10 flex items-center justify-center w-3 h-3">

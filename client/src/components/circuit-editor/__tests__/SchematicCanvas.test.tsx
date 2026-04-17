@@ -97,7 +97,7 @@ vi.mock('@/components/ui/context-menu', () => ({
   ContextMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
   ContextMenuTrigger: ({ children }: { children?: ReactNode }) => <>{children}</>,
   ContextMenuContent: ({ children }: { children?: ReactNode }) => <div data-testid="context-menu">{children}</div>,
-  ContextMenuItem: ({ children, onSelect }: { children?: ReactNode; onSelect?: () => void }) => <button onClick={onSelect}>{children}</button>,
+  ContextMenuItem: ({ children, onSelect }: { children?: ReactNode; onSelect?: () => void }) => <button type="button" onClick={onSelect}>{children}</button>,
   ContextMenuSeparator: () => <hr />,
 }));
 

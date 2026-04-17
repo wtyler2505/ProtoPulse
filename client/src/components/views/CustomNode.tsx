@@ -82,7 +82,7 @@ export default function CustomNode({ id, data, selected }: NodeProps<Node<Custom
           This improves navigation and discoverability for users relying on screen readers【758651948260829†L286-L326】.
         */}
         <div
-          role="button"
+          role="group"
           tabIndex={0}
           aria-label={`Node ${data.label ?? data.type}`}
           className={cn(

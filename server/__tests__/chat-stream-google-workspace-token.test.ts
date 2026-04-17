@@ -31,12 +31,24 @@ const {
 vi.mock('../storage', () => ({
   storage: {
     getProject: mockGetProject,
-    getChatMessages: vi.fn(),
+    getChatMessages: vi.fn().mockResolvedValue([]),
     createChatMessage: vi.fn(),
     deleteChatMessages: vi.fn(),
     deleteChatMessage: vi.fn(),
     getAiActions: vi.fn(),
     getAiActionsByMessage: vi.fn(),
+    getNodes: vi.fn().mockResolvedValue([]),
+    getEdges: vi.fn().mockResolvedValue([]),
+    getBomItems: vi.fn().mockResolvedValue([]),
+    getValidationIssues: vi.fn().mockResolvedValue([]),
+    getComponentParts: vi.fn().mockResolvedValue([]),
+    getCircuitDesigns: vi.fn().mockResolvedValue([]),
+    getCircuitInstances: vi.fn().mockResolvedValue([]),
+    getCircuitNets: vi.fn().mockResolvedValue([]),
+    getCircuitWires: vi.fn().mockResolvedValue([]),
+    getSimulationResults: vi.fn().mockResolvedValue([]),
+    getHistoryItems: vi.fn().mockResolvedValue([]),
+    getDesignPreferences: vi.fn().mockResolvedValue([]),
   },
 }));
 
@@ -143,6 +155,10 @@ describe('chat stream — googleWorkspaceToken sourcing (audit #60)', () => {
       googleWorkspaceToken: 'attacker-controlled-evil-token',
     });
 
+    if (res.status !== 200) {
+      // eslint-disable-next-line no-console
+      console.log('Unexpected status', res.status, await res.text());
+    }
     expect(res.status).toBe(200);
     expect(mockStreamAIMessage).toHaveBeenCalledTimes(1);
 

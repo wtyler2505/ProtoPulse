@@ -207,7 +207,7 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
             {isEditing ? (
               <Pencil className="w-3.5 h-3.5 text-primary mx-auto animate-pulse" data-testid={`edit-indicator-${item.id}`} />
             ) : (
-              <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`drag-handle-${item.id}`} aria-label="Drag to reorder">
+              <button type="button" {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`drag-handle-${item.id}`} aria-label="Drag to reorder">
                 <GripVertical className="w-3.5 h-3.5" />
               </button>
             )}
@@ -241,8 +241,8 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
               <td className="px-4 py-1"><input data-testid={`edit-unit-price-${item.id}`} type="number" min={0} max={99999.99} step={0.01} className="w-24 bg-primary/5 border border-primary/30 px-2 py-1 text-xs font-mono text-right focus-visible:outline-none focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-cyan-400/50" value={editValues.unitPrice} onChange={e => setEditValues(v => ({ ...v, unitPrice: parseFloat(e.target.value) || 0 }))} onKeyDown={handleEditKeyDown} /></td>
               <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground">${(editValues.quantity * editValues.unitPrice).toFixed(2)}</td>
               <td className="px-4 py-3 text-right flex gap-1">
-                <StyledTooltip content="Save changes" side="left"><button aria-label="Save changes" className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button></StyledTooltip>
-                <StyledTooltip content="Cancel editing" side="left"><button aria-label="Cancel editing" className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors" onClick={cancelEdit} data-testid={`button-cancel-edit-${item.id}`}><X className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Save changes" side="left"><button type="button" aria-label="Save changes" className="p-1.5 text-emerald-500 hover:bg-emerald-500/10 transition-colors" onClick={saveEdit} data-testid={`button-save-${item.id}`}><Check className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Cancel editing" side="left"><button type="button" aria-label="Cancel editing" className="p-1.5 text-muted-foreground hover:bg-muted/30 transition-colors" onClick={cancelEdit} data-testid={`button-cancel-edit-${item.id}`}><X className="w-4 h-4" /></button></StyledTooltip>
               </td>
             </>
           ) : (
@@ -285,16 +285,16 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
               <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${(Math.round(Number(item.unitPrice) * 100) / 100).toFixed(2)}</td>
               <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${(Math.round(Number(item.totalPrice) * 100) / 100).toFixed(2)}</td>
               <td className="px-4 py-3 text-right flex gap-1">
-                <StyledTooltip content="Edit item" side="left"><button aria-label="Edit item" className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button></StyledTooltip>
-                <StyledTooltip content="Assess damage" side="left"><button aria-label="Assess damage" className="p-1.5 text-amber-500 hover:bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => onAssessDamage(item)} data-testid={`button-damage-${item.id}`}><Shield className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Edit item" side="left"><button type="button" aria-label="Edit item" className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted/30 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => startEdit(item)} data-testid={`button-edit-${item.id}`}><Pencil className="w-4 h-4" /></button></StyledTooltip>
+                <StyledTooltip content="Assess damage" side="left"><button type="button" aria-label="Assess damage" className="p-1.5 text-amber-500 hover:bg-amber-500/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => onAssessDamage(item)} data-testid={`button-damage-${item.id}`}><Shield className="w-4 h-4" /></button></StyledTooltip>
                 {onFindAlternates && (
-                  <StyledTooltip content="Find alternate parts" side="left"><button aria-label="Find alternates" className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => onFindAlternates(item.partNumber)} data-testid={`button-alternates-${item.id}`}><RefreshCw className="w-4 h-4" /></button></StyledTooltip>
+                  <StyledTooltip content="Find alternate parts" side="left"><button type="button" aria-label="Find alternates" className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => onFindAlternates(item.partNumber)} data-testid={`button-alternates-${item.id}`}><RefreshCw className="w-4 h-4" /></button></StyledTooltip>
                 )}
                 <StyledTooltip content="Buy from supplier" side="left">
-                  <button aria-label="Add to cart" className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { const baseUrl = getSupplierSearchUrl(item.supplier); if (!baseUrl) { return; } window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer'); }} data-testid={`button-cart-${item.id}`}><ShoppingCart className="w-4 h-4" /></button>
+                  <button type="button" aria-label="Add to cart" className="p-1.5 text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => { const baseUrl = getSupplierSearchUrl(item.supplier); if (!baseUrl) { return; } window.open(baseUrl + encodeURIComponent(item.partNumber), '_blank', 'noopener,noreferrer'); }} data-testid={`button-cart-${item.id}`}><ShoppingCart className="w-4 h-4" /></button>
                 </StyledTooltip>
                 <ConfirmDialog
-                  trigger={<StyledTooltip content="Remove from BOM" side="left"><button aria-label="Delete item" className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-delete-${item.id}`}><Trash2 className="w-4 h-4" /></button></StyledTooltip>}
+                  trigger={<StyledTooltip content="Remove from BOM" side="left"><button type="button" aria-label="Delete item" className="p-1.5 text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" data-testid={`button-delete-${item.id}`}><Trash2 className="w-4 h-4" /></button></StyledTooltip>}
                   title="Remove BOM Item"
                   description={`Are you sure you want to remove "${item.partNumber}" from the Bill of Materials? This action cannot be undone.`}
                   confirmLabel="Remove"
