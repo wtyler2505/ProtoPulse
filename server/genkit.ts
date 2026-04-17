@@ -166,7 +166,7 @@ export const queryNodesTool = ai.defineTool({
   name: 'queryNodes',
   description: 'Fetch all component nodes in the architecture diagram to analyze system structure.',
   inputSchema: z.object({}),
-  outputSchema: z.array(z.unknown())
+  outputSchema: z.array(architectureNodeOutputSchema)
 }, async () => {
   const ctx = ai.currentContext() as ToolContext;
   if (!ctx?.projectId) {
