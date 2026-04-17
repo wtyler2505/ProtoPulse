@@ -301,6 +301,18 @@ export const RPI_PICO: VerifiedBoardDefinition = {
   maxCurrentPerPin: 12,
   maxTotalCurrent: 50,
 
+  visual: {
+
+
+    pcbColor: '#1b5e20',
+
+
+    silkscreenColor: '#14532d',
+
+
+  },
+
+
   pins: ALL_PINS,
   buses: BUSES,
 

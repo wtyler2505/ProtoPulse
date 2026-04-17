@@ -177,6 +177,18 @@ export const STM32_NUCLEO_64: VerifiedBoardDefinition = {
   maxCurrentPerPin: 25,
   maxTotalCurrent: 120,
 
+  visual: {
+
+
+    pcbColor: '#f8fafc',
+
+
+    silkscreenColor: '#cbd5e1',
+
+
+  },
+
+
   pins: ALL_PINS,
   buses: BUSES,
 

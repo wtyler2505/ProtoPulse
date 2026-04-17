@@ -162,6 +162,18 @@ export const ADAFRUIT_FEATHER_M0: VerifiedBoardDefinition = {
   maxCurrentPerPin: 7,
   maxTotalCurrent: 50,
 
+  visual: {
+
+
+    pcbColor: '#0f172a',
+
+
+    silkscreenColor: '#1e293b',
+
+
+  },
+
+
   pins: ALL_PINS,
   buses: BUSES,
 

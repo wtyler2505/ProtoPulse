@@ -267,6 +267,18 @@ export const RIORAND_KJL01: VerifiedBoardDefinition = {
   maxCurrentPerPin: 16000,
   maxTotalCurrent: 20000,
 
+  visual: {
+
+
+    pcbColor: '#dc2626',
+
+
+    silkscreenColor: '#b91c1c',
+
+
+  },
+
+
   pins: ALL_PINS,
   buses: BUSES,
 

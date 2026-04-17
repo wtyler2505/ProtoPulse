@@ -263,4 +263,11 @@ export interface VerifiedBoardDefinition {
   warnings: string[];
   /** Strapping/boot pins that affect power-on behavior. */
   bootPins?: BootPinConfig[];
+
+  // Visuals
+  /** Optional visual representation hints */
+  visual?: {
+    pcbColor?: string;
+    silkscreenColor?: string;
+  };
 }

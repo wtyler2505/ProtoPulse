@@ -6,9 +6,9 @@ import {
 } from '../index';
 
 describe('Verified Board Pack integration', () => {
-  it('getAllVerifiedBoards returns all 10 boards', () => {
+  it('getAllVerifiedBoards returns all 13 boards', () => {
     const boards = getAllVerifiedBoards();
-    expect(boards).toHaveLength(10);
+    expect(boards).toHaveLength(13);
     const ids = boards.map((b) => b.id);
     expect(ids).toContain('arduino-mega-2560-r3');
     expect(ids).toContain('nodemcu-esp32s');

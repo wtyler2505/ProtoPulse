@@ -229,6 +229,18 @@ export const SPARKFUN_THING_PLUS: VerifiedBoardDefinition = {
   maxCurrentPerPin: 12,
   maxTotalCurrent: 50,
 
+  visual: {
+
+
+    pcbColor: '#dc2626',
+
+
+    silkscreenColor: '#b91c1c',
+
+
+  },
+
+
   pins: ALL_PINS,
   buses: BUSES,
 

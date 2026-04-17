@@ -337,6 +337,18 @@ export const NODEMCU_ESP32S: VerifiedBoardDefinition = {
   maxCurrentPerPin: 40,
   maxTotalCurrent: 1200,
 
+  visual: {
+
+
+    pcbColor: '#0f172a',
+
+
+    silkscreenColor: '#1e293b',
+
+
+  },
+
+
   pins: ALL_PINS,
   buses: BUSES,
 

@@ -12,6 +12,9 @@ export { STM32_NUCLEO_64 } from './stm32-nucleo-64';
 export { ADAFRUIT_FEATHER_M0 } from './adafruit-feather';
 export { SPARKFUN_THING_PLUS } from './sparkfun-thing-plus';
 export { TEENSY_40 } from './teensy-40';
+export { L298N_MOTOR_DRIVER } from './l298n-motor-driver';
+export { SSD1306_OLED_I2C } from './ssd1306-oled-i2c';
+export { HC_SR04_ULTRASONIC } from './hc-sr04-ultrasonic';
 
 export type {
   BootPinConfig,
@@ -37,6 +40,9 @@ import { STM32_NUCLEO_64 } from './stm32-nucleo-64';
 import { ADAFRUIT_FEATHER_M0 } from './adafruit-feather';
 import { SPARKFUN_THING_PLUS } from './sparkfun-thing-plus';
 import { TEENSY_40 } from './teensy-40';
+import { L298N_MOTOR_DRIVER } from './l298n-motor-driver';
+import { SSD1306_OLED_I2C } from './ssd1306-oled-i2c';
+import { HC_SR04_ULTRASONIC } from './hc-sr04-ultrasonic';
 import type { VerifiedBoardDefinition } from './types';
 
 const ALL_BOARDS: VerifiedBoardDefinition[] = [
@@ -50,6 +56,9 @@ const ALL_BOARDS: VerifiedBoardDefinition[] = [
   ADAFRUIT_FEATHER_M0,
   SPARKFUN_THING_PLUS,
   TEENSY_40,
+  L298N_MOTOR_DRIVER,
+  SSD1306_OLED_I2C,
+  HC_SR04_ULTRASONIC,
 ];
 
 /** Get a verified board by its stable ID. */

@@ -66,16 +66,20 @@ describe('BreadboardShoppingList', () => {
 
   it('generates CSV on export button click', async () => {
     const user = userEvent.setup();
-    // Mock URL.createObjectURL and URL.revokeObjectURL
-    const createObjectURL = vi.fn().mockReturnValue('blob:test');
-    const revokeObjectURL = vi.fn();
-    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    
+    // Mock createObjectURL without destroying the URL constructor
+    const originalCreateObjectURL = window.URL.createObjectURL;
+    const originalRevokeObjectURL = window.URL.revokeObjectURL;
+    window.URL.createObjectURL = vi.fn().mockReturnValue('blob:test');
+    window.URL.revokeObjectURL = vi.fn();
 
     render(<BreadboardShoppingList missingParts={mockMissing} />);
     await user.click(screen.getByTestId('export-csv'));
-    expect(createObjectURL).toHaveBeenCalled();
+    expect(window.URL.createObjectURL).toHaveBeenCalled();
 
-    vi.unstubAllGlobals();
+    // Restore
+    window.URL.createObjectURL = originalCreateObjectURL;
+    window.URL.revokeObjectURL = originalRevokeObjectURL;
   });
 
   it('renders empty state when no missing parts', () => {

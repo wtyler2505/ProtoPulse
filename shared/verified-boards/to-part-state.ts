@@ -343,7 +343,7 @@ export function boardDefinitionToPartState(board: VerifiedBoardDefinition): Part
       height: heightPx,
       rotation: 0,
       rx: 8,
-      style: { fill: '#0f172a', stroke: '#334155', strokeWidth: 1.2 },
+      style: { fill: board.visual?.pcbColor ?? '#0f172a', stroke: '#334155', strokeWidth: 1.2 },
     },
     {
       id: 'bb-silkscreen',
@@ -354,7 +354,7 @@ export function boardDefinitionToPartState(board: VerifiedBoardDefinition): Part
       height: Math.max(14, heightPx - (edgeInset + 4) * 2),
       rotation: 0,
       rx: 6,
-      style: { fill: '#0b1220', stroke: '#1e293b', strokeWidth: 0.6, opacity: 0.35 },
+      style: { fill: board.visual?.silkscreenColor ?? '#0b1220', stroke: '#1e293b', strokeWidth: 0.6, opacity: 0.35 },
     },
     {
       id: 'title-label',

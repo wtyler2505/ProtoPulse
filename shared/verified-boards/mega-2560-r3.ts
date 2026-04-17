@@ -371,6 +371,18 @@ export const MEGA_2560_R3: VerifiedBoardDefinition = {
   maxCurrentPerPin: 40,
   maxTotalCurrent: 200,
 
+  visual: {
+
+
+    pcbColor: '#00979C',
+
+
+    silkscreenColor: '#006468',
+
+
+  },
+
+
   pins: ALL_PINS,
   buses: BUSES,
 

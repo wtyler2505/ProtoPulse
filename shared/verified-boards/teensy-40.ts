@@ -240,6 +240,18 @@ export const TEENSY_40: VerifiedBoardDefinition = {
   maxCurrentPerPin: 10,
   maxTotalCurrent: 100,
 
+  visual: {
+
+
+    pcbColor: '#166534',
+
+
+    silkscreenColor: '#14532d',
+
+
+  },
+
+
   pins: ALL_PINS,
   buses: BUSES,
 
