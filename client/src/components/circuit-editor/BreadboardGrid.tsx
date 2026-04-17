@@ -67,7 +67,7 @@ const C = {
   channelFill: '#1f1f15',
   holeFill: '#454535',
   holeStroke: '#333328',
-  holeHighlight: '#00F0FF',
+  holeHighlight: 'var(--color-editor-accent)',
   holeOccupied: '#2a2a22',
   holeOccupiedStroke: '#3a3a2e',
   holeHover: '#a3e635',

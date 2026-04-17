@@ -89,7 +89,7 @@ function ResistorHeatOverlay({
     >
       <span
         className="text-[7px] font-mono leading-none"
-        style={{ color: heatLevel > 0.6 ? '#ef4444' : '#00F0FF' }}
+        style={{ color: heatLevel > 0.6 ? '#ef4444' : 'var(--color-editor-accent)' }}
       >
         {formatSIValue(powerDissipation, 'W')}
       </span>
@@ -131,13 +131,13 @@ function MotorOverlay({
             y1={cy}
             x2={cx + r * Math.cos((deg * Math.PI) / 180)}
             y2={cy + r * Math.sin((deg * Math.PI) / 180)}
-            stroke="#00F0FF"
+            stroke="var(--color-editor-accent)"
             strokeWidth={2}
             strokeLinecap="round"
             opacity={0.8}
           />
         ))}
-        <circle cx={cx} cy={cy} r={3} fill="#00F0FF" opacity={0.9} />
+        <circle cx={cx} cy={cy} r={3} fill="var(--color-editor-accent)" opacity={0.9} />
       </g>
     </svg>
   );
@@ -166,7 +166,7 @@ function ServoOverlay({
       <path
         d={`M ${cx - armLen} ${cy} A ${armLen} ${armLen} 0 0 1 ${cx + armLen} ${cy}`}
         fill="none"
-        stroke="#00F0FF"
+        stroke="var(--color-editor-accent)"
         strokeWidth={1}
         opacity={0.2}
         strokeDasharray="2,2"
@@ -177,16 +177,16 @@ function ServoOverlay({
         y1={cy}
         x2={cx + armLen * Math.cos(radians)}
         y2={cy + armLen * Math.sin(radians)}
-        stroke="#00F0FF"
+        stroke="var(--color-editor-accent)"
         strokeWidth={2}
         strokeLinecap="round"
       />
-      <circle cx={cx} cy={cy} r={3} fill="#00F0FF" />
+      <circle cx={cx} cy={cy} r={3} fill="var(--color-editor-accent)" />
       {/* Angle label */}
       <text
         x={cx}
         y={cy + armLen + 10}
-        fill="#00F0FF"
+        fill="var(--color-editor-accent)"
         fontSize={7}
         textAnchor="middle"
         fontFamily="monospace"
@@ -323,23 +323,23 @@ function PotentiometerOverlay({
   return (
     <svg width={width} height={height} style={{ overflow: 'visible' }} data-testid="sim-vis-pot-svg">
       {/* Arc track */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#00F0FF" strokeWidth={1} opacity={0.2} />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--color-editor-accent)" strokeWidth={1} opacity={0.2} />
       {/* Wiper position */}
       <line
         x1={cx}
         y1={cy}
         x2={cx + r * Math.cos(radians)}
         y2={cy + r * Math.sin(radians)}
-        stroke="#00F0FF"
+        stroke="var(--color-editor-accent)"
         strokeWidth={2}
         strokeLinecap="round"
       />
-      <circle cx={cx} cy={cy} r={2} fill="#00F0FF" />
+      <circle cx={cx} cy={cy} r={2} fill="var(--color-editor-accent)" />
       {/* Percentage label */}
       <text
         x={cx}
         y={cy + r + 10}
-        fill="#00F0FF"
+        fill="var(--color-editor-accent)"
         fontSize={7}
         textAnchor="middle"
         fontFamily="monospace"

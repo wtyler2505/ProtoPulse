@@ -106,7 +106,7 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
           : '#06b6d4');
 
   // When highlighted via net selection, use bright neon cyan
-  const strokeColor = isHighlighted ? '#00F0FF' : baseStrokeColor;
+  const strokeColor = isHighlighted ? 'var(--color-editor-accent)' : baseStrokeColor;
 
   // Bus nets render thicker to indicate multiple signals
   const baseWidth = isBus ? 3 : 1.5;
@@ -124,7 +124,7 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
         <path
           d={edgePath}
           style={{
-            stroke: '#00F0FF',
+            stroke: 'var(--color-editor-accent)',
             strokeWidth: strokeWidth + 4,
             fill: 'none',
             opacity: 0.25,
@@ -138,7 +138,7 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
         <path
           d={edgePath}
           style={{
-            stroke: '#00F0FF',
+            stroke: 'var(--color-editor-accent)',
             strokeWidth: strokeWidth + 2,
             fill: 'none',
             opacity: 0.15,
@@ -153,7 +153,7 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
         d={edgePath}
         style={{
           ...style,
-          stroke: isAnimated ? '#00F0FF' : strokeColor,
+          stroke: isAnimated ? 'var(--color-editor-accent)' : strokeColor,
           strokeWidth,
           fill: 'none',
           ...(isAnimated ? { animationDuration: `${animDuration}s` } : {}),
@@ -215,7 +215,7 @@ const SchematicNetEdge = memo(function SchematicNetEdge({
             style={{
               transform: `translate(-50%, 6px) translate(${labelX}px,${labelY}px)`,
             }}
-            className="absolute text-[8px] font-mono text-[#00F0FF] bg-black/70 px-1 py-0.5 rounded pointer-events-none nodrag nopan whitespace-nowrap"
+            className="absolute text-[8px] font-mono text-[var(--color-editor-accent)] bg-black/70 px-1 py-0.5 rounded pointer-events-none nodrag nopan whitespace-nowrap"
             data-testid={`wire-sim-label-${id}`}
           >
             {formatSIValue(wireState.currentMagnitude, 'A')}

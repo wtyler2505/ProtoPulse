@@ -129,7 +129,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
     >
       {/* Header */}
       <div className="flex items-center gap-2" data-testid="impedance-panel-header">
-        <Zap className="h-4 w-4 text-[#00F0FF]" />
+        <Zap className="h-4 w-4 text-[var(--color-editor-accent)]" />
         <h3 className="font-semibold text-white">Impedance Trace Width</h3>
         {nonCompliantCount > 0 && (
           <Badge variant="destructive" data-testid="non-compliant-count">
@@ -321,7 +321,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
                     <td
                       className={cn(
                         'px-2 py-1.5 text-right font-mono',
-                        s.compliant ? 'text-zinc-400' : 'text-[#00F0FF]',
+                        s.compliant ? 'text-zinc-400' : 'text-[var(--color-editor-accent)]',
                       )}
                     >
                       {s.suggestedWidth.toFixed(3)}mm
@@ -351,7 +351,7 @@ export const ImpedanceTraceWidthPanel = memo(function ImpedanceTraceWidthPanel({
       {nonCompliantCount > 0 && onApplySuggestions && (
         <Button
           onClick={handleApply}
-          className="w-full bg-[#00F0FF]/10 text-[#00F0FF] hover:bg-[#00F0FF]/20 border border-[#00F0FF]/30"
+          className="w-full bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/20 border border-[var(--color-editor-accent)]/30"
           data-testid="btn-apply-suggestions"
         >
           <Zap className="h-4 w-4 mr-2" />

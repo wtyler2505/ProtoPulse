@@ -376,7 +376,7 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
   return (
     <g
       data-testid={`bb-instance-${instance.id}`}
-      className={cn(selected && "filter drop-shadow-[0_0_2px_#00F0FF]")}
+      className={cn(selected && "filter drop-shadow-[0_0_2px_var(--color-editor-accent)]")}
     >
       {renderShape()}
       {/* Value label shown below selected components with a family */}
@@ -387,7 +387,7 @@ const BreadboardComponent = memo(({ instance, part, selected, onClick }: Breadbo
           textAnchor="middle"
           dominantBaseline="hanging"
           fontSize={4}
-          fill="#00F0FF"
+          fill="var(--color-editor-accent)"
           className="font-mono select-none pointer-events-none"
           data-testid={`bb-value-label-${instance.id}`}
         >

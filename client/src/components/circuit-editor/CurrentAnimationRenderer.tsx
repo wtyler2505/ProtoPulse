@@ -258,7 +258,7 @@ export const CurrentAnimationControlBar = memo(function CurrentAnimationControlB
 
   return (
     <div
-      className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-black/80 border border-[#00F0FF]/30 rounded-lg px-3 py-1.5 backdrop-blur-sm"
+      className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-black/80 border border-[var(--color-editor-accent)]/30 rounded-lg px-3 py-1.5 backdrop-blur-sm"
       style={{ height: CONTROL_BAR_HEIGHT }}
       data-testid="current-animation-control-bar"
     >
@@ -266,7 +266,7 @@ export const CurrentAnimationControlBar = memo(function CurrentAnimationControlB
       <button
         type="button"
         onClick={handlePlayPause}
-        className="flex items-center justify-center w-7 h-7 rounded hover:bg-zinc-700 text-[#00F0FF] transition-colors"
+        className="flex items-center justify-center w-7 h-7 rounded hover:bg-zinc-700 text-[var(--color-editor-accent)] transition-colors"
         title={status.state === 'playing' ? 'Pause animation' : 'Play animation'}
         aria-label={status.state === 'playing' ? 'Pause animation' : 'Play animation'}
         data-testid="current-animation-play-pause"
@@ -312,7 +312,7 @@ export const CurrentAnimationControlBar = memo(function CurrentAnimationControlB
           step={0.25}
           value={status.speed}
           onChange={handleSpeedChange}
-          className="w-16 h-1 accent-[#00F0FF] cursor-pointer"
+          className="w-16 h-1 accent-[var(--color-editor-accent)] cursor-pointer"
           title="Animation speed"
           aria-label="Animation speed"
           data-testid="current-animation-speed-slider"
@@ -328,7 +328,7 @@ export const CurrentAnimationControlBar = memo(function CurrentAnimationControlB
         onClick={handleHeatmapToggle}
         className={`flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
           status.showHeatmap
-            ? 'bg-[#00F0FF]/20 text-[#00F0FF] ring-1 ring-[#00F0FF]/50'
+            ? 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] ring-1 ring-[var(--color-editor-accent)]/50'
             : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
         }`}
         title={status.showHeatmap ? 'Hide voltage colors' : 'Show voltage colors'}
@@ -383,7 +383,7 @@ export const CurrentAnimationToggleButton = memo(function CurrentAnimationToggle
       disabled={disabled}
       className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
         isActive
-          ? 'bg-[#00F0FF]/20 text-[#00F0FF] ring-1 ring-[#00F0FF]/50'
+          ? 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] ring-1 ring-[var(--color-editor-accent)]/50'
           : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300'
       } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
       title={isActive ? 'Stop current animation' : 'Start current animation'}

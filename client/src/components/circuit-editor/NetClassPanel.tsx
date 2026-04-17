@@ -73,7 +73,7 @@ const PRESET_COLORS = [
   '#3b82f6', // blue
   '#8b5cf6', // violet
   '#ec4899', // pink
-  '#00F0FF', // neon cyan (theme accent)
+  'var(--color-editor-accent)', // neon cyan (theme accent)
 ];
 
 const EMPTY_FORM: Omit<NetClass, 'name'> & { name: string } = {

@@ -50,7 +50,7 @@ function ParamSliderRow({ param, onChange, onResetOne }: ParamSliderRowProps) {
         <div className="flex items-center gap-1.5">
           <Badge
             variant={isModified ? 'default' : 'secondary'}
-            className={`font-mono text-[10px] px-1.5 py-0 ${isModified ? 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30' : ''}`}
+            className={`font-mono text-[10px] px-1.5 py-0 ${isModified ? 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30' : ''}`}
           >
             {formatSIValue(param.currentValue, param.unit)}
           </Badge>
@@ -79,7 +79,7 @@ function ParamSliderRow({ param, onChange, onResetOne }: ParamSliderRowProps) {
             onChange(param.id, v);
           }
         }}
-        className="[&_[data-slot=range]]:bg-[#00F0FF] [&_[data-slot=thumb]]:border-[#00F0FF]/50"
+        className="[&_[data-slot=range]]:bg-[var(--color-editor-accent)] [&_[data-slot=thumb]]:border-[var(--color-editor-accent)]/50"
         aria-label={`${param.name} slider`}
       />
 
@@ -129,7 +129,7 @@ export function WhatIfSliderPanel({
         <CardTitle className="text-sm font-medium">
           What-If Sweep
           {hasModified && (
-            <span className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-[#00F0FF]" />
+            <span className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-[var(--color-editor-accent)]" />
           )}
         </CardTitle>
         <div className="flex items-center gap-1">
@@ -180,11 +180,11 @@ export function WhatIfSliderPanel({
               ))}
 
               {result !== undefined && (
-                <div className="mt-3 rounded-md border border-[#00F0FF]/20 bg-[#00F0FF]/5 p-3">
+                <div className="mt-3 rounded-md border border-[var(--color-editor-accent)]/20 bg-[var(--color-editor-accent)]/5 p-3">
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
                     {resultLabel}
                   </div>
-                  <div className="text-lg font-mono font-semibold text-[#00F0FF]">
+                  <div className="text-lg font-mono font-semibold text-[var(--color-editor-accent)]">
                     {formatSIValue(result, resultUnit)}
                   </div>
                 </div>

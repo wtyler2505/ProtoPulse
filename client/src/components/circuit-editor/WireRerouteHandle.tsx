@@ -218,7 +218,7 @@ const WireRerouteHandle = memo(function WireRerouteHandle({
         {isDragging && previewPath && (
           <path
             d={previewPath}
-            stroke="#00F0FF"
+            stroke="var(--color-editor-accent)"
             strokeWidth={strokeWidth}
             strokeDasharray={`${dashSize} ${dashSize * 0.75}`}
             fill="none"
@@ -233,9 +233,9 @@ const WireRerouteHandle = memo(function WireRerouteHandle({
             cx={hoveredSegment.midpoint.x}
             cy={hoveredSegment.midpoint.y}
             r={handleRadius}
-            fill="#00F0FF"
+            fill="var(--color-editor-accent)"
             fillOpacity={0.8}
-            stroke="#00F0FF"
+            stroke="var(--color-editor-accent)"
             strokeWidth={strokeWidth * 0.5}
             style={{ cursor: 'grab', pointerEvents: 'all' }}
             onMouseDown={handleHandleMouseDown}

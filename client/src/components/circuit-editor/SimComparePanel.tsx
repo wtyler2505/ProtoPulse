@@ -152,7 +152,7 @@ function OverlayChart({ overlay, signalIndex }: OverlayChartProps) {
 
         {/* Signal A — cyan */}
         {pathA && (
-          <path d={pathA} fill="none" stroke="#00F0FF" strokeWidth={1.5} opacity={0.9} />
+          <path d={pathA} fill="none" stroke="var(--color-editor-accent)" strokeWidth={1.5} opacity={0.9} />
         )}
         {/* Signal B — magenta */}
         {pathB && (
@@ -163,7 +163,7 @@ function OverlayChart({ overlay, signalIndex }: OverlayChartProps) {
       {/* Legend */}
       <div className="flex items-center justify-center gap-4 text-[10px] mt-1" data-testid="overlay-legend">
         <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-0.5 bg-[#00F0FF]" />
+          <span className="inline-block w-3 h-0.5 bg-[var(--color-editor-accent)]" />
           Snapshot A
         </span>
         <span className="flex items-center gap-1">
@@ -218,7 +218,7 @@ export function SimComparePanel({ currentSimData }: SimComparePanelProps) {
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-4">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-[#00F0FF]" />
+          <BarChart3 className="h-4 w-4 text-[var(--color-editor-accent)]" />
           Compare Simulations
           {count > 0 && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
@@ -350,14 +350,14 @@ export function SimComparePanel({ currentSimData }: SimComparePanelProps) {
 
               {/* Overall stats */}
               <div
-                className="grid grid-cols-2 gap-2 rounded-md border border-[#00F0FF]/20 bg-[#00F0FF]/5 p-2"
+                className="grid grid-cols-2 gap-2 rounded-md border border-[var(--color-editor-accent)]/20 bg-[var(--color-editor-accent)]/5 p-2"
                 data-testid="compare-overall-stats"
               >
                 <div>
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     RMS Error
                   </div>
-                  <div className="text-sm font-mono font-semibold text-[#00F0FF]">
+                  <div className="text-sm font-mono font-semibold text-[var(--color-editor-accent)]">
                     {compareResult.overallRmsError.toPrecision(4)}
                   </div>
                 </div>
@@ -365,7 +365,7 @@ export function SimComparePanel({ currentSimData }: SimComparePanelProps) {
                   <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     Peak Deviation
                   </div>
-                  <div className="text-sm font-mono font-semibold text-[#00F0FF]">
+                  <div className="text-sm font-mono font-semibold text-[var(--color-editor-accent)]">
                     {compareResult.overallPeakDeviation.toPrecision(4)}
                   </div>
                 </div>

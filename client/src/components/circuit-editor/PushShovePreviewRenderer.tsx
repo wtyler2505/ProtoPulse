@@ -140,7 +140,7 @@ export const PushShovePreviewToggle = memo(function PushShovePreviewToggle({
       >
         {/* Two parallel traces with arrows showing displacement */}
         <line x1="3" y1="7" x2="17" y2="7" stroke={active ? '#FACC15' : '#6B7280'} strokeWidth="2" strokeLinecap="round" />
-        <line x1="3" y1="13" x2="17" y2="13" stroke={active ? '#00F0FF' : '#6B7280'} strokeWidth="2" strokeLinecap="round" />
+        <line x1="3" y1="13" x2="17" y2="13" stroke={active ? 'var(--color-editor-accent)' : '#6B7280'} strokeWidth="2" strokeLinecap="round" />
         <line x1="10" y1="8" x2="10" y2="12" stroke={active ? '#F97316' : '#6B7280'} strokeWidth="1" markerEnd="url(#toggle-arrow)" />
         <defs>
           <marker id="toggle-arrow" viewBox="0 0 4 4" refX="4" refY="2" markerWidth="4" markerHeight="4" orient="auto">

@@ -150,7 +150,7 @@ function NewScenarioForm({ onSubmit, onCancel }: NewScenarioFormProps) {
   }, [name, description, simType, frequencyStart, frequencyEnd, frequencyPoints, timeSpan, timeStep, temperature, onSubmit]);
 
   return (
-    <div className="flex flex-col gap-2 p-2 border border-[#00F0FF]/30 rounded-md bg-[#00F0FF]/5" data-testid="scenario-new-form">
+    <div className="flex flex-col gap-2 p-2 border border-[var(--color-editor-accent)]/30 rounded-md bg-[var(--color-editor-accent)]/5" data-testid="scenario-new-form">
       <Input
         value={name}
         onChange={(e) => setName(e.target.value)}
@@ -340,7 +340,7 @@ export function ScenarioManagerPanel({ className, onScenarioLoad }: ScenarioMana
       {/* Header */}
       <div className="flex items-center justify-between px-1">
         <span className="text-xs font-medium text-foreground flex items-center gap-1" data-testid="scenario-manager-title">
-          <Zap className="w-3 h-3 text-[#00F0FF]" />
+          <Zap className="w-3 h-3 text-[var(--color-editor-accent)]" />
           Simulation Scenarios
         </span>
         <span className="text-[10px] text-muted-foreground tabular-nums" data-testid="scenario-manager-count">
@@ -367,7 +367,7 @@ export function ScenarioManagerPanel({ className, onScenarioLoad }: ScenarioMana
         <Button
           variant="outline"
           size="sm"
-          className="h-7 text-xs gap-1 border-dashed border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/10"
+          className="h-7 text-xs gap-1 border-dashed border-[var(--color-editor-accent)]/30 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/10"
           onClick={() => setShowForm(true)}
           data-testid="scenario-new-button"
         >
@@ -456,7 +456,7 @@ function ScenarioRow({ scenario, isActive, isPreset, onLoad, onDelete }: Scenari
     <div
       className={cn(
         'flex flex-col gap-1 px-2 py-1.5 rounded border transition-colors',
-        isActive ? 'border-[#00F0FF]/50 bg-[#00F0FF]/10' : 'border-transparent hover:bg-muted/40',
+        isActive ? 'border-[var(--color-editor-accent)]/50 bg-[var(--color-editor-accent)]/10' : 'border-transparent hover:bg-muted/40',
       )}
       data-testid={`scenario-row-${scenario.id}`}
     >
@@ -477,7 +477,7 @@ function ScenarioRow({ scenario, isActive, isPreset, onLoad, onDelete }: Scenari
 
         {/* Active indicator */}
         {isActive && (
-          <Badge variant="default" className="h-4 px-1 text-[9px] bg-[#00F0FF] text-black" data-testid={`scenario-active-${scenario.id}`}>
+          <Badge variant="default" className="h-4 px-1 text-[9px] bg-[var(--color-editor-accent)] text-black" data-testid={`scenario-active-${scenario.id}`}>
             Active
           </Badge>
         )}

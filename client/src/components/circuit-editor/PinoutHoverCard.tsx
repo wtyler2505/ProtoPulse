@@ -34,7 +34,7 @@ export interface PinoutHoverCardProps {
 const PIN_TYPE_COLORS: Record<PinInfo['type'], string> = {
   power: 'text-red-400',
   ground: 'text-zinc-400',
-  io: 'text-[#00F0FF]',
+  io: 'text-[var(--color-editor-accent)]',
   analog: 'text-yellow-400',
   special: 'text-purple-400',
   nc: 'text-zinc-600',
@@ -43,7 +43,7 @@ const PIN_TYPE_COLORS: Record<PinInfo['type'], string> = {
 const PIN_TYPE_BG_COLORS: Record<PinInfo['type'], string> = {
   power: 'bg-red-400',
   ground: 'bg-zinc-400',
-  io: 'bg-[#00F0FF]',
+  io: 'bg-[var(--color-editor-accent)]',
   analog: 'bg-yellow-400',
   special: 'bg-purple-400',
   nc: 'bg-zinc-600',
@@ -632,7 +632,7 @@ export function PinoutHoverCard({
             target="_blank"
             rel="noopener noreferrer"
             data-testid="pinout-datasheet-link"
-            className="text-[11px] text-[#00F0FF] hover:text-[#00F0FF]/80 underline underline-offset-2 transition-colors"
+            className="text-[11px] text-[var(--color-editor-accent)] hover:text-[var(--color-editor-accent)]/80 underline underline-offset-2 transition-colors"
           >
             View Datasheet
           </a>

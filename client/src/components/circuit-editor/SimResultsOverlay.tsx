@@ -171,7 +171,7 @@ interface ProbeIndicatorProps {
 }
 
 const ProbeIndicator = memo(function ProbeIndicator({ id, type, label, x, y }: ProbeIndicatorProps) {
-  const probeColor = type === 'voltage' ? '#00F0FF' : '#FFD700';
+  const probeColor = type === 'voltage' ? 'var(--color-editor-accent)' : '#FFD700';
 
   return (
     <g
@@ -462,7 +462,7 @@ export const SimResultsToggleButton = memo(function SimResultsToggleButton({
       disabled={disabled}
       className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
         visible
-          ? 'bg-[#00F0FF]/20 text-[#00F0FF] ring-1 ring-[#00F0FF]/50'
+          ? 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] ring-1 ring-[var(--color-editor-accent)]/50'
           : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-zinc-300'
       } ${disabled ? 'cursor-not-allowed opacity-50' : ''}`}
       title={visible ? 'Hide simulation results' : 'Show simulation results'}

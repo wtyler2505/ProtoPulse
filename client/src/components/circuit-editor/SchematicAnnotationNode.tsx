@@ -30,7 +30,7 @@ export interface AnnotationNodeData {
 const FONT_SIZES = [10, 12, 14, 16, 20, 24, 32];
 const ANNOTATION_COLORS = [
   '#ffffff', // white
-  '#00F0FF', // neon cyan (theme)
+  'var(--color-editor-accent)', // neon cyan (theme)
   '#ef4444', // red
   '#22c55e', // green
   '#f59e0b', // amber

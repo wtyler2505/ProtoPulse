@@ -92,11 +92,11 @@ function ValueLabelOverlay({ pos, state }: { pos: NodePosition; state: ResistorV
       }}
       data-testid={`sim-value-label-${pos.refDes}`}
     >
-      <div className="bg-black/70 border border-[#00F0FF]/20 px-1.5 py-0.5 rounded whitespace-nowrap">
-        <span className="text-[8px] font-mono text-[#00F0FF] block leading-tight">
+      <div className="bg-black/70 border border-[var(--color-editor-accent)]/20 px-1.5 py-0.5 rounded whitespace-nowrap">
+        <span className="text-[8px] font-mono text-[var(--color-editor-accent)] block leading-tight">
           {formatSIValue(state.voltageDrop, 'V')}
         </span>
-        <span className="text-[8px] font-mono text-[#00F0FF]/70 block leading-tight">
+        <span className="text-[8px] font-mono text-[var(--color-editor-accent)]/70 block leading-tight">
           {formatSIValue(state.current, 'A')}
         </span>
       </div>
@@ -207,7 +207,7 @@ function SliderControlOverlay({ pos, control }: { pos: NodePosition; control: In
       className="absolute z-10"
       style={{ left: pos.x + pos.width + 4, top: pos.y + pos.height / 2 - 16 }}
     >
-      <div className="pointer-events-auto bg-black/80 border border-[#00F0FF]/30 rounded px-1.5 py-1 flex flex-col items-center gap-0.5">
+      <div className="pointer-events-auto bg-black/80 border border-[var(--color-editor-accent)]/30 rounded px-1.5 py-1 flex flex-col items-center gap-0.5">
         <input
           type="range"
           min={min}
@@ -215,10 +215,10 @@ function SliderControlOverlay({ pos, control }: { pos: NodePosition; control: In
           step={0.01}
           value={value}
           onChange={handleChange}
-          className="w-16 h-1 accent-[#00F0FF] cursor-pointer"
+          className="w-16 h-1 accent-[var(--color-editor-accent)] cursor-pointer"
           data-testid={`sim-control-slider-${pos.refDes}`}
         />
-        <span className="text-[8px] font-mono text-[#00F0FF]/80" data-testid={`sim-control-slider-value-${pos.refDes}`}>
+        <span className="text-[8px] font-mono text-[var(--color-editor-accent)]/80" data-testid={`sim-control-slider-value-${pos.refDes}`}>
           {pct}%
         </span>
       </div>
@@ -237,7 +237,7 @@ function IndicatorControlOverlay({ pos, control }: { pos: NodePosition; control:
       style={{ left: pos.x + pos.width + 4, top: pos.y + pos.height / 2 - 8 }}
       data-testid={`sim-control-indicator-${pos.refDes}`}
     >
-      <span className="text-[8px] font-mono text-[#00F0FF]/70">
+      <span className="text-[8px] font-mono text-[var(--color-editor-accent)]/70">
         {formatSIValue(value, control.unit ?? 'V')}
       </span>
     </div>

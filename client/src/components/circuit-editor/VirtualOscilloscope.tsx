@@ -353,7 +353,7 @@ const VirtualOscilloscope = memo(function VirtualOscilloscope({
     >
       {/* Title bar */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-zinc-800 cursor-grab">
-        <span className="text-[10px] font-bold text-[#00F0FF] tracking-wide" data-testid="scope-title">
+        <span className="text-[10px] font-bold text-[var(--color-editor-accent)] tracking-wide" data-testid="scope-title">
           OSCILLOSCOPE
         </span>
         <div className="flex items-center gap-2">
@@ -445,7 +445,7 @@ const VirtualOscilloscope = memo(function VirtualOscilloscope({
           >
             -
           </button>
-          <span className="w-16 text-center font-mono text-[#00F0FF]" data-testid="scope-timebase-label">
+          <span className="w-16 text-center font-mono text-[var(--color-editor-accent)]" data-testid="scope-timebase-label">
             {formatSIValue(timePerDiv, 's')}/d
           </span>
           <button

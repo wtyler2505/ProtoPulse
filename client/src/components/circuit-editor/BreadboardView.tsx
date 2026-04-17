@@ -1905,7 +1905,7 @@ function BreadboardCanvas({
                     height={40}
                     rx={4}
                     fill="#1e293b"
-                    stroke={isSelected ? '#00F0FF' : '#475569'}
+                    stroke={isSelected ? 'var(--color-editor-accent)' : '#475569'}
                     strokeWidth={isSelected ? 1.5 : 1}
                     strokeDasharray={isSelected ? undefined : '3 2'}
                     opacity={0.9}
@@ -1917,8 +1917,8 @@ function BreadboardCanvas({
                   <text x={0} y={2} textAnchor="middle" fill="#e2e8f0" fontSize={7} fontFamily="monospace">{inst.referenceDesignator}</text>
                   <text x={0} y={12} textAnchor="middle" fill="#67e8f9" fontSize={5} fontFamily="monospace">{label.slice(0, 12)}</text>
                   {/* Pin connection points (simplified — 2 dots for generic) */}
-                  <circle cx={-25} cy={0} r={2} fill="#00F0FF" opacity={0.7} />
-                  <circle cx={25} cy={0} r={2} fill="#00F0FF" opacity={0.7} />
+                  <circle cx={-25} cy={0} r={2} fill="var(--color-editor-accent)" opacity={0.7} />
+                  <circle cx={25} cy={0} r={2} fill="var(--color-editor-accent)" opacity={0.7} />
                 </g>
               );
             })}
@@ -1965,7 +1965,7 @@ function BreadboardCanvas({
                   {isAnimated && (
                     <path
                       d={pathD}
-                      stroke="#00F0FF"
+                      stroke="var(--color-editor-accent)"
                       strokeWidth={(wire.width ?? 1.5) + 1.5}
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -1977,7 +1977,7 @@ function BreadboardCanvas({
                   )}
                   <path
                     d={pathD}
-                    stroke={isAnimated ? '#00F0FF' : isJumper ? '#f59e0b' : (wire.color ?? '#3498db')}
+                    stroke={isAnimated ? 'var(--color-editor-accent)' : isJumper ? '#f59e0b' : (wire.color ?? '#3498db')}
                     strokeWidth={isJumper ? 3 : (wire.width ?? 1.5)}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -2022,7 +2022,7 @@ function BreadboardCanvas({
                         <text
                           x={midPt.x + 4}
                           y={midPt.y + 1}
-                          fill="#00F0FF"
+                          fill="var(--color-editor-accent)"
                           fontSize={6}
                           fontFamily="monospace"
                           data-testid={`wire-sim-label-${wire.id}`}
@@ -2134,10 +2134,10 @@ function BreadboardCanvas({
                 return (
                   <g key={`sim-val-${inst.id}`} pointerEvents="none" data-testid={`sim-bb-value-${inst.referenceDesignator}`}>
                     <rect x={x + 8} y={y - 8} width={32} height={14} rx={2} fill="rgba(0,0,0,0.7)" stroke="rgba(0,240,255,0.2)" strokeWidth={0.5} />
-                    <text x={x + 10} y={y - 1} fill="#00F0FF" fontSize={5} fontFamily="monospace">
+                    <text x={x + 10} y={y - 1} fill="var(--color-editor-accent)" fontSize={5} fontFamily="monospace">
                       {formatSIValue(state.voltageDrop, 'V')}
                     </text>
-                    <text x={x + 10} y={y + 4} fill="#00F0FF" fontSize={5} fontFamily="monospace" opacity={0.7}>
+                    <text x={x + 10} y={y + 4} fill="var(--color-editor-accent)" fontSize={5} fontFamily="monospace" opacity={0.7}>
                       {formatSIValue(state.current, 'A')}
                     </text>
                   </g>
@@ -2177,20 +2177,20 @@ function BreadboardCanvas({
                     cy={pin.pixel.y}
                     r={5}
                     fill="rgba(0,240,255,0.14)"
-                    stroke="#00F0FF"
+                    stroke="var(--color-editor-accent)"
                     strokeWidth={1.2}
                   />
                   <circle
                     cx={pin.pixel.x}
                     cy={pin.pixel.y}
                     r={2}
-                    fill="#00F0FF"
+                    fill="var(--color-editor-accent)"
                     opacity={0.95}
                   />
                   <text
                     x={pin.pixel.x + 6}
                     y={pin.pixel.y - 6}
-                    fill="#00F0FF"
+                    fill="var(--color-editor-accent)"
                     fontSize={5}
                     fontFamily="monospace"
                   >
@@ -2208,7 +2208,7 @@ function BreadboardCanvas({
             className="absolute bottom-3 right-3 z-10 bg-card/70 backdrop-blur-sm border border-border px-2 py-1 pointer-events-none select-none"
             data-testid="coordinate-readout"
           >
-            <span className="text-[11px] font-mono tabular-nums text-[#00F0FF]">
+            <span className="text-[11px] font-mono tabular-nums text-[var(--color-editor-accent)]">
               X: {mouseBoardPos.x} &nbsp; Y: {mouseBoardPos.y}
             </span>
           </div>

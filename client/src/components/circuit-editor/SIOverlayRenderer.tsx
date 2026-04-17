@@ -329,7 +329,7 @@ const SIOverlayToggle = memo(function SIOverlayToggle({ manager, className }: SI
         {/* Simplified SI wave icon */}
         <path
           d="M2 8 Q5 2, 8 8 Q11 14, 14 8"
-          stroke={state.enabled ? '#00F0FF' : 'currentColor'}
+          stroke={state.enabled ? 'var(--color-editor-accent)' : 'currentColor'}
           strokeWidth="1.5"
           strokeLinecap="round"
           fill="none"
@@ -347,7 +347,7 @@ const SIOverlayToggle = memo(function SIOverlayToggle({ manager, className }: SI
             minWidth: 14,
             textAlign: 'center',
             borderRadius: 7,
-            backgroundColor: state.enabled ? '#00F0FF' : '#6B7280',
+            backgroundColor: state.enabled ? 'var(--color-editor-accent)' : '#6B7280',
             color: '#000',
             fontWeight: 600,
             padding: '0 3px',

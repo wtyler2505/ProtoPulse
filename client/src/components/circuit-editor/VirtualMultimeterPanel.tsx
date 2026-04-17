@@ -107,7 +107,7 @@ function MultimeterDisplay({
     <div
       data-testid="multimeter-display"
       className={cn(
-        'flex items-baseline justify-end gap-2 rounded-md border border-[#00F0FF]/30 bg-gray-950 px-4 py-3',
+        'flex items-baseline justify-end gap-2 rounded-md border border-[var(--color-editor-accent)]/30 bg-gray-950 px-4 py-3',
         'font-mono tabular-nums',
       )}
     >
@@ -115,8 +115,8 @@ function MultimeterDisplay({
         data-testid="multimeter-display-value"
         className={cn(
           'text-3xl font-bold tracking-wider',
-          overloaded ? 'text-red-400' : 'text-[#00F0FF]',
-          !valid && 'text-[#00F0FF]/40',
+          overloaded ? 'text-red-400' : 'text-[var(--color-editor-accent)]',
+          !valid && 'text-[var(--color-editor-accent)]/40',
         )}
       >
         {text}
@@ -124,7 +124,7 @@ function MultimeterDisplay({
       {valid && !overloaded && (
         <span
           data-testid="multimeter-display-unit"
-          className="text-sm text-[#00F0FF]/70"
+          className="text-sm text-[var(--color-editor-accent)]/70"
         >
           {displayUnit}
         </span>
@@ -156,7 +156,7 @@ function ModeSelector({
           size="sm"
           className={cn(
             'min-w-[3rem] px-2 text-xs',
-            currentMode === mode && 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/40',
+            currentMode === mode && 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/40',
           )}
           onClick={() => { onModeChange(mode); }}
           aria-pressed={currentMode === mode}
@@ -261,7 +261,7 @@ export function VirtualMultimeterPanel({
           <Badge
             data-testid="multimeter-auto-range"
             variant="outline"
-            className="text-[10px] px-1.5 py-0 text-[#00F0FF] border-[#00F0FF]/30"
+            className="text-[10px] px-1.5 py-0 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30"
           >
             AUTO
           </Badge>

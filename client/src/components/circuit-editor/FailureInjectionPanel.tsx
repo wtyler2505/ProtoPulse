@@ -104,7 +104,7 @@ function AddFaultForm({ components, onSubmit, onCancel }: AddFaultFormProps) {
 
   return (
     <div
-      className="flex flex-col gap-2 p-2 border border-[#00F0FF]/30 rounded-md bg-[#00F0FF]/5"
+      className="flex flex-col gap-2 p-2 border border-[var(--color-editor-accent)]/30 rounded-md bg-[var(--color-editor-accent)]/5"
       data-testid="fault-add-form"
     >
       {/* Component selector */}
@@ -169,7 +169,7 @@ function AddFaultForm({ components, onSubmit, onCancel }: AddFaultFormProps) {
               setSeverity(v);
             }
           }}
-          className="[&_[data-slot=range]]:bg-[#00F0FF] [&_[data-slot=thumb]]:border-[#00F0FF]/50"
+          className="[&_[data-slot=range]]:bg-[var(--color-editor-accent)] [&_[data-slot=thumb]]:border-[var(--color-editor-accent)]/50"
           aria-label="Fault severity"
           data-testid="fault-form-severity"
         />
@@ -334,7 +334,7 @@ export function FailureInjectionPanel({ className, components = {} }: FailureInj
     >
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-3 px-4">
         <CardTitle className="text-sm font-medium flex items-center gap-1.5">
-          <AlertTriangle className="w-3.5 h-3.5 text-[#00F0FF]" />
+          <AlertTriangle className="w-3.5 h-3.5 text-[var(--color-editor-accent)]" />
           Failure Injection
           {faults.length > 0 && (
             <Badge
@@ -375,7 +375,7 @@ export function FailureInjectionPanel({ className, components = {} }: FailureInj
           <Button
             variant="outline"
             size="sm"
-            className="w-full h-7 text-xs gap-1 border-dashed border-[#00F0FF]/30 text-[#00F0FF] hover:bg-[#00F0FF]/10"
+            className="w-full h-7 text-xs gap-1 border-dashed border-[var(--color-editor-accent)]/30 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/10"
             onClick={() => { setShowForm(true); }}
             data-testid="fault-add-button"
           >
@@ -402,11 +402,11 @@ export function FailureInjectionPanel({ className, components = {} }: FailureInj
         {/* Fault report summary */}
         {faults.length > 0 && (
           <div
-            className="rounded-md border border-[#00F0FF]/20 bg-[#00F0FF]/5 p-3 space-y-2"
+            className="rounded-md border border-[var(--color-editor-accent)]/20 bg-[var(--color-editor-accent)]/5 p-3 space-y-2"
             data-testid="fault-report"
           >
             <div className="flex items-center gap-1.5">
-              <Activity className="w-3 h-3 text-[#00F0FF]" />
+              <Activity className="w-3 h-3 text-[var(--color-editor-accent)]" />
               <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
                 Fault Report
               </span>

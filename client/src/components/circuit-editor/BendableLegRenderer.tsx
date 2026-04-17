@@ -113,7 +113,7 @@ const LegSvg = memo(({ leg, componentType, pinIndex }: LegSvgProps) => {
       {hovered && (
         <path
           d={d}
-          stroke="#00F0FF"
+          stroke="var(--color-editor-accent)"
           strokeWidth={2.5}
           strokeLinecap="round"
           fill="none"

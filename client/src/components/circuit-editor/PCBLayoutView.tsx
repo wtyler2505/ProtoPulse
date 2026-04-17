@@ -386,7 +386,7 @@ function PCBMiniMap({ boardWidth, boardHeight, instances, panOffset, zoom, conta
           width={vpMiniW}
           height={vpMiniH}
           fill="rgba(0, 240, 255, 0.12)"
-          stroke="#00F0FF"
+          stroke="var(--color-editor-accent)"
           strokeWidth={1}
           rx={1}
         />
@@ -1024,7 +1024,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                         'rgba(0, 0, 255, 0.2)'
                       }
                       stroke={
-                        selectedZoneId === zone.id ? '#00F0FF' :
+                        selectedZoneId === zone.id ? 'var(--color-editor-accent)' :
                         isTeardrop ? layerColor :
                         zone.zoneType === 'pour' ? '#00FF00' :
                         zone.zoneType === 'keepout' ? '#FF0000' :
@@ -1086,7 +1086,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                         <circle
                           r={6 / zoom}
                           fill={comment.status === 'resolved' ? "rgba(34, 197, 94, 0.2)" : "rgba(234, 179, 8, 0.2)"}
-                          stroke={isSelected ? "#00F0FF" : (comment.status === 'resolved' ? "#22c55e" : "#eab308")}
+                          stroke={isSelected ? "var(--color-editor-accent)" : (comment.status === 'resolved' ? "#22c55e" : "#eab308")}
                           strokeWidth={2 / zoom}
                         />
                         <text
@@ -1109,7 +1109,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                     <polyline
                       points={zonePoints.map(p => `${p.x},${p.y}`).join(' ')}
                       fill="none"
-                      stroke="#00F0FF"
+                      stroke="var(--color-editor-accent)"
                       strokeWidth={2 / zoom}
                     />
                     {/* Preview line to mouse */}
@@ -1119,7 +1119,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                         y1={zonePoints[zonePoints.length - 1].y}
                         x2={mouseBoardPos.x}
                         y2={mouseBoardPos.y}
-                        stroke="#00F0FF"
+                        stroke="var(--color-editor-accent)"
                         strokeWidth={1 / zoom}
                         strokeDasharray={`${2/zoom},${2/zoom}`}
                         opacity={0.6}
@@ -1131,13 +1131,13 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                         y1={zonePoints[zonePoints.length - 1].y}
                         x2={zonePoints[0].x}
                         y2={zonePoints[0].y}
-                        stroke="#00F0FF"
+                        stroke="var(--color-editor-accent)"
                         strokeWidth={1 / zoom}
                         strokeDasharray={`${4/zoom},${4/zoom}`}
                       />
                     )}
                     {zonePoints.map((p, i) => (
-                      <circle key={i} cx={p.x} cy={p.y} r={3 / zoom} fill="#00F0FF" />
+                      <circle key={i} cx={p.x} cy={p.y} r={3 / zoom} fill="var(--color-editor-accent)" />
                     ))}
                   </g>
                 )}
@@ -1152,7 +1152,7 @@ function PCBCanvas({ circuitId, projectId, circuitSettings, collaborationClient 
                     width={selectionRect.width}
                     height={selectionRect.height}
                     fill="rgba(0, 240, 255, 0.1)"
-                    stroke="#00F0FF"
+                    stroke="var(--color-editor-accent)"
                     strokeWidth={1 / zoom}
                     strokeDasharray={`${4 / zoom},${2 / zoom}`}
                   />

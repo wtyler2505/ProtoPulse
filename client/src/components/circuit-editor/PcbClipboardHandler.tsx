@@ -197,7 +197,7 @@ export function PcbClipboardHandler({
       <text
         x={cursorPos.x}
         y={cursorPos.y - 8}
-        fill="#00F0FF"
+        fill="var(--color-editor-accent)"
         fontSize={3}
         textAnchor="middle"
         data-testid="pcb-clipboard-toast"
@@ -237,7 +237,7 @@ function GhostTrace({ data }: { data: TraceData }) {
     <path
       d={d}
       fill="none"
-      stroke="#00F0FF"
+      stroke="var(--color-editor-accent)"
       strokeWidth={data.width}
       strokeDasharray="1 1"
       strokeLinecap="round"
@@ -253,9 +253,9 @@ function GhostZone({ data }: { data: ZoneData }) {
   return (
     <polygon
       points={points}
-      fill="#00F0FF"
+      fill="var(--color-editor-accent)"
       fillOpacity={0.15}
-      stroke="#00F0FF"
+      stroke="var(--color-editor-accent)"
       strokeWidth={0.2}
       strokeDasharray="1 1"
     />
@@ -269,7 +269,7 @@ function GhostVia({ data }: { data: ViaData }) {
       cy={data.position.y}
       r={data.outerDiameter / 2}
       fill="none"
-      stroke="#00F0FF"
+      stroke="var(--color-editor-accent)"
       strokeWidth={0.15}
       strokeDasharray="0.5 0.5"
     />
@@ -284,7 +284,7 @@ function GhostInstance({ data }: { data: InstanceData }) {
       width={4}
       height={3}
       fill="none"
-      stroke="#00F0FF"
+      stroke="var(--color-editor-accent)"
       strokeWidth={0.2}
       strokeDasharray="0.5 0.5"
       transform={`rotate(${String(data.rotation)} ${String(data.position.x)} ${String(data.position.y)})`}

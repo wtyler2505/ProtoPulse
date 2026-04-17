@@ -414,7 +414,7 @@ export function SerialPlotterPanel() {
               key={ch.index}
               className={cn(
                 'flex items-center gap-1.5 px-2 py-1 rounded text-xs cursor-pointer select-none',
-                'border border-transparent hover:border-[#00F0FF]/30',
+                'border border-transparent hover:border-[var(--color-editor-accent)]/30',
                 !ch.visible && 'opacity-40',
               )}
               onClick={() => {

@@ -189,7 +189,7 @@ export default function BaudRateSelector({
             size="sm"
             className={cn(
               'h-6 text-[10px] px-2',
-              state.selectedRate === rate && 'bg-[#00F0FF]/15 text-[#00F0FF] border-[#00F0FF]/30',
+              state.selectedRate === rate && 'bg-[var(--color-editor-accent)]/15 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30',
             )}
             onClick={() => handleQuickPick(rate)}
           >
@@ -217,7 +217,7 @@ export default function BaudRateSelector({
         {/* Detected rate + confidence badge */}
         {state.detectedRate !== null && state.confidence > 0 && (
           <div className="flex items-center gap-1">
-            <Zap className="w-3 h-3 text-[#00F0FF]" />
+            <Zap className="w-3 h-3 text-[var(--color-editor-accent)]" />
             <span className="text-[10px] text-muted-foreground">
               {manager.formatRate(state.detectedRate)}
             </span>
@@ -279,7 +279,7 @@ export default function BaudRateSelector({
           <button
             data-testid="baud-rate-last-used"
             type="button"
-            className="text-[#00F0FF] hover:underline cursor-pointer"
+            className="text-[var(--color-editor-accent)] hover:underline cursor-pointer"
             onClick={() => handleQuickPick(state.lastUsedRate)}
           >
             {manager.formatRate(state.lastUsedRate)}
@@ -300,7 +300,7 @@ export default function BaudRateSelector({
           <button
             data-testid="baud-rate-try-auto-detect"
             type="button"
-            className="text-[#00F0FF] hover:underline cursor-pointer ml-1"
+            className="text-[var(--color-editor-accent)] hover:underline cursor-pointer ml-1"
             onClick={handleTryAutoDetect}
           >
             Try auto-detect

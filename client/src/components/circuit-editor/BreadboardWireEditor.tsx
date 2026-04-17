@@ -367,7 +367,7 @@ export default function BreadboardWireEditor({
           cx={jp.x}
           cy={jp.y}
           r={3 / zoom}
-          fill="#00F0FF"
+          fill="var(--color-editor-accent)"
           stroke="#ffffff"
           strokeWidth={0.5 / zoom}
           pointerEvents="none"

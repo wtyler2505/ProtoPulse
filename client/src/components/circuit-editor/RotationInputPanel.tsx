@@ -88,14 +88,14 @@ function AngleIndicator({ angle }: AngleIndicatorProps) {
         );
       })}
       {/* Center dot */}
-      <circle cx={cx} cy={cy} r={2} className="fill-[#00F0FF]" />
+      <circle cx={cx} cy={cy} r={2} className="fill-[var(--color-editor-accent)]" />
       {/* Direction line */}
       <line
         x1={cx}
         y1={cy}
         x2={lineX}
         y2={lineY}
-        stroke="#00F0FF"
+        stroke="var(--color-editor-accent)"
         strokeWidth={2}
         strokeLinecap="round"
       />
@@ -186,7 +186,7 @@ export function RotationInputPanel({
               size="sm"
               className={cn(
                 'h-6 px-2 text-[10px] font-mono',
-                angle === preset && 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/30',
+                angle === preset && 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/30',
               )}
               onClick={() => { onChange(preset); }}
               data-testid={`rotation-preset-${preset}`}

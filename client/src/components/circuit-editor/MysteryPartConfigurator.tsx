@@ -122,7 +122,7 @@ function MysteryPartPreview({ config }: PreviewProps) {
         width={bodyW}
         height={bodyH}
         fill="#2A2A2A"
-        stroke="#00F0FF"
+        stroke="var(--color-editor-accent)"
         strokeWidth={2}
         rx={3}
       />
@@ -132,7 +132,7 @@ function MysteryPartPreview({ config }: PreviewProps) {
         y={PAD + bodyH / 2}
         textAnchor="middle"
         dominantBaseline="central"
-        fill="#00F0FF"
+        fill="var(--color-editor-accent)"
         fontSize={10}
         fontFamily="monospace"
       >

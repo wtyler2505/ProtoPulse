@@ -206,7 +206,7 @@ function ParameterTable({
             data-testid={`wca-param-row-${p.id}`}
           >
             <div className="flex items-center gap-2 min-w-0">
-              <span className="font-mono font-medium text-[#00F0FF] shrink-0">{p.id}</span>
+              <span className="font-mono font-medium text-[var(--color-editor-accent)] shrink-0">{p.id}</span>
               <span className="text-muted-foreground truncate">{p.name}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -249,7 +249,7 @@ function CornerResultsTable({ result }: { result: WCAResult }) {
           <div
             key={corner.type}
             className={`flex items-center justify-between px-2 py-1.5 rounded text-xs ${
-              isWorst && corner.type !== 'nominal' ? 'ring-1 ring-[#00F0FF]/40' : 'bg-muted/30'
+              isWorst && corner.type !== 'nominal' ? 'ring-1 ring-[var(--color-editor-accent)]/40' : 'bg-muted/30'
             }`}
             data-testid={`wca-corner-${corner.type}`}
           >
@@ -279,11 +279,11 @@ function CornerResultsTable({ result }: { result: WCAResult }) {
       })}
 
       <div
-        className="flex items-center justify-between px-2 py-2 mt-2 rounded bg-[#00F0FF]/5 border border-[#00F0FF]/20 text-xs"
+        className="flex items-center justify-between px-2 py-2 mt-2 rounded bg-[var(--color-editor-accent)]/5 border border-[var(--color-editor-accent)]/20 text-xs"
         data-testid="wca-spread"
       >
-        <span className="font-medium text-[#00F0FF]">Total Spread</span>
-        <span className="font-mono font-medium text-[#00F0FF]">
+        <span className="font-medium text-[var(--color-editor-accent)]">Total Spread</span>
+        <span className="font-mono font-medium text-[var(--color-editor-accent)]">
           {result.spread.toPrecision(6)}
         </span>
       </div>
@@ -407,7 +407,7 @@ export function WorstCaseAnalysisPanel() {
     <Card className="border-border/50" data-testid="wca-panel">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-[#00F0FF]" />
+          <BarChart3 className="h-4 w-4 text-[var(--color-editor-accent)]" />
           Worst-Case Analysis
         </CardTitle>
       </CardHeader>
@@ -422,7 +422,7 @@ export function WorstCaseAnalysisPanel() {
         <Button
           onClick={handleRun}
           disabled={parameters.length === 0 || running}
-          className="w-full h-8 text-xs bg-[#00F0FF]/10 text-[#00F0FF] hover:bg-[#00F0FF]/20 border border-[#00F0FF]/30"
+          className="w-full h-8 text-xs bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)] hover:bg-[var(--color-editor-accent)]/20 border border-[var(--color-editor-accent)]/30"
           variant="outline"
           data-testid="wca-run-button"
         >

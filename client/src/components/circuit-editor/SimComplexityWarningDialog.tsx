@@ -197,7 +197,7 @@ function SuggestionCards({ suggestions }: { suggestions: string[] }) {
   return (
     <div data-testid="suggestion-list" className="space-y-2">
       <h4 className="text-sm font-medium text-zinc-300 flex items-center gap-1.5">
-        <Lightbulb className="h-3.5 w-3.5 text-[#00F0FF]" />
+        <Lightbulb className="h-3.5 w-3.5 text-[var(--color-editor-accent)]" />
         Suggestions
       </h4>
       {suggestions.map((s, i) => (
@@ -206,7 +206,7 @@ function SuggestionCards({ suggestions }: { suggestions: string[] }) {
           data-testid={`suggestion-item-${i}`}
           className="flex items-start gap-2 rounded-md border border-zinc-700 bg-zinc-900/50 p-2.5 text-sm text-zinc-300"
         >
-          <span className="text-[#00F0FF] font-medium shrink-0">{i + 1}.</span>
+          <span className="text-[var(--color-editor-accent)] font-medium shrink-0">{i + 1}.</span>
           <span>{s}</span>
         </div>
       ))}
@@ -248,7 +248,7 @@ export default function SimComplexityWarningDialog({
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-[#00F0FF]" />
+            <Cpu className="h-5 w-5 text-[var(--color-editor-accent)]" />
             Simulation Complexity Analysis
           </DialogTitle>
           <DialogDescription>
@@ -282,7 +282,7 @@ export default function SimComplexityWarningDialog({
               onRunAnyway();
               onOpenChange(false);
             }}
-            className={highestLevel !== 'danger' ? 'bg-[#00F0FF] text-black hover:bg-[#00D4E0]' : undefined}
+            className={highestLevel !== 'danger' ? 'bg-[var(--color-editor-accent)] text-black hover:bg-[#00D4E0]' : undefined}
           >
             {warnings.length > 0 ? 'Run Anyway' : 'Run Simulation'}
           </Button>

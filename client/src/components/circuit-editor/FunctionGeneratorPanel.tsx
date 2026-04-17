@@ -131,7 +131,7 @@ function WaveformPreview({
       width={PREVIEW_WIDTH}
       height={PREVIEW_HEIGHT}
       viewBox={`0 0 ${PREVIEW_WIDTH} ${PREVIEW_HEIGHT}`}
-      className="w-full rounded border border-[#00F0FF]/20 bg-gray-950"
+      className="w-full rounded border border-[var(--color-editor-accent)]/20 bg-gray-950"
       aria-label={`${WAVEFORM_LABELS[waveform]} waveform preview`}
     >
       {/* Zero line */}
@@ -148,7 +148,7 @@ function WaveformPreview({
       <polyline
         points={points}
         fill="none"
-        stroke="#00F0FF"
+        stroke="var(--color-editor-accent)"
         strokeWidth={1.5}
         strokeLinejoin="round"
       />
@@ -250,7 +250,7 @@ export function FunctionGeneratorPanel({
           size="icon"
           className={cn(
             'h-7 w-7',
-            enabled ? 'text-[#00F0FF]' : 'text-muted-foreground',
+            enabled ? 'text-[var(--color-editor-accent)]' : 'text-muted-foreground',
           )}
           onClick={() => { gen.setEnabled(!enabled); }}
           aria-label={enabled ? 'Disable generator' : 'Enable generator'}
@@ -278,7 +278,7 @@ export function FunctionGeneratorPanel({
             size="sm"
             className={cn(
               'min-w-[3.5rem] flex-1 px-2 text-xs',
-              waveform === w && 'bg-[#00F0FF]/20 text-[#00F0FF] border-[#00F0FF]/40',
+              waveform === w && 'bg-[var(--color-editor-accent)]/20 text-[var(--color-editor-accent)] border-[var(--color-editor-accent)]/40',
             )}
             onClick={() => { gen.setWaveform(w); }}
             aria-pressed={waveform === w}

@@ -95,7 +95,7 @@ export function AudioOutputIndicator({ className }: AudioOutputIndicatorProps) {
         size="sm"
         className={cn(
           'relative h-7 w-7 p-0',
-          isSounding && 'text-[#00F0FF]',
+          isSounding && 'text-[var(--color-editor-accent)]',
           state.muted && 'text-muted-foreground',
         )}
         onClick={handleMuteToggle}
@@ -115,9 +115,9 @@ export function AudioOutputIndicator({ className }: AudioOutputIndicatorProps) {
             className="absolute -right-0.5 top-1/2 -translate-y-1/2"
             aria-hidden="true"
           >
-            <span className="absolute h-1.5 w-1.5 animate-ping rounded-full bg-[#00F0FF]/40" />
+            <span className="absolute h-1.5 w-1.5 animate-ping rounded-full bg-[var(--color-editor-accent)]/40" />
             <span
-              className="absolute h-1.5 w-1.5 animate-ping rounded-full bg-[#00F0FF]/30"
+              className="absolute h-1.5 w-1.5 animate-ping rounded-full bg-[var(--color-editor-accent)]/30"
               style={{ animationDelay: '150ms' }}
             />
           </span>
@@ -129,7 +129,7 @@ export function AudioOutputIndicator({ className }: AudioOutputIndicatorProps) {
         data-testid="audio-frequency-display"
         className={cn(
           'min-w-[4.5rem] text-right font-mono text-xs tabular-nums',
-          isSounding ? 'text-[#00F0FF]' : 'text-muted-foreground',
+          isSounding ? 'text-[var(--color-editor-accent)]' : 'text-muted-foreground',
         )}
       >
         {state.playing ? formatFrequency(state.frequency) : '--'}

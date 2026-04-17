@@ -304,13 +304,13 @@ export function BreadboardCoachPlanOverlay({
                     height={12}
                     rx={3}
                     fill="rgba(0,240,255,0.15)"
-                    stroke="#00F0FF"
+                    stroke="var(--color-editor-accent)"
                     strokeWidth={0.75}
                   />
                   <text
                     x={btnX + 18}
                     y={btnY + 8}
-                    fill="#00F0FF"
+                    fill="var(--color-editor-accent)"
                     fontSize={5}
                     fontFamily="monospace"
                     textAnchor="middle"

@@ -213,7 +213,7 @@ export default function BoardSettingsDialog({ open, onOpenChange }: BoardSetting
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col" data-testid="board-settings-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-[#00F0FF]" />
+            <Cpu className="h-5 w-5 text-[var(--color-editor-accent)]" />
             Board Settings
           </DialogTitle>
           <DialogDescription>
@@ -251,7 +251,7 @@ export default function BoardSettingsDialog({ open, onOpenChange }: BoardSetting
                         className={cn(
                           'w-full flex items-center justify-between px-3 py-1.5 rounded-sm text-sm cursor-pointer transition-colors',
                           draftFqbn === preset.fqbn
-                            ? 'bg-[#00F0FF]/10 text-[#00F0FF]'
+                            ? 'bg-[var(--color-editor-accent)]/10 text-[var(--color-editor-accent)]'
                             : 'hover:bg-muted/50',
                         )}
                         onClick={() => {
