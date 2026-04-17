@@ -131,6 +131,28 @@ function boardProfileCheck(data: ProjectExportData): PrecheckResult {
     : check('Board Profile', 'warn', 'No board profile selected — firmware will use a generic template.');
 }
 
+/**
+ * BL-0150 — inventory shortfall warning for fab/pick-and-place exports.
+ *
+ * Warns (never blocks) when the BOM demands more units than the project has
+ * on hand. If `bomShortfallUnits` is `undefined` the inventory panel hasn't
+ * loaded — we stay quiet instead of fabricating a "pass".
+ */
+function bomShortfallCheck(data: ProjectExportData): PrecheckResult {
+  if (data.bomShortfallUnits === undefined) {
+    return check('Inventory Coverage', 'pass', 'Inventory data not loaded; skipping shortfall check.');
+  }
+  if (data.bomShortfallUnits === 0) {
+    return check('Inventory Coverage', 'pass', 'All BOM items covered by on-hand stock.');
+  }
+  const lines = data.bomShortfallLineCount ?? 0;
+  return check(
+    'Inventory Coverage',
+    'warn',
+    `${data.bomShortfallUnits} unit${data.bomShortfallUnits === 1 ? '' : 's'} short across ${lines} BOM line${lines === 1 ? '' : 's'} — order parts before fab.`,
+  );
+}
+
 function bomFailureDataCheck(data: ProjectExportData): PrecheckResult {
   if (data.bomItemCount === 0) {
     return check('Failure Mode Data', 'fail', 'No BOM items — cannot check failure data.');
@@ -175,6 +197,7 @@ function fabPackageChecks(data: ProjectExportData): PrecheckResult[] {
     circuitInstanceCheck(data),
     bomItemCheck(data),
     bomPartNumberCheck(data),
+    bomShortfallCheck(data),
   ];
 }
 
@@ -260,6 +283,7 @@ function pickPlaceChecks(data: ProjectExportData): PrecheckResult[] {
     sessionCheck(data),
     projectNameCheck(data, false),
     pcbLayoutCheck(data),
+    bomShortfallCheck(data),
   ];
 }
 

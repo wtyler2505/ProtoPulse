@@ -96,7 +96,7 @@ describe('escapeCSV', () => {
 
   it('wraps values containing double-quotes in quotes, escaping quotes by doubling', () => {
     expect(escapeCSV('say "hi"')).toBe('"say ""hi"""');
-    expect(escapeCSV('"start')).toBe('""""start"');
+    expect(escapeCSV('"start')).toBe('"""start"');
     expect(escapeCSV('end"')).toBe('"end"""');
   });
 

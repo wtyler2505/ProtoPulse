@@ -44,12 +44,35 @@ export interface ShareProjectButtonProps {
 
 export function ShareProjectButton({ projectId }: ShareProjectButtonProps) {
   const { sessionId } = useAuth();
-  const { connectionState, activeUsers, myRole } = useCollaboration(
+  const { connectionState, activeUsers, myRole, pendingConflicts, resolveConflict } = useCollaboration(
     projectId,
     sessionId ?? '',
   );
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [conflictOpen, setConflictOpen] = useState(false);
+
+  // BL-0524: Auto-open the conflict dialog the first time a conflict arrives.
+  useEffect(() => {
+    if (pendingConflicts.length > 0 && !conflictOpen) {
+      setConflictOpen(true);
+    }
+    if (pendingConflicts.length === 0 && conflictOpen) {
+      setConflictOpen(false);
+    }
+  }, [pendingConflicts.length, conflictOpen]);
+
+  // BL-0524: Alt+K keyboard shortcut to re-open the conflict dialog.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.altKey && (e.key === 'k' || e.key === 'K') && pendingConflicts.length > 0) {
+        e.preventDefault();
+        setConflictOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); };
+  }, [pendingConflicts.length]);
 
   const { visible, overflowCount } = useMemo(
     () => computeAvatarOverflow(activeUsers.length),
@@ -117,6 +140,23 @@ export function ShareProjectButton({ projectId }: ShareProjectButtonProps) {
         </button>
       </StyledTooltip>
 
+      {pendingConflicts.length > 0 && (
+        <StyledTooltip
+          content={`${String(pendingConflicts.length)} collaboration conflict${pendingConflicts.length !== 1 ? 's' : ''} waiting for review (Alt+K)`}
+          side="bottom"
+        >
+          <button
+            data-testid="button-conflict-badge"
+            onClick={() => { setConflictOpen(true); }}
+            className="flex items-center gap-1 px-2 py-1 rounded-sm bg-amber-500/20 text-amber-500 hover:bg-amber-500/30 transition-colors"
+            aria-label="Review collaboration conflicts"
+          >
+            <AlertTriangle className="w-3.5 h-3.5" />
+            <span className="text-xs font-semibold">{pendingConflicts.length}</span>
+          </button>
+        </StyledTooltip>
+      )}
+
       <ShareProjectDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -124,6 +164,13 @@ export function ShareProjectButton({ projectId }: ShareProjectButtonProps) {
         connectionState={connectionState}
         activeUsers={activeUsers}
         myRole={myRole}
+      />
+
+      <ConflictResolutionDialog
+        conflicts={pendingConflicts}
+        open={conflictOpen}
+        onOpenChange={setConflictOpen}
+        onResolve={resolveConflict}
       />
     </>
   );
