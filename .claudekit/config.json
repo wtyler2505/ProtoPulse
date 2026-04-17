@@ -1,12 +1,12 @@
 {
   "hooks": {
     "typecheck-changed": {
-      "timeout": 180000,
-      "command": "NODE_OPTIONS='--max-old-space-size=4096' npx tsc --noEmit"
+      "timeout": 600000,
+      "command": "NODE_OPTIONS='--max-old-space-size=16384' npx tsc --noEmit"
     },
     "typecheck-project": {
-      "timeout": 180000,
-      "command": "NODE_OPTIONS='--max-old-space-size=4096' npx tsc --noEmit"
+      "timeout": 600000,
+      "command": "NODE_OPTIONS='--max-old-space-size=16384' npx tsc --noEmit"
     }
   }
 }

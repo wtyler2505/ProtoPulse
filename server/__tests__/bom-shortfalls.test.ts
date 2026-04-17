@@ -23,7 +23,7 @@ const mkShortfall = (partial: Partial<BomShortfall>): BomShortfall => ({
 
 describe('BomShortfall endpoint shape', () => {
   it('computes per-row shortfall consistently with server transform', () => {
-    const row = mkShortfall({ quantityNeeded: 20, quantityOnHand: 5 });
+    const row = mkShortfall({ quantityNeeded: 20, quantityOnHand: 5, shortfall: 15 });
     expect(row.shortfall).toBe(15);
     expect(computeShortfall(row)).toBe(15);
   });

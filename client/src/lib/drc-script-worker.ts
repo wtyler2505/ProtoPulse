@@ -115,12 +115,51 @@ const BLOCKED_GLOBALS = [
 
 // ---------------------------------------------------------------------------
 // Block prototype-chain escape
+//
+// 1. `globalThis.constructor` — block `globalThis.constructor('return fetch')()`.
+// 2. `Function.prototype.constructor` — block the more powerful attack
+//    `(function(){}).constructor('return globalThis')()` which reaches the
+//    real Function constructor through ANY function literal's prototype
+//    chain. Shadowing the `Function` global does NOT protect against this
+//    because `fn.constructor` resolves via the prototype chain, bypassing
+//    the shadowed lexical binding.
+// 3. Generator + async constructor variants are also reachable via
+//    `(function*(){}).constructor` and `(async function(){}).constructor` —
+//    freeze their prototype.constructor too.
+//
+// Redefining `constructor` to `undefined` does NOT break legitimate user
+// code — user DRC scripts write `function foo() {}` and `var x = new Date()`
+// which don't traverse `.constructor`. Only sandbox-escape attacks touch it.
 // ---------------------------------------------------------------------------
 
+function freezeConstructor(target: object | null | undefined): void {
+  if (!target) return;
+  try {
+    Object.defineProperty(target, 'constructor', {
+      value: undefined,
+      writable: false,
+      configurable: false,
+    });
+  } catch {
+    // Best-effort — some engines may not allow redefining constructor
+  }
+}
+
+freezeConstructor(globalThis);
+freezeConstructor(Function.prototype);
 try {
-  Object.defineProperty(globalThis, 'constructor', { value: undefined, writable: false, configurable: false });
+  // Generator functions: (function*(){}).constructor === GeneratorFunction
+  const genProto = Object.getPrototypeOf(function* () {});
+  freezeConstructor(genProto);
 } catch {
-  // Best-effort — some engines may not allow redefining constructor
+  // Engine may not support generator syntax in strict mode
+}
+try {
+  // Async functions: (async function(){}).constructor === AsyncFunction
+  const asyncProto = Object.getPrototypeOf(async function () {});
+  freezeConstructor(asyncProto);
+} catch {
+  // Engine may not support async syntax in strict mode
 }
 
 // ---------------------------------------------------------------------------

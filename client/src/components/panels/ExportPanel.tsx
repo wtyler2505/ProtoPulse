@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useProjectId } from '@/lib/contexts/project-id-context';
 import { useProjectMeta } from '@/lib/project-context';
+import { useBomShortfalls } from '@/lib/parts/use-bom-shortfalls';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { useBom } from '@/lib/contexts/bom-context';
 import { useArduino } from '@/lib/contexts/arduino-context';
@@ -304,6 +305,7 @@ type DownloadState = 'idle' | 'loading' | 'success' | 'error';
 function ExportPanel() {
   const projectId = useProjectId();
   const { projectName } = useProjectMeta();
+  const { data: shortfallsResp } = useBomShortfalls(projectId);
   const { nodes, edges } = useArchitecture();
   const { bom } = useBom();
   const { issues } = useValidation();
@@ -408,6 +410,9 @@ function ExportPanel() {
     hasCircuitComponent: selectedCircuitHasComponents,
     hasBoardProfile: profiles.length > 0,
     bomItemsWithFailureData: 0,
+    // BL-0150 — inventory shortfall signal for fab/pick-and-place precheck.
+    bomShortfallUnits: shortfallsResp?.totalShortfallUnits,
+    bomShortfallLineCount: shortfallsResp?.total,
   }), [
     bom,
     nodes.length,
@@ -417,6 +422,8 @@ function ExportPanel() {
     selectedCircuitHasInstances,
     selectedCircuitHasPcbLayout,
     selectedCircuitHasSource,
+    shortfallsResp?.totalShortfallUnits,
+    shortfallsResp?.total,
   ]);
 
   // Pre-compute validation results for all formats

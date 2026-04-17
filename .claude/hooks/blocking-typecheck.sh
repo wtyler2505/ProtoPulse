@@ -6,7 +6,11 @@
 
 cd /home/wtyler/Projects/ProtoPulse
 
-OUTPUT=$(NODE_OPTIONS="--max-old-space-size=4096" timeout 120 npm run check 2>&1)
+# Use 16GB heap (same as package.json's npm run check script) — the 4GB cap
+# here was SIGTERMing tsc before completion, producing false "failed" output.
+# Timeout 600s (10 min) since initial tsc can take 2-3 min at 16GB heap.
+# See task #43 + #71 for context.
+OUTPUT=$(NODE_OPTIONS="--max-old-space-size=16384" timeout 600 npm run check 2>&1)
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -ne 0 ]; then

@@ -102,6 +102,30 @@ const WORKER_CODE = `
   }
 })();
 
+// ── Block prototype-chain escape paths ──
+// The \`new Function()\` eval below runs user DSL code. Shadowing the global
+// \`Function\` binding is NOT sufficient because \`(function(){}).constructor\`
+// reaches the real Function constructor through any function literal's
+// prototype chain. Freeze the \`constructor\` property on all function
+// prototypes to close that escape — same pattern as drc-script-worker.
+// See task #70 for the initial fix that motivated this one.
+(function() {
+  function freezeConstructor(target) {
+    if (!target) return;
+    try {
+      Object.defineProperty(target, 'constructor', {
+        value: undefined,
+        writable: false,
+        configurable: false
+      });
+    } catch(e) {}
+  }
+  freezeConstructor(self);
+  freezeConstructor(Function.prototype);
+  try { freezeConstructor(Object.getPrototypeOf(function*(){})); } catch(e) {}
+  try { freezeConstructor(Object.getPrototypeOf(async function(){})); } catch(e) {}
+})();
+
 // ── Inline Circuit Builder API ──
 function createCircuitBuilder(name, componentCatalog) {
   var components = [];

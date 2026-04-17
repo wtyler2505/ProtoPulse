@@ -241,6 +241,7 @@ function bomCsvChecks(data: ProjectExportData): PrecheckResult[] {
     projectNameCheck(data, false),
     bomItemCheck(data),
     bomPartNumberCheck(data),
+    bomShortfallCheck(data),
   ];
 }
 

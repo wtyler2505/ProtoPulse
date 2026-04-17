@@ -555,3 +555,90 @@ describe('Collaboration — BL-0486: CRDT merge during state updates', () => {
     expect(updates[1].payload.version).toBe(2);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/*  BL-0524: Conflict-detected emission + resolve-mine convergence     */
+/* ------------------------------------------------------------------ */
+
+describe('Collaboration — BL-0524: Conflict UI wire (detection + convergence)', () => {
+  let server: CollaborationServer;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    mockValidateSession.mockResolvedValue({ userId: 1 });
+    mockGetUserById.mockResolvedValue({ username: 'alice' });
+    mockIsProjectOwner.mockResolvedValue(true);
+    mockGetProject.mockResolvedValue({ id: 1, ownerId: 1 });
+    mockGetProjectMembers.mockResolvedValue([]);
+    const httpServer = new EventEmitter();
+    server = new CollaborationServer(httpServer as unknown as import('http').Server);
+  });
+
+  afterEach(() => {
+    server.shutdown();
+    vi.useRealTimers();
+    vi.clearAllMocks();
+  });
+
+  it('emits conflict-detected to the LWW-losing client only', async () => {
+    const ws1 = await simulateJoin(1, 'session-a', { userId: 1, isOwner: true });
+    const ws2 = await simulateJoin(1, 'session-b', { userId: 2, isOwner: false });
+
+    // User 2 updates node n1 first — wins the race, lands in recent window
+    sendMessage(ws2, makeMsg('state-update', {
+      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' } }],
+    }, 2));
+
+    // User 1 sends a conflicting update for the same key — server has a newer
+    // Lamport for user 2's op, so user 1 loses LWW and is dropped.
+    sendMessage(ws1, makeMsg('state-update', {
+      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } }],
+    }, 1));
+
+    // User 1 should receive a conflict-detected message
+    const conflicts1 = getMessagesByType(ws1, 'conflict-detected');
+    expect(conflicts1).toHaveLength(1);
+    const list = conflicts1[0].payload.conflicts as Array<Record<string, unknown>>;
+    expect(list).toHaveLength(1);
+    expect(list[0].kind).toBe('lww-update');
+    expect(list[0].key).toBe('n1');
+
+    // User 2 (winner) must NOT receive a conflict message
+    const conflicts2 = getMessagesByType(ws2, 'conflict-detected');
+    expect(conflicts2).toHaveLength(0);
+  });
+
+  it('converges both clients when the loser re-applies their op ("accept mine")', async () => {
+    const ws1 = await simulateJoin(1, 'session-a', { userId: 1, isOwner: true });
+    const ws2 = await simulateJoin(1, 'session-b', { userId: 2, isOwner: false });
+
+    // User 2 wins the initial LWW race.
+    sendMessage(ws2, makeMsg('state-update', {
+      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' } }],
+    }, 2));
+
+    // User 1 loses LWW → dropped, receives conflict-detected.
+    sendMessage(ws1, makeMsg('state-update', {
+      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } }],
+    }, 1));
+
+    // Simulate the client "accept mine" path: re-send the losing op WITHOUT
+    // server-assigned timestamp/clientId so the server re-tags with a fresh
+    // Lamport clock (which will now beat user 2's stale timestamp).
+    const sentBefore2 = ws2.sent.length;
+    sendMessage(ws1, makeMsg('state-update', {
+      operations: [{ op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } }],
+    }, 1));
+
+    // User 2 must now see a state-update flipping the value to "mine".
+    const updatesTo2 = getMessagesByType(ws2, 'state-update', sentBefore2);
+    expect(updatesTo2.length).toBeGreaterThanOrEqual(1);
+    const lastOps = updatesTo2[updatesTo2.length - 1].payload.operations as Array<Record<string, unknown>>;
+    expect(lastOps).toHaveLength(1);
+    expect(lastOps[0]).toMatchObject({
+      op: 'update',
+      key: 'n1',
+      value: { label: 'mine' },
+    });
+  });
+});

@@ -221,19 +221,26 @@ describe('drc-script-worker sandbox — blocked globals', () => {
 });
 
 describe('drc-script-worker sandbox — escape attempts', () => {
-  it('Function.constructor escape produces no successful global access', async () => {
-    // Attempt: (function(){}).constructor('return window')()
+  it('Function.constructor escape via function literal prototype is now blocked (patched)', async () => {
+    // ATTACK: `(function(){}).constructor` used to return the real Function
+    // constructor because the sandbox shadowed the global `Function` but not
+    // `Function.prototype.constructor` reachable via any function literal's
+    // prototype chain.
+    //
+    // FIX (2026-04-17): the worker now freezes Function.prototype.constructor
+    // (plus GeneratorFunction + AsyncFunction prototypes) to undefined at
+    // module load. This test was originally `it.fails` documenting the live
+    // vuln; it was flipped to `it` after the patch landed.
     const result = await runScript(`
       try {
-        var fn = (function(){}).constructor('return window');
+        var fn = (function(){}).constructor('return typeof globalThis');
         var w = fn();
-        if (w) report('LEAK', 'escape succeeded: ' + typeof w, 'error', []);
+        if (w && w !== 'undefined') report('LEAK', 'escape succeeded: got ' + w, 'error', []);
         else report('OK', 'blocked', 'info', []);
       } catch (e) {
         report('OK', 'threw: ' + e.message, 'info', []);
       }
     `);
-    // Either the attempt threw, or it returned undefined — NEVER a leak
     expect(result.violations.some(v => v.ruleId === 'LEAK')).toBe(false);
   });
 

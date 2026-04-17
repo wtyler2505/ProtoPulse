@@ -16,7 +16,7 @@
  * of ProtoPulse's cyberpunk-adjacent UI language.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import type { Conflict, ConflictKind, CRDTOperation } from '@shared/collaboration';
 import {
   Dialog,
@@ -79,7 +79,7 @@ export function ConflictResolutionDialog({
   open,
   onOpenChange,
   onResolve,
-}: ConflictResolutionDialogProps): JSX.Element | null {
+}: ConflictResolutionDialogProps): ReactElement | null {
   const [activeIndex, setActiveIndex] = useState(0);
   const [mergeDraft, setMergeDraft] = useState('');
 

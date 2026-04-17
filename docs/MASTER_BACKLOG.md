@@ -83,7 +83,7 @@
 |--------|---------------|-------|
 | Tracked scope | High | 508 total items across delivery work, parity gaps, audits, and long-term vision. |
 | Duplicate risk | Medium-High | Consolidated from multiple source docs and competitive audits; cross-tool items likely overlap unless regularly merged. |
-| Explicitly blocked items | 1 | `BL-0524` is explicitly blocked; firmware/debugger/platform blockers resolved by Pure-Local Desktop App pivot (ADR 0007/0008). |
+| Explicitly blocked items | 0 | `BL-0524` unblocked by Wave 67 (BL-0486 already DONE) and closed Wave 152; firmware/debugger/platform blockers resolved by Pure-Local Desktop App pivot (ADR 0007/0008). |
 | Epic decomposition need | High | Several initiatives are too large to execute safely as single rows and need parent/child planning. |
 | Acceptance/verification metadata | Medium-High gap | Many older `OPEN` items still lack explicit acceptance criteria, effort, confidence, or verification notes. |
 | Complexity scoring coverage | High | All 508 detailed backlog rows plus epics, wave candidates, and `Next Up` now have a first-pass `C1`-`C5` score. |
@@ -91,6 +91,8 @@
 
 ## Change Log
 
+- **2026-04-17:** Wave 152 — closed `BL-0524` (Conflict resolution UI). BL-0486 (CRDT conflict resolution algorithm) had landed in Wave 67 but the losing-op UX was never surfaced — server silently dropped LWW-losers, insert-superseded, and delete-rejected operations. Added `detectConflict()` + `Conflict` + `ConflictKind` types in `shared/collaboration.ts` (9 new tests), instrumented `server/collaboration.ts#mergeAndBroadcastOps` to emit a server→loser `conflict-detected` WS message with the losing op + the authoritative winning op (no dedicated REST resolve route — "accept mine" re-uses the existing `state-update` path with a fresh Lamport timestamp). Extended `CollaborationClient` with `pendingConflicts`/`resolveConflict`/`conflicts-change` event + `dismissConflict` (4 new client tests). New `client/src/components/collaboration/ConflictResolutionDialog.tsx` shadcn Dialog with side-by-side yours/theirs panels, editable merge textarea, per-conflict paging, and Accept-mine / Accept-theirs / Save-custom-merge buttons (5 UI tests). Wired into `ShareProjectButton` as an amber conflict-count badge with `Alt+K` shortcut and auto-open on first conflict. Lock enforcement from BL-0487 untouched (17 integration tests still green, 23 CRDT + 44 auth + 50 collab server tests pass). P2 open count: 2 → 1; BLOCKED count: 1 → 0.
+- **2026-04-17:** Wave 151 — closed `BL-0150` (Inventory tracking tied to BOM consumption). Added pure `computeShortfall()` + `BomShortfall` type in `shared/parts/shortfall.ts` (canonical rule: `max(0, quantityNeeded - coalesce(quantityOnHand, 0))` — supply is never decremented on BOM writes to prevent double-booking). New `BomStorage.getShortfalls(projectId)` with SQL filter `needed > coalesce(onHand, 0)` and shortfall-DESC ordering. New route `GET /api/projects/:id/bom/shortfalls` returning `{ data, total, totalShortfallUnits }`. Client hook `useBomShortfalls` + `indexShortfallsByPartNumber` helper. Red "−N" shortfall badge (with `PackageX` icon) in `BomTable` stock cell, tooltip showing `BOM wants N / on hand M`. Export precheck `bomShortfallCheck` added to `fab-package`, `pick-place`, `bom-csv` runners as a non-blocking warning. Tests: 11 shared shortfall tests (boundary/null/NaN), 4 hook tests (indexing/query key), 3 endpoint shape tests, plus `getShortfalls` mock wired into `api.test.ts`. P2 open count: 3 → 2.
 - **2026-04-14:** Wave 150 — closed `BL-0473` (MPN normalization and dedup in BOM). Added `shared/parts/mpn.ts` normalizer (trim, whitespace collapse, packaging-suffix strip for `/NOPB`, `#PBF`, `-TR*`, `-7`, `+`) with case-preserving + case-insensitive comparison helpers. Wired into `server/parts-ingress.ts findByMpn()` and `server/storage/parts.ts PartsStorage.getByMpn()` — case-insensitive `ilike` match plus manufacturer-scoped comparison-key fallback so `RC0402FR-0710KL`, `rc0402fr-0710kl`, and `LM317T/NOPB ≡ LM317T` all dedup. Stock upsert at existing `(projectId, partId)` already bumps quantity instead of duplicating — now reached reliably. Tests: 37 unit tests for the normalizer + 6 regression tests for ingress dedup (case variant, whitespace variant, stock-qty bump, suffix fallback, genuinely different MPN, empty-manufacturer skip). P2 open count: 4 → 3.
 - **2026-04-14:** Refreshed `Next Up` — all 10 prior candidates were already DONE (verified Wave 106 / 107). Replaced the stale table with the 3 remaining `PARTIAL` P2 items (`BL-0126`, `BL-0150`, `BL-0473`); `BL-0524` remains `BLOCKED on BL-0486` and is excluded. Recounted Quick Stats directly from P0–P3 sections (508 rows total: 4 open, 504 done) and removed the outdated "BACKLOG COMPLETE" note.
 - **2026-03-13:** Wave 80 — marked 5 P0 security items DONE (BL-0636/0637/0638/0639/0642). Updated blockers, decisions, ADR requirements, and discovery spikes as resolved by Pure-Local Desktop App pivot (ADR 0007/0008). Firmware/debugger/platform items now unblocked.
@@ -111,6 +113,8 @@
 
 | Wave | Notable Completions | Why It Matters |
 |------|----------------------|----------------|
+| 152 | `BL-0524` | Conflict resolution UI — side-by-side yours/theirs CRDT merge dialog with accept-mine / accept-theirs / custom-merge controls. Removes the last explicitly BLOCKED item from the backlog; closes the Wave 67 collaboration foundation. |
+| 151 | `BL-0150` | Inventory tracking tied to BOM consumption — shared shortfall contract, shortfall-first BOM badge, export-precheck warning. |
 | 121 | `BL-0409`, `BL-0411`, `BL-0417`, `BL-0421` | AI sketch starter, board-aware suggestions, state machine skeletons, sketch explainer — Arduino intelligence. |
 | 120 | `BL-0407`, `BL-0410`, `BL-0442` | Firmware snapshots, smart code snippets, build journals — firmware safety + developer experience. |
 | 119 | `BL-0405`, `BL-0414`, `BL-0415`, `BL-0419`, `BL-0425` | Board package checker, RAM early warning, flash budget, library conflicts, secrets scanner — Arduino firmware safety. |
@@ -142,12 +146,12 @@
 
 ## Next Up (Proposed Top 10 Actionable Items)
 
-> **2026-04-14:** Only 3 unblocked open items remain in the entire backlog — all are `PARTIAL` P2 rows where some implementation exists but the end-to-end workflow is incomplete. `BL-0524` is excluded because it is `BLOCKED on BL-0486`. When these 3 land, the next planning cycle should seed new work from epics or the competitive-audit pipeline rather than from this table.
+> **2026-04-17:** Only 1 unblocked open item remains in the entire backlog — `BL-0126` is the last `PARTIAL` P2 row. `BL-0524` (Conflict resolution UI) was closed in Wave 152 — its blocker `BL-0486` had actually landed in Wave 67 and only the UI layer was missing. When `BL-0126` lands, the next planning cycle should seed new work from epics or the competitive-audit pipeline rather than from this table.
 
 | Rank | ID | Why Next | Effort | Complexity | User Impact |
 |------|----|----------|--------|------------|-------------|
-| 1 | `BL-0150` | **Inventory tracking tied to BOM consumption** (P2, `PARTIAL`) — close the loop so placing parts in a design decrements real inventory and flags shortfalls before export. Directly supports the "one tool, zero context switching" promise (Epic C) and the Inventory ↔ ProtoPulse shared-source plan. | M | `C4` | High |
-| 2 | `BL-0126` | **Shared unit/scale contract across sim + DRC engines** (P2, `PARTIAL`) — agree one canonical unit/scale model so simulation results and DRC verdicts stop disagreeing on the same net. Prevents silent numerical drift between engines; unblocks downstream simulation/DRC trust work. | M | `C4` | Medium |
+| ~~1~~ | ~~`BL-0150`~~ | ~~Inventory tracking tied to BOM consumption~~ — **CLOSED Wave 151** (see Change Log). | — | — | — |
+| 1 | `BL-0126` | **Shared unit/scale contract across sim + DRC engines** (P2, `PARTIAL`) — agree one canonical unit/scale model so simulation results and DRC verdicts stop disagreeing on the same net. Prevents silent numerical drift between engines; unblocks downstream simulation/DRC trust work. | M | `C4` | Medium |
 | ~~1~~ | ~~`BL-0473`~~ | ~~MPN normalization and dedup in BOM~~ — **CLOSED Wave 150** (see Change Log). | — | — | — |
 
 ## Complexity Radar (Highest-Complexity Open Items)
@@ -306,7 +310,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 ## Blocked / Waiting On
 
-`BL-0524` is now explicitly marked `BLOCKED`, and several other items are still blocked-in-practice even though their row status remains `OPEN`. Treat the following as the current blocker map until their prerequisite decisions land.
+No backlog items are explicitly `BLOCKED` (`BL-0524` closed Wave 152 — its prerequisite `BL-0486` had already landed in Wave 67). Several other items are still blocked-in-practice even though their row status remains `OPEN`. Treat the following as the current blocker map until their prerequisite decisions land.
 
 | Practical Blocker | Why It Is Not Ready Yet | Related IDs |
 |-------------------|-------------------------|-------------|
@@ -424,11 +428,11 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 |----------|------|------|-------------|
 | P0 | 0 | 19 | All resolved (Waves 52-60, 80). |
 | P1 | 0 | 73 | All resolved (Waves 54-67). |
-| P2 | **3** | **280** | 2 `PARTIAL` (`BL-0126`, `BL-0150`) + 1 `BLOCKED` (`BL-0524` waiting on `BL-0486`). Waves 61-150. |
+| P2 | **1** | **282** | 1 `PARTIAL` (`BL-0126`). `BL-0524` closed Wave 152 (BLOCKED footnote removed — BL-0486 was already DONE). Waves 61-152. |
 | P3 | 0 | 133 | All resolved (Waves 105-154). |
-| **Total** | **3** | **505** | **508 items tracked** (counted directly from P0–P3 sections 2026-04-14). |
+| **Total** | **1** | **507** | **508 items tracked** (counted directly from P0–P3 sections 2026-04-17). |
 
-*Snapshot updated: 2026-04-14 — `BL-0473` closed in Wave 150. 2 remaining `PARTIAL` items + 1 `BLOCKED` item are the only non-DONE work in the backlog.*
+*Snapshot updated: 2026-04-17 — `BL-0524` closed in Wave 152. 1 remaining `PARTIAL` item (`BL-0126`) is the only non-DONE work in the backlog; no items are `BLOCKED`.*
 
 ---
 
@@ -715,7 +719,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 | BL-0147 | Flashing progress/error diagnostics — avrdude+esptool output parsing, 25+ error patterns, FlashProgressBar with stage icons. | DONE (Wave 87) | C3 | MF-094, ARDX-063 |
 | BL-0148 | Web Serial integration tests | DONE (Wave 110) | C3 | MF-095 |
 | BL-0149 | Multi-angle photo follow-up for component ID | DONE (Wave 112) | C3 | MF-097 |
-| BL-0150 | Inventory tracking tied to BOM consumption | PARTIAL | C4 | MF-101 |
+| BL-0150 | Inventory tracking tied to BOM consumption | DONE (Wave 151) — shortfall pipeline: `shared/parts/shortfall.ts` pure calc, `BomStorage.getShortfalls`, `GET /api/projects/:id/bom/shortfalls`, `useBomShortfalls` hook, red shortfall badge in `BomTable`, export precheck warning on fab-package/pick-place/bom-csv. | C4 | MF-101 |
 | BL-0151 | Compile error translator (plain English) | DONE (Wave 84) | C2 | ARDX-008 |
 | BL-0152 | Auto-generate pin constants from schematic labels | DONE (Wave 86) | C3 | ARDX-019 |
 | BL-0153 | Serial plotter for live sensor curves | DONE (Wave 77) | C3 | ARDX-032 |
@@ -822,7 +826,7 @@ Use these epic summaries when a single backlog row is no longer enough to plan o
 
 | ID | Description | Status | Complexity | Source |
 |----|-------------|--------|------------|--------|
-| BL-0524 | **Conflict resolution UI** — When a CRDT merge produces a conflict (once BL-0486 is fixed), surface a diff dialog showing "your version" vs "their version" with accept/reject/merge controls. Without UI, silent last-write-wins is confusing. | BLOCKED on BL-0486 | C4 | Wave 64 audit |
+| BL-0524 | **Conflict resolution UI** — When a CRDT merge produces a conflict, surface a diff dialog showing "your version" vs "their version" with accept/reject/merge controls. Losing ops (LWW update, insert-superseded, delete-rejected) now emit `conflict-detected` to the loser; `ConflictResolutionDialog` provides accept-mine / accept-theirs / custom-merge controls; Alt+K shortcut + amber badge on ShareProjectButton. | DONE (Wave 152) | C4 | Wave 64 audit |
 | BL-0525 | **Presence cursors on Schematic and PCB canvases** — Live collaboration cursors (`LiveCursor` from `collaboration-client.ts`) are not rendered on the Schematic or PCB SVG canvases. Only the Architecture ReactFlow canvas has cursor rendering. Extend to all interactive editors. | DONE (verified Wave 106) | C3 | Wave 64 audit |
 | BL-0526 | **Session re-validation on WebSocket reconnect** — After a WebSocket disconnect/reconnect, the server does not re-verify the session token or project membership before re-admitting the client to the room. An expired session can continue collaborating. | DONE (Wave 109) | C3 | Wave 64 audit |
 | BL-0527 | **Offline queue retry jitter** — addJitter() with ±20% randomized backoff in offline-sync.ts. | DONE (Wave 89) | C2 | Wave 64 audit |

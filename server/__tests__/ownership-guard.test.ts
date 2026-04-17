@@ -28,19 +28,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Project } from '@shared/schema';
 
 /**
- * Local structural alias for a circuit design row. We avoid importing the
- * drizzle `circuitDesigns` table type because @shared/schema does not
- * re-export a `CircuitDesign` row type by name.
+ * Local structural alias for a circuit design row. Matches the return shape
+ * of IStorage.getCircuitDesign — required fields include parentDesignId +
+ * settings (unknown JSON). We avoid importing the drizzle table type because
+ * @shared/schema does not re-export a named `CircuitDesign` row type.
  */
 interface CircuitDesign {
   id: number;
   projectId: number;
   name: string;
   description: string | null;
-  version: number | null;
+  version: number;
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
+  parentDesignId: number | null;
+  settings: unknown;
 }
 
 // ---------------------------------------------------------------------------
@@ -151,12 +153,14 @@ function makeCircuit(o: Partial<CircuitDesign> = {}): CircuitDesign {
 
 /** Minimal IStorage stub — only the two methods the helpers call. */
 function mockStorage(
-  projects: Record<number, Project | null> = {},
-  designs: Record<number, CircuitDesign | null> = {},
+  projects: Record<number, Project | undefined> = {},
+  designs: Record<number, CircuitDesign | undefined> = {},
 ): Partial<IStorage> {
   return {
-    getProject: vi.fn(async (id: number) => projects[id] ?? null),
-    getCircuitDesign: vi.fn(async (id: number) => designs[id] ?? null),
+    // IStorage returns `Project | undefined` / `CircuitDesign | undefined` for
+    // not-found; mirror that here so TS accepts the mock.
+    getProject: vi.fn(async (id: number): Promise<Project | undefined> => projects[id]),
+    getCircuitDesign: vi.fn(async (id: number): Promise<CircuitDesign | undefined> => designs[id]),
   };
 }
 
@@ -179,7 +183,7 @@ describe('assertProjectOwnership', () => {
   });
 
   it('returns 404 when project does not exist', async () => {
-    const s = mockStorage({ 1: null }) as IStorage;
+    const s = mockStorage({ 1: undefined }) as IStorage;
     await expect(assertProjectOwnership(1, 42, s)).rejects.toMatchObject({ status: 404 });
   });
 
@@ -217,7 +221,7 @@ describe('assertCircuitBelongsToProject', () => {
   });
 
   it('returns 404 when circuit does not exist', async () => {
-    const s = mockStorage({}, { 10: null }) as IStorage;
+    const s = mockStorage({}, { 10: undefined }) as IStorage;
     await expect(assertCircuitBelongsToProject(10, 1, s)).rejects.toMatchObject({ status: 404 });
   });
 
