@@ -6,6 +6,7 @@ import { useBom, useOutput, useProjectId } from '@/lib/project-context';
 import { Package, RefreshCw, Store, GitCompareArrows, Calculator, Scale, ClipboardCheck, Flame, Layers, TrendingDown, History, CircuitBoard, Shield, ShieldCheck, AlertTriangle, Bell, BookTemplate, Warehouse } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useComponentParts } from '@/lib/component-editor/hooks';
+import { useBomShortfalls, indexShortfallsByPartNumber } from '@/lib/parts/use-bom-shortfalls';
 import type { BomItem } from '@/lib/project-context';
 import { STORAGE_KEYS, DEFAULT_PREFERRED_SUPPLIERS, OPTIMIZATION_GOALS } from '@/lib/constants';
 import { classifyLifecycle } from '@/lib/lifecycle-badges';

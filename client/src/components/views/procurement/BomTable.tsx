@@ -268,7 +268,19 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
               <td className="px-4 py-3 text-muted-foreground" data-testid={`text-manufacturer-${item.id}`}>{item.manufacturer}</td>
               <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" data-testid={`text-description-${item.id}`}>{item.description}</td>
               <td className="px-4 py-3 text-muted-foreground" data-testid={`text-supplier-${item.id}`}>{item.supplier}</td>
-              <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>{item.stock.toLocaleString()}</td>
+              <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-stock-${item.id}`}>
+                <span className="inline-flex items-center gap-1.5 justify-end">
+                  {item.stock.toLocaleString()}
+                  {shortfall && shortfall.shortfall > 0 && (
+                    <StyledTooltip content={`Need ${shortfall.shortfall} more (BOM wants ${shortfall.quantityNeeded}, on hand ${shortfall.quantityOnHand})`} side="left">
+                      <span className="inline-flex items-center gap-0.5 px-1 py-0 text-[9px] font-medium bg-red-500/10 text-red-500 border border-red-500/20 uppercase tracking-wider" data-testid={`shortfall-badge-${item.id}`}>
+                        <PackageX className="w-2.5 h-2.5" />
+                        -{shortfall.shortfall}
+                      </span>
+                    </StyledTooltip>
+                  )}
+                </span>
+              </td>
               <td className="px-4 py-3 text-right font-mono text-xs" data-testid={`text-quantity-${item.id}`}>{item.quantity}</td>
               <td className="px-4 py-3 text-right font-mono text-xs text-muted-foreground" data-testid={`text-unit-price-${item.id}`}>${(Math.round(Number(item.unitPrice) * 100) / 100).toFixed(2)}</td>
               <td className="px-4 py-3 text-right font-mono text-xs font-bold text-foreground" data-testid={`text-total-price-${item.id}`}>${(Math.round(Number(item.totalPrice) * 100) / 100).toFixed(2)}</td>

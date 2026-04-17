@@ -783,4 +783,111 @@ describe('CollaborationClient', () => {
       expect(client.getMyRole()).toBe('viewer'); // default
     });
   });
+
+  /* ---------------------------------------------------------------- */
+  /*  BL-0524: Conflict handling                                        */
+  /* ---------------------------------------------------------------- */
+
+  describe('conflicts', () => {
+    function connected(): { client: CollaborationClient; ws: MockWebSocket } {
+      const client = new CollaborationClient(1, 'sess');
+      client.setUserId(42);
+      client.connect();
+      const ws = getLastWs();
+      ws.simulateOpen();
+      return { client, ws };
+    }
+
+    it('stores incoming conflicts and emits conflicts-change', () => {
+      const { client, ws } = connected();
+      const handler = vi.fn();
+      client.on('conflicts-change', handler);
+
+      const conflict = {
+        id: 'c1', projectId: 1, kind: 'lww-update', path: ['nodes'], key: 'n1',
+        yourOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' }, timestamp: 5, clientId: 42 },
+        theirOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' }, timestamp: 10, clientId: 2 },
+        detectedAt: 10,
+      };
+
+      ws.simulateMessage({
+        type: 'conflict-detected',
+        userId: 42,
+        projectId: 1,
+        timestamp: Date.now(),
+        payload: { conflicts: [conflict] },
+      });
+
+      expect(client.getPendingConflicts()).toHaveLength(1);
+      expect(client.getPendingConflicts()[0].id).toBe('c1');
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('resolveConflict mine resends the losing op without server-assigned timestamps', () => {
+      const { client, ws } = connected();
+      ws.simulateMessage({
+        type: 'conflict-detected',
+        userId: 42, projectId: 1, timestamp: Date.now(),
+        payload: { conflicts: [{
+          id: 'c1', projectId: 1, kind: 'lww-update', path: ['nodes'], key: 'n1',
+          yourOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' }, timestamp: 5, clientId: 42 },
+          theirOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' }, timestamp: 10, clientId: 2 },
+          detectedAt: 10,
+        }] },
+      });
+
+      client.resolveConflict('c1', 'mine');
+
+      // Last sent message should be a state-update with the loser's op, no timestamp/clientId
+      const sent = ws.sent.map((s) => JSON.parse(s) as CollabMessage);
+      const stateUpdate = sent.find((m) => m.type === 'state-update');
+      expect(stateUpdate).toBeDefined();
+      const ops = (stateUpdate?.payload.operations as unknown[]) ?? [];
+      expect(ops).toHaveLength(1);
+      expect((ops[0] as Record<string, unknown>).timestamp).toBeUndefined();
+      expect((ops[0] as Record<string, unknown>).clientId).toBeUndefined();
+      expect(client.getPendingConflicts()).toHaveLength(0);
+    });
+
+    it('resolveConflict theirs removes the conflict without sending anything', () => {
+      const { client, ws } = connected();
+      ws.simulateMessage({
+        type: 'conflict-detected',
+        userId: 42, projectId: 1, timestamp: Date.now(),
+        payload: { conflicts: [{
+          id: 'c1', projectId: 1, kind: 'lww-update', path: ['nodes'], key: 'n1',
+          yourOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } },
+          theirOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' } },
+          detectedAt: 10,
+        }] },
+      });
+      const sentBefore = ws.sent.length;
+      client.resolveConflict('c1', 'theirs');
+      expect(ws.sent.length).toBe(sentBefore);
+      expect(client.getPendingConflicts()).toHaveLength(0);
+    });
+
+    it('resolveConflict merge sends a fresh update with the custom value', () => {
+      const { client, ws } = connected();
+      ws.simulateMessage({
+        type: 'conflict-detected',
+        userId: 42, projectId: 1, timestamp: Date.now(),
+        payload: { conflicts: [{
+          id: 'c1', projectId: 1, kind: 'lww-update', path: ['nodes'], key: 'n1',
+          yourOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'mine' } },
+          theirOp: { op: 'update', path: ['nodes'], key: 'n1', value: { label: 'theirs' } },
+          detectedAt: 10,
+        }] },
+      });
+
+      client.resolveConflict('c1', 'merge', { label: 'combined' });
+      const sent = ws.sent.map((s) => JSON.parse(s) as CollabMessage);
+      const update = sent.find((m) => m.type === 'state-update');
+      const ops = (update?.payload.operations as unknown[]) ?? [];
+      const op0 = ops[0] as Record<string, unknown>;
+      expect(op0.op).toBe('update');
+      expect(op0.key).toBe('n1');
+      expect(op0.value).toEqual({ label: 'combined' });
+    });
+  });
 });
