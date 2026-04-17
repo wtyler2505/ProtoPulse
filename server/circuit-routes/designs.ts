@@ -4,17 +4,22 @@ import { VersionConflictError } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
 import { insertCircuitDesignSchema } from '@shared/schema';
+import { circuitSettingsSchema } from '@shared/circuit-schemas';
 import { parseIdParam, payloadLimit } from './utils';
 import { requireProjectOwnership } from '../routes/auth-middleware';
 
-// `settings` is stored as `jsonb` in Drizzle — opaque structured blob owned
-// by the client-side design tooling. Using `z.unknown()` (not `z.any()`)
-// keeps the shape permissive at the route boundary but forces consumers to
-// narrow before use, preventing `any` propagation into handler code.
+/**
+ * `settings` is stored as `jsonb` on `circuit_designs.settings` and mirrors
+ * the `CircuitSettings` interface in `shared/circuit-types.ts`. Previously
+ * accepted via `z.any()` / `z.unknown()` — replaced 2026-04-17 with the
+ * concrete schema from `@shared/circuit-schemas` which validates known
+ * fields (gridSize, powerSymbols, noConnectMarkers, netLabels, annotations,
+ * etc.) and passes through unknowns for forward-compat. Task #45.
+ */
 const updateCircuitDesignSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().nullable().optional(),
-  settings: z.unknown().optional(),
+  settings: circuitSettingsSchema.optional(),
 });
 
 /** Parse the If-Match header value into a version number, or undefined if absent/invalid. */

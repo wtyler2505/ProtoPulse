@@ -2,17 +2,36 @@ import type { Express } from 'express';
 import type { IStorage } from '../storage';
 import { z } from 'zod';
 import { fromZodError } from 'zod-validation-error';
+import {
+  netSegmentSchema,
+  netLabelSchema,
+  netStyleSchema,
+} from '@shared/circuit-schemas';
 import { parseIdParam, payloadLimit, circuitPaginationSchema } from './utils';
 import { requireCircuitOwnership } from '../routes/auth-middleware';
 
+/**
+ * Net payload schemas. `segments`/`labels`/`style` were previously `z.any()`
+ * validation bypasses (task #45). Now typed against concrete shared schemas:
+ *
+ * - `segments` accepts any of three legitimate shapes via `z.union`:
+ *   graph-edge (canonical `NetSegment` from `shared/circuit-types.ts`),
+ *   line-segment `{x1,y1,x2,y2}` (apply-code layout path), and
+ *   DSL placeholder `{irId}` (circuit-dsl output).
+ * - `labels` validates against the `NetLabel` interface.
+ * - `style` validates against the `NetStyle` interface.
+ *
+ * All nested schemas use `.passthrough()` so future optional fields on the
+ * client don't break route validation without a coordinated deploy.
+ */
 const createNetSchema = z.object({
   name: z.string().min(1),
   netType: z.enum(['signal', 'power', 'ground', 'bus']).optional(),
   voltage: z.string().nullable().optional(),
   busWidth: z.number().int().positive().nullable().optional(),
-  segments: z.array(z.any()).optional(),
-  labels: z.array(z.any()).optional(),
-  style: z.any().optional(),
+  segments: z.array(netSegmentSchema).optional(),
+  labels: z.array(netLabelSchema).optional(),
+  style: netStyleSchema.optional(),
 });
 
 const updateNetSchema = z.object({
@@ -20,9 +39,9 @@ const updateNetSchema = z.object({
   netType: z.enum(['signal', 'power', 'ground', 'bus']).optional(),
   voltage: z.string().nullable().optional(),
   busWidth: z.number().int().positive().nullable().optional(),
-  segments: z.array(z.any()).optional(),
-  labels: z.array(z.any()).optional(),
-  style: z.any().optional(),
+  segments: z.array(netSegmentSchema).optional(),
+  labels: z.array(netLabelSchema).optional(),
+  style: netStyleSchema.optional(),
 });
 
 export function registerCircuitNetRoutes(app: Express, storage: IStorage): void {

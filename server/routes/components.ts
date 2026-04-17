@@ -18,6 +18,7 @@ import { storage } from '../storage';
 import { db } from '../db';
 import { insertComponentPartSchema, insertComponentLibrarySchema } from '@shared/schema';
 import type { PartMeta, Connector, PartViews, Bus, Constraint, PartState } from '@shared/component-types';
+import { partMetaSchema, partStateSchema } from '@shared/circuit-schemas';
 import { runDRC, getDefaultDRCRules } from '@shared/drc-engine';
 import { exportToFzpz, importFromFzpz } from '../component-export';
 import { parseSvgToShapes } from '../svg-parser';
@@ -557,10 +558,15 @@ export function registerComponentRoutes(app: Express): void {
     },
   );
 
+  // `currentPart` is the full PartState snapshot the AI modify flow sends to
+  // seed the prompt. Was `z.any()` (validation bypass, task #45) — now
+  // validated against the canonical `PartState` schema which in turn
+  // validates nested `PartMeta`. Passthrough on nested objects accepts
+  // forward-compat fields. Task #45.
   const modifyBodySchema = z.object({
     instruction: z.string().min(1).max(10000),
     apiKey: z.string().max(500).optional(),
-    currentPart: z.any().optional(),
+    currentPart: partStateSchema.optional(),
   });
 
   app.post(
@@ -727,9 +733,12 @@ export function registerComponentRoutes(app: Express): void {
     },
   );
 
+  // `meta` is a PartMeta-shaped object the client sends for AI description
+  // suggestion. Was `z.any()` (task #45) — now validated against the
+  // canonical `PartMeta` schema from `@shared/circuit-schemas`.
   const suggestBodySchema = z.object({
     apiKey: z.string().max(500).optional(),
-    meta: z.any(),
+    meta: partMetaSchema,
   });
 
   app.post(
@@ -752,11 +761,14 @@ export function registerComponentRoutes(app: Express): void {
     },
   );
 
+  // `existingMeta` is the current PartMeta the client passes to seed the AI
+  // pin-extraction prompt with prior context. Was `z.any()` (task #45) —
+  // now validated against the canonical PartMeta schema.
   const extractPinsBodySchema = z.object({
     apiKey: z.string().max(500).optional(),
     imageBase64: z.string().min(1),
     mimeType: z.string().optional(),
-    existingMeta: z.any().optional(),
+    existingMeta: partMetaSchema.optional(),
   });
 
   app.post(
