@@ -6,6 +6,8 @@ interface TokenInfo {
   input: number;
   output: number;
   cost: number;
+  /** True when tokens are chars/4 approximation; false when from provider usage. */
+  estimated: boolean;
 }
 
 interface ChatMessagingState {

@@ -95,7 +95,7 @@ interface MessageBubbleProps {
   pendingActions: PendingActionReview | null;
   onAcceptActions: () => void;
   onRejectActions: () => void;
-  tokenInfo?: {input: number; output: number; cost: number} | null;
+  tokenInfo?: {input: number; output: number; cost: number; estimated: boolean} | null;
 }
 
 const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onRegenerate, onRetry, onBranch, onOpenSettings, isLast, pendingActions, onAcceptActions, onRejectActions, tokenInfo }: MessageBubbleProps) {
@@ -147,8 +147,17 @@ const MessageBubble = memo(function MessageBubble({ msg, copiedId, onCopy, onReg
             </div>
           )}
           {tokenInfo && msg.role === 'assistant' && (
-            <div className="text-xs text-muted-foreground/80 mt-1" data-testid="text-token-info">
+            <div
+              className="text-xs text-muted-foreground/80 mt-1"
+              data-testid="text-token-info"
+              title={
+                tokenInfo.estimated
+                  ? 'Estimated — exact cost is shown once the provider returns usage data after the response completes.'
+                  : 'Exact cost from provider usage report.'
+              }
+            >
               {tokenInfo.input + tokenInfo.output} tokens · ~${tokenInfo.cost.toFixed(4)}
+              {tokenInfo.estimated ? ' (estimated)' : ''}
             </div>
           )}
           {msg.isError && msg.isKeyError && onOpenSettings && (

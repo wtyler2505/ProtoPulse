@@ -68,8 +68,9 @@ export default function CircuitCodeView() {
       void queryClient.invalidateQueries({ queryKey: ['circuit-designs', projectId] });
       toast({ title: 'Applied to project', description: `Created circuit design #${data.circuitId}` });
     },
-    onError: (err: any) => {
-      toast({ title: 'Failed to apply', description: err.message, variant: 'destructive' });
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      toast({ title: 'Failed to apply', description: message, variant: 'destructive' });
     }
   });
 

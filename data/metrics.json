@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "persistedAt": "2026-04-17T23:21:22.546Z",
+  "persistedAt": "2026-04-17T23:28:23.726Z",
   "routes": {
     "GET /api/auth/me": {
       "count": 5,
@@ -87,8 +87,8 @@
       ]
     },
     "GET /api/projects/:id/snapshots": {
-      "count": 8,
-      "totalDuration": 485,
+      "count": 11,
+      "totalDuration": 658,
       "errors": 0,
       "min": 11,
       "max": 205,
@@ -96,10 +96,13 @@
         11,
         20,
         21,
+        30,
         47,
         54,
         55,
+        65,
         72,
+        78,
         205
       ]
     },
@@ -251,16 +254,18 @@
       ]
     },
     "GET /api/settings/api-keys": {
-      "count": 5,
-      "totalDuration": 151,
+      "count": 7,
+      "totalDuration": 180,
       "errors": 0,
       "min": 4,
       "max": 120,
       "samples": [
         4,
         7,
+        8,
         10,
         10,
+        21,
         120
       ]
     },

@@ -73,7 +73,7 @@ interface MessageListProps {
   pendingActions: PendingActionReview | null;
   acceptPendingActions: () => void;
   rejectPendingActions: () => void;
-  tokenInfo: { input: number; output: number; cost: number } | null;
+  tokenInfo: { input: number; output: number; cost: number; estimated: boolean } | null;
   scrollRef: React.RefObject<HTMLDivElement | null>;
   isGenerating: boolean;
   streamingContent: string;
@@ -752,10 +752,36 @@ export default function ChatPanel({ isOpen, onClose, collapsed = false, width = 
                   finalConfidence = lastConfidence;
                 }
 
-                const inputTokens = Math.ceil(msgText.length / 4);
-                const outputTokens = Math.ceil(fullText.length / 4);
-                const cost = (inputTokens * 0.00025 + outputTokens * 0.0005) / 1000;
-                setTokenInfo({ input: inputTokens, output: outputTokens, cost });
+                // Prefer the provider's real token usage (emitted as
+                // `type: 'usage'` earlier in the stream). Fall back to chars/4
+                // approximation when the provider didn't report usage.
+                // AI-audit H-2: previously used stale hardcoded pricing
+                // ($0.00025 in / $0.0005 out per 1K) which was ~10x wrong for
+                // modern Gemini tiers. Now sourced from shared/model-pricing.ts.
+                if (reportedUsage) {
+                  const cost = estimateCost(
+                    reportedUsage.model,
+                    reportedUsage.inputTokens,
+                    reportedUsage.outputTokens,
+                  );
+                  setTokenInfo({
+                    input: reportedUsage.inputTokens,
+                    output: reportedUsage.outputTokens,
+                    cost,
+                    estimated: false,
+                  });
+                } else {
+                  const inputTokens = approximateTokens(msgText);
+                  const outputTokens = approximateTokens(fullText);
+                  const modelForPricing = resolvedModel ?? '';
+                  const cost = estimateCost(modelForPricing, inputTokens, outputTokens);
+                  setTokenInfo({
+                    input: inputTokens,
+                    output: outputTokens,
+                    cost,
+                    estimated: true,
+                  });
+                }
               } else if (data.type === 'error') {
                 const streamErr = mapStreamErrorToUserMessage(
                   (data as { message?: string; code?: string }),

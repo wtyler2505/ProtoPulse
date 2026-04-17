@@ -22,6 +22,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { getElectronicsKnowledge } from '@shared/electronics-knowledge';
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -447,6 +449,7 @@ function makeReversePolarity(): DangerRule {
 }
 
 function makeMissingDecoupling(): DangerRule {
+  const k = getElectronicsKnowledge('decoupling');
   return {
     id: 'missing-decoupling',
     name: 'Missing decoupling capacitor',
@@ -467,14 +470,14 @@ function makeMissingDecoupling(): DangerRule {
           proposals.push(makeProposal(
             'missing-decoupling',
             `Add decoupling capacitors for ${nodeLabel || 'MCU'}`,
-            'Every MCU needs 100nF ceramic decoupling capacitors on each VCC pin and a 10µF bulk capacitor near the power input. Without them, voltage dips during fast switching cause erratic behavior.',
+            k.explanation,
             'warning',
             'signal_integrity',
             action,
             {
               type: 'add_component',
-              description: 'Add 100nF ceramic + 10µF bulk capacitors',
-              payload: { component: 'capacitor', values: ['100nF', '10µF'], near: action.nodeId },
+              description: k.fixDescription,
+              payload: { ...k.defaultValues, near: action.nodeId },
             },
           ));
         }
@@ -526,6 +529,7 @@ function makeGpioOvercurrent(): DangerRule {
 }
 
 function makeMissingI2cPullups(): DangerRule {
+  const k = getElectronicsKnowledge('i2c-pullup');
   return {
     id: 'missing-i2c-pullups',
     name: 'Missing I2C pull-up resistors',
@@ -559,14 +563,14 @@ function makeMissingI2cPullups(): DangerRule {
         proposals.push(makeProposal(
           'missing-i2c-pullups',
           'Missing I2C pull-up resistors on SDA/SCL',
-          'I2C bus lines (SDA, SCL) are open-drain and require pull-up resistors (typically 4.7kΩ) to VCC. Without them, communication will be unreliable or completely fail.',
+          k.explanation,
           'warning',
           'signal_integrity',
           action,
           {
             type: 'add_component',
-            description: 'Add 4.7kΩ pull-up resistors on SDA and SCL',
-            payload: { component: 'resistor', value: '4.7kΩ', count: 2, placement: 'i2c-pullup' },
+            description: k.fixDescription,
+            payload: { ...k.defaultValues },
           },
         ));
       }
@@ -617,6 +621,7 @@ function makeAdcReference(): DangerRule {
 }
 
 function makeFlybackDiode(): DangerRule {
+  const k = getElectronicsKnowledge('flyback-diode');
   return {
     id: 'flyback-diode',
     name: 'Missing flyback diode on inductive load',
@@ -648,14 +653,14 @@ function makeFlybackDiode(): DangerRule {
         proposals.push(makeProposal(
           'flyback-diode',
           `Add flyback diode for ${inductiveNode.label}`,
-          `Inductive load "${inductiveNode.label}" generates voltage spikes when switched off. A flyback diode (e.g. 1N4007) across the coil clamps these spikes and prevents driver damage.`,
+          `Inductive load "${inductiveNode.label}" — ${k.explanation}`,
           'critical',
           'protection',
           action,
           {
             type: 'add_component',
-            description: 'Add 1N4007 flyback diode across inductive load',
-            payload: { component: 'diode', value: '1N4007', across: inductiveNode.id },
+            description: k.fixDescription,
+            payload: { ...k.defaultValues, across: inductiveNode.id },
           },
         ));
       }
@@ -684,17 +689,18 @@ function makeResetResistor(): DangerRule {
           isResistor(n) && matchesAny(n.label, RESET_PATTERNS),
         );
         if (!hasResetPullup) {
+          const kReset = getElectronicsKnowledge('reset-pullup');
           proposals.push(makeProposal(
             'reset-resistor',
             `Add reset pull-up resistor for ${nodeLabel || 'MCU'}`,
-            'MCU reset pins are typically active-low and should have a pull-up resistor (10kΩ) to VCC to prevent spurious resets from noise. Optionally add a 100nF cap to GND for debouncing.',
+            kReset.explanation,
             'suggestion',
             'best_practice',
             action,
             {
               type: 'add_component',
-              description: 'Add 10kΩ pull-up resistor on RESET pin',
-              payload: { component: 'resistor', value: '10kΩ', placement: 'reset-pullup', near: action.nodeId },
+              description: kReset.fixDescription,
+              payload: { ...kReset.defaultValues, near: action.nodeId },
             },
           ));
         }
@@ -722,17 +728,18 @@ function makeEsdProtection(): DangerRule {
         // Check if ESD protection exists
         const hasEsd = state.nodes.some(isEsd);
         if (!hasEsd) {
+          const kEsd = getElectronicsKnowledge('esd-protection');
           proposals.push(makeProposal(
             'esd-protection',
             `Add ESD protection for ${nodeLabel || 'USB'}`,
-            'External-facing connectors (USB, Ethernet, etc.) should have ESD protection (TVS diodes, e.g. USBLC6-2) to protect internal circuitry from electrostatic discharge.',
+            kEsd.explanation,
             'warning',
             'protection',
             action,
             {
               type: 'add_component',
-              description: 'Add TVS diode array (e.g. USBLC6-2) for ESD protection',
-              payload: { component: 'tvs-diode', near: action.nodeId },
+              description: kEsd.fixDescription,
+              payload: { ...kEsd.defaultValues, near: action.nodeId },
             },
           ));
         }
@@ -808,17 +815,18 @@ function makeMissingLevelShifter(): DangerRule {
         // Check if a level shifter already exists in the design
         const hasShifter = state.nodes.some(isLevelShifter);
         if (!hasShifter) {
+          const kLs = getElectronicsKnowledge('level-shifter');
           proposals.push(makeProposal(
             'missing-level-shifter',
             `Add level shifter between ${sv}V and ${tv}V domains`,
-            `Connecting a ${sv}V device to a ${tv}V device without a level shifter can damage the lower-voltage device. Use a bidirectional level shifter (e.g. TXB0108) or a simple MOSFET-based shifter.`,
+            `${kLs.explanation} (This connection is ${sv}V ↔ ${tv}V.)`,
             'warning',
             'voltage',
             action,
             {
               type: 'add_component',
               description: `Add bidirectional level shifter (${sv}V ↔ ${tv}V)`,
-              payload: { component: 'level-shifter', fromV: sv, toV: tv, between: [sourceId, targetId] },
+              payload: { ...kLs.defaultValues, fromV: sv, toV: tv, between: [sourceId, targetId] },
             },
           ));
         }

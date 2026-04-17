@@ -4,7 +4,14 @@
  *
  * Singleton + Subscribe pattern.  localStorage persistence for dismiss
  * cooldowns and per-rule feedback tracking.
+ *
+ * Domain knowledge for rules shared with the Proactive Healing Engine
+ * (decoupling, flyback, …) lives in `shared/electronics-knowledge.ts`.  Do
+ * not duplicate explanations or default component values here — update the
+ * shared file instead so both engines see the change.
  */
+
+import { getElectronicsKnowledge } from '@shared/electronics-knowledge';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -219,6 +226,7 @@ function makePrediction(
 // ---------------------------------------------------------------------------
 
 function makeMcuDecouplingCaps(): PredictionRule {
+  const k = getElectronicsKnowledge('decoupling');
   return {
     id: 'mcu-decoupling-caps',
     name: 'MCU decoupling capacitors',
@@ -234,7 +242,7 @@ function makeMcuDecouplingCaps(): PredictionRule {
           preds.push(makePrediction(
             'mcu-decoupling-caps',
             `Add decoupling capacitors for ${mcu.label}`,
-            `MCU "${mcu.label}" needs 100 nF ceramic capacitors on each VCC pin and a 10 \u00B5F bulk cap near the power input. This prevents voltage dips during fast switching.`,
+            `MCU "${mcu.label}" — ${k.explanation}`,
             0.95,
             'missing_component',
             { type: 'add_component', payload: { component: 'capacitor', value: '100nF', near: mcu.id } },
@@ -276,6 +284,7 @@ function makeMcuCrystal(): PredictionRule {
 }
 
 function makeMotorFlybackDiode(): PredictionRule {
+  const k = getElectronicsKnowledge('flyback-diode');
   return {
     id: 'motor-flyback-diode',
     name: 'Motor flyback diode',
@@ -292,7 +301,7 @@ function makeMotorFlybackDiode(): PredictionRule {
           preds.push(makePrediction(
             'motor-flyback-diode',
             `Add flyback diode for ${load.label}`,
-            `Inductive load "${load.label}" can produce voltage spikes when switched off. A flyback diode (e.g. 1N4007) across the coil clamps these spikes and protects your driver circuitry.`,
+            `Inductive load "${load.label}" — ${k.explanation}`,
             0.93,
             'missing_component',
             { type: 'add_component', payload: { component: 'diode', type: 'flyback', near: load.id } },

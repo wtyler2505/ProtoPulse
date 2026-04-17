@@ -63,11 +63,27 @@ describe('MessageBubble', () => {
       <MessageBubble
         msg={baseMsg}
         {...defaultProps}
-        tokenInfo={{ input: 100, output: 50, cost: 0.0015 }}
+        tokenInfo={{ input: 100, output: 50, cost: 0.0015, estimated: false }}
       />,
     );
     const tokenEl = screen.getByTestId('text-token-info');
     expect(tokenEl.textContent).toContain('150 tokens');
+    // Exact counts from provider usage should NOT show the estimated caveat.
+    expect(tokenEl.textContent).not.toContain('estimated');
+  });
+
+  it('labels cost as estimated when tokens are approximated (AI-audit H-2)', () => {
+    render(
+      <MessageBubble
+        msg={baseMsg}
+        {...defaultProps}
+        tokenInfo={{ input: 100, output: 50, cost: 0.0015, estimated: true }}
+      />,
+    );
+    const tokenEl = screen.getByTestId('text-token-info');
+    expect(tokenEl.textContent).toContain('estimated');
+    // Tooltip-style title attribute surfaces the full caveat for assistive tech.
+    expect(tokenEl.getAttribute('title')).toContain('Estimated');
   });
 
   it('renders the AI action trust receipt inside pending review blocks', () => {
