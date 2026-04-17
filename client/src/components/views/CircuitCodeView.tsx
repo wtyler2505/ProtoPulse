@@ -154,7 +154,7 @@ export default function CircuitCodeView() {
         <span>{netCount} nets</span>
         <span className="ml-auto flex items-center gap-3">
           {isEvaluating ? (
-            <span className="text-[#00F0FF]">Evaluating...</span>
+            <span className="text-[var(--color-editor-accent)]">Evaluating...</span>
           ) : (
             'Ready'
           )}

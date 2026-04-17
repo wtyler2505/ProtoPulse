@@ -101,11 +101,11 @@ export default function SpiceSubcircuitEditor() {
     <div className="max-w-3xl mx-auto p-6 space-y-5" data-testid="spice-subcircuit-editor">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Zap className="w-5 h-5 text-[#00F0FF]" />
+        <Zap className="w-5 h-5 text-[var(--color-editor-accent)]" />
         <h3 className="text-sm font-semibold text-foreground">SPICE Subcircuit</h3>
       </div>
       <p className="text-xs text-muted-foreground leading-relaxed">
-        Attach a SPICE <code className="text-[#00F0FF]/80">.SUBCKT</code> definition to this component.
+        Attach a SPICE <code className="text-[var(--color-editor-accent)]/80">.SUBCKT</code> definition to this component.
         This model will be used when simulating circuits that include this part.
       </p>
 
@@ -134,7 +134,7 @@ export default function SpiceSubcircuitEditor() {
           data-testid="button-apply-spice"
           onClick={handleApply}
           disabled={!isDirty}
-          className="gap-1.5 bg-[#00F0FF] text-black hover:bg-[#00F0FF]/80"
+          className="gap-1.5 bg-[var(--color-editor-accent)] text-black hover:bg-[var(--color-editor-accent)]/80"
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
           Apply
@@ -241,7 +241,7 @@ export default function SpiceSubcircuitEditor() {
       {showMappings && mapResult && validation.parsed && (
         <div className="rounded border border-border bg-card/50 p-3 space-y-2" data-testid="spice-port-mapping">
           <div className="flex items-center gap-2 mb-1">
-            <ArrowRightLeft className="w-4 h-4 text-[#00F0FF]" />
+            <ArrowRightLeft className="w-4 h-4 text-[var(--color-editor-accent)]" />
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Port ↔ Pin Mapping</span>
             <RefreshCw
               className="w-3 h-3 text-muted-foreground cursor-pointer hover:text-foreground"
@@ -259,7 +259,7 @@ export default function SpiceSubcircuitEditor() {
                   className="flex items-center gap-2 text-xs py-0.5"
                   data-testid={`mapping-${m.portName}`}
                 >
-                  <span className="font-mono text-[#00F0FF]">{m.portName}</span>
+                  <span className="font-mono text-[var(--color-editor-accent)]">{m.portName}</span>
                   <span className="text-muted-foreground">→</span>
                   <span className="font-mono text-foreground">{m.connectorName}</span>
                   <CheckCircle2 className="w-3 h-3 text-green-400 ml-auto" />

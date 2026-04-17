@@ -130,13 +130,13 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
   return (
     <Card
       data-testid={`pattern-card-${pattern.id}`}
-      className="bg-card/60 backdrop-blur-xl border-border hover:border-[#00F0FF]/30 transition-colors cursor-pointer"
+      className="bg-card/60 backdrop-blur-xl border-border hover:border-[var(--color-editor-accent)]/30 transition-colors cursor-pointer"
       onClick={() => { setExpanded((prev) => !prev); }}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-            <CategoryIcon className="w-4 h-4 text-[#00F0FF] shrink-0" />
+            <CategoryIcon className="w-4 h-4 text-[var(--color-editor-accent)] shrink-0" />
             {pattern.name}
           </CardTitle>
           <div className="flex items-center gap-2 shrink-0">
@@ -161,7 +161,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
         >
           {/* Why It Works */}
           <div>
-            <h4 className="text-xs font-semibold text-[#00F0FF] uppercase tracking-wider mb-1.5">
+            <h4 className="text-xs font-semibold text-[var(--color-editor-accent)] uppercase tracking-wider mb-1.5">
               Why It Works
             </h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -171,7 +171,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
 
           {/* Components */}
           <div>
-            <h4 className="text-xs font-semibold text-[#00F0FF] uppercase tracking-wider mb-1.5">
+            <h4 className="text-xs font-semibold text-[var(--color-editor-accent)] uppercase tracking-wider mb-1.5">
               Components
             </h4>
             <div className="space-y-1.5">
@@ -184,7 +184,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-foreground">{c.name}</span>
                     {c.value && (
-                      <span className="text-[10px] font-mono text-[#00F0FF]">{c.value}</span>
+                      <span className="text-[10px] font-mono text-[var(--color-editor-accent)]">{c.value}</span>
                     )}
                   </div>
                   <div className="text-[10px] text-muted-foreground">{c.type}</div>
@@ -198,7 +198,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
 
           {/* Connections */}
           <div>
-            <h4 className="text-xs font-semibold text-[#00F0FF] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <h4 className="text-xs font-semibold text-[var(--color-editor-accent)] uppercase tracking-wider mb-1.5 flex items-center gap-1">
               <Link className="w-3 h-3" />
               Connections
             </h4>
@@ -222,7 +222,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
 
           {/* Tips */}
           <div>
-            <h4 className="text-xs font-semibold text-[#00F0FF] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+            <h4 className="text-xs font-semibold text-[var(--color-editor-accent)] uppercase tracking-wider mb-1.5 flex items-center gap-1">
               <Lightbulb className="w-3 h-3" />
               Tips
             </h4>
@@ -231,7 +231,7 @@ function PatternCard({ pattern }: { pattern: DesignPattern }) {
                 <li
                   key={tip.slice(0, 40)}
                   data-testid={`pattern-tip-${pattern.id}`}
-                  className="text-[10px] text-muted-foreground leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-[#00F0FF]/50"
+                  className="text-[10px] text-muted-foreground leading-relaxed pl-3 relative before:content-[''] before:absolute before:left-0 before:top-1.5 before:w-1 before:h-1 before:rounded-full before:bg-[var(--color-editor-accent)]/50"
                 >
                   {tip}
                 </li>
@@ -406,7 +406,7 @@ function PatternsTabContent() {
             return (
               <div key={category} data-testid={`pattern-group-${category}`}>
                 <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                  <CategoryIcon className="w-4 h-4 text-[#00F0FF]" />
+                  <CategoryIcon className="w-4 h-4 text-[var(--color-editor-accent)]" />
                   {CATEGORY_LABELS[category]}
                   <span className="text-xs text-muted-foreground font-normal">
                     ({patterns.length})
@@ -447,13 +447,13 @@ function SnippetCard({
   return (
     <Card
       data-testid={`snippet-card-${snippet.id}`}
-      className="bg-card/60 backdrop-blur-xl border-border hover:border-[#00F0FF]/30 transition-colors cursor-pointer"
+      className="bg-card/60 backdrop-blur-xl border-border hover:border-[var(--color-editor-accent)]/30 transition-colors cursor-pointer"
       onClick={() => { setExpanded((prev) => !prev); }}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-            <Layers className="w-4 h-4 text-[#00F0FF] shrink-0" />
+            <Layers className="w-4 h-4 text-[var(--color-editor-accent)] shrink-0" />
             {snippet.name}
           </CardTitle>
           <div className="flex items-center gap-1.5 shrink-0">
@@ -500,7 +500,7 @@ function SnippetCard({
           {/* Nodes list */}
           {snippet.nodes.length > 0 && (
             <div>
-              <h4 className="text-[10px] font-semibold text-[#00F0FF] uppercase tracking-wider mb-1">
+              <h4 className="text-[10px] font-semibold text-[var(--color-editor-accent)] uppercase tracking-wider mb-1">
                 Nodes
               </h4>
               <div className="space-y-1">
@@ -513,7 +513,7 @@ function SnippetCard({
                     <span className="font-medium text-foreground">{node.label}</span>
                     <span className="text-muted-foreground ml-1.5">({node.type})</span>
                     {node.properties.value != null && (
-                      <span className="font-mono text-[#00F0FF] ml-1.5">{String(node.properties.value)}</span>
+                      <span className="font-mono text-[var(--color-editor-accent)] ml-1.5">{String(node.properties.value)}</span>
                     )}
                   </div>
                 ))}
@@ -666,7 +666,7 @@ function SnippetFormDialog({
       <DialogContent className="max-w-md" data-testid="snippet-form-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">
-            <Layers className="h-4 w-4 text-[#00F0FF]" />
+            <Layers className="h-4 w-4 text-[var(--color-editor-accent)]" />
             {editSnippet ? 'Edit Snippet' : 'Create Snippet'}
           </DialogTitle>
           <DialogDescription className="text-xs">

@@ -50,7 +50,7 @@ function ResultRow({
   return (
     <div data-testid={testId} className="flex items-center justify-between py-1.5 border-b border-border/30 last:border-b-0">
       <span className="text-xs text-muted-foreground">{label}</span>
-      <span className={cn('text-sm font-mono font-semibold', accent ? 'text-[#00F0FF]' : 'text-foreground')}>
+      <span className={cn('text-sm font-mono font-semibold', accent ? 'text-[var(--color-editor-accent)]' : 'text-foreground')}>
         {value}
       </span>
     </div>
@@ -102,7 +102,7 @@ function OhmsLawCard() {
     <Card data-testid="calc-ohms-card" className="bg-card/60 backdrop-blur-xl border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Calculator className="w-4 h-4 text-[#00F0FF]" />
+          <Calculator className="w-4 h-4 text-[var(--color-editor-accent)]" />
           {"Ohm's Law"}
         </CardTitle>
         <CardDescription>V = I x R — enter any 2 values</CardDescription>
@@ -209,7 +209,7 @@ function LedResistorCard() {
     <Card data-testid="calc-led-card" className="bg-card/60 backdrop-blur-xl border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Lightbulb className="w-4 h-4 text-[#00F0FF]" />
+          <Lightbulb className="w-4 h-4 text-[var(--color-editor-accent)]" />
           LED Resistor
         </CardTitle>
         <CardDescription>R = (Vs - Vf) / If</CardDescription>
@@ -340,7 +340,7 @@ function VoltageDividerCard() {
     <Card data-testid="calc-divider-card" className="bg-card/60 backdrop-blur-xl border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <GitFork className="w-4 h-4 text-[#00F0FF]" />
+          <GitFork className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Voltage Divider
         </CardTitle>
         <CardDescription>Vout = Vin x R2 / (R1 + R2)</CardDescription>
@@ -476,7 +476,7 @@ function VoltageDividerCard() {
                     <span className="font-mono">
                       {s.r1Formatted} / {s.r2Formatted}
                     </span>
-                    <span className="text-[#00F0FF] font-mono">
+                    <span className="text-[var(--color-editor-accent)] font-mono">
                       {formatEngineering(s.actualVout, 'V')} ({s.errorPercent.toFixed(2)}%)
                     </span>
                   </div>
@@ -530,7 +530,7 @@ function RcTimeConstantCard() {
     <Card data-testid="calc-rc-card" className="bg-card/60 backdrop-blur-xl border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Timer className="w-4 h-4 text-[#00F0FF]" />
+          <Timer className="w-4 h-4 text-[var(--color-editor-accent)]" />
           RC Time Constant
         </CardTitle>
         <CardDescription>{'\u03C4 = R \u00D7 C, fc = 1/(2\u03C0RC)'}</CardDescription>
@@ -654,7 +654,7 @@ function FilterCutoffCard() {
     <Card data-testid="calc-filter-card" className="bg-card/60 backdrop-blur-xl border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Radio className="w-4 h-4 text-[#00F0FF]" />
+          <Radio className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Filter Cutoff
         </CardTitle>
         <CardDescription>Low-pass, high-pass, and bandpass</CardDescription>
@@ -847,7 +847,7 @@ function PowerDissipationCard() {
     <Card data-testid="calc-power-card" className="bg-card/60 backdrop-blur-xl border-border">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-          <Zap className="w-4 h-4 text-[#00F0FF]" />
+          <Zap className="w-4 h-4 text-[var(--color-editor-accent)]" />
           Power Dissipation
         </CardTitle>
         <CardDescription>P=IV, P=I{'\u00B2'}R, P=V{'\u00B2'}/R — enter any 2</CardDescription>

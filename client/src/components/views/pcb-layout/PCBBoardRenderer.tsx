@@ -274,7 +274,7 @@ const CoordinateReadout = memo(function CoordinateReadout({ mouseBoardPos }: Coo
       className="absolute bottom-3 right-3 z-10 bg-card/70 backdrop-blur-sm border border-border px-2 py-1 pointer-events-none select-none"
       data-testid="coordinate-readout"
     >
-      <span className="text-[11px] font-mono tabular-nums text-[#00F0FF]">
+      <span className="text-[11px] font-mono tabular-nums text-[var(--color-editor-accent)]">
         X: {mouseBoardPos.x} &nbsp; Y: {mouseBoardPos.y}
       </span>
     </div>

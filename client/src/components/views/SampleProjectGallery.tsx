@@ -70,7 +70,7 @@ function SampleCard({ sample, onOpen }: SampleCardProps) {
     <Card
       className={cn(
         'border-border bg-card cursor-pointer transition-all duration-200',
-        'hover:border-[var(--accent-primary,#00F0FF)]/50 hover:shadow-[0_0_12px_rgba(0,240,255,0.1)]',
+        'hover:border-[var(--color-editor-accent)]/50 hover:shadow-[0_0_12px_rgba(0,240,255,0.1)]',
         'group flex flex-col',
       )}
       data-testid={`sample-card-${sample.id}`}
@@ -89,10 +89,10 @@ function SampleCard({ sample, onOpen }: SampleCardProps) {
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-md bg-[var(--accent-primary,#00F0FF)]/10 flex items-center justify-center shrink-0">
-              <Icon className="w-4 h-4 text-[var(--accent-primary,#00F0FF)]" />
+            <div className="w-8 h-8 rounded-md bg-[var(--color-editor-accent)]/10 flex items-center justify-center shrink-0">
+              <Icon className="w-4 h-4 text-[var(--color-editor-accent)]" />
             </div>
-            <CardTitle className="text-sm font-semibold text-foreground group-hover:text-[var(--accent-primary,#00F0FF)] transition-colors">
+            <CardTitle className="text-sm font-semibold text-foreground group-hover:text-[var(--color-editor-accent)] transition-colors">
               {sample.name}
             </CardTitle>
           </div>
@@ -191,7 +191,7 @@ export default function SampleProjectGallery({ onOpenSample }: SampleProjectGall
       {/* Section header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <GraduationCap className="w-4 h-4 text-[var(--accent-primary,#00F0FF)]" />
+          <GraduationCap className="w-4 h-4 text-[var(--color-editor-accent)]" />
           <h3
             className="text-sm font-medium text-muted-foreground uppercase tracking-wider"
             data-testid="sample-projects-heading"
@@ -209,7 +209,7 @@ export default function SampleProjectGallery({ onOpenSample }: SampleProjectGall
             className={cn(
               'h-6 px-2 text-xs',
               difficultyFilter === 'all'
-                ? 'text-[var(--accent-primary,#00F0FF)] bg-[var(--accent-primary,#00F0FF)]/10'
+                ? 'text-[var(--color-editor-accent)] bg-[var(--color-editor-accent)]/10'
                 : 'text-muted-foreground',
             )}
             onClick={() => {

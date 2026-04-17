@@ -273,7 +273,7 @@ function InventoryHealthCard({ report }: { report: HealthReport }) {
           <div className="flex-1 min-w-0 space-y-1.5">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                <Activity className="h-3.5 w-3.5 text-[#00F0FF]" />
+                <Activity className="h-3.5 w-3.5 text-[var(--color-editor-accent)]" />
                 Inventory Health
               </h3>
               <Button
@@ -423,7 +423,7 @@ function BarcodeScannerDialog({ open, onOpenChange }: { open: boolean; onOpenCha
       <DialogContent className="max-w-md" data-testid="barcode-scanner-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">
-            <ScanBarcode className="h-4 w-4 text-[#00F0FF]" />
+            <ScanBarcode className="h-4 w-4 text-[var(--color-editor-accent)]" />
             Barcode Scanner
           </DialogTitle>
           <DialogDescription className="text-xs">
@@ -512,16 +512,16 @@ function BarcodeScannerDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                     {result.parsedComponent && (
                       <div className="mt-1 text-[9px] text-muted-foreground space-y-0.5" data-testid={`scan-parsed-${idx}`}>
                         <div>
-                          <span className="text-[#00F0FF]">Part:</span> {result.parsedComponent.partNumber}
+                          <span className="text-[var(--color-editor-accent)]">Part:</span> {result.parsedComponent.partNumber}
                         </div>
                         {result.parsedComponent.location && (
                           <div>
-                            <span className="text-[#00F0FF]">Location:</span> {result.parsedComponent.location}
+                            <span className="text-[var(--color-editor-accent)]">Location:</span> {result.parsedComponent.location}
                           </div>
                         )}
                         {result.parsedComponent.quantity != null && (
                           <div>
-                            <span className="text-[#00F0FF]">Qty:</span> {result.parsedComponent.quantity}
+                            <span className="text-[var(--color-editor-accent)]">Qty:</span> {result.parsedComponent.quantity}
                           </div>
                         )}
                       </div>
@@ -623,7 +623,7 @@ function PrintLabelsDialog({
       <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto" data-testid="print-labels-dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-sm">
-            <Printer className="h-4 w-4 text-[#00F0FF]" />
+            <Printer className="h-4 w-4 text-[var(--color-editor-accent)]" />
             Print Inventory Labels
           </DialogTitle>
           <DialogDescription className="text-xs">

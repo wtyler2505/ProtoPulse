@@ -196,7 +196,7 @@ const SortableBomRow = memo(function SortableBomRow({ item, editingId, editValue
           className={cn(
             'hover:bg-muted/30 transition-colors group cursor-pointer',
             isEditing && 'bg-primary/10 ring-1 ring-inset ring-primary/40',
-            highlighted && 'ring-1 ring-inset ring-[#00F0FF]/60 bg-[#00F0FF]/5 animate-pulse',
+            highlighted && 'ring-1 ring-inset ring-[var(--color-editor-accent)]/60 bg-[var(--color-editor-accent)]/5 animate-pulse',
             isDuplicate && !isEditing && !highlighted && 'bg-amber-500/5 ring-1 ring-inset ring-amber-500/30',
           )}
           data-testid={`row-bom-${item.id}`}

@@ -60,7 +60,7 @@ function TemplateCard({ template, selected, onSelect }: TemplateCardProps) {
       className={cn(
         'cursor-pointer transition-all duration-200 border',
         selected
-          ? 'border-[var(--accent-primary,#00F0FF)] shadow-[0_0_12px_rgba(0,240,255,0.2)] bg-[var(--accent-primary,#00F0FF)]/5'
+          ? 'border-[var(--color-editor-accent)] shadow-[0_0_12px_rgba(0,240,255,0.2)] bg-[var(--color-editor-accent)]/5'
           : 'border-border bg-card hover:border-muted-foreground/50',
       )}
       data-testid={`template-card-${template.id}`}
@@ -85,7 +85,7 @@ function TemplateCard({ template, selected, onSelect }: TemplateCardProps) {
                 {template.name}
               </CardTitle>
               {selected ? (
-                <Check className="w-4 h-4 text-[var(--accent-primary,#00F0FF)] shrink-0" data-testid={`template-selected-${template.id}`} />
+                <Check className="w-4 h-4 text-[var(--color-editor-accent)] shrink-0" data-testid={`template-selected-${template.id}`} />
               ) : null}
             </div>
           </div>
@@ -244,7 +244,7 @@ export default function TeamTemplateSelector({ onSelect, onSkip, projectName }: 
             size="sm"
             className={cn(
               'h-6 text-[11px] px-2',
-              categoryFilter === cat.value && 'bg-[var(--accent-primary,#00F0FF)] text-black',
+              categoryFilter === cat.value && 'bg-[var(--color-editor-accent)] text-black',
             )}
             onClick={() => { setCategoryFilter(cat.value); }}
             data-testid={`template-filter-${cat.value}`}
@@ -290,7 +290,7 @@ export default function TeamTemplateSelector({ onSelect, onSkip, projectName }: 
           size="sm"
           disabled={!selectedId}
           onClick={handleApply}
-          className="bg-[var(--accent-primary,#00F0FF)] text-black hover:bg-[var(--accent-primary,#00F0FF)]/90"
+          className="bg-[var(--color-editor-accent)] text-black hover:bg-[var(--color-editor-accent)]/90"
           data-testid="button-apply-template"
         >
           Apply Template

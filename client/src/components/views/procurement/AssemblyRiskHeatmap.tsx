@@ -178,7 +178,7 @@ function BoardSvg({
               rx={3}
               fill={color}
               opacity={risk.riskScore === 0 ? 0.3 : 0.8}
-              stroke={isSelected ? '#00F0FF' : 'none'}
+              stroke={isSelected ? 'var(--color-editor-accent)' : 'none'}
               strokeWidth={isSelected ? 2.5 : 0}
             />
             <text
@@ -266,7 +266,7 @@ function RiskTable({
                 key={risk.refDes}
                 className={cn(
                   'border-b border-border/50 cursor-pointer transition-colors hover:bg-card/30',
-                  isSelected && 'bg-[#00F0FF]/5 border-[#00F0FF]/20',
+                  isSelected && 'bg-[var(--color-editor-accent)]/5 border-[var(--color-editor-accent)]/20',
                 )}
                 onClick={() => onSelect(isSelected ? null : risk.refDes)}
                 data-testid={`risk-row-${risk.refDes}`}

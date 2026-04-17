@@ -281,7 +281,7 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
       const pinShape: CircleShape = {
         id: shapeId, type: 'circle', x: pos.x - 3, y: pos.y - 3,
         width: 6, height: 6, cx: pos.x, cy: pos.y, rotation: 0,
-        style: { fill: '#00F0FF', stroke: '#00F0FF', strokeWidth: 1 },
+        style: { fill: 'var(--color-editor-accent)', stroke: 'var(--color-editor-accent)', strokeWidth: 1 },
       };
       dispatch({ type: 'ADD_SHAPE', payload: { view, shape: pinShape } });
       dispatch({ type: 'ADD_CONNECTOR', payload: {
@@ -741,7 +741,7 @@ export default function ShapeCanvas({ view, drcViolations = [] }: ShapeCanvasPro
             padding: '4px 10px',
             fontSize: 12,
             background: '#1a1a2e',
-            color: '#00F0FF',
+            color: 'var(--color-editor-accent)',
             border: '1px solid #00F0FF',
             borderRadius: 4,
             cursor: 'pointer',

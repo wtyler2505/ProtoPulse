@@ -82,6 +82,7 @@ System-level wiring patterns, multi-voltage integration, common ground disciplin
 - [[slow-blow-fuse-sizing-at-125-percent-peak-prevents-nuisance-trips-while-protecting-wiring]] — fuse sizing rule for motor/inductive loads
 - [[78l05-regulator-failure-kills-hall-power-making-motor-appear-dead-when-only-the-regulator-failed]] — Hall-power regulator failure masquerades as motor failure
 - [[l293d-ground-pins-are-the-primary-thermal-dissipation-path-not-just-electrical-connections]] — L293D ground pins as heatsink; wiring affects thermals
+- [[wire-bundles-past-twenty-conductors-make-connector-labeling-mandatory-rather-than-optional]] — labeling flips from nice-to-have to mandatory at ~20 conductors; 4-motor builds pay a 20-minute debugging tax per unlabeled bundle
 
 ### BLDC & Hall Integration
 - [[tank-steering-replaces-mechanical-steering-with-differential-wheel-speed-control]] — differential-drive control paradigm for dual-motor rovers

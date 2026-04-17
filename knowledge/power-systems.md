@@ -98,6 +98,9 @@ Battery management, voltage regulation, power distribution architecture, fusing 
 - [[reversed-polarity-on-aluminum-electrolytic-capacitors-causes-violent-catastrophic-failure]] — polarity reversal causes explosion, not just failure; orientation is critical
 - [[industrial-grade-electrolytic-capacitors-are-rated-for-5000-plus-hours-versus-2000-hours-for-generic-parts-making-manufacturer-reputation-a-selection-criterion]] — manufacturer grade is a hidden reliability axis beyond datasheet specs
 
+### AC/DC input
+- [[industrial-devices-accept-both-ac-and-dc-input-on-the-same-terminal-block-because-an-internal-bridge-rectifier-makes-polarity-irrelevant]] — internal bridge rectifier accepts both AC and DC on same terminals, polarity-insensitive but costs two diode drops
+
 ### MOSFET switching
 - [[logic-level-mosfet-gate-threshold-below-3v-eliminates-need-for-gate-driver-circuit]] — P30N06LE driven directly from 3.3V/5V GPIO
 - [[floating-gate-pull-down-on-mosfet-is-mandatory-to-prevent-random-actuation-during-mcu-boot]] — 10K gate-source resistor prevents floating gate during reset

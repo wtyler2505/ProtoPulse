@@ -158,7 +158,7 @@ export default function JobHistoryPanel({ className }: JobHistoryPanelProps) {
       className={cn('flex flex-col h-full overflow-hidden', className)}
     >
       <div className="border-b border-border bg-card/60 px-3 py-2 flex items-center gap-2">
-        <History className="w-4 h-4 text-[#00F0FF]" />
+        <History className="w-4 h-4 text-[var(--color-editor-accent)]" />
         <h2 className="text-sm font-semibold text-foreground">Build History</h2>
         <span className="text-xs text-muted-foreground ml-auto">{jobs.length} job{jobs.length !== 1 ? 's' : ''}</span>
       </div>

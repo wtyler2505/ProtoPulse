@@ -18,6 +18,7 @@ The payoff is seven features that were previously blocked by data model drift: g
 ---
 
 Relevant Notes:
+- [[parts-ingress-uses-best-effort-dual-write-with-audit-log]] -- Phase 2 implementation detail: how the ingress pipeline mirrors legacy writes into the canonical catalog with audit-log reconciliation for Phase 4
 - [[god-files-create-feature-paralysis-through-complexity]] -- same structural pattern: complexity blocks features until decomposed
 - [[dual-export-system-is-a-maintenance-trap]] -- another case where two parallel systems for one concept compounded maintenance cost
 - [[hardcoded-project-id-blocked-multi-project-until-wave-39]] -- similar data-model drift pattern that blocked a domain until consolidation

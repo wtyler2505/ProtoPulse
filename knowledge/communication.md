@@ -51,6 +51,7 @@ Wireless and wired communication protocols, module pairing, range/reliability tr
 
 ### RFID
 - [[rfid-13mhz-reads-only-iso-14443a-tags-within-5cm-limiting-use-to-contact-range-applications]] — 13.56MHz RFID is contact-range only; don't expect proximity/walk-by reads
+- [[mifare-classic-default-keys-are-public-knowledge-making-it-unsuitable-for-real-security]] — MIFARE Classic provides identification, not authentication; default keys are public and Crypto-1 is broken — use DESFire for access control
 
 ### Wireless module selection / integration
 - [[wireless-modules-are-overwhelmingly-3v3-making-level-shifting-the-default]] — 8/11 communication modules use 3.3V logic; level shifting is the default wiring concern for 5V MCU projects
