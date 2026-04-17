@@ -43,6 +43,7 @@ import BreadboardWireEditor from './BreadboardWireEditor';
 import BreadboardBenchPartRenderer from './BreadboardBenchPartRenderer';
 import { COMPONENT_DRAG_TYPE } from './ComponentPlacer';
 import type { ComponentDragData } from './ComponentPlacer';
+import { getBenchConnectorAnchorPositions, type BenchConnectorAnchorPosition } from '@/lib/circuit-editor/breadboard-bench-connectors';
 import {
   buildBreadboardBenchSummary,
   indexBreadboardBenchInsights,
@@ -114,7 +115,12 @@ import {
 } from '@/lib/circuit-editor/breadboard-model';
 import type { CircuitDesignRow, CircuitInstanceRow, CircuitWireRow, ComponentPart } from '@shared/schema';
 import type { PartMeta } from '@shared/component-types';
-import { determinePlacementMode, pixelToBench } from '@/lib/circuit-editor/bench-surface-model';
+import {
+  determinePlacementMode,
+  pixelToBench,
+  type WireEndpoint as SurfaceWireEndpoint,
+  type WireEndpointMeta,
+} from '@/lib/circuit-editor/bench-surface-model';
 import { UndoRedoStack } from '@/lib/undo-redo';
 import type { ExactPartDraftSeed } from '@shared/exact-part-resolver';
 import { formatSIValue } from '@/lib/simulation/visual-state';
@@ -134,6 +140,7 @@ interface WireInProgress {
   netId: number;
   points: PixelPos[];
   coordPath: BreadboardCoord[];
+  endpointPath: Array<SurfaceWireEndpoint | null>;
   color: string;
 }
 
@@ -945,6 +952,85 @@ function BreadboardCanvas({
     [instances],
   );
 
+  const benchConnectorAnchors = useMemo(
+    () => benchInstances.flatMap((inst) => getBenchConnectorAnchorPositions(inst, inst.partId ? partsMap.get(inst.partId) : undefined)),
+    [benchInstances, partsMap],
+  );
+
+  const getHoleEndpoint = useCallback((point: PixelPos): Extract<SurfaceWireEndpoint, { type: 'hole' }> | null => {
+    const coord = pixelToCoord(point);
+    if (!coord) {
+      return null;
+    }
+
+    if (coord.type === 'terminal') {
+      return {
+        type: 'hole',
+        col: coord.col,
+        row: coord.row,
+      };
+    }
+
+    return null;
+  }, []);
+
+  const resolveInteractiveWireTarget = useCallback((point: PixelPos): {
+    pixel: PixelPos;
+    meta: SurfaceWireEndpoint | null;
+  } => {
+    let closestBenchAnchor: BenchConnectorAnchorPosition | null = null;
+    let closestBenchDistance = Number.POSITIVE_INFINITY;
+
+    for (const anchor of benchConnectorAnchors) {
+      const distance = Math.hypot(anchor.x - point.x, anchor.y - point.y);
+      if (distance <= 12 && distance < closestBenchDistance) {
+        closestBenchDistance = distance;
+        closestBenchAnchor = anchor;
+      }
+    }
+
+    if (closestBenchAnchor) {
+      return {
+        pixel: { x: closestBenchAnchor.x, y: closestBenchAnchor.y },
+        meta: {
+          type: 'bench-pin',
+          instanceId: closestBenchAnchor.instanceId,
+          pinId: closestBenchAnchor.pinId,
+        },
+      };
+    }
+
+    const holeEndpoint = getHoleEndpoint(point);
+    if (holeEndpoint) {
+      return {
+        pixel: coordToPixel({ type: 'terminal', col: holeEndpoint.col, row: holeEndpoint.row }),
+        meta: holeEndpoint,
+      };
+    }
+
+    return {
+      pixel: point,
+      meta: null,
+    };
+  }, [benchConnectorAnchors, getHoleEndpoint]);
+
+  const buildEndpointMeta = useCallback((points: PixelPos[], endpointMeta: Array<SurfaceWireEndpoint | null>): WireEndpointMeta | null => {
+    if (points.length < 2 || endpointMeta.length === 0) {
+      return null;
+    }
+
+    const startMeta = endpointMeta[0] ?? getHoleEndpoint(points[0]);
+    const endMeta = endpointMeta[endpointMeta.length - 1] ?? getHoleEndpoint(points[points.length - 1]);
+    if (!startMeta || !endMeta) {
+      return null;
+    }
+
+    return {
+      start: startMeta,
+      end: endMeta,
+    };
+  }, [getHoleEndpoint]);
+
   // Build ComponentPlacement for each placed instance (used by collision + drag-to-place)
   const instancePlacements = useMemo(() => {
     if (!instances) return [];
@@ -1373,6 +1459,7 @@ function BreadboardCanvas({
           points: hookup.path,
           color: getCoachHookupColor(hookup.netType),
           wireType: 'jump',
+          provenance: 'coach',
         });
       }
 
@@ -1396,6 +1483,7 @@ function BreadboardCanvas({
           points: bridge.path,
           color: getCoachHookupColor(bridge.netType),
           wireType: 'jump',
+          provenance: 'coach',
         });
       }
 
@@ -1488,6 +1576,11 @@ function BreadboardCanvas({
           netId: firstNet.id,
           points: [pixel],
           coordPath: [coord],
+          endpointPath: [coord.type === 'terminal' ? {
+            type: 'hole',
+            col: coord.col,
+            row: coord.row,
+          } : null],
           color: getDefaultColorForNet(firstNet.name),
         });
       } else {
@@ -1496,11 +1589,60 @@ function BreadboardCanvas({
           ...wireInProgress,
           points: [...wireInProgress.points, pixel],
           coordPath: [...wireInProgress.coordPath, coord],
+          endpointPath: [
+            ...wireInProgress.endpointPath,
+            coord.type === 'terminal' ? {
+              type: 'hole',
+              col: coord.col,
+              row: coord.row,
+            } : null,
+          ],
         };
         setWireInProgress(updated);
       }
     }
   }, [tool, wireInProgress, nets]);
+
+  const handleBenchConnectorClick = useCallback((anchor: BenchConnectorAnchorPosition) => {
+    setSelectedInstanceId(anchor.instanceId);
+
+    if (tool !== 'wire') {
+      return;
+    }
+
+    if (!wireInProgress) {
+      const firstNet = nets?.[0];
+      if (!firstNet) {
+        return;
+      }
+
+      setWireInProgress({
+        netId: firstNet.id,
+        points: [{ x: anchor.x, y: anchor.y }],
+        coordPath: [],
+        endpointPath: [{
+          type: 'bench-pin',
+          instanceId: anchor.instanceId,
+          pinId: anchor.pinId,
+        }],
+        color: getDefaultColorForNet(firstNet.name),
+      });
+      return;
+    }
+
+    setWireInProgress({
+      ...wireInProgress,
+      points: [...wireInProgress.points, { x: anchor.x, y: anchor.y }],
+      endpointPath: [
+        ...wireInProgress.endpointPath,
+        {
+          type: 'bench-pin',
+          instanceId: anchor.instanceId,
+          pinId: anchor.pinId,
+        },
+      ],
+    });
+  }, [nets, tool, wireInProgress]);
 
   const handleTiePointHover = useCallback((coord: BreadboardCoord | null) => {
     setHoveredCoord(coord);
@@ -1517,17 +1659,21 @@ function BreadboardCanvas({
   const handleDoubleClick = useCallback(() => {
     // Complete wire on double-click
     if (wireInProgress && wireInProgress.points.length >= 2) {
+      const endpointMeta = buildEndpointMeta(wireInProgress.points, wireInProgress.endpointPath);
+      const hasBenchPinEndpoint = wireInProgress.endpointPath.some((endpoint) => endpoint?.type === 'bench-pin');
       createWireMutation.mutate({
         circuitId,
         netId: wireInProgress.netId,
         view: 'breadboard',
         points: wireInProgress.points,
         color: wireInProgress.color,
-        wireType: 'wire',
+        wireType: hasBenchPinEndpoint ? 'jump' : 'wire',
+        endpointMeta,
+        provenance: hasBenchPinEndpoint ? 'jumper' : 'manual',
       });
       setWireInProgress(null);
     }
-  }, [wireInProgress, createWireMutation, circuitId]);
+  }, [buildEndpointMeta, wireInProgress, createWireMutation, circuitId]);
 
   const handleEscape = useCallback(() => {
     setWireInProgress(null);
@@ -1553,13 +1699,29 @@ function BreadboardCanvas({
     if (!wire) { return; }
     const pts = (wire.points as Array<{ x: number; y: number }>).map(p => ({ ...p }));
     if (pts.length === 0) { return; }
+    const resolvedTarget = resolveInteractiveWireTarget(newPos);
     if (endpoint === 'start') {
-      pts[0] = { x: newPos.x, y: newPos.y };
+      pts[0] = resolvedTarget.pixel;
     } else {
-      pts[pts.length - 1] = { x: newPos.x, y: newPos.y };
+      pts[pts.length - 1] = resolvedTarget.pixel;
     }
-    updateWireMutation.mutate({ circuitId, id: wireId, points: pts });
-  }, [breadboardWires, updateWireMutation, circuitId]);
+    const existingMeta = (wire.endpointMeta as WireEndpointMeta | null | undefined) ?? null;
+    const nextEndpointMeta = endpoint === 'start'
+      ? buildEndpointMeta(pts, [resolvedTarget.meta, existingMeta?.end ?? null])
+      : buildEndpointMeta(pts, [existingMeta?.start ?? null, resolvedTarget.meta]);
+    const isBenchLinked = nextEndpointMeta?.start.type === 'bench-pin' || nextEndpointMeta?.end.type === 'bench-pin';
+    const provenance = isBenchLinked
+      ? 'jumper'
+      : (wire.provenance === 'jumper' ? 'manual' : (wire.provenance ?? 'manual'));
+    updateWireMutation.mutate({
+      circuitId,
+      id: wireId,
+      points: pts,
+      endpointMeta: nextEndpointMeta,
+      provenance,
+      wireType: isBenchLinked ? 'jump' : 'wire',
+    });
+  }, [breadboardWires, buildEndpointMeta, resolveInteractiveWireTarget, updateWireMutation, circuitId]);
 
   // BL-0591: Wire right-click opens color picker
   const handleWireContextMenu = useCallback((e: React.MouseEvent, wireId: number) => {
@@ -1989,6 +2151,8 @@ function BreadboardCanvas({
                   part={part}
                   selected={selectedInstanceId === inst.id}
                   onClick={setSelectedInstanceId}
+                  showConnectorTargets={tool === 'wire'}
+                  onConnectorClick={handleBenchConnectorClick}
                 />
               );
             })}

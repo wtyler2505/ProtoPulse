@@ -307,6 +307,8 @@ export function useCreateCircuitWire() {
       width?: number;
       color?: string | null;
       wireType?: 'wire' | 'jump';
+      endpointMeta?: Record<string, unknown> | null;
+      provenance?: 'manual' | 'synced' | 'coach' | 'jumper';
     }) => {
       const { circuitId, ...body } = data;
       const res = await apiRequest('POST', `/api/circuits/${circuitId}/wires`, body);
@@ -329,6 +331,8 @@ export function useUpdateCircuitWire() {
       width?: number;
       color?: string | null;
       wireType?: 'wire' | 'jump';
+      endpointMeta?: Record<string, unknown> | null;
+      provenance?: 'manual' | 'synced' | 'coach' | 'jumper';
     }) => {
       const { circuitId, id, ...body } = data;
       const res = await apiRequest('PATCH', `/api/circuits/${circuitId}/wires/${id}`, body);

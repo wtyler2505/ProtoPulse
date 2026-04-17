@@ -482,6 +482,8 @@ describe('BreadboardView', () => {
     mockBom.splice(0, mockBom.length, ...baseMockBom.map((item) => ({ ...item })));
     mockInstances[0].breadboardX = null;
     mockInstances[0].breadboardY = null;
+    mockInstances[0].benchX = null;
+    mockInstances[0].benchY = null;
     mockInstances[0].partId = 17;
     mockInstances[0].properties = { type: 'mcu' };
     mockCreateNet.mutateAsync.mockResolvedValue({ id: 99, name: 'VCC', circuitDesignId: 1, netType: 'power' });
@@ -864,6 +866,44 @@ describe('BreadboardView', () => {
       expect(mockToast).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Coach support staged',
+        }),
+      );
+    });
+
+    it('creates jumper wires from real bench connector anchors with endpoint metadata', async () => {
+      mockInstances[0].benchX = 180;
+      mockInstances[0].benchY = 160;
+
+      render(<BreadboardView />);
+
+      fireEvent.click(screen.getByTestId('tool-wire'));
+      fireEvent.click(screen.getByTestId('bench-connector-hit-1-pin-1'));
+      fireEvent.click(screen.getByTestId('bench-connector-hit-1-pin-2'));
+      fireEvent.doubleClick(screen.getByTestId('breadboard-canvas'));
+
+      await waitFor(() => {
+        expect(mockCreateWire.mutate).toHaveBeenCalled();
+      });
+
+      expect(mockCreateWire.mutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          circuitId: 1,
+          netId: 1,
+          view: 'breadboard',
+          wireType: 'jump',
+          provenance: 'jumper',
+          endpointMeta: {
+            start: {
+              type: 'bench-pin',
+              instanceId: 1,
+              pinId: 'pin-1',
+            },
+            end: {
+              type: 'bench-pin',
+              instanceId: 1,
+              pinId: 'pin-2',
+            },
+          },
         }),
       );
     });

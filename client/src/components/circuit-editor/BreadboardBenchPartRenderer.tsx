@@ -1,9 +1,9 @@
 import { memo, useMemo } from 'react';
 
 import { computeShapesBounds, renderPartShape } from '@/components/circuit-editor/PartSymbolRenderer';
+import { getBenchConnectorAnchorPositions, type BenchConnectorAnchorPosition } from '@/lib/circuit-editor/breadboard-bench-connectors';
 import { cn } from '@/lib/utils';
 import { getVerificationStatus, shouldPreferExactBreadboardView } from '@shared/component-trust';
-import type { Connector } from '@shared/component-types';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
 
 interface BreadboardBenchPartRendererProps {
@@ -11,6 +11,8 @@ interface BreadboardBenchPartRendererProps {
   part?: ComponentPart;
   selected?: boolean;
   onClick?: (id: number) => void;
+  showConnectorTargets?: boolean;
+  onConnectorClick?: (anchor: BenchConnectorAnchorPosition) => void;
 }
 
 const BreadboardBenchPartRenderer = memo(function BreadboardBenchPartRenderer({
@@ -18,6 +20,8 @@ const BreadboardBenchPartRenderer = memo(function BreadboardBenchPartRenderer({
   part,
   selected = false,
   onClick,
+  showConnectorTargets = false,
+  onConnectorClick,
 }: BreadboardBenchPartRendererProps) {
   const pos = useMemo(() => {
     if (instance.benchX == null || instance.benchY == null) {
@@ -37,7 +41,10 @@ const BreadboardBenchPartRenderer = memo(function BreadboardBenchPartRenderer({
   const rotationTransform = instance.breadboardRotation != null && instance.breadboardRotation !== 0
     ? `rotate(${String(instance.breadboardRotation)} ${String(pos?.x ?? 0)} ${String(pos?.y ?? 0)})`
     : undefined;
-  const benchConnectors = (((part?.connectors ?? []) as Connector[]) ?? []).filter((connector) => connector.terminalPositions?.breadboard);
+  const benchAnchors = useMemo(
+    () => getBenchConnectorAnchorPositions(instance, part),
+    [instance, part],
+  );
   const title = typeof meta.title === 'string' ? meta.title : instance.referenceDesignator;
   const verificationLabel = getVerificationStatus(meta) === 'verified' ? 'Verified geometry' : 'Candidate geometry';
 
@@ -56,18 +63,32 @@ const BreadboardBenchPartRenderer = memo(function BreadboardBenchPartRenderer({
         <g transform={`translate(${String(pos.x)} ${String(pos.y)})`}>
           <g transform={innerTransform}>
             {exactShapes.map((shape) => renderPartShape(shape))}
-            {benchConnectors.map((connector) => {
-              const anchor = connector.terminalPositions.breadboard;
+            {benchAnchors.map((anchor) => {
               return (
-                <circle
-                  key={`bench-anchor-${instance.id}-${connector.id}`}
-                  cx={anchor.x}
-                  cy={anchor.y}
-                  r={2.3}
-                  fill="rgba(14,165,233,0.2)"
-                  stroke={selected ? 'var(--color-editor-accent)' : '#94a3b8'}
-                  strokeWidth={selected ? 1.1 : 0.8}
-                />
+                <g key={`bench-anchor-${instance.id}-${anchor.connectorId}`}>
+                  <circle
+                    cx={anchor.localX}
+                    cy={anchor.localY}
+                    r={showConnectorTargets ? 3.1 : 2.3}
+                    fill={showConnectorTargets ? 'rgba(14,165,233,0.28)' : 'rgba(14,165,233,0.2)'}
+                    stroke={selected || showConnectorTargets ? 'var(--color-editor-accent)' : '#94a3b8'}
+                    strokeWidth={selected || showConnectorTargets ? 1.1 : 0.8}
+                  />
+                  {onConnectorClick && (
+                    <circle
+                      data-testid={`bench-connector-hit-${instance.id}-${anchor.connectorId}`}
+                      cx={anchor.localX}
+                      cy={anchor.localY}
+                      r={6}
+                      fill="transparent"
+                      style={{ cursor: 'crosshair' }}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onConnectorClick(anchor);
+                      }}
+                    />
+                  )}
+                </g>
               );
             })}
           </g>
@@ -118,18 +139,31 @@ const BreadboardBenchPartRenderer = memo(function BreadboardBenchPartRenderer({
       <text x={0} y={-13} textAnchor="middle" fill="#94a3b8" fontSize={6} fontFamily="monospace">BENCH</text>
       <text x={0} y={2} textAnchor="middle" fill="#e2e8f0" fontSize={7} fontFamily="monospace">{instance.referenceDesignator}</text>
       <text x={0} y={12} textAnchor="middle" fill="#67e8f9" fontSize={5} fontFamily="monospace">{title.slice(0, 14)}</text>
-      {benchConnectors.slice(0, 8).map((connector, index) => {
-        const x = index < 4 ? -28 : 28;
-        const y = -10 + (index % 4) * 7;
+      {benchAnchors.slice(0, 8).map((anchor) => {
         return (
-          <circle
-            key={`fallback-anchor-${instance.id}-${connector.id}`}
-            cx={x}
-            cy={y}
-            r={2}
-            fill="var(--color-editor-accent)"
-            opacity={0.7}
-          />
+          <g key={`fallback-anchor-${instance.id}-${anchor.connectorId}`}>
+            <circle
+              cx={anchor.localX}
+              cy={anchor.localY}
+              r={showConnectorTargets ? 2.6 : 2}
+              fill="var(--color-editor-accent)"
+              opacity={showConnectorTargets ? 0.95 : 0.7}
+            />
+            {onConnectorClick && (
+              <circle
+                data-testid={`bench-connector-hit-${instance.id}-${anchor.connectorId}`}
+                cx={anchor.localX}
+                cy={anchor.localY}
+                r={6}
+                fill="transparent"
+                style={{ cursor: 'crosshair' }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onConnectorClick(anchor);
+                }}
+              />
+            )}
+          </g>
         );
       })}
     </g>
