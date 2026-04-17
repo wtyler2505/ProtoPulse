@@ -55,6 +55,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash /home/wtyler/Projects/ProtoPulse/.claude/hooks/auto-create-parent-moc.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
             "command": "claudekit-hooks run lint-changed"
           }
         ]
