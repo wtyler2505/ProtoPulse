@@ -11,7 +11,6 @@ interface ChatSettings {
   customSystemPrompt: string;
   routingStrategy: RoutingStrategy;
   previewAiChanges: boolean;
-  googleWorkspaceToken: string;
 }
 
 const DEFAULTS: ChatSettings = {
@@ -21,12 +20,19 @@ const DEFAULTS: ChatSettings = {
   customSystemPrompt: '',
   routingStrategy: 'auto' as RoutingStrategy,
   previewAiChanges: true,
-  googleWorkspaceToken: '',
 };
+
+/** Legacy key — scrubbed from localStorage on first load. See audit finding #60. */
+const LEGACY_GOOGLE_WORKSPACE_KEY = 'protopulse-google-workspace-token';
 
 /** Read chat settings from localStorage with validation and fallback defaults. */
 function readLocalStorage(): ChatSettings {
   try {
+    // Security fix (audit #60): scrub any legacy plaintext Google Workspace OAuth token.
+    // This key is now managed exclusively by useGoogleWorkspaceToken (server-encrypted +
+    // sessionStorage scratch). Any value left over from a previous session is a liability.
+    try { localStorage.removeItem(LEGACY_GOOGLE_WORKSPACE_KEY); } catch { /* ignore */ }
+
     const provider = 'gemini';
     const storedModel = localStorage.getItem(STORAGE_KEYS.AI_MODEL);
     const models = AI_MODELS[provider];
@@ -37,8 +43,7 @@ function readLocalStorage(): ChatSettings {
     const routingStrategy = (localStorage.getItem(STORAGE_KEYS.ROUTING_STRATEGY) as RoutingStrategy) || DEFAULTS.routingStrategy;
     const previewRaw = localStorage.getItem(STORAGE_KEYS.AI_PREVIEW_CHANGES);
     const previewAiChanges = previewRaw !== null ? previewRaw === 'true' : DEFAULTS.previewAiChanges;
-    const googleWorkspaceToken = localStorage.getItem('protopulse-google-workspace-token') || '';
-    
+
     return {
       aiProvider: provider,
       aiModel: model,
@@ -46,7 +51,6 @@ function readLocalStorage(): ChatSettings {
       customSystemPrompt,
       routingStrategy,
       previewAiChanges,
-      googleWorkspaceToken,
     };
   } catch {
     return DEFAULTS;
@@ -62,7 +66,6 @@ function writeLocalStorage(patch: Partial<ChatSettings>) {
     if (patch.customSystemPrompt !== undefined) localStorage.setItem(STORAGE_KEYS.AI_SYSTEM_PROMPT, patch.customSystemPrompt);
     if (patch.routingStrategy !== undefined) localStorage.setItem(STORAGE_KEYS.ROUTING_STRATEGY, patch.routingStrategy);
     if (patch.previewAiChanges !== undefined) localStorage.setItem(STORAGE_KEYS.AI_PREVIEW_CHANGES, String(patch.previewAiChanges));
-    if (patch.googleWorkspaceToken !== undefined) localStorage.setItem('protopulse-google-workspace-token', patch.googleWorkspaceToken);
   } catch {
     // Quota exceeded — silently ignore, server is the durable store
   }
@@ -196,15 +199,6 @@ export function useChatSettings() {
     });
   }, [scheduleSave]);
 
-  const setGoogleWorkspaceToken = useCallback((v: string) => {
-    setSettings(prev => {
-      const next = { ...prev, googleWorkspaceToken: v };
-      writeLocalStorage({ googleWorkspaceToken: v });
-      scheduleSave({ googleWorkspaceToken: v });
-      return next;
-    });
-  }, [scheduleSave]);
-
   return {
     ...settings,
     setAiProvider,
@@ -213,7 +207,6 @@ export function useChatSettings() {
     setCustomSystemPrompt,
     setRoutingStrategy,
     setPreviewAiChanges,
-    setGoogleWorkspaceToken,
     settingsQuery,
   };
 }

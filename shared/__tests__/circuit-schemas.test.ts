@@ -291,6 +291,18 @@ describe('partMetaSchema', () => {
 // partStateSchema
 // ---------------------------------------------------------------------------
 describe('partStateSchema', () => {
+  // Canonical Connector shape per shared/component-types.ts:73-81 requires
+  // id + name + connectorType + shapeIds + terminalPositions (and optional
+  // description + padSpec). These test fixtures match that real shape — an
+  // earlier version under-specified the schema with just {id} which was a
+  // validation hole.
+  const canonicalConnector = {
+    id: 'c1',
+    name: 'Pin 1',
+    connectorType: 'male' as const,
+    shapeIds: { breadboard: ['shape-1'] },
+    terminalPositions: { breadboard: { x: 0, y: 0 } },
+  };
   const minimalState = {
     meta: {
       title: 'Resistor',
@@ -298,7 +310,7 @@ describe('partStateSchema', () => {
       mountingType: 'smd' as const,
       properties: [],
     },
-    connectors: [{ id: 'c1' }],
+    connectors: [canonicalConnector],
     buses: [],
     views: {
       breadboard: { shapes: [] },
@@ -307,10 +319,11 @@ describe('partStateSchema', () => {
     },
   };
 
-  it('accepts minimal part state', () => {
+  it('accepts minimal part state with full Connector shape', () => {
     const result = partStateSchema.parse(minimalState);
     expect(result.meta.title).toBe('Resistor');
     expect(result.connectors).toHaveLength(1);
+    expect(result.connectors[0].id).toBe('c1');
   });
 
   it('rejects state where meta is missing', () => {
@@ -327,12 +340,58 @@ describe('partStateSchema', () => {
     ).toThrow();
   });
 
+  it('rejects connector missing required fields (name/connectorType/shapeIds/terminalPositions)', () => {
+    expect(() =>
+      partStateSchema.parse({
+        ...minimalState,
+        connectors: [{ id: 'c1' }], // missing required fields — this used to pass under the old loose schema
+      }),
+    ).toThrow();
+  });
+
+  it('rejects connector with invalid connectorType enum', () => {
+    expect(() =>
+      partStateSchema.parse({
+        ...minimalState,
+        connectors: [{ ...canonicalConnector, connectorType: 'bogus' }],
+      }),
+    ).toThrow();
+  });
+
+  it('accepts connector with optional padSpec', () => {
+    const result = partStateSchema.parse({
+      ...minimalState,
+      connectors: [{
+        ...canonicalConnector,
+        padSpec: { type: 'smd' as const, shape: 'rect' as const, width: 1.6, height: 0.8 },
+      }],
+    });
+    expect(result.connectors[0].padSpec?.type).toBe('smd');
+  });
+
   it('passes through connector/bus forward-compat fields', () => {
     const result = partStateSchema.parse({
       ...minimalState,
-      connectors: [{ id: 'c1', futureAnchor: { x: 5 } }],
+      connectors: [{ ...canonicalConnector, futureAnchor: { x: 5 } }],
     });
     expect((result.connectors[0] as Record<string, unknown>).futureAnchor).toEqual({ x: 5 });
+  });
+
+  it('accepts bus with full shape', () => {
+    const result = partStateSchema.parse({
+      ...minimalState,
+      buses: [{ id: 'b1', name: 'I2C', connectorIds: ['c1'] }],
+    });
+    expect(result.buses[0].name).toBe('I2C');
+  });
+
+  it('rejects bus missing required name', () => {
+    expect(() =>
+      partStateSchema.parse({
+        ...minimalState,
+        buses: [{ id: 'b1', connectorIds: [] }],
+      }),
+    ).toThrow();
   });
 });
 

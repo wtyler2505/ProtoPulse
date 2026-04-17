@@ -706,6 +706,13 @@ export function registerChatRoutes(app: Express): void {
         });
       };
 
+      // Security fix (audit #60): Resolve Google Workspace token server-side from the
+      // authenticated user's encrypted api_keys record. Never trust a token in the request
+      // body — it would round-trip the client and be exfiltratable via XSS.
+      const googleWorkspaceToken = req.userId
+        ? (await getApiKey(req.userId, 'google_workspace')) ?? undefined
+        : undefined;
+
       try {
         await streamAIMessage(
           {
@@ -716,11 +723,11 @@ export function registerChatRoutes(app: Express): void {
             appState,
             temperature: temperature ?? 0.7,
             maxTokens,
-            toolContext: { 
-              projectId: pid, 
-              storage, 
+            toolContext: {
+              projectId: pid,
+              storage,
               confirmed: parsed.data.confirmed,
-              googleWorkspaceToken: req.body.googleWorkspaceToken
+              googleWorkspaceToken,
             },
             imageContent: parsed.data.imageBase64
               ? {

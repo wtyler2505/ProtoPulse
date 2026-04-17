@@ -227,16 +227,45 @@ export const partMetaSchema = z.object({
 // of scope for the route boundary (handled deeper in the component-editor
 // code path).
 
+// Connector / Bus shapes mirror shared/component-types.ts:73-87 fully —
+// under-specifying these was a validation hole (task #45 regression).
+const terminalPositionSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+}).passthrough();
+
+const padSpecSchema = z.object({
+  type: z.enum(['tht', 'smd']),
+  shape: z.enum(['circle', 'rect', 'oblong', 'square']),
+  diameter: z.number().optional(),
+  drill: z.number().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+}).passthrough();
+
 const connectorSchema = z.object({
   id: z.string().min(1),
+  name: z.string(),
+  description: z.string().optional(),
+  connectorType: z.enum(['male', 'female', 'pad']),
+  shapeIds: z.record(z.array(z.string())),
+  terminalPositions: z.record(terminalPositionSchema),
+  padSpec: padSpecSchema.optional(),
 }).passthrough();
 
 const busSchema = z.object({
   id: z.string().min(1),
+  name: z.string(),
+  connectorIds: z.array(z.string()),
 }).passthrough();
 
 const viewDataSchema = z.object({
   shapes: z.array(z.unknown()),
+  layerConfig: z.record(z.object({
+    visible: z.boolean(),
+    locked: z.boolean(),
+    color: z.string().optional(),
+  }).passthrough()).optional(),
 }).passthrough();
 
 /**
