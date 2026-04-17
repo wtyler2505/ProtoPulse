@@ -43,14 +43,17 @@ const mockSetNodes = vi.fn();
 const mockSetEdges = vi.fn();
 const mockPushUndoState = vi.fn();
 
+let mockArchitectureNodes: Array<{ id: string; type: string; position: { x: number; y: number }; data: Record<string, unknown> }> = [];
+let mockArchitectureEdges: Array<{ id: string; source: string; target: string; label?: string }> = [];
+
 vi.mock('@/hooks/use-toast', () => ({
   toast: vi.fn(),
 }));
 
 vi.mock('@/lib/contexts/architecture-context', () => ({
   useArchitecture: () => ({
-    nodes: [],
-    edges: [],
+    nodes: mockArchitectureNodes,
+    edges: mockArchitectureEdges,
     setNodes: mockSetNodes,
     setEdges: mockSetEdges,
     pushUndoState: mockPushUndoState,
