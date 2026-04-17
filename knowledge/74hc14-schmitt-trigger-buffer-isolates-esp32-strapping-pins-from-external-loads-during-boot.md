@@ -18,7 +18,7 @@ A 74HC14 hex inverting Schmitt-trigger buffer placed between the ESP32 GPIO and 
 
 Therefore since [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]], the fix when a strapping pin MUST drive an external input (because the GPIO budget is already exhausted — see [[esp32-4wd-rover-consumes-20-of-34-gpios-for-motor-control-forcing-use-of-strapping-and-input-only-pins]]) is a Schmitt-trigger buffer, not moving the wire. A non-inverting alternative like the 74HCT245 works equally well for isolation but [[74hc14-inverting-and-74hct245-non-inverting-buffers-trade-firmware-complexity-against-level-shifting-integration]] captures the trade-off.
 
-The Schmitt-trigger hysteresis is a bonus: it cleans up slow-edged signals on the output side (useful when the external wire is long). But the load-bearing function is boot-time isolation, not edge cleanup.
+The Schmitt-trigger hysteresis is a bonus: it cleans up slow-edged signals on the output side (useful when the external wire is long). But the load-bearing function is boot-time isolation, not edge cleanup. The hysteresis mechanism itself is the same threshold-control pattern that [[lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary|LVD circuits use for battery cutoff/reconnect]] — asymmetric rising and falling trip points break the oscillation cycle that a single threshold creates.
 
 ---
 
@@ -28,6 +28,7 @@ Relevant Notes:
 - [[esp32-gpio12-must-be-low-at-boot-or-module-crashes]] — the failure mode this buffer prevents
 - [[esp32-has-14-safe-gpio-pins-with-no-boot-or-flash-restrictions]] — when you exhaust the safe pins you are forced onto strapping pins
 - [[signal-inversion-through-a-hex-inverting-buffer-requires-firmware-to-flip-every-driven-pins-logic-to-compensate]] — the cost of choosing 74HC14 over 74HCT245
+- [[lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary]] — same hysteresis mechanism applied at battery-voltage scale; the Schmitt trigger and the LVD are instances of the universal threshold-control pattern
 
 Topics:
 - [[microcontrollers]]

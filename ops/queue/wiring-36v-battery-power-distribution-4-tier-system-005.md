@@ -37,4 +37,21 @@ Insight exists at `knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-
 **Agent note:** Hysteresis is a general engineering pattern (Schmitt triggers, thermostats, hydraulic cutoffs) that appears narrowly here. Worth watching for a future synthesis claim "threshold-control systems need hysteresis windows to prevent oscillation" that would pull in examples from non-battery domains.
 
 ## Revisit
+
+**Older notes updated:** 1
+
+- [[74hc14-schmitt-trigger-buffer-isolates-esp32-strapping-pins-from-external-loads-during-boot]] — added bidirectional link to LVD hysteresis note. This older note already mentioned "Schmitt-trigger hysteresis" as edge cleanup but didn't connect it to the LVD pattern. The hysteresis mechanism is literally identical (asymmetric rising/falling trip points) at different voltage scales — surfacing this cross-domain link helps an agent hitting a threshold-chatter problem in either domain traverse to the other.
+
+**Claim status:** unchanged. The claim ("reconnect voltage above cutoff prevents oscillation") is sharp, recent (2026-04-14), and well-supported. Not split — the note is genuinely about one mechanism applied to one domain with universal-pattern context.
+
+**Inline body update:** Strengthened the "same hysteresis pattern appears in..." paragraph by linking the Schmitt trigger example inline (previously text-only), adding WiFi roaming specificity, and explicitly naming the shared mechanism across voltage scales.
+
+**Siblings evaluated, no new link:** 130K voltage divider, BMS discharge port, per-branch fusing, 10uF ceramic, E-STOP aux, lead-acid external LVD, LiFePO4 12S, linear voltage-to-percentage, ANL marine fuse. All are power-systems infrastructure but operate on different mechanisms (scaling, fuse coordination, MCU power tree, etc.), not threshold hysteresis. Adding connections would be "related" without articulable agent-utility rationale.
+
+**Network effect:** 2 outgoing links in body → 3 inline + 3 footer (3 → 6 total). New cross-domain path power-systems ↔ microcontrollers/wiring-integration through the Schmitt trigger bridge.
+
+**MOC updates:** [[power-systems]] entry already accurate ("hysteresis window prevents chattering at the disconnect threshold"). No change needed.
+
+**Agent note forward:** The watch for "threshold-control systems need hysteresis windows" synthesis claim still stands, and now has a second domain-instance (logic buffering) linked into it. If a third instance appears (thermostat, WiFi roaming), the synthesis is ready to materialize.
+
 ## Verify

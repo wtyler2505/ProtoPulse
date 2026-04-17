@@ -36,4 +36,25 @@ Insight exists at `knowledge/anl-marine-fuse-class-is-the-correct-selection-for-
 **Agent note:** This is a class-selection claim (architectural) not a sizing claim (parametric). The three inline links form a tight chain: "size the fuse correctly, place it correctly, and pick the right physical class." Makes a nice example of how three separate claims compose into a complete design decision.
 
 ## Revisit
+
+**Claim status:** unchanged -- the class-selection claim holds and is sharpened by newer context, not revised.
+
+**Target note additions:**
+- Added inline link to [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] -- frames the 100A ANL rating inside the continuous<peak<fuse<wire ordering. This note did not exist in its current form when the ANL note was authored.
+- Added inline link to [[per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main]] -- explicitly completes the two-tier ANL-above / blade-below hierarchy that the ANL note describes but previously left disconnected. Bidirectional: per-branch already cites ANL, ANL now cites per-branch.
+- Updated footer Relevant Notes to reflect both new connections.
+
+**Older notes updated (backward pass):**
+- `knowledge/main-fuse-within-six-inches-of-battery-positive-is-nec-fire-prevention-requirement.md` -- added ANL class-selection footer link. Pre-existing mention of ANL-100 was unlinked.
+- `knowledge/slow-blow-fuse-sizing-at-125-percent-peak-prevents-nuisance-trips-while-protecting-wiring.md` -- added ANL class-selection footer link. Pre-existing mention of ANL time-current curve was unlinked.
+- `knowledge/power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity.md` -- added ANL class-selection footer link. Pre-existing mention of "ANL-100 time-delay fuse" in row 3 was unlinked.
+
+**Network effect:** ANL note outgoing links 3 -> 5. Three older fuse notes now forward-reference ANL class selection, closing the class-vs-sizing gap noted in the Connect phase. The "size the fuse correctly, place it correctly, pick the right physical class" chain is now fully bidirectional across all four fuse notes.
+
+**MOC updates:** None. [[power-systems]] entry for the ANL note is unchanged -- already correctly placed in "Fusing + main disconnect" section with accurate prose description.
+
+**Articulation test:** All five new connections pass. Each articulates a specific structural or physics relationship, not "related to".
+
+**Not changing:** Title, description, claim, body reasoning, example math. The note was written recently (2026-04-14) with current understanding; only connection gaps needed closing.
+
 ## Verify

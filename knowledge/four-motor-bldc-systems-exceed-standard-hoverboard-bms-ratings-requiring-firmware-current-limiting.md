@@ -20,7 +20,7 @@ When building a 4WD rover with four hoverboard hub motors (like OmniTrek), the t
 | Continuous power | 250W | 1,000W |
 | Peak power | 350W | 1,400W |
 
-A standard hoverboard BMS is designed for a 2-motor system and typically trips at 30-40A total. Using its battery pack to drive 4 motors means the BMS will trip under peak load conditions (hill climbing, acceleration from stop, hitting obstacles), causing sudden power loss -- a dangerous condition for a rover carrying expensive electronics.
+A standard hoverboard BMS is designed for a 2-motor system and typically trips at 30-40A total. Using its battery pack to drive 4 motors means the BMS will trip under peak load conditions (hill climbing, acceleration from stop, hitting obstacles), causing sudden power loss -- a dangerous condition for a rover carrying expensive electronics. The severity is not just lost motion: because [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors|the BMS discharge port is the single output path for the entire downstream tree]], an overcurrent trip cuts the ESP32 supply in the same instant it cuts the motor bus, so there is no opportunity for firmware to log the event or attempt a graceful recovery.
 
 The solutions form a hierarchy, from free-and-software-only to full-architecture-change:
 

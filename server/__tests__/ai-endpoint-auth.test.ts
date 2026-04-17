@@ -27,7 +27,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import path from 'path';
 import type { Request, Response } from 'express';
-import type { Project, CircuitDesign } from '@shared/schema';
+import type { Project, CircuitDesignRow } from '@shared/schema';
 
 // ---------------------------------------------------------------------------
 // Mocks (must be declared before imports of the module under test)
@@ -98,7 +98,7 @@ function makeProject(overrides: Partial<Project> = {}): Project {
   } as Project;
 }
 
-function makeCircuit(overrides: Partial<CircuitDesign> = {}): CircuitDesign {
+function makeCircuit(overrides: Partial<CircuitDesignRow> = {}): CircuitDesignRow {
   return {
     id: 10,
     projectId: 1,
@@ -106,7 +106,7 @@ function makeCircuit(overrides: Partial<CircuitDesign> = {}): CircuitDesign {
     createdAt: now,
     updatedAt: now,
     ...overrides,
-  } as CircuitDesign;
+  } as CircuitDesignRow;
 }
 
 function makeReq(

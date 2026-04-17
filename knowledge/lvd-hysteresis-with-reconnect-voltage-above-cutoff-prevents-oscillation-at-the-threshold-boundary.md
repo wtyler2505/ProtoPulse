@@ -17,7 +17,7 @@ A low-voltage disconnect (LVD) without hysteresis has a classic failure mode. Wh
 
 The fix is a two-threshold design: cut off at 30V (3.0V per cell for Li-Ion) but only reconnect at 33V. The 3V gap is the hysteresis band. Once the LVD disconnects, the battery must recover past 33V before power returns -- which requires either extended rest time or actual charging. The mid-range 30-33V window is a one-way trip: you can enter it from above (discharging) but must exit from below (charging above 33V).
 
-The same hysteresis pattern appears in every threshold-controlled system: Schmitt triggers in logic circuits, thermostats with heat/cool deadbands, mechanical relays with pull-in/drop-out differentials, WiFi signal hand-off between access points. The universal principle is that a single threshold creates bistable chatter; a threshold with a hysteresis band creates clean state transitions.
+The same hysteresis pattern appears in every threshold-controlled system: [[74hc14-schmitt-trigger-buffer-isolates-esp32-strapping-pins-from-external-loads-during-boot|Schmitt triggers in logic circuits]] clean up slow edges by the same mechanism, thermostats with heat/cool deadbands avoid relay chatter, mechanical relays have pull-in/drop-out differentials built in, and WiFi access-point roaming uses signal-strength hysteresis to prevent hand-off ping-pong. The universal principle is that a single threshold creates bistable chatter; a threshold with a hysteresis band creates clean state transitions. The voltage scale changes (millivolts for logic, volts for batteries, dB for radio) but the mechanism is identical.
 
 For Li-Ion specifically, the 3V hysteresis serves a second purpose beyond stopping oscillation. The battery's recovery from load is a chemistry-limited process that takes time -- seconds to minutes for full recovery. A LVD that reconnects as soon as voltage rebounds (within milliseconds) reconnects to a battery whose internal state hasn't actually improved. Forcing a 3V recovery effectively forces a wait for real chemical recovery, preventing repeated deep-discharge cycles that would shorten pack life.
 
@@ -30,6 +30,7 @@ Source: [[wiring-36v-battery-power-distribution-4-tier-system]]
 Relevant Notes:
 - [[10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect]] -- the voltage range where LVD thresholds are set
 - [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors]] -- the BMS is the first-line LVD; external LVD is a secondary layer or a lead-acid replacement
+- [[74hc14-schmitt-trigger-buffer-isolates-esp32-strapping-pins-from-external-loads-during-boot]] -- same hysteresis pattern in a different domain: a logic-level threshold with asymmetric rising/falling trip points prevents output chatter on slow-edged inputs, identical mechanism to LVD cutoff/reconnect separation
 
 Topics:
 - [[power-systems]]

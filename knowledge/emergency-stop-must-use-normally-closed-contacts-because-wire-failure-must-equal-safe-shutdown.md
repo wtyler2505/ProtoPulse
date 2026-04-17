@@ -33,6 +33,7 @@ Relevant Notes:
 - [[two-stage-estop-separates-control-circuit-from-power-circuit-for-safe-high-current-interruption]] -- why the NC button controls a coil, not the main power directly
 - [[dc-contactor-must-have-magnetic-blowout-arc-suppression-or-contacts-will-weld-under-dc-load]] -- the contactor that the NC button controls
 - [[twist-to-release-estop-prevents-accidental-restart-after-emergency-shutdown]] -- deliberate restart required
+- [[estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal]] -- the NC fail-safe principle extends to the firmware signal path, not just the power path
 
 Topics:
 - [[power-systems]]

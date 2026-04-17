@@ -47,6 +47,7 @@ const ALL_VIEW_MODES: ViewMode[] = [
   'personal_inventory',
   'part_alternates',
   'part_usage',
+  'vault_browser',
 ];
 
 describe('PANEL_EXPLANATIONS', () => {

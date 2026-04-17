@@ -32,6 +32,7 @@ Relevant Notes:
 - [[ac-switches-cannot-interrupt-dc-arcs-and-will-cause-fire-or-explosion-in-battery-systems]] -- the switch downstream of this fuse must also be DC-rated
 - [[star-ground-at-distribution-board-prevents-ground-loops-in-multi-circuit-systems]] -- the ground path architecture that complements this positive-side fuse
 - [[zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory]] -- per-controller fuses downstream provide additional granular protection
+- [[anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc]] -- why the main fuse in this six-inch rule must be ANL class specifically, not a blade fuse
 
 Topics:
 - [[power-systems]]

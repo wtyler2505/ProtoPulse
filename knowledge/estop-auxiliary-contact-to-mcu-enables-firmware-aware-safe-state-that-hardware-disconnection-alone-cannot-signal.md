@@ -21,7 +21,7 @@ Adding an auxiliary NC contact on the e-stop switch fixes this. The aux contact 
 
 In that brief window, interrupt-service code can: (1) set a "safe shutdown requested" flag in non-volatile storage, (2) command motor controllers to brake rather than coast, (3) save position estimates and mission state, (4) send a last-gasp MQTT or WebSocket notification, (5) write a log entry explaining why this session ended. On the next boot, firmware reads the flag and requires a deliberate operator action (button press, app confirmation) before resuming operations, rather than auto-starting and potentially re-triggering whatever caused the e-stop.
 
-The signal circuit is trivial: 10K pull-up to 3.3V, NC aux contact to GND, GPIO reads high normally and goes low on e-stop press. A 10K pull-down to GND on the MCU side prevents floating when the e-stop's aux contact is open (pressed state) and the switch is physically disconnected. The signal current is microamps -- no arc risk, no contactor needed.
+The signal circuit is trivial: 10K pull-up to 3.3V, NC aux contact to GND, GPIO reads high normally and goes low on e-stop press. The aux contact uses NC for the same fail-safe reason the main contacts do -- [[emergency-stop-must-use-normally-closed-contacts-because-wire-failure-must-equal-safe-shutdown]] -- so if the signal wire breaks or the connector corrodes, the GPIO reads the same low state as "e-stop pressed" and the firmware enters the safe shutdown path by default. A 10K pull-down to GND on the MCU side prevents floating when the e-stop's aux contact is open (pressed state) and the switch is physically disconnected. The signal current is microamps -- no arc risk, no contactor needed.
 
 This is the software-hardware safety layering principle in action. The hardware e-stop guarantees power cuts regardless of firmware state. The firmware signal path guarantees the cut is observable and logged. Neither replaces the other. A pure-software e-stop fails when firmware hangs (the hardware must handle it). A pure-hardware e-stop fails to provide diagnostics (the firmware must observe it). Both together form a complete safety system.
 
@@ -33,6 +33,7 @@ Relevant Notes:
 - [[twist-to-release-estop-prevents-accidental-restart-after-emergency-shutdown]] -- the mechanical latch that this signal reports on
 - [[two-stage-estop-separates-control-circuit-from-power-circuit-for-safe-high-current-interruption]] -- the aux contact is a third independent circuit alongside control and power
 - [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors]] -- explains why aux-signaled shutdown is the only way to get diagnostic logging
+- [[emergency-stop-must-use-normally-closed-contacts-because-wire-failure-must-equal-safe-shutdown]] -- the fail-safe NC principle applied to the signal path, not just the power path
 
 Topics:
 - [[power-systems]]

@@ -56,6 +56,7 @@ Relevant Notes:
 - [[slow-blow-fuse-sizing-at-125-percent-peak-prevents-nuisance-trips-while-protecting-wiring]] -- the fuse sizing math
 - [[individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system]] -- per-circuit fuse sizing follows same hierarchy at smaller scale
 - [[main-fuse-within-six-inches-of-battery-positive-is-nec-fire-prevention-requirement]] -- placement of the main fuse
+- [[anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc]] -- why the fuse in row 3 of this hierarchy is specifically an ANL-100 and not a blade fuse
 
 Topics:
 - [[power-systems]]

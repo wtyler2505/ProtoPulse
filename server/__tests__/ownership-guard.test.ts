@@ -25,7 +25,23 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Project, CircuitDesign } from '@shared/schema';
+import type { Project } from '@shared/schema';
+
+/**
+ * Local structural alias for a circuit design row. We avoid importing the
+ * drizzle `circuitDesigns` table type because @shared/schema does not
+ * re-export a `CircuitDesign` row type by name.
+ */
+interface CircuitDesign {
+  id: number;
+  projectId: number;
+  name: string;
+  description: string | null;
+  version: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+}
 
 // ---------------------------------------------------------------------------
 // Mock db, cache, logger, auth
@@ -230,29 +246,19 @@ describe('assertCircuitBelongsToProject', () => {
 describe('AI export tool: circuit resolution refuses cross-project IDs', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('rejects a circuitId belonging to a different project', async () => {
-    // Import lazily so vi.mock setup runs first.
-    const mod = await import('../ai-tools/export');
-    // resolveCircuitId is not exported, but we can drive the behavior through
-    // its observable effect: feed a crafted storage that owns the circuit
-    // under project 2, and ask for project 1. The exported tools should see
-    // null and fall back.
-    //
-    // Instead of poking private internals, verify the inlined security
-    // contract matches the source file by structural assertion: the source
-    // contains the ownership check block. This doubles as a regression guard
-    // in case someone removes the check.
-    const fs = await import('node:fs');
-    const path = await import('node:path');
-    // ai-tools/export.ts is a sibling to server/__tests__ → ../ai-tools/export.ts
-    const src = fs.readFileSync(
+  it('source contains ownership-check block in resolveCircuitId', () => {
+    // Structural assertion: the resolveCircuitId helper must verify the
+    // caller-supplied circuitId belongs to the active project. We avoid
+    // importing ai-tools/export.ts (which pulls in heavy transitive
+    // dependencies) and assert the source contains the hardened code path.
+    const fs = require('node:fs') as typeof import('node:fs');
+    const path = require('node:path') as typeof import('node:path');
+    const src: string = fs.readFileSync(
       path.join(__dirname, '..', 'ai-tools', 'export.ts'),
       'utf8',
     );
     expect(src).toMatch(/design\.projectId !== projectId/);
     expect(src).toMatch(/getCircuitDesign\(circuitId\)/);
-    // Also verify the helper is not dead-imported.
-    void mod; // keep import for tree-shaking sanity
   });
 });
 

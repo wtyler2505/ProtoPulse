@@ -37,6 +37,7 @@ Relevant Notes:
 - [[main-fuse-within-six-inches-of-battery-positive-is-nec-fire-prevention-requirement]] -- placement of this fuse in the power chain
 - [[individual-circuit-fusing-at-distribution-board-isolates-faults-without-killing-entire-system]] -- downstream per-circuit fuses provide more granular protection
 - [[zs-x11h-has-no-reverse-polarity-overcurrent-or-thermal-protection-making-inline-fuse-mandatory]] -- the per-controller 20A fuse that coordinates with this 100A main fuse
+- [[anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc]] -- the class-selection decision that pairs with this sizing math above 60A / 30V
 
 Topics:
 - [[power-systems]]

@@ -36,4 +36,23 @@ Insight exists at `knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requ
 **Agent note:** Lead-acid vs lithium is often treated as a cost/weight comparison. This note adds the protection-architecture dimension: lithium packs ship with integrated BMS, lead-acid doesn't. That's a real design burden that flips the "lead-acid is simpler" intuition on its head.
 
 ## Revisit
+
+**Reweave date:** 2026-04-14 (standard depth, related scope)
+
+**Claim status:** unchanged -- claim holds, title already sharp ("arguable position" test passes: someone could argue lead-acid doesn't *require* external LVD if use is constrained)
+
+**Connections added (2):**
+- [[salvaged-bms-has-unknown-thresholds-and-must-be-verified-before-trusting-with-project-safety]] -- inline in paragraph 1 and in footer. Articulates the "untrusted BMS" problem as distinct from this note's "no BMS" problem. Agent-traversal value: when choosing pack chemistry, both failure modes are now reachable from either starting point.
+- [[lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit]] -- inline in final paragraph and in footer. The final paragraph mentioned "lithium chemistries" abstractly; now it points to a concrete 12S LiFePO4 path with its own cascading voltage burden. Agent-traversal value: "switch to lithium to escape LVD burden" agent now reaches the voltage-compatibility counter-burden on the same link.
+
+**Connections rejected (articulation test failures):**
+- 130K voltage divider, linear voltage-to-percentage -- telemetry path concerns. The LVD trip decision is independent of whether the MCU *also* reads pack voltage. An agent following this link would not gain LVD design decisions.
+- ANL marine fuse, per-branch motor fusing -- overcurrent protection dimension, orthogonal to over-discharge chemistry.
+- E-STOP aux, 10uF ceramic -- different abstraction layers (operator safety, MCU decoupling).
+- AC-switch DC arc -- relevant to LVD relay *rating* but not to the existence-of-LVD claim; would dilute.
+
+**MOC updates:** [[power-systems]] already lists this note under "Batteries + BMS" with correct phrasing. No update needed.
+
+**Network effect:** outgoing links 3 -> 5. Bridges to salvaged-hardware domain (via salvaged-bms) and to chemistry-substitution domain (via lifepo4-12s). No new {vocabulary.topic_map} membership, but richer traversal within power-systems.
+
 ## Verify

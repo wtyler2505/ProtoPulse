@@ -36,4 +36,20 @@ Added ADC-reading table to target insight `knowledge/10s-lithium-ion-pack-voltag
 **Agent note:** This note is a hub in the "10S Li-Ion design envelope" cluster. Four other notes in this batch cite it. Incoming-link dominance makes it an anchor for battery-related reasoning.
 
 ## Revisit
+
+**Backward pass 2026-04-14.** Target note already had 4 inline prose links + 2 topics from connect phase. Three new connections added based on sibling notes created in the same wave (2026-04-14) that explicitly reference this note:
+
+- **Claim precision sharpened**: added "NMC cells" qualifier in opening sentence and a paragraph scoping the 30V-42V envelope as NMC-specific — prevents misreading as a general "36V lithium" claim when 12S LiFePO4 lives at 30-43.8V.
+- **`[[lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary]]`** added (inline in new system-design point 5 + footer). Why: LVD note references this as "the voltage range where LVD thresholds are set" — closes the bidirectional link. The 30V BMS cutoff is the anchor point for external LVD hysteresis design.
+- **`[[lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit]]`** added (inline scoping paragraph + footer). Why: LiFePO4 note names this note as the NMC baseline it compares against; target should acknowledge the alternative chemistry context so readers don't over-generalize.
+- **`[[nmc-vs-lifepo4-is-a-tradeoff-between-energy-density-and-cycle-life-safety]]`** added (inline + footer). Why: the chemistry-level decision this voltage curve lives under; was already listed as "relevant note" in nmc-vs-lifepo4 but reverse link was missing.
+
+**Claim status**: sharpened (scope narrowed to NMC explicitly; core claim unchanged).
+
+**Network effect**: outgoing prose links 4→7 (adds LVD, LiFePO4, NMC-vs-LFP). Target now bridges the firmware-monitoring cluster (divider, ESP32 ADC, linear V%) with the chemistry-choice cluster (NMC vs LFP, lead-acid) and the threshold-design cluster (LVD hysteresis). Incoming-link dominance preserved — still a hub in the "10S Li-Ion design envelope" cluster.
+
+**MOC**: no power-systems update needed; the note's entry already captures the right summary ("36V nominal is only a moment on the discharge curve").
+
+**Not changed**: title (already sharp — "usable window is narrower than beginners expect" is arguable). No split (single coherent claim about the voltage envelope + firmware monitoring implications). No challenge (claim holds against all evidence encountered). Didn't add ADS1115 as a direct sibling link in body — already present in existing ESP32 ADC nonlinearity inline link.
+
 ## Verify

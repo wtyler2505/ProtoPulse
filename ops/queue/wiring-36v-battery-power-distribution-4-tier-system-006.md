@@ -39,4 +39,23 @@ Insight exists at `knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-awa
 **Agent note:** This note is a hub for the "hardware-software safety layering" pattern. Pairs with BMS-kills-mcu to form the "firmware can only observe safety events, not cause them" principle.
 
 ## Revisit
+
+**Reweave pass completed 2026-04-14.**
+
+**Claim status:** unchanged. The claim "firmware-aware safe state that hardware disconnection alone cannot signal" is already sharp, arguable, and specific. No sharpening, splitting, or challenge needed.
+
+**Backward pass — newer/related notes evaluated:**
+- [[emergency-stop-must-use-normally-closed-contacts-because-wire-failure-must-equal-safe-shutdown]] — /connect flagged as genuine extension but did not edit. Reweave added it (see below).
+- Siblings from Wave F handoff (voltage-divider, BMS-discharge, per-branch fusing, 10uF ceramic, LVD hysteresis, lead-acid LVD, LiFePO4 12S, voltage-to-percentage, ANL fuse) evaluated — all are power-distribution / battery-monitoring domain, orthogonal to safety-signal wiring. No forced connections.
+- Backlinkers ([[emergency-stop-via-stop-pin-low-disables-bldc-controllers-entirely-and-is-safer-than-regenerative-braking-for-fault-conditions]], stop-vs-ct-brake note, four-motor-bldc note) already reference this note correctly — no reciprocal edits needed.
+
+**Edits applied:**
+1. Inline link added in paragraph 3 (signal circuit description) to [[emergency-stop-must-use-normally-closed-contacts-because-wire-failure-must-equal-safe-shutdown]] with articulation: "the aux contact uses NC for the same fail-safe reason the main contacts do...if the signal wire breaks or the connector corrodes, the GPIO reads the same low state as 'e-stop pressed'." This closes the /connect-phase gap.
+2. Same note added to Relevant Notes footer with articulation: "the fail-safe NC principle applied to the signal path, not just the power path."
+3. Reciprocal link added to [[emergency-stop-must-use-normally-closed-contacts-because-wire-failure-must-equal-safe-shutdown]] footer pointing back to this note with articulation: "the NC fail-safe principle extends to the firmware signal path, not just the power path."
+
+**Network effect:** outgoing links 3 -> 4 on target; NC-contacts note outgoing 3 -> 4. New traversal path: NC-contacts <-> aux-contact, surfacing the NC-principle-applies-to-signals-not-just-power pattern.
+
+**MOC updates:** [[power-systems]] line 62 already lists this note correctly under Emergency Stop + Safety. No edit needed.
+
 ## Verify

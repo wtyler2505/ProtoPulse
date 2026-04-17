@@ -36,4 +36,31 @@ Insight exists at `knowledge/linear-voltage-to-percentage-approximation-is-adequ
 **Agent note:** A nice "when simple approximation is justified" claim. The key insight is that accuracy only matters at the low-battery end where linear and true curves converge — so the error-tolerance argument is domain-specific, not generic "linear is good enough." Future synthesis: "accuracy requirements depend on where the user cares about the answer, not on the mathematical fit."
 
 ## Revisit
+
+**Backward pass scope:** heavy processing depth + related scope. Siblings already processed (LiFePO4 12S, 130K divider) verified correctly back-reference this note. Semantic neighbors from earlier source waves checked.
+
+**Changes applied to target note:**
+
+| Type | Description |
+|------|-------------|
+| connection | added inline prose linking decision thresholds to [[lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary]] and [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors]] — articulates WHY warning/critical/e-stop thresholds cluster at 30-32V (the firmware must act before the BMS kills logic supply) |
+| connection | added footer links to [[lvd-hysteresis...]], [[bms-discharge-port...]], and [[lifepo4-12s-pack-nominal-38v4...]] — the LiFePO4 note already back-references this note and articulates the denominator retune (42V -> 43.8V); adding the reverse edge closes the pair |
+
+**Changes applied to sibling note (forward-connection fix):**
+
+| Type | Description |
+|------|-------------|
+| connection | added [[linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion...]] and [[130k-to-10k-voltage-divider...]] to Relevant Notes in `10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect.md` — the voltage-range note had an ADC-readings table but no forward link to the firmware mapping consumer of those readings |
+
+**Claim status:** unchanged — original claim is sharp, well-defended, and current. The nuance (accuracy only matters where linear and true curves converge) is the core insight and survives reconsideration.
+
+**Network effect:**
+- Outgoing links on target: 3 inline + 3 footer -> 5 inline + 6 footer
+- New bidirectional edges: target <-> LVD hysteresis, target <-> BMS discharge port, target <-> LiFePO4 12S, target <-> 10S voltage range (previously one-way from target)
+- The BMS -> LVD -> linearization -> ADC -> divider measurement chain is now fully navigable in both directions
+
+**MOC updates:** [[power-systems]] Batteries section entry verified — phrasing "SOC linearization is adequate for fuel-gauge UI despite curve nonlinearity" still captures the claim. No change needed.
+
+**Agent traversal value:** An agent debugging "battery reads 50% but rover stops unexpectedly" can now traverse target -> LVD hysteresis to understand the disconnect-threshold envelope, or target -> BMS discharge port to understand why the 30V floor is a hard power cutoff, not just a UI minimum.
+
 ## Verify

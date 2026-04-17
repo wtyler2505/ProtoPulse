@@ -35,6 +35,8 @@ Buck 5V GND ─→ GND BUS BAR
 
 Every circuit returns directly to a single, heavy copper bus bar. Motor current flows from MC1 directly to the bus bar and back to the battery without passing through any other circuit's ground path. The bus bar itself has negligible resistance due to its massive cross-section.
 
+**How heavy is "heavy"?** The GND return wire from the bus bar to the battery negative must match the battery positive gauge, because it carries the same total current — see the wire-class table in [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]]. For a 4-motor 36V rover that means #4 AWG on both positive and ground sides. Sizing the ground return to match only the single largest branch is the subtle failure: four 20A branches converge into one return, so the return sees continuous 60-80A even though no individual branch does. A #14 AWG GND return sized for "one motor's worth" drops several volts under full load — which silently recreates the series-topology ground-shift problem that the star topology was supposed to prevent.
+
 **Simpler-scale example — dual-motor rover:** The same topology applies at smaller scale. A two-motor hoverboard rover with one Arduino, two ZS-X11H controllers, and one battery needs exactly three ground wires to converge at one bus point (a small copper bus bar or terminal strip is enough):
 ```
 Arduino GND    ────→ BUS POINT ←──── Battery (-)
@@ -57,6 +59,7 @@ Relevant Notes:
 - [[parallel-power-rails-from-battery-are-more-reliable-than-cascaded-regulators]] -- parallel topology extends to ground returns, not just power
 - [[main-fuse-within-six-inches-of-battery-positive-is-nec-fire-prevention-requirement]] -- the upstream protection that feeds this distribution point
 - [[bldc-controller-and-mcu-must-share-common-ground-or-control-signals-float]] -- the failure mode this topology prevents at every scale
+- [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] -- the wire-gauge table that specifies the GND return must match battery positive gauge (not the largest branch)
 
 Topics:
 - [[power-systems]]

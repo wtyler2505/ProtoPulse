@@ -30,6 +30,16 @@ vi.mock('../storage', () => ({
     acknowledgeAlert: mockAcknowledgeAlert,
     acknowledgeAll: mockAcknowledgeAll,
   },
+  // assertProjectOwnership (invoked when projectId is supplied) reads from
+  // `storage`. Provide an owner-less project so the test user passes through
+  // via backward-compat while the guard still executes.
+  storage: {
+    getProject: vi.fn().mockResolvedValue({
+      id: 1,
+      ownerId: null,
+      name: 'Test',
+    }),
+  },
   StorageError: class StorageError extends Error {},
 }));
 

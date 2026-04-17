@@ -42,4 +42,26 @@ The 36V source doc lines 365-378 cover the same material. The insight was author
 **Agent note:** Star-ground is often taught as "one of many valid topologies." This note takes a stronger position: star is mandatory for multi-current-rail systems, because daisy-chain voltage drops corrupt ground references. The enrichment adds the arithmetic that makes the stronger position defensible.
 
 ## Revisit
+
+**Reweave scope:** standard — semantic neighbors in the grounding/distribution cluster + same-topic ({{power-systems}}) browse.
+
+**Reconsideration result:** Note holds. Claim is sharp, arguable, and supported. Existing inline/footer connections cover the main cluster (fusing, parallel rails, common ground, main fuse). Content from enrich (voltage-drop math, daisy-chain diagrams, scale-invariance to 2-motor builds) already integrated.
+
+**Gap identified and closed:** The star-topology prose called the return conductor "heavy copper bus bar" with "massive cross-section" but never specified "how heavy." Readers asking that question had no link to the answer. [[power-budget-hierarchy-ensures-continuous-is-below-peak-is-below-fuse-is-below-wire-ampacity]] already contains the wire-class table with the load-bearing insight (GND return matches battery positive gauge because it sees sum of loads, not max single branch), but the link was one-directional (hierarchy -> star-ground only).
+
+**Changes applied:**
+1. Added inline paragraph "How heavy is 'heavy'?" after the star-topology diagram, citing [[power-budget-hierarchy...]] and surfacing the subtle failure mode (sizing the GND return to one branch's current = silently recreating series ground-shift at 4x current).
+2. Added footer connection to [[power-budget-hierarchy...]] with articulation: "wire-gauge table that specifies the GND return must match battery positive gauge (not the largest branch)."
+
+**Claim status:** unchanged (topology claim holds); **sharpened via connection** (readers now get concrete gauge guidance instead of vague "heavy").
+
+**Network effect:**
+- Outgoing links: 4 inline + 4 footer → 5 inline + 5 footer
+- Bidirectional cluster: star-ground <-> power-budget-hierarchy (was one-way)
+- New traversal path: star-ground → power-budget-hierarchy → ANL fuse class / slow-blow sizing (gauges the fusing side of the same hierarchy)
+
+**Split/challenge consideration:** Rejected. Note covers one claim (star topology for return paths) at two scales (2-motor and 4-motor) plus one tightly-coupled corollary (shield single-end grounding uses the same bus point). Splitting would fragment; each piece would be too thin.
+
+**MOC update:** [[power-systems]] entry unchanged — line 71 summary "all grounds return to single bus bar" still accurate.
+
 ## Verify

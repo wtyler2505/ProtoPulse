@@ -36,4 +36,24 @@ Enrichment already present in target insight `knowledge/esp32-adc-is-nonlinear-a
 **Agent note:** This note has the lowest outgoing link count (4 wikilinks) in the batch but acts as a connection HUB — multiple batch siblings cite it as the grounding reason for their ADC-measurement decisions. Incoming links matter more than outgoing for hub-role notes.
 
 ## Revisit
+
+**Claim status:** unchanged — core claim about ESP32 ADC nonlinearity above 2.5V holds. Enrich phase already added `esp_adc_cal_characterize()` API name and ADS1115 part reference to the prose; reweave did not need to revisit those.
+
+**Outgoing links before:** 2 inline (esp32-adc2-unavailable, mega-5v-regulator-thermal) + 2 topics.
+**Outgoing links after:** 6 related-notes (added 4) + 1 new inline cross-reference.
+
+**Connections added:**
+- Inline: `[[esp32-adc-attenuation-setting-determines-input-voltage-range]]` in opening paragraph — the 11dB attenuation claim referenced throughout had no link to the attenuation note despite the sibling linking back. Bidirectional pair now complete.
+- Inline: `[[pico-has-only-3-adc-channels...]]` and `[[raspberry-pi-has-zero-built-in-adc...]]` in the ADS1115 sentence — both sibling notes already cite this note as a grounding reference. Bidirectional pairs now complete, and the shared-escape-route cluster (ADS1115 via I2C) is agent-traversable from any entry point.
+- Inline + footer: `[[130k-to-10k-voltage-divider...]]` as practical consequence example — strongest reverse-direction incoming link in the batch per connect phase; forward link adds a concrete-application traversal path (claim → design rule → part sizing).
+- Footer: `[[linear-voltage-to-percentage-approximation...]]` — downstream consumer that already cites this note; footer entry explains the measurement-error + model-error compounding argument for agents traversing the battery-percent decision chain.
+
+**Network effect:** Target note now participates in three distinct subgraphs — (a) ESP32 ADC characterization cluster (attenuation, ADC2/WiFi, nonlinearity), (b) cross-MCU external-ADC escape route cluster (ESP32 / Pico / RPi all pointing at ADS1115), (c) 36V battery power-distribution measurement chain (divider → ADC → linear percent → decision). Hub-role reinforced: 4 new outgoing paths plus existing incoming links from claim-001 and enrich-013 siblings.
+
+**MOC membership:** unchanged — [[microcontrollers]] MOC already includes this note (line 45); [[eda-fundamentals]] footer topic unchanged. No MOC edit needed; broader MOC polish already queued as Wave 0 task #2.
+
+**Agent traversal check:** Every new link articulates a decision or mechanism — "selects which voltage window the nonlinearity appears in", "pushes designs toward ADS1115 over I2C", "RPi is forced there by architecture, ESP32 by accuracy". No "see also" noise added.
+
+**Split / challenge:** not indicated. The note is a single claim backed by consistent evidence; no split-recommended or merge-candidate signal from enrich. Voice preserved.
+
 ## Verify

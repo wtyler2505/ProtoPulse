@@ -118,10 +118,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-005.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -133,10 +134,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-006.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -148,10 +150,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-007.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -163,10 +166,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-008.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -178,10 +182,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-009.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -193,10 +198,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-010.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "create",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -208,10 +214,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-011.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "enrich",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -223,10 +230,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-012.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "enrich",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {
@@ -238,10 +246,11 @@
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
       "file": "wiring-36v-battery-power-distribution-4-tier-system-013.md",
       "created": "2026-04-14T07:40:23Z",
-      "current_phase": "reweave",
+      "current_phase": "verify",
       "completed_phases": [
         "enrich",
-        "reflect"
+        "reflect",
+        "reweave"
       ]
     },
     {

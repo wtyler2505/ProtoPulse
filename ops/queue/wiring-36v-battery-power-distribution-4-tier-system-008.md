@@ -39,4 +39,31 @@ Insight exists at `knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-ta
 **Agent note:** This is an OPEN claim (see frontmatter). The voltage compatibility verification remains a live TODO against specific downstream datasheets (LM2596 40V, ZS-X11H 60V). Future revisit pass should track whether these verifications were completed.
 
 ## Revisit
+
+**Reweave pass:** 2026-04-14 (post-wiring-guide extraction of sibling claims 001-010)
+
+**Connections added inline (6 new):**
+- [[10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect]] -- grounds the "10S NMC pack" reference in paragraph 2 with the canonical 30-42V range note
+- [[linear-regulator-heat-dissipation-equals-voltage-drop-times-current-making-high-differential-applications-dangerous]] -- supports the LM2596 discussion with the thermal-physics reason linear substitutes are worse at 43.8V
+- [[switching-buck-converters-waste-watts-not-volts-making-them-essential-for-large-voltage-differentials]] -- anchors the LM2676/MP2315 50V+ upgrade recommendation
+- [[linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve]] -- adds a NEW second-order implication bullet: the SOC function must be retuned from 42V to 43.8V denominator on LiFePO4 swap
+- [[lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary]] -- adds a NEW second-order bullet: LVD cutoff is identical but recovery-band behavior differs between chemistries
+- [[anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc]] -- replaces the generic "ANL fuses rated 125V DC" prose with a proper link
+- [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors]] -- strengthens the BMS-chemistry-mismatch bullet by chaining to the "BMS is single kill switch" note
+
+**Footer Relevant Notes updated:** 3 entries -> 9 entries (added the 6 new links above plus retained the original 3)
+
+**Claim status: unchanged.** The core claim (LiFePO4 12S systematically elevates downstream voltage and requires component-by-component verification) holds fully. No sharpening or splitting needed -- the claim is already specific and arguable. No challenge raised by newer notes: all sibling claims reinforce the verification cascade.
+
+**Network effect:**
+- Outgoing links: 3 -> 9 (200% growth)
+- This note now bridges batteries + BMS + regulators + ADC + fusing + firmware-SOC domains via explicit inline chains, matching its actual scope
+- OPEN status (from frontmatter) preserved -- the specific datasheet verifications (LM2596 40V confirmed out-of-spec, ZS-X11H 60V confirmed in-spec) are still correct. No verification TODOs closed in this pass; those belong to /verify.
+
+**MOC update (power-systems.md):** NOT needed inline -- this note is already listed under "Batteries + BMS (Li-ion, LiFePO4, lead-acid)" indirectly via [[nmc-vs-lifepo4-is-a-tradeoff-between-energy-density-and-cycle-life-safety]]. The previous Connect-phase flag to add it as a standalone bullet under "Batteries + BMS" is still valid; it has not been added yet and should be picked up by the next MOC curation pass. Not blocking progression to /verify.
+
+**Backlinks verified:**
+- [[lead-acid-36v-pack...]] already links to this note (one-way reciprocation now complete via new outbound link to the 10S NMC pack note, which lead-acid also references)
+- [[nmc-vs-lifepo4...]] -- forward link from this note exists; reciprocation check deferred
+
 ## Verify

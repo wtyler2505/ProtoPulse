@@ -193,7 +193,6 @@
       "templater-obsidian:Templater": false,
       "obsidian42-brat:BRAT": false,
       "claude-sidebar:New Claude Tab": false,
-      "smart-templates:Smart Templates: Open template context": false,
       "css-editor:Open CSS editor quick switcher": false
     }
   },

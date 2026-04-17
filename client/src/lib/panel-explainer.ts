@@ -563,6 +563,22 @@ export const PANEL_EXPLANATIONS: Record<ViewMode, PanelExplanation> = {
       { view: 'bom_templates', label: 'BOM Templates' },
     ],
   },
+
+  vault_browser: {
+    title: 'Knowledge Vault',
+    description:
+      'Browse the Ars Contexta knowledge vault — atomic notes, topic maps (MOCs), and linked reference material that powers the AI and your own research. Search by keyword or pick a topic map to drill in.',
+    tips: [
+      'Search requires at least 3 characters — use specific terms for better matches.',
+      'Topic maps (MOCs) on the left group related notes by theme; click one to browse its linked notes.',
+      'Linked-note chips in the detail pane are clickable — follow connections to traverse the graph.',
+    ],
+    relatedViews: [
+      { view: 'knowledge', label: 'Learn' },
+      { view: 'design_patterns', label: 'Patterns' },
+      { view: 'starter_circuits', label: 'Starter Circuits' },
+    ],
+  },
 };
 
 /**

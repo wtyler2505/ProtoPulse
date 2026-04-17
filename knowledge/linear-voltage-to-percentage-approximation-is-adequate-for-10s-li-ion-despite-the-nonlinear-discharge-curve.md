@@ -21,7 +21,7 @@ Yet the linear approximation is still the right choice for most rover firmware, 
 
 The middle-curve inaccuracy is obvious to a user watching the percentage on a display -- the battery "holds" at 70% for a long time then drops fast -- but this matches the user's intuition about how lithium batteries behave, so it doesn't generate support requests. A Coulomb-counting fuel gauge IC (MAX17043, STC3100) would produce a more accurate linear reading, but at the cost of added hardware, firmware complexity, and a current-sense resistor in the main bus carrying full motor current.
 
-The trade-off: for a precision application (drone, long-range EV, medical device) the linear approximation is not good enough and a Coulomb counter is mandatory. For a rover that drives for 30-60 minutes and returns to base for charging, linear is fine. The real decisions -- "low battery warning" at 32V, "critical / return now" at 30.5V, "auto e-stop" at 30V -- happen in the region where linear and true curves agree.
+The trade-off: for a precision application (drone, long-range EV, medical device) the linear approximation is not good enough and a Coulomb counter is mandatory. For a rover that drives for 30-60 minutes and returns to base for charging, linear is fine. The real decisions -- "low battery warning" at 32V, "critical / return now" at 30.5V, "auto e-stop" at 30V -- happen in the region where linear and true curves agree. These thresholds land inside the [[lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary|LVD hysteresis window]] and above the [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors|30V BMS cutoff floor]] -- so firmware still has headroom to act before the BMS kills logic supply along with motor power.
 
 The code shape:
 ```cpp
@@ -40,6 +40,9 @@ Relevant Notes:
 - [[10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect]] -- the range that this percentage spans
 - [[130k-to-10k-voltage-divider-scales-42v-battery-maximum-to-3v-adc-input-with-safety-margin]] -- the divider that feeds this calculation
 - [[esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc]] -- the measurement imprecision at the input compounds with the model imprecision in the mapping
+- [[lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary]] -- the warning/critical/e-stop thresholds this formula drives sit inside the LVD hysteresis window
+- [[bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors]] -- the 30V floor in the formula is the BMS cutoff; the firmware must act before the BMS trips because the BMS kills MCU supply
+- [[lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit]] -- the formula's denominator (42V) must be retuned to 43.8V for a LiFePO4 swap, and the mid-curve flatness is even worse on LiFePO4
 
 Topics:
 - [[power-systems]]
