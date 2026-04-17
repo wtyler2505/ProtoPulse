@@ -8,10 +8,14 @@
  * @module views/GenerativeDesignView
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useGenerativeDesign } from '@/lib/generative-design/generative-engine';
 import { defaultCriteria } from '@/lib/generative-design/fitness-scorer';
-import { compareCandidateWithCurrent, exportCandidate } from '@/lib/generative-design/generative-adopt';
+import {
+  architectureToCurrentIR,
+  compareCandidateWithCurrent,
+  exportCandidate,
+} from '@/lib/generative-design/generative-adopt';
 import { AdoptCandidateDialog } from '@/components/dialogs/AdoptCandidateDialog';
 import { useArchitecture } from '@/lib/contexts/architecture-context';
 import { toast } from '@/hooks/use-toast';
@@ -60,6 +64,14 @@ export default function GenerativeDesignView() {
 
   const isRunning = state === 'generating' || state === 'scoring' || state === 'evolving';
 
+  // Derive the current project's CircuitIR from the live architecture graph.
+  // This replaces the prior hardcoded `defaultBaseCircuit()` stub that caused
+  // Adopt/Compare to always diff against a single fake resistor (audit C-1).
+  const currentArchitectureIR = useMemo(
+    () => architectureToCurrentIR(existingNodes, existingEdges),
+    [existingNodes, existingEdges],
+  );
+
   const handleGenerate = useCallback(() => {
     const criteria = defaultCriteria();
     criteria.estimatedCost.budgetUsd = budgetUsd;
@@ -78,11 +90,10 @@ export default function GenerativeDesignView() {
   }, [description, budgetUsd, maxWatts, maxTempC, populationSize, generations, run]);
 
   const handleCompare = useCallback((candidate: CandidateEntry) => {
-    const currentIR = defaultBaseCircuit();
-    const result = compareCandidateWithCurrent(candidate, currentIR);
+    const result = compareCandidateWithCurrent(candidate, currentArchitectureIR);
     setComparisonResult(result);
     setShowComparison((prev) => (prev === candidate.id ? null : candidate.id));
-  }, []);
+  }, [currentArchitectureIR]);
 
   const handleAdoptClick = useCallback((candidate: CandidateEntry) => {
     setSelectedCandidate(candidate);
@@ -355,7 +366,7 @@ export default function GenerativeDesignView() {
         open={adoptDialogOpen}
         onOpenChange={setAdoptDialogOpen}
         candidate={selectedCandidate}
-        currentIR={defaultBaseCircuit()}
+        currentIR={currentArchitectureIR}
         onAdopt={(result: AdoptResult) => {
           pushUndoState();
 

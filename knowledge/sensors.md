@@ -1,5 +1,5 @@
 ---
-description: "Sensor knowledge -- measurement principles, calibration, interface protocols, and wiring gotchas for IR, Hall, reed, tilt, light, temperature, RTC, RFID, sound/PDM microphone, and compass/IMU sensors in the inventory"
+description: "Measurement principles, calibration techniques, and interface protocols for environmental and motion sensing, including common wiring and interference traps."
 type: moc
 topics:
   - "[[eda-fundamentals]]"

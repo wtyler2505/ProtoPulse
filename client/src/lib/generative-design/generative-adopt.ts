@@ -90,6 +90,107 @@ export interface ExportPayload {
 }
 
 // ---------------------------------------------------------------------------
+// architectureToCurrentIR
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive a CircuitIR from the current project architecture (xyflow nodes + edges).
+ *
+ * Used by the generative design Compare/Adopt flow so that diffs are computed
+ * against the REAL project state, not a hardcoded seed.
+ *
+ * Derivation strategy:
+ * - Each node becomes an IRComponent.
+ *   - refdes: preserved from previously adopted generative nodes (node.data.irRefdes)
+ *     or falls back to the node's label / id.
+ *   - partId: preserved from adopted nodes (node.data.irPartId) or derived from
+ *     node.data.type (hand-built nodes).
+ *   - value / footprint / pins: preserved if available from a previous adopt;
+ *     otherwise pins are inferred from connected edges (edge.label as netName)
+ *     with a synthetic `_unconnected` pin if the node has no edges (the IR
+ *     comparison code tolerates any pin shape; validation is not invoked here).
+ * - Each unique edge label contributes a net (type inferred from name heuristics).
+ *
+ * Accepts empty arrays and returns an IR with zero components — consumers of
+ * `compareCandidateWithCurrent` already handle the empty case.
+ */
+export function architectureToCurrentIR(nodes: Node[], edges: Edge[]): CircuitIR {
+  // Map node id -> list of net names connected to it (from edges).
+  const nodeNets = new Map<string, string[]>();
+  for (const e of edges) {
+    const net = (e.label as string) || (((e.data as { netName?: string } | undefined)?.netName) ?? '');
+    if (!net) continue;
+    for (const endpoint of [e.source, e.target]) {
+      const list = nodeNets.get(endpoint) ?? [];
+      if (!list.includes(net)) list.push(net);
+      nodeNets.set(endpoint, list);
+    }
+  }
+
+  const components: IRComponent[] = nodes.map((n) => {
+    const data = (n.data ?? {}) as {
+      irRefdes?: string;
+      irPartId?: string;
+      label?: string;
+      type?: string;
+      value?: string;
+      footprint?: string;
+      pins?: Record<string, string>;
+    };
+    const refdes = data.irRefdes ?? data.label ?? n.id;
+    const partId = data.irPartId ?? data.type ?? 'unknown';
+
+    let pins: Record<string, string>;
+    if (data.pins && Object.keys(data.pins).length > 0) {
+      pins = data.pins;
+    } else {
+      const connected = nodeNets.get(n.id) ?? [];
+      if (connected.length > 0) {
+        pins = {};
+        connected.forEach((netName, idx) => {
+          pins[`pin${idx + 1}`] = netName;
+        });
+      } else {
+        pins = { pin1: '_unconnected' };
+      }
+    }
+
+    return {
+      id: n.id,
+      refdes,
+      partId,
+      value: data.value,
+      footprint: data.footprint,
+      pins,
+    };
+  });
+
+  // Derive unique nets from edge labels.
+  const seenNets = new Set<string>();
+  const nets: IRNet[] = [];
+  for (const e of edges) {
+    const name = (e.label as string) || (((e.data as { netName?: string } | undefined)?.netName) ?? '');
+    if (!name || seenNets.has(name)) continue;
+    seenNets.add(name);
+    const lower = name.toLowerCase();
+    let type: IRNet['type'] = 'signal';
+    if (lower === 'gnd' || lower === 'ground' || lower.includes('gnd')) {
+      type = 'ground';
+    } else if (lower === 'vcc' || lower === 'vdd' || lower.startsWith('v') || lower.includes('power') || lower.includes('pwr')) {
+      type = 'power';
+    }
+    nets.push({ id: `net-${nets.length + 1}`, name, type });
+  }
+
+  return {
+    meta: { name: 'Current Architecture', version: '1.0.0' },
+    components,
+    nets,
+    wires: [],
+  };
+}
+
+// ---------------------------------------------------------------------------
 // compareCandidateWithCurrent
 // ---------------------------------------------------------------------------
 

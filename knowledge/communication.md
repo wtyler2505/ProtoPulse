@@ -1,5 +1,5 @@
 ---
-description: "Communication protocol knowledge — UART/RX-TX pin contention, I2C address collisions and pull-up rules, SPI chip-select discipline, Bluetooth HC-05/HC-06 master-slave and AT-mode traps, IR NEC encoding and 38kHz interference, W5100 hardware TCP/IP trade-offs, RS-485 long-run signaling, PoE, RFID, and wireless-module selection"
+description: "Common pitfalls and physical limitations for UART, I2C, SPI, and wireless protocols, including pull-up resistor requirements, address collisions, and interference resolution."
 type: moc
 topics:
   - "[[eda-fundamentals]]"

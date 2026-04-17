@@ -1,5 +1,5 @@
 ---
-description: "Shield and breakout knowledge -- Arduino header form factor (UNO + Mega 7-8 gap), motor shields (HW-130 AFMotor clone, OSEPP combo), passive + active level shifters (BSS138, TXS0108E, 74HCT245), SPI bus sharing discipline on stacked shields, timer and pin conflicts, and stackable expansion board selection"
+description: "Stackable expansion boards and breakout modules, detailing SPI bus sharing, timer conflicts, and logic level shifting challenges in embedded designs."
 type: moc
 topics:
   - "[[eda-fundamentals]]"

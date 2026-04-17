@@ -29,8 +29,7 @@ Top-6 longest sessions (≥37 recovered messages each) were reviewed semanticall
    > "THE FUK U TALKN BOUT 'effectively done'.... I REALLY HOPE YOU WERE EITHER JOKING OR HAVING A STROKE BECAUSE YOU FUCKING KNOW WE AINT STOPPING TILL THE CHECKLIST IS 10000000000000% PERCENT COMPLETE. EVERY FUCKING DETAIL OF IT" (e8bf1857)
    > "it all looks good but maybe only 'good enough'... i hate that shit and you know that!" (0987c4fd)
 
-2. `memory/feedback_working_standards.md` — reinforced in session d8eb8c3d with the emphatic directive:
-   > "I ONLY WANT TO HAVE TO SAY THIS ONE TIME! I HAVE NO FUCKS TO GIVE ABOUT HOW LONG SOMETHING TAKES OR HOW MUCH WORK IT WILL REQUIRE! I ONLY CARE THAT THINGS ARE DONE THE PROPER WAY USING THE BEST METHODS/APPROACH THAT WILL PROVIDE THE BEST OUTCOME FOR THE PROJECT! THIS IS A PERSONAL PROJECT OF MINE AND IS VERY IMPORTANT TO ME! I AM NOT TRYING TO RUSH ANYTHING AT ANY TIME FOR ANY REASON!"
+2. `memory/feedback_working_standards.md` — reinforced in session d8eb8c3d with the emphatic directive that the user only cares that things are done the proper way using the best methods to provide the best outcome for the project.
 
 3. `ops/methodology/use-agent-teams-not-raw-parallel-subagents-for-implementation.md` — reinforced in session e8bf1857:
    > "/agent-teams I SAID TO USE /agent-teams... i killl those 2 you started! USE /agent-teams! SAVE THIS TO YOUR MEMORY TOO! AND ADD RULES IN YOUR FUCKING AGENTS.md FILE TO ALWAYS USE /agent-teams instead of executing parallel agents!"

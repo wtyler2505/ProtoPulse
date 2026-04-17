@@ -3,6 +3,70 @@ import { googleAI } from '@genkit-ai/google-genai';
 import { storage } from './storage';
 import { toolRegistry, type ToolContext } from './ai-tools/index';
 
+// Strict Zod output schemas for Genkit tools. These mirror the actual runtime
+// shapes produced by storage.getBomItems / getNodes / getEdges (and therefore
+// the Drizzle-inferred / bom-compat types). We keep jsonb payloads (data,
+// style) as z.unknown() because they are genuinely free-form.
+
+const bomItemOutputSchema = z.object({
+  id: z.number(),
+  projectId: z.number(),
+  partNumber: z.string(),
+  manufacturer: z.string(),
+  description: z.string(),
+  quantity: z.number(),
+  unitPrice: z.string(),
+  totalPrice: z.string(),
+  supplier: z.string(),
+  stock: z.number(),
+  status: z.string(),
+  leadTime: z.string().nullable(),
+  datasheetUrl: z.string().nullable(),
+  manufacturerUrl: z.string().nullable(),
+  storageLocation: z.string().nullable(),
+  quantityOnHand: z.number().nullable(),
+  minimumStock: z.number().nullable(),
+  esdSensitive: z.boolean().nullable(),
+  assemblyCategory: z.string().nullable(),
+  tolerance: z.string().nullable(),
+  version: z.number(),
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable(),
+});
+
+const architectureNodeOutputSchema = z.object({
+  id: z.number(),
+  projectId: z.number(),
+  nodeId: z.string(),
+  nodeType: z.string(),
+  label: z.string(),
+  positionX: z.number(),
+  positionY: z.number(),
+  // jsonb blob — intentionally free-form (component metadata varies per node type).
+  data: z.unknown().nullable(),
+  version: z.number(),
+  updatedAt: z.date(),
+  deletedAt: z.date().nullable(),
+});
+
+const architectureEdgeOutputSchema = z.object({
+  id: z.number(),
+  projectId: z.number(),
+  edgeId: z.string(),
+  source: z.string(),
+  target: z.string(),
+  label: z.string().nullable(),
+  animated: z.boolean().nullable(),
+  // jsonb blob — ReactFlow style object, genuinely free-form.
+  style: z.unknown().nullable(),
+  signalType: z.string().nullable(),
+  voltage: z.string().nullable(),
+  busWidth: z.number().nullable(),
+  netName: z.string().nullable(),
+  version: z.number(),
+  deletedAt: z.date().nullable(),
+});
+
 // Initialize the Genkit instance
 export const ai = genkit({
   plugins: [googleAI()],

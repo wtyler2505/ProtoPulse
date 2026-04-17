@@ -33,13 +33,42 @@ Recorded decisions about ProtoPulse's technical architecture. See `docs/adr/` fo
 - [[six-epics-organize-the-remaining-strategic-work]] -- A-F strategic layers
 - [[codex-audit-produced-the-structural-skeleton-for-all-subsequent-waves]] -- 293 findings became 154 waves
 
-### Comprehensive Audit Sub-Maps (April 2026)
+### Comprehensive Audit Findings (April 2026)
 - [[comprehensive-audit-reveals-zero-validation-at-any-layer]] -- the audit's meta-finding across all 40 sections
-- [[ai-system-debt]] -- validation vacuum cluster (9 notes)
+
+#### AI System Debt
+- [[genkit-tools-use-z-any-output-destroying-structured-validation]] -- z.any() defeats structured output guarantees
+- [[no-genkit-evaluation-framework-means-ai-quality-is-vibes-only]] -- zero AI eval test coverage
+- [[production-mock-data-in-pricing-tool-causes-hallucinated-prices]] -- fake prices in production
+- [[risk-analysis-tool-references-nonexistent-schema-columns]] -- risk scores silently broken
+- [[genkit-125-flat-tools-is-an-outdated-anti-pattern-needs-multi-agent]] -- context collapse from 125 flat tools
+- [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- zombie Gemini requests on tab close
+- [[build-system-prompt-has-on-m-edge-resolution-bottleneck]] -- O(N*M) prompt construction
+- [[ai-toolset-has-major-blindspots-in-history-variables-lifecycle-and-zones]] -- 6 API domains invisible to AI
+- [[voice-ai-is-disconnected-from-llm-using-hardcoded-command-matching]] -- voice input never reaches the LLM
+- [[ai-is-the-moat-lean-into-it]] -- the moat has no quality foundation
+- [[all-procurement-data-is-ai-fabricated]] -- the symptom of the validation vacuum
+
+#### Security Debt
 - [[security-debt]] -- attack chain cluster (5 notes)
-- [[performance-debt]] -- main-thread blocking cluster (6 notes)
-- [[resource-leaks-debt]] -- zombie streams, memory ratchet, scrypt burst (3 notes)
-- [[desktop-pivot-debt]] -- Tauri CSP/RCE chain + sidecar dependency (3 notes)
+
+#### Performance Debt
+- [[simulation-engine-blocks-main-thread-with-no-webworker-or-wasm]] -- MNA/NR solver freezes React UI during heavy analysis
+- [[reactflow-json-stringify-sync-is-on-per-render-and-breaks-at-10k-nodes]] -- O(N) serialization per render cycle
+- [[build-system-prompt-has-on-m-edge-resolution-bottleneck]] -- 40k array iterations for medium schematics
+- [[vite-manual-chunks-defeats-dynamic-import-and-tree-shaking]] -- bloated initial JS payload
+- [[jsonb-columns-lack-gin-indexes-forcing-sequential-scans]] -- no GIN indexes on JSONB columns
+- [[execsync-in-arduino-service-blocks-entire-express-event-loop]] -- sync shell calls freeze API for all users
+
+#### Resource Leaks Debt
+- [[setinterval-never-cleared-creates-memory-ratchet-in-server-routes]] -- dangling intervals leak memory until OOM crash (cross-listed in security-debt)
+- [[genkit-abort-signal-creates-zombie-streams-that-leak-api-quota]] -- unhandled abort = zombie Gemini requests (cross-listed in ai-system-debt)
+- [[scrypt-64mb-per-request-enables-oom-dos-before-rate-limiter]] -- 10 concurrent logins = 640MB RSS spike before rate-limiter engages (cross-listed in security-debt)
+
+#### Desktop Pivot Debt
+- [[tauri-csp-disabled-plus-global-tauri-equals-xss-to-rce]] -- disabled CSP + `withGlobalTauri` turns any XSS into OS-level RCE (cross-listed in security-debt)
+- [[tauri-node-sidecar-is-not-self-contained-and-crashes-without-global-node]] -- the desktop app depends on a system Node.js install and crashes without one
+- [[native-desktop-pivot-unblocked-three-c5-programs]] -- the positive side of the pivot: three C5 programs became feasible only in native mode
 
 ## Core Stack Decisions
 

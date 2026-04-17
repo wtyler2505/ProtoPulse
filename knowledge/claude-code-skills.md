@@ -1,5 +1,5 @@
 ---
-description: How 250+ Claude Code skills organize into workflows -- plugins, project skills, slash commands, mastery skills, thinking tools, and the gaps between them
+description: "How 250+ Claude Code skills organize into workflows including plugins, project skills, slash commands, and mastery skills."
 type: moc
 topics: []
 ---

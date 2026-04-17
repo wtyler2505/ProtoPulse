@@ -23,6 +23,7 @@ How the ProtoPulse knowledge system works, why it works that way, and how it evo
 
 ## Processing
 
+- [[enforce-hardware-vault-as-single-source-of-truth]] -- Ensure hardware components are never hallucinated and are synced with the Ars Contexta vault
 - [[use-url-parse-or-polyfill-to-avoid-url-is-not-a-constructor]] -- Ensure robust URL parsing by using polyfills or dedicated libraries instead of relying on the global URL constructor
 - [[enforce-physical-constraints-on-breadboardfit-logic]] -- Always validate component dimensions and pin alignment against standard breadboard grid spacing 
 

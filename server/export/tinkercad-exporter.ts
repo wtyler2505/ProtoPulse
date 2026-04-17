@@ -5,11 +5,13 @@
  * Maps ProtoPulse components and nets to TinkerCad entities.
  */
 
-import type { 
-  CircuitInstanceRow, 
-  CircuitNetRow, 
-  ComponentPart 
+import type {
+  CircuitInstanceRow,
+  CircuitNetRow,
+  ComponentPart
 } from '@shared/schema';
+import type { PartMeta } from '@shared/component-types';
+import type { NetSegment, NetStyle } from '@shared/circuit-types';
 
 interface TinkerCadExportOptions {
   projectName: string;

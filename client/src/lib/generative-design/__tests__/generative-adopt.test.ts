@@ -3,11 +3,13 @@ import type { CircuitIR } from '@/lib/circuit-dsl/circuit-ir';
 import type { CandidateEntry } from '../generative-engine';
 import type { FitnessResult } from '../fitness-scorer';
 import {
+  architectureToCurrentIR,
   compareCandidateWithCurrent,
   adoptCandidate,
   buildExportPayload,
   exportCandidate,
 } from '../generative-adopt';
+import type { Node, Edge } from '@xyflow/react';
 import type { ComparisonResult, AdoptResult, ExportPayload } from '../generative-adopt';
 
 // ---------------------------------------------------------------------------
@@ -468,5 +470,122 @@ describe('exportCandidate', () => {
     exportCandidate(candidate);
 
     expect(clickedLink?.rel).toBe('noopener noreferrer');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// architectureToCurrentIR
+// ---------------------------------------------------------------------------
+
+describe('architectureToCurrentIR', () => {
+  it('returns an empty-component IR when there are no nodes', () => {
+    const ir = architectureToCurrentIR([], []);
+    expect(ir.components).toEqual([]);
+    expect(ir.nets).toEqual([]);
+    expect(ir.meta.name).toBe('Current Architecture');
+  });
+
+  it('derives components from architecture nodes using label + type', () => {
+    const nodes: Node[] = [
+      {
+        id: 'node-1',
+        type: 'custom',
+        position: { x: 0, y: 0 },
+        data: { label: 'U1', type: 'mcu' },
+      },
+      {
+        id: 'node-2',
+        type: 'custom',
+        position: { x: 200, y: 0 },
+        data: { label: 'R1', type: 'resistor' },
+      },
+    ];
+    const ir = architectureToCurrentIR(nodes, []);
+    expect(ir.components).toHaveLength(2);
+    expect(ir.components[0]).toMatchObject({ id: 'node-1', refdes: 'U1', partId: 'mcu' });
+    expect(ir.components[1]).toMatchObject({ id: 'node-2', refdes: 'R1', partId: 'resistor' });
+    // Synthetic pin inserted because there are no edges
+    expect(Object.keys(ir.components[0].pins)).toHaveLength(1);
+  });
+
+  it('preserves IR-native metadata on previously adopted generative nodes', () => {
+    const nodes: Node[] = [
+      {
+        id: 'gen-c1',
+        type: 'custom',
+        position: { x: 0, y: 0 },
+        data: {
+          label: 'C1 (0.1uF)',
+          type: 'capacitor',
+          irRefdes: 'C1',
+          irPartId: 'capacitor',
+          value: '0.1uF',
+          pins: { pin1: 'VCC', pin2: 'GND' },
+        },
+      },
+    ];
+    const ir = architectureToCurrentIR(nodes, []);
+    expect(ir.components[0].refdes).toBe('C1');
+    expect(ir.components[0].partId).toBe('capacitor');
+    expect(ir.components[0].value).toBe('0.1uF');
+    expect(ir.components[0].pins).toEqual({ pin1: 'VCC', pin2: 'GND' });
+  });
+
+  it('derives pins from connected edges and builds nets with type inference', () => {
+    const nodes: Node[] = [
+      { id: 'a', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'A', type: 'mcu' } },
+      { id: 'b', type: 'custom', position: { x: 200, y: 0 }, data: { label: 'B', type: 'led' } },
+    ];
+    const edges: Edge[] = [
+      { id: 'e1', source: 'a', target: 'b', label: 'VCC' },
+      { id: 'e2', source: 'a', target: 'b', label: 'GND' },
+      { id: 'e3', source: 'a', target: 'b', label: 'DATA' },
+    ];
+    const ir = architectureToCurrentIR(nodes, edges);
+    // Pins derived from edge labels
+    expect(Object.values(ir.components[0].pins)).toEqual(expect.arrayContaining(['VCC', 'GND', 'DATA']));
+    // Net types inferred
+    const byName = new Map(ir.nets.map((n) => [n.name, n.type]));
+    expect(byName.get('VCC')).toBe('power');
+    expect(byName.get('GND')).toBe('ground');
+    expect(byName.get('DATA')).toBe('signal');
+  });
+
+  it('produces a comparison against a candidate that reflects the real project, not defaultBaseCircuit', () => {
+    // Simulates audit C-1: current project holds U1 (mcu) and R2 (resistor).
+    // Candidate has R2 (unchanged) + new C1 (capacitor). Comparison should
+    // show U1 as REMOVED and C1 as ADDED — NOT fall back to the R1 stub.
+    const nodes: Node[] = [
+      { id: 'u1', type: 'custom', position: { x: 0, y: 0 }, data: { label: 'U1', type: 'mcu' } },
+      { id: 'r2', type: 'custom', position: { x: 200, y: 0 }, data: { label: 'R2', type: 'resistor', value: '1k' } },
+    ];
+    const currentIR = architectureToCurrentIR(nodes, []);
+    const candidate: CandidateEntry = {
+      id: 'cand-x',
+      generation: 1,
+      parentIds: [],
+      ir: {
+        meta: { name: 'variant', version: '1.0.0' },
+        components: [
+          { id: 'r2', refdes: 'R2', partId: 'resistor', value: '1k', pins: { pin1: 'VCC', pin2: 'OUT' } },
+          { id: 'c1', refdes: 'C1', partId: 'capacitor', value: '10uF', pins: { pin1: 'VCC', pin2: 'GND' } },
+        ],
+        nets: [
+          { id: 'n1', name: 'VCC', type: 'power' },
+          { id: 'n2', name: 'GND', type: 'ground' },
+          { id: 'n3', name: 'OUT', type: 'signal' },
+        ],
+        wires: [],
+      },
+      fitness: makeFitness(),
+    };
+
+    const result = compareCandidateWithCurrent(candidate, currentIR);
+    const addedRefdes = result.componentDiffs.filter((d) => d.status === 'added').map((d) => d.refdes);
+    const removedRefdes = result.componentDiffs.filter((d) => d.status === 'removed').map((d) => d.refdes);
+    expect(addedRefdes).toContain('C1');
+    expect(removedRefdes).toContain('U1');
+    // The R1 stub fingerprint MUST NOT appear as a "removed" component
+    expect(removedRefdes).not.toContain('R1');
   });
 });

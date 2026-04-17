@@ -429,3 +429,174 @@ describe('spiceToSiNumber / siToSpiceString', () => {
     expect(parseSiValue('10M')?.value).toBe(1e7);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Length domain — sim ↔ DRC boundary (BL-0126 length extension)
+// ---------------------------------------------------------------------------
+//
+// The DRC engine (shared/drc-engine.ts) + board stackup store lengths in mils.
+// The simulation layer consumes mm (and internally goes to metres).
+// These tests lock the exact conversion contract shared across both engines.
+
+describe('Length constants — canonical exact values', () => {
+  it('MM_PER_INCH = 25.4 (definition)', () => {
+    expect(MM_PER_INCH).toBe(25.4);
+  });
+
+  it('MIL_PER_INCH = 1000 (1 mil = 1/1000 inch)', () => {
+    expect(MIL_PER_INCH).toBe(1000);
+  });
+
+  it('MM_PER_MIL = 25.4/1000 = 0.0254 exactly (no magic-number drift)', () => {
+    expect(MM_PER_MIL).toBe(0.0254);
+    expect(MM_PER_MIL).toBe(MM_PER_INCH / MIL_PER_INCH);
+  });
+
+  it('METER_PER_MM = 1e-3', () => {
+    expect(METER_PER_MM).toBe(1e-3);
+  });
+});
+
+describe('Length branding — phantom types have zero runtime cost', () => {
+  it('asMm / asMil / asMeter / asInch are runtime-identity', () => {
+    expect(asMm(10) as number).toBe(10);
+    expect(asMil(8) as number).toBe(8);
+    expect(asMeter(0.1) as number).toBe(0.1);
+    expect(asInch(1) as number).toBe(1);
+  });
+
+  it('preserves NaN, Infinity, negatives through the brand', () => {
+    expect(Number.isNaN(asMm(NaN) as number)).toBe(true);
+    expect(asMm(Infinity) as number).toBe(Infinity);
+    expect(asMil(-5) as number).toBe(-5);
+  });
+});
+
+describe('milToMm / mmToMil — exact conversions at PCB scale', () => {
+  it('1 mil = 0.0254 mm exactly', () => {
+    expect(milToMm(1) as number).toBe(0.0254);
+  });
+
+  it('round-trips 8 mil (typical clearance)', () => {
+    expect(mmToMil(milToMm(8)) as number).toBeCloseTo(8, 10);
+  });
+
+  it('round-trips 6 mil (advanced clearance)', () => {
+    expect(mmToMil(milToMm(6)) as number).toBeCloseTo(6, 10);
+  });
+
+  it('round-trips 6000 mil (6-inch board width) without precision loss', () => {
+    expect(mmToMil(milToMm(6000)) as number).toBeCloseTo(6000, 6);
+  });
+
+  it('100 mil = 2.54 mm (typical header spacing)', () => {
+    expect(milToMm(100) as number).toBeCloseTo(2.54, 10);
+  });
+
+  it('1000 mil = 1 inch = 25.4 mm', () => {
+    expect(milToMm(1000) as number).toBeCloseTo(25.4, 10);
+  });
+
+  it('handles zero', () => {
+    expect(milToMm(0) as number).toBe(0);
+    expect(mmToMil(0) as number).toBe(0);
+  });
+
+  it('handles negatives symmetrically', () => {
+    expect(milToMm(-8) as number).toBeCloseTo(-0.2032, 10);
+    expect(mmToMil(-0.2032) as number).toBeCloseTo(-8, 10);
+  });
+
+  it('passes NaN through', () => {
+    expect(Number.isNaN(milToMm(NaN) as number)).toBe(true);
+    expect(Number.isNaN(mmToMil(NaN) as number)).toBe(true);
+  });
+
+  it('passes Infinity through', () => {
+    expect(milToMm(Infinity) as number).toBe(Infinity);
+    expect(mmToMil(-Infinity) as number).toBe(-Infinity);
+  });
+
+  it('accepts branded input (type-safe boundary)', () => {
+    const clearance = asMil(8);
+    const clearanceMm = milToMm(clearance);
+    expect(clearanceMm as number).toBeCloseTo(0.2032, 10);
+  });
+});
+
+describe('mmToMeter / meterToMm — SI bridge', () => {
+  it('1 mm = 0.001 m', () => {
+    expect(mmToMeter(1) as number).toBe(1e-3);
+  });
+
+  it('round-trips cleanly at typical trace lengths', () => {
+    for (const mm of [0.1, 1, 10, 100, 300]) {
+      expect(meterToMm(mmToMeter(mm)) as number).toBeCloseTo(mm, 10);
+    }
+  });
+
+  it('handles zero, negatives, NaN, Infinity', () => {
+    expect(mmToMeter(0) as number).toBe(0);
+    expect(mmToMeter(-10) as number).toBe(-0.01);
+    expect(Number.isNaN(mmToMeter(NaN) as number)).toBe(true);
+    expect(mmToMeter(Infinity) as number).toBe(Infinity);
+  });
+});
+
+describe('milToMeter / meterToMil — full cross-engine chain', () => {
+  it('1 mil = 0.0000254 m (25.4 µm)', () => {
+    expect(milToMeter(1) as number).toBeCloseTo(25.4e-6, 15);
+  });
+
+  it('composition invariant: milToMeter ≡ mmToMeter ∘ milToMm', () => {
+    // This is THE critical contract: the chain DRC → bridge → sim must
+    // give the same number as the direct conversion. If this ever fails,
+    // engines have drifted.
+    for (const mils of [1, 6, 8, 100, 1000, 6000]) {
+      const viaChain = mmToMeter(milToMm(mils));
+      const direct = milToMeter(mils);
+      expect(viaChain as number).toBeCloseTo(direct as number, 15);
+    }
+  });
+
+  it('round-trips cleanly at typical PCB clearances', () => {
+    for (const mils of [6, 8, 10, 50, 100, 1000]) {
+      expect(meterToMil(milToMeter(mils)) as number).toBeCloseTo(mils, 8);
+    }
+  });
+});
+
+describe('inch ↔ mm ↔ mil — exact arithmetic for whole inches', () => {
+  it('1 inch = 25.4 mm exactly', () => {
+    expect(inchToMm(1) as number).toBe(25.4);
+  });
+
+  it('1 inch = 1000 mil exactly (integer-precise)', () => {
+    expect(inchToMil(1) as number).toBe(1000);
+    expect(milToInch(1000) as number).toBe(1);
+  });
+
+  it('round-trips 0.1 inch = 100 mil = 2.54 mm', () => {
+    expect(inchToMil(0.1) as number).toBeCloseTo(100, 10);
+    expect(milToMm(100) as number).toBeCloseTo(2.54, 10);
+    expect(mmToInch(2.54) as number).toBeCloseTo(0.1, 10);
+  });
+});
+
+describe('Length contract — boundary invariant locks prior drift bug', () => {
+  it('replaces the inline `* 0.0254` magic number used in pcb-geometry-bridge.ts', () => {
+    // Before BL-0126, pcb-geometry-bridge.ts did: `height = thickness * 0.0254`.
+    // This asserts milToMm(x) is exactly equivalent so the migration is a
+    // no-op for ALL numeric inputs.
+    for (const mils of [1, 4, 7, 35, 62, 100, 1600]) {
+      expect(milToMm(mils) as number).toBe(mils * 0.0254);
+    }
+  });
+
+  it('stackup thickness sum (mils) → mm is stable across long boards', () => {
+    // Simulates pcb-geometry-bridge `estimateLayerSeparation` for a 4-layer
+    // 62-mil board. Matches the expected FR4 conversion.
+    const stackMils = 62; // total board thickness
+    expect(milToMm(stackMils) as number).toBeCloseTo(1.5748, 6);
+  });
+});

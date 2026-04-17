@@ -1,6 +1,6 @@
 ---
 title: "AI component generation requires rigorous dimension and electrical limit research instead of hallucinated approximations"
-description: "Analysis of ai component generation requires rigorous dimension and electrical limit research instead of hallucinated approximations"
+description: "Enforcing rigorous verification against real datasheets prevents invalid footprints and dangerous electrical assumptions in AI-generated components."
 topics: []
 ---
 
