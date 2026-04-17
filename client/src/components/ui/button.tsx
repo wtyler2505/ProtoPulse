@@ -70,14 +70,28 @@ export interface ButtonProps
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, type, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
-    // Explicit type prop wins; otherwise default to "button" to prevent
-    // accidental form submission from Enter-key / Space activation.
-    const resolvedType = asChild ? type : (type ?? "button")
+    if (asChild) {
+      // Slot renders the child element directly — often <a>, <Link>, etc.
+      // Passing a `type` attribute to an <a> is semantically wrong (on <a>,
+      // `type` means MIME type). So when asChild, we forward NOTHING for
+      // type: any explicit type set by the consumer flows through via
+      // `...props` if it was in ...rest, but we don't force our default.
+      // (In this component we extracted `type` out of props, so it's
+      // intentionally dropped when asChild=true.)
+      return (
+        <Comp
+          className={cn(buttonVariants({ variant, size, className }))}
+          ref={ref}
+          {...props}
+        />
+      )
+    }
+    // Non-asChild path: force safe type default. Explicit type wins.
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        type={resolvedType}
+        type={type ?? "button"}
         {...props}
       />
     )
