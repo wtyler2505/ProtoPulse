@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
   DialogFooter
 } from '@/components/ui/dialog';
@@ -11,19 +11,20 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Search, 
-  RefreshCw, 
-  CheckCircle2, 
-  AlertTriangle, 
-  XCircle, 
+import {
+  Search,
+  RefreshCw,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
   Info,
   ArrowRightLeft
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useAlternateParts } from '@/lib/alternate-parts';
+import { useAlternateParts, AlternatePartsEngine } from '@/lib/alternate-parts';
 import type { AlternatePart, PartReference } from '@/lib/alternate-parts';
 import type { CircuitInstanceRow, ComponentPart } from '@shared/schema';
+import type { PartMeta, Connector } from '@shared/component-types';
 
 interface ComponentReplacementDialogProps {
   open: boolean;
@@ -32,6 +33,19 @@ interface ComponentReplacementDialogProps {
   originalPart: ComponentPart | null;
   onReplace: (newPartId: number) => void;
 }
+
+/**
+ * Extended meta shape carried in ComponentPart.meta jsonb for replacement lookups.
+ * Mirrors PartMeta but also accepts legacy keys (partNumber, category, footprint,
+ * parameters) that older parts wrote under the same jsonb column.
+ */
+type ReplacementPartMeta = Partial<PartMeta> & {
+  partNumber?: string;
+  category?: string;
+  parameters?: Record<string, unknown>;
+  footprint?: string;
+  package?: string;
+};
 
 export default function ComponentReplacementDialog({
   open,
@@ -49,7 +63,8 @@ export default function ComponentReplacementDialog({
   // Convert DB part to AlternateParts engine format for comparison
   const originalPartRef: PartReference | null = useMemo(() => {
     if (!originalPart) return null;
-    const meta = (originalPart.meta ?? {}) as any;
+    const meta = (originalPart.meta ?? {}) as ReplacementPartMeta;
+    const connectors = (Array.isArray(originalPart.connectors) ? originalPart.connectors : []) as Connector[];
     return {
       id: String(originalPart.id),
       partNumber: String(meta.mpn || meta.partNumber || originalPart.id),
@@ -58,8 +73,8 @@ export default function ComponentReplacementDialog({
       category: String(meta.category || 'generic'),
       parameters: (meta.parameters ?? {}),
       package: String(meta.footprint || meta.package || 'Unknown'),
-      pinCount: (originalPart.connectors as any[] || []).length,
-      pinout: (originalPart.connectors as any[] || []).map(c => c.name),
+      pinCount: connectors.length,
+      pinout: connectors.map(c => c.name),
       status: 'active',
     };
   }, [originalPart]);
@@ -67,7 +82,7 @@ export default function ComponentReplacementDialog({
   const handleSearch = useCallback(() => {
     if (!searchQuery.trim()) return;
     setIsSearching(true);
-    
+
     // Simulate API/search delay
     setTimeout(() => {
       const searchResult = findAlternates(searchQuery.trim());
@@ -90,8 +105,10 @@ export default function ComponentReplacementDialog({
   // Live pin compatibility check
   const compatibility = useMemo(() => {
     if (!originalPartRef || !selectedAlt) return null;
-    const engine = (window as any).AlternatePartsEngine?.getInstance() || null;
-    if (!engine) return null;
+    // NOTE: previously read from `window.AlternatePartsEngine` which is never
+    // set anywhere in the codebase — that branch always returned null. Import
+    // the class directly so the compatibility preview actually renders.
+    const engine = AlternatePartsEngine.getInstance();
     return engine.checkPinCompatibility(originalPartRef, selectedAlt.part);
   }, [originalPartRef, selectedAlt]);
 
@@ -181,11 +198,11 @@ export default function ComponentReplacementDialog({
                       ) : (
                         <XCircle className="w-3.5 h-3.5 text-destructive" />
                       )}
-                      {compatibility?.level === 'exact' ? 'Pin-for-Pin Compatible' : 
+                      {compatibility?.level === 'exact' ? 'Pin-for-Pin Compatible' :
                        compatibility?.level === 'partial' ? 'Partially Compatible' : 'Incompatible Pinout'}
                     </h4>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      {compatibility?.level === 'exact' 
+                      {compatibility?.level === 'exact'
                         ? "This part is a drop-in replacement. All pins match and functions are identical."
                         : compatibility?.level === 'partial'
                         ? "Most pins match, but some connections may require manual verification."
