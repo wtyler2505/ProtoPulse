@@ -56,3 +56,13 @@ Insight exists at `knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requ
 **Network effect:** outgoing links 3 -> 5. Bridges to salvaged-hardware domain (via salvaged-bms) and to chemistry-substitution domain (via lifepo4-12s). No new {vocabulary.topic_map} membership, but richer traversal within power-systems.
 
 ## Verify
+
+**Target note:** `knowledge/lead-acid-36v-pack-from-3-series-12v-batteries-requires-external-lvd-because-no-integrated-bms-exists.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. Required fields present (description, type, created: 2026-04-14, source, confidence: proven, topics). No related_components — acceptable for a chemistry-level claim.
+
+**Gate 3 — Graph integrity:** PASS. All 13 wiki-links resolve.
+
+**Result:** All gates PASS. No gaps.

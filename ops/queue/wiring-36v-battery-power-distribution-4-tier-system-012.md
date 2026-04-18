@@ -57,3 +57,13 @@ Enrichment already present in target insight `knowledge/esp32-adc-is-nonlinear-a
 **Split / challenge:** not indicated. The note is a single claim backed by consistent evidence; no split-recommended or merge-candidate signal from enrich. Voice preserved.
 
 ## Verify
+
+**Target note:** `knowledge/esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** FLAGGED. Missing `created:` field. Other required fields present (description, type, source, confidence: proven, topics, related_components: [] explicit). FIX NEEDED: add `created:` date.
+
+**Gate 3 — Graph integrity:** PASS. All 15 wiki-links resolve.
+
+**Result:** Gate 1 PASS, Gate 2 FAIL (missing created), Gate 3 PASS. Non-blocking.

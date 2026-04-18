@@ -408,9 +408,25 @@ export function registerPcbAdvancedTools(registry: ToolRegistry): void {
         };
       }
 
+      // DB rows expose flat pcbX/pcbY/pcbRotation/pcbSide. Map to the
+      // autorouter's nested pcbPosition shape at this boundary.
+      const toPcbPos = (inst: typeof instances[number]):
+        | { x: number; y: number; rotation: number; side: 'front' | 'back' }
+        | undefined =>
+        inst.pcbX != null && inst.pcbY != null
+          ? {
+              x: inst.pcbX,
+              y: inst.pcbY,
+              rotation: inst.pcbRotation ?? 0,
+              side: (inst.pcbSide === 'back' ? 'back' : 'front'),
+            }
+          : undefined;
+
       const fromInst = instances.find(i => i.id === targetConnection.fromInstanceId);
       const toInst = instances.find(i => i.id === targetConnection.toInstanceId);
-      if (!fromInst?.pcbPosition || !toInst?.pcbPosition) {
+      const fromPos = fromInst ? toPcbPos(fromInst) : undefined;
+      const toPos = toInst ? toPcbPos(toInst) : undefined;
+      if (!fromInst || !toInst || !fromPos || !toPos) {
         return {
           success: false,
           message: `Both endpoints must be placed on the PCB before routing. Place instances first.`,
@@ -438,7 +454,7 @@ export function registerPcbAdvancedTools(registry: ToolRegistry): void {
         .filter(i => i.id !== fromInst.id && i.id !== toInst.id)
         .map(i => ({
           id: i.id,
-          pcbPosition: i.pcbPosition,
+          pcbPosition: toPcbPos(i),
         }));
 
       const obstacles = extractObstaclesFromCircuit({
@@ -447,12 +463,13 @@ export function registerPcbAdvancedTools(registry: ToolRegistry): void {
       });
 
       // Compute bounding box with a 10mm margin around both endpoints.
-      const xs = [fromInst.pcbPosition.x, toInst.pcbPosition.x];
-      const ys = [fromInst.pcbPosition.y, toInst.pcbPosition.y];
+      const xs = [fromPos.x, toPos.x];
+      const ys = [fromPos.y, toPos.y];
       for (const inst of instances) {
-        if (inst.pcbPosition) {
-          xs.push(inst.pcbPosition.x);
-          ys.push(inst.pcbPosition.y);
+        const pos = toPcbPos(inst);
+        if (pos) {
+          xs.push(pos.x);
+          ys.push(pos.y);
         }
       }
       const margin = 10;
@@ -467,8 +484,8 @@ export function registerPcbAdvancedTools(registry: ToolRegistry): void {
 
       const result = autoroute({
         bounds,
-        start: { x: fromInst.pcbPosition.x, y: fromInst.pcbPosition.y, layer: layerHint },
-        end: { x: toInst.pcbPosition.x, y: toInst.pcbPosition.y, layer: layerHint },
+        start: { x: fromPos.x, y: fromPos.y, layer: layerHint },
+        end: { x: toPos.x, y: toPos.y, layer: layerHint },
         obstacles,
       });
 

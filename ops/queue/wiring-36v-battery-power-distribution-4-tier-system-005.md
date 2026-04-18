@@ -55,3 +55,13 @@ Insight exists at `knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-
 **Agent note forward:** The watch for "threshold-control systems need hysteresis windows" synthesis claim still stands, and now has a second domain-instance (logic buffering) linked into it. If a third instance appears (thermostat, WiFi roaming), the synthesis is ready to materialize.
 
 ## Verify
+
+**Target note:** `knowledge/lvd-hysteresis-with-reconnect-voltage-above-cutoff-prevents-oscillation-at-the-threshold-boundary.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. All required fields present (description, type, created: 2026-04-14, source, confidence: proven, topics, related_components).
+
+**Gate 3 — Graph integrity:** PASS. All 9 wiki-links resolve.
+
+**Result:** All gates PASS. No gaps.

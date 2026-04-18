@@ -58,3 +58,13 @@ Insight exists at `knowledge/anl-marine-fuse-class-is-the-correct-selection-for-
 **Not changing:** Title, description, claim, body reasoning, example math. The note was written recently (2026-04-14) with current understanding; only connection gaps needed closing.
 
 ## Verify
+
+**Target note:** `knowledge/anl-marine-fuse-class-is-the-correct-selection-for-rover-main-bus-above-60a-because-automotive-blade-fuses-lose-interrupt-capacity-at-dc.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. All required fields present (description, type, created: 2026-04-14, source, confidence: proven, topics, related_components: anl-100-fuse).
+
+**Gate 3 — Graph integrity:** PASS. All 13 wiki-links resolve.
+
+**Result:** All gates PASS. No gaps.

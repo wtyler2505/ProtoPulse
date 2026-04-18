@@ -53,3 +53,13 @@ Added ADC-reading table to target insight `knowledge/10s-lithium-ion-pack-voltag
 **Not changed**: title (already sharp — "usable window is narrower than beginners expect" is arguable). No split (single coherent claim about the voltage envelope + firmware monitoring implications). No challenge (claim holds against all evidence encountered). Didn't add ADS1115 as a direct sibling link in body — already present in existing ESP32 ADC nonlinearity inline link.
 
 ## Verify
+
+**Target note:** `knowledge/10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** FLAGGED. Missing `created:` field. Other required fields present (description, type, source, confidence: proven, topics, related_components).  FIX NEEDED: add `created:` date.
+
+**Gate 3 — Graph integrity:** PASS. All 16 wiki-links resolve.
+
+**Result:** Gate 1 PASS, Gate 2 FAIL (missing created), Gate 3 PASS. Non-blocking.

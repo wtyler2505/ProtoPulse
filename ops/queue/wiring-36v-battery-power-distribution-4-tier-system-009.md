@@ -64,3 +64,13 @@ Insight exists at `knowledge/linear-voltage-to-percentage-approximation-is-adequ
 **Agent traversal value:** An agent debugging "battery reads 50% but rover stops unexpectedly" can now traverse target -> LVD hysteresis to understand the disconnect-threshold envelope, or target -> BMS discharge port to understand why the 30V floor is a hard power cutoff, not just a UI minimum.
 
 ## Verify
+
+**Target note:** `knowledge/linear-voltage-to-percentage-approximation-is-adequate-for-10s-li-ion-despite-the-nonlinear-discharge-curve.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. All required fields present (description, type, created: 2026-04-14, source, confidence: proven, topics, related_components).
+
+**Gate 3 — Graph integrity:** PASS. All 15 wiki-links resolve.
+
+**Result:** All gates PASS. No gaps.

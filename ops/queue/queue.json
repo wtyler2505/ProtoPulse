@@ -30,7 +30,7 @@
       "priority": "session",
       "status": "done",
       "condition_key": "dangling_links",
-      "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) \u2014 targets don't exist in knowledge/",
+      "target": "8 dangling [[links]] in knowledge/index.md (identity, methodology, goals, eda-fundamentals, architecture-decisions, competitive-landscape, breadboard-intelligence, maker-ux) — targets don't exist in knowledge/",
       "action": "/seed or /extract to create initial topic maps",
       "auto_generated": true,
       "created": "2026-04-06T03:52:00Z"
@@ -48,7 +48,7 @@
     {
       "id": "claim-001",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "130K to 10K voltage divider scales 42V battery maximum to 3V ADC input with safety margin",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -58,13 +58,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-002",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "BMS discharge port is the sole power output so a BMS trip kills the MCU along with the motors",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -74,13 +75,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-003",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Per-branch motor fusing enables graceful degradation because a single motor fault blows its own fuse not the main",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -90,13 +92,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-004",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "10uF ceramic on ESP32 Vin prevents WiFi TX brownouts because radio bursts pull current faster than the buck regulator responds",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -106,13 +109,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-005",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "LVD hysteresis with reconnect voltage above cutoff prevents oscillation at the threshold boundary",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -122,13 +126,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-006",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "E-STOP auxiliary contact to MCU enables firmware-aware safe state that hardware disconnection alone cannot signal",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -138,13 +143,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-007",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Lead acid 36V pack from 3 series 12V batteries requires external LVD because no integrated BMS exists",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -154,13 +160,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-008",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "LiFePO4 12S pack nominal 38V4 exceeds 36V design target and must be verified against controller upper limit",
       "classification": "open",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -170,13 +177,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-009",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "Linear voltage to percentage approximation is adequate for 10S Li-Ion despite the nonlinear discharge curve",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -186,13 +194,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "claim-010",
       "type": "claim",
-      "status": "pending",
+      "status": "done",
       "target": "ANL marine fuse class is the correct selection for rover main bus above 60A because automotive blade fuses lose interrupt capacity at DC",
       "classification": "closed",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -202,13 +211,14 @@
       "completed_phases": [
         "create",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "enrich-011",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "star-ground-at-distribution-board-prevents-ground-loops-in-multi-circuit-systems",
       "source_detail": "Add never-daisy-chain anti-pattern with voltage-drop math",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -218,13 +228,14 @@
       "completed_phases": [
         "enrich",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "enrich-012",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "esp32-adc-is-nonlinear-above-2v5-requiring-calibration-or-external-adc",
       "source_detail": "Name esp_adc_cal_characterize() API and ADS1115 part",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -234,13 +245,14 @@
       "completed_phases": [
         "enrich",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
       "id": "enrich-013",
       "type": "enrichment",
-      "status": "pending",
+      "status": "done",
       "target": "10s-lithium-ion-pack-voltage-range-spans-30v-to-42v-and-the-usable-window-is-narrower-than-beginners-expect",
       "source_detail": "Add ADC reading values at each battery state through 130K/10K divider",
       "batch": "wiring-36v-battery-power-distribution-4-tier-system",
@@ -250,7 +262,8 @@
       "completed_phases": [
         "enrich",
         "reflect",
-        "reweave"
+        "reweave",
+        "verify"
       ]
     },
     {
@@ -763,7 +776,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "txs0108e-oe-pin-is-active-high-and-floating-by-default-silently-disabling-all-outputs",
-      "source_detail": "Add Hall-sensor wiring as worked example \u2014 OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
+      "source_detail": "Add Hall-sensor wiring as worked example — OE tied to VCCA (3.3V) with pin-19/pin-11 callouts in BLDC Hall readback topology",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-051.md",
       "created": "2026-04-14T08:13:01Z",
@@ -775,7 +788,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "esp32-gpio34-39-are-input-only-with-no-internal-pull-resistors",
-      "source_detail": "Add positive-case allocation rationale \u2014 ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
+      "source_detail": "Add positive-case allocation rationale — ADC1 WiFi-safe + no-strapping conflict + read-only matches Hall topology + TXS-provides-pullups exception",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-052.md",
       "created": "2026-04-14T08:13:01Z",
@@ -787,7 +800,7 @@
       "type": "enrichment",
       "status": "pending",
       "target": "bldc-controller-hall-sensor-outputs-are-push-pull-digital-making-txs-class-shifters-the-correct-bridge-to-3v3-mcus",
-      "source_detail": "Add concrete RioRand\u2192TXS0108E\u2192ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
+      "source_detail": "Add concrete RioRand→TXS0108E→ESP32 pin mapping table (Hall A/B/C/Temp through B1-B4/A1-A4 to GPIO 34/35/36/39)",
       "batch": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter",
       "file": "wiring-hall-sensors-to-esp32-via-txs0108e-level-shifter-053.md",
       "created": "2026-04-14T08:13:01Z",

@@ -67,3 +67,13 @@ Insight exists at `knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-ta
 - [[nmc-vs-lifepo4...]] -- forward link from this note exists; reciprocation check deferred
 
 ## Verify
+
+**Target note:** `knowledge/lifepo4-12s-pack-nominal-38v4-exceeds-36v-design-target-and-must-be-verified-against-controller-upper-limit.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. Required fields present (description, type, created: 2026-04-14, source, confidence: high, topics). No related_components — claim is chemistry-topology level.
+
+**Gate 3 — Graph integrity:** PASS. All 22 wiki-links resolve.
+
+**Result:** All gates PASS. Confidence is 'high' rather than 'proven' — appropriate for a claim that requires per-controller datasheet verification.

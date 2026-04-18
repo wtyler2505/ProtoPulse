@@ -59,3 +59,13 @@ Insight exists at `knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-awa
 **MOC updates:** [[power-systems]] line 62 already lists this note correctly under Emergency Stop + Safety. No edit needed.
 
 ## Verify
+
+**Target note:** `knowledge/estop-auxiliary-contact-to-mcu-enables-firmware-aware-safe-state-that-hardware-disconnection-alone-cannot-signal.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. All required fields present (description, type, created: 2026-04-14, source, confidence: proven, topics, related_components).
+
+**Gate 3 — Graph integrity:** PASS. All 13 wiki-links resolve.
+
+**Result:** All gates PASS. No gaps.

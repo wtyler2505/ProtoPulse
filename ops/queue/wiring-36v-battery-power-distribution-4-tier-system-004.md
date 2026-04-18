@@ -55,3 +55,13 @@ Insight exists at `knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownout
 **Enrichment signals:** None. No title-sharpen, split-recommended, or merge-candidate flags from enrich phase.
 
 ## Verify
+
+**Target note:** `knowledge/10uf-ceramic-on-esp32-vin-prevents-wifi-tx-brownouts-because-radio-bursts-pull-current-faster-than-the-buck-regulator-responds.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. All required fields present (description, type, created: 2026-04-14, source, confidence: proven, topics, related_components).
+
+**Gate 3 — Graph integrity:** PASS. All 14 wiki-links resolve to existing vault files.
+
+**Result:** All gates PASS. No gaps.

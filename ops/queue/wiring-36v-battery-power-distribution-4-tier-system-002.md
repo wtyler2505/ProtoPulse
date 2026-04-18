@@ -57,4 +57,13 @@ Insight exists at `knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bm
 **MOC updates:** none — [[power-systems]] entry already captures single-path BMS claim.
 
 ## Verify
-(to be filled by verify phase)
+
+**Target note:** `knowledge/bms-discharge-port-is-the-sole-power-output-so-a-bms-trip-kills-the-mcu-along-with-the-motors.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. All required fields present (description, type, created: 2026-04-14, source, confidence: proven, topics, related_components).
+
+**Gate 3 — Graph integrity:** FLAGGED. 12/13 links resolve. Broken: [[persistent-state-must-tolerate-power-loss-at-any-instruction]] — target note does not exist in knowledge/. FIX NEEDED: either create the target note or remove/rename the link in the target note.
+
+**Result:** Gate 1 PASS, Gate 2 PASS, Gate 3 FAIL (1 broken link flagged but non-blocking).

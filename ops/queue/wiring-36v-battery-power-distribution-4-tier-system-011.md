@@ -65,3 +65,13 @@ The 36V source doc lines 365-378 cover the same material. The insight was author
 **MOC update:** [[power-systems]] entry unchanged — line 71 summary "all grounds return to single bus bar" still accurate.
 
 ## Verify
+
+**Target note:** `knowledge/star-ground-at-distribution-board-prevents-ground-loops-in-multi-circuit-systems.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** FLAGGED. Missing `created:` field in frontmatter. Other required fields present (description, type, source, confidence: proven, topics, related_components). FIX NEEDED: add `created:` date to frontmatter.
+
+**Gate 3 — Graph integrity:** PASS. All 14 wiki-links resolve.
+
+**Result:** Gate 1 PASS, Gate 2 FAIL (missing created), Gate 3 PASS. Non-blocking.

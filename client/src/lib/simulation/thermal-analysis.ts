@@ -155,8 +155,12 @@ const CONVERGENCE_THRESHOLD = 0.01;
 // Helpers
 // ---------------------------------------------------------------------------
 
+// BL-0126: route length conversion through the shared unit contract so this
+// engine cannot silently diverge from DRC / PDN on the mil↔mm exchange.
+import { milToMm as sharedMilToMm } from '@shared/units';
+
 function milsToMm(mils: number): number {
-  return mils * 0.0254;
+  return sharedMilToMm(mils);
 }
 
 /**

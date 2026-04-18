@@ -59,3 +59,13 @@ Insight exists at `knowledge/per-branch-motor-fusing-enables-graceful-degradatio
 - Hall sensor reference — kept; it grounds the dead-wheel detection loop the trade-off paragraph mentions.
 
 ## Verify
+
+**Target note:** `knowledge/per-branch-motor-fusing-enables-graceful-degradation-because-a-single-motor-fault-blows-its-own-fuse-not-the-main.md`
+
+**Gate 1 — Description quality:** PASS. Description is specific, adds information beyond the title (includes numbers, rationale, mechanism), and a cold reader could predict the claim's title from it.
+
+**Gate 2 — Schema compliance:** PASS. All required fields present (description, type, created, source, confidence: proven, topics, related_components).
+
+**Gate 3 — Graph integrity:** FLAGGED. 14/15 links resolve. Broken: [[hall-sensor-feedback-from-bldc-hub-motors-provides-rpm-and-direction-without-encoders]] — target note does not exist. FIX NEEDED: create the target note or rename/remove the link.
+
+**Result:** Gate 1 PASS, Gate 2 PASS, Gate 3 FAIL (1 broken link flagged but non-blocking).
