@@ -1057,8 +1057,20 @@ function scoreLabel(score: number): string {
 /** Patterns for restricted ESP32 pins — kept as named constants. */
 const HEURISTIC_ESP32_FLASH_PINS = /^(gpio|io|d)\s*(6|7|8|9|10|11)\b/i;
 const HEURISTIC_ESP32_GPIO12 = /^(gpio|io|d)\s*12\b/i;
+const HEURISTIC_ESP32_GPIO15 = /^(gpio|io|d)\s*15\b/i;
 const HEURISTIC_ESP32_GPIO5 = /^(gpio|io|d)\s*5\b/i;
+const HEURISTIC_ESP32_GPIO2 = /^(gpio|io|d)\s*2\b/i;
 const HEURISTIC_ESP32_GPIO0 = /^(gpio|io|d)\s*0\b/i;
+/** Input-only pins (no internal pull-up/down, cannot drive outputs). */
+const HEURISTIC_ESP32_INPUT_ONLY = /^(gpio|io|d)\s*(34|35|36|37|38|39)\b/i;
+
+/**
+ * Recognized ESP32 variant suffixes. When none match, we emit a
+ * per-instance conservative advisory so silent pass-through never happens
+ * on unknown ESP32 silicon revisions.
+ */
+const KNOWN_ESP32_VARIANTS =
+  /esp32[\s-]*(wroom|wrover|c3|s2|s3|c6|h2|pico|solo|d0|d2|u4|-?12|-?32|module|devkit|devkitc|nodemcu|wroom-32|-?32d|-?32u)/i;
 
 /**
  * Return true when the part looks like an ESP32 family member but is NOT

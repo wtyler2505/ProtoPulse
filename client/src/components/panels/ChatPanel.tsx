@@ -17,8 +17,16 @@ import { cn } from '@/lib/utils';
 
 import { copyToClipboard } from '@/lib/clipboard';
 import { AI_MODELS, DESTRUCTIVE_ACTIONS, COPY_FEEDBACK_DURATION, LOCAL_COMMAND_DELAY } from './chat/constants';
-
-const NAVIGATIONAL_ACTIONS = new Set(['switch_view', 'switch_schematic_sheet', 'undo', 'redo', 'project_summary', 'show_help', 'start_tutorial']);
+import {
+  validateMessageInput,
+  buildChatRequestBody,
+  reduceStreamEvent,
+  initialStreamAccumulator,
+  decideRoute,
+  mapAbortToMessage,
+  type StreamAccumulator,
+  type StreamEvent,
+} from './chat/lib/handleSendHelpers';
 import MessageBubble from './chat/MessageBubble';
 import SettingsPanel from './chat/SettingsPanel';
 import ChatHeader from './chat/ChatHeader';
