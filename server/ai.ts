@@ -390,11 +390,6 @@ function estimateTokens(text: string): number {
 
 /** Known input context window sizes per model ID (tokens). */
 const MODEL_CONTEXT_LIMITS: Record<string, number> = {
-  // Anthropic
-  'claude-opus-4-5-20250514': 200_000,
-  'claude-sonnet-4-5-20250514': 200_000,
-  'claude-haiku-4-5-20251001': 200_000,
-  // Gemini
   'gemini-2.5-pro': 1_000_000,
   'gemini-2.5-flash': 1_000_000,
   'gemini-2.5-flash-lite': 1_000_000,
@@ -404,11 +399,11 @@ const MODEL_CONTEXT_LIMITS: Record<string, number> = {
 
 function getModelContextLimit(model: string): number {
   if (MODEL_CONTEXT_LIMITS[model]) { return MODEL_CONTEXT_LIMITS[model]; }
-  // Prefix match: "claude-sonnet-4-5" matches "claude-sonnet-4-5-20250514"
+  // Prefix match: "gemini-2.5-flash" matches "gemini-2.5-flash-lite"
   for (const [key, limit] of Object.entries(MODEL_CONTEXT_LIMITS)) {
     if (model.startsWith(key) || key.startsWith(model)) { return limit; }
   }
-  return 200_000; // conservative default
+  return 1_000_000; // conservative default (Gemini 2.5 family baseline)
 }
 
 /** Select the most-recent messages that fit within the model's context budget.
