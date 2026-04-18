@@ -201,6 +201,45 @@ describe('heuristic-trap-inference', () => {
     });
   });
 
+  describe('motor-driver vs LED-driver disambiguation (audit #257)', () => {
+    // Positive: real motor drivers fire.
+    it.each([
+      ['L298N motor driver board'],
+      ['BLDC Motor Controller KJL-01'],
+      ['Adafruit Motor Shield V3'],
+      ['TB6612FNG Dual Motor Driver'],
+      ['DRV8833 H-Bridge'],
+      ['ZS-X11H brushless controller'],
+      ['Stepper driver A4988'],
+    ])('fires motor traps on %s', (title) => {
+      const traps = inferTraps({ family: 'driver', title });
+      const motorIds = traps.filter((t) => t.id.startsWith('motor-')).map((t) => t.id);
+      expect(motorIds.length).toBeGreaterThan(0);
+    });
+
+    // Negative: LED drivers do NOT fire motor traps.
+    it.each([
+      ['WS2812 RGB LED driver'],
+      ['LED matrix HT16K33'],
+      ['LED motor-PWM driver IC'],
+      ['LED driver with motor-like PWM'],
+      ['APA102 addressable LED strip'],
+      ['MAX7219 LED display driver'],
+      ['TLC5940 16-channel LED PWM'],
+    ])('does NOT fire motor traps on %s', (title) => {
+      const traps = inferTraps({ family: 'driver', title });
+      const motorIds = traps.filter((t) => t.id.startsWith('motor-')).map((t) => t.id);
+      expect(motorIds).toEqual([]);
+    });
+
+    // Explicit audit #257 regression.
+    it('rejects "LED Motor" compound title without firing BLDC polarity warning', () => {
+      const traps = inferTraps({ family: 'driver', title: 'LED Motor brightness controller' });
+      const hasBldc = traps.some((t) => t.id === 'motor-brake-polarity');
+      expect(hasBldc).toBe(false);
+    });
+  });
+
   describe('InferredTrap structure', () => {
     it('every trap has required fields', () => {
       const traps = inferTraps({ family: 'mcu', title: 'ESP32-WROOM-32' });

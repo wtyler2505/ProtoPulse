@@ -220,21 +220,67 @@ function motorPwmTrap(): InferredTrap {
   };
 }
 
-/** Check if the title indicates a motor-related driver (vs LED driver, etc.) */
+/**
+ * Check whether the title clearly identifies the part as an LED driver.
+ *
+ * LED driver detection supersedes motor-driver detection when both match —
+ * parts like "LED strip motor-PWM driver IC" are NOT motor controllers
+ * despite containing "motor" in the description.
+ */
+function isLedDriver(title: string): boolean {
+  const lower = title.toLowerCase();
+  // Common LED-driver cue words + known LED-driver MPN patterns.
+  return (
+    lower.includes(' led ') ||
+    lower.startsWith('led ') ||
+    lower.endsWith(' led') ||
+    lower.includes(' led-') ||
+    lower.includes('-led ') ||
+    lower.includes('led driver') ||
+    lower.includes('led matrix') ||
+    lower.includes('led strip') ||
+    lower.includes('rgb led') ||
+    lower.includes('ws2812') ||
+    lower.includes('apa102') ||
+    lower.includes('sk6812') ||
+    lower.includes('tlc59') ||
+    lower.includes('mbi503') ||
+    lower.includes('mbi5024') ||
+    lower.includes('max7219') ||
+    lower.includes('ht16k33')
+  );
+}
+
+/** Check if the title indicates a motor-related driver (vs LED driver, etc.). */
 function isMotorDriver(title: string): boolean {
+  // LED drivers SUPERSEDE motor drivers when both might match (audit #257).
+  if (isLedDriver(title)) {
+    return false;
+  }
   const lower = title.toLowerCase();
   return (
-    lower.includes('motor') ||
+    // Motor-family keywords — avoid bare "motor" which over-matches.
     lower.includes('bldc') ||
+    lower.includes('brushless') ||
+    lower.includes('stepper') ||
+    lower.includes('servo') ||
     lower.includes('h-bridge') ||
     lower.includes('h bridge') ||
+    lower.includes('dc motor') ||
+    lower.includes('motor driver') ||
+    lower.includes('motor controller') ||
+    lower.includes('motor shield') ||
+    // Known motor-driver chip MPNs.
     lower.includes('l298') ||
     lower.includes('l293') ||
     lower.includes('l9110') ||
     lower.includes('tb6612') ||
     lower.includes('drv8') ||
+    lower.includes('bts7960') ||
+    // Known motor-driver brands / boards.
     lower.includes('riorand') ||
-    lower.includes('bts7960')
+    lower.includes('zs-x11h') ||
+    lower.includes('kjl-01')
   );
 }
 
